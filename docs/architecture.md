@@ -84,8 +84,9 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 
 ## 10. Tooling and layout
 
-- **pnpm** workspaces and **Turborepo** pipelines: `build`, `lint`, `typecheck`, `test`, `e2e`. Remote cache off.
-- Everything lives under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages (GraphQL documents and generated types, config, tsconfig). The repository root holds only configuration files, `docker-compose*.yml`, `.env.example`, `README.md`, `LICENSE` and `docs/`.
+- **pnpm** workspaces and **Turborepo**, remote cache off.
+- Packages live under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages, which are added when there is code to share.
+- The repository root stays short: only files a tool requires there, such as the workspace files, the Compose file and `.env.example`, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/`.
 - **ESLint** (typescript-eslint, module boundaries, `@graphql-eslint`, project rules for SDL) and **Prettier**.
 - **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
 - **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; Docker image build; secret scanning.

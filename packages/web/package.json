@@ -1,0 +1,19 @@
+{
+  "name": "@broccoli/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Broccoli web app.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@broccoli/config": "workspace:*",
+    "eslint": "10.12.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

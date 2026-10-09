@@ -1,0 +1,19 @@
+{
+  "name": "@broccoli/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared TypeScript, ESLint and Prettier configuration.",
+  "exports": {
+    "./eslint": "./eslint.js",
+    "./prettier": "./prettier.json",
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  },
+  "dependencies": {
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.71.1"
+  },
+  "peerDependencies": {
+    "eslint": "^10.0.0"
+  }
+}
