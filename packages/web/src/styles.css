@@ -1,0 +1,111 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/hanken-grotesk";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-row-hover: var(--row-hover);
+  --color-row-selected: var(--row-selected);
+  --color-sidebar: var(--sidebar);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-light: var(--brand-light);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-app-backdrop: var(--app-backdrop);
+  --font-sans: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* Light theme only for now. Primary actions are warm ink, never green; sage
+   `--brand` is the single accent. */
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.23 0.012 80);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.23 0.012 80);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.23 0.012 80);
+  --primary: oklch(0.23 0.012 80);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.93 0.006 90);
+  --secondary-foreground: oklch(0.23 0.012 80);
+  --muted: oklch(0.93 0.006 90);
+  --muted-foreground: oklch(0.6 0.012 80);
+  --accent: oklch(0.93 0.006 90);
+  --accent-foreground: oklch(0.23 0.012 80);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.006 85);
+  --input: oklch(0.91 0.006 85);
+  --ring: oklch(0.7 0.008 85);
+  --row-hover: oklch(0.965 0.006 90);
+  --row-selected: oklch(0.95 0.008 90);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.975 0.005 95);
+  --brand: oklch(0.57 0.085 150);
+  --brand-deep: oklch(0.45 0.085 148);
+  --brand-light: oklch(0.67 0.078 152);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-soft: oklch(0.93 0.04 150);
+  --app-backdrop: oklch(0.975 0.005 95);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  /* The shell never scrolls as a document, so rubber-band bounce is only noise. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+}
+
+@layer utilities {
+  /* Fine film grain over the app frame. */
+  .surface-grain {
+    position: relative;
+    isolation: isolate;
+  }
+  .surface-grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+    opacity: 0.035;
+  }
+}
