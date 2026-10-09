@@ -29,10 +29,7 @@ export async function waitForStartup(server: RunningServer): Promise<Readiness> 
   throw new Error(`Server did not finish starting within ${STARTUP_TIMEOUT_MS} ms`);
 }
 
-export async function fetchReadiness(
-  server: RunningServer,
-  timeoutMs = STARTUP_TIMEOUT_MS,
-): Promise<Readiness> {
+async function fetchReadiness(server: RunningServer, timeoutMs: number): Promise<Readiness> {
   const response = await fetch(`${server.url}/readyz`, {
     signal: AbortSignal.timeout(timeoutMs),
   });

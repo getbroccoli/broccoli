@@ -19,8 +19,10 @@ export class MigrationRun {
 
   constructor(config: pg.ClientConfig) {
     this.#client = new pg.Client(config);
-    // A dropped connection also rejects the pending query; this listener only keeps
-    // the client's `error` event from crashing the process.
+    // Do not remove: without a listener, node-postgres emits an unhandled `error`
+    // event when the connection drops mid-migration, and Node exits. The pending
+    // query rejects as well, so `apply()` still reports the failure. Covered by the
+    // "connection drops during migration" e2e test.
     this.#client.on("error", () => {});
     this.#connected = this.#client.connect();
   }

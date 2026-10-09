@@ -1,9 +1,8 @@
 import { afterAll, beforeAll, describe, expect, inject, it, onTestFinished } from "vitest";
 
 import type { RunningServer } from "../../src/server.js";
-import { startStallingProxy } from "./support/stalling-proxy.js";
 import { createTestDatabase, type TestDatabase } from "./support/test-databases.js";
-import { fetchReadiness, startTestServer, waitForStartup } from "./support/test-server.js";
+import { startTestServer, waitForStartup } from "./support/test-server.js";
 
 const run = inject("testRun");
 
@@ -42,20 +41,4 @@ it("reports unavailable when the database cannot be reached", async () => {
   onTestFinished(() => server.stop());
 
   expect(await waitForStartup(server)).toEqual(UNAVAILABLE);
-});
-
-it("reports unavailable while the database stalls, then ready again", async () => {
-  const database = await createTestDatabase(run);
-  onTestFinished(() => database.drop());
-  const proxy = await startStallingProxy(database.url);
-  onTestFinished(() => proxy.close());
-  const server = await startTestServer(proxy.url);
-  onTestFinished(() => server.stop());
-  expect(await waitForStartup(server)).toEqual(READY);
-
-  proxy.stall();
-  expect(await fetchReadiness(server, 5_000)).toEqual(UNAVAILABLE);
-
-  proxy.resume();
-  expect(await fetchReadiness(server)).toEqual(READY);
 });

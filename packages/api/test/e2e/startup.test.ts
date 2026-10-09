@@ -1,7 +1,7 @@
 import { expect, inject, it, onTestFinished } from "vitest";
 
 import { holdMigrationLock } from "./support/migration-lock.js";
-import { startStallingProxy } from "./support/stalling-proxy.js";
+import { startDisconnectingProxy } from "./support/disconnecting-proxy.js";
 import { createEmptyTestDatabase, type TestDatabase } from "./support/test-databases.js";
 import { startTestServer, waitForStartup } from "./support/test-server.js";
 
@@ -30,12 +30,12 @@ it("stays alive and unavailable when its connection drops during migration", asy
   const database = await emptyDatabase();
   const lock = await holdMigrationLock(database.url);
   onTestFinished(() => lock.release());
-  const proxy = await startStallingProxy(database.url);
+  const proxy = await startDisconnectingProxy(database.url);
   const server = await startTestServer(proxy.url);
   onTestFinished(() => server.stop());
   await expect.poll(() => lock.hasWaitingSession()).toBe(true);
 
-  await proxy.close();
+  await proxy.disconnect();
 
   expect(await waitForStartup(server)).toEqual(UNAVAILABLE);
   expect((await fetch(`${server.url}/healthz`)).status).toBe(200);
