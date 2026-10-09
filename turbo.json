@@ -14,7 +14,8 @@
     "test": {},
     "test:e2e": {
       "dependsOn": ["^build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["TEST_DATABASE_URL", "DOCKER_*"]
     }
   }
 }
