@@ -20,8 +20,8 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
-    "format": "prettier --write . '!pnpm-lock.yaml'",
-    "format:check": "prettier --check . '!pnpm-lock.yaml'",
+    "format": "prettier --write . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
+    "format:check": "prettier --check . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
     "check": "pnpm format:check && turbo run lint typecheck test"
   },
   "devDependencies": {

@@ -1,0 +1,3 @@
+# Used by the root format scripts. Patterns with a slash resolve relative to this folder,
+# so list root files by name only.
+pnpm-lock.yaml
