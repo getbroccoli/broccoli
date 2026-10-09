@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 
 import express from "express";
 
-import { connectDatabase, type Database } from "./db/database.js";
+import { connectDatabase, type Database } from "./db/index.js";
 import type { Env } from "./env.js";
 import { healthRouter } from "./health.js";
 import type { Logger } from "./logger.js";

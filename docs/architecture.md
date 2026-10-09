@@ -37,7 +37,7 @@ Broccoli exposes a [Model Context Protocol](https://modelcontextprotocol.io) ser
 - **Drizzle ORM**, pinned to the 0.45 line. The TypeScript schema is the single source of truth; `drizzle-kit generate` produces SQL migrations that are reviewed in each pull request. Hand-written SQL in migrations is allowed for extensions, triggers and constraints.
 - Recursive CTEs (org chart, reporting lines), window functions and JSONB paths use the `sql` tag.
 - Upgrading to Drizzle 1.0 (new migration folder format, Relational Queries v2) is a planned task after the first release.
-- **One Postgres role** and one `DATABASE_URL`. The role owns the schema, so Broccoli runs on managed Postgres plans that offer no superuser. Migrations run at startup under a Postgres advisory lock, so instances starting together apply them one after another. The instance does not report ready until they succeed. A restricted application role can be added later with grants alone.
+- **One Postgres role** and one `DATABASE_URL`. The role owns the schema, so Broccoli runs on managed Postgres plans that offer no superuser. Migrations run at startup under a Postgres advisory lock, so instances starting together apply them one after another. The instance does not report ready until they succeed.
 - **Transactions.** One application-level unit-of-work callback supplies repositories bound to the same transaction. ORM types stay inside the Postgres adapters. Code never awaits work that needs another connection while holding locks.
 - `pgvector` is added only when a feature needs it.
 

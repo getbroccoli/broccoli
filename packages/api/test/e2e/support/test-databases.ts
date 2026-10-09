@@ -1,6 +1,6 @@
 import pg from "pg";
 
-import { connectDatabase } from "../../../src/db/database.js";
+import { connectDatabase } from "../../../src/db/index.js";
 import { createLogger } from "../../../src/logger.js";
 
 /** One `pnpm test:e2e` run: every database it creates is named after `runId`. */
