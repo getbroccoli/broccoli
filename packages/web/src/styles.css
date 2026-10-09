@@ -56,7 +56,8 @@
   --secondary: oklch(0.93 0.006 90);
   --secondary-foreground: oklch(0.23 0.012 80);
   --muted: oklch(0.93 0.006 90);
-  --muted-foreground: oklch(0.6 0.012 80);
+  /* Darker than the prototype's 0.6 to reach 4.5:1 contrast on white. */
+  --muted-foreground: oklch(0.56 0.012 80);
   --accent: oklch(0.93 0.006 90);
   --accent-foreground: oklch(0.23 0.012 80);
   --destructive: oklch(0.577 0.245 27.325);

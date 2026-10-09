@@ -1,7 +1,7 @@
 /** English copy. Every user-facing string lives here and is read through `t()`. */
 export const en = {
+  "app.name": "Broccoli",
   "workspace.name": "Broccoli",
-  "workspace.menu": "Workspace menu",
   "workspace.company": "Company",
   "nav.label": "Main",
   "nav.people": "People",
