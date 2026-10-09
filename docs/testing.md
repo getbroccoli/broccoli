@@ -25,3 +25,15 @@ How we write tests in Broccoli. The decisions behind them are in [§9 of the arc
 - Assert on outcomes a caller can see: return values, GraphQL responses, state read back through public queries, and emitted events.
 - Mock only external systems such as email, Slack and third-party HTTP. Never mock Postgres.
 - Add property-based tests only when the module design agrees on them.
+
+## Running end-to-end tests
+
+End-to-end tests need Postgres. Start this checkout's throwaway instance, run the tests, and stop it when you are done:
+
+```sh
+docker compose --profile test up -d --wait
+pnpm test:e2e
+docker compose --profile test down
+```
+
+Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; `down` discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.

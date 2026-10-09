@@ -37,7 +37,7 @@ Broccoli exposes a [Model Context Protocol](https://modelcontextprotocol.io) ser
 - **Drizzle ORM**, pinned to the 0.45 line. The TypeScript schema is the single source of truth; `drizzle-kit generate` produces SQL migrations that are reviewed in each pull request. Hand-written SQL in migrations is allowed for extensions, triggers and constraints.
 - Recursive CTEs (org chart, reporting lines), window functions and JSONB paths use the `sql` tag.
 - Upgrading to Drizzle 1.0 (new migration folder format, Relational Queries v2) is a planned task after the first release.
-- **Three Postgres roles:** a bootstrap role, `broccoli_migrations` (owns DDL) and `broccoli_app` (DML only; cannot update or delete audit rows). Migrations run at startup under the migrations role, serialised per database. The instance does not report ready until they succeed.
+- **One Postgres role** and one `DATABASE_URL`. The role owns the schema, so Broccoli runs on managed Postgres plans that offer no superuser. Migrations run at startup under a Postgres advisory lock, so instances starting together apply them one after another. The instance does not report ready until they succeed.
 - **Transactions.** One application-level unit-of-work callback supplies repositories bound to the same transaction. ORM types stay inside the Postgres adapters. Code never awaits work that needs another connection while holding locks.
 - `pgvector` is added only when a feature needs it.
 
@@ -60,7 +60,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 ## 7. Permissions and audit
 
 - **Permissions** combine row scopes (`self`, `team`, `reporting_line`, `all`) per object with field visibility (`public`, `protected`, `sensitive`). Both are enforced in the application layer: use cases receive an actor and grants, repositories apply scope predicates before pagination and counting, and results are projected to readable fields before leaving the use case. Filtering and sorting cannot reveal hidden fields.
-- **Audit.** Every mutation emits a domain event carrying the real actor (including impersonation), the client (web, MCP or job) and a trace id. Events land in an append-only `audit_log` that the application role can only insert into. There is no generic field history in the first release.
+- **Audit.** Every mutation emits a domain event carrying the real actor (including impersonation), the client (web, MCP or job) and a trace id. Events land in an append-only `audit_log`; a trigger rejects updates and deletes. There is no generic field history in the first release.
 - **Custom fields** are deferred to their own module design. The only decision now: no runtime DDL.
 
 ## 8. Frontend
@@ -76,8 +76,8 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 
 ## 9. Testing
 
-- **Vitest** everywhere. Domain unit tests sit next to the code. End-to-end API tests under `packages/api/test/e2e` call GraphQL over HTTP against a real Postgres.
-- **Isolation.** One template database is migrated once per run; each test file gets a fresh database cloned from it, so files run in parallel.
+- **Vitest** everywhere. Domain unit tests sit next to the code. End-to-end API tests under `packages/api/test/e2e` start the real server and call it over HTTP (GraphQL once it exists) against a real Postgres.
+- **Isolation.** One template database is migrated once per run; each test file gets a fresh database cloned from it, so files run in parallel. Database names carry a per-run id, so several runs can share one Postgres server.
 - **Test data** comes from typed factories per module that go through the public use cases, not raw inserts, plus one small seed for the demo company.
 - **Property-based tests** are used sparingly and agreed case by case (access rules are the first candidate).
 - MCP gets smoke tests after the first release.
@@ -87,9 +87,10 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **pnpm** workspaces and **Turborepo**, remote cache off.
 - Packages live under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages, which are added when there is code to share.
 - The repository root stays short: only files a tool requires there, such as the workspace files, the Compose file and `.env.example`, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/`.
+- **Builds.** The web app builds with Vite and the API with tsdown, so TypeScript resolves imports like a bundler: relative imports carry no file extension and a folder is imported by its name, which resolves to its `index.ts`.
 - **ESLint** (typescript-eslint, module boundaries, `@graphql-eslint`, project rules for SDL) and **Prettier**.
 - **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
-- **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; Docker image build; secret scanning.
+- **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; Docker image build; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.
 
 ## 11. Development environment
 
@@ -97,7 +98,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - Compose names the project after the folder, so each checkout or worktree gets its own containers, volumes and network. Host ports come from the gitignored `.env` (`HOST_WEB_PORT`, `HOST_PG_PORT`) with defaults in `.env.example`.
 - `pnpm dev` runs `dev.sh`, which traps exit and runs `docker compose down`, so Ctrl-C, errors and normal exits all tear the stack down.
 - `pnpm dev:prune` removes Compose projects whose checkout no longer exists.
-- End-to-end tests use the same Compose file with a `test` profile for a throwaway Postgres.
+- End-to-end tests use the same Compose file with a `test` profile for a throwaway Postgres. Its host port is picked freely unless `HOST_PG_PORT` is set, and the tests find it with `docker compose port`.
 
 ## 12. Configuration, secrets, observability and self-hosting
 

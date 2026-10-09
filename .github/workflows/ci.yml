@@ -12,10 +12,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Jobs run inside containers so that they share no host ports or file ownership
+# with other jobs on the same self-hosted machine.
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-latest
+  test:
+    name: Test
+    runs-on: self-hosted
+    container: node:24.21.0-bookworm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Installs pnpm from packageManager; pnpm then installs Node from devEngines.
@@ -26,3 +29,31 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm build
+
+  e2e:
+    name: End-to-end tests
+    runs-on: self-hosted
+    container: node:24.21.0-bookworm
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: broccoli
+          # Reachable only on the job network.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        options: >-
+          --tmpfs /var/lib/postgresql:size=1g
+          --health-cmd "pg_isready -U broccoli -d postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgres://broccoli@postgres:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          standalone: true
+          cache: true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:e2e
