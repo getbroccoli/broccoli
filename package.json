@@ -1,0 +1,32 @@
+{
+  "name": "broccoli",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.21.0",
+      "onFail": "download"
+    }
+  },
+  "prettier": "@broccoli/config/prettier",
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "format": "prettier --write . '!pnpm-lock.yaml'",
+    "format:check": "prettier --check . '!pnpm-lock.yaml'",
+    "check": "pnpm format:check && turbo run lint typecheck test"
+  },
+  "devDependencies": {
+    "@broccoli/config": "workspace:*",
+    "prettier": "3.9.9",
+    "turbo": "2.11.7"
+  }
+}

@@ -84,8 +84,9 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 
 ## 10. Tooling and layout
 
-- **pnpm** workspaces and **Turborepo** pipelines: `build`, `lint`, `typecheck`, `test`, `e2e`. Remote cache off.
-- Everything lives under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages (GraphQL documents and generated types, config, tsconfig). The repository root holds only configuration files, `docker-compose*.yml`, `.env.example`, `README.md`, `LICENSE` and `docs/`.
+- **pnpm** workspaces and **Turborepo** pipelines: `build`, `lint`, `typecheck`, `test`, `test:e2e`. Remote cache off. `pnpm check` runs the format check, lint, type check and unit tests.
+- Everything lives under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages. Shared TypeScript, ESLint and Prettier configuration lives in one `config` package; other shared packages (GraphQL documents and generated types) are added when there is code to share.
+- **A short root.** It holds only the files the tools require there (`package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `turbo.json`), `docker-compose*.yml`, `.env.example`, `README.md`, `LICENSE`, `AGENTS.md` and `docs/`. Images for the README and GitHub live in `.github/assets/`.
 - **ESLint** (typescript-eslint, module boundaries, `@graphql-eslint`, project rules for SDL) and **Prettier**.
 - **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
 - **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; Docker image build; secret scanning.
