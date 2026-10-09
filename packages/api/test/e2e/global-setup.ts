@@ -2,12 +2,8 @@ import { randomBytes } from "node:crypto";
 
 import type { TestProject } from "vitest/node";
 
-import { resolveDatabaseServerUrl } from "./support/database-server.js";
-import {
-  createTemplateDatabase,
-  dropRunDatabases,
-  type TestRun,
-} from "./support/test-databases.js";
+import { resolveDatabaseServerUrl } from "./support/database-server";
+import { createTemplateDatabase, dropRunDatabases, type TestRun } from "./support/test-databases";
 
 declare module "vitest" {
   export interface ProvidedContext {

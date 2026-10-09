@@ -1,6 +1,6 @@
 import pg from "pg";
 
-import { MIGRATION_LOCK_KEY } from "../../../src/db/index.js";
+import { MIGRATION_LOCK_KEY } from "../../../src/db";
 
 /** Holds the migration lock the way a competing instance would while migrating. */
 export interface MigrationLockHolder {

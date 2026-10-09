@@ -87,6 +87,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **pnpm** workspaces and **Turborepo**, remote cache off.
 - Packages live under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages, which are added when there is code to share.
 - The repository root stays short: only files a tool requires there, such as the workspace files, the Compose file and `.env.example`, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/`.
+- **Builds.** The web app builds with Vite and the API with tsdown, so TypeScript resolves imports like a bundler: relative imports carry no file extension and a folder is imported by its name, which resolves to its `index.ts`.
 - **ESLint** (typescript-eslint, module boundaries, `@graphql-eslint`, project rules for SDL) and **Prettier**.
 - **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
 - **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; Docker image build; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.

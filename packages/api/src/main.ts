@@ -1,6 +1,6 @@
-import { loadEnv } from "./env.js";
-import { createLogger } from "./logger.js";
-import { startServer } from "./server.js";
+import { loadEnv } from "./env";
+import { createLogger } from "./logger";
+import { startServer } from "./server";
 
 const env = loadEnv();
 const logger = createLogger(env.logLevel);

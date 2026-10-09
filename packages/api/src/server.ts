@@ -3,11 +3,11 @@ import type { AddressInfo } from "node:net";
 
 import express from "express";
 
-import { connectDatabase, type Database } from "./db/index.js";
-import type { Env } from "./env.js";
-import { healthRouter } from "./health.js";
-import type { Logger } from "./logger.js";
-import { Readiness } from "./readiness.js";
+import { connectDatabase, type Database } from "./db";
+import type { Env } from "./env";
+import { healthRouter } from "./health";
+import type { Logger } from "./logger";
+import { Readiness } from "./readiness";
 
 export type ServerEnv = Pick<Env, "databaseUrl" | "port">;
 

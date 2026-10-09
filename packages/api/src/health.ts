@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import type { Readiness } from "./readiness.js";
+import type { Readiness } from "./readiness";
 
 /**
  * Liveness and readiness probes for orchestrators and load balancers.

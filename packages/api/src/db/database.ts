@@ -1,7 +1,7 @@
 import pg from "pg";
 
-import type { Logger } from "../logger.js";
-import { MigrationRun } from "./migration-run.js";
+import type { Logger } from "../logger";
+import { MigrationRun } from "./migration-run";
 
 const CONNECTION_TIMEOUT_MS = 5_000;
 const CONNECTION_CHECK_TIMEOUT_MS = 2_000;

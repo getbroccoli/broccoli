@@ -1,9 +1,9 @@
 import { expect, inject, it, onTestFinished } from "vitest";
 
-import { holdMigrationLock } from "./support/migration-lock.js";
-import { startDisconnectingProxy } from "./support/disconnecting-proxy.js";
-import { createEmptyTestDatabase, type TestDatabase } from "./support/test-databases.js";
-import { startTestServer, waitForStartup } from "./support/test-server.js";
+import { holdMigrationLock } from "./support/migration-lock";
+import { startDisconnectingProxy } from "./support/disconnecting-proxy";
+import { createEmptyTestDatabase, type TestDatabase } from "./support/test-databases";
+import { startTestServer, waitForStartup } from "./support/test-server";
 
 const run = inject("testRun");
 
