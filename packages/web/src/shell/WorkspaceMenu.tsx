@@ -1,5 +1,5 @@
 import { Buildings, CaretDown, Plant } from "@phosphor-icons/react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useRef } from "react";
 
 import {
@@ -11,16 +11,20 @@ import {
 import { t } from "@/i18n";
 
 export function WorkspaceMenu() {
-  // An item that navigates hands focus to the new page; other closes return it to the trigger.
-  const navigating = useRef(false);
-  const restoreFocus = () => {
-    const restore = !navigating.current;
-    navigating.current = false;
-    return restore;
-  };
+  const router = useRouter();
+  const openedOnPath = useRef<string | null>(null);
+  // Return focus to the trigger unless the page changed, in which case the new page's
+  // heading takes it (see `useFocusHeadingOnNavigation`).
+  const isStillOnOpeningPage = () => router.state.location.pathname === openedOnPath.current;
 
   return (
-    <DropdownMenu>
+    <DropdownMenu
+      onOpenChange={(open) => {
+        if (open) {
+          openedOnPath.current = router.state.location.pathname;
+        }
+      }}
+    >
       <DropdownMenuTrigger
         render={
           <button
@@ -41,13 +45,8 @@ export function WorkspaceMenu() {
           </button>
         }
       />
-      <DropdownMenuContent align="start" className="w-60" finalFocus={restoreFocus}>
-        <DropdownMenuItem
-          render={<Link to="/company" />}
-          onClick={() => {
-            navigating.current = true;
-          }}
-        >
+      <DropdownMenuContent align="start" className="w-60" finalFocus={isStillOnOpeningPage}>
+        <DropdownMenuItem render={<Link to="/company" />}>
           <Buildings size={14} />
           {t("workspace.company")}
         </DropdownMenuItem>
