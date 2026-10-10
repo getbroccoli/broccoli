@@ -1,0 +1,54 @@
+# Development stack, layered on docker-compose.yml by `pnpm dev` (packages/scripts/dev.sh),
+# which installs node_modules on the host first. Relative paths resolve from the repository root.
+
+x-dev-service: &dev-service
+  image: node:24.21.0-bookworm
+  # The host user, so files written to the checkout (routeTree.gen.ts) stay theirs.
+  user: ${HOST_UID:?Start the development stack with pnpm dev}:${HOST_GID:?Start the development stack with pnpm dev}
+  init: true
+  volumes:
+    - .:/repo
+
+services:
+  # The production image does not run in development.
+  broccoli:
+    profiles: [self-host]
+
+  postgres:
+    volumes:
+      - dev-postgres-data:/var/lib/postgresql
+
+  api:
+    <<: *dev-service
+    working_dir: /repo/packages/api
+    command: [node_modules/.bin/tsx, watch, src/main.ts]
+    environment:
+      DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
+      LOG_LEVEL: ${LOG_LEVEL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    <<: *dev-service
+    working_dir: /repo/packages/web
+    command: [node_modules/.bin/vite]
+    environment:
+      API_PROXY_TARGET: http://api:3000
+    ports:
+      # An empty HOST_WEB_PORT picks a free port, so worktrees never collide. Localhost only:
+      # the dev server has no authentication.
+      - 127.0.0.1:${HOST_WEB_PORT:-0}:5173
+    # Ready once the API answers through the Vite proxy.
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, http://localhost:5173/readyz]
+      interval: 2s
+      timeout: 3s
+      start_period: 60s
+
+volumes:
+  # Development data stays apart from the production image's postgres-data.
+  dev-postgres-data:
+    labels:
+      # `pnpm dev:prune` removes this project once the checkout folder is gone.
+      org.getbroccoli.checkout: ${BROCCOLI_CHECKOUT:?Start the development stack with pnpm dev}

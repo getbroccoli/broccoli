@@ -15,7 +15,8 @@
   },
   "prettier": "@broccoli/config/prettier",
   "scripts": {
-    "start": "sh packages/scripts/start.sh",
+    "dev": "sh packages/scripts/dev.sh",
+    "dev:prune": "node packages/scripts/prune.mjs",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
