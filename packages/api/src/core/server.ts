@@ -7,8 +7,10 @@ import express from "express";
 
 import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
+import { startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import type { Logger } from "./logger";
+import type { ModuleManifest } from "./module-manifest";
 import { Readiness } from "./readiness";
 
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
@@ -29,21 +31,33 @@ export interface RunningServer {
  * Starts listening at once and migrates the database in the background, retrying
  * until it succeeds; `/readyz` reports ready when the migrations have succeeded.
  */
-export async function startServer(env: ServerEnv, logger: Logger): Promise<RunningServer> {
+export async function startServer(
+  env: ServerEnv,
+  logger: Logger,
+  modules: readonly ModuleManifest[],
+): Promise<RunningServer> {
   const database = connectDatabase(env.databaseUrl, logger);
   const readiness = new Readiness(() => database.checkConnection());
 
   const app = express();
   app.disable("x-powered-by");
+  const httpServer = createServer(app);
+  let graphql: GraphqlApi;
+  try {
+    graphql = await startGraphqlApi(modules, httpServer, logger);
+  } catch (error) {
+    await database.close();
+    throw error;
+  }
   app.use(healthRouter(readiness));
+  app.use(graphql.router);
   if (env.webDir) {
     app.use(webAppRouter(env.webDir));
   }
-
-  let httpServer: Server;
   try {
-    httpServer = await listen(app, env.port);
+    await listen(httpServer, env.port);
   } catch (error) {
+    await graphql.stop();
     await database.close();
     throw error;
   }
@@ -57,7 +71,8 @@ export async function startServer(env: ServerEnv, logger: Logger): Promise<Runni
     stop: () => {
       stopping ??= (async () => {
         stopped.abort();
-        await close(httpServer);
+        // Drains in-flight requests, then closes the HTTP server.
+        await graphql.stop();
         await database.close();
         await migration;
       })();
@@ -101,19 +116,12 @@ function webAppRouter(webDir: string): express.Router {
     });
 }
 
-function listen(app: express.Express, port: number): Promise<Server> {
+function listen(server: Server, port: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    const server = createServer(app);
     server.once("error", reject);
     server.listen(port, () => {
       server.off("error", reject);
-      resolve(server);
+      resolve();
     });
-  });
-}
-
-function close(server: Server): Promise<void> {
-  return new Promise((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
   });
 }

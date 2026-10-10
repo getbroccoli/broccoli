@@ -2,6 +2,7 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import { createLogger } from "../../../src/core/logger";
 import { startServer, type RunningServer } from "../../../src/core/server";
+import { modules } from "../../../src/modules";
 
 export interface Readiness {
   httpStatus: number;
@@ -13,7 +14,7 @@ const POLL_INTERVAL_MS = 25;
 
 /** Starts the real API on a free port. */
 export function startTestServer(databaseUrl: string, webDir?: string): Promise<RunningServer> {
-  return startServer({ databaseUrl, port: 0, webDir }, createLogger("silent"));
+  return startServer({ databaseUrl, port: 0, webDir }, createLogger("silent"), modules);
 }
 
 /** Polls `/readyz` until the server has finished starting and returns its answer. */
