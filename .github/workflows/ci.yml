@@ -32,8 +32,8 @@ jobs:
 
   image:
     name: Docker image
-    runs-on: self-hosted
-    # Build only: running containers would share the host's Docker daemon and networks.
+    # GitHub-hosted: a job with Docker access on the shared self-hosted host could reach it.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: docker build -f packages/api/Dockerfile .

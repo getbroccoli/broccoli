@@ -1,9 +1,11 @@
+import { createServer, type AddressInfo } from "node:net";
+
 import { expect, inject, it, onTestFinished } from "vitest";
 
 import { holdMigrationLock } from "./support/migration-lock";
 import { startDisconnectingProxy } from "./support/disconnecting-proxy";
 import { createEmptyTestDatabase, type TestDatabase } from "./support/test-databases";
-import { startTestServer, waitForStartup } from "./support/test-server";
+import { fetchReadiness, startTestServer, waitForStartup } from "./support/test-server";
 
 const run = inject("testRun");
 
@@ -49,3 +51,26 @@ it("stops while another instance holds the migration lock", async () => {
 
   await expect(server.stop()).resolves.toBeUndefined();
 }, 5_000);
+
+it("becomes ready when the database comes up after it started", async () => {
+  const database = await emptyDatabase();
+  const port = await findFreePort();
+  const databaseUrl = new URL(database.url);
+  databaseUrl.host = `127.0.0.1:${port}`;
+  const server = await startTestServer(databaseUrl.href);
+  onTestFinished(() => server.stop());
+  expect(await waitForStartup(server)).toEqual(UNAVAILABLE);
+
+  const proxy = await startDisconnectingProxy(database.url, port);
+  onTestFinished(() => proxy.disconnect());
+
+  await expect.poll(() => fetchReadiness(server), { timeout: 10_000 }).toEqual(READY);
+});
+
+async function findFreePort(): Promise<number> {
+  const probe = createServer();
+  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
+  const { port } = probe.address() as AddressInfo;
+  await new Promise((resolve) => probe.close(resolve));
+  return port;
+}

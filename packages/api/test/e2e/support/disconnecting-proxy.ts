@@ -10,7 +10,11 @@ export interface DisconnectingProxy {
   disconnect(): Promise<void>;
 }
 
-export async function startDisconnectingProxy(databaseUrl: string): Promise<DisconnectingProxy> {
+/** Listens on `port`, or on a free port when it is 0. */
+export async function startDisconnectingProxy(
+  databaseUrl: string,
+  port = 0,
+): Promise<DisconnectingProxy> {
   const target = new URL(databaseUrl);
   const sockets = new Set<Socket>();
 
@@ -23,7 +27,7 @@ export async function startDisconnectingProxy(databaseUrl: string): Promise<Disc
     }
     client.pipe(upstream).pipe(client);
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(port, "127.0.0.1", resolve));
 
   const proxyUrl = new URL(databaseUrl);
   proxyUrl.host = `127.0.0.1:${(server.address() as AddressInfo).port}`;

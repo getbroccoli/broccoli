@@ -1,6 +1,7 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
+import { resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import express from "express";
 
@@ -9,6 +10,9 @@ import type { Env } from "./env";
 import { healthRouter } from "./health";
 import type { Logger } from "./logger";
 import { Readiness } from "./readiness";
+
+/** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
+const MIGRATION_RETRY_MS = 1_000;
 
 export type ServerEnv = Pick<Env, "databaseUrl" | "port" | "webDir">;
 
@@ -22,8 +26,8 @@ export interface RunningServer {
 }
 
 /**
- * Starts listening at once and migrates the database in the background; `/readyz`
- * reports ready when the migrations have succeeded.
+ * Starts listening at once and migrates the database in the background, retrying
+ * until it succeeds; `/readyz` reports ready when the migrations have succeeded.
  */
 export async function startServer(env: ServerEnv, logger: Logger): Promise<RunningServer> {
   const database = connectDatabase(env.databaseUrl, logger);
@@ -44,13 +48,15 @@ export async function startServer(env: ServerEnv, logger: Logger): Promise<Runni
     throw error;
   }
 
-  const migration = migrate(database, readiness, logger);
+  const stopped = new AbortController();
+  const migration = migrate(database, readiness, logger, stopped.signal);
   let stopping: Promise<void> | undefined;
 
   return {
     url: `http://localhost:${(httpServer.address() as AddressInfo).port}`,
     stop: () => {
       stopping ??= (async () => {
+        stopped.abort();
         await close(httpServer);
         await database.close();
         await migration;
@@ -60,20 +66,33 @@ export async function startServer(env: ServerEnv, logger: Logger): Promise<Runni
   };
 }
 
-async function migrate(database: Database, readiness: Readiness, logger: Logger): Promise<void> {
-  try {
-    await database.migrate();
-    readiness.markMigrated();
-    logger.info("Database migrations applied");
-  } catch (error) {
-    readiness.markFailed();
-    logger.error({ err: error }, "Database migrations failed; not ready");
+async function migrate(
+  database: Database,
+  readiness: Readiness,
+  logger: Logger,
+  stopped: AbortSignal,
+): Promise<void> {
+  while (!stopped.aborted) {
+    try {
+      await database.migrate();
+      readiness.markMigrated();
+      logger.info("Database migrations applied");
+      return;
+    } catch (error) {
+      if (stopped.aborted) {
+        return;
+      }
+      readiness.markFailed();
+      logger.error({ err: error }, "Database migrations failed; not ready, retrying");
+    }
+    await delay(MIGRATION_RETRY_MS, undefined, { signal: stopped }).catch(() => {});
   }
 }
 
 /** Serves the built web app; other GET paths get `index.html` so router links load. */
 function webAppRouter(webDir: string): express.Router {
-  const indexHtml = join(webDir, "index.html");
+  // `sendFile` needs an absolute path.
+  const indexHtml = resolve(webDir, "index.html");
   return express
     .Router()
     .use(express.static(webDir))

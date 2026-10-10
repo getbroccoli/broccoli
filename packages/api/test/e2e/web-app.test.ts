@@ -1,6 +1,6 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
@@ -54,6 +54,16 @@ describe("with a web app folder", () => {
 
     expect(await response.json()).toEqual({ status: "ok" });
   });
+});
+
+it("serves page links from a web app folder given as a relative path", async () => {
+  const webDir = await mkdtemp(join(tmpdir(), "broccoli-web-"));
+  onTestFinished(() => rm(webDir, { recursive: true, force: true }));
+  await writeFile(join(webDir, "index.html"), INDEX_HTML);
+  const server = await startTestServer(UNREACHABLE_DATABASE_URL, relative(process.cwd(), webDir));
+  onTestFinished(() => server.stop());
+
+  expect(await (await fetch(`${server.url}/people/123`)).text()).toBe(INDEX_HTML);
 });
 
 it("serves no web app without a web app folder", async () => {
