@@ -91,13 +91,13 @@ async function migrate(
 
 /** Serves the built web app; other GET paths get `index.html` so router links load. */
 function webAppRouter(webDir: string): express.Router {
-  // `sendFile` needs an absolute path.
-  const indexHtml = resolve(webDir, "index.html");
+  // `root` makes `sendFile` accept a relative folder and hidden parent folders.
+  const root = resolve(webDir);
   return express
     .Router()
-    .use(express.static(webDir))
+    .use(express.static(root))
     .get("/{*path}", (_request, response) => {
-      response.sendFile(indexHtml);
+      response.sendFile("index.html", { root });
     });
 }
 

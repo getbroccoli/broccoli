@@ -56,8 +56,8 @@ describe("with a web app folder", () => {
   });
 });
 
-it("serves page links from a web app folder given as a relative path", async () => {
-  const webDir = await mkdtemp(join(tmpdir(), "broccoli-web-"));
+it("serves page links from a relative web app folder inside a hidden folder", async () => {
+  const webDir = await mkdtemp(join(tmpdir(), ".broccoli-web-"));
   onTestFinished(() => rm(webDir, { recursive: true, force: true }));
   await writeFile(join(webDir, "index.html"), INDEX_HTML);
   const server = await startTestServer(UNREACHABLE_DATABASE_URL, relative(process.cwd(), webDir));
