@@ -1,7 +1,7 @@
 import { setTimeout as delay } from "node:timers/promises";
 
-import { createLogger } from "../../../src/logger";
-import { startServer, type RunningServer } from "../../../src/server";
+import { createLogger } from "../../../src/core/logger";
+import { startServer, type RunningServer } from "../../../src/core/server";
 
 export interface Readiness {
   httpStatus: number;
