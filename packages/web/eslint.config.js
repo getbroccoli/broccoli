@@ -20,7 +20,7 @@ export default defineConfig(
         "error",
         {
           // `shadcn add` sometimes writes this import (and adds an unrelated `cn` package).
-          paths: [{ name: "cn", message: 'Import cn from "@/lib/utils".' }],
+          paths: [{ name: "cn", message: 'Import cn from "@/lib/class-names".' }],
         },
       ],
     },
