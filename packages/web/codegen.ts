@@ -6,7 +6,7 @@ const config: CodegenConfig = {
   documents: "src/**/*.graphql",
   ignoreNoDocuments: true,
   generates: {
-    "src/generated/": {
+    "src/__generated__/": {
       preset: "client",
       // Apollo Client's data masking replaces the preset's fragment masking.
       presetConfig: { fragmentMasking: false },
@@ -18,8 +18,8 @@ const config: CodegenConfig = {
         strictScalars: true,
       },
     },
-    "src/generated/possible-types.ts": { plugins: ["fragment-matcher"] },
-    "src/generated/type-policies.ts": { plugins: ["./codegen/type-policies.ts"] },
+    "src/__generated__/possible-types.ts": { plugins: ["fragment-matcher"] },
+    "src/__generated__/type-policies.ts": { plugins: ["./codegen/type-policies.ts"] },
   },
 };
 

@@ -6,7 +6,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig(
   eslintConfig(import.meta.dirname),
-  globalIgnores(["src/generated/"]),
+  globalIgnores(["src/__generated__/"]),
   {
     files: ["**/*.{js,ts,tsx}"],
     extends: [

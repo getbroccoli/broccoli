@@ -1,6 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 
-import { PingDocument } from "@/generated/graphql";
+import { PingDocument } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
 /** Temporary debug check of the API connection; remove once the People page lists people. */
