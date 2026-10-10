@@ -1,5 +1,6 @@
 export { expect } from "vitest";
 export { createBrowser, type Browser } from "./browser";
+export { createEmployee, type Employee, type EmployeeCreateInput } from "./employees";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnecting-proxy";
 export { holdMigrationLock, type MigrationLockHolder } from "./migration-lock";
 export { createEmptyTestDatabase, createTestDatabase, type TestDatabase } from "./test-databases";

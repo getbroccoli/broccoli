@@ -7,6 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { toNodeHandler } from "better-auth/node";
 import express from "express";
 
+import { resolveActor } from "./actor";
 import { createAuth } from "./auth";
 import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
@@ -14,7 +15,7 @@ import { startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { setupPlugin } from "./instance";
 import type { Logger } from "./logger";
-import type { ModuleManifest } from "./module-manifest";
+import type { ModuleDependencies, ModuleManifest } from "./module-manifest";
 import { Readiness } from "./readiness";
 import { readOrCreateSecret } from "./secrets";
 
@@ -42,7 +43,7 @@ export interface RunningServer {
 export async function startServer(
   env: ServerEnv,
   logger: Logger,
-  modules: readonly ModuleManifest[],
+  createModules: (dependencies: ModuleDependencies) => readonly ModuleManifest[],
 ): Promise<RunningServer> {
   // Built first: a web app folder without `index.html` fails startup before anything opens.
   const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
@@ -62,7 +63,12 @@ export async function startServer(
   const httpServer = createServer(app);
   let graphql: GraphqlApi;
   try {
-    graphql = await startGraphqlApi(modules, httpServer, logger);
+    graphql = await startGraphqlApi(
+      createModules({ orm: database.orm }),
+      httpServer,
+      logger,
+      (headers) => resolveActor(auth, database.orm, headers),
+    );
   } catch (error) {
     await database.close();
     throw error;

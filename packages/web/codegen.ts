@@ -2,7 +2,7 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
   // Introspection is off, so the schema comes from the API's SDL files.
-  schema: "../api/src/modules/**/*.graphql",
+  schema: "../api/src/**/*.graphql",
   documents: "src/**/*.graphql",
   ignoreNoDocuments: true,
   generates: {
@@ -16,6 +16,8 @@ const config: CodegenConfig = {
         useTypeImports: true,
         enumsAsTypes: true,
         strictScalars: true,
+        // Dates stay strings on the web; see docs/architecture.md §8.
+        scalars: { Date: "string", DateTime: "string" },
       },
     },
     "src/__generated__/possible-types.ts": { plugins: ["fragment-matcher"] },
