@@ -1,6 +1,37 @@
 services:
+  # Broccoli for self-hosting: `docker compose up` needs no .env.
+  broccoli:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
+      LOG_LEVEL: ${LOG_LEVEL:-}
+    ports:
+      # `pnpm start` sets DEFAULT_HOST_WEB_PORT=0, so Docker picks a free port.
+      - ${HOST_WEB_PORT:-${DEFAULT_HOST_WEB_PORT:-8080}}:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: broccoli
+      # Never publish this port: trust auth is safe only on the Compose network.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U broccoli -d broccoli]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
   # Throwaway Postgres for end-to-end tests: data on tmpfs, durability off.
-  # Start it with `docker compose --profile test up -d --wait`.
+  # Start it with `docker compose up -d --wait postgres-test`.
   postgres-test:
     image: postgres:18-alpine
     profiles: [test]
@@ -26,3 +57,6 @@ services:
       interval: 1s
       timeout: 3s
       retries: 30
+
+volumes:
+  postgres-data:

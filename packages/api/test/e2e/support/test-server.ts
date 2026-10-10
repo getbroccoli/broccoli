@@ -12,8 +12,8 @@ const STARTUP_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 25;
 
 /** Starts the real API on a free port. */
-export function startTestServer(databaseUrl: string): Promise<RunningServer> {
-  return startServer({ databaseUrl, port: 0 }, createLogger("silent"));
+export function startTestServer(databaseUrl: string, webDir?: string): Promise<RunningServer> {
+  return startServer({ databaseUrl, port: 0, webDir }, createLogger("silent"));
 }
 
 /** Polls `/readyz` until the server has finished starting and returns its answer. */
@@ -29,7 +29,11 @@ export async function waitForStartup(server: RunningServer): Promise<Readiness> 
   throw new Error(`Server did not finish starting within ${STARTUP_TIMEOUT_MS} ms`);
 }
 
-async function fetchReadiness(server: RunningServer, timeoutMs: number): Promise<Readiness> {
+/** One `/readyz` answer. */
+export async function fetchReadiness(
+  server: RunningServer,
+  timeoutMs = STARTUP_TIMEOUT_MS,
+): Promise<Readiness> {
   const response = await fetch(`${server.url}/readyz`, {
     signal: AbortSignal.timeout(timeoutMs),
   });

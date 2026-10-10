@@ -31,9 +31,9 @@ How we write tests in Broccoli. The decisions behind them are in [§9 of the arc
 End-to-end tests need Postgres. Start this checkout's throwaway instance, run the tests, and stop it when you are done:
 
 ```sh
-docker compose --profile test up -d --wait
+docker compose up -d --wait postgres-test
 pnpm test:e2e
-docker compose --profile test down
+docker compose rm --stop --force postgres-test
 ```
 
-Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; `down` discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.
+Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; removing the container discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.

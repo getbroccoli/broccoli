@@ -26,8 +26,6 @@
 
 ## Quick install
 
-Coming soon: the code is moving into this repository.
-
 ```sh
 docker compose up
 ```
