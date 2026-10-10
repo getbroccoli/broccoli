@@ -6,10 +6,10 @@ This document records the architecture decisions behind Broccoli. It is edited i
 
 - **Modular monolith.** One API process, one web single-page app, one container image. Modules live in `packages/api/src/modules/<name>/`; the code they share (server, database, GraphQL) lives in `packages/api/src/core/`.
 - **Single-tenant.** One deployment and one Postgres database per company, for self-hosted and managed installs alike. There is no tenant column and no row-level security; the managed service runs one instance per company and migrates each.
-- **Four layers per module.**
+- **Layers per module.**
   - `domain`: pure TypeScript, no I/O.
   - `application`: use cases. The single place for authorisation, transactions, audit and events.
-  - `adapters`: GraphQL, MCP and Postgres.
+  - `graphql`, `mcp` and `db`: adapters, named after their technology like the matching folders in `core/`.
   - `index.ts`: the module's public surface.
 - **Module manifest.** Each module exports one manifest: SDL and resolvers, MCP tools, event handlers, jobs. The core iterates over the list of manifests. No shared request context or central configuration has to be edited to add a module.
 - **Cross-module calls** go through the other module's public use cases or its events. A module never reads another module's tables.

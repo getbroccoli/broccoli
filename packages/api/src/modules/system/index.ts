@@ -1,11 +1,10 @@
-import { readFileSync } from "node:fs";
-
+import { readSdl } from "../../core/graphql";
 import type { ModuleManifest } from "../../core/module-manifest";
-import { resolvers } from "./adapters/graphql/resolvers";
+import { resolvers } from "./graphql/resolvers";
 
 /** Platform-level API fields that belong to no business module. */
 export const system: ModuleManifest = {
   name: "system",
-  typeDefs: readFileSync(new URL("./adapters/graphql/schema.graphql", import.meta.url), "utf8"),
+  typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
   resolvers,
 };
