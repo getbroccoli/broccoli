@@ -91,15 +91,15 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - The repository root stays short: only files a tool requires there, such as the workspace files, the Compose file and `.env.example`, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/`.
 - **Builds.** The web app builds with Vite and the API with tsdown, so TypeScript resolves imports like a bundler: relative imports carry no file extension and a folder is imported by its name, which resolves to its `index.ts`.
 - **ESLint** (typescript-eslint, module boundaries, `@graphql-eslint`, project rules for SDL) and **Prettier**.
-- **Scripts** are kept to a minimum: `packages/scripts/start.sh`, `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
+- **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
 - **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.
 
 ## 11. Development environment
 
-- `docker-compose.yml` is the self-hosting file: Postgres, the Broccoli image (built from `packages/api/Dockerfile`) and, later, the updater. `docker compose up` needs no `.env` and serves Broccoli on port 8080. `docker-compose.dev.yml` overrides it for development: `api` runs `tsx watch`, `web` runs the Vite dev server, the checkout is bind-mounted and `node_modules` lives in a named volume per project.
-- Compose names the project after the folder, so each checkout or worktree gets its own containers, volumes and network. Host ports come from the gitignored `.env` (`HOST_WEB_PORT`, `HOST_PG_PORT`) with defaults in `.env.example`. `pnpm start` runs `start.sh`, which starts the stack on a free host port unless `HOST_WEB_PORT` is set and prints the URL, so worktrees run side by side.
-- `pnpm dev` runs `dev.sh`, which traps exit and runs `docker compose down`, so Ctrl-C, errors and normal exits all tear the stack down.
-- `pnpm dev:prune` removes Compose projects whose checkout no longer exists.
+- `docker-compose.yml` is the self-hosting file: Postgres, the Broccoli image (built from `packages/api/Dockerfile`) and, later, the updater. `docker compose up` needs no `.env` and serves Broccoli on port 8080. `packages/scripts/docker-compose.dev.yml` overrides it for development: `api` runs `tsx watch`, `web` runs the Vite dev server and proxies API paths to `api`, the checkout is bind-mounted, containers run as the host user and `node_modules` lives in named volumes per project. pnpm is needed only for development; self-hosters run `docker compose up`.
+- Compose names the project after the folder, so each checkout or worktree gets its own containers, volumes and network. Host ports come from the gitignored `.env` (`HOST_WEB_PORT`, `HOST_PG_PORT`) with defaults in `.env.example`. `HOST_WEB_PORT=0` picks a free port, so the production image runs from any worktree with `HOST_WEB_PORT=0 docker compose up --build`.
+- `pnpm dev` runs `dev.sh`, which starts the development stack on a free host port unless `HOST_WEB_PORT` is set, prints the URL and follows the logs. It traps exit and runs `docker compose down`, so Ctrl-C, errors and normal exits all tear the stack down; volumes are kept.
+- `pnpm dev:prune` removes Compose projects whose checkout no longer exists. `dev.sh` labels the Postgres volume with its checkout folder; unlabelled projects are never touched.
 - End-to-end tests use the same Compose file with a `test` profile for a throwaway Postgres. Its host port is picked freely unless `HOST_PG_PORT` is set, and the tests find it with `docker compose port`.
 
 ## 12. Configuration, secrets, observability and self-hosting

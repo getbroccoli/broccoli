@@ -8,8 +8,8 @@ services:
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
     ports:
-      # `pnpm start` sets DEFAULT_HOST_WEB_PORT=0, so Docker picks a free port.
-      - ${HOST_WEB_PORT:-${DEFAULT_HOST_WEB_PORT:-8080}}:3000
+      # HOST_WEB_PORT=0 picks a free port, so worktrees run side by side.
+      - ${HOST_WEB_PORT:-8080}:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,3 +60,6 @@ services:
 
 volumes:
   postgres-data:
+    labels:
+      # Set by `pnpm dev`; `pnpm dev:prune` removes the stack once this folder is gone.
+      org.getbroccoli.checkout: ${BROCCOLI_CHECKOUT:-}
