@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { test as baseTest, inject } from "vitest";
+import { inject } from "vitest";
 
 import type { RunningServer } from "../../../src/core/server";
 import { createBrowser, type Browser } from "./browser";
@@ -68,16 +68,6 @@ export class TestEnv {
     await rm(this.dataDir, { recursive: true, force: true });
   }
 }
-
-/** Vitest's `test` with a fresh `env` for every test. */
-export const test = baseTest.extend<{ env: TestEnv }>({
-  // eslint-disable-next-line no-empty-pattern -- Vitest reads fixture dependencies from this pattern.
-  env: async ({}, use) => {
-    const env = await TestEnv.start();
-    await use(env);
-    await env.stop();
-  },
-});
 
 async function startReady(
   db: TestDatabase,

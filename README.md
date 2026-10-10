@@ -30,7 +30,7 @@
 docker compose up
 ```
 
-Then open http://localhost:8080 and create the owner account. Until you do, anyone who can reach the port can claim it, so set up the owner before exposing Broccoli to a network.
+Open http://localhost:8080.
 
 ## License
 
