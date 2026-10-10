@@ -1,0 +1,12 @@
+"A calendar day in `YYYY-MM-DD` format."
+scalar Date
+
+"An instant in ISO 8601 format with a time zone; returned in UTC."
+scalar DateTime
+
+"Where a page of a connection ends."
+type PageInfo {
+  hasNextPage: Boolean!
+  "The cursor to pass as `after` for the next page; null on an empty page."
+  endCursor: String
+}
