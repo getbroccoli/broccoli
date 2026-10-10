@@ -1,8 +1,8 @@
-// Removes the Compose projects of checkouts that no longer exist. Only projects whose
-// Postgres volume `pnpm dev` labelled with its checkout are considered; nothing else on
-// the Docker host is touched.
+// Removes the Compose projects of checkouts that no longer exist. Only projects that
+// `pnpm dev` labelled with their checkout are considered; nothing else on the Docker host
+// is touched.
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { statSync } from "node:fs";
 
 const CHECKOUT_LABEL = "org.getbroccoli.checkout";
 const PROJECT_LABEL = "com.docker.compose.project";
@@ -10,6 +10,16 @@ const PROJECT_LABEL = "com.docker.compose.project";
 /** Runs a Docker command and returns its output lines. */
 function docker(...args) {
   return execFileSync("docker", args, { encoding: "utf8" }).split("\n").filter(Boolean);
+}
+
+/** Only a confirmed ENOENT counts: an unreadable folder may still be someone's checkout. */
+function isDeleted(folder) {
+  try {
+    statSync(folder);
+    return false;
+  } catch (error) {
+    return error.code === "ENOENT";
+  }
 }
 
 function projectsOfMissingCheckouts() {
@@ -22,7 +32,7 @@ function projectsOfMissingCheckouts() {
     `{{.Label "${PROJECT_LABEL}"}}\t{{.Label "${CHECKOUT_LABEL}"}}`,
   ).map((line) => line.split("\t"));
   const projects = volumes
-    .filter(([project, checkout]) => project && checkout && !existsSync(checkout))
+    .filter(([project, checkout]) => project && checkout && isDeleted(checkout))
     .map(([project]) => project);
   return [...new Set(projects)];
 }

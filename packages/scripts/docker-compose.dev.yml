@@ -66,8 +66,9 @@ services:
       API_PROXY_TARGET: http://api:3000
     command: [corepack, pnpm, --filter, "@broccoli/web", dev]
     ports:
-      # An empty HOST_WEB_PORT picks a free port, so worktrees never collide.
-      - ${HOST_WEB_PORT:-0}:5173
+      # An empty HOST_WEB_PORT picks a free port, so worktrees never collide. Localhost only:
+      # the dev server has no authentication.
+      - 127.0.0.1:${HOST_WEB_PORT:-0}:5173
     depends_on:
       deps:
         condition: service_completed_successfully
@@ -89,3 +90,7 @@ volumes:
   config-node-modules:
   web-node-modules:
   dev-home:
+    labels:
+      # `pnpm dev:prune` removes this project once the checkout folder is gone. A dev-only
+      # volume: changing a label on the Postgres volume would make Compose recreate it.
+      org.getbroccoli.checkout: ${BROCCOLI_CHECKOUT:?Start the development stack with pnpm dev}
