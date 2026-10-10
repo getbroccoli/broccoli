@@ -10,7 +10,7 @@ const MAX_LINES_PER_FILE = 300;
  */
 export function eslintConfig(packageDir) {
   return defineConfig(
-    globalIgnores(["dist/", "coverage/"]),
+    globalIgnores(["dist/", "coverage/", "**/*.gen.ts"]),
     js.configs.recommended,
     tseslint.configs.recommendedTypeChecked,
     {

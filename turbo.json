@@ -5,15 +5,24 @@
     "enabled": false
   },
   "tasks": {
+    "codegen": {
+      "outputs": ["src/**/*.gen.ts"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "codegen"],
       "outputs": ["dist/**"]
     },
-    "lint": {},
-    "typecheck": {},
-    "test": {},
+    "lint": {
+      "dependsOn": ["codegen"]
+    },
+    "typecheck": {
+      "dependsOn": ["codegen"]
+    },
+    "test": {
+      "dependsOn": ["codegen"]
+    },
     "test:e2e": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "codegen"],
       "cache": false,
       "passThroughEnv": ["TEST_DATABASE_URL", "DOCKER_*"]
     }

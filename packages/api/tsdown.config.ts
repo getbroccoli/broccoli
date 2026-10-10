@@ -8,4 +8,6 @@ export default defineConfig({
   unbundle: true,
   fixedExtension: false,
   sourcemap: true,
+  // Modules read their SDL from next to their code at startup.
+  copy: [{ from: "src/**/*.graphql", flatten: false }],
 });

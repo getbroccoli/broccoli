@@ -1,11 +1,10 @@
 import { eslintConfig } from "@broccoli/config/eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import { reactRefresh } from "eslint-plugin-react-refresh";
-import { defineConfig, globalIgnores } from "eslint/config";
+import { defineConfig } from "eslint/config";
 
 export default defineConfig(
   eslintConfig(import.meta.dirname),
-  globalIgnores(["src/routeTree.gen.ts"]),
   reactHooks.configs.flat.recommended,
   // Route files export `Route` next to their components, as TanStack Router expects.
   reactRefresh.configs.vite({ allowExportNames: ["Route"] }),
