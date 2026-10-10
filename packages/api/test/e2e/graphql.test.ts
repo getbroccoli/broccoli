@@ -21,7 +21,7 @@ describe("GraphQL", () => {
   });
 
   it("answers the ping query with pong", async () => {
-    const response = await fetch(`${server.url}/graphql`, {
+    const response = await fetch(`${server.url}/api/graphql`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ query: "{ ping }" }),
@@ -32,7 +32,7 @@ describe("GraphQL", () => {
   });
 
   it("rejects introspection with a validation error", async () => {
-    const response = await fetch(`${server.url}/graphql`, {
+    const response = await fetch(`${server.url}/api/graphql`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ query: "{ __schema { types { name } } }" }),

@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       strictPort: true,
-      proxy: { "/healthz": apiTarget, "/readyz": apiTarget, "/graphql": apiTarget },
+      proxy: { "/healthz": apiTarget, "/readyz": apiTarget, "/api": apiTarget },
     },
   };
 });

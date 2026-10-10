@@ -49,6 +49,13 @@ describe("with a web app folder", () => {
     expect(await response.text()).toBe(ASSET);
   });
 
+  it("returns 404 instead of the web app for an unknown API path", async () => {
+    const response = await fetch(`${server.url}/api/unknown`);
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).not.toBe(INDEX_HTML);
+  });
+
   it("keeps answering health checks", async () => {
     const response = await fetch(`${server.url}/healthz`);
 
