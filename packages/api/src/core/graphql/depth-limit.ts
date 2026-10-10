@@ -12,56 +12,59 @@ import {
  * depth 1. `__typename` and introspection fields do not count.
  */
 export function depthLimit(maxDepth: number): ValidationRule {
-  return (context) => ({
-    OperationDefinition(operation) {
-      if (depthOf(operation.selectionSet, context, new Set()) > maxDepth) {
-        context.reportError(
-          new GraphQLError(`Operation exceeds the maximum depth of ${maxDepth}.`, {
-            nodes: operation,
-          }),
-        );
-      }
-    },
-  });
+  return (context) => {
+    const measure = new DepthMeasure(context);
+    return {
+      OperationDefinition(operation) {
+        if (measure.depthOf(operation.selectionSet) > maxDepth) {
+          context.reportError(
+            new GraphQLError(`Operation exceeds the maximum depth of ${maxDepth}.`, {
+              nodes: operation,
+            }),
+          );
+        }
+      },
+    };
+  };
 }
 
-function depthOf(
-  selectionSet: SelectionSetNode,
-  context: ValidationContext,
-  visitedFragments: ReadonlySet<string>,
-): number {
-  return Math.max(
-    0,
-    ...selectionSet.selections.map((selection) =>
-      depthOfSelection(selection, context, visitedFragments),
-    ),
-  );
-}
+/** Measures each fragment once, so repeated spreads cannot make validation exponential. */
+class DepthMeasure {
+  private readonly fragmentDepths = new Map<string, number>();
 
-function depthOfSelection(
-  selection: SelectionNode,
-  context: ValidationContext,
-  visitedFragments: ReadonlySet<string>,
-): number {
-  switch (selection.kind) {
-    case Kind.FIELD:
-      if (selection.name.value.startsWith("__")) {
-        return 0;
-      }
-      return (
-        1 +
-        (selection.selectionSet ? depthOf(selection.selectionSet, context, visitedFragments) : 0)
-      );
-    case Kind.INLINE_FRAGMENT:
-      return depthOf(selection.selectionSet, context, visitedFragments);
-    case Kind.FRAGMENT_SPREAD: {
-      const name = selection.name.value;
-      const fragment = context.getFragment(name);
-      // graphql-js reports unknown and cyclic fragments itself; skip them here.
-      if (!fragment || visitedFragments.has(name)) {
-        return 0;
-      }
-      return depthOf(fragment.selectionSet, context, new Set(visitedFragments).add(name));
+  constructor(private readonly context: ValidationContext) {}
+
+  depthOf(selectionSet: SelectionSetNode): number {
+    return Math.max(
+      0,
+      ...selectionSet.selections.map((selection) => this.depthOfSelection(selection)),
+    );
+  }
+
+  private depthOfSelection(selection: SelectionNode): number {
+    switch (selection.kind) {
+      case Kind.FIELD:
+        if (selection.name.value.startsWith("__")) {
+          return 0;
+        }
+        return 1 + (selection.selectionSet ? this.depthOf(selection.selectionSet) : 0);
+      case Kind.INLINE_FRAGMENT:
+        return this.depthOf(selection.selectionSet);
+      case Kind.FRAGMENT_SPREAD:
+        return this.fragmentDepth(selection.name.value);
     }
+  }
+
+  private fragmentDepth(name: string): number {
+    const known = this.fragmentDepths.get(name);
+    if (known !== undefined) {
+      return known;
+    }
+    // graphql-js reports unknown and cyclic fragments itself; they count as 0 here.
+    this.fragmentDepths.set(name, 0);
+    const fragment = this.context.getFragment(name);
+    const depth = fragment ? this.depthOf(fragment.selectionSet) : 0;
+    this.fragmentDepths.set(name, depth);
+    return depth;
   }
 }

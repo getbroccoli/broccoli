@@ -19,7 +19,7 @@ This document records the architecture decisions behind Broccoli. It is edited i
 
 - **GraphQL is the primary API and, for now, an internal contract** used by the Broccoli web app. It may change freely before 1.0. The schema is not published and there are no deprecation rules yet.
 - **Schema-first SDL.** Each module owns its `.graphql` files; they are merged at startup. Resolver types come from `@graphql-codegen`; mapper configuration is module-local and composed at build time. Generated files (`*.gen.ts`) are not committed: `pnpm codegen` writes them, it runs after `pnpm install`, and every Turborepo task that needs them depends on it.
-- **Namespaced mutations** group operations by module (`absence { request(...) }`). Because the GraphQL specification only guarantees serial execution for root mutation fields, the server rejects requests with more than one mutation field, and a lint rule enforces the same on client documents.
+- **Namespaced mutations** group operations by module (`absence { request(...) }`). Because the GraphQL specification only guarantees serial execution for root mutation fields, and the fields inside a namespace run in parallel, the server lets a mutation select one namespace and one operation in it, and a lint rule enforces the same on client documents. Only errors raised before execution (parse, validation, bad input) reach the client as they are; any other error is masked.
 - **Server:** Express 5 and Apollo Server 5 via `@as-integrations/express5`. Depth limits, bounded pagination, introspection off in production, error masking configured explicitly.
 - **File uploads** (spreadsheet import) use a bounded REST endpoint, not GraphQL. No subscriptions.
 

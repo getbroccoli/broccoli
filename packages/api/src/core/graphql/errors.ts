@@ -1,21 +1,20 @@
-import { unwrapResolverError } from "@apollo/server/errors";
 import { GraphQLError, type GraphQLFormattedError } from "graphql";
 
 /**
- * True for errors meant for the client: Apollo's request errors (parse, validation,
- * bad input) and `GraphQLError`s thrown on purpose. Anything else is a bug or an
- * infrastructure failure whose message may leak internals.
+ * True for errors raised before execution: parse, validation and bad input. They
+ * describe the request. Errors with a path come from execution and may carry internals,
+ * even when graphql-js raised them (it puts unserializable values in the message).
  */
-export function isClientError(error: unknown): boolean {
-  return unwrapResolverError(error) instanceof GraphQLError;
+export function isRequestError(error: unknown): boolean {
+  return error instanceof GraphQLError && error.path === undefined;
 }
 
-/** Apollo `formatError`: passes client errors through and masks everything else. */
+/** Apollo `formatError`: passes request errors through and masks everything else. */
 export function formatError(
   formatted: GraphQLFormattedError,
   error: unknown,
 ): GraphQLFormattedError {
-  if (isClientError(error)) {
+  if (isRequestError(error)) {
     return formatted;
   }
   const { locations, path } = formatted;
