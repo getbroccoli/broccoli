@@ -1,0 +1,25 @@
+import type { CodegenConfig } from "@graphql-codegen/cli";
+
+const config: CodegenConfig = {
+  // Introspection is off, so the schema comes from the API's SDL files.
+  schema: "../api/src/modules/**/*.graphql",
+  documents: "src/**/*.graphql",
+  ignoreNoDocuments: true,
+  generates: {
+    "src/generated/": {
+      preset: "client",
+      // Apollo Client's data masking replaces the preset's fragment masking.
+      presetConfig: { fragmentMasking: false },
+      config: {
+        customDirectives: { apolloUnmask: true },
+        inlineFragmentTypes: "mask",
+        useTypeImports: true,
+        enumsAsTypes: true,
+        strictScalars: true,
+      },
+    },
+    "src/generated/possible-types.ts": { plugins: ["fragment-matcher"] },
+  },
+};
+
+export default config;
