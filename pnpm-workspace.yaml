@@ -1,4 +1,10 @@
 packages:
   - packages/*
+# The development containers run Linux on the host's node_modules, so a macOS install also
+# fetches the Linux builds of native packages.
+supportedArchitectures:
+  os: [current, linux]
+  cpu: [current]
+  libc: [current, glibc]
 allowBuilds:
   esbuild: false

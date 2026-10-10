@@ -1,96 +1,54 @@
-# Development stack, layered on docker-compose.yml by `pnpm dev` (packages/scripts/dev.sh).
-# Relative paths resolve from the repository root, the folder of the first Compose file.
-
-x-dev-environment: &dev-environment
-  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
-  # Corepack and pnpm keep their caches in the dev-home volume.
-  HOME: /home/dev
-  # The store must share a device with node_modules for hard links; otherwise pnpm puts
-  # it at the root of the checkout's device, the bind-mounted checkout itself.
-  pnpm_config_store_dir: /repo/node_modules/.pnpm-store
-
-x-dev-volumes: &dev-volumes
-  - .:/repo
-  # node_modules stay in volumes: Linux binaries never land in the checkout.
-  - node-modules:/repo/node_modules
-  - api-node-modules:/repo/packages/api/node_modules
-  - config-node-modules:/repo/packages/config/node_modules
-  - web-node-modules:/repo/packages/web/node_modules
-  - dev-home:/home/dev
+# Development stack, layered on docker-compose.yml by `pnpm dev` (packages/scripts/dev.sh),
+# which installs node_modules on the host first. Relative paths resolve from the repository root.
 
 x-dev-service: &dev-service
   image: node:24.21.0-bookworm
-  working_dir: /repo
   # The host user, so files written to the checkout (routeTree.gen.ts) stay theirs.
   user: ${HOST_UID:?Start the development stack with pnpm dev}:${HOST_GID:?Start the development stack with pnpm dev}
   init: true
-  volumes: *dev-volumes
+  volumes:
+    - .:/repo
 
 services:
   # The production image does not run in development.
   broccoli:
     profiles: [self-host]
 
-  # Installs dependencies on every start, so lockfile changes are picked up.
-  deps:
-    <<: *dev-service
-    # Root only to hand the new, root-owned volumes to the host user.
-    user: root
-    environment: *dev-environment
-    command:
-      - sh
-      - -c
-      - >-
-        chown ${HOST_UID}:${HOST_GID} node_modules packages/api/node_modules
-        packages/config/node_modules packages/web/node_modules /home/dev
-        && exec setpriv --reuid=${HOST_UID} --regid=${HOST_GID} --clear-groups
-        corepack pnpm install --frozen-lockfile --config.confirmModulesPurge=false
+  postgres:
+    volumes:
+      - dev-postgres-data:/var/lib/postgresql
 
   api:
     <<: *dev-service
+    working_dir: /repo/packages/api
+    command: [node_modules/.bin/tsx, watch, src/main.ts]
     environment:
-      <<: *dev-environment
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
-    command: [corepack, pnpm, --filter, "@broccoli/api", dev]
     depends_on:
-      deps:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
 
   web:
     <<: *dev-service
+    working_dir: /repo/packages/web
+    command: [node_modules/.bin/vite]
     environment:
-      <<: *dev-environment
       API_PROXY_TARGET: http://api:3000
-    command: [corepack, pnpm, --filter, "@broccoli/web", dev]
     ports:
       # An empty HOST_WEB_PORT picks a free port, so worktrees never collide. Localhost only:
       # the dev server has no authentication.
       - 127.0.0.1:${HOST_WEB_PORT:-0}:5173
-    depends_on:
-      deps:
-        condition: service_completed_successfully
     # Ready once the API answers through the Vite proxy.
     healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - "fetch('http://localhost:5173/readyz').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      test: [CMD, curl, --fail, --silent, http://localhost:5173/readyz]
       interval: 2s
       timeout: 3s
-      start_period: 120s
-      retries: 30
+      start_period: 60s
 
 volumes:
-  node-modules:
-  api-node-modules:
-  config-node-modules:
-  web-node-modules:
-  dev-home:
+  # Development data stays apart from the production image's postgres-data.
+  dev-postgres-data:
     labels:
-      # `pnpm dev:prune` removes this project once the checkout folder is gone. A dev-only
-      # volume: changing a label on the Postgres volume would make Compose recreate it.
+      # `pnpm dev:prune` removes this project once the checkout folder is gone.
       org.getbroccoli.checkout: ${BROCCOLI_CHECKOUT:?Start the development stack with pnpm dev}

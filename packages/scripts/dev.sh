@@ -1,7 +1,6 @@
 #!/bin/sh
 # Starts this checkout's development stack on a free host port unless HOST_WEB_PORT is set,
-# prints its URL and follows the logs. Any exit removes the containers; volumes stay, so the
-# next start is quick.
+# prints its URL and follows the logs. Any exit removes the containers; the database volume stays.
 set -eu
 cd "$(dirname "$0")/../.."
 
@@ -15,10 +14,8 @@ compose() {
   docker compose -f docker-compose.yml -f packages/scripts/docker-compose.dev.yml "$@"
 }
 
-# Docker would create the node_modules mount points as root in the checkout.
-for manifest in package.json packages/*/package.json; do
-  mkdir -p "$(dirname "$manifest")/node_modules"
-done
+# The containers run on the checkout's node_modules.
+pnpm install --frozen-lockfile
 
 trap 'compose down' EXIT
 # Ctrl-C is the normal way to stop. sh skips the EXIT trap when a signal kills it, so turn
