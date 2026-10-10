@@ -1,7 +1,7 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth, type BetterAuthPlugin } from "better-auth";
 
-import type { Orm } from "../db";
+import type { Orm, OrmTransaction } from "../db";
 import type { Logger } from "../logger";
 import { account, session, user, verification } from "./schema";
 
@@ -43,7 +43,7 @@ export function createAuth({ orm, secret, publicUrl, plugins, logger }: AuthConf
 }
 
 /** Better Auth's storage on `orm`, which may be a transaction. */
-export function authDatabase(orm: Orm) {
+export function authDatabase(orm: Orm | OrmTransaction) {
   return drizzleAdapter(orm, {
     provider: "pg",
     schema: { user, session, account, verification },

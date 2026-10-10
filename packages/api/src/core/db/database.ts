@@ -19,6 +19,8 @@ const CONNECTION_CHECK_QUERY = {
 /** Drizzle on the shared connection pool; `transaction()` runs a unit of work. */
 export type Orm = NodePgDatabase;
 
+export type OrmTransaction = Parameters<Parameters<Orm["transaction"]>[0]>[0];
+
 export interface Database {
   orm: Orm;
   /** Applies pending migrations; safe to call from several instances at once. */

@@ -4,15 +4,19 @@ import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { toNodeHandler } from "better-auth/node";
 import express from "express";
 
+import { createAuth } from "./auth";
 import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
 import { startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
+import { announceSetup, setupPlugin } from "./instance";
 import type { Logger } from "./logger";
 import type { ModuleManifest } from "./module-manifest";
 import { Readiness } from "./readiness";
+import { readOrCreateSecret } from "./secrets";
 
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
@@ -33,7 +37,8 @@ export interface RunningServer {
 
 /**
  * Starts listening at once and migrates the database in the background, retrying
- * until it succeeds; `/readyz` reports ready when the migrations have succeeded.
+ * until it succeeds; `/readyz` reports ready when the migrations have succeeded and
+ * a new instance has logged its setup link.
  */
 export async function startServer(
   env: ServerEnv,
@@ -42,7 +47,16 @@ export async function startServer(
 ): Promise<RunningServer> {
   // Built first: a web app folder without `index.html` fails startup before anything opens.
   const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
+  const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
   const database = connectDatabase(env.databaseUrl, logger);
+  const auth = createAuth({
+    orm: database.orm,
+    secret: authSecret,
+    publicUrl: env.publicUrl,
+    plugins:
+      env.mode === "self_hosted" ? [setupPlugin({ orm: database.orm, dataDir: env.dataDir })] : [],
+    logger,
+  });
   const readiness = new Readiness(() => database.checkConnection());
 
   const app = express();
@@ -56,6 +70,8 @@ export async function startServer(
     throw error;
   }
   app.use(healthRouter(readiness));
+  // Better Auth reads the raw body, so no body parser may run before it.
+  app.all("/api/auth/{*path}", toNodeHandler(auth));
   app.use(graphql.router);
   if (webApp) {
     app.use(webApp);
@@ -69,7 +85,8 @@ export async function startServer(
   }
 
   const stopped = new AbortController();
-  const migration = migrate(database, readiness, logger, stopped.signal);
+  const announce = () => announceSetup({ orm: database.orm, ...env, logger });
+  const migration = migrate(database, readiness, logger, stopped.signal, announce);
   let stopping: Promise<void> | undefined;
 
   return {
@@ -92,12 +109,16 @@ async function migrate(
   readiness: Readiness,
   logger: Logger,
   stopped: AbortSignal,
+  afterMigrations: () => Promise<void>,
 ): Promise<void> {
   while (!stopped.aborted) {
     try {
       await database.migrate();
-      readiness.markMigrated();
       logger.info("Database migrations applied");
+      await afterMigrations().catch((error: unknown) => {
+        logger.error({ err: error }, "Setup link could not be prepared");
+      });
+      readiness.markMigrated();
       return;
     } catch (error) {
       if (stopped.aborted) {
