@@ -8,8 +8,8 @@ services:
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
       BROCCOLI_MODE: ${BROCCOLI_MODE:-}
-      # Builds the setup link in the log.
-      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:${HOST_WEB_PORT:-8080}}
+      # Set it when Broccoli has a domain; unset trusts the address each request uses.
+      PUBLIC_URL: ${PUBLIC_URL:-}
     volumes:
       # Secrets such as the session signing key; back it up with the database.
       - broccoli-data:/data
