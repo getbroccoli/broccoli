@@ -16,6 +16,8 @@ ENV NODE_ENV=production PORT=3000 WEB_DIR=/app/web
 WORKDIR /app/api
 COPY --from=build /out/api ./
 COPY --from=build /repo/packages/web/dist /app/web
+# A new named volume copies this folder's owner, so the app can write its secrets.
+RUN mkdir /data && chown node:node /data
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s \

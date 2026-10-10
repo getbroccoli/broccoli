@@ -24,5 +24,10 @@ trap 'exit 0' HUP INT TERM
 
 compose up --detach --wait
 address=$(compose port web 5173)
-echo "Broccoli dev is running at http://localhost:${address##*:}"
+url="http://localhost:${address##*:}"
+echo "Broccoli dev is running at $url"
+# The API writes the token once migrations finish, before the stack reports healthy.
+if [ -f .data/secrets/setup-token ]; then
+  echo "Set up the owner at $url/setup#token=$(cat .data/secrets/setup-token)"
+fi
 compose logs --follow

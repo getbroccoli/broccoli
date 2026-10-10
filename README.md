@@ -30,6 +30,8 @@
 docker compose up
 ```
 
+Then open the setup link from the log (`Open http://localhost:8080/setup#token=… to create the owner account`) to create the owner account. Only someone who can read the log can use it, and it works once.
+
 ## License
 
 Copyright (C) 2026 Minari Limited.
