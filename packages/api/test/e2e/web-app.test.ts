@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
-import type { RunningServer } from "../../src/server";
+import type { RunningServer } from "../../src/core/server";
 import { startTestServer } from "./support/test-server";
 
 // The web app needs no database, so these servers never become ready.

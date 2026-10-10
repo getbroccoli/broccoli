@@ -7,4 +7,5 @@ supportedArchitectures:
   cpu: [current]
   libc: [current, glibc]
 allowBuilds:
+  "@apollo/protobufjs": false
   esbuild: false

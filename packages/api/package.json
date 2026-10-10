@@ -6,6 +6,7 @@
   "description": "Broccoli API server.",
   "scripts": {
     "build": "tsdown",
+    "codegen": "graphql-codegen",
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -15,6 +16,9 @@
   },
   "devDependencies": {
     "@broccoli/config": "workspace:*",
+    "@graphql-codegen/cli": "7.4.3",
+    "@graphql-codegen/typescript": "6.1.0",
+    "@graphql-codegen/typescript-resolvers": "6.1.0",
     "@types/express": "5.0.6",
     "@types/node": "24.19.1",
     "@types/pg": "8.23.1",
@@ -26,8 +30,12 @@
     "vitest": "5.0.3"
   },
   "dependencies": {
+    "@apollo/server": "5.5.1",
+    "@as-integrations/express5": "1.1.2",
+    "@graphql-tools/schema": "10.1.1",
     "drizzle-orm": "0.45.3",
     "express": "5.2.1",
+    "graphql": "16.14.2",
     "pg": "8.23.1",
     "pino": "10.4.0",
     "zod": "4.6.5"

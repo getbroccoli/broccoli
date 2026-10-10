@@ -4,8 +4,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 
-/** Resolves to `packages/api/drizzle` from both `src/db` and `dist/db`. */
-const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../drizzle", import.meta.url));
+/** Resolves to `packages/api/drizzle` from both `src/core/db` and `dist/core/db`. */
+const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../../drizzle", import.meta.url));
 export const MIGRATION_LOCK_KEY = "broccoli.migrations";
 
 /**

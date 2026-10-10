@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it, onTestFinished } from "vitest";
 
-import type { RunningServer } from "../../src/server";
+import type { RunningServer } from "../../src/core/server";
 import { createTestDatabase, type TestDatabase } from "./support/test-databases";
 import { startTestServer, waitForStartup } from "./support/test-server";
 

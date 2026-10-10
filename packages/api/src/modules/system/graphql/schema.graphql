@@ -1,0 +1,4 @@
+type Query {
+  "Answers `pong`; checks that the GraphQL API is reachable."
+  ping: String!
+}

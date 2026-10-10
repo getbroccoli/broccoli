@@ -24,7 +24,9 @@
     "test:e2e": "turbo run test:e2e",
     "format": "prettier --write . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
     "format:check": "prettier --check . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
-    "check": "pnpm format:check && turbo run lint typecheck test"
+    "check": "pnpm format:check && turbo run lint typecheck test",
+    "codegen": "turbo run codegen",
+    "postinstall": "pnpm codegen"
   },
   "devDependencies": {
     "@broccoli/config": "workspace:*",

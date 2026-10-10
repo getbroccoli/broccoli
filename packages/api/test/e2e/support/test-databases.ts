@@ -1,7 +1,7 @@
 import pg from "pg";
 
-import { connectDatabase } from "../../../src/db";
-import { createLogger } from "../../../src/logger";
+import { connectDatabase } from "../../../src/core/db";
+import { createLogger } from "../../../src/core/logger";
 
 /** One `pnpm test:e2e` run: every database it creates is named after `runId`. */
 export interface TestRun {
