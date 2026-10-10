@@ -10,7 +10,7 @@ coverage/
 *.gen.ts
 packages/web/src/__generated__/
 
-# Environment and secrets; `pnpm dev` keeps the API's data folder in .data
+# Environment and secrets; `pnpm dev` keeps the API's data folder, with its secrets, in .data
 .data/
 .env
 .env.*

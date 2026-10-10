@@ -12,7 +12,7 @@ import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
 import { startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
-import { announceSetup, setupPlugin } from "./instance";
+import { setupPlugin } from "./instance";
 import type { Logger } from "./logger";
 import type { ModuleManifest } from "./module-manifest";
 import { Readiness } from "./readiness";
@@ -37,8 +37,7 @@ export interface RunningServer {
 
 /**
  * Starts listening at once and migrates the database in the background, retrying
- * until it succeeds; `/readyz` reports ready when the migrations have succeeded and
- * a new instance has logged its setup link.
+ * until it succeeds; `/readyz` reports ready when the migrations have succeeded.
  */
 export async function startServer(
   env: ServerEnv,
@@ -53,8 +52,7 @@ export async function startServer(
     orm: database.orm,
     secret: authSecret,
     publicUrl: env.publicUrl,
-    plugins:
-      env.mode === "self_hosted" ? [setupPlugin({ orm: database.orm, dataDir: env.dataDir })] : [],
+    plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm)] : [],
     logger,
   });
   const readiness = new Readiness(() => database.checkConnection());
@@ -85,8 +83,7 @@ export async function startServer(
   }
 
   const stopped = new AbortController();
-  const announce = () => announceSetup({ orm: database.orm, ...env, logger });
-  const migration = migrate(database, readiness, logger, stopped.signal, announce);
+  const migration = migrate(database, readiness, logger, stopped.signal);
   let stopping: Promise<void> | undefined;
 
   return {
@@ -109,16 +106,12 @@ async function migrate(
   readiness: Readiness,
   logger: Logger,
   stopped: AbortSignal,
-  afterMigrations: () => Promise<void>,
 ): Promise<void> {
   while (!stopped.aborted) {
     try {
       await database.migrate();
-      logger.info("Database migrations applied");
-      await afterMigrations().catch((error: unknown) => {
-        logger.error({ err: error }, "Setup link could not be prepared");
-      });
       readiness.markMigrated();
+      logger.info("Database migrations applied");
       return;
     } catch (error) {
       if (stopped.aborted) {

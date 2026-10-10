@@ -9,47 +9,33 @@ import { z } from "zod";
 import { authDatabase } from "../auth";
 import type { Orm } from "../db";
 import { claimOwner, hasOwner, OwnerExistsError } from "./owner";
-import { isSetupToken, removeSetupToken } from "./setup-token";
 
-export const SETUP_ERROR_CODES = {
-  OWNER_EXISTS: { code: "OWNER_EXISTS", message: "The owner account already exists" },
-  INVALID_SETUP_TOKEN: { code: "INVALID_SETUP_TOKEN", message: "The setup token is not valid" },
-} as const;
+const OWNER_EXISTS = { code: "OWNER_EXISTS", message: "The owner account already exists" };
 
 const setupBody = z.object({
-  token: z.string(),
   email: z.string(),
   password: z.string(),
 });
 
 type SetupBody = z.infer<typeof setupBody>;
 
-interface SetupDependencies {
-  orm: Orm;
-  dataDir: string;
-}
-
 /**
- * `POST /api/auth/setup`: whoever holds the setup token creates the owner account
- * and is signed in. Works once; for self-hosted instances only.
+ * `POST /api/auth/setup`: the first caller creates the owner account and is signed
+ * in. Works once; for self-hosted instances only.
  */
-export function setupPlugin({ orm, dataDir }: SetupDependencies) {
+export function setupPlugin(orm: Orm) {
   return {
     id: "setup",
     endpoints: {
       setup: createAuthEndpoint("/setup", { method: "POST", body: setupBody }, async (ctx) => {
         assertValidCredentials(ctx.body, ctx.context.password.config);
-        // Before the token: after setup the token is gone, so every token is wrong.
+        // Checked early to skip the slow hashing; the transaction checks again.
         if (await hasOwner(orm)) {
-          throw APIError.from("CONFLICT", SETUP_ERROR_CODES.OWNER_EXISTS);
-        }
-        if (!(await isSetupToken(dataDir, ctx.body.token))) {
-          throw APIError.from("FORBIDDEN", SETUP_ERROR_CODES.INVALID_SETUP_TOKEN);
+          throw APIError.from("CONFLICT", OWNER_EXISTS);
         }
         // Hashing is slow, so it happens before the transaction takes its lock.
         const passwordHash = await ctx.context.password.hash(ctx.body.password);
         const owner = await createOwner(orm, ctx, ctx.body.email.toLowerCase(), passwordHash);
-        await removeSetupToken(dataDir);
         await setSessionCookie(ctx, owner);
         return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
       }),
@@ -101,7 +87,7 @@ async function createOwner(
     );
   } catch (error) {
     if (error instanceof OwnerExistsError) {
-      throw APIError.from("CONFLICT", SETUP_ERROR_CODES.OWNER_EXISTS);
+      throw APIError.from("CONFLICT", OWNER_EXISTS);
     }
     throw error;
   }

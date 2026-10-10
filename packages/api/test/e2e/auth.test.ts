@@ -12,8 +12,7 @@ describe("owner authentication", () => {
 
   beforeAll(async () => {
     instance = await TestInstance.start(run);
-    const token = await instance.readSetupToken();
-    const response = await createBrowser(instance.url).post("/api/auth/setup", { ...owner, token });
+    const response = await createBrowser(instance.url).post("/api/auth/setup", owner);
     expect(response.status).toBe(200);
     const body = (await response.json()) as { user: { id: string } };
     ownerId = body.user.id;

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -25,14 +25,6 @@ export class TestInstance {
 
   get url(): string {
     return this.server.url;
-  }
-
-  get setupTokenPath(): string {
-    return join(this.dataDir, "secrets", "setup-token");
-  }
-
-  readSetupToken(): Promise<string> {
-    return readFile(this.setupTokenPath, "utf8");
   }
 
   /** Stops the server and starts a new one on the same database and data folder. */

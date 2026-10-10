@@ -6,7 +6,7 @@ export type LogLevel = (typeof LOG_LEVELS)[number];
 
 export const MODES = ["self_hosted", "managed"] as const;
 
-/** Self-hosted installs create their owner with a setup token; managed ones from the sign-in service. */
+/** Self-hosted installs create their owner on first visit; managed ones through the sign-in service. */
 export type Mode = (typeof MODES)[number];
 
 export interface Env {

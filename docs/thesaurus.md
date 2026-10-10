@@ -8,7 +8,6 @@ The words Broccoli's code and docs use, and what each one means.
 - **User**: a person who can sign in (Better Auth's `user` table).
 - **Account**: one way a user signs in, such as a password (`credential`) or managed sign-in (Better Auth's `account` table). A user can have several.
 - **Session**: a signed-in browser, carried in a cookie and stored in the `session` table.
-- **Setup token**: the one-time secret that lets the operator create the owner on a new self-hosted instance.
-- **Setup link**: `<PUBLIC_URL>/setup#token=…`, logged while no owner exists.
+- **Setup**: creating the owner on a new self-hosted instance; the first visitor does it, once.
 - **Onboarding step**: where a new instance is in its first-run flow: `owner`, `company`, `done`.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.

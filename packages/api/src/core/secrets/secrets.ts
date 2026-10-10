@@ -31,18 +31,13 @@ export async function readOrCreateSecret(dataDir: string, name: string): Promise
   return (await readSecret(dataDir, name)) as string;
 }
 
-/** The secret's value, or `undefined` when it does not exist. */
-export async function readSecret(dataDir: string, name: string): Promise<string | undefined> {
+async function readSecret(dataDir: string, name: string): Promise<string | undefined> {
   try {
     return await readFile(join(secretsFolder(dataDir), name), "utf8");
   } catch (error) {
     ignoreCode("ENOENT")(error);
     return undefined;
   }
-}
-
-export async function removeSecret(dataDir: string, name: string): Promise<void> {
-  await rm(join(secretsFolder(dataDir), name), { force: true });
 }
 
 function secretsFolder(dataDir: string): string {

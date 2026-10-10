@@ -27,9 +27,8 @@ services:
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
       BROCCOLI_MODE: ${BROCCOLI_MODE:-}
-      # In the checkout, owned by the host user; dev.sh reads the setup token from it.
+      # In the checkout, so the host user owns it.
       DATA_DIR: /repo/.data
-      # The host port is free-picked, so dev.sh prints the setup link instead.
       PUBLIC_URL: ""
     depends_on:
       postgres:

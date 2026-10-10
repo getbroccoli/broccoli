@@ -1,1 +1,1 @@
-export { readOrCreateSecret, readSecret, removeSecret } from "./secrets";
+export { readOrCreateSecret } from "./secrets";

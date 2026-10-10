@@ -1,5 +1,3 @@
-import { stat } from "node:fs/promises";
-
 import { afterEach, beforeEach, describe, expect, inject, it, onTestFinished } from "vitest";
 
 import { createBrowser } from "./support/browser";
@@ -10,11 +8,9 @@ const owner = { email: "owner@example.com", password: "correct horse battery sta
 
 describe("self-hosted owner setup", () => {
   let instance: TestInstance;
-  let token: string;
 
   beforeEach(async () => {
     instance = await TestInstance.start(run);
-    token = await instance.readSetupToken();
   });
 
   afterEach(() => instance.stop());
@@ -25,7 +21,6 @@ describe("self-hosted owner setup", () => {
     const response = await browser.post("/api/auth/setup", {
       ...owner,
       email: "OWNER@EXAMPLE.COM",
-      token,
     });
 
     expect(response.status).toBe(200);
@@ -38,10 +33,10 @@ describe("self-hosted owner setup", () => {
   });
 
   it("refuses a second setup", async () => {
-    const first = await createBrowser(instance.url).post("/api/auth/setup", { ...owner, token });
+    const first = await createBrowser(instance.url).post("/api/auth/setup", owner);
     expect(first.status).toBe(200);
 
-    const response = await createBrowser(instance.url).post("/api/auth/setup", { ...owner, token });
+    const response = await createBrowser(instance.url).post("/api/auth/setup", owner);
 
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ code: "OWNER_EXISTS" });
@@ -53,7 +48,7 @@ describe("self-hosted owner setup", () => {
     const response = await fetch(`${instance.url}/api/auth/setup`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...owner, token }),
+      body: JSON.stringify(owner),
     });
 
     expect(response.status).toBe(200);
@@ -68,7 +63,7 @@ describe("self-hosted owner setup", () => {
     const response = await fetch(`${instance.url}/api/auth/setup`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...owner, token }),
+      body: JSON.stringify(owner),
     });
 
     expect(response.status).toBe(200);
@@ -79,21 +74,9 @@ describe("self-hosted owner setup", () => {
     expect(sessionCookie).not.toMatch(/;\s*Secure(?:;|$)/i);
   });
 
-  it("refuses a wrong token without claiming setup", async () => {
-    const browser = createBrowser(instance.url);
-
-    const response = await browser.post("/api/auth/setup", { ...owner, token: "wrong-token" });
-
-    expect(response.status).toBe(403);
-    expect(await response.json()).toMatchObject({ code: "INVALID_SETUP_TOKEN" });
-    const retry = await browser.post("/api/auth/setup", { ...owner, token });
-    expect(retry.status).toBe(200);
-  });
-
   it("refuses a password shorter than eight characters", async () => {
     const response = await createBrowser(instance.url).post("/api/auth/setup", {
       ...owner,
-      token,
       password: "1234567",
     });
 
@@ -103,8 +86,8 @@ describe("self-hosted owner setup", () => {
 
   it("allows exactly one of two simultaneous setups", async () => {
     const responses = await Promise.all([
-      createBrowser(instance.url).post("/api/auth/setup", { ...owner, token }),
-      createBrowser(instance.url).post("/api/auth/setup", { ...owner, token }),
+      createBrowser(instance.url).post("/api/auth/setup", owner),
+      createBrowser(instance.url).post("/api/auth/setup", owner),
     ]);
 
     expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
@@ -112,28 +95,25 @@ describe("self-hosted owner setup", () => {
     expect(await refused.json()).toMatchObject({ code: "OWNER_EXISTS" });
   });
 
-  it("keeps a private token across restarts and removes it after setup", async () => {
-    expect((await stat(instance.setupTokenPath)).mode & 0o777).toBe(0o600);
+  it("keeps the owner's session across a restart", async () => {
+    const browser = createBrowser(instance.url);
+    const response = await browser.post("/api/auth/setup", owner);
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { user: { id: string; email: string } };
 
     await instance.restart();
 
-    expect(await instance.readSetupToken()).toBe(token);
-    expect((await stat(instance.setupTokenPath)).mode & 0o777).toBe(0o600);
-    const response = await createBrowser(instance.url).post("/api/auth/setup", { ...owner, token });
-    expect(response.status).toBe(200);
-    await expect(stat(instance.setupTokenPath)).rejects.toMatchObject({ code: "ENOENT" });
+    const session = await browser.get(`${instance.url}/api/auth/get-session`);
+    expect(session.status).toBe(200);
+    expect(await session.json()).toMatchObject({ user: body.user });
   });
 });
 
-it("creates no setup token and refuses setup in managed mode", async () => {
+it("refuses setup in managed mode", async () => {
   const instance = await TestInstance.start(run, { mode: "managed" });
   onTestFinished(() => instance.stop());
 
-  const response = await createBrowser(instance.url).post("/api/auth/setup", {
-    ...owner,
-    token: "unused-token",
-  });
+  const response = await createBrowser(instance.url).post("/api/auth/setup", owner);
 
   expect(response.status).toBe(404);
-  await expect(stat(instance.setupTokenPath)).rejects.toMatchObject({ code: "ENOENT" });
 });
