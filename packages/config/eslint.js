@@ -11,9 +11,10 @@ const MAX_LINES_PER_FILE = 300;
 export function eslintConfig(packageDir) {
   return defineConfig(
     globalIgnores(["dist/", "coverage/", "**/*.gen.ts"]),
-    js.configs.recommended,
-    tseslint.configs.recommendedTypeChecked,
     {
+      // Scoped to code, so GraphQL documents can use their own parser and rules.
+      files: ["**/*.{js,ts,tsx}"],
+      extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
       languageOptions: {
         parserOptions: { projectService: true, tsconfigRootDir: packageDir },
       },
