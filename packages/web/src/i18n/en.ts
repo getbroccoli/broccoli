@@ -12,4 +12,6 @@ export const en = {
   "notFound.title": "Page not found",
   "notFound.description": "This page does not exist or has moved.",
   "notFound.back": "Go to People",
+  "system.ping.ok": "API: pong",
+  "system.ping.unreachable": "API: unreachable",
 } as const;
