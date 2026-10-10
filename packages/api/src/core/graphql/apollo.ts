@@ -6,6 +6,7 @@ import { ApolloServerPluginLandingPageDisabled } from "@apollo/server/plugin/dis
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { makeExecutableSchema } from "@graphql-tools/schema";
 import express from "express";
+import { GraphQLError } from "graphql";
 
 import type { Actor } from "../actor";
 import type { Logger } from "../logger";
@@ -69,13 +70,29 @@ export async function startGraphqlApi(
   await apollo.start();
 
   return {
-    router: express.Router().use(
-      "/api/graphql",
-      express.json(),
-      expressMiddleware(apollo, {
-        context: async ({ req }) => ({ actor: await resolveActor(req.headers) }),
-      }),
-    ),
+    router: express
+      .Router()
+      .use(
+        "/api/graphql",
+        express.json(),
+        expressMiddleware(apollo, { context: createContext(resolveActor) }),
+      ),
     stop: () => apollo.stop(),
+  };
+}
+
+/** Builds each request's context; a failure becomes a masked internal error. */
+export function createContext(resolveActor: ActorResolver) {
+  return async ({ req }: { req: { headers: IncomingHttpHeaders } }): Promise<GraphqlContext> => {
+    try {
+      return { actor: await resolveActor(req.headers) };
+    } catch (error) {
+      // Apollo reports context failures without a path, which formatError would pass
+      // through as a request error; the code marks this one as internal.
+      throw new GraphQLError("Internal server error", {
+        originalError: error instanceof Error ? error : undefined,
+        extensions: { code: "INTERNAL_SERVER_ERROR" },
+      });
+    }
   };
 }
