@@ -1,6 +1,7 @@
+import { readFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import express from "express";
@@ -36,6 +37,8 @@ export async function startServer(
   logger: Logger,
   modules: readonly ModuleManifest[],
 ): Promise<RunningServer> {
+  // Built first: a web app folder without `index.html` fails startup before anything opens.
+  const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
   const database = connectDatabase(env.databaseUrl, logger);
   const readiness = new Readiness(() => database.checkConnection());
 
@@ -51,8 +54,8 @@ export async function startServer(
   }
   app.use(healthRouter(readiness));
   app.use(graphql.router);
-  if (env.webDir) {
-    app.use(webAppRouter(env.webDir));
+  if (webApp) {
+    app.use(webApp);
   }
   try {
     await listen(httpServer, env.port);
@@ -104,16 +107,18 @@ async function migrate(
   }
 }
 
-/** Serves the built web app; other GET paths get `index.html` so router links load. */
+/** Serves the built web app; other GET paths outside `/api` get `index.html` so router links load. */
 function webAppRouter(webDir: string): express.Router {
-  // `root` makes `sendFile` accept a relative folder and hidden parent folders.
+  // `resolve` lets the folder be relative and sit inside hidden parent folders.
   const root = resolve(webDir);
-  return express
-    .Router()
-    .use(express.static(root))
-    .get("/{*path}", (_request, response) => {
-      response.sendFile("index.html", { root });
-    });
+  // Read once, so a page link costs no file system access.
+  const indexHtml = readFileSync(join(root, "index.html"), "utf8");
+  const router = express.Router().use(express.static(root));
+  // API paths never get the web app, so an unknown one answers 404.
+  router.use("/api", (_request, _response, next) => next("router"));
+  return router.get("/{*path}", (_request, response) => {
+    response.type("html").send(indexHtml);
+  });
 }
 
 function listen(server: Server, port: number): Promise<void> {

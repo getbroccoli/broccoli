@@ -1,9 +1,11 @@
 import "./styles.css";
 
+import { ApolloProvider } from "@apollo/client/react";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { apolloClient } from "./apollo";
 import { routeTree } from "./routeTree.gen";
 
 const router = createRouter({ routeTree });
@@ -21,6 +23,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <ApolloProvider client={apolloClient}>
+      <RouterProvider router={router} />
+    </ApolloProvider>
   </StrictMode>,
 );

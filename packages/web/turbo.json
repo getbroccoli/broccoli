@@ -1,0 +1,10 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "codegen": {
+      // Web codegen reads the API's SDL, which Turborepo would not hash otherwise.
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/api/src/**/*.graphql"]
+    }
+  }
+}

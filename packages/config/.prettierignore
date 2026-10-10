@@ -2,3 +2,4 @@
 # so list root files by name only.
 pnpm-lock.yaml
 *.gen.ts
+__generated__/

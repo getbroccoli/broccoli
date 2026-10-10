@@ -6,7 +6,7 @@
   },
   "tasks": {
     "codegen": {
-      "outputs": ["src/**/*.gen.ts"]
+      "outputs": ["src/**/*.gen.ts", "src/__generated__/**"]
     },
     "build": {
       "dependsOn": ["^build", "codegen"],

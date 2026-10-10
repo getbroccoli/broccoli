@@ -20,7 +20,7 @@ export const MAX_DEPTH = 10;
 export const MAX_TOKENS = 2000;
 
 export interface GraphqlApi {
-  /** Serves `POST /graphql`. */
+  /** Serves `POST /api/graphql`. */
   router: express.Router;
   /** Drains in-flight requests and closes the HTTP server. */
   stop(): Promise<void>;
@@ -53,7 +53,7 @@ export async function startGraphqlApi(
   await apollo.start();
 
   return {
-    router: express.Router().use("/graphql", express.json(), expressMiddleware(apollo)),
+    router: express.Router().use("/api/graphql", express.json(), expressMiddleware(apollo)),
     stop: () => apollo.stop(),
   };
 }
