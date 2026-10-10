@@ -30,6 +30,14 @@ jobs:
       - run: pnpm check
       - run: pnpm build
 
+  image:
+    name: Docker image
+    runs-on: self-hosted
+    # Build only: running containers would share the host's Docker daemon and networks.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: docker build -f packages/api/Dockerfile .
+
   e2e:
     name: End-to-end tests
     runs-on: self-hosted

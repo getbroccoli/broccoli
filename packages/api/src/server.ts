@@ -1,5 +1,6 @@
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 
 import express from "express";
 
@@ -9,7 +10,7 @@ import { healthRouter } from "./health";
 import type { Logger } from "./logger";
 import { Readiness } from "./readiness";
 
-export type ServerEnv = Pick<Env, "databaseUrl" | "port">;
+export type ServerEnv = Pick<Env, "databaseUrl" | "port" | "webDir">;
 
 export interface RunningServer {
   url: string;
@@ -31,6 +32,9 @@ export async function startServer(env: ServerEnv, logger: Logger): Promise<Runni
   const app = express();
   app.disable("x-powered-by");
   app.use(healthRouter(readiness));
+  if (env.webDir) {
+    app.use(webAppRouter(env.webDir));
+  }
 
   let httpServer: Server;
   try {
@@ -65,6 +69,17 @@ async function migrate(database: Database, readiness: Readiness, logger: Logger)
     readiness.markFailed();
     logger.error({ err: error }, "Database migrations failed; not ready");
   }
+}
+
+/** Serves the built web app; other GET paths get `index.html` so router links load. */
+function webAppRouter(webDir: string): express.Router {
+  const indexHtml = join(webDir, "index.html");
+  return express
+    .Router()
+    .use(express.static(webDir))
+    .get("/{*path}", (_request, response) => {
+      response.sendFile(indexHtml);
+    });
 }
 
 function listen(app: express.Express, port: number): Promise<Server> {

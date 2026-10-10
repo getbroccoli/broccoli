@@ -6,7 +6,7 @@ const execFileAsync = promisify(execFile);
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("../../../../../", import.meta.url));
 const COMPOSE_SERVICE = "postgres-test";
-const START_COMMAND = "docker compose --profile test up -d --wait";
+const START_COMMAND = "docker compose up -d --wait postgres-test";
 
 /**
  * Admin URL of the Postgres server that hosts the test databases: TEST_DATABASE_URL

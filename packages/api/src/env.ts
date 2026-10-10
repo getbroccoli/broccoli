@@ -8,6 +8,8 @@ export interface Env {
   databaseUrl: string;
   port: number;
   logLevel: LogLevel;
+  /** Folder of the built web app to serve; unset serves only the API. */
+  webDir?: string;
 }
 
 /** Compose passes unset variables as empty strings, so blank means unset. */
@@ -20,11 +22,13 @@ const envSchema = z
     DATABASE_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^postgres(ql)?$/ })),
     PORT: z.preprocess(blankAsUnset, z.coerce.number().int().min(1).max(65_535).default(3000)),
     LOG_LEVEL: z.preprocess(blankAsUnset, z.enum(LOG_LEVELS).default("info")),
+    WEB_DIR: z.preprocess(blankAsUnset, z.string().optional()),
   })
   .transform((variables): Env => ({
     databaseUrl: variables.DATABASE_URL,
     port: variables.PORT,
     logLevel: variables.LOG_LEVEL,
+    webDir: variables.WEB_DIR,
   }));
 
 /** Reads and validates the environment; throws one error listing every problem. */

@@ -26,11 +26,15 @@
 
 ## Quick install
 
-Coming soon: the code is moving into this repository.
+Broccoli is early: today it starts an empty app shell. You need Git and Docker.
 
 ```sh
+git clone https://github.com/getbroccoli/broccoli
+cd broccoli
 docker compose up
 ```
+
+Then open http://localhost:8080. To use another port, set `HOST_WEB_PORT` in `.env` (see `.env.example`).
 
 ## License
 

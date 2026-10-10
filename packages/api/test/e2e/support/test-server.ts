@@ -12,8 +12,8 @@ const STARTUP_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 25;
 
 /** Starts the real API on a free port. */
-export function startTestServer(databaseUrl: string): Promise<RunningServer> {
-  return startServer({ databaseUrl, port: 0 }, createLogger("silent"));
+export function startTestServer(databaseUrl: string, webDir?: string): Promise<RunningServer> {
+  return startServer({ databaseUrl, port: 0, webDir }, createLogger("silent"));
 }
 
 /** Polls `/readyz` until the server has finished starting and returns its answer. */
