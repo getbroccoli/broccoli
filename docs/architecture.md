@@ -68,6 +68,8 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **Vite single-page app** with React 19, served as static files by the API container with a deep-link fallback. No server-side rendering.
 - **TanStack Router** with file-based routes and automatic code splitting; `routeTree.gen.ts` is committed. A pathless `_authenticated` layout with a `beforeLoad` redirect is the auth gate. Filters, sorting, pagination and wizard state live in validated search params.
 - **Apollo Client 4** with the default normalised cache. Every object type exposes `id` and every query selects it (lint rule). Type policies for mutation namespaces and `possibleTypes` are generated at codegen time. Creates and deletes refetch the affected list queries. The cache is cleared on logout and act-as. Prefetching from router loaders is decided in the frontend module design.
+- **UI kit:** shadcn/ui in the `base-nova` style on Base UI (triggers take `render`, not `asChild`), Tailwind v4 with design tokens as CSS variables in `styles.css`, Phosphor icons in app code (Lucide only inside shadcn components). The Hanken Grotesk font is bundled, so the browser makes no third-party requests. Light theme only for now.
+- **Shell:** a window-sized frame with the navigation on the left and the Canvas, a card that owns its own scroll; the document never scrolls.
 - **TanStack Form** with Zod schemas, shared with API input validation where practical, and shadcn/ui components.
 - **State:** Apollo cache for server data, the URL for navigation state, React state and context for UI only.
 - **i18n:** English only, but every user-facing string goes through one `t()` helper from day one.

@@ -3,7 +3,12 @@
   "compilerOptions": {
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "*.ts"]
 }
