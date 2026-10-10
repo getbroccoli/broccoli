@@ -92,7 +92,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **Builds.** The web app builds with Vite and the API with tsdown, so TypeScript resolves imports like a bundler: relative imports carry no file extension and a folder is imported by its name, which resolves to its `index.ts`.
 - **ESLint** (typescript-eslint, module boundaries, `@graphql-eslint`, project rules for SDL) and **Prettier**.
 - **Scripts** are kept to a minimum: `packages/scripts/start.sh`, `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
-- **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; Docker image build; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.
+- **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.
 
 ## 11. Development environment
 
