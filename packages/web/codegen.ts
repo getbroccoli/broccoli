@@ -19,6 +19,7 @@ const config: CodegenConfig = {
       },
     },
     "src/generated/possible-types.ts": { plugins: ["fragment-matcher"] },
+    "src/generated/type-policies.ts": { plugins: ["./codegen/type-policies.ts"] },
   },
 };
 
