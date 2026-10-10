@@ -1,3 +1,6 @@
+export type Browser = ReturnType<typeof createBrowser>;
+
+/** A client that keeps cookies like a browser and sends its own address as the Origin. */
 export function createBrowser(baseUrl: string) {
   const cookies = new Map<string, string>();
 
@@ -27,5 +30,7 @@ export function createBrowser(baseUrl: string) {
   return {
     post: (path: string, body: unknown) => request(path, "POST", body),
     get: (path: string) => request(path, "GET"),
+    graphql: (query: string, variables?: Record<string, unknown>) =>
+      request("/api/graphql", "POST", { query, variables }),
   };
 }

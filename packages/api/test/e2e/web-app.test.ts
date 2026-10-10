@@ -5,7 +5,7 @@ import { join, relative } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
 import type { RunningServer } from "../../src/core/server";
-import { startTestServer } from "./support/test-server";
+import { startTestServer } from "./support";
 
 // The web app needs no database, so these servers never become ready.
 const UNREACHABLE_DATABASE_URL = "postgres://broccoli@127.0.0.1:1/broccoli_test_unreachable";

@@ -1,71 +1,46 @@
-import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { expect, TEST_OWNER, test } from "./support";
 
-import { createBrowser } from "./support/browser";
-import { TestInstance } from "./support/test-instance";
+test("logs the owner in with the right password", async ({ env }) => {
+  const { user } = await env.signInAsOwner();
+  const browser = env.browser();
 
-const run = inject("testRun");
-const owner = { email: "owner@example.com", password: "correct horse battery staple" };
+  const response = await browser.post("/api/auth/sign-in/email", TEST_OWNER);
 
-describe("owner authentication", () => {
-  let instance: TestInstance;
-  let ownerId: string;
+  expect(response.status).toBe(200);
+  const session = await browser.get("/api/auth/get-session");
+  expect(await session.json()).toMatchObject({ user });
+});
 
-  beforeAll(async () => {
-    instance = await TestInstance.start(run);
-    const response = await createBrowser(instance.url).post("/api/auth/setup", owner);
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as { user: { id: string } };
-    ownerId = body.user.id;
+test("refuses a wrong password", async ({ env }) => {
+  await env.signInAsOwner();
+
+  const response = await env.browser().post("/api/auth/sign-in/email", {
+    ...TEST_OWNER,
+    password: "wrong password",
   });
 
-  afterAll(() => instance.stop());
+  expect(response.status).toBe(401);
+  expect(await response.json()).toMatchObject({ code: "INVALID_EMAIL_OR_PASSWORD" });
+});
 
-  it("logs the owner in with the right password", async () => {
-    const browser = createBrowser(instance.url);
+test("ends the session on logout", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
 
-    const response = await browser.post("/api/auth/sign-in/email", owner);
+  const response = await browser.post("/api/auth/sign-out", {});
 
-    expect(response.status).toBe(200);
-    const session = await browser.get("/api/auth/get-session");
-    expect(session.status).toBe(200);
-    expect(await session.json()).toMatchObject({ user: { id: ownerId, email: owner.email } });
+  expect(response.status).toBe(200);
+  const session = await browser.get("/api/auth/get-session");
+  expect(session.status).toBe(200);
+  expect(await session.json()).toBeNull();
+});
+
+test("refuses sign-up", async ({ env }) => {
+  const response = await env.browser().post("/api/auth/sign-up/email", {
+    name: "New User",
+    email: "new@example.com",
+    password: TEST_OWNER.password,
   });
 
-  it("refuses a wrong password", async () => {
-    const browser = createBrowser(instance.url);
-
-    const response = await browser.post("/api/auth/sign-in/email", {
-      ...owner,
-      password: "wrong password",
-    });
-
-    expect(response.status).toBe(401);
-    expect(await response.json()).toMatchObject({ code: "INVALID_EMAIL_OR_PASSWORD" });
-  });
-
-  it("ends the session on logout", async () => {
-    const browser = createBrowser(instance.url);
-    const login = await browser.post("/api/auth/sign-in/email", owner);
-    expect(login.status).toBe(200);
-    const signedIn = await browser.get("/api/auth/get-session");
-    expect(await signedIn.json()).toMatchObject({ user: { id: ownerId, email: owner.email } });
-
-    const response = await browser.post("/api/auth/sign-out", {});
-
-    expect(response.status).toBe(200);
-    const session = await browser.get("/api/auth/get-session");
-    expect(session.status).toBe(200);
-    expect(await session.json()).toBeNull();
-  });
-
-  it("refuses sign-up", async () => {
-    const response = await createBrowser(instance.url).post("/api/auth/sign-up/email", {
-      name: "New User",
-      email: "new@example.com",
-      password: owner.password,
-    });
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ code: "EMAIL_PASSWORD_SIGN_UP_DISABLED" });
-  });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ code: "EMAIL_PASSWORD_SIGN_UP_DISABLED" });
 });
