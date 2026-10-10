@@ -17,7 +17,10 @@ import { Readiness } from "./readiness";
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
 
-export type ServerEnv = Pick<Env, "databaseUrl" | "port" | "webDir">;
+export type ServerEnv = Pick<
+  Env,
+  "databaseUrl" | "port" | "webDir" | "mode" | "dataDir" | "publicUrl"
+>;
 
 export interface RunningServer {
   url: string;

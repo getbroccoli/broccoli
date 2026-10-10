@@ -32,7 +32,10 @@
   "dependencies": {
     "@apollo/server": "5.5.1",
     "@as-integrations/express5": "1.1.2",
+    "@better-auth/core": "1.7.7",
+    "@better-auth/drizzle-adapter": "1.7.7",
     "@graphql-tools/schema": "10.1.1",
+    "better-auth": "1.7.7",
     "drizzle-orm": "0.45.3",
     "express": "5.2.1",
     "graphql": "16.14.2",

@@ -20,7 +20,7 @@ describe("with a web app folder", () => {
     webDir = await mkdtemp(join(tmpdir(), "broccoli-web-"));
     await writeFile(join(webDir, "index.html"), INDEX_HTML);
     await writeFile(join(webDir, "app.js"), ASSET);
-    server = await startTestServer(UNREACHABLE_DATABASE_URL, webDir);
+    server = await startTestServer(UNREACHABLE_DATABASE_URL, { webDir });
   });
 
   afterAll(async () => {
@@ -67,7 +67,9 @@ it("serves page links from a relative web app folder inside a hidden folder", as
   const webDir = await mkdtemp(join(tmpdir(), ".broccoli-web-"));
   onTestFinished(() => rm(webDir, { recursive: true, force: true }));
   await writeFile(join(webDir, "index.html"), INDEX_HTML);
-  const server = await startTestServer(UNREACHABLE_DATABASE_URL, relative(process.cwd(), webDir));
+  const server = await startTestServer(UNREACHABLE_DATABASE_URL, {
+    webDir: relative(process.cwd(), webDir),
+  });
   onTestFinished(() => server.stop());
 
   expect(await (await fetch(`${server.url}/people/123`)).text()).toBe(INDEX_HTML);
