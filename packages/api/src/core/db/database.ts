@@ -1,3 +1,4 @@
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
 import type { Logger } from "../logger";
@@ -15,7 +16,13 @@ const CONNECTION_CHECK_QUERY = {
   query_timeout: CONNECTION_CHECK_TIMEOUT_MS,
 };
 
+/** Drizzle on the shared connection pool; `transaction()` runs a unit of work. */
+export type Orm = NodePgDatabase;
+
+export type OrmTransaction = Parameters<Parameters<Orm["transaction"]>[0]>[0];
+
 export interface Database {
+  orm: Orm;
   /** Applies pending migrations; safe to call from several instances at once. */
   migrate(): Promise<void>;
   /** Resolves when the database answers a query within a short timeout. */
@@ -36,6 +43,7 @@ export function connectDatabase(url: string, logger: Logger): Database {
   let migration: MigrationRun | undefined;
 
   return {
+    orm: drizzle({ client: pool }),
     migrate: async () => {
       migration = new MigrationRun(connection);
       try {

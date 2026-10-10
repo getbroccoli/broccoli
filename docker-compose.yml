@@ -7,6 +7,12 @@ services:
     environment:
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
+      BROCCOLI_MODE: ${BROCCOLI_MODE:-}
+      # Set it when Broccoli has a domain; unset trusts the address each request uses.
+      PUBLIC_URL: ${PUBLIC_URL:-}
+    volumes:
+      # Secrets such as the session signing key; back it up with the database.
+      - broccoli-data:/data
     ports:
       # HOST_WEB_PORT=0 picks a free port, so worktrees run side by side.
       - ${HOST_WEB_PORT:-8080}:3000
@@ -59,4 +65,5 @@ services:
       retries: 30
 
 volumes:
+  broccoli-data:
   postgres-data:

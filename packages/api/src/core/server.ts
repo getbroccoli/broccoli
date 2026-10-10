@@ -4,20 +4,27 @@ import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import { toNodeHandler } from "better-auth/node";
 import express from "express";
 
+import { createAuth } from "./auth";
 import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
 import { startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
+import { setupPlugin } from "./instance";
 import type { Logger } from "./logger";
 import type { ModuleManifest } from "./module-manifest";
 import { Readiness } from "./readiness";
+import { readOrCreateSecret } from "./secrets";
 
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
 
-export type ServerEnv = Pick<Env, "databaseUrl" | "port" | "webDir">;
+export type ServerEnv = Pick<
+  Env,
+  "databaseUrl" | "port" | "webDir" | "mode" | "dataDir" | "publicUrl"
+>;
 
 export interface RunningServer {
   url: string;
@@ -39,7 +46,15 @@ export async function startServer(
 ): Promise<RunningServer> {
   // Built first: a web app folder without `index.html` fails startup before anything opens.
   const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
+  const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
   const database = connectDatabase(env.databaseUrl, logger);
+  const auth = createAuth({
+    orm: database.orm,
+    secret: authSecret,
+    publicUrl: env.publicUrl,
+    plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm)] : [],
+    logger,
+  });
   const readiness = new Readiness(() => database.checkConnection());
 
   const app = express();
@@ -53,6 +68,8 @@ export async function startServer(
     throw error;
   }
   app.use(healthRouter(readiness));
+  // Better Auth reads the raw body, so no body parser may run before it.
+  app.all("/api/auth/{*path}", toNodeHandler(auth));
   app.use(graphql.router);
   if (webApp) {
     app.use(webApp);

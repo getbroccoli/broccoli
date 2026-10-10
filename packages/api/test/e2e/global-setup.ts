@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import type { TestProject } from "vitest/node";
 
+// Global setup runs outside the test runner, so it skips the index, which loads the `test` fixture.
 import { resolveDatabaseServerUrl } from "./support/database-server";
 import { createTemplateDatabase, dropRunDatabases, type TestRun } from "./support/test-databases";
 

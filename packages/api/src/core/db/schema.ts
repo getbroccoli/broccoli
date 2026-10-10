@@ -1,2 +1,3 @@
-// Drizzle table definitions. Modules re-export their tables from here as they are added.
-export {};
+// Drizzle table definitions, the source of the generated migrations.
+export { account, session, user, verification } from "../auth";
+export { instance } from "../instance";

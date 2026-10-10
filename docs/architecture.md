@@ -55,6 +55,9 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **Sessions** are opaque, database-backed and carried in Secure, HttpOnly cookies, with CSRF protection and cookie caching off. Logout, account disabling and permission changes take effect immediately.
 - **MCP clients** authenticate with OAuth 2.1 through `@better-auth/oauth-provider` and `@better-auth/mcp` (discovery, PKCE S256, client registration, audiences, refresh, revocation). An application-level active-grant check makes revocation immediate.
 - **Managed sign-in.** A small plugin endpoint validates a signed single-use ticket from the managed sign-in service (issuer and audience checks, atomic one-time use, subject-based account linking) and creates a normal session.
+- **Mode.** `BROCCOLI_MODE` is `self_hosted` (the default) or `managed`. It is deployment configuration, so it lives in the environment, not the database.
+- **Owner bootstrap.** Self-hosted installs have no public sign-up: the first visitor of a new install creates the owner. `POST /api/auth/setup`, a Broccoli plugin on Better Auth, creates the owner's user, password and session in one transaction that locks the `instance` row, and refuses once an owner exists. The owner is identified by the user id, not the email. Managed installs have no setup endpoint; the owner signs in with email or Google through the managed sign-in service, reusing the same owner claim.
+- **Passwords** are 8 to 128 characters.
 - **Owned by Broccoli, not the library:** owner bootstrap and recovery, invitations (email, later Slack), act-as impersonation (real actor and effective profile stored server-side, both audited, no credential or grant changes while impersonating), password policy.
 
 ## 7. Permissions and audit
@@ -105,6 +108,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 ## 12. Configuration, secrets, observability and self-hosting
 
 - **Configuration** is environment variables validated with Zod at startup (blank counts as unset), one `env.ts` per package, no configuration files. Feature flags are plain environment variables.
+- **Data folder.** `DATA_DIR` (default `/data`, a Compose volume) holds files that must survive restarts. `PUBLIC_URL` is the address browsers use; unset, Broccoli trusts the address of each request. Session cookies are Secure when `PUBLIC_URL` is https; without it the protocol is unknown, so they are not.
 - **Secrets.** On first boot the app generates the encryption key and cookie secret into a volume file (`/data/secrets/`, mode 600) and reads them on later boots; `ENCRYPTION_KEY` in the environment overrides the file. Third-party credentials (Slack and similar) are stored encrypted in the database. The rule: the database holds hashes and ciphertext, never keys. Operators back up the secrets volume together with the database.
 - **Logging** with pino: identifiers, not contents; a redaction list; a trace id on every line.
 - **Observability** with OpenTelemetry auto-instrumentation, OTLP export off by default. `/healthz` and `/readyz` (ready only after migrations). No third-party error service.

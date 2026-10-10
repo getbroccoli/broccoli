@@ -2,10 +2,15 @@ import { createServer, type AddressInfo } from "node:net";
 
 import { expect, inject, it, onTestFinished } from "vitest";
 
-import { holdMigrationLock } from "./support/migration-lock";
-import { startDisconnectingProxy } from "./support/disconnecting-proxy";
-import { createEmptyTestDatabase, type TestDatabase } from "./support/test-databases";
-import { fetchReadiness, startTestServer, waitForStartup } from "./support/test-server";
+import {
+  createEmptyTestDatabase,
+  fetchReadiness,
+  holdMigrationLock,
+  startDisconnectingProxy,
+  startTestServer,
+  waitForStartup,
+  type TestDatabase,
+} from "./support";
 
 const run = inject("testRun");
 

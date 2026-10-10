@@ -26,6 +26,10 @@ services:
     environment:
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
+      BROCCOLI_MODE: ${BROCCOLI_MODE:-}
+      # In the checkout, so the host user owns it.
+      DATA_DIR: /repo/.data
+      PUBLIC_URL: ""
     depends_on:
       postgres:
         condition: service_healthy

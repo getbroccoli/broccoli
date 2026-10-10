@@ -18,7 +18,12 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       strictPort: true,
-      proxy: { "/healthz": apiTarget, "/readyz": apiTarget, "/api": apiTarget },
+      proxy: {
+        "/healthz": apiTarget,
+        "/readyz": apiTarget,
+        // Keeps the browser's Host: sign-in only trusts the address the browser used.
+        "/api": { target: apiTarget, changeOrigin: false },
+      },
     },
   };
 });

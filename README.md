@@ -30,6 +30,8 @@
 docker compose up
 ```
 
+Open http://localhost:8080.
+
 ## License
 
 Copyright (C) 2026 Minari Limited.

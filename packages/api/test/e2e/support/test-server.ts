@@ -1,5 +1,9 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import type { Mode } from "../../../src/core/env";
 import { createLogger } from "../../../src/core/logger";
 import { startServer, type RunningServer } from "../../../src/core/server";
 import { modules } from "../../../src/modules";
@@ -12,9 +16,35 @@ export interface Readiness {
 const STARTUP_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 25;
 
+export interface TestServerOptions {
+  webDir?: string;
+  /** Defaults to a new temporary folder, removed when the server stops. */
+  dataDir?: string;
+  mode?: Mode;
+  publicUrl?: string;
+}
+
 /** Starts the real API on a free port. */
-export function startTestServer(databaseUrl: string, webDir?: string): Promise<RunningServer> {
-  return startServer({ databaseUrl, port: 0, webDir }, createLogger("silent"), modules);
+export async function startTestServer(
+  databaseUrl: string,
+  { webDir, dataDir, mode = "self_hosted", publicUrl }: TestServerOptions = {},
+): Promise<RunningServer> {
+  const ownsDataDir = dataDir === undefined;
+  const folder = dataDir ?? (await mkdtemp(join(tmpdir(), "broccoli-data-")));
+  const server = await startServer(
+    { databaseUrl, port: 0, webDir, mode, dataDir: folder, publicUrl },
+    createLogger("silent"),
+    modules,
+  );
+  return {
+    url: server.url,
+    stop: async () => {
+      await server.stop();
+      if (ownsDataDir) {
+        await rm(folder, { recursive: true, force: true });
+      }
+    },
+  };
 }
 
 /** Polls `/readyz` until the server has finished starting and returns its answer. */
