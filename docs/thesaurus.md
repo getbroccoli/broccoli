@@ -11,3 +11,5 @@ The words Broccoli's code and docs use, and what each one means.
 - **Setup**: creating the owner on a new self-hosted instance; the first visitor does it, once.
 - **Onboarding step**: where a new instance is in its first-run flow: `owner`, `company`, `done`.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
+- **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
+- **Actor**: who is calling the API: a signed-in user, and whether they are the owner.

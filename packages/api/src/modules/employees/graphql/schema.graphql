@@ -1,0 +1,46 @@
+"Someone who works for the company."
+type Employee {
+  id: ID!
+  firstName: String!
+  lastName: String!
+  "Work email, lowercased; unique."
+  email: String!
+  jobTitle: String
+  "First working day."
+  startDate: Date
+  createdAt: DateTime!
+}
+
+type EmployeeEdge {
+  cursor: String!
+  node: Employee!
+}
+
+type EmployeeConnection {
+  edges: [EmployeeEdge!]!
+  pageInfo: PageInfo!
+}
+
+input EmployeeCreateInput {
+  firstName: String!
+  lastName: String!
+  "Unique, compared without case."
+  email: String!
+  jobTitle: String
+  startDate: Date
+}
+
+type EmployeeMutations {
+  "Adds an employee. Owner only."
+  create(input: EmployeeCreateInput!): Employee!
+}
+
+# Each module declares its own root fields; the server merges them into one type.
+type Query {
+  "Employees in name order: first name, then last name. Owner only."
+  employees("Page size, 1 to 10000." first: Int = 100, after: String): EmployeeConnection!
+}
+
+type Mutation {
+  employee: EmployeeMutations!
+}
