@@ -10,10 +10,10 @@ export interface DisconnectingProxy {
   disconnect(): Promise<void>;
 }
 
-/** Listens on `port`, or on a free port when it is 0. */
+/** Listens on `port`, or on a free port when it is omitted. */
 export async function startDisconnectingProxy(
   databaseUrl: string,
-  port = 0,
+  port?: number,
 ): Promise<DisconnectingProxy> {
   const target = new URL(databaseUrl);
   const sockets = new Set<Socket>();

@@ -4,10 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Broccoli API server.",
-  "files": [
-    "dist",
-    "drizzle"
-  ],
   "scripts": {
     "build": "tsdown",
     "start": "node dist/main.js",
