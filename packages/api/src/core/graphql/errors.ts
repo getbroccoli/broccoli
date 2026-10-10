@@ -8,7 +8,12 @@ import { ApplicationError } from "../application-error";
  * even when graphql-js raised them (it puts unserializable values in the message).
  */
 export function isRequestError(error: unknown): boolean {
-  return error instanceof GraphQLError && error.path === undefined;
+  return (
+    error instanceof GraphQLError &&
+    error.path === undefined &&
+    // Apollo reports a failing context function without a path, with the cause in its message.
+    error.extensions.code !== "INTERNAL_SERVER_ERROR"
+  );
 }
 
 /** The use case's expected failure behind a resolver error, if that is what it is. */

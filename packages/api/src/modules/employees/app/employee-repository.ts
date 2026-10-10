@@ -1,4 +1,4 @@
-import type { Employee, NewEmployee } from "../domain/employee";
+import type { Employee, NewEmployee } from "../domain";
 
 /**
  * An employee's place in the list order: lowercased first name, lowercased last

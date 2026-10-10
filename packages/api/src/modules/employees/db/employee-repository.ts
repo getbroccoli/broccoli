@@ -2,11 +2,7 @@ import { DrizzleQueryError, sql } from "drizzle-orm";
 import { DatabaseError } from "pg";
 
 import type { Orm } from "../../../core/db";
-import {
-  EmailTakenError,
-  type EmployeeKeyset,
-  type EmployeeRepository,
-} from "../app/employee-repository";
+import { EmailTakenError, type EmployeeKeyset, type EmployeeRepository } from "../app";
 import { employees } from "./employees-table";
 
 const UNIQUE_VIOLATION = "23505";

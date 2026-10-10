@@ -1,6 +1,6 @@
 import { type Actor, requireOwner } from "../../../core/actor";
 import { invalidInput } from "../../../core/application-error";
-import { type Employee, type NewEmployeeInput, parseNewEmployee } from "../domain/employee";
+import { type Employee, type NewEmployeeInput, parseNewEmployee } from "../domain";
 import { EmailTakenError, type EmployeeRepository } from "./employee-repository";
 
 export async function createEmployee(

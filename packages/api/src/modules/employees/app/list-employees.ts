@@ -1,6 +1,6 @@
 import { type Actor, requireOwner } from "../../../core/actor";
 import { invalidInput } from "../../../core/application-error";
-import type { Employee } from "../domain/employee";
+import type { Employee } from "../domain";
 import { decodeCursor, encodeCursor } from "./cursor";
 import type { EmployeeRepository } from "./employee-repository";
 

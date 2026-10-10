@@ -1,7 +1,7 @@
 import type { Actor } from "../../../core/actor";
 import type { Resolvers } from "../../../core/graphql";
-import type { EmployeeConnection } from "../app/list-employees";
-import type { Employee, NewEmployeeInput } from "../domain/employee";
+import type { EmployeeConnection } from "../app";
+import type { Employee, NewEmployeeInput } from "../domain";
 
 export interface EmployeeUseCases {
   createEmployee(actor: Actor | null, input: NewEmployeeInput): Promise<Employee>;

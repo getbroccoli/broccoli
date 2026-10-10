@@ -59,6 +59,22 @@ it("passes through a GraphQLError raised before execution", () => {
   expect(result).toBe(formatted);
 });
 
+it("masks an error raised while creating the request context", () => {
+  const error = new GraphQLError(
+    'Context creation failed: Failed query: select "owner_user_id" from "instance"',
+    { extensions: { code: "INTERNAL_SERVER_ERROR" } },
+  );
+
+  const result = formatError(error.toJSON(), error);
+
+  expect(result).toEqual({
+    message: "Internal server error",
+    locations: undefined,
+    path: undefined,
+    extensions: { code: "INTERNAL_SERVER_ERROR" },
+  });
+});
+
 it("masks a deliberately thrown GraphQLError with a path", () => {
   const originalError = new GraphQLError("Permission denied", {
     extensions: { code: "FORBIDDEN" },
