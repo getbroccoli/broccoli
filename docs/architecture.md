@@ -108,7 +108,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 ## 12. Configuration, secrets, observability and self-hosting
 
 - **Configuration** is environment variables validated with Zod at startup (blank counts as unset), one `env.ts` per package, no configuration files. Feature flags are plain environment variables.
-- **Data folder.** `DATA_DIR` (default `/data`, a Compose volume) holds files that must survive restarts. `PUBLIC_URL` is the address browsers use; it builds links such as the setup link and defaults to the request's own address.
+- **Data folder.** `DATA_DIR` (default `/data`, a Compose volume) holds files that must survive restarts. `PUBLIC_URL` is the address browsers use; it builds links such as the setup link and defaults to the request's own address. Session cookies are Secure when `PUBLIC_URL` is https; without it the protocol is unknown, so they are not.
 - **Secrets.** On first boot the app generates the encryption key and cookie secret into a volume file (`/data/secrets/`, mode 600) and reads them on later boots; `ENCRYPTION_KEY` in the environment overrides the file. Third-party credentials (Slack and similar) are stored encrypted in the database. The rule: the database holds hashes and ciphertext, never keys. Operators back up the secrets volume together with the database.
 - **Logging** with pino: identifiers, not contents; a redaction list; a trace id on every line.
 - **Observability** with OpenTelemetry auto-instrumentation, OTLP export off by default. `/healthz` and `/readyz` (ready only after migrations). No third-party error service.

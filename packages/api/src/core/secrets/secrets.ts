@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { link, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -15,8 +15,12 @@ export async function readOrCreateSecret(dataDir: string, name: string): Promise
   }
   const folder = secretsFolder(dataDir);
   await mkdir(folder, { recursive: true, mode: 0o700 });
-  const draft = join(folder, `.${name}.${process.pid}.${Date.now()}`);
-  await writeFile(draft, randomBytes(SECRET_BYTES).toString("base64url"), { mode: 0o600 });
+  // A unique draft per call; `wx` refuses to reuse a file another writer owns.
+  const draft = join(folder, `.${name}.${randomUUID()}`);
+  await writeFile(draft, randomBytes(SECRET_BYTES).toString("base64url"), {
+    mode: 0o600,
+    flag: "wx",
+  });
   try {
     // `link` fails when the secret exists, so a process starting at the same time
     // never replaces a secret another one has already handed out.

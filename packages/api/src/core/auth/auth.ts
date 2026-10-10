@@ -34,6 +34,11 @@ export function createAuth({ orm, secret, publicUrl, plugins, logger }: AuthConf
     },
     plugins,
     telemetry: { enabled: false },
+    advanced: {
+      // Without a public URL the protocol is unknown, and a Secure cookie would be
+      // dropped by browsers on plain HTTP; HTTPS installs set an https PUBLIC_URL.
+      useSecureCookies: publicUrl?.startsWith("https:") ?? false,
+    },
     logger: {
       log: (level, message, ...details: unknown[]) => {
         logger[level]({ details }, message);

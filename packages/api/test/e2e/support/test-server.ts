@@ -21,17 +21,18 @@ export interface TestServerOptions {
   /** Defaults to a new temporary folder, removed when the server stops. */
   dataDir?: string;
   mode?: Mode;
+  publicUrl?: string;
 }
 
 /** Starts the real API on a free port. */
 export async function startTestServer(
   databaseUrl: string,
-  { webDir, dataDir, mode = "self_hosted" }: TestServerOptions = {},
+  { webDir, dataDir, mode = "self_hosted", publicUrl }: TestServerOptions = {},
 ): Promise<RunningServer> {
   const ownsDataDir = dataDir === undefined;
   const folder = dataDir ?? (await mkdtemp(join(tmpdir(), "broccoli-data-")));
   const server = await startServer(
-    { databaseUrl, port: 0, webDir, mode, dataDir: folder },
+    { databaseUrl, port: 0, webDir, mode, dataDir: folder, publicUrl },
     createLogger("silent"),
     modules,
   );

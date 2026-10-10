@@ -63,6 +63,43 @@ describe("self-hosted owner setup", () => {
     expect(await response.json()).toMatchObject({ code: "OWNER_EXISTS" });
   });
 
+  it("sets a Secure session cookie when the public URL uses HTTPS", async () => {
+    await server.stop();
+    server = await startTestServer(database.url, {
+      dataDir,
+      publicUrl: "https://broccoli.example.com",
+    });
+    expect(await waitForStartup(server)).toEqual({ httpStatus: 200, status: "ready" });
+
+    const response = await fetch(`${server.url}/api/auth/setup`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...owner, token }),
+    });
+
+    expect(response.status).toBe(200);
+    const sessionCookie = response.headers
+      .getSetCookie()
+      .find((cookie) => cookie.includes("session_token="));
+    expect(sessionCookie).toMatch(/;\s*Secure(?:;|$)/i);
+  });
+
+  // Run with NODE_ENV=production to catch Better Auth's production cookie default.
+  it("sets a session cookie without Secure when no public URL is configured", async () => {
+    const response = await fetch(`${server.url}/api/auth/setup`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...owner, token }),
+    });
+
+    expect(response.status).toBe(200);
+    const sessionCookie = response.headers
+      .getSetCookie()
+      .find((cookie) => cookie.includes("session_token="));
+    expect(sessionCookie).toBeDefined();
+    expect(sessionCookie).not.toMatch(/;\s*Secure(?:;|$)/i);
+  });
+
   it("refuses a wrong token without claiming setup", async () => {
     const browser = createBrowser(server.url);
 
