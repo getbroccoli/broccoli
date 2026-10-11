@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: { alias: [{ find: /^graphql$/, replacement: "graphql/index.js" }] },
   test: {
     include: ["test/e2e/**/*.test.ts"],
-    globalSetup: ["test/e2e/global-setup.ts"],
+    globalSetup: ["test/support/global-setup.ts"],
     testTimeout: 30_000,
     hookTimeout: 30_000,
   },

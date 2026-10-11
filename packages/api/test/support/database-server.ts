@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-const REPOSITORY_ROOT = fileURLToPath(new URL("../../../../../", import.meta.url));
+const REPOSITORY_ROOT = fileURLToPath(new URL("../../../../", import.meta.url));
 const COMPOSE_SERVICE = "postgres-test";
 const START_COMMAND = "docker compose up -d --wait postgres-test";
 

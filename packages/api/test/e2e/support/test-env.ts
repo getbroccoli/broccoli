@@ -4,9 +4,11 @@ import { join } from "node:path";
 
 import { inject } from "vitest";
 
+import { connectDatabase, type Database } from "../../../src/core/db";
+import { createLogger } from "../../../src/core/logger";
 import type { RunningServer } from "../../../src/core/server";
+import { createTestDatabase, type TestDatabase, TestSeed } from "../../support";
 import { createBrowser, type Browser } from "./browser";
-import { createTestDatabase, type TestDatabase } from "./test-databases";
 import { startTestServer, waitForStartup, type TestServerOptions } from "./test-server";
 
 export type TestEnvOptions = Omit<TestServerOptions, "dataDir">;
@@ -23,11 +25,18 @@ export interface SignedInOwner {
  * entry point to the other test tools.
  */
 export class TestEnv {
+  /** Creates test data through the use cases, on this environment's database. */
+  readonly seed: TestSeed;
+  private readonly database: Database;
+
   private constructor(
     readonly db: TestDatabase,
     readonly dataDir: string,
     private server: RunningServer,
-  ) {}
+  ) {
+    this.database = connectDatabase(db.url, createLogger("silent"));
+    this.seed = new TestSeed(this.database.orm);
+  }
 
   /** Starts a new environment and waits until it is ready. */
   static async start(options: TestEnvOptions = {}): Promise<TestEnv> {
@@ -63,6 +72,7 @@ export class TestEnv {
   }
 
   async stop(): Promise<void> {
+    await this.database.close();
     await this.server.stop();
     await this.db.drop();
     await rm(this.dataDir, { recursive: true, force: true });
