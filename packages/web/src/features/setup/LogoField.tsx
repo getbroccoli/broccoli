@@ -38,6 +38,9 @@ export function LogoField({ logoUrl, disabled, onBusyChange, onUploaded }: LogoF
     onBusyChange(true);
     try {
       setFailure(await change());
+    } catch {
+      // The upload went through but reading the company back failed: the preview is stale.
+      setFailure("setup.company.logoFailed");
     } finally {
       setBusy(false);
       onBusyChange(false);

@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { useForm } from "@tanstack/react-form";
 import { useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { z } from "zod";
 
 import {
@@ -69,10 +69,12 @@ function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
   const [updateCompany] = useMutation(UpdateCompanyDocument);
   const [logoBusy, setLogoBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const nameInput = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     defaultValues: { name: company.name ?? company.suggestedName ?? "" },
     validators: { onSubmit: companyStepSchema },
+    onSubmitInvalid: () => nameInput.current?.focus(),
     onSubmit: async ({ value }) => {
       setFailed(false);
       try {
@@ -119,6 +121,7 @@ function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <Label htmlFor="company-name">{t("setup.company.name")}</Label>
                 <Input
+                  ref={nameInput}
                   id="company-name"
                   name="organization"
                   autoComplete="organization"
