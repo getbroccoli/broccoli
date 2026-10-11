@@ -25,6 +25,5 @@ A manual check of the People page against a development stack.
 ## Robustness
 
 - [ ] `/people?sort=bogus&dir=sideways&after=junk&q=` opens the normal list.
-- [ ] Without a session (cookie cleared), the page shows "Sign in to see your people."
 - [ ] With the API failing, the page shows "Couldn’t load people" and "Try again" reloads the list once the API is back.
 - [ ] At a narrow canvas the table scrolls sideways inside its frame, the Name column and header row stay pinned.
