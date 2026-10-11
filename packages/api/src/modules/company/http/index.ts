@@ -1,1 +1,1 @@
-export { logoRouter } from "./logo-router";
+export { logoRouter, logoUrl } from "./logo-router";

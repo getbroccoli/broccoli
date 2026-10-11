@@ -6,7 +6,8 @@ import { getCompany } from "./get-company";
 import { detectCompanyNameAndLogo } from "./detect-company-name-and-logo";
 import { readLogo } from "./read-logo";
 import { removeLogo } from "./remove-logo";
-import { setName } from "./set-name";
+import { saveLogo } from "./save-logo";
+import { updateCompany } from "./update-company";
 
 export type { Company } from "./company";
 
@@ -21,7 +22,8 @@ export function createCompanyUseCases({
   const context = { orm, eventBus, companies };
   return {
     getCompany: (actor: Actor) => getCompany(context, actor),
-    setName: (actor: Actor, name: string) => setName(context, actor, name),
+    update: (actor: Actor, input: { name: string }) => updateCompany(context, actor, input),
+    saveLogo: (actor: Actor, bytes: Buffer) => saveLogo(context, actor, bytes),
     removeLogo: (actor: Actor) => removeLogo(context, actor),
     readLogo: (actor: Actor, logoId: string) => readLogo(context, actor, logoId),
     detectCompanyNameAndLogo: (owner: { userId: string; email: string }) =>

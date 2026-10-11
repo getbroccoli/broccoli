@@ -5,14 +5,14 @@ import { companyRepository } from "../../db";
 import { parseCompanyName } from "../../domain";
 import { type Company, type CompanyContext, readCompany } from "./company";
 
-/** Saves the name and, if it is current, completes the company step, in one transaction. */
-export async function setName(
+/** Saves the company's details and, if it is current, completes the company step of setup. */
+export async function updateCompany(
   context: CompanyContext,
   actor: Actor,
-  rawName: string,
+  input: { name: string },
 ): Promise<Company> {
   requireOwner(actor);
-  const name = parseCompanyName(rawName);
+  const name = parseCompanyName(input.name);
   await runInTransaction(context.orm, context.eventBus, async (tx) => {
     await companyRepository(tx).saveName(name);
     await advanceStep(tx, "company", "done");

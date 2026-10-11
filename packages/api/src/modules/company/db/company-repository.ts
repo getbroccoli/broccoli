@@ -52,6 +52,18 @@ export function companyRepository(db: Orm | Tx) {
         .where(isNull(company.brandLookedUpAt));
     },
 
+    /** The owner's own logo; also counts as the first lookup, so a running one cannot replace it. */
+    saveLogo: async (logo: Logo): Promise<void> => {
+      await orm()
+        .update(company)
+        .set({
+          logoId: randomUUID(),
+          logoContent: logo.bytes,
+          logoMimeType: logo.mimeType,
+          brandLookedUpAt: sql`coalesce(${company.brandLookedUpAt}, now())`,
+        });
+    },
+
     /** Also counts as the first lookup, so a lookup still running cannot bring the logo back. */
     removeLogo: async (): Promise<void> => {
       await orm()

@@ -2,6 +2,11 @@ import { onTestFinished } from "vitest";
 
 import { expect, startFakeBrandServer, TestEnv, test } from "#test/support";
 
+const logo = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
+  "base64",
+);
+
 test("completes setup when the owner names the company", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const before = await browser.graphql("query { setup { id step } company { id suggestedName } }");
@@ -14,13 +19,13 @@ test("completes setup when the owner names the company", async ({ env }) => {
   });
 
   const saved = await browser.graphql(`
-    mutation { company { setName(name: "Example Ltd") { id name } } }
+    mutation { company { update(input: { name: "Example Ltd" }) { id name } } }
   `);
 
   expect(saved.status).toBe(200);
   expect(await saved.json()).toEqual({
     data: {
-      company: { setName: { id: "company", name: "Example Ltd" } },
+      company: { update: { id: "company", name: "Example Ltd" } },
     },
   });
   const after = await browser.graphql("query { setup { id step } }");
@@ -28,10 +33,6 @@ test("completes setup when the owner names the company", async ({ env }) => {
 });
 
 test("serves the looked-up logo to the owner with private caching", async () => {
-  const logo = Buffer.from(
-    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489",
-    "hex",
-  );
   const brands = await startFakeBrandServer(() => ({
     status: 200,
     body: {
@@ -62,5 +63,38 @@ test("serves the looked-up logo to the owner with private caching", async () => 
   expect(image.headers.get("x-content-type-options")).toBe("nosniff");
 
   const anonymous = await env.browser().get(body.data.company.logoUrl);
+  expect(anonymous.status).toBe(401);
+});
+
+test("serves the logo uploaded by the owner", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+
+  const response = await browser.put("/api/company/logo", logo);
+
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as { logoUrl: string };
+  expect(body.logoUrl).toMatch(/^\/api\/company\/logo\/[0-9a-f-]+$/);
+  const image = await browser.get(body.logoUrl);
+  expect(image.status).toBe(200);
+  expect(Buffer.from(await image.arrayBuffer())).toEqual(logo);
+});
+
+test("refuses invalid, oversized and anonymous logo uploads", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+
+  const invalid = await browser.put(
+    "/api/company/logo",
+    Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+  );
+  expect(invalid.status).toBe(400);
+  expect(await invalid.json()).toEqual({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "logo", code: "invalid" }],
+  });
+
+  const oversized = await browser.put("/api/company/logo", Buffer.alloc(512 * 1024 + 1));
+  expect(oversized.status).toBe(413);
+
+  const anonymous = await env.browser().put("/api/company/logo", logo);
   expect(anonymous.status).toBe(401);
 });

@@ -1,6 +1,6 @@
 import { parseRasterImage, type RasterImage } from "../../../utils";
 
-const MAX_LOGO_BYTES = 512 * 1024;
+export const MAX_LOGO_BYTES = 512 * 1024;
 
 /** The company logo as Broccoli stores and serves it. */
 export type Logo = RasterImage;

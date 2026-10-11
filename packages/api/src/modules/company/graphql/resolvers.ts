@@ -1,6 +1,7 @@
 import { requireSignedIn } from "../../../core/actor";
 import type { Resolvers } from "../../../core/graphql";
 import type { Company, CompanyUseCases } from "../app";
+import { logoUrl } from "../http";
 
 export function createResolvers(useCases: CompanyUseCases): Resolvers {
   return {
@@ -12,8 +13,8 @@ export function createResolvers(useCases: CompanyUseCases): Resolvers {
       company: () => ({}),
     },
     CompanyMutations: {
-      setName: async (_parent, { name }, { actor }) =>
-        toGraphql(await useCases.setName(requireSignedIn(actor), name)),
+      update: async (_parent, { input }, { actor }) =>
+        toGraphql(await useCases.update(requireSignedIn(actor), input)),
       removeLogo: async (_parent, _args, { actor }) =>
         toGraphql(await useCases.removeLogo(requireSignedIn(actor))),
     },
@@ -25,6 +26,6 @@ function toGraphql({ name, suggestedName, logoId }: Company) {
     id: "company",
     name,
     suggestedName,
-    logoUrl: logoId && `/api/company/logo/${logoId}`,
+    logoUrl: logoId && logoUrl(logoId),
   };
 }
