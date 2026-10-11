@@ -1,4 +1,4 @@
-import { expect, TEST_OWNER, test } from "./support";
+import { expect, TEST_OWNER, test } from "#test/support";
 
 test("logs the owner in with the right password", async ({ env }) => {
   const { user } = await env.signInAsOwner();

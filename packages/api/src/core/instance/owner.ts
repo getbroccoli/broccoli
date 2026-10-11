@@ -9,8 +9,13 @@ export class OwnerExistsError extends Error {
 }
 
 export async function hasOwner(orm: Orm): Promise<boolean> {
+  return (await readOwnerUserId(orm)) !== null;
+}
+
+/** The owner's user id, or null before setup. */
+export async function readOwnerUserId(orm: Orm): Promise<string | null> {
   const [row] = await orm.select({ ownerUserId: instance.ownerUserId }).from(instance);
-  return Boolean(row?.ownerUserId);
+  return row?.ownerUserId ?? null;
 }
 
 /**

@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Broccoli API server.",
+  "imports": {
+    "#test/support": "./test/support/index.ts"
+  },
   "scripts": {
     "build": "tsdown",
     "codegen": "graphql-codegen",
@@ -11,6 +14,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "test:integration": "vitest run -c vitest.integration.config.ts",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
     "db:generate": "drizzle-kit generate"
   },

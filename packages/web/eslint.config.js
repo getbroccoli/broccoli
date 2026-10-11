@@ -36,7 +36,7 @@ export default defineConfig(
     languageOptions: {
       parser: graphql.parser,
       parserOptions: {
-        graphQLConfig: { schema: "../api/src/modules/**/*.graphql", documents: "src/**/*.graphql" },
+        graphQLConfig: { schema: "../api/src/**/*.graphql", documents: "src/**/*.graphql" },
       },
     },
     plugins: { "@graphql-eslint": graphql },

@@ -56,4 +56,5 @@ jobs:
           standalone: true
           cache: true
       - run: pnpm install --frozen-lockfile
+      - run: pnpm test:integration
       - run: pnpm test:e2e

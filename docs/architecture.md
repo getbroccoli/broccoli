@@ -4,22 +4,27 @@ This document records the architecture decisions behind Broccoli. It is edited i
 
 ## 1. Shape of the system
 
-- **Modular monolith.** One API process, one web single-page app, one container image. Modules live in `packages/api/src/modules/<name>/`; the code they share (server, database, GraphQL) lives in `packages/api/src/core/`.
+- **Modular monolith.** One API process, one web single-page app, one container image. Modules live in `packages/api/src/modules/<name>/`; the code they share (server, database, GraphQL) lives in `packages/api/src/core/`. Pure helpers that know nothing about Broccoli or its libraries, such as `isCalendarDate`, live in `packages/api/src/utils/`.
 - **Single-tenant.** One deployment and one Postgres database per company, for self-hosted and managed installs alike. There is no tenant column and no row-level security; the managed service runs one instance per company and migrates each.
 - **Layers per module.**
   - `domain`: pure TypeScript, no I/O.
-  - `application`: use cases. The single place for authorisation, transactions, audit and events.
-  - `graphql`, `mcp` and `db`: adapters, named after their technology like the matching folders in `core/`.
-  - `index.ts`: the module's public surface.
-- **Module manifest.** Each module exports one manifest: SDL and resolvers, MCP tools, event handlers, jobs. The core iterates over the list of manifests. No shared request context or central configuration has to be edited to add a module.
+  - `db`: the Postgres adapter. Concrete repositories over the ORM or a transaction (`employeeRepository(db)`) that take and return domain types.
+  - `app`: the application layer. `app/use-cases/` holds one function per thing a user can do, and its `index.ts` is the module's use-case factory (`createEmployeeUseCases({ orm })`). Use cases are the single place for authorisation, transactions, audit and events.
+  - `graphql` and `mcp`: adapters that translate a request into one use-case call; no rules.
+  - `index.ts`: the module's public surface; it composes the adapters with the use cases.
+  - **Dependencies point one way:** `domain ← db ← app ← graphql | mcp`, each through the folder's `index.ts`. Repositories and use cases are concrete, and their types are inferred; there are no hand-written interfaces, because tests never replace our own code (see `docs/testing.md`).
+- **Module manifest.** Each module exports one factory, such as `employeesModule({ orm })`, that receives the core's dependencies at startup, builds its use cases once and returns its manifest: SDL and resolvers, later MCP tools, event handlers and jobs. The core iterates over the list of manifests. The GraphQL context carries only the actor; resolvers call the module's use cases with it. No shared request context or central configuration has to be edited to add a module.
 - **Cross-module calls** go through the other module's public use cases or its events. A module never reads another module's tables.
 - **Domain-driven design is tiered** and decided per module when it is designed. The default is a plain domain layer with unit tests. Aggregates, value objects and domain events are used only where invariants demand them, such as leave balances, approvals and permissions.
 
 ## 2. API
 
 - **GraphQL is the primary API and, for now, an internal contract** used by the Broccoli web app. It may change freely before 1.0. The schema is not published and there are no deprecation rules yet.
-- **Schema-first SDL.** Each module owns its `.graphql` files; they are merged at startup. Resolver types come from `@graphql-codegen`; mapper configuration is module-local and composed at build time. Generated files (`*.gen.ts`) are not committed: `pnpm codegen` writes them, it runs after `pnpm install`, and every Turborepo task that needs them depends on it.
-- **Namespaced mutations** group operations by module (`absence { request(...) }`). Because the GraphQL specification only guarantees serial execution for root mutation fields, and the fields inside a namespace run in parallel, the server lets a mutation select one namespace and one operation in it; client documents are not linted for it. Only errors raised before execution (parse, validation, bad input) reach the client as they are; any other error is masked.
+- **Schema-first SDL.** Each module owns its `.graphql` files and declares its own `type Query` and `type Mutation` fields; they are merged at startup with the core's shared SDL (`Date`, `DateTime`, `PageInfo`). Resolver types come from `@graphql-codegen`; mapper configuration is module-local and composed at build time. Generated files (`*.gen.ts`) are not committed: `pnpm codegen` writes them, it runs after `pnpm install`, and every Turborepo task that needs them depends on it.
+- **Namespaced mutations** group operations by module (`absence { request(...) }`). Because the GraphQL specification only guarantees serial execution for root mutation fields, and the fields inside a namespace run in parallel, the server lets a mutation select one namespace and one operation in it; client documents are not linted for it.
+- **Errors.** Errors raised before execution (parse, validation, bad input) reach the client as they are. Use cases report expected failures with an `ApplicationError`: `UNAUTHENTICATED`, `FORBIDDEN` or `INVALID_INPUT` with field errors (`{ field: "email", code: "taken" }`) in `extensions`. Any other error is masked.
+- **Pagination.** Lists are Relay connections (`first`, `after`; `edges { cursor node }`, `pageInfo { hasNextPage endCursor }`) over keyset queries. Cursors are opaque base64url strings of the sort key and the id, prefixed with the order they belong to, so a cursor from another order is refused. `first` defaults to 100 and is at most 10,000. `core/pagination` parses page arguments and builds connections; `core/db` builds the keyset condition. Lists take `orderBy: { field, direction }` and a `filter` input; `keysetOrder` always ends the order with the id, and `nullsLast` puts empty values last in both directions. Trade-off: a cursor holds the sort values of the last row seen, so inserts and deletes never shift other rows, but a row whose sort value changes while someone pages can appear twice or be skipped in that pass.
+- **Scalars.** `Date` is a calendar day, `YYYY-MM-DD`, and stays a string end to end. `DateTime` is an instant: ISO 8601 with a time zone in, UTC ISO out, and a JS `Date` inside the API.
 - **Server:** Express 5 and Apollo Server 5 via `@as-integrations/express5`, at `/api/graphql`. Every API route lives under `/api/`; only the health probes `/healthz` and `/readyz` sit at the root, and an unknown `/api/` path is a 404, never the web app. Depth limits, bounded pagination, introspection off in production, error masking configured explicitly.
 - **File uploads** (spreadsheet import) use a bounded REST endpoint, not GraphQL. No subscriptions.
 
@@ -62,7 +67,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 
 ## 7. Permissions and audit
 
-- **Permissions** combine row scopes (`self`, `team`, `reporting_line`, `all`) per object with field visibility (`public`, `protected`, `sensitive`). Both are enforced in the application layer: use cases receive an actor and grants, repositories apply scope predicates before pagination and counting, and results are projected to readable fields before leaving the use case. Filtering and sorting cannot reveal hidden fields.
+- **Permissions** combine row scopes (`self`, `team`, `reporting_line`, `all`) per object with field visibility (`public`, `protected`, `sensitive`). Both are enforced in the application layer: use cases receive an actor and grants, repositories apply scope predicates before pagination and counting, and results are projected to readable fields before leaving the use case. Filtering and sorting cannot reveal hidden fields. Until scopes are built, use cases call `requireOwner(actor)`: the owner has scope `all`, everyone else nothing.
 - **Audit.** Every mutation emits a domain event carrying the real actor (including impersonation), the client (web, MCP or job) and a trace id. Events land in an append-only `audit_log`; a trigger rejects updates and deletes. There is no generic field history in the first release.
 - **Custom fields** are deferred to their own module design. The only decision now: no runtime DDL.
 
@@ -76,14 +81,15 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **TanStack Form** with Zod schemas, shared with API input validation where practical, and shadcn/ui components.
 - **State:** Apollo cache for server data, the URL for navigation state, React state and context for UI only.
 - **i18n:** English only, but every user-facing string goes through one `t()` helper from day one.
+- **Dates are strings.** `Date` and `DateTime` values arrive and leave as strings (codegen maps both to `string`) and are stored, compared and sent as strings. A calendar `Date` is never turned into a JS `Date`: `new Date("2026-10-10")` is UTC midnight and shows the previous day west of UTC. A `DateTime` becomes a JS `Date` only inside display formatting (`Intl.DateTimeFormat`).
 - Route files stay thin; feature components live in `features/<module>/`; a lint rule caps files at 300 lines.
 - No frontend tests for now.
 
 ## 9. Testing
 
-- **Vitest** everywhere. Domain unit tests sit next to the code. End-to-end API tests under `packages/api/test/e2e` start the real server and call it over HTTP (GraphQL once it exists) against a real Postgres.
+- **Vitest** everywhere, in three layers. Domain unit tests sit next to the code. Use-case integration tests (`*.int.test.ts`) sit next to the use cases and call them directly against a real Postgres; they carry most of the behaviour. End-to-end API tests under `packages/api/test/e2e` start the real server and call it over HTTP to prove the wiring.
 - **Isolation.** One template database is migrated once per run; each test file gets a fresh database cloned from it, so files run in parallel. Database names carry a per-run id, so several runs can share one Postgres server.
-- **Test data** comes from typed factories per module that go through the public use cases, not raw inserts, plus one small seed for the demo company.
+- **Test data** comes from `TestSeed`, which inserts through each module's repository and skips the use cases, so setup never depends on the code under test and writes no audit rows or events; plus one small seed for the demo company.
 - **Property-based tests** are used sparingly and agreed case by case (access rules are the first candidate).
 - MCP gets smoke tests after the first release.
 

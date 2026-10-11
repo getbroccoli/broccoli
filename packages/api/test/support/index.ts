@@ -1,10 +1,19 @@
 export { expect } from "vitest";
+export { OWNER } from "./actors";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnecting-proxy";
-export { holdMigrationLock, type MigrationLockHolder } from "./migration-lock";
-export { createEmptyTestDatabase, createTestDatabase, type TestDatabase } from "./test-databases";
 export { test } from "./fixture";
+export { holdMigrationLock, type MigrationLockHolder } from "./migration-lock";
+export {
+  createEmptyTestDatabase,
+  createTemplateDatabase,
+  createTestDatabase,
+  dropRunDatabases,
+  type TestDatabase,
+  type TestRun,
+} from "./test-databases";
 export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./test-env";
+export { TestSeed } from "./test-seed";
 export {
   fetchReadiness,
   startTestServer,
