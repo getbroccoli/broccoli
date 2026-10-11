@@ -4,7 +4,9 @@ import { z } from "zod";
 
 import {
   afterKeyset,
-  type KeysetColumn,
+  type KeysetOrder,
+  keysetOrder,
+  nullsLast,
   type Orm,
   type OrmTransaction,
   orderByKeyset,
@@ -89,30 +91,27 @@ export function employeeRepository(db: Orm | OrmTransaction) {
   };
 }
 
-function keysetColumns({ field, direction }: EmployeeOrder): KeysetColumn[] {
+function keysetColumns({ field, direction }: EmployeeOrder): KeysetOrder {
   const descending = direction === "DESC";
-  const sorted = (expressions: SQL[]) =>
-    expressions.map((expression) => ({ expression, descending }));
+  const by = (expression: SQL) => ({ expression, descending });
+  const id = sql`${employees.id}`;
   switch (field) {
     case "NAME":
-      return sorted([
-        sql`lower(${employees.firstName})`,
-        sql`lower(${employees.lastName})`,
-        sql`${employees.id}`,
-      ]);
+      return keysetOrder(
+        [by(sql`lower(${employees.firstName})`), by(sql`lower(${employees.lastName})`)],
+        id,
+        descending,
+      );
     case "EMAIL":
-      return sorted([sql`${employees.email}`, sql`${employees.id}`]);
+      return keysetOrder([by(sql`${employees.email}`)], id, descending);
     case "START_DATE":
-      return [
-        // Rows without a start date go last whichever way the dates sort.
-        { expression: sql`${employees.startDate} is null`, descending: false },
-        // As ISO text, whatever the DateStyle: it sorts like the date, and node-postgres would
-        // turn a date into a JS Date.
-        ...sorted([
-          sql`coalesce(to_char(${employees.startDate}, 'YYYY-MM-DD'), '')`,
-          sql`${employees.id}`,
-        ]),
-      ];
+      // As ISO text, whatever the DateStyle: it sorts like the date, and node-postgres
+      // would turn a date into a JS Date.
+      return keysetOrder(
+        nullsLast(sql`to_char(${employees.startDate}, 'YYYY-MM-DD')`, descending),
+        id,
+        descending,
+      );
   }
 }
 
