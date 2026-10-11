@@ -1,19 +1,16 @@
 import { expect, it } from "vitest";
 
+import { PNG, JPEG, WEBP } from "#test/support";
+
 import { parseRasterImage } from ".";
 
 const limits = { maxBytes: 512 * 1024 };
 
 it.each([
-  {
-    hex: "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489",
-    mimeType: "image/png",
-  },
-  { hex: "ffd8ffe0", mimeType: "image/jpeg" },
-  { hex: "524946460c0000005745425056503820", mimeType: "image/webp" },
-])("recognises $mimeType by its signature", ({ hex, mimeType }) => {
-  const bytes = Buffer.from(hex, "hex");
-
+  { bytes: PNG, mimeType: "image/png" },
+  { bytes: JPEG, mimeType: "image/jpeg" },
+  { bytes: WEBP, mimeType: "image/webp" },
+])("accepts a complete $mimeType image", ({ bytes, mimeType }) => {
   expect(parseRasterImage(bytes, limits)).toEqual({ bytes, mimeType });
 });
 
@@ -26,8 +23,37 @@ it.each([
 });
 
 it("refuses an image larger than the limit", () => {
-  const bytes = Buffer.alloc(512 * 1024 + 1);
-  Buffer.from("89504e470d0a1a0a", "hex").copy(bytes);
+  expect(parseRasterImage(PNG, { maxBytes: PNG.length - 1 })).toBeNull();
+});
+
+it("refuses a PNG containing only its signature", () => {
+  expect(parseRasterImage(PNG.subarray(0, 8), limits)).toBeNull();
+});
+
+it("refuses a PNG without an IHDR chunk after the signature", () => {
+  const bytes = Buffer.concat([PNG.subarray(0, 8), PNG.subarray(33)]);
+
+  expect(parseRasterImage(bytes, limits)).toBeNull();
+});
+
+it("refuses a PNG without its final IEND chunk", () => {
+  expect(parseRasterImage(PNG.subarray(0, -12), limits)).toBeNull();
+});
+
+it("refuses a JPEG without its end-of-image marker", () => {
+  expect(parseRasterImage(JPEG.subarray(0, -2), limits)).toBeNull();
+});
+
+it("refuses a WebP whose RIFF size does not match its length", () => {
+  const bytes = Buffer.from(WEBP);
+  bytes.writeUInt32LE(bytes.length - 7, 4);
+
+  expect(parseRasterImage(bytes, limits)).toBeNull();
+});
+
+it("refuses a WebP without a supported image chunk", () => {
+  const bytes = Buffer.from(WEBP);
+  bytes.write("JUNK", 12, "ascii");
 
   expect(parseRasterImage(bytes, limits)).toBeNull();
 });

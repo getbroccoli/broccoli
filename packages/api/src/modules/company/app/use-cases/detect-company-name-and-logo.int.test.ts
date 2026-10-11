@@ -1,11 +1,6 @@
-import { companyUseCases, expect, test } from "#test/support";
+import { companyUseCases, expect, PNG as logo, test } from "#test/support";
 
 import { createLogger } from "../../../../core/logger";
-
-const logo = Buffer.from(
-  "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489",
-  "hex",
-);
 
 test("stores the brand name and logo found for the owner's domain", async ({ orm, seed }) => {
   const actor = await seed.owner();

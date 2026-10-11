@@ -1,11 +1,6 @@
 import { onTestFinished } from "vitest";
 
-import { companyUseCases, expect, test } from "#test/support";
-
-const logo = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
-  "base64",
-);
+import { companyUseCases, expect, JPEG, PNG as logo, test } from "#test/support";
 
 test("saves a PNG and serves its bytes and content type", async ({ orm, seed }) => {
   const actor = await seed.owner();
@@ -56,6 +51,23 @@ test("refuses an SVG and keeps the previous logo", async ({ orm, seed }) => {
   });
 });
 
+test("refuses a truncated PNG and keeps the previous logo", async ({ orm, seed }) => {
+  const actor = await seed.owner();
+  const company = companyUseCases(orm);
+  const before = await company.saveLogo(actor, logo);
+
+  await expect(company.saveLogo(actor, logo.subarray(0, 8))).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "logo", code: "invalid" }],
+  });
+
+  expect(await company.getCompany(actor)).toEqual(before);
+  expect(await company.readLogo(actor, before.logoId!)).toEqual({
+    bytes: logo,
+    mimeType: "image/png",
+  });
+});
+
 test("refuses a non-owner without changing the logo", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const company = companyUseCases(orm);
@@ -72,7 +84,7 @@ test("keeps the owner's saved logo when a pending brand lookup finishes", async 
   const actor = await seed.owner();
   const lookupStarted = Promise.withResolvers<void>();
   const lookup = Promise.withResolvers<{ name: string; logo: Buffer }>();
-  const brand = { name: "Example Labs", logo: Buffer.from("ffd8ffffd9", "hex") };
+  const brand = { name: "Example Labs", logo: JPEG };
   const company = companyUseCases(orm, {
     brandLookup: () => {
       lookupStarted.resolve();

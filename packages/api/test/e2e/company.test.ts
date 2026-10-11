@@ -1,11 +1,6 @@
 import { onTestFinished } from "vitest";
 
-import { expect, startFakeBrandServer, TestEnv, test } from "#test/support";
-
-const logo = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
-  "base64",
-);
+import { expect, PNG as logo, startFakeBrandServer, TestEnv, test } from "#test/support";
 
 test("completes setup when the owner names the company", async ({ env }) => {
   const { browser } = await env.signInAsOwner();

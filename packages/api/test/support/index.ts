@@ -5,6 +5,7 @@ export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectin
 export { test } from "./fixture";
 export { startFakeBrandServer } from "./fake-brand-server";
 export { startFakeHttpServer } from "./fake-http-server";
+export { PNG, JPEG, WEBP } from "./images";
 export { holdMigrationLock, type MigrationLockHolder } from "./migration-lock";
 export {
   createEmptyTestDatabase,
