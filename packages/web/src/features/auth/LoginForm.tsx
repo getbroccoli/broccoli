@@ -4,6 +4,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
 
+import { FieldError } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,16 +115,5 @@ export function LoginForm() {
         )}
       </form.Subscribe>
     </form>
-  );
-}
-
-function FieldError({ id, message }: { id: string; message: string | undefined }) {
-  if (!message) {
-    return null;
-  }
-  return (
-    <p id={id} className="text-sm text-destructive">
-      {message}
-    </p>
   );
 }
