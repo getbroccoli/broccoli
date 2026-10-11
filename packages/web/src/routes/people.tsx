@@ -1,15 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 
-import { PingStatus } from "@/features/system";
+import { DEFAULT_DIRECTORY_SEARCH, directorySearch, EmployeeDirectory } from "@/features/employees";
 import { t } from "@/i18n";
 import { PageHeader } from "@/shell";
 
 export const Route = createFileRoute("/people")({
+  validateSearch: directorySearch,
+  search: { middlewares: [stripSearchParams(DEFAULT_DIRECTORY_SEARCH)] },
   component: () => (
     <>
-      <PageHeader title={t("people.title")} description={t("people.empty")} />
-      {/* Temporary debug check of the API connection; remove once this page lists people. */}
-      <PingStatus />
+      <PageHeader title={t("people.title")} />
+      <EmployeeDirectory />
     </>
   ),
 });

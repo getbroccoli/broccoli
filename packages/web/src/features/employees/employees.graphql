@@ -1,0 +1,18 @@
+query Employees($first: Int, $after: String, $orderBy: EmployeeOrder, $filter: EmployeeFilter) {
+  employees(first: $first, after: $after, orderBy: $orderBy, filter: $filter) {
+    edges {
+      node {
+        id
+        firstName
+        lastName
+        email
+        jobTitle
+        startDate
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
