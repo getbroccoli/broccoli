@@ -20,7 +20,7 @@ export async function detectCompanyNameAndLogo(
     return;
   }
   try {
-    // Outside any transaction: a slow lookup holds no lock or connection.
+    // The HTTP call runs before the write, so no connection or lock waits on it.
     const brand = await brandLookup(domain);
     await companies.saveBrandOnce(brand?.name ?? null, brand?.logo ? parseLogo(brand.logo) : null);
   } catch (error) {
