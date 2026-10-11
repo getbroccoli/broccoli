@@ -58,7 +58,8 @@ export async function startServer(
     plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm, eventBus)] : [],
     logger,
   });
-  const resolveActorOf: ActorResolver = (headers) => resolveActor(auth, database.orm, headers);
+  const resolveActorOf: ActorResolver = (request, response) =>
+    resolveActor(auth, database.orm, request, response);
   const readiness = new Readiness(() => database.checkConnection());
 
   const app = express();

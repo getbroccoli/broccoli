@@ -21,9 +21,10 @@ export class TestSeed {
 
   async owner({ email = "owner@example.com" } = {}): Promise<Actor> {
     const userId = randomUUID();
-    await this.orm.insert(user).values({ id: userId, name: "Owner", email: email.toLowerCase() });
+    const storedEmail = email.toLowerCase();
+    await this.orm.insert(user).values({ id: userId, name: "Owner", email: storedEmail });
     await instanceRepository(this.orm).setOwner(userId, "company");
-    return { userId, isOwner: true };
+    return { userId, email: storedEmail, isOwner: true };
   }
 
   employee({ startDate = null, ...overrides }: SeedEmployee = {}): Promise<Employee> {

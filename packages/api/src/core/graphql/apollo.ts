@@ -1,4 +1,4 @@
-import type { IncomingHttpHeaders, Server } from "node:http";
+import type { IncomingMessage, Server, ServerResponse } from "node:http";
 
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
@@ -29,7 +29,11 @@ export interface GraphqlContext {
   actor: Actor | null;
 }
 
-export type ActorResolver = (headers: IncomingHttpHeaders) => Promise<Actor | null>;
+/** Reads the actor of a request; may add a renewed session cookie to the response. */
+export type ActorResolver = (
+  request: IncomingMessage,
+  response: ServerResponse,
+) => Promise<Actor | null>;
 
 /** Scalars and types that every module may use. */
 const CORE_TYPE_DEFS = readSdl(import.meta.url, "./schema.graphql");
@@ -83,9 +87,15 @@ export async function startGraphqlApi(
 
 /** Builds each request's context; a failure becomes a masked internal error. */
 export function createContext(resolveActor: ActorResolver) {
-  return async ({ req }: { req: { headers: IncomingHttpHeaders } }): Promise<GraphqlContext> => {
+  return async ({
+    req,
+    res,
+  }: {
+    req: IncomingMessage;
+    res: ServerResponse;
+  }): Promise<GraphqlContext> => {
     try {
-      return { actor: await resolveActor(req.headers) };
+      return { actor: await resolveActor(req, res) };
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass
       // through as a request error; the code marks this one as internal.

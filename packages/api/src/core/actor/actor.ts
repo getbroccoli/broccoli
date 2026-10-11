@@ -1,5 +1,5 @@
 import { fromNodeHeaders } from "better-auth/node";
-import type { IncomingHttpHeaders } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { ApplicationError } from "../application-error";
 import type { Orm } from "../db";
@@ -9,22 +9,34 @@ import type { Auth } from "../auth";
 /** Who is calling the API. */
 export interface Actor {
   userId: string;
+  /** Login email, lowercased. */
+  email: string;
   isOwner: boolean;
 }
 
-/** The signed-in user of a request, or null without a valid session. */
+/**
+ * The signed-in user of a request, or null without a valid session. A session due
+ * for renewal is extended, and its renewed cookie is added to `response`.
+ */
 export async function resolveActor(
   auth: Auth,
   orm: Orm,
-  headers: IncomingHttpHeaders,
+  request: IncomingMessage,
+  response: ServerResponse,
 ): Promise<Actor | null> {
   // Better Auth answers a request without a session cookie without a query.
-  const session = await auth.api.getSession({ headers: fromNodeHeaders(headers) });
+  const { headers, response: session } = await auth.api.getSession({
+    headers: fromNodeHeaders(request.headers),
+    returnHeaders: true,
+  });
+  for (const cookie of headers.getSetCookie()) {
+    response.appendHeader("Set-Cookie", cookie);
+  }
   if (!session) {
     return null;
   }
-  const userId = session.user.id;
-  return { userId, isOwner: userId === (await readOwnerUserId(orm)) };
+  const { id: userId, email } = session.user;
+  return { userId, email, isOwner: userId === (await readOwnerUserId(orm)) };
 }
 
 /**

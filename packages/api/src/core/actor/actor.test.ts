@@ -13,7 +13,7 @@ it("refuses a missing actor with UNAUTHENTICATED", () => {
 });
 
 it("refuses a signed-in non-owner with FORBIDDEN", () => {
-  const actor = { userId: "user-1", isOwner: false };
+  const actor = { userId: "user-1", email: "user@example.com", isOwner: false };
 
   expect(() => requireOwner(actor)).toThrowError(
     expect.objectContaining({
@@ -25,13 +25,13 @@ it("refuses a signed-in non-owner with FORBIDDEN", () => {
 });
 
 it("returns the owner", () => {
-  const actor = { userId: "owner-1", isOwner: true };
+  const actor = { userId: "owner-1", email: "owner@example.com", isOwner: true };
 
   expect(requireOwner(actor)).toBe(actor);
 });
 
 it("returns a signed-in actor", () => {
-  const actor = { userId: "user-1", isOwner: false };
+  const actor = { userId: "user-1", email: "user@example.com", isOwner: false };
 
   expect(requireSignedIn(actor)).toBe(actor);
 });

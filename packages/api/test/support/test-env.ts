@@ -2,8 +2,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { sql } from "drizzle-orm";
 import { inject } from "vitest";
 
+import { session } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
@@ -64,6 +66,12 @@ export class TestEnv {
     }
     const { user } = (await response.json()) as Pick<SignedInOwner, "user">;
     return { browser, user };
+  }
+
+  async expireSessionsIn(days: number): Promise<void> {
+    await this.database.orm
+      .update(session)
+      .set({ expiresAt: sql`now() + ${days} * interval '1 day'` });
   }
 
   /** Stops the server and starts a new one on the same database and data folder. */
