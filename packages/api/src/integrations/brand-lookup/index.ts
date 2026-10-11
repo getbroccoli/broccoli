@@ -1,3 +1,2 @@
-// Optional company-brand lookup by email domain. The contract is in `contract.ts`.
-export { createBrandLookup } from "./brand-lookup";
-export type { Brand, BrandLookup } from "./contract";
+// Optional company-brand lookup by email domain.
+export { createBrandLookup, type Brand, type BrandLookup } from "./brand-lookup";
