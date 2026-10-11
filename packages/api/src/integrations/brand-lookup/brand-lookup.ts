@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getJson } from "../http";
+import { getJson } from "../../utils";
 
 /** What the brand lookup service knows about a company, by its email domain. */
 export interface Brand {
