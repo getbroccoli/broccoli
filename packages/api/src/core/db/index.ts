@@ -8,3 +8,4 @@ export {
   type KeysetColumn,
   type KeysetOrder,
 } from "./keyset";
+export { isUniqueViolation } from "./unique-violation";

@@ -1,9 +1,9 @@
-import { DrizzleQueryError, ilike, or, sql, type SQL } from "drizzle-orm";
-import { DatabaseError } from "pg";
+import { ilike, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
   afterKeyset,
+  isUniqueViolation,
   type KeysetOrder,
   keysetOrder,
   nullsLast,
@@ -14,7 +14,6 @@ import {
 import { EmailTakenError, type Employee, type NewEmployee } from "../domain";
 import { employees } from "./employees-table";
 
-const UNIQUE_VIOLATION = "23505";
 const EMAIL_UNIQUE_CONSTRAINT = "employees_email_unique";
 
 export interface EmployeeOrder {
@@ -55,7 +54,7 @@ export function employeeRepository(db: Orm | OrmTransaction) {
         const [employee] = await db.insert(employees).values(newEmployee).returning();
         return employee!;
       } catch (error) {
-        throw isEmailTaken(error) ? new EmailTakenError() : error;
+        throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
     },
 
@@ -122,13 +121,4 @@ function matches(search: string): SQL {
     ilike(employees.lastName, pattern),
     ilike(employees.email, pattern),
   )!;
-}
-
-function isEmailTaken(error: unknown): boolean {
-  const cause = error instanceof DrizzleQueryError ? error.cause : error;
-  return (
-    cause instanceof DatabaseError &&
-    cause.code === UNIQUE_VIOLATION &&
-    cause.constraint === EMAIL_UNIQUE_CONSTRAINT
-  );
 }
