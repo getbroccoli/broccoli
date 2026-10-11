@@ -5,7 +5,7 @@ import type { CompanyRepository } from "../../db";
 import { suggestName } from "../../domain";
 
 /** The largest company logo Broccoli stores. */
-export const MAX_LOGO_BYTES = 512 * 1024;
+export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 
 /** The company as the owner sees it in the company step and later. */
 export interface Company {
