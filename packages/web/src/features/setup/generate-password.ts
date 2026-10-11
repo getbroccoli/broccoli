@@ -5,7 +5,8 @@ const PASSWORD_LENGTH = 20;
 // Bytes from here up would favour the first characters of the alphabet, so they are skipped.
 const UNBIASED_BYTE_LIMIT = 256 - (256 % PASSWORD_ALPHABET.length);
 
-type RandomSource = (bytes: Uint8Array) => Uint8Array;
+/** Fills `bytes` with random values and returns them, like `crypto.getRandomValues`. */
+type RandomSource = (bytes: Uint8Array<ArrayBuffer>) => Uint8Array;
 
 /** A 20-character password, every character equally likely. */
 export function generatePassword(
