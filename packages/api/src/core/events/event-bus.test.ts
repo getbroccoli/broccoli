@@ -1,23 +1,22 @@
+import { EXAMPLE_PAYLOAD } from "#test/support";
 import { expect, it } from "vitest";
 
 import { createLogger } from "../logger";
 import { createEventBus } from ".";
 
-const owner = { userId: "test-owner", email: "owner@example.com" };
-
 it("delivers the payload to a subscribed handler", async () => {
-  const events = createEventBus(createLogger("silent"));
+  const eventBus = createEventBus(createLogger("silent"));
   const received: unknown[] = [];
-  events.subscribe({
-    "instance.owner_claimed": (payload) => {
+  eventBus.subscribe({
+    "example.happened": (payload) => {
       received.push(payload);
       return Promise.resolve();
     },
   });
 
-  await events.dispatch([{ type: "instance.owner_claimed", payload: owner }]);
+  await eventBus.dispatch([{ type: "example.happened", payload: EXAMPLE_PAYLOAD }]);
 
-  expect(received).toEqual([owner]);
+  expect(received).toEqual([EXAMPLE_PAYLOAD]);
 });
 
 it("logs a failing handler and still awaits the next handler", async () => {
@@ -27,24 +26,24 @@ it("logs a failing handler and still awaits the next handler", async () => {
       logs.push(line);
     },
   });
-  const events = createEventBus(logger);
+  const eventBus = createEventBus(logger);
   const received: unknown[] = [];
-  events.subscribe({
-    "instance.owner_claimed": () => {
+  eventBus.subscribe({
+    "example.happened": () => {
       throw new Error("Handler failed");
     },
   });
-  events.subscribe({
-    "instance.owner_claimed": async (payload) => {
+  eventBus.subscribe({
+    "example.happened": async (payload) => {
       await Promise.resolve();
       received.push(payload);
     },
   });
 
   await expect(
-    events.dispatch([{ type: "instance.owner_claimed", payload: owner }]),
+    eventBus.dispatch([{ type: "example.happened", payload: EXAMPLE_PAYLOAD }]),
   ).resolves.toBeUndefined();
 
-  expect(received).toEqual([owner]);
-  expect(logs.join("")).toContain("instance.owner_claimed");
+  expect(received).toEqual([EXAMPLE_PAYLOAD]);
+  expect(logs.join("")).toContain("example.happened");
 });

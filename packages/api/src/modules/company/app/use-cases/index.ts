@@ -13,12 +13,12 @@ export type { Company } from "./company";
 /** Everything that can be done with the company; the adapters call nothing else. */
 export function createCompanyUseCases({
   orm,
-  events,
+  eventBus,
   logger,
   brandLookup,
-}: Pick<ModuleDependencies, "orm" | "events" | "logger"> & { brandLookup: BrandLookup }) {
+}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger"> & { brandLookup: BrandLookup }) {
   const companies = companyRepository(orm);
-  const context = { orm, events, companies };
+  const context = { orm, eventBus, companies };
   return {
     getCompany: (actor: Actor | null) => getCompany(context, actor),
     setName: (actor: Actor | null, name: string) => setName(context, actor, name),

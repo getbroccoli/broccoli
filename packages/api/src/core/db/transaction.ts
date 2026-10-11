@@ -28,7 +28,8 @@ class Transaction implements Tx {
   publish<Type extends EventType>(type: Type, payload: DomainEvents[Type]): void {
     // Reading `orm` checks the transaction is still open.
     void this.orm;
-    this.events.push({ type, payload });
+    // TypeScript cannot tie a generic `type` to its payload in the union, hence the cast.
+    this.events.push({ type, payload } as DomainEvent);
   }
 
   end(): void {
@@ -42,7 +43,7 @@ class Transaction implements Tx {
  */
 export async function runInTransaction<T>(
   orm: Orm,
-  events: EventBus,
+  eventBus: EventBus,
   work: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   let transaction: Transaction | undefined;
@@ -56,7 +57,7 @@ export async function runInTransaction<T>(
     // Ended before dispatch, so a handler cannot write through the released connection.
     transaction?.end();
   }
-  await events.dispatch(transaction!.events);
+  await eventBus.dispatch(transaction!.events);
   return result;
 }
 

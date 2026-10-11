@@ -26,7 +26,7 @@ type SetupBody = z.infer<typeof setupBody>;
  * in. Works once; for self-hosted instances only. Answers after the handlers of
  * `instance.owner_claimed` have run.
  */
-export function setupPlugin(orm: Orm, events: EventBus) {
+export function setupPlugin(orm: Orm, eventBus: EventBus) {
   return {
     id: "setup",
     endpoints: {
@@ -39,7 +39,7 @@ export function setupPlugin(orm: Orm, events: EventBus) {
         // Hashing is slow, so it happens before the transaction takes its lock.
         const passwordHash = await ctx.context.password.hash(ctx.body.password);
         const owner = await createOwner(
-          { orm, events },
+          { orm, eventBus },
           ctx,
           ctx.body.email.toLowerCase(),
           passwordHash,
@@ -68,14 +68,14 @@ function assertValidCredentials(
 
 /** Creates the owner with a password and a session, in one transaction. */
 async function createOwner(
-  { orm, events }: { orm: Orm; events: EventBus },
+  { orm, eventBus }: { orm: Orm; eventBus: EventBus },
   ctx: GenericEndpointContext,
   email: string,
   passwordHash: string,
 ) {
   const { internalAdapter, options } = ctx.context;
   try {
-    return await runInTransaction(orm, events, (tx) =>
+    return await runInTransaction(orm, eventBus, (tx) =>
       // Better Auth's writes join the transaction that holds the instance lock.
       runWithAdapter(authDatabase(ormOf(tx))(options), () =>
         claimOwner(tx, async () => {

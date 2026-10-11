@@ -1,19 +1,10 @@
-import { expect, test } from "#test/support";
+import { companyUseCases, expect, test } from "#test/support";
 
-import { createEventBus } from "../../../../core/events";
 import { readSetupStep } from "../../../../core/instance";
-import { createLogger } from "../../../../core/logger";
-import { createCompanyUseCases } from ".";
 
 test("saves the owner's company name and completes the company step", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const logger = createLogger("silent");
-  const company = createCompanyUseCases({
-    orm,
-    events: createEventBus(logger),
-    logger,
-    brandLookup: () => Promise.resolve(null),
-  });
+  const company = companyUseCases(orm);
 
   const saved = await company.setName(actor, "Example Ltd");
 
@@ -24,13 +15,7 @@ test("saves the owner's company name and completes the company step", async ({ o
 
 test("renames the company after setup is done", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const logger = createLogger("silent");
-  const company = createCompanyUseCases({
-    orm,
-    events: createEventBus(logger),
-    logger,
-    brandLookup: () => Promise.resolve(null),
-  });
+  const company = companyUseCases(orm);
   await company.setName(actor, "Example Ltd");
 
   const saved = await company.setName(actor, "Example Labs");
@@ -42,13 +27,7 @@ test("renames the company after setup is done", async ({ orm, seed }) => {
 
 test("refuses a non-owner without changing the company or setup step", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  const logger = createLogger("silent");
-  const company = createCompanyUseCases({
-    orm,
-    events: createEventBus(logger),
-    logger,
-    brandLookup: () => Promise.resolve(null),
-  });
+  const company = companyUseCases(orm);
   const before = await company.getCompany(owner);
 
   await expect(
@@ -61,13 +40,7 @@ test("refuses a non-owner without changing the company or setup step", async ({ 
 
 test("requires sign-in without changing the company or setup step", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  const logger = createLogger("silent");
-  const company = createCompanyUseCases({
-    orm,
-    events: createEventBus(logger),
-    logger,
-    brandLookup: () => Promise.resolve(null),
-  });
+  const company = companyUseCases(orm);
   const before = await company.getCompany(owner);
 
   await expect(company.setName(null, "Example Ltd")).rejects.toMatchObject({
@@ -81,13 +54,7 @@ test("requires sign-in without changing the company or setup step", async ({ orm
 
 test("leaves the company step unfinished when the name is invalid", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const logger = createLogger("silent");
-  const company = createCompanyUseCases({
-    orm,
-    events: createEventBus(logger),
-    logger,
-    brandLookup: () => Promise.resolve(null),
-  });
+  const company = companyUseCases(orm);
 
   await expect(company.setName(actor, "   ")).rejects.toMatchObject({
     code: "INVALID_INPUT",

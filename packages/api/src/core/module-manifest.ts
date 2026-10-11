@@ -11,7 +11,7 @@ import type { Logger } from "./logger";
  */
 export interface ModuleDependencies {
   orm: Orm;
-  events: EventBus;
+  eventBus: EventBus;
   logger: Logger;
 }
 

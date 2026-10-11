@@ -25,6 +25,8 @@ Three layers, most tests in the middle one:
 - Cover one behaviour per test, with short setup and a visible arrange, act and assert.
 - Keep tests deterministic. Inject the clock and ID generators. No sleeps, no network, no dependence on test order.
 - Build test data with `seed` (`TestSeed` in `packages/api/test/support`), which inserts through each module's repository, skipping use cases, permissions, audit and events. Seed values must be what the app would store (normalised, such as a lowercased email). Set only the fields the test is about. A module adds its own seed methods.
+- Build the use cases under test with the module's helper in `#test/support`, such as `companyUseCases(orm, { brandLookup })`. It fills every dependency with a test default (a new event bus, a silent logger, no external calls), so a test passes only the one it is about and the factory call is not repeated in every test. A module whose factory needs more than `{ orm }` adds such a helper.
+- Core tests publish the test-only `example.happened` domain event (`EXAMPLE_PAYLOAD`), never a module's event, so they do not depend on any module.
 - Assert on outcomes a caller can see: return values, GraphQL responses, state read back through public queries, and emitted events.
 - Mock only external systems such as email, Slack and third-party HTTP. Never mock Postgres.
 - Add property-based tests only when the module design agrees on them.

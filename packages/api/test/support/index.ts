@@ -15,6 +15,8 @@ export {
 } from "./test-databases";
 export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./test-env";
 export { TestSeed } from "./test-seed";
+export { companyUseCases } from "./use-cases";
+export { EXAMPLE_PAYLOAD } from "./example-event";
 export {
   fetchReadiness,
   startTestServer,

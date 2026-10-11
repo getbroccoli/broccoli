@@ -13,7 +13,7 @@ export type { Logo } from "./domain";
 export function companyModule({
   brandLookupUrl,
   ...dependencies
-}: Pick<ModuleDependencies, "orm" | "events" | "logger"> & {
+}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger"> & {
   brandLookupUrl: string | null;
 }): ModuleManifest {
   const useCases = createCompanyUseCases({

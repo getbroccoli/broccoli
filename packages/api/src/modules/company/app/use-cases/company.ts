@@ -14,7 +14,7 @@ export interface Company {
 /** What the company use cases share. */
 export interface CompanyContext {
   orm: Orm;
-  events: EventBus;
+  eventBus: EventBus;
   companies: CompanyRepository;
 }
 

@@ -13,7 +13,7 @@ export async function setName(
 ): Promise<Company> {
   requireOwner(actor);
   const name = parseCompanyName(rawName);
-  await runInTransaction(context.orm, context.events, async (tx) => {
+  await runInTransaction(context.orm, context.eventBus, async (tx) => {
     await companyRepository(tx).saveName(name);
     await advanceStep(tx, "company", "done");
   });

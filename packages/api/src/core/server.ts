@@ -50,12 +50,12 @@ export async function startServer(
   const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
   const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
   const database = connectDatabase(env.databaseUrl, logger);
-  const events = createEventBus(logger);
+  const eventBus = createEventBus(logger);
   const auth = createAuth({
     orm: database.orm,
     secret: authSecret,
     publicUrl: env.publicUrl,
-    plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm, events)] : [],
+    plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm, eventBus)] : [],
     logger,
   });
   const resolveActorOf: ActorResolver = (headers) => resolveActor(auth, database.orm, headers);
@@ -67,7 +67,7 @@ export async function startServer(
   let modules: readonly ModuleManifest[];
   let graphql: GraphqlApi;
   try {
-    modules = createModules({ orm: database.orm, events, logger });
+    modules = createModules({ orm: database.orm, eventBus, logger });
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveActorOf);
   } catch (error) {
     await database.close();
@@ -79,7 +79,7 @@ export async function startServer(
   app.use(graphql.router);
   for (const module of modules) {
     if (module.events) {
-      events.subscribe(module.events);
+      eventBus.subscribe(module.events);
     }
     if (module.router) {
       app.use("/api", module.router(resolveActorOf));
