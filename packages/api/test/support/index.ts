@@ -1,4 +1,5 @@
 export { expect } from "vitest";
+export { OWNER } from "./actors";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnecting-proxy";
 export { test } from "./fixture";
@@ -12,7 +13,7 @@ export {
   type TestRun,
 } from "./test-databases";
 export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./test-env";
-export { OWNER, TestSeed } from "./test-seed";
+export { TestSeed } from "./test-seed";
 export {
   fetchReadiness,
   startTestServer,

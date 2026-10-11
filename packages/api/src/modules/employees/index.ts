@@ -4,7 +4,9 @@ import { createEmployeeUseCases } from "./app";
 import { createResolvers } from "./graphql";
 
 export { createEmployeeUseCases, type EmployeeUseCases } from "./app";
-export type { Employee, NewEmployeeInput } from "./domain";
+/** For test seeding only; other modules go through the use cases. */
+export { employeeRepository } from "./db";
+export type { Employee, NewEmployee, NewEmployeeInput } from "./domain";
 
 /** The people who work for the company: create and list them. */
 export function employeesModule(dependencies: ModuleDependencies): ModuleManifest {

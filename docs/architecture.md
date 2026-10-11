@@ -89,7 +89,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 
 - **Vitest** everywhere, in three layers. Domain unit tests sit next to the code. Use-case integration tests (`*.int.test.ts`) sit next to the use cases and call them directly against a real Postgres; they carry most of the behaviour. End-to-end API tests under `packages/api/test/e2e` start the real server and call it over HTTP to prove the wiring.
 - **Isolation.** One template database is migrated once per run; each test file gets a fresh database cloned from it, so files run in parallel. Database names carry a per-run id, so several runs can share one Postgres server.
-- **Test data** comes from `TestSeed`, which goes through the public use cases, not raw inserts, plus one small seed for the demo company.
+- **Test data** comes from `TestSeed`, which inserts through each module's repository and skips the use cases, so setup never depends on the code under test and writes no audit rows or events; plus one small seed for the demo company.
 - **Property-based tests** are used sparingly and agreed case by case (access rules are the first candidate).
 - MCP gets smoke tests after the first release.
 
