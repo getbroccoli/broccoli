@@ -13,6 +13,14 @@ import { routeTree } from "./routeTree.gen";
 const apolloClient = createApolloClient({ onUnauthenticated: () => void router.invalidate() });
 const router = createRouter({ routeTree, context: { apolloClient } });
 
+// A page restored from the back-forward cache skips loading, so check the session again:
+// Back after signing out must not show the signed-in page.
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    void router.invalidate();
+  }
+});
+
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
