@@ -8,7 +8,7 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import express from "express";
 import { GraphQLError } from "graphql";
 
-import { sendRenewedCookies, type RequestActor, type SessionActor } from "../actor";
+import { sendRenewedCookies, type RequestActor, type UserActor } from "../actor";
 import type { Logger } from "../logger";
 import type { ModuleManifest } from "../module-manifest";
 import { depthLimit } from "./depth-limit";
@@ -26,7 +26,7 @@ export const MAX_TOKENS = 2000;
 /** What every resolver receives as its context. */
 export interface GraphqlContext {
   /** The signed-in user, or null for an anonymous request. */
-  actor: SessionActor | null;
+  actor: UserActor | null;
 }
 
 /** Reads the actor of a request from its headers; see `resolveActor`. */

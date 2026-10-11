@@ -12,8 +12,8 @@ export interface Actor {
   isOwner: boolean;
 }
 
-/** The actor as read from a session, with account details for adapters to display. */
-export interface SessionActor extends Actor {
+/** The actor of a signed-in user, with account details for adapters to display. */
+export interface UserActor extends Actor {
   /** Sign-in email, lowercased; never used for authorization. */
   email: string;
 }
@@ -21,7 +21,7 @@ export interface SessionActor extends Actor {
 /** The caller of a request, and the session cookies to send back with the response. */
 export interface RequestActor {
   /** Null without a valid session. */
-  actor: SessionActor | null;
+  actor: UserActor | null;
   /** `Set-Cookie` values for a session that was due for renewal; empty otherwise. */
   renewedCookies: string[];
 }
