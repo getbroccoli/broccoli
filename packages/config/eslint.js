@@ -1,8 +1,12 @@
 import js from "@eslint/js";
+import checkFile from "eslint-plugin-check-file";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 const MAX_LINES_PER_FILE = 300;
+
+// Letters and digits only: camelCase, or PascalCase for React components and their folders.
+const CAMEL_OR_PASCAL_CASE = "+([a-zA-Z0-9])";
 
 /**
  * Builds the shared ESLint flat config for one package.
@@ -28,6 +32,23 @@ export function eslintConfig(packageDir) {
     {
       files: ["**/*.js"],
       extends: [tseslint.configs.disableTypeChecked],
+    },
+    {
+      // File and folder names: see "Naming" in AGENTS.md.
+      files: ["src/**/*.{ts,tsx}", "test/**/*.ts"],
+      plugins: { "check-file": checkFile },
+      rules: {
+        "check-file/filename-naming-convention": [
+          "error",
+          { "**/*.ts": "CAMEL_CASE", "**/*.tsx": CAMEL_OR_PASCAL_CASE },
+          // `getCompany.int.test.ts` is checked as `getCompany`.
+          { ignoreMiddleExtensions: true },
+        ],
+        "check-file/folder-naming-convention": [
+          "error",
+          { "src/**/": CAMEL_OR_PASCAL_CASE, "test/**/": CAMEL_OR_PASCAL_CASE },
+        ],
+      },
     },
   );
 }

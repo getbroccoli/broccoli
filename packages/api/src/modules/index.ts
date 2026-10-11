@@ -1,4 +1,4 @@
-import type { ModuleDependencies, ModuleManifest } from "../core/module-manifest";
+import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
 import { employeesModule } from "./employees";
 import { systemModule } from "./system";

@@ -1,7 +1,7 @@
 import { readSdl } from "../../core/graphql";
-import type { ModuleDependencies, ModuleManifest } from "../../core/module-manifest";
+import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { createCompanyUseCases } from "./app";
-import { createBrandLookup } from "../../integrations/brand-lookup";
+import { createBrandLookup } from "../../integrations/brandLookup";
 import { createResolvers } from "./graphql";
 import { logoRouter } from "./http";
 

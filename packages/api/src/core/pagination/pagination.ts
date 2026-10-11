@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { invalidInput } from "../application-error";
+import { invalidInput } from "../applicationError";
 
 export const PAGE_SIZE = { default: 100, max: 10_000 } as const;
 

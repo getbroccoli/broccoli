@@ -10,14 +10,14 @@ import { GraphQLError } from "graphql";
 
 import { requireSignedIn, type RequestActor, type UserActor } from "../actor";
 import type { Logger } from "../logger";
-import type { ModuleManifest } from "../module-manifest";
-import { depthLimit } from "./depth-limit";
-import { errorLoggingPlugin } from "./error-logging";
+import type { ModuleManifest } from "../moduleManifest";
+import { depthLimit } from "./depthLimit";
+import { errorLoggingPlugin } from "./errorLogging";
 import { formatError } from "./errors";
-import { requireSessionOutsidePublicFields } from "./public-fields";
+import { requireSessionOutsidePublicFields } from "./publicFields";
 import { DateScalar, DateTimeScalar } from "./scalars";
 import { readSdl } from "./sdl";
-import { singleMutationField } from "./single-mutation-field";
+import { singleMutationField } from "./singleMutationField";
 
 /** Deepest field nesting a request may use. */
 export const MAX_DEPTH = 10;

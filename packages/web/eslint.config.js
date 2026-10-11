@@ -1,5 +1,6 @@
 import { eslintConfig } from "@broccoli/config/eslint";
 import graphql from "@graphql-eslint/eslint-plugin";
+import checkFile from "eslint-plugin-check-file";
 import reactHooks from "eslint-plugin-react-hooks";
 import { reactRefresh } from "eslint-plugin-react-refresh";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -31,6 +32,14 @@ export default defineConfig(
     rules: { "react-refresh/only-export-components": "off" },
   },
   {
+    // Named by their tools: route file names are URLs, and the shadcn CLI writes kebab-case.
+    files: ["src/routes/**", "src/components/ui/**", "src/lib/class-names.ts"],
+    rules: {
+      "check-file/filename-naming-convention": "off",
+      "check-file/folder-naming-convention": "off",
+    },
+  },
+  {
     rules: {
       "no-restricted-imports": [
         "error",
@@ -49,8 +58,9 @@ export default defineConfig(
         graphQLConfig: { schema: "../api/src/**/*.graphql", documents: "src/**/*.graphql" },
       },
     },
-    plugins: { "@graphql-eslint": graphql },
+    plugins: { "@graphql-eslint": graphql, "check-file": checkFile },
     rules: {
+      "check-file/filename-naming-convention": ["error", { "**/*.graphql": "CAMEL_CASE" }],
       // Every query selects `id`, so the normalised cache can identify each object.
       "@graphql-eslint/require-selections": "error",
       "@graphql-eslint/executable-definitions": "error",

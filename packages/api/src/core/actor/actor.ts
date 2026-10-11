@@ -1,7 +1,7 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type { IncomingHttpHeaders } from "node:http";
 
-import { ApplicationError } from "../application-error";
+import { ApplicationError } from "../applicationError";
 import type { Orm } from "../db";
 import { readOwnerUserId } from "../instance";
 import type { Auth } from "../auth";

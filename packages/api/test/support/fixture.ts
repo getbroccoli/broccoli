@@ -2,9 +2,9 @@ import { inject, test as baseTest } from "vitest";
 
 import { connectDatabase, type Orm } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
-import { createTestDatabase } from "./test-databases";
-import { TestEnv } from "./test-env";
-import { TestSeed } from "./test-seed";
+import { createTestDatabase } from "./testDatabases";
+import { TestEnv } from "./testEnv";
+import { TestSeed } from "./testSeed";
 
 /**
  * Vitest's `test` with fixtures, each created only for the tests that use it:

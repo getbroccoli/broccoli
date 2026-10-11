@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
-import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
+import { useCopyToClipboard } from "@/lib/useCopyToClipboard";
 
-import { generatePassword } from "./generate-password";
+import { generatePassword } from "./generatePassword";
 
 interface NewPasswordFieldProps {
   id: string;

@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 
 import { NewPasswordField } from "./NewPasswordField";
-import { setUpOwner, type SetupResult } from "./setup-api";
+import { setUpOwner, type SetupResult } from "./setupApi";
 
 // The API's password policy.
 const PASSWORD_LENGTH = { min: 8, max: 128 };
