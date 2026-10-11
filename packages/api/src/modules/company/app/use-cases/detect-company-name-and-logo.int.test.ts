@@ -17,7 +17,7 @@ test("stores the brand name and logo found for the owner's domain", async ({ orm
     },
   });
 
-  await company.onOwnerClaimed({ userId: actor.userId, email: "owner@example.com" });
+  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" });
 
   const saved = await company.getCompany(actor);
   expect(domains).toEqual(["example.com"]);
@@ -33,7 +33,7 @@ test("keeps the domain suggestion and no logo when no brand is found", async ({ 
   const actor = await seed.owner();
   const company = companyUseCases(orm);
 
-  await company.onOwnerClaimed({ userId: actor.userId, email: "owner@example.com" });
+  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" });
 
   expect(await company.getCompany(actor)).toEqual({
     name: null,
@@ -52,7 +52,7 @@ test("does not look up a personal email domain", async ({ orm, seed }) => {
     },
   });
 
-  await company.onOwnerClaimed({ userId: actor.userId, email: "owner@gmail.com" });
+  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@gmail.com" });
 
   expect(domains).toEqual([]);
   expect(await company.getCompany(actor)).toEqual({
@@ -76,7 +76,7 @@ test("logs a failed lookup and resolves without storing a brand", async ({ orm, 
   });
 
   await expect(
-    company.onOwnerClaimed({ userId: actor.userId, email: "owner@example.com" }),
+    company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" }),
   ).resolves.toBeUndefined();
 
   expect(await company.getCompany(actor)).toEqual({
@@ -96,12 +96,12 @@ test("does not restore a removed logo when owner setup is delivered again", asyn
   const company = companyUseCases(orm, {
     brandLookup: () => Promise.resolve({ name: "Example Labs", logo }),
   });
-  await company.onOwnerClaimed(owner);
+  await company.detectCompanyNameAndLogo(owner);
   const before = await company.getCompany(actor);
   expect(before.logoId).toEqual(expect.any(String));
   await company.removeLogo(actor);
 
-  await company.onOwnerClaimed(owner);
+  await company.detectCompanyNameAndLogo(owner);
 
   expect((await company.getCompany(actor)).logoId).toBeNull();
   expect(await company.readLogo(actor, before.logoId!)).toBeNull();

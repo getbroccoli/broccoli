@@ -7,7 +7,7 @@ import { companyDomain, parseLogo } from "../../domain";
  * Looks up the brand of the new owner's email domain once and keeps it for the
  * company step. A failed lookup is logged; the domain suggestion still works.
  */
-export async function onOwnerClaimed(
+export async function detectCompanyNameAndLogo(
   {
     companies,
     brandLookup,

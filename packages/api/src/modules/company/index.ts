@@ -24,7 +24,7 @@ export function companyModule({
     name: "company",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
-    events: { "instance.owner_claimed": useCases.onOwnerClaimed },
+    events: { "instance.owner_claimed": useCases.detectCompanyNameAndLogo },
     router: (resolveActor) => logoRouter(useCases, resolveActor),
   };
 }

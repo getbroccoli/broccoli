@@ -9,7 +9,7 @@ test("removes the logo and stops serving its old id", async ({ orm, seed }) => {
   const company = companyUseCases(orm, {
     brandLookup: () => Promise.resolve({ name: "Example Labs", logo }),
   });
-  await company.onOwnerClaimed({ userId: actor.userId, email: "owner@example.com" });
+  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" });
   const before = await company.getCompany(actor);
   expect(before.logoId).toEqual(expect.any(String));
 
@@ -30,7 +30,10 @@ test("keeps the logo removed when a pending lookup finishes", async ({ orm, seed
       return lookup.promise;
     },
   });
-  const pending = company.onOwnerClaimed({ userId: actor.userId, email: "owner@example.com" });
+  const pending = company.detectCompanyNameAndLogo({
+    userId: actor.userId,
+    email: "owner@example.com",
+  });
   await lookupStarted.promise;
 
   await company.removeLogo(actor);

@@ -3,7 +3,7 @@ import type { ModuleDependencies } from "../../../../core/module-manifest";
 import type { BrandLookup } from "../../brand-lookup";
 import { companyRepository } from "../../db";
 import { getCompany } from "./get-company";
-import { onOwnerClaimed } from "./owner-claimed";
+import { detectCompanyNameAndLogo } from "./detect-company-name-and-logo";
 import { readLogo } from "./read-logo";
 import { removeLogo } from "./remove-logo";
 import { setName } from "./set-name";
@@ -24,8 +24,8 @@ export function createCompanyUseCases({
     setName: (actor: Actor | null, name: string) => setName(context, actor, name),
     removeLogo: (actor: Actor | null) => removeLogo(context, actor),
     readLogo: (actor: Actor | null, logoId: string) => readLogo(context, actor, logoId),
-    onOwnerClaimed: (owner: { userId: string; email: string }) =>
-      onOwnerClaimed({ companies, brandLookup, logger }, owner),
+    detectCompanyNameAndLogo: (owner: { userId: string; email: string }) =>
+      detectCompanyNameAndLogo({ companies, brandLookup, logger }, owner),
   };
 }
 

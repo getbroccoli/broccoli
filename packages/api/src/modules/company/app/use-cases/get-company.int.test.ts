@@ -19,7 +19,7 @@ test("suggests the stored brand name after owner setup", async ({ orm, seed }) =
   const company = companyUseCases(orm, {
     brandLookup: () => Promise.resolve({ name: "  Example Labs  ", logo: null }),
   });
-  await company.onOwnerClaimed({ userId: actor.userId, email: "owner@example.com" });
+  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" });
 
   expect(await company.getCompany(actor)).toEqual({
     name: null,
