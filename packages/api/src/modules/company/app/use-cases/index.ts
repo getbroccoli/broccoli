@@ -1,6 +1,6 @@
 import type { Actor } from "../../../../core/actor";
 import type { ModuleDependencies } from "../../../../core/module-manifest";
-import type { BrandLookup } from "../../brand-lookup";
+import type { BrandLookup } from "../../../../integrations/brand-lookup";
 import { companyRepository } from "../../db";
 import { getCompany } from "./get-company";
 import { detectCompanyNameAndLogo } from "./detect-company-name-and-logo";

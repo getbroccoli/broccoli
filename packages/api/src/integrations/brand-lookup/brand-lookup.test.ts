@@ -2,7 +2,7 @@ import { expect, it, onTestFinished, vi } from "vitest";
 
 import { startFakeBrandServer } from "#test/support";
 
-import { createBrandLookup } from "..";
+import { createBrandLookup } from ".";
 
 it("parses a brand name and logo from a successful response", async () => {
   const logo = Buffer.from(

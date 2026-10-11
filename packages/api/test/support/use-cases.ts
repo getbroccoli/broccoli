@@ -1,6 +1,7 @@
 import { createEventBus } from "../../src/core/events";
 import { createLogger, type Logger } from "../../src/core/logger";
-import { type BrandLookup, createCompanyUseCases } from "../../src/modules/company";
+import { type BrandLookup } from "../../src/integrations/brand-lookup";
+import { createCompanyUseCases } from "../../src/modules/company";
 
 /**
  * The company use cases on `orm` with test defaults: no brand is found and logs are

@@ -1,5 +1,5 @@
 import type { Logger } from "../../../../core/logger";
-import type { BrandLookup } from "../../brand-lookup";
+import type { BrandLookup } from "../../../../integrations/brand-lookup";
 import type { CompanyRepository } from "../../db";
 import { companyDomain, parseLogo } from "../../domain";
 
