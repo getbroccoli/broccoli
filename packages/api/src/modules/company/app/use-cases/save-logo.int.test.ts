@@ -74,7 +74,10 @@ test("refuses a non-owner without changing the logo", async ({ orm, seed }) => {
   const before = await company.getCompany(owner);
 
   await expect(
-    company.saveLogo({ userId: "another-user", isOwner: false }, logo),
+    company.saveLogo(
+      { userId: "another-user", email: "another@example.com", isOwner: false },
+      logo,
+    ),
   ).rejects.toMatchObject({ code: "FORBIDDEN", message: "Only the owner can do this." });
 
   expect(await company.getCompany(owner)).toEqual(before);

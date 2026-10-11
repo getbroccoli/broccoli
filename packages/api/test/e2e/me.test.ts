@@ -18,6 +18,16 @@ test("returns the signed-in owner as the current user", async ({ env }) => {
   });
 });
 
+test("returns the updated email after the owner's email changes", async ({ env }) => {
+  const { browser, user } = await env.signInAsOwner();
+  const email = "updated.owner@example.com";
+  await env.changeUserEmail(user.id, email);
+
+  const response = await browser.graphql("{ me { email } }");
+
+  expect(await response.json()).toEqual({ data: { me: { email } } });
+});
+
 test("returns no current user after logout", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
 

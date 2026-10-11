@@ -2,10 +2,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { inject } from "vitest";
 
-import { session } from "../../src/core/auth";
+import { session, user } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
@@ -66,6 +66,10 @@ export class TestEnv {
     }
     const { user } = (await response.json()) as Pick<SignedInOwner, "user">;
     return { browser, user };
+  }
+
+  async changeUserEmail(userId: string, email: string): Promise<void> {
+    await this.database.orm.update(user).set({ email }).where(eq(user.id, userId));
   }
 
   async expireSessionsIn(days: number): Promise<void> {

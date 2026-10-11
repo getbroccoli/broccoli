@@ -9,6 +9,8 @@ import type { Auth } from "../auth";
 /** Who is calling the API. */
 export interface Actor {
   userId: string;
+  /** Sign-in email, lowercased; for display, never for authorization. */
+  email: string;
   isOwner: boolean;
 }
 
@@ -39,8 +41,9 @@ export async function resolveActor(
   if (!session) {
     return { actor: null, renewedCookies };
   }
-  const userId = session.user.id;
-  return { actor: { userId, isOwner: userId === (await readOwnerUserId(orm)) }, renewedCookies };
+  const { id: userId, email } = session.user;
+  const isOwner = userId === (await readOwnerUserId(orm));
+  return { actor: { userId, email, isOwner }, renewedCookies };
 }
 
 /** Adds the `renewedCookies` of `resolveActor` to the response. */
