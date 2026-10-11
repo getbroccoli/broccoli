@@ -71,7 +71,7 @@ export function LogoField({ logoUrl, disabled, onBusyChange, onUploaded }: LogoF
 
   return (
     <div className="flex shrink-0 flex-col gap-2">
-      <span className="text-sm font-medium">{t("setup.company.logo")}</span>
+      <span className="text-sm leading-none font-medium">{t("setup.company.logo")}</span>
       <div className="relative size-24">
         <button
           type="button"
