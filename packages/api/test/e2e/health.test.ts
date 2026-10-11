@@ -1,6 +1,6 @@
 import { onTestFinished } from "vitest";
 
-import { expect, startTestServer, test, waitForStartup } from "./support";
+import { expect, startTestServer, test, waitForStartup } from "../support";
 
 const UNREACHABLE_DATABASE_URL = "postgres://broccoli@127.0.0.1:1/broccoli_test_unreachable";
 

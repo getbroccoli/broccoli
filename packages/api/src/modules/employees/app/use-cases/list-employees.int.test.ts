@@ -1,4 +1,4 @@
-import { expect, OWNER, test } from "../../../../../test/integration";
+import { expect, OWNER, test } from "../../../../../test/support";
 
 import { createEmployeeUseCases } from ".";
 

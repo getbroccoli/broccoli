@@ -4,10 +4,11 @@ import { join } from "node:path";
 
 import { inject } from "vitest";
 
-import { connectDatabase, type Database } from "../../../src/core/db";
-import { createLogger } from "../../../src/core/logger";
-import type { RunningServer } from "../../../src/core/server";
-import { createTestDatabase, type TestDatabase, TestSeed } from "../../support";
+import { connectDatabase, type Database } from "../../src/core/db";
+import { createLogger } from "../../src/core/logger";
+import type { RunningServer } from "../../src/core/server";
+import { createTestDatabase, type TestDatabase } from "./test-databases";
+import { TestSeed } from "./test-seed";
 import { createBrowser, type Browser } from "./browser";
 import { startTestServer, waitForStartup, type TestServerOptions } from "./test-server";
 

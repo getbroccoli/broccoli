@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import type { Mode } from "../../../src/core/env";
-import { createLogger } from "../../../src/core/logger";
-import { startServer, type RunningServer } from "../../../src/core/server";
-import { createModules } from "../../../src/modules";
+import type { Mode } from "../../src/core/env";
+import { createLogger } from "../../src/core/logger";
+import { startServer, type RunningServer } from "../../src/core/server";
+import { createModules } from "../../src/modules";
 
 export interface Readiness {
   httpStatus: number;

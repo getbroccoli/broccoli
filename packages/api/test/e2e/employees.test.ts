@@ -1,4 +1,4 @@
-import { expect, test } from "./support";
+import { expect, test } from "../support";
 
 interface EmployeeListResponse {
   data: {
