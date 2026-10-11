@@ -38,20 +38,6 @@ test("refuses a non-owner without changing the company or setup step", async ({ 
   expect(await readSetupStep(orm)).toBe("company");
 });
 
-test("requires sign-in without changing the company or setup step", async ({ orm, seed }) => {
-  const owner = await seed.owner();
-  const company = companyUseCases(orm);
-  const before = await company.getCompany(owner);
-
-  await expect(company.setName(null, "Example Ltd")).rejects.toMatchObject({
-    code: "UNAUTHENTICATED",
-    message: "Sign in to continue.",
-  });
-
-  expect(await company.getCompany(owner)).toEqual(before);
-  expect(await readSetupStep(orm)).toBe("company");
-});
-
 test("leaves the company step unfinished when the name is invalid", async ({ orm, seed }) => {
   const actor = await seed.owner();
   const company = companyUseCases(orm);

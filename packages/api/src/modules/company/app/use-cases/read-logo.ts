@@ -7,7 +7,7 @@ import type { CompanyContext } from "./company";
 /** The current logo; null for an id that is not current, or not an id at all. */
 export async function readLogo(
   { companies }: CompanyContext,
-  actor: Actor | null,
+  actor: Actor,
   logoId: string,
 ): Promise<Logo | null> {
   requireOwner(actor);

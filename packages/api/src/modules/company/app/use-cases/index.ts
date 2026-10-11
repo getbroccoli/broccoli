@@ -20,10 +20,10 @@ export function createCompanyUseCases({
   const companies = companyRepository(orm);
   const context = { orm, eventBus, companies };
   return {
-    getCompany: (actor: Actor | null) => getCompany(context, actor),
-    setName: (actor: Actor | null, name: string) => setName(context, actor, name),
-    removeLogo: (actor: Actor | null) => removeLogo(context, actor),
-    readLogo: (actor: Actor | null, logoId: string) => readLogo(context, actor, logoId),
+    getCompany: (actor: Actor) => getCompany(context, actor),
+    setName: (actor: Actor, name: string) => setName(context, actor, name),
+    removeLogo: (actor: Actor) => removeLogo(context, actor),
+    readLogo: (actor: Actor, logoId: string) => readLogo(context, actor, logoId),
     detectCompanyNameAndLogo: (owner: { userId: string; email: string }) =>
       detectCompanyNameAndLogo({ companies, brandLookup, logger }, owner),
   };

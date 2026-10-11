@@ -8,7 +8,7 @@ import { type Company, type CompanyContext, readCompany } from "./company";
 /** Saves the name and, if it is current, completes the company step, in one transaction. */
 export async function setName(
   context: CompanyContext,
-  actor: Actor | null,
+  actor: Actor,
   rawName: string,
 ): Promise<Company> {
   requireOwner(actor);

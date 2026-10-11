@@ -13,18 +13,8 @@ const calls = {
   listEmployees: (useCases, actor) => useCases.listEmployees(actor, {}),
 } satisfies Record<
   keyof EmployeeUseCases,
-  (useCases: EmployeeUseCases, actor: Actor | null) => Promise<unknown>
+  (useCases: EmployeeUseCases, actor: Actor) => Promise<unknown>
 >;
-
-test.for(Object.entries(calls))("%s refuses an anonymous actor", async ([, call], { orm }) => {
-  const useCases = createEmployeeUseCases({ orm });
-
-  await expect(call(useCases, null)).rejects.toMatchObject({
-    code: "UNAUTHENTICATED",
-    message: "Sign in to continue.",
-    fieldErrors: [],
-  });
-});
 
 test.for(Object.entries(calls))(
   "%s refuses a signed-in user who is not the owner",

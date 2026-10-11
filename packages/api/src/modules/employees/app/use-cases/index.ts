@@ -9,10 +9,9 @@ import { type EmployeeListArgs, listEmployees } from "./list-employees";
 export function createEmployeeUseCases({ orm }: Pick<ModuleDependencies, "orm">) {
   const employees = employeeRepository(orm);
   return {
-    createEmployee: (actor: Actor | null, input: NewEmployeeInput) =>
+    createEmployee: (actor: Actor, input: NewEmployeeInput) =>
       createEmployee(employees, actor, input),
-    listEmployees: (actor: Actor | null, args: EmployeeListArgs) =>
-      listEmployees(employees, actor, args),
+    listEmployees: (actor: Actor, args: EmployeeListArgs) => listEmployees(employees, actor, args),
   };
 }
 

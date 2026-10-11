@@ -10,7 +10,7 @@ import {
 
 export async function createEmployee(
   employees: EmployeeRepository,
-  actor: Actor | null,
+  actor: Actor,
   input: NewEmployeeInput,
 ): Promise<Employee> {
   requireOwner(actor);

@@ -7,8 +7,8 @@ How we write tests in Broccoli. The decisions behind them are in [§9 of the arc
 Three layers, most tests in the middle one:
 
 - **Domain rules** with unit tests next to the code, named `<subject>.test.ts`. Domain code is pure, so these tests need no mocks.
-- **Use cases** with integration tests next to them, named `<use-case>.int.test.ts`. They call the module's use-case factory directly against a real, migrated Postgres, with any actor built in the test (`OWNER`, a non-owner, `null`). Permissions, validation, uniqueness, paging, transactions, audit and events are verified here. The `test` fixtures in `packages/api/test/support`, shared by all layers that need Postgres, give each test its own database (`orm`) and a `seed`.
-- **API wiring** with a few end-to-end tests under `packages/api/test/e2e`. They start the real server and call GraphQL over HTTP: the session becomes the actor, each operation reaches its use case once on the happy path, errors keep their format. Rules already covered by integration tests are not repeated here.
+- **Use cases** with integration tests next to them, named `<use-case>.int.test.ts`. They call the module's use-case factory directly against a real, migrated Postgres, with any actor built in the test (`OWNER` or a non-owner); use cases never see an anonymous caller. Permissions, validation, uniqueness, paging, transactions, audit and events are verified here. The `test` fixtures in `packages/api/test/support`, shared by all layers that need Postgres, give each test its own database (`orm`) and a `seed`.
+- **API wiring** with a few end-to-end tests under `packages/api/test/e2e`. They start the real server and call GraphQL over HTTP: the session becomes the actor and a request without one is refused, each operation reaches its use case once on the happy path, errors keep their format. Rules already covered by integration tests are not repeated here.
 - **Bugs** with a test that reproduces the bug, written before the fix, at the lowest layer that shows it.
 
 ## What not to test

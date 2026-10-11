@@ -1,5 +1,6 @@
 import express from "express";
 
+import { requireSignedIn } from "../../../core/actor";
 import { ApplicationError } from "../../../core/application-error";
 import type { ActorResolver } from "../../../core/graphql";
 import type { CompanyUseCases } from "../app";
@@ -11,7 +12,7 @@ export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolve
   return express.Router().get("/company/logo/:logoId", async (request, response) => {
     try {
       const logo = await useCases.readLogo(
-        await resolveActor(request.headers),
+        requireSignedIn(await resolveActor(request.headers)),
         request.params.logoId,
       );
       if (!logo) {
