@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, isNull, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
-import type { Logo } from "../domain";
+import type { RasterImage } from "../../../utils";
 import { company } from "./company-table";
 
 /** The company row without the logo bytes, which only `readLogo` loads. */
@@ -37,7 +37,7 @@ export function companyRepository(db: Orm | Tx) {
      * Stores the first brand lookup's result; does nothing once a lookup was stored,
      * so a repeated or late lookup never overrides the owner's changes.
      */
-    saveBrandOnce: async (brandName: string | null, logo: Logo | null): Promise<void> => {
+    saveBrandOnce: async (brandName: string | null, logo: RasterImage | null): Promise<void> => {
       await orm()
         .update(company)
         .set({
@@ -53,7 +53,7 @@ export function companyRepository(db: Orm | Tx) {
     },
 
     /** The owner's own logo; also counts as the first lookup, so a running one cannot replace it. */
-    saveLogo: async (logo: Logo): Promise<void> => {
+    saveLogo: async (logo: RasterImage): Promise<void> => {
       await orm()
         .update(company)
         .set({
@@ -77,12 +77,14 @@ export function companyRepository(db: Orm | Tx) {
     },
 
     /** The logo with this id, or null when it is not the current one. */
-    readLogo: async (logoId: string): Promise<Logo | null> => {
+    readLogo: async (logoId: string): Promise<RasterImage | null> => {
       const [row] = await orm()
         .select({ bytes: company.logoContent, mimeType: company.logoMimeType })
         .from(company)
         .where(eq(company.logoId, logoId));
-      return row?.bytes ? { bytes: row.bytes, mimeType: row.mimeType as Logo["mimeType"] } : null;
+      return row?.bytes
+        ? { bytes: row.bytes, mimeType: row.mimeType as RasterImage["mimeType"] }
+        : null;
     },
   };
 }

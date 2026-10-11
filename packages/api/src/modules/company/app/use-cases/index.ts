@@ -9,7 +9,7 @@ import { removeLogo } from "./remove-logo";
 import { saveLogo } from "./save-logo";
 import { updateCompany } from "./update-company";
 
-export type { Company } from "./company";
+export { MAX_LOGO_BYTES, type Company } from "./company";
 
 /** Everything that can be done with the company; the adapters call nothing else. */
 export function createCompanyUseCases({

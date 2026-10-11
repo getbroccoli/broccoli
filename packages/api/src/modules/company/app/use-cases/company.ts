@@ -4,6 +4,9 @@ import { readOwner } from "../../../../core/instance";
 import type { CompanyRepository } from "../../db";
 import { suggestName } from "../../domain";
 
+/** The largest company logo Broccoli stores. */
+export const MAX_LOGO_BYTES = 512 * 1024;
+
 /** The company as the owner sees it in the company step and later. */
 export interface Company {
   name: string | null;

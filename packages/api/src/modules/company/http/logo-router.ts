@@ -3,8 +3,7 @@ import express from "express";
 import { requireSignedIn } from "../../../core/actor";
 import { ApplicationError } from "../../../core/application-error";
 import type { ActorResolver } from "../../../core/graphql";
-import type { CompanyUseCases } from "../app";
-import { MAX_LOGO_BYTES } from "../domain";
+import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
 
 const STATUS_OF = { UNAUTHENTICATED: 401, FORBIDDEN: 403, INVALID_INPUT: 400 } as const;
 
