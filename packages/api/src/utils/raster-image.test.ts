@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
 
-import { parseLogo } from ".";
+import { parseRasterImage } from ".";
+
+const limits = { maxBytes: 512 * 1024 };
 
 it.each([
   {
@@ -12,7 +14,7 @@ it.each([
 ])("recognises $mimeType by its signature", ({ hex, mimeType }) => {
   const bytes = Buffer.from(hex, "hex");
 
-  expect(parseLogo(bytes)).toEqual({ bytes, mimeType });
+  expect(parseRasterImage(bytes, limits)).toEqual({ bytes, mimeType });
 });
 
 it.each([
@@ -20,12 +22,12 @@ it.each([
   { format: "GIF", bytes: Buffer.from("GIF89a") },
   { format: "empty input", bytes: Buffer.alloc(0) },
 ])("refuses $format", ({ bytes }) => {
-  expect(parseLogo(bytes)).toBeNull();
+  expect(parseRasterImage(bytes, limits)).toBeNull();
 });
 
-it("refuses a PNG larger than 512 KiB", () => {
+it("refuses an image larger than the limit", () => {
   const bytes = Buffer.alloc(512 * 1024 + 1);
   Buffer.from("89504e470d0a1a0a", "hex").copy(bytes);
 
-  expect(parseLogo(bytes)).toBeNull();
+  expect(parseRasterImage(bytes, limits)).toBeNull();
 });
