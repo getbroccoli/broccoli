@@ -1,5 +1,5 @@
 import { fromNodeHeaders } from "better-auth/node";
-import type { IncomingHttpHeaders, ServerResponse } from "node:http";
+import type { IncomingHttpHeaders } from "node:http";
 
 import { ApplicationError } from "../application-error";
 import type { Orm } from "../db";
@@ -28,8 +28,8 @@ export interface RequestActor {
 
 /**
  * The signed-in user of a request. Reading the session also extends one that is due
- * for renewal; the caller must send `renewedCookies` back, or the browser's cookie
- * expires before the session does.
+ * for renewal; the GraphQL adapter sends `renewedCookies` back, or the browser's
+ * cookie would expire before the session does.
  */
 export async function resolveActor(
   auth: Auth,
@@ -48,13 +48,6 @@ export async function resolveActor(
   const { id: userId, email } = session.user;
   const isOwner = userId === (await readOwnerUserId(orm));
   return { actor: { userId, email, isOwner }, renewedCookies };
-}
-
-/** Adds the `renewedCookies` of `resolveActor` to the response. */
-export function sendRenewedCookies(response: ServerResponse, renewedCookies: string[]): void {
-  if (renewedCookies.length > 0) {
-    response.appendHeader("Set-Cookie", renewedCookies);
-  }
 }
 
 /**

@@ -8,7 +8,7 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import express from "express";
 import { GraphQLError } from "graphql";
 
-import { sendRenewedCookies, type RequestActor, type UserActor } from "../actor";
+import type { RequestActor, UserActor } from "../actor";
 import type { Logger } from "../logger";
 import type { ModuleManifest } from "../module-manifest";
 import { depthLimit } from "./depth-limit";
@@ -93,7 +93,9 @@ export function createContext(resolveActor: ActorResolver) {
   }): Promise<GraphqlContext> => {
     try {
       const { actor, renewedCookies } = await resolveActor(req.headers);
-      sendRenewedCookies(res, renewedCookies);
+      if (renewedCookies.length > 0) {
+        res.appendHeader("Set-Cookie", renewedCookies);
+      }
       return { actor };
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass

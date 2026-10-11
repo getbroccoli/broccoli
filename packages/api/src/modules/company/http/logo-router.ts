@@ -1,6 +1,6 @@
 import express from "express";
 
-import { requireSignedIn, sendRenewedCookies } from "../../../core/actor";
+import { requireSignedIn } from "../../../core/actor";
 import { ApplicationError } from "../../../core/application-error";
 import type { ActorResolver } from "../../../core/graphql";
 import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
@@ -18,11 +18,9 @@ export function logoUrl(logoId: string): string {
  * GET is cached for good.
  */
 export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolver): express.Router {
-  const signedIn = async (request: express.Request, response: express.Response) => {
-    const { actor, renewedCookies } = await resolveActor(request.headers);
-    sendRenewedCookies(response, renewedCookies);
-    return requireSignedIn(actor);
-  };
+  // The session cookie is renewed by GraphQL, which every page calls.
+  const signedIn = async (request: express.Request) =>
+    requireSignedIn((await resolveActor(request.headers)).actor);
 
   return express
     .Router()
@@ -34,7 +32,7 @@ export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolve
         try {
           // Without a body Express leaves `body` unset; an empty image is refused like any other.
           const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
-          const company = await useCases.saveLogo(await signedIn(request, response), bytes);
+          const company = await useCases.saveLogo(await signedIn(request), bytes);
           response.json({ logoUrl: company.logoId && logoUrl(company.logoId) });
         } catch (error) {
           sendApplicationError(error, response);
@@ -43,10 +41,7 @@ export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolve
     )
     .get("/company/logo/:logoId", async (request, response) => {
       try {
-        const logo = await useCases.readLogo(
-          await signedIn(request, response),
-          request.params.logoId,
-        );
+        const logo = await useCases.readLogo(await signedIn(request), request.params.logoId);
         if (!logo) {
           response.sendStatus(404);
           return;

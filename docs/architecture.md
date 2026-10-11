@@ -72,7 +72,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 ## 6. Auth and sessions
 
 - **Better Auth** with the Drizzle adapter, mounted before body parsers. Only the plugins in use are enabled; packages are pinned together.
-- **Sessions** are opaque, database-backed and carried in Secure, HttpOnly cookies, with CSRF protection and cookie caching off. Logout, account disabling and permission changes take effect immediately. A session lasts 7 days and is renewed daily while in use; every adapter that reads the session (GraphQL, HTTP routes) passes the renewed cookie on to the browser. The web app reads the signed-in user from `Query.me`.
+- **Sessions** are opaque, database-backed and carried in Secure, HttpOnly cookies, with CSRF protection and cookie caching off. Logout, account disabling and permission changes take effect immediately. A session lasts 7 days and is renewed daily while in use; GraphQL, which every page calls, passes the renewed cookie on to the browser; other HTTP routes do not renew. The web app reads the signed-in user from `Query.me`.
 - **MCP clients** authenticate with OAuth 2.1 through `@better-auth/oauth-provider` and `@better-auth/mcp` (discovery, PKCE S256, client registration, audiences, refresh, revocation). An application-level active-grant check makes revocation immediate.
 - **Managed sign-in.** A small plugin endpoint validates a signed single-use ticket from the managed sign-in service (issuer and audience checks, atomic one-time use, subject-based account linking) and creates a normal session.
 - **Mode.** `BROCCOLI_MODE` is `self_hosted` (the default) or `managed`. It is deployment configuration, so it lives in the environment, not the database.
