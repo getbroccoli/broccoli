@@ -2,19 +2,26 @@ import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import { t } from "@/i18n";
 
 const DEBOUNCE_MS = 300;
-// The API searches at most 100 characters.
-const MAX_QUERY_LENGTH = 100;
 
-interface EmployeeSearchFieldProps {
+interface TableSearchFieldProps {
   query: string | undefined;
   onQueryChange: (query: string | undefined) => void;
+  label: string;
+  placeholder: string;
+  /** The longest search the list's API accepts. */
+  maxLength: number;
 }
 
 /** Search text that reaches the URL once typing pauses, and follows the URL when it changes. */
-export function EmployeeSearchField({ query = "", onQueryChange }: EmployeeSearchFieldProps) {
+export function TableSearchField({
+  query = "",
+  onQueryChange,
+  label,
+  placeholder,
+  maxLength,
+}: TableSearchFieldProps) {
   const [text, setText] = useState(query);
   const [shownQuery, setShownQuery] = useState(query);
   if (query !== shownQuery) {
@@ -38,11 +45,11 @@ export function EmployeeSearchField({ query = "", onQueryChange }: EmployeeSearc
       />
       <Input
         type="search"
-        maxLength={MAX_QUERY_LENGTH}
+        maxLength={maxLength}
         value={text}
         onChange={(event) => setText(event.target.value)}
-        placeholder={t("people.search.placeholder")}
-        aria-label={t("people.search.label")}
+        placeholder={placeholder}
+        aria-label={label}
         className="h-7 pl-7 text-[12.5px] md:text-[12.5px]"
       />
     </div>

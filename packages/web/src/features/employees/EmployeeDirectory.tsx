@@ -1,60 +1,60 @@
 import { useQuery } from "@apollo/client/react";
 import { LockSimple, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 
 import { EmployeesDocument } from "@/__generated__/graphql";
-import { applicationErrorOf } from "@/apollo";
-import { DataTable, TableState, type DataTableSort } from "@/components/data-table";
+import { isSignedOut } from "@/apollo";
+import { DataTable, TableSearchField, TableState } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
+import { useListPage } from "@/lib/list-page";
 
-import { toEmployeesVariables, type SortKey } from "./directory-search";
+import { SEARCH_MAX_LENGTH, toEmployeesVariables, type DirectorySearch } from "./directory-search";
 import { EMPLOYEE_COLUMNS } from "./employee-columns";
-import { EmployeeSearchField } from "./EmployeeSearchField";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
-
-const SIGNED_OUT_CODES = new Set(["UNAUTHENTICATED", "FORBIDDEN"]);
 
 /** The People directory: employees one page at a time, with sort, search and paging in the URL. */
 export function EmployeeDirectory() {
   const search = useSearch({ from: "/people" });
   const navigate = useNavigate({ from: "/people" });
+  const writeSearch = useCallback(
+    (patch: Partial<DirectorySearch>, replace: boolean) =>
+      void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
+    [navigate],
+  );
   const { data, previousData, error, loading, refetch } = useQuery(EmployeesDocument, {
     variables: toEmployeesVariables(search),
   });
-  const applicationError = applicationErrorOf(error);
-  const hasInvalidCursor = applicationError?.fieldErrors.some(({ field }) => field === "after");
-
-  useEffect(() => {
-    if (hasInvalidCursor) {
-      void navigate({ search: (prev) => ({ ...prev, after: undefined }), replace: true });
-    }
-  }, [hasInvalidCursor, navigate]);
-
-  const changeQuery = useCallback(
-    (q: string | undefined) =>
-      void navigate({ search: (prev) => ({ ...prev, q, after: undefined }), replace: true }),
-    [navigate],
-  );
-  const changeSort = ({ key, direction }: DataTableSort<SortKey>) =>
-    void navigate({ search: (prev) => ({ ...prev, sort: key, dir: direction, after: undefined }) });
-
-  const connection = (data ?? previousData)?.employees;
+  const list = useListPage({
+    search,
+    writeSearch,
+    current: data?.employees,
+    previous: previousData?.employees,
+    error,
+  });
 
   return (
     <DataTable
       columns={EMPLOYEE_COLUMNS}
-      rows={connection?.edges.map(({ node }) => node)}
+      rows={list.rows}
       getRowId={(employee) => employee.id}
-      sort={{ key: search.sort, direction: search.dir }}
-      onSortChange={changeSort}
+      sort={list.sort}
+      onSortChange={list.changeSort}
       isLoading={loading}
-      toolbar={<EmployeeSearchField query={search.q} onQueryChange={changeQuery} />}
-      notice={error && !hasInvalidCursor ? errorNotice() : undefined}
+      toolbar={
+        <TableSearchField
+          query={search.q}
+          onQueryChange={list.changeQuery}
+          label={t("people.search.label")}
+          placeholder={t("people.search.placeholder")}
+          maxLength={SEARCH_MAX_LENGTH}
+        />
+      }
+      notice={list.error ? errorNotice() : undefined}
       emptyState={
         search.q ? (
-          <NoMatchingEmployees query={search.q} onClear={() => changeQuery(undefined)} />
+          <NoMatchingEmployees query={search.q} onClear={() => list.changeQuery(undefined)} />
         ) : (
           <TableState
             icon={UserCircle}
@@ -63,28 +63,12 @@ export function EmployeeDirectory() {
           />
         )
       }
-      pager={
-        connection && {
-          hasNextPage: connection.pageInfo.hasNextPage,
-          isFirstPage: !search.after,
-          // Rows kept from the previous search or sort cannot continue the current one.
-          onNext: data
-            ? () =>
-                void navigate({
-                  search: (prev) => ({
-                    ...prev,
-                    after: data.employees.pageInfo.endCursor ?? undefined,
-                  }),
-                })
-            : undefined,
-          onFirst: () => void navigate({ search: (prev) => ({ ...prev, after: undefined }) }),
-        }
-      }
+      pager={list.pager}
     />
   );
 
   function errorNotice() {
-    if (applicationError && SIGNED_OUT_CODES.has(applicationError.code)) {
+    if (isSignedOut(list.error)) {
       return <TableState icon={LockSimple} title={t("people.signedOut.title")} />;
     }
     return (
