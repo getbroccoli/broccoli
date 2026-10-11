@@ -17,6 +17,8 @@ interface NewPasswordFieldProps {
   onChange: (value: string) => void;
   onBlur: () => void;
   error: string | undefined;
+  /** While true the password cannot be typed or generated; it can still be shown and copied. */
+  readOnly: boolean;
   inputRef?: Ref<HTMLInputElement>;
 }
 
@@ -27,6 +29,7 @@ export function NewPasswordField({
   onChange,
   onBlur,
   error,
+  readOnly,
   inputRef,
 }: NewPasswordFieldProps) {
   const [visible, setVisible] = useState(false);
@@ -51,6 +54,7 @@ export function NewPasswordField({
           type="button"
           variant="ghost"
           className="-mr-2"
+          disabled={readOnly}
           aria-label={t(
             showGenerated ? "setup.owner.generateAnotherLabel" : "setup.owner.generateLabel",
           )}
@@ -72,6 +76,7 @@ export function NewPasswordField({
           autoComplete="new-password"
           autoCapitalize="none"
           spellCheck={false}
+          readOnly={readOnly}
           placeholder={t("setup.owner.passwordPlaceholder")}
           className="h-12 rounded-xl bg-muted/30 pr-40 pl-4"
           value={value}

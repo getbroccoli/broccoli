@@ -1,6 +1,6 @@
 import { useApolloClient } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
@@ -39,6 +39,7 @@ const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "ownerExists">, Messa
 export function OwnerSetupForm() {
   const apolloClient = useApolloClient();
   const router = useRouter();
+  const emailInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
 
@@ -60,7 +61,18 @@ export function OwnerSetupForm() {
       setFailure(FAILURE_MESSAGES[result]);
       passwordInput.current?.focus();
     },
+    // Focus takes a screen reader to the field and reads its error with it.
+    onSubmitInvalid: ({ formApi }) => {
+      const emailIsInvalid = (formApi.getFieldMeta("email")?.errors.length ?? 0) > 0;
+      (emailIsInvalid ? emailInput : passwordInput).current?.focus();
+    },
   });
+  // The credentials stay as sent while the account is created.
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+  const isFilledIn = useStore(
+    form.store,
+    ({ values }) => values.email.trim() !== "" && values.password.length >= PASSWORD_LENGTH.min,
+  );
 
   return (
     <form
@@ -80,10 +92,12 @@ export function OwnerSetupForm() {
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="owner-email">{t("setup.owner.email")}</Label>
                   <Input
+                    ref={emailInput}
                     id="owner-email"
                     name="username"
                     type="email"
                     autoComplete="username"
+                    readOnly={isSubmitting}
                     placeholder={t("setup.owner.emailPlaceholder")}
                     className="h-12 rounded-xl bg-muted/30 px-4"
                     value={field.state.value}
@@ -107,6 +121,7 @@ export function OwnerSetupForm() {
               <NewPasswordField
                 id="owner-password"
                 inputRef={passwordInput}
+                readOnly={isSubmitting}
                 value={field.state.value}
                 onChange={field.handleChange}
                 onBlur={field.handleBlur}
@@ -122,24 +137,15 @@ export function OwnerSetupForm() {
         </div>
       </div>
       <footer className="flex shrink-0 justify-end border-t border-border px-6 py-3 sm:px-10">
-        <form.Subscribe
-          selector={({ isSubmitting, values }) => ({
-            isSubmitting,
-            isFilledIn: values.email.trim() !== "" && values.password.length >= PASSWORD_LENGTH.min,
-          })}
+        <Button
+          type="submit"
+          size="lg"
+          className="h-10 gap-2 px-4"
+          disabled={isSubmitting || !isFilledIn}
         >
-          {({ isSubmitting, isFilledIn }) => (
-            <Button
-              type="submit"
-              size="lg"
-              className="h-10 gap-2 px-4"
-              disabled={isSubmitting || !isFilledIn}
-            >
-              {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
-              <ArrowRight weight="bold" aria-hidden />
-            </Button>
-          )}
-        </form.Subscribe>
+          {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
+          <ArrowRight weight="bold" aria-hidden />
+        </Button>
       </footer>
     </form>
   );
