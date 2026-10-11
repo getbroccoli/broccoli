@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 
 const DEBOUNCE_MS = 300;
+// The API searches at most 100 characters.
+const MAX_QUERY_LENGTH = 100;
 
 interface EmployeeSearchFieldProps {
   query: string | undefined;
@@ -36,6 +38,7 @@ export function EmployeeSearchField({ query = "", onQueryChange }: EmployeeSearc
       />
       <Input
         type="search"
+        maxLength={MAX_QUERY_LENGTH}
         value={text}
         onChange={(event) => setText(event.target.value)}
         placeholder={t("people.search.placeholder")}

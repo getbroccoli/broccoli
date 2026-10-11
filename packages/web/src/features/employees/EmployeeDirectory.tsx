@@ -49,7 +49,7 @@ export function EmployeeDirectory() {
       getRowId={(employee) => employee.id}
       sort={{ key: search.sort, direction: search.dir }}
       onSortChange={changeSort}
-      isRefreshing={loading && Boolean(previousData)}
+      isLoading={loading}
       toolbar={<EmployeeSearchField query={search.q} onQueryChange={changeQuery} />}
       notice={error && !hasInvalidCursor ? errorNotice() : undefined}
       emptyState={
@@ -67,10 +67,16 @@ export function EmployeeDirectory() {
         connection && {
           hasNextPage: connection.pageInfo.hasNextPage,
           isFirstPage: !search.after,
-          onNext: () =>
-            void navigate({
-              search: (prev) => ({ ...prev, after: connection.pageInfo.endCursor ?? undefined }),
-            }),
+          // Rows kept from the previous search or sort cannot continue the current one.
+          onNext: data
+            ? () =>
+                void navigate({
+                  search: (prev) => ({
+                    ...prev,
+                    after: data.employees.pageInfo.endCursor ?? undefined,
+                  }),
+                })
+            : undefined,
           onFirst: () => void navigate({ search: (prev) => ({ ...prev, after: undefined }) }),
         }
       }

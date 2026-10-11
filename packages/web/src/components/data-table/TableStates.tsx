@@ -2,6 +2,7 @@ import type { Icon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 interface TableStateProps {
@@ -47,10 +48,12 @@ const SKELETON_BAR_WIDTHS = ["max-w-[55%]", "max-w-[70%]", "max-w-[40%]", "max-w
 /** Placeholder rows while the first page loads. */
 export function TableSkeleton() {
   return (
-    <div aria-hidden className="motion-reduce:[&_*]:animate-none">
+    <div role="status" className="motion-reduce:[&_*]:animate-none">
+      <span className="sr-only">{t("table.loading")}</span>
       {Array.from({ length: 8 }, (_, index) => (
         <div
           key={index}
+          aria-hidden
           className="flex items-center gap-3 border-b border-border/40 px-3 py-3 last:border-0"
         >
           <Skeleton className="size-6 shrink-0 rounded-full" />

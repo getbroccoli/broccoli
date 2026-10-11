@@ -20,6 +20,7 @@ export const en = {
   "people.error.title": "Couldn’t load people",
   "people.error.detail": "Something went wrong. Try again in a moment.",
   "people.error.retry": "Try again",
+  "table.loading": "Loading…",
   "table.firstPage": "First page",
   "table.nextPage": "Next page",
   "company.title": "Company",

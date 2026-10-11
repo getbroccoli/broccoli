@@ -30,8 +30,8 @@ interface DataTableProps<Row, SortKey extends string> {
   emptyState: ReactNode;
   /** Shown instead of the rows, such as an error. */
   notice?: ReactNode;
-  /** True while new rows load behind the ones shown. */
-  isRefreshing?: boolean;
+  /** True while rows load; rows already shown stay, dimmed. */
+  isLoading?: boolean;
   /** The left side of the toolbar. */
   toolbar?: ReactNode;
   pager?: DataTablePager;
@@ -49,7 +49,7 @@ export function DataTable<Row, SortKey extends string>({
   onSortChange,
   emptyState,
   notice,
-  isRefreshing = false,
+  isLoading = false,
   toolbar,
   pager,
 }: DataTableProps<Row, SortKey>) {
@@ -63,7 +63,7 @@ export function DataTable<Row, SortKey extends string>({
         </div>
       )}
       <div className="subtle-scrollbar max-h-[70vh] overflow-auto">
-        <table aria-busy={isRefreshing} className="w-full text-[12.5px]">
+        <table aria-busy={isLoading} className="w-full text-[12.5px]">
           <TableHeader className="sticky top-0 z-20 bg-card [&_tr]:border-border/60">
             <TableRow className="hover:bg-transparent">
               {columns.map((column, index) => (
@@ -79,7 +79,7 @@ export function DataTable<Row, SortKey extends string>({
             </TableRow>
           </TableHeader>
           {rows && !placeholder && (
-            <TableBody className={cn("transition-opacity", isRefreshing && "opacity-60")}>
+            <TableBody className={cn("transition-opacity", isLoading && "opacity-60")}>
               {rows.map((row) => (
                 <TableRow
                   key={getRowId(row)}
@@ -105,7 +105,7 @@ export function DataTable<Row, SortKey extends string>({
         {!rows && !notice && <TableSkeleton />}
         {placeholder}
       </div>
-      {pager && !placeholder && <TablePager {...pager} />}
+      {pager && !notice && <TablePager {...pager} />}
     </section>
   );
 }

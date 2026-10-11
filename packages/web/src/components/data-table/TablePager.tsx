@@ -6,7 +6,8 @@ import { t } from "@/i18n";
 export interface DataTablePager {
   hasNextPage: boolean;
   isFirstPage: boolean;
-  onNext: () => void;
+  /** Missing while the next page cannot be reached yet, such as during loading. */
+  onNext: (() => void) | undefined;
   onFirst: () => void;
 }
 
@@ -31,7 +32,7 @@ export function TablePager({ hasNextPage, isFirstPage, onNext, onFirst }: DataTa
         size="icon-sm"
         aria-label={t("table.nextPage")}
         title={t("table.nextPage")}
-        disabled={!hasNextPage}
+        disabled={!hasNextPage || !onNext}
         onClick={onNext}
       >
         <CaretRight size={14} />
