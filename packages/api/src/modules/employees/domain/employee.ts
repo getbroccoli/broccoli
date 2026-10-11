@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { invalidInput, type FieldError } from "../../../core/application-error";
-import { isCalendarDate } from "../../../core/calendar-date";
+import { isCalendarDate } from "../../../utils";
 
 const NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;
