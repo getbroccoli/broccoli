@@ -15,4 +15,4 @@ The words Broccoli's code and docs use, and what each one means.
 - **Actor**: who is calling the API: a signed-in user, and whether they are the owner.
 - **Company**: the business the instance belongs to; its name and logo. One per instance.
 - **Brand lookup**: finding a company's name and logo from the owner's email domain, through the service at `BRAND_LOOKUP_URL`.
-- **Event**: something that happened, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.
+- **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.

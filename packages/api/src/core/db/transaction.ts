@@ -1,4 +1,4 @@
-import type { BroccoliEvents, EventBus, EventType, PublishedEvent } from "../events";
+import type { DomainEvents, EventBus, EventType, DomainEvent } from "../events";
 import type { Orm, OrmTransaction } from "./database";
 
 /**
@@ -7,11 +7,11 @@ import type { Orm, OrmTransaction } from "./database";
  */
 export interface Tx {
   /** Queues an event; it is dispatched once the transaction commits. */
-  publish<Type extends EventType>(type: Type, payload: BroccoliEvents[Type]): void;
+  publish<Type extends EventType>(type: Type, payload: DomainEvents[Type]): void;
 }
 
 class Transaction implements Tx {
-  readonly events: PublishedEvent[] = [];
+  readonly events: DomainEvent[] = [];
   #orm: OrmTransaction | undefined;
 
   constructor(orm: OrmTransaction) {
@@ -25,7 +25,7 @@ class Transaction implements Tx {
     return this.#orm;
   }
 
-  publish<Type extends EventType>(type: Type, payload: BroccoliEvents[Type]): void {
+  publish<Type extends EventType>(type: Type, payload: DomainEvents[Type]): void {
     // Reading `orm` checks the transaction is still open.
     void this.orm;
     this.events.push({ type, payload });

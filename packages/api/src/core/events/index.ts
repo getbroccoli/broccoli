@@ -1,8 +1,8 @@
 export {
   createEventBus,
-  type BroccoliEvents,
+  type DomainEvents,
   type EventBus,
   type EventHandlers,
   type EventType,
-  type PublishedEvent,
+  type DomainEvent,
 } from "./event-bus";

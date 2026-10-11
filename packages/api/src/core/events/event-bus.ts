@@ -5,17 +5,17 @@ import type { Logger } from "../logger";
  * declaration merging, so no central list has to be edited.
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- filled by declaration merging.
-export interface BroccoliEvents {}
+export interface DomainEvents {}
 
-export type EventType = keyof BroccoliEvents;
+export type EventType = keyof DomainEvents;
 
-export type PublishedEvent = {
-  [Type in EventType]: { type: Type; payload: BroccoliEvents[Type] };
+export type DomainEvent = {
+  [Type in EventType]: { type: Type; payload: DomainEvents[Type] };
 }[EventType];
 
 /** What a module does when an event happens, by event type. */
 export type EventHandlers = {
-  [Type in EventType]?: (payload: BroccoliEvents[Type]) => Promise<void>;
+  [Type in EventType]?: (payload: DomainEvents[Type]) => Promise<void>;
 };
 
 export type EventBus = ReturnType<typeof createEventBus>;
@@ -27,7 +27,7 @@ export type EventBus = ReturnType<typeof createEventBus>;
 export function createEventBus(logger: Logger) {
   const subscriptions: EventHandlers[] = [];
 
-  async function deliver({ type, payload }: PublishedEvent): Promise<void> {
+  async function deliver({ type, payload }: DomainEvent): Promise<void> {
     for (const handlers of subscriptions) {
       // Narrowing by `type` does not reach a mapped handler type, hence the cast.
       const handler = handlers[type] as ((payload: unknown) => Promise<void>) | undefined;
@@ -45,7 +45,7 @@ export function createEventBus(logger: Logger) {
     },
 
     /** Runs each subscribed handler in turn; a failing handler is logged, never thrown. */
-    async dispatch(events: readonly PublishedEvent[]): Promise<void> {
+    async dispatch(events: readonly DomainEvent[]): Promise<void> {
       for (const event of events) {
         await deliver(event);
       }
