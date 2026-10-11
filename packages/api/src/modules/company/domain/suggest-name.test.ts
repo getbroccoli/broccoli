@@ -12,13 +12,13 @@ it("falls back to the email domain when the brand name is blank", () => {
   expect(suggestName({ brandName: "   ", ownerEmail: "owner@example.com" })).toBe("Example");
 });
 
-it.each(["nika-solutions.com", "nika-solutions.co.uk", "mail.nika-solutions.com"])(
+it.each(["example-robotics.com", "example-robotics.co.uk", "mail.example-robotics.com"])(
   "suggests the registered company name from %s",
   (domain) => {
     const ownerEmail = `owner@${domain.toUpperCase()}`;
 
     expect(companyDomain(ownerEmail)).toBe(domain);
-    expect(suggestName({ brandName: null, ownerEmail })).toBe("Nika Solutions");
+    expect(suggestName({ brandName: null, ownerEmail })).toBe("Example Robotics");
   },
 );
 

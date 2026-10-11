@@ -54,7 +54,7 @@ export function suggestName({
   return domain ? nameFromDomain(domain) : null;
 }
 
-/** `nika-solutions.co.uk` → "Nika Solutions". */
+/** `example-robotics.co.uk` → "Example Robotics". */
 function nameFromDomain(domain: string): string | null {
   const label = getDomainWithoutSuffix(domain);
   if (!label) {
