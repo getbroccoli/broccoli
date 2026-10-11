@@ -1,7 +1,7 @@
 import { expect, test } from "#test/support";
 
 import { createEventBus } from "../events";
-import { advanceStep, readOnboardingStep } from "../instance";
+import { advanceStep, readSetupStep } from "../instance";
 import { createLogger } from "../logger";
 import { runInTransaction } from ".";
 
@@ -14,7 +14,7 @@ test("dispatches queued events after the write commits", async ({ orm, seed }) =
   events.subscribe({
     "instance.owner_claimed": async (payload) => {
       received.push(payload);
-      steps.push(await readOnboardingStep(orm));
+      steps.push(await readSetupStep(orm));
     },
   });
 
@@ -47,7 +47,7 @@ test("rolls back the write and drops queued events when work fails", async ({ or
     }),
   ).rejects.toThrow("Work failed");
 
-  expect(await readOnboardingStep(orm)).toBe("company");
+  expect(await readSetupStep(orm)).toBe("company");
   expect(received).toEqual([]);
 });
 
@@ -60,7 +60,7 @@ test("refuses to use a transaction after it has ended", async ({ orm, seed }) =>
     tx.publish("instance.owner_claimed", { userId: actor.userId, email: "owner@example.com" }),
   ).toThrow("The transaction has ended");
   await expect(advanceStep(tx, "company", "done")).rejects.toThrow("The transaction has ended");
-  expect(await readOnboardingStep(orm)).toBe("company");
+  expect(await readSetupStep(orm)).toBe("company");
 });
 
 test("refuses the publisher's transaction inside an after-commit handler", async ({
@@ -89,5 +89,5 @@ test("refuses the publisher's transaction inside an after-commit handler", async
   });
 
   expect(rejection).toEqual(new Error("The transaction has ended"));
-  expect(await readOnboardingStep(orm)).toBe("company");
+  expect(await readSetupStep(orm)).toBe("company");
 });

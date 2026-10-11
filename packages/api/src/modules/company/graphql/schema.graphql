@@ -16,7 +16,7 @@ type Query {
 }
 
 type CompanyMutations {
-  "Saves the name, 1 to 100 characters after trimming; completes the company step of onboarding."
+  "Saves the name, 1 to 100 characters after trimming; completes the company step of setup."
   setName(name: String!): Company!
   removeLogo: Company!
 }

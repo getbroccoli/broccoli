@@ -9,7 +9,7 @@ export { createCompanyUseCases, type Company, type CompanyUseCases } from "./app
 export { createBrandLookup, type Brand, type BrandLookup } from "./brand-lookup";
 export type { Logo } from "./domain";
 
-/** The company the instance belongs to: its name, suggested at onboarding, and its logo. */
+/** The company the instance belongs to: its name, suggested during setup, and its logo. */
 export function companyModule({
   brandLookupUrl,
   ...dependencies

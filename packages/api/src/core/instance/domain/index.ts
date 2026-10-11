@@ -1,1 +1,1 @@
-export { ONBOARDING_STEPS, OwnerExistsError, type OnboardingStep } from "./onboarding";
+export { SETUP_STEPS, OwnerExistsError, type SetupStep } from "./setup";

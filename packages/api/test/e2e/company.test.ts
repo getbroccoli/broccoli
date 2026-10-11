@@ -2,15 +2,13 @@ import { onTestFinished } from "vitest";
 
 import { expect, startFakeBrandServer, TestEnv, test } from "#test/support";
 
-test("completes onboarding when the owner names the company", async ({ env }) => {
+test("completes setup when the owner names the company", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
-  const before = await browser.graphql(
-    "query { onboarding { id step } company { id suggestedName } }",
-  );
+  const before = await browser.graphql("query { setup { id step } company { id suggestedName } }");
   expect(before.status).toBe(200);
   expect(await before.json()).toEqual({
     data: {
-      onboarding: { id: "instance", step: "COMPANY" },
+      setup: { id: "instance", step: "COMPANY" },
       company: { id: "company", suggestedName: "Example" },
     },
   });
@@ -25,8 +23,8 @@ test("completes onboarding when the owner names the company", async ({ env }) =>
       company: { setName: { id: "company", name: "Example Ltd" } },
     },
   });
-  const after = await browser.graphql("query { onboarding { id step } }");
-  expect(await after.json()).toEqual({ data: { onboarding: { id: "instance", step: "DONE" } } });
+  const after = await browser.graphql("query { setup { id step } }");
+  expect(await after.json()).toEqual({ data: { setup: { id: "instance", step: "DONE" } } });
 });
 
 test("serves the looked-up logo to the owner with private caching", async () => {

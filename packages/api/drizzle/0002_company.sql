@@ -9,5 +9,5 @@ CREATE TABLE "company" (
 	CONSTRAINT "company_singleton" CHECK ("company"."id")
 );
 --> statement-breakpoint
--- The single company row; the owner names it during onboarding.
+-- The single company row; the owner names it during setup.
 INSERT INTO "company" DEFAULT VALUES;

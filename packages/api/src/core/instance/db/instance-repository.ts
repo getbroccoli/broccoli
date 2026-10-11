@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { OnboardingStep } from "../domain";
+import type { SetupStep } from "../domain";
 import { instance } from "./instance-table";
 
 export type InstanceRepository = ReturnType<typeof instanceRepository>;
@@ -12,8 +12,8 @@ export function instanceRepository(db: Orm | Tx) {
   const orm = () => ormOf(db);
 
   return {
-    readStep: async (): Promise<OnboardingStep> => {
-      const [row] = await orm().select({ step: instance.onboardingStep }).from(instance);
+    readStep: async (): Promise<SetupStep> => {
+      const [row] = await orm().select({ step: instance.setupStep }).from(instance);
       if (!row) {
         throw new Error("The instance row is missing; migrations insert it");
       }
@@ -47,16 +47,13 @@ export function instanceRepository(db: Orm | Tx) {
       return row.ownerUserId;
     },
 
-    setOwner: async (userId: string, step: OnboardingStep): Promise<void> => {
-      await orm().update(instance).set({ ownerUserId: userId, onboardingStep: step });
+    setOwner: async (userId: string, step: SetupStep): Promise<void> => {
+      await orm().update(instance).set({ ownerUserId: userId, setupStep: step });
     },
 
     /** Moves the step from `from` to `to`; does nothing at any other step. */
-    advanceStep: async (from: OnboardingStep, to: OnboardingStep): Promise<void> => {
-      await orm()
-        .update(instance)
-        .set({ onboardingStep: to })
-        .where(eq(instance.onboardingStep, from));
+    advanceStep: async (from: SetupStep, to: SetupStep): Promise<void> => {
+      await orm().update(instance).set({ setupStep: to }).where(eq(instance.setupStep, from));
     },
   };
 }

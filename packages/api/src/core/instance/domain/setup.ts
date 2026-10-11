@@ -1,7 +1,7 @@
 /** Where a new instance is in its first-run flow, in order. */
-export const ONBOARDING_STEPS = ["owner", "company", "done"] as const;
+export const SETUP_STEPS = ["owner", "company", "done"] as const;
 
-export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+export type SetupStep = (typeof SETUP_STEPS)[number];
 
 /** An instance has one owner; a second claim is refused. */
 export class OwnerExistsError extends Error {

@@ -2,21 +2,21 @@ type Query {
   "Answers `pong`; checks that the GraphQL API is reachable."
   ping: String!
   "Where the instance is in its first-run flow; readable without signing in, so the web app can route."
-  onboarding: Onboarding!
+  setup: Setup!
 }
 
 "Where a new instance is in its first-run flow."
-enum OnboardingStep {
-  "No owner yet: a self-hosted instance shows setup."
+enum SetupStep {
+  "No owner yet: a self-hosted instance asks for the owner account."
   OWNER
   "The owner exists and has not named the company yet."
   COMPANY
-  "Onboarding is finished."
+  "Setup is finished."
   DONE
 }
 
-type Onboarding {
+type Setup {
   "Always `instance`: one instance, so the client caches one object."
   id: ID!
-  step: OnboardingStep!
+  step: SetupStep!
 }

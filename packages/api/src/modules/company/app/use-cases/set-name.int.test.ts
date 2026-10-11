@@ -1,7 +1,7 @@
 import { expect, test } from "#test/support";
 
 import { createEventBus } from "../../../../core/events";
-import { readOnboardingStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 import { createLogger } from "../../../../core/logger";
 import { createCompanyUseCases } from ".";
 
@@ -19,10 +19,10 @@ test("saves the owner's company name and completes the company step", async ({ o
 
   expect(saved.name).toBe("Example Ltd");
   expect((await company.getCompany(actor)).name).toBe("Example Ltd");
-  expect(await readOnboardingStep(orm)).toBe("done");
+  expect(await readSetupStep(orm)).toBe("done");
 });
 
-test("renames the company after onboarding is done", async ({ orm, seed }) => {
+test("renames the company after setup is done", async ({ orm, seed }) => {
   const actor = await seed.owner();
   const logger = createLogger("silent");
   const company = createCompanyUseCases({
@@ -37,13 +37,10 @@ test("renames the company after onboarding is done", async ({ orm, seed }) => {
 
   expect(saved.name).toBe("Example Labs");
   expect((await company.getCompany(actor)).name).toBe("Example Labs");
-  expect(await readOnboardingStep(orm)).toBe("done");
+  expect(await readSetupStep(orm)).toBe("done");
 });
 
-test("refuses a non-owner without changing the company or onboarding step", async ({
-  orm,
-  seed,
-}) => {
+test("refuses a non-owner without changing the company or setup step", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const logger = createLogger("silent");
   const company = createCompanyUseCases({
@@ -59,10 +56,10 @@ test("refuses a non-owner without changing the company or onboarding step", asyn
   ).rejects.toMatchObject({ code: "FORBIDDEN", message: "Only the owner can do this." });
 
   expect(await company.getCompany(owner)).toEqual(before);
-  expect(await readOnboardingStep(orm)).toBe("company");
+  expect(await readSetupStep(orm)).toBe("company");
 });
 
-test("requires sign-in without changing the company or onboarding step", async ({ orm, seed }) => {
+test("requires sign-in without changing the company or setup step", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const logger = createLogger("silent");
   const company = createCompanyUseCases({
@@ -79,7 +76,7 @@ test("requires sign-in without changing the company or onboarding step", async (
   });
 
   expect(await company.getCompany(owner)).toEqual(before);
-  expect(await readOnboardingStep(orm)).toBe("company");
+  expect(await readSetupStep(orm)).toBe("company");
 });
 
 test("leaves the company step unfinished when the name is invalid", async ({ orm, seed }) => {
@@ -98,5 +95,5 @@ test("leaves the company step unfinished when the name is invalid", async ({ orm
   });
 
   expect((await company.getCompany(actor)).name).toBeNull();
-  expect(await readOnboardingStep(orm)).toBe("company");
+  expect(await readSetupStep(orm)).toBe("company");
 });

@@ -97,3 +97,12 @@ test("refuses setup in managed mode", async () => {
 
   expect(response.status).toBe(404);
 });
+
+test("reports the owner step on a fresh instance without a session", async ({ env }) => {
+  const response = await env.browser().graphql("query { setup { id step } }");
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    data: { setup: { id: "instance", step: "OWNER" } },
+  });
+});
