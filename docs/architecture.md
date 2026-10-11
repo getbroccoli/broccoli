@@ -9,8 +9,7 @@ packages/api/src/
 ├── core/          what every module shares: server, database, GraphQL, auth, events
 ├── modules/       business modules, one folder each, such as company and employees
 ├── integrations/  clients of external services; return plain data, know no module
-├── utils/         pure helpers that know nothing about Broccoli
-└── main.ts        reads the environment and starts the server
+└── utils/         pure helpers that know nothing about Broccoli
 ```
 
 Modules import `core`, `integrations` and `utils`; `core` never imports a module.
