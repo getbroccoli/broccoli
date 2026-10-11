@@ -7,6 +7,9 @@ import { SortableHeader, type DataTableSort } from "./SortableHeader";
 import { TablePager, type DataTablePager } from "./TablePager";
 import { TableSkeleton } from "./TableStates";
 
+// The first column stays put while the rows scroll sideways; the inset shadow marks its edge.
+const PINNED_COLUMN = "sticky left-0 z-10 bg-card shadow-[inset_-1px_0_0_var(--color-border)]";
+
 export interface DataTableColumn<Row, SortKey extends string = string> {
   id: string;
   header: string;
@@ -70,7 +73,7 @@ export function DataTable<Row, SortKey extends string>({
                   sortKey={column.sortKey}
                   sort={sort}
                   onSortChange={onSortChange}
-                  className={cn(index === 0 && "sticky left-0 z-10 bg-card", column.className)}
+                  className={cn(index === 0 && PINNED_COLUMN, column.className)}
                 />
               ))}
             </TableRow>
@@ -87,7 +90,7 @@ export function DataTable<Row, SortKey extends string>({
                       key={column.id}
                       className={cn(
                         "px-3 py-2.5",
-                        index === 0 && "sticky left-0 z-10 bg-card group-hover/row:bg-row-hover",
+                        index === 0 && `${PINNED_COLUMN} group-hover/row:bg-row-hover`,
                         column.className,
                       )}
                     >

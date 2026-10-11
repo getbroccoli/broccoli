@@ -15,7 +15,7 @@ Three layers, most tests in the middle one:
 
 - Trivial code: constants, types, pass-through glue and placeholders.
 - Implementation details: private helpers, call order, or mocks of our own modules.
-- The frontend, for now.
+- Frontend components and pages, for now. Pure frontend functions, such as search-param parsing, get unit tests.
 - Configuration files by matching their text. Run the tool that reads them instead.
 
 ## Writing a test
