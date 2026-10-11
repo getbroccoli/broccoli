@@ -106,8 +106,12 @@ function keysetColumns({ field, direction }: EmployeeOrder): KeysetColumn[] {
       return [
         // Rows without a start date go last whichever way the dates sort.
         { expression: sql`${employees.startDate} is null`, descending: false },
-        // As text: ISO dates sort the same, and node-postgres would turn a date into a JS Date.
-        ...sorted([sql`coalesce(${employees.startDate}::text, '')`, sql`${employees.id}`]),
+        // As ISO text, whatever the DateStyle: it sorts like the date, and node-postgres would
+        // turn a date into a JS Date.
+        ...sorted([
+          sql`coalesce(to_char(${employees.startDate}, 'YYYY-MM-DD'), '')`,
+          sql`${employees.id}`,
+        ]),
       ];
   }
 }
