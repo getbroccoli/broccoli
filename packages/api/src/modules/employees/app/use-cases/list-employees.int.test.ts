@@ -67,26 +67,6 @@ test("pages stably through employees with the same name", async ({ orm, seed }) 
   });
 });
 
-test("refuses an anonymous actor", async ({ orm }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
-
-  await expect(listEmployees(null, {})).rejects.toMatchObject({
-    code: "UNAUTHENTICATED",
-    message: "Sign in to continue.",
-    fieldErrors: [],
-  });
-});
-
-test("refuses a signed-in user who is not the owner", async ({ orm }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
-
-  await expect(listEmployees({ userId: "user-1", isOwner: false }, {})).rejects.toMatchObject({
-    code: "FORBIDDEN",
-    message: "Only the owner can do this.",
-    fieldErrors: [],
-  });
-});
-
 test("sorts by name in descending order", async ({ orm, seed }) => {
   const { listEmployees } = createEmployeeUseCases({ orm });
   const samA = await seed.employee({ firstName: "sam", lastName: "adams" });

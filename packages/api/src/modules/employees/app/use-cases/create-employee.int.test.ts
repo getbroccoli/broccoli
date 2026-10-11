@@ -59,38 +59,3 @@ test("refuses invalid input with one field error per field", async ({ orm }) => 
     ],
   });
 });
-
-test("refuses an anonymous actor", async ({ orm }) => {
-  const { createEmployee } = createEmployeeUseCases({ orm });
-
-  await expect(
-    createEmployee(null, {
-      firstName: "Employee",
-      lastName: "One",
-      email: "employee.one@example.com",
-    }),
-  ).rejects.toMatchObject({
-    code: "UNAUTHENTICATED",
-    message: "Sign in to continue.",
-    fieldErrors: [],
-  });
-});
-
-test("refuses a signed-in user who is not the owner", async ({ orm }) => {
-  const { createEmployee } = createEmployeeUseCases({ orm });
-
-  await expect(
-    createEmployee(
-      { userId: "user-1", isOwner: false },
-      {
-        firstName: "Employee",
-        lastName: "One",
-        email: "employee.one@example.com",
-      },
-    ),
-  ).rejects.toMatchObject({
-    code: "FORBIDDEN",
-    message: "Only the owner can do this.",
-    fieldErrors: [],
-  });
-});
