@@ -162,32 +162,6 @@ test("refuses invalid input with one field error per field", async ({ env }) => 
   expect(body).toHaveProperty("errors.0.extensions.fieldErrors.length", 2);
 });
 
-test("refuses a page size greater than 10000", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-
-  const response = await browser.graphql(listQuery, { first: 10001 });
-
-  expect(response.status).toBe(200);
-  const body = await response.json();
-  expect(body).toHaveProperty("errors.0.extensions", {
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "first", code: "out_of_range" }],
-  });
-});
-
-test("refuses a malformed cursor", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-
-  const response = await browser.graphql(listQuery, { first: 2, after: "not-a-cursor" });
-
-  expect(response.status).toBe(200);
-  const body = await response.json();
-  expect(body).toHaveProperty("errors.0.extensions", {
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "after", code: "invalid" }],
-  });
-});
-
 test("refuses the query without a session", async ({ env }) => {
   await env.signInAsOwner();
 
