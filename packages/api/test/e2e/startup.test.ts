@@ -10,7 +10,7 @@ import {
   startTestServer,
   waitForStartup,
   type TestDatabase,
-} from "../support";
+} from "#test/support";
 
 const run = inject("testRun");
 

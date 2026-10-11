@@ -1,4 +1,4 @@
-import { expect, test } from "../support";
+import { expect, test } from "#test/support";
 
 const createMutation = `
   mutation CreateEmployee($input: EmployeeCreateInput!) {

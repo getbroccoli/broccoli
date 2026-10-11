@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Broccoli API server.",
+  "imports": {
+    "#test/support": "./test/support/index.ts"
+  },
   "scripts": {
     "build": "tsdown",
     "codegen": "graphql-codegen",

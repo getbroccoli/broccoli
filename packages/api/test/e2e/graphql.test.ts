@@ -1,4 +1,4 @@
-import { expect, test } from "../support";
+import { expect, test } from "#test/support";
 
 test("answers the ping query with pong", async ({ env }) => {
   const response = await env.browser().graphql("{ ping }");
