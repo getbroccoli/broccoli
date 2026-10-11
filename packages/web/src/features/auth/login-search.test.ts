@@ -15,6 +15,7 @@ it("defaults an empty redirect to People", () => {
 it.each([
   ["an external URL", "https://example.com/x"],
   ["a protocol-relative URL", "//example.com"],
+  ["a malformed protocol-relative URL", "//"],
   ["a dot segment that exposes a protocol-relative URL", "/a/..//example.com"],
   ["a backslash", "/\\example.com"],
   ["a JavaScript URL", "javascript:alert(1)"],

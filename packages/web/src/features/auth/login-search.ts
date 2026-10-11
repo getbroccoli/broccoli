@@ -8,7 +8,12 @@ export const DEFAULT_REDIRECT = "/people";
  * could lead elsewhere: another site, a script URL, or back to the login page.
  */
 export function toLocalPath(raw: string, origin: string): string {
-  if (!raw.startsWith("/") || raw.includes("\\") || hasControlCharacter(raw)) {
+  if (
+    !raw.startsWith("/") ||
+    raw.startsWith("//") ||
+    raw.includes("\\") ||
+    hasControlCharacter(raw)
+  ) {
     return DEFAULT_REDIRECT;
   }
   const url = new URL(raw, origin);
