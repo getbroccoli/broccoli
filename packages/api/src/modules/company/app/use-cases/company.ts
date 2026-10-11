@@ -20,7 +20,10 @@ export interface CompanyContext {
 
 /** Read after `requireOwner`, so the owner exists. */
 export async function readCompany({ orm, companies }: CompanyContext): Promise<Company> {
-  const [{ name, brandName, logoId }, owner] = await Promise.all([companies.read(), readOwner(orm)]);
+  const [{ name, brandName, logoId }, owner] = await Promise.all([
+    companies.read(),
+    readOwner(orm),
+  ]);
   if (!owner) {
     throw new Error("The instance has no owner");
   }

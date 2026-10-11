@@ -47,14 +47,19 @@ export function createBrandLookup(
 
 /** The body as text; stops reading and fails beyond `MAX_RESPONSE_BYTES`. */
 async function readText(response: Response): Promise<string> {
+  if (!response.body) {
+    return "";
+  }
+  const reader: ReadableStreamDefaultReader<Uint8Array> = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
-  for await (const chunk of response.body ?? []) {
-    size += chunk.length;
+  for (let read = await reader.read(); !read.done; read = await reader.read()) {
+    size += read.value.length;
     if (size > MAX_RESPONSE_BYTES) {
+      await reader.cancel();
       throw new Error("Brand lookup answer is too large");
     }
-    chunks.push(chunk);
+    chunks.push(read.value);
   }
   return Buffer.concat(chunks).toString("utf8");
 }

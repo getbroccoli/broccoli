@@ -10,7 +10,10 @@ const STATUS_OF = { UNAUTHENTICATED: 401, FORBIDDEN: 403 } as const;
 export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolver): express.Router {
   return express.Router().get("/company/logo/:logoId", async (request, response) => {
     try {
-      const logo = await useCases.readLogo(await resolveActor(request.headers), request.params.logoId);
+      const logo = await useCases.readLogo(
+        await resolveActor(request.headers),
+        request.params.logoId,
+      );
       if (!logo) {
         response.sendStatus(404);
         return;

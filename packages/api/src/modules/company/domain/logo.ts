@@ -10,7 +10,10 @@ const SIGNATURES: { mimeType: Logo["mimeType"]; matches: (bytes: Buffer) => bool
     mimeType: "image/png",
     matches: (bytes) => bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")),
   },
-  { mimeType: "image/jpeg", matches: (bytes) => bytes.subarray(0, 3).equals(Buffer.from("ffd8ff", "hex")) },
+  {
+    mimeType: "image/jpeg",
+    matches: (bytes) => bytes.subarray(0, 3).equals(Buffer.from("ffd8ff", "hex")),
+  },
   {
     mimeType: "image/webp",
     matches: (bytes) =>

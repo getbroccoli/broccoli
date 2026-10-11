@@ -37,7 +37,12 @@ export function setupPlugin(orm: Orm, events: EventBus) {
         }
         // Hashing is slow, so it happens before the transaction takes its lock.
         const passwordHash = await ctx.context.password.hash(ctx.body.password);
-        const owner = await createOwner({ orm, events }, ctx, ctx.body.email.toLowerCase(), passwordHash);
+        const owner = await createOwner(
+          { orm, events },
+          ctx,
+          ctx.body.email.toLowerCase(),
+          passwordHash,
+        );
         await setSessionCookie(ctx, owner);
         return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
       }),

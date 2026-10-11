@@ -8,7 +8,11 @@ import { companyDomain, parseLogo } from "../../domain";
  * company step. A failed lookup is logged; the domain suggestion still works.
  */
 export async function onOwnerClaimed(
-  { companies, brandLookup, logger }: { companies: CompanyRepository; brandLookup: BrandLookup; logger: Logger },
+  {
+    companies,
+    brandLookup,
+    logger,
+  }: { companies: CompanyRepository; brandLookup: BrandLookup; logger: Logger },
   { email }: { email: string },
 ): Promise<void> {
   const domain = companyDomain(email);
@@ -20,6 +24,9 @@ export async function onOwnerClaimed(
     const brand = await brandLookup(domain);
     await companies.saveBrandOnce(brand?.name ?? null, brand?.logo ? parseLogo(brand.logo) : null);
   } catch (error) {
-    logger.warn({ err: error }, "Brand lookup failed; suggesting the company name from the email domain");
+    logger.warn(
+      { err: error },
+      "Brand lookup failed; suggesting the company name from the email domain",
+    );
   }
 }

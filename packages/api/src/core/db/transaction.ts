@@ -28,7 +28,7 @@ class Transaction implements Tx {
   publish<Type extends EventType>(type: Type, payload: BroccoliEvents[Type]): void {
     // Reading `orm` checks the transaction is still open.
     void this.orm;
-    this.events.push({ type, payload } as PublishedEvent);
+    this.events.push({ type, payload });
   }
 
   end(): void {

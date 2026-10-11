@@ -12,8 +12,7 @@ export function createResolvers(useCases: CompanyUseCases): Resolvers {
     CompanyMutations: {
       setName: async (_parent, { name }, { actor }) =>
         toGraphql(await useCases.setName(actor, name)),
-      removeLogo: async (_parent, _args, { actor }) =>
-        toGraphql(await useCases.removeLogo(actor)),
+      removeLogo: async (_parent, _args, { actor }) => toGraphql(await useCases.removeLogo(actor)),
     },
   };
 }
