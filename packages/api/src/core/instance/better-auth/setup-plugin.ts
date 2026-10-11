@@ -6,10 +6,11 @@ import type { BetterAuthPlugin } from "better-auth";
 import { setSessionCookie } from "better-auth/cookies";
 import { z } from "zod";
 
-import { authDatabase } from "../auth";
-import { type Orm, ormOf, runInTransaction } from "../db";
-import type { EventBus } from "../events";
-import { claimOwner, hasOwner, OwnerExistsError } from "./owner";
+import { authDatabase } from "../../auth";
+import { type Orm, ormOf, runInTransaction } from "../../db";
+import type { EventBus } from "../../events";
+import { claimOwner, hasOwner } from "../app";
+import { OwnerExistsError } from "../domain";
 
 const OWNER_EXISTS = { code: "OWNER_EXISTS", message: "The owner account already exists" };
 

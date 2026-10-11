@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Actor } from "../../src/core/actor";
 import { user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
-import { instance } from "../../src/core/instance";
+import { instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import { parseCalendarDate } from "../../src/utils";
 
@@ -21,10 +21,8 @@ export class TestSeed {
 
   async owner({ email = "owner@example.com" } = {}): Promise<Actor> {
     const userId = randomUUID();
-    await this.orm.transaction(async (tx) => {
-      await tx.insert(user).values({ id: userId, name: "Owner", email: email.toLowerCase() });
-      await tx.update(instance).set({ ownerUserId: userId, onboardingStep: "company" });
-    });
+    await this.orm.insert(user).values({ id: userId, name: "Owner", email: email.toLowerCase() });
+    await instanceRepository(this.orm).setOwner(userId, "company");
     return { userId, isOwner: true };
   }
 

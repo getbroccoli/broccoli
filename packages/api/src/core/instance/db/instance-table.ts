@@ -1,11 +1,8 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, pgTable, text } from "drizzle-orm/pg-core";
 
-import { user } from "../auth";
-
-export const ONBOARDING_STEPS = ["owner", "company", "done"] as const;
-
-export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+import { user } from "../../auth";
+import { ONBOARDING_STEPS } from "../domain";
 
 /** The one row describing this installation; the migration inserts it. */
 export const instance = pgTable(
