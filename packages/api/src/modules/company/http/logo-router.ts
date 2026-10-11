@@ -1,6 +1,6 @@
 import express from "express";
 
-import { requireSignedIn } from "../../../core/actor";
+import { requireSignedIn, sendRenewedCookies } from "../../../core/actor";
 import { ApplicationError } from "../../../core/application-error";
 import type { ActorResolver } from "../../../core/graphql";
 import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
@@ -18,8 +18,11 @@ export function logoUrl(logoId: string): string {
  * GET is cached for good.
  */
 export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolver): express.Router {
-  const signedIn = async (request: express.Request, response: express.Response) =>
-    requireSignedIn(await resolveActor(request, response));
+  const signedIn = async (request: express.Request, response: express.Response) => {
+    const { actor, renewedCookies } = await resolveActor(request.headers);
+    sendRenewedCookies(response, renewedCookies);
+    return requireSignedIn(actor);
+  };
 
   return express
     .Router()

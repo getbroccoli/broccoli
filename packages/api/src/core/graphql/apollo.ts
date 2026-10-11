@@ -1,4 +1,4 @@
-import type { IncomingMessage, Server, ServerResponse } from "node:http";
+import type { IncomingHttpHeaders, Server, ServerResponse } from "node:http";
 
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
@@ -8,7 +8,7 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import express from "express";
 import { GraphQLError } from "graphql";
 
-import type { Actor } from "../actor";
+import { sendRenewedCookies, type Actor, type RequestActor } from "../actor";
 import type { Logger } from "../logger";
 import type { ModuleManifest } from "../module-manifest";
 import { depthLimit } from "./depth-limit";
@@ -29,11 +29,8 @@ export interface GraphqlContext {
   actor: Actor | null;
 }
 
-/** Reads the actor of a request; may add a renewed session cookie to the response. */
-export type ActorResolver = (
-  request: IncomingMessage,
-  response: ServerResponse,
-) => Promise<Actor | null>;
+/** Reads the actor of a request from its headers; see `resolveActor`. */
+export type ActorResolver = (headers: IncomingHttpHeaders) => Promise<RequestActor>;
 
 /** Scalars and types that every module may use. */
 const CORE_TYPE_DEFS = readSdl(import.meta.url, "./schema.graphql");
@@ -91,11 +88,13 @@ export function createContext(resolveActor: ActorResolver) {
     req,
     res,
   }: {
-    req: IncomingMessage;
+    req: { headers: IncomingHttpHeaders };
     res: ServerResponse;
   }): Promise<GraphqlContext> => {
     try {
-      return { actor: await resolveActor(req, res) };
+      const { actor, renewedCookies } = await resolveActor(req.headers);
+      sendRenewedCookies(res, renewedCookies);
+      return { actor };
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass
       // through as a request error; the code marks this one as internal.

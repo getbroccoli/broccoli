@@ -1,5 +1,5 @@
 import { fromNodeHeaders } from "better-auth/node";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingHttpHeaders, ServerResponse } from "node:http";
 
 import { ApplicationError } from "../application-error";
 import type { Orm } from "../db";
@@ -12,29 +12,42 @@ export interface Actor {
   isOwner: boolean;
 }
 
+/** The caller of a request, and the session cookies to send back with the response. */
+export interface RequestActor {
+  /** Null without a valid session. */
+  actor: Actor | null;
+  /** `Set-Cookie` values for a session that was due for renewal; empty otherwise. */
+  renewedCookies: string[];
+}
+
 /**
- * The signed-in user of a request, or null without a valid session. A session due
- * for renewal is extended, and its renewed cookie is added to `response`.
+ * The signed-in user of a request. Reading the session also extends one that is due
+ * for renewal; the caller must send `renewedCookies` back, or the browser's cookie
+ * expires before the session does.
  */
 export async function resolveActor(
   auth: Auth,
   orm: Orm,
-  request: IncomingMessage,
-  response: ServerResponse,
-): Promise<Actor | null> {
+  requestHeaders: IncomingHttpHeaders,
+): Promise<RequestActor> {
   // Better Auth answers a request without a session cookie without a query.
   const { headers, response: session } = await auth.api.getSession({
-    headers: fromNodeHeaders(request.headers),
+    headers: fromNodeHeaders(requestHeaders),
     returnHeaders: true,
   });
-  for (const cookie of headers.getSetCookie()) {
-    response.appendHeader("Set-Cookie", cookie);
-  }
+  const renewedCookies = headers.getSetCookie();
   if (!session) {
-    return null;
+    return { actor: null, renewedCookies };
   }
   const userId = session.user.id;
-  return { userId, isOwner: userId === (await readOwnerUserId(orm)) };
+  return { actor: { userId, isOwner: userId === (await readOwnerUserId(orm)) }, renewedCookies };
+}
+
+/** Adds the `renewedCookies` of `resolveActor` to the response. */
+export function sendRenewedCookies(response: ServerResponse, renewedCookies: string[]): void {
+  if (renewedCookies.length > 0) {
+    response.appendHeader("Set-Cookie", renewedCookies);
+  }
 }
 
 /**
