@@ -1,15 +1,14 @@
 import { Check, Copy, DiceFive } from "@phosphor-icons/react";
-import { useEffect, useState, type Ref } from "react";
+import { useState, type Ref } from "react";
 
 import { FieldError } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 
 import { generatePassword } from "./generate-password";
-
-const COPIED_FEEDBACK_MS = 2000;
 
 interface NewPasswordFieldProps {
   id: string;
@@ -34,7 +33,7 @@ export function NewPasswordField({
 }: NewPasswordFieldProps) {
   const [visible, setVisible] = useState(false);
   const [generated, setGenerated] = useState(false);
-  const { copied, copyFailed, copy, resetCopy } = useCopy();
+  const { copied, copyFailed, copy, resetCopy } = useCopyToClipboard();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const copyErrorId = `${id}-copy-error`;
@@ -115,38 +114,6 @@ export function NewPasswordField({
       )}
     </div>
   );
-}
-
-/** Copies text to the clipboard and reports "copied" for a moment, or a failure. */
-function useCopy() {
-  const [copied, setCopied] = useState(false);
-  const [copyFailed, setCopyFailed] = useState(false);
-
-  useEffect(() => {
-    if (!copied) {
-      return;
-    }
-    const timer = window.setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
-    return () => window.clearTimeout(timer);
-  }, [copied]);
-
-  async function copy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopyFailed(false);
-      setCopied(true);
-    } catch {
-      setCopied(false);
-      setCopyFailed(true);
-    }
-  }
-
-  function resetCopy() {
-    setCopied(false);
-    setCopyFailed(false);
-  }
-
-  return { copied, copyFailed, copy, resetCopy };
 }
 
 function describedBy(...ids: (string | false | undefined)[]): string {
