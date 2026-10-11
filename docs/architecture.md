@@ -17,7 +17,7 @@ Modules import `core`, `integrations` and `utils`; `core` never imports a module
 
 ## 1. Shape of the system
 
-- **Modular monolith.** One API process, one web single-page app, one container image. The folders of the API are listed above. An integration handles transport (URL, timeout, response format); the rules about the data it returns stay in the module.
+- **Modular monolith.** One API process, one web single-page app, one container image. The folders of the API are listed above. An integration handles transport (URL, timeout, response format); the rules about the data it returns stay in the module. Integrations use Node's built-in `fetch` through the small helpers in `integrations/http` (`getJson`: timeout, size cap, schema), with no HTTP library; a vendor SDK is added only where it removes real work, and nothing retries by default.
 - **Single-tenant.** One deployment and one Postgres database per company, for self-hosted and managed installs alike. There is no tenant column and no row-level security; the managed service runs one instance per company and migrates each.
 - **Layers per module.**
   - `domain`: pure TypeScript, no I/O.
