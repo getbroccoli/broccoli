@@ -1,14 +1,12 @@
 # QA: People directory
 
-A manual check of the People page against a development stack. Use generated demo data only.
+A manual check of the People page against a development stack.
 
 ## Setup
 
-1. `pnpm dev` and open the printed URL.
-2. Create the owner, which also signs you in:
-   `curl -c cookies -H 'content-type: application/json' -H "origin: $URL" -d '{"email":"owner@example.com","password":"correct-horse-battery"}' $URL/api/auth/setup`
-3. Open `/people` before adding anyone: the empty state "No people yet" shows.
-4. Add about 60 employees with the `employee { create(input: …) }` mutation, using `example.com` addresses and leaving some without a job title or start date.
+1. Start the stack and create the owner as in [QA setup](setup.md).
+2. Open `/people` before adding anyone: the empty state "No people yet" shows.
+3. Add about 60 employees, leaving some without a job title or start date.
 
 ## List and paging
 
