@@ -30,6 +30,14 @@ export interface NewEmployeeInput {
 
 export type NewEmployee = Omit<Employee, "id" | "createdAt">;
 
+/** Work emails are unique: another employee already has this one. */
+export class EmailTakenError extends Error {
+  constructor() {
+    super("Another employee already has this email");
+    this.name = "EmailTakenError";
+  }
+}
+
 const name = z.string().trim().min(1).max(NAME_MAX_LENGTH);
 
 const newEmployeeSchema = z.object({

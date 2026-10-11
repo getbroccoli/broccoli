@@ -1,4 +1,5 @@
 export {
+  EmailTakenError,
   parseNewEmployee,
   type Employee,
   type NewEmployee,

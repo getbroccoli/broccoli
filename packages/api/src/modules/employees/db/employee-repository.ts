@@ -1,8 +1,8 @@
 import { DrizzleQueryError, sql } from "drizzle-orm";
 import { DatabaseError } from "pg";
 
-import type { Orm } from "../../../core/db";
-import { EmailTakenError, type EmployeeKeyset, type EmployeeRepository } from "../app";
+import type { Orm, OrmTransaction } from "../../../core/db";
+import { EmailTakenError, type Employee, type NewEmployee } from "../domain";
 import { employees } from "./employees-table";
 
 const UNIQUE_VIOLATION = "23505";
@@ -11,20 +11,31 @@ const EMAIL_UNIQUE_CONSTRAINT = "employees_email_unique";
 const firstNameKey = sql<string>`lower(${employees.firstName})`;
 const lastNameKey = sql<string>`lower(${employees.lastName})`;
 
-export function createEmployeeRepository(orm: Orm): EmployeeRepository {
+/**
+ * An employee's place in the list order: lowercased first name, lowercased last
+ * name, id. Lowercased by Postgres, so it compares exactly like the stored order.
+ */
+export type EmployeeKeyset = [firstName: string, lastName: string, id: string];
+
+export type EmployeeRepository = ReturnType<typeof employeeRepository>;
+
+/** Employees stored in Postgres, through the pool or inside a transaction. */
+export function employeeRepository(db: Orm | OrmTransaction) {
   return {
-    insert: async (newEmployee) => {
+    /** Throws `EmailTakenError` when another employee has the email. */
+    insert: async (newEmployee: NewEmployee): Promise<Employee> => {
       try {
-        const [employee] = await orm.insert(employees).values(newEmployee).returning();
+        const [employee] = await db.insert(employees).values(newEmployee).returning();
         return employee!;
       } catch (error) {
         throw isEmailTaken(error) ? new EmailTakenError() : error;
       }
     },
 
-    findPage: async ({ first, after }) => {
+    /** Up to `first` employees in list order after `after`, or from the start. */
+    findPage: async ({ first, after }: { first: number; after: EmployeeKeyset | null }) => {
       // One extra row tells whether another page follows.
-      const rows = await orm
+      const rows = await db
         .select({ employee: employees, firstNameKey, lastNameKey })
         .from(employees)
         .where(
@@ -37,7 +48,7 @@ export function createEmployeeRepository(orm: Orm): EmployeeRepository {
       return {
         rows: rows.slice(0, first).map(({ employee, firstNameKey, lastNameKey }) => ({
           employee,
-          keyset: [firstNameKey, lastNameKey, employee.id],
+          keyset: [firstNameKey, lastNameKey, employee.id] satisfies EmployeeKeyset,
         })),
         hasNextPage: rows.length > first,
       };

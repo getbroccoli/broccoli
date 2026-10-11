@@ -1,8 +1,8 @@
-import { type Actor, requireOwner } from "../../../core/actor";
-import { invalidInput } from "../../../core/application-error";
-import type { Employee } from "../domain";
-import { decodeCursor, encodeCursor } from "./cursor";
-import type { EmployeeRepository } from "./employee-repository";
+import { type Actor, requireOwner } from "../../../../core/actor";
+import { invalidInput } from "../../../../core/application-error";
+import type { EmployeeRepository } from "../../db";
+import type { Employee } from "../../domain";
+import { decodeCursor, encodeCursor } from "../cursor";
 
 export const PAGE_SIZE = { default: 100, max: 10_000 } as const;
 
@@ -11,11 +11,16 @@ export interface EmployeeConnection {
   pageInfo: { hasNextPage: boolean; endCursor: string | null };
 }
 
+export interface PageArgs {
+  first?: number;
+  after?: string | null;
+}
+
 /** Employees in name order, one page at a time. */
 export async function listEmployees(
-  repository: EmployeeRepository,
+  employees: EmployeeRepository,
   actor: Actor | null,
-  { first = PAGE_SIZE.default, after = null }: { first?: number; after?: string | null },
+  { first = PAGE_SIZE.default, after = null }: PageArgs,
 ): Promise<EmployeeConnection> {
   requireOwner(actor);
   if (!Number.isInteger(first) || first < 1 || first > PAGE_SIZE.max) {
@@ -26,7 +31,7 @@ export async function listEmployees(
     throw invalidInput([{ field: "after", code: "invalid" }]);
   }
 
-  const page = await repository.findPage({ first, after: keyset });
+  const page = await employees.findPage({ first, after: keyset });
   const edges = page.rows.map(({ employee, keyset }) => ({
     cursor: encodeCursor(keyset),
     node: employee,

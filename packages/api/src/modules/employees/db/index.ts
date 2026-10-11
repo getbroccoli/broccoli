@@ -1,1 +1,5 @@
-export { createEmployeeRepository } from "./employee-repository";
+export {
+  employeeRepository,
+  type EmployeeKeyset,
+  type EmployeeRepository,
+} from "./employee-repository";

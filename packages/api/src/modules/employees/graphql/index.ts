@@ -1,1 +1,1 @@
-export { createResolvers, type EmployeeUseCases } from "./resolvers";
+export { createResolvers } from "./resolvers";

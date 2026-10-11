@@ -8,10 +8,12 @@ This document records the architecture decisions behind Broccoli. It is edited i
 - **Single-tenant.** One deployment and one Postgres database per company, for self-hosted and managed installs alike. There is no tenant column and no row-level security; the managed service runs one instance per company and migrates each.
 - **Layers per module.**
   - `domain`: pure TypeScript, no I/O.
-  - `app`: use cases, the application layer. The single place for authorisation, transactions, audit and events.
-  - `graphql`, `mcp` and `db`: adapters, named after their technology like the matching folders in `core/`.
-  - `index.ts`: the module's public surface.
-- **Module manifest.** Each module exports one factory, such as `employeesModule({ orm })`, that receives the core's dependencies at startup, builds the module's repositories and use cases once and returns its manifest: SDL and resolvers, later MCP tools, event handlers and jobs. The core iterates over the list of manifests. The GraphQL context carries only the actor; resolvers call the module's use cases with it. No shared request context or central configuration has to be edited to add a module.
+  - `db`: the Postgres adapter. Concrete repositories over the ORM or a transaction (`employeeRepository(db)`) that take and return domain types.
+  - `app`: the application layer. `app/use-cases/` holds one function per thing a user can do, and its `index.ts` is the module's use-case factory (`createEmployeeUseCases({ orm })`). Use cases are the single place for authorisation, transactions, audit and events.
+  - `graphql` and `mcp`: adapters that translate a request into one use-case call; no rules.
+  - `index.ts`: the module's public surface; it composes the adapters with the use cases.
+  - **Dependencies point one way:** `domain ← db ← app ← graphql | mcp`, each through the folder's `index.ts`. Repositories and use cases are concrete, and their types are inferred; there are no hand-written interfaces, because tests never replace our own code (see `docs/testing.md`).
+- **Module manifest.** Each module exports one factory, such as `employeesModule({ orm })`, that receives the core's dependencies at startup, builds its use cases once and returns its manifest: SDL and resolvers, later MCP tools, event handlers and jobs. The core iterates over the list of manifests. The GraphQL context carries only the actor; resolvers call the module's use cases with it. No shared request context or central configuration has to be edited to add a module.
 - **Cross-module calls** go through the other module's public use cases or its events. A module never reads another module's tables.
 - **Domain-driven design is tiered** and decided per module when it is designed. The default is a plain domain layer with unit tests. Aggregates, value objects and domain events are used only where invariants demand them, such as leave balances, approvals and permissions.
 

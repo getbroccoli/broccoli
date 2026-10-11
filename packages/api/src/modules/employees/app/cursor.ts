@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { EmployeeKeyset } from "./employee-repository";
+import type { EmployeeKeyset } from "../db";
 
 const keysetSchema = z.tuple([z.string(), z.string(), z.uuid()]);
 
