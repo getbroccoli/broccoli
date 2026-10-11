@@ -4,6 +4,8 @@ scalar Date
 "An instant in ISO 8601 format with a time zone; returned in UTC."
 scalar DateTime
 
+# Shared by every module's connections (Relay uses one PageInfo type): a schema can
+# hold only one type of this name, and no module should depend on another's SDL.
 "Where a page of a connection ends."
 type PageInfo {
   hasNextPage: Boolean!
