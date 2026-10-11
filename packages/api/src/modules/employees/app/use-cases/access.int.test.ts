@@ -21,9 +21,7 @@ test.for(Object.entries(calls))(
   async ([, call], { orm }) => {
     const useCases = createEmployeeUseCases({ orm });
 
-    await expect(
-      call(useCases, { userId: "user-1", email: "user@example.com", isOwner: false }),
-    ).rejects.toMatchObject({
+    await expect(call(useCases, { userId: "user-1", isOwner: false })).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "Only the owner can do this.",
       fieldErrors: [],

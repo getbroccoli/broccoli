@@ -6,18 +6,22 @@ import type { Orm } from "../db";
 import { readOwnerUserId } from "../instance";
 import type { Auth } from "../auth";
 
-/** Who is calling the API. */
+/** Who is calling the API: all a use case needs to decide what is allowed. */
 export interface Actor {
   userId: string;
-  /** Sign-in email, lowercased; for display, never for authorization. */
-  email: string;
   isOwner: boolean;
+}
+
+/** The actor as read from a session, with account details for adapters to display. */
+export interface SessionActor extends Actor {
+  /** Sign-in email, lowercased; never used for authorization. */
+  email: string;
 }
 
 /** The caller of a request, and the session cookies to send back with the response. */
 export interface RequestActor {
   /** Null without a valid session. */
-  actor: Actor | null;
+  actor: SessionActor | null;
   /** `Set-Cookie` values for a session that was due for renewal; empty otherwise. */
   renewedCookies: string[];
 }

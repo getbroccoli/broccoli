@@ -5,4 +5,5 @@ export {
   sendRenewedCookies,
   type Actor,
   type RequestActor,
+  type SessionActor,
 } from "./actor";

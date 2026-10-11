@@ -31,10 +31,7 @@ test("refuses a non-owner without changing the company or setup step", async ({ 
   const before = await company.getCompany(owner);
 
   await expect(
-    company.update(
-      { userId: "another-user", email: "another@example.com", isOwner: false },
-      { name: "Example Ltd" },
-    ),
+    company.update({ userId: "another-user", isOwner: false }, { name: "Example Ltd" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN", message: "Only the owner can do this." });
 
   expect(await company.getCompany(owner)).toEqual(before);
