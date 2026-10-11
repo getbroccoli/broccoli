@@ -1,14 +1,15 @@
 import { GraphQLError, GraphQLScalarType, Kind } from "graphql";
 
-import { isCalendarDate } from "../../utils";
+import { type CalendarDate, parseCalendarDate } from "../../utils";
 
 const DATE_TIME_WITH_ZONE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/i;
 
-function parseDate(value: unknown): string {
-  if (typeof value !== "string" || !isCalendarDate(value)) {
+function parseDate(value: unknown): CalendarDate {
+  const date = typeof value === "string" ? parseCalendarDate(value) : undefined;
+  if (!date) {
     throw new GraphQLError("Date must be a real date in YYYY-MM-DD format.");
   }
-  return value;
+  return date;
 }
 
 function parseDateTime(value: unknown): Date {
@@ -20,7 +21,7 @@ function parseDateTime(value: unknown): Date {
 }
 
 /** A calendar day, `YYYY-MM-DD`; a string end to end, so it never shifts with time zones. */
-export const DateScalar = new GraphQLScalarType<string, string>({
+export const DateScalar = new GraphQLScalarType<CalendarDate, string>({
   name: "Date",
   description: "A calendar day in `YYYY-MM-DD` format.",
   serialize: parseDate,

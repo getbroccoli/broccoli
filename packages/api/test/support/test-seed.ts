@@ -1,5 +1,8 @@
 import type { Orm } from "../../src/core/db";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
+import { parseCalendarDate } from "../../src/utils";
+
+type SeedEmployee = Partial<Omit<NewEmployee, "startDate"> & { startDate: string | null }>;
 
 /**
  * Creates test data by inserting through each module's repository, skipping use
@@ -11,15 +14,23 @@ export class TestSeed {
 
   constructor(private readonly orm: Orm) {}
 
-  employee(overrides: Partial<NewEmployee> = {}): Promise<Employee> {
+  employee({ startDate = null, ...overrides }: SeedEmployee = {}): Promise<Employee> {
     const number = ++this.#count;
     return employeeRepository(this.orm).insert({
       firstName: "Employee",
       lastName: String(number),
       email: `employee${number}@example.com`,
       jobTitle: null,
-      startDate: null,
+      startDate: startDate === null ? null : calendarDate(startDate),
       ...overrides,
     });
   }
+}
+
+function calendarDate(value: string) {
+  const date = parseCalendarDate(value);
+  if (!date) {
+    throw new Error(`Seed start date ${value} is not a calendar date`);
+  }
+  return date;
 }

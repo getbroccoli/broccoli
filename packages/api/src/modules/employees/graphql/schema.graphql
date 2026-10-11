@@ -21,6 +21,24 @@ type EmployeeConnection {
   pageInfo: PageInfo!
 }
 
+enum EmployeeOrderField {
+  "First name, then last name, ignoring case."
+  NAME
+  EMAIL
+  "Employees without a start date come last in both directions."
+  START_DATE
+}
+
+input EmployeeOrder {
+  field: EmployeeOrderField!
+  direction: OrderDirection! = ASC
+}
+
+input EmployeeFilter {
+  "Matches first name, last name or email containing it, ignoring case; at most 100 characters."
+  search: String
+}
+
 input EmployeeCreateInput {
   firstName: String!
   lastName: String!
@@ -37,8 +55,14 @@ type EmployeeMutations {
 
 # Each module declares its own root fields; the server merges them into one type.
 type Query {
-  "Employees in name order: first name, then last name. Owner only."
-  employees("Page size, 1 to 10000." first: Int = 100, after: String): EmployeeConnection!
+  "Employees, one page at a time. Owner only."
+  employees(
+    "Page size, 1 to 10000."
+    first: Int = 100
+    after: String
+    orderBy: EmployeeOrder = { field: NAME, direction: ASC }
+    filter: EmployeeFilter
+  ): EmployeeConnection!
 }
 
 type Mutation {

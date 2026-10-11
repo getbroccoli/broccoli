@@ -78,3 +78,24 @@ test("lists employees through the API page by page", async ({ env }) => {
     endCursor: secondPage.data.employees.edges.at(-1)?.cursor,
   });
 });
+
+test("sorts and filters employees through the API", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const alpha = await env.seed.employee({ firstName: "Ada", email: "alpha.team@example.com" });
+  await env.seed.employee({ firstName: "Ben", email: "other@example.com" });
+  const zulu = await env.seed.employee({ firstName: "Zoe", email: "zulu.team@example.com" });
+
+  const response = await browser.graphql(`
+    query {
+      employees(orderBy: { field: EMAIL, direction: DESC }, filter: { search: "team" }) {
+        edges { cursor node { id } }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  `);
+  const page = (await response.json()) as EmployeeListResponse;
+
+  expect(response.status).toBe(200);
+  expect(page).not.toHaveProperty("errors");
+  expect(page.data.employees.edges.map((edge) => edge.node.id)).toEqual([zulu.id, alpha.id]);
+});

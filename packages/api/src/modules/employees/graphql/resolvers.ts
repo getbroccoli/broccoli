@@ -4,8 +4,8 @@ import type { EmployeeUseCases } from "../app";
 export function createResolvers(useCases: EmployeeUseCases): Resolvers {
   return {
     Query: {
-      employees: (_parent, { first, after }, { actor }) =>
-        useCases.listEmployees(actor, { first: first ?? undefined, after }),
+      employees: (_parent, { first, after, orderBy, filter }, { actor }) =>
+        useCases.listEmployees(actor, { first: first ?? undefined, after, orderBy, filter }),
     },
     Mutation: {
       employee: () => ({}),

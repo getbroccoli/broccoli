@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { invalidInput, type FieldError } from "../../../core/application-error";
-import { isCalendarDate } from "../../../utils";
+import { type CalendarDate, parseCalendarDate } from "../../../utils";
 
 const NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;
@@ -15,8 +15,8 @@ export interface Employee {
   /** Work email, lowercased; unique. */
   email: string;
   jobTitle: string | null;
-  /** First working day, `YYYY-MM-DD`. */
-  startDate: string | null;
+  /** First working day. */
+  startDate: CalendarDate | null;
   createdAt: Date;
 }
 
@@ -52,7 +52,14 @@ const newEmployeeSchema = z.object({
     .transform((title) => title || null),
   startDate: z
     .string()
-    .refine(isCalendarDate)
+    .transform((value, context) => {
+      const date = parseCalendarDate(value);
+      if (!date) {
+        context.addIssue({ code: "custom", message: "Not a calendar date" });
+        return z.NEVER;
+      }
+      return date;
+    })
     .nullish()
     .transform((date) => date ?? null),
 });

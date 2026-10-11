@@ -1,0 +1,31 @@
+import { expect, it } from "vitest";
+
+import { parseCalendarDate } from ".";
+
+it("returns a real date unchanged", () => {
+  expect(parseCalendarDate("2026-02-28")).toBe("2026-02-28");
+});
+
+it("accepts 29 February in a leap year", () => {
+  expect(parseCalendarDate("2024-02-29")).toBe("2024-02-29");
+});
+
+it("refuses 29 February in other years", () => {
+  expect(parseCalendarDate("2025-02-29")).toBeUndefined();
+});
+
+it("refuses a day that does not exist", () => {
+  expect(parseCalendarDate("2026-04-31")).toBeUndefined();
+});
+
+it("refuses month 13", () => {
+  expect(parseCalendarDate("2026-13-01")).toBeUndefined();
+});
+
+it("refuses single-digit months and days", () => {
+  expect(parseCalendarDate("2026-1-1")).toBeUndefined();
+});
+
+it("refuses a date with a time", () => {
+  expect(parseCalendarDate("2026-02-28T00:00:00Z")).toBeUndefined();
+});

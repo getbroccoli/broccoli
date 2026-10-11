@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 import { date, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import type { CalendarDate } from "../../../utils";
+
 export const employees = pgTable(
   "employees",
   {
@@ -11,7 +13,7 @@ export const employees = pgTable(
     lastName: text("last_name").notNull(),
     email: text("email").notNull().unique("employees_email_unique"),
     jobTitle: text("job_title"),
-    startDate: date("start_date", { mode: "string" }),
+    startDate: date("start_date", { mode: "string" }).$type<CalendarDate>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

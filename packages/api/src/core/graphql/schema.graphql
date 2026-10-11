@@ -12,3 +12,9 @@ type PageInfo {
   "The cursor to pass as `after` for the next page; null on an empty page."
   endCursor: String
 }
+
+"Which way a list is sorted."
+enum OrderDirection {
+  ASC
+  DESC
+}

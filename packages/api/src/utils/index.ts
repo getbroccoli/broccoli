@@ -1,1 +1,1 @@
-export { isCalendarDate } from "./calendar-date";
+export { parseCalendarDate, type CalendarDate } from "./calendar-date";
