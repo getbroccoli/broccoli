@@ -1,3 +1,5 @@
+import { postJson } from "@/lib/post-json";
+
 /** How a sign-in attempt ended, as the login form reports it. */
 export type SignInResult = "ok" | "invalidCredentials" | "tooManyAttempts" | "failed";
 
@@ -24,12 +26,4 @@ export async function signOut(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-function postJson(path: string, body: unknown): Promise<Response> {
-  return fetch(path, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
 }
