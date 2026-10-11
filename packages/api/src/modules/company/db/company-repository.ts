@@ -52,8 +52,16 @@ export function companyRepository(db: Orm | Tx) {
         .where(isNull(company.brandLookedUpAt));
     },
 
+    /** Also counts as the first lookup, so a lookup still running cannot bring the logo back. */
     removeLogo: async (): Promise<void> => {
-      await orm().update(company).set({ logoId: null, logoContent: null, logoMimeType: null });
+      await orm()
+        .update(company)
+        .set({
+          logoId: null,
+          logoContent: null,
+          logoMimeType: null,
+          brandLookedUpAt: sql`coalesce(${company.brandLookedUpAt}, now())`,
+        });
     },
 
     /** The logo with this id, or null when it is not the current one. */

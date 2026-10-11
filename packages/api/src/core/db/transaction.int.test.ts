@@ -62,3 +62,32 @@ test("refuses to use a transaction after it has ended", async ({ orm, seed }) =>
   await expect(advanceStep(tx, "company", "done")).rejects.toThrow("The transaction has ended");
   expect(await readOnboardingStep(orm)).toBe("company");
 });
+
+test("refuses the publisher's transaction inside an after-commit handler", async ({
+  orm,
+  seed,
+}) => {
+  const actor = await seed.owner();
+  const events = createEventBus(createLogger("silent"));
+  let rejection: unknown;
+
+  await runInTransaction(orm, events, (retainedTx) => {
+    events.subscribe({
+      "instance.owner_claimed": async () => {
+        try {
+          await advanceStep(retainedTx, "company", "done");
+        } catch (error) {
+          rejection = error;
+        }
+      },
+    });
+    retainedTx.publish("instance.owner_claimed", {
+      userId: actor.userId,
+      email: "owner@example.com",
+    });
+    return Promise.resolve();
+  });
+
+  expect(rejection).toEqual(new Error("The transaction has ended"));
+  expect(await readOnboardingStep(orm)).toBe("company");
+});

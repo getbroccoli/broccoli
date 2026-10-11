@@ -46,16 +46,18 @@ export async function runInTransaction<T>(
   work: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   let transaction: Transaction | undefined;
+  let result: T;
   try {
-    const result = await orm.transaction((ormTransaction) => {
+    result = await orm.transaction((ormTransaction) => {
       transaction = new Transaction(ormTransaction);
       return work(transaction);
     });
-    await events.dispatch(transaction!.events);
-    return result;
   } finally {
+    // Ended before dispatch, so a handler cannot write through the released connection.
     transaction?.end();
   }
+  await events.dispatch(transaction!.events);
+  return result;
 }
 
 /** The ORM to query: the pool, or the open transaction behind `db`. */
