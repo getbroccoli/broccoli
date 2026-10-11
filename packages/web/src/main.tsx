@@ -5,10 +5,13 @@ import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import { apolloClient } from "./apollo";
+import { createApolloClient } from "./apollo";
 import { routeTree } from "./routeTree.gen";
 
-const router = createRouter({ routeTree });
+// The client tells the router to re-check the session when the API refuses a request
+// for want of one; the gates then send the user to sign in.
+const apolloClient = createApolloClient({ onUnauthenticated: () => void router.invalidate() });
+const router = createRouter({ routeTree, context: { apolloClient } });
 
 declare module "@tanstack/react-router" {
   interface Register {

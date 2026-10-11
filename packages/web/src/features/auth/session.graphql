@@ -1,0 +1,11 @@
+query Session {
+  me {
+    id
+    email
+    isOwner
+  }
+  setup {
+    id
+    step
+  }
+}
