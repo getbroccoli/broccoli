@@ -11,7 +11,7 @@ import { t } from "@/i18n";
 import { useListPage } from "@/lib/list-page";
 
 import { SEARCH_MAX_LENGTH, toEmployeesVariables, type DirectorySearch } from "./directory-search";
-import { EMPLOYEE_COLUMNS } from "./employee-columns";
+import { EMPLOYEE_COLUMNS, useEmployeeRows } from "./employee-columns";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
 
 /** The People directory: employees one page at a time, with sort, search and paging in the URL. */
@@ -33,11 +33,12 @@ export function EmployeeDirectory() {
     previous: previousData?.employees,
     error,
   });
+  const rows = useEmployeeRows(list.rows);
 
   return (
     <DataTable
       columns={EMPLOYEE_COLUMNS}
-      rows={list.rows}
+      rows={rows}
       getRowId={(employee) => employee.id}
       sort={list.sort}
       onSortChange={list.changeSort}

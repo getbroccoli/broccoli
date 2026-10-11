@@ -1,5 +1,25 @@
-/** The name with an initials avatar. */
-export function EmployeeNameCell({ firstName, lastName }: { firstName: string; lastName: string }) {
+import type { FragmentType } from "@apollo/client";
+import { useFragment } from "@apollo/client/react";
+
+import {
+  EmployeeNameCell_EmployeeFragmentDoc,
+  type EmployeeNameCell_EmployeeFragment,
+} from "@/__generated__/graphql";
+
+/** The name with an initials avatar; owns the `EmployeeNameCell_employee` fragment. */
+export function EmployeeNameCell({
+  employee,
+}: {
+  employee: FragmentType<EmployeeNameCell_EmployeeFragment>;
+}) {
+  const { data, complete } = useFragment({
+    fragment: EmployeeNameCell_EmployeeFragmentDoc,
+    from: employee,
+  });
+  // The query that rendered this row has just written the fragment, so it is complete.
+  if (!complete) return null;
+  const { firstName, lastName } = data;
+
   return (
     <div className="flex items-center gap-2.5">
       <span

@@ -3,11 +3,7 @@ query Employees($first: Int, $after: String, $orderBy: EmployeeOrder, $filter: E
     edges {
       node {
         id
-        firstName
-        lastName
-        email
-        jobTitle
-        startDate
+        ...EmployeeColumns_employee
       }
     }
     pageInfo {
