@@ -72,7 +72,7 @@ export function OwnerSetupForm() {
       }}
     >
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-[592px] flex-col gap-8 p-6 sm:p-10">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 p-6 sm:p-10">
           <form.Field name="email">
             {(field) => {
               const error = field.state.meta.errors[0]?.message;
