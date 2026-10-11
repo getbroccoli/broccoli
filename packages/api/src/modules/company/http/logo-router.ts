@@ -18,8 +18,9 @@ export function logoUrl(logoId: string): string {
  * GET is cached for good.
  */
 export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolver): express.Router {
+  // The session cookie is renewed by GraphQL, which every page calls.
   const signedIn = async (request: express.Request) =>
-    requireSignedIn(await resolveActor(request.headers));
+    requireSignedIn((await resolveActor(request.headers)).actor);
 
   return express
     .Router()

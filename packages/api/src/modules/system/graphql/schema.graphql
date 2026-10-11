@@ -1,8 +1,19 @@
 type Query {
   "Answers `pong`; checks that the GraphQL API is reachable."
-  ping: String!
+  ping: String! @public
   "Where the instance is in its first-run flow; readable without signing in, so the web app can route."
-  setup: Setup!
+  setup: Setup! @public
+  "The signed-in user; null without a session. Readable without signing in, so the web app can route."
+  me: User @public
+}
+
+"The signed-in user."
+type User {
+  id: ID!
+  "Login email, lowercased."
+  email: String!
+  "True for the instance owner, who may do everything until permission scopes exist."
+  isOwner: Boolean!
 }
 
 "Where a new instance is in its first-run flow."

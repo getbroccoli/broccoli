@@ -1,17 +1,24 @@
-import { Buildings, CaretDown, Plant } from "@phosphor-icons/react";
-import { Link, useRouter } from "@tanstack/react-router";
+import { useApolloClient } from "@apollo/client/react";
+import { Buildings, CaretDown, Plant, SignOut } from "@phosphor-icons/react";
+import { Link, useRouteContext, useRouter } from "@tanstack/react-router";
 import { useRef } from "react";
 
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { signOut } from "@/features/auth";
 import { t } from "@/i18n";
 
 export function WorkspaceMenu() {
   const router = useRouter();
+  const apolloClient = useApolloClient();
+  const { me } = useRouteContext({ from: "/_authenticated" });
   const openedOnPath = useRef<string | null>(null);
   // Return focus to the trigger unless the page changed, in which case the new page's
   // heading takes it (see `useFocusHeadingOnNavigation`).
@@ -50,7 +57,25 @@ export function WorkspaceMenu() {
           <Buildings size={14} />
           {t("workspace.company")}
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="truncate">
+            {t("auth.signedInAs", { email: me.email })}
+          </DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => void signOutAndReload()}>
+            <SignOut size={14} />
+            {t("auth.signOut")}
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
+
+  /** The gate then sends the signed-out user to the login page. */
+  async function signOutAndReload() {
+    if (await signOut()) {
+      await apolloClient.clearStore();
+      await router.invalidate();
+    }
+  }
 }

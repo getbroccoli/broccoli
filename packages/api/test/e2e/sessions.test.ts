@@ -48,6 +48,30 @@ test("refuses an owner-only mutation without a session", async ({ env }) => {
   expect(body).toHaveProperty("errors.0.extensions", { code: "UNAUTHENTICATED", fieldErrors: [] });
 });
 
+test("renews a session cookie that is due for renewal", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  await env.expireSessionsIn(5);
+
+  const response = await browser.graphql("{ setup { id step } }");
+
+  const cookie = response.headers
+    .getSetCookie()
+    .find((cookie) => cookie.startsWith("better-auth.session_token="));
+  expect(cookie).toContain("better-auth.session_token=");
+  expect(cookie).toContain("Max-Age=604800");
+});
+
+test("does not resend the cookie of a fresh session", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+
+  const response = await browser.graphql("{ setup { id step } }");
+
+  expect(await response.json()).toHaveProperty("data.setup.id", "instance");
+  expect(response.headers.getSetCookie()).not.toEqual(
+    expect.arrayContaining([expect.stringContaining("better-auth.session_token=")]),
+  );
+});
+
 test("masks a database failure while reading the session", async () => {
   const database = await createTestDatabase(inject("testRun"));
   onTestFinished(() => database.drop());

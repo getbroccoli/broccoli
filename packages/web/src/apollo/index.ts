@@ -1,2 +1,2 @@
-export { applicationErrorOf, isSignedOut, type ApplicationError } from "./application-error";
-export { apolloClient } from "./client";
+export { applicationErrorOf, type ApplicationError } from "./application-error";
+export { createApolloClient } from "./client";

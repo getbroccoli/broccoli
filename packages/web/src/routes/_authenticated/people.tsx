@@ -4,7 +4,7 @@ import { DEFAULT_DIRECTORY_SEARCH, directorySearch, EmployeeDirectory } from "@/
 import { t } from "@/i18n";
 import { PageHeader } from "@/shell";
 
-export const Route = createFileRoute("/people")({
+export const Route = createFileRoute("/_authenticated/people")({
   validateSearch: directorySearch,
   search: { middlewares: [stripSearchParams(DEFAULT_DIRECTORY_SEARCH)] },
   component: () => (

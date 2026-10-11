@@ -1,10 +1,9 @@
 import { useQuery } from "@apollo/client/react";
-import { LockSimple, UserCircle, WarningCircle } from "@phosphor-icons/react";
+import { UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import { EmployeesDocument } from "@/__generated__/graphql";
-import { isSignedOut } from "@/apollo";
 import { DataTable, TableSearchField, TableState } from "@/components/data-table";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
@@ -16,7 +15,7 @@ import { NoMatchingEmployees } from "./NoMatchingEmployees";
 
 /** The People directory: employees one page at a time, with sort, search and paging in the URL. */
 export function EmployeeDirectory() {
-  const search = useSearch({ from: "/people" });
+  const search = useSearch({ from: "/_authenticated/people" });
   const navigate = useNavigate({ from: "/people" });
   const writeSearch = useCallback(
     (patch: Partial<DirectorySearch>, replace: boolean) =>
@@ -69,9 +68,6 @@ export function EmployeeDirectory() {
   );
 
   function errorNotice() {
-    if (isSignedOut(list.error)) {
-      return <TableState icon={LockSimple} title={t("people.signedOut.title")} />;
-    }
     return (
       <TableState
         isError

@@ -35,6 +35,8 @@ export function createAuth({ orm, secret, publicUrl, plugins, logger }: AuthConf
     plugins,
     telemetry: { enabled: false },
     advanced: {
+      // Better Auth skips its origin check under test runners; keep it on so tests see production behaviour.
+      disableOriginCheck: false,
       // Without a public URL the protocol is unknown, and a Secure cookie would be
       // dropped by browsers on plain HTTP; HTTPS installs set an https PUBLIC_URL.
       useSecureCookies: publicUrl !== undefined && new URL(publicUrl).protocol === "https:",

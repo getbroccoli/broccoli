@@ -1,3 +1,6 @@
+"Readable without signing in. Every other root field of Query and Mutation needs a session."
+directive @public on FIELD_DEFINITION
+
 "A calendar day in `YYYY-MM-DD` format."
 scalar Date
 
