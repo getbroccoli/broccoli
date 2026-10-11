@@ -24,5 +24,12 @@ trap 'exit 0' HUP INT TERM
 
 compose up --detach --wait
 address=$(compose port web 5173)
-echo "Broccoli dev is running at http://localhost:${address##*:}"
+green='' cyan='' reset=''
+if [ -t 1 ]; then
+  green='\033[1;32m'
+  cyan='\033[1;36m'
+  reset='\033[0m'
+fi
+printf '\n%b🥦🥦🥦  Broccoli is ready!%b  ➜  %bhttp://localhost:%s%b\n\n' \
+  "$green" "$reset" "$cyan" "${address##*:}" "$reset"
 compose logs --follow
