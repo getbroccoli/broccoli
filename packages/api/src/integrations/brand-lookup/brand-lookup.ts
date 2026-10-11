@@ -1,27 +1,14 @@
 import { z } from "zod";
 
+import type { BrandLookup } from "./contract";
+
 const DEFAULT_TIMEOUT_MS = 2_000;
 /** Larger than any logo Broccoli stores, base64-encoded, plus the JSON around it. */
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 
-/** What the brand lookup service knows about a domain. */
-export interface Brand {
-  name: string | null;
-  /** The logo as the service sent it, not yet checked. */
-  logo: Buffer | null;
-}
-
-/** Finds the brand of an email domain; null when none is known. */
-export type BrandLookup = (domain: string) => Promise<Brand | null>;
-
-const brandResponse = z.object({
-  name: z.string().nullable(),
-  logo: z.object({ contentType: z.string(), base64: z.base64() }).nullable(),
-});
-
 /**
- * The client of the brand lookup service: `GET <url>/brands/<domain>`. Without a URL
- * it never makes a request. Fails on an unexpected answer or after `timeoutMs`.
+ * The client of the brand lookup service: `GET <url>/brands/<domain>`. A null URL
+ * disables it: it then makes no request and always resolves null.
  */
 export function createBrandLookup(
   url: string | null,
@@ -44,6 +31,11 @@ export function createBrandLookup(
     return { name, logo: logo ? Buffer.from(logo.base64, "base64") : null };
   };
 }
+
+const brandResponse = z.object({
+  name: z.string().nullable(),
+  logo: z.object({ contentType: z.string(), base64: z.base64() }).nullable(),
+});
 
 /** The body as text; stops reading and fails beyond `MAX_RESPONSE_BYTES`. */
 async function readText(response: Response): Promise<string> {
