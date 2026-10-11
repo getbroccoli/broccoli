@@ -20,6 +20,8 @@ export interface Env {
   dataDir: string;
   /** Address browsers use to reach Broccoli; unset means it is taken from each request. */
   publicUrl?: string;
+  /** Service that finds the brand of an email domain; null makes no lookup. */
+  brandLookupUrl: string | null;
 }
 
 /** Compose passes unset variables as empty strings, so blank means unset. */
@@ -36,6 +38,7 @@ const envSchema = z
     BROCCOLI_MODE: z.preprocess(blankAsUnset, z.enum(MODES).default("self_hosted")),
     DATA_DIR: z.preprocess(blankAsUnset, z.string().default("/data")),
     PUBLIC_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
+    BRAND_LOOKUP_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
   })
   .transform((variables): Env => ({
     databaseUrl: variables.DATABASE_URL,
@@ -45,6 +48,7 @@ const envSchema = z
     mode: variables.BROCCOLI_MODE,
     dataDir: variables.DATA_DIR,
     publicUrl: variables.PUBLIC_URL,
+    brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
   }));
 
 /** Reads and validates the environment; throws one error listing every problem. */

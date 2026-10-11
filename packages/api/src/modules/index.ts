@@ -1,8 +1,21 @@
 import type { ModuleDependencies, ModuleManifest } from "../core/module-manifest";
+import { companyModule } from "./company";
 import { employeesModule } from "./employees";
-import { system } from "./system";
+import { systemModule } from "./system";
 
-/** Every module of the API; the core builds the API from this list. */
-export function createModules(dependencies: ModuleDependencies): ModuleManifest[] {
-  return [system, employeesModule(dependencies)];
+/** Settings that only some modules need, read from the environment by `main.ts`. */
+export interface ModuleSettings {
+  brandLookupUrl: string | null;
+}
+
+/** Every module of the API, each given only the dependencies it uses. */
+export function createModules(
+  core: ModuleDependencies,
+  { brandLookupUrl }: ModuleSettings,
+): ModuleManifest[] {
+  return [
+    systemModule({ orm: core.orm }),
+    employeesModule({ orm: core.orm }),
+    companyModule({ ...core, brandLookupUrl }),
+  ];
 }

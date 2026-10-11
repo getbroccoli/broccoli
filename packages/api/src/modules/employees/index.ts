@@ -9,7 +9,7 @@ export { employeeRepository } from "./db";
 export type { Employee, NewEmployee, NewEmployeeInput } from "./domain";
 
 /** The people who work for the company: create and list them. */
-export function employeesModule(dependencies: ModuleDependencies): ModuleManifest {
+export function employeesModule(dependencies: Pick<ModuleDependencies, "orm">): ModuleManifest {
   return {
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),

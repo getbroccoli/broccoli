@@ -5,7 +5,9 @@ import { createModules } from "./modules";
 
 const env = loadEnv();
 const logger = createLogger(env.logLevel);
-const server = await startServer(env, logger, createModules);
+const server = await startServer(env, logger, (core) =>
+  createModules(core, { brandLookupUrl: env.brandLookupUrl }),
+);
 logger.info({ url: server.url }, "Broccoli API listening");
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

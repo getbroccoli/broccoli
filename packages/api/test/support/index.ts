@@ -3,6 +3,7 @@ export { OWNER } from "./actors";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnecting-proxy";
 export { test } from "./fixture";
+export { startFakeBrandServer } from "./fake-brand-server";
 export { holdMigrationLock, type MigrationLockHolder } from "./migration-lock";
 export {
   createEmptyTestDatabase,

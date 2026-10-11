@@ -6,7 +6,7 @@ import { createEmployee } from "./create-employee";
 import { type EmployeeListArgs, listEmployees } from "./list-employees";
 
 /** Everything a user can do with employees; the adapters call nothing else. */
-export function createEmployeeUseCases({ orm }: ModuleDependencies) {
+export function createEmployeeUseCases({ orm }: Pick<ModuleDependencies, "orm">) {
   const employees = employeeRepository(orm);
   return {
     createEmployee: (actor: Actor | null, input: NewEmployeeInput) =>

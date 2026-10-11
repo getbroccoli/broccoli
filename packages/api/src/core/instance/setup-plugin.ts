@@ -7,7 +7,8 @@ import { setSessionCookie } from "better-auth/cookies";
 import { z } from "zod";
 
 import { authDatabase } from "../auth";
-import type { Orm } from "../db";
+import { type Orm, ormOf, runInTransaction } from "../db";
+import type { EventBus } from "../events";
 import { claimOwner, hasOwner, OwnerExistsError } from "./owner";
 
 const OWNER_EXISTS = { code: "OWNER_EXISTS", message: "The owner account already exists" };
@@ -21,9 +22,10 @@ type SetupBody = z.infer<typeof setupBody>;
 
 /**
  * `POST /api/auth/setup`: the first caller creates the owner account and is signed
- * in. Works once; for self-hosted instances only.
+ * in. Works once; for self-hosted instances only. Answers after the handlers of
+ * `instance.owner_claimed` have run.
  */
-export function setupPlugin(orm: Orm) {
+export function setupPlugin(orm: Orm, events: EventBus) {
   return {
     id: "setup",
     endpoints: {
@@ -35,7 +37,7 @@ export function setupPlugin(orm: Orm) {
         }
         // Hashing is slow, so it happens before the transaction takes its lock.
         const passwordHash = await ctx.context.password.hash(ctx.body.password);
-        const owner = await createOwner(orm, ctx, ctx.body.email.toLowerCase(), passwordHash);
+        const owner = await createOwner({ orm, events }, ctx, ctx.body.email.toLowerCase(), passwordHash);
         await setSessionCookie(ctx, owner);
         return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
       }),
@@ -60,16 +62,16 @@ function assertValidCredentials(
 
 /** Creates the owner with a password and a session, in one transaction. */
 async function createOwner(
-  orm: Orm,
+  { orm, events }: { orm: Orm; events: EventBus },
   ctx: GenericEndpointContext,
   email: string,
   passwordHash: string,
 ) {
   const { internalAdapter, options } = ctx.context;
   try {
-    return await orm.transaction((tx) =>
+    return await runInTransaction(orm, events, (tx) =>
       // Better Auth's writes join the transaction that holds the instance lock.
-      runWithAdapter(authDatabase(tx)(options), () =>
+      runWithAdapter(authDatabase(ormOf(tx))(options), () =>
         claimOwner(tx, async () => {
           const user = await internalAdapter.createUser(
             { email, name: "", emailVerified: false },

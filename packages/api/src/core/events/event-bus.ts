@@ -1,0 +1,54 @@
+import type { Logger } from "../logger";
+
+/**
+ * Every event a module can publish, by type. Publishers add their events by
+ * declaration merging, so no central list has to be edited.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- filled by declaration merging.
+export interface BroccoliEvents {}
+
+export type EventType = keyof BroccoliEvents;
+
+export type PublishedEvent = {
+  [Type in EventType]: { type: Type; payload: BroccoliEvents[Type] };
+}[EventType];
+
+/** What a module does when an event happens, by event type. */
+export type EventHandlers = {
+  [Type in EventType]?: (payload: BroccoliEvents[Type]) => Promise<void>;
+};
+
+export type EventBus = ReturnType<typeof createEventBus>;
+
+/**
+ * Delivers events to the handlers of every module, in process. Events are
+ * dispatched after the transaction that published them commits.
+ */
+export function createEventBus(logger: Logger) {
+  const subscriptions: EventHandlers[] = [];
+
+  async function deliver({ type, payload }: PublishedEvent): Promise<void> {
+    for (const handlers of subscriptions) {
+      // Narrowing by `type` does not reach a mapped handler type, hence the cast.
+      const handler = handlers[type] as ((payload: unknown) => Promise<void>) | undefined;
+      try {
+        await handler?.(payload);
+      } catch (error) {
+        logger.error({ err: error, eventType: type }, "Event handler failed");
+      }
+    }
+  }
+
+  return {
+    subscribe(handlers: EventHandlers): void {
+      subscriptions.push(handlers);
+    },
+
+    /** Runs each subscribed handler in turn; a failing handler is logged, never thrown. */
+    async dispatch(events: readonly PublishedEvent[]): Promise<void> {
+      for (const event of events) {
+        await deliver(event);
+      }
+    },
+  };
+}

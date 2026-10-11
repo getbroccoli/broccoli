@@ -8,4 +8,5 @@ export {
   type KeysetColumn,
   type KeysetOrder,
 } from "./keyset";
+export { ormOf, runInTransaction, type Tx } from "./transaction";
 export { isUniqueViolation } from "./unique-violation";

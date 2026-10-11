@@ -11,7 +11,8 @@ import { resolveActor } from "./actor";
 import { createAuth } from "./auth";
 import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
-import { startGraphqlApi, type GraphqlApi } from "./graphql";
+import { createEventBus } from "./events";
+import { type ActorResolver, startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { setupPlugin } from "./instance";
 import type { Logger } from "./logger";
@@ -49,26 +50,25 @@ export async function startServer(
   const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
   const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
   const database = connectDatabase(env.databaseUrl, logger);
+  const events = createEventBus(logger);
   const auth = createAuth({
     orm: database.orm,
     secret: authSecret,
     publicUrl: env.publicUrl,
-    plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm)] : [],
+    plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm, events)] : [],
     logger,
   });
+  const resolveActorOf: ActorResolver = (headers) => resolveActor(auth, database.orm, headers);
   const readiness = new Readiness(() => database.checkConnection());
 
   const app = express();
   app.disable("x-powered-by");
   const httpServer = createServer(app);
+  let modules: readonly ModuleManifest[];
   let graphql: GraphqlApi;
   try {
-    graphql = await startGraphqlApi(
-      createModules({ orm: database.orm }),
-      httpServer,
-      logger,
-      (headers) => resolveActor(auth, database.orm, headers),
-    );
+    modules = createModules({ orm: database.orm, events, logger });
+    graphql = await startGraphqlApi(modules, httpServer, logger, resolveActorOf);
   } catch (error) {
     await database.close();
     throw error;
@@ -77,6 +77,14 @@ export async function startServer(
   // Better Auth reads the raw body, so no body parser may run before it.
   app.all("/api/auth/{*path}", toNodeHandler(auth));
   app.use(graphql.router);
+  for (const module of modules) {
+    if (module.events) {
+      events.subscribe(module.events);
+    }
+    if (module.router) {
+      app.use("/api", module.router(resolveActorOf));
+    }
+  }
   if (webApp) {
     app.use(webApp);
   }
