@@ -27,11 +27,19 @@ export async function resolveActor(
   return { userId, isOwner: userId === (await readOwnerUserId(orm)) };
 }
 
-/** Owner-only access: until permission scopes exist, the owner may do everything. */
-export function requireOwner(actor: Actor | null): Actor {
+/**
+ * The actor of a request that needs a signed-in user. Adapters (GraphQL, HTTP, MCP)
+ * call it, so use cases always receive an actor.
+ */
+export function requireSignedIn(actor: Actor | null): Actor {
   if (!actor) {
     throw new ApplicationError("UNAUTHENTICATED", "Sign in to continue.");
   }
+  return actor;
+}
+
+/** Owner-only access: until permission scopes exist, the owner may do everything. */
+export function requireOwner(actor: Actor): Actor {
   if (!actor.isOwner) {
     throw new ApplicationError("FORBIDDEN", "Only the owner can do this.");
   }

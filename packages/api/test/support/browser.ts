@@ -8,11 +8,11 @@ export function createBrowser(baseUrl: string) {
     const response = await fetch(new URL(path, baseUrl), {
       method,
       headers: {
-        "content-type": "application/json",
+        "content-type": Buffer.isBuffer(body) ? "application/octet-stream" : "application/json",
         origin: baseUrl,
         cookie: [...cookies].map(([name, value]) => `${name}=${value}`).join("; "),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: Buffer.isBuffer(body) ? body : body === undefined ? undefined : JSON.stringify(body),
     });
 
     for (const cookie of response.headers.getSetCookie()) {
@@ -29,6 +29,7 @@ export function createBrowser(baseUrl: string) {
 
   return {
     post: (path: string, body: unknown) => request(path, "POST", body),
+    put: (path: string, body: Buffer) => request(path, "PUT", body),
     get: (path: string) => request(path, "GET"),
     graphql: (query: string, variables?: Record<string, unknown>) =>
       request("/api/graphql", "POST", { query, variables }),

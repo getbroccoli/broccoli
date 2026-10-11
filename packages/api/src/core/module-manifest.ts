@@ -1,9 +1,18 @@
-import type { Orm } from "./db";
-import type { Resolvers } from "./graphql";
+import type express from "express";
 
-/** What the core hands every module when the server starts. */
+import type { Orm } from "./db";
+import type { EventBus, EventHandlers } from "./events";
+import type { ActorResolver, Resolvers } from "./graphql";
+import type { Logger } from "./logger";
+
+/**
+ * The core's services for the modules. Each module factory takes only the ones it
+ * uses (`Pick<ModuleDependencies, "orm">`) plus its own settings.
+ */
 export interface ModuleDependencies {
   orm: Orm;
+  eventBus: EventBus;
+  logger: Logger;
 }
 
 /**
@@ -15,4 +24,8 @@ export interface ModuleManifest {
   /** The module's GraphQL SDL. */
   typeDefs: string;
   resolvers: Resolvers;
+  /** What the module does when another module's event happens. */
+  events?: EventHandlers;
+  /** HTTP routes under `/api/` that GraphQL cannot serve, such as images. */
+  router?: (resolveActor: ActorResolver) => express.Router;
 }

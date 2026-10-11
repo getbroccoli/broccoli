@@ -8,8 +8,11 @@ The words Broccoli's code and docs use, and what each one means.
 - **User**: a person who can sign in (Better Auth's `user` table).
 - **Account**: one way a user signs in, such as a password (`credential`) or managed sign-in (Better Auth's `account` table). A user can have several.
 - **Session**: a signed-in browser, carried in a cookie and stored in the `session` table.
-- **Setup**: creating the owner on a new self-hosted instance; the first visitor does it, once.
-- **Onboarding step**: where a new instance is in its first-run flow: `owner`, `company`, `done`.
+- **Setup**: the first-run flow of a new instance, step by step: the owner account (on self-hosted instances the first visitor creates it, once, through `POST /api/auth/setup`), then the company name.
+- **Setup step**: where a new instance is in setup: `owner`, `company`, `done`. Not to be confused with employee onboarding, an HR process.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
 - **Actor**: who is calling the API: a signed-in user, and whether they are the owner.
+- **Company**: the business the instance belongs to; its name and logo. One per instance.
+- **Brand lookup**: finding a company's name and logo from the owner's email domain, through the service at `BRAND_LOOKUP_URL`.
+- **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.

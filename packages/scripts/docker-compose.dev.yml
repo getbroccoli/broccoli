@@ -30,6 +30,7 @@ services:
       # In the checkout, so the host user owns it.
       DATA_DIR: /repo/.data
       PUBLIC_URL: ""
+      BRAND_LOOKUP_URL: ${BRAND_LOOKUP_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

@@ -7,8 +7,8 @@ How we write tests in Broccoli. The decisions behind them are in [§9 of the arc
 Three layers, most tests in the middle one:
 
 - **Domain rules** with unit tests next to the code, named `<subject>.test.ts`. Domain code is pure, so these tests need no mocks.
-- **Use cases** with integration tests next to them, named `<use-case>.int.test.ts`. They call the module's use-case factory directly against a real, migrated Postgres, with any actor built in the test (`OWNER`, a non-owner, `null`). Permissions, validation, uniqueness, paging, transactions, audit and events are verified here. The `test` fixtures in `packages/api/test/support`, shared by all layers that need Postgres, give each test its own database (`orm`) and a `seed`.
-- **API wiring** with a few end-to-end tests under `packages/api/test/e2e`. They start the real server and call GraphQL over HTTP: the session becomes the actor, each operation reaches its use case once on the happy path, errors keep their format. Rules already covered by integration tests are not repeated here.
+- **Use cases** with integration tests next to them, named `<use-case>.int.test.ts`. They call the module's use-case factory directly against a real, migrated Postgres, with any actor built in the test (`OWNER` or a non-owner); use cases never see an anonymous caller. Permissions, validation, uniqueness, paging, transactions, audit and events are verified here. The `test` fixtures in `packages/api/test/support`, shared by all layers that need Postgres, give each test its own database (`orm`) and a `seed`.
+- **API wiring** with a few end-to-end tests under `packages/api/test/e2e`. They start the real server and call GraphQL over HTTP: the session becomes the actor and a request without one is refused, each operation reaches its use case once on the happy path, errors keep their format. Rules already covered by integration tests are not repeated here.
 - **Bugs** with a test that reproduces the bug, written before the fix, at the lowest layer that shows it.
 
 ## What not to test
@@ -16,6 +16,7 @@ Three layers, most tests in the middle one:
 - Trivial code: constants, types, pass-through glue and placeholders.
 - Implementation details: private helpers, call order, or mocks of our own modules.
 - Frontend components and pages, for now. Pure frontend functions, such as search-param parsing, get unit tests.
+- Integrations (`src/integrations/`) on their own. They are thin clients over shared helpers such as `getJson`, which have their own tests; use-case tests replace them with a fake, and end-to-end tests run them against a local fake service.
 - Configuration files by matching their text. Run the tool that reads them instead.
 
 ## Writing a test
@@ -25,6 +26,8 @@ Three layers, most tests in the middle one:
 - Cover one behaviour per test, with short setup and a visible arrange, act and assert.
 - Keep tests deterministic. Inject the clock and ID generators. No sleeps, no network, no dependence on test order.
 - Build test data with `seed` (`TestSeed` in `packages/api/test/support`), which inserts through each module's repository, skipping use cases, permissions, audit and events. Seed values must be what the app would store (normalised, such as a lowercased email). Set only the fields the test is about. A module adds its own seed methods.
+- Build the use cases under test with the module's helper in `#test/support`, such as `companyUseCases(orm, { brandLookup })`. It fills every dependency with a test default (a new event bus, a silent logger, no external calls), so a test passes only the one it is about and the factory call is not repeated in every test. A module whose factory needs more than `{ orm }` adds such a helper.
+- Core tests publish the test-only `example.happened` domain event (`EXAMPLE_PAYLOAD`), never a module's event, so they do not depend on any module.
 - Assert on outcomes a caller can see: return values, GraphQL responses, state read back through public queries, and emitted events.
 - Mock only external systems such as email, Slack and third-party HTTP. Never mock Postgres.
 - Add property-based tests only when the module design agrees on them.

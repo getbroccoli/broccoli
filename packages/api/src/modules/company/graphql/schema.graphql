@@ -1,0 +1,32 @@
+"The company this instance belongs to."
+type Company {
+  "Always `company`: one company per instance."
+  id: ID!
+  "Null until the owner saves it."
+  name: String
+  "Pre-fill for the name field: the brand found for the owner's email domain, else a name made from the domain."
+  suggestedName: String
+  "Path of the company logo, such as `/api/company/logo/<id>`; null without one."
+  logoUrl: String
+}
+
+type Query {
+  "The company; owner only."
+  company: Company!
+}
+
+"The company's details the owner edits."
+input CompanyInput {
+  "1 to 100 characters after trimming."
+  name: String!
+}
+
+type CompanyMutations {
+  "Saves the company's details; completes the company step of setup."
+  update(input: CompanyInput!): Company!
+  removeLogo: Company!
+}
+
+type Mutation {
+  company: CompanyMutations!
+}

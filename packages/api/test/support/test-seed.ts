@@ -1,4 +1,9 @@
+import { randomUUID } from "node:crypto";
+
+import type { Actor } from "../../src/core/actor";
+import { user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
+import { instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import { parseCalendarDate } from "../../src/utils";
 
@@ -13,6 +18,13 @@ export class TestSeed {
   #count = 0;
 
   constructor(private readonly orm: Orm) {}
+
+  async owner({ email = "owner@example.com" } = {}): Promise<Actor> {
+    const userId = randomUUID();
+    await this.orm.insert(user).values({ id: userId, name: "Owner", email: email.toLowerCase() });
+    await instanceRepository(this.orm).setOwner(userId, "company");
+    return { userId, isOwner: true };
+  }
 
   employee({ startDate = null, ...overrides }: SeedEmployee = {}): Promise<Employee> {
     const number = ++this.#count;
