@@ -15,7 +15,7 @@ Three layers, most tests in the middle one:
 
 - Trivial code: constants, types, pass-through glue and placeholders.
 - Implementation details: private helpers, call order, or mocks of our own modules.
-- The frontend, for now.
+- Frontend components and pages, for now. Pure frontend functions, such as search-param parsing, get unit tests.
 - Integrations (`src/integrations/`) on their own. They are thin clients over shared helpers such as `getJson`, which have their own tests; use-case tests replace them with a fake, and end-to-end tests run them against a local fake service.
 - Configuration files by matching their text. Run the tool that reads them instead.
 

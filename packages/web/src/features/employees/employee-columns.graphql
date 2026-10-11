@@ -1,0 +1,7 @@
+fragment EmployeeColumns_employee on Employee {
+  id
+  ...EmployeeNameCell_employee
+  email
+  jobTitle
+  startDate
+}

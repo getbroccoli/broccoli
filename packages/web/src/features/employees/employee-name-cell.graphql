@@ -1,0 +1,5 @@
+fragment EmployeeNameCell_employee on Employee {
+  id
+  firstName
+  lastName
+}
