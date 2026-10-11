@@ -1,3 +1,4 @@
+import { readUserEmail } from "../../../core/auth";
 import type { Orm } from "../../../core/db";
 import type { Resolvers } from "../../../core/graphql";
 import { readSetupStep } from "../../../core/instance";
@@ -9,8 +10,12 @@ export function createResolvers(orm: Orm): Resolvers {
     Query: {
       ping: () => "pong",
       setup: async () => ({ id: "instance", step: STEPS[await readSetupStep(orm)] }),
-      me: (_parent, _args, { actor }) =>
-        actor && { id: actor.userId, email: actor.email, isOwner: actor.isOwner },
+      me: async (_parent, _args, { actor }) =>
+        actor && {
+          id: actor.userId,
+          email: await readUserEmail(orm, actor.userId),
+          isOwner: actor.isOwner,
+        },
     },
   };
 }

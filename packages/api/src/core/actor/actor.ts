@@ -9,8 +9,6 @@ import type { Auth } from "../auth";
 /** Who is calling the API. */
 export interface Actor {
   userId: string;
-  /** Login email, lowercased. */
-  email: string;
   isOwner: boolean;
 }
 
@@ -35,8 +33,8 @@ export async function resolveActor(
   if (!session) {
     return null;
   }
-  const { id: userId, email } = session.user;
-  return { userId, email, isOwner: userId === (await readOwnerUserId(orm)) };
+  const userId = session.user.id;
+  return { userId, isOwner: userId === (await readOwnerUserId(orm)) };
 }
 
 /**
