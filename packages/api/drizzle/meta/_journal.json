@@ -15,6 +15,20 @@
       "when": 1791640042561,
       "tag": "0001_employees",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791705400081,
+      "tag": "0002_company",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791718674871,
+      "tag": "0003_setup_step",
+      "breakpoints": true
     }
   ]
 }

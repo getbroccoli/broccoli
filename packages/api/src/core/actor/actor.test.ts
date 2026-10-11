@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 
-import { requireOwner } from ".";
+import { requireOwner, requireSignedIn } from ".";
 
 it("refuses a missing actor with UNAUTHENTICATED", () => {
-  expect(() => requireOwner(null)).toThrowError(
+  expect(() => requireSignedIn(null)).toThrowError(
     expect.objectContaining({
       code: "UNAUTHENTICATED",
       message: "Sign in to continue.",
@@ -28,4 +28,10 @@ it("returns the owner", () => {
   const actor = { userId: "owner-1", isOwner: true };
 
   expect(requireOwner(actor)).toBe(actor);
+});
+
+it("returns a signed-in actor", () => {
+  const actor = { userId: "user-1", isOwner: false };
+
+  expect(requireSignedIn(actor)).toBe(actor);
 });

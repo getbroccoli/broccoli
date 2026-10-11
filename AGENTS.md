@@ -1,5 +1,6 @@
 # Instructions for coding agents
 
+- Follow YAGNI, KISS and DRY: build only what the task needs, choose the simplest design that works, and keep each piece of knowledge in one place.
 - Follow `docs/architecture.md`. Propose a change to it in the same pull request when a change needs one.
 - Follow `docs/testing.md` when writing or changing tests.
 - A folder of related code is a module with a narrow contract: its `index.ts` lists everything it offers with explicit named exports (no `export *`). Code outside the folder imports the folder itself (`./db`), never the folder's other files. Relative imports carry no file extension. The exceptions are `packages/web/src/components/ui/*` and `packages/web/src/lib/class-names`, which the shadcn CLI generates and imports by path. Generated code in `packages/web/src/__generated__` is imported by path too. Tests import the shared test support as `#test/support`, a subpath import declared in `packages/api/package.json`.

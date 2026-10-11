@@ -21,7 +21,7 @@ export interface EmployeeListArgs extends PageArgs {
 /** Employees, sorted and filtered, one page at a time. */
 export async function listEmployees(
   employees: EmployeeRepository,
-  actor: Actor | null,
+  actor: Actor,
   { orderBy, filter, ...pageArgs }: EmployeeListArgs,
 ): Promise<Connection<Employee>> {
   requireOwner(actor);

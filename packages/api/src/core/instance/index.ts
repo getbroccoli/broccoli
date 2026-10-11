@@ -1,3 +1,14 @@
-export { claimOwner, hasOwner, OwnerExistsError, readOwnerUserId } from "./owner";
-export { instance, ONBOARDING_STEPS, type OnboardingStep } from "./schema";
-export { setupPlugin } from "./setup-plugin";
+import "./events";
+
+export {
+  advanceStep,
+  claimOwner,
+  hasOwner,
+  readSetupStep,
+  readOwner,
+  readOwnerUserId,
+} from "./app";
+export { setupPlugin } from "./better-auth";
+/** For the schema and test seeding only; other code goes through the operations above. */
+export { instance, instanceRepository } from "./db";
+export { SETUP_STEPS, OwnerExistsError, type SetupStep } from "./domain";

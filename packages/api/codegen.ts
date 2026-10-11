@@ -12,7 +12,10 @@ const config: CodegenConfig = {
         scalars: { Date: "string", DateTime: "Date" },
         contextType: "./apollo#GraphqlContext",
         // A mutation namespace holds no data; its field resolves to an empty object.
-        mappers: { EmployeeMutations: "Record<PropertyKey, never>" },
+        mappers: {
+          EmployeeMutations: "Record<PropertyKey, never>",
+          CompanyMutations: "Record<PropertyKey, never>",
+        },
       },
     },
   },
