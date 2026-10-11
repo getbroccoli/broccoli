@@ -54,7 +54,7 @@ export async function resolveActor(
  * The actor of a request that needs a signed-in user. Adapters (GraphQL, HTTP, MCP)
  * call it, so use cases always receive an actor.
  */
-export function requireSignedIn(actor: Actor | null): Actor {
+export function requireSignedIn<SignedIn extends Actor>(actor: SignedIn | null): SignedIn {
   if (!actor) {
     throw new ApplicationError("UNAUTHENTICATED", "Sign in to continue.");
   }
