@@ -2,9 +2,22 @@
 
 This document records the architecture decisions behind Broccoli. It is edited in place; the git history is its change log. Each section states the decision, the reasons and what is deliberately left open.
 
+## Layout of the API
+
+```
+packages/api/src/
+├── core/          what every module shares: server, database, GraphQL, auth, events
+├── modules/       business modules, one folder each, such as company and employees
+├── integrations/  clients of external services; return plain data, know no module
+├── utils/         pure helpers that know nothing about Broccoli
+└── main.ts        reads the environment and starts the server
+```
+
+Modules import `core`, `integrations` and `utils`; `core` never imports a module.
+
 ## 1. Shape of the system
 
-- **Modular monolith.** One API process, one web single-page app, one container image. Modules live in `packages/api/src/modules/<name>/`; the code they share (server, database, GraphQL) lives in `packages/api/src/core/`. Pure helpers that know nothing about Broccoli or its libraries, such as `isCalendarDate`, live in `packages/api/src/utils/`. Clients of external services, such as the brand lookup, live in `packages/api/src/integrations/<service>/`: they handle transport (URL, timeout, response format) and return plain data, know nothing about modules, and modules import them; the rules about that data stay in the module.
+- **Modular monolith.** One API process, one web single-page app, one container image. The folders of the API are listed above. An integration handles transport (URL, timeout, response format); the rules about the data it returns stay in the module.
 - **Single-tenant.** One deployment and one Postgres database per company, for self-hosted and managed installs alike. There is no tenant column and no row-level security; the managed service runs one instance per company and migrates each.
 - **Layers per module.**
   - `domain`: pure TypeScript, no I/O.
