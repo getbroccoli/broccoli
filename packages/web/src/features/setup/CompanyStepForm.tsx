@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
@@ -86,34 +86,22 @@ function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
       await router.invalidate();
     },
   });
+  // The name stays as sent while it is saved.
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+  const isFilledIn = useStore(form.store, ({ values }) => values.name.trim() !== "");
 
   return (
     <SetupStepForm
       onSubmit={() => void form.handleSubmit()}
-      footer={
-        <form.Subscribe
-          selector={({ isSubmitting, values }) => ({
-            isSubmitting,
-            isFilledIn: values.name.trim() !== "",
-          })}
-        >
-          {({ isSubmitting, isFilledIn }) => (
-            <SubmitButton isSubmitting={isSubmitting} disabled={!isFilledIn || logoBusy} />
-          )}
-        </form.Subscribe>
-      }
+      footer={<SubmitButton isSubmitting={isSubmitting} disabled={!isFilledIn || logoBusy} />}
     >
       <div className="flex flex-col gap-6 sm:flex-row">
-        <form.Subscribe selector={({ isSubmitting }) => isSubmitting}>
-          {(isSubmitting) => (
-            <LogoField
-              logoUrl={company.logoUrl ?? null}
-              disabled={isSubmitting}
-              onBusyChange={setLogoBusy}
-              onUploaded={onLogoUploaded}
-            />
-          )}
-        </form.Subscribe>
+        <LogoField
+          logoUrl={company.logoUrl ?? null}
+          disabled={isSubmitting}
+          onBusyChange={setLogoBusy}
+          onUploaded={onLogoUploaded}
+        />
         <form.Field name="name">
           {(field) => {
             const error = field.state.meta.errors[0]?.message;
@@ -126,6 +114,7 @@ function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
                   name="organization"
                   autoComplete="organization"
                   autoFocus
+                  readOnly={isSubmitting}
                   className="h-12 rounded-xl bg-muted/30 px-4"
                   value={field.state.value}
                   onChange={(event) => field.handleChange(event.target.value)}
