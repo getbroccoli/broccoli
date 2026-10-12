@@ -8,32 +8,21 @@ permissions:
   contents: read
   packages: write
 
-# One publish at a time, so `main` always ends on the newest commit.
-concurrency:
-  group: image
-  cancel-in-progress: false
-
 jobs:
   publish:
     name: Publish image
-    runs-on: self-hosted
-    env:
-      IMAGE: ghcr.io/getbroccoli/broccoli
+    # GitHub-hosted, not the shared self-hosted runner: the registry token and the built
+    # image stay on a machine no other job uses, and it is discarded afterwards.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # A job-private Docker config: the registry login never reaches other jobs on the shared host.
-      - run: echo "DOCKER_CONFIG=$RUNNER_TEMP/docker" >> "$GITHUB_ENV"
       - name: Log in to GitHub Container Registry
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Tagged with the short commit SHA, which deployments pin, and `main`.
+      # Each commit gets its own tag, the short SHA that deployments pin.
       - name: Build and push
         run: |
-          tag="${GITHUB_SHA::7}"
-          docker build --file packages/api/Dockerfile --tag "$IMAGE:$tag" --tag "$IMAGE:main" .
-          docker push "$IMAGE:$tag"
-          docker push "$IMAGE:main"
-      - name: Log out
-        if: always()
-        run: rm -rf "$DOCKER_CONFIG"
+          image="ghcr.io/getbroccoli/broccoli:${GITHUB_SHA::7}"
+          docker build --file packages/api/Dockerfile --tag "$image" .
+          docker push "$image"
