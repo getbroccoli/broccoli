@@ -74,6 +74,21 @@ test("serves the logo uploaded by the owner", async ({ env }) => {
   expect(Buffer.from(await image.arrayBuffer())).toEqual(logo);
 });
 
+test("accepts and serves a logo larger than 512 KB", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const jpeg = Buffer.alloc(512 * 1024 + 1);
+  jpeg.set([0xff, 0xd8, 0xff]);
+  jpeg.set([0xff, 0xd9], jpeg.length - 2);
+
+  const response = await browser.put("/api/company/logo", jpeg);
+
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as { logoUrl: string };
+  const image = await browser.get(body.logoUrl);
+  expect(image.status).toBe(200);
+  expect(Buffer.from(await image.arrayBuffer())).toEqual(jpeg);
+});
+
 test("refuses invalid, oversized and anonymous logo uploads", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
 
@@ -87,7 +102,7 @@ test("refuses invalid, oversized and anonymous logo uploads", async ({ env }) =>
     fieldErrors: [{ field: "logo", code: "invalid" }],
   });
 
-  const oversized = await browser.put("/api/company/logo", Buffer.alloc(512 * 1024 + 1));
+  const oversized = await browser.put("/api/company/logo", Buffer.alloc(5 * 1024 * 1024 + 1));
   expect(oversized.status).toBe(413);
 
   const anonymous = await env.browser().put("/api/company/logo", logo);

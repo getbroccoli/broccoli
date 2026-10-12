@@ -13,6 +13,7 @@ import { t, type MessageKey } from "@/i18n";
 
 import { NewPasswordField } from "./NewPasswordField";
 import { setUpOwner, type SetupResult } from "./setupApi";
+import { SetupStepForm } from "./SetupStepForm";
 
 // The API's password policy.
 const PASSWORD_LENGTH = { min: 8, max: 128 };
@@ -75,68 +76,9 @@ export function OwnerSetupForm() {
   );
 
   return (
-    <form
-      noValidate
-      className="flex min-h-0 flex-1 flex-col"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void form.handleSubmit();
-      }}
-    >
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 p-6 sm:p-10">
-          <form.Field name="email">
-            {(field) => {
-              const error = field.state.meta.errors[0]?.message;
-              return (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="owner-email">{t("setup.owner.email")}</Label>
-                  <Input
-                    ref={emailInput}
-                    id="owner-email"
-                    name="username"
-                    type="email"
-                    autoComplete="username"
-                    readOnly={isSubmitting}
-                    placeholder={t("setup.owner.emailPlaceholder")}
-                    className="h-12 rounded-xl bg-muted/30 px-4"
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    onBlur={field.handleBlur}
-                    aria-invalid={error !== undefined}
-                    aria-describedby={
-                      error ? "owner-email-hint owner-email-error" : "owner-email-hint"
-                    }
-                  />
-                  <p id="owner-email-hint" className="text-sm text-muted-foreground">
-                    {t("setup.owner.emailHint")}
-                  </p>
-                  <FieldError id="owner-email-error" message={error} />
-                </div>
-              );
-            }}
-          </form.Field>
-          <form.Field name="password">
-            {(field) => (
-              <NewPasswordField
-                id="owner-password"
-                inputRef={passwordInput}
-                readOnly={isSubmitting}
-                value={field.state.value}
-                onChange={field.handleChange}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors[0]?.message}
-              />
-            )}
-          </form.Field>
-          {failure && (
-            <p role="alert" className="text-sm text-destructive">
-              {t(failure)}
-            </p>
-          )}
-        </div>
-      </div>
-      <footer className="flex shrink-0 justify-end border-t border-border px-6 py-3 sm:px-10">
+    <SetupStepForm
+      onSubmit={() => void form.handleSubmit()}
+      footer={
         <Button
           type="submit"
           size="lg"
@@ -146,7 +88,55 @@ export function OwnerSetupForm() {
           {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
           <ArrowRight weight="bold" aria-hidden />
         </Button>
-      </footer>
-    </form>
+      }
+    >
+      <form.Field name="email">
+        {(field) => {
+          const error = field.state.meta.errors[0]?.message;
+          return (
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="owner-email">{t("setup.owner.email")}</Label>
+              <Input
+                ref={emailInput}
+                id="owner-email"
+                name="username"
+                type="email"
+                autoComplete="username"
+                readOnly={isSubmitting}
+                placeholder={t("setup.owner.emailPlaceholder")}
+                className="h-12 rounded-xl bg-muted/30 px-4"
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                onBlur={field.handleBlur}
+                aria-invalid={error !== undefined}
+                aria-describedby={error ? "owner-email-hint owner-email-error" : "owner-email-hint"}
+              />
+              <p id="owner-email-hint" className="text-sm text-muted-foreground">
+                {t("setup.owner.emailHint")}
+              </p>
+              <FieldError id="owner-email-error" message={error} />
+            </div>
+          );
+        }}
+      </form.Field>
+      <form.Field name="password">
+        {(field) => (
+          <NewPasswordField
+            id="owner-password"
+            inputRef={passwordInput}
+            readOnly={isSubmitting}
+            value={field.state.value}
+            onChange={field.handleChange}
+            onBlur={field.handleBlur}
+            error={field.state.meta.errors[0]?.message}
+          />
+        )}
+      </form.Field>
+      {failure && (
+        <p role="alert" className="text-sm text-destructive">
+          {t(failure)}
+        </p>
+      )}
+    </SetupStepForm>
   );
 }

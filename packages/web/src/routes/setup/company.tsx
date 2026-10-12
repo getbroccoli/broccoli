@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { SetupLayout } from "@/features/setup";
+import { CompanyStepForm, SetupLayout } from "@/features/setup";
 import { t } from "@/i18n";
 
 /** The owner names the company; outside the app shell until setup is done. */
@@ -18,6 +18,8 @@ export const Route = createFileRoute("/setup/company")({
       step="company"
       title={t("setup.company.title")}
       description={t("setup.company.description")}
-    />
+    >
+      <CompanyStepForm />
+    </SetupLayout>
   ),
 });

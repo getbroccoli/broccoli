@@ -1,0 +1,27 @@
+query CompanyStep {
+  company {
+    id
+    name
+    suggestedName
+    logoUrl
+  }
+}
+
+mutation UpdateCompany($input: CompanyInput!) {
+  company {
+    update(input: $input) {
+      id
+      name
+      logoUrl
+    }
+  }
+}
+
+mutation RemoveCompanyLogo {
+  company {
+    removeLogo {
+      id
+      logoUrl
+    }
+  }
+}
