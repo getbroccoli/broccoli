@@ -15,6 +15,12 @@ export const en = {
   "auth.login.invalidCredentials": "The email or password is incorrect.",
   "auth.login.tooManyAttempts": "Too many attempts. Try again in a moment.",
   "auth.login.failed": "Couldn’t sign in. Try again.",
+  "auth.managed.google": "Continue with Google",
+  "auth.managed.email": "Sign in with email",
+  "auth.managed.hint": "Use the account you used to create this workspace.",
+  "auth.managed.signInRequired":
+    "We couldn’t sign you in. Try again with the account for this workspace.",
+  "auth.managed.signInUnavailable": "Sign-in is temporarily unavailable. Try again shortly.",
   "auth.signedInAs": "Signed in as {email}",
   "auth.signOut": "Sign out",
   "setup.workspaceName": "Your workspace",

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { SetupStep } from "../domain";
+import type { ManagedAssignment, SetupStep } from "../domain";
 import { instance } from "./instanceTable";
 
 export type InstanceRepository = ReturnType<typeof instanceRepository>;
@@ -47,6 +47,36 @@ export function instanceRepository(db: Orm | Tx) {
       return row.ownerUserId;
     },
 
+    /** Null before a managed instance's init, and always on self-hosted instances. */
+    readAssignment: async (): Promise<ManagedAssignment | null> => {
+      const [row] = await orm().select(assignmentColumns).from(instance);
+      return row ? toAssignment(row) : null;
+    },
+
+    /** Locks the row until the transaction ends, so concurrent inits run one after another. */
+    lockAssignment: async (): Promise<{
+      ownerUserId: string | null;
+      assignment: ManagedAssignment | null;
+    }> => {
+      const [row] = await orm().select(assignmentColumns).from(instance).for("update");
+      if (!row) {
+        throw new Error("The instance row is missing; migrations insert it");
+      }
+      return { ownerUserId: row.ownerUserId, assignment: toAssignment(row) };
+    },
+
+    setAssignment: async ({
+      companyId,
+      publicOrigin,
+      websiteOrigin,
+    }: ManagedAssignment): Promise<void> => {
+      await orm().update(instance).set({
+        managedCompanyId: companyId,
+        managedPublicOrigin: publicOrigin,
+        managedWebsiteOrigin: websiteOrigin,
+      });
+    },
+
     setOwner: async (userId: string, step: SetupStep): Promise<void> => {
       await orm().update(instance).set({ ownerUserId: userId, setupStep: step });
     },
@@ -56,4 +86,26 @@ export function instanceRepository(db: Orm | Tx) {
       await orm().update(instance).set({ setupStep: to }).where(eq(instance.setupStep, from));
     },
   };
+}
+
+const assignmentColumns = {
+  ownerUserId: instance.ownerUserId,
+  companyId: instance.managedCompanyId,
+  publicOrigin: instance.managedPublicOrigin,
+  websiteOrigin: instance.managedWebsiteOrigin,
+};
+
+function toAssignment({
+  companyId,
+  publicOrigin,
+  websiteOrigin,
+}: {
+  companyId: string | null;
+  publicOrigin: string | null;
+  websiteOrigin: string | null;
+}): ManagedAssignment | null {
+  // A check constraint keeps the three columns all null or all set.
+  return companyId && publicOrigin && websiteOrigin
+    ? { companyId, publicOrigin, websiteOrigin }
+    : null;
 }

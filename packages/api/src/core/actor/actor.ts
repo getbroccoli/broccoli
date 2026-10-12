@@ -4,7 +4,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import { ApplicationError } from "../applicationError";
 import type { Orm } from "../db";
 import { readOwnerUserId } from "../instance";
-import type { Auth } from "../auth";
+import type { AuthSource } from "../auth";
 
 /** Who is calling the API: all a use case needs to decide what is allowed. */
 export interface Actor {
@@ -32,10 +32,15 @@ export interface RequestActor {
  * cookie would expire before the session does.
  */
 export async function resolveActor(
-  auth: Auth,
+  authSource: AuthSource,
   orm: Orm,
   requestHeaders: IncomingHttpHeaders,
 ): Promise<RequestActor> {
+  const auth = await authSource.current();
+  // A managed instance waiting for init has no auth, so nobody is signed in.
+  if (!auth) {
+    return { actor: null, renewedCookies: [] };
+  }
   // Better Auth answers a request without a session cookie without a query.
   const { headers, response: session } = await auth.api.getSession({
     headers: fromNodeHeaders(requestHeaders),

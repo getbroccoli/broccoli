@@ -26,8 +26,17 @@ enum SetupStep {
   DONE
 }
 
+"How people sign in to this instance."
+enum SignIn {
+  "Email and password; the first visitor creates the owner."
+  PASSWORD
+  "Through the Broccoli accounts service, with Google or email."
+  MANAGED
+}
+
 type Setup {
   "Always `instance`: one instance, so the client caches one object."
   id: ID!
   step: SetupStep!
+  signIn: SignIn!
 }

@@ -1,8 +1,16 @@
 import { expect, it } from "vitest";
 
-import { toLocalPath } from "./loginSearch";
+import { loginSearch, toLocalPath } from "./loginSearch";
 
 const origin = "http://localhost:5173";
+
+it.each(["sign_in_required", "sign_in_unavailable"])("keeps the %s error", (error) => {
+  expect(loginSearch.parse({ error }).error).toBe(error);
+});
+
+it("drops an unknown error", () => {
+  expect(loginSearch.parse({ error: "<script>" }).error).toBeUndefined();
+});
 
 it("keeps a local path with its query and hash", () => {
   expect(toLocalPath("/people?q=ann#x", origin)).toBe("/people?q=ann#x");

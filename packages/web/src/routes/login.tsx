@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { LoginForm, loginSearch } from "@/features/auth";
+import { loginSearch, SignIn } from "@/features/auth";
 import { t } from "@/i18n";
 import { AuthCard } from "@/shell";
 
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/login")({
   },
   component: () => (
     <AuthCard title={t("auth.login.title")} description={t("auth.login.description")}>
-      <LoginForm />
+      <SignIn />
     </AuthCard>
   ),
 });

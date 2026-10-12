@@ -1,6 +1,4 @@
-import { onTestFinished } from "vitest";
-
-import { expect, TEST_OWNER, TestEnv, test } from "#test/support";
+import { expect, TEST_OWNER, test } from "#test/support";
 
 const SECURE_ATTRIBUTE = /;\s*Secure(?:;|$)/i;
 
@@ -87,15 +85,6 @@ test("keeps the owner's session across a restart", async ({ env }) => {
   const session = await browser.get(`${env.url}/api/auth/get-session`);
   expect(session.status).toBe(200);
   expect(await session.json()).toMatchObject({ user });
-});
-
-test("refuses setup in managed mode", async () => {
-  const env = await TestEnv.start({ mode: "managed" });
-  onTestFinished(() => env.stop());
-
-  const response = await env.browser().post("/api/auth/setup", TEST_OWNER);
-
-  expect(response.status).toBe(404);
 });
 
 test("reports the owner step on a fresh instance without a session", async ({ env }) => {

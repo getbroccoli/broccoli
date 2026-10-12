@@ -4,18 +4,18 @@ import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { toNodeHandler } from "better-auth/node";
 import express from "express";
 
 import { resolveActor } from "./actor";
-import { createAuth } from "./auth";
+import { authHandler } from "./auth";
 import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
 import { createEventBus } from "./events";
 import { type ActorResolver, startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
-import { setupPlugin } from "./instance";
+import { selfHostedAuth } from "./instance";
 import type { Logger } from "./logger";
+import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
 import { Readiness } from "./readiness";
 import { readOrCreateSecret } from "./secrets";
@@ -23,10 +23,7 @@ import { readOrCreateSecret } from "./secrets";
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
 
-export type ServerEnv = Pick<
-  Env,
-  "databaseUrl" | "port" | "webDir" | "mode" | "dataDir" | "publicUrl"
->;
+export type ServerEnv = Pick<Env, "databaseUrl" | "port" | "webDir" | "deployment" | "dataDir">;
 
 export interface RunningServer {
   url: string;
@@ -51,15 +48,15 @@ export async function startServer(
   const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
   const database = connectDatabase(env.databaseUrl, logger);
   const eventBus = createEventBus(logger);
-  const auth = createAuth({
-    orm: database.orm,
-    secret: authSecret,
-    publicUrl: env.publicUrl,
-    plugins: env.mode === "self_hosted" ? [setupPlugin(database.orm, eventBus)] : [],
-    logger,
-  });
-  const resolveActorOf: ActorResolver = (headers) => resolveActor(auth, database.orm, headers);
   const readiness = new Readiness(() => database.checkConnection());
+  const services = { orm: database.orm, eventBus, secret: authSecret, logger };
+  // Self-hosted instances add only their auth; managed ones also init routes and status.
+  const deploymentParts: Pick<ManagedServer, "auth"> & Partial<ManagedServer> =
+    env.deployment.mode === "managed"
+      ? managedServer({ ...services, deployment: env.deployment, readiness })
+      : { auth: selfHostedAuth({ ...services, publicUrl: env.deployment.publicUrl }) };
+  const resolveActorOf: ActorResolver = (headers) =>
+    resolveActor(deploymentParts.auth, database.orm, headers);
 
   const app = express();
   app.disable("x-powered-by");
@@ -73,26 +70,27 @@ export async function startServer(
     await database.close();
     throw error;
   }
-  app.use(healthRouter(readiness));
-  // Better Auth reads the raw body, so no body parser may run before it.
-  app.all("/api/auth/{*path}", toNodeHandler(auth));
-  app.use(graphql.router);
-  for (const module of modules) {
-    if (module.events) {
-      eventBus.subscribe(module.events);
-    }
-    if (module.router) {
-      app.use("/api", module.router(resolveActorOf));
-    }
-  }
-  if (webApp) {
-    app.use(webApp);
-  }
   try {
+    app.use(healthRouter(readiness, deploymentParts.initStatus));
+    if (deploymentParts.router) {
+      app.use(deploymentParts.router);
+    }
+    app.all("/api/auth/{*path}", authHandler(deploymentParts.auth));
+    app.use(graphql.router);
+    for (const module of modules) {
+      if (module.events) {
+        eventBus.subscribe(module.events);
+      }
+      if (module.router) {
+        app.use("/api", module.router(resolveActorOf));
+      }
+    }
+    if (webApp) {
+      app.use(webApp);
+    }
     await listen(httpServer, env.port);
   } catch (error) {
-    await graphql.stop();
-    await database.close();
+    await closeAfterFailedStart(graphql, database);
     throw error;
   }
 
@@ -113,6 +111,15 @@ export async function startServer(
       return stopping;
     },
   };
+}
+
+/** Stops what startup opened; the pool closes even when Apollo fails to stop. */
+async function closeAfterFailedStart(graphql: GraphqlApi, database: Database): Promise<void> {
+  try {
+    await graphql.stop();
+  } finally {
+    await database.close();
+  }
 }
 
 async function migrate(

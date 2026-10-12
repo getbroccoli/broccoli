@@ -3,8 +3,8 @@ import { instanceRepository } from "../db";
 import { OwnerExistsError } from "../domain";
 
 /** The owner's user id, or null before setup. */
-export function readOwnerUserId(orm: Orm): Promise<string | null> {
-  return instanceRepository(orm).readOwnerUserId();
+export function readOwnerUserId(db: Orm | Tx): Promise<string | null> {
+  return instanceRepository(db).readOwnerUserId();
 }
 
 export async function hasOwner(orm: Orm): Promise<boolean> {

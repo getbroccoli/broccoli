@@ -1,3 +1,3 @@
 export { signOut } from "./authApi";
-export { LoginForm } from "./LoginForm";
+export { SignIn } from "./SignIn";
 export { loginSearch, type LoginSearch } from "./loginSearch";

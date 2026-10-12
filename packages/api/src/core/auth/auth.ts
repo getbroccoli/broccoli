@@ -1,5 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { betterAuth, type BetterAuthPlugin } from "better-auth";
+import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 
 import type { Orm, OrmTransaction } from "../db";
 import type { Logger } from "../logger";
@@ -14,13 +14,22 @@ export interface AuthConfig {
   /** Unset takes the address from each request. */
   publicUrl?: string;
   plugins: BetterAuthPlugin[];
+  /** Origins Better Auth trusts besides its own; may depend on the request. */
+  trustedOrigins?: BetterAuthOptions["trustedOrigins"];
   logger: Logger;
 }
 
 export type Auth = ReturnType<typeof createAuth>;
 
 /** Better Auth with email and password sign-in; nobody can sign up. */
-export function createAuth({ orm, secret, publicUrl, plugins, logger }: AuthConfig) {
+export function createAuth({
+  orm,
+  secret,
+  publicUrl,
+  plugins,
+  trustedOrigins,
+  logger,
+}: AuthConfig) {
   return betterAuth({
     database: authDatabase(orm),
     secret,
@@ -33,12 +42,13 @@ export function createAuth({ orm, secret, publicUrl, plugins, logger }: AuthConf
       maxPasswordLength: PASSWORD_LENGTH.max,
     },
     plugins,
+    trustedOrigins,
     telemetry: { enabled: false },
     advanced: {
       // Better Auth skips its origin check under test runners; keep it on so tests see production behaviour.
       disableOriginCheck: false,
       // Without a public URL the protocol is unknown, and a Secure cookie would be
-      // dropped by browsers on plain HTTP; HTTPS installs set an https PUBLIC_URL.
+      // dropped by browsers on plain HTTP; HTTPS installs use an https public URL.
       useSecureCookies: publicUrl !== undefined && new URL(publicUrl).protocol === "https:",
     },
     logger: {

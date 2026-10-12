@@ -29,7 +29,7 @@ services:
       BROCCOLI_MODE: ${BROCCOLI_MODE:-}
       # In the checkout, so the host user owns it.
       DATA_DIR: /repo/.data
-      PUBLIC_URL: ""
+      SELF_HOSTED_PUBLIC_URL: ""
       BRAND_LOOKUP_URL: ${BRAND_LOOKUP_URL:-}
     depends_on:
       postgres:
