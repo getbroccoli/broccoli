@@ -2,7 +2,11 @@ import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
   dialect: "postgresql",
-  // Module tables stay inside their module; drizzle-kit finds them by file name.
-  schema: ["./src/core/db/schema.ts", "./src/modules/*/db/*Table.ts"],
+  // Tables stay inside the folder that owns them; drizzle-kit finds them by file name.
+  schema: [
+    "./src/core/auth/schema.ts",
+    "./src/core/*/db/*Table.ts",
+    "./src/modules/*/db/*Table.ts",
+  ],
   out: "./drizzle",
 });

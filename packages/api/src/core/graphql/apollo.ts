@@ -10,11 +10,11 @@ import { GraphQLError } from "graphql";
 
 import { requireSignedIn, type RequestActor, type UserActor } from "../actor";
 import type { Logger } from "../logger";
-import type { ModuleManifest } from "../moduleManifest";
 import { depthLimit } from "./depthLimit";
 import { errorLoggingPlugin } from "./errorLogging";
 import { formatError } from "./errors";
 import { requireSessionOutsidePublicFields } from "./publicFields";
+import type { Resolvers } from "./resolvers.gen";
 import { DateScalar, DateTimeScalar } from "./scalars";
 import { readSdl } from "./sdl";
 import { singleMutationField } from "./singleMutationField";
@@ -49,9 +49,9 @@ export interface GraphqlApi {
   stop(): Promise<void>;
 }
 
-/** Builds the schema from the module manifests and starts Apollo Server. */
+/** Builds the schema from the modules' SDL and resolvers and starts Apollo Server. */
 export async function startGraphqlApi(
-  manifests: readonly ModuleManifest[],
+  manifests: readonly { typeDefs: string; resolvers: Resolvers }[],
   httpServer: Server,
   logger: Logger,
   resolveActor: ActorResolver,
