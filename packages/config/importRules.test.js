@@ -34,6 +34,17 @@ test("rejects an existing target that is not an element", () => {
   );
 });
 
+test("rejects a single-file element inside a folder element", () => {
+  const packageDir = packageWith(["src/billing"], {
+    elements: { "src/billing": [], "src/billing/report": [] },
+  });
+  writeFileSync(join(packageDir, "src/billing/report.ts"), "export const report = true;");
+
+  expect(() => importRulesConfig(packageDir)).toThrow(
+    new Error('importRules.json: "src/billing/report" is a file inside element "src/billing"'),
+  );
+});
+
 test("rejects a layer that lists an unknown layer", () => {
   const packageDir = packageWith(["src/billing/app"], {
     elements: { "src/billing": [] },
@@ -97,6 +108,24 @@ test("rejects a type-only import of an undeclared element", async () => {
   const errors = await lintErrors(
     "src/modules/payroll/index.ts",
     'import type { billing } from "../billing";',
+  );
+
+  expect(errors).not.toEqual([]);
+});
+
+test("rejects a TypeScript import type of an undeclared element", async () => {
+  const errors = await lintErrors(
+    "src/modules/payroll/index.ts",
+    'type X = typeof import("../billing");',
+  );
+
+  expect(errors).not.toEqual([]);
+});
+
+test("rejects a JavaScript re-export of an undeclared element", async () => {
+  const errors = await lintErrors(
+    "src/modules/payroll/x.js",
+    'export { billing } from "../billing";',
   );
 
   expect(errors).not.toEqual([]);
@@ -174,10 +203,46 @@ test("allows a test to import shared test support", async () => {
   expect(errors).toEqual([]);
 });
 
+test("allows a layer's test to use its element's test-only imports", async () => {
+  const errors = await lintErrors(
+    "src/modules/payroll/domain/x.test.ts",
+    'import { billing } from "../../billing";',
+  );
+
+  expect(errors).toEqual([]);
+});
+
 test("rejects production code importing shared test support", async () => {
   const errors = await lintErrors(
     "src/modules/billing/app/index.ts",
     'import { support } from "#test/support";',
+  );
+
+  expect(errors).not.toEqual([]);
+});
+
+test("rejects production code importing a test in the same folder element", async () => {
+  const packageDir = packageWith(["src/core/db"], { elements: { "src/core/db": [] } });
+  writeFileSync(join(packageDir, "tsconfig.json"), JSON.stringify({ include: ["src"] }));
+  writeFileSync(join(packageDir, "src/core/db/x.test.ts"), "export const value = true;");
+
+  const errors = await lintErrors("src/core/db/index.ts", 'import "./x.test";', packageDir);
+
+  expect(errors).not.toEqual([]);
+});
+
+test("rejects production code importing a single-file element's test", async () => {
+  const packageDir = packageWith(["src/modules/billing", "src/core"], {
+    elements: { "src/modules/billing": ["src/core/logger"], "src/core/logger": [] },
+  });
+  writeFileSync(join(packageDir, "tsconfig.json"), JSON.stringify({ include: ["src"] }));
+  writeFileSync(join(packageDir, "src/core/logger.ts"), "export const logger = true;");
+  writeFileSync(join(packageDir, "src/core/logger.test.ts"), "export const value = true;");
+
+  const errors = await lintErrors(
+    "src/modules/billing/index.ts",
+    'import "../../core/logger.test";',
+    packageDir,
   );
 
   expect(errors).not.toEqual([]);
@@ -189,14 +254,23 @@ test("rejects a file that belongs to no element", async () => {
   expect(errors).not.toEqual([]);
 });
 
+test("rejects a test file that belongs to no element", async () => {
+  const errors = await lintErrors("src/unlisted/x.test.ts", "export const value = true;");
+
+  expect(errors).not.toEqual([]);
+});
+
 test("rejects a wildcard re-export", async () => {
   const errors = await lintErrors("src/modules/billing/index.ts", 'export * from "../payroll";');
 
   expect(errors).not.toEqual([]);
 });
 
-async function lintErrors(file, code) {
-  const fixtureDir = fileURLToPath(new URL("./test/importRulesFixture/", import.meta.url));
+async function lintErrors(
+  file,
+  code,
+  fixtureDir = fileURLToPath(new URL("./test/importRulesFixture/", import.meta.url)),
+) {
   const eslint = new ESLint({
     cwd: fixtureDir,
     overrideConfigFile: true,

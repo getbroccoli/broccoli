@@ -21,7 +21,7 @@ export function importRulesConfig(packageDir) {
   const files = [...elements].filter(([, { isFile }]) => isFile).map(([path]) => path);
   return [
     {
-      files: ["src/**/*.{ts,tsx}", "test/**/*.ts"],
+      files: ["{src,test}/**/*.{js,ts,tsx}"],
       plugins: { boundaries },
       settings: {
         "boundaries/root-path": packageDir,
@@ -31,18 +31,27 @@ export function importRulesConfig(packageDir) {
           .map((path) => ({ type: path, pattern: path, partialMatch: false })),
         // A single-file element is a file category, which also covers the file's own tests.
         "boundaries/files": [
-          { category: TEST, pattern: `**/*.test.{${SOURCE_EXTENSIONS}}` },
+          { category: TEST, pattern: testPatterns(folders, files) },
           ...files.map((path) => ({
             category: path,
             pattern: singleFilePatterns(packageDir, path),
           })),
+        ],
+        // `import("…")` in a type is a dependency too.
+        "boundaries/additional-dependency-nodes": [
+          { selector: "TSImportType > Literal.source", kind: "type", name: "import-type" },
         ],
         "import/resolver": { typescript: { project: join(packageDir, "tsconfig.json") } },
       },
       rules: {
         "boundaries/dependencies": [
           "error",
-          { default: "disallow", policies: dependencyPolicies(elements, rules) },
+          {
+            default: "disallow",
+            // Imports inside an element are checked too, so none of them reaches a test.
+            checkInternals: true,
+            policies: dependencyPolicies(elements, rules),
+          },
         ],
         "boundaries/no-unknown-dependencies": "error",
         "boundaries/no-unknown-files": "error",
@@ -73,6 +82,12 @@ function validateRules({ elements, layers, deepImports, testsMayImport }, packag
     requireExisting(packageDir, path);
     requireElements(path, targets);
   }
+  // The plugin cannot take a file away from the folder element around it.
+  for (const path of Object.keys(elements)) {
+    if (isFolderOnDisk(join(packageDir, path))) continue;
+    const folder = Object.keys(elements).find((other) => path.startsWith(`${other}/`));
+    if (folder) fail(`"${path}" is a file inside element "${folder}"`);
+  }
   for (const [layer, siblings] of Object.entries(layers)) {
     for (const sibling of siblings) {
       if (!Object.hasOwn(layers, sibling)) {
@@ -89,8 +104,8 @@ function validateRules({ elements, layers, deepImports, testsMayImport }, packag
 
 /**
  * Returns every element with what it may import. A layer folder inside an element becomes an
- * element of its own (`src/modules/company/app`).
- * @returns {Map<string, { isFile: boolean, allowed: string[] }>}
+ * element of its own (`src/modules/company/app`), owned by that element.
+ * @returns {Map<string, { owner: string, isFile: boolean, allowed: string[] }>}
  */
 function expandElements({ elements, layers }, packageDir) {
   const expanded = new Map();
@@ -100,12 +115,14 @@ function expandElements({ elements, layers }, packageDir) {
       ? []
       : Object.keys(layers).filter((layer) => isFolderOnDisk(join(packageDir, path, layer)));
     expanded.set(path, {
+      owner: path,
       isFile,
       allowed: [...targets, ...ownLayers.map((layer) => `${path}/${layer}`)],
     });
     for (const layer of ownLayers) {
       const siblings = layers[layer].filter((sibling) => ownLayers.includes(sibling));
       expanded.set(`${path}/${layer}`, {
+        owner: path,
         isFile: false,
         allowed: [...siblings.map((sibling) => `${path}/${sibling}`), ...targets],
       });
@@ -116,7 +133,7 @@ function expandElements({ elements, layers }, packageDir) {
 
 /**
  * One policy per element and one for its tests. The plugin applies the last matching policy, so
- * the general allowances come first.
+ * the general allowances come first and the ban on importing tests comes last.
  */
 function dependencyPolicies(elements, { deepImports, testsMayImport }) {
   const isFile = (path) => elements.get(path).isFile;
@@ -130,16 +147,16 @@ function dependencyPolicies(elements, { deepImports, testsMayImport }) {
     isFile(path) || deepImports.includes(path)
       ? source(path)
       : { element: { type: path, fileInternalPath: `index.{${SOURCE_EXTENSIONS}}` } };
-  const testTargets = (path) => [
+  const testTargets = (path, owner) => [
     ...(isFile(path) ? [path] : []),
     ...(testsMayImport[ALL_TESTS] ?? []),
-    ...(testsMayImport[path] ?? []),
+    ...(testsMayImport[owner] ?? []),
   ];
 
   const elementPolicies = [...elements]
-    .flatMap(([path, { allowed }]) => [
+    .flatMap(([path, { owner, allowed }]) => [
       { from: source(path), targets: allowed },
-      { from: testSource(path), targets: [...allowed, ...testTargets(path)] },
+      { from: testSource(path), targets: [...allowed, ...testTargets(path, owner)] },
     ])
     // The plugin rejects a policy that allows nothing.
     .filter(({ targets }) => targets.length > 0)
@@ -147,14 +164,22 @@ function dependencyPolicies(elements, { deepImports, testsMayImport }) {
 
   return [
     { allow: { dependency: { relationship: { to: "internal" } } } },
-    { allow: { to: { module: { origin: ["external", "core"] } } } },
     ...elementPolicies,
+    { disallow: { to: { file: { categories: TEST } } } },
   ];
 }
 
 function readRules(packageDir) {
   const rules = JSON.parse(readFileSync(join(packageDir, RULES_FILE), "utf8"));
   return { elements: {}, layers: {}, deepImports: [], testsMayImport: {}, ...rules };
+}
+
+/** Tests inside a folder element or next to a single-file element; any other test is unknown. */
+function testPatterns(folders, files) {
+  return [
+    ...folders.map((path) => `${path}/**/*.test.{${SOURCE_EXTENSIONS}}`),
+    ...files.map((path) => `${path}.*test.{${SOURCE_EXTENSIONS}}`),
+  ];
 }
 
 /** A source file also covers its tests (`logger.test.ts`); another file stands for itself. */

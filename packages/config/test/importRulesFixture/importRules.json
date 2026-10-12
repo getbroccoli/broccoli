@@ -20,5 +20,8 @@
     "app": ["db", "domain"]
   },
   "deepImports": ["src/components/ui"],
-  "testsMayImport": { "*": ["test/support"] }
+  "testsMayImport": {
+    "*": ["test/support"],
+    "src/modules/payroll": ["src/modules/billing"]
+  }
 }
