@@ -9,3 +9,4 @@ supportedArchitectures:
 allowBuilds:
   "@apollo/protobufjs": false
   esbuild: false
+  unrs-resolver: false
