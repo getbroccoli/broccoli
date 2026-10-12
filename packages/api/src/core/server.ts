@@ -25,7 +25,7 @@ const MIGRATION_RETRY_MS = 1_000;
 
 export type ServerEnv = Pick<
   Env,
-  "databaseUrl" | "port" | "webDir" | "mode" | "dataDir" | "publicUrl"
+  "databaseUrl" | "port" | "webDir" | "mode" | "dataDir" | "publicUrl" | "managed"
 >;
 
 export interface RunningServer {

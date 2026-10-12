@@ -9,7 +9,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-}
       BROCCOLI_MODE: ${BROCCOLI_MODE:-}
       # Set it when Broccoli has a domain; unset trusts the address each request uses.
-      PUBLIC_URL: ${PUBLIC_URL:-}
+      SELF_HOSTED_PUBLIC_URL: ${SELF_HOSTED_PUBLIC_URL:-}
       BRAND_LOOKUP_URL: ${BRAND_LOOKUP_URL:-}
     volumes:
       # Secrets such as the session signing key; back it up with the database.
