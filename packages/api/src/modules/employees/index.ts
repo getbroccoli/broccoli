@@ -1,5 +1,5 @@
 import { readSdl } from "../../core/graphql";
-import type { ModuleDependencies, ModuleManifest } from "../../core/module-manifest";
+import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { createEmployeeUseCases } from "./app";
 import { createResolvers } from "./graphql";
 

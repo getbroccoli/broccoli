@@ -1,2 +1,2 @@
 export { SetupLayout } from "./SetupLayout";
-export type { SetupStepId } from "./setup-steps";
+export type { SetupStepId } from "./setupSteps";

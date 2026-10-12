@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 
 import { NewPasswordField } from "./NewPasswordField";
-import { setUpOwner, type SetupResult } from "./setup-api";
+import { setUpOwner, type SetupResult } from "./setupApi";
 import { SetupStepForm } from "./SetupStepForm";
 
 // The API's password policy.

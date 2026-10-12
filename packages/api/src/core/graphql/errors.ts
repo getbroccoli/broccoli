@@ -1,6 +1,6 @@
 import { GraphQLError, type GraphQLFormattedError } from "graphql";
 
-import { ApplicationError } from "../application-error";
+import { ApplicationError } from "../applicationError";
 
 /**
  * True for errors raised before execution: parse, validation and bad input. They

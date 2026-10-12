@@ -16,7 +16,7 @@ import { type ActorResolver, startGraphqlApi, type GraphqlApi } from "./graphql"
 import { healthRouter } from "./health";
 import { setupPlugin } from "./instance";
 import type { Logger } from "./logger";
-import type { ModuleDependencies, ModuleManifest } from "./module-manifest";
+import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
 import { Readiness } from "./readiness";
 import { readOrCreateSecret } from "./secrets";
 

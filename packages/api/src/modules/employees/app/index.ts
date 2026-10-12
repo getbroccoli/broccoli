@@ -1,1 +1,1 @@
-export { createEmployeeUseCases, type EmployeeUseCases } from "./use-cases";
+export { createEmployeeUseCases, type EmployeeUseCases } from "./useCases";

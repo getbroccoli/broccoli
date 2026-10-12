@@ -1,7 +1,7 @@
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import type { StepView } from "./setup-steps";
+import type { StepView } from "./setupSteps";
 import { StepIcon } from "./StepIcon";
 
 export /** The steps as a list with their state, on wide screens. */

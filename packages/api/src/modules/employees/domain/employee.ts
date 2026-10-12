@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { invalidInput, type FieldError } from "../../../core/application-error";
+import { invalidInput, type FieldError } from "../../../core/applicationError";
 import { type CalendarDate, parseCalendarDate } from "../../../utils";
 
 const NAME_MAX_LENGTH = 100;

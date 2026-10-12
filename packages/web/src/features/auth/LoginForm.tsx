@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 
-import { signIn, type SignInResult } from "./auth-api";
+import { signIn, type SignInResult } from "./authApi";
 
 const loginSchema = z.object({
   email: z.email(t("auth.login.emailInvalid")),

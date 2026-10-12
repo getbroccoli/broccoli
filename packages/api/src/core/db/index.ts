@@ -1,5 +1,5 @@
 export { connectDatabase, type Database, type Orm, type OrmTransaction } from "./database";
-export { MIGRATION_LOCK_KEY } from "./migration-run";
+export { MIGRATION_LOCK_KEY } from "./migrationRun";
 export {
   afterKeyset,
   keysetOrder,
@@ -9,4 +9,4 @@ export {
   type KeysetOrder,
 } from "./keyset";
 export { ormOf, runInTransaction, type Tx } from "./transaction";
-export { isUniqueViolation } from "./unique-violation";
+export { isUniqueViolation } from "./uniqueViolation";

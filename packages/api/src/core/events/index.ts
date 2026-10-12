@@ -5,4 +5,4 @@ export {
   type EventHandlers,
   type EventType,
   type DomainEvent,
-} from "./event-bus";
+} from "./eventBus";

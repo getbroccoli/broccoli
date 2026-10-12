@@ -1,2 +1,2 @@
-export { instance } from "./instance-table";
-export { instanceRepository, type InstanceRepository } from "./instance-repository";
+export { instance } from "./instanceTable";
+export { instanceRepository, type InstanceRepository } from "./instanceRepository";

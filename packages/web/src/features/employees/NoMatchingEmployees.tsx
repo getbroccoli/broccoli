@@ -1,6 +1,6 @@
 import { MagnifyingGlass } from "@phosphor-icons/react";
 
-import { TableState } from "@/components/data-table";
+import { TableState } from "@/components/dataTable";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 

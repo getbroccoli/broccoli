@@ -1,6 +1,6 @@
 import { CheckCircle, Circle } from "@phosphor-icons/react";
 
-import type { StepState } from "./setup-steps";
+import type { StepState } from "./setupSteps";
 
 /** A filled check for a done step, a ringed dot for the current one, a circle for later. */
 export function StepIcon({ state }: { state: StepState }) {

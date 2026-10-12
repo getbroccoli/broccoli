@@ -2,7 +2,7 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
 
 import type { Logger } from "../logger";
-import { MigrationRun } from "./migration-run";
+import { MigrationRun } from "./migrationRun";
 
 const CONNECTION_TIMEOUT_MS = 5_000;
 const CONNECTION_CHECK_TIMEOUT_MS = 2_000;

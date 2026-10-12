@@ -6,7 +6,7 @@ import { RemoveCompanyLogoDocument } from "@/__generated__/graphql";
 import { t, type MessageKey } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { uploadLogo, type UploadLogoResult } from "./logo-api";
+import { uploadLogo, type UploadLogoResult } from "./logoApi";
 
 // The API's limit; larger files are refused here without a request.
 const MAX_LOGO_BYTES = 5 * 1024 * 1024;
