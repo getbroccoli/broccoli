@@ -29,6 +29,17 @@ function init(env: TestEnv, token: string): Promise<Response> {
   });
 }
 
+test("rate limits init after 30 requests from the same client", async () => {
+  const { env } = await managedEnv();
+  for (let attempt = 0; attempt < 30; attempt++) {
+    expect((await init(env, "bad-token")).status).toBe(401);
+  }
+
+  const response = await init(env, "bad-token");
+
+  expect(response.status).toBe(429);
+});
+
 test("reports ready and waiting before init", async () => {
   const { env } = await managedEnv();
 

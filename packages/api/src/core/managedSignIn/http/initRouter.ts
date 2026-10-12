@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
 
 import { runInTransaction, type Orm } from "../../db";
 import type { EventBus } from "../../events";
@@ -9,6 +10,8 @@ import { InvalidAssignmentError, InvalidTokenError, parseInitClaims } from "../d
 import { verifyToken, type TokenCheck } from "../jwt";
 
 const MAX_TOKEN_LENGTH = 8192;
+/** Orchestration sends one init and a few retries; the endpoint is reachable from the internet. */
+const INIT_ATTEMPTS_PER_MINUTE = 30;
 
 export interface InitRouterOptions {
   orm: Orm;
@@ -31,7 +34,8 @@ export function initRouter({
   auth,
 }: InitRouterOptions): Router {
   const router = Router();
-  router.post("/api/init", async (request, response) => {
+  const limit = rateLimit({ windowMs: 60_000, limit: INIT_ATTEMPTS_PER_MINUTE });
+  router.post("/api/init", limit, async (request, response) => {
     response.set("Cache-Control", "no-store");
     if ((await readiness.check()) !== "ready") {
       response.status(503).json({ error: "starting" });
