@@ -11,7 +11,7 @@ import { createRemoteJWKSet } from "jose";
 import { resolveActor } from "./actor";
 import { createAuth } from "./auth";
 import { connectDatabase, type Database } from "./db";
-import type { Env, ManagedEnv } from "./env";
+import type { Deployment, Env, ManagedDeployment } from "./env";
 import { createEventBus, type EventBus } from "./events";
 import { type ActorResolver, startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
@@ -33,10 +33,7 @@ import { readOrCreateSecret } from "./secrets";
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
 
-export type ServerEnv = Pick<
-  Env,
-  "databaseUrl" | "port" | "webDir" | "mode" | "dataDir" | "publicUrl" | "managed"
->;
+export type ServerEnv = Pick<Env, "databaseUrl" | "port" | "webDir" | "deployment" | "dataDir">;
 
 export interface RunningServer {
   url: string;
@@ -62,10 +59,7 @@ export async function startServer(
   const database = connectDatabase(env.databaseUrl, logger);
   const eventBus = createEventBus(logger);
   const authServices = { orm: database.orm, eventBus, secret: authSecret, logger };
-  const issuer = env.managed && accountsIssuer(env.managed);
-  const auth = issuer
-    ? managedAuthSource(authServices, issuer)
-    : selfHostedAuthSource(authServices, env.publicUrl);
+  const { auth, issuer } = authFor(env.deployment, authServices);
   const resolveActorOf: ActorResolver = async (headers) => {
     const current = await auth.current();
     return current
@@ -152,7 +146,19 @@ interface AccountsIssuer {
   keys: ReturnType<typeof createRemoteJWKSet>;
 }
 
-function accountsIssuer({ instanceId, accountsOrigin }: ManagedEnv): AccountsIssuer {
+/** Better Auth for this deployment, and for a managed one who signs its tokens. */
+function authFor(
+  deployment: Deployment,
+  services: AuthServices,
+): { auth: AuthSource; issuer: AccountsIssuer | null } {
+  if (deployment.mode === "self_hosted") {
+    return { auth: selfHostedAuthSource(services, deployment.publicUrl), issuer: null };
+  }
+  const issuer = accountsIssuer(deployment);
+  return { auth: managedAuthSource(services, issuer), issuer };
+}
+
+function accountsIssuer({ instanceId, accountsOrigin }: ManagedDeployment): AccountsIssuer {
   return {
     instanceId,
     issuer: accountsOrigin,

@@ -5,12 +5,12 @@ import { DEFAULT_ACCOUNTS_URL, loadEnv } from "./env";
 const DATABASE = { DATABASE_URL: "postgres://broccoli@localhost/broccoli" };
 
 it("needs no settings when self-hosted", () => {
-  expect(loadEnv(DATABASE)).toMatchObject({ mode: "self_hosted", managed: null });
+  expect(loadEnv(DATABASE).deployment).toEqual({ mode: "self_hosted" });
 });
 
 it("reads the self-hosted public URL", () => {
   const env = loadEnv({ ...DATABASE, SELF_HOSTED_PUBLIC_URL: "https://hr.example.com" });
-  expect(env.publicUrl).toBe("https://hr.example.com");
+  expect(env.deployment).toEqual({ mode: "self_hosted", publicUrl: "https://hr.example.com" });
 });
 
 it.each([
@@ -28,7 +28,7 @@ it("uses the configured accounts origin", () => {
     MANAGED_ACCOUNTS_URL: "https://accounts.example.com/",
   });
 
-  expect(env.managed?.accountsOrigin).toBe("https://accounts.example.com");
+  expect(env.deployment).toMatchObject({ accountsOrigin: "https://accounts.example.com" });
 });
 
 it("requires the instance id when managed", () => {
@@ -37,7 +37,11 @@ it("requires the instance id when managed", () => {
 
 it("defaults the accounts origin when managed", () => {
   const env = loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed", MANAGED_INSTANCE_ID: "slot-1" });
-  expect(env.managed).toEqual({ instanceId: "slot-1", accountsOrigin: DEFAULT_ACCOUNTS_URL });
+  expect(env.deployment).toEqual({
+    mode: "managed",
+    instanceId: "slot-1",
+    accountsOrigin: DEFAULT_ACCOUNTS_URL,
+  });
 });
 
 it("refuses the self-hosted public URL when managed", () => {

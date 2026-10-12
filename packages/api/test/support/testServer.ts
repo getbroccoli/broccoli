@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
+import type { Deployment } from "../../src/core/env";
 import { createLogger } from "../../src/core/logger";
 import { startServer, type RunningServer } from "../../src/core/server";
 import { createModules } from "../../src/modules";
@@ -32,21 +33,19 @@ export async function startTestServer(
 ): Promise<RunningServer> {
   const ownsDataDir = dataDir === undefined;
   const folder = dataDir ?? (await mkdtemp(join(tmpdir(), "broccoli-data-")));
-  const mode = managed ? "managed" : "self_hosted";
+  const deployment: Deployment = managed
+    ? { mode: "managed", instanceId: managed.instanceId, accountsOrigin: managed.accountsUrl }
+    : { mode: "self_hosted", publicUrl };
   const server = await startServer(
     {
       databaseUrl,
       port: 0,
       webDir,
-      mode,
-      managed: managed
-        ? { instanceId: managed.instanceId, accountsOrigin: managed.accountsUrl }
-        : null,
+      deployment,
       dataDir: folder,
-      publicUrl,
     },
     createLogger("silent"),
-    (core) => createModules(core, { mode, brandLookupUrl }),
+    (core) => createModules(core, { mode: deployment.mode, brandLookupUrl }),
   );
   return {
     url: server.url,

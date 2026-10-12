@@ -11,11 +11,21 @@ export const MODES = ["self_hosted", "managed"] as const;
 /** Self-hosted installs create their owner on first visit; managed ones through the sign-in service. */
 export type Mode = (typeof MODES)[number];
 
+/** How this installation runs; each mode carries only its own settings. */
+export type Deployment = SelfHostedDeployment | ManagedDeployment;
+
+export interface SelfHostedDeployment {
+  mode: "self_hosted";
+  /** The address browsers use; unset means it is taken from each request. */
+  publicUrl?: string;
+}
+
 /** The public accounts service; dev and tests point `MANAGED_ACCOUNTS_URL` elsewhere. */
 export const DEFAULT_ACCOUNTS_URL = "https://accounts.getbroccoli.com";
 
 /** Boot settings of a managed instance: the trust anchor for its signed init. */
-export interface ManagedEnv {
+export interface ManagedDeployment {
+  mode: "managed";
   /** The pool slot; init tokens are addressed to `instance:<instanceId>`. */
   instanceId: string;
   /** Issuer of init tokens and sign-in tickets; its keys are at `/.well-known/jwks.json`. */
@@ -28,13 +38,9 @@ export interface Env {
   logLevel: LogLevel;
   /** Folder of the built web app to serve; unset serves only the API. */
   webDir?: string;
-  mode: Mode;
+  deployment: Deployment;
   /** Folder for files that must survive restarts, such as `secrets/`. */
   dataDir: string;
-  /** Self-hosted only: the address browsers use; unset means it is taken from each request. */
-  publicUrl?: string;
-  /** Null when self-hosted. */
-  managed: ManagedEnv | null;
   /** Service that finds the brand of an email domain; null makes no lookup. */
   brandLookupUrl: string | null;
 }
@@ -86,16 +92,15 @@ const envSchema = z
     port: variables.PORT,
     logLevel: variables.LOG_LEVEL,
     webDir: variables.WEB_DIR,
-    mode: variables.BROCCOLI_MODE,
-    dataDir: variables.DATA_DIR,
-    publicUrl: variables.SELF_HOSTED_PUBLIC_URL,
-    managed:
+    deployment:
       variables.BROCCOLI_MODE === "managed"
         ? {
+            mode: "managed",
             instanceId: variables.MANAGED_INSTANCE_ID!,
             accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
           }
-        : null,
+        : { mode: "self_hosted", publicUrl: variables.SELF_HOSTED_PUBLIC_URL },
+    dataDir: variables.DATA_DIR,
     brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
   }));
 
