@@ -3,6 +3,7 @@ name: Image
 on:
   push:
     branches: [main]
+  pull_request:
 
 permissions:
   contents: read
@@ -11,11 +12,18 @@ permissions:
 jobs:
   publish:
     name: Publish image
+    # Only branches of this repository can publish; forks get no packages token.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     # GitHub-hosted, not the shared self-hosted runner: the registry token and the built
     # image stay on a machine no other job uses, and it is discarded afterwards.
     runs-on: ubuntu-24.04
+    env:
+      # A pull request builds its head commit, not GitHub's merge commit, so the tag names a real commit.
+      COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.COMMIT }}
       - name: Log in to GitHub Container Registry
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
         env:
@@ -23,6 +31,6 @@ jobs:
       # Each commit gets its own tag, the short SHA that deployments pin.
       - name: Build and push
         run: |
-          image="ghcr.io/getbroccoli/broccoli:${GITHUB_SHA::7}"
+          image="ghcr.io/getbroccoli/broccoli:${COMMIT::7}"
           docker build --file packages/api/Dockerfile --tag "$image" .
           docker push "$image"
