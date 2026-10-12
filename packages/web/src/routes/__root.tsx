@@ -18,11 +18,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     if (!data) {
       throw new Error("The session query returned no data");
     }
-    // A new instance has no owner yet: every page waits for setup.
-    if (data.setup.step === "OWNER" && location.pathname !== "/setup") {
-      throw redirect({ to: "/setup", replace: true });
+    // A new instance has no owner yet: every page waits for setup, or for managed sign-in.
+    const ownerEntry = data.setup.signIn === "MANAGED" ? "/login" : "/setup";
+    if (data.setup.step === "OWNER" && location.pathname !== ownerEntry) {
+      throw redirect({ to: ownerEntry, replace: true });
     }
-    return { me: data.me ?? null, setupStep: data.setup.step };
+    return { me: data.me ?? null, setupStep: data.setup.step, signIn: data.setup.signIn };
   },
   component: Outlet,
   errorComponent: UnreachablePage,

@@ -7,5 +7,6 @@ query Session {
   setup {
     id
     step
+    signIn
   }
 }

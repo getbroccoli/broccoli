@@ -35,12 +35,21 @@ function isLoginPath(pathname: string): boolean {
   return pathname === "/login" || pathname.startsWith("/login/");
 }
 
-/** The search params of `/login`: where to go after signing in, always a local path. */
+/** Why a managed sign-in came back to the login page; set by the API's callback. */
+export const SIGN_IN_ERRORS = ["sign_in_required", "sign_in_unavailable"] as const;
+
+export type SignInError = (typeof SIGN_IN_ERRORS)[number];
+
+/**
+ * The search params of `/login`: where to go after signing in, always a local path, and
+ * why a managed sign-in failed, if it did.
+ */
 export const loginSearch = z.object({
   redirect: z
     .string()
     .transform((raw) => toLocalPath(raw, window.location.origin))
     .catch(DEFAULT_REDIRECT),
+  error: z.enum(SIGN_IN_ERRORS).optional().catch(undefined),
 });
 
 export type LoginSearch = z.infer<typeof loginSearch>;
