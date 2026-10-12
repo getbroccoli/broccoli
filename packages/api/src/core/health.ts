@@ -1,6 +1,13 @@
+import { setTimeout as delay } from "node:timers/promises";
+
 import { Router } from "express";
 
 import type { Readiness } from "./readiness";
+
+type InitStatus = "waiting" | "ready";
+
+/** As long as the database check may take; a slower read means the database is stuck. */
+const INIT_STATUS_TIMEOUT_MS = 2_000;
 
 /**
  * Liveness and readiness probes for orchestrators and load balancers.
@@ -14,10 +21,7 @@ import type { Readiness } from "./readiness";
  *   instances add `initStatus`: `waiting` until their signed init, then `ready`. A
  *   waiting instance is still ready, so orchestration can reach `/api/init`.
  */
-export function healthRouter(
-  readiness: Readiness,
-  initStatus?: () => Promise<"waiting" | "ready">,
-): Router {
+export function healthRouter(readiness: Readiness, initStatus?: () => Promise<InitStatus>): Router {
   const router = Router();
 
   router.get("/healthz", (_request, response) => {
@@ -30,8 +34,26 @@ export function healthRouter(
       response.status(503).json({ status });
       return;
     }
-    response.json(initStatus ? { status, initStatus: await initStatus() } : { status });
+    if (!initStatus) {
+      response.json({ status });
+      return;
+    }
+    const assignment = await readInitStatus(initStatus);
+    if (!assignment) {
+      response.status(503).json({ status: "unavailable" });
+      return;
+    }
+    response.json({ status, initStatus: assignment });
   });
 
   return router;
+}
+
+/** Null when the init status cannot be read in time, like a database that does not answer. */
+async function readInitStatus(initStatus: () => Promise<InitStatus>): Promise<InitStatus | null> {
+  try {
+    return await Promise.race([initStatus(), delay(INIT_STATUS_TIMEOUT_MS, null, { ref: false })]);
+  } catch {
+    return null;
+  }
 }

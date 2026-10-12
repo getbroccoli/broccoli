@@ -70,28 +70,27 @@ export async function startServer(
     await database.close();
     throw error;
   }
-  app.use(healthRouter(readiness, deploymentParts.initStatus));
-  if (deploymentParts.router) {
-    app.use(deploymentParts.router);
-  }
-  app.all("/api/auth/{*path}", authHandler(deploymentParts.auth));
-  app.use(graphql.router);
-  for (const module of modules) {
-    if (module.events) {
-      eventBus.subscribe(module.events);
-    }
-    if (module.router) {
-      app.use("/api", module.router(resolveActorOf));
-    }
-  }
-  if (webApp) {
-    app.use(webApp);
-  }
   try {
+    app.use(healthRouter(readiness, deploymentParts.initStatus));
+    if (deploymentParts.router) {
+      app.use(deploymentParts.router);
+    }
+    app.all("/api/auth/{*path}", authHandler(deploymentParts.auth));
+    app.use(graphql.router);
+    for (const module of modules) {
+      if (module.events) {
+        eventBus.subscribe(module.events);
+      }
+      if (module.router) {
+        app.use("/api", module.router(resolveActorOf));
+      }
+    }
+    if (webApp) {
+      app.use(webApp);
+    }
     await listen(httpServer, env.port);
   } catch (error) {
-    await graphql.stop();
-    await database.close();
+    await closeAfterFailedStart(graphql, database);
     throw error;
   }
 
@@ -112,6 +111,15 @@ export async function startServer(
       return stopping;
     },
   };
+}
+
+/** Stops what startup opened; the pool closes even when Apollo fails to stop. */
+async function closeAfterFailedStart(graphql: GraphqlApi, database: Database): Promise<void> {
+  try {
+    await graphql.stop();
+  } finally {
+    await database.close();
+  }
 }
 
 async function migrate(

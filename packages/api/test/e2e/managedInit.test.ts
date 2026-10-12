@@ -1,3 +1,4 @@
+import pg from "pg";
 import { onTestFinished } from "vitest";
 
 import {
@@ -28,6 +29,24 @@ test("reports ready and waiting before init", async () => {
   const readiness = await fetch(`${env.url}/readyz`);
   expect(readiness.status).toBe(200);
   expect(await readiness.json()).toEqual({ status: "ready", initStatus: "waiting" });
+});
+
+test("reports unavailable when reading init status is blocked", async () => {
+  const { env } = await startManagedEnv();
+  const client = new pg.Client({ connectionString: env.db.url });
+  await client.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("LOCK TABLE instance IN ACCESS EXCLUSIVE MODE");
+
+    const readiness = await fetch(`${env.url}/readyz`, { signal: AbortSignal.timeout(5_000) });
+
+    expect(readiness.status).toBe(503);
+    expect(await readiness.json()).toEqual({ status: "unavailable" });
+  } finally {
+    await client.query("ROLLBACK");
+    await client.end();
+  }
 });
 
 test("refuses GraphQL before init with a retry hint", async () => {
