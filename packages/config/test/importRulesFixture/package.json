@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "imports": {
+    "#test/support": "./test/support/index.ts"
+  }
+}

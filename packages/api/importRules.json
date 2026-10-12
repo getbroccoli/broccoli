@@ -1,0 +1,112 @@
+{
+  "elements": {
+    "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
+    "src/modules": [
+      "src/core/moduleManifest",
+      "src/modules/company",
+      "src/modules/employees",
+      "src/modules/system"
+    ],
+    "src/modules/company": [
+      "src/core/actor",
+      "src/core/applicationError",
+      "src/core/db",
+      "src/core/events",
+      "src/core/graphql",
+      "src/core/instance",
+      "src/core/logger",
+      "src/core/moduleManifest",
+      "src/integrations/brandLookup",
+      "src/utils"
+    ],
+    "src/modules/employees": [
+      "src/core/actor",
+      "src/core/applicationError",
+      "src/core/db",
+      "src/core/graphql",
+      "src/core/moduleManifest",
+      "src/core/pagination",
+      "src/utils"
+    ],
+    "src/modules/system": [
+      "src/core/db",
+      "src/core/graphql",
+      "src/core/instance",
+      "src/core/moduleManifest"
+    ],
+    "src/integrations/brandLookup": ["src/utils"],
+    "src/utils": [],
+    "src/core/server": [
+      "src/core/actor",
+      "src/core/auth",
+      "src/core/db",
+      "src/core/env",
+      "src/core/events",
+      "src/core/graphql",
+      "src/core/health",
+      "src/core/instance",
+      "src/core/logger",
+      "src/core/moduleManifest",
+      "src/core/readiness",
+      "src/core/secrets"
+    ],
+    "src/core/moduleManifest": [
+      "src/core/db",
+      "src/core/events",
+      "src/core/graphql",
+      "src/core/logger"
+    ],
+    "src/core/graphql": [
+      "src/core/actor",
+      "src/core/applicationError",
+      "src/core/logger",
+      "src/utils"
+    ],
+    "src/core/actor": [
+      "src/core/applicationError",
+      "src/core/auth",
+      "src/core/db",
+      "src/core/instance"
+    ],
+    "src/core/instance": ["src/core/auth", "src/core/db", "src/core/events"],
+    "src/core/auth": ["src/core/db", "src/core/logger"],
+    "src/core/db": ["src/core/events", "src/core/logger"],
+    "src/core/events": ["src/core/logger"],
+    "src/core/pagination": ["src/core/applicationError"],
+    "src/core/health": ["src/core/readiness"],
+    "src/core/logger": ["src/core/env"],
+    "src/core/applicationError": [],
+    "src/core/env": [],
+    "src/core/readiness": [],
+    "src/core/secrets": [],
+    "test/support": [
+      "src/core/actor",
+      "src/core/auth",
+      "src/core/db",
+      "src/core/env",
+      "src/core/events",
+      "src/core/instance",
+      "src/core/logger",
+      "src/core/server",
+      "src/integrations/brandLookup",
+      "src/modules",
+      "src/modules/company",
+      "src/modules/employees",
+      "src/utils"
+    ],
+    "test/e2e": ["src/core/server", "test/support"]
+  },
+  "layers": {
+    "domain": [],
+    "db": ["domain"],
+    "app": ["db", "domain"],
+    "graphql": ["app", "domain", "http"],
+    "http": ["app", "domain"],
+    "mcp": ["app", "domain"],
+    "betterAuth": ["app", "domain"]
+  },
+  "testsMayImport": {
+    "*": ["test/support"],
+    "src/core/db": ["src/core/instance"]
+  }
+}

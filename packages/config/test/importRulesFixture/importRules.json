@@ -1,0 +1,24 @@
+{
+  "elements": {
+    "src/main": ["src/modules"],
+    "src/modules": ["src/modules/billing", "src/modules/payroll"],
+    "src/modules/billing": [
+      "src/modules/payroll",
+      "src/core/db",
+      "src/core/logger",
+      "src/components/ui"
+    ],
+    "src/modules/payroll": ["src/core/db"],
+    "src/core/db": [],
+    "src/core/logger": [],
+    "src/components/ui": [],
+    "test/support": ["src/modules/billing"]
+  },
+  "layers": {
+    "domain": [],
+    "db": ["domain"],
+    "app": ["db", "domain"]
+  },
+  "deepImports": ["src/components/ui"],
+  "testsMayImport": { "*": ["test/support"] }
+}

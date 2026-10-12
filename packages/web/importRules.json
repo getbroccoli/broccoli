@@ -1,0 +1,53 @@
+{
+  "elements": {
+    "src/main": ["src/apollo", "src/routeTree.gen", "src/styles.css"],
+    "src/routeTree.gen": ["src/routes"],
+    "src/routes": [
+      "src/__generated__",
+      "src/features/auth",
+      "src/features/employees",
+      "src/features/setup",
+      "src/i18n",
+      "src/shell"
+    ],
+    "src/shell": ["src/components/ui", "src/features/auth", "src/i18n"],
+    "src/features/auth": [
+      "src/components/form",
+      "src/components/ui",
+      "src/i18n",
+      "src/lib/postJson"
+    ],
+    "src/features/company": [],
+    "src/features/employees": [
+      "src/__generated__",
+      "src/components/dataTable",
+      "src/components/ui",
+      "src/i18n",
+      "src/lib/formatDate",
+      "src/lib/listPage"
+    ],
+    "src/features/setup": [
+      "src/__generated__",
+      "src/components/form",
+      "src/components/ui",
+      "src/features/company",
+      "src/i18n",
+      "src/lib/class-names",
+      "src/lib/postJson",
+      "src/lib/useCopyToClipboard"
+    ],
+    "src/components/dataTable": ["src/components/ui", "src/i18n", "src/lib/class-names"],
+    "src/components/form": [],
+    "src/components/ui": ["src/lib/class-names"],
+    "src/lib/listPage": ["src/apollo", "src/components/dataTable"],
+    "src/lib/class-names": [],
+    "src/lib/formatDate": [],
+    "src/lib/postJson": [],
+    "src/lib/useCopyToClipboard": [],
+    "src/apollo": ["src/__generated__"],
+    "src/i18n": [],
+    "src/__generated__": [],
+    "src/styles.css": []
+  },
+  "deepImports": ["src/components/ui", "src/__generated__"]
+}
