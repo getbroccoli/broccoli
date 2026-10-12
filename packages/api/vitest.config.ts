@@ -4,7 +4,7 @@ export default defineConfig({
   // Load the same graphql build as Node and Apollo do; two copies break `instanceof GraphQLError`.
   resolve: { alias: [{ find: /^graphql$/, replacement: "graphql/index.js" }] },
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "importRules.test.ts"],
     // Integration tests need Postgres; `pnpm test:integration` runs them.
     exclude: ["src/**/*.int.test.ts"],
   },
