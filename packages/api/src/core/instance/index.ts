@@ -11,8 +11,8 @@ export {
   readOwnerUserId,
 } from "./app";
 export { selfHostedAuth } from "./betterAuth";
-/** For the schema and test seeding only; other code goes through the operations above. */
-export { instance, instanceRepository } from "./db";
+/** For test seeding only; other code goes through the operations above. */
+export { instanceRepository } from "./db";
 export {
   AssignmentConflictError,
   OwnerExistsError,
