@@ -2,6 +2,7 @@
   "elements": {
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
     "src/modules": [
+      "src/core/env",
       "src/core/moduleManifest",
       "src/modules/company",
       "src/modules/employees",
@@ -30,6 +31,7 @@
     ],
     "src/modules/system": [
       "src/core/db",
+      "src/core/env",
       "src/core/graphql",
       "src/core/instance",
       "src/core/moduleManifest"
@@ -46,6 +48,7 @@
       "src/core/health",
       "src/core/instance",
       "src/core/logger",
+      "src/core/managedSignIn",
       "src/core/moduleManifest",
       "src/core/readiness",
       "src/core/secrets"
@@ -68,7 +71,17 @@
       "src/core/db",
       "src/core/instance"
     ],
-    "src/core/instance": ["src/core/auth", "src/core/db", "src/core/events"],
+    "src/core/instance": ["src/core/auth", "src/core/db", "src/core/events", "src/core/logger"],
+    "src/core/managedSignIn": [
+      "src/core/auth",
+      "src/core/db",
+      "src/core/env",
+      "src/core/events",
+      "src/core/instance",
+      "src/core/logger",
+      "src/core/readiness",
+      "src/utils"
+    ],
     "src/core/auth": ["src/core/db", "src/core/logger"],
     "src/core/db": ["src/core/events", "src/core/logger"],
     "src/core/events": ["src/core/logger"],
@@ -76,7 +89,7 @@
     "src/core/health": ["src/core/readiness"],
     "src/core/logger": ["src/core/env"],
     "src/core/applicationError": [],
-    "src/core/env": [],
+    "src/core/env": ["src/utils"],
     "src/core/readiness": [],
     "src/core/secrets": [],
     "test/support": [
@@ -94,16 +107,17 @@
       "src/modules/employees",
       "src/utils"
     ],
-    "test/e2e": ["src/core/server", "test/support"]
+    "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]
   },
   "layers": {
     "domain": [],
     "db": ["domain"],
     "app": ["db", "domain"],
     "graphql": ["app", "domain", "http"],
-    "http": ["app", "domain"],
+    "http": ["app", "domain", "jwt"],
     "mcp": ["app", "domain"],
-    "betterAuth": ["app", "domain"]
+    "betterAuth": ["app", "domain", "jwt"],
+    "jwt": ["domain"]
   },
   "testsMayImport": {
     "*": ["test/support"],
