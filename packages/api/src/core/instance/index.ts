@@ -8,7 +8,7 @@ export {
   readOwner,
   readOwnerUserId,
 } from "./app";
-export { setupPlugin } from "./better-auth";
+export { setupPlugin } from "./betterAuth";
 /** For the schema and test seeding only; other code goes through the operations above. */
 export { instance, instanceRepository } from "./db";
 export { SETUP_STEPS, OwnerExistsError, type SetupStep } from "./domain";

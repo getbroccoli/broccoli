@@ -1,6 +1,2 @@
-export { company } from "./company-table";
-export {
-  companyRepository,
-  type CompanyRecord,
-  type CompanyRepository,
-} from "./company-repository";
+export { company } from "./companyTable";
+export { companyRepository, type CompanyRecord, type CompanyRepository } from "./companyRepository";

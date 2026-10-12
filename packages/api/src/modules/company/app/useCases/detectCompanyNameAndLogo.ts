@@ -1,0 +1,37 @@
+import type { Logger } from "../../../../core/logger";
+import type { BrandLookup } from "../../../../integrations/brandLookup";
+import type { CompanyRepository } from "../../db";
+import { parseRasterImage } from "../../../../utils";
+import { companyDomain } from "../../domain";
+import { MAX_LOGO_BYTES } from "./company";
+
+/**
+ * Looks up the brand of the new owner's email domain once and keeps it for the
+ * company step. A failed lookup is logged; the domain suggestion still works.
+ */
+export async function detectCompanyNameAndLogo(
+  {
+    companies,
+    brandLookup,
+    logger,
+  }: { companies: CompanyRepository; brandLookup: BrandLookup; logger: Logger },
+  { email }: { email: string },
+): Promise<void> {
+  const domain = companyDomain(email);
+  if (!domain) {
+    return;
+  }
+  try {
+    // The HTTP call runs before the write, so no connection or lock waits on it.
+    const brand = await brandLookup(domain);
+    await companies.saveBrandOnce(
+      brand?.name ?? null,
+      brand?.logo ? parseRasterImage(brand.logo, { maxBytes: MAX_LOGO_BYTES }) : null,
+    );
+  } catch (error) {
+    logger.warn(
+      { err: error },
+      "Brand lookup failed; suggesting the company name from the email domain",
+    );
+  }
+}

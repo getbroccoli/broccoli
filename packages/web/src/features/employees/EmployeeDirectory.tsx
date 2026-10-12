@@ -4,13 +4,13 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import { EmployeesDocument } from "@/__generated__/graphql";
-import { DataTable, TableSearchField, TableState } from "@/components/data-table";
+import { DataTable, TableSearchField, TableState } from "@/components/dataTable";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
-import { useListPage } from "@/lib/list-page";
+import { useListPage } from "@/lib/listPage";
 
-import { SEARCH_MAX_LENGTH, toEmployeesVariables, type DirectorySearch } from "./directory-search";
-import { EMPLOYEE_COLUMNS, useEmployeeRows } from "./employee-columns";
+import { SEARCH_MAX_LENGTH, toEmployeesVariables, type DirectorySearch } from "./directorySearch";
+import { EMPLOYEE_COLUMNS, useEmployeeRows } from "./employeeColumns";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
 
 /** The People directory: employees one page at a time, with sort, search and paging in the URL. */

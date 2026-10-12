@@ -4,4 +4,4 @@ export {
   type EmployeeKeyset,
   type EmployeeOrder,
   type EmployeeRepository,
-} from "./employee-repository";
+} from "./employeeRepository";

@@ -1,5 +1,5 @@
 import { readSdl } from "../../core/graphql";
-import type { ModuleDependencies, ModuleManifest } from "../../core/module-manifest";
+import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { createResolvers } from "./graphql/resolvers";
 
 /** Platform-level API fields that belong to no business module. */

@@ -1,7 +1,7 @@
 import { buildSchema, execute, GraphQLError, parse } from "graphql";
 import { assert, expect, it } from "vitest";
 
-import { ApplicationError } from "../application-error";
+import { ApplicationError } from "../applicationError";
 import { formatError } from "./errors";
 
 it("passes an ApplicationError through with its code and field errors", () => {

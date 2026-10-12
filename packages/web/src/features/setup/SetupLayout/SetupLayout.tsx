@@ -3,7 +3,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 import { t } from "@/i18n";
 
-import { type SetupStepId, stepViews } from "./setup-steps";
+import { type SetupStepId, stepViews } from "./setupSteps";
 import { StepBars } from "./StepBars";
 import { StepList } from "./StepList";
 

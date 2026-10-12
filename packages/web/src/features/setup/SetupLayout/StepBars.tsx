@@ -1,7 +1,7 @@
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import type { StepView } from "./setup-steps";
+import type { StepView } from "./setupSteps";
 
 /** The current step's title over one bar per step, on narrow screens. */
 export function StepBars({ steps }: { steps: StepView[] }) {

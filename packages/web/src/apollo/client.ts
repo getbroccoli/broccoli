@@ -3,7 +3,7 @@ import { ApolloClient, ApolloLink, HttpLink, InMemoryCache } from "@apollo/clien
 import introspection from "@/__generated__/possible-types";
 import { typePolicies } from "@/__generated__/type-policies";
 
-import { unauthenticatedLink } from "./unauthenticated-link";
+import { unauthenticatedLink } from "./unauthenticatedLink";
 
 interface ApolloClientOptions {
   /** Runs after a request was refused for want of a session and the cache was cleared. */
