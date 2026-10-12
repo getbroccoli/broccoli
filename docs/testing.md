@@ -24,6 +24,7 @@ Three layers, most tests in the middle one:
 - Work test-first: a failing test, the smallest code that passes, then refactor.
 - Name the test after the expected behaviour: `it("rejects a request that overlaps an approved absence")`.
 - Cover one behaviour per test, with short setup and a visible arrange, act and assert.
+- Put each test in the file of the code it checks. A concern shared by many modules, such as sessions or paging, gets its own test file.
 - Keep tests deterministic. Inject the clock and ID generators. No sleeps, no network, no dependence on test order.
 - Build test data with `seed` (`TestSeed` in `packages/api/test/support`), which inserts through each module's repository, skipping use cases, permissions, audit and events. Seed values must be what the app would store (normalised, such as a lowercased email). Set only the fields the test is about. A module adds its own seed methods.
 - Build the use cases under test with the module's helper in `#test/support`, such as `companyUseCases(orm, { brandLookup })`. It fills every dependency with a test default (a new event bus, a silent logger, no external calls), so a test passes only the one it is about and the factory call is not repeated in every test. A module whose factory needs more than `{ orm }` adds such a helper.
