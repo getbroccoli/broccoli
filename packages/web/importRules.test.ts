@@ -1,8 +1,11 @@
 import { join } from "node:path";
 import { ESLint } from "eslint";
-import { assert, expect, test } from "vitest";
+import { assert, expect, test, vi } from "vitest";
 
 const eslint = new ESLint({ cwd: import.meta.dirname });
+
+// The first lint builds the package's TypeScript program, which takes seconds.
+vi.setConfig({ testTimeout: 30_000 });
 
 test("rejects a feature importing an undeclared feature", async () => {
   const errors = await lintErrors("src/features/employees/index.ts", 'import "../setup";');
