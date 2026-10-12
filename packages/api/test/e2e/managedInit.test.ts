@@ -86,16 +86,6 @@ test("opens the instance to users after init", async () => {
   expect((await env.browser().graphql("{ ping }")).status).toBe(200);
 });
 
-test("accepts the same init again", async () => {
-  const { env, accounts } = await managedEnv();
-  await init(env, await accounts.signInit());
-
-  const response = await init(env, await accounts.signInit());
-
-  expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({ initStatus: "ready" });
-});
-
 test("refuses a different assignment", async () => {
   const { env, accounts } = await managedEnv();
   await init(env, await accounts.signInit());

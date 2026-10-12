@@ -5,28 +5,6 @@ import { type Orm, ormOf, type Tx } from "../../db";
 import type { ManagedAssignment, SetupStep } from "../domain";
 import { instance } from "./instanceTable";
 
-const assignmentColumns = {
-  ownerUserId: instance.ownerUserId,
-  companyId: instance.managedCompanyId,
-  publicOrigin: instance.managedPublicOrigin,
-  websiteOrigin: instance.managedWebsiteOrigin,
-};
-
-function toAssignment({
-  companyId,
-  publicOrigin,
-  websiteOrigin,
-}: {
-  companyId: string | null;
-  publicOrigin: string | null;
-  websiteOrigin: string | null;
-}): ManagedAssignment | null {
-  // A check constraint keeps the three columns all null or all set.
-  return companyId && publicOrigin && websiteOrigin
-    ? { companyId, publicOrigin, websiteOrigin }
-    : null;
-}
-
 export type InstanceRepository = ReturnType<typeof instanceRepository>;
 
 /** The instance row in Postgres, through the pool or inside a transaction. */
@@ -108,4 +86,26 @@ export function instanceRepository(db: Orm | Tx) {
       await orm().update(instance).set({ setupStep: to }).where(eq(instance.setupStep, from));
     },
   };
+}
+
+const assignmentColumns = {
+  ownerUserId: instance.ownerUserId,
+  companyId: instance.managedCompanyId,
+  publicOrigin: instance.managedPublicOrigin,
+  websiteOrigin: instance.managedWebsiteOrigin,
+};
+
+function toAssignment({
+  companyId,
+  publicOrigin,
+  websiteOrigin,
+}: {
+  companyId: string | null;
+  publicOrigin: string | null;
+  websiteOrigin: string | null;
+}): ManagedAssignment | null {
+  // A check constraint keeps the three columns all null or all set.
+  return companyId && publicOrigin && websiteOrigin
+    ? { companyId, publicOrigin, websiteOrigin }
+    : null;
 }
