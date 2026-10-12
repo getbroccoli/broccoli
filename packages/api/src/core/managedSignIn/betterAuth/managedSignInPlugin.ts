@@ -55,9 +55,12 @@ export function managedSignInPlugin({
   const { companyId, publicOrigin, websiteOrigin } = assignment;
   const signInFailed = (error: SignInError) => redirect(`${publicOrigin}/login?error=${error}`);
 
-  async function readTicket(ctx: GenericEndpointContext): Promise<ManagedTicket | null> {
+  /** The posted ticket, when it comes from the website with this browser's state. */
+  async function readTicket(
+    ctx: GenericEndpointContext,
+    ticket: unknown,
+  ): Promise<ManagedTicket | null> {
     const state = ctx.getCookie(STATE_COOKIE);
-    const ticket: unknown = ctx.body?.ticket;
     if (
       ctx.request?.headers.get("origin") !== websiteOrigin ||
       !state ||
@@ -96,7 +99,7 @@ export function managedSignInPlugin({
       managedStart: createAuthEndpoint(
         "/managed/start",
         { method: "GET", query: z.object({ method: z.string().optional() }).optional() },
-        async (ctx) => {
+        (ctx) => {
           const state = randomBytes(32).toString("hex");
           ctx.setCookie(STATE_COOKIE, state, {
             ...STATE_COOKIE_OPTIONS,
@@ -109,7 +112,7 @@ export function managedSignInPlugin({
           if (method && SIGN_IN_METHODS.has(method)) {
             entry.searchParams.set("method", method);
           }
-          return redirect(entry.href);
+          return Promise.resolve(redirect(entry.href));
         },
       ),
       managedCallback: createAuthEndpoint(
@@ -123,7 +126,7 @@ export function managedSignInPlugin({
           // The state is single-use: cleared whatever the outcome.
           ctx.setCookie(STATE_COOKIE, "", { ...STATE_COOKIE_OPTIONS, maxAge: 0 });
           try {
-            const ticket = await readTicket(ctx);
+            const ticket = await readTicket(ctx, ctx.body.ticket);
             if (!ticket) {
               return signInFailed("sign_in_required");
             }

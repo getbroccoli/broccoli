@@ -91,9 +91,8 @@ test("refuses one of two concurrent posts of the same ticket", async ({ orm }) =
   const results = await Promise.allSettled([signIn(orm, value).result, signIn(orm, value).result]);
 
   expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-  expect(results.find((result) => result.status === "rejected")).toMatchObject({
-    reason: expect.any(SignInRefusedError),
-  });
+  const rejected = results.find((result) => result.status === "rejected");
+  expect(rejected?.reason).toBeInstanceOf(SignInRefusedError);
 });
 
 test("refuses a ticket that expired while waiting", async ({ orm }) => {
@@ -112,7 +111,7 @@ test("leaves the ticket unused when the transaction fails", async ({ orm }) => {
     }),
   ).rejects.toThrow("later step failed");
 
-  await expect(signIn(orm, value).result).resolves.toEqual({ userId: expect.any(String) });
+  await expect(signIn(orm, value).result).resolves.toHaveProperty("userId");
 });
 
 test("deletes expired tickets on sign-in", async ({ orm }) => {

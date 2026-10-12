@@ -1,6 +1,4 @@
-import { onTestFinished } from "vitest";
-
-import { expect, TEST_OWNER, TestEnv, test } from "#test/support";
+import { expect, TEST_OWNER, test } from "#test/support";
 
 const SECURE_ATTRIBUTE = /;\s*Secure(?:;|$)/i;
 

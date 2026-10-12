@@ -54,8 +54,7 @@ test("keeps one assignment when two arrive together", async ({ orm }) => {
   ]);
 
   expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-  expect(results.find((result) => result.status === "rejected")).toMatchObject({
-    reason: expect.any(AssignmentConflictError),
-  });
+  const rejected = results.find((result) => result.status === "rejected");
+  expect(rejected?.reason).toBeInstanceOf(AssignmentConflictError);
   expect(["c-acme", "c-other"]).toContain((await readAssignment(orm))?.companyId);
 });
