@@ -81,25 +81,23 @@ const envSchema = z
       refuse("MANAGED_ACCOUNTS_URL", "Must be an https origin without a path");
     }
   })
-  .transform(
-    (variables): Env => ({
-      databaseUrl: variables.DATABASE_URL,
-      port: variables.PORT,
-      logLevel: variables.LOG_LEVEL,
-      webDir: variables.WEB_DIR,
-      mode: variables.BROCCOLI_MODE,
-      dataDir: variables.DATA_DIR,
-      publicUrl: variables.SELF_HOSTED_PUBLIC_URL,
-      managed:
-        variables.BROCCOLI_MODE === "managed"
-          ? {
-              instanceId: variables.MANAGED_INSTANCE_ID!,
-              accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
-            }
-          : null,
-      brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
-    }),
-  );
+  .transform((variables): Env => ({
+    databaseUrl: variables.DATABASE_URL,
+    port: variables.PORT,
+    logLevel: variables.LOG_LEVEL,
+    webDir: variables.WEB_DIR,
+    mode: variables.BROCCOLI_MODE,
+    dataDir: variables.DATA_DIR,
+    publicUrl: variables.SELF_HOSTED_PUBLIC_URL,
+    managed:
+      variables.BROCCOLI_MODE === "managed"
+        ? {
+            instanceId: variables.MANAGED_INSTANCE_ID!,
+            accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
+          }
+        : null,
+    brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
+  }));
 
 function accountsOrigin(url: string | undefined): string | null {
   return parseOrigin(url ?? DEFAULT_ACCOUNTS_URL);
