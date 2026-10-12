@@ -1,7 +1,5 @@
 {
   "elements": {
-    "src/main": ["src/modules"],
-    "src/modules": ["src/modules/billing", "src/modules/payroll"],
     "src/modules/billing": [
       "src/modules/payroll",
       "src/core/db",
