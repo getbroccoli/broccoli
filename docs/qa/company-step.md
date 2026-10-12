@@ -5,12 +5,12 @@ A manual check of naming the company and adding its logo in the browser, on a de
 ## Setup
 
 1. Run `pnpm dev` on a database without an owner (remove the development database volume, or use a fresh checkout).
-2. On `/setup`, create the owner with `owner@nika-solutions.com`.
+2. On `/setup`, create the owner with `owner@example.com`.
 
 ## Name
 
 - [ ] The page is `/setup/company`, with "Setup Workspace" done and "Setup Company" current.
-- [ ] The name field shows "Nika Solutions". With a `gmail.com` owner it is empty and "Save and continue" is disabled.
+- [ ] The name field shows "Example". With a `gmail.com` owner it is empty and "Save and continue" is disabled.
 - [ ] A blank name keeps the button disabled; 101 characters show "Use at most 100 characters." after submitting.
 
 ## Logo
