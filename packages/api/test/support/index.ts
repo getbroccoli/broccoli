@@ -4,6 +4,12 @@ export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test } from "./fixture";
 export { startFakeBrandServer } from "./fakeBrandServer";
+export {
+  startFakeAccounts,
+  type FakeAccounts,
+  MANAGED_ASSIGNMENT,
+  MANAGED_INSTANCE_ID,
+} from "./fakeAccounts";
 export { startFakeHttpServer } from "./fakeHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";

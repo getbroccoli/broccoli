@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import type { Mode } from "../../src/core/env";
 import { createLogger } from "../../src/core/logger";
 import { startServer, type RunningServer } from "../../src/core/server";
 import { createModules } from "../../src/modules";
@@ -20,7 +19,8 @@ export interface TestServerOptions {
   webDir?: string;
   /** Defaults to a new temporary folder, removed when the server stops. */
   dataDir?: string;
-  mode?: Mode;
+  /** Starts a managed instance; unset is self-hosted. */
+  managed?: { instanceId: string; accountsUrl: string };
   publicUrl?: string;
   brandLookupUrl?: string | null;
 }
@@ -28,20 +28,25 @@ export interface TestServerOptions {
 /** Starts the real API on a free port. */
 export async function startTestServer(
   databaseUrl: string,
-  {
-    webDir,
-    dataDir,
-    mode = "self_hosted",
-    publicUrl,
-    brandLookupUrl = null,
-  }: TestServerOptions = {},
+  { webDir, dataDir, managed, publicUrl, brandLookupUrl = null }: TestServerOptions = {},
 ): Promise<RunningServer> {
   const ownsDataDir = dataDir === undefined;
   const folder = dataDir ?? (await mkdtemp(join(tmpdir(), "broccoli-data-")));
+  const mode = managed ? "managed" : "self_hosted";
   const server = await startServer(
-    { databaseUrl, port: 0, webDir, mode, dataDir: folder, publicUrl },
+    {
+      databaseUrl,
+      port: 0,
+      webDir,
+      mode,
+      managed: managed
+        ? { instanceId: managed.instanceId, accountsOrigin: managed.accountsUrl }
+        : null,
+      dataDir: folder,
+      publicUrl,
+    },
     createLogger("silent"),
-    (core) => createModules(core, { brandLookupUrl }),
+    (core) => createModules(core, { mode, brandLookupUrl }),
   );
   return {
     url: server.url,
