@@ -4,28 +4,18 @@ import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { toNodeHandler } from "better-auth/node";
 import express from "express";
-import { createRemoteJWKSet } from "jose";
 
 import { resolveActor } from "./actor";
-import { createAuth } from "./auth";
+import { authHandler } from "./auth";
 import { connectDatabase, type Database } from "./db";
-import type { Deployment, Env, ManagedDeployment } from "./env";
-import { createEventBus, type EventBus } from "./events";
+import type { Env } from "./env";
+import { createEventBus } from "./events";
 import { type ActorResolver, startGraphqlApi, type GraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
-import { setupPlugin } from "./instance";
+import { selfHostedAuth } from "./instance";
 import type { Logger } from "./logger";
-import {
-  callbackOnlyTrust,
-  fixedAuth,
-  initRouter,
-  managedAuth,
-  managedSignInPlugin,
-  waitingGate,
-  type AuthSource,
-} from "./managedSignIn";
+import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
 import { Readiness } from "./readiness";
 import { readOrCreateSecret } from "./secrets";
@@ -58,15 +48,15 @@ export async function startServer(
   const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
   const database = connectDatabase(env.databaseUrl, logger);
   const eventBus = createEventBus(logger);
-  const authServices = { orm: database.orm, eventBus, secret: authSecret, logger };
-  const { auth, issuer } = authFor(env.deployment, authServices);
-  const resolveActorOf: ActorResolver = async (headers) => {
-    const current = await auth.current();
-    return current
-      ? resolveActor(current, database.orm, headers)
-      : { actor: null, renewedCookies: [] };
-  };
   const readiness = new Readiness(() => database.checkConnection());
+  const services = { orm: database.orm, eventBus, secret: authSecret, logger };
+  // Self-hosted instances add only their auth; managed ones also init routes and status.
+  const deploymentParts: Pick<ManagedServer, "auth"> & Partial<ManagedServer> =
+    env.deployment.mode === "managed"
+      ? managedServer({ ...services, deployment: env.deployment, readiness })
+      : { auth: selfHostedAuth({ ...services, publicUrl: env.deployment.publicUrl }) };
+  const resolveActorOf: ActorResolver = (headers) =>
+    resolveActor(deploymentParts.auth, database.orm, headers);
 
   const app = express();
   app.disable("x-powered-by");
@@ -80,18 +70,11 @@ export async function startServer(
     await database.close();
     throw error;
   }
-  app.use(healthRouter(readiness, issuer ? () => initStatus(auth) : undefined));
-  if (issuer) {
-    const tokenCheck = { ...issuer, audience: `instance:${issuer.instanceId}` };
-    app.use(initRouter({ orm: database.orm, eventBus, tokenCheck, readiness, auth }));
-    app.use(waitingGate(auth));
+  app.use(healthRouter(readiness, deploymentParts.initStatus));
+  if (deploymentParts.router) {
+    app.use(deploymentParts.router);
   }
-  // Better Auth reads the raw body, so no body parser may run before it.
-  app.all("/api/auth/{*path}", async (request, response) => {
-    // In managed mode the waiting gate has already answered while there is no auth.
-    const current = await auth.current();
-    await toNodeHandler(current!)(request, response);
-  });
+  app.all("/api/auth/{*path}", authHandler(deploymentParts.auth));
   app.use(graphql.router);
   for (const module of modules) {
     if (module.events) {
@@ -129,68 +112,6 @@ export async function startServer(
       return stopping;
     },
   };
-}
-
-interface AuthServices {
-  orm: Database["orm"];
-  eventBus: EventBus;
-  /** Signs session cookies. */
-  secret: string;
-  logger: Logger;
-}
-
-/** Who signs a managed instance's init tokens and tickets, and the slot they address. */
-interface AccountsIssuer {
-  instanceId: string;
-  issuer: string;
-  keys: ReturnType<typeof createRemoteJWKSet>;
-}
-
-/** Better Auth for this deployment, and for a managed one who signs its tokens. */
-function authFor(
-  deployment: Deployment,
-  services: AuthServices,
-): { auth: AuthSource; issuer: AccountsIssuer | null } {
-  if (deployment.mode === "self_hosted") {
-    return { auth: selfHostedAuthSource(services, deployment.publicUrl), issuer: null };
-  }
-  const issuer = accountsIssuer(deployment);
-  return { auth: managedAuthSource(services, issuer), issuer };
-}
-
-function accountsIssuer({ instanceId, accountsOrigin }: ManagedDeployment): AccountsIssuer {
-  return {
-    instanceId,
-    issuer: accountsOrigin,
-    keys: createRemoteJWKSet(new URL("/.well-known/jwks.json", accountsOrigin)),
-  };
-}
-
-/** The first visitor creates the owner with a password. */
-function selfHostedAuthSource(services: AuthServices, publicUrl: string | undefined): AuthSource {
-  return fixedAuth(
-    createAuth({
-      ...services,
-      publicUrl,
-      plugins: [setupPlugin(services.orm, services.eventBus)],
-    }),
-  );
-}
-
-/** Built once init has assigned the instance; people sign in with accounts tickets. */
-function managedAuthSource(services: AuthServices, { issuer, keys }: AccountsIssuer): AuthSource {
-  return managedAuth(services.orm, (assignment) =>
-    createAuth({
-      ...services,
-      publicUrl: assignment.publicOrigin,
-      plugins: [managedSignInPlugin({ ...services, assignment, tokenCheck: { issuer, keys } })],
-      trustedOrigins: callbackOnlyTrust(assignment),
-    }),
-  );
-}
-
-async function initStatus(auth: AuthSource): Promise<"waiting" | "ready"> {
-  return (await auth.current()) ? "ready" : "waiting";
 }
 
 async function migrate(

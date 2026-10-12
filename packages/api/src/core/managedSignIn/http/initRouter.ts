@@ -5,7 +5,7 @@ import { runInTransaction, type Orm } from "../../db";
 import type { EventBus } from "../../events";
 import { AssignmentConflictError, assignInstance } from "../../instance";
 import type { Readiness } from "../../readiness";
-import type { AuthSource } from "../app";
+import type { AuthSource } from "../../auth";
 import { InvalidAssignmentError, InvalidTokenError, parseInitClaims } from "../domain";
 import { verifyToken, type TokenCheck } from "../jwt";
 

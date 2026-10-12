@@ -1,15 +1,6 @@
-import type { Auth } from "../../auth";
+import type { Auth, AuthSource } from "../../auth";
 import type { Orm } from "../../db";
 import { readAssignment, type ManagedAssignment } from "../../instance";
-
-/** This process's Better Auth, or null while a managed instance waits for its init. */
-export interface AuthSource {
-  current(): Promise<Auth | null>;
-}
-
-export function fixedAuth(auth: Auth): AuthSource {
-  return { current: () => Promise.resolve(auth) };
-}
 
 /**
  * Builds Better Auth from the stored assignment the first time one exists. Until then

@@ -31,19 +31,6 @@ beforeEach(() => {
 
 afterEach(() => vi.useRealTimers());
 
-function sign(overrides: JWTPayload = {}) {
-  return new SignJWT({
-    purpose: "init",
-    iss: ISSUER,
-    aud: AUDIENCE,
-    iat: NOW,
-    exp: NOW + 60,
-    ...overrides,
-  })
-    .setProtectedHeader({ alg: "EdDSA", kid: "company" })
-    .sign(privateKey);
-}
-
 it("returns the payload of a valid token", async () => {
   const payload = await verifyToken(await sign(), { keys, issuer: ISSUER, audience: AUDIENCE });
   expect(payload.purpose).toBe("init");
@@ -127,3 +114,16 @@ it.each([
 
   await expect(result).rejects.not.toBeInstanceOf(InvalidTokenError);
 });
+
+function sign(overrides: JWTPayload = {}) {
+  return new SignJWT({
+    purpose: "init",
+    iss: ISSUER,
+    aud: AUDIENCE,
+    iat: NOW,
+    exp: NOW + 60,
+    ...overrides,
+  })
+    .setProtectedHeader({ alg: "EdDSA", kid: "company" })
+    .sign(privateKey);
+}

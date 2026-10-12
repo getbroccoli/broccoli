@@ -12,11 +12,6 @@ const ACME: ManagedAssignment = {
   websiteOrigin: "https://www.example.com",
 };
 
-function assign(orm: Orm, assignment: ManagedAssignment) {
-  const eventBus = createEventBus(createLogger("silent"));
-  return runInTransaction(orm, eventBus, (tx) => assignInstance(tx, assignment));
-}
-
 test("stores the first assignment", async ({ orm }) => {
   await assign(orm, ACME);
 
@@ -58,3 +53,8 @@ test("keeps one assignment when two arrive together", async ({ orm }) => {
   expect(rejected?.reason).toBeInstanceOf(AssignmentConflictError);
   expect(["c-acme", "c-other"]).toContain((await readAssignment(orm))?.companyId);
 });
+
+function assign(orm: Orm, assignment: ManagedAssignment) {
+  const eventBus = createEventBus(createLogger("silent"));
+  return runInTransaction(orm, eventBus, (tx) => assignInstance(tx, assignment));
+}

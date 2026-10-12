@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 
-import type { AuthSource } from "../app";
+import type { AuthSource } from "../../auth";
 
 const RETRY_AFTER_SECONDS = "5";
 

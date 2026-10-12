@@ -1,2 +1,2 @@
-export { fixedAuth, managedAuth, type AuthSource } from "./managedAuth";
+export { managedAuth } from "./managedAuth";
 export { SignInRefusedError, signInWithTicket } from "./signInWithTicket";

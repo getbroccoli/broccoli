@@ -15,34 +15,6 @@ import { SignInRefusedError, signInWithTicket } from "./signInWithTicket";
 
 const NOW = new Date("2026-10-12T10:00:00Z");
 
-function ticket(overrides: Partial<ManagedTicket> = {}): ManagedTicket {
-  return {
-    subject: "subject-1",
-    email: "owner@example.com",
-    name: "Ada Owner",
-    company: "c-acme",
-    state: "a".repeat(64),
-    jti: randomUUID(),
-    expiresAt: new Date(NOW.getTime() + 60_000),
-    ...overrides,
-  };
-}
-
-function signIn(orm: Orm, value: ManagedTicket, clock = () => NOW) {
-  const events: string[] = [];
-  const eventBus = createEventBus(createLogger("silent"));
-  eventBus.subscribe({
-    "instance.owner_claimed": () => {
-      events.push("owner_claimed");
-      return Promise.resolve();
-    },
-  });
-  return {
-    events,
-    result: runInTransaction(orm, eventBus, (tx) => signInWithTicket(tx, value, clock)),
-  };
-}
-
 test("creates the owner from the first ticket", async ({ orm }) => {
   const { result, events } = signIn(orm, ticket());
 
@@ -183,3 +155,31 @@ test("links the owner to the accounts subject without a password", async ({ orm 
     }),
   ]);
 });
+
+function ticket(overrides: Partial<ManagedTicket> = {}): ManagedTicket {
+  return {
+    subject: "subject-1",
+    email: "owner@example.com",
+    name: "Ada Owner",
+    company: "c-acme",
+    state: "a".repeat(64),
+    jti: randomUUID(),
+    expiresAt: new Date(NOW.getTime() + 60_000),
+    ...overrides,
+  };
+}
+
+function signIn(orm: Orm, value: ManagedTicket, clock = () => NOW) {
+  const events: string[] = [];
+  const eventBus = createEventBus(createLogger("silent"));
+  eventBus.subscribe({
+    "instance.owner_claimed": () => {
+      events.push("owner_claimed");
+      return Promise.resolve();
+    },
+  });
+  return {
+    events,
+    result: runInTransaction(orm, eventBus, (tx) => signInWithTicket(tx, value, clock)),
+  };
+}

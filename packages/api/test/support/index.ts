@@ -12,6 +12,7 @@ export {
 } from "./fakeAccounts";
 export { startFakeHttpServer } from "./fakeHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
+export { managedOptions, postInit, startManagedEnv } from "./managedTestEnv";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
 export {
   createEmptyTestDatabase,

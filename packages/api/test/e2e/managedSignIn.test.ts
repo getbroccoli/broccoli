@@ -1,12 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { onTestFinished } from "vitest";
-
 import {
   expect,
   MANAGED_ASSIGNMENT,
-  MANAGED_INSTANCE_ID,
-  startFakeAccounts,
+  managedOptions,
+  postInit,
+  startManagedEnv,
   TestEnv,
   test,
   type FakeAccounts,
@@ -14,86 +13,6 @@ import {
 
 const STATE_COOKIE = "__Host-managed_state";
 const { publicOrigin, websiteOrigin, companyId } = MANAGED_ASSIGNMENT;
-
-async function assignedEnv(): Promise<{ env: TestEnv; accounts: FakeAccounts }> {
-  const accounts = await startFakeAccounts();
-  onTestFinished(() => accounts.stop());
-  const env = await TestEnv.start({
-    managed: { instanceId: MANAGED_INSTANCE_ID, accountsUrl: accounts.url },
-  });
-  onTestFinished(() => env.stop());
-  const init = await fetch(`${env.url}/api/init`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${await accounts.signInit()}` },
-  });
-  expect(init.status).toBe(200);
-  return { env, accounts };
-}
-
-/** `/start` as the browser calls it: returns the state its cookie carries. */
-async function start(
-  env: TestEnv,
-  query = "",
-): Promise<{ state: string; location: URL; cookie: string }> {
-  const response = await fetch(`${env.url}/api/auth/managed/start${query}`, { redirect: "manual" });
-  expect(response.status).toBe(303);
-  expect(response.headers.get("cache-control")).toBe("no-store");
-  expect(response.headers.get("referrer-policy")).toBe("no-referrer");
-  const cookie = response.headers
-    .getSetCookie()
-    .find((value) => value.startsWith(`${STATE_COOKIE}=`))!;
-  const state = cookie.slice(STATE_COOKIE.length + 1).split(";", 1)[0]!;
-  return { state, location: new URL(response.headers.get("location")!), cookie };
-}
-
-function ticketClaims(state: string, overrides: Record<string, unknown> = {}) {
-  return {
-    sub: "subject-1",
-    email: "owner@example.com",
-    name: "Ada Owner",
-    company: companyId,
-    state,
-    jti: randomUUID(),
-    ...overrides,
-  };
-}
-
-/** The website's form POST of `ticket`. */
-function postTicket(
-  env: TestEnv,
-  ticket: string,
-  state: string | null,
-  origin: string | null = websiteOrigin,
-) {
-  return fetch(`${env.url}/api/auth/managed/callback`, {
-    method: "POST",
-    redirect: "manual",
-    headers: {
-      "content-type": "application/x-www-form-urlencoded",
-      ...(origin === null ? {} : { origin }),
-      ...(state ? { cookie: `${STATE_COOKIE}=${state}` } : {}),
-    },
-    body: new URLSearchParams({ ticket }).toString(),
-  });
-}
-
-function sessionCookie(response: Response): string | undefined {
-  return response.headers
-    .getSetCookie()
-    .find((value) => value.includes("session_token="))
-    ?.split(";", 1)[0];
-}
-
-async function me(env: TestEnv, cookie: string) {
-  const response = await fetch(`${env.url}/api/graphql`, {
-    method: "POST",
-    headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ query: "{ me { isOwner } setup { step signIn } }" }),
-  });
-  return (await response.json()) as {
-    data: { me: { isOwner: boolean } | null; setup: { step: string; signIn: string } };
-  };
-}
 
 const SIGN_IN_REQUIRED = `${publicOrigin}/login?error=sign_in_required`;
 
@@ -257,7 +176,7 @@ test("redirects to sign-in unavailable when the issuer's keys cannot be read", a
   const { env, accounts } = await assignedEnv();
   const { state } = await start(env);
   const ticket = await accounts.signTicket(ticketClaims(state));
-  await env.restart({ managed: { instanceId: MANAGED_INSTANCE_ID, accountsUrl: accounts.url } });
+  await env.restart(managedOptions(accounts));
   await accounts.stop();
 
   const response = await postTicket(env, ticket, state);
@@ -278,3 +197,75 @@ test("has no self-hosted setup", async () => {
 
   expect(response.status).toBe(404);
 });
+
+/** A managed instance already assigned by init. */
+async function assignedEnv(): Promise<{ env: TestEnv; accounts: FakeAccounts }> {
+  const { env, accounts } = await startManagedEnv();
+  expect((await postInit(env, await accounts.signInit())).status).toBe(200);
+  return { env, accounts };
+}
+
+/** `/start` as the browser calls it: returns the state its cookie carries. */
+async function start(
+  env: TestEnv,
+  query = "",
+): Promise<{ state: string; location: URL; cookie: string }> {
+  const response = await fetch(`${env.url}/api/auth/managed/start${query}`, { redirect: "manual" });
+  expect(response.status).toBe(303);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+  const cookie = response.headers
+    .getSetCookie()
+    .find((value) => value.startsWith(`${STATE_COOKIE}=`))!;
+  const state = cookie.slice(STATE_COOKIE.length + 1).split(";", 1)[0]!;
+  return { state, location: new URL(response.headers.get("location")!), cookie };
+}
+
+function ticketClaims(state: string, overrides: Record<string, unknown> = {}) {
+  return {
+    sub: "subject-1",
+    email: "owner@example.com",
+    name: "Ada Owner",
+    company: companyId,
+    state,
+    jti: randomUUID(),
+    ...overrides,
+  };
+}
+
+/** The website's form POST of `ticket`. */
+function postTicket(
+  env: TestEnv,
+  ticket: string,
+  state: string | null,
+  origin: string | null = websiteOrigin,
+) {
+  return fetch(`${env.url}/api/auth/managed/callback`, {
+    method: "POST",
+    redirect: "manual",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      ...(origin === null ? {} : { origin }),
+      ...(state ? { cookie: `${STATE_COOKIE}=${state}` } : {}),
+    },
+    body: new URLSearchParams({ ticket }).toString(),
+  });
+}
+
+function sessionCookie(response: Response): string | undefined {
+  return response.headers
+    .getSetCookie()
+    .find((value) => value.includes("session_token="))
+    ?.split(";", 1)[0];
+}
+
+async function me(env: TestEnv, cookie: string) {
+  const response = await fetch(`${env.url}/api/graphql`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie },
+    body: JSON.stringify({ query: "{ me { isOwner } setup { step signIn } }" }),
+  });
+  return (await response.json()) as {
+    data: { me: { isOwner: boolean } | null; setup: { step: string; signIn: string } };
+  };
+}

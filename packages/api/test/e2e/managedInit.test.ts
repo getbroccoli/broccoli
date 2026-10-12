@@ -3,45 +3,27 @@ import { onTestFinished } from "vitest";
 import {
   expect,
   MANAGED_ASSIGNMENT,
-  MANAGED_INSTANCE_ID,
-  startFakeAccounts,
+  managedOptions,
+  postInit,
+  startManagedEnv,
   startTestServer,
   waitForStartup,
-  TestEnv,
   test,
-  type FakeAccounts,
 } from "#test/support";
 
-async function managedEnv(): Promise<{ env: TestEnv; accounts: FakeAccounts }> {
-  const accounts = await startFakeAccounts();
-  onTestFinished(() => accounts.stop());
-  const env = await TestEnv.start({
-    managed: { instanceId: MANAGED_INSTANCE_ID, accountsUrl: accounts.url },
-  });
-  onTestFinished(() => env.stop());
-  return { env, accounts };
-}
-
-function init(env: TestEnv, token: string): Promise<Response> {
-  return fetch(`${env.url}/api/init`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}` },
-  });
-}
-
 test("rate limits init after 30 requests from the same client", async () => {
-  const { env } = await managedEnv();
+  const { env } = await startManagedEnv();
   for (let attempt = 0; attempt < 30; attempt++) {
-    expect((await init(env, "bad-token")).status).toBe(401);
+    expect((await postInit(env, "bad-token")).status).toBe(401);
   }
 
-  const response = await init(env, "bad-token");
+  const response = await postInit(env, "bad-token");
 
   expect(response.status).toBe(429);
 });
 
 test("reports ready and waiting before init", async () => {
-  const { env } = await managedEnv();
+  const { env } = await startManagedEnv();
 
   const readiness = await fetch(`${env.url}/readyz`);
   expect(readiness.status).toBe(200);
@@ -49,7 +31,7 @@ test("reports ready and waiting before init", async () => {
 });
 
 test("refuses GraphQL before init with a retry hint", async () => {
-  const { env } = await managedEnv();
+  const { env } = await startManagedEnv();
 
   const graphql = await env.browser().graphql("{ ping }");
   expect(graphql.status).toBe(503);
@@ -57,7 +39,7 @@ test("refuses GraphQL before init with a retry hint", async () => {
 });
 
 test("serves the preparing page before init", async () => {
-  const { env } = await managedEnv();
+  const { env } = await startManagedEnv();
 
   const page = await fetch(`${env.url}/people`, { headers: { accept: "text/html" } });
   expect(page.status).toBe(503);
@@ -65,7 +47,7 @@ test("serves the preparing page before init", async () => {
 });
 
 test("refuses managed sign-in before init", async () => {
-  const { env } = await managedEnv();
+  const { env } = await startManagedEnv();
 
   expect((await fetch(`${env.url}/api/auth/managed/start`, { redirect: "manual" })).status).toBe(
     503,
@@ -73,9 +55,9 @@ test("refuses managed sign-in before init", async () => {
 });
 
 test("opens the instance to users after init", async () => {
-  const { env, accounts } = await managedEnv();
+  const { env, accounts } = await startManagedEnv();
 
-  const first = await init(env, await accounts.signInit());
+  const first = await postInit(env, await accounts.signInit());
   expect(first.status).toBe(200);
   expect(await first.json()).toEqual({ initStatus: "ready" });
 
@@ -87,10 +69,10 @@ test("opens the instance to users after init", async () => {
 });
 
 test("refuses a different assignment", async () => {
-  const { env, accounts } = await managedEnv();
-  await init(env, await accounts.signInit());
+  const { env, accounts } = await startManagedEnv();
+  await postInit(env, await accounts.signInit());
 
-  const response = await init(
+  const response = await postInit(
     env,
     await accounts.signInit({ config: { ...MANAGED_ASSIGNMENT, companyId: "c-other" } }),
   );
@@ -104,60 +86,60 @@ test.each([
   ["another purpose", { purpose: "entry" }],
   ["a lifetime over a minute", { lifetimeSeconds: 61 }],
 ])("refuses an init token for %s", async (_kind, options) => {
-  const { env, accounts } = await managedEnv();
+  const { env, accounts } = await startManagedEnv();
 
-  expect((await init(env, await accounts.signInit(options))).status).toBe(401);
+  expect((await postInit(env, await accounts.signInit(options))).status).toBe(401);
 });
 
 test("refuses a malformed assignment", async () => {
-  const { env, accounts } = await managedEnv();
+  const { env, accounts } = await startManagedEnv();
 
   const token = await accounts.signInit({
     config: { ...MANAGED_ASSIGNMENT, publicOrigin: "https://acme.example.com/app" },
   });
 
-  expect((await init(env, token)).status).toBe(400);
+  expect((await postInit(env, token)).status).toBe(400);
 });
 
 test("refuses an init token that expired within the clock tolerance", async () => {
-  const { env, accounts } = await managedEnv();
+  const { env, accounts } = await startManagedEnv();
   const now = Math.floor(Date.now() / 1000);
   const token = await accounts.signInit({ issuedAt: now - 59, expiresAt: now - 1 });
 
-  const response = await init(env, token);
+  const response = await postInit(env, token);
 
   expect(response.status).toBe(401);
 });
 
 test("refuses a sign-in ticket posted as init", async () => {
-  const { env, accounts } = await managedEnv();
+  const { env, accounts } = await startManagedEnv();
   const token = await accounts.signTicket({ sub: "subject-1" });
 
-  const response = await init(env, token);
+  const response = await postInit(env, token);
 
   expect(response.status).toBe(401);
 });
 
 test("answers unavailable when the issuer's keys cannot be read", async () => {
-  const { env, accounts } = await managedEnv();
+  const { env, accounts } = await startManagedEnv();
   const token = await accounts.signInit();
   await accounts.stop();
 
-  expect((await init(env, token)).status).toBe(503);
+  expect((await postInit(env, token)).status).toBe(503);
 });
 
 test("serves sign-in on a waiting replica after another server assigns it", async () => {
-  const { env, accounts } = await managedEnv();
+  const { env, accounts } = await startManagedEnv();
   const replica = await startTestServer(env.db.url, {
     dataDir: env.dataDir,
-    managed: { instanceId: MANAGED_INSTANCE_ID, accountsUrl: accounts.url },
+    ...managedOptions(accounts),
   });
   onTestFinished(() => replica.stop());
   await waitForStartup(replica);
   const before = await fetch(`${replica.url}/api/auth/managed/start`, { redirect: "manual" });
   expect(before.status).toBe(503);
 
-  expect((await init(env, await accounts.signInit())).status).toBe(200);
+  expect((await postInit(env, await accounts.signInit())).status).toBe(200);
 
   const response = await fetch(`${replica.url}/api/auth/managed/start`, { redirect: "manual" });
   expect(response.status).toBe(303);
