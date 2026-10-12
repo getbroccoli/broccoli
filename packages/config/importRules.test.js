@@ -9,12 +9,7 @@ import { expect, onTestFinished, test } from "vitest";
 import { importRulesConfig } from "./importRules.js";
 
 test("rejects an element that does not exist on disk", () => {
-  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
-  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
-  writeFileSync(
-    join(packageDir, "importRules.json"),
-    JSON.stringify({ elements: { "src/missing": [] } }),
-  );
+  const packageDir = packageWith([], { elements: { "src/missing": [] } });
 
   expect(() => importRulesConfig(packageDir)).toThrow(
     new Error('importRules.json: "src/missing" does not exist'),
@@ -22,13 +17,7 @@ test("rejects an element that does not exist on disk", () => {
 });
 
 test("rejects a target that does not exist on disk", () => {
-  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
-  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
-  mkdirSync(join(packageDir, "src/billing"), { recursive: true });
-  writeFileSync(
-    join(packageDir, "importRules.json"),
-    JSON.stringify({ elements: { "src/billing": ["src/missing"] } }),
-  );
+  const packageDir = packageWith(["src/billing"], { elements: { "src/billing": ["src/missing"] } });
 
   expect(() => importRulesConfig(packageDir)).toThrow(
     new Error('importRules.json: "src/missing" does not exist'),
@@ -36,14 +25,9 @@ test("rejects a target that does not exist on disk", () => {
 });
 
 test("rejects an existing target that is not an element", () => {
-  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
-  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
-  mkdirSync(join(packageDir, "src/billing"), { recursive: true });
-  mkdirSync(join(packageDir, "src/payroll"), { recursive: true });
-  writeFileSync(
-    join(packageDir, "importRules.json"),
-    JSON.stringify({ elements: { "src/billing": ["src/payroll"] } }),
-  );
+  const packageDir = packageWith(["src/billing", "src/payroll"], {
+    elements: { "src/billing": ["src/payroll"] },
+  });
 
   expect(() => importRulesConfig(packageDir)).toThrow(
     new Error('importRules.json: "src/billing" lists "src/payroll", which is not an element'),
@@ -51,13 +35,10 @@ test("rejects an existing target that is not an element", () => {
 });
 
 test("rejects a layer that lists an unknown layer", () => {
-  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
-  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
-  mkdirSync(join(packageDir, "src/billing/app"), { recursive: true });
-  writeFileSync(
-    join(packageDir, "importRules.json"),
-    JSON.stringify({ elements: { "src/billing": [] }, layers: { app: ["missing"] } }),
-  );
+  const packageDir = packageWith(["src/billing/app"], {
+    elements: { "src/billing": [] },
+    layers: { app: ["missing"] },
+  });
 
   expect(() => importRulesConfig(packageDir)).toThrow(
     new Error('importRules.json: layer "app" lists "missing", which is not a layer'),
@@ -65,16 +46,9 @@ test("rejects a layer that lists an unknown layer", () => {
 });
 
 test("rejects a cycle between elements", () => {
-  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
-  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
-  mkdirSync(join(packageDir, "src/billing"), { recursive: true });
-  mkdirSync(join(packageDir, "src/payroll"), { recursive: true });
-  writeFileSync(
-    join(packageDir, "importRules.json"),
-    JSON.stringify({
-      elements: { "src/billing": ["src/payroll"], "src/payroll": ["src/billing"] },
-    }),
-  );
+  const packageDir = packageWith(["src/billing", "src/payroll"], {
+    elements: { "src/billing": ["src/payroll"], "src/payroll": ["src/billing"] },
+  });
 
   expect(() => importRulesConfig(packageDir)).toThrow(
     /import cycle: (?=.*src\/billing)(?=.*src\/payroll)/,
@@ -82,17 +56,10 @@ test("rejects a cycle between elements", () => {
 });
 
 test("rejects a cycle that appears when layers are expanded", () => {
-  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
-  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
-  mkdirSync(join(packageDir, "src/billing/domain"), { recursive: true });
-  mkdirSync(join(packageDir, "src/billing/db"), { recursive: true });
-  writeFileSync(
-    join(packageDir, "importRules.json"),
-    JSON.stringify({
-      elements: { "src/billing": [] },
-      layers: { domain: ["db"], db: ["domain"] },
-    }),
-  );
+  const packageDir = packageWith(["src/billing/domain", "src/billing/db"], {
+    elements: { "src/billing": [] },
+    layers: { domain: ["db"], db: ["domain"] },
+  });
 
   expect(() => importRulesConfig(packageDir)).toThrow(
     /import cycle: (?=.*src\/billing\/domain)(?=.*src\/billing\/db)/,
@@ -100,17 +67,10 @@ test("rejects a cycle that appears when layers are expanded", () => {
 });
 
 test("allows test support to import an element whose tests use it", () => {
-  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
-  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
-  mkdirSync(join(packageDir, "src/billing"), { recursive: true });
-  mkdirSync(join(packageDir, "test/support"), { recursive: true });
-  writeFileSync(
-    join(packageDir, "importRules.json"),
-    JSON.stringify({
-      elements: { "src/billing": [], "test/support": ["src/billing"] },
-      testsMayImport: { "src/billing": ["test/support"] },
-    }),
-  );
+  const packageDir = packageWith(["src/billing", "test/support"], {
+    elements: { "src/billing": [], "test/support": ["src/billing"] },
+    testsMayImport: { "src/billing": ["test/support"] },
+  });
 
   expect(() => importRulesConfig(packageDir)).not.toThrow();
 });
@@ -248,4 +208,12 @@ async function lintErrors(file, code) {
 
   const [result] = await eslint.lintText(code, { filePath: join(fixtureDir, file) });
   return result.messages;
+}
+
+function packageWith(folders, rules) {
+  const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
+  onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));
+  for (const folder of folders) mkdirSync(join(packageDir, folder), { recursive: true });
+  writeFileSync(join(packageDir, "importRules.json"), JSON.stringify(rules));
+  return packageDir;
 }
