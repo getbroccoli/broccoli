@@ -31,7 +31,7 @@ export async function verifyToken(
       clockTolerance: CLOCK_SKEW_SECONDS,
     }));
   } catch (error) {
-    if (error instanceof errors.JOSEError && !isKeyReadFailure(error)) {
+    if (isTokenError(error)) {
       throw new InvalidTokenError();
     }
     throw error;
@@ -50,6 +50,19 @@ function hasValidLifetime({ iat, exp }: JWTPayload): boolean {
   return lifetime > 0 && lifetime <= MAX_LIFETIME_SECONDS;
 }
 
-function isKeyReadFailure(error: errors.JOSEError): boolean {
-  return error instanceof errors.JWKSTimeout || error instanceof errors.JWKSInvalid;
+/** Errors about the token itself; any other error means its keys could not be read. */
+const TOKEN_ERRORS = [
+  errors.JWTClaimValidationFailed,
+  errors.JWTExpired,
+  errors.JWTInvalid,
+  errors.JWSInvalid,
+  errors.JWSSignatureVerificationFailed,
+  errors.JOSEAlgNotAllowed,
+  errors.JOSENotSupported,
+  errors.JWKSNoMatchingKey,
+  errors.JWKSMultipleMatchingKeys,
+];
+
+function isTokenError(error: unknown): boolean {
+  return TOKEN_ERRORS.some((tokenError) => error instanceof tokenError);
 }

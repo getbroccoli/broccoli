@@ -118,6 +118,16 @@ test("refuses a malformed assignment", async () => {
   expect((await init(env, token)).status).toBe(400);
 });
 
+test("refuses an init token that expired within the clock tolerance", async () => {
+  const { env, accounts } = await managedEnv();
+  const now = Math.floor(Date.now() / 1000);
+  const token = await accounts.signInit({ issuedAt: now - 59, expiresAt: now - 1 });
+
+  const response = await init(env, token);
+
+  expect(response.status).toBe(401);
+});
+
 test("refuses a sign-in ticket posted as init", async () => {
   const { env, accounts } = await managedEnv();
   const token = await accounts.signTicket({ sub: "subject-1" });

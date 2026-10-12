@@ -14,6 +14,8 @@ interface SignOptions {
   issuer?: string;
   audience?: string;
   lifetimeSeconds?: number;
+  issuedAt?: number;
+  expiresAt?: number;
 }
 
 /** The accounts service: an Ed25519 key, its JWKS, and signed init tokens and tickets. */
@@ -25,13 +27,13 @@ export async function startFakeAccounts() {
   );
 
   function sign(claims: JWTPayload, audience: string, options: SignOptions) {
-    const issuedAt = Math.floor(Date.now() / 1000);
+    const issuedAt = options.issuedAt ?? Math.floor(Date.now() / 1000);
     return new SignJWT(claims)
       .setProtectedHeader({ alg: "EdDSA", kid: "company" })
       .setIssuer(options.issuer ?? server.url)
       .setAudience(options.audience ?? audience)
       .setIssuedAt(issuedAt)
-      .setExpirationTime(issuedAt + (options.lifetimeSeconds ?? 60))
+      .setExpirationTime(options.expiresAt ?? issuedAt + (options.lifetimeSeconds ?? 60))
       .sign(privateKey);
   }
 

@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { expect, test } from "#test/support";
 
 import { account, user } from "../../auth";
-import { runInTransaction, type Orm } from "../../db";
+import { ormOf, runInTransaction, type Orm } from "../../db";
 import { createEventBus } from "../../events";
 import { readOwnerUserId, readSetupStep } from "../../instance";
 import { createLogger } from "../../logger";
 import type { ManagedTicket } from "../domain";
-import { managedTicket } from "../db";
+import { managedTicket, managedTicketRepository } from "../db";
 import { SignInRefusedError, signInWithTicket } from "./signInWithTicket";
 
 const NOW = new Date("2026-10-12T10:00:00Z");
@@ -28,7 +28,7 @@ function ticket(overrides: Partial<ManagedTicket> = {}): ManagedTicket {
   };
 }
 
-function signIn(orm: Orm, value: ManagedTicket, now = NOW) {
+function signIn(orm: Orm, value: ManagedTicket, clock = () => NOW) {
   const events: string[] = [];
   const eventBus = createEventBus(createLogger("silent"));
   eventBus.subscribe({
@@ -39,7 +39,7 @@ function signIn(orm: Orm, value: ManagedTicket, now = NOW) {
   });
   return {
     events,
-    result: runInTransaction(orm, eventBus, (tx) => signInWithTicket(tx, value, now)),
+    result: runInTransaction(orm, eventBus, (tx) => signInWithTicket(tx, value, clock)),
   };
 }
 
@@ -95,10 +95,54 @@ test("refuses one of two concurrent posts of the same ticket", async ({ orm }) =
   expect(rejected?.reason).toBeInstanceOf(SignInRefusedError);
 });
 
-test("refuses a ticket that expired while waiting", async ({ orm }) => {
+test("refuses an already expired ticket", async ({ orm }) => {
   const value = ticket({ expiresAt: NOW });
 
   await expect(signIn(orm, value).result).rejects.toBeInstanceOf(SignInRefusedError);
+});
+
+test("refuses a ticket that expires while another transaction holds its insert", async ({
+  orm,
+}) => {
+  const value = ticket();
+  const consumed = Promise.withResolvers<number>();
+  const release = Promise.withResolvers<void>();
+  const rollback = new Error("Roll back the first use");
+  const eventBus = createEventBus(createLogger("silent"));
+  const first = runInTransaction(orm, eventBus, async (tx) => {
+    await managedTicketRepository(tx).consume(value.jti, value.expiresAt);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    consumed.resolve(rows[0]!.pid);
+    await release.promise;
+    throw rollback;
+  });
+  const rolledBack = expect(first).rejects.toBe(rollback);
+  const blockingPid = await consumed.promise;
+  let now = NOW;
+  const second = Promise.allSettled([signIn(orm, value, () => now).result]);
+
+  try {
+    await expect
+      .poll(async () => {
+        const { rows } = await orm.execute<{ waiting: boolean }>(sql`
+          select exists (
+            select from pg_stat_activity
+            where datname = current_database()
+              and ${blockingPid} = any(pg_blocking_pids(pid))
+          ) as waiting
+        `);
+        return rows[0]!.waiting;
+      })
+      .toBe(true);
+    now = new Date(value.expiresAt.getTime() + 1);
+  } finally {
+    release.resolve();
+    await rolledBack;
+    await second;
+  }
+
+  const rejected = (await second).find((result) => result.status === "rejected");
+  expect(rejected?.reason).toBeInstanceOf(SignInRefusedError);
 });
 
 test("leaves the ticket unused when the transaction fails", async ({ orm }) => {
@@ -106,7 +150,7 @@ test("leaves the ticket unused when the transaction fails", async ({ orm }) => {
   const eventBus = createEventBus(createLogger("silent"));
   await expect(
     runInTransaction(orm, eventBus, async (tx) => {
-      await signInWithTicket(tx, value, NOW);
+      await signInWithTicket(tx, value, () => NOW);
       throw new Error("later step failed");
     }),
   ).rejects.toThrow("later step failed");
@@ -119,7 +163,7 @@ test("deletes expired tickets on sign-in", async ({ orm }) => {
   await signIn(orm, old).result;
   const current = ticket();
 
-  await signIn(orm, current, new Date(NOW.getTime() + 2_000)).result;
+  await signIn(orm, current, () => new Date(NOW.getTime() + 2_000)).result;
 
   expect(await orm.select({ jti: managedTicket.jti }).from(managedTicket)).toEqual([
     { jti: current.jti },

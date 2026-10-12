@@ -43,8 +43,15 @@ export function initRouter({
       return;
     }
     try {
-      const assignment = parseInitClaims(await verifyToken(token, tokenCheck));
-      await runInTransaction(orm, eventBus, (tx) => assignInstance(tx, assignment));
+      const payload = await verifyToken(token, tokenCheck);
+      const assignment = parseInitClaims(payload);
+      await runInTransaction(orm, eventBus, async (tx) => {
+        await assignInstance(tx, assignment);
+        // Strict, after the row lock: the token must still be valid when the assignment commits.
+        if (payload.exp! * 1000 <= Date.now()) {
+          throw new InvalidTokenError();
+        }
+      });
       await auth.current();
       response.json({ initStatus: "ready" });
     } catch (error) {

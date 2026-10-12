@@ -19,28 +19,31 @@ export class SignInRefusedError extends Error {
 export async function signInWithTicket(
   tx: Tx,
   ticket: ManagedTicket,
-  now: Date,
+  clock: () => Date,
 ): Promise<{ userId: string }> {
   const tickets = managedTicketRepository(tx);
   if (!(await tickets.consume(ticket.jti, ticket.expiresAt))) {
     throw new SignInRefusedError();
   }
-  // Checked after `consume`, which may have waited for a concurrent use of the ticket.
-  if (ticket.expiresAt <= now) {
+  await tickets.deleteExpired(clock());
+  const userId = await findOrClaimOwner(tx, ticket);
+  // Checked last, with a fresh clock: the steps above may have waited for other transactions.
+  if (ticket.expiresAt <= clock()) {
     throw new SignInRefusedError();
   }
-  await tickets.deleteExpired(now);
+  return { userId };
+}
 
-  const accounts = managedAccountRepository(tx);
-  const userId = await accounts.findUserId(ticket.subject);
-  if (userId) {
-    // Only the owner exists until invitations do.
-    if (userId !== (await readOwnerUserId(tx))) {
-      throw new SignInRefusedError();
-    }
-    return { userId };
+async function findOrClaimOwner(tx: Tx, ticket: ManagedTicket): Promise<string> {
+  const userId = await managedAccountRepository(tx).findUserId(ticket.subject);
+  if (!userId) {
+    return claimOwnerFor(tx, ticket);
   }
-  return { userId: await claimOwnerFor(tx, ticket) };
+  // Only the owner exists until invitations do.
+  if (userId !== (await readOwnerUserId(tx))) {
+    throw new SignInRefusedError();
+  }
+  return userId;
 }
 
 async function claimOwnerFor(tx: Tx, ticket: ManagedTicket): Promise<string> {

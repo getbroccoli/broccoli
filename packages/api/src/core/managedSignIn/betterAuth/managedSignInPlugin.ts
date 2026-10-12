@@ -82,7 +82,7 @@ export function managedSignInPlugin({
     return runInTransaction(orm, eventBus, (tx) =>
       // Better Auth's writes join the transaction that uses the ticket.
       runWithAdapter(authDatabase(ormOf(tx))(options), async () => {
-        const { userId } = await signInWithTicket(tx, ticket, new Date());
+        const { userId } = await signInWithTicket(tx, ticket, () => new Date());
         const session = await internalAdapter.createSession(userId);
         const user = await internalAdapter.findUserById(userId);
         if (!user) {

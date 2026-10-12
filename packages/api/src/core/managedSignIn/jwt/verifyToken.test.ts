@@ -1,4 +1,12 @@
-import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT, type JWTPayload } from "jose";
+import {
+  createLocalJWKSet,
+  createRemoteJWKSet,
+  customFetch,
+  exportJWK,
+  generateKeyPair,
+  SignJWT,
+  type JWTPayload,
+} from "jose";
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 
 import { InvalidTokenError } from "../domain";
@@ -101,4 +109,21 @@ it("passes on a failure to read the keys", async () => {
   await expect(
     verifyToken(await sign(), { keys: failingKeys, issuer: ISSUER, audience: AUDIENCE }),
   ).rejects.toBeInstanceOf(TypeError);
+});
+
+it.each([
+  ["HTTP 503", 503],
+  ["non-JSON HTTP 200", 200],
+])("passes on a JWKS response containing %s", async (_kind, status) => {
+  const remoteKeys = createRemoteJWKSet(new URL("/.well-known/jwks.json", ISSUER), {
+    [customFetch]: () => Promise.resolve(new Response("Service unavailable", { status })),
+  });
+
+  const result = verifyToken(await sign(), {
+    keys: remoteKeys,
+    issuer: ISSUER,
+    audience: AUDIENCE,
+  });
+
+  await expect(result).rejects.not.toBeInstanceOf(InvalidTokenError);
 });
