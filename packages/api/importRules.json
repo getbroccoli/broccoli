@@ -1,58 +1,18 @@
 {
   "elements": {
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
-    "src/modules": [
-      "src/core/env",
-      "src/core/moduleManifest",
-      "src/modules/company",
-      "src/modules/employees",
-      "src/modules/system"
-    ],
+    "src/modules": ["src/core/env", "src/core/moduleManifest", "src/modules/*"],
     "src/modules/company": [
-      "src/core/actor",
-      "src/core/applicationError",
-      "src/core/db",
-      "src/core/events",
-      "src/core/graphql",
-      "src/core/instance",
-      "src/core/logger",
-      "src/core/moduleManifest",
+      "src/core/*",
+      "!src/core/server",
       "src/integrations/brandLookup",
       "src/utils"
     ],
-    "src/modules/employees": [
-      "src/core/actor",
-      "src/core/applicationError",
-      "src/core/db",
-      "src/core/graphql",
-      "src/core/moduleManifest",
-      "src/core/pagination",
-      "src/utils"
-    ],
-    "src/modules/system": [
-      "src/core/db",
-      "src/core/env",
-      "src/core/graphql",
-      "src/core/instance",
-      "src/core/moduleManifest"
-    ],
+    "src/modules/employees": ["src/core/*", "!src/core/server", "src/utils"],
+    "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/integrations/brandLookup": ["src/utils"],
     "src/utils": [],
-    "src/core/server": [
-      "src/core/actor",
-      "src/core/auth",
-      "src/core/db",
-      "src/core/env",
-      "src/core/events",
-      "src/core/graphql",
-      "src/core/health",
-      "src/core/instance",
-      "src/core/logger",
-      "src/core/managedSignIn",
-      "src/core/moduleManifest",
-      "src/core/readiness",
-      "src/core/secrets"
-    ],
+    "src/core/server": ["src/core/*"],
     "src/core/moduleManifest": [
       "src/core/db",
       "src/core/events",
@@ -93,18 +53,10 @@
     "src/core/readiness": [],
     "src/core/secrets": [],
     "test/support": [
-      "src/core/actor",
-      "src/core/auth",
-      "src/core/db",
-      "src/core/env",
-      "src/core/events",
-      "src/core/instance",
-      "src/core/logger",
-      "src/core/server",
-      "src/integrations/brandLookup",
+      "src/core/*",
+      "src/integrations/*",
       "src/modules",
-      "src/modules/company",
-      "src/modules/employees",
+      "src/modules/*",
       "src/utils"
     ],
     "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]

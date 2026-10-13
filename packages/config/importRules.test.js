@@ -31,6 +31,16 @@ test("rejects an existing target that is not an element", () => {
   );
 });
 
+test("rejects a pattern that matches no element", () => {
+  const packageDir = packageWith(["src/billing"], {
+    elements: { "src/billing": ["src/core/*"] },
+  });
+
+  expect(() => importRulesConfig(packageDir)).toThrow(
+    new Error('importRules.json: "src/billing" lists "src/core/*", which matches no element'),
+  );
+});
+
 test("rejects a single-file element inside a folder element", () => {
   const packageDir = packageWith(["src/billing"], {
     elements: { "src/billing": [], "src/billing/report": [] },
@@ -61,6 +71,24 @@ test("rejects a cycle between elements", () => {
   expect(() => importRulesConfig(packageDir)).toThrow(
     /import cycle: (?=.*src\/billing)(?=.*src\/payroll)/,
   );
+});
+
+test("rejects a cycle formed through a pattern", () => {
+  const packageDir = packageWith(["src/billing", "src/payroll"], {
+    elements: { "src/billing": ["src/*"], "src/payroll": ["src/billing"] },
+  });
+
+  expect(() => importRulesConfig(packageDir)).toThrow(
+    /import cycle: (?=.*src\/billing)(?=.*src\/payroll)/,
+  );
+});
+
+test("accepts an element whose pattern also matches itself", () => {
+  const packageDir = packageWith(["src/core/db", "src/core/logger"], {
+    elements: { "src/core/db": ["src/core/*"], "src/core/logger": [] },
+  });
+
+  expect(() => importRulesConfig(packageDir)).not.toThrow();
 });
 
 test("rejects a cycle that appears when layers are expanded", () => {

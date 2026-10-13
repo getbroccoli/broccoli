@@ -12,7 +12,7 @@ packages/api/src/
 └── utils/         helpers that know nothing about Broccoli, such as getJson
 ```
 
-**Import rules.** Each package's `importRules.json` ([API](../packages/api/importRules.json), [web](../packages/web/importRules.json)) lists what each folder, or single file, may import; anything not listed is forbidden. ESLint enforces it, allows a folder to be imported only through its `index.ts`, and refuses rules whose graph has a cycle. A module imports another module only where that pair is listed (see cross-module calls in §1); `core` never imports a module.
+**Import rules.** Each package's `importRules.json` ([API](../packages/api/importRules.json), [web](../packages/web/importRules.json)) lists what each folder, or single file, may import; a target may be a glob (`src/core/*`), and `!` removes matches (`!src/core/server`). Anything not listed is forbidden. ESLint enforces it, allows a folder to be imported only through its `index.ts`, and refuses rules whose graph has a cycle. A module imports another module only where that pair is listed (see cross-module calls in §1); `core` never imports a module.
 
 ## 1. Shape of the system
 

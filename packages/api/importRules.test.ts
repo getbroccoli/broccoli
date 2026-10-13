@@ -13,6 +13,12 @@ test("rejects a module importing an undeclared module", async () => {
   expect(errors).not.toEqual([]);
 });
 
+test("rejects a module importing core/server", async () => {
+  const errors = await lintErrors("src/modules/company/index.ts", 'import "../../core/server";');
+
+  expect(errors).not.toEqual([]);
+});
+
 test("allows a module importing a declared element", async () => {
   const errors = await lintErrors("src/modules/company/index.ts", 'import "../../core/instance";');
 

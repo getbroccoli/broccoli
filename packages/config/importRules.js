@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, matchesGlob } from "node:path";
 import boundaries from "eslint-plugin-boundaries";
 
 const RULES_FILE = "importRules.json";
@@ -169,9 +169,47 @@ function dependencyPolicies(elements, { deepImports, testsMayImport }) {
   ];
 }
 
+/** Reads the rules and replaces each target pattern with the elements it matches. */
 function readRules(packageDir) {
-  const rules = JSON.parse(readFileSync(join(packageDir, RULES_FILE), "utf8"));
-  return { elements: {}, layers: {}, deepImports: [], testsMayImport: {}, ...rules };
+  const rules = {
+    elements: {},
+    layers: {},
+    deepImports: [],
+    testsMayImport: {},
+    ...JSON.parse(readFileSync(join(packageDir, RULES_FILE), "utf8")),
+  };
+  const paths = Object.keys(rules.elements);
+  const expand = (lists) =>
+    Object.fromEntries(
+      Object.entries(lists).map(([from, targets]) => [from, expandTargets(from, targets, paths)]),
+    );
+  return {
+    ...rules,
+    elements: expand(rules.elements),
+    testsMayImport: expand(rules.testsMayImport),
+  };
+}
+
+/**
+ * `src/core/*` adds every element it matches except `from` itself; `!src/core/server` removes
+ * what it matches. Exact paths pass through for validation.
+ */
+function expandTargets(from, targets, paths) {
+  const expanded = new Set();
+  for (const target of targets) {
+    const isRemoval = target.startsWith("!");
+    const pattern = isRemoval ? target.slice(1) : target;
+    const isGlob = /[*?[{]/.test(pattern);
+    const matches = isGlob
+      ? paths.filter((path) => path !== from && matchesGlob(path, pattern))
+      : [pattern];
+    if (matches.length === 0) fail(`"${from}" lists "${target}", which matches no element`);
+    for (const path of matches) {
+      if (isRemoval) expanded.delete(path);
+      else expanded.add(path);
+    }
+  }
+  return [...expanded];
 }
 
 /** Tests inside a folder element or next to a single-file element; any other test is unknown. */
