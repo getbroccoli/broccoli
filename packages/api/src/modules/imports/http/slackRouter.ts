@@ -15,11 +15,7 @@ const CALLBACK_PATH = "/api/integrations/slack/callback";
 const IMPORT_PAGE = "/setup/import";
 /** Holds `<state>.<code verifier>` while the browser is at Slack. */
 const COOKIE = "broccoli_slack_oauth";
-const COOKIE_OPTIONS = {
-  path: "/api/integrations/slack",
-  httpOnly: true,
-  sameSite: "lax",
-} as const;
+const COOKIE_PATH = "/api/integrations/slack";
 /** As long as the relay keeps its state. */
 const COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
 
@@ -41,8 +37,10 @@ export function slackRouter(
         const origin = await publicOrigin(request);
         const start = useCases.beginSlackConnection(actor, `${origin}${CALLBACK_PATH}`);
         response.cookie(COOKIE, `${start.state}.${start.codeVerifier}`, {
-          ...COOKIE_OPTIONS,
+          path: COOKIE_PATH,
           maxAge: COOKIE_MAX_AGE_MS,
+          httpOnly: true,
+          sameSite: "lax",
           secure: origin.startsWith("https:"),
         });
         response.redirect(302, start.authorizeUrl.href);
@@ -52,7 +50,14 @@ export function slackRouter(
     })
     .get("/integrations/slack/callback", async (request, response) => {
       const pending = readPendingConnection(request.headers.cookie);
-      response.cookie(COOKIE, "", { ...COOKIE_OPTIONS, maxAge: 0 });
+      const origin = await publicOrigin(request);
+      response.cookie(COOKIE, "", {
+        path: COOKIE_PATH,
+        maxAge: 0,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: origin.startsWith("https:"),
+      });
       const error = await finishConnection(useCases, resolveActor, request, pending);
       response.redirect(302, error ? `${IMPORT_PAGE}?slackError=${error}` : IMPORT_PAGE);
     });
