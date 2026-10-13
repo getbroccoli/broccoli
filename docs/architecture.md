@@ -21,7 +21,7 @@ packages/api/src/
 - **Layers per module.**
   - `domain`: pure TypeScript, no I/O.
   - `db`: the Postgres adapter. Concrete repositories over the ORM or a transaction (`employeeRepository(db)`) that take and return domain types.
-  - `app`: the application layer. `app/useCases/` holds one function per thing a user can do, and its `index.ts` is the module's use-case factory (`createEmployeeUseCases({ orm })`). Use cases are the single place for authorisation, transactions, audit and events.
+  - `app`: the application layer. `app/useCases/` holds one function per thing a user can do; closely related ones, such as the two steps of connecting Slack, share a file. Its `index.ts` is the module's use-case factory (`createEmployeeUseCases({ orm })`). Use cases are the single place for authorisation, transactions, audit and events.
   - `graphql`, `mcp` and `http`: adapters that translate a request into one use-case call; no rules. `http` holds the few routes GraphQL cannot serve, such as images.
   - `index.ts`: the module's public surface; it composes the adapters with the use cases.
   - A `core/` folder that owns state and rules, such as `core/instance` (owner and setup), uses the same layers; its adapter folder is named after its technology (`betterAuth`).

@@ -3,8 +3,7 @@ import type { Tx } from "../../../../core/db";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SlackApi, SlackAuthorization } from "../../../../integrations/slack";
 import { slackConnectionRepository } from "../../db";
-import { beginSlackConnection } from "./beginSlackConnection";
-import { connectSlack } from "./connectSlack";
+import { beginSlackConnection, connectSlack } from "./connection";
 import { getSlackConnection, isCurrentSlackConnection, readSlackMembers } from "./readConnection";
 
 export type { SlackMembersRead } from "./readConnection";
