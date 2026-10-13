@@ -1,6 +1,6 @@
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
-import { parseCalendarDate } from "../../utils";
+import { todayInUtc } from "../../utils";
 import { createDemoUseCases } from "./app";
 import { createResolvers } from "./graphql";
 
@@ -17,8 +17,4 @@ export function demoModule(
     resolvers: createResolvers(useCases),
     events: { "instance.setup_completed": () => useCases.seedDemoData(todayInUtc()) },
   };
-}
-
-function todayInUtc() {
-  return parseCalendarDate(new Date().toISOString().slice(0, 10))!;
 }

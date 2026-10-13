@@ -21,3 +21,8 @@ export function addDays(date: CalendarDate, days: number): CalendarDate {
     .toISOString()
     .slice(0, 10) as CalendarDate;
 }
+
+/** Today as a calendar day in UTC. */
+export function todayInUtc(): CalendarDate {
+  return new Date().toISOString().slice(0, 10) as CalendarDate;
+}
