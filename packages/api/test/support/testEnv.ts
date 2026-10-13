@@ -12,9 +12,13 @@ import type { RunningServer } from "../../src/core/server";
 import { createTestDatabase, type TestDatabase } from "./testDatabases";
 import { TestSeed } from "./testSeed";
 import { createBrowser, type Browser } from "./browser";
-import { startTestServer, waitForStartup, type TestServerOptions } from "./testServer";
+import {
+  startTestBroccoliServer,
+  waitForStartup,
+  type TestBroccoliServerOptions,
+} from "./testBroccoliServer";
 
-export type TestEnvOptions = Omit<TestServerOptions, "dataDir">;
+export type TestEnvOptions = Omit<TestBroccoliServerOptions, "dataDir">;
 
 export const TEST_OWNER = { email: "owner@example.com", password: "correct horse battery staple" };
 
@@ -97,7 +101,7 @@ async function startReady(
   dataDir: string,
   options: TestEnvOptions,
 ): Promise<RunningServer> {
-  const server = await startTestServer(db.url, { ...options, dataDir });
+  const server = await startTestBroccoliServer(db.url, { ...options, dataDir });
   const readiness = await waitForStartup(server);
   if (readiness.status !== "ready") {
     await server.stop();

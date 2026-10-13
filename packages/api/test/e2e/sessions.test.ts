@@ -5,7 +5,7 @@ import {
   createTestDatabase,
   expect,
   startDisconnectingProxy,
-  startTestServer,
+  startTestBroccoliServer,
   test,
   TEST_OWNER,
   waitForStartup,
@@ -77,7 +77,7 @@ test("masks a database failure while reading the session", async () => {
   onTestFinished(() => database.drop());
   const proxy = await startDisconnectingProxy(database.url);
   onTestFinished(() => proxy.disconnect());
-  const server = await startTestServer(proxy.url);
+  const server = await startTestBroccoliServer(proxy.url);
   onTestFinished(() => server.stop());
   expect(await waitForStartup(server)).toEqual({ httpStatus: 200, status: "ready" });
   const browser = createBrowser(server.url);

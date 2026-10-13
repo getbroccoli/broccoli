@@ -5,7 +5,7 @@ import { join, relative } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 
 import type { RunningServer } from "../../src/core/server";
-import { startTestServer } from "#test/support";
+import { startTestBroccoliServer } from "#test/support";
 
 // The web app needs no database, so these servers never become ready.
 const UNREACHABLE_DATABASE_URL = "postgres://broccoli@127.0.0.1:1/broccoli_test_unreachable";
@@ -20,7 +20,7 @@ describe("with a web app folder", () => {
     webDir = await mkdtemp(join(tmpdir(), "broccoli-web-"));
     await writeFile(join(webDir, "index.html"), INDEX_HTML);
     await writeFile(join(webDir, "app.js"), ASSET);
-    server = await startTestServer(UNREACHABLE_DATABASE_URL, { webDir });
+    server = await startTestBroccoliServer(UNREACHABLE_DATABASE_URL, { webDir });
   });
 
   afterAll(async () => {
@@ -67,7 +67,7 @@ it("serves page links from a relative web app folder inside a hidden folder", as
   const webDir = await mkdtemp(join(tmpdir(), ".broccoli-web-"));
   onTestFinished(() => rm(webDir, { recursive: true, force: true }));
   await writeFile(join(webDir, "index.html"), INDEX_HTML);
-  const server = await startTestServer(UNREACHABLE_DATABASE_URL, {
+  const server = await startTestBroccoliServer(UNREACHABLE_DATABASE_URL, {
     webDir: relative(process.cwd(), webDir),
   });
   onTestFinished(() => server.stop());
@@ -76,7 +76,7 @@ it("serves page links from a relative web app folder inside a hidden folder", as
 });
 
 it("serves no web app without a web app folder", async () => {
-  const server = await startTestServer(UNREACHABLE_DATABASE_URL);
+  const server = await startTestBroccoliServer(UNREACHABLE_DATABASE_URL);
   onTestFinished(() => server.stop());
 
   expect((await fetch(`${server.url}/`)).status).toBe(404);

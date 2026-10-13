@@ -7,7 +7,7 @@ import {
   managedOptions,
   postInit,
   startManagedEnv,
-  startTestServer,
+  startTestBroccoliServer,
   waitForStartup,
   test,
 } from "#test/support";
@@ -149,7 +149,7 @@ test("answers unavailable when the issuer's keys cannot be read", async () => {
 
 test("serves sign-in on a waiting replica after another server assigns it", async () => {
   const { env, accounts } = await startManagedEnv();
-  const replica = await startTestServer(env.db.url, {
+  const replica = await startTestBroccoliServer(env.db.url, {
     dataDir: env.dataDir,
     ...managedOptions(accounts),
   });

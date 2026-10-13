@@ -1,7 +1,7 @@
 import express from "express";
 import { onTestFinished } from "vitest";
 
-import { expect, startHttpServer, storedFileIds, test } from "#test/support";
+import { expect, startSimpleHttpServer, storedFileIds, test } from "#test/support";
 
 import { runInTransaction, type Orm } from "../db";
 import { createEventBus } from "../events";
@@ -91,7 +91,7 @@ async function startFileServer(orm: Orm): Promise<string> {
   const app = express().get("/:fileId", (request, response) =>
     sendFile(orm, request.params.fileId, response),
   );
-  const server = await startHttpServer(app);
+  const server = await startSimpleHttpServer(app);
   onTestFinished(server.stop);
   return server.url;
 }

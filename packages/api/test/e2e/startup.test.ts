@@ -15,7 +15,7 @@ import {
   fetchReadiness,
   holdMigrationLock,
   startDisconnectingProxy,
-  startTestServer,
+  startTestBroccoliServer,
   waitForStartup,
   type TestDatabase,
 } from "#test/support";
@@ -27,7 +27,10 @@ const UNAVAILABLE = { httpStatus: 503, status: "unavailable" };
 
 it("migrates one empty database from two instances starting together", async () => {
   const database = await emptyDatabase();
-  const servers = await Promise.all([startTestServer(database.url), startTestServer(database.url)]);
+  const servers = await Promise.all([
+    startTestBroccoliServer(database.url),
+    startTestBroccoliServer(database.url),
+  ]);
   onTestFinished(async () => {
     await Promise.all(servers.map((server) => server.stop()));
   });
@@ -40,7 +43,7 @@ it("stays alive and unavailable when its connection drops during migration", asy
   const lock = await holdMigrationLock(database.url);
   onTestFinished(() => lock.release());
   const proxy = await startDisconnectingProxy(database.url);
-  const server = await startTestServer(proxy.url);
+  const server = await startTestBroccoliServer(proxy.url);
   onTestFinished(() => server.stop());
   await expect.poll(() => lock.hasWaitingSession()).toBe(true);
 
@@ -54,7 +57,7 @@ it("stops while another instance holds the migration lock", async () => {
   const database = await emptyDatabase();
   const lock = await holdMigrationLock(database.url);
   onTestFinished(() => lock.release());
-  const server = await startTestServer(database.url);
+  const server = await startTestBroccoliServer(database.url);
 
   await expect(server.stop()).resolves.toBeUndefined();
 }, 5_000);
@@ -64,7 +67,7 @@ it("becomes ready when the database comes up after it started", async () => {
   const port = await findFreePort();
   const databaseUrl = new URL(database.url);
   databaseUrl.host = `127.0.0.1:${port}`;
-  const server = await startTestServer(databaseUrl.href);
+  const server = await startTestBroccoliServer(databaseUrl.href);
   onTestFinished(() => server.stop());
   expect(await waitForStartup(server)).toEqual(UNAVAILABLE);
 

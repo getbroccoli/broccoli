@@ -11,7 +11,7 @@ export {
   MANAGED_INSTANCE_ID,
 } from "./fakeAccounts";
 export { startFakeHttpServer } from "./fakeHttpServer";
-export { startHttpServer } from "./httpServer";
+export { startSimpleHttpServer } from "./simpleHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
 export { managedOptions, postInit, startManagedEnv } from "./managedTestEnv";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
@@ -30,8 +30,8 @@ export { companyUseCases } from "./useCases";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,
-  startTestServer,
+  startTestBroccoliServer,
   waitForStartup,
   type Readiness,
-  type TestServerOptions,
-} from "./testServer";
+  type TestBroccoliServerOptions,
+} from "./testBroccoliServer";

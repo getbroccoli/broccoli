@@ -1,8 +1,13 @@
 import { createServer, type RequestListener } from "node:http";
 import type { AddressInfo } from "node:net";
 
-/** Serves `listener` on a free local port until `stop` is called. */
-export async function startHttpServer(listener: RequestListener) {
+/**
+ * Serves any request listener, such as a small Express app, on a free local port
+ * until `stop` is called. Use it to drive our own HTTP code from a test; for a fake
+ * external JSON service use `startFakeHttpServer`, for Broccoli itself
+ * `startTestBroccoliServer`.
+ */
+export async function startSimpleHttpServer(listener: RequestListener) {
   const server = createServer(listener);
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);

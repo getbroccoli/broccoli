@@ -1,11 +1,15 @@
-import { startHttpServer } from "./httpServer";
+import { startSimpleHttpServer } from "./simpleHttpServer";
 
 type Answer = { status: number; body?: unknown };
 
-/** Async answers let a timeout test hold a response without sleeping. */
+/**
+ * Stands in for an external JSON service, such as the brand lookup: answers GET
+ * requests with `answer(path)` and records the paths asked for. Async answers let a
+ * timeout test hold a response without sleeping.
+ */
 export async function startFakeHttpServer(answer: (path: string) => Answer | Promise<Answer>) {
   const paths: string[] = [];
-  const server = await startHttpServer((request, response) => {
+  const server = await startSimpleHttpServer((request, response) => {
     if (request.method !== "GET") {
       response.writeHead(404).end();
       return;
