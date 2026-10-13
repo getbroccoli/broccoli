@@ -10,5 +10,7 @@ export async function isEmployeeAvatar(
   fileId: string,
 ): Promise<boolean> {
   requireOwner(actor);
-  return z.uuid().safeParse(fileId).success && (await employees.hasAvatar(fileId));
+  // Postgres refuses a malformed uuid, so only a parsed one reaches the query.
+  const id = z.uuid().safeParse(fileId);
+  return id.success && (await employees.hasAvatar(id.data));
 }
