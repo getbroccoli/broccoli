@@ -13,9 +13,9 @@ export function DemoBanner() {
   if (!data?.demoData.isPresent) return null;
 
   return (
-    <div className="mb-6 flex items-center gap-3 rounded-lg border border-border bg-muted/60 px-3 py-2 text-[12.5px] text-foreground">
+    <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-muted/60 px-3 py-2 text-[12.5px] text-foreground">
       <Info aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-      <p className="flex-1">{t("demo.banner.text")}</p>
+      <p className="min-w-0 flex-1">{t("demo.banner.text")}</p>
       <ClearDemoDataDialog />
     </div>
   );
