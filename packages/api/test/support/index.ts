@@ -11,6 +11,7 @@ export {
   MANAGED_INSTANCE_ID,
 } from "./fakeAccounts";
 export { startFakeHttpServer } from "./fakeHttpServer";
+export { startHttpServer } from "./httpServer";
 export { PNG, JPEG, WEBP } from "./images";
 export { managedOptions, postInit, startManagedEnv } from "./managedTestEnv";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";

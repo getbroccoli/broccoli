@@ -1,10 +1,7 @@
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
-
 import express from "express";
 import { onTestFinished } from "vitest";
 
-import { expect, storedFileIds, test } from "#test/support";
+import { expect, startHttpServer, storedFileIds, test } from "#test/support";
 
 import { runInTransaction, type Orm } from "../db";
 import { createEventBus } from "../events";
@@ -91,22 +88,10 @@ test("does not keep a file when its transaction rolls back", async ({ orm }) => 
 });
 
 async function startFileServer(orm: Orm): Promise<string> {
-  const app = express();
-  app.get("/:fileId", (request, response) => sendFile(orm, request.params.fileId, response));
-  const server = createServer(app);
-  onTestFinished(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-        server.closeAllConnections();
-      }),
+  const app = express().get("/:fileId", (request, response) =>
+    sendFile(orm, request.params.fileId, response),
   );
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      server.off("error", reject);
-      resolve();
-    });
-  });
-  return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const server = await startHttpServer(app);
+  onTestFinished(server.stop);
+  return server.url;
 }

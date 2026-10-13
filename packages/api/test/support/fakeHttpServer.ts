@@ -1,12 +1,11 @@
-import { createServer } from "node:http";
-import type { AddressInfo } from "node:net";
+import { startHttpServer } from "./httpServer";
 
 type Answer = { status: number; body?: unknown };
 
 /** Async answers let a timeout test hold a response without sleeping. */
 export async function startFakeHttpServer(answer: (path: string) => Answer | Promise<Answer>) {
   const paths: string[] = [];
-  const server = createServer((request, response) => {
+  const server = await startHttpServer((request, response) => {
     if (request.method !== "GET") {
       response.writeHead(404).end();
       return;
@@ -21,20 +20,5 @@ export async function startFakeHttpServer(answer: (path: string) => Answer | Pro
       })
       .catch(() => response.destroy());
   });
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      server.off("error", reject);
-      resolve();
-    });
-  });
-  return {
-    url: `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
-    paths,
-    stop: () =>
-      new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-        server.closeAllConnections();
-      }),
-  };
+  return { ...server, paths };
 }
