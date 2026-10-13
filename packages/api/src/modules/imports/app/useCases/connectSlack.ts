@@ -7,9 +7,6 @@ import type { IncomingRecord } from "../../domain";
 import type { ImportContext } from "./importContext";
 import { readSlackRecords } from "./slackRecords";
 
-/** Scopes the import needs: the member list and each member's email. */
-const REQUIRED_SCOPES = ["users:read", "users:read.email"];
-
 /**
  * Finishes connecting Slack after the relay's return: redeems the handle, reads the
  * members, then stores the connection and makes the Slack source hold them.
@@ -34,6 +31,9 @@ export async function connectSlack(
     await imports.syncEmployeeRecords(sourceId, records);
   });
 }
+
+/** Scopes the import needs: the member list and each member's email. */
+const REQUIRED_SCOPES = ["users:read", "users:read.email"];
 
 async function readWorkspace(
   { slack, logger }: ImportContext,

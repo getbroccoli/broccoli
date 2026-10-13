@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { fetchJson } from "../../utils";
+import { fetchJson, urlUnder } from "../../utils";
 
 /** What Slack granted the instance: a bot token for one workspace. */
 export interface SlackGrant {
@@ -129,8 +129,3 @@ const usersListAnswer = z.object({
   members: z.array(member).default([]),
   response_metadata: z.object({ next_cursor: z.string().optional() }).optional(),
 });
-
-/** `path` under `base`; `new URL` would drop the last path segment of a base without a trailing slash. */
-function urlUnder(base: string, path: string): URL {
-  return new URL(path, base.endsWith("/") ? base : `${base}/`);
-}

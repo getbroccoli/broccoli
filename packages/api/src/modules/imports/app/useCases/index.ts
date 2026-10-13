@@ -14,8 +14,6 @@ import {
 } from "./readImport";
 import { skipImport } from "./skipImport";
 
-export type { SlackConnectionStart } from "./beginSlackConnection";
-
 /** Everything that can be done with the import; the adapters call nothing else. */
 export function createImportUseCases({
   orm,

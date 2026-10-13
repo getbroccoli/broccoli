@@ -5,5 +5,5 @@ export {
   type ImportEmployeeValues,
   type IncomingRecord,
 } from "./importEmployee";
-export type { ImportSource, ImportSourceKind } from "./importSource";
+export type { ImportSource } from "./importSource";
 export { mapSlackMembers, type SlackMember } from "./slackMembers";
