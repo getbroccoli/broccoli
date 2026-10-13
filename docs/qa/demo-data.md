@@ -5,7 +5,7 @@ A manual check that a new instance starts with the demo company and that clearin
 ## Setup
 
 1. Start the stack with a fresh development database and create the owner as in [QA setup](setup.md).
-2. Save the company step with a name such as "Acme Corp".
+2. Save the company step with a name such as "Acme Corp", then choose "Skip for now" on the import step.
 
 ## Seeded
 
@@ -26,7 +26,7 @@ A manual check that a new instance starts with the demo company and that clearin
 
 ## Managed
 
-- [ ] Sign in to a managed instance through the managed flow and save the company step: the same 40 people and the banner appear.
+- [ ] Sign in to a managed instance through the managed flow, save the company step and skip the import step: the same 40 people and the banner appear.
 
 ## Image
 

@@ -1,7 +1,7 @@
 import express from "express";
 
 import { requireSignedIn } from "../../../core/actor";
-import { ApplicationError } from "../../../core/applicationError";
+import { ApplicationError, sendApplicationError } from "../../../core/applicationError";
 import type { ActorResolver } from "../../../core/graphql";
 import type { ImportUseCases } from "../app";
 
@@ -47,7 +47,7 @@ export function slackRouter(
         });
         response.redirect(302, start.authorizeUrl.href);
       } catch (error) {
-        sendAccessError(error, response);
+        sendApplicationError(error, response);
       }
     })
     .get("/integrations/slack/callback", async (request, response) => {
@@ -101,12 +101,4 @@ function readPendingConnection(
     ?.slice(COOKIE.length + 1);
   const [state, codeVerifier, ...rest] = value?.split(".") ?? [];
   return state && codeVerifier && rest.length === 0 ? { state, codeVerifier } : null;
-}
-
-/** Answers a refused caller with 401 or 403; anything else goes to Express's error handler. */
-function sendAccessError(error: unknown, response: express.Response): void {
-  if (!(error instanceof ApplicationError)) {
-    throw error;
-  }
-  response.sendStatus(error.code === "UNAUTHENTICATED" ? 401 : 403);
 }
