@@ -8,6 +8,9 @@ export default defineConfig({
   unbundle: true,
   fixedExtension: false,
   sourcemap: true,
-  // Modules read their SDL from next to their code at startup.
-  copy: [{ from: "src/**/*.graphql", flatten: false }],
+  // Modules read their SDL and shipped images, such as demo avatars, from next to their code.
+  copy: [
+    { from: "src/**/*.graphql", flatten: false },
+    { from: "src/**/*.webp", flatten: false },
+  ],
 });
