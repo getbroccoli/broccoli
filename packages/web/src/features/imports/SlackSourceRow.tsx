@@ -34,7 +34,7 @@ export function SlackSourceRow({ source }: SlackSourceRowProps) {
         <SlackLogo size={22} weight="duotone" aria-hidden className="shrink-0" />
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="text-[15px] font-medium">{t("imports.slack.name")}</span>
-          <span className="truncate text-[13px] text-muted-foreground">
+          <span className="text-[13px] text-muted-foreground">
             {source ? peopleLine(source) : t("imports.slack.hint")}
           </span>
         </div>
