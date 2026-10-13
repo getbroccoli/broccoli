@@ -3,7 +3,7 @@ import express from "express";
 import { requireSignedIn } from "../../../core/actor";
 import { ApplicationError, sendApplicationError } from "../../../core/applicationError";
 import type { ActorResolver } from "../../../core/graphql";
-import type { ImportUseCases } from "../app";
+import type { SlackUseCases } from "../app";
 
 /** Why connecting Slack failed, for the import page to explain. */
 type SlackError = "cancelled" | "state" | "failed";
@@ -21,11 +21,11 @@ const COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
 
 /**
  * Connecting Slack through the relay. `GET /api/integrations/slack/connect` sends the
- * owner's browser to Slack; Slack's answer comes back to the callback, which imports
- * the members and returns to the import page.
+ * owner's browser to Slack; Slack's answer comes back to the callback, which stores
+ * the connection and returns to the import page.
  */
 export function slackRouter(
-  useCases: ImportUseCases,
+  useCases: SlackUseCases,
   resolveActor: ActorResolver,
   publicOrigin: PublicOrigin,
 ): express.Router {
@@ -65,7 +65,7 @@ export function slackRouter(
 
 /** Imports the workspace Slack answered with; returns why it failed, or null. */
 async function finishConnection(
-  useCases: ImportUseCases,
+  useCases: SlackUseCases,
   resolveActor: ActorResolver,
   request: express.Request,
   pending: { state: string; codeVerifier: string } | null,

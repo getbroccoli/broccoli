@@ -7,6 +7,7 @@ import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import { importRepository, type ImportEmployeeValues } from "../../src/modules/imports";
+import { slackConnectionRepository } from "../../src/modules/slack";
 import { parseCalendarDate } from "../../src/utils";
 import { TEST_ENCRYPTION } from "./testEncryption";
 
@@ -95,7 +96,7 @@ export class TestSeed {
   }
 
   slackConnection(accessToken = "test-slack-token") {
-    return importRepository(this.orm).saveSlackConnection({
+    return slackConnectionRepository(this.orm).save({
       teamId: "T1",
       teamName: "Acme Workspace",
       encryptedToken: TEST_ENCRYPTION.encrypt(accessToken),

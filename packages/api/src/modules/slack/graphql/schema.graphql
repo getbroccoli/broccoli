@@ -1,0 +1,11 @@
+"The Slack workspace this instance is connected to."
+type SlackConnection {
+  "Always `slack`: one connection per instance."
+  id: ID!
+  workspaceName: String!
+}
+
+type Query {
+  "The connected Slack workspace; null until Slack is connected. Owner only."
+  slackConnection: SlackConnection
+}

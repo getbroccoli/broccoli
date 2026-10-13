@@ -1,21 +1,13 @@
 import { z } from "zod";
 
-import type { SlackApi, SlackMember } from "../../../../integrations/slack";
+import type { SlackMember } from "../../../slack";
 import type { ImportEmployeeValues, IncomingRecord } from "../../domain";
-
-/** The workspace's members as employee records; rejects when Slack refuses. */
-export async function readSlackRecords(
-  slackApi: SlackApi,
-  accessToken: string,
-): Promise<IncomingRecord[]> {
-  return mapSlackMembers(await slackApi.listMembers(accessToken));
-}
 
 /**
  * The workspace's people as employee records. Deleted members, bots, apps, guests and
  * members without a valid email are left out; a member listed twice counts once.
  */
-function mapSlackMembers(members: SlackMember[]): IncomingRecord[] {
+export function mapSlackMembers(members: SlackMember[]): IncomingRecord[] {
   const records = new Map<string, IncomingRecord>();
   for (const member of members) {
     const email = parseEmail(member.profile?.email);

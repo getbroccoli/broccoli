@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { type Actor, requireOwner } from "../../../../core/actor";
-import type { ImportContext } from "./importContext";
+import type { SlackContext } from "./slackContext";
 
 /** Where to send the browser to connect Slack, with the values its return must match. */
 export interface SlackConnectionStart {
@@ -14,7 +14,7 @@ export interface SlackConnectionStart {
 
 /** Starts connecting Slack: the browser goes to the relay and comes back to `returnTo`. */
 export function beginSlackConnection(
-  { slackAuthorization }: ImportContext,
+  { slackAuthorization }: SlackContext,
   actor: Actor,
   returnTo: string,
 ): SlackConnectionStart {

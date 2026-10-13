@@ -19,7 +19,6 @@ import {
 } from "../domain";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
-import { slackConnection } from "./slackConnectionTable";
 
 /** The sort values of the last employee record seen: first name, last name, id. */
 export type ImportEmployeeKeyset = [firstName: string, lastName: string, id: string];
@@ -37,40 +36,13 @@ export interface ImportEmployeePageQuery {
   sourceId: string | null;
 }
 
-export interface StoredSlackConnection {
-  teamId: string;
-  teamName: string;
-  encryptedToken: string;
-}
-
 export type ImportRepository = ReturnType<typeof importRepository>;
 
-/** The import's sources, records and Slack connection, through the pool or inside a transaction. */
+/** The import's sources and records, through the pool or inside a transaction. */
 export function importRepository(db: Orm | Tx) {
   const orm = () => ormOf(db);
 
   return {
-    readSlackConnection: async (): Promise<StoredSlackConnection | null> => {
-      const [row] = await orm().select(connectionColumns).from(slackConnection);
-      return row ?? null;
-    },
-
-    /** Like `readSlackConnection`, and locks the row until the transaction ends. */
-    lockSlackConnection: async (): Promise<StoredSlackConnection | null> => {
-      const [row] = await orm().select(connectionColumns).from(slackConnection).for("update");
-      return row ?? null;
-    },
-
-    saveSlackConnection: async (connection: StoredSlackConnection): Promise<void> => {
-      await orm()
-        .insert(slackConnection)
-        .values(connection)
-        .onConflictDoUpdate({
-          target: slackConnection.id,
-          set: { ...connection, connectedAt: sql`now()` },
-        });
-    },
-
     /** Creates the Slack source or renames it, marks it read now and returns its id. */
     saveSlackSource: async (name: string): Promise<string> => {
       const [row] = await orm()
@@ -177,12 +149,6 @@ export function importRepository(db: Orm | Tx) {
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
-
-const connectionColumns = {
-  teamId: slackConnection.teamId,
-  teamName: slackConnection.teamName,
-  encryptedToken: slackConnection.encryptedToken,
-};
 
 const sourceColumns = {
   id: importSources.id,

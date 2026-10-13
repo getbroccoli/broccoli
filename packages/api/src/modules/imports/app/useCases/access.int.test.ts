@@ -5,11 +5,7 @@ import type { Actor } from "../../../../core/actor";
 type ImportUseCases = ReturnType<typeof importUseCases>;
 
 const calls = {
-  beginSlackConnection: (imports, actor) =>
-    imports.beginSlackConnection(actor, "https://example.com/callback"),
-  connectSlack: (imports, actor) =>
-    imports.connectSlack(actor, { code: "test-code", codeVerifier: "test-verifier" }),
-  refreshSlack: (imports, actor) => imports.refreshSlack(actor),
+  readSlack: (imports, actor) => imports.readSlack(actor),
   listSources: (imports, actor) => imports.listSources(actor),
   readSources: (imports, actor) => imports.readSources(actor, []),
   countEmployees: (imports, actor) => imports.countEmployees(actor, []),

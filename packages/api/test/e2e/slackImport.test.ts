@@ -48,7 +48,7 @@ test("connecting redirects the owner to the relay with an OAuth cookie and S256 
   );
 });
 
-test("the callback redeems the handle and exposes all Slack pages through the import graph", async ({
+test("connecting saves the workspace and an explicit read imports all Slack pages", async ({
   env,
   slack,
 }) => {
@@ -77,6 +77,19 @@ test("the callback redeems the handle and exposes all Slack pages through the im
     method: "POST",
     body: { handle: "test-handle", code_verifier: codeVerifier },
   });
+  expect(slack.requests.filter(({ path }) => path.startsWith("/users.list"))).toEqual([]);
+  const connection = await browser.graphql(`query {
+    slackConnection { id workspaceName }
+    import { sources { name } }
+  }`);
+  expect(await connection.json()).toEqual({
+    data: {
+      slackConnection: { id: "slack", workspaceName: "Acme Workspace" },
+      import: { sources: [] },
+    },
+  });
+  const imported = await browser.graphql("mutation { import { readSlack { id } } }");
+  expect(await imported.json()).toEqual({ data: { import: { readSlack: { id: "import" } } } });
   const reads = slack.requests.filter(({ path }) => path.startsWith("/users.list"));
   expect(reads).toHaveLength(2);
   for (const request of reads) {
@@ -172,18 +185,20 @@ test("refresh returns the updated import and skipping completes setup", async ({
   await browser.getManual(
     `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
   );
+  const imported = await browser.graphql("mutation { import { readSlack { id } } }");
+  expect(await imported.json()).toEqual({ data: { import: { readSlack: { id: "import" } } } });
   slack.pages[0] = [
     { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
   ];
 
   const refreshed = await browser.graphql(`mutation {
-    import { refreshSlack { id sources { employeeCount } employees { edges { node { email } } } } }
+    import { readSlack { id sources { employeeCount } employees { edges { node { email } } } } }
   }`);
 
   expect(await refreshed.json()).toEqual({
     data: {
       import: {
-        refreshSlack: {
+        readSlack: {
           id: "import",
           sources: [{ employeeCount: 1 }],
           employees: { edges: [{ node: { email: "avery@example.com" } }] },
@@ -213,9 +228,11 @@ test("a malformed Slack response refuses refresh and preserves the imported empl
   );
   expect(callback.status).toBe(302);
   expect(callback.headers.get("location")).toBe("/setup/import");
+  const imported = await browser.graphql("mutation { import { readSlack { id } } }");
+  expect(await imported.json()).toEqual({ data: { import: { readSlack: { id: "import" } } } });
   slack.replyToNextUsersList({ ok: true });
 
-  const refreshed = await browser.graphql("mutation { import { refreshSlack { id } } }");
+  const refreshed = await browser.graphql("mutation { import { readSlack { id } } }");
 
   expect(await refreshed.json()).toMatchObject({
     errors: [{ message: "Could not read Slack.", extensions: { code: "UNAVAILABLE" } }],

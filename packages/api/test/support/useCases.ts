@@ -6,6 +6,7 @@ import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack"
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases } from "../../src/modules/demo";
 import { createImportUseCases } from "../../src/modules/imports";
+import { createSlackUseCases, type SlackUseCases } from "../../src/modules/slack";
 import { TEST_ENCRYPTION } from "./testEncryption";
 
 /**
@@ -30,6 +31,30 @@ export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"
 export function importUseCases(
   orm: Parameters<typeof createImportUseCases>[0]["orm"],
   {
+    slack = {},
+  }: {
+    slack?: Partial<Pick<SlackUseCases, "readSlackMembers" | "isCurrentSlackConnection">>;
+  } = {},
+) {
+  const logger = createLogger("silent");
+  return createImportUseCases({
+    orm,
+    eventBus: createEventBus(logger),
+    slack: {
+      readSlackMembers: () => {
+        throw new Error("Unexpected Slack read");
+      },
+      isCurrentSlackConnection: () => {
+        throw new Error("Unexpected Slack connection check");
+      },
+      ...slack,
+    },
+  });
+}
+
+export function slackUseCases(
+  orm: Parameters<typeof createSlackUseCases>[0]["orm"],
+  {
     encryption = TEST_ENCRYPTION,
     slackAuthorization = {},
     slackApi = {},
@@ -40,7 +65,7 @@ export function importUseCases(
   } = {},
 ) {
   const logger = createLogger("silent");
-  return createImportUseCases({
+  return createSlackUseCases({
     orm,
     eventBus: createEventBus(logger),
     logger,

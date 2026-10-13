@@ -15,8 +15,8 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       import: () => ({}),
     },
     ImportMutations: {
-      refreshSlack: async (_parent, _args, { actor }) => {
-        await useCases.refreshSlack(actor);
+      readSlack: async (_parent, _args, { actor }) => {
+        await useCases.readSlack(actor);
         return IMPORT;
       },
       skip: async (_parent, _args, { actor }) => {

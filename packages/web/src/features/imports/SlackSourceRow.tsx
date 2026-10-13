@@ -2,7 +2,7 @@ import { useMutation } from "@apollo/client/react";
 import { SlackLogo } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import { RefreshSlackDocument, type ImportStepQuery } from "@/__generated__/graphql";
+import { ReadSlackDocument, type ImportStepQuery } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
@@ -10,21 +10,23 @@ import { t } from "@/i18n";
 export const CONNECT_SLACK_URL = "/api/integrations/slack/connect";
 
 interface SlackSourceRowProps {
-  /** The Slack source, or undefined before Slack is connected. */
+  /** The connected workspace, or null before Slack is connected. */
+  connection: ImportStepQuery["slackConnection"];
+  /** The Slack source, or undefined until its members are imported. */
   source: ImportStepQuery["import"]["sources"][number] | undefined;
 }
 
-/** Slack as a source of people: connect it, or see its workspace and read it again. */
-export function SlackSourceRow({ source }: SlackSourceRowProps) {
-  const [refreshSlack, { loading: refreshing }] = useMutation(RefreshSlackDocument);
-  const [refreshFailed, setRefreshFailed] = useState(false);
+/** Slack as a source of people: connect it, import its members, and read it again. */
+export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
+  const [readSlack, { loading: reading }] = useMutation(ReadSlackDocument);
+  const [readFailed, setReadFailed] = useState(false);
 
-  const refresh = async () => {
-    setRefreshFailed(false);
+  const read = async () => {
+    setReadFailed(false);
     try {
-      await refreshSlack();
+      await readSlack();
     } catch {
-      setRefreshFailed(true);
+      setReadFailed(true);
     }
   };
 
@@ -35,23 +37,23 @@ export function SlackSourceRow({ source }: SlackSourceRowProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="text-[15px] font-medium">{t("imports.slack.name")}</span>
           <span className="text-[13px] text-muted-foreground">
-            {source ? peopleLine(source) : t("imports.slack.hint")}
+            {connection ? workspaceLine(connection.workspaceName, source) : t("imports.slack.hint")}
           </span>
         </div>
-        {source ? (
+        {connection ? (
           <Button
             type="button"
-            variant="outline"
-            disabled={refreshing}
-            onClick={() => void refresh()}
+            variant={source ? "outline" : "default"}
+            disabled={reading}
+            onClick={() => void read()}
           >
-            {t(refreshing ? "imports.slack.refreshing" : "imports.slack.refresh")}
+            {t(readLabel(reading, source !== undefined))}
           </Button>
         ) : (
           <Button render={<a href={CONNECT_SLACK_URL} />}>{t("imports.slack.connect")}</Button>
         )}
       </div>
-      {source && (
+      {connection && (
         <a
           href={CONNECT_SLACK_URL}
           className="self-end text-[13px] text-muted-foreground underline underline-offset-3 hover:text-foreground"
@@ -59,17 +61,27 @@ export function SlackSourceRow({ source }: SlackSourceRowProps) {
           {t("imports.slack.connectAnother")}
         </a>
       )}
-      {refreshFailed && (
+      {readFailed && (
         <p role="alert" className="text-sm text-destructive">
-          {t("imports.slack.refreshFailed")}
+          {t("imports.slack.readFailed")}
         </p>
       )}
     </div>
   );
 }
 
-function peopleLine({ name, employeeCount }: { name: string; employeeCount: number }): string {
-  return employeeCount === 1
+function workspaceLine(name: string, source: { employeeCount: number } | undefined): string {
+  if (!source) {
+    return name;
+  }
+  return source.employeeCount === 1
     ? t("imports.slack.onePerson", { name })
-    : t("imports.slack.people", { name, count: String(employeeCount) });
+    : t("imports.slack.people", { name, count: String(source.employeeCount) });
+}
+
+function readLabel(reading: boolean, imported: boolean) {
+  if (reading) {
+    return imported ? "imports.slack.refreshing" : "imports.slack.importing";
+  }
+  return imported ? "imports.slack.refresh" : "imports.slack.import";
 }

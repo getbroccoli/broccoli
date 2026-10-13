@@ -1,23 +1,25 @@
 query ImportStep {
+  slackConnection {
+    id
+    workspaceName
+  }
   import {
     id
     sources {
       id
       kind
-      name
       employeeCount
     }
   }
 }
 
-mutation RefreshSlack {
+mutation ReadSlack {
   import {
-    refreshSlack {
+    readSlack {
       id
       sources {
         id
         kind
-        name
         employeeCount
       }
     }

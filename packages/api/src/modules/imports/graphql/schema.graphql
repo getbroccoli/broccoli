@@ -54,8 +54,8 @@ type Query {
 }
 
 type ImportMutations {
-  "Reads the connected Slack workspace again; its source then holds the current members."
-  refreshSlack: Import!
+  "Reads the connected Slack workspace into the import, the first time and on every refresh; its source then holds the current members."
+  readSlack: Import!
   "Leaves the import step of setup for now; the records stay."
   skip: Import!
 }

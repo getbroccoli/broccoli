@@ -3,7 +3,8 @@ import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest"
 import { companyModule } from "./company";
 import { demoModule } from "./demo";
 import { employeesModule } from "./employees";
-import { importsModule, type SlackUrls } from "./imports";
+import { importsModule } from "./imports";
+import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
 /** Settings that only some modules need, read from the environment by `main.ts`. */
@@ -20,11 +21,14 @@ export function createModules(
   core: ModuleDependencies,
   { mode, publicUrl, brandLookupUrl, slack }: ModuleSettings,
 ): ModuleManifest[] {
+  // Built once: the Slack module serves it and the import reads Slack through it.
+  const slackUseCases = createSlack({ ...core, slack });
   return [
     systemModule({ orm: core.orm, mode }),
     employeesModule({ orm: core.orm }),
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, eventBus: core.eventBus }),
-    importsModule({ ...core, mode, publicUrl, slack }),
+    slackModule({ useCases: slackUseCases, orm: core.orm, mode, publicUrl }),
+    importsModule({ orm: core.orm, eventBus: core.eventBus, slack: slackUseCases }),
   ];
 }

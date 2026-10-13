@@ -14,7 +14,8 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 - [ ] The page is `/setup/import`, titled "Add your people", with "Setup Company" done and "Add your people" current.
 - [ ] The Slack row reads "Import the members of your Slack workspace." with "Connect Slack".
 - [ ] "Connect Slack" opens Slack's consent screen for the workspace.
-- [ ] Allowing it returns to `/setup/import`; the row reads "<workspace> · N people", where N counts the members with an email, without bots, apps, guests or deactivated accounts.
+- [ ] Allowing it returns to `/setup/import`; the row shows the workspace name with "Import members".
+- [ ] "Import members" turns the row into "<workspace> · N people" with "Refresh", where N counts the members with an email, without bots, apps, guests or deactivated accounts.
 - [ ] `query { import { sources { name employeeCount } employees { edges { node { firstName lastName email jobTitle } } } } }` lists them with names and titles as in Slack.
 
 ## Refresh and reconnect
