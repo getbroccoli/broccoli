@@ -14,6 +14,9 @@ export const Route = createFileRoute("/_authenticated")({
     if (setupStep === "COMPANY") {
       throw redirect({ to: "/setup/company", replace: true });
     }
+    if (setupStep === "IMPORT") {
+      throw redirect({ to: "/setup/import", replace: true });
+    }
     return { me };
   },
   component: () => (

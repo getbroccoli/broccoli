@@ -6,6 +6,7 @@
       "src/__generated__",
       "src/features/auth",
       "src/features/employees",
+      "src/features/imports",
       "src/features/setup",
       "src/i18n",
       "src/shell"
@@ -26,6 +27,12 @@
       "src/i18n",
       "src/lib/formatDate",
       "src/lib/listPage"
+    ],
+    "src/features/imports": [
+      "src/__generated__",
+      "src/components/ui",
+      "src/features/setup",
+      "src/i18n"
     ],
     "src/features/setup": [
       "src/__generated__",

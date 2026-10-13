@@ -1,0 +1,33 @@
+query ImportStep {
+  import {
+    id
+    sources {
+      id
+      kind
+      name
+      employeeCount
+    }
+  }
+}
+
+mutation RefreshSlack {
+  import {
+    refreshSlack {
+      id
+      sources {
+        id
+        kind
+        name
+        employeeCount
+      }
+    }
+  }
+}
+
+mutation SkipImport {
+  import {
+    skip {
+      id
+    }
+  }
+}
