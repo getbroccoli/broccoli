@@ -11,6 +11,7 @@ The words Broccoli's code and docs use, and what each one means.
 - **Setup**: the first-run flow of a new instance, step by step: the owner account (on self-hosted instances the first visitor creates it, once, through `POST /api/auth/setup`), then the company name.
 - **Setup step**: where a new instance is in setup: `owner`, `company`, `done`. Not to be confused with employee onboarding, an HR process.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
+- **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
 - **Record**: a module's main entity, such as an employee or the company.
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
