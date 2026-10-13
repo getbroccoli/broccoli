@@ -4,7 +4,7 @@ import { type Actor, requireOwner } from "../../../../core/actor";
 import type { EmployeeRepository } from "../../db";
 
 /** Whether this file is an employee's avatar, so the avatar route may serve it. */
-export async function isEmployeeAvatar(
+export async function isEmployeeAvatarFile(
   employees: EmployeeRepository,
   actor: Actor,
   fileId: string,

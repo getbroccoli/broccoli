@@ -22,7 +22,7 @@ export function avatarRouter(
     try {
       const actor = requireSignedIn((await resolveActor(request.headers)).actor);
       const { fileId } = request.params;
-      if (!(await useCases.isEmployeeAvatar(actor, fileId))) {
+      if (!(await useCases.isEmployeeAvatarFile(actor, fileId))) {
         response.sendStatus(404);
         return;
       }
