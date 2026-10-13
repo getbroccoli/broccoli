@@ -6,6 +6,7 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 /** A local relay and Slack API; tests control pages and inspect the HTTP requests. */
 export async function startFakeSlack() {
   const pages: SlackMember[][] = [[]];
+  let nextUsersListBody: unknown;
   const requests: {
     method: string;
     path: string;
@@ -32,6 +33,11 @@ export async function startFakeSlack() {
     });
   });
   app.get("/users.list", (request, response) => {
+    if (nextUsersListBody !== undefined) {
+      response.json(nextUsersListBody);
+      nextUsersListBody = undefined;
+      return;
+    }
     const page = request.query.cursor === undefined ? 0 : Number(request.query.cursor);
     if (!Number.isInteger(page) || !pages[page]) {
       response.status(400).json({ ok: false, error: "invalid_cursor" });
@@ -43,5 +49,12 @@ export async function startFakeSlack() {
       response_metadata: { next_cursor: page + 1 < pages.length ? String(page + 1) : "" },
     });
   });
-  return { ...(await startSimpleHttpServer(app)), pages, requests };
+  return {
+    ...(await startSimpleHttpServer(app)),
+    pages,
+    requests,
+    replyToNextUsersList: (body: unknown) => {
+      nextUsersListBody = body;
+    },
+  };
 }

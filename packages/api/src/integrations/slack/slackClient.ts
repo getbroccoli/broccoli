@@ -74,8 +74,8 @@ export function createSlackClient({
           maxBytes: MAX_PAGE_BYTES,
           init: { headers: { authorization: `Bearer ${accessToken}` } },
         });
-        if (!answer?.ok) {
-          throw new Error(`Slack refused users.list: ${answer?.error ?? "not found"}`);
+        if (!answer?.ok || !answer.members) {
+          throw new Error(`Slack refused users.list: ${answer?.error ?? "no members"}`);
         }
         members.push(...answer.members);
         cursor = answer.response_metadata?.next_cursor ?? "";
@@ -126,6 +126,7 @@ const member = z.object({
 const usersListAnswer = z.object({
   ok: z.boolean(),
   error: z.string().optional(),
-  members: z.array(member).default([]),
+  // Absent when Slack refuses; never read as an empty workspace.
+  members: z.array(member).optional(),
   response_metadata: z.object({ next_cursor: z.string().optional() }).optional(),
 });

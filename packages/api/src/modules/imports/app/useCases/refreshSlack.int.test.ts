@@ -1,4 +1,8 @@
+import { onTestFinished } from "vitest";
+
 import { expect, importUseCases, OWNER, test } from "#test/support";
+
+import type { SlackMember } from "../../../../integrations/slack";
 
 test("refresh keeps surviving member ids, updates their values, adds newcomers and removes leavers", async ({
   orm,
@@ -67,6 +71,61 @@ test("a failed Slack read preserves the source and all its employees", async ({ 
 
   expect(await imports.listSources(OWNER)).toEqual([source]);
   expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(employees);
+});
+
+test("a pending refresh preserves the records from reconnecting the same workspace", async ({
+  orm,
+  seed,
+}) => {
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { externalId: "U1", firstName: "Avery", email: "avery@example.com" },
+  ]);
+  await seed.slackConnection("old-test-token");
+  const readStarted = Promise.withResolvers<void>();
+  const heldRead = Promise.withResolvers<SlackMember[]>();
+  const oldMembers = [
+    { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
+  ];
+  const imports = importUseCases(orm, {
+    slack: {
+      redeem: () =>
+        Promise.resolve({
+          accessToken: "new-test-token",
+          scopes: ["users:read", "users:read.email"],
+          team: { id: "T1", name: "Acme Workspace" },
+        }),
+      listMembers: (token) => {
+        if (token === "old-test-token") {
+          readStarted.resolve();
+          return heldRead.promise;
+        }
+        expect(token).toBe("new-test-token");
+        return Promise.resolve([
+          {
+            id: "U2",
+            profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" },
+          },
+        ]);
+      },
+    },
+  });
+
+  const pending = imports.refreshSlack(OWNER);
+  onTestFinished(async () => {
+    heldRead.resolve(oldMembers);
+    await pending;
+  });
+  await readStarted.promise;
+  await imports.connectSlack(OWNER, { handle: "new-handle", codeVerifier: "test-verifier" });
+  const reconnected = await imports.listEmployees(OWNER, {});
+  expect(reconnected.edges.map(({ node }) => node)).toMatchObject([
+    { sourceId: source.id, email: "robin@example.com" },
+  ]);
+  heldRead.resolve(oldMembers);
+  await pending;
+
+  expect(await imports.listEmployees(OWNER, {})).toEqual(reconnected);
 });
 
 test("refuses to refresh before Slack is connected", async ({ orm }) => {

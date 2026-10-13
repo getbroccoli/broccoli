@@ -16,9 +16,9 @@ export async function refreshSlack(context: ImportContext, actor: Actor): Promis
   const records = await readMembers(context, connection.sealedToken);
   await runInTransaction(context.orm, context.eventBus, async (tx) => {
     const imports = importRepository(tx);
-    // Another connect may have replaced the workspace meanwhile; its name wins.
+    // A connect since the read has stored newer members; they win.
     const current = await imports.lockSlackConnection();
-    if (current?.teamId !== connection.teamId) {
+    if (current?.sealedToken !== connection.sealedToken) {
       return;
     }
     const sourceId = await imports.saveSlackSource(current.teamName);

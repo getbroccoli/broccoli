@@ -199,6 +199,39 @@ test("refresh returns the updated import and skipping completes setup", async ({
   expect(await setup.json()).toEqual({ data: { setup: { step: "DONE" } } });
 });
 
+test("a malformed Slack response refuses refresh and preserves the imported employees", async ({
+  env,
+  slack,
+}) => {
+  slack.pages[0] = [
+    { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
+  ];
+  const { browser } = await env.signInAsOwner();
+  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
+  const callback = await browser.getManual(
+    `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
+  );
+  expect(callback.status).toBe(302);
+  expect(callback.headers.get("location")).toBe("/setup/import");
+  slack.replyToNextUsersList({ ok: true });
+
+  const refreshed = await browser.graphql("mutation { import { refreshSlack { id } } }");
+
+  expect(await refreshed.json()).toMatchObject({
+    errors: [{ message: "Could not read Slack.", extensions: { code: "UNAVAILABLE" } }],
+  });
+  const employees = await browser.graphql(
+    "query { import { employees { edges { node { firstName email } } } } }",
+  );
+  expect(await employees.json()).toEqual({
+    data: {
+      import: {
+        employees: { edges: [{ node: { firstName: "Avery", email: "avery@example.com" } }] },
+      },
+    },
+  });
+});
+
 test("connecting without a session is refused", async ({ env, slack }) => {
   const response = await env.browser().getManual("/api/integrations/slack/connect");
 
