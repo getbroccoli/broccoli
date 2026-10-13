@@ -43,7 +43,12 @@ export interface Env {
   dataDir: string;
   /** Service that finds the brand of an email domain; null makes no lookup. */
   brandLookupUrl: string | null;
+  /** The Slack OAuth relay on the accounts service. */
+  slackRelayUrl: string;
 }
+
+// shortcut: the production accounts service is not live yet; switch to https://accounts.getbroccoli.com before the release.
+const DEFAULT_SLACK_RELAY_URL = "https://accounts.dev.getbroccoli.com";
 
 /** Compose passes unset variables as empty strings, so blank means unset. */
 function blankAsUnset(value: unknown): unknown {
@@ -64,6 +69,10 @@ const envSchema = z
     MANAGED_INSTANCE_ID: z.preprocess(blankAsUnset, z.string().optional()),
     MANAGED_ACCOUNTS_URL: z.preprocess(blankAsUnset, z.string().optional()),
     BRAND_LOOKUP_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
+    SLACK_RELAY_URL: z.preprocess(
+      blankAsUnset,
+      z.url({ protocol: /^https?$/ }).default(DEFAULT_SLACK_RELAY_URL),
+    ),
   })
   // Each mode refuses the other's variables, so no setting has two sources.
   .superRefine((variables, context) => {
@@ -102,6 +111,7 @@ const envSchema = z
         : { mode: "self_hosted", publicUrl: variables.SELF_HOSTED_PUBLIC_URL },
     dataDir: variables.DATA_DIR,
     brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
+    slackRelayUrl: variables.SLACK_RELAY_URL,
   }));
 
 function accountsOrigin(url: string | undefined): string | null {

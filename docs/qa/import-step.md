@@ -7,7 +7,7 @@ A manual check of bringing people in from Slack during setup, on a development s
 1. Run `pnpm dev` and follow [setup](setup.md) up to and including naming the company.
 2. Have a Slack workspace with a few members, including a bot and a guest, and an account that may install apps there.
 
-Self-hosted instances connect through `https://accounts.getbroccoli.com`; a managed instance uses its accounts service.
+Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no setting.
 
 ## Connect
 

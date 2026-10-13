@@ -11,6 +11,7 @@ services:
       # Set it when Broccoli has a domain; unset trusts the address each request uses.
       SELF_HOSTED_PUBLIC_URL: ${SELF_HOSTED_PUBLIC_URL:-}
       BRAND_LOOKUP_URL: ${BRAND_LOOKUP_URL:-}
+      SLACK_RELAY_URL: ${SLACK_RELAY_URL:-}
     volumes:
       # Secrets such as the session signing key; back it up with the database.
       - broccoli-data:/data
