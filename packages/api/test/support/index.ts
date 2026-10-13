@@ -24,6 +24,7 @@ export {
 } from "./testDatabases";
 export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./testEnv";
 export { TestSeed } from "./testSeed";
+export { storedFileIds } from "./storedFileIds";
 export { companyUseCases } from "./useCases";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
