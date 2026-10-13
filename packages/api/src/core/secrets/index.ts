@@ -1,2 +1,2 @@
-export { readOrCreateSecret } from "./secrets";
+export { ensureSecret } from "./ensureSecret";
 export { createEncryption, type Encryption } from "./encryption";

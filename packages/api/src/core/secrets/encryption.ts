@@ -13,7 +13,7 @@ export interface Encryption {
   decrypt(encrypted: string): string;
 }
 
-/** Encryption with `key`, a base64url secret of 32 bytes such as `readOrCreateSecret` makes. */
+/** Encryption with `key`, a base64url secret of 32 bytes such as `ensureSecret` makes. */
 export function createEncryption(key: string): Encryption {
   const keyBytes = Buffer.from(key, "base64url");
   if (keyBytes.length !== KEY_BYTES) {

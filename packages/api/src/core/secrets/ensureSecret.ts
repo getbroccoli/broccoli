@@ -8,7 +8,7 @@ const SECRET_BYTES = 32;
  * Secrets live in `<dataDir>/secrets/<name>`, readable only by the app's user. The
  * database never holds them, so operators back up this folder with the database.
  */
-export async function readOrCreateSecret(dataDir: string, name: string): Promise<string> {
+export async function ensureSecret(dataDir: string, name: string): Promise<string> {
   const existing = await readSecret(dataDir, name);
   if (existing !== undefined) {
     return existing;
