@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
-import { date, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import { files } from "../../../core/files";
 import type { CalendarDate } from "../../../utils";
 
 export const employees = pgTable(
@@ -15,6 +16,10 @@ export const employees = pgTable(
     jobTitle: text("job_title"),
     startDate: date("start_date", { mode: "string" }).$type<CalendarDate>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    /** The employee owns this file and deletes it with the employee. */
+    avatarFileId: uuid("avatar_file_id").references(() => files.id),
+    /** Part of the sample company; clearing demo data deletes it. */
+    isDemo: boolean("is_demo").notNull().default(false),
   },
   (table) => [
     // Serves the list order, which is also the keyset of its cursor.

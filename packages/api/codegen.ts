@@ -15,6 +15,7 @@ const config: CodegenConfig = {
         mappers: {
           EmployeeMutations: "Record<PropertyKey, never>",
           CompanyMutations: "Record<PropertyKey, never>",
+          DemoMutations: "Record<PropertyKey, never>",
         },
       },
     },

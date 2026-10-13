@@ -1,0 +1,57 @@
+import { expect, test } from "#test/support";
+
+import { runInTransaction } from "../../db";
+import { createEventBus } from "../../events";
+import { createLogger } from "../../logger";
+import { advanceStep } from ".";
+
+test("publishes setup completion when the company step finishes", async ({ orm, seed }) => {
+  await seed.owner();
+  const eventBus = createEventBus(createLogger("silent"));
+  const received: unknown[] = [];
+  eventBus.subscribe({
+    "instance.setup_completed": (payload) => {
+      received.push(payload);
+      return Promise.resolve();
+    },
+  });
+
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "company", "done"));
+
+  expect(received).toEqual([null]);
+});
+
+test("does not publish setup completion again when the company step is already done", async ({
+  orm,
+  seed,
+}) => {
+  await seed.owner();
+  const eventBus = createEventBus(createLogger("silent"));
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "company", "done"));
+  const received: unknown[] = [];
+  eventBus.subscribe({
+    "instance.setup_completed": (payload) => {
+      received.push(payload);
+      return Promise.resolve();
+    },
+  });
+
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "company", "done"));
+
+  expect(received).toEqual([]);
+});
+
+test("does not publish setup completion when advancing to the company step", async ({ orm }) => {
+  const eventBus = createEventBus(createLogger("silent"));
+  const received: unknown[] = [];
+  eventBus.subscribe({
+    "instance.setup_completed": (payload) => {
+      received.push(payload);
+      return Promise.resolve();
+    },
+  });
+
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "owner", "company"));
+
+  expect(received).toEqual([]);
+});

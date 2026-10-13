@@ -81,9 +81,13 @@ export function instanceRepository(db: Orm | Tx) {
       await orm().update(instance).set({ ownerUserId: userId, setupStep: step });
     },
 
-    /** Moves the step from `from` to `to`; does nothing at any other step. */
-    advanceStep: async (from: SetupStep, to: SetupStep): Promise<void> => {
-      await orm().update(instance).set({ setupStep: to }).where(eq(instance.setupStep, from));
+    /** Moves the step from `from` to `to`; does nothing at any other step. Returns whether it moved. */
+    advanceStep: async (from: SetupStep, to: SetupStep): Promise<boolean> => {
+      const result = await orm()
+        .update(instance)
+        .set({ setupStep: to })
+        .where(eq(instance.setupStep, from));
+      return (result.rowCount ?? 0) > 0;
     },
   };
 }

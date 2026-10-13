@@ -1,4 +1,4 @@
-import { ilike, or, sql, type SQL } from "drizzle-orm";
+import { eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -8,8 +8,9 @@ import {
   keysetOrder,
   nullsLast,
   type Orm,
-  type OrmTransaction,
+  ormOf,
   orderByKeyset,
+  type Tx,
 } from "../../../core/db";
 import { EmailTakenError, type Employee, type NewEmployee } from "../domain";
 import { employees } from "./employeesTable";
@@ -46,17 +47,46 @@ export interface EmployeePageQuery {
 }
 
 /** Employees stored in Postgres, through the pool or inside a transaction. */
-export function employeeRepository(db: Orm | OrmTransaction) {
+export function employeeRepository(db: Orm | Tx) {
+  const orm = () => ormOf(db);
+
   return {
     /** Throws `EmailTakenError` when another employee has the email. */
-    insert: async (newEmployee: NewEmployee): Promise<Employee> => {
+    insert: async (newEmployee: EmployeeRow): Promise<Employee> => {
       try {
-        const [employee] = await db.insert(employees).values(newEmployee).returning();
+        const [employee] = await orm().insert(employees).values(newEmployee).returning();
         return employee!;
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
     },
+
+    /** Inserts employees in one statement; throws `EmailTakenError` like `insert`. */
+    insertMany: async (newEmployees: readonly EmployeeRow[]): Promise<void> => {
+      try {
+        await orm()
+          .insert(employees)
+          .values([...newEmployees]);
+      } catch (error) {
+        throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
+      }
+    },
+
+    /** Deletes every demo employee; returns the ids of the avatar files they owned. */
+    deleteDemo: async (): Promise<string[]> => {
+      const rows = await orm()
+        .delete(employees)
+        .where(eq(employees.isDemo, true))
+        .returning({ avatarFileId: employees.avatarFileId });
+      return rows.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : []));
+    },
+
+    hasAny: () => exists(orm(), sql`true`),
+
+    hasDemo: () => exists(orm(), eq(employees.isDemo, true)),
+
+    /** Whether an employee's avatar is this file. */
+    hasAvatar: (fileId: string) => exists(orm(), eq(employees.avatarFileId, fileId)),
 
     /** Up to `first + 1` employees after `after`; the extra one signals a next page. */
     findPage: async ({ first, after, order, search }: EmployeePageQuery) => {
@@ -64,7 +94,7 @@ export function employeeRepository(db: Orm | OrmTransaction) {
       const keys = Object.fromEntries(
         columns.map(({ expression }, index) => [`key${index}`, expression]),
       );
-      const rows = await db
+      const rows = await orm()
         .select({ employee: employees, ...keys })
         .from(employees)
         .where(
@@ -88,6 +118,14 @@ export function employeeRepository(db: Orm | OrmTransaction) {
       });
     },
   };
+}
+
+/** A new employee as stored, with the columns only the module itself sets. */
+type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };
+
+async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {
+  const rows = await orm.select({ id: employees.id }).from(employees).where(condition).limit(1);
+  return rows.length > 0;
 }
 
 function keysetColumns({ field, direction }: EmployeeOrder): KeysetOrder {

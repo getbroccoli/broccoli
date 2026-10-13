@@ -1,0 +1,20 @@
+"Whether this instance holds demo data, the sample company it starts with."
+type DemoData {
+  "Always `demoData`: one per instance."
+  id: ID!
+  isPresent: Boolean!
+}
+
+type Query {
+  "Owner only."
+  demo: DemoData!
+}
+
+type DemoMutations {
+  "Deletes every demo record; records people added stay. Owner only."
+  clear: DemoData!
+}
+
+type Mutation {
+  demo: DemoMutations!
+}

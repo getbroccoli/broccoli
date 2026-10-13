@@ -1,13 +1,11 @@
 import express from "express";
 
 import { requireSignedIn } from "../../../core/actor";
-import { ApplicationError } from "../../../core/applicationError";
+import { sendApplicationError } from "../../../core/applicationError";
 import type { Orm } from "../../../core/db";
 import { sendFile } from "../../../core/files";
 import type { ActorResolver } from "../../../core/graphql";
 import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
-
-const STATUS_OF = { UNAUTHENTICATED: 401, FORBIDDEN: 403, INVALID_INPUT: 400 } as const;
 
 /** Where the logo with this file id is served. */
 export function logoUrl(fileId: string): string {
@@ -57,17 +55,4 @@ export function logoRouter(
         sendApplicationError(error, response);
       }
     });
-}
-
-/** Answers an expected failure with its status; anything else goes to Express's error handler. */
-function sendApplicationError(error: unknown, response: express.Response): void {
-  if (!(error instanceof ApplicationError)) {
-    throw error;
-  }
-  const status = STATUS_OF[error.code];
-  if (error.code === "INVALID_INPUT") {
-    response.status(status).json({ code: error.code, fieldErrors: error.fieldErrors });
-    return;
-  }
-  response.sendStatus(status);
 }

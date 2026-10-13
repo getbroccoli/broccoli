@@ -1,5 +1,7 @@
 import { useRef, type ReactNode } from "react";
 
+import { DemoBanner } from "@/features/demo";
+
 import { LeftNav } from "./LeftNav";
 import { useFocusHeadingOnNavigation } from "./useFocusHeadingOnNavigation";
 
@@ -16,7 +18,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <LeftNav />
       <main ref={main} className="flex min-w-0 flex-1 p-3">
         <div className="w-full overflow-y-auto rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_30px_rgba(0,0,0,0.04)]">
-          <div className="mx-auto px-8 py-8">{children}</div>
+          <div className="mx-auto px-8 py-8">
+            <DemoBanner />
+            {children}
+          </div>
         </div>
       </main>
     </div>

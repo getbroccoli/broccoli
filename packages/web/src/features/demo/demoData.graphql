@@ -1,0 +1,15 @@
+query DemoData {
+  demo {
+    id
+    isPresent
+  }
+}
+
+mutation ClearDemoData {
+  demo {
+    clear {
+      id
+      isPresent
+    }
+  }
+}

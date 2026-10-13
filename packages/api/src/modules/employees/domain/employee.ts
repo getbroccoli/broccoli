@@ -17,6 +17,8 @@ export interface Employee {
   jobTitle: string | null;
   /** First working day. */
   startDate: CalendarDate | null;
+  /** The file holding their avatar, or null. */
+  avatarFileId: string | null;
   createdAt: Date;
 }
 
@@ -28,7 +30,7 @@ export interface NewEmployeeInput {
   startDate?: string | null;
 }
 
-export type NewEmployee = Omit<Employee, "id" | "createdAt">;
+export type NewEmployee = Omit<Employee, "id" | "avatarFileId" | "createdAt">;
 
 /** Work emails are unique: another employee already has this one. */
 export class EmailTakenError extends Error {

@@ -2,17 +2,28 @@ import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { createEmployeeUseCases } from "./app";
 import { createResolvers } from "./graphql";
+import { avatarRouter } from "./http";
 
-export { createEmployeeUseCases, type EmployeeUseCases } from "./app";
+export {
+  clearDemoEmployees,
+  createDemoEmployees,
+  createEmployeeUseCases,
+  hasDemoEmployees,
+  hasEmployees,
+  type DemoEmployee,
+  type EmployeeUseCases,
+} from "./app";
 /** For test seeding only; other modules go through the use cases. */
 export { employeeRepository } from "./db";
 export type { Employee, NewEmployee, NewEmployeeInput } from "./domain";
 
-/** The people who work for the company: create and list them. */
-export function employeesModule(dependencies: Pick<ModuleDependencies, "orm">): ModuleManifest {
+/** The people who work for the company: create and list them, and serve their avatars. */
+export function employeesModule({ orm }: Pick<ModuleDependencies, "orm">): ModuleManifest {
+  const useCases = createEmployeeUseCases({ orm });
   return {
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(createEmployeeUseCases(dependencies)),
+    resolvers: createResolvers(useCases),
+    router: (resolveActor) => avatarRouter(useCases, resolveActor, orm),
   };
 }
