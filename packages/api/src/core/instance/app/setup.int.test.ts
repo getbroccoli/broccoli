@@ -18,7 +18,7 @@ test("publishes setup completion when the company step finishes", async ({ orm, 
 
   await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "company", "done"));
 
-  expect(received).toEqual([{}]);
+  expect(received).toEqual([null]);
 });
 
 test("does not publish setup completion again when the company step is already done", async ({

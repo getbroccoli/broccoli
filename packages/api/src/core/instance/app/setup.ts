@@ -14,6 +14,6 @@ export function readSetupStep(orm: Orm): Promise<SetupStep> {
 export async function advanceStep(tx: Tx, from: SetupStep, to: SetupStep): Promise<void> {
   const moved = await instanceRepository(tx).advanceStep(from, to);
   if (moved && to === "done") {
-    tx.publish("instance.setup_completed", {});
+    tx.publish("instance.setup_completed", null);
   }
 }
