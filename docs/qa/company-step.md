@@ -21,7 +21,7 @@ A manual check of naming the company and adding its logo in the browser, on a de
 
 ## Saving
 
-- [ ] "Save and continue" lands on `/people` in the app. `/setup/company` now goes to `/people`.
+- [ ] "Save and continue" lands on `/setup/import`, with "Setup Company" done and "Add your people" current. `/setup/company` now goes to `/setup/import`.
 - [ ] Before saving, signing in as the owner in a second browser profile lands on `/setup/company`.
 
 ## Layout

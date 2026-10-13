@@ -38,6 +38,10 @@ curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
   -d '{"query":"mutation { company { update(input: { name: \"Example Inc\" }) { id } } }"}'
 ```
 
+## Skip the import
+
+After the company step, every signed-in page opens `/setup/import`. Choose "Skip for now", or call `mutation { import { skip { id } } }` the same way.
+
 ## Sign in again
 
 Once the owner exists, setup answers `OWNER_EXISTS`. Sign in with the same body at `/api/auth/sign-in/email`, from the console or with `curl -c cookies`.
