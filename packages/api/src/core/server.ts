@@ -18,7 +18,7 @@ import type { Logger } from "./logger";
 import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
 import { Readiness } from "./readiness";
-import { createSecretBox, readOrCreateSecret } from "./secrets";
+import { createEncryption, readOrCreateSecret } from "./secrets";
 
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
@@ -46,7 +46,7 @@ export async function startServer(
   // Built first: a web app folder without `index.html` fails startup before anything opens.
   const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
   const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
-  const secretBox = createSecretBox(await readOrCreateSecret(env.dataDir, "encryption-key"));
+  const encryption = createEncryption(await readOrCreateSecret(env.dataDir, "encryption-key"));
   const database = connectDatabase(env.databaseUrl, logger);
   const eventBus = createEventBus(logger);
   const readiness = new Readiness(() => database.checkConnection());
@@ -65,7 +65,7 @@ export async function startServer(
   let modules: readonly ModuleManifest[];
   let graphql: GraphqlApi;
   try {
-    modules = createModules({ orm: database.orm, eventBus, logger, secretBox });
+    modules = createModules({ orm: database.orm, eventBus, logger, encryption });
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveActorOf);
   } catch (error) {
     await database.close();

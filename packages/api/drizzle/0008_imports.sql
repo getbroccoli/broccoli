@@ -24,7 +24,7 @@ CREATE TABLE "slack_connection" (
 	"id" boolean PRIMARY KEY DEFAULT true NOT NULL,
 	"team_id" text NOT NULL,
 	"team_name" text NOT NULL,
-	"sealed_token" text NOT NULL,
+	"encrypted_token" text NOT NULL,
 	"connected_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "slack_connection_singleton" CHECK ("slack_connection"."id")
 );

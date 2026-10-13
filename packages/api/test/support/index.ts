@@ -26,7 +26,7 @@ export {
 } from "./testDatabases";
 export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./testEnv";
 export { TestSeed } from "./testSeed";
-export { TEST_SECRET_BOX } from "./testSecretBox";
+export { TEST_ENCRYPTION } from "./testEncryption";
 export { storedFileIds } from "./storedFileIds";
 export { companyUseCases, demoUseCases, importUseCases } from "./useCases";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";

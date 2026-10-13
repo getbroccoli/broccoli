@@ -19,10 +19,12 @@ export function createImportUseCases({
   orm,
   eventBus,
   logger,
-  secretBox,
+  encryption,
   slack,
-}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger" | "secretBox"> & { slack: SlackClient }) {
-  const context = { orm, eventBus, logger, secretBox, slack, imports: importRepository(orm) };
+}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger" | "encryption"> & {
+  slack: SlackClient;
+}) {
+  const context = { orm, eventBus, logger, encryption, slack, imports: importRepository(orm) };
   return {
     beginSlackConnection: (actor: Actor, returnTo: string) =>
       beginSlackConnection(context, actor, returnTo),

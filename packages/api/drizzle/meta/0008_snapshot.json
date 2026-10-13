@@ -851,8 +851,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "sealed_token": {
-          "name": "sealed_token",
+        "encrypted_token": {
+          "name": "encrypted_token",
           "type": "text",
           "primaryKey": false,
           "notNull": true

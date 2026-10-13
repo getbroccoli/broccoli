@@ -27,7 +27,7 @@ export function importsModule({
   publicUrl,
   slack,
   ...dependencies
-}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger" | "secretBox"> & {
+}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger" | "encryption"> & {
   mode: Mode;
   /** Self-hosted only: the address browsers use; unset takes it from each request. */
   publicUrl?: string;

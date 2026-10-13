@@ -25,7 +25,7 @@ export async function connectSlack(
     await imports.saveSlackConnection({
       teamId: grant.team.id,
       teamName: grant.team.name,
-      sealedToken: context.secretBox.seal(grant.accessToken),
+      encryptedToken: context.encryption.encrypt(grant.accessToken),
     });
     const sourceId = await imports.saveSlackSource(grant.team.name);
     await imports.syncEmployeeRecords(sourceId, records);

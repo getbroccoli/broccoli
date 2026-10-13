@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 
 import { expect, importUseCases, OWNER, test } from "#test/support";
 
-import { createSecretBox } from "../../../../core/secrets";
+import { createEncryption } from "../../../../core/secrets";
 import type { SlackClient } from "../../../../integrations/slack";
 
 test("connects the workspace and imports its members", async ({ orm }) => {
@@ -43,11 +43,11 @@ test("connects the workspace and imports its members", async ({ orm }) => {
   ]);
 });
 
-test("stores the Slack token sealed with the instance key", async ({ orm }) => {
-  const secretBox = createSecretBox(Buffer.alloc(32, 7).toString("base64url"));
+test("stores the Slack token encrypted with the instance key", async ({ orm }) => {
+  const encryption = createEncryption(Buffer.alloc(32, 7).toString("base64url"));
   const token = "test-private-slack-token";
   const imports = importUseCases(orm, {
-    secretBox,
+    encryption,
     slack: {
       redeem: () =>
         Promise.resolve({
@@ -61,12 +61,12 @@ test("stores the Slack token sealed with the instance key", async ({ orm }) => {
 
   await imports.connectSlack(OWNER, { handle: "test-handle", codeVerifier: "test-verifier" });
 
-  const stored = await orm.execute<{ sealed_token: string }>(
-    sql`select sealed_token from slack_connection`,
+  const stored = await orm.execute<{ encrypted_token: string }>(
+    sql`select encrypted_token from slack_connection`,
   );
   expect(stored.rows).toHaveLength(1);
-  expect(stored.rows[0]!.sealed_token).not.toContain(token);
-  expect(secretBox.open(stored.rows[0]!.sealed_token)).toBe(token);
+  expect(stored.rows[0]!.encrypted_token).not.toContain(token);
+  expect(encryption.decrypt(stored.rows[0]!.encrypted_token)).toBe(token);
 });
 
 test("connecting another workspace renames the same source and replaces its employees", async ({

@@ -8,7 +8,7 @@ import { instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import { importRepository, type ImportEmployeeValues } from "../../src/modules/imports";
 import { parseCalendarDate } from "../../src/utils";
-import { TEST_SECRET_BOX } from "./testSecretBox";
+import { TEST_ENCRYPTION } from "./testEncryption";
 
 type SeedEmployee = Partial<
   Omit<NewEmployee, "startDate"> & { startDate: string | null; avatarFileId: string | null }
@@ -98,7 +98,7 @@ export class TestSeed {
     return importRepository(this.orm).saveSlackConnection({
       teamId: "T1",
       teamName: "Acme Workspace",
-      sealedToken: TEST_SECRET_BOX.seal(accessToken),
+      encryptedToken: TEST_ENCRYPTION.encrypt(accessToken),
     });
   }
 }

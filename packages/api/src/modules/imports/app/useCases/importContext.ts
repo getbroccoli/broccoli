@@ -1,7 +1,7 @@
 import type { Orm } from "../../../../core/db";
 import type { EventBus } from "../../../../core/events";
 import type { Logger } from "../../../../core/logger";
-import type { SecretBox } from "../../../../core/secrets";
+import type { Encryption } from "../../../../core/secrets";
 import type { SlackClient } from "../../../../integrations/slack";
 import type { ImportRepository } from "../../db";
 
@@ -10,7 +10,7 @@ export interface ImportContext {
   orm: Orm;
   eventBus: EventBus;
   logger: Logger;
-  secretBox: SecretBox;
+  encryption: Encryption;
   slack: SlackClient;
   imports: ImportRepository;
 }

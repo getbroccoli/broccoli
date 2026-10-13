@@ -40,7 +40,7 @@ export interface ImportEmployeePageQuery {
 export interface StoredSlackConnection {
   teamId: string;
   teamName: string;
-  sealedToken: string;
+  encryptedToken: string;
 }
 
 export type ImportRepository = ReturnType<typeof importRepository>;
@@ -181,7 +181,7 @@ const INSERT_BATCH_SIZE = 1_000;
 const connectionColumns = {
   teamId: slackConnection.teamId,
   teamName: slackConnection.teamName,
-  sealedToken: slackConnection.sealedToken,
+  encryptedToken: slackConnection.encryptedToken,
 };
 
 const sourceColumns = {
