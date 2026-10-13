@@ -30,7 +30,7 @@ A manual check that a new instance starts with the demo company and that clearin
 
 ## Image
 
-- [ ] Build and run the image (`HOST_WEB_PORT=0 docker compose up --build`): seeding works, and the container holds the 40 avatars under `/app/api/dist/modules/demo/avatars/` and `NOTICE` at `/app/NOTICE`.
+- [ ] Build and run the image (`HOST_WEB_PORT=0 docker compose up --build`): seeding works, and the container holds the 40 avatars and their `NOTICE` under `/app/api/dist/modules/demo/avatars/`.
 
 ## Look
 

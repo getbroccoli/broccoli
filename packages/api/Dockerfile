@@ -16,8 +16,6 @@ ENV NODE_ENV=production PORT=3000 WEB_DIR=/app/web
 WORKDIR /app/api
 COPY --from=build /out/api ./
 COPY --from=build /repo/packages/web/dist /app/web
-# The demo avatars ship in the API; NOTICE says where they come from.
-COPY --from=build /repo/NOTICE /app/NOTICE
 # A new named volume copies this folder's owner, so the app can write its secrets.
 RUN mkdir /data && chown node:node /data
 USER node

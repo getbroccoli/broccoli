@@ -1,6 +1,6 @@
 Demo avatars
 
-The demo avatars in packages/api/src/modules/demo/avatars/ were generated with
+The demo avatars in this folder were generated with
 Face Studio (https://facestudio.app), which allows personal and commercial use of
 the faces it generates. They show no real person. They are not covered by the
 GNU Affero General Public License that covers the rest of this repository.
