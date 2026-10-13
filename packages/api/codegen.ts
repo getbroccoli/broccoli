@@ -16,6 +16,11 @@ const config: CodegenConfig = {
           EmployeeMutations: "Record<PropertyKey, never>",
           CompanyMutations: "Record<PropertyKey, never>",
           DemoMutations: "Record<PropertyKey, never>",
+          ImportMutations: "Record<PropertyKey, never>",
+          // The import has one fixed id; its fields load what they need.
+          Import: "Record<PropertyKey, never>",
+          ImportSource: "../../modules/imports/domain#ImportSource as ImportSourceModel",
+          ImportEmployee: "../../modules/imports/domain#ImportEmployee as ImportEmployeeModel",
         },
       },
     },

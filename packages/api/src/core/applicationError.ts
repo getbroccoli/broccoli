@@ -1,6 +1,11 @@
 import type express from "express";
 
-export type ApplicationErrorCode = "UNAUTHENTICATED" | "FORBIDDEN" | "INVALID_INPUT";
+export type ApplicationErrorCode =
+  | "UNAUTHENTICATED"
+  | "FORBIDDEN"
+  | "INVALID_INPUT"
+  /** An external service, such as Slack, refused or failed. */
+  | "UNAVAILABLE";
 
 /** Why one input field was refused, such as `{ field: "email", code: "taken" }`. */
 export interface FieldError {
@@ -29,7 +34,12 @@ export function invalidInput(fieldErrors: FieldError[]): ApplicationError {
   return new ApplicationError("INVALID_INPUT", "The input is invalid.", fieldErrors);
 }
 
-const HTTP_STATUS_OF = { UNAUTHENTICATED: 401, FORBIDDEN: 403, INVALID_INPUT: 400 } as const;
+const HTTP_STATUS_OF = {
+  UNAUTHENTICATED: 401,
+  FORBIDDEN: 403,
+  INVALID_INPUT: 400,
+  UNAVAILABLE: 503,
+} as const;
 
 /**
  * Answers an HTTP route's expected failure with its status, and invalid input with

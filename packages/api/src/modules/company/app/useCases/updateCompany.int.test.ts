@@ -1,8 +1,11 @@
 import { companyUseCases, expect, test } from "#test/support";
 
-import { readSetupStep } from "../../../../core/instance";
+import { instanceRepository, readSetupStep } from "../../../../core/instance";
 
-test("saves the owner's company name and completes the company step", async ({ orm, seed }) => {
+test("saves the owner's company name and moves setup on to the import step", async ({
+  orm,
+  seed,
+}) => {
   const actor = await seed.owner();
   const company = companyUseCases(orm);
 
@@ -10,13 +13,14 @@ test("saves the owner's company name and completes the company step", async ({ o
 
   expect(saved.name).toBe("Example Ltd");
   expect((await company.getCompany(actor)).name).toBe("Example Ltd");
-  expect(await readSetupStep(orm)).toBe("done");
+  expect(await readSetupStep(orm)).toBe("import");
 });
 
 test("renames the company after setup is done", async ({ orm, seed }) => {
   const actor = await seed.owner();
   const company = companyUseCases(orm);
   await company.update(actor, { name: "Example Ltd" });
+  await instanceRepository(orm).setOwner(actor.userId, "done");
 
   const saved = await company.update(actor, { name: "Example Labs" });
 

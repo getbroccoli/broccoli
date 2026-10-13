@@ -10,15 +10,23 @@
     ],
     "src/modules/demo": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
     "src/modules/employees": ["src/core/*", "!src/core/server", "src/utils"],
+    "src/modules/imports": [
+      "src/core/*",
+      "!src/core/server",
+      "src/integrations/slack",
+      "src/utils"
+    ],
     "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/integrations/brandLookup": ["src/utils"],
+    "src/integrations/slack": ["src/utils"],
     "src/utils": [],
     "src/core/server": ["src/core/*"],
     "src/core/moduleManifest": [
       "src/core/db",
       "src/core/events",
       "src/core/graphql",
-      "src/core/logger"
+      "src/core/logger",
+      "src/core/secrets"
     ],
     "src/core/graphql": [
       "src/core/actor",

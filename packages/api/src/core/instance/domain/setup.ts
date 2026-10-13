@@ -1,5 +1,5 @@
 /** Where a new instance is in its first-run flow, in order. */
-export const SETUP_STEPS = ["owner", "company", "done"] as const;
+export const SETUP_STEPS = ["owner", "company", "import", "done"] as const;
 
 export type SetupStep = (typeof SETUP_STEPS)[number];
 

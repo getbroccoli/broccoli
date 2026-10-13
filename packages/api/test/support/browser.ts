@@ -4,9 +4,15 @@ export type Browser = ReturnType<typeof createBrowser>;
 export function createBrowser(baseUrl: string) {
   const cookies = new Map<string, string>();
 
-  async function request(path: string, method: string, body?: unknown): Promise<Response> {
+  async function request(
+    path: string,
+    method: string,
+    body?: unknown,
+    redirect: "follow" | "manual" = "follow",
+  ): Promise<Response> {
     const response = await fetch(new URL(path, baseUrl), {
       method,
+      redirect,
       headers: {
         "content-type": Buffer.isBuffer(body) ? "application/octet-stream" : "application/json",
         origin: baseUrl,
@@ -31,6 +37,7 @@ export function createBrowser(baseUrl: string) {
     post: (path: string, body: unknown) => request(path, "POST", body),
     put: (path: string, body: Buffer) => request(path, "PUT", body),
     get: (path: string) => request(path, "GET"),
+    getManual: (path: string) => request(path, "GET", undefined, "manual"),
     graphql: (query: string, variables?: Record<string, unknown>) =>
       request("/api/graphql", "POST", { query, variables }),
   };

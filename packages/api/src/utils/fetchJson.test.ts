@@ -12,7 +12,9 @@ it("parses a successful response matching the schema", async () => {
   const server = await startFakeHttpServer(() => ({ status: 200, body: { name: "Example" } }));
   onTestFinished(() => server.stop());
 
-  await expect(fetchJson(new URL(server.url), schema, options)).resolves.toEqual({ name: "Example" });
+  await expect(fetchJson(new URL(server.url), schema, options)).resolves.toEqual({
+    name: "Example",
+  });
 });
 
 it("returns null for a 404 response", async () => {

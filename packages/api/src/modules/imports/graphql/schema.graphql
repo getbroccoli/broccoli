@@ -1,0 +1,65 @@
+"Every source and its records, awaiting review and approval. One per instance."
+type Import {
+  "Always `import`: one import per instance."
+  id: ID!
+  "Oldest first."
+  sources: [ImportSource!]!
+  "The employee records of every source, by name. Owner only."
+  employees("Page size, 1 to 10000." first: Int = 100, after: String): ImportEmployeeConnection!
+}
+
+"Where people came from."
+enum ImportSourceKind {
+  SLACK
+}
+
+"One place people came from, such as the Slack workspace; it owns its records."
+type ImportSource {
+  id: ID!
+  kind: ImportSourceKind!
+  "The Slack workspace's name."
+  name: String!
+  "When the source was last read."
+  readAt: DateTime!
+  employeeCount: Int!
+  "This source's employee records, by name."
+  employees("Page size, 1 to 10000." first: Int = 100, after: String): ImportEmployeeConnection!
+}
+
+"An employee as one source proposes it; not yet an employee. Any field may be missing."
+type ImportEmployee {
+  id: ID!
+  source: ImportSource!
+  firstName: String
+  lastName: String
+  "Lowercased."
+  email: String
+  jobTitle: String
+  startDate: Date
+}
+
+type ImportEmployeeEdge {
+  cursor: String!
+  node: ImportEmployee!
+}
+
+type ImportEmployeeConnection {
+  edges: [ImportEmployeeEdge!]!
+  pageInfo: PageInfo!
+}
+
+type Query {
+  "The import. Owner only."
+  import: Import!
+}
+
+type ImportMutations {
+  "Reads the connected Slack workspace again; its source then holds the current members."
+  refreshSlack: Import!
+  "Leaves the import step of setup for now; the records stay."
+  skip: Import!
+}
+
+type Mutation {
+  import: ImportMutations!
+}

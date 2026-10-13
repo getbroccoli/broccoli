@@ -24,6 +24,7 @@ export interface TestBroccoliServerOptions {
   managed?: { instanceId: string; accountsUrl: string };
   publicUrl?: string;
   brandLookupUrl?: string | null;
+  slack?: { relayUrl: string; apiUrl: string };
 }
 
 /**
@@ -32,7 +33,14 @@ export interface TestBroccoliServerOptions {
  */
 export async function startTestBroccoliServer(
   databaseUrl: string,
-  { webDir, dataDir, managed, publicUrl, brandLookupUrl = null }: TestBroccoliServerOptions = {},
+  {
+    webDir,
+    dataDir,
+    managed,
+    publicUrl,
+    brandLookupUrl = null,
+    slack = { relayUrl: "http://127.0.0.1:9", apiUrl: "http://127.0.0.1:9" },
+  }: TestBroccoliServerOptions = {},
 ): Promise<RunningServer> {
   const ownsDataDir = dataDir === undefined;
   const folder = dataDir ?? (await mkdtemp(join(tmpdir(), "broccoli-data-")));
@@ -48,7 +56,7 @@ export async function startTestBroccoliServer(
       dataDir: folder,
     },
     createLogger("silent"),
-    (core) => createModules(core, { mode: deployment.mode, brandLookupUrl }),
+    (core) => createModules(core, { mode: deployment.mode, brandLookupUrl, publicUrl, slack }),
   );
   return {
     url: server.url,

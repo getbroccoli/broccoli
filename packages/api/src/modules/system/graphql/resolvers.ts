@@ -3,7 +3,7 @@ import type { Mode } from "../../../core/env";
 import type { Resolvers } from "../../../core/graphql";
 import { readSetupStep } from "../../../core/instance";
 
-const STEPS = { owner: "OWNER", company: "COMPANY", done: "DONE" } as const;
+const STEPS = { owner: "OWNER", company: "COMPANY", import: "IMPORT", done: "DONE" } as const;
 const SIGN_IN = { self_hosted: "PASSWORD", managed: "MANAGED" } as const;
 
 export function createResolvers(orm: Orm, mode: Mode): Resolvers {

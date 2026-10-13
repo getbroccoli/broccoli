@@ -22,6 +22,8 @@ enum SetupStep {
   OWNER
   "The owner exists and has not named the company yet."
   COMPANY
+  "The company is named; the owner brings in their people."
+  IMPORT
   "Setup is finished."
   DONE
 }
