@@ -1,6 +1,6 @@
 import { useMutation } from "@apollo/client/react";
 import { SlackLogo } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { ReadSlackDocument, type ImportStepQuery } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,10 @@ interface SlackSourceRowProps {
   source: ImportStepQuery["import"]["sources"][number] | undefined;
 }
 
-/** Slack as a source of people: connect it, import its members, and read it again. */
+/**
+ * Slack as a source of people: connect it, and read it again. A connected workspace
+ * without imported members is imported as soon as the row shows it.
+ */
 export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
   const [readSlack, { loading: reading }] = useMutation(ReadSlackDocument);
   const [readFailed, setReadFailed] = useState(false);
@@ -29,6 +32,16 @@ export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
       setReadFailed(true);
     }
   };
+
+  // Once per visit: a failure leaves the button for the owner to try again.
+  const autoImported = useRef(false);
+  const needsImport = connection !== null && source === undefined;
+  useEffect(() => {
+    if (needsImport && !autoImported.current) {
+      autoImported.current = true;
+      void read();
+    }
+  });
 
   return (
     <div className="flex flex-col gap-2">
