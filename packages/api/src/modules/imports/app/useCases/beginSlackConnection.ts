@@ -2,7 +2,6 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { type Actor, requireOwner } from "../../../../core/actor";
 import type { ImportContext } from "./importContext";
-import { requireSlackAuthorization } from "./slackRecords";
 
 /** Where to send the browser to connect Slack, with the values its return must match. */
 export interface SlackConnectionStart {
@@ -20,12 +19,11 @@ export function beginSlackConnection(
   returnTo: string,
 ): SlackConnectionStart {
   requireOwner(actor);
-  const authorization = requireSlackAuthorization(slackAuthorization);
   const state = randomBytes(RANDOM_BYTES).toString("base64url");
   const codeVerifier = randomBytes(RANDOM_BYTES).toString("base64url");
   const codeChallenge = createHash("sha256").update(codeVerifier).digest("base64url");
   return {
-    authorizeUrl: authorization.authorizeUrl({ returnTo, state, codeChallenge }),
+    authorizeUrl: slackAuthorization.authorizeUrl({ returnTo, state, codeChallenge }),
     state,
     codeVerifier,
   };

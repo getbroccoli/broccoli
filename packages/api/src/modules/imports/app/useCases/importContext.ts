@@ -11,8 +11,7 @@ export interface ImportContext {
   eventBus: EventBus;
   logger: Logger;
   encryption: Encryption;
-  /** Null when this server has no way to authorize Slack. */
-  slackAuthorization: SlackAuthorization | null;
+  slackAuthorization: SlackAuthorization;
   slackApi: SlackApi;
   imports: ImportRepository;
 }

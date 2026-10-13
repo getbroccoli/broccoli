@@ -12,12 +12,10 @@ export const CONNECT_SLACK_URL = "/api/integrations/slack/connect";
 interface SlackSourceRowProps {
   /** The Slack source, or undefined before Slack is connected. */
   source: ImportStepQuery["import"]["sources"][number] | undefined;
-  /** False while this server has no way to connect Slack. */
-  canConnect: boolean;
 }
 
 /** Slack as a source of people: connect it, or see its workspace and read it again. */
-export function SlackSourceRow({ source, canConnect }: SlackSourceRowProps) {
+export function SlackSourceRow({ source }: SlackSourceRowProps) {
   const [refreshSlack, { loading: refreshing }] = useMutation(RefreshSlackDocument);
   const [refreshFailed, setRefreshFailed] = useState(false);
 
@@ -37,9 +35,7 @@ export function SlackSourceRow({ source, canConnect }: SlackSourceRowProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="text-[15px] font-medium">{t("imports.slack.name")}</span>
           <span className="text-[13px] text-muted-foreground">
-            {source
-              ? peopleLine(source)
-              : t(canConnect ? "imports.slack.hint" : "imports.slack.notSetUp")}
+            {source ? peopleLine(source) : t("imports.slack.hint")}
           </span>
         </div>
         {source ? (
@@ -52,12 +48,10 @@ export function SlackSourceRow({ source, canConnect }: SlackSourceRowProps) {
             {t(refreshing ? "imports.slack.refreshing" : "imports.slack.refresh")}
           </Button>
         ) : (
-          canConnect && (
-            <Button render={<a href={CONNECT_SLACK_URL} />}>{t("imports.slack.connect")}</Button>
-          )
+          <Button render={<a href={CONNECT_SLACK_URL} />}>{t("imports.slack.connect")}</Button>
         )}
       </div>
-      {source && canConnect && (
+      {source && (
         <a
           href={CONNECT_SLACK_URL}
           className="self-end text-[13px] text-muted-foreground underline underline-offset-3 hover:text-foreground"

@@ -12,9 +12,9 @@ export { createImportUseCases, type ImportUseCases } from "./app";
 export { importRepository } from "./db";
 export type { ImportEmployeeValues } from "./domain";
 
-/** Where Slack is reached: Broccoli's OAuth relay, if this server uses one, and Slack's Web API. */
+/** Where Slack is reached: Broccoli's OAuth relay and Slack's Web API. */
 export interface SlackUrls {
-  relayUrl: string | null;
+  relayUrl: string;
   apiUrl: string;
 }
 
@@ -35,7 +35,7 @@ export function importsModule({
 }): ModuleManifest {
   const useCases = createImportUseCases({
     ...dependencies,
-    slackAuthorization: slack.relayUrl === null ? null : createSlackRelay(slack.relayUrl),
+    slackAuthorization: createSlackRelay(slack.relayUrl),
     slackApi: createSlackApi(slack.apiUrl),
   });
   const publicOrigin: PublicOrigin = async (request) => {

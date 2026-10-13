@@ -2,8 +2,6 @@
 type Import {
   "Always `import`: one import per instance."
   id: ID!
-  "Whether this server can connect a Slack workspace; false until Slack is set up."
-  canConnectSlack: Boolean!
   "Oldest first."
   sources: [ImportSource!]!
   "The employee records of every source, by name. Owner only."

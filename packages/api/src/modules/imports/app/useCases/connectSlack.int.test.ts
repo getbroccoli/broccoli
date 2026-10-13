@@ -141,14 +141,3 @@ test.for(["exchange", "list", "users:read", "users:read.email"])(
     expect((await orm.execute(sql`select * from slack_connection`)).rows).toEqual([]);
   },
 );
-
-test("refuses to connect without Slack authorization", async ({ orm }) => {
-  const imports = importUseCases(orm, { slackAuthorization: null });
-
-  await expect(
-    imports.connectSlack(OWNER, { code: "test-code", codeVerifier: "test-verifier" }),
-  ).rejects.toMatchObject({
-    code: "UNAVAILABLE",
-    message: "Slack is not set up on this server.",
-  });
-});

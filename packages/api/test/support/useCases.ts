@@ -34,7 +34,7 @@ export function importUseCases(
     slackAuthorization = {},
     slackApi = {},
   }: {
-    slackAuthorization?: Partial<SlackAuthorization> | null;
+    slackAuthorization?: Partial<SlackAuthorization>;
     slackApi?: Partial<SlackApi>;
     encryption?: Encryption;
   } = {},
@@ -45,18 +45,15 @@ export function importUseCases(
     eventBus: createEventBus(logger),
     logger,
     encryption,
-    slackAuthorization:
-      slackAuthorization === null
-        ? null
-        : {
-            authorizeUrl: () => {
-              throw new Error("Unexpected Slack authorization");
-            },
-            exchange: () => {
-              throw new Error("Unexpected Slack exchange");
-            },
-            ...slackAuthorization,
-          },
+    slackAuthorization: {
+      authorizeUrl: () => {
+        throw new Error("Unexpected Slack authorization");
+      },
+      exchange: () => {
+        throw new Error("Unexpected Slack exchange");
+      },
+      ...slackAuthorization,
+    },
     slackApi: {
       listMembers: () => {
         throw new Error("Unexpected Slack read");

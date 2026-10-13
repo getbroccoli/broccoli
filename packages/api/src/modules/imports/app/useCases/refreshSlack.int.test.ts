@@ -15,7 +15,6 @@ test("refresh keeps surviving member ids, updates their values, adds newcomers a
   ]);
   await seed.slackConnection();
   const imports = importUseCases(orm, {
-    slackAuthorization: null,
     slackApi: {
       listMembers: (token) => {
         expect(token).toBe("test-slack-token");

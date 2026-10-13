@@ -5,7 +5,6 @@ import type { Actor } from "../../../../core/actor";
 type ImportUseCases = ReturnType<typeof importUseCases>;
 
 const calls = {
-  canConnectSlack: (imports, actor) => imports.canConnectSlack(actor),
   beginSlackConnection: (imports, actor) =>
     imports.beginSlackConnection(actor, "https://example.com/callback"),
   connectSlack: (imports, actor) =>

@@ -28,16 +28,3 @@ test("begins authorization with the callback, state and S256 challenge", ({ orm 
     createHash("sha256").update(codeVerifier).digest("base64url"),
   );
 });
-
-test("refuses to begin a connection without Slack authorization", ({ orm }) => {
-  const imports = importUseCases(orm, { slackAuthorization: null });
-
-  expect(() =>
-    imports.beginSlackConnection(OWNER, "https://example.com/api/integrations/slack/callback"),
-  ).toThrow(
-    expect.objectContaining({
-      code: "UNAVAILABLE",
-      message: "Slack is not set up on this server.",
-    }),
-  );
-});
