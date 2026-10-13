@@ -3,6 +3,8 @@ import checkFile from "eslint-plugin-check-file";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
+import { importRulesConfig } from "./importRules.js";
+
 const MAX_LINES_PER_FILE = 300;
 
 // Letters and digits only: camelCase, or PascalCase for React components and their folders.
@@ -50,5 +52,7 @@ export function eslintConfig(packageDir) {
         ],
       },
     },
+    // What each folder may import: see the package's importRules.json.
+    importRulesConfig(packageDir),
   );
 }

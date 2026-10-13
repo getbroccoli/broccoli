@@ -12,7 +12,7 @@ packages/api/src/
 └── utils/         helpers that know nothing about Broccoli, such as getJson
 ```
 
-Modules import `core`, `integrations` and `utils`; `core` never imports a module.
+**Import rules.** Each package's `importRules.json` ([API](../packages/api/importRules.json), [web](../packages/web/importRules.json)) lists what each folder, or single file, may import; a target may be a glob (`src/core/*`), and `!` removes matches (`!src/core/server`). Anything not listed is forbidden. ESLint enforces it, allows a folder to be imported only through its `index.ts`, and refuses rules whose graph has a cycle. A module imports another module only where that pair is listed (see cross-module calls in §1); `core` never imports a module.
 
 ## 1. Shape of the system
 
@@ -25,7 +25,7 @@ Modules import `core`, `integrations` and `utils`; `core` never imports a module
   - `graphql`, `mcp` and `http`: adapters that translate a request into one use-case call; no rules. `http` holds the few routes GraphQL cannot serve, such as images.
   - `index.ts`: the module's public surface; it composes the adapters with the use cases.
   - A `core/` folder that owns state and rules, such as `core/instance` (owner and setup), uses the same layers; its adapter folder is named after its technology (`betterAuth`).
-  - **Dependencies point one way:** `domain ← db ← app ← graphql | mcp`, each through the folder's `index.ts`. Repositories and use cases are concrete, and their types are inferred; there are no hand-written interfaces, because tests never replace our own code (see `docs/testing.md`).
+  - **Dependencies point one way:** `domain ← db ← app ← graphql | mcp | http`, each through the folder's `index.ts`, as the `layers` of `importRules.json` declare. Repositories and use cases are concrete, and their types are inferred; there are no hand-written interfaces, because tests never replace our own code (see `docs/testing.md`).
 - **Module manifest.** Each module exports one factory, such as `employeesModule({ orm })`, that receives the core's dependencies at startup, builds its use cases once and returns its manifest: SDL and resolvers, event handlers, HTTP routes under `/api/`, later MCP tools and jobs. A factory takes only the core services it uses (`Pick<ModuleDependencies, "orm" | "eventBus">`) plus its own settings; `createModules` in `modules/index.ts` is the one place that hands them out, so a new dependency touches only the modules that use it. The core iterates over the list of manifests. The GraphQL context carries the actor (`UserActor`: the use-case `Actor` plus the sign-in email for display); resolvers call the module's use cases with it. No shared request context or central configuration has to be edited to add a module.
 - **Cross-module calls** go through the other module's public use cases or its events. A module never reads another module's tables.
 - **Domain-driven design is tiered** and decided per module when it is designed. The default is a plain domain layer with unit tests. Aggregates, value objects and domain events are used only where invariants demand them, such as leave balances, approvals and permissions.
@@ -99,7 +99,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **State:** Apollo cache for server data, the URL for navigation state, React state and context for UI only.
 - **i18n:** English only, but every user-facing string goes through one `t()` helper from day one.
 - **Dates are strings.** `Date` and `DateTime` values arrive and leave as strings (codegen maps both to `string`) and are stored, compared and sent as strings. A calendar `Date` is never turned into a JS `Date`: `new Date("2026-10-10")` is UTC midnight and shows the previous day west of UTC. A `DateTime` becomes a JS `Date` only inside display formatting (`Intl.DateTimeFormat`). A calendar `Date` is displayed by formatting the timestamp `Date.UTC(y, m - 1, d)` with `timeZone: "UTC"`.
-- Route files stay thin; feature components live in `features/<module>/`; a lint rule caps files at 300 lines.
+- Route files stay thin; feature components live in `features/<module>/`; a lint rule caps files at 300 lines. Routes and the shell compose features; a feature imports another feature only where `importRules.json` lists it.
 - Pure frontend functions get unit tests; no component or browser tests yet.
 
 ## 9. Testing
@@ -116,7 +116,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - Packages live under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages, which are added when there is code to share.
 - The repository root stays short: only files a tool requires there, such as the workspace files, the Compose file and `.env.example`, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/`.
 - **Builds.** The web app builds with Vite and the API with tsdown, so TypeScript resolves imports like a bundler: relative imports carry no file extension and a folder is imported by its name, which resolves to its `index.ts`.
-- **ESLint** (typescript-eslint, module boundaries, `@graphql-eslint`, project rules for SDL) and **Prettier**.
+- **ESLint** (typescript-eslint, import rules from `importRules.json` through `eslint-plugin-boundaries`, `@graphql-eslint`, project rules for SDL) and **Prettier**.
 - **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
 - **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.
 
