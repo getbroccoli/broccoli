@@ -108,3 +108,18 @@ test("refuses invalid, oversized and anonymous logo uploads", async ({ env }) =>
   const anonymous = await env.browser().put("/api/company/logo", logo);
   expect(anonymous.status).toBe(401);
 });
+
+test("returns 404 for the first logo URL after the owner uploads a second logo", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const first = await browser.put("/api/company/logo", logo);
+  expect(first.status).toBe(200);
+  const { logoUrl: firstLogoUrl } = (await first.json()) as { logoUrl: string };
+  expect((await browser.get(firstLogoUrl)).status).toBe(200);
+
+  const second = await browser.put("/api/company/logo", logo);
+
+  expect(second.status).toBe(200);
+  expect((await browser.get(firstLogoUrl)).status).toBe(404);
+});

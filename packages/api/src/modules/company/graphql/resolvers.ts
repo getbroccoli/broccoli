@@ -18,11 +18,11 @@ export function createResolvers(useCases: CompanyUseCases): Resolvers {
   };
 }
 
-function toGraphql({ name, suggestedName, logoId }: Company) {
+function toGraphql({ name, suggestedName, logoFileId }: Company) {
   return {
     id: "company",
     name,
     suggestedName,
-    logoUrl: logoId && logoUrl(logoId),
+    logoUrl: logoFileId && logoUrl(logoFileId),
   };
 }

@@ -1,4 +1,4 @@
-import { companyUseCases, expect, PNG as logo, test } from "#test/support";
+import { companyUseCases, expect, PNG as logo, storedFileIds, test } from "#test/support";
 
 test("removes the logo and stops serving its old id", async ({ orm, seed }) => {
   const actor = await seed.owner();
@@ -7,13 +7,14 @@ test("removes the logo and stops serving its old id", async ({ orm, seed }) => {
   });
   await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" });
   const before = await company.getCompany(actor);
-  expect(before.logoId).toEqual(expect.any(String));
+  expect(before.logoFileId).toEqual(expect.any(String));
 
   const removed = await company.removeLogo(actor);
 
-  expect(removed).toEqual({ name: null, suggestedName: "Example Labs", logoId: null });
-  expect((await company.getCompany(actor)).logoId).toBeNull();
-  expect(await company.readLogo(actor, before.logoId!)).toBeNull();
+  expect(removed).toEqual({ name: null, suggestedName: "Example Labs", logoFileId: null });
+  expect((await company.getCompany(actor)).logoFileId).toBeNull();
+  expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(false);
+  expect(await storedFileIds(orm)).toEqual([]);
 });
 
 test("keeps the logo removed when a pending lookup finishes", async ({ orm, seed }) => {
@@ -39,5 +40,5 @@ test("keeps the logo removed when a pending lookup finishes", async ({ orm, seed
   });
   await pending;
 
-  expect((await company.getCompany(actor)).logoId).toBeNull();
+  expect((await company.getCompany(actor)).logoFileId).toBeNull();
 });

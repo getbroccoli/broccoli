@@ -10,7 +10,7 @@ test("suggests a name from the owner's domain before the company is named", asyn
   expect(await company.getCompany(actor)).toEqual({
     name: null,
     suggestedName: "Example",
-    logoId: null,
+    logoFileId: null,
   });
 });
 
@@ -24,6 +24,6 @@ test("suggests the stored brand name after owner setup", async ({ orm, seed }) =
   expect(await company.getCompany(actor)).toEqual({
     name: null,
     suggestedName: "Example Labs",
-    logoId: null,
+    logoFileId: null,
   });
 });
