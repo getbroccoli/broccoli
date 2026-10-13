@@ -14,6 +14,9 @@ export const Route = createFileRoute("/setup/import")({
     if (setupStep === "DONE") {
       throw redirect({ to: "/people", replace: true });
     }
+    if (setupStep === "COMPANY") {
+      throw redirect({ to: "/setup/company", replace: true });
+    }
   },
   component: () => (
     <SetupLayout
