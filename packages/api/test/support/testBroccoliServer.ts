@@ -16,7 +16,7 @@ export interface Readiness {
 const STARTUP_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 25;
 
-export interface TestServerOptions {
+export interface TestBroccoliServerOptions {
   webDir?: string;
   /** Defaults to a new temporary folder, removed when the server stops. */
   dataDir?: string;
@@ -26,10 +26,13 @@ export interface TestServerOptions {
   brandLookupUrl?: string | null;
 }
 
-/** Starts the real API on a free port. */
-export async function startTestServer(
+/**
+ * Starts Broccoli itself, the real API with every module, on a free port and a test
+ * database. End-to-end tests reach it through `TestEnv`.
+ */
+export async function startTestBroccoliServer(
   databaseUrl: string,
-  { webDir, dataDir, managed, publicUrl, brandLookupUrl = null }: TestServerOptions = {},
+  { webDir, dataDir, managed, publicUrl, brandLookupUrl = null }: TestBroccoliServerOptions = {},
 ): Promise<RunningServer> {
   const ownsDataDir = dataDir === undefined;
   const folder = dataDir ?? (await mkdtemp(join(tmpdir(), "broccoli-data-")));

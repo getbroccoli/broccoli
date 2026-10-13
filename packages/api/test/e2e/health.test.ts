@@ -1,6 +1,6 @@
 import { onTestFinished } from "vitest";
 
-import { expect, startTestServer, test, waitForStartup } from "#test/support";
+import { expect, startTestBroccoliServer, test, waitForStartup } from "#test/support";
 
 const UNREACHABLE_DATABASE_URL = "postgres://broccoli@127.0.0.1:1/broccoli_test_unreachable";
 
@@ -19,7 +19,7 @@ test("reports ready once startup has finished", async ({ env }) => {
 });
 
 test("reports unavailable when the database cannot be reached", async () => {
-  const server = await startTestServer(UNREACHABLE_DATABASE_URL);
+  const server = await startTestBroccoliServer(UNREACHABLE_DATABASE_URL);
   onTestFinished(() => server.stop());
 
   expect(await waitForStartup(server)).toEqual({ httpStatus: 503, status: "unavailable" });

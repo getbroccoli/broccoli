@@ -44,7 +44,7 @@ packages/api/src/
 - **Scalars.** `Date` is a calendar day, `YYYY-MM-DD`, and stays a string end to end. `DateTime` is an instant: ISO 8601 with a time zone in, UTC ISO out, and a JS `Date` inside the API.
 - **Server:** Express 5 and Apollo Server 5 via `@as-integrations/express5`, at `/api/graphql`. Every API route lives under `/api/`; only the health probes `/healthz` and `/readyz` sit at the root, and an unknown `/api/` path is a 404, never the web app. Depth limits, bounded pagination, introspection off in production, error masking configured explicitly.
 - **Mutation names.** Inside a namespace, `create`, `update` and `delete` cover ordinary record changes (`employee { create }`, `company { update(input:) }`); a domain action or a named part gets its own verb (`approve`, `removeLogo`). A name never repeats the namespace's object.
-- **File uploads** (spreadsheet import, the company logo) use a bounded REST endpoint, not GraphQL: the logo is `PUT /api/company/logo` with the raw image as the body. No subscriptions.
+- **File uploads** (spreadsheet import, the company logo) use a bounded REST endpoint, not GraphQL: the logo is `PUT /api/company/logo` with the raw image as the body, stored as a file (see Files in §4). No subscriptions.
 
 ## 3. MCP
 
@@ -62,6 +62,7 @@ Broccoli exposes a [Model Context Protocol](https://modelcontextprotocol.io) ser
 - Upgrading to Drizzle 1.0 (new migration folder format, Relational Queries v2) is a planned task after the first release.
 - **One Postgres role** and one `DATABASE_URL`. The role owns the schema, so Broccoli runs on managed Postgres plans that offer no superuser. Migrations run at startup under a Postgres advisory lock, so instances starting together apply them one after another. The instance does not report ready until they succeed.
 - **Transactions.** A use case opens one with `runInTransaction(orm, eventBus, work)` and passes the opaque `Tx` it gets to every operation that must join it, its own repositories (`companyRepository(tx)`) and other modules' public operations (`advanceStep(tx, …)`) alike. Operations meant to compose take a required `tx`; there is no nesting and no savepoint, and a `Tx` used after its transaction ended throws. Only database adapters reach the ORM behind a `Tx` (`ormOf`), so ORM types stay inside them. Code never awaits work that needs another connection while holding locks, such as an HTTP call.
+- **Files** live in Postgres: `core/files` keeps their bytes and MIME type in the `files` table, so a rollback undoes a stored file and a database backup includes it. Core knows nothing else about a file: no category, owner or access rule. A module stores a file with `storeFile(tx, …)`, keeps its id in its own table (a foreign key without cascade, so a referenced file cannot be deleted), serves it from its own route after its own access rule and a check that the id is one of its own, with `sendFile`, and deletes it with `deleteFiles(tx, ids)`. A file never changes; a new version is a new file, so its URL is cached for good. There is no generic download route.
 - `pgvector` is added only when a feature needs it.
 
 Kysely with generated types and Prisma were considered. Drizzle was chosen for a single source of truth and generated migrations; the cost is that generated SQL must be reviewed.

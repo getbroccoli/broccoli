@@ -2,22 +2,28 @@ import express from "express";
 
 import { requireSignedIn } from "../../../core/actor";
 import { ApplicationError } from "../../../core/applicationError";
+import type { Orm } from "../../../core/db";
+import { sendFile } from "../../../core/files";
 import type { ActorResolver } from "../../../core/graphql";
 import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
 
 const STATUS_OF = { UNAUTHENTICATED: 401, FORBIDDEN: 403, INVALID_INPUT: 400 } as const;
 
-/** Where the logo with this id is served. */
-export function logoUrl(logoId: string): string {
-  return `/api/company/logo/${logoId}`;
+/** Where the logo with this file id is served. */
+export function logoUrl(fileId: string): string {
+  return `/api/company/logo/${fileId}`;
 }
 
 /**
  * `PUT /api/company/logo` takes the owner's image as the raw body; `GET
- * /api/company/logo/:logoId` serves it. A new logo gets a new id, so the answer of
+ * /api/company/logo/:fileId` serves it. A new logo is a new file, so the answer of
  * GET is cached for good.
  */
-export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolver): express.Router {
+export function logoRouter(
+  useCases: CompanyUseCases,
+  resolveActor: ActorResolver,
+  orm: Orm,
+): express.Router {
   // The session cookie is renewed by GraphQL, which every page calls.
   const signedIn = async (request: express.Request) =>
     requireSignedIn((await resolveActor(request.headers)).actor);
@@ -33,26 +39,20 @@ export function logoRouter(useCases: CompanyUseCases, resolveActor: ActorResolve
           // Without a body Express leaves `body` unset; an empty image is refused like any other.
           const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
           const company = await useCases.saveLogo(await signedIn(request), bytes);
-          response.json({ logoUrl: company.logoId && logoUrl(company.logoId) });
+          response.json({ logoUrl: company.logoFileId && logoUrl(company.logoFileId) });
         } catch (error) {
           sendApplicationError(error, response);
         }
       },
     )
-    .get("/company/logo/:logoId", async (request, response) => {
+    .get("/company/logo/:fileId", async (request, response) => {
       try {
-        const logo = await useCases.readLogo(await signedIn(request), request.params.logoId);
-        if (!logo) {
+        const { fileId } = request.params;
+        if (!(await useCases.isCurrentLogo(await signedIn(request), fileId))) {
           response.sendStatus(404);
           return;
         }
-        response
-          .type(logo.mimeType)
-          .set({
-            "Cache-Control": "private, max-age=31536000, immutable",
-            "X-Content-Type-Options": "nosniff",
-          })
-          .send(logo.bytes);
+        await sendFile(orm, fileId, response);
       } catch (error) {
         sendApplicationError(error, response);
       }

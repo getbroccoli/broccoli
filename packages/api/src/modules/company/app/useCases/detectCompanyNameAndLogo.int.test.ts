@@ -17,11 +17,8 @@ test("stores the brand name and logo found for the owner's domain", async ({ orm
   const saved = await company.getCompany(actor);
   expect(domains).toEqual(["example.com"]);
   expect(saved.suggestedName).toBe("Example Labs");
-  expect(saved.logoId).toEqual(expect.any(String));
-  expect(await company.readLogo(actor, saved.logoId!)).toEqual({
-    bytes: logo,
-    mimeType: "image/png",
-  });
+  expect(saved.logoFileId).toEqual(expect.any(String));
+  expect(await company.isCurrentLogo(actor, saved.logoFileId!)).toBe(true);
 });
 
 test("keeps the domain suggestion and no logo when no brand is found", async ({ orm, seed }) => {
@@ -33,7 +30,7 @@ test("keeps the domain suggestion and no logo when no brand is found", async ({ 
   expect(await company.getCompany(actor)).toEqual({
     name: null,
     suggestedName: "Example",
-    logoId: null,
+    logoFileId: null,
   });
 });
 
@@ -53,7 +50,7 @@ test("does not look up a personal email domain", async ({ orm, seed }) => {
   expect(await company.getCompany(actor)).toEqual({
     name: null,
     suggestedName: null,
-    logoId: null,
+    logoFileId: null,
   });
 });
 
@@ -77,7 +74,7 @@ test("logs a failed lookup and resolves without storing a brand", async ({ orm, 
   expect(await company.getCompany(actor)).toEqual({
     name: null,
     suggestedName: "Example",
-    logoId: null,
+    logoFileId: null,
   });
   expect(logs.length).toBeGreaterThan(0);
 });
@@ -93,11 +90,11 @@ test("does not restore a removed logo when owner setup is delivered again", asyn
   });
   await company.detectCompanyNameAndLogo(owner);
   const before = await company.getCompany(actor);
-  expect(before.logoId).toEqual(expect.any(String));
+  expect(before.logoFileId).toEqual(expect.any(String));
   await company.removeLogo(actor);
 
   await company.detectCompanyNameAndLogo(owner);
 
-  expect((await company.getCompany(actor)).logoId).toBeNull();
-  expect(await company.readLogo(actor, before.logoId!)).toBeNull();
+  expect((await company.getCompany(actor)).logoFileId).toBeNull();
+  expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(false);
 });

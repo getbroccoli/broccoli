@@ -1,16 +1,12 @@
-import { randomUUID } from "node:crypto";
-
-import { eq, isNull, sql } from "drizzle-orm";
+import { isNull, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
-import type { RasterImage } from "../../../utils";
 import { company } from "./companyTable";
 
-/** The company row without the logo bytes, which only `readLogo` loads. */
 export interface CompanyRecord {
   name: string | null;
   brandName: string | null;
-  logoId: string | null;
+  logoFileId: string | null;
 }
 
 export type CompanyRepository = ReturnType<typeof companyRepository>;
@@ -21,7 +17,11 @@ export function companyRepository(db: Orm | Tx) {
   return {
     read: async (): Promise<CompanyRecord> => {
       const [row] = await orm()
-        .select({ name: company.name, brandName: company.brandName, logoId: company.logoId })
+        .select({
+          name: company.name,
+          brandName: company.brandName,
+          logoFileId: company.logoFileId,
+        })
         .from(company);
       if (!row) {
         throw new Error("The company row is missing; migrations insert it");
@@ -34,57 +34,35 @@ export function companyRepository(db: Orm | Tx) {
     },
 
     /**
-     * Stores the first brand lookup's result; does nothing once a lookup was stored,
-     * so a repeated or late lookup never overrides the owner's changes.
+     * Stores the first brand lookup's result and returns true; does nothing and
+     * returns false once a lookup was stored, so a repeated or late lookup never
+     * overrides the owner's changes.
      */
-    saveBrandOnce: async (brandName: string | null, logo: RasterImage | null): Promise<void> => {
-      await orm()
+    saveBrandOnce: async (
+      brandName: string | null,
+      logoFileId: string | null,
+    ): Promise<boolean> => {
+      const rows = await orm()
         .update(company)
-        .set({
-          brandName,
-          brandLookedUpAt: sql`now()`,
-          ...(logo && {
-            logoId: randomUUID(),
-            logoContent: logo.bytes,
-            logoMimeType: logo.mimeType,
-          }),
-        })
-        .where(isNull(company.brandLookedUpAt));
+        .set({ brandName, brandLookedUpAt: sql`now()`, ...(logoFileId && { logoFileId }) })
+        .where(isNull(company.brandLookedUpAt))
+        .returning({ id: company.id });
+      return rows.length > 0;
     },
 
-    /** The owner's own logo; also counts as the first lookup, so a running one cannot replace it. */
-    saveLogo: async (logo: RasterImage): Promise<void> => {
-      await orm()
-        .update(company)
-        .set({
-          logoId: randomUUID(),
-          logoContent: logo.bytes,
-          logoMimeType: logo.mimeType,
-          brandLookedUpAt: sql`coalesce(${company.brandLookedUpAt}, now())`,
-        });
-    },
-
-    /** Also counts as the first lookup, so a lookup still running cannot bring the logo back. */
-    removeLogo: async (): Promise<void> => {
-      await orm()
-        .update(company)
-        .set({
-          logoId: null,
-          logoContent: null,
-          logoMimeType: null,
-          brandLookedUpAt: sql`coalesce(${company.brandLookedUpAt}, now())`,
-        });
-    },
-
-    /** The logo with this id, or null when it is not the current one. */
-    readLogo: async (logoId: string): Promise<RasterImage | null> => {
-      const [row] = await orm()
-        .select({ bytes: company.logoContent, mimeType: company.logoMimeType })
+    /**
+     * Sets the owner's own logo, or none, and returns the previous logo's file id.
+     * Also counts as the first lookup, so a lookup still running cannot replace it.
+     */
+    replaceLogo: async (logoFileId: string | null): Promise<string | null> => {
+      const [current] = await orm()
+        .select({ logoFileId: company.logoFileId })
         .from(company)
-        .where(eq(company.logoId, logoId));
-      return row?.bytes
-        ? { bytes: row.bytes, mimeType: row.mimeType as RasterImage["mimeType"] }
-        : null;
+        .for("update");
+      await orm()
+        .update(company)
+        .set({ logoFileId, brandLookedUpAt: sql`coalesce(${company.brandLookedUpAt}, now())` });
+      return current?.logoFileId ?? null;
     },
   };
 }

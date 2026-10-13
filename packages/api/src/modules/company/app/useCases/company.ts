@@ -11,7 +11,7 @@ export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
 export interface Company {
   name: string | null;
   suggestedName: string | null;
-  logoId: string | null;
+  logoFileId: string | null;
 }
 
 /** What the company use cases share. */
@@ -23,12 +23,12 @@ export interface CompanyContext {
 
 /** Read after `requireOwner`, so the owner exists. */
 export async function readCompany({ orm, companies }: CompanyContext): Promise<Company> {
-  const [{ name, brandName, logoId }, owner] = await Promise.all([
+  const [{ name, brandName, logoFileId }, owner] = await Promise.all([
     companies.read(),
     readOwner(orm),
   ]);
   if (!owner) {
     throw new Error("The instance has no owner");
   }
-  return { name, suggestedName: suggestName({ brandName, ownerEmail: owner.email }), logoId };
+  return { name, suggestedName: suggestName({ brandName, ownerEmail: owner.email }), logoFileId };
 }
