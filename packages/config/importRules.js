@@ -6,6 +6,11 @@ const RULES_FILE = "importRules.json";
 const SOURCE_EXTENSIONS = ["ts", "tsx"];
 const ALL_TESTS = "*";
 const TEST = "test";
+// Tells the reader, often an agent, how to fix the import, not only that it is refused.
+const IMPORT_REFUSED =
+  `${RULES_FILE} does not allow "{{dependency.source}}" here. Import another folder through its ` +
+  `index.ts, never its inner files. If this import is intended, add the target to this ` +
+  `element's list in ${RULES_FILE}; tests never import test files.`;
 
 /**
  * Builds the ESLint config that enforces a package's `importRules.json`: what each element
@@ -48,6 +53,7 @@ export function importRulesConfig(packageDir) {
           "error",
           {
             default: "disallow",
+            message: IMPORT_REFUSED,
             // Imports inside an element are checked too, so none of them reaches a test.
             checkInternals: true,
             policies: dependencyPolicies(elements, rules),

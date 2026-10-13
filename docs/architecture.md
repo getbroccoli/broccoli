@@ -105,7 +105,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 ## 9. Testing
 
 - **Vitest** everywhere, in three layers. Domain unit tests sit next to the code. Use-case integration tests (`*.int.test.ts`) sit next to the use cases and call them directly against a real Postgres; they carry most of the behaviour. End-to-end API tests under `packages/api/test/e2e` start the real server and call it over HTTP to prove the wiring.
-- **Isolation.** One template database is migrated once per run; each test file gets a fresh database cloned from it, so files run in parallel. Database names carry a per-run id, so several runs can share one Postgres server.
+- **Isolation.** One template database is migrated once per run; each test gets a fresh database cloned from it, so files run in parallel. Database names carry a per-run id, so several runs can share one Postgres server.
 - **Test data** comes from `TestSeed`, which inserts through each module's repository and skips the use cases, so setup never depends on the code under test and writes no audit rows or events; plus one small seed for the demo company.
 - **Property-based tests** are used sparingly and agreed case by case (access rules are the first candidate).
 - MCP gets smoke tests after the first release.
@@ -116,7 +116,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - Packages live under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages, which are added when there is code to share.
 - The repository root stays short: only files a tool requires there, such as the workspace files, the Compose file and `.env.example`, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/`.
 - **Builds.** The web app builds with Vite and the API with tsdown, so TypeScript resolves imports like a bundler: relative imports carry no file extension and a folder is imported by its name, which resolves to its `index.ts`.
-- **ESLint** (typescript-eslint, import rules from `importRules.json` through `eslint-plugin-boundaries`, `@graphql-eslint`, project rules for SDL) and **Prettier**.
+- **ESLint** (typescript-eslint, import rules from `importRules.json` through `eslint-plugin-boundaries`, `@graphql-eslint` for the web app's GraphQL documents) and **Prettier**.
 - **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
 - **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.
 
@@ -134,7 +134,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **Data folder.** `DATA_DIR` (default `/data`, a Compose volume) holds files that must survive restarts. `SELF_HOSTED_PUBLIC_URL` is the address browsers use; unset, Broccoli trusts the address of each request. Session cookies are Secure when `SELF_HOSTED_PUBLIC_URL` is https; without it the protocol is unknown, so they are not.
 - **Secrets.** On first boot the app generates the encryption key and cookie secret into a volume file (`/data/secrets/`, mode 600) and reads them on later boots; `ENCRYPTION_KEY` in the environment overrides the file. Third-party credentials (Slack and similar) are stored encrypted in the database. The rule: the database holds hashes and ciphertext, never keys. Operators back up the secrets volume together with the database.
 - **Brand lookup.** `BRAND_LOOKUP_URL` is unset by default, so a self-hosted instance makes no third-party call and suggests the company name from the owner's email domain only. Managed instances set it to a service that is not public; when set, Broccoli sends the owner's email domain, never the address, once, and stores the name and logo it gets back.
-- **Logging** with pino: identifiers, not contents; a redaction list; a trace id on every line.
-- **Observability** with OpenTelemetry auto-instrumentation, OTLP export off by default. `/healthz` and `/readyz` (ready only after migrations). No third-party error service.
+- **Logging** with pino: identifiers, not contents.
+- **Observability:** `/healthz` and `/readyz` (ready only after migrations). No third-party error service.
 - **Self-hosting.** One image containing the API, the static web app and migrations, published to `ghcr.io/getbroccoli/broccoli` for every commit on `main` and on pull request branches, tagged with the short commit SHA; the API serves the web app from `WEB_DIR` and answers other page paths with `index.html`. Postgres from Compose, with trust auth on the Compose network and no published port; publishing it requires a password first. An updater sidecar that pulls a tag, pins the image by digest, health-checks and rolls back. Backup is documented `pg_dump`, not a built-in feature.
 - **Managed** installs use the same image with `BROCCOLI_MODE=managed` and `MANAGED_INSTANCE_ID`; their company, address and website come from the signed init (§6), not the environment.
