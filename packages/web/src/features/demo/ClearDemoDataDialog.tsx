@@ -20,8 +20,12 @@ import { t } from "@/i18n";
 export function ClearDemoDataDialog() {
   const [open, setOpen] = useState(false);
   const [clearDemoData, { loading, error, reset }] = useMutation(ClearDemoDataDocument, {
-    refetchQueries: ["Employees"],
-    awaitRefetchQueries: true,
+    // Every cached page, search and sort of the list held demo people: drop them all, so
+    // the list on screen refetches and any other one fetches fresh when it is opened.
+    update: (cache) => {
+      cache.evict({ id: "ROOT_QUERY", fieldName: "employees" });
+      cache.gc();
+    },
   });
 
   const changeOpen = (nextOpen: boolean) => {
