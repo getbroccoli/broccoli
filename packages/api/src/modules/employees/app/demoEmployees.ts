@@ -17,8 +17,12 @@ export async function createDemoEmployees(tx: Tx, demoEmployees: readonly DemoEm
   for (const { avatar } of demoEmployees) {
     avatarFileIds.push(await storeFile(tx, { content: avatar.bytes, mimeType: avatar.mimeType }));
   }
-  await employeeRepository(tx).insertDemo(
-    newEmployees.map((employee, index) => ({ ...employee, avatarFileId: avatarFileIds[index]! })),
+  await employeeRepository(tx).insertMany(
+    newEmployees.map((employee, index) => ({
+      ...employee,
+      avatarFileId: avatarFileIds[index]!,
+      isDemo: true,
+    })),
   );
 }
 

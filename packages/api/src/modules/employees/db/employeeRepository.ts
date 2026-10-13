@@ -52,7 +52,7 @@ export function employeeRepository(db: Orm | Tx) {
 
   return {
     /** Throws `EmailTakenError` when another employee has the email. */
-    insert: async (newEmployee: NewEmployee & Partial<AvatarOf>): Promise<Employee> => {
+    insert: async (newEmployee: EmployeeRow): Promise<Employee> => {
       try {
         const [employee] = await orm().insert(employees).values(newEmployee).returning();
         return employee!;
@@ -61,12 +61,12 @@ export function employeeRepository(db: Orm | Tx) {
       }
     },
 
-    /** Inserts demo employees in one statement; throws `EmailTakenError` like `insert`. */
-    insertDemo: async (demoEmployees: readonly (NewEmployee & AvatarOf)[]): Promise<void> => {
+    /** Inserts employees in one statement; throws `EmailTakenError` like `insert`. */
+    insertMany: async (newEmployees: readonly EmployeeRow[]): Promise<void> => {
       try {
         await orm()
           .insert(employees)
-          .values(demoEmployees.map((employee) => ({ ...employee, isDemo: true })));
+          .values([...newEmployees]);
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
@@ -120,7 +120,8 @@ export function employeeRepository(db: Orm | Tx) {
   };
 }
 
-type AvatarOf = Pick<Employee, "avatarFileId">;
+/** A new employee as stored, with the columns only the module itself sets. */
+type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };
 
 async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {
   const rows = await orm.select({ id: employees.id }).from(employees).where(condition).limit(1);
