@@ -22,6 +22,19 @@ const test = baseTest.extend<{ slack: Awaited<ReturnType<typeof startFakeSlack>>
   },
 });
 
+baseTest(
+  "without a relay, Slack is unavailable in GraphQL and connecting returns 503",
+  async ({ env }) => {
+    const { browser } = await env.signInAsOwner();
+
+    const response = await browser.graphql("query { import { canConnectSlack } }");
+
+    expect(await response.json()).toEqual({ data: { import: { canConnectSlack: false } } });
+    const connection = await browser.getManual("/api/integrations/slack/connect");
+    expect(connection.status).toBe(503);
+  },
+);
+
 test("connecting redirects the owner to the relay with an OAuth cookie and S256 challenge", async ({
   env,
   slack,

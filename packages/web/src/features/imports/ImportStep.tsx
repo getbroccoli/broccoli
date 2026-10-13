@@ -53,7 +53,10 @@ export function ImportStep() {
         </p>
       )}
       {data ? (
-        <SlackSourceRow source={data.import.sources.find(({ kind }) => kind === "SLACK")} />
+        <SlackSourceRow
+          source={data.import.sources.find(({ kind }) => kind === "SLACK")}
+          canConnect={data.import.canConnectSlack}
+        />
       ) : error ? (
         <div role="alert" className="flex flex-col items-start gap-3">
           <p className="text-sm text-destructive">{t("imports.loadFailed")}</p>

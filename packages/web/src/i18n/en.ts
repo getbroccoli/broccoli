@@ -82,6 +82,7 @@ export const en = {
   "imports.retry": "Try again",
   "imports.slack.name": "Slack",
   "imports.slack.hint": "Import the members of your Slack workspace.",
+  "imports.slack.notSetUp": "Slack isn’t set up on this server yet.",
   "imports.slack.connect": "Connect Slack",
   "imports.slack.connectAnother": "Connect another workspace",
   "imports.slack.onePerson": "{name} · 1 person",

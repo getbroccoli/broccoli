@@ -26,6 +26,7 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
     },
     Import: {
       id: () => "import",
+      canConnectSlack: (_parent, _args, { actor }) => useCases.canConnectSlack(actor),
       sources: (_parent, _args, { actor }) => useCases.listSources(actor),
       employees: (_parent, { first, after }, { actor }) =>
         useCases.listEmployees(actor, { first: first ?? undefined, after }),

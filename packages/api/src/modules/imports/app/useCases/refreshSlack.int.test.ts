@@ -15,7 +15,8 @@ test("refresh keeps surviving member ids, updates their values, adds newcomers a
   ]);
   await seed.slackConnection();
   const imports = importUseCases(orm, {
-    slack: {
+    slackAuthorization: null,
+    slackApi: {
       listMembers: (token) => {
         expect(token).toBe("test-slack-token");
         return Promise.resolve([
@@ -59,7 +60,7 @@ test("a failed Slack read preserves the source and all its employees", async ({ 
   ]);
   await seed.slackConnection();
   const imports = importUseCases(orm, {
-    slack: {
+    slackApi: {
       listMembers: () => Promise.reject(new Error("Slack unavailable")),
     },
   });
@@ -88,13 +89,15 @@ test("a pending refresh preserves the records from reconnecting the same workspa
     { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
   ];
   const imports = importUseCases(orm, {
-    slack: {
-      redeem: () =>
+    slackAuthorization: {
+      exchange: () =>
         Promise.resolve({
           accessToken: "new-test-token",
           scopes: ["users:read", "users:read.email"],
           team: { id: "T1", name: "Acme Workspace" },
         }),
+    },
+    slackApi: {
       listMembers: (token) => {
         if (token === "old-test-token") {
           readStarted.resolve();
@@ -117,7 +120,7 @@ test("a pending refresh preserves the records from reconnecting the same workspa
     await pending;
   });
   await readStarted.promise;
-  await imports.connectSlack(OWNER, { handle: "new-handle", codeVerifier: "test-verifier" });
+  await imports.connectSlack(OWNER, { code: "new-code", codeVerifier: "test-verifier" });
   const reconnected = await imports.listEmployees(OWNER, {});
   expect(reconnected.edges.map(({ node }) => node)).toMatchObject([
     { sourceId: source.id, email: "robin@example.com" },

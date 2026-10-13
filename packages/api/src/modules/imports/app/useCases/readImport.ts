@@ -14,6 +14,12 @@ export interface ImportEmployeeListArgs extends PageArgs {
   sourceId?: string;
 }
 
+/** Whether this server can connect a Slack workspace. */
+export function canConnectSlack({ slackAuthorization }: ImportContext, actor: Actor): boolean {
+  requireOwner(actor);
+  return slackAuthorization !== null;
+}
+
 /** The import's sources, oldest first. */
 export function listSources({ imports }: ImportContext, actor: Actor): Promise<ImportSource[]> {
   requireOwner(actor);

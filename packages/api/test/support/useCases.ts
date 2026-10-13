@@ -2,7 +2,7 @@ import { createEventBus } from "../../src/core/events";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { Encryption } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
-import type { SlackClient } from "../../src/integrations/slack";
+import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases } from "../../src/modules/demo";
 import { createImportUseCases } from "../../src/modules/imports";
@@ -31,8 +31,13 @@ export function importUseCases(
   orm: Parameters<typeof createImportUseCases>[0]["orm"],
   {
     encryption = TEST_ENCRYPTION,
-    slack = {},
-  }: { slack?: Partial<SlackClient>; encryption?: Encryption } = {},
+    slackAuthorization = {},
+    slackApi = {},
+  }: {
+    slackAuthorization?: Partial<SlackAuthorization> | null;
+    slackApi?: Partial<SlackApi>;
+    encryption?: Encryption;
+  } = {},
 ) {
   const logger = createLogger("silent");
   return createImportUseCases({
@@ -40,17 +45,23 @@ export function importUseCases(
     eventBus: createEventBus(logger),
     logger,
     encryption,
-    slack: {
-      authorizeUrl: () => {
-        throw new Error("Unexpected Slack authorization");
-      },
-      redeem: () => {
-        throw new Error("Unexpected Slack redemption");
-      },
+    slackAuthorization:
+      slackAuthorization === null
+        ? null
+        : {
+            authorizeUrl: () => {
+              throw new Error("Unexpected Slack authorization");
+            },
+            exchange: () => {
+              throw new Error("Unexpected Slack exchange");
+            },
+            ...slackAuthorization,
+          },
+    slackApi: {
       listMembers: () => {
         throw new Error("Unexpected Slack read");
       },
-      ...slack,
+      ...slackApi,
     },
   });
 }

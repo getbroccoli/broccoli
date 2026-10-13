@@ -1,6 +1,7 @@
 query ImportStep {
   import {
     id
+    canConnectSlack
     sources {
       id
       kind

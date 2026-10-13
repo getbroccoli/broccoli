@@ -24,7 +24,7 @@ export interface TestBroccoliServerOptions {
   managed?: { instanceId: string; accountsUrl: string };
   publicUrl?: string;
   brandLookupUrl?: string | null;
-  slack?: { relayUrl: string; apiUrl: string };
+  slack?: { relayUrl: string | null; apiUrl: string };
 }
 
 /**
@@ -39,7 +39,7 @@ export async function startTestBroccoliServer(
     managed,
     publicUrl,
     brandLookupUrl = null,
-    slack = { relayUrl: "http://127.0.0.1:9", apiUrl: "http://127.0.0.1:9" },
+    slack = { relayUrl: null, apiUrl: "http://127.0.0.1:9" },
   }: TestBroccoliServerOptions = {},
 ): Promise<RunningServer> {
   const ownsDataDir = dataDir === undefined;

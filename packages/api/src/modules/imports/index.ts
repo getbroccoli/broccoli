@@ -2,7 +2,7 @@ import type { Mode } from "../../core/env";
 import { readSdl } from "../../core/graphql";
 import { readAssignment } from "../../core/instance";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
-import { createSlackClient } from "../../integrations/slack";
+import { createSlackApi, createSlackRelay } from "../../integrations/slack";
 import { createImportUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { type PublicOrigin, slackRouter } from "./http";
@@ -12,9 +12,9 @@ export { createImportUseCases, type ImportUseCases } from "./app";
 export { importRepository } from "./db";
 export type { ImportEmployeeValues } from "./domain";
 
-/** Where Slack is reached: Broccoli's OAuth relay and Slack's Web API. */
+/** Where Slack is reached: Broccoli's OAuth relay, if this server uses one, and Slack's Web API. */
 export interface SlackUrls {
-  relayUrl: string;
+  relayUrl: string | null;
   apiUrl: string;
 }
 
@@ -33,7 +33,11 @@ export function importsModule({
   publicUrl?: string;
   slack: SlackUrls;
 }): ModuleManifest {
-  const useCases = createImportUseCases({ ...dependencies, slack: createSlackClient(slack) });
+  const useCases = createImportUseCases({
+    ...dependencies,
+    slackAuthorization: slack.relayUrl === null ? null : createSlackRelay(slack.relayUrl),
+    slackApi: createSlackApi(slack.apiUrl),
+  });
   const publicOrigin: PublicOrigin = async (request) => {
     if (mode === "managed") {
       // Requests reach a managed instance only after init stored its assignment.

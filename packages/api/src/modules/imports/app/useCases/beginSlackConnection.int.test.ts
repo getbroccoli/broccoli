@@ -4,7 +4,7 @@ import { expect, importUseCases, OWNER, test } from "#test/support";
 
 test("begins authorization with the callback, state and S256 challenge", ({ orm }) => {
   const imports = importUseCases(orm, {
-    slack: {
+    slackAuthorization: {
       authorizeUrl: ({ returnTo, state, codeChallenge }) => {
         const url = new URL("https://example.com/slack/authorize");
         url.search = new URLSearchParams({
@@ -26,5 +26,18 @@ test("begins authorization with the callback, state and S256 challenge", ({ orm 
   expect(authorizeUrl.searchParams.get("state")).toBe(state);
   expect(authorizeUrl.searchParams.get("code_challenge")).toBe(
     createHash("sha256").update(codeVerifier).digest("base64url"),
+  );
+});
+
+test("refuses to begin a connection without Slack authorization", ({ orm }) => {
+  const imports = importUseCases(orm, { slackAuthorization: null });
+
+  expect(() =>
+    imports.beginSlackConnection(OWNER, "https://example.com/api/integrations/slack/callback"),
+  ).toThrow(
+    expect.objectContaining({
+      code: "UNAVAILABLE",
+      message: "Slack is not set up on this server.",
+    }),
   );
 });

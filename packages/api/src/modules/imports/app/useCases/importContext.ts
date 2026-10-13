@@ -2,7 +2,7 @@ import type { Orm } from "../../../../core/db";
 import type { EventBus } from "../../../../core/events";
 import type { Logger } from "../../../../core/logger";
 import type { Encryption } from "../../../../core/secrets";
-import type { SlackClient } from "../../../../integrations/slack";
+import type { SlackApi, SlackAuthorization } from "../../../../integrations/slack";
 import type { ImportRepository } from "../../db";
 
 /** What the import use cases share. */
@@ -11,6 +11,8 @@ export interface ImportContext {
   eventBus: EventBus;
   logger: Logger;
   encryption: Encryption;
-  slack: SlackClient;
+  /** Null when this server has no way to authorize Slack. */
+  slackAuthorization: SlackAuthorization | null;
+  slackApi: SlackApi;
   imports: ImportRepository;
 }

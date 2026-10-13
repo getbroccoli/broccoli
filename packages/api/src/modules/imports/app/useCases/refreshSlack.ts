@@ -27,11 +27,11 @@ export async function refreshSlack(context: ImportContext, actor: Actor): Promis
 }
 
 async function readMembers(
-  { slack, encryption, logger }: ImportContext,
+  { slackApi, encryption, logger }: ImportContext,
   encryptedToken: string,
 ): Promise<IncomingRecord[]> {
   try {
-    return await readSlackRecords(slack, encryption.decrypt(encryptedToken));
+    return await readSlackRecords(slackApi, encryption.decrypt(encryptedToken));
   } catch (error) {
     logger.warn({ err: error }, "Reading Slack failed");
     throw new ApplicationError("UNAVAILABLE", "Could not read Slack.");

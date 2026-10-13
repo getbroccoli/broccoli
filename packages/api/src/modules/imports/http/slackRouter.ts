@@ -85,7 +85,8 @@ async function finishConnection(
     return "state";
   }
   try {
-    await useCases.connectSlack(actor, { handle, codeVerifier: pending.codeVerifier });
+    // The relay's handle is its one-time code.
+    await useCases.connectSlack(actor, { code: handle, codeVerifier: pending.codeVerifier });
     return null;
   } catch (failure) {
     if (failure instanceof ApplicationError && failure.code === "UNAVAILABLE") {

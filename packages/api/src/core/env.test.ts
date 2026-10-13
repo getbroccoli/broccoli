@@ -8,6 +8,10 @@ it("needs no settings when self-hosted", () => {
   expect(loadEnv(DATABASE).deployment).toEqual({ mode: "self_hosted" });
 });
 
+it.each([undefined, "", "   "])("disables the Slack relay when its URL is %j", (slackRelayUrl) => {
+  expect(loadEnv({ ...DATABASE, SLACK_RELAY_URL: slackRelayUrl }).slackRelayUrl).toBeNull();
+});
+
 it("reads the self-hosted public URL", () => {
   const env = loadEnv({ ...DATABASE, SELF_HOSTED_PUBLIC_URL: "https://hr.example.com" });
   expect(env.deployment).toEqual({ mode: "self_hosted", publicUrl: "https://hr.example.com" });
