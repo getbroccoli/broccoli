@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getJson } from "../../utils";
+import { fetchJson } from "../../utils";
 
 /** What the brand lookup service knows about a company, by its email domain. */
 export interface Brand {
@@ -31,7 +31,7 @@ export function createBrandLookup(
     return () => Promise.resolve(null);
   }
   return async (domain) => {
-    const brand = await getJson(brandUrl(url, domain), brandResponse, {
+    const brand = await fetchJson(brandUrl(url, domain), brandResponse, {
       timeoutMs,
       maxBytes: MAX_RESPONSE_BYTES,
     });

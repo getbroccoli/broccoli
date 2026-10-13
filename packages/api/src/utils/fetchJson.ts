@@ -1,21 +1,22 @@
 import type { z } from "zod";
 
 /**
- * GETs a JSON answer and parses it with `schema`. Resolves null on 404. Rejects on
- * another unsuccessful status, after `timeoutMs`, on a body over `maxBytes`, on
- * invalid JSON, or when the answer does not match `schema`.
+ * Requests a JSON answer, a GET unless `init` says otherwise, and parses it with
+ * `schema`. Resolves null on 404. Rejects on another unsuccessful status, after
+ * `timeoutMs`, on a body over `maxBytes`, on invalid JSON, or when the answer does
+ * not match `schema`.
  */
-export async function getJson<T>(
+export async function fetchJson<T>(
   url: URL,
   schema: z.ZodType<T>,
-  { timeoutMs, maxBytes }: { timeoutMs: number; maxBytes: number },
+  { timeoutMs, maxBytes, init }: { timeoutMs: number; maxBytes: number; init?: RequestInit },
 ): Promise<T | null> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
+  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   if (response.status === 404) {
     return null;
   }
   if (!response.ok) {
-    throw new Error(`GET ${url.origin} answered ${response.status}`);
+    throw new Error(`${init?.method ?? "GET"} ${url.origin} answered ${response.status}`);
   }
   return schema.parse(JSON.parse(await readText(response, maxBytes)));
 }
