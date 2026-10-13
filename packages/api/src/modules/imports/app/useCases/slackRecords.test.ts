@@ -1,9 +1,10 @@
 import { expect, it } from "vitest";
 
-import { mapSlackMembers } from ".";
+import type { SlackMember } from "../../../../integrations/slack";
+import { readSlackRecords } from "./slackRecords";
 
-it("maps profile names, normalises the email and leaves the start date unknown", () => {
-  const records = mapSlackMembers([
+it("maps profile names, normalises the email and leaves the start date unknown", async () => {
+  const records = await recordsOf([
     {
       id: "U1",
       profile: {
@@ -32,21 +33,21 @@ it("maps profile names, normalises the email and leaves the start date unknown",
 
 it.each(["deleted", "is_bot", "is_app_user", "is_restricted", "is_ultra_restricted"])(
   "skips members marked %s",
-  (flag) => {
+  async (flag) => {
     expect(
-      mapSlackMembers([{ id: "U1", [flag]: true, profile: { email: "avery@example.com" } }]),
+      await recordsOf([{ id: "U1", [flag]: true, profile: { email: "avery@example.com" } }]),
     ).toEqual([]);
   },
 );
 
-it.each([undefined, "", "   ", "not-an-email"])("skips the invalid email %s", (email) => {
-  expect(mapSlackMembers([{ id: "U1", profile: { email } }])).toEqual([]);
+it.each([undefined, "", "   ", "not-an-email"])("skips the invalid email %s", async (email) => {
+  expect(await recordsOf([{ id: "U1", profile: { email } }])).toEqual([]);
 });
 
-it("keeps each Slack user id once", () => {
+it("keeps each Slack user id once", async () => {
   const member = { id: "U1", profile: { email: "avery@example.com" } };
 
-  const records = mapSlackMembers([member, member]);
+  const records = await recordsOf([member, member]);
 
   expect(records.map((record) => record.externalId)).toEqual(["U1"]);
 });
@@ -54,8 +55,8 @@ it("keeps each Slack user id once", () => {
 it.each([
   { first_name: " ", last_name: "Stone" },
   { first_name: "Avery", last_name: " " },
-])("falls back to the profile real name when either name is blank: %j", (names) => {
-  const [record] = mapSlackMembers([
+])("falls back to the profile real name when either name is blank: %j", async (names) => {
+  const [record] = await recordsOf([
     {
       id: "U1",
       name: "Ignored Username",
@@ -67,8 +68,8 @@ it.each([
   expect(record?.values).toMatchObject({ firstName: "Avery Robin", lastName: "Stone" });
 });
 
-it("falls back to the member real name when the profile real name is blank", () => {
-  const [record] = mapSlackMembers([
+it("falls back to the member real name when the profile real name is blank", async () => {
+  const [record] = await recordsOf([
     {
       id: "U1",
       name: "Ignored Username",
@@ -80,8 +81,8 @@ it("falls back to the member real name when the profile real name is blank", () 
   expect(record?.values).toMatchObject({ firstName: "Avery", lastName: "Stone" });
 });
 
-it("falls back to the username when both real names are blank", () => {
-  const [record] = mapSlackMembers([
+it("falls back to the username when both real names are blank", async () => {
+  const [record] = await recordsOf([
     {
       id: "U1",
       name: "Avery Stone",
@@ -93,27 +94,27 @@ it("falls back to the username when both real names are blank", () => {
   expect(record?.values).toMatchObject({ firstName: "Avery", lastName: "Stone" });
 });
 
-it("uses a single word fallback as the first name only", () => {
-  const [record] = mapSlackMembers([
+it("uses a single word fallback as the first name only", async () => {
+  const [record] = await recordsOf([
     { id: "U1", name: "Avery", profile: { email: "avery@example.com" } },
   ]);
 
   expect(record?.values).toMatchObject({ firstName: "Avery", lastName: null });
 });
 
-it("keeps a member without any name", () => {
-  const [record] = mapSlackMembers([{ id: "U1", profile: { email: "avery@example.com" } }]);
+it("keeps a member without any name", async () => {
+  const [record] = await recordsOf([{ id: "U1", profile: { email: "avery@example.com" } }]);
 
   expect(record?.values).toMatchObject({ firstName: null, lastName: null });
 });
 
-it.each([undefined, "", "   "])("turns the blank job title %s into null", (title) => {
-  const [record] = mapSlackMembers([{ id: "U1", profile: { email: "avery@example.com", title } }]);
+it.each([undefined, "", "   "])("turns the blank job title %s into null", async (title) => {
+  const [record] = await recordsOf([{ id: "U1", profile: { email: "avery@example.com", title } }]);
 
   expect(record?.values.jobTitle).toBeNull();
 });
 
-it("retains only the specified Slack fields in the raw record", () => {
+it("retains only the specified Slack fields in the raw record", async () => {
   const raw = {
     id: "U1",
     name: "avery",
@@ -134,7 +135,11 @@ it("retains only the specified Slack fields in the raw record", () => {
     profile: { ...raw.profile, phone: "private", image_192: "https://example.com/avatar.png" },
   };
 
-  const [record] = mapSlackMembers([member]);
+  const [record] = await recordsOf([member]);
 
   expect(record?.raw).toEqual(raw);
 });
+
+function recordsOf(members: SlackMember[]) {
+  return readSlackRecords({ listMembers: () => Promise.resolve(members) }, "test-token");
+}
