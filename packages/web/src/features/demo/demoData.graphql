@@ -1,12 +1,12 @@
 query DemoData {
-  demoData {
+  demo {
     id
     isPresent
   }
 }
 
 mutation ClearDemoData {
-  demoData {
+  demo {
     clear {
       id
       isPresent

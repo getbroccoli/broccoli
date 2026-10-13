@@ -10,7 +10,7 @@ import { ClearDemoDataDialog } from "./ClearDemoDataDialog";
 export function DemoBanner() {
   // A failed query shows nothing here: the page below reports its own errors.
   const { data } = useQuery(DemoDataDocument);
-  if (!data?.demoData.isPresent) return null;
+  if (!data?.demo.isPresent) return null;
 
   return (
     <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-muted/60 px-3 py-2 text-[12.5px] text-foreground">

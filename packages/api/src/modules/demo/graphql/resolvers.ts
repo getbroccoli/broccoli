@@ -4,12 +4,12 @@ import type { DemoUseCases } from "../app";
 export function createResolvers(useCases: DemoUseCases): Resolvers {
   return {
     Query: {
-      demoData: async (_parent, _args, { actor }) => toGraphql(await useCases.getDemoData(actor)),
+      demo: async (_parent, _args, { actor }) => toGraphql(await useCases.getDemoData(actor)),
     },
     Mutation: {
-      demoData: () => ({}),
+      demo: () => ({}),
     },
-    DemoDataMutations: {
+    DemoMutations: {
       clear: async (_parent, _args, { actor }) => toGraphql(await useCases.clearDemoData(actor)),
     },
   };

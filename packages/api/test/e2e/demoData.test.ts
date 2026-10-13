@@ -3,14 +3,14 @@ import { expect, test, WEBP } from "#test/support";
 interface DemoDataResponse {
   data: {
     employees: { edges: { node: { avatarUrl: string | null } }[] };
-    demoData: { id: string; isPresent: boolean };
+    demo: { id: string; isPresent: boolean };
   };
 }
 
 const saveCompany = `mutation { company { update(input: { name: "Acme Corp" }) { id } } }`;
 const demoQuery = `query {
   employees(first: 100) { edges { node { avatarUrl } } }
-  demoData { id isPresent }
+  demo { id isPresent }
 }`;
 
 test("fills the directory and serves demo avatars when the owner saves the company step", async ({
@@ -26,7 +26,7 @@ test("fills the directory and serves demo avatars when the owner saves the compa
   expect(response.status).toBe(200);
   expect(body).not.toHaveProperty("errors");
   expect(body.data.employees.edges).toHaveLength(40);
-  expect(body.data.demoData).toEqual({ id: "demoData", isPresent: true });
+  expect(body.data.demo).toEqual({ id: "demoData", isPresent: true });
   const avatarUrl = body.data.employees.edges[0]!.node.avatarUrl!;
   expect(avatarUrl).toMatch(/^\/api\/employees\/avatar\/[0-9a-f-]+$/);
   const image = await browser.get(avatarUrl);
@@ -47,15 +47,15 @@ test("clears demo data through the API and stops serving its avatars", async ({ 
   const avatarUrl = body.data.employees.edges[0]!.node.avatarUrl!;
   expect((await browser.get(avatarUrl)).status).toBe(200);
 
-  const cleared = await browser.graphql("mutation { demoData { clear { id isPresent } } }");
+  const cleared = await browser.graphql("mutation { demo { clear { id isPresent } } }");
 
   expect(cleared.status).toBe(200);
   expect(await cleared.json()).toEqual({
-    data: { demoData: { clear: { id: "demoData", isPresent: false } } },
+    data: { demo: { clear: { id: "demoData", isPresent: false } } },
   });
   const after = await browser.graphql(demoQuery);
   expect(await after.json()).toEqual({
-    data: { employees: { edges: [] }, demoData: { id: "demoData", isPresent: false } },
+    data: { employees: { edges: [] }, demo: { id: "demoData", isPresent: false } },
   });
   expect((await browser.get(avatarUrl)).status).toBe(404);
 });
@@ -65,8 +65,8 @@ test("refuses demo data and employee avatars without a session", async ({ env })
   await env.seed.employee({ avatarFileId });
   const browser = env.browser();
 
-  const response = await browser.graphql("query { demoData { isPresent } }");
-  const cleared = await browser.graphql("mutation { demoData { clear { id isPresent } } }");
+  const response = await browser.graphql("query { demo { isPresent } }");
+  const cleared = await browser.graphql("mutation { demo { clear { id isPresent } } }");
   const image = await browser.get(`/api/employees/avatar/${avatarFileId}`);
 
   expect(await response.json()).toMatchObject({

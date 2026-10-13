@@ -7,14 +7,14 @@ type DemoData {
 
 type Query {
   "Owner only."
-  demoData: DemoData!
+  demo: DemoData!
 }
 
-type DemoDataMutations {
+type DemoMutations {
   "Deletes every demo record; records people added stay. Owner only."
   clear: DemoData!
 }
 
 type Mutation {
-  demoData: DemoDataMutations!
+  demo: DemoMutations!
 }
