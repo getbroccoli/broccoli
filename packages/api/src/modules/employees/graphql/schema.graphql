@@ -8,6 +8,8 @@ type Employee {
   jobTitle: String
   "First working day."
   startDate: Date
+  "Path of the employee's avatar, such as `/api/employees/avatar/<id>`; null without one."
+  avatarUrl: String
   createdAt: DateTime!
 }
 
