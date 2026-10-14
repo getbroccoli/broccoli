@@ -1,5 +1,4 @@
-import type { Orm } from "../../../../core/db";
-import type { EventBus } from "../../../../core/events";
+import type { Orm, Transact } from "../../../../core/db";
 import { readOwner } from "../../../../core/instance";
 import type { CompanyRepository } from "../../db";
 import { suggestName } from "../../domain";
@@ -17,7 +16,7 @@ export interface Company {
 /** What the company use cases share. */
 export interface CompanyContext {
   orm: Orm;
-  eventBus: EventBus;
+  transact: Transact;
   companies: CompanyRepository;
 }
 

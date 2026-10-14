@@ -3,17 +3,15 @@ import { onTestFinished } from "vitest";
 
 import { expect, startSimpleHttpServer, storedFileIds, test } from "#test/support";
 
-import { runInTransaction, type Orm } from "../db";
-import { createEventBus } from "../events";
-import { createLogger } from "../logger";
+import type { Orm } from "../db";
 import { deleteFiles, sendFile, storeFile } from ".";
 
 test("serves stored bytes with their MIME type, immutable private caching and nosniff", async ({
   orm,
+  transact,
 }) => {
-  const eventBus = createEventBus(createLogger("silent"));
   const content = Buffer.from([0, 1, 127, 128, 255]);
-  const fileId = await runInTransaction(orm, eventBus, (tx) =>
+  const fileId = await transact((tx) =>
     storeFile(tx, { content, mimeType: "application/octet-stream" }),
   );
   const url = await startFileServer(orm);
@@ -35,47 +33,40 @@ test("returns 404 for an unknown file", async ({ orm }) => {
   expect(response.status).toBe(404);
 });
 
-test("returns 404 for a deleted file", async ({ orm }) => {
-  const eventBus = createEventBus(createLogger("silent"));
-  const fileId = await runInTransaction(orm, eventBus, (tx) =>
+test("returns 404 for a deleted file", async ({ orm, transact }) => {
+  const fileId = await transact((tx) =>
     storeFile(tx, { content: Buffer.from("file"), mimeType: "application/octet-stream" }),
   );
   const url = await startFileServer(orm);
 
-  await runInTransaction(orm, eventBus, (tx) => deleteFiles(tx, [fileId]));
+  await transact((tx) => deleteFiles(tx, [fileId]));
 
   expect((await fetch(`${url}/${fileId}`)).status).toBe(404);
 });
 
-test("keeps stored files when deleting an empty list", async ({ orm }) => {
-  const eventBus = createEventBus(createLogger("silent"));
-  const fileId = await runInTransaction(orm, eventBus, (tx) =>
+test("keeps stored files when deleting an empty list", async ({ orm, transact }) => {
+  const fileId = await transact((tx) =>
     storeFile(tx, { content: Buffer.from("file"), mimeType: "application/octet-stream" }),
   );
 
-  await runInTransaction(orm, eventBus, (tx) => deleteFiles(tx, []));
+  await transact((tx) => deleteFiles(tx, []));
 
   expect(await storedFileIds(orm)).toEqual([fileId]);
 });
 
-test("keeps stored files when deleting an unknown id", async ({ orm }) => {
-  const eventBus = createEventBus(createLogger("silent"));
-  const fileId = await runInTransaction(orm, eventBus, (tx) =>
+test("keeps stored files when deleting an unknown id", async ({ orm, transact }) => {
+  const fileId = await transact((tx) =>
     storeFile(tx, { content: Buffer.from("file"), mimeType: "application/octet-stream" }),
   );
 
-  await runInTransaction(orm, eventBus, (tx) =>
-    deleteFiles(tx, ["00000000-0000-4000-8000-000000000001"]),
-  );
+  await transact((tx) => deleteFiles(tx, ["00000000-0000-4000-8000-000000000001"]));
 
   expect(await storedFileIds(orm)).toEqual([fileId]);
 });
 
-test("does not keep a file when its transaction rolls back", async ({ orm }) => {
-  const eventBus = createEventBus(createLogger("silent"));
-
+test("does not keep a file when its transaction rolls back", async ({ orm, transact }) => {
   await expect(
-    runInTransaction(orm, eventBus, async (tx) => {
+    transact(async (tx) => {
       await storeFile(tx, {
         content: Buffer.from("file"),
         mimeType: "application/octet-stream",

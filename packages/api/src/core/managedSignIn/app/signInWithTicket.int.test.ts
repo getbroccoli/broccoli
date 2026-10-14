@@ -5,7 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { expect, SYSTEM, test } from "#test/support";
 
 import { account, user } from "../../auth";
-import { ormOf, runInTransaction, type Orm } from "../../db";
+import { ormOf, type Orm, transactor } from "../../db";
 import { createEventBus } from "../../events";
 import { readOwnerUserId, readSetupStep } from "../../instance";
 import { createLogger } from "../../logger";
@@ -75,13 +75,13 @@ test("refuses an already expired ticket", async ({ orm }) => {
 
 test("refuses a ticket that expires while another transaction holds its insert", async ({
   orm,
+  transact,
 }) => {
   const value = ticket();
   const consumed = Promise.withResolvers<number>();
   const release = Promise.withResolvers<void>();
   const rollback = new Error("Roll back the first use");
-  const eventBus = createEventBus(createLogger("silent"));
-  const first = runInTransaction(orm, eventBus, async (tx) => {
+  const first = transact(async (tx) => {
     await managedTicketRepository(tx).consume(value.jti, value.expiresAt);
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     consumed.resolve(rows[0]!.pid);
@@ -117,11 +117,10 @@ test("refuses a ticket that expires while another transaction holds its insert",
   expect(rejected?.reason).toBeInstanceOf(SignInRefusedError);
 });
 
-test("leaves the ticket unused when the transaction fails", async ({ orm }) => {
+test("leaves the ticket unused when the transaction fails", async ({ orm, transact }) => {
   const value = ticket();
-  const eventBus = createEventBus(createLogger("silent"));
   await expect(
-    runInTransaction(orm, eventBus, async (tx) => {
+    transact(async (tx) => {
       await signInWithTicket(SYSTEM, tx, value, () => NOW);
       throw new Error("later step failed");
     }),
@@ -180,6 +179,6 @@ function signIn(orm: Orm, value: ManagedTicket, clock = () => NOW) {
   });
   return {
     events,
-    result: runInTransaction(orm, eventBus, (tx) => signInWithTicket(SYSTEM, tx, value, clock)),
+    result: transactor(orm, eventBus)((tx) => signInWithTicket(SYSTEM, tx, value, clock)),
   };
 }

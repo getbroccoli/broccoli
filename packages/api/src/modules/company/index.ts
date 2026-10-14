@@ -12,7 +12,7 @@ export { createCompanyUseCases, type Company, type CompanyUseCases } from "./app
 export function companyModule({
   brandLookupUrl,
   ...dependencies
-}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger"> & {
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   brandLookupUrl: string | null;
 }): ModuleManifest {
   const useCases = createCompanyUseCases({

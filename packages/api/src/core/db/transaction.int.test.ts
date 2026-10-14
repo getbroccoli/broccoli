@@ -3,11 +3,12 @@ import { EXAMPLE_PAYLOAD, expect, SYSTEM, test } from "#test/support";
 import { createEventBus } from "../events";
 import { advanceStep, readSetupStep } from "../instance";
 import { createLogger } from "../logger";
-import { runInTransaction } from ".";
+import { transactor } from ".";
 
 test("dispatches queued events after the write commits", async ({ orm, seed }) => {
   await seed.owner();
   const eventBus = createEventBus(createLogger("silent"));
+  const transact = transactor(orm, eventBus);
   const received: unknown[] = [];
   const steps: string[] = [];
   eventBus.subscribe({
@@ -17,7 +18,7 @@ test("dispatches queued events after the write commits", async ({ orm, seed }) =
     },
   });
 
-  await runInTransaction(orm, eventBus, async (tx) => {
+  await transact(async (tx) => {
     await advanceStep(SYSTEM, tx, "company", "done");
     tx.publish("example.happened", EXAMPLE_PAYLOAD);
     expect(received).toEqual([]);
@@ -30,6 +31,7 @@ test("dispatches queued events after the write commits", async ({ orm, seed }) =
 test("rolls back the write and drops queued events when work fails", async ({ orm, seed }) => {
   await seed.owner();
   const eventBus = createEventBus(createLogger("silent"));
+  const transact = transactor(orm, eventBus);
   const received: unknown[] = [];
   eventBus.subscribe({
     "example.happened": (payload) => {
@@ -39,7 +41,7 @@ test("rolls back the write and drops queued events when work fails", async ({ or
   });
 
   await expect(
-    runInTransaction(orm, eventBus, async (tx) => {
+    transact(async (tx) => {
       await advanceStep(SYSTEM, tx, "company", "done");
       tx.publish("example.happened", EXAMPLE_PAYLOAD);
       throw new Error("Work failed");
@@ -50,10 +52,9 @@ test("rolls back the write and drops queued events when work fails", async ({ or
   expect(received).toEqual([]);
 });
 
-test("refuses to use a transaction after it has ended", async ({ orm, seed }) => {
+test("refuses to use a transaction after it has ended", async ({ orm, seed, transact }) => {
   await seed.owner();
-  const eventBus = createEventBus(createLogger("silent"));
-  const tx = await runInTransaction(orm, eventBus, (tx) => Promise.resolve(tx));
+  const tx = await transact((tx) => Promise.resolve(tx));
 
   expect(() => tx.publish("example.happened", EXAMPLE_PAYLOAD)).toThrow(
     "The transaction has ended",
@@ -70,9 +71,10 @@ test("refuses the publisher's transaction inside an after-commit handler", async
 }) => {
   await seed.owner();
   const eventBus = createEventBus(createLogger("silent"));
+  const transact = transactor(orm, eventBus);
   let rejection: unknown;
 
-  await runInTransaction(orm, eventBus, (retainedTx) => {
+  await transact((retainedTx) => {
     eventBus.subscribe({
       "example.happened": async () => {
         try {

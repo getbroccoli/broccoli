@@ -3,9 +3,8 @@ import express from "express";
 import { createRemoteJWKSet } from "jose";
 
 import { createAuth, type AuthSource } from "../auth";
-import type { Orm } from "../db";
+import type { Orm, Transact } from "../db";
 import type { ManagedDeployment } from "../env";
-import type { EventBus } from "../events";
 import type { Logger } from "../logger";
 import type { Readiness } from "../readiness";
 import { managedAuth } from "./app";
@@ -15,7 +14,7 @@ import { initRouter, waitingGate } from "./http";
 export interface ManagedServerOptions {
   deployment: ManagedDeployment;
   orm: Orm;
-  eventBus: EventBus;
+  transact: Transact;
   /** Signs session cookies. */
   secret: string;
   readiness: Readiness;
@@ -37,7 +36,7 @@ export interface ManagedServer {
 export function managedServer({
   deployment: { instanceId, accountsOrigin },
   orm,
-  eventBus,
+  transact,
   secret,
   readiness,
   logger,
@@ -52,7 +51,7 @@ export function managedServer({
       secret,
       logger,
       publicUrl: assignment.publicOrigin,
-      plugins: [managedSignInPlugin({ orm, eventBus, assignment, tokenCheck: signer })],
+      plugins: [managedSignInPlugin({ transact, assignment, tokenCheck: signer })],
       trustedOrigins: callbackOnlyTrust(assignment),
     }),
   );
@@ -61,7 +60,7 @@ export function managedServer({
     auth,
     router: express
       .Router()
-      .use(initRouter({ orm, eventBus, tokenCheck, readiness, auth }))
+      .use(initRouter({ transact, tokenCheck, readiness, auth }))
       .use(waitingGate(auth)),
     initStatus: async () => ((await auth.current()) ? "ready" : "waiting"),
   };

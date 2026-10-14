@@ -14,12 +14,12 @@ export { MAX_LOGO_BYTES, type Company } from "./company";
 /** Everything that can be done with the company; the adapters call nothing else. */
 export function createCompanyUseCases({
   orm,
-  eventBus,
+  transact,
   logger,
   brandLookup,
-}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger"> & { brandLookup: BrandLookup }) {
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & { brandLookup: BrandLookup }) {
   const companies = companyRepository(orm);
-  const context = { orm, eventBus, companies };
+  const context = { orm, transact, companies };
   return {
     getCompany: (ctx: SecurityContext) => getCompany(context, ctx),
     update: (ctx: SecurityContext, input: { name: string }) => updateCompany(context, ctx, input),
@@ -27,7 +27,7 @@ export function createCompanyUseCases({
     removeLogo: (ctx: SecurityContext) => removeLogo(context, ctx),
     isCurrentLogo: (ctx: SecurityContext, fileId: string) => isCurrentLogo(context, ctx, fileId),
     detectCompanyNameAndLogo: (ctx: SecurityContext, owner: { userId: string; email: string }) =>
-      detectCompanyNameAndLogo({ orm, eventBus, brandLookup, logger }, ctx, owner),
+      detectCompanyNameAndLogo({ transact, brandLookup, logger }, ctx, owner),
   };
 }
 

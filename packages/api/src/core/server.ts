@@ -7,7 +7,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import express from "express";
 
 import { authHandler } from "./auth";
-import { connectDatabase, type Database } from "./db";
+import { connectDatabase, type Database, transactor } from "./db";
 import type { Env } from "./env";
 import { createEventBus } from "./events";
 import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
@@ -48,8 +48,9 @@ export async function startServer(
   const authSecret = await readOrCreateSecret(env.dataDir, "auth-secret");
   const database = connectDatabase(env.databaseUrl, logger);
   const eventBus = createEventBus(logger);
+  const transact = transactor(database.orm, eventBus);
   const readiness = new Readiness(() => database.checkConnection());
-  const services = { orm: database.orm, eventBus, secret: authSecret, logger };
+  const services = { orm: database.orm, transact, secret: authSecret, logger };
   // Self-hosted instances add only their auth; managed ones also init routes and status.
   const deploymentParts: Pick<ManagedServer, "auth"> & Partial<ManagedServer> =
     env.deployment.mode === "managed"
@@ -64,7 +65,7 @@ export async function startServer(
   let modules: readonly ModuleManifest[];
   let graphql: GraphqlApi;
   try {
-    modules = createModules({ orm: database.orm, eventBus, logger });
+    modules = createModules({ orm: database.orm, transact, logger });
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
   } catch (error) {
     await database.close();

@@ -1,8 +1,7 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 
-import { runInTransaction, type Orm } from "../../db";
-import type { EventBus } from "../../events";
+import type { Transact } from "../../db";
 import { AssignmentConflictError, assignInstance } from "../../instance";
 import type { Readiness } from "../../readiness";
 import type { AuthSource } from "../../auth";
@@ -15,8 +14,7 @@ const MAX_TOKEN_LENGTH = 8192;
 const INIT_ATTEMPTS_PER_MINUTE = 30;
 
 export interface InitRouterOptions {
-  orm: Orm;
-  eventBus: EventBus;
+  transact: Transact;
   /** Init tokens must be addressed to this instance and signed by the accounts service. */
   tokenCheck: TokenCheck;
   readiness: Readiness;
@@ -27,13 +25,7 @@ export interface InitRouterOptions {
  * `POST /api/init`: orchestration assigns this managed instance to a company with a
  * signed request. Repeating the same assignment is harmless, so it keeps no `jti`.
  */
-export function initRouter({
-  orm,
-  eventBus,
-  tokenCheck,
-  readiness,
-  auth,
-}: InitRouterOptions): Router {
+export function initRouter({ transact, tokenCheck, readiness, auth }: InitRouterOptions): Router {
   const router = Router();
   const limit = rateLimit({ windowMs: 60_000, limit: INIT_ATTEMPTS_PER_MINUTE });
   router.post("/api/init", limit, async (request, response) => {
@@ -50,7 +42,7 @@ export function initRouter({
     try {
       const payload = await verifyToken(token, tokenCheck);
       const assignment = parseInitClaims(payload);
-      await runInTransaction(orm, eventBus, async (tx) => {
+      await transact(async (tx) => {
         await assignInstance(PrincipalSecurityContext.system(), tx, assignment);
         // Strict, after the row lock: the token must still be valid when the assignment commits.
         if (payload.exp! * 1000 <= Date.now()) {
