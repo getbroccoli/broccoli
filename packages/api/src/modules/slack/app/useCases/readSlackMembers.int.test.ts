@@ -1,9 +1,9 @@
-import { expect, slackUseCases, test } from "#test/support";
+import { expect, OWNER, slackUseCases, test } from "#test/support";
 
 import { createEncryption } from "../../../../core/secrets";
 
 test("refuses to read members before Slack is connected", async ({ orm }) => {
-  await expect(slackUseCases(orm).readSlackMembers()).rejects.toMatchObject({
+  await expect(slackUseCases(orm).readSlackMembers(OWNER)).rejects.toMatchObject({
     code: "UNAVAILABLE",
     message: "Slack is not connected.",
   });
@@ -27,7 +27,7 @@ test("returns the workspace, unfiltered members and a connection snapshot", asyn
     },
   });
 
-  const result = await slack.readSlackMembers();
+  const result = await slack.readSlackMembers(OWNER);
 
   expect(result).toMatchObject({ workspace: { id: "T1", name: "Acme Workspace" }, members });
 });
@@ -38,7 +38,7 @@ test("reports a failed Slack read as unavailable", async ({ orm, seed }) => {
     slackApi: { listMembers: () => Promise.reject(new Error("Slack unavailable")) },
   });
 
-  await expect(slack.readSlackMembers()).rejects.toMatchObject({
+  await expect(slack.readSlackMembers(OWNER)).rejects.toMatchObject({
     code: "UNAVAILABLE",
     message: "Could not read Slack.",
   });
@@ -51,7 +51,7 @@ test("reports a token that cannot be decrypted as unavailable", async ({ orm, se
     slackApi: { listMembers: () => Promise.resolve([]) },
   });
 
-  await expect(slack.readSlackMembers()).rejects.toMatchObject({
+  await expect(slack.readSlackMembers(OWNER)).rejects.toMatchObject({
     code: "UNAVAILABLE",
     message: "Could not read Slack.",
   });

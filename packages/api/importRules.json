@@ -25,18 +25,25 @@
       "src/core/secrets"
     ],
     "src/core/graphql": [
-      "src/core/actor",
       "src/core/applicationError",
       "src/core/logger",
+      "src/core/security",
       "src/utils"
     ],
-    "src/core/actor": [
-      "src/core/applicationError",
+    "src/core/security": ["src/core/applicationError"],
+    "src/core/sessionSecurity": [
       "src/core/auth",
       "src/core/db",
-      "src/core/instance"
+      "src/core/instance",
+      "src/core/security"
     ],
-    "src/core/instance": ["src/core/auth", "src/core/db", "src/core/events", "src/core/logger"],
+    "src/core/instance": [
+      "src/core/auth",
+      "src/core/db",
+      "src/core/events",
+      "src/core/logger",
+      "src/core/security"
+    ],
     "src/core/managedSignIn": [
       "src/core/auth",
       "src/core/db",
@@ -45,6 +52,7 @@
       "src/core/instance",
       "src/core/logger",
       "src/core/readiness",
+      "src/core/security",
       "src/utils"
     ],
     "src/core/auth": ["src/core/db", "src/core/logger"],

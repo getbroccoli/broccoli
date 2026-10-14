@@ -1,4 +1,4 @@
-import { demoUseCases, expect, OWNER, storedFileIds, test } from "#test/support";
+import { demoUseCases, expect, OWNER, storedFileIds, SYSTEM, test } from "#test/support";
 
 import { createEmployeeUseCases } from "../../../employees";
 import { parseCalendarDate } from "../../../../utils";
@@ -9,7 +9,7 @@ test("seeds 40 demo employees with distinct stored avatars", async ({ orm }) => 
   const demo = demoUseCases(orm);
   const { listEmployees } = createEmployeeUseCases({ orm });
 
-  await demo.seedDemoData(today);
+  await demo.seedDemoData(SYSTEM, today);
 
   const employees = await listEmployees(OWNER, { first: 100 });
   const avatarIds = employees.edges.map(({ node }) => node.avatarFileId);
@@ -23,11 +23,11 @@ test("seeds 40 demo employees with distinct stored avatars", async ({ orm }) => 
 test("adds nothing when demo data has already been seeded", async ({ orm }) => {
   const demo = demoUseCases(orm);
   const { listEmployees } = createEmployeeUseCases({ orm });
-  await demo.seedDemoData(today);
+  await demo.seedDemoData(SYSTEM, today);
   const before = await listEmployees(OWNER, { first: 100 });
   const filesBefore = await storedFileIds(orm);
 
-  await demo.seedDemoData(today);
+  await demo.seedDemoData(SYSTEM, today);
 
   expect(await listEmployees(OWNER, { first: 100 })).toEqual(before);
   expect(await storedFileIds(orm)).toEqual(filesBefore);
@@ -39,7 +39,7 @@ test("does not seed demo data when a real employee exists", async ({ orm, seed }
   const demo = demoUseCases(orm);
   const { listEmployees } = createEmployeeUseCases({ orm });
 
-  await demo.seedDemoData(today);
+  await demo.seedDemoData(SYSTEM, today);
 
   const employees = await listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([employee]);

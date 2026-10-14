@@ -1,8 +1,8 @@
 import express from "express";
 
-import { requireSignedIn } from "../../../core/actor";
 import { ApplicationError, sendApplicationError } from "../../../core/applicationError";
-import type { ActorResolver } from "../../../core/graphql";
+import type { SecurityResolver } from "../../../core/graphql";
+import { requireSignedIn } from "../../../core/security";
 import type { SlackUseCases } from "../app";
 
 /** Why connecting Slack failed, for the import page to explain. */
@@ -26,16 +26,16 @@ const COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
  */
 export function slackRouter(
   useCases: SlackUseCases,
-  resolveActor: ActorResolver,
+  resolveSecurity: SecurityResolver,
   publicOrigin: PublicOrigin,
 ): express.Router {
   return express
     .Router()
     .get("/integrations/slack/connect", async (request, response) => {
       try {
-        const actor = requireSignedIn((await resolveActor(request.headers)).actor);
+        const ctx = requireSignedIn((await resolveSecurity(request.headers)).security);
         const origin = await publicOrigin(request);
-        const start = useCases.beginSlackConnection(actor, `${origin}${CALLBACK_PATH}`);
+        const start = useCases.beginSlackConnection(ctx, `${origin}${CALLBACK_PATH}`);
         response.cookie(COOKIE, `${start.state}.${start.codeVerifier}`, {
           path: COOKIE_PATH,
           maxAge: COOKIE_MAX_AGE_MS,
@@ -58,7 +58,7 @@ export function slackRouter(
         sameSite: "lax",
         secure: origin.startsWith("https:"),
       });
-      const error = await finishConnection(useCases, resolveActor, request, pending);
+      const error = await finishConnection(useCases, resolveSecurity, request, pending);
       response.redirect(302, error ? `${IMPORT_PAGE}?slackError=${error}` : IMPORT_PAGE);
     });
 }
@@ -66,7 +66,7 @@ export function slackRouter(
 /** Imports the workspace Slack answered with; returns why it failed, or null. */
 async function finishConnection(
   useCases: SlackUseCases,
-  resolveActor: ActorResolver,
+  resolveSecurity: SecurityResolver,
   request: express.Request,
   pending: { state: string; codeVerifier: string } | null,
 ): Promise<SlackError | null> {
@@ -80,17 +80,21 @@ async function finishConnection(
   if (typeof handle !== "string") {
     return "failed";
   }
-  const { actor } = await resolveActor(request.headers);
-  if (!actor?.isOwner) {
+  const { security } = await resolveSecurity(request.headers);
+  if (!security) {
     return "state";
   }
   try {
     // The relay's handle is its one-time code.
-    await useCases.connectSlack(actor, { code: handle, codeVerifier: pending.codeVerifier });
+    await useCases.connectSlack(security, { code: handle, codeVerifier: pending.codeVerifier });
     return null;
   } catch (failure) {
     if (failure instanceof ApplicationError && failure.code === "UNAVAILABLE") {
       return "failed";
+    }
+    // Only the owner may connect; anyone else came back to a flow that is not theirs.
+    if (failure instanceof ApplicationError && failure.code === "FORBIDDEN") {
+      return "state";
     }
     throw failure;
   }

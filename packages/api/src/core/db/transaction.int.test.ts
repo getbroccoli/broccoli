@@ -1,4 +1,4 @@
-import { EXAMPLE_PAYLOAD, expect, test } from "#test/support";
+import { EXAMPLE_PAYLOAD, expect, SYSTEM, test } from "#test/support";
 
 import { createEventBus } from "../events";
 import { advanceStep, readSetupStep } from "../instance";
@@ -18,7 +18,7 @@ test("dispatches queued events after the write commits", async ({ orm, seed }) =
   });
 
   await runInTransaction(orm, eventBus, async (tx) => {
-    await advanceStep(tx, "company", "done");
+    await advanceStep(SYSTEM, tx, "company", "done");
     tx.publish("example.happened", EXAMPLE_PAYLOAD);
     expect(received).toEqual([]);
   });
@@ -40,7 +40,7 @@ test("rolls back the write and drops queued events when work fails", async ({ or
 
   await expect(
     runInTransaction(orm, eventBus, async (tx) => {
-      await advanceStep(tx, "company", "done");
+      await advanceStep(SYSTEM, tx, "company", "done");
       tx.publish("example.happened", EXAMPLE_PAYLOAD);
       throw new Error("Work failed");
     }),
@@ -58,7 +58,9 @@ test("refuses to use a transaction after it has ended", async ({ orm, seed }) =>
   expect(() => tx.publish("example.happened", EXAMPLE_PAYLOAD)).toThrow(
     "The transaction has ended",
   );
-  await expect(advanceStep(tx, "company", "done")).rejects.toThrow("The transaction has ended");
+  await expect(advanceStep(SYSTEM, tx, "company", "done")).rejects.toThrow(
+    "The transaction has ended",
+  );
   expect(await readSetupStep(orm)).toBe("company");
 });
 
@@ -74,7 +76,7 @@ test("refuses the publisher's transaction inside an after-commit handler", async
     eventBus.subscribe({
       "example.happened": async () => {
         try {
-          await advanceStep(retainedTx, "company", "done");
+          await advanceStep(SYSTEM, retainedTx, "company", "done");
         } catch (error) {
           rejection = error;
         }

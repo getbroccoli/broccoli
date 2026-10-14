@@ -1,4 +1,4 @@
-import type { Actor } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import { importRepository } from "../../db";
 import type { SlackReader } from "./importContext";
@@ -22,14 +22,14 @@ export function createImportUseCases({
 }: Pick<ModuleDependencies, "orm" | "eventBus"> & { slack: SlackReader }) {
   const context = { orm, eventBus, slack, imports: importRepository(orm) };
   return {
-    readSlack: (actor: Actor) => readSlack(context, actor),
-    listSources: (actor: Actor) => listSources(context, actor),
-    readSources: (actor: Actor, ids: readonly string[]) => readSources(context, actor, ids),
-    countEmployees: (actor: Actor, sourceIds: readonly string[]) =>
-      countEmployees(context, actor, sourceIds),
-    listEmployees: (actor: Actor, args: ImportEmployeeListArgs) =>
-      listEmployees(context, actor, args),
-    skipImport: (actor: Actor) => skipImport(context, actor),
+    readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
+    listSources: (ctx: SecurityContext) => listSources(context, ctx),
+    readSources: (ctx: SecurityContext, ids: readonly string[]) => readSources(context, ctx, ids),
+    countEmployees: (ctx: SecurityContext, sourceIds: readonly string[]) =>
+      countEmployees(context, ctx, sourceIds),
+    listEmployees: (ctx: SecurityContext, args: ImportEmployeeListArgs) =>
+      listEmployees(context, ctx, args),
+    skipImport: (ctx: SecurityContext) => skipImport(context, ctx),
   };
 }
 

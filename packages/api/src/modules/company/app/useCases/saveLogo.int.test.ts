@@ -1,6 +1,15 @@
 import { onTestFinished } from "vitest";
 
-import { companyUseCases, expect, JPEG, PNG as logo, storedFileIds, test } from "#test/support";
+import {
+  companyUseCases,
+  expect,
+  JPEG,
+  NON_OWNER,
+  PNG as logo,
+  storedFileIds,
+  SYSTEM,
+  test,
+} from "#test/support";
 
 test("saves a PNG as the current logo", async ({ orm, seed }) => {
   const actor = await seed.owner();
@@ -62,9 +71,10 @@ test("refuses a non-owner without changing the logo", async ({ orm, seed }) => {
   const company = companyUseCases(orm);
   const before = await company.getCompany(owner);
 
-  await expect(
-    company.saveLogo({ userId: "another-user", isOwner: false }, logo),
-  ).rejects.toMatchObject({ code: "FORBIDDEN", message: "Only the owner can do this." });
+  await expect(company.saveLogo(NON_OWNER, logo)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Only the owner can do this.",
+  });
 
   expect(await company.getCompany(owner)).toEqual(before);
 });
@@ -80,8 +90,8 @@ test("keeps the owner's saved logo when a pending brand lookup finishes", async 
       return lookup.promise;
     },
   });
-  const pending = company.detectCompanyNameAndLogo({
-    userId: actor.userId,
+  const pending = company.detectCompanyNameAndLogo(SYSTEM, {
+    userId: actor.user!.userId,
     email: "owner@example.com",
   });
   onTestFinished(async () => {

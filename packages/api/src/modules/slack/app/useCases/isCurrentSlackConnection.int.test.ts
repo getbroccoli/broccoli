@@ -7,10 +7,10 @@ import { createLogger } from "../../../../core/logger";
 test("recognises the connection from a member read", async ({ orm, seed }) => {
   await seed.slackConnection();
   const slack = slackUseCases(orm, { slackApi: { listMembers: () => Promise.resolve([]) } });
-  const { snapshot } = await slack.readSlackMembers();
+  const { snapshot } = await slack.readSlackMembers(OWNER);
 
   const current = await runInTransaction(orm, createEventBus(createLogger("silent")), (tx) =>
-    slack.isCurrentSlackConnection(tx, snapshot),
+    slack.isCurrentSlackConnection(OWNER, tx, snapshot),
   );
 
   expect(current).toBe(true);
@@ -32,11 +32,11 @@ test("rejects a snapshot after reconnecting the same workspace with the same tok
         }),
     },
   });
-  const { snapshot } = await slack.readSlackMembers();
+  const { snapshot } = await slack.readSlackMembers(OWNER);
   await slack.connectSlack(OWNER, { code: "test-code", codeVerifier: "test-verifier" });
 
   const current = await runInTransaction(orm, createEventBus(createLogger("silent")), (tx) =>
-    slack.isCurrentSlackConnection(tx, snapshot),
+    slack.isCurrentSlackConnection(OWNER, tx, snapshot),
   );
 
   expect(current).toBe(false);

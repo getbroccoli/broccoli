@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import { ApplicationError } from "../../../../core/applicationError";
 import { runInTransaction } from "../../../../core/db";
 import type { SlackGrant } from "../../../../integrations/slack";
@@ -21,10 +21,10 @@ export interface SlackConnectionStart {
 /** Starts connecting Slack: the browser goes to the relay and comes back to `returnTo`. */
 export function beginSlackConnection(
   { slackAuthorization }: SlackContext,
-  actor: Actor,
+  ctx: SecurityContext,
   returnTo: string,
 ): SlackConnectionStart {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   const state = randomBytes(RANDOM_BYTES).toString("base64url");
   const codeVerifier = randomBytes(RANDOM_BYTES).toString("base64url");
   const codeChallenge = createHash("sha256").update(codeVerifier).digest("base64url");
@@ -41,10 +41,10 @@ export function beginSlackConnection(
  */
 export async function connectSlack(
   context: SlackContext,
-  actor: Actor,
+  ctx: SecurityContext,
   params: { code: string; codeVerifier: string },
 ): Promise<void> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   // Slack is asked before the transaction, which never waits on another service.
   const grant = await exchangeCode(context, params);
   await runInTransaction(context.orm, context.eventBus, (tx) =>

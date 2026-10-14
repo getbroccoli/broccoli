@@ -1,4 +1,4 @@
-import { expect, test } from "#test/support";
+import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
 
 import { runInTransaction, type Orm } from "../../db";
 import { createEventBus } from "../../events";
@@ -11,6 +11,16 @@ const ACME: ManagedAssignment = {
   publicOrigin: "https://acme.example.com",
   websiteOrigin: "https://www.example.com",
 };
+
+test("refuses a non-owner assigning an instance and leaves it unassigned", async ({ orm }) => {
+  const eventBus = createEventBus(createLogger("silent"));
+
+  await expect(
+    runInTransaction(orm, eventBus, (tx) => assignInstance(NON_OWNER, tx, ACME)),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+  expect(await readAssignment(orm)).toBeNull();
+});
 
 test("stores the first assignment", async ({ orm }) => {
   await assign(orm, ACME);
@@ -56,5 +66,5 @@ test("keeps one assignment when two arrive together", async ({ orm }) => {
 
 function assign(orm: Orm, assignment: ManagedAssignment) {
   const eventBus = createEventBus(createLogger("silent"));
-  return runInTransaction(orm, eventBus, (tx) => assignInstance(tx, assignment));
+  return runInTransaction(orm, eventBus, (tx) => assignInstance(SYSTEM, tx, assignment));
 }

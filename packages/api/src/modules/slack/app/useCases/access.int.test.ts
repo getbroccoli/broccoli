@@ -1,18 +1,24 @@
-import { expect, slackUseCases, test } from "#test/support";
+import { expect, NON_OWNER, slackUseCases, test } from "#test/support";
 
-import type { Actor } from "../../../../core/actor";
+import { runInTransaction, type Tx } from "../../../../core/db";
+import { createEventBus } from "../../../../core/events";
+import { createLogger } from "../../../../core/logger";
+import type { SecurityContext } from "../../../../core/security";
 
 type SlackUseCases = ReturnType<typeof slackUseCases>;
 
 const calls = {
-  beginSlackConnection: (slack, actor) =>
-    slack.beginSlackConnection(actor, "https://example.com/callback"),
-  connectSlack: (slack, actor) =>
-    slack.connectSlack(actor, { code: "test-code", codeVerifier: "test-verifier" }),
-  getSlackConnection: (slack, actor) => slack.getSlackConnection(actor),
+  beginSlackConnection: (slack, ctx) =>
+    slack.beginSlackConnection(ctx, "https://example.com/callback"),
+  connectSlack: (slack, ctx) =>
+    slack.connectSlack(ctx, { code: "test-code", codeVerifier: "test-verifier" }),
+  getSlackConnection: (slack, ctx) => slack.getSlackConnection(ctx),
+  readSlackMembers: (slack, ctx) => slack.readSlackMembers(ctx),
+  isCurrentSlackConnection: (slack, ctx, tx) =>
+    slack.isCurrentSlackConnection(ctx, tx, "test-snapshot"),
 } satisfies Record<
-  "beginSlackConnection" | "connectSlack" | "getSlackConnection",
-  (slack: SlackUseCases, actor: Actor) => unknown
+  keyof SlackUseCases,
+  (slack: SlackUseCases, ctx: SecurityContext, tx: Tx) => unknown
 >;
 
 test.for(Object.entries(calls))(
@@ -21,8 +27,8 @@ test.for(Object.entries(calls))(
     const slack = slackUseCases(orm);
 
     await expect(
-      Promise.resolve().then(async () => {
-        await call(slack, { userId: "another-user", isOwner: false });
+      runInTransaction(orm, createEventBus(createLogger("silent")), async (tx) => {
+        await call(slack, NON_OWNER, tx);
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",

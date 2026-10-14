@@ -55,6 +55,6 @@ export function slackModule({
     name: "slack",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
-    router: (resolveActor) => slackRouter(useCases, resolveActor, publicOrigin),
+    router: (resolveSecurity) => slackRouter(useCases, resolveSecurity, publicOrigin),
   };
 }

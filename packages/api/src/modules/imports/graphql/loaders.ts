@@ -24,16 +24,17 @@ export function importLoaders(
   };
 }
 
-function createLoaders(useCases: ImportUseCases, { actor }: GraphqlContext) {
+function createLoaders(useCases: ImportUseCases, context: GraphqlContext) {
+  const ctx = context.getActor();
   return {
     source: new DataLoader<string, ImportSource>(async (ids) => {
       const sources = new Map(
-        (await useCases.readSources(actor, ids)).map((source) => [source.id, source]),
+        (await useCases.readSources(ctx, ids)).map((source) => [source.id, source]),
       );
       return ids.map((id) => sources.get(id) ?? new Error(`No import source ${id}`));
     }),
     employeeCount: new DataLoader<string, number>(async (sourceIds) => {
-      const counts = await useCases.countEmployees(actor, sourceIds);
+      const counts = await useCases.countEmployees(ctx, sourceIds);
       return sourceIds.map((id) => counts.get(id)!);
     }),
   };

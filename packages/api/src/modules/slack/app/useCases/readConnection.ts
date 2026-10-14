@@ -1,4 +1,4 @@
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
 import type { SlackMember } from "../../../../integrations/slack";
@@ -8,9 +8,9 @@ import type { SlackContext } from "./slackContext";
 /** The connected workspace, or null. */
 export async function getSlackConnection(
   { connections }: SlackContext,
-  actor: Actor,
+  ctx: SecurityContext,
 ): Promise<{ teamId: string; teamName: string } | null> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   const connection = await connections.read();
   return connection && { teamId: connection.teamId, teamName: connection.teamName };
 }
@@ -23,16 +23,12 @@ export interface SlackMembersRead {
   snapshot: string;
 }
 
-/**
- * Reads every member of the connected workspace; for other modules, which check their
- * own permissions. Refuses when Slack is not connected or does not answer.
- */
-export async function readSlackMembers({
-  connections,
-  encryption,
-  slackApi,
-  logger,
-}: SlackContext): Promise<SlackMembersRead> {
+/** Reads every member of the connected workspace; refuses when Slack is not connected or does not answer. */
+export async function readSlackMembers(
+  { connections, encryption, slackApi, logger }: SlackContext,
+  ctx: SecurityContext,
+): Promise<SlackMembersRead> {
+  ctx.requireOwnerOrSystem();
   const connection = await connections.read();
   if (!connection) {
     throw new ApplicationError("UNAVAILABLE", "Slack is not connected.");
@@ -55,7 +51,12 @@ export async function readSlackMembers({
  * Locks the connection until `tx` ends and tells whether it is still the one `snapshot`
  * came from, so a caller never stores members read before a newer connect.
  */
-export async function isCurrentSlackConnection(tx: Tx, snapshot: string): Promise<boolean> {
+export async function isCurrentSlackConnection(
+  ctx: SecurityContext,
+  tx: Tx,
+  snapshot: string,
+): Promise<boolean> {
+  ctx.requireOwnerOrSystem();
   const connection = await slackConnectionRepository(tx).lock();
   return connection?.encryptedToken === snapshot;
 }

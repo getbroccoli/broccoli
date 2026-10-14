@@ -2,6 +2,7 @@ import { type Orm, runInTransaction, type Tx } from "../../../../core/db";
 import type { EventBus } from "../../../../core/events";
 import { deleteFiles, storeFile } from "../../../../core/files";
 import type { Logger } from "../../../../core/logger";
+import type { SecurityContext } from "../../../../core/security";
 import type { BrandLookup } from "../../../../integrations/brandLookup";
 import { parseRasterImage, type RasterImage } from "../../../../utils";
 import { companyRepository } from "../../db";
@@ -19,8 +20,10 @@ export async function detectCompanyNameAndLogo(
     brandLookup,
     logger,
   }: { orm: Orm; eventBus: EventBus; brandLookup: BrandLookup; logger: Logger },
+  ctx: SecurityContext,
   { email }: { email: string },
 ): Promise<void> {
+  ctx.requireOwnerOrSystem();
   const domain = companyDomain(email);
   if (!domain) {
     return;

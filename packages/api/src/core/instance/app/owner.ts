@@ -1,4 +1,5 @@
 import type { Orm, Tx } from "../../db";
+import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import { OwnerExistsError } from "../domain";
 
@@ -22,9 +23,11 @@ export function readOwner(orm: Orm): Promise<{ userId: string; email: string } |
  * `instance.owner_claimed`, however the owner was created.
  */
 export async function claimOwner<Owner extends { user: { id: string; email: string } }>(
+  ctx: SecurityContext,
   tx: Tx,
   createOwner: () => Promise<Owner>,
 ): Promise<Owner> {
+  ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
   if (await instance.lockOwnerUserId()) {
     throw new OwnerExistsError();

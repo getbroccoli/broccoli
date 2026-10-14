@@ -24,6 +24,6 @@ export function employeesModule({ orm }: Pick<ModuleDependencies, "orm">): Modul
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
-    router: (resolveActor) => avatarRouter(useCases, resolveActor, orm),
+    router: (resolveSecurity) => avatarRouter(useCases, resolveSecurity, orm),
   };
 }

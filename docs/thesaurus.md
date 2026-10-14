@@ -15,7 +15,8 @@ The words Broccoli's code and docs use, and what each one means.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
 - **Record**: a module's main entity, such as an employee or the company.
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
-- **Actor**: who is calling the API: a signed-in user, and whether they are the owner.
+- **Security context**: who is calling application code: a signed-in user, and whether they are the owner, or the system.
+- **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.
 - **Company**: the business the instance belongs to; its name and logo. One per instance.
 - **Brand lookup**: finding a company's name and logo from the owner's email domain, through the service at `BRAND_LOOKUP_URL`.
 - **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.

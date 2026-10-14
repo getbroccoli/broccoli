@@ -15,26 +15,30 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       import: () => ({}),
     },
     ImportMutations: {
-      readSlack: async (_parent, _args, { actor }) => {
-        await useCases.readSlack(actor);
+      readSlack: async (_parent, _args, context) => {
+        await useCases.readSlack(context.getActor());
         return IMPORT;
       },
-      skip: async (_parent, _args, { actor }) => {
-        await useCases.skipImport(actor);
+      skip: async (_parent, _args, context) => {
+        await useCases.skipImport(context.getActor());
         return IMPORT;
       },
     },
     Import: {
       id: () => "import",
-      sources: (_parent, _args, { actor }) => useCases.listSources(actor),
-      employees: (_parent, { first, after }, { actor }) =>
-        useCases.listEmployees(actor, { first: first ?? undefined, after }),
+      sources: (_parent, _args, context) => useCases.listSources(context.getActor()),
+      employees: (_parent, { first, after }, context) =>
+        useCases.listEmployees(context.getActor(), { first: first ?? undefined, after }),
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],
       employeeCount: ({ id }, _args, context) => loaders(context).employeeCount.load(id),
-      employees: ({ id }, { first, after }, { actor }) =>
-        useCases.listEmployees(actor, { first: first ?? undefined, after, sourceId: id }),
+      employees: ({ id }, { first, after }, context) =>
+        useCases.listEmployees(context.getActor(), {
+          first: first ?? undefined,
+          after,
+          sourceId: id,
+        }),
     },
     ImportEmployee: {
       source: ({ sourceId }, _args, context) => loaders(context).source.load(sourceId),

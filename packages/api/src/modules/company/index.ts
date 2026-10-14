@@ -1,5 +1,6 @@
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import { PrincipalSecurityContext } from "../../core/security";
 import { createCompanyUseCases } from "./app";
 import { createBrandLookup } from "../../integrations/brandLookup";
 import { createResolvers } from "./graphql";
@@ -22,7 +23,10 @@ export function companyModule({
     name: "company",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
-    events: { "instance.owner_claimed": useCases.detectCompanyNameAndLogo },
-    router: (resolveActor) => logoRouter(useCases, resolveActor, dependencies.orm),
+    events: {
+      "instance.owner_claimed": (owner) =>
+        useCases.detectCompanyNameAndLogo(PrincipalSecurityContext.system(), owner),
+    },
+    router: (resolveSecurity) => logoRouter(useCases, resolveSecurity, dependencies.orm),
   };
 }

@@ -1,17 +1,20 @@
-import { expect, importUseCases, test } from "#test/support";
+import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 
-import type { Actor } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 
 type ImportUseCases = ReturnType<typeof importUseCases>;
 
 const calls = {
-  readSlack: (imports, actor) => imports.readSlack(actor),
-  listSources: (imports, actor) => imports.listSources(actor),
-  readSources: (imports, actor) => imports.readSources(actor, []),
-  countEmployees: (imports, actor) => imports.countEmployees(actor, []),
-  listEmployees: (imports, actor) => imports.listEmployees(actor, {}),
-  skipImport: (imports, actor) => imports.skipImport(actor),
-} satisfies Record<keyof ImportUseCases, (imports: ImportUseCases, actor: Actor) => unknown>;
+  readSlack: (imports, ctx) => imports.readSlack(ctx),
+  listSources: (imports, ctx) => imports.listSources(ctx),
+  readSources: (imports, ctx) => imports.readSources(ctx, []),
+  countEmployees: (imports, ctx) => imports.countEmployees(ctx, []),
+  listEmployees: (imports, ctx) => imports.listEmployees(ctx, {}),
+  skipImport: (imports, ctx) => imports.skipImport(ctx),
+} satisfies Record<
+  keyof ImportUseCases,
+  (imports: ImportUseCases, ctx: SecurityContext) => unknown
+>;
 
 test.for(Object.entries(calls))(
   "%s refuses a signed-in user who is not the owner",
@@ -20,7 +23,7 @@ test.for(Object.entries(calls))(
 
     await expect(
       Promise.resolve().then(async () => {
-        await call(imports, { userId: "another-user", isOwner: false });
+        await call(imports, NON_OWNER);
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",

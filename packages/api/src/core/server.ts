@@ -6,12 +6,11 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import express from "express";
 
-import { resolveActor } from "./actor";
 import { authHandler } from "./auth";
 import { connectDatabase, type Database } from "./db";
 import type { Env } from "./env";
 import { createEventBus } from "./events";
-import { type ActorResolver, startGraphqlApi, type GraphqlApi } from "./graphql";
+import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { selfHostedAuth } from "./instance";
 import type { Logger } from "./logger";
@@ -19,6 +18,7 @@ import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
 import { Readiness } from "./readiness";
 import { createEncryption, ensureSecret } from "./secrets";
+import { resolveSecurityContext } from "./sessionSecurity";
 
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
@@ -56,8 +56,8 @@ export async function startServer(
     env.deployment.mode === "managed"
       ? managedServer({ ...services, deployment: env.deployment, readiness })
       : { auth: selfHostedAuth({ ...services, publicUrl: env.deployment.publicUrl }) };
-  const resolveActorOf: ActorResolver = (headers) =>
-    resolveActor(deploymentParts.auth, database.orm, headers);
+  const resolveSecurity: SecurityResolver = (headers) =>
+    resolveSecurityContext(deploymentParts.auth, database.orm, headers);
 
   const app = express();
   app.disable("x-powered-by");
@@ -66,7 +66,7 @@ export async function startServer(
   let graphql: GraphqlApi;
   try {
     modules = createModules({ orm: database.orm, eventBus, logger, encryption });
-    graphql = await startGraphqlApi(modules, httpServer, logger, resolveActorOf);
+    graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
   } catch (error) {
     await database.close();
     throw error;
@@ -83,7 +83,7 @@ export async function startServer(
         eventBus.subscribe(module.events);
       }
       if (module.router) {
-        app.use("/api", module.router(resolveActorOf));
+        app.use("/api", module.router(resolveSecurity));
       }
     }
     if (webApp) {

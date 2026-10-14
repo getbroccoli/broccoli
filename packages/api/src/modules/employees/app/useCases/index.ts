@@ -1,4 +1,4 @@
-import type { Actor } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import { employeeRepository } from "../../db";
 import type { NewEmployeeInput } from "../../domain";
@@ -10,11 +10,12 @@ import { type EmployeeListArgs, listEmployees } from "./listEmployees";
 export function createEmployeeUseCases({ orm }: Pick<ModuleDependencies, "orm">) {
   const employees = employeeRepository(orm);
   return {
-    createEmployee: (actor: Actor, input: NewEmployeeInput) =>
-      createEmployee(employees, actor, input),
-    listEmployees: (actor: Actor, args: EmployeeListArgs) => listEmployees(employees, actor, args),
-    isEmployeeAvatarFile: (actor: Actor, fileId: string) =>
-      isEmployeeAvatarFile(employees, actor, fileId),
+    createEmployee: (ctx: SecurityContext, input: NewEmployeeInput) =>
+      createEmployee(employees, ctx, input),
+    listEmployees: (ctx: SecurityContext, args: EmployeeListArgs) =>
+      listEmployees(employees, ctx, args),
+    isEmployeeAvatarFile: (ctx: SecurityContext, fileId: string) =>
+      isEmployeeAvatarFile(employees, ctx, fileId),
   };
 }
 

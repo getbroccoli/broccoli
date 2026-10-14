@@ -6,8 +6,8 @@ import { avatarUrl } from "../http";
 export function createResolvers(useCases: EmployeeUseCases): Resolvers {
   return {
     Query: {
-      employees: async (_parent, { first, after, orderBy, filter }, { actor }) => {
-        const connection = await useCases.listEmployees(actor, {
+      employees: async (_parent, { first, after, orderBy, filter }, context) => {
+        const connection = await useCases.listEmployees(context.getActor(), {
           first: first ?? undefined,
           after,
           orderBy,
@@ -23,8 +23,8 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
       employee: () => ({}),
     },
     EmployeeMutations: {
-      create: async (_parent, { input }, { actor }) =>
-        toGraphql(await useCases.createEmployee(actor, input)),
+      create: async (_parent, { input }, context) =>
+        toGraphql(await useCases.createEmployee(context.getActor(), input)),
     },
   };
 }

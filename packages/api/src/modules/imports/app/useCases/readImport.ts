@@ -1,4 +1,4 @@
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import {
   type Connection,
   type PageArgs,
@@ -15,28 +15,31 @@ export interface ImportEmployeeListArgs extends PageArgs {
 }
 
 /** The import's sources, oldest first. */
-export function listSources({ imports }: ImportContext, actor: Actor): Promise<ImportSource[]> {
-  requireOwner(actor);
+export function listSources(
+  { imports }: ImportContext,
+  ctx: SecurityContext,
+): Promise<ImportSource[]> {
+  ctx.requireOwnerOrSystem();
   return imports.listSources();
 }
 
 /** The sources with these ids, in any order; for loading many at once. */
 export function readSources(
   { imports }: ImportContext,
-  actor: Actor,
+  ctx: SecurityContext,
   ids: readonly string[],
 ): Promise<ImportSource[]> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   return imports.findSources(ids);
 }
 
 /** The number of employee records of each of these sources. */
 export async function countEmployees(
   { imports }: ImportContext,
-  actor: Actor,
+  ctx: SecurityContext,
   sourceIds: readonly string[],
 ): Promise<Map<string, number>> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   const counts = await imports.countEmployees(sourceIds);
   return new Map(sourceIds.map((id) => [id, counts.get(id) ?? 0]));
 }
@@ -44,10 +47,10 @@ export async function countEmployees(
 /** The import's employee records by name, one page at a time. */
 export async function listEmployees(
   { imports }: ImportContext,
-  actor: Actor,
+  ctx: SecurityContext,
   { sourceId, ...pageArgs }: ImportEmployeeListArgs,
 ): Promise<Connection<ImportEmployee>> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   const page = parsePage(pageArgs, importEmployeeKeyset);
   return toConnection(
     await imports.findEmployeePage({ ...page, sourceId: sourceId ?? null }),

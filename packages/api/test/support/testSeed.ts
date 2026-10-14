@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 
-import type { Actor } from "../../src/core/actor";
 import { user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
@@ -10,6 +9,7 @@ import { importRepository, type ImportEmployeeValues } from "../../src/modules/i
 import { slackConnectionRepository } from "../../src/modules/slack";
 import { parseCalendarDate } from "../../src/utils";
 import { TEST_ENCRYPTION } from "./testEncryption";
+import { TestSecurityContext } from "./testSecurityContext";
 
 type SeedEmployee = Partial<
   Omit<NewEmployee, "startDate"> & { startDate: string | null; avatarFileId: string | null }
@@ -25,11 +25,12 @@ export class TestSeed {
 
   constructor(private readonly orm: Orm) {}
 
-  async owner({ email = "owner@example.com" } = {}): Promise<Actor> {
+  async owner({ email = "owner@example.com" } = {}): Promise<TestSecurityContext> {
     const userId = randomUUID();
-    await this.orm.insert(user).values({ id: userId, name: "Owner", email: email.toLowerCase() });
+    const normalisedEmail = email.toLowerCase();
+    await this.orm.insert(user).values({ id: userId, name: "Owner", email: normalisedEmail });
     await instanceRepository(this.orm).setOwner(userId, "company");
-    return { userId, isOwner: true };
+    return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
   }
 
   async file({ content, mimeType }: { content: Buffer; mimeType: string }): Promise<string> {

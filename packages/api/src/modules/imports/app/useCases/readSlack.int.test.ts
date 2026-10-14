@@ -5,13 +5,16 @@ import { ApplicationError } from "../../../../core/applicationError";
 test("the first Slack read creates a source and imports its members", async ({ orm }) => {
   const imports = importUseCases(orm, {
     slack: {
-      readSlackMembers: () =>
-        Promise.resolve({
+      readSlackMembers: (ctx) => {
+        expect(ctx).toBe(OWNER);
+        return Promise.resolve({
           workspace: { id: "T1", name: "Acme Workspace" },
           members: [{ id: "U1", profile: { first_name: "Avery", email: "avery@example.com" } }],
           snapshot: "test-snapshot",
-        }),
-      isCurrentSlackConnection: (_tx, snapshot) => {
+        });
+      },
+      isCurrentSlackConnection: (ctx, _tx, snapshot) => {
+        expect(ctx).toBe(OWNER);
         expect(snapshot).toBe("test-snapshot");
         return Promise.resolve(true);
       },
@@ -153,7 +156,8 @@ test("a refresh whose connection is no longer current leaves the records", async
           members: [],
           snapshot: "old-snapshot",
         }),
-      isCurrentSlackConnection: (_tx, snapshot) => {
+      isCurrentSlackConnection: (ctx, _tx, snapshot) => {
+        expect(ctx).toBe(OWNER);
         expect(snapshot).toBe("old-snapshot");
         return Promise.resolve(false);
       },

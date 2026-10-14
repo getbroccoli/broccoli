@@ -1,4 +1,4 @@
-import type { Actor } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import type { Tx } from "../../../../core/db";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SlackApi, SlackAuthorization } from "../../../../integrations/slack";
@@ -30,13 +30,14 @@ export function createSlackUseCases({
     connections: slackConnectionRepository(orm),
   };
   return {
-    beginSlackConnection: (actor: Actor, returnTo: string) =>
-      beginSlackConnection(context, actor, returnTo),
-    connectSlack: (actor: Actor, params: { code: string; codeVerifier: string }) =>
-      connectSlack(context, actor, params),
-    getSlackConnection: (actor: Actor) => getSlackConnection(context, actor),
-    readSlackMembers: () => readSlackMembers(context),
-    isCurrentSlackConnection: (tx: Tx, snapshot: string) => isCurrentSlackConnection(tx, snapshot),
+    beginSlackConnection: (ctx: SecurityContext, returnTo: string) =>
+      beginSlackConnection(context, ctx, returnTo),
+    connectSlack: (ctx: SecurityContext, params: { code: string; codeVerifier: string }) =>
+      connectSlack(context, ctx, params),
+    getSlackConnection: (ctx: SecurityContext) => getSlackConnection(context, ctx),
+    readSlackMembers: (ctx: SecurityContext) => readSlackMembers(context, ctx),
+    isCurrentSlackConnection: (ctx: SecurityContext, tx: Tx, snapshot: string) =>
+      isCurrentSlackConnection(ctx, tx, snapshot),
   };
 }
 
