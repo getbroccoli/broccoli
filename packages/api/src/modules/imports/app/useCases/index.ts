@@ -1,18 +1,12 @@
-import type { SecurityContext } from "../../../../core/security";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
+import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
 import type { SlackReader } from "./importContext";
-
-export type { SlackReader } from "./importContext";
-import {
-  countEmployees,
-  type ImportEmployeeListArgs,
-  listEmployees,
-  listSources,
-  readSources,
-} from "./readImport";
+import { createImportReadService } from "./importReadService";
 import { readSlack } from "./readSlack";
 import { skipImport } from "./skipImport";
+
+export type { SlackReader } from "./importContext";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
 export function createImportUseCases({
@@ -20,16 +14,12 @@ export function createImportUseCases({
   eventBus,
   slack,
 }: Pick<ModuleDependencies, "orm" | "eventBus"> & { slack: SlackReader }) {
-  const context = { orm, eventBus, slack, imports: importRepository(orm) };
+  const imports = importRepository(orm);
+  const context = { orm, eventBus, slack, imports };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
-    listSources: (ctx: SecurityContext) => listSources(context, ctx),
-    readSources: (ctx: SecurityContext, ids: readonly string[]) => readSources(context, ctx, ids),
-    countEmployees: (ctx: SecurityContext, sourceIds: readonly string[]) =>
-      countEmployees(context, ctx, sourceIds),
-    listEmployees: (ctx: SecurityContext, args: ImportEmployeeListArgs) =>
-      listEmployees(context, ctx, args),
     skipImport: (ctx: SecurityContext) => skipImport(context, ctx),
+    ...createImportReadService(imports),
   };
 }
 
