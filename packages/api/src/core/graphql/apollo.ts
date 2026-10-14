@@ -9,7 +9,7 @@ import express from "express";
 import { GraphQLError } from "graphql";
 
 import type { Logger } from "../logger";
-import { requireSignedIn, type RequestSecurity, type SecurityContext } from "../security";
+import type { RequestSecurity, SecurityContext } from "../security";
 import { depthLimit } from "./depthLimit";
 import { errorLoggingPlugin } from "./errorLogging";
 import { formatError } from "./errors";
@@ -27,13 +27,11 @@ export const MAX_TOKENS = 2000;
 /** What every resolver receives as its context. */
 export interface GraphqlContext {
   /**
-   * The signed-in user's security context. Every field outside `@public` needs a
-   * session, so resolvers read it without checking; reading it without a session
-   * throws `UNAUTHENTICATED`.
+   * The signed-in user's security context, or null without a session. Root fields
+   * outside `@public` refuse a request without one before their resolver runs; a
+   * resolver that calls a use case passes `requireSignedIn(security)`.
    */
-  readonly security: SecurityContext;
-  /** The signed-in user's security context, or null: for `@public` fields only. */
-  readonly optionalSecurity: SecurityContext | null;
+  readonly security: SecurityContext | null;
 }
 
 /** Reads the security context of a request from its headers; see `resolveSecurityContext`. */
@@ -105,7 +103,7 @@ export function createContext(resolveSecurity: SecurityResolver) {
       if (renewedCookies.length > 0) {
         res.appendHeader("Set-Cookie", renewedCookies);
       }
-      return new RequestContext(security);
+      return { security };
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass
       // through as a request error; the code marks this one as internal.
@@ -115,14 +113,4 @@ export function createContext(resolveSecurity: SecurityResolver) {
       });
     }
   };
-}
-
-// A class, so the getter lives on the prototype: Apollo Server copies the context's
-// own properties for each operation, which would call an own getter too early.
-class RequestContext implements GraphqlContext {
-  constructor(readonly optionalSecurity: SecurityContext | null) {}
-
-  get security(): SecurityContext {
-    return requireSignedIn(this.optionalSecurity);
-  }
 }

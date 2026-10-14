@@ -6,7 +6,8 @@ import type { GraphqlContext } from "./apollo";
 /**
  * Denies by default: every root Query and Mutation field without `@public` refuses a
  * request without a session before its resolver runs. Nested fields are reachable
- * only through a root field, so checking the roots covers the whole schema.
+ * only through a root field, so checking the roots covers every field below a
+ * private root; a field below an `@public` root checks the session itself.
  */
 export function requireSessionOutsidePublicFields(schema: GraphQLSchema): GraphQLSchema {
   for (const rootType of [schema.getQueryType(), schema.getMutationType()]) {
@@ -31,7 +32,7 @@ function isPublic(field: GraphQLField<unknown, GraphqlContext>): boolean {
 function requireSession(field: GraphQLField<unknown, GraphqlContext>): void {
   const resolve = field.resolve ?? defaultFieldResolver;
   field.resolve = (source, args, context, info) => {
-    requireSignedIn(context.optionalSecurity);
+    requireSignedIn(context.security);
     return resolve(source, args, context, info);
   };
 }
