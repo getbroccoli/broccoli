@@ -5,15 +5,17 @@ import { logoUrl } from "../http";
 export function createResolvers(useCases: CompanyUseCases): Resolvers {
   return {
     Query: {
-      company: async (_parent, _args, { actor }) => toGraphql(await useCases.getCompany(actor)),
+      company: async (_parent, _args, { security }) =>
+        toGraphql(await useCases.getCompany(security)),
     },
     Mutation: {
       company: () => ({}),
     },
     CompanyMutations: {
-      update: async (_parent, { input }, { actor }) =>
-        toGraphql(await useCases.update(actor, input)),
-      removeLogo: async (_parent, _args, { actor }) => toGraphql(await useCases.removeLogo(actor)),
+      update: async (_parent, { input }, { security }) =>
+        toGraphql(await useCases.update(security, input)),
+      removeLogo: async (_parent, _args, { security }) =>
+        toGraphql(await useCases.removeLogo(security)),
     },
   };
 }

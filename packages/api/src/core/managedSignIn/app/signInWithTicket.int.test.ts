@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { eq, sql } from "drizzle-orm";
 
-import { expect, test } from "#test/support";
+import { expect, SYSTEM, test } from "#test/support";
 
 import { account, user } from "../../auth";
 import { ormOf, runInTransaction, type Orm } from "../../db";
@@ -122,7 +122,7 @@ test("leaves the ticket unused when the transaction fails", async ({ orm }) => {
   const eventBus = createEventBus(createLogger("silent"));
   await expect(
     runInTransaction(orm, eventBus, async (tx) => {
-      await signInWithTicket(tx, value, () => NOW);
+      await signInWithTicket(SYSTEM, tx, value, () => NOW);
       throw new Error("later step failed");
     }),
   ).rejects.toThrow("later step failed");
@@ -180,6 +180,6 @@ function signIn(orm: Orm, value: ManagedTicket, clock = () => NOW) {
   });
   return {
     events,
-    result: runInTransaction(orm, eventBus, (tx) => signInWithTicket(tx, value, clock)),
+    result: runInTransaction(orm, eventBus, (tx) => signInWithTicket(SYSTEM, tx, value, clock)),
   };
 }

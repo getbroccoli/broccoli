@@ -8,8 +8,8 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import express from "express";
 import { GraphQLError } from "graphql";
 
-import { requireSignedIn, type RequestActor, type UserActor } from "../actor";
 import type { Logger } from "../logger";
+import { requireSignedIn, type RequestSecurity, type SecurityContext } from "../security";
 import { depthLimit } from "./depthLimit";
 import { errorLoggingPlugin } from "./errorLogging";
 import { formatError } from "./errors";
@@ -27,16 +27,17 @@ export const MAX_TOKENS = 2000;
 /** What every resolver receives as its context. */
 export interface GraphqlContext {
   /**
-   * The signed-in user. Every field outside `@public` needs a session, so resolvers
-   * read it without checking; reading it without a session throws `UNAUTHENTICATED`.
+   * The signed-in user's security context. Every field outside `@public` needs a
+   * session, so resolvers read it without checking; reading it without a session
+   * throws `UNAUTHENTICATED`.
    */
-  readonly actor: UserActor;
-  /** The signed-in user, or null: for `@public` fields only. */
-  readonly optionalActor: UserActor | null;
+  readonly security: SecurityContext;
+  /** The signed-in user's security context, or null: for `@public` fields only. */
+  readonly optionalSecurity: SecurityContext | null;
 }
 
-/** Reads the actor of a request from its headers; see `resolveActor`. */
-export type ActorResolver = (headers: IncomingHttpHeaders) => Promise<RequestActor>;
+/** Reads the security context of a request from its headers; see `resolveSecurityContext`. */
+export type SecurityResolver = (headers: IncomingHttpHeaders) => Promise<RequestSecurity>;
 
 /** Scalars and types that every module may use. */
 const CORE_TYPE_DEFS = readSdl(import.meta.url, "./schema.graphql");
@@ -54,7 +55,7 @@ export async function startGraphqlApi(
   manifests: readonly { typeDefs: string; resolvers: Resolvers }[],
   httpServer: Server,
   logger: Logger,
-  resolveActor: ActorResolver,
+  resolveSecurity: SecurityResolver,
 ): Promise<GraphqlApi> {
   const apollo = new ApolloServer<GraphqlContext>({
     schema: requireSessionOutsidePublicFields(
@@ -84,14 +85,14 @@ export async function startGraphqlApi(
       .use(
         "/api/graphql",
         express.json(),
-        expressMiddleware(apollo, { context: createContext(resolveActor) }),
+        expressMiddleware(apollo, { context: createContext(resolveSecurity) }),
       ),
     stop: () => apollo.stop(),
   };
 }
 
 /** Builds each request's context; a failure becomes a masked internal error. */
-export function createContext(resolveActor: ActorResolver) {
+export function createContext(resolveSecurity: SecurityResolver) {
   return async ({
     req,
     res,
@@ -100,11 +101,11 @@ export function createContext(resolveActor: ActorResolver) {
     res: ServerResponse;
   }): Promise<GraphqlContext> => {
     try {
-      const { actor, renewedCookies } = await resolveActor(req.headers);
+      const { security, renewedCookies } = await resolveSecurity(req.headers);
       if (renewedCookies.length > 0) {
         res.appendHeader("Set-Cookie", renewedCookies);
       }
-      return new RequestContext(actor);
+      return new RequestContext(security);
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass
       // through as a request error; the code marks this one as internal.
@@ -119,9 +120,9 @@ export function createContext(resolveActor: ActorResolver) {
 // A class, so the getter lives on the prototype: Apollo Server copies the context's
 // own properties for each operation, which would call an own getter too early.
 class RequestContext implements GraphqlContext {
-  constructor(readonly optionalActor: UserActor | null) {}
+  constructor(readonly optionalSecurity: SecurityContext | null) {}
 
-  get actor(): UserActor {
-    return requireSignedIn(this.optionalActor);
+  get security(): SecurityContext {
+    return requireSignedIn(this.optionalSecurity);
   }
 }

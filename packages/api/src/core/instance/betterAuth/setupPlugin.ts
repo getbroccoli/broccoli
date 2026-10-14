@@ -9,6 +9,7 @@ import { z } from "zod";
 import { authDatabase } from "../../auth";
 import { type Orm, ormOf, runInTransaction } from "../../db";
 import type { EventBus } from "../../events";
+import { PrincipalSecurityContext } from "../../security";
 import { claimOwner, hasOwner } from "../app";
 import { OwnerExistsError } from "../domain";
 
@@ -78,7 +79,7 @@ async function createOwner(
     return await runInTransaction(orm, eventBus, (tx) =>
       // Better Auth's writes join the transaction that holds the instance lock.
       runWithAdapter(authDatabase(ormOf(tx))(options), () =>
-        claimOwner(tx, async () => {
+        claimOwner(PrincipalSecurityContext.system(), tx, async () => {
           const user = await internalAdapter.createUser(
             { email, name: "", emailVerified: false },
             { method: "email-password" },

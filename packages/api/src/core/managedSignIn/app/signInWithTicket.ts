@@ -1,4 +1,5 @@
 import type { Tx } from "../../db";
+import type { SecurityContext } from "../../security";
 import { claimOwner, OwnerExistsError, readOwnerUserId } from "../../instance";
 import { managedAccountRepository, managedTicketRepository } from "../db";
 import type { ManagedTicket } from "../domain";
@@ -17,16 +18,18 @@ export class SignInRefusedError extends Error {
  * the session, so a failure leaves the ticket unused.
  */
 export async function signInWithTicket(
+  ctx: SecurityContext,
   tx: Tx,
   ticket: ManagedTicket,
   clock: () => Date,
 ): Promise<{ userId: string }> {
+  ctx.requireOwnerOrSystem();
   const tickets = managedTicketRepository(tx);
   if (!(await tickets.consume(ticket.jti, ticket.expiresAt))) {
     throw new SignInRefusedError();
   }
   await tickets.deleteExpired(clock());
-  const userId = await findOrClaimOwner(tx, ticket);
+  const userId = await findOrClaimOwner(ctx, tx, ticket);
   // Checked last, with a fresh clock: the steps above may have waited for other transactions.
   if (ticket.expiresAt <= clock()) {
     throw new SignInRefusedError();
@@ -34,10 +37,14 @@ export async function signInWithTicket(
   return { userId };
 }
 
-async function findOrClaimOwner(tx: Tx, ticket: ManagedTicket): Promise<string> {
+async function findOrClaimOwner(
+  ctx: SecurityContext,
+  tx: Tx,
+  ticket: ManagedTicket,
+): Promise<string> {
   const userId = await managedAccountRepository(tx).findUserId(ticket.subject);
   if (!userId) {
-    return claimOwnerFor(tx, ticket);
+    return claimOwnerFor(ctx, tx, ticket);
   }
   // Only the owner exists until invitations do.
   if (userId !== (await readOwnerUserId(tx))) {
@@ -46,10 +53,12 @@ async function findOrClaimOwner(tx: Tx, ticket: ManagedTicket): Promise<string> 
   return userId;
 }
 
-async function claimOwnerFor(tx: Tx, ticket: ManagedTicket): Promise<string> {
+async function claimOwnerFor(ctx: SecurityContext, tx: Tx, ticket: ManagedTicket): Promise<string> {
   const accounts = managedAccountRepository(tx);
   try {
-    const owner = await claimOwner(tx, async () => ({ user: await accounts.createUser(ticket) }));
+    const owner = await claimOwner(ctx, tx, async () => ({
+      user: await accounts.createUser(ticket),
+    }));
     return owner.user.id;
   } catch (error) {
     if (error instanceof OwnerExistsError) {

@@ -1,5 +1,6 @@
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import { PrincipalSecurityContext } from "../../core/security";
 import { todayInUtc } from "../../utils";
 import { createDemoUseCases } from "./app";
 import { createResolvers } from "./graphql";
@@ -15,6 +16,9 @@ export function demoModule(
     name: "demo",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
-    events: { "instance.setup_completed": () => useCases.seedDemoData(todayInUtc()) },
+    events: {
+      "instance.setup_completed": () =>
+        useCases.seedDemoData(PrincipalSecurityContext.system(), todayInUtc()),
+    },
   };
 }

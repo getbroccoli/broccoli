@@ -21,7 +21,7 @@ export interface CompanyContext {
   companies: CompanyRepository;
 }
 
-/** Read after `requireOwner`, so the owner exists. */
+/** Called by the company use cases, which run only once setup has created the owner. */
 export async function readCompany({ orm, companies }: CompanyContext): Promise<Company> {
   const [{ name, brandName, logoFileId }, owner] = await Promise.all([
     companies.read(),

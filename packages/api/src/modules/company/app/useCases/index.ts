@@ -1,4 +1,4 @@
-import type { Actor } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { BrandLookup } from "../../../../integrations/brandLookup";
 import { companyRepository } from "../../db";
@@ -21,13 +21,13 @@ export function createCompanyUseCases({
   const companies = companyRepository(orm);
   const context = { orm, eventBus, companies };
   return {
-    getCompany: (actor: Actor) => getCompany(context, actor),
-    update: (actor: Actor, input: { name: string }) => updateCompany(context, actor, input),
-    saveLogo: (actor: Actor, bytes: Buffer) => saveLogo(context, actor, bytes),
-    removeLogo: (actor: Actor) => removeLogo(context, actor),
-    isCurrentLogo: (actor: Actor, fileId: string) => isCurrentLogo(context, actor, fileId),
-    detectCompanyNameAndLogo: (owner: { userId: string; email: string }) =>
-      detectCompanyNameAndLogo({ orm, eventBus, brandLookup, logger }, owner),
+    getCompany: (ctx: SecurityContext) => getCompany(context, ctx),
+    update: (ctx: SecurityContext, input: { name: string }) => updateCompany(context, ctx, input),
+    saveLogo: (ctx: SecurityContext, bytes: Buffer) => saveLogo(context, ctx, bytes),
+    removeLogo: (ctx: SecurityContext) => removeLogo(context, ctx),
+    isCurrentLogo: (ctx: SecurityContext, fileId: string) => isCurrentLogo(context, ctx, fileId),
+    detectCompanyNameAndLogo: (ctx: SecurityContext, owner: { userId: string; email: string }) =>
+      detectCompanyNameAndLogo({ orm, eventBus, brandLookup, logger }, ctx, owner),
   };
 }
 
