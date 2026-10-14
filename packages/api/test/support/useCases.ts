@@ -1,13 +1,13 @@
 import { createEventBus } from "../../src/core/events";
 import { createLogger, type Logger } from "../../src/core/logger";
-import type { Encryption } from "../../src/core/secrets";
+import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases } from "../../src/modules/demo";
 import { createImportUseCases } from "../../src/modules/imports";
 import { createSlackConnectionService, type SlackConnectionService } from "../../src/modules/slack";
-import { TEST_ENCRYPTION } from "./testEncryption";
+import { TEST_SECRET_BOX } from "./testSecretBox";
 
 /**
  * The company use cases on `orm` with test defaults: no brand is found and logs are
@@ -55,13 +55,13 @@ export function importUseCases(
 export function slackUseCases(
   orm: Parameters<typeof createSlackConnectionService>[0]["orm"],
   {
-    encryption = TEST_ENCRYPTION,
+    secretBox = TEST_SECRET_BOX,
     slackAuthorization = {},
     slackApi = {},
   }: {
     slackAuthorization?: Partial<SlackAuthorization>;
     slackApi?: Partial<SlackApi>;
-    encryption?: Encryption;
+    secretBox?: SecretBox;
   } = {},
 ) {
   const logger = createLogger("silent");
@@ -69,7 +69,7 @@ export function slackUseCases(
     orm,
     eventBus: createEventBus(logger),
     logger,
-    encryption,
+    secretBox,
     slackAuthorization: {
       authorizeUrl: ({ returnTo, state, codeChallenge }) => {
         const url = new URL("https://example.com/slack/authorize");

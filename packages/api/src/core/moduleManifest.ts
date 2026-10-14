@@ -4,7 +4,7 @@ import type { Orm } from "./db";
 import type { EventBus, EventHandlers } from "./events";
 import type { Resolvers, SecurityResolver } from "./graphql";
 import type { Logger } from "./logger";
-import type { Encryption } from "./secrets";
+import type { SecretBox } from "./secrets";
 
 /**
  * The core's services for the modules. Each module factory takes only the ones it
@@ -15,7 +15,7 @@ export interface ModuleDependencies {
   eventBus: EventBus;
   logger: Logger;
   /** Encrypts credentials the database stores, with the instance's encryption key. */
-  encryption: Encryption;
+  secretBox: SecretBox;
 }
 
 /**

@@ -10,7 +10,7 @@ import {
   SYSTEM,
   slackUseCases,
   test,
-  TEST_ENCRYPTION,
+  TEST_SECRET_BOX,
 } from "#test/support";
 
 import type { SlackAuthorization } from "../../../../integrations/slack";
@@ -137,7 +137,7 @@ test.for([
     );
     expect(stored.rows).toHaveLength(1);
     expect(stored.rows[0]!.encrypted_token).not.toContain(GRANT.accessToken);
-    expect(TEST_ENCRYPTION.decrypt(stored.rows[0]!.encrypted_token)).toBe(GRANT.accessToken);
+    expect(TEST_SECRET_BOX.decrypt(stored.rows[0]!.encrypted_token)).toBe(GRANT.accessToken);
   },
 );
 

@@ -1,2 +1,2 @@
 export { ensureSecret } from "./ensureSecret";
-export { createEncryption, type Encryption } from "./encryption";
+export { createSecretBox, type SecretBox } from "./secretBox";

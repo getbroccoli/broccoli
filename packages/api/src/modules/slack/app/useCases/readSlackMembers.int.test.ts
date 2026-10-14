@@ -1,6 +1,6 @@
 import { expect, OWNER, slackUseCases, test } from "#test/support";
 
-import { createEncryption } from "../../../../core/secrets";
+import { createSecretBox } from "../../../../core/secrets";
 
 test("refuses to read members before Slack is connected", async ({ orm }) => {
   await expect(slackUseCases(orm).readSlackMembers(OWNER)).rejects.toMatchObject({
@@ -47,7 +47,7 @@ test("reports a failed Slack read as unavailable", async ({ orm, seed }) => {
 test("reports a token that cannot be decrypted as unavailable", async ({ orm, seed }) => {
   await seed.slackConnection();
   const slack = slackUseCases(orm, {
-    encryption: createEncryption(Buffer.alloc(32, 7).toString("base64url")),
+    secretBox: createSecretBox(Buffer.alloc(32, 7).toString("base64url")),
     slackApi: { listMembers: () => Promise.resolve([]) },
   });
 

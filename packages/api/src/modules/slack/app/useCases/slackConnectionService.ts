@@ -4,7 +4,7 @@ import { ApplicationError } from "../../../../core/applicationError";
 import { type Orm, runInTransaction, type Tx } from "../../../../core/db";
 import type { EventBus } from "../../../../core/events";
 import type { Logger } from "../../../../core/logger";
-import type { Encryption } from "../../../../core/secrets";
+import type { SecretBox } from "../../../../core/secrets";
 import type { SecurityContext } from "../../../../core/security";
 import type {
   SlackApi,
@@ -50,14 +50,14 @@ export function createSlackConnectionService({
   orm,
   eventBus,
   logger,
-  encryption,
+  secretBox,
   slackAuthorization,
   slackApi,
 }: {
   orm: Orm;
   eventBus: EventBus;
   logger: Logger;
-  encryption: Encryption;
+  secretBox: SecretBox;
   slackAuthorization: SlackAuthorization;
   slackApi: SlackApi;
 }) {
@@ -127,7 +127,7 @@ export function createSlackConnectionService({
         slackConnectionRepository(tx).save({
           teamId: grant.team.id,
           teamName: grant.team.name,
-          encryptedToken: encryption.encrypt(grant.accessToken),
+          encryptedToken: secretBox.encrypt(grant.accessToken),
         }),
       );
       return null;
@@ -150,7 +150,7 @@ export function createSlackConnectionService({
         throw new ApplicationError("UNAVAILABLE", "Slack is not connected.");
       }
       try {
-        const members = await slackApi.listMembers(encryption.decrypt(connection.encryptedToken));
+        const members = await slackApi.listMembers(secretBox.decrypt(connection.encryptedToken));
         return {
           workspace: { id: connection.teamId, name: connection.teamName },
           members,
