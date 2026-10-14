@@ -1,6 +1,5 @@
 import { defaultFieldResolver, type GraphQLField, type GraphQLSchema } from "graphql";
 
-import { requireSignedIn } from "../security";
 import type { GraphqlContext } from "./apollo";
 
 /**
@@ -32,7 +31,7 @@ function isPublic(field: GraphQLField<unknown, GraphqlContext>): boolean {
 function requireSession(field: GraphQLField<unknown, GraphqlContext>): void {
   const resolve = field.resolve ?? defaultFieldResolver;
   field.resolve = (source, args, context, info) => {
-    requireSignedIn(context.security);
+    context.requireSignedIn();
     return resolve(source, args, context, info);
   };
 }

@@ -1,22 +1,21 @@
 import type { Resolvers } from "../../../core/graphql";
-import { requireSignedIn } from "../../../core/security";
 import type { Company, CompanyUseCases } from "../app";
 import { logoUrl } from "../http";
 
 export function createResolvers(useCases: CompanyUseCases): Resolvers {
   return {
     Query: {
-      company: async (_parent, _args, { security }) =>
-        toGraphql(await useCases.getCompany(requireSignedIn(security))),
+      company: async (_parent, _args, context) =>
+        toGraphql(await useCases.getCompany(context.requireSignedIn())),
     },
     Mutation: {
       company: () => ({}),
     },
     CompanyMutations: {
-      update: async (_parent, { input }, { security }) =>
-        toGraphql(await useCases.update(requireSignedIn(security), input)),
-      removeLogo: async (_parent, _args, { security }) =>
-        toGraphql(await useCases.removeLogo(requireSignedIn(security))),
+      update: async (_parent, { input }, context) =>
+        toGraphql(await useCases.update(context.requireSignedIn(), input)),
+      removeLogo: async (_parent, _args, context) =>
+        toGraphql(await useCases.removeLogo(context.requireSignedIn())),
     },
   };
 }

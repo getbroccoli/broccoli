@@ -1,5 +1,4 @@
 import type { Resolvers } from "../../../core/graphql";
-import { requireSignedIn } from "../../../core/security";
 import type { EmployeeUseCases } from "../app";
 import type { Employee } from "../domain";
 import { avatarUrl } from "../http";
@@ -7,8 +6,8 @@ import { avatarUrl } from "../http";
 export function createResolvers(useCases: EmployeeUseCases): Resolvers {
   return {
     Query: {
-      employees: async (_parent, { first, after, orderBy, filter }, { security }) => {
-        const connection = await useCases.listEmployees(requireSignedIn(security), {
+      employees: async (_parent, { first, after, orderBy, filter }, context) => {
+        const connection = await useCases.listEmployees(context.requireSignedIn(), {
           first: first ?? undefined,
           after,
           orderBy,
@@ -24,8 +23,8 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
       employee: () => ({}),
     },
     EmployeeMutations: {
-      create: async (_parent, { input }, { security }) =>
-        toGraphql(await useCases.createEmployee(requireSignedIn(security), input)),
+      create: async (_parent, { input }, context) =>
+        toGraphql(await useCases.createEmployee(context.requireSignedIn(), input)),
     },
   };
 }

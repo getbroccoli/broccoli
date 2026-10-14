@@ -5,6 +5,7 @@ import { expect, it } from "vitest";
 import { NON_OWNER } from "#test/support";
 
 import { ApplicationError } from "../applicationError";
+import { GraphqlContext } from "./apollo";
 import { requireSessionOutsidePublicFields } from "./publicFields";
 
 const typeDefs = `
@@ -32,7 +33,7 @@ it("refuses a private field without a session before running its resolver", asyn
   const result = await graphql({
     schema,
     source: "{ secret }",
-    contextValue: { security: null },
+    contextValue: new GraphqlContext(null),
   });
 
   expect(result.errors).toHaveLength(1);
@@ -54,7 +55,7 @@ it("answers a public field without a session", async () => {
   const result = await graphql({
     schema,
     source: "{ open }",
-    contextValue: { security: null },
+    contextValue: new GraphqlContext(null),
   });
 
   expect(result).toEqual({ data: { open: "open" } });
@@ -70,7 +71,7 @@ it("answers a private field with a signed-in user", async () => {
   const result = await graphql({
     schema,
     source: "{ secret }",
-    contextValue: { security: NON_OWNER },
+    contextValue: new GraphqlContext(NON_OWNER),
   });
 
   expect(result).toEqual({ data: { secret: "secret" } });
@@ -94,7 +95,7 @@ it("refuses a private mutation namespace without a session", async () => {
   const result = await graphql({
     schema,
     source: "mutation { thing { do } }",
-    contextValue: { security: null },
+    contextValue: new GraphqlContext(null),
   });
 
   expect(result.errors).toHaveLength(1);
