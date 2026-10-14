@@ -7,7 +7,7 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
   return {
     Query: {
       employees: async (_parent, { first, after, orderBy, filter }, context) => {
-        const connection = await useCases.listEmployees(context.requireSignedIn(), {
+        const connection = await useCases.listEmployees(context.getActor(), {
           first: first ?? undefined,
           after,
           orderBy,
@@ -24,7 +24,7 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
     },
     EmployeeMutations: {
       create: async (_parent, { input }, context) =>
-        toGraphql(await useCases.createEmployee(context.requireSignedIn(), input)),
+        toGraphql(await useCases.createEmployee(context.getActor(), input)),
     },
   };
 }

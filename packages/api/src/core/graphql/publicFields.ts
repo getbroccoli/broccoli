@@ -31,7 +31,7 @@ function isPublic(field: GraphQLField<unknown, GraphqlContext>): boolean {
 function requireSession(field: GraphQLField<unknown, GraphqlContext>): void {
   const resolve = field.resolve ?? defaultFieldResolver;
   field.resolve = (source, args, context, info) => {
-    context.requireSignedIn();
+    context.getActor(); // Throws UNAUTHENTICATED without a session.
     return resolve(source, args, context, info);
   };
 }

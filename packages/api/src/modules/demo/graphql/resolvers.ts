@@ -5,14 +5,14 @@ export function createResolvers(useCases: DemoUseCases): Resolvers {
   return {
     Query: {
       demo: async (_parent, _args, context) =>
-        toGraphql(await useCases.getDemoData(context.requireSignedIn())),
+        toGraphql(await useCases.getDemoData(context.getActor())),
     },
     Mutation: {
       demo: () => ({}),
     },
     DemoMutations: {
       clear: async (_parent, _args, context) =>
-        toGraphql(await useCases.clearDemoData(context.requireSignedIn())),
+        toGraphql(await useCases.clearDemoData(context.getActor())),
     },
   };
 }

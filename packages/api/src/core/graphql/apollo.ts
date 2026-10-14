@@ -25,8 +25,8 @@ export const MAX_DEPTH = 10;
 export const MAX_TOKENS = 2000;
 
 /**
- * What every resolver receives as its context. A class, so `requireSignedIn` lives on
- * the prototype: Apollo Server copies the context's own properties for each operation.
+ * What every resolver receives as its context. A class, so `getActor` lives on the
+ * prototype: Apollo Server copies the context's own properties for each operation.
  */
 export class GraphqlContext {
   /** The signed-in user's security context, or null without a session. */
@@ -36,7 +36,7 @@ export class GraphqlContext {
    * The security context to pass to a use case; throws `UNAUTHENTICATED` without a
    * session. Root fields outside `@public` call it before their resolver runs.
    */
-  requireSignedIn(): SecurityContext {
+  getActor(): SecurityContext {
     return requireSignedIn(this.security);
   }
 }
