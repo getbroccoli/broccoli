@@ -6,7 +6,7 @@ import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import { parseCalendarDate } from "../../src/utils";
-import { TestSecurityContext } from "./securityContexts";
+import { TestSecurityContext } from "./testSecurityContext";
 
 type SeedEmployee = Partial<
   Omit<NewEmployee, "startDate"> & { startDate: string | null; avatarFileId: string | null }
