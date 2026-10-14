@@ -1,4 +1,4 @@
-import { companyUseCases, expect, PNG as logo, test } from "#test/support";
+import { companyUseCases, expect, PNG as logo, SYSTEM, test } from "#test/support";
 
 import { createLogger } from "../../../../core/logger";
 
@@ -12,7 +12,10 @@ test("stores the brand name and logo found for the owner's domain", async ({ orm
     },
   });
 
-  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" });
+  await company.detectCompanyNameAndLogo(SYSTEM, {
+    userId: actor.user!.userId,
+    email: "owner@example.com",
+  });
 
   const saved = await company.getCompany(actor);
   expect(domains).toEqual(["example.com"]);
@@ -25,7 +28,10 @@ test("keeps the domain suggestion and no logo when no brand is found", async ({ 
   const actor = await seed.owner();
   const company = companyUseCases(orm);
 
-  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" });
+  await company.detectCompanyNameAndLogo(SYSTEM, {
+    userId: actor.user!.userId,
+    email: "owner@example.com",
+  });
 
   expect(await company.getCompany(actor)).toEqual({
     name: null,
@@ -44,7 +50,10 @@ test("does not look up a personal email domain", async ({ orm, seed }) => {
     },
   });
 
-  await company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@gmail.com" });
+  await company.detectCompanyNameAndLogo(SYSTEM, {
+    userId: actor.user!.userId,
+    email: "owner@gmail.com",
+  });
 
   expect(domains).toEqual([]);
   expect(await company.getCompany(actor)).toEqual({
@@ -68,7 +77,10 @@ test("logs a failed lookup and resolves without storing a brand", async ({ orm, 
   });
 
   await expect(
-    company.detectCompanyNameAndLogo({ userId: actor.userId, email: "owner@example.com" }),
+    company.detectCompanyNameAndLogo(SYSTEM, {
+      userId: actor.user!.userId,
+      email: "owner@example.com",
+    }),
   ).resolves.toBeUndefined();
 
   expect(await company.getCompany(actor)).toEqual({
@@ -84,16 +96,16 @@ test("does not restore a removed logo when owner setup is delivered again", asyn
   seed,
 }) => {
   const actor = await seed.owner();
-  const owner = { userId: actor.userId, email: "owner@example.com" };
+  const owner = { userId: actor.user!.userId, email: "owner@example.com" };
   const company = companyUseCases(orm, {
     brandLookup: () => Promise.resolve({ name: "Example Labs", logo }),
   });
-  await company.detectCompanyNameAndLogo(owner);
+  await company.detectCompanyNameAndLogo(SYSTEM, owner);
   const before = await company.getCompany(actor);
   expect(before.logoFileId).toEqual(expect.any(String));
   await company.removeLogo(actor);
 
-  await company.detectCompanyNameAndLogo(owner);
+  await company.detectCompanyNameAndLogo(SYSTEM, owner);
 
   expect((await company.getCompany(actor)).logoFileId).toBeNull();
   expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(false);

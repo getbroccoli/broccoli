@@ -1,12 +1,12 @@
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import type { CompanyContext } from "./company";
 
 /** Whether this is the file id of the current logo. */
 export async function isCurrentLogo(
   { companies }: CompanyContext,
-  actor: Actor,
+  ctx: SecurityContext,
   fileId: string,
 ): Promise<boolean> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   return (await companies.read()).logoFileId === fileId;
 }

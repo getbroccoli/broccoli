@@ -11,6 +11,7 @@ import { authDatabase } from "../../auth";
 import { ormOf, runInTransaction, type Orm } from "../../db";
 import type { EventBus } from "../../events";
 import type { ManagedAssignment } from "../../instance";
+import { PrincipalSecurityContext } from "../../security";
 import { SignInRefusedError, signInWithTicket } from "../app";
 import { InvalidTokenError, parseTicketClaims, type ManagedTicket } from "../domain";
 import { verifyToken, type TokenCheck } from "../jwt";
@@ -82,7 +83,12 @@ export function managedSignInPlugin({
     return runInTransaction(orm, eventBus, (tx) =>
       // Better Auth's writes join the transaction that uses the ticket.
       runWithAdapter(authDatabase(ormOf(tx))(options), async () => {
-        const { userId } = await signInWithTicket(tx, ticket, () => new Date());
+        const { userId } = await signInWithTicket(
+          PrincipalSecurityContext.system(),
+          tx,
+          ticket,
+          () => new Date(),
+        );
         const session = await internalAdapter.createSession(userId);
         const user = await internalAdapter.findUserById(userId);
         if (!user) {

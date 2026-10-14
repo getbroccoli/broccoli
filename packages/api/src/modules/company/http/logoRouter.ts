@@ -1,10 +1,10 @@
 import express from "express";
 
-import { requireSignedIn } from "../../../core/actor";
+import { requireSignedIn } from "../../../core/security";
 import { sendApplicationError } from "../../../core/applicationError";
 import type { Orm } from "../../../core/db";
 import { sendFile } from "../../../core/files";
-import type { ActorResolver } from "../../../core/graphql";
+import type { SecurityResolver } from "../../../core/graphql";
 import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
 
 /** Where the logo with this file id is served. */
@@ -19,12 +19,12 @@ export function logoUrl(fileId: string): string {
  */
 export function logoRouter(
   useCases: CompanyUseCases,
-  resolveActor: ActorResolver,
+  resolveSecurity: SecurityResolver,
   orm: Orm,
 ): express.Router {
   // The session cookie is renewed by GraphQL, which every page calls.
   const signedIn = async (request: express.Request) =>
-    requireSignedIn((await resolveActor(request.headers)).actor);
+    requireSignedIn((await resolveSecurity(request.headers)).security);
 
   return express
     .Router()

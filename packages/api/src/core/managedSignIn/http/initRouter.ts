@@ -6,6 +6,7 @@ import type { EventBus } from "../../events";
 import { AssignmentConflictError, assignInstance } from "../../instance";
 import type { Readiness } from "../../readiness";
 import type { AuthSource } from "../../auth";
+import { PrincipalSecurityContext } from "../../security";
 import { InvalidAssignmentError, InvalidTokenError, parseInitClaims } from "../domain";
 import { verifyToken, type TokenCheck } from "../jwt";
 
@@ -50,7 +51,7 @@ export function initRouter({
       const payload = await verifyToken(token, tokenCheck);
       const assignment = parseInitClaims(payload);
       await runInTransaction(orm, eventBus, async (tx) => {
-        await assignInstance(tx, assignment);
+        await assignInstance(PrincipalSecurityContext.system(), tx, assignment);
         // Strict, after the row lock: the token must still be valid when the assignment commits.
         if (payload.exp! * 1000 <= Date.now()) {
           throw new InvalidTokenError();

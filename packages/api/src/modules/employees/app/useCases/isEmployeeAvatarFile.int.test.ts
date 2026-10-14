@@ -1,4 +1,4 @@
-import { expect, OWNER, test, WEBP } from "#test/support";
+import { expect, NON_OWNER, OWNER, test, WEBP } from "#test/support";
 
 import { createEmployeeUseCases } from ".";
 
@@ -28,7 +28,7 @@ test("refuses to check an employee avatar for a non-owner", async ({ orm, seed }
   await seed.employee({ avatarFileId });
   const { isEmployeeAvatarFile } = createEmployeeUseCases({ orm });
 
-  await expect(
-    isEmployeeAvatarFile({ userId: "someone", isOwner: false }, avatarFileId),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  await expect(isEmployeeAvatarFile(NON_OWNER, avatarFileId)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
 });

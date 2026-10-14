@@ -1,4 +1,4 @@
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import { invalidInput } from "../../../../core/applicationError";
 import type { EmployeeRepository } from "../../db";
 import {
@@ -10,10 +10,10 @@ import {
 
 export async function createEmployee(
   employees: EmployeeRepository,
-  actor: Actor,
+  ctx: SecurityContext,
   input: NewEmployeeInput,
 ): Promise<Employee> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   const newEmployee = parseNewEmployee(input);
   try {
     return await employees.insert(newEmployee);

@@ -1,5 +1,5 @@
 export { expect } from "vitest";
-export { OWNER } from "./actors";
+export { NON_OWNER, OWNER, SYSTEM, TestSecurityContext } from "./testSecurityContext";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test } from "./fixture";

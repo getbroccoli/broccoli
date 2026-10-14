@@ -2,7 +2,7 @@ import type express from "express";
 
 import type { Orm } from "./db";
 import type { EventBus, EventHandlers } from "./events";
-import type { ActorResolver, Resolvers } from "./graphql";
+import type { Resolvers, SecurityResolver } from "./graphql";
 import type { Logger } from "./logger";
 
 /**
@@ -27,5 +27,5 @@ export interface ModuleManifest {
   /** What the module does when another module's event happens. */
   events?: EventHandlers;
   /** HTTP routes under `/api/` that GraphQL cannot serve, such as images. */
-  router?: (resolveActor: ActorResolver) => express.Router;
+  router?: (resolveSecurity: SecurityResolver) => express.Router;
 }

@@ -1,9 +1,20 @@
-import { expect, test } from "#test/support";
+import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
 
 import { runInTransaction } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
-import { advanceStep } from ".";
+import { advanceStep, readSetupStep } from ".";
+
+test("refuses a non-owner advancing setup and keeps the current step", async ({ orm, seed }) => {
+  await seed.owner();
+  const eventBus = createEventBus(createLogger("silent"));
+
+  await expect(
+    runInTransaction(orm, eventBus, (tx) => advanceStep(NON_OWNER, tx, "company", "done")),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+  expect(await readSetupStep(orm)).toBe("company");
+});
 
 test("publishes setup completion when the company step finishes", async ({ orm, seed }) => {
   await seed.owner();
@@ -16,7 +27,7 @@ test("publishes setup completion when the company step finishes", async ({ orm, 
     },
   });
 
-  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "company", "done"));
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(SYSTEM, tx, "company", "done"));
 
   expect(received).toEqual([null]);
 });
@@ -27,7 +38,7 @@ test("does not publish setup completion again when the company step is already d
 }) => {
   await seed.owner();
   const eventBus = createEventBus(createLogger("silent"));
-  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "company", "done"));
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(SYSTEM, tx, "company", "done"));
   const received: unknown[] = [];
   eventBus.subscribe({
     "instance.setup_completed": (payload) => {
@@ -36,7 +47,7 @@ test("does not publish setup completion again when the company step is already d
     },
   });
 
-  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "company", "done"));
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(SYSTEM, tx, "company", "done"));
 
   expect(received).toEqual([]);
 });
@@ -51,7 +62,7 @@ test("does not publish setup completion when advancing to the company step", asy
     },
   });
 
-  await runInTransaction(orm, eventBus, (tx) => advanceStep(tx, "owner", "company"));
+  await runInTransaction(orm, eventBus, (tx) => advanceStep(SYSTEM, tx, "owner", "company"));
 
   expect(received).toEqual([]);
 });

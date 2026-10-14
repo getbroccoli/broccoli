@@ -1,4 +1,4 @@
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import { invalidInput } from "../../../../core/applicationError";
 import {
   type Connection,
@@ -21,10 +21,10 @@ export interface EmployeeListArgs extends PageArgs {
 /** Employees, sorted and filtered, one page at a time. */
 export async function listEmployees(
   employees: EmployeeRepository,
-  actor: Actor,
+  ctx: SecurityContext,
   { orderBy, filter, ...pageArgs }: EmployeeListArgs,
 ): Promise<Connection<Employee>> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   const order: EmployeeOrder = orderBy
     ? { field: orderBy.field, direction: orderBy.direction ?? "ASC" }
     : DEFAULT_ORDER;

@@ -1,4 +1,4 @@
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import { invalidInput } from "../../../../core/applicationError";
 import { runInTransaction } from "../../../../core/db";
 import { deleteFiles, storeFile } from "../../../../core/files";
@@ -9,10 +9,10 @@ import { type Company, type CompanyContext, MAX_LOGO_BYTES, readCompany } from "
 /** Replaces the company logo with an image the owner uploaded. */
 export async function saveLogo(
   context: CompanyContext,
-  actor: Actor,
+  ctx: SecurityContext,
   bytes: Buffer,
 ): Promise<Company> {
-  requireOwner(actor);
+  ctx.requireOwnerOrSystem();
   const logo = parseRasterImage(bytes, { maxBytes: MAX_LOGO_BYTES });
   if (!logo) {
     throw invalidInput([{ field: "logo", code: "invalid" }]);

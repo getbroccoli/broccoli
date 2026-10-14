@@ -1,21 +1,21 @@
-import { expect, test } from "#test/support";
+import { expect, NON_OWNER, test } from "#test/support";
 
-import type { Actor } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import { createEmployeeUseCases, type EmployeeUseCases } from ".";
 
 const calls = {
-  createEmployee: (useCases, actor) =>
-    useCases.createEmployee(actor, {
+  createEmployee: (useCases, ctx) =>
+    useCases.createEmployee(ctx, {
       firstName: "Employee",
       lastName: "One",
       email: "employee.one@example.com",
     }),
-  listEmployees: (useCases, actor) => useCases.listEmployees(actor, {}),
-  isEmployeeAvatarFile: (useCases, actor) =>
-    useCases.isEmployeeAvatarFile(actor, "00000000-0000-4000-8000-000000000001"),
+  listEmployees: (useCases, ctx) => useCases.listEmployees(ctx, {}),
+  isEmployeeAvatarFile: (useCases, ctx) =>
+    useCases.isEmployeeAvatarFile(ctx, "00000000-0000-4000-8000-000000000001"),
 } satisfies Record<
   keyof EmployeeUseCases,
-  (useCases: EmployeeUseCases, actor: Actor) => Promise<unknown>
+  (useCases: EmployeeUseCases, ctx: SecurityContext) => Promise<unknown>
 >;
 
 test.for(Object.entries(calls))(
@@ -23,7 +23,7 @@ test.for(Object.entries(calls))(
   async ([, call], { orm }) => {
     const useCases = createEmployeeUseCases({ orm });
 
-    await expect(call(useCases, { userId: "user-1", isOwner: false })).rejects.toMatchObject({
+    await expect(call(useCases, NON_OWNER)).rejects.toMatchObject({
       code: "FORBIDDEN",
       message: "Only the owner can do this.",
       fieldErrors: [],

@@ -1,7 +1,7 @@
-import { type Actor, requireOwner } from "../../../../core/actor";
+import type { SecurityContext } from "../../../../core/security";
 import { type Company, type CompanyContext, readCompany } from "./company";
 
-export async function getCompany(context: CompanyContext, actor: Actor): Promise<Company> {
-  requireOwner(actor);
+export async function getCompany(context: CompanyContext, ctx: SecurityContext): Promise<Company> {
+  ctx.requireOwnerOrSystem();
   return readCompany(context);
 }

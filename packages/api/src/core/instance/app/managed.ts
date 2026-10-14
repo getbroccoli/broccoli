@@ -1,4 +1,5 @@
 import type { Orm, Tx } from "../../db";
+import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import { AssignmentConflictError, type ManagedAssignment } from "../domain";
 
@@ -12,7 +13,12 @@ export function readAssignment(orm: Orm): Promise<ManagedAssignment | null> {
  * can retry after a lost response; any other assignment is refused, as is one on an
  * instance whose owner was already set up.
  */
-export async function assignInstance(tx: Tx, assignment: ManagedAssignment): Promise<void> {
+export async function assignInstance(
+  ctx: SecurityContext,
+  tx: Tx,
+  assignment: ManagedAssignment,
+): Promise<void> {
+  ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
   const current = await instance.lockAssignment();
   if (current.assignment) {
