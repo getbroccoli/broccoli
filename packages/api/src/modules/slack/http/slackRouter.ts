@@ -3,6 +3,7 @@ import express from "express";
 import { sendApplicationError } from "../../../core/applicationError";
 import type { SecurityResolver } from "../../../core/graphql";
 import { requireSignedIn } from "../../../core/security";
+import { readCookie } from "../../../utils";
 import type { SlackConnectionService } from "../app";
 
 /** The address browsers use for this instance, such as `https://acme.example.com`. */
@@ -67,15 +68,6 @@ export function slackRouter(
         : "state";
       response.redirect(302, failure ? `${IMPORT_PAGE}?slackError=${failure}` : IMPORT_PAGE);
     });
-}
-
-/** The value of cookie `name` in a `Cookie` header. */
-function readCookie(header: string | undefined, name: string): string | undefined {
-  return header
-    ?.split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`))
-    ?.slice(name.length + 1);
 }
 
 /** A query parameter given once, as text; Express parses repeats and brackets into other shapes. */

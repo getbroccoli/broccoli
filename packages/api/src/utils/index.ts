@@ -2,4 +2,5 @@ export { addDays, parseCalendarDate, todayInUtc, type CalendarDate } from "./cal
 export { fetchJson } from "./fetchJson";
 export { parseRasterImage, type RasterImage } from "./rasterImage";
 export { parseOrigin } from "./origin";
+export { readCookie } from "./readCookie";
 export { urlUnder } from "./urlUnder";
