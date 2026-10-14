@@ -20,6 +20,6 @@ export function createModules(
     systemModule({ orm: core.orm, mode }),
     employeesModule({ orm: core.orm }),
     companyModule({ ...core, brandLookupUrl }),
-    demoModule({ orm: core.orm, eventBus: core.eventBus }),
+    demoModule({ orm: core.orm, transact: core.transact }),
   ];
 }

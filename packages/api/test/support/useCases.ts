@@ -1,8 +1,8 @@
-import { createEventBus } from "../../src/core/events";
 import { createLogger, type Logger } from "../../src/core/logger";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases } from "../../src/modules/demo";
+import { testTransactor } from "./testTransactor";
 
 /**
  * The company use cases on `orm` with test defaults: no brand is found and logs are
@@ -15,10 +15,9 @@ export function companyUseCases(
     logger = createLogger("silent"),
   }: { brandLookup?: BrandLookup; logger?: Logger } = {},
 ) {
-  return createCompanyUseCases({ orm, eventBus: createEventBus(logger), logger, brandLookup });
+  return createCompanyUseCases({ orm, transact: testTransactor(orm), logger, brandLookup });
 }
 
 export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"]) {
-  const logger = createLogger("silent");
-  return createDemoUseCases({ orm, eventBus: createEventBus(logger) });
+  return createDemoUseCases({ orm, transact: testTransactor(orm) });
 }
