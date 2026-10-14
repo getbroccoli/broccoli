@@ -13,6 +13,34 @@ import type {
 } from "../../../../integrations/slack";
 import { slackConnectionRepository } from "../../db";
 
+/**
+ * The whole life of the Slack connection in one place: starting it, finishing it when
+ * the browser returns, and reading the connected workspace for the owner and for
+ * other modules. Every function checks `ctx` itself.
+ */
+export interface SlackConnectionService {
+  /** Starts connecting Slack: the browser goes to Slack and comes back to `returnTo`. */
+  beginSlackConnection(ctx: SecurityContext, returnTo: string): SlackConnectionStart;
+  /**
+   * Finishes connecting Slack when the browser returns: checks that the return belongs
+   * to this browser and the owner, exchanges the code, and stores the workspace with
+   * its token encrypted. Reading its members is up to the caller. Null on success.
+   */
+  finishSlackConnection(
+    ctx: SecurityContext,
+    slackReturn: SlackConnectionReturn,
+  ): Promise<SlackConnectionFailure | null>;
+  /** The connected workspace, or null. */
+  getSlackConnection(ctx: SecurityContext): Promise<{ teamId: string; teamName: string } | null>;
+  /** Every member of the connected workspace; refuses when Slack is not connected or does not answer. */
+  readSlackMembers(ctx: SecurityContext): Promise<SlackMembersRead>;
+  /**
+   * Locks the connection until `tx` ends and tells whether it is still the one
+   * `snapshot` came from, so a caller never stores members read before a newer connect.
+   */
+  isCurrentSlackConnection(ctx: SecurityContext, tx: Tx, snapshot: string): Promise<boolean>;
+}
+
 /** Where to send the browser to connect Slack, and what the browser keeps until it returns. */
 export interface SlackConnectionStart {
   authorizeUrl: URL;
@@ -40,11 +68,6 @@ export interface SlackMembersRead {
   snapshot: string;
 }
 
-/**
- * The whole life of the Slack connection in one place: starting it, finishing it when
- * the browser returns, and reading the connected workspace for the owner and for
- * other modules. Every function checks `ctx` itself.
- */
 export function createSlackConnectionService({
   orm,
   transact,
@@ -59,7 +82,7 @@ export function createSlackConnectionService({
   secretBox: SecretBox;
   slackAuthorization: SlackAuthorization;
   slackApi: SlackApi;
-}) {
+}): SlackConnectionService {
   const connections = slackConnectionRepository(orm);
 
   /** Exchanges the code and checks the scopes; null when Slack refused. */
@@ -79,7 +102,6 @@ export function createSlackConnectionService({
   }
 
   return {
-    /** Starts connecting Slack: the browser goes to Slack and comes back to `returnTo`. */
     beginSlackConnection: (ctx: SecurityContext, returnTo: string): SlackConnectionStart => {
       ctx.requireOwnerOrSystem();
       const pending = { state: randomToken(), codeVerifier: randomToken() };
@@ -94,11 +116,6 @@ export function createSlackConnectionService({
       };
     },
 
-    /**
-     * Finishes connecting Slack when the browser returns: checks that the return belongs
-     * to this browser and the owner, exchanges the code, and stores the workspace with
-     * its token encrypted. Reading its members is up to the caller. Null on success.
-     */
     finishSlackConnection: async (
       ctx: SecurityContext,
       { pendingToken, state, code, error }: SlackConnectionReturn,
@@ -132,7 +149,6 @@ export function createSlackConnectionService({
       return null;
     },
 
-    /** The connected workspace, or null. */
     getSlackConnection: async (
       ctx: SecurityContext,
     ): Promise<{ teamId: string; teamName: string } | null> => {
@@ -141,7 +157,6 @@ export function createSlackConnectionService({
       return connection && { teamId: connection.teamId, teamName: connection.teamName };
     },
 
-    /** Every member of the connected workspace; refuses when Slack is not connected or does not answer. */
     readSlackMembers: async (ctx: SecurityContext): Promise<SlackMembersRead> => {
       ctx.requireOwnerOrSystem();
       const connection = await connections.read();
@@ -162,10 +177,6 @@ export function createSlackConnectionService({
       }
     },
 
-    /**
-     * Locks the connection until `tx` ends and tells whether it is still the one
-     * `snapshot` came from, so a caller never stores members read before a newer connect.
-     */
     isCurrentSlackConnection: async (
       ctx: SecurityContext,
       tx: Tx,
@@ -177,8 +188,6 @@ export function createSlackConnectionService({
     },
   };
 }
-
-export type SlackConnectionService = ReturnType<typeof createSlackConnectionService>;
 
 /** Scopes Broccoli needs: the member list and each member's email. */
 const REQUIRED_SCOPES = ["users:read", "users:read.email"];

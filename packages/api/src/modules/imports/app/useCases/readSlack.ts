@@ -1,7 +1,7 @@
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
-import { mapSlackMembers } from "./slackRecords";
+import { mapSlackMembers } from "./mapSlackMembers";
 
 /**
  * Reads the connected Slack workspace into the import: the first time and on every

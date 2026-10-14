@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { mapSlackMembers } from "./slackRecords";
+import { mapSlackMembers } from "./mapSlackMembers";
 
 it("maps profile names, normalises the email and leaves the start date unknown", () => {
   const records = mapSlackMembers([
