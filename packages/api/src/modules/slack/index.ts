@@ -3,11 +3,15 @@ import { readSdl } from "../../core/graphql";
 import { readAssignment } from "../../core/instance";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { createSlackApi, createSlackRelay } from "../../integrations/slack";
-import { createSlackUseCases, type SlackUseCases } from "./app";
+import { createSlackConnectionService, type SlackConnectionService } from "./app";
 import { createResolvers } from "./graphql";
 import { type PublicOrigin, slackRouter } from "./http";
 
-export { createSlackUseCases, type SlackMembersRead, type SlackUseCases } from "./app";
+export {
+  createSlackConnectionService,
+  type SlackMembersRead,
+  type SlackConnectionService,
+} from "./app";
 export type { SlackMember } from "../../integrations/slack";
 /** For test seeding only; other modules go through the use cases. */
 export { slackConnectionRepository } from "./db";
@@ -18,14 +22,14 @@ export interface SlackUrls {
   apiUrl: string;
 }
 
-/** The Slack use cases, built once and shared by the Slack module and the modules that read Slack. */
+/** The Slack connection service, built once and shared by the Slack module and the modules that read Slack. */
 export function createSlack({
   slack,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "eventBus" | "logger" | "encryption"> & {
   slack: SlackUrls;
-}): SlackUseCases {
-  return createSlackUseCases({
+}): SlackConnectionService {
+  return createSlackConnectionService({
     ...dependencies,
     slackAuthorization: createSlackRelay(slack.relayUrl),
     slackApi: createSlackApi(slack.apiUrl),
@@ -34,12 +38,12 @@ export function createSlack({
 
 /** The connection to the company's Slack workspace: connecting it and reading it for other modules. */
 export function slackModule({
-  useCases,
+  slackConnection,
   orm,
   mode,
   publicUrl,
 }: Pick<ModuleDependencies, "orm"> & {
-  useCases: SlackUseCases;
+  slackConnection: SlackConnectionService;
   mode: Mode;
   /** Self-hosted only: the address browsers use; unset takes it from each request. */
   publicUrl?: string;
@@ -54,7 +58,7 @@ export function slackModule({
   return {
     name: "slack",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(useCases),
-    router: (resolveSecurity) => slackRouter(useCases, resolveSecurity, publicOrigin),
+    resolvers: createResolvers(slackConnection),
+    router: (resolveSecurity) => slackRouter(slackConnection, resolveSecurity, publicOrigin),
   };
 }

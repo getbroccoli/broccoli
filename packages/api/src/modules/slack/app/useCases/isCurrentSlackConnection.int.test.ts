@@ -33,7 +33,18 @@ test("rejects a snapshot after reconnecting the same workspace with the same tok
     },
   });
   const { snapshot } = await slack.readSlackMembers(OWNER);
-  await slack.connectSlack(OWNER, { code: "test-code", codeVerifier: "test-verifier" });
+  const { authorizeUrl, pendingToken } = slack.beginSlackConnection(
+    OWNER,
+    "https://example.com/callback",
+  );
+  expect(
+    await slack.finishSlackConnection(OWNER, {
+      pendingToken,
+      state: authorizeUrl.searchParams.get("state")!,
+      code: "test-code",
+      error: undefined,
+    }),
+  ).toBeNull();
 
   const current = await runInTransaction(orm, createEventBus(createLogger("silent")), (tx) =>
     slack.isCurrentSlackConnection(OWNER, tx, snapshot),

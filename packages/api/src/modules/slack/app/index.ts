@@ -1,1 +1,5 @@
-export { createSlackUseCases, type SlackMembersRead, type SlackUseCases } from "./useCases";
+export {
+  createSlackConnectionService,
+  type SlackConnectionService,
+  type SlackMembersRead,
+} from "./useCases";

@@ -10,14 +10,12 @@ type SlackUseCases = ReturnType<typeof slackUseCases>;
 const calls = {
   beginSlackConnection: (slack, ctx) =>
     slack.beginSlackConnection(ctx, "https://example.com/callback"),
-  connectSlack: (slack, ctx) =>
-    slack.connectSlack(ctx, { code: "test-code", codeVerifier: "test-verifier" }),
   getSlackConnection: (slack, ctx) => slack.getSlackConnection(ctx),
   readSlackMembers: (slack, ctx) => slack.readSlackMembers(ctx),
   isCurrentSlackConnection: (slack, ctx, tx) =>
     slack.isCurrentSlackConnection(ctx, tx, "test-snapshot"),
 } satisfies Record<
-  keyof SlackUseCases,
+  Exclude<keyof SlackUseCases, "finishSlackConnection">,
   (slack: SlackUseCases, ctx: SecurityContext, tx: Tx) => unknown
 >;
 

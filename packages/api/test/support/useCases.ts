@@ -6,7 +6,7 @@ import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack"
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases } from "../../src/modules/demo";
 import { createImportUseCases } from "../../src/modules/imports";
-import { createSlackUseCases, type SlackUseCases } from "../../src/modules/slack";
+import { createSlackConnectionService, type SlackConnectionService } from "../../src/modules/slack";
 import { TEST_ENCRYPTION } from "./testEncryption";
 
 /**
@@ -33,7 +33,7 @@ export function importUseCases(
   {
     slack = {},
   }: {
-    slack?: Partial<Pick<SlackUseCases, "readSlackMembers" | "isCurrentSlackConnection">>;
+    slack?: Partial<Pick<SlackConnectionService, "readSlackMembers" | "isCurrentSlackConnection">>;
   } = {},
 ) {
   const logger = createLogger("silent");
@@ -53,7 +53,7 @@ export function importUseCases(
 }
 
 export function slackUseCases(
-  orm: Parameters<typeof createSlackUseCases>[0]["orm"],
+  orm: Parameters<typeof createSlackConnectionService>[0]["orm"],
   {
     encryption = TEST_ENCRYPTION,
     slackAuthorization = {},
@@ -65,14 +65,20 @@ export function slackUseCases(
   } = {},
 ) {
   const logger = createLogger("silent");
-  return createSlackUseCases({
+  return createSlackConnectionService({
     orm,
     eventBus: createEventBus(logger),
     logger,
     encryption,
     slackAuthorization: {
-      authorizeUrl: () => {
-        throw new Error("Unexpected Slack authorization");
+      authorizeUrl: ({ returnTo, state, codeChallenge }) => {
+        const url = new URL("https://example.com/slack/authorize");
+        url.search = new URLSearchParams({
+          return_to: returnTo,
+          state,
+          code_challenge: codeChallenge,
+        }).toString();
+        return url;
       },
       exchange: () => {
         throw new Error("Unexpected Slack exchange");

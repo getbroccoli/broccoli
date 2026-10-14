@@ -22,13 +22,13 @@ export function createModules(
   { mode, publicUrl, brandLookupUrl, slack }: ModuleSettings,
 ): ModuleManifest[] {
   // Built once: the Slack module serves it and the import reads Slack through it.
-  const slackUseCases = createSlack({ ...core, slack });
+  const slackConnection = createSlack({ ...core, slack });
   return [
     systemModule({ orm: core.orm, mode }),
     employeesModule({ orm: core.orm }),
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, eventBus: core.eventBus }),
-    slackModule({ useCases: slackUseCases, orm: core.orm, mode, publicUrl }),
-    importsModule({ orm: core.orm, eventBus: core.eventBus, slack: slackUseCases }),
+    slackModule({ slackConnection, orm: core.orm, mode, publicUrl }),
+    importsModule({ orm: core.orm, eventBus: core.eventBus, slack: slackConnection }),
   ];
 }

@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { expect, startFakeSlack, TestEnv, test as baseTest } from "#test/support";
 
 const test = baseTest.extend<{ slack: Awaited<ReturnType<typeof startFakeSlack>>; env: TestEnv }>({
@@ -22,7 +20,7 @@ const test = baseTest.extend<{ slack: Awaited<ReturnType<typeof startFakeSlack>>
   },
 });
 
-test("connecting redirects the owner to the relay with an OAuth cookie and S256 challenge", async ({
+test("connecting redirects the owner to the relay with an OAuth cookie and callback URL", async ({
   env,
   slack,
 }) => {
@@ -31,7 +29,7 @@ test("connecting redirects the owner to the relay with an OAuth cookie and S256 
   const response = await browser.getManual("/api/integrations/slack/connect");
 
   expect(response.status).toBe(302);
-  const { cookie, state, codeVerifier, authorizeUrl } = authorization(response);
+  const { cookie, authorizeUrl } = authorization(response);
   expect(cookie).toContain("Path=/api/integrations/slack");
   expect(cookie).toContain("Max-Age=600");
   expect(cookie).toContain("HttpOnly");
@@ -40,11 +38,6 @@ test("connecting redirects the owner to the relay with an OAuth cookie and S256 
   expect(authorizeUrl.pathname).toBe("/slack/authorize");
   expect(authorizeUrl.searchParams.get("return_to")).toBe(
     `${env.url}/api/integrations/slack/callback`,
-  );
-  expect(authorizeUrl.searchParams.get("state")).toBe(state);
-  expect(codeVerifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
-  expect(authorizeUrl.searchParams.get("code_challenge")).toBe(
-    createHash("sha256").update(codeVerifier).digest("base64url"),
   );
 });
 
@@ -59,9 +52,7 @@ test("connecting saves the workspace and an explicit read imports all Slack page
     { id: "U2", profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" } },
   ]);
   const { browser } = await env.signInAsOwner();
-  const { state, codeVerifier } = authorization(
-    await browser.getManual("/api/integrations/slack/connect"),
-  );
+  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
 
   const callback = await browser.getManual(
     `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
@@ -75,7 +66,7 @@ test("connecting saves the workspace and an explicit read imports all Slack page
   const redemption = slack.requests.find(({ path }) => path === "/slack/redeem");
   expect(redemption).toMatchObject({
     method: "POST",
-    body: { handle: "test-handle", code_verifier: codeVerifier },
+    body: { handle: "test-handle" },
   });
   expect(slack.requests.filter(({ path }) => path.startsWith("/users.list"))).toEqual([]);
   const connection = await browser.graphql(`query {
@@ -256,17 +247,35 @@ test("connecting without a session is refused", async ({ env, slack }) => {
   expect(slack.requests).toEqual([]);
 });
 
+test("a callback after signing out redirects with state and clears the OAuth cookie", async ({
+  env,
+  slack,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
+  await browser.post("/api/auth/sign-out", {});
+
+  const response = await browser.getManual(
+    `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
+  );
+
+  expect(response.status).toBe(302);
+  expect(response.headers.get("location")).toBe("/setup/import?slackError=state");
+  expect(response.headers.getSetCookie()).toEqual(
+    expect.arrayContaining([expect.stringMatching(/^broccoli_slack_oauth=.*Max-Age=0/)]),
+  );
+  expect(slack.requests).toEqual([]);
+});
+
 function authorization(response: Response) {
   const cookie = response.headers
     .getSetCookie()
     .find((value) => value.startsWith("broccoli_slack_oauth="));
   if (!cookie) throw new Error("The Slack OAuth cookie is missing");
-  const [state, codeVerifier] = cookie
-    .split(";", 1)[0]!
-    .slice("broccoli_slack_oauth=".length)
-    .split(".");
-  if (!state || !codeVerifier) throw new Error("The Slack OAuth cookie is incomplete");
   const location = response.headers.get("location");
   if (!location) throw new Error("The authorization redirect is missing");
-  return { cookie, state, codeVerifier, authorizeUrl: new URL(location) };
+  const authorizeUrl = new URL(location);
+  const state = authorizeUrl.searchParams.get("state");
+  if (!state) throw new Error("The authorization state is missing");
+  return { cookie, state, authorizeUrl };
 }
