@@ -6,6 +6,7 @@ export {
   type GraphqlContext,
   type SecurityResolver,
 } from "./apollo";
+export { perRequest } from "./perRequest";
 export type { Resolvers } from "./resolvers.gen";
 export { DateScalar, DateTimeScalar } from "./scalars";
 export { readSdl } from "./sdl";

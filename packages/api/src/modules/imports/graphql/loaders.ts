@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 
-import type { GraphqlContext } from "../../../core/graphql";
+import { type GraphqlContext, perRequest } from "../../../core/graphql";
 import type { ImportUseCases } from "../app";
 import type { ImportSource } from "../domain";
 
@@ -13,15 +13,7 @@ export type ImportLoaders = ReturnType<typeof createLoaders>;
 export function importLoaders(
   useCases: ImportUseCases,
 ): (context: GraphqlContext) => ImportLoaders {
-  const perRequest = new WeakMap<GraphqlContext, ImportLoaders>();
-  return (context) => {
-    let loaders = perRequest.get(context);
-    if (!loaders) {
-      loaders = createLoaders(useCases, context);
-      perRequest.set(context, loaders);
-    }
-    return loaders;
-  };
+  return perRequest((context) => createLoaders(useCases, context));
 }
 
 function createLoaders(useCases: ImportUseCases, context: GraphqlContext) {
