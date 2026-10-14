@@ -11,11 +11,11 @@ export type { SlackReader } from "./importContext";
 /** Everything that can be done with the import; the adapters call nothing else. */
 export function createImportUseCases({
   orm,
-  eventBus,
+  transact,
   slack,
-}: Pick<ModuleDependencies, "orm" | "eventBus"> & { slack: SlackReader }) {
+}: Pick<ModuleDependencies, "orm" | "transact"> & { slack: SlackReader }) {
   const imports = importRepository(orm);
-  const context = { orm, eventBus, slack, imports };
+  const context = { transact, slack, imports };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     skipImport: (ctx: SecurityContext) => skipImport(context, ctx),

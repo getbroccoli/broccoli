@@ -1,4 +1,3 @@
-import { runInTransaction } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 import type { CalendarDate } from "../../../../utils";
 import { createDemoEmployees, hasEmployees } from "../../../employees";
@@ -8,7 +7,7 @@ import { readAvatars } from "./readAvatars";
 
 /** Fills an instance without employees with the demo company; otherwise does nothing. */
 export async function seedDemoData(
-  { orm, eventBus }: DemoContext,
+  { transact }: DemoContext,
   ctx: SecurityContext,
   today: CalendarDate,
 ) {
@@ -16,7 +15,7 @@ export async function seedDemoData(
   const people = demoPeople(today);
   // Read before the transaction opens, so no file I/O runs while it holds locks.
   const avatars = await readAvatars(people.map(({ key }) => key));
-  await runInTransaction(orm, eventBus, async (tx) => {
+  await transact(async (tx) => {
     if (await hasEmployees(ctx, tx)) {
       return;
     }

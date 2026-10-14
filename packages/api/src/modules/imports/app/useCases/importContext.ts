@@ -1,5 +1,4 @@
-import type { Orm } from "../../../../core/db";
-import type { EventBus } from "../../../../core/events";
+import type { Transact } from "../../../../core/db";
 import type { SlackConnectionService } from "../../../slack";
 import type { ImportRepository } from "../../db";
 
@@ -11,8 +10,7 @@ export type SlackReader = Pick<
 
 /** What the import use cases share. */
 export interface ImportContext {
-  orm: Orm;
-  eventBus: EventBus;
+  transact: Transact;
   slack: SlackReader;
   imports: ImportRepository;
 }

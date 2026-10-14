@@ -1,5 +1,4 @@
 import type { SecurityContext } from "../../../../core/security";
-import { runInTransaction } from "../../../../core/db";
 import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { mapSlackMembers } from "./slackRecords";
@@ -13,7 +12,7 @@ export async function readSlack(context: ImportContext, ctx: SecurityContext): P
   // Slack is read before the transaction, which never waits on another service.
   const { workspace, members, snapshot } = await context.slack.readSlackMembers(ctx);
   const records = mapSlackMembers(members);
-  await runInTransaction(context.orm, context.eventBus, async (tx) => {
+  await context.transact(async (tx) => {
     // A connect since the read stored another connection; its members are read next time.
     if (!(await context.slack.isCurrentSlackConnection(ctx, tx, snapshot))) {
       return;

@@ -8,8 +8,7 @@ import { setSessionCookie } from "better-auth/cookies";
 import { z } from "zod";
 
 import { authDatabase } from "../../auth";
-import { ormOf, runInTransaction, type Orm } from "../../db";
-import type { EventBus } from "../../events";
+import { ormOf, type Transact } from "../../db";
 import type { ManagedAssignment } from "../../instance";
 import { PrincipalSecurityContext } from "../../security";
 import { SignInRefusedError, signInWithTicket } from "../app";
@@ -29,8 +28,7 @@ const STATE_COOKIE_OPTIONS = { httpOnly: true, secure: true, sameSite: "none", p
 type SignInError = "sign_in_required" | "sign_in_unavailable";
 
 export interface ManagedSignInOptions {
-  orm: Orm;
-  eventBus: EventBus;
+  transact: Transact;
   assignment: ManagedAssignment;
   /** Tickets must be signed by the accounts service; the audience is the public origin. */
   tokenCheck: Omit<TokenCheck, "audience">;
@@ -47,12 +45,7 @@ export function callbackOnlyTrust({ websiteOrigin }: ManagedAssignment) {
  * fresh state; `POST /api/auth/managed/callback` takes the ticket the website posts
  * back and signs its user in. Both answer with redirects, never JSON.
  */
-export function managedSignInPlugin({
-  orm,
-  eventBus,
-  assignment,
-  tokenCheck,
-}: ManagedSignInOptions) {
+export function managedSignInPlugin({ transact, assignment, tokenCheck }: ManagedSignInOptions) {
   const { companyId, publicOrigin, websiteOrigin } = assignment;
   const signInFailed = (error: SignInError) => redirect(`${publicOrigin}/login?error=${error}`);
 
@@ -80,7 +73,7 @@ export function managedSignInPlugin({
   /** Uses the ticket and creates the session in one transaction. */
   function signIn(ctx: GenericEndpointContext, ticket: ManagedTicket) {
     const { internalAdapter, options } = ctx.context;
-    return runInTransaction(orm, eventBus, (tx) =>
+    return transact((tx) =>
       // Better Auth's writes join the transaction that uses the ticket.
       runWithAdapter(authDatabase(ormOf(tx))(options), async () => {
         const { userId } = await signInWithTicket(

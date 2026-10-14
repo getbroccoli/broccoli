@@ -1,5 +1,4 @@
-import { type Orm, runInTransaction, type Tx } from "../../../../core/db";
-import type { EventBus } from "../../../../core/events";
+import type { Transact, Tx } from "../../../../core/db";
 import { deleteFiles, storeFile } from "../../../../core/files";
 import type { Logger } from "../../../../core/logger";
 import type { SecurityContext } from "../../../../core/security";
@@ -15,11 +14,10 @@ import { MAX_LOGO_BYTES } from "./company";
  */
 export async function detectCompanyNameAndLogo(
   {
-    orm,
-    eventBus,
+    transact,
     brandLookup,
     logger,
-  }: { orm: Orm; eventBus: EventBus; brandLookup: BrandLookup; logger: Logger },
+  }: { transact: Transact; brandLookup: BrandLookup; logger: Logger },
   ctx: SecurityContext,
   { email }: { email: string },
 ): Promise<void> {
@@ -32,7 +30,7 @@ export async function detectCompanyNameAndLogo(
     // The HTTP call runs before the transaction, so no connection or lock waits on it.
     const brand = await brandLookup(domain);
     const logo = brand?.logo ? parseRasterImage(brand.logo, { maxBytes: MAX_LOGO_BYTES }) : null;
-    await runInTransaction(orm, eventBus, (tx) => saveBrandOnce(tx, brand?.name ?? null, logo));
+    await transact((tx) => saveBrandOnce(tx, brand?.name ?? null, logo));
   } catch (error) {
     logger.warn(
       { err: error },

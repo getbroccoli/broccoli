@@ -7,8 +7,7 @@ import { setSessionCookie } from "better-auth/cookies";
 import { z } from "zod";
 
 import { authDatabase } from "../../auth";
-import { type Orm, ormOf, runInTransaction } from "../../db";
-import type { EventBus } from "../../events";
+import { type Orm, ormOf, type Transact } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
 import { claimOwner, hasOwner } from "../app";
 import { OwnerExistsError } from "../domain";
@@ -27,7 +26,7 @@ type SetupBody = z.infer<typeof setupBody>;
  * in. Works once; for self-hosted instances only. Answers after the handlers of
  * `instance.owner_claimed` have run.
  */
-export function setupPlugin(orm: Orm, eventBus: EventBus) {
+export function setupPlugin(orm: Orm, transact: Transact) {
   return {
     id: "setup",
     endpoints: {
@@ -39,12 +38,7 @@ export function setupPlugin(orm: Orm, eventBus: EventBus) {
         }
         // Hashing is slow, so it happens before the transaction takes its lock.
         const passwordHash = await ctx.context.password.hash(ctx.body.password);
-        const owner = await createOwner(
-          { orm, eventBus },
-          ctx,
-          ctx.body.email.toLowerCase(),
-          passwordHash,
-        );
+        const owner = await createOwner(transact, ctx, ctx.body.email.toLowerCase(), passwordHash);
         await setSessionCookie(ctx, owner);
         return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
       }),
@@ -69,14 +63,14 @@ function assertValidCredentials(
 
 /** Creates the owner with a password and a session, in one transaction. */
 async function createOwner(
-  { orm, eventBus }: { orm: Orm; eventBus: EventBus },
+  transact: Transact,
   ctx: GenericEndpointContext,
   email: string,
   passwordHash: string,
 ) {
   const { internalAdapter, options } = ctx.context;
   try {
-    return await runInTransaction(orm, eventBus, (tx) =>
+    return await transact((tx) =>
       // Better Auth's writes join the transaction that holds the instance lock.
       runWithAdapter(authDatabase(ormOf(tx))(options), () =>
         claimOwner(PrincipalSecurityContext.system(), tx, async () => {

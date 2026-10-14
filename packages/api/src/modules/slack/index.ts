@@ -26,7 +26,7 @@ export interface SlackUrls {
 export function createSlack({
   slack,
   ...dependencies
-}: Pick<ModuleDependencies, "orm" | "eventBus" | "logger" | "secretBox"> & {
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "secretBox"> & {
   slack: SlackUrls;
 }): SlackConnectionService {
   return createSlackConnectionService({

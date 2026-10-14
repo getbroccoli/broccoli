@@ -1,8 +1,6 @@
 import { expect, NON_OWNER, slackUseCases, test } from "#test/support";
 
-import { runInTransaction, type Tx } from "../../../../core/db";
-import { createEventBus } from "../../../../core/events";
-import { createLogger } from "../../../../core/logger";
+import type { Tx } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 
 type SlackUseCases = ReturnType<typeof slackUseCases>;
@@ -21,11 +19,11 @@ const calls = {
 
 test.for(Object.entries(calls))(
   "%s refuses a signed-in user who is not the owner",
-  async ([, call], { orm }) => {
+  async ([, call], { orm, transact }) => {
     const slack = slackUseCases(orm);
 
     await expect(
-      runInTransaction(orm, createEventBus(createLogger("silent")), async (tx) => {
+      transact(async (tx) => {
         await call(slack, NON_OWNER, tx);
       }),
     ).rejects.toMatchObject({

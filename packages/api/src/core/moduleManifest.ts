@@ -1,7 +1,7 @@
 import type express from "express";
 
-import type { Orm } from "./db";
-import type { EventBus, EventHandlers } from "./events";
+import type { Orm, Transact } from "./db";
+import type { EventHandlers } from "./events";
 import type { Resolvers, SecurityResolver } from "./graphql";
 import type { Logger } from "./logger";
 import type { SecretBox } from "./secrets";
@@ -12,7 +12,7 @@ import type { SecretBox } from "./secrets";
  */
 export interface ModuleDependencies {
   orm: Orm;
-  eventBus: EventBus;
+  transact: Transact;
   logger: Logger;
   /** Encrypts credentials the database stores, with the instance's encryption key. */
   secretBox: SecretBox;

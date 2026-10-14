@@ -1,5 +1,4 @@
 import type { SecurityContext } from "../../../../core/security";
-import { runInTransaction } from "../../../../core/db";
 import { advanceStep } from "../../../../core/instance";
 import { companyRepository } from "../../db";
 import { parseCompanyName } from "../../domain";
@@ -13,7 +12,7 @@ export async function updateCompany(
 ): Promise<Company> {
   ctx.requireOwnerOrSystem();
   const name = parseCompanyName(input.name);
-  await runInTransaction(context.orm, context.eventBus, async (tx) => {
+  await context.transact(async (tx) => {
     await companyRepository(tx).saveName(name);
     await advanceStep(ctx, tx, "company", "import");
   });

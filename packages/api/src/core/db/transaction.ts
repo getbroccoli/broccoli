@@ -37,11 +37,24 @@ class Transaction implements Tx {
   }
 }
 
+/** Runs work in one transaction, as `runInTransaction` describes. */
+export type Transact = <T>(work: (tx: Tx) => Promise<T>) => Promise<T>;
+
+/** Binds `runInTransaction` to the database and the event bus, once at startup. */
+export function transactor(orm: Orm, eventBus: EventBus): Transact {
+  return (work) => runInTransaction(orm, eventBus, work);
+}
+
+/** The ORM to query: the pool, or the open transaction behind `db`. */
+export function ormOf(db: Orm | Tx): Orm | OrmTransaction {
+  return db instanceof Transaction ? db.orm : (db as Orm);
+}
+
 /**
  * Runs `work` in one transaction. After the commit, dispatches the events published
  * on it; a rollback drops them. Inner operations join `tx`; there is no nesting.
  */
-export async function runInTransaction<T>(
+async function runInTransaction<T>(
   orm: Orm,
   eventBus: EventBus,
   work: (tx: Tx) => Promise<T>,
@@ -59,9 +72,4 @@ export async function runInTransaction<T>(
   }
   await eventBus.dispatch(transaction!.events);
   return result;
-}
-
-/** The ORM to query: the pool, or the open transaction behind `db`. */
-export function ormOf(db: Orm | Tx): Orm | OrmTransaction {
-  return db instanceof Transaction ? db.orm : (db as Orm);
 }

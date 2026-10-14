@@ -1,8 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { ApplicationError } from "../../../../core/applicationError";
-import { type Orm, runInTransaction, type Tx } from "../../../../core/db";
-import type { EventBus } from "../../../../core/events";
+import type { Orm, Transact, Tx } from "../../../../core/db";
 import type { Logger } from "../../../../core/logger";
 import type { SecretBox } from "../../../../core/secrets";
 import type { SecurityContext } from "../../../../core/security";
@@ -48,14 +47,14 @@ export interface SlackMembersRead {
  */
 export function createSlackConnectionService({
   orm,
-  eventBus,
+  transact,
   logger,
   secretBox,
   slackAuthorization,
   slackApi,
 }: {
   orm: Orm;
-  eventBus: EventBus;
+  transact: Transact;
   logger: Logger;
   secretBox: SecretBox;
   slackAuthorization: SlackAuthorization;
@@ -123,7 +122,7 @@ export function createSlackConnectionService({
       if (!grant) {
         return "failed";
       }
-      await runInTransaction(orm, eventBus, (tx) =>
+      await transact((tx) =>
         slackConnectionRepository(tx).save({
           teamId: grant.team.id,
           teamName: grant.team.name,

@@ -13,7 +13,7 @@ export type { ImportEmployeeValues } from "./domain";
  * workspace deliver records, which wait in the import for review.
  */
 export function importsModule(
-  dependencies: Pick<ModuleDependencies, "orm" | "eventBus"> & { slack: SlackReader },
+  dependencies: Pick<ModuleDependencies, "orm" | "transact"> & { slack: SlackReader },
 ): ModuleManifest {
   return {
     name: "imports",

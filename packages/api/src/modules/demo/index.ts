@@ -9,7 +9,7 @@ export { createDemoUseCases, type DemoUseCases } from "./app";
 
 /** The sample company a new instance starts with, until import exists; and clearing it. */
 export function demoModule(
-  dependencies: Pick<ModuleDependencies, "orm" | "eventBus">,
+  dependencies: Pick<ModuleDependencies, "orm" | "transact">,
 ): ModuleManifest {
   const useCases = createDemoUseCases(dependencies);
   return {
