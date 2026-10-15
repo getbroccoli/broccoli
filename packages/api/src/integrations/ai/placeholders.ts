@@ -28,20 +28,7 @@ export function withPlaceholders(state: JsonObject): JsonObject {
 /** A value shared by this many cells says nothing about one person: a department, a title. */
 const MIN_SHARED = 3;
 
-const BOOLEANS = new Set([
-  "yes",
-  "no",
-  "true",
-  "false",
-  "y",
-  "n",
-  "x",
-  "ja",
-  "nein",
-  "oui",
-  "non",
-  "sí",
-]);
+const BOOLEANS = new Set("yes no true false y n x ja nein oui non sí".split(" "));
 
 const PUBLIC_MAIL_DOMAINS = new Set([
   "gmail.com",

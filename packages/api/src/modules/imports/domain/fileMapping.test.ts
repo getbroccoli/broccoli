@@ -89,11 +89,7 @@ it("shows at most five samples below the chosen header", () => {
     },
   });
   for (const question of Object.values(questions)) {
-    expect(question.options).toEqual({
-      A: "Column A",
-      B: "Column B",
-      none: "No column holds this",
-    });
+    expect(question.options).toEqual(LETTER_OPTIONS);
   }
 });
 
@@ -120,11 +116,7 @@ it("shows the first five rows as samples and letter-only options without a heade
     },
   });
   for (const question of Object.values(questions)) {
-    expect(question.options).toEqual({
-      A: "Column A",
-      B: "Column B",
-      none: "No column holds this",
-    });
+    expect(question.options).toEqual(LETTER_OPTIONS);
   }
 });
 
@@ -338,3 +330,5 @@ it("keeps all raw cells when a header collides with a repeated header's suffix",
   expect(Object.keys(raw)).toHaveLength(3);
   expect(Object.values(raw)).toEqual(["Avery Stone", "Robin Reed", "Sam Vale"]);
 });
+
+const LETTER_OPTIONS = { A: "Column A", B: "Column B", none: "No column holds this" };
