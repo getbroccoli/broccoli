@@ -73,8 +73,7 @@ export const en = {
   "setup.company.submitting": "Saving…",
   "setup.company.failed": "Couldn’t save. Try again.",
   "setup.import.title": "Add your people",
-  "setup.import.description":
-    "Bring in your team from Slack. You review everyone before anyone is added.",
+  "setup.import.description": "Bring in your team from Slack, then approve to add them as people.",
   "setup.import.skip": "Skip for now",
   "setup.import.skipping": "Skipping…",
   "setup.import.skipFailed": "Couldn’t continue. Try again.",
