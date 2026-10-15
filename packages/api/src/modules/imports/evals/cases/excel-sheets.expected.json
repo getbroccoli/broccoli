@@ -1,0 +1,62 @@
+{
+  "records": [
+    {
+      "firstName": "Priya",
+      "lastName": "Shah",
+      "email": "priya.shah@acme.example",
+      "jobTitle": "Office manager",
+      "startDate": "2024-04-03"
+    },
+    {
+      "firstName": "Tom",
+      "lastName": "Okafor",
+      "email": "tom.okafor@acme.example",
+      "jobTitle": "Software engineer",
+      "startDate": "2023-11-07"
+    },
+    {
+      "firstName": "Mia",
+      "lastName": "Kowalski",
+      "email": "mia.kowalski@acme.example",
+      "jobTitle": "Accountant",
+      "startDate": "2025-01-12"
+    },
+    {
+      "firstName": "Lena",
+      "lastName": "Fischer",
+      "email": "lena.fischer@acme.example",
+      "jobTitle": "Data analyst",
+      "startDate": null
+    },
+    {
+      "firstName": "Omar",
+      "lastName": "Haddad",
+      "email": "omar.haddad@acme.example",
+      "jobTitle": "UX designer",
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Priya",
+    "Shah",
+    "priya.shah@acme.example",
+    "Tom",
+    "Okafor",
+    "tom.okafor@acme.example",
+    "Mia",
+    "Kowalski",
+    "mia.kowalski@acme.example",
+    "Lena",
+    "Fischer",
+    "lena.fischer@acme.example",
+    "Omar",
+    "Haddad",
+    "omar.haddad@acme.example",
+    "Jonas",
+    "Berg",
+    "jonas.berg@acme.example",
+    "Sara",
+    "Lind",
+    "sara.lind@acme.example"
+  ]
+}

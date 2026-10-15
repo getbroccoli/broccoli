@@ -35,3 +35,4 @@
 - `blank-columns-rows`: Staff sheet with empty columns between fields (blank headings), blank lines and a comma-only row between people; the four fields still map.
 - `wide-decoys`: Thirty-column UK payroll export with the five fields scattered among NI, tax, bank, IBAN, address, phone, personal-email, line-manager and emergency-contact decoys, plus birth and leaving dates.
 - `single-person`: One header row and one person; the single numeric start date 27/03/2023 has day above 12, so day-first order is known and parses to 2023-03-27.
+- `excel-sheets`: Excel workbook saved by LibreOffice: a Staff sheet with a title row, work emails built by a formula from the names and start dates as date cells that would be ambiguous as text, a Contractors sheet with its own column order, a hidden Leavers sheet that must not be read and a Departments list that maps to nobody.
