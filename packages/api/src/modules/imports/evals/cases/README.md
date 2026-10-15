@@ -1,7 +1,6 @@
 - `simple`: UK staff spreadsheet with a first-row header, middle names and a Mc surname, lowercased work emails, job titles and day-first start dates.
 - `uk-payroll`: UK payroll headings, leading titles, middle names, double-barrelled and apostrophised surnames, lowercase surname particles and plain two-word names.
 - `comma-names`: Payroll export headed `Surname, Forename`; a whole column of quoted family-first names preserves compound surnames.
-- `russian-fio`: Russian headings and patronymics in either order; initials and two-word Cyrillic names stay whole.
 - `world-names`: Given-first Latin names split, including hyphens, apostrophes and surname particles; native CJK, mononyms and names containing binti stay whole.
 - `title-row-semicolons`: Acme Corp staff tracker title and blank line before a semicolon table, a double-barrelled surname, day-first dates and an empty work email.
 - `tabs-month-first`: Export from a US-format tool, deliberately keeping month-first dates, tab delimiters and reordered columns.
