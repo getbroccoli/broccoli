@@ -101,7 +101,8 @@ export function ImportReview() {
                 type="button"
                 size="lg"
                 className="h-10 px-4"
-                disabled={approving || reading}
+                // Only what the owner sees now: not while the review refreshes or failed to.
+                disabled={approving || reading || loading || Boolean(error)}
                 onClick={() => void approve()}
               >
                 {approveLabel({ approving, reading, readyCount })}
