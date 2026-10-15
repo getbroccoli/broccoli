@@ -22,6 +22,10 @@ The words Broccoli's code and docs use, and what each one means.
 - **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.
 - **Demo data**: the sample company a new instance starts with, marked so that clearing it removes nothing else. People added while it is present stay.
 - **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
-- **Import source**: one place people come from, such as the connected Slack workspace. It owns its import records.
+- **Import source**: one place people come from, such as the connected Slack workspace or an uploaded file. It owns its import records.
+- **File source**: a staff file the owner uploaded as an import source. Its records come from the file's rows once the file is mapped.
+- **Mapping**: which row of a file is its header and which column holds which employee field. The model proposes it; code copies the cells.
+- **Model**: the AI service Broccoli asks multiple-choice questions, such as which column holds the email. Managed instances use Broccoli's key.
+- **Job**: background work that runs after the request that queued it, such as mapping a file, retried when it fails.
 - **Import record**: one record as one source proposes it, such as an import employee, with the source's values as they came; not yet a record of its module.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.
