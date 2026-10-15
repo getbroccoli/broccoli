@@ -18,3 +18,14 @@ export interface ImportSource {
   /** Set when `failed`. */
   failure: ImportSourceFailure | null;
 }
+
+/** A file source with what its mapping runs need. */
+export interface FileSource extends ImportSource {
+  fileId: string;
+  /** The current run; a job of an earlier run writes nothing. */
+  mappingAttempt: number;
+}
+
+/** How a mapping run ended. */
+export type MappingOutcome =
+  { status: "mapped" } | { status: "failed"; failure: ImportSourceFailure };

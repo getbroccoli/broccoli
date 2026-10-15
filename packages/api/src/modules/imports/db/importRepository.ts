@@ -13,9 +13,10 @@ import {
 import {
   IMPORT_EMPLOYEE_VERSION,
   type ImportEmployee,
+  type FileSource,
   type ImportSource,
-  type ImportSourceFailure,
   type IncomingRecord,
+  type MappingOutcome,
   parseImportEmployeeValues,
 } from "../domain";
 import { importRecords } from "./importRecordsTable";
@@ -61,15 +62,6 @@ export interface ImportRepository {
     query: ImportEmployeePageQuery,
   ): Promise<{ node: ImportEmployee; keyset: ImportEmployeeKeyset }[]>;
 }
-
-/** A file source with what its mapping runs need. */
-export interface FileSource extends ImportSource {
-  fileId: string;
-  mappingAttempt: number;
-}
-
-export type MappingOutcome =
-  { status: "mapped" } | { status: "failed"; failure: ImportSourceFailure };
 
 /** The sort values of the last employee record seen: first name, last name, id. */
 export type ImportEmployeeKeyset = [firstName: string, lastName: string, id: string];
