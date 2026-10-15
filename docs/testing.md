@@ -45,3 +45,17 @@ docker compose rm --stop --force postgres-test
 ```
 
 Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; removing the container discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.
+
+## Evals
+
+An eval checks one of the product's AI decisions against the real model, such as which row of a file is its header and which column holds which field. It runs the module's use cases like an integration test, with the real model instead of the fake one, and lives next to the module as `evals/<decision>.eval.test.ts` with its cases in `evals/cases/`: an input file and `<case>.expected.json`, the result the file must produce, written by hand from the rules and never copied from a run.
+
+Run the evals when you change the model, a question or what is sent to the model, and paste the summary into the pull request:
+
+```sh
+docker compose up -d --wait postgres-test
+EVAL_OPEN_ROUTER_KEY=… pnpm --filter @broccoli/api eval
+EVAL_OPEN_ROUTER_KEY=… pnpm --filter @broccoli/api eval -t simple   # one case
+```
+
+They call OpenRouter with your key, which costs money: a full run of the import cases costs well under one cent. Each case is one test: it fails when the saved result differs from the expected one, lists the personal values of the file that reached the model and prints what its model calls cost; the run ends with its total cost. Evals never run in `pnpm check` or CI.

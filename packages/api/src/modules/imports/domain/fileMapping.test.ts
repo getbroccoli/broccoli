@@ -93,6 +93,37 @@ it("shows at most five samples below the chosen header", () => {
   }
 });
 
+it("shows the first five rows as samples and letter-only options without a header", () => {
+  const sheet = Array.from({ length: 6 }, (_, index) => [
+    `Person ${index}`,
+    `person${index}@example.com`,
+  ]);
+
+  const { state, questions } = columnQuestions(sheet, null);
+
+  expect(state).toEqual({
+    columns: {
+      A: { samples: ["Person 0", "Person 1", "Person 2", "Person 3", "Person 4"] },
+      B: {
+        samples: [
+          "person0@example.com",
+          "person1@example.com",
+          "person2@example.com",
+          "person3@example.com",
+          "person4@example.com",
+        ],
+      },
+    },
+  });
+  for (const question of Object.values(questions)) {
+    expect(question.options).toEqual({
+      A: "Column A",
+      B: "Column B",
+      none: "No column holds this",
+    });
+  }
+});
+
 it("cuts column headers and samples to 100 characters", () => {
   expect(columnQuestions([["h".repeat(101)], ["s".repeat(101)]], 0).state).toEqual({
     columns: {
@@ -152,7 +183,41 @@ it("leaves unanswered fields unmapped", () => {
   ).toEqual({ ...UNMAPPED, email: 1 });
 });
 
-it("splits the full name at its last space", () => {
+it("reads every row without a header with letter keys and one-based sheet ids", () => {
+  const sheet = [
+    ["Avery Stone", "avery@example.com"],
+    ["Robin Reed", "robin@example.com"],
+  ];
+
+  const records = readFileRecords(sheet, null, { ...UNMAPPED, fullName: 0, email: 1 });
+
+  expect(records).toEqual([
+    {
+      externalId: "row:1",
+      raw: { A: "Avery Stone", B: "avery@example.com" },
+      values: {
+        firstName: "Avery",
+        lastName: "Stone",
+        email: "avery@example.com",
+        jobTitle: null,
+        startDate: null,
+      },
+    },
+    {
+      externalId: "row:2",
+      raw: { A: "Robin Reed", B: "robin@example.com" },
+      values: {
+        firstName: "Robin",
+        lastName: "Reed",
+        email: "robin@example.com",
+        jobTitle: null,
+        startDate: null,
+      },
+    },
+  ]);
+});
+
+it("splits a full name into given and middle names and a surname", () => {
   const [record] = readFileRecords([["Name"], ["Avery Robin Stone"]], 0, {
     ...UNMAPPED,
     fullName: 0,

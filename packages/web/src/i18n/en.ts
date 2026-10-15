@@ -115,7 +115,6 @@ export const en = {
   "imports.files.mapping": "Reading columns…",
   "imports.files.onePerson": "1 person",
   "imports.files.people": "{count} people",
-  "imports.files.noHeader": "Couldn’t find the table header.",
   "imports.files.noPeopleColumns": "Couldn’t find a name or email column.",
   "imports.files.unavailable": "Couldn’t reach the AI provider.",
   "imports.files.retry": "Retry",

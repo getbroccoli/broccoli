@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "firstName": "Eilidh",
+      "lastName": "MacRae",
+      "email": "eilidh.macrae@acme-corp.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2024-08-12"
+    },
+    {
+      "firstName": "Piotr",
+      "lastName": "Zieliński",
+      "email": "piotr.zielinski@acme-corp.example",
+      "jobTitle": "Maintenance Technician",
+      "startDate": "2023-04-24"
+    },
+    {
+      "firstName": "Leon",
+      "lastName": "Baptiste",
+      "email": "leon.baptiste@acme-corp.example",
+      "jobTitle": "Sales Adviser",
+      "startDate": "2025-01-20"
+    }
+  ],
+  "forbidden": [
+    "Eilidh MacRae",
+    "eilidh.macrae@acme-corp.example",
+    "Eilidh",
+    "MacRae",
+    "Piotr Zieliński",
+    "piotr.zielinski@acme-corp.example",
+    "Piotr",
+    "Zieliński",
+    "Leon Baptiste",
+    "leon.baptiste@acme-corp.example",
+    "Leon",
+    "Baptiste"
+  ]
+}

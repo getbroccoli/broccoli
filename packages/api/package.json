@@ -16,6 +16,7 @@
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run -c vitest.integration.config.ts",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
+    "eval": "vitest run -c vitest.eval.config.ts",
     "db:generate": "drizzle-kit generate"
   },
   "devDependencies": {

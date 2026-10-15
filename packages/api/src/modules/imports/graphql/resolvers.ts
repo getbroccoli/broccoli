@@ -6,7 +6,6 @@ const IMPORT = {};
 const KINDS = { slack: "SLACK", file: "FILE" } as const;
 const STATUSES = { mapping: "MAPPING", mapped: "MAPPED", failed: "FAILED" } as const;
 const FAILURES = {
-  no_header: "NO_HEADER",
   no_people_columns: "NO_PEOPLE_COLUMNS",
   unavailable: "UNAVAILABLE",
 } as const;

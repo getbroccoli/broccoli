@@ -17,7 +17,6 @@ import {
 import { t } from "@/i18n";
 
 const FAILURE_MESSAGES = {
-  NO_HEADER: "imports.files.noHeader",
   NO_PEOPLE_COLUMNS: "imports.files.noPeopleColumns",
   UNAVAILABLE: "imports.files.unavailable",
 } as const satisfies Record<ImportSourceFailure, string>;

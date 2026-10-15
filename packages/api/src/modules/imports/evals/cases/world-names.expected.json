@@ -1,0 +1,68 @@
+{
+  "records": [
+    {
+      "firstName": "Anne-Marie",
+      "lastName": "O'Brien",
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Lucía Vega",
+      "lastName": "Rojas",
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Eva",
+      "lastName": "van der Meer",
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "林美玲",
+      "lastName": null,
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Wening",
+      "lastName": null,
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Farah binti Rahman",
+      "lastName": null,
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Anne-Marie",
+    "O'Brien",
+    "Anne-Marie O'Brien",
+    "Lucía",
+    "Vega",
+    "Lucía Vega",
+    "Rojas",
+    "Lucía Vega Rojas",
+    "Eva",
+    "van",
+    "der",
+    "Meer",
+    "van der Meer",
+    "Eva van der Meer",
+    "林美玲",
+    "Wening",
+    "Farah",
+    "binti",
+    "Rahman",
+    "Farah binti Rahman"
+  ]
+}

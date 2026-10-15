@@ -120,6 +120,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **Test data** comes from `TestSeed`, which inserts through each module's repository and skips the use cases, so setup never depends on the code under test and writes no audit rows or events. The demo company lives in the `demo` module, not in test seeds.
 - **Property-based tests** are used sparingly and agreed case by case (access rules are the first candidate).
 - MCP gets smoke tests after the first release.
+- **Evals** (`*.eval.test.ts`) run the product's AI decisions against the real model, on demand with a developer's key; they are not part of CI.
 
 ## 10. Tooling and layout
 

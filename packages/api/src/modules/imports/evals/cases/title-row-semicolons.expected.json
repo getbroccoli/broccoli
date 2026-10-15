@@ -1,0 +1,38 @@
+{
+  "records": [
+    {
+      "firstName": "Mairwen",
+      "lastName": "Hughes",
+      "email": "mairwen.hughes@acme-corp.example",
+      "jobTitle": "Bookkeeper",
+      "startDate": "2024-04-23"
+    },
+    {
+      "firstName": "Dev",
+      "lastName": "Mehta",
+      "email": "dev.mehta@acme-corp.example",
+      "jobTitle": "Operations Assistant",
+      "startDate": "2023-06-05"
+    },
+    {
+      "firstName": "Simone",
+      "lastName": "Campbell-Reed",
+      "email": null,
+      "jobTitle": "Customer Service Adviser",
+      "startDate": "2025-02-14"
+    }
+  ],
+  "forbidden": [
+    "Mairwen Hughes",
+    "mairwen.hughes@acme-corp.example",
+    "Mairwen",
+    "Hughes",
+    "Dev Mehta",
+    "dev.mehta@acme-corp.example",
+    "Dev",
+    "Mehta",
+    "Simone Campbell-Reed",
+    "Simone",
+    "Campbell-Reed"
+  ]
+}

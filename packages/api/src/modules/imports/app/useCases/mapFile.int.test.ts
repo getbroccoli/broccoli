@@ -103,17 +103,38 @@ test("maps a semicolon file with a title above the header", async ({
   ]);
 });
 
-test("fails the file when no row is the header", async ({ orm, seed, fakeDecisions: fake }) => {
-  const source = await seed.fileSource({ content: "Avery Stone,avery@example.com" });
-  fake.answer({ headerRow: "none" });
+test("maps a file without a header from its cells", async ({ orm, seed, fakeDecisions: fake }) => {
+  const source = await seed.fileSource({
+    content: "Avery Stone,avery@example.com\nRobin Reed,robin@example.com",
+  });
+  fake.answer({ headerRow: "none", fullName: "A", email: "B" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
-    { id: source.id, status: "failed", failure: "no_header" },
+    { id: source.id, status: "mapped", failure: null },
   ]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([
+    {
+      sourceId: source.id,
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+      jobTitle: null,
+      startDate: null,
+    },
+    {
+      sourceId: source.id,
+      firstName: "Robin",
+      lastName: "Reed",
+      email: "robin@example.com",
+      jobTitle: null,
+      startDate: null,
+    },
+  ]);
 });
 
 test("fails the file when no name or email column is found", async ({

@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "firstName": "Rhys",
+      "lastName": "Morgan-Hale",
+      "email": "rhys.morgan-hale@acme-corp.example",
+      "jobTitle": "Warehouse Supervisor",
+      "startDate": null
+    },
+    {
+      "firstName": "Niamh",
+      "lastName": "O'Kerr",
+      "email": "niamh.okerr@acme-corp.example",
+      "jobTitle": "Bookkeeper",
+      "startDate": null
+    },
+    {
+      "firstName": "Kemi",
+      "lastName": "Adebayo",
+      "email": "kemi.adebayo@acme-corp.example",
+      "jobTitle": "HR Adviser",
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Rhys Morgan-Hale",
+    "rhys.morgan-hale@acme-corp.example",
+    "Rhys",
+    "Morgan-Hale",
+    "Niamh O'Kerr",
+    "niamh.okerr@acme-corp.example",
+    "Niamh",
+    "O'Kerr",
+    "Kemi Adebayo",
+    "kemi.adebayo@acme-corp.example",
+    "Kemi",
+    "Adebayo"
+  ]
+}

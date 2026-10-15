@@ -1,0 +1,42 @@
+{
+  "records": [
+    {
+      "firstName": "Hannah Rose",
+      "lastName": "Whitcombe",
+      "email": "hannah.whitcombe@acme-corp.example",
+      "jobTitle": "Office Manager",
+      "startDate": "2024-03-01"
+    },
+    {
+      "firstName": "Cian",
+      "lastName": "McArden",
+      "email": "cian.mcarden@acme-corp.example",
+      "jobTitle": "Accounts Assistant",
+      "startDate": "2023-11-20"
+    },
+    {
+      "firstName": "Aisha",
+      "lastName": "Patel",
+      "email": "aisha.patel@acme-corp.example",
+      "jobTitle": "Customer Service Adviser",
+      "startDate": "2025-01-06"
+    }
+  ],
+  "forbidden": [
+    "Hannah Rose Whitcombe",
+    "Hannah.Whitcombe@acme-corp.example",
+    "Hannah",
+    "Rose",
+    "Whitcombe",
+    "Cian McArden",
+    "cian.mcarden@acme-corp.example",
+    "Cian",
+    "McArden",
+    "Aisha Patel",
+    "aisha.patel@acme-corp.example",
+    "Aisha",
+    "Patel",
+    "Hannah Rose",
+    "hannah.whitcombe@acme-corp.example"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "records": [
+    {
+      "firstName": "Arjun",
+      "lastName": "Baines",
+      "email": "arjun.baines@acme-corp.example",
+      "jobTitle": "IT Support Technician",
+      "startDate": "2022-04-11"
+    },
+    {
+      "firstName": "Nneka",
+      "lastName": "Okoye",
+      "email": "nneka.okoye@acme-corp.example",
+      "jobTitle": "Finance Officer",
+      "startDate": "2023-06-19"
+    },
+    {
+      "firstName": "Bethan",
+      "lastName": "McLeod",
+      "email": "bethan.mcleod@acme-corp.example",
+      "jobTitle": "HR Administrator",
+      "startDate": "2024-01-15"
+    }
+  ],
+  "forbidden": [
+    "QQ 12 34 56 C",
+    "arjun.baines@mail.example",
+    "Leela Baines",
+    "+44 7700 900101",
+    "17/08/1990",
+    "31/12/2025",
+    "Arjun Baines",
+    "arjun.baines@acme-corp.example",
+    "07700 900201",
+    "SW1A 0ZZ",
+    "ACM-001",
+    "Leela",
+    "Baines",
+    "Arjun",
+    "QQ 23 45 67 C",
+    "nneka.okoye@mail.example",
+    "Chidi Okoye",
+    "+44 7700 900102",
+    "24/02/1987",
+    "31/10/2025",
+    "Nneka Okoye",
+    "nneka.okoye@acme-corp.example",
+    "07700 900202",
+    "M1 1ZZ",
+    "ACM-002",
+    "Chidi",
+    "Okoye",
+    "Nneka",
+    "QQ 34 56 78 C",
+    "bethan.mcleod@mail.example",
+    "Iain McLeod",
+    "+44 7700 900103",
+    "06/11/1994",
+    "31/03/2026",
+    "Bethan McLeod",
+    "bethan.mcleod@acme-corp.example",
+    "07700 900203",
+    "CF10 1ZZ",
+    "ACM-003",
+    "Iain",
+    "McLeod",
+    "Bethan"
+  ]
+}

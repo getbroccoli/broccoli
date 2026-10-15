@@ -76,7 +76,7 @@ export class TestSeed {
     content: string;
     status?: "mapping" | "mapped" | "failed";
     attempt?: number;
-    failure?: "no_header" | "no_people_columns" | "unavailable" | null;
+    failure?: "no_people_columns" | "unavailable" | null;
   }) {
     const fileId = await this.file({ content: Buffer.from(content), mimeType: "text/csv" });
     const repository = importRepository(this.orm);

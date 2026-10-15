@@ -1,0 +1,44 @@
+{
+  "records": [
+    {
+      "firstName": "Elizabeth Mae",
+      "lastName": "Pritchard",
+      "email": "elizabeth.pritchard@acme-corp.example",
+      "jobTitle": "Office Manager",
+      "startDate": "2024-05-13"
+    },
+    {
+      "firstName": "Mohammed",
+      "lastName": "Rahman",
+      "email": "mohammed.rahman@acme-corp.example",
+      "jobTitle": "Finance Assistant",
+      "startDate": "2023-09-18"
+    },
+    {
+      "firstName": "Aleksandra",
+      "lastName": "Wójcik",
+      "email": "aleksandra.wojcik@acme-corp.example",
+      "jobTitle": "Recruitment Coordinator",
+      "startDate": "2025-02-03"
+    }
+  ],
+  "forbidden": [
+    "Elizabeth Mae",
+    "Pritchard",
+    "Liz Pritchard",
+    "elizabeth.pritchard@acme-corp.example",
+    "Elizabeth",
+    "Mae",
+    "Liz",
+    "Mohammed",
+    "Rahman",
+    "Mo Rahman",
+    "mohammed.rahman@acme-corp.example",
+    "Mo",
+    "Aleksandra",
+    "Wójcik",
+    "Ola Wójcik",
+    "aleksandra.wojcik@acme-corp.example",
+    "Ola"
+  ]
+}

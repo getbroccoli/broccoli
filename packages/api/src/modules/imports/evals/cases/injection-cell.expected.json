@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "firstName": "Callum",
+      "lastName": "Fenwick",
+      "email": "callum.fenwick@acme-corp.example",
+      "jobTitle": "IT Support Technician",
+      "startDate": "2024-06-17"
+    },
+    {
+      "firstName": "Zara",
+      "lastName": "Mahmood",
+      "email": "zara.mahmood@acme-corp.example",
+      "jobTitle": "Marketing Assistant",
+      "startDate": "2023-10-02"
+    },
+    {
+      "firstName": "Amara",
+      "lastName": "Okafor",
+      "email": "amara.okafor@acme-corp.example",
+      "jobTitle": "Payroll Assistant",
+      "startDate": "2025-03-10"
+    }
+  ],
+  "forbidden": [
+    "Callum Fenwick",
+    "callum.fenwick@acme-corp.example",
+    "Callum",
+    "Fenwick",
+    "Zara Mahmood",
+    "zara.mahmood@acme-corp.example",
+    "Zara",
+    "Mahmood",
+    "Amara Okafor",
+    "amara.okafor@acme-corp.example",
+    "Amara",
+    "Okafor"
+  ]
+}
