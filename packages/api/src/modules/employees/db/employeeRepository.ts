@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   afterKeyset,
+  containsPattern,
   isUniqueViolation,
   type KeysetOrder,
   keysetOrder,
@@ -12,7 +13,7 @@ import {
   orderByKeyset,
   type Tx,
 } from "../../../core/db";
-import { EmailTakenError, type Employee, type NewEmployee } from "../domain";
+import { EmailTakenError, type Employee, type EmployeeOrder, type NewEmployee } from "../domain";
 import { employees } from "./employeesTable";
 
 /** Employees stored in Postgres, through the pool or inside a transaction. */
@@ -34,11 +35,6 @@ export interface EmployeeRepository {
 }
 
 const EMAIL_UNIQUE_CONSTRAINT = "employees_email_unique";
-
-export interface EmployeeOrder {
-  field: "NAME" | "EMAIL" | "START_DATE";
-  direction: "ASC" | "DESC";
-}
 
 /** The sort values of the last row seen, as Postgres computed them, behind the order they belong to. */
 export type EmployeeKeyset = [field: string, direction: string, ...values: unknown[]];
@@ -179,7 +175,7 @@ function keysetColumns({ field, direction }: EmployeeOrder): KeysetOrder {
 }
 
 function matches(search: string): SQL {
-  const pattern = `%${search.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+  const pattern = containsPattern(search);
   return or(
     ilike(employees.firstName, pattern),
     ilike(employees.lastName, pattern),

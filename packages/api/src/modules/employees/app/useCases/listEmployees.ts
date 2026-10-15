@@ -1,20 +1,21 @@
 import type { SecurityContext } from "../../../../core/security";
-import { invalidInput } from "../../../../core/applicationError";
 import {
   type Connection,
+  type OrderArg,
   type PageArgs,
+  parseOrder,
   parsePage,
   toConnection,
 } from "../../../../core/pagination";
-import { employeeKeyset, type EmployeeOrder, type EmployeeRepository } from "../../db";
-import type { Employee } from "../../domain";
+import { parseSearch } from "../../../../core/search";
+import { employeeKeyset, type EmployeeRepository } from "../../db";
+import type { Employee, EmployeeOrder, EmployeeOrderField } from "../../domain";
 
-const SEARCH_MAX_LENGTH = 100;
 const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 
 export interface EmployeeListArgs extends PageArgs {
   /** Defaults to name order; the direction to ascending. */
-  orderBy?: { field: EmployeeOrder["field"]; direction?: EmployeeOrder["direction"] | null } | null;
+  orderBy?: OrderArg<EmployeeOrderField>;
   filter?: { search?: string | null } | null;
 }
 
@@ -25,22 +26,8 @@ export async function listEmployees(
   { orderBy, filter, ...pageArgs }: EmployeeListArgs,
 ): Promise<Connection<Employee>> {
   ctx.requireOwnerOrSystem();
-  const order: EmployeeOrder = orderBy
-    ? { field: orderBy.field, direction: orderBy.direction ?? "ASC" }
-    : DEFAULT_ORDER;
+  const order = parseOrder(orderBy, DEFAULT_ORDER);
   const search = parseSearch(filter?.search);
   const page = parsePage(pageArgs, employeeKeyset(order));
   return toConnection(await employees.findPage({ ...page, order, search }), page.first);
-}
-
-/** Trimmed, or null when blank. */
-function parseSearch(search: string | null | undefined): string | null {
-  const trimmed = search?.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (trimmed.length > SEARCH_MAX_LENGTH) {
-    throw invalidInput([{ field: "search", code: "too_long" }]);
-  }
-  return trimmed;
 }

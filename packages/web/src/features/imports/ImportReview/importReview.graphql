@@ -1,0 +1,32 @@
+query ImportReview($first: Int, $after: String, $orderBy: EmployeeOrder, $filter: EmployeeFilter) {
+  import {
+    id
+    readyEmployeeCount
+    sources {
+      id
+      status
+      employeeCount
+      ...SourceChips_source
+    }
+    employees(first: $first, after: $after, orderBy: $orderBy, filter: $filter) {
+      edges {
+        node {
+          id
+          ...ImportReviewColumns_importEmployee
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+mutation ApproveImport {
+  import {
+    approve {
+      id
+    }
+  }
+}

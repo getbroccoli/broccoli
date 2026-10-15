@@ -7,9 +7,9 @@ import { EmployeesDocument } from "@/__generated__/graphql";
 import { DataTable, TableSearchField, TableState } from "@/components/dataTable";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
-import { useListPage } from "@/lib/listPage";
+import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
 
-import { SEARCH_MAX_LENGTH, toEmployeesVariables, type DirectorySearch } from "./directorySearch";
+import { toEmployeeListVariables, type EmployeeListSearch } from "./employeeListSearch";
 import { EMPLOYEE_COLUMNS, useEmployeeRows } from "./employeeColumns";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
 
@@ -18,12 +18,12 @@ export function EmployeeDirectory() {
   const search = useSearch({ from: "/_authenticated/people" });
   const navigate = useNavigate({ from: "/people" });
   const writeSearch = useCallback(
-    (patch: Partial<DirectorySearch>, replace: boolean) =>
+    (patch: Partial<EmployeeListSearch>, replace: boolean) =>
       void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
     [navigate],
   );
   const { data, previousData, error, loading, refetch } = useQuery(EmployeesDocument, {
-    variables: toEmployeesVariables(search),
+    variables: toEmployeeListVariables(search),
   });
   const list = useListPage({
     search,

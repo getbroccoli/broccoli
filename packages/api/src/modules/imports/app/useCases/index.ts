@@ -11,6 +11,7 @@ import { readSlack } from "./readSlack";
 import { skipImport } from "./skipImport";
 
 export type { SlackReader } from "./importContext";
+export { incompleteReason } from "./importEmployeeMapping";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
 export function createImportUseCases({

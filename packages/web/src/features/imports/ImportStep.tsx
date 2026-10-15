@@ -1,16 +1,13 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { useRouter, useSearch } from "@tanstack/react-router";
+import { Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import {
-  ApproveImportDocument,
-  ImportStepDocument,
-  SkipImportDocument,
-} from "@/__generated__/graphql";
-import { Button } from "@/components/ui/button";
+import { ImportStepDocument, SkipImportDocument } from "@/__generated__/graphql";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
@@ -23,15 +20,10 @@ const SLACK_ERROR_MESSAGES = {
 
 const POLL_INTERVAL_MS = 2_000;
 
-const LEAVE_FAILURES = {
-  approve: "setup.import.approveFailed",
-  skip: "setup.import.skipFailed",
-} as const;
-
 /**
- * The import step of setup: the sources people come from. Approving turns the
- * imported people into employees; approving or skipping leaves the step, and the
- * router then reloads and routing sends the owner on into the app.
+ * The import step of setup: the sources people come from. Next leads to the review,
+ * where the owner approves; skipping leaves the step, and the router then reloads
+ * and routing sends the owner on into the app.
  */
 export function ImportStep() {
   const router = useRouter();
@@ -47,22 +39,20 @@ export function ImportStep() {
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
   }, [mapping, startPolling, stopPolling]);
-  const [approveImport, { loading: approving }] = useMutation(ApproveImportDocument);
   const [skipImport, { loading: skipping }] = useMutation(SkipImportDocument);
-  const [failure, setFailure] = useState<keyof typeof LEAVE_FAILURES | null>(null);
+  const [skipFailed, setSkipFailed] = useState(false);
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
-  const canApprove = sources.some(({ employeeCount }) => employeeCount > 0);
+  const canReview = sources.some(({ employeeCount }) => employeeCount > 0);
   const [uploading, setUploading] = useState(false);
-  const busy = approving || skipping;
   const reading = mapping || uploading;
 
-  const leave = async (how: keyof typeof LEAVE_FAILURES) => {
-    setFailure(null);
+  const skip = async () => {
+    setSkipFailed(false);
     try {
-      await (how === "approve" ? approveImport() : skipImport());
+      await skipImport();
     } catch {
-      setFailure(how);
+      setSkipFailed(true);
       return;
     }
     await router.invalidate();
@@ -70,23 +60,30 @@ export function ImportStep() {
 
   return (
     <SetupStepForm
-      onSubmit={() => void leave(canApprove ? "approve" : "skip")}
+      onSubmit={() => void skip()}
       footer={
         <div className="flex gap-2">
           <Button
-            type={canApprove ? "button" : "submit"}
+            type="submit"
             variant="outline"
             size="lg"
             className="h-10 px-4"
-            disabled={busy}
-            onClick={canApprove ? () => void leave("skip") : undefined}
+            disabled={skipping}
           >
             {t(skipping ? "setup.import.skipping" : "setup.import.skip")}
           </Button>
-          {canApprove && (
-            <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || reading}>
-              {t(approveLabel(approving, reading))}
-            </Button>
+          {canReview && (
+            <Link
+              to="/setup/import/review"
+              disabled={skipping || reading}
+              aria-disabled={skipping || reading}
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "h-10 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+              )}
+            >
+              {t(reading ? "setup.import.reading" : "setup.import.next")}
+            </Link>
           )}
         </div>
       }
@@ -117,18 +114,11 @@ export function ImportStep() {
       ) : (
         <Skeleton className="h-[66px] rounded-xl" />
       )}
-      {failure && (
+      {skipFailed && (
         <p role="alert" className="text-sm text-destructive">
-          {t(LEAVE_FAILURES[failure])}
+          {t("setup.import.skipFailed")}
         </p>
       )}
     </SetupStepForm>
   );
-}
-
-function approveLabel(approving: boolean, reading: boolean) {
-  if (approving) {
-    return "setup.import.approving";
-  }
-  return reading ? "setup.import.reading" : "setup.import.approve";
 }

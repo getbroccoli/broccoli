@@ -11,12 +11,10 @@ export interface DataTablePager {
   onFirst: () => void;
 }
 
-/** First page and Next page, for lists that page forward with a cursor. Hidden on a single page. */
+/** First page and Next page, for lists that page forward with a cursor. */
 export function TablePager({ hasNextPage, isFirstPage, onNext, onFirst }: DataTablePager) {
-  if (!hasNextPage && isFirstPage) return null;
-
   return (
-    <div className="flex items-center justify-end gap-1 border-t border-border/60 px-3 py-2">
+    <div className="ml-auto flex items-center gap-1">
       <Button
         variant="ghost"
         size="icon-sm"

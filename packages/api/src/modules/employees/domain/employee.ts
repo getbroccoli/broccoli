@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { invalidInput, type FieldError } from "../../../core/applicationError";
+import type { ListOrder } from "../../../core/pagination";
 import { type CalendarDate, parseCalendarDate } from "../../../utils";
 
 const NAME_MAX_LENGTH = 100;
@@ -21,6 +22,12 @@ export interface Employee {
   avatarFileId: string | null;
   createdAt: Date;
 }
+
+/** What a list of employees can be sorted by. */
+export type EmployeeOrderField = "NAME" | "EMAIL" | "START_DATE";
+
+/** How a list of employees, or of people about to become employees, is sorted. */
+export type EmployeeOrder = ListOrder<EmployeeOrderField>;
 
 export interface NewEmployeeInput {
   firstName: string;
@@ -79,6 +86,12 @@ export function parseNewEmployee(input: NewEmployeeInput): NewEmployee {
 export function tryParseNewEmployee(input: NewEmployeeInput): NewEmployee | null {
   const result = newEmployeeSchema.safeParse(input);
   return result.success ? result.data : null;
+}
+
+/** The employee rules' field errors for `input`; empty when it makes an employee. */
+export function employeeFieldErrors(input: NewEmployeeInput): FieldError[] {
+  const result = newEmployeeSchema.safeParse(input);
+  return result.success ? [] : fieldErrorsOf(result.error);
 }
 
 /** One error per field: the first problem found is the one worth fixing. */

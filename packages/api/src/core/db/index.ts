@@ -1,4 +1,5 @@
 export { connectDatabase, type Database, type Orm, type OrmTransaction } from "./database";
+export { containsPattern } from "./likePattern";
 export { MIGRATION_LOCK_KEY } from "./migrationRun";
 export {
   afterKeyset,

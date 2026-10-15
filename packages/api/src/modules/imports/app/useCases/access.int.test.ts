@@ -25,6 +25,7 @@ const calls = {
   "reads.listSources": (imports, ctx) => imports.reads.listSources(ctx),
   "reads.readSources": (imports, ctx) => imports.reads.readSources(ctx, []),
   "reads.countEmployees": (imports, ctx) => imports.reads.countEmployees(ctx, []),
+  "reads.readyEmployeeCount": (imports, ctx) => imports.reads.readyEmployeeCount(ctx),
   "reads.listEmployees": (imports, ctx) => imports.reads.listEmployees(ctx, {}),
   skipImport: (imports, ctx) => imports.skipImport(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx),

@@ -1,0 +1,5 @@
+fragment SourceChips_source on ImportSource {
+  id
+  kind
+  name
+}

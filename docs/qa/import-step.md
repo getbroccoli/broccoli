@@ -40,16 +40,13 @@ On a managed instance with `MANAGED_MODEL_API_KEY` set. A self-hosted instance s
 - [ ] A `.xlsx` file, an empty `.csv` and a file over 5 MB each show one red line naming the file and the reason; no card appears.
 - [ ] A CSV without a name or email column ends as "Couldn’t find a name or email column." with "Retry".
 - [ ] "Remove" in a card's menu removes the card and its people.
-- [ ] While a card reads "Reading columns…", the footer's button reads "Reading your files…" and is disabled; afterwards "Approve" adds the file's people next to the Slack members.
+- [ ] While a card reads "Reading columns…", the footer's button reads "Reading your files…" and is disabled; afterwards it reads "Next: review your people" again.
 
 ## Leaving the step
 
 - [ ] Before Slack is imported, the footer shows only "Skip for now".
-- [ ] With members imported, the footer shows "Skip for now" and "Approve".
-- [ ] "Approve" shows "Approving…" and lands on `/people`, which lists the members and no demo people; `/setup/import` now goes to `/people`.
-- [ ] A member whose Slack name is one word, without a last name, is not on `/people`.
-- [ ] With `/setup/import` open in two tabs, "Approve" in both adds each member once.
-- [ ] On a fresh instance, "Skip for now" lands on `/people` with the demo people; "Approve" in another open tab then adds no one.
+- [ ] With members imported, the footer shows "Skip for now" and "Next: review your people", which opens the [review](import-review.md).
+- [ ] On a fresh instance, "Skip for now" lands on `/people` with the demo people.
 
 ## Layout
 

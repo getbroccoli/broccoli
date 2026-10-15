@@ -2,15 +2,20 @@ import { Plant } from "@phosphor-icons/react";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 
 import { type SetupStepId, stepViews } from "./setupSteps";
 import { StepBars } from "./StepBars";
 import { StepList } from "./StepList";
 
+/** How wide the card's content runs: a form, or a table such as the import review. */
+export type SetupWidth = "default" | "wide";
+
 interface SetupLayoutProps {
   step: SetupStepId;
   title: string;
   description: string;
+  width?: SetupWidth;
   children?: ReactNode;
 }
 
@@ -18,7 +23,13 @@ interface SetupLayoutProps {
  * The frame of the setup pages: the setup steps beside a card with the step's heading.
  * The card fills the window and its body scrolls; the document does not.
  */
-export function SetupLayout({ step, title, description, children }: SetupLayoutProps) {
+export function SetupLayout({
+  step,
+  title,
+  description,
+  width = "default",
+  children,
+}: SetupLayoutProps) {
   const heading = useRef<HTMLHeadingElement>(null);
   const steps = stepViews(step);
 
@@ -45,7 +56,7 @@ export function SetupLayout({ step, title, description, children }: SetupLayoutP
       </aside>
       <main className="m-2 mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 md:my-3 md:mr-3 md:ml-0">
         <header className="shrink-0 px-6 pt-8 sm:px-10 sm:pt-12">
-          <div className="mx-auto max-w-[592px]">
+          <div className={cn("mx-auto", width === "wide" ? "max-w-[1180px]" : "max-w-[592px]")}>
             <h1
               ref={heading}
               tabIndex={-1}
