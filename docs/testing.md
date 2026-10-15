@@ -15,7 +15,7 @@ Three layers, most tests in the middle one:
 
 - Trivial code: constants, types, pass-through glue and placeholders.
 - Implementation details: private helpers, call order, or mocks of our own modules.
-- Frontend components in isolation. Test pure functions with unit tests and UI bugs in a browser.
+- Frontend components and pages, for now. Pure frontend functions, such as search-param parsing, get unit tests.
 - Integrations (`src/integrations/`) on their own. They are thin clients over shared helpers such as `fetchJson`, which have their own tests; use-case tests replace them with a fake, and end-to-end tests run them against a local fake service.
 - Configuration files by matching their text. Run the tool that reads them instead.
 
@@ -45,14 +45,3 @@ docker compose rm --stop --force postgres-test
 ```
 
 Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; removing the container discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.
-
-### Browser tests
-
-With `agent-browser` and Chromium installed, start `postgres-test` and run:
-
-```sh
-pnpm --filter @broccoli/web build
-pnpm --filter @broccoli/api exec vitest run -c vitest.browser.config.ts
-```
-
-CI skips these tests. Check development console warnings separately with `pnpm dev`.

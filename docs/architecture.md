@@ -110,7 +110,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - **i18n:** English only, but every user-facing string goes through one `t()` helper from day one.
 - **Dates are strings.** `Date` and `DateTime` values arrive and leave as strings (codegen maps both to `string`) and are stored, compared and sent as strings. A calendar `Date` is never turned into a JS `Date`: `new Date("2026-10-10")` is UTC midnight and shows the previous day west of UTC. A `DateTime` becomes a JS `Date` only inside display formatting (`Intl.DateTimeFormat`). A calendar `Date` is displayed by formatting the timestamp `Date.UTC(y, m - 1, d)` with `timeZone: "UTC"`.
 - Route files stay thin; feature components live in `features/<module>/`; a lint rule caps files at 300 lines. Routes and the shell compose features; a feature imports another feature only where `importRules.json` lists it.
-- Pure frontend functions get unit tests. Focused browser regressions use the built web app and the real self-hosted server; no component tests yet.
+- Pure frontend functions get unit tests; no component or browser tests yet.
 
 ## 9. Testing
 

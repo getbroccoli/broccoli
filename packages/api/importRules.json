@@ -73,8 +73,7 @@
       "src/modules/*",
       "src/utils"
     ],
-    "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"],
-    "test/browser": ["test/support"]
+    "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]
   },
   "layers": {
     "domain": [],
