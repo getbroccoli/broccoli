@@ -11,7 +11,7 @@ export {
   MANAGED_INSTANCE_ID,
 } from "./fakeAccounts";
 export { startFakeHttpServer } from "./fakeHttpServer";
-export { startFakeSlack, connectAndReadSlack, slackAuthorization } from "./fakeSlack";
+export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
