@@ -47,6 +47,7 @@ describe("splitFullName", () => {
     ["Farah binti Rahman", "Farah binti Rahman"],
     ["Nora Vale, Jr.", "Nora Vale, Jr."],
     ["Иванов Иван Пётр", "Иванов Иван Пётр"],
+    ["Иван Ильич Рабинович", "Иван Ильич Рабинович"],
     ["Ivanov Иван Ильич", "Ivanov Иван Ильич"],
   ])("keeps the uncertain name %s whole with single spaces", (fullName, firstName) => {
     expect(splitFullName(fullName)).toEqual({ firstName, lastName: null });
@@ -54,6 +55,12 @@ describe("splitFullName", () => {
 });
 
 describe("splitFullNames", () => {
+  it("keeps a long comma-free cell whole", () => {
+    const fullName = "a".repeat(64_000);
+
+    expect(splitFullNames([fullName])).toEqual([{ firstName: fullName, lastName: null }]);
+  });
+
   it("reads a column of comma names as family name followed by given name", () => {
     const names = ["  Vega Rojas , Lucía  ", null, "  ", "van der Meer, Eva", "D'Angelo, Luca"];
 

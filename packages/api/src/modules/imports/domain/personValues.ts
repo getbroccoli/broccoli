@@ -27,10 +27,12 @@ export function splitFullName(fullName: string): PersonName {
   }
   if (words.length === 3 && words.every((word) => CYRILLIC_WORD.test(word))) {
     const [first, second, third] = words as [string, string, string];
-    if (PATRONYMIC.test(third)) {
+    // Two patronymic-like words, such as Ильич Рабинович, leave the order unknown.
+    const patronymics = words.filter((word) => PATRONYMIC.test(word)).length;
+    if (patronymics === 1 && PATRONYMIC.test(third)) {
       return { firstName: `${second} ${third}`, lastName: first };
     }
-    if (PATRONYMIC.test(second)) {
+    if (patronymics === 1 && PATRONYMIC.test(second)) {
       return { firstName: `${first} ${second}`, lastName: third };
     }
   }
@@ -43,16 +45,19 @@ export function splitFullName(fullName: string): PersonName {
  */
 export function splitFullNames(fullNames: readonly (string | null)[]): PersonName[] {
   const filled = fullNames.map((name) => nonBlank(name ?? undefined));
-  const commaForm = filled.every((name) => name === null || COMMA_NAME.test(name));
-  return filled.map((name) => {
+  const parts = filled.map((name) => name?.split(",").map((part) => part.trim()));
+  const commaForm = parts.every(
+    (nameParts) => nameParts === undefined || (nameParts.length === 2 && nameParts.every(Boolean)),
+  );
+  return filled.map((name, index) => {
     if (name === null) {
       return { firstName: null, lastName: null };
     }
     if (!commaForm) {
       return splitFullName(name);
     }
-    const [family, given] = name.split(",") as [string, string];
-    return { firstName: given.trim(), lastName: family.trim() };
+    const [family, given] = parts[index] as [string, string];
+    return { firstName: given, lastName: family };
   });
 }
 
@@ -60,6 +65,5 @@ const LATIN_WORD = /^[\p{Script=Latin}'’-]+$/u;
 const CYRILLIC_WORD = /^[\p{Script=Cyrillic}-]+$/u;
 /** Russian, Ukrainian and Belarusian patronymic endings, such as Ильич or Іванівна. */
 const PATRONYMIC = /(ич|ична|овна|евна|івна|ївна|віч|ўна)$/iu;
-const COMMA_NAME = /^[^,]*[^\s,][^,]*,[^,]*[^\s,][^,]*$/;
 
 const email = z.email();
