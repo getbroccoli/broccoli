@@ -66,6 +66,16 @@ it("keeps heading words", () => {
   ).toEqual({ headings: ["Work email", "Start date", "Eintrittsdatum", "Vorname"] });
 });
 
+it("keeps job-title words", () => {
+  expect(withPlaceholders({ roles: ["Office Administrator", "Maintenance Technician"] })).toEqual({
+    roles: ["Office Administrator", "Maintenance Technician"],
+  });
+});
+
+it("masks job words that are also common surnames", () => {
+  expect(withPlaceholders({ name: "Mason Cook" })).toEqual({ name: "Xxxxx Xxxx" });
+});
+
 it("recognises heading words regardless of case and surrounding punctuation", () => {
   expect(withPlaceholders({ header: "(WORK) EMAIL:" })).toEqual({ header: "(WORK) EMAIL:" });
 });
@@ -102,19 +112,19 @@ it("keeps whitespace between masked tokens", () => {
 
 it("keeps an exact value found three times across the state", () => {
   expect(
-    withPlaceholders({ role: "Engineer", rows: { "1": ["Engineer", { role: "Engineer" }] } }),
-  ).toEqual({ role: "Engineer", rows: { "1": ["Engineer", { role: "Engineer" }] } });
+    withPlaceholders({ role: "Gardening", rows: { "1": ["Gardening", { role: "Gardening" }] } }),
+  ).toEqual({ role: "Gardening", rows: { "1": ["Gardening", { role: "Gardening" }] } });
 });
 
 it("masks a value found only twice", () => {
-  expect(withPlaceholders({ roles: ["Engineer", "Engineer"] })).toEqual({
-    roles: ["Xxxxxxxx", "Xxxxxxxx"],
+  expect(withPlaceholders({ roles: ["Gardening", "Gardening"] })).toEqual({
+    roles: ["Xxxxxxxxx", "Xxxxxxxxx"],
   });
 });
 
 it("counts repeated values by exact equality", () => {
-  expect(withPlaceholders({ roles: ["Engineer", "Engineer", "engineer"] })).toEqual({
-    roles: ["Xxxxxxxx", "Xxxxxxxx", "xxxxxxxx"],
+  expect(withPlaceholders({ roles: ["Gardening", "Gardening", "gardening"] })).toEqual({
+    roles: ["Xxxxxxxxx", "Xxxxxxxxx", "xxxxxxxxx"],
   });
 });
 

@@ -60,7 +60,7 @@ const PUBLIC_MAIL_DOMAINS = new Set([
   "protonmail.com",
 ]);
 
-/** Words staff-file headings are made of; heading words only, never names. */
+/** Words of staff-file headings and job titles; never names. */
 const HEADING_WORDS = new Set(
   [
     // English
@@ -83,6 +83,12 @@ const HEADING_WORDS = new Set(
     // Dutch
     "voornaam achternaam naam telefoonnummer functie afdeling geboortedatum indiensttreding adres",
     "medewerker werknemer",
+    // Job titles, without words that are also common surnames (Baker, Cook, Mason, Taylor…)
+    "administrator technician adviser advisor assistant officer coordinator director developer",
+    "designer engineer accountant analyst consultant specialist supervisor executive",
+    "representative receptionist recruiter bookkeeper administration sales marketing maintenance",
+    "support finance accounts customer operations it hr research senior junior chief office",
+    "entwickler entwicklerin designerin buchhalter buchhalterin leiter leiterin",
   ].flatMap((line) => line.split(" ")),
 );
 
