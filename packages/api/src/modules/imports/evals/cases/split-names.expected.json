@@ -1,42 +1,44 @@
 {
   "records": [
     {
-      "firstName": "Gabriela",
-      "lastName": "Moreno",
-      "email": "gabriela.moreno@acme-corp.example",
-      "jobTitle": "Designer",
+      "firstName": "Elizabeth Mae",
+      "lastName": "Pritchard",
+      "email": "elizabeth.pritchard@acme-corp.example",
+      "jobTitle": "Office Manager",
       "startDate": "2024-05-13"
     },
     {
-      "firstName": "Benjamin",
-      "lastName": "Keller",
-      "email": "benjamin.keller@acme-corp.example",
-      "jobTitle": "Engineer",
+      "firstName": "Mohammed",
+      "lastName": "Rahman",
+      "email": "mohammed.rahman@acme-corp.example",
+      "jobTitle": "Finance Assistant",
       "startDate": "2023-09-18"
     },
     {
-      "firstName": "Alexandra",
-      "lastName": "Petrova",
-      "email": "alexandra.petrova@acme-corp.example",
-      "jobTitle": "Recruiter",
+      "firstName": "Aleksandra",
+      "lastName": "Wójcik",
+      "email": "aleksandra.wojcik@acme-corp.example",
+      "jobTitle": "Recruitment Coordinator",
       "startDate": "2025-02-03"
     }
   ],
   "forbidden": [
-    "Gabriela",
-    "Moreno",
-    "Gabi",
-    "Gabi Moreno",
-    "gabriela.moreno@acme-corp.example",
-    "Benjamin",
-    "Keller",
-    "Ben",
-    "Ben Keller",
-    "benjamin.keller@acme-corp.example",
-    "Alexandra",
-    "Petrova",
-    "Sasha",
-    "Sasha Petrova",
-    "alexandra.petrova@acme-corp.example"
+    "Elizabeth Mae",
+    "Pritchard",
+    "Liz Pritchard",
+    "elizabeth.pritchard@acme-corp.example",
+    "Elizabeth",
+    "Mae",
+    "Liz",
+    "Mohammed",
+    "Rahman",
+    "Mo Rahman",
+    "mohammed.rahman@acme-corp.example",
+    "Mo",
+    "Aleksandra",
+    "Wójcik",
+    "Ola Wójcik",
+    "aleksandra.wojcik@acme-corp.example",
+    "Ola"
   ]
 }

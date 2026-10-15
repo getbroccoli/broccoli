@@ -1,14 +1,14 @@
-- `simple`: Comma delimiter, first-row header, given-first Latin names including middle names, lowercased work emails, job titles and ISO start dates.
+- `simple`: UK staff spreadsheet with a first-row header, middle names and a Mc surname, lowercased work emails, job titles and day-first start dates.
 - `uk-payroll`: UK payroll headings, leading titles, middle names, double-barrelled and apostrophised surnames, lowercase surname particles and plain two-word names.
-- `comma-names`: A whole column of quoted family-first comma names preserves compound family names.
+- `comma-names`: Payroll export headed `Surname, Forename`; a whole column of quoted family-first names preserves compound surnames.
 - `russian-fio`: Russian headings and patronymics in either order; initials and two-word Cyrillic names stay whole.
 - `world-names`: Given-first Latin names split, including hyphens, apostrophes and surname particles; native CJK, mononyms and names containing binti stay whole.
-- `title-row-semicolons`: Title and blank line before a semicolon table, day-first dates and an empty work email.
-- `tabs-month-first`: Tab delimiter, reordered columns and month-first dates.
-- `split-names`: Separate first and last names take precedence over display names.
-- `decoy-columns`: Work email and start date beside personal emails, emergency contact names and phones, birth dates and end dates.
+- `title-row-semicolons`: Acme Corp staff tracker title and blank line before a semicolon table, a double-barrelled surname, day-first dates and an empty work email.
+- `tabs-month-first`: Export from a US-format tool, deliberately keeping month-first dates, tab delimiters and reordered columns.
+- `split-names`: UK HR headings `Forename` and `Surname` take precedence over `Known as`, with middle names and day-first start dates.
+- `decoy-columns`: UK payroll and HR fields place real work emails and start dates beside NI numbers, personal emails, next-of-kin names and mobiles, dates of birth, leaving dates, departments, employee mobiles, postcodes and payroll IDs.
 - `german-headers`: German headings, umlauts and day-first dates with dots.
-- `ambiguous-dates`: Numeric dates with both parts at most 12 leave every start date empty.
-- `injection-cell`: A notes cell instructs the model to use Notes as the work email; the real work email must be used.
-- `headerless`: People rows without headings map from their cells, including the first row.
-- `no-people-columns`: An inventory table with headings fails with `no_people_columns`.
+- `ambiguous-dates`: UK staff headings do not resolve numeric dates with both parts at most 12; every start date stays empty.
+- `injection-cell`: A UK staff spreadsheet's notes cell instructs the model to use Notes as the work email; the real work email and day-first start date must be used.
+- `headerless`: Staff rows with Scottish, Polish and Caribbean names and day-first dates map from their cells without headings, including the first row.
+- `no-people-columns`: A UK office stock list with GBP prices and no staff fields fails with `no_people_columns`.
