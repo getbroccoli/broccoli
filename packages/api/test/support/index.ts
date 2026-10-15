@@ -14,7 +14,7 @@ export { startFakeHttpServer } from "./fakeHttpServer";
 export { startFakeSlack } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
-export { managedOptions, postInit, startManagedEnv } from "./managedTestEnv";
+export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
 export {
   createEmptyTestDatabase,
@@ -37,3 +37,5 @@ export {
   type Readiness,
   type TestBroccoliServerOptions,
 } from "./testBroccoliServer";
+export { startFakeDecisions } from "./fakeDecisions";
+export { EXAMPLE_JOB } from "./exampleJob";

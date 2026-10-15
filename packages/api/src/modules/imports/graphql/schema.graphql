@@ -6,21 +6,45 @@ type Import {
   sources: [ImportSource!]!
   "The employee records of every source, by name. Owner only."
   employees("Page size, 1 to 10000." first: Int = 100, after: String): ImportEmployeeConnection!
+  "Whether files can be added; the model that reads them needs a key."
+  canReadFiles: Boolean!
 }
 
 "Where people came from."
 enum ImportSourceKind {
   SLACK
+  FILE
+}
+
+"Whether a source's records are ready. A Slack source always is."
+enum ImportSourceStatus {
+  "The file's columns are being worked out; it has no records yet."
+  MAPPING
+  MAPPED
+  FAILED
+}
+
+"Why a file could not be read."
+enum ImportSourceFailure {
+  "No row holds column headings."
+  NO_HEADER
+  "No column holds a name or an email."
+  NO_PEOPLE_COLUMNS
+  "The model could not be reached or refused."
+  UNAVAILABLE
 }
 
 "One place people came from, such as the Slack workspace; it owns its records."
 type ImportSource {
   id: ID!
   kind: ImportSourceKind!
-  "The Slack workspace's name."
+  "The Slack workspace's name, or the file's."
   name: String!
   "When the source was last read."
   readAt: DateTime!
+  status: ImportSourceStatus!
+  "Set when FAILED."
+  failure: ImportSourceFailure
   employeeCount: Int!
   "This source's employee records, by name."
   employees("Page size, 1 to 10000." first: Int = 100, after: String): ImportEmployeeConnection!
@@ -58,8 +82,12 @@ type ImportMutations {
   readSlack: Import!
   "Leaves the import step of setup for now; the records stay."
   skip: Import!
-  "Turns the import's employee records into employees and completes setup. Records that are not complete stay in the import. Approving again does nothing."
+  "Turns the import's employee records into employees and completes setup. Records that are not complete stay in the import. Approving again does nothing. Refused with CONFLICT while a file is being mapped."
   approve: Import!
+  "Maps a failed file again; any other source is left as it is."
+  retryFile(sourceId: ID!): Import!
+  "Removes a file, its records and the stored file."
+  removeFile(sourceId: ID!): Import!
 }
 
 type Mutation {

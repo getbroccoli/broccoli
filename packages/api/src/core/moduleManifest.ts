@@ -2,6 +2,7 @@ import type express from "express";
 
 import type { Orm, Transact } from "./db";
 import type { EventHandlers } from "./events";
+import type { JobHandlers, JobQueue } from "./jobs";
 import type { Resolvers, SecurityResolver } from "./graphql";
 import type { Logger } from "./logger";
 import type { SecretBox } from "./secrets";
@@ -16,6 +17,8 @@ export interface ModuleDependencies {
   logger: Logger;
   /** Encrypts credentials the database stores, with the instance's encryption key. */
   secretBox: SecretBox;
+  /** Queues background jobs inside a transaction. */
+  jobs: JobQueue;
 }
 
 /**
@@ -29,6 +32,8 @@ export interface ModuleManifest {
   resolvers: Resolvers;
   /** What the module does when another module's event happens. */
   events?: EventHandlers;
+  /** The module's background jobs, run as the system. */
+  jobs?: JobHandlers;
   /** HTTP routes under `/api/` that GraphQL cannot serve, such as images. */
   router?: (resolveSecurity: SecurityResolver) => express.Router;
 }

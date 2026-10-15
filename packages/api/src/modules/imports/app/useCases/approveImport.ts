@@ -1,3 +1,4 @@
+import { ApplicationError } from "../../../../core/applicationError";
 import { advanceStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees, type NewEmployeeInput } from "../../../employees";
@@ -8,7 +9,7 @@ import type { ImportContext } from "./importContext";
 /**
  * Turns the import's employee records into employees and completes setup, in one
  * transaction; at any step but `import` it does nothing, so approving twice creates
- * them once. Incomplete records stay in the import.
+ * them once. Incomplete records stay in the import; refused while a file is being mapped.
  */
 export async function approveImport(
   { transact, logger }: ImportContext,
@@ -16,6 +17,9 @@ export async function approveImport(
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const result = await transact(async (tx) => {
+    if (await importRepository(tx).hasMappingSource()) {
+      throw new ApplicationError("CONFLICT", "Files are still being read.");
+    }
     // The step move locks the instance row, so a concurrent Approve waits and then finds `done`.
     if (!(await advanceStep(ctx, tx, "import", "done"))) {
       return null;

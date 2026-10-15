@@ -116,3 +116,41 @@ test("refuses a non-owner approving the import", async ({ orm, seed }) => {
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
   ).toEqual([]);
 });
+
+test("refuses approval while a file is mapping without advancing setup", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const source = await seed.importSource();
+  const records = await seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone" },
+  ]);
+  await seed.fileSource({ content: "Name\nRobin Reed" });
+  const imports = importUseCases(orm);
+
+  await expect(imports.approveImport(owner)).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "Files are still being read.",
+  });
+
+  expect(await readSetupStep(orm)).toBe("import");
+  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(records);
+});
+
+test("approves available records when a failed file is present", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  ]);
+  await seed.fileSource({ content: "Name\nRobin Reed", status: "failed", failure: "unavailable" });
+  const imports = importUseCases(orm);
+
+  await imports.approveImport(owner);
+
+  expect(await readSetupStep(orm)).toBe("done");
+  expect(
+    (await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);
+});

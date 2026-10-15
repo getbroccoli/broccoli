@@ -15,6 +15,7 @@ it("reads the self-hosted public URL", () => {
 
 it.each([
   ["MANAGED_INSTANCE_ID", "slot-1"],
+  ["MANAGED_MODEL_API_KEY", "test-model-key"],
   ["MANAGED_ACCOUNTS_URL", "https://accounts.example.com"],
 ])("refuses %s when self-hosted", (variable, value) => {
   expect(() => loadEnv({ ...DATABASE, [variable]: value })).toThrow(variable);
@@ -25,6 +26,7 @@ it("uses the configured accounts origin", () => {
     ...DATABASE,
     BROCCOLI_MODE: "managed",
     MANAGED_INSTANCE_ID: "slot-1",
+    MANAGED_MODEL_API_KEY: "test-model-key",
     MANAGED_ACCOUNTS_URL: "https://accounts.example.com/",
   });
 
@@ -32,14 +34,22 @@ it("uses the configured accounts origin", () => {
 });
 
 it("requires the instance id when managed", () => {
-  expect(() => loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed" })).toThrow(/MANAGED_INSTANCE_ID/);
+  expect(() =>
+    loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed", MANAGED_MODEL_API_KEY: "test-model-key" }),
+  ).toThrow(/MANAGED_INSTANCE_ID/);
 });
 
 it("defaults the accounts origin when managed", () => {
-  const env = loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed", MANAGED_INSTANCE_ID: "slot-1" });
+  const env = loadEnv({
+    ...DATABASE,
+    BROCCOLI_MODE: "managed",
+    MANAGED_INSTANCE_ID: "slot-1",
+    MANAGED_MODEL_API_KEY: "test-model-key",
+  });
   expect(env.deployment).toEqual({
     mode: "managed",
     instanceId: "slot-1",
+    modelApiKey: "test-model-key",
     accountsOrigin: DEFAULT_ACCOUNTS_URL,
   });
 });
@@ -50,6 +60,7 @@ it("refuses the self-hosted public URL when managed", () => {
       ...DATABASE,
       BROCCOLI_MODE: "managed",
       MANAGED_INSTANCE_ID: "slot-1",
+      MANAGED_MODEL_API_KEY: "test-model-key",
       SELF_HOSTED_PUBLIC_URL: "https://hr.example.com",
     }),
   ).toThrow(/SELF_HOSTED_PUBLIC_URL/);
@@ -61,7 +72,14 @@ it("refuses an accounts URL with a path", () => {
       ...DATABASE,
       BROCCOLI_MODE: "managed",
       MANAGED_INSTANCE_ID: "slot-1",
+      MANAGED_MODEL_API_KEY: "test-model-key",
       MANAGED_ACCOUNTS_URL: "https://accounts.example.com/x",
     }),
   ).toThrow(/MANAGED_ACCOUNTS_URL/);
+});
+
+it("requires the model key when managed", () => {
+  expect(() =>
+    loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed", MANAGED_INSTANCE_ID: "slot-1" }),
+  ).toThrow(/MANAGED_MODEL_API_KEY/);
 });

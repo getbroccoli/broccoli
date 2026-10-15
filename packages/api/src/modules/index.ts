@@ -1,3 +1,4 @@
+import { createDecisions } from "../core/ai/decisions";
 import type { Mode } from "../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
@@ -14,12 +15,14 @@ export interface ModuleSettings {
   publicUrl?: string;
   brandLookupUrl: string | null;
   slack: SlackUrls;
+  /** The model that maps files: the provider's address and Broccoli's key; null without a key. */
+  model: { url: string; apiKey: string } | null;
 }
 
 /** Every module of the API, each given only the dependencies it uses. */
 export function createModules(
   core: ModuleDependencies,
-  { mode, publicUrl, brandLookupUrl, slack }: ModuleSettings,
+  { mode, publicUrl, brandLookupUrl, slack, model }: ModuleSettings,
 ): ModuleManifest[] {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
@@ -29,6 +32,10 @@ export function createModules(
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule({ slackConnection, orm: core.orm, mode, publicUrl }),
-    importsModule({ ...core, slack: slackConnection }),
+    importsModule({
+      ...core,
+      slack: slackConnection,
+      decisions: model && createDecisions({ ...model, logger: core.logger }),
+    }),
   ];
 }

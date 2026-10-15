@@ -6,6 +6,7 @@ import {
   managedOptions,
   postInit,
   startManagedEnv,
+  signInAsManagedOwner,
   TestEnv,
   test,
   type FakeAccounts,
@@ -158,9 +159,8 @@ test.each(["https://evil.example.com", "https://www.example.com.evil.example.com
 );
 
 test("signs a returning owner in with a new ticket", async () => {
-  const { env, accounts } = await assignedEnv();
-  const first = await start(env);
-  await postTicket(env, await accounts.signTicket(ticketClaims(first.state)), first.state);
+  const { env, accounts } = await startManagedEnv();
+  await signInAsManagedOwner(env, accounts);
 
   const second = await start(env);
   const response = await postTicket(

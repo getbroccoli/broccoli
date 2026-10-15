@@ -65,6 +65,35 @@ export class TestSeed {
     return source!;
   }
 
+  async fileSource({
+    name = "staff.csv",
+    content,
+    status = "mapping",
+    attempt = 0,
+    failure = null,
+  }: {
+    name?: string;
+    content: string;
+    status?: "mapping" | "mapped" | "failed";
+    attempt?: number;
+    failure?: "no_header" | "no_people_columns" | "unavailable" | null;
+  }) {
+    const fileId = await this.file({ content: Buffer.from(content), mimeType: "text/csv" });
+    const repository = importRepository(this.orm);
+    const id = await repository.insertFileSource(name, fileId);
+    for (let previous = 0; previous < attempt; previous++) {
+      await repository.finishMapping(id, previous, { status: "failed", failure: "unavailable" });
+      await repository.restartMapping(id);
+    }
+    if (status === "failed") {
+      await repository.finishMapping(id, attempt, { status, failure: failure ?? "unavailable" });
+    } else if (status === "mapped") {
+      await repository.finishMapping(id, attempt, { status });
+    }
+    const [source] = await repository.findSources([id]);
+    return source!;
+  }
+
   async importEmployees(
     sourceId: string,
     employees: (Partial<ImportEmployeeValues> & { externalId?: string })[],

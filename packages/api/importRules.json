@@ -1,7 +1,12 @@
 {
   "elements": {
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
-    "src/modules": ["src/core/env", "src/core/moduleManifest", "src/modules/*"],
+    "src/modules": [
+      "src/core/ai/decisions",
+      "src/core/env",
+      "src/core/moduleManifest",
+      "src/modules/*"
+    ],
     "src/modules/company": [
       "src/core/*",
       "!src/core/server",
@@ -11,6 +16,7 @@
     "src/modules/demo": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
     "src/modules/employees": ["src/core/*", "!src/core/server", "src/utils"],
     "src/modules/imports": [
+      "src/core/ai/decisions",
       "src/core/*",
       "!src/core/server",
       "src/modules/employees",
@@ -27,6 +33,7 @@
       "src/core/db",
       "src/core/events",
       "src/core/graphql",
+      "src/core/jobs",
       "src/core/logger",
       "src/core/secrets"
     ],
@@ -63,6 +70,8 @@
     ],
     "src/core/auth": ["src/core/db", "src/core/logger"],
     "src/core/files": ["src/core/db"],
+    "src/core/jobs": ["src/core/db", "src/core/logger"],
+    "src/core/ai/decisions": ["src/core/logger"],
     "src/core/db": ["src/core/events", "src/core/logger"],
     "src/core/events": ["src/core/logger"],
     "src/core/pagination": ["src/core/applicationError"],
@@ -73,6 +82,7 @@
     "src/core/readiness": [],
     "src/core/secrets": [],
     "test/support": [
+      "src/core/ai/decisions",
       "src/core/*",
       "src/integrations/*",
       "src/modules",

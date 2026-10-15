@@ -2,9 +2,17 @@ import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 
 import type { SecurityContext } from "../../../../core/security";
 
-type ImportUseCases = ReturnType<typeof importUseCases>;
+type ImportUseCases = Omit<ReturnType<typeof importUseCases>, "sentJobs">;
 
 const calls = {
+  uploadFile: (imports, ctx) =>
+    imports.uploadFile(ctx, { name: "staff.csv", bytes: Buffer.from("Name\nAvery Stone") }),
+  mapFile: (imports, ctx) => imports.mapFile(ctx, { sourceId: "missing", attempt: 0 }),
+  markFileFailed: (imports, ctx) =>
+    imports.markFileFailed(ctx, { sourceId: "missing", attempt: 0 }),
+  retryFile: (imports, ctx) => imports.retryFile(ctx, "missing"),
+  removeFile: (imports, ctx) => imports.removeFile(ctx, "missing"),
+  canReadFiles: (imports, ctx) => imports.canReadFiles(ctx),
   readSlack: (imports, ctx) => imports.readSlack(ctx),
   listSources: (imports, ctx) => imports.listSources(ctx),
   readSources: (imports, ctx) => imports.readSources(ctx, []),

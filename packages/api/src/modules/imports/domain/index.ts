@@ -1,9 +1,25 @@
 export {
+  columnQuestions,
+  type ColumnMapping,
+  FILE_FIELDS,
+  type FileField,
+  headerQuestion,
+  readColumnMapping,
+  readFileRecords,
+  readHeaderRow,
+} from "./fileMapping";
+export {
   IMPORT_EMPLOYEE_VERSION,
   parseImportEmployeeValues,
   type ImportEmployee,
   type ImportEmployeeValues,
   type IncomingRecord,
 } from "./importEmployee";
-export type { ImportSource } from "./importSource";
+export type {
+  ImportSource,
+  ImportSourceFailure,
+  ImportSourceKind,
+  ImportSourceStatus,
+} from "./importSource";
 export { nonBlank, parseEmail, splitFullName } from "./personValues";
+export { readDateColumn, readSheet, type Sheet, type SheetRefusal } from "./sheet";

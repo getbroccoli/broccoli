@@ -24,6 +24,7 @@ export interface TestBroccoliServerOptions {
   managed?: { instanceId: string; accountsUrl: string };
   publicUrl?: string;
   brandLookupUrl?: string | null;
+  decisionsUrl?: string;
   slack?: { relayUrl: string; apiUrl: string };
 }
 
@@ -39,13 +40,19 @@ export async function startTestBroccoliServer(
     managed,
     publicUrl,
     brandLookupUrl = null,
+    decisionsUrl = "http://127.0.0.1:9",
     slack = { relayUrl: "http://127.0.0.1:9", apiUrl: "http://127.0.0.1:9" },
   }: TestBroccoliServerOptions = {},
 ): Promise<RunningServer> {
   const ownsDataDir = dataDir === undefined;
   const folder = dataDir ?? (await mkdtemp(join(tmpdir(), "broccoli-data-")));
   const deployment: Deployment = managed
-    ? { mode: "managed", instanceId: managed.instanceId, accountsOrigin: managed.accountsUrl }
+    ? {
+        mode: "managed",
+        instanceId: managed.instanceId,
+        accountsOrigin: managed.accountsUrl,
+        modelApiKey: "test-model-key",
+      }
     : { mode: "self_hosted", publicUrl };
   const server = await startServer(
     {
@@ -56,7 +63,17 @@ export async function startTestBroccoliServer(
       dataDir: folder,
     },
     createLogger("silent"),
-    (core) => createModules(core, { mode: deployment.mode, brandLookupUrl, publicUrl, slack }),
+    (core) =>
+      createModules(core, {
+        mode: deployment.mode,
+        brandLookupUrl,
+        publicUrl,
+        slack,
+        model:
+          deployment.mode === "managed"
+            ? { url: decisionsUrl, apiKey: deployment.modelApiKey }
+            : null,
+      }),
   );
   return {
     url: server.url,

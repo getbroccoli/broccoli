@@ -12,6 +12,7 @@ import type { Env } from "./env";
 import { createEventBus } from "./events";
 import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
+import { createJobRunner } from "./jobs";
 import { selfHostedAuth } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer, type ManagedServer } from "./managedSignIn";
@@ -50,6 +51,7 @@ export async function startServer(
   const database = connectDatabase(env.databaseUrl, logger);
   const eventBus = createEventBus(logger);
   const transact = transactor(database.orm, eventBus);
+  const jobRunner = createJobRunner(env.databaseUrl, logger);
   const readiness = new Readiness(() => database.checkConnection());
   const services = { orm: database.orm, transact, secret: authSecret, logger };
   // Self-hosted instances add only their auth; managed ones also init routes and status.
@@ -66,7 +68,7 @@ export async function startServer(
   let modules: readonly ModuleManifest[];
   let graphql: GraphqlApi;
   try {
-    modules = createModules({ orm: database.orm, transact, logger, secretBox });
+    modules = createModules({ orm: database.orm, transact, logger, secretBox, jobs: jobRunner.queue });
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
   } catch (error) {
     await database.close();
@@ -97,7 +99,10 @@ export async function startServer(
   }
 
   const stopped = new AbortController();
-  const migration = migrate(database, readiness, logger, stopped.signal);
+  const jobHandlers = modules.flatMap((module) => (module.jobs ? [module.jobs] : []));
+  const migration = migrate(database, readiness, logger, stopped.signal, () =>
+    jobRunner.start(jobHandlers),
+  );
   let stopping: Promise<void> | undefined;
 
   return {
@@ -107,6 +112,7 @@ export async function startServer(
         stopped.abort();
         // Drains in-flight requests, then closes the HTTP server.
         await graphql.stop();
+        await jobRunner.stop();
         await database.close();
         await migration;
       })();
@@ -124,15 +130,18 @@ async function closeAfterFailedStart(graphql: GraphqlApi, database: Database): P
   }
 }
 
+/** Migrates, then starts the jobs, which need the migrated database; ready after both. */
 async function migrate(
   database: Database,
   readiness: Readiness,
   logger: Logger,
   stopped: AbortSignal,
+  startJobs: () => Promise<void>,
 ): Promise<void> {
   while (!stopped.aborted) {
     try {
       await database.migrate();
+      await startJobs();
       readiness.markMigrated();
       logger.info("Database migrations applied");
       return;
