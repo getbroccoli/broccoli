@@ -134,10 +134,10 @@ export function employeeRepository(db: Orm | Tx) {
   };
 }
 
-/** A new employee as stored, with the columns only the module itself sets. */
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
 
+/** A new employee as stored, with the columns only the module itself sets. */
 type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };
 
 async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {
