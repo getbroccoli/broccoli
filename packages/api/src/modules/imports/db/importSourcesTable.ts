@@ -16,7 +16,7 @@ export const importSources = pgTable(
     status: text("status", { enum: ["mapping", "mapped", "failed"] })
       .notNull()
       .default("mapped"),
-    failure: text("failure", { enum: ["no_header", "no_people_columns", "unavailable"] }),
+    failure: text("failure", { enum: ["no_people_columns", "unavailable"] }),
     /** The current mapping run of a file: a job of an earlier run writes nothing. */
     mappingAttempt: integer("mapping_attempt").notNull().default(0),
     /** The uploaded file; set exactly for file sources. */

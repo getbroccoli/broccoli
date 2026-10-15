@@ -26,8 +26,6 @@ enum ImportSourceStatus {
 
 "Why a file could not be read."
 enum ImportSourceFailure {
-  "No row holds column headings."
-  NO_HEADER
   "No column holds a name or an email."
   NO_PEOPLE_COLUMNS
   "The model could not be reached or refused."

@@ -194,9 +194,6 @@ async function mapSheetOrFail(decisions: Decisions, sheet: Sheet): Promise<Mappi
 async function mapSheet(decisions: Decisions, sheet: Sheet): Promise<MappingResult> {
   const { headerRow, mapping } =
     (await mapInOneRequest(decisions, sheet)) ?? (await mapHeaderThenColumns(decisions, sheet));
-  if (headerRow === null) {
-    return { outcome: { status: "failed", failure: "no_header" }, records: [] };
-  }
   if (mapping === null) {
     return { outcome: { status: "failed", failure: "no_people_columns" }, records: [] };
   }
@@ -224,10 +221,8 @@ async function mapInOneRequest(decisions: Decisions, sheet: Sheet): Promise<Shee
 
 async function mapHeaderThenColumns(decisions: Decisions, sheet: Sheet): Promise<SheetMapping> {
   const header = headerQuestion(sheet);
+  // No header row: the columns are read from their cells alone.
   const headerRow = readHeaderRow(await decisions.decide(header.state, header.questions));
-  if (headerRow === null) {
-    return { headerRow, mapping: null };
-  }
   const columns = columnQuestions(sheet, headerRow);
   return {
     headerRow,

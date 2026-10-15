@@ -5,7 +5,7 @@ export type ImportSourceKind = "slack" | "file";
 export type ImportSourceStatus = "mapping" | "mapped" | "failed";
 
 /** Why a file could not be mapped. */
-export type ImportSourceFailure = "no_header" | "no_people_columns" | "unavailable";
+export type ImportSourceFailure = "no_people_columns" | "unavailable";
 
 /** One place people came from; it owns its records. */
 export interface ImportSource {

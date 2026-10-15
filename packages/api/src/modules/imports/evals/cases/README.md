@@ -6,5 +6,5 @@
 - `german-headers`: German headings, umlauts and day-first dates with dots.
 - `ambiguous-dates`: Numeric dates with both parts at most 12 leave every start date empty.
 - `injection-cell`: A notes cell instructs the model to use Notes as the work email; the real work email must be used.
-- `no-header`: People rows without headings fail with `no_header`.
+- `headerless`: People rows without headings map from their cells, including the first row.
 - `no-people-columns`: An inventory table with headings fails with `no_people_columns`.

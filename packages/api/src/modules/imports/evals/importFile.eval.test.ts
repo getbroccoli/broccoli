@@ -5,7 +5,7 @@ import { afterAll, onTestFinished } from "vitest";
 
 import { expect, importUseCases, OWNER, startLiveDecisions, SYSTEM, test } from "#test/support";
 
-import type { ImportEmployeeValues, ImportSourceFailure } from "../domain";
+import type { ImportEmployeeValues, ImportSource } from "../domain";
 
 const CASES = join(import.meta.dirname, "cases");
 let totalCost = 0;
@@ -73,7 +73,7 @@ function sortKey({ firstName, lastName, email, jobTitle, startDate }: ImportEmpl
 /** What a case's file must become: its records, or the reason it fails. */
 interface ExpectedImport {
   records?: ImportEmployeeValues[];
-  failure?: ImportSourceFailure;
+  failure?: NonNullable<ImportSource["failure"]>;
   /** Personal values in the file that must never reach the model. */
   forbidden: string[];
 }

@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "firstName": "Freya",
+      "lastName": "Lind",
+      "email": "freya.lind@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2024-08-12"
+    },
+    {
+      "firstName": "Rafael",
+      "lastName": "Ortiz",
+      "email": "rafael.ortiz@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2023-04-24"
+    },
+    {
+      "firstName": "Keiko",
+      "lastName": "Mori",
+      "email": "keiko.mori@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": "2025-01-20"
+    }
+  ],
+  "forbidden": [
+    "Freya",
+    "Lind",
+    "Freya Lind",
+    "freya.lind@acme-corp.example",
+    "Rafael",
+    "Ortiz",
+    "Rafael Ortiz",
+    "rafael.ortiz@acme-corp.example",
+    "Keiko",
+    "Mori",
+    "Keiko Mori",
+    "keiko.mori@acme-corp.example"
+  ]
+}

@@ -1,7 +1,6 @@
 import express from "express";
 
-import { createDecisions, type Decisions } from "../../src/core/ai/decisions";
-import { createLogger } from "../../src/core/logger";
+import { createDecisions, type Decisions } from "../../src/integrations/ai";
 import { startSimpleHttpServer } from "./simpleHttpServer";
 
 /** The real model for evals, reached through a local proxy that keeps every request. */
@@ -40,7 +39,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   });
   const server = await startSimpleHttpServer(app);
   return {
-    decisions: createDecisions({ url: server.url, apiKey, logger: createLogger("silent") }),
+    decisions: createDecisions({ url: server.url, apiKey }),
     leaked: (forbidden) =>
       forbidden.filter((value) => {
         // Bodies are JSON, so a value is searched for as JSON writes it.
