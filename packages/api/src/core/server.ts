@@ -68,7 +68,13 @@ export async function startServer(
   let modules: readonly ModuleManifest[];
   let graphql: GraphqlApi;
   try {
-    modules = createModules({ orm: database.orm, transact, logger, secretBox, jobs: jobRunner.queue });
+    modules = createModules({
+      orm: database.orm,
+      transact,
+      logger,
+      secretBox,
+      jobs: jobRunner.queue,
+    });
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
   } catch (error) {
     await database.close();

@@ -1,19 +1,11 @@
-import { onTestFinished } from "vitest";
-
-import {
-  expect,
-  importUseCases,
-  OWNER,
-  startFakeDecisions,
-  storedFileIds,
-  test,
-} from "#test/support";
+import { expect, importUseCases, OWNER, storedFileIds, test } from "#test/support";
 
 import { files } from "../../../../core/files";
 
-test("stores a mapping source named after the file and sends its first job", async ({ orm }) => {
-  const fake = await startFakeDecisions();
-  onTestFinished(() => fake.stop());
+test("stores a mapping source named after the file and sends its first job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
   const imports = importUseCases(orm, { decisions: fake.decisions });
   const bytes = Buffer.from("Name,Email\nAvery Stone,avery@example.com");
 
@@ -42,9 +34,10 @@ test("refuses an upload without a model key", async ({ orm }) => {
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("refuses a NUL byte as not_csv without storing the file", async ({ orm }) => {
-  const fake = await startFakeDecisions();
-  onTestFinished(() => fake.stop());
+test("refuses a NUL byte as not_csv without storing the file", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
   await expect(

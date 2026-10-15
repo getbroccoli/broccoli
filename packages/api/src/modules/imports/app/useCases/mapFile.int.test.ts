@@ -1,29 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  expect,
-  importUseCases,
-  OWNER,
-  startFakeDecisions,
-  SYSTEM,
-  test as baseTest,
-} from "#test/support";
+import { expect, importUseCases, OWNER, SYSTEM, test } from "#test/support";
 
 import { DecisionsError } from "../../../../core/ai/decisions";
 
-const test = baseTest.extend<{ fake: Awaited<ReturnType<typeof startFakeDecisions>> }>({
-  // eslint-disable-next-line no-empty-pattern -- Vitest reads fixture dependencies from this pattern.
-  fake: async ({}, use) => {
-    const fake = await startFakeDecisions();
-    try {
-      await use(fake);
-    } finally {
-      await fake.stop();
-    }
-  },
-});
-
-test("maps a semicolon file with a title above the header", async ({ orm, seed, fake }) => {
+test("maps a semicolon file with a title above the header", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
   const source = await seed.fileSource({
     content:
       "Staff export\nFull name;Work email;Role;Start date\nAvery Stone;avery@example.com;Designer;02/03/2026\nRobin Reed;robin@example.com;Engineer;14/01/2026",
@@ -56,7 +41,7 @@ test("maps a semicolon file with a title above the header", async ({ orm, seed, 
   ]);
 });
 
-test("fails the file when no row is the header", async ({ orm, seed, fake }) => {
+test("fails the file when no row is the header", async ({ orm, seed, fakeDecisions: fake }) => {
   const source = await seed.fileSource({ content: "Avery Stone,avery@example.com" });
   fake.answer({ headerRow: "none" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
@@ -69,7 +54,11 @@ test("fails the file when no row is the header", async ({ orm, seed, fake }) => 
   expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
-test("fails the file when no name or email column is found", async ({ orm, seed, fake }) => {
+test("fails the file when no name or email column is found", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
   const source = await seed.fileSource({ content: "Role\nDesigner" });
   fake.answer({ headerRow: "1", jobTitle: "A" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
@@ -82,7 +71,11 @@ test("fails the file when no name or email column is found", async ({ orm, seed,
   expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
-test("a stale attempt leaves the source and its records unchanged", async ({ orm, seed, fake }) => {
+test("a stale attempt leaves the source and its records unchanged", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
   const source = await seed.fileSource({ content: "Name\nRobin Reed", attempt: 1 });
   const records = await seed.importEmployees(source.id, [
     { firstName: "Avery", lastName: "Stone" },
@@ -96,7 +89,7 @@ test("a stale attempt leaves the source and its records unchanged", async ({ orm
   expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(records);
 });
 
-test("a removed source writes nothing and does not throw", async ({ orm, fake }) => {
+test("a removed source writes nothing and does not throw", async ({ orm, fakeDecisions: fake }) => {
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
   await imports.mapFile(SYSTEM, { sourceId: randomUUID(), attempt: 0 });
@@ -105,7 +98,11 @@ test("a removed source writes nothing and does not throw", async ({ orm, fake })
   expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
-test("a retryable model failure leaves the source mapping", async ({ orm, seed, fake }) => {
+test("a retryable model failure leaves the source mapping", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
   const source = await seed.fileSource({ content: "Name\nAvery Stone" });
   fake.fail(503);
   const imports = importUseCases(orm, { decisions: fake.decisions });
@@ -118,7 +115,11 @@ test("a retryable model failure leaves the source mapping", async ({ orm, seed, 
   expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
-test("an unauthorized model request fails the file as unavailable", async ({ orm, seed, fake }) => {
+test("an unauthorized model request fails the file as unavailable", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
   const source = await seed.fileSource({ content: "Name\nAvery Stone" });
   fake.fail(401);
   const imports = importUseCases(orm, { decisions: fake.decisions });

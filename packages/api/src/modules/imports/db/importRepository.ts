@@ -64,8 +64,7 @@ export interface FileSource extends ImportSource {
 }
 
 export type MappingOutcome =
-  | { status: "mapped" }
-  | { status: "failed"; failure: ImportSourceFailure };
+  { status: "mapped" } | { status: "failed"; failure: ImportSourceFailure };
 
 /** The sort values of the last employee record seen: first name, last name, id. */
 export type ImportEmployeeKeyset = [firstName: string, lastName: string, id: string];

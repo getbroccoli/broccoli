@@ -46,3 +46,5 @@ export async function startFakeDecisions() {
     },
   };
 }
+
+export type FakeDecisions = Awaited<ReturnType<typeof startFakeDecisions>>;

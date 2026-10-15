@@ -37,5 +37,5 @@ export {
   type Readiness,
   type TestBroccoliServerOptions,
 } from "./testBroccoliServer";
-export { startFakeDecisions } from "./fakeDecisions";
+export { startFakeDecisions, type FakeDecisions } from "./fakeDecisions";
 export { EXAMPLE_JOB } from "./exampleJob";

@@ -14,7 +14,6 @@ import { skipImport } from "./skipImport";
 import { type UploadedFile, uploadFile } from "./uploadFile";
 
 export type { SlackReader } from "./importContext";
-export type { MapFileJob } from "./mapFile";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
 export function createImportUseCases({

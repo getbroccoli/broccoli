@@ -2,6 +2,7 @@ import { inject, test as baseTest } from "vitest";
 
 import { connectDatabase, type Orm, type Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
+import { type FakeDecisions, startFakeDecisions } from "./fakeDecisions";
 import { createTestDatabase } from "./testDatabases";
 import { TestEnv } from "./testEnv";
 import { TestSeed } from "./testSeed";
@@ -10,8 +11,9 @@ import { testTransactor } from "./testTransactor";
 /**
  * Vitest's `test` with fixtures, each created only for the tests that use it:
  * `env`, a running Broccoli for end-to-end tests (seed it with `env.seed`), and
- * `orm` and `seed`, a fresh migrated database for use-case integration tests, and
- * `transact`, transactions on `orm` whose events nobody receives.
+ * `orm` and `seed`, a fresh migrated database for use-case integration tests (its
+ * URL is `databaseUrl`), `transact`, transactions on `orm` whose events nobody
+ * receives, and `fakeDecisions`, a local model with scripted answers.
  */
 export const test = baseTest.extend<{
   env: TestEnv;
@@ -19,6 +21,7 @@ export const test = baseTest.extend<{
   databaseUrl: string;
   seed: TestSeed;
   transact: Transact;
+  fakeDecisions: FakeDecisions;
 }>({
   // eslint-disable-next-line no-empty-pattern -- Vitest reads fixture dependencies from this pattern.
   env: async ({}, use) => {
@@ -48,5 +51,14 @@ export const test = baseTest.extend<{
   },
   transact: async ({ orm }, use) => {
     await use(testTransactor(orm));
+  },
+  // eslint-disable-next-line no-empty-pattern -- Vitest reads fixture dependencies from this pattern.
+  fakeDecisions: async ({}, use) => {
+    const fake = await startFakeDecisions();
+    try {
+      await use(fake);
+    } finally {
+      await fake.stop();
+    }
   },
 });

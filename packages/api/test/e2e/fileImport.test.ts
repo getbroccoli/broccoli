@@ -1,10 +1,8 @@
-import { onTestFinished } from "vitest";
-
 import {
   type Browser,
   expect,
   signInAsManagedOwner,
-  startFakeDecisions,
+  type FakeDecisions,
   startManagedEnv,
   test,
 } from "#test/support";
@@ -18,8 +16,10 @@ const IMPORT = `query {
   }
 }`;
 
-test("the managed owner uploads a CSV and its people become mapped import employees", async () => {
-  const { browser } = await managedImport();
+test("the managed owner uploads a CSV and its people become mapped import employees", async ({
+  fakeDecisions,
+}) => {
+  const { browser } = await managedImport(fakeDecisions);
 
   const response = await browser.post("/api/imports/files?name=staff.csv", CSV);
 
@@ -46,8 +46,10 @@ test("the managed owner uploads a CSV and its people become mapped import employ
     });
 });
 
-test("a failed file becomes mapped after retrying with working decisions", async () => {
-  const { browser, fake } = await managedImport();
+test("a failed file becomes mapped after retrying with working decisions", async ({
+  fakeDecisions,
+}) => {
+  const { browser, fake } = await managedImport(fakeDecisions);
   fake.fail(401);
   const response = await browser.post("/api/imports/files?name=staff.csv", CSV);
   expect(response.status).toBe(200);
@@ -86,8 +88,8 @@ test("a failed file becomes mapped after retrying with working decisions", async
     });
 });
 
-test("removeFile removes the uploaded source", async () => {
-  const { browser } = await managedImport();
+test("removeFile removes the uploaded source", async ({ fakeDecisions }) => {
+  const { browser } = await managedImport(fakeDecisions);
   const response = await browser.post("/api/imports/files?name=staff.csv", CSV);
   expect(response.status).toBe(200);
   const { sourceId } = (await response.json()) as { sourceId: string };
@@ -128,16 +130,16 @@ test("self-hosted instances cannot read files and refuse uploads", async ({ env 
   expect(uploaded.status).toBe(503);
 });
 
-test("the upload route refuses a request without a session", async () => {
-  const { env } = await managedImport();
+test("the upload route refuses a request without a session", async ({ fakeDecisions }) => {
+  const { env } = await managedImport(fakeDecisions);
 
   const response = await env.browser().post("/api/imports/files?name=staff.csv", CSV);
 
   expect(response.status).toBe(401);
 });
 
-test("the upload route refuses files above 5 MB", async () => {
-  const { browser } = await managedImport();
+test("the upload route refuses files above 5 MB", async ({ fakeDecisions }) => {
+  const { browser } = await managedImport(fakeDecisions);
 
   const response = await browser.post(
     "/api/imports/files?name=staff.csv",
@@ -147,10 +149,10 @@ test("the upload route refuses files above 5 MB", async () => {
   expect(response.status).toBe(413);
 });
 
-test.each(["", "?name=staff.xlsx"])(
+test.for(["", "?name=staff.xlsx"])(
   "the upload route refuses a missing or non-CSV name: %s",
-  async (query) => {
-    const { browser } = await managedImport();
+  async (query, { fakeDecisions }) => {
+    const { browser } = await managedImport(fakeDecisions);
 
     const response = await browser.post(`/api/imports/files${query}`, CSV);
 
@@ -162,9 +164,7 @@ test.each(["", "?name=staff.xlsx"])(
   },
 );
 
-async function managedImport() {
-  const fake = await startFakeDecisions();
-  onTestFinished(() => fake.stop());
+async function managedImport(fake: FakeDecisions) {
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
   const { env, accounts } = await startManagedEnv({ decisionsUrl: fake.url });
   const browser = await signInAsManagedOwner(env, accounts);
