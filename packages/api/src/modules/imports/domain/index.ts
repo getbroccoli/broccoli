@@ -1,9 +1,11 @@
 export {
+  type ColumnMapping,
   columnQuestions,
   headerQuestion,
   readColumnMapping,
   readFileRecords,
   readHeaderRow,
+  sheetQuestions,
 } from "./fileMapping";
 export {
   IMPORT_EMPLOYEE_VERSION,

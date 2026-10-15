@@ -7,6 +7,7 @@ import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository, type ImportRepository } from "../../db";
 import {
+  type ColumnMapping,
   columnQuestions,
   type FileSource,
   headerQuestion,
@@ -17,6 +18,7 @@ import {
   readHeaderRow,
   readSheet,
   type Sheet,
+  sheetQuestions,
 } from "../../domain";
 
 /**
@@ -184,20 +186,51 @@ async function mapSheetOrFail(decisions: Decisions, sheet: Sheet): Promise<Mappi
   }
 }
 
-/** The two model calls; outside any transaction, which never waits on another service. */
+/**
+ * Asks the model outside any transaction, which never waits on another service: first
+ * everything in one request; when an answer is unsure, the header and then the columns
+ * under it, which gives the model the header's text and the cells below it.
+ */
 async function mapSheet(decisions: Decisions, sheet: Sheet): Promise<MappingResult> {
-  const header = headerQuestion(sheet);
-  const headerRow = readHeaderRow(await decisions.decide(header.state, header.questions));
+  const { headerRow, mapping } =
+    (await mapInOneRequest(decisions, sheet)) ?? (await mapHeaderThenColumns(decisions, sheet));
   if (headerRow === null) {
     return { outcome: { status: "failed", failure: "no_header" }, records: [] };
   }
-  const columns = columnQuestions(sheet, headerRow);
-  const mapping = readColumnMapping(await decisions.decide(columns.state, columns.questions));
   if (mapping === null) {
     return { outcome: { status: "failed", failure: "no_people_columns" }, records: [] };
   }
   return {
     outcome: { status: "mapped" },
     records: readFileRecords(sheet, headerRow, mapping),
+  };
+}
+
+/** The header row and the columns, each null when the model found none. */
+interface SheetMapping {
+  headerRow: number | null;
+  mapping: ColumnMapping | null;
+}
+
+/** Null when any answer is unsure. */
+async function mapInOneRequest(decisions: Decisions, sheet: Sheet): Promise<SheetMapping | null> {
+  const { state, questions } = sheetQuestions(sheet);
+  const answers = await decisions.decide(state, questions);
+  if (Object.values(answers).includes(null)) {
+    return null;
+  }
+  return { headerRow: readHeaderRow(answers), mapping: readColumnMapping(answers) };
+}
+
+async function mapHeaderThenColumns(decisions: Decisions, sheet: Sheet): Promise<SheetMapping> {
+  const header = headerQuestion(sheet);
+  const headerRow = readHeaderRow(await decisions.decide(header.state, header.questions));
+  if (headerRow === null) {
+    return { headerRow, mapping: null };
+  }
+  const columns = columnQuestions(sheet, headerRow);
+  return {
+    headerRow,
+    mapping: readColumnMapping(await decisions.decide(columns.state, columns.questions)),
   };
 }

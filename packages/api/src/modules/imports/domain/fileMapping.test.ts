@@ -2,10 +2,12 @@ import { expect, it } from "vitest";
 
 import {
   columnQuestions,
+  FILE_FIELDS,
   headerQuestion,
   readColumnMapping,
   readFileRecords,
   readHeaderRow,
+  sheetQuestions,
   type ColumnMapping,
 } from "./fileMapping";
 
@@ -17,6 +19,23 @@ const UNMAPPED: ColumnMapping = {
   jobTitle: null,
   startDate: null,
 };
+
+it("asks for the header and each field using the widest of the first ten rows", () => {
+  const sheet = [
+    ["Staff"],
+    ...Array.from({ length: 8 }, () => ["Name", "Email"]),
+    ["Avery Stone", "avery@example.com", "Designer"],
+    ["Robin Reed", "robin@example.com", "Engineer", "2026-01-14"],
+  ];
+
+  const { questions } = sheetQuestions(sheet);
+
+  expect(Object.keys(questions)).toEqual(["headerRow", ...FILE_FIELDS]);
+  expect(questions.headerRow).toEqual(headerQuestion(sheet).questions.headerRow);
+  for (const field of FILE_FIELDS) {
+    expect(Object.keys(questions[field].options)).toEqual(["A", "B", "C", "none"]);
+  }
+});
 
 it("shows only the first ten rows as header choices", () => {
   const sheet = Array.from({ length: 12 }, (_, index) => [`Row ${index + 1}`]);

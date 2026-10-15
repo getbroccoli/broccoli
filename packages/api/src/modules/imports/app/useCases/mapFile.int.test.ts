@@ -4,6 +4,62 @@ import { expect, importUseCases, OWNER, SYSTEM, test } from "#test/support";
 
 import { DecisionsError } from "../../../../core/ai/decisions";
 
+test("maps a file in one request when every answer is confident", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({
+    content: "Name,Email\nAvery Stone,avery@example.com",
+  });
+  fake.answer({ headerRow: "1", fullName: "A", email: "B" });
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toMatchObject([
+    {
+      sourceId: source.id,
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+      jobTitle: null,
+      startDate: null,
+    },
+  ]);
+  expect(fake.requestCount).toBe(1);
+});
+
+test("uses the fallback header and columns when a field answer is unsure", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({
+    content: "Staff export\nReference,Name,Email\nIgnored,Avery Stone,avery@example.com",
+  });
+  fake.answer(
+    { headerRow: "1", fullName: "A", jobTitle: { choice: "none", confidence: 0.5 } },
+    { headerRow: "2" },
+    { fullName: "B", email: "C" },
+  );
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toMatchObject([
+    {
+      sourceId: source.id,
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+      jobTitle: null,
+      startDate: null,
+    },
+  ]);
+  expect(fake.requestCount).toBe(3);
+});
+
 test("maps a semicolon file with a title above the header", async ({
   orm,
   seed,

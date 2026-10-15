@@ -18,6 +18,34 @@ export type FileField = (typeof FILE_FIELDS)[number];
 /** Per field, the 0-based column index, or null when no column holds it. */
 export type ColumnMapping = Record<FileField, number | null>;
 
+/**
+ * Asks everything at once over the first rows: which one is the header, and which
+ * column, by letter, holds each field.
+ */
+export function sheetQuestions(sheet: Sheet): {
+  state: JsonObject;
+  questions: { headerRow: Question } & Record<FileField, Question>;
+} {
+  const { state, questions } = headerQuestion(sheet);
+  const width = Math.max(...sheet.slice(0, HEADER_CANDIDATES).map((row) => row.length));
+  const options: Record<string, string> = {
+    ...Object.fromEntries(
+      Array.from({ length: width }, (_cell, index) => columnLetter(index)).map((letter) => [
+        letter,
+        `Column ${letter}`,
+      ]),
+    ),
+    [NONE]: "No column holds this",
+  };
+  return {
+    state,
+    questions: {
+      ...questions,
+      ...fieldQuestions(options, "Columns are lettered A, B, C… by their position in a row."),
+    },
+  };
+}
+
 /** Asks which of the first rows holds the column headings. */
 export function headerQuestion(sheet: Sheet): {
   state: JsonObject;
@@ -75,12 +103,7 @@ export function columnQuestions(
         ]),
       ),
     },
-    questions: Object.fromEntries(
-      FILE_FIELDS.map((field) => [
-        field,
-        { instructions: `${FIELD_QUESTIONS[field]} ${UNTRUSTED}`, options },
-      ]),
-    ) as Record<FileField, Question>,
+    questions: fieldQuestions(options),
   };
 }
 
@@ -166,6 +189,21 @@ const FIELD_QUESTIONS: Record<FileField, string> = {
   jobTitle: "Which column holds the job title or position?",
   startDate: "Which column holds the date the person started or joined? Never a birth or end date.",
 };
+
+function fieldQuestions(
+  options: Record<string, string>,
+  note?: string,
+): Record<FileField, Question> {
+  return Object.fromEntries(
+    FILE_FIELDS.map((field) => [
+      field,
+      {
+        instructions: [FIELD_QUESTIONS[field], note, UNTRUSTED].filter(Boolean).join(" "),
+        options,
+      },
+    ]),
+  ) as Record<FileField, Question>;
+}
 
 /** Separate first and last name columns win over a full name column. */
 function nameOf(
