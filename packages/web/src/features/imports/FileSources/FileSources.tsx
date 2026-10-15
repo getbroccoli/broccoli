@@ -27,10 +27,12 @@ interface FileSourcesProps {
   sources: ImportStepQuery["import"]["sources"];
   /** Reloads the import after a file was added. */
   onUploaded: () => Promise<unknown>;
+  /** Tells whether files are being uploaded, so nothing is approved before they arrive. */
+  onUploadingChange: (uploading: boolean) => void;
 }
 
 /** Staff files as sources of people: drop or choose CSV files, retry or remove them. */
-export function FileSources({ sources, onUploaded }: FileSourcesProps) {
+export function FileSources({ sources, onUploaded, onUploadingChange }: FileSourcesProps) {
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const [refusals, setRefusals] = useState<string[]>([]);
@@ -45,20 +47,26 @@ export function FileSources({ sources, onUploaded }: FileSourcesProps) {
       return;
     }
     setRefusals([]);
+    onUploadingChange(true);
     const refused: string[] = [];
-    for (const file of Array.from(files)) {
-      setUploading(file.name);
-      const result = await uploadFile(file);
-      if (result === "ok") {
-        await onUploaded();
-      } else {
-        refused.push(t(REFUSALS[result], { name: file.name }));
+    try {
+      for (const file of Array.from(files)) {
+        setUploading(file.name);
+        const result = await uploadFile(file);
+        if (result === "ok") {
+          // The file is stored; a failed reload only delays its card until the next one.
+          await onUploaded().catch(() => {});
+        } else {
+          refused.push(t(REFUSALS[result], { name: file.name }));
+        }
       }
-    }
-    setUploading(null);
-    setRefusals(refused);
-    if (input.current) {
-      input.current.value = "";
+    } finally {
+      setUploading(null);
+      setRefusals(refused);
+      onUploadingChange(false);
+      if (input.current) {
+        input.current.value = "";
+      }
     }
   };
 
@@ -112,7 +120,9 @@ export function FileSources({ sources, onUploaded }: FileSourcesProps) {
           <span className="text-[13px] text-muted-foreground">{t("imports.files.dropHint")}</span>
         </button>
       ) : (
-        <ul className={`flex flex-col gap-2 rounded-xl ${dragging ? "outline-2 outline-primary" : ""}`}>
+        <ul
+          className={`flex flex-col gap-2 rounded-xl ${dragging ? "outline-2 outline-primary" : ""}`}
+        >
           {sources.map((source) => (
             <FileSourceCard
               key={source.id}

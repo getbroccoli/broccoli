@@ -47,6 +47,10 @@ it("leaves an ambiguous column empty", () => {
   expect(readDateColumn(["02/03/2026", "04/05/2026"])).toEqual([null, null]);
 });
 
+it("ignores impossible dates when inferring the column's date order", () => {
+  expect(readDateColumn(["14/01/2026", "02/99/2026"])).toEqual(["2026-01-14", null]);
+});
+
 it("leaves a cell that is not a date empty", () => {
   expect(readDateColumn(["14/01/2026", "not a date", "31/02/2026", ""])).toEqual([
     "2026-01-14",

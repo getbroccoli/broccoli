@@ -27,9 +27,9 @@ export interface JobQueue {
 /** Runs the modules' jobs in this process; their queue lives in Postgres. */
 export interface JobRunner {
   queue: JobQueue;
-  /** Creates the queues and starts working them; call after the migrations. */
+  /** Creates the queues and starts working them; call after the migrations. Does nothing once stopped. */
   start(handlers: readonly JobHandlers[]): Promise<void>;
-  /** Lets running jobs finish for a while, then stops. */
+  /** Waits for a start in progress, lets running jobs finish for a while, then stops. */
   stop(): Promise<void>;
 }
 
@@ -44,7 +44,8 @@ export function createJobRunner(
     schedule: false,
   });
   boss.on("error", (error) => logger.error({ err: error }, "Job runner failed"));
-  let started = false;
+  let starting: Promise<void> | undefined;
+  let stopping: Promise<void> | undefined;
 
   return {
     queue: {
@@ -53,23 +54,24 @@ export function createJobRunner(
       },
     },
 
-    start: async (handlers) => {
-      await boss.start();
-      started = true;
-      for (const moduleHandlers of handlers) {
-        for (const [name, handler] of Object.entries(moduleHandlers) as [
-          JobName,
-          JobHandler<JobName>,
-        ][]) {
-          await workQueue(boss, name, handler, retryDelaySeconds);
-        }
+    start: (handlers) => {
+      if (stopping) {
+        return Promise.resolve();
       }
+      starting = startWorking(boss, handlers, retryDelaySeconds);
+      return starting;
     },
 
-    stop: async () => {
-      if (started) {
+    stop: () => {
+      stopping ??= (async () => {
+        if (!starting) {
+          return;
+        }
+        // A failed start still opened the pool, so it is stopped either way.
+        await starting.catch(() => {});
         await boss.stop({ graceful: true, timeout: STOP_TIMEOUT_MS });
-      }
+      })();
+      return stopping;
     },
   };
 }
@@ -79,6 +81,22 @@ const RETRY_LIMIT = 2;
 const EXPIRE_IN_SECONDS = 120;
 const STOP_TIMEOUT_MS = 10_000;
 const CONCURRENCY = 2;
+
+async function startWorking(
+  boss: PgBoss,
+  handlers: readonly JobHandlers[],
+  retryDelaySeconds: number,
+): Promise<void> {
+  await boss.start();
+  for (const moduleHandlers of handlers) {
+    for (const [name, handler] of Object.entries(moduleHandlers) as [
+      JobName,
+      JobHandler<JobName>,
+    ][]) {
+      await workQueue(boss, name, handler, retryDelaySeconds);
+    }
+  }
+}
 
 async function workQueue(
   boss: PgBoss,

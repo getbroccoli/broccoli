@@ -143,6 +143,39 @@ test("does not retry an unauthorized request", async ({ app, decisions }) => {
   await expect(result).rejects.toMatchObject({ retryable: false });
 });
 
+test("allows retrying a timeout while reading a successful response body", async ({
+  app,
+  decisions,
+}) => {
+  let sentHeaders = false;
+  app.post("/alpha/decisions", (_request, response) => {
+    response.status(200).type("json");
+    response.flushHeaders();
+    response.write('{"answers":');
+    sentHeaders = true;
+  });
+
+  const result = decisions.decide({}, QUESTIONS);
+
+  await expect(result).rejects.toBeInstanceOf(DecisionsError);
+  await expect(result).rejects.toMatchObject({ retryable: true });
+  expect(sentHeaders).toBe(true);
+});
+
+test("does not retry a successful response containing malformed JSON", async ({
+  app,
+  decisions,
+}) => {
+  app.post("/alpha/decisions", (_request, response) => {
+    response.status(200).type("json").send("not JSON");
+  });
+
+  const result = decisions.decide({}, QUESTIONS);
+
+  await expect(result).rejects.toBeInstanceOf(DecisionsError);
+  await expect(result).rejects.toMatchObject({ retryable: false });
+});
+
 test("does not retry an answer outside the offered options", async ({ app, decisions }) => {
   app.post("/alpha/decisions", (_request, response) =>
     response.json({ answers: { ...ANSWERS, name: { ...ANSWERS.name, choice: "C" } } }),

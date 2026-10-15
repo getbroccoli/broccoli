@@ -77,7 +77,7 @@ export function createDecisions({
           RETRYABLE_STATUSES.has(response.status) || response.status >= 500,
         );
       }
-      return readAnswers(await response.json().catch(() => null), questions);
+      return readAnswers(parseJson(await readBody(response)), questions);
     },
   };
 }
@@ -106,6 +106,23 @@ async function post(
     });
   } catch (error) {
     throw new DecisionsError(`The model could not be reached: ${String(error)}`, true);
+  }
+}
+
+/** The body as text; a connection that breaks or times out mid-answer may succeed later. */
+async function readBody(response: Response): Promise<string> {
+  try {
+    return await response.text();
+  } catch (error) {
+    throw new DecisionsError(`The model's answer was cut off: ${String(error)}`, true);
+  }
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
   }
 }
 

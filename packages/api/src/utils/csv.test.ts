@@ -69,3 +69,17 @@ it("keeps each row's own length", () => {
     ["Sam", "sam@example.com", "Designer"],
   ]);
 });
+
+it("trims spaces inside quoted cells", () => {
+  expect(parseCsv(Buffer.from('Name,Email\n" Avery Stone "," avery@example.com "'))).toEqual([
+    ["Name", "Email"],
+    ["Avery Stone", "avery@example.com"],
+  ]);
+});
+
+it("drops a row of quoted blanks", () => {
+  expect(parseCsv(Buffer.from('Name,Email\n" "," "\nAvery Stone,avery@example.com'))).toEqual([
+    ["Name", "Email"],
+    ["Avery Stone", "avery@example.com"],
+  ]);
+});

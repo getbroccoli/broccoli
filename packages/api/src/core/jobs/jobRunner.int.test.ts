@@ -96,3 +96,55 @@ test("calls onFailed with the payload after the third failed attempt", async ({
     .toEqual([{ payload: EXAMPLE_JOB, attempts: 3 }]);
   expect(attempts).toEqual([EXAMPLE_JOB, EXAMPLE_JOB, EXAMPLE_JOB]);
 });
+
+test("stopping during startup waits for startup and leaves no worker running", async ({
+  runner,
+  databaseUrl,
+  transact,
+}) => {
+  const stoppedRunnerJobs: (typeof EXAMPLE_JOB)[] = [];
+  const lifecycle: string[] = [];
+  const starting = runner
+    .start([
+      {
+        "example.ran": {
+          run: (payload) => {
+            stoppedRunnerJobs.push(payload);
+            return Promise.resolve();
+          },
+          onFailed: () => {
+            throw new Error("The job should succeed");
+          },
+        },
+      },
+    ])
+    .then(() => lifecycle.push("started"));
+
+  const stopping = runner.stop().then(() => lifecycle.push("stopped"));
+  await Promise.all([starting, stopping]);
+
+  expect(lifecycle).toEqual(["started", "stopped"]);
+  const secondRunner = createJobRunner(databaseUrl, createLogger("silent"));
+  const ran: (typeof EXAMPLE_JOB)[] = [];
+  try {
+    await secondRunner.start([
+      {
+        "example.ran": {
+          run: (payload) => {
+            ran.push(payload);
+            return Promise.resolve();
+          },
+          onFailed: () => {
+            throw new Error("The job should succeed");
+          },
+        },
+      },
+    ]);
+    await transact((tx) => secondRunner.queue.send(tx, "example.ran", EXAMPLE_JOB));
+
+    await expect.poll(() => ran, { timeout: 5_000 }).toEqual([EXAMPLE_JOB]);
+  } finally {
+    await secondRunner.stop();
+  }
+  expect(stoppedRunnerJobs).toEqual([]);
+});

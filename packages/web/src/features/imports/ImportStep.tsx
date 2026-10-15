@@ -53,7 +53,9 @@ export function ImportStep() {
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
   const canApprove = sources.some(({ employeeCount }) => employeeCount > 0);
+  const [uploading, setUploading] = useState(false);
   const busy = approving || skipping;
+  const reading = mapping || uploading;
 
   const leave = async (how: keyof typeof LEAVE_FAILURES) => {
     setFailure(null);
@@ -82,8 +84,8 @@ export function ImportStep() {
             {t(skipping ? "setup.import.skipping" : "setup.import.skip")}
           </Button>
           {canApprove && (
-            <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || mapping}>
-              {t(approveLabel(approving, mapping))}
+            <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || reading}>
+              {t(approveLabel(approving, reading))}
             </Button>
           )}
         </div>
@@ -98,7 +100,11 @@ export function ImportStep() {
         <>
           <SlackSourceRow connection={data.slackConnection} source={slackSource} />
           {data.import.canReadFiles && (
-            <FileSources sources={fileSources} onUploaded={() => refetch()} />
+            <FileSources
+              sources={fileSources}
+              onUploaded={() => refetch()}
+              onUploadingChange={setUploading}
+            />
           )}
         </>
       ) : error ? (
@@ -120,9 +126,9 @@ export function ImportStep() {
   );
 }
 
-function approveLabel(approving: boolean, mapping: boolean) {
+function approveLabel(approving: boolean, reading: boolean) {
   if (approving) {
     return "setup.import.approving";
   }
-  return mapping ? "setup.import.reading" : "setup.import.approve";
+  return reading ? "setup.import.reading" : "setup.import.approve";
 }

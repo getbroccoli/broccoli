@@ -121,8 +121,8 @@ export function readFileRecords(
   headerRow: number,
   mapping: ColumnMapping,
 ): IncomingRecord[] {
-  const keys = rawKeys(sheet[headerRow]!);
   const rows = sheet.slice(headerRow + 1);
+  const keys = rawKeys(sheet[headerRow]!, Math.max(0, ...sheet.map((row) => row.length)));
   const cellsOf = (field: FileField) =>
     rows.map((row) => (mapping[field] === null ? "" : (row[mapping[field]] ?? "")));
   const startDates = readDateColumn(cellsOf("startDate"));
@@ -180,15 +180,21 @@ function nameOf(
   return splitFullName(fullName);
 }
 
-/** Header texts as keys: a blank one becomes its column letter, a repeated one gets ` (2)`. */
-function rawKeys(header: readonly string[]): string[] {
-  const seen = new Map<string, number>();
-  return header.map((text, column) => {
-    const key = text === "" ? columnLetter(column) : text;
-    const count = (seen.get(key) ?? 0) + 1;
-    seen.set(key, count);
-    return count === 1 ? key : `${key} (${count})`;
-  });
+/**
+ * One distinct key per column: its header text, its letter when it has none, and ` (2)`,
+ * ` (3)`, … when the key is taken.
+ */
+function rawKeys(header: readonly string[], width: number): string[] {
+  const keys = new Set<string>();
+  for (let column = 0; column < width; column++) {
+    const text = header[column] || columnLetter(column);
+    let key = text;
+    for (let count = 2; keys.has(key); count++) {
+      key = `${text} (${count})`;
+    }
+    keys.add(key);
+  }
+  return [...keys];
 }
 
 function cut(row: readonly string[]): string[] {

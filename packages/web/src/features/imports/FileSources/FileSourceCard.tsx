@@ -71,11 +71,7 @@ export function FileSourceCard({ source, busy, onRetry, onRemove }: FileSourceCa
   );
 }
 
-function statusLine({
-  status,
-  failure,
-  employeeCount,
-}: FileSourceCardProps["source"]): string {
+function statusLine({ status, failure, employeeCount }: FileSourceCardProps["source"]): string {
   if (status === "MAPPING") {
     return t("imports.files.mapping");
   }

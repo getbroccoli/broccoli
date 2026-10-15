@@ -39,11 +39,14 @@ function decode(bytes: Uint8Array): string {
 function parseWith(text: string, delimiter: string): string[][] | null {
   let rows: string[][];
   try {
-    rows = parse(text, { delimiter, relax_column_count: true, relax_quotes: true, trim: true });
+    rows = parse(text, { delimiter, relax_column_count: true, relax_quotes: true });
   } catch {
     return null;
   }
-  return rows.filter((row) => row.some((cell) => cell !== ""));
+  // Trimmed here, not by the parser, which leaves spaces inside quotes.
+  return rows
+    .map((row) => row.map((cell) => cell.trim()))
+    .filter((row) => row.some((cell) => cell !== ""));
 }
 
 /** How many rows share the most common column count: the right delimiter makes a regular table. */

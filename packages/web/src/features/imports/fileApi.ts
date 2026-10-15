@@ -1,12 +1,6 @@
 /** How an upload of a staff file ended. */
 export type UploadFileResult =
-  | "ok"
-  | "notCsv"
-  | "empty"
-  | "tooManyRows"
-  | "tooManyColumns"
-  | "tooLarge"
-  | "failed";
+  "ok" | "notCsv" | "empty" | "tooManyRows" | "tooManyColumns" | "tooLarge" | "failed";
 
 const RESULT_BY_FIELD_CODE: Partial<Record<string, UploadFileResult>> = {
   not_csv: "notCsv",

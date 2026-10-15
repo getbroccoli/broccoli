@@ -8,11 +8,11 @@ query ImportStep {
     canReadFiles
     sources {
       id
-        kind
-        name
-        status
-        failure
-        employeeCount
+      kind
+      name
+      status
+      failure
+      employeeCount
     }
   }
 }

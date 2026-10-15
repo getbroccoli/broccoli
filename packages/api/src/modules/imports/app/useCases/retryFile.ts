@@ -10,7 +10,9 @@ export async function retryFile(
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   await transact(async (tx) => {
-    const attempt = await importRepository(tx).restartMapping(sourceId);
+    const imports = importRepository(tx);
+    await imports.lockSources();
+    const attempt = await imports.restartMapping(sourceId);
     if (attempt !== null) {
       await jobs.send(tx, "imports.mapFile", { sourceId, attempt });
     }

@@ -41,6 +41,11 @@ export interface ImportRepository {
   /** Whether any source is still being mapped. */
   hasMappingSource(): Promise<boolean>;
   /**
+   * Waits for and holds, until the transaction ends, the lock that Approve and the
+   * operations starting a mapping run take first, so Approve never misses a run.
+   */
+  lockSources(): Promise<void>;
+  /**
    * Makes the source's employee records match `records` by external id: updates the
    * ones still there, so their ids stay, adds new ones and deletes the rest.
    */
@@ -178,6 +183,10 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return row !== undefined;
     },
 
+    lockSources: async (): Promise<void> => {
+      await orm().execute(sql`select pg_advisory_xact_lock(hashtext(${SOURCES_LOCK_KEY}))`);
+    },
+
     syncEmployeeRecords: async (sourceId: string, records: IncomingRecord[]): Promise<void> => {
       const ofSource = and(
         eq(importRecords.sourceId, sourceId),
@@ -270,6 +279,8 @@ export function importRepository(db: Orm | Tx): ImportRepository {
     },
   };
 }
+
+const SOURCES_LOCK_KEY = "broccoli.import_sources";
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;

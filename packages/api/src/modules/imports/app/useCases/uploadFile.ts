@@ -29,8 +29,10 @@ export async function uploadFile(
     throw invalidInput([{ field: "file", code: sheet }]);
   }
   return transact(async (tx) => {
+    const imports = importRepository(tx);
+    await imports.lockSources();
     const fileId = await storeFile(tx, { content: Buffer.from(bytes), mimeType: "text/csv" });
-    const sourceId = await importRepository(tx).insertFileSource(name, fileId);
+    const sourceId = await imports.insertFileSource(name, fileId);
     await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
     return sourceId;
   });

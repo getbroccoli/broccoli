@@ -131,3 +131,60 @@ test("an unauthorized model request fails the file as unavailable", async ({
   ]);
   expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
 });
+
+test("an in-flight answer leaves a retried source mapping without records", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
+  fake.answer({ headerRow: "1", fullName: "A" });
+  const held = fake.holdNextAnswer();
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const mapping = imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  try {
+    await held.received;
+    await imports.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
+    await imports.retryFile(OWNER, source.id);
+    const restarted = await imports.listSources(OWNER);
+    expect(restarted).toMatchObject([{ id: source.id, status: "mapping", failure: null }]);
+    expect(imports.sentJobs).toEqual([
+      { name: "imports.mapFile", payload: { sourceId: source.id, attempt: 1 } },
+    ]);
+
+    held.release();
+    await mapping;
+
+    expect(await imports.listSources(OWNER)).toEqual(restarted);
+    expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+  } finally {
+    held.release();
+    await mapping;
+  }
+});
+
+test("an in-flight answer does not restore a removed source or its records", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
+  fake.answer({ headerRow: "1", fullName: "A" });
+  const held = fake.holdNextAnswer();
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const mapping = imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  try {
+    await held.received;
+    await imports.removeFile(OWNER, source.id);
+    held.release();
+    await mapping;
+
+    expect(await imports.listSources(OWNER)).toEqual([]);
+    expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+  } finally {
+    held.release();
+    await mapping;
+  }
+});

@@ -221,3 +221,32 @@ it("keys raw cells by header, giving blank and repeated headers distinct keys", 
   );
   expect(record?.raw).toEqual({ Name: "Avery Stone", B: "Designer", "Name (2)": "Robin Reed" });
 });
+
+it("keeps raw cells beyond the header's width under their column letters", () => {
+  const [record] = readFileRecords(
+    [["Name"], ["Avery Stone", "avery@example.com", "Designer"]],
+    0,
+    { ...UNMAPPED, fullName: 0 },
+  );
+
+  expect(record?.raw).toEqual({
+    Name: "Avery Stone",
+    B: "avery@example.com",
+    C: "Designer",
+  });
+});
+
+it("keeps all raw cells when a header collides with a repeated header's suffix", () => {
+  const [record] = readFileRecords(
+    [
+      ["Name", "Name", "Name (2)"],
+      ["Avery Stone", "Robin Reed", "Sam Vale"],
+    ],
+    0,
+    { ...UNMAPPED, fullName: 0 },
+  );
+
+  const raw = record!.raw as Record<string, string>;
+  expect(Object.keys(raw)).toHaveLength(3);
+  expect(Object.values(raw)).toEqual(["Avery Stone", "Robin Reed", "Sam Vale"]);
+});

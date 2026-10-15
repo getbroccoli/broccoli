@@ -8,14 +8,15 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 export async function startFakeDecisions() {
   let answers: Record<string, string | Answer> = {};
   let status = 200;
+  let nextAnswer: { received: () => void; released: Promise<void> } | undefined;
   const app = express().use(express.json());
-  app.post("/alpha/decisions", (request, response) => {
+  app.post("/alpha/decisions", async (request, response) => {
     if (status !== 200) {
       response.status(status).json({ error: "Decisions unavailable" });
       return;
     }
     const { questions } = request.body as { questions: Record<string, unknown> };
-    response.json({
+    const body = {
       answers: Object.fromEntries(
         Object.keys(questions).map((id) => {
           const scripted = answers[id] ?? "none";
@@ -27,7 +28,14 @@ export async function startFakeDecisions() {
           ];
         }),
       ),
-    });
+    };
+    const held = nextAnswer;
+    nextAnswer = undefined;
+    if (held) {
+      held.received();
+      await held.released;
+    }
+    response.json(body);
   });
   const server = await startSimpleHttpServer(app);
   return {
@@ -43,6 +51,12 @@ export async function startFakeDecisions() {
     },
     fail(nextStatus: number) {
       status = nextStatus;
+    },
+    holdNextAnswer() {
+      const received = Promise.withResolvers<void>();
+      const released = Promise.withResolvers<void>();
+      nextAnswer = { received: received.resolve, released: released.promise };
+      return { received: received.promise, release: released.resolve };
     },
   };
 }

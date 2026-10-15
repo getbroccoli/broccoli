@@ -17,14 +17,16 @@ export async function approveImport(
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const result = await transact(async (tx) => {
-    if (await importRepository(tx).hasMappingSource()) {
+    const imports = importRepository(tx);
+    await imports.lockSources();
+    if (await imports.hasMappingSource()) {
       throw new ApplicationError("CONFLICT", "Files are still being read.");
     }
     // The step move locks the instance row, so a concurrent Approve waits and then finds `done`.
     if (!(await advanceStep(ctx, tx, "import", "done"))) {
       return null;
     }
-    const records = await importRepository(tx).listEmployeeRecords();
+    const records = await imports.listEmployeeRecords();
     return createImportedEmployees(ctx, tx, records.map(toNewEmployeeInput));
   });
   if (result) {
