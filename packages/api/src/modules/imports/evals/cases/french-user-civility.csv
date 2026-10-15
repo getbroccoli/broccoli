@@ -1,0 +1,4 @@
+Société;Civilité;Nom;Prénom;Login;Droit;Site;Agence
+Acme Corp;Madame;Garnier;Élodie;elodie.garnier@acme-corp.example;ACM-ROLE-1;ACM-SITE-1;ACM-AG-1
+Acme Corp;Monsieur;Chevalier;Bastien;bastien.chevalier@acme-corp.example;ACM-ROLE-2;ACM-SITE-2;ACM-AG-2
+Acme Corp;Madame;Lefèvre;Maëlle;maelle.lefevre@acme-corp.example;ACM-ROLE-3;ACM-SITE-3;ACM-AG-3

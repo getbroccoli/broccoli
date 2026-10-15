@@ -11,3 +11,9 @@
 - `injection-cell`: A UK staff spreadsheet's notes cell instructs the model to use Notes as the work email; the real work email and day-first start date must be used.
 - `headerless`: Staff rows with Scottish, Polish and Caribbean names and day-first dates map from their cells without headings, including the first row.
 - `no-people-columns`: A UK office stock list with GBP prices and no staff fields fails with `no_people_columns`.
+- `workspace-recovery`: Google Workspace CSV headings with required markers, recovery emails beside work emails, dummy passwords and employee IDs; name-like vocabulary stays masked.
+- `german-legal-names`: Personio payroll attributes separate legal surnames from birth names, personal from work email, and hire dates from birth and termination dates.
+- `french-coded-headers`: Lucca-style semicolon CSV uses machine field codes, personal-email decoys and the same emergency contact on every row; French day-first contract dates map to start dates.
+- `spanish-contract-dates`: Factorial-style Spanish contract sheet distinguishes contract start from effective, end and birth dates, with a repeated manager-email decoy.
+- `dutch-payroll-names`: Nmbrs employee-tab columns distinguish legal given names from everyday names, employee surnames from partner surnames, and work emails from private emails.
+- `french-user-civility`: Sage-style French user CSV has surnames before given names, work emails under Login, civility and permission codes but no job title or start date.

@@ -1,0 +1,49 @@
+{
+  "records": [
+    {
+      "firstName": "Céline",
+      "lastName": "Perrin",
+      "email": "celine.perrin@acme-corp.example",
+      "jobTitle": null,
+      "startDate": "2022-04-23"
+    },
+    {
+      "firstName": "Thibaut",
+      "lastName": "Roux",
+      "email": "thibaut.roux@acme-corp.example",
+      "jobTitle": null,
+      "startDate": "2023-06-17"
+    },
+    {
+      "firstName": "Aurélie",
+      "lastName": "Favre",
+      "email": "aurelie.favre@acme-corp.example",
+      "jobTitle": null,
+      "startDate": "2024-08-21"
+    }
+  ],
+  "forbidden": [
+    "celine.perrin",
+    "Céline",
+    "Perrin",
+    "celine.perrin@acme-corp.example",
+    "celine.perrin@home.example",
+    "23/04/2022",
+    "Lucien Morel",
+    "+33612345671",
+    "thibaut.roux",
+    "Thibaut",
+    "Roux",
+    "thibaut.roux@acme-corp.example",
+    "thibaut.roux@home.example",
+    "17/06/2023",
+    "aurelie.favre",
+    "Aurélie",
+    "Favre",
+    "aurelie.favre@acme-corp.example",
+    "aurelie.favre@home.example",
+    "21/08/2024",
+    "Lucien",
+    "Morel"
+  ]
+}
