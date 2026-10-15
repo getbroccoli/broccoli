@@ -19,6 +19,8 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
     throw new Error("Set EVAL_OPEN_ROUTER_KEY to run the evals");
   }
   const sentBodies: string[] = [];
+  // The client's timeout ends only its call to the proxy; stopping ends the calls to OpenRouter too.
+  const upstreamCalls = new AbortController();
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
   app.post("/alpha/decisions", async (request, response) => {
     const body = request.body as string;
@@ -27,6 +29,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body,
+      signal: upstreamCalls.signal,
     });
     response
       .status(upstream.status)
@@ -42,7 +45,10 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
         const written = JSON.stringify(value).slice(1, -1).toLowerCase();
         return sentBodies.some((body) => body.includes(written));
       }),
-    stop: server.stop,
+    stop: () => {
+      upstreamCalls.abort();
+      return server.stop();
+    },
   };
 }
 

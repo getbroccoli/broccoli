@@ -1,6 +1,10 @@
 import { defineConfig } from "vitest/config";
 
 // Evals call the real model with your key; they are never part of `pnpm check` or CI.
+if (!process.env.EVAL_OPEN_ROUTER_KEY) {
+  throw new Error("Set EVAL_OPEN_ROUTER_KEY to run the evals");
+}
+
 export default defineConfig({
   test: {
     include: ["src/**/*.eval.test.ts"],

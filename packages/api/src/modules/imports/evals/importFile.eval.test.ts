@@ -17,7 +17,14 @@ for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
       readFileSync(join(CASES, `${name}.expected.json`), "utf8"),
     ) as ExpectedImport;
     const model = await startLiveDecisions();
-    onTestFinished(() => model.stop());
+    onTestFinished(() => {
+      // shortcut: leaks are only reported until personal data is replaced by placeholders before model calls; then assert none.
+      const leaked = model.leaked(expected.forbidden);
+      if (leaked.length > 0) {
+        console.warn(`${name}: ${leaked.length} forbidden values reached the model:`, leaked);
+      }
+      return model.stop();
+    });
     const imports = importUseCases(orm, { decisions: model.decisions });
 
     const sourceId = await imports.uploadFile(OWNER, {
@@ -40,12 +47,6 @@ for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
       failure: expected.failure ?? null,
       records: sorted(expected.records ?? []),
     });
-
-    // shortcut: leaks are only reported until personal data is replaced by placeholders before model calls; then assert none.
-    const leaked = model.leaked(expected.forbidden);
-    if (leaked.length > 0) {
-      console.warn(`${name}: ${leaked.length} forbidden values reached the model:`, leaked);
-    }
   });
 }
 
