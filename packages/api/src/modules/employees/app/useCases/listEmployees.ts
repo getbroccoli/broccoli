@@ -3,9 +3,9 @@ import {
   type Connection,
   type PageArgs,
   parsePage,
-  parseSearch,
   toConnection,
 } from "../../../../core/pagination";
+import { parseSearch } from "../../../../core/search";
 import { employeeKeyset, type EmployeeOrder, type EmployeeRepository } from "../../db";
 import type { Employee } from "../../domain";
 

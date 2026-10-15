@@ -2,9 +2,9 @@ import {
   type Connection,
   type PageArgs,
   parsePage,
-  parseSearch,
   toConnection,
 } from "../../../../core/pagination";
+import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
 import { importEmployeeKeyset, type ImportEmployeeOrder, type ImportRepository } from "../../db";
 import type { ImportEmployee, ImportSource } from "../../domain";
