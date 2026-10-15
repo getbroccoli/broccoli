@@ -85,22 +85,6 @@ export function createSlackConnectionService({
 }): SlackConnectionService {
   const connections = slackConnectionRepository(orm);
 
-  /** Exchanges the code and checks the scopes; null when Slack refused. */
-  async function exchangeCode(code: string, codeVerifier: string): Promise<SlackGrant | null> {
-    try {
-      const grant = await slackAuthorization.exchange({ code, codeVerifier });
-      if (!REQUIRED_SCOPES.every((scope) => grant.scopes.includes(scope))) {
-        throw new Error(
-          `Slack granted ${grant.scopes.join(",")}, not ${REQUIRED_SCOPES.join(",")}`,
-        );
-      }
-      return grant;
-    } catch (error) {
-      logger.warn({ err: error }, "Connecting Slack failed");
-      return null;
-    }
-  }
-
   return {
     beginSlackConnection: (ctx: SecurityContext, returnTo: string): SlackConnectionStart => {
       ctx.requireOwnerOrSystem();
@@ -135,7 +119,7 @@ export function createSlackConnectionService({
         return "state";
       }
       // Slack is asked before the transaction, which never waits on another service.
-      const grant = await exchangeCode(code, pending.codeVerifier);
+      const grant = await exchangeCode({ slackAuthorization, logger }, code, pending.codeVerifier);
       if (!grant) {
         return "failed";
       }
@@ -187,6 +171,24 @@ export function createSlackConnectionService({
       return connection?.encryptedToken === snapshot;
     },
   };
+}
+
+/** Exchanges the code and checks the scopes; null when Slack refused. */
+async function exchangeCode(
+  { slackAuthorization, logger }: { slackAuthorization: SlackAuthorization; logger: Logger },
+  code: string,
+  codeVerifier: string,
+): Promise<SlackGrant | null> {
+  try {
+    const grant = await slackAuthorization.exchange({ code, codeVerifier });
+    if (!REQUIRED_SCOPES.every((scope) => grant.scopes.includes(scope))) {
+      throw new Error(`Slack granted ${grant.scopes.join(",")}, not ${REQUIRED_SCOPES.join(",")}`);
+    }
+    return grant;
+  } catch (error) {
+    logger.warn({ err: error }, "Connecting Slack failed");
+    return null;
+  }
 }
 
 /** Scopes Broccoli needs: the member list and each member's email. */
