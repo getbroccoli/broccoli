@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { ImportEmployee } from "../../domain";
-import { incompleteReason, toNewEmployee } from "./importEmployeeService";
+import { incompleteReason, toNewEmployee } from "./importEmployeeMapping";
 
 const record: ImportEmployee = {
   id: "employee-1",
