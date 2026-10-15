@@ -12,8 +12,6 @@ export interface LiveDecisions {
   stop(): Promise<void>;
 }
 
-const OPENROUTER_URL = "https://openrouter.ai/api";
-
 /** Calls OpenRouter with the key in `EVAL_OPEN_ROUTER_KEY`; costs money. */
 export async function startLiveDecisions(): Promise<LiveDecisions> {
   const apiKey = process.env.EVAL_OPEN_ROUTER_KEY;
@@ -47,3 +45,5 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
     stop: server.stop,
   };
 }
+
+const OPENROUTER_URL = "https://openrouter.ai/api";

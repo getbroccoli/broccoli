@@ -7,14 +7,6 @@ import { expect, importUseCases, OWNER, startLiveDecisions, SYSTEM, test } from 
 
 import type { ImportEmployeeValues, ImportSourceFailure } from "../domain";
 
-/** What a case's file must become: its records, or the reason it fails. */
-interface ExpectedImport {
-  records?: ImportEmployeeValues[];
-  failure?: ImportSourceFailure;
-  /** Personal values in the file that must never reach the model. */
-  forbidden: string[];
-}
-
 const CASES = join(import.meta.dirname, "cases");
 
 for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
@@ -64,4 +56,12 @@ function sorted(records: ImportEmployeeValues[]): ImportEmployeeValues[] {
 
 function sortKey({ firstName, lastName, email, jobTitle, startDate }: ImportEmployeeValues) {
   return [firstName, lastName, email, jobTitle, startDate].join("\u0000");
+}
+
+/** What a case's file must become: its records, or the reason it fails. */
+interface ExpectedImport {
+  records?: ImportEmployeeValues[];
+  failure?: ImportSourceFailure;
+  /** Personal values in the file that must never reach the model. */
+  forbidden: string[];
 }
