@@ -76,7 +76,7 @@ const HEADING_WORDS = new Set(
     "land mitarbeiter mitarbeiterin personalnummer vorgesetzter notizen datum",
     // French
     "nom prénom courriel téléphone poste fonction service département embauche naissance ville pays",
-    "salarié employé de d'embauche",
+    "salarié employé d'embauche",
     // Spanish
     "nombre apellido apellidos correo electrónico teléfono móvil puesto cargo departamento fecha",
     "inicio ingreso nacimiento dirección empleado",
