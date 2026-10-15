@@ -18,6 +18,14 @@ it("replaces a private email domain used fewer than three times", () => {
   });
 });
 
+it("replaces a private domain that only one address uses, however often it repeats", () => {
+  expect(
+    withPlaceholders({
+      emails: ["lena@lena-vogel.example", "lena@lena-vogel.example", "lena@lena-vogel.example"],
+    }),
+  ).toEqual({ emails: ["person1@example.com", "person1@example.com", "person1@example.com"] });
+});
+
 it("keeps a public email provider's domain", () => {
   expect(withPlaceholders({ email: "lena@gmail.com" })).toEqual({ email: "person1@gmail.com" });
 });

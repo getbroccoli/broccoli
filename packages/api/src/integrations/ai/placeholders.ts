@@ -7,7 +7,13 @@ import type { Json, JsonObject } from "./decisions";
  */
 export function withPlaceholders(state: JsonObject): JsonObject {
   const strings = collectStrings(state);
-  const emailDomains = countOf(strings.flatMap(tokensOf).filter(isEmail).map(domainOf));
+  const emails = new Set(
+    strings
+      .flatMap(tokensOf)
+      .filter(isEmail)
+      .map((email) => email.toLowerCase()),
+  );
+  const emailDomains = countOf([...emails].map(domainOf));
   const emailNumbers = new Map<string, number>();
   const rewrite = (value: string): string => {
     if (passesAsItself(value)) {
@@ -24,7 +30,7 @@ export function withPlaceholders(state: JsonObject): JsonObject {
   return mapStrings(state, rewrite) as JsonObject;
 }
 
-/** An email domain shared by this many addresses is the company's, not a person's. */
+/** An email domain shared by this many distinct addresses is the company's, not a person's. */
 const MIN_SHARED = 3;
 
 const BOOLEANS = new Set("yes no true false y n x ja nein oui non sí".split(" "));
