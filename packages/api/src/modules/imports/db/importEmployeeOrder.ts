@@ -4,6 +4,7 @@ import { z } from "zod";
 import { containsPattern, keysetOrder, type KeysetOrder, nullsLast } from "../../../core/db";
 import { importRecords } from "./importRecordsTable";
 
+/** How a page of import employees is sorted. */
 export interface ImportEmployeeOrder {
   field: "NAME" | "EMAIL" | "START_DATE";
   direction: "ASC" | "DESC";
@@ -25,9 +26,6 @@ export function importEmployeeKeyset({
 }: ImportEmployeeOrder): z.ZodType<ImportEmployeeKeyset> {
   return z.tuple([z.literal(field), z.literal(direction), ...KEYSET_VALUES[field]]);
 }
-
-const valueOf = (field: string): SQL<string | null> =>
-  sql<string | null>`${importRecords.values}->>${field}`;
 
 /** The keyset order of the records in `order`. */
 export function importEmployeeOrderColumns({ field, direction }: ImportEmployeeOrder): KeysetOrder {
@@ -59,4 +57,9 @@ export function matchesSearch(search: string): SQL {
     ilike(valueOf("lastName"), pattern),
     ilike(valueOf("email"), pattern),
   )!;
+}
+
+/** A field of the record's `values`, as text. */
+function valueOf(field: string): SQL<string | null> {
+  return sql<string | null>`${importRecords.values}->>${field}`;
 }

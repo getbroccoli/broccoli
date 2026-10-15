@@ -7,9 +7,9 @@ import { EmployeesDocument } from "@/__generated__/graphql";
 import { DataTable, TableSearchField, TableState } from "@/components/dataTable";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
-import { useListPage } from "@/lib/listPage";
+import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
 
-import { SEARCH_MAX_LENGTH, toEmployeesVariables, type DirectorySearch } from "./directorySearch";
+import { toEmployeesVariables, type DirectorySearch } from "./directorySearch";
 import { EMPLOYEE_COLUMNS, useEmployeeRows } from "./employeeColumns";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
 

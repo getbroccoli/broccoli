@@ -9,14 +9,10 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
-import { useListPage } from "@/lib/listPage";
+import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
 
 import { IMPORT_REVIEW_COLUMNS } from "./importReviewColumns";
-import {
-  type ImportReviewSearch,
-  SEARCH_MAX_LENGTH,
-  toImportReviewVariables,
-} from "./importReviewSearch";
+import { type ImportReviewSearch, toImportReviewVariables } from "./importReviewSearch";
 import { SourceChips } from "./SourceChips";
 
 const POLL_INTERVAL_MS = 2_000;

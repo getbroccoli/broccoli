@@ -1,32 +1,6 @@
 import { expect, it } from "vitest";
 
-import { importReviewSearch, toImportReviewVariables } from "./importReviewSearch";
-
-it("parses an empty search to name order, ascending", () => {
-  expect(importReviewSearch.parse({})).toEqual({ sort: "name", dir: "asc" });
-});
-
-it("falls back for an unknown sort while keeping the direction", () => {
-  expect(importReviewSearch.parse({ sort: "unknown", dir: "desc" })).toEqual({
-    sort: "name",
-    dir: "desc",
-  });
-});
-
-it("falls back for an unknown direction while keeping the sort", () => {
-  expect(importReviewSearch.parse({ sort: "email", dir: "unknown" })).toEqual({
-    sort: "email",
-    dir: "asc",
-  });
-});
-
-it("trims the search text", () => {
-  expect(importReviewSearch.parse({ q: "  Avery  " })).toEqual({
-    q: "Avery",
-    sort: "name",
-    dir: "asc",
-  });
-});
+import { toImportReviewVariables } from "./importReviewSearch";
 
 it("builds a page of 50 with email descending, the cursor and search filter", () => {
   const variables = toImportReviewVariables({

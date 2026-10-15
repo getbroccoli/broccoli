@@ -1,10 +1,9 @@
-import { z } from "zod";
+import type { z } from "zod";
 
 import type { EmployeeOrderField, EmployeesQueryVariables } from "@/__generated__/graphql";
+import { listSearchSchema } from "@/lib/listPage";
 
 const PAGE_SIZE = 50;
-/** The longest search the API accepts. */
-export const SEARCH_MAX_LENGTH = 100;
 
 const ORDER_FIELDS = {
   name: "NAME",
@@ -15,16 +14,8 @@ const ORDER_FIELDS = {
 const SORT_KEYS = ["name", "email", "startDate"] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 
-/**
- * The directory's search params. Each field falls back on its own, so a hand-edited
- * URL still opens a valid list.
- */
-export const directorySearch = z.object({
-  q: z.string().trim().min(1).max(SEARCH_MAX_LENGTH).optional().catch(undefined),
-  sort: z.enum(SORT_KEYS).default("name").catch("name"),
-  dir: z.enum(["asc", "desc"]).default("asc").catch("asc"),
-  after: z.string().min(1).optional().catch(undefined),
-});
+/** The directory's search params. */
+export const directorySearch = listSearchSchema(SORT_KEYS);
 
 export type DirectorySearch = z.infer<typeof directorySearch>;
 
