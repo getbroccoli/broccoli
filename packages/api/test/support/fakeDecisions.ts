@@ -1,7 +1,6 @@
 import express from "express";
 
-import { createDecisions, type Answer } from "../../src/core/ai/decisions";
-import { createLogger } from "../../src/core/logger";
+import { createDecisions, type Answer } from "../../src/integrations/ai";
 import { startSimpleHttpServer } from "./simpleHttpServer";
 
 /** A local decisions provider with scripted choices; unspecified questions answer none. */
@@ -46,7 +45,6 @@ export async function startFakeDecisions() {
     decisions: createDecisions({
       url: server.url,
       apiKey: "test-model-key",
-      logger: createLogger("silent"),
     }),
     get requestCount() {
       return requestCount;

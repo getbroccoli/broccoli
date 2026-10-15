@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import type { Logger } from "../../logger";
-
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };
 
@@ -41,12 +39,10 @@ export class DecisionsError extends Error {
 export function createDecisions({
   url,
   apiKey,
-  logger,
   timeoutMs = 30_000,
 }: {
   url: string;
   apiKey: string;
-  logger: Logger;
   timeoutMs?: number;
 }): Decisions {
   return {
@@ -54,7 +50,6 @@ export function createDecisions({
       state: JsonObject,
       questions: Q,
     ): Promise<Answers<Q>> => {
-      const startedAt = Date.now();
       const response = await post(`${url}/alpha/decisions`, apiKey, timeoutMs, {
         model: DECISIONS_MODEL,
         state,
@@ -65,11 +60,6 @@ export function createDecisions({
           ]),
         ),
       });
-      // Never the state: it holds the owner's data.
-      logger.info(
-        { status: response.status, questions: Object.keys(questions), ms: Date.now() - startedAt },
-        "Asked the model",
-      );
       if (!response.ok) {
         await response.body?.cancel();
         throw new DecisionsError(

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { expect, importUseCases, OWNER, SYSTEM, test } from "#test/support";
 
-import { DecisionsError } from "../../../../core/ai/decisions";
+import { DecisionsError } from "../../../../integrations/ai";
 
 test("maps a file in one request when every answer is confident", async ({
   orm,

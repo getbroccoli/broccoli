@@ -1,4 +1,4 @@
-import { type Decisions, DecisionsError } from "../../../../core/ai/decisions";
+import { type Decisions, DecisionsError } from "../../../../integrations/ai";
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import { deleteFiles, readFile, storeFile } from "../../../../core/files";

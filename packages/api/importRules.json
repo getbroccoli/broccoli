@@ -2,9 +2,9 @@
   "elements": {
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
     "src/modules": [
-      "src/core/ai/decisions",
       "src/core/env",
       "src/core/moduleManifest",
+      "src/integrations/ai",
       "src/modules/*"
     ],
     "src/modules/company": [
@@ -16,15 +16,16 @@
     "src/modules/demo": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
     "src/modules/employees": ["src/core/*", "!src/core/server", "src/utils"],
     "src/modules/imports": [
-      "src/core/ai/decisions",
       "src/core/*",
       "!src/core/server",
+      "src/integrations/ai",
       "src/modules/employees",
       "src/modules/slack",
       "src/utils"
     ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
     "src/modules/system": ["src/core/*", "!src/core/server"],
+    "src/integrations/ai": ["src/utils"],
     "src/integrations/brandLookup": ["src/utils"],
     "src/integrations/slack": ["src/utils"],
     "src/utils": [],
@@ -71,7 +72,6 @@
     "src/core/auth": ["src/core/db", "src/core/logger"],
     "src/core/files": ["src/core/db"],
     "src/core/jobs": ["src/core/db", "src/core/logger"],
-    "src/core/ai/decisions": ["src/core/logger"],
     "src/core/db": ["src/core/events", "src/core/logger"],
     "src/core/events": ["src/core/logger"],
     "src/core/pagination": ["src/core/applicationError"],
@@ -82,7 +82,6 @@
     "src/core/readiness": [],
     "src/core/secrets": [],
     "test/support": [
-      "src/core/ai/decisions",
       "src/core/*",
       "src/integrations/*",
       "src/modules",

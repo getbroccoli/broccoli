@@ -1,4 +1,4 @@
-import { createDecisions } from "../core/ai/decisions";
+import { createDecisions } from "../integrations/ai";
 import type { Mode } from "../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
@@ -35,7 +35,7 @@ export function createModules(
     importsModule({
       ...core,
       slack: slackConnection,
-      decisions: model && createDecisions({ ...model, logger: core.logger }),
+      decisions: model && createDecisions(model),
     }),
   ];
 }

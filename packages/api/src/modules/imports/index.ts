@@ -1,4 +1,4 @@
-import type { Decisions } from "../../core/ai/decisions";
+import type { Decisions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";

@@ -1,7 +1,8 @@
-import type { Answers, JsonObject, Question } from "../../../core/ai/decisions";
+import type { Answers, JsonObject, Question } from "../../../integrations/ai";
+import { parseDateColumn } from "../../../utils";
 import type { ImportEmployeeValues, IncomingRecord } from "./importEmployee";
 import { nonBlank, parseEmail, splitFullName } from "./personValues";
-import { readDateColumn, type Sheet } from "./sheet";
+import type { Sheet } from "./sheet";
 
 export const FILE_FIELDS = [
   "fullName",
@@ -148,7 +149,7 @@ export function readFileRecords(
   const keys = rawKeys(sheet[headerRow]!, Math.max(0, ...sheet.map((row) => row.length)));
   const cellsOf = (field: FileField) =>
     rows.map((row) => (mapping[field] === null ? "" : (row[mapping[field]] ?? "")));
-  const startDates = readDateColumn(cellsOf("startDate"));
+  const startDates = parseDateColumn(cellsOf("startDate"));
   const records: IncomingRecord[] = [];
   rows.forEach((row, index) => {
     const cell = (field: FileField) => {

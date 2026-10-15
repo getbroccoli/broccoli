@@ -1,4 +1,4 @@
-import type { Decisions } from "../../src/core/ai/decisions";
+import type { Decisions } from "../../src/integrations/ai";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";

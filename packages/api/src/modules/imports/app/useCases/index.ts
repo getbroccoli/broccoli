@@ -1,4 +1,4 @@
-import type { Decisions } from "../../../../core/ai/decisions";
+import type { Decisions } from "../../../../integrations/ai";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
