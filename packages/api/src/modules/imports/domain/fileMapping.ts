@@ -188,7 +188,8 @@ const PEOPLE_FIELDS: readonly FileField[] = ["fullName", "firstName", "lastName"
 const FIELD_QUESTIONS: Record<FileField, string> = {
   fullName:
     "Which column holds each person's whole name in one cell, in either order, such as 'Xxxx Xxxxx' or 'Xxxxx, Xxxx'?",
-  firstName: "Which column holds only the given or first name, and nothing else?",
+  firstName:
+    "Which column holds only the given or first names, and nothing else? A column of legal given names may hold several in one cell.",
   lastName: "Which column holds only the family or last name, and nothing else?",
   email: "Which column holds the work email? Never a personal or emergency-contact email.",
   jobTitle: "Which column holds the job title or position?",
