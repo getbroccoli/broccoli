@@ -1,0 +1,45 @@
+{
+  "records": [
+    {
+      "firstName": "Élodie",
+      "lastName": "Garnier",
+      "email": "elodie.garnier@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Bastien",
+      "lastName": "Chevalier",
+      "email": "bastien.chevalier@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Maëlle",
+      "lastName": "Lefèvre",
+      "email": "maelle.lefevre@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Garnier",
+    "Élodie",
+    "elodie.garnier@acme-corp.example",
+    "ACM-ROLE-1",
+    "ACM-SITE-1",
+    "ACM-AG-1",
+    "Chevalier",
+    "Bastien",
+    "bastien.chevalier@acme-corp.example",
+    "ACM-ROLE-2",
+    "ACM-SITE-2",
+    "ACM-AG-2",
+    "Lefèvre",
+    "Maëlle",
+    "maelle.lefevre@acme-corp.example",
+    "ACM-ROLE-3",
+    "ACM-SITE-3",
+    "ACM-AG-3"
+  ]
+}

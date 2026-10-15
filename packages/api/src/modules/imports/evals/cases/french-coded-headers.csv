@@ -1,0 +1,4 @@
+login;firstName;lastName;mail;personalEmail;legalEntity;dtContractStart;e_emergencycontact_name;e_emergencycontact_number
+celine.perrin;Céline;Perrin;celine.perrin@acme-corp.example;celine.perrin@home.example;Acme Corp;23/04/2022;Lucien Morel;+33612345671
+thibaut.roux;Thibaut;Roux;thibaut.roux@acme-corp.example;thibaut.roux@home.example;Acme Corp;17/06/2023;Lucien Morel;+33612345671
+aurelie.favre;Aurélie;Favre;aurelie.favre@acme-corp.example;aurelie.favre@home.example;Acme Corp;21/08/2024;Lucien Morel;+33612345671

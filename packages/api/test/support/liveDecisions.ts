@@ -6,8 +6,10 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 /** The real model for evals, reached through a local proxy that keeps every request. */
 export interface LiveDecisions {
   decisions: Decisions;
-  /** The values, of `forbidden`, that any request sent so far contains, ignoring case. */
+  /** Forbidden values found as whole words in any request's keys or values, ignoring case. */
   leaked(forbidden: readonly string[]): string[];
+  /** Every request sent so far, as the model received it. */
+  requests(): unknown[];
   /** What the answers so far cost, in US dollars, as OpenRouter reports it. */
   cost(): number;
   stop(): Promise<void>;
@@ -26,7 +28,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
   app.post("/alpha/decisions", async (request, response) => {
     const body = request.body as string;
-    sentBodies.push(body.toLowerCase());
+    sentBodies.push(body);
     const upstream = await fetch(`${OPENROUTER_URL}/alpha/decisions`, {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
@@ -40,12 +42,18 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   const server = await startSimpleHttpServer(app);
   return {
     decisions: createDecisions({ url: server.url, apiKey }),
-    leaked: (forbidden) =>
-      forbidden.filter((value) => {
-        // Bodies are JSON, so a value is searched for as JSON writes it.
-        const written = JSON.stringify(value).slice(1, -1).toLowerCase();
-        return sentBodies.some((body) => body.includes(written));
-      }),
+    leaked: (forbidden) => {
+      const texts = sentBodies.map((body) => stringsOf(JSON.parse(body)).join("\n"));
+      return forbidden.filter((value) => {
+        const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const word = new RegExp(
+          `(?<![\\p{L}\\p{M}\\p{N}_])${escaped}(?![\\p{L}\\p{M}\\p{N}_])`,
+          "iu",
+        );
+        return texts.some((text) => word.test(text));
+      });
+    },
+    requests: () => sentBodies.map((body) => JSON.parse(body) as unknown),
     cost: () => cost,
     stop: () => {
       upstreamCalls.abort();
@@ -55,6 +63,20 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api";
+
+/** Every key and string value, so a value is matched as the model reads it, not as JSON escapes it. */
+function stringsOf(value: unknown): string[] {
+  if (typeof value === "string") {
+    return [value];
+  }
+  if (value === null || typeof value !== "object") {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, item]) => [
+    ...(Array.isArray(value) ? [] : [key]),
+    ...stringsOf(item),
+  ]);
+}
 
 function readCost(answer: string): number {
   try {

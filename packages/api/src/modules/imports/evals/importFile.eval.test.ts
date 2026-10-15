@@ -25,9 +25,12 @@ afterAll(() => {
 test.for(caseNames())("%s", async (name, { orm, onTestFinished }) => {
   const expected = readExpected(name);
   const model = await startLiveDecisions();
-  onTestFinished(() => {
-    reportModelUse(name, model, expected.forbidden);
-    return model.stop();
+  onTestFinished(async () => {
+    try {
+      reportModelUse(name, model, expected.forbidden);
+    } finally {
+      await model.stop();
+    }
   });
   const imports = importUseCases(orm, { decisions: model.decisions });
 
@@ -57,13 +60,13 @@ function readExpected(name: string): ExpectedImport {
 }
 
 function reportModelUse(name: string, model: LiveDecisions, forbidden: string[]): void {
-  // shortcut: leaks are only reported until personal data is replaced by placeholders before model calls; then assert none.
+  model.requests().forEach((request, index) => {
+    console.info(`${name}: request ${index + 1}\n${JSON.stringify(request, null, 2)}`);
+  });
   const leaked = model.leaked(forbidden);
-  if (leaked.length > 0) {
-    console.warn(`${name}: ${leaked.length} forbidden values reached the model:`, leaked);
-  }
   totalCost += model.cost();
   console.info(`${name}: model cost ${dollars(model.cost())}`);
+  expect(leaked).toEqual([]);
 }
 
 function valuesOf({

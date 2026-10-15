@@ -1,0 +1,48 @@
+{
+  "records": [
+    {
+      "firstName": "Mark",
+      "lastName": "Baker",
+      "email": "mark.baker@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Will",
+      "lastName": "Cook",
+      "email": "will.cook@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Rose",
+      "lastName": "Land",
+      "email": "rose.land@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Mark",
+    "Baker",
+    "mark.baker@acme-corp.example",
+    "Fictional!729a",
+    "mark.baker@home.example",
+    "+447700900311",
+    "ACM-311",
+    "Will",
+    "Cook",
+    "will.cook@acme-corp.example",
+    "Fictional!638b",
+    "will.cook@home.example",
+    "+447700900312",
+    "ACM-312",
+    "Rose",
+    "Land",
+    "rose.land@acme-corp.example",
+    "Fictional!547c",
+    "rose.land@home.example",
+    "+447700900313",
+    "ACM-313"
+  ]
+}

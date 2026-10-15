@@ -1,0 +1,1 @@
+export { withPlaceholders } from "./placeholders";

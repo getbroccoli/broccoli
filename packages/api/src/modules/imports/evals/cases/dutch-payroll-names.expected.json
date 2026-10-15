@@ -1,0 +1,61 @@
+{
+  "records": [
+    {
+      "firstName": "Marieke Johanna",
+      "lastName": "Dekker",
+      "email": "marieke.dekker@acme-corp.example",
+      "jobTitle": null,
+      "startDate": "2022-04-23"
+    },
+    {
+      "firstName": "Pieter Willem",
+      "lastName": "Smit",
+      "email": "pieter.smit@acme-corp.example",
+      "jobTitle": null,
+      "startDate": "2023-06-17"
+    },
+    {
+      "firstName": "Anouk Elise",
+      "lastName": "Vos",
+      "email": "anouk.vos@acme-corp.example",
+      "jobTitle": null,
+      "startDate": "2024-08-21"
+    }
+  ],
+  "forbidden": [
+    "ACM-631",
+    "Dekker",
+    "Marieke Johanna",
+    "Mieke",
+    "Jansen",
+    "marieke.dekker@home.example",
+    "marieke.dekker@acme-corp.example",
+    "18-09-1991",
+    "23-04-2022",
+    "30-11-2026",
+    "ACM-632",
+    "Smit",
+    "Pieter Willem",
+    "Piet",
+    "Bakker",
+    "pieter.smit@home.example",
+    "pieter.smit@acme-corp.example",
+    "27-02-1989",
+    "17-06-2023",
+    "ACM-633",
+    "Vos",
+    "Anouk Elise",
+    "Nouk",
+    "Visser",
+    "anouk.vos@home.example",
+    "anouk.vos@acme-corp.example",
+    "14-12-1994",
+    "21-08-2024",
+    "Marieke",
+    "Johanna",
+    "Pieter",
+    "Willem",
+    "Anouk",
+    "Elise"
+  ]
+}

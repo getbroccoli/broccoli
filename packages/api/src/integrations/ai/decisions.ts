@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { withPlaceholders } from "./sanitize";
+
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };
 
@@ -17,7 +19,11 @@ export interface Answer {
 /** Per question, the answer, or null when its confidence is under the caller's minimum. */
 export type Answers<Q extends Record<string, Question>> = { [Id in keyof Q]: Answer | null };
 
-/** Asks the model multiple-choice questions; the only way a request reaches it. */
+/**
+ * Asks the model multiple-choice questions; the only way a request reaches it. Every
+ * string in `state` leaves as a placeholder unless it cannot identify anyone; keys,
+ * `instructions` and `options` are sent as they are and must never carry data.
+ */
 export interface Decisions {
   /**
    * Asks every question about `state` in one request; an answer under `minConfidence`
@@ -31,6 +37,9 @@ export interface Decisions {
 }
 
 export const DECISIONS_MODEL = "typesafe/jev-1.13";
+
+/** Only providers that neither keep nor train on requests; a request no such provider serves fails. */
+const NO_RETENTION = { data_collection: "deny", zdr: true };
 
 /** Under this, an answer is a guess and counts as no answer. */
 const DEFAULT_MIN_CONFIDENCE = 0.8;
@@ -63,7 +72,8 @@ export function createDecisions({
     ): Promise<Answers<Q>> => {
       const response = await post(`${url}/alpha/decisions`, apiKey, timeoutMs, {
         model: DECISIONS_MODEL,
-        state,
+        provider: NO_RETENTION,
+        state: withPlaceholders(state),
         questions: Object.fromEntries(
           Object.entries(questions).map(([id, { instructions, options }]) => [
             id,

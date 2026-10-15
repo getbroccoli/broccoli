@@ -1,0 +1,4 @@
+Nombre,Apellido,Dirección de correo electrónico,Fecha de inicio del contrato,Fecha de efectividad del contrato,Fecha de finalización del contrato,Título de trabajo preferido,Dirección de correo electrónico del gerente,Fecha de nacimiento
+Alba,Romero,alba.romero@acme-corp.example,23/04/2022,15/05/2022,30/11/2026,Ingeniero de software,raul.molina@acme-corp.example,18/09/1991
+Sergio,Vidal,sergio.vidal@acme-corp.example,17/06/2023,19/07/2023,,Ingeniero de software,raul.molina@acme-corp.example,27/02/1989
+Inés,Fuentes,ines.fuentes@acme-corp.example,21/08/2024,23/09/2024,,Ingeniero de software,raul.molina@acme-corp.example,14/12/1994

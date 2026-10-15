@@ -46,6 +46,34 @@ test("the managed owner uploads a CSV and its people become mapped import employ
     });
 });
 
+test("the model receives placeholders instead of the file's people and asks for providers that keep nothing", async ({
+  fakeDecisions,
+}) => {
+  const { browser, fake } = await managedImport(fakeDecisions);
+
+  const response = await browser.post("/api/imports/files?name=staff.csv", CSV);
+
+  expect(response.status).toBe(200);
+  const { sourceId } = (await response.json()) as { sourceId: string };
+  await expect
+    .poll(() => readImport(browser), { timeout: 15_000 })
+    .toMatchObject({
+      data: { import: { sources: [{ id: sourceId, status: "MAPPED" }] } },
+    });
+  const requests = fake.requests();
+  expect(requests.length).toBeGreaterThan(0);
+  for (const request of requests) {
+    expect(request).toHaveProperty("provider", { data_collection: "deny", zdr: true });
+  }
+  const sent = JSON.stringify(requests);
+  expect(sent).not.toContain("Avery");
+  expect(sent).not.toContain("Stone");
+  expect(sent).not.toContain("avery@example.com");
+  expect(sent).not.toContain("Robin");
+  expect(sent).not.toContain("Reed");
+  expect(sent).not.toContain("robin@example.com");
+});
+
 test("a failed file becomes mapped after retrying with working decisions", async ({
   fakeDecisions,
 }) => {
