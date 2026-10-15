@@ -1,5 +1,10 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
+import { codegenMappers as companyMappers } from "./src/modules/company/codegen";
+import { codegenMappers as demoMappers } from "./src/modules/demo/codegen";
+import { codegenMappers as employeeMappers } from "./src/modules/employees/codegen";
+import { codegenMappers as importMappers } from "./src/modules/imports/codegen";
+
 const config: CodegenConfig = {
   schema: "src/**/*.graphql",
   generates: {
@@ -11,17 +16,8 @@ const config: CodegenConfig = {
         enumsAsTypes: true,
         scalars: { Date: "string", DateTime: "Date" },
         contextType: "./apollo#GraphqlContext",
-        // A mutation namespace holds no data; its field resolves to an empty object.
-        mappers: {
-          EmployeeMutations: "Record<PropertyKey, never>",
-          CompanyMutations: "Record<PropertyKey, never>",
-          DemoMutations: "Record<PropertyKey, never>",
-          ImportMutations: "Record<PropertyKey, never>",
-          // The import has one fixed id; its fields load what they need.
-          Import: "Record<PropertyKey, never>",
-          ImportSource: "../../modules/imports/domain#ImportSource as ImportSourceModel",
-          ImportEmployee: "../../modules/imports/domain#ImportEmployee as ImportEmployeeModel",
-        },
+        // Each module owns its mappers; they meet only in this one generated file.
+        mappers: { ...companyMappers, ...demoMappers, ...employeeMappers, ...importMappers },
       },
     },
   },

@@ -6,11 +6,7 @@ import type { ImportSource } from "../domain";
 
 export type ImportLoaders = ReturnType<typeof createLoaders>;
 
-/**
- * The loaders of one request, so a list of records or sources loads their related
- * data in one query each instead of one per item. Call it once, in `createResolvers`,
- * and pass the accessor to every resolver file that needs it, so they share batches.
- */
+/** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function importLoaders(
   useCases: ImportUseCases,
 ): (context: GraphqlContext) => ImportLoaders {
