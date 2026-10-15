@@ -107,8 +107,6 @@ function concat(chunks: Uint8Array[]): Uint8Array {
   return joined;
 }
 
-const SHEET = /<(?:[\w.-]+:)?sheet\s[^>]*>/g;
-
 /** Positions, in workbook order, of the sheets marked hidden or very hidden. */
 function hiddenSheetPositions(workbook: string): Set<number> {
   const hidden = new Set<number>();
@@ -119,6 +117,8 @@ function hiddenSheetPositions(workbook: string): Set<number> {
   });
   return hidden;
 }
+
+const SHEET = /<(?:[\w.-]+:)?sheet\s[^>]*>/g;
 
 /**
  * The reader pads every row up to the furthest cell holding content, so one value far out
