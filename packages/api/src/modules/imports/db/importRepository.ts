@@ -31,6 +31,8 @@ export interface ImportRepository {
   syncEmployeeRecords(sourceId: string, records: IncomingRecord[]): Promise<void>;
   listSources(): Promise<ImportSource[]>;
   findSources(ids: readonly string[]): Promise<ImportSource[]>;
+  /** Every employee record of every source, oldest first. */
+  listEmployeeRecords(): Promise<ImportEmployee[]>;
   /** The number of employee records of each source that has any; the others are absent. */
   countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
   /** Up to `first + 1` employee records after `after`, by name; the extra one signals a next page. */
@@ -123,6 +125,15 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .select(sourceColumns)
         .from(importSources)
         .where(inArray(importSources.id, [...ids])),
+
+    listEmployeeRecords: async (): Promise<ImportEmployee[]> => {
+      const records = await orm()
+        .select()
+        .from(importRecords)
+        .where(eq(importRecords.type, "employee"))
+        .orderBy(importRecords.createdAt, importRecords.id);
+      return records.map(toImportEmployee);
+    },
 
     countEmployees: async (sourceIds: readonly string[]): Promise<Map<string, number>> => {
       const rows = await orm()

@@ -1,6 +1,7 @@
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
+import { approveImport } from "./approveImport";
 import type { SlackReader } from "./importContext";
 import { createImportReadService } from "./importReadService";
 import { readSlack } from "./readSlack";
@@ -12,13 +13,15 @@ export type { SlackReader } from "./importContext";
 export function createImportUseCases({
   orm,
   transact,
+  logger,
   slack,
-}: Pick<ModuleDependencies, "orm" | "transact"> & { slack: SlackReader }) {
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & { slack: SlackReader }) {
   const imports = importRepository(orm);
-  const context = { transact, slack, imports };
+  const context = { transact, logger, slack, imports };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     skipImport: (ctx: SecurityContext) => skipImport(context, ctx),
+    approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
     ...createImportReadService(imports),
   };
 }

@@ -23,6 +23,10 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
         await useCases.skipImport(context.getActor());
         return IMPORT;
       },
+      approve: async (_parent, _args, context) => {
+        await useCases.approveImport(context.getActor());
+        return IMPORT;
+      },
     },
     Import: {
       id: () => "import",

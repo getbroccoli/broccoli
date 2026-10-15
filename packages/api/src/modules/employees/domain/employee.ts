@@ -75,6 +75,12 @@ export function parseNewEmployee(input: NewEmployeeInput): NewEmployee {
   return result.data;
 }
 
+/** Like `parseNewEmployee`, but null for input that does not make an employee. */
+export function tryParseNewEmployee(input: NewEmployeeInput): NewEmployee | null {
+  const result = newEmployeeSchema.safeParse(input);
+  return result.success ? result.data : null;
+}
+
 /** One error per field: the first problem found is the one worth fixing. */
 function fieldErrorsOf(error: z.ZodError): FieldError[] {
   const byField = new Map<string, string>();

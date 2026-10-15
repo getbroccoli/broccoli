@@ -32,7 +32,12 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 ## Leaving the step
 
-- [ ] "Skip for now" lands on `/people`; `/setup/import` now goes to `/people`.
+- [ ] Before Slack is imported, the footer shows only "Skip for now".
+- [ ] With members imported, the footer shows "Skip for now" and "Approve".
+- [ ] "Approve" shows "Approving…" and lands on `/people`, which lists the members and no demo people; `/setup/import` now goes to `/people`.
+- [ ] A member whose Slack name is one word, without a last name, is not on `/people`.
+- [ ] With `/setup/import` open in two tabs, "Approve" in both adds each member once.
+- [ ] On a fresh instance, "Skip for now" lands on `/people` with the demo people; "Approve" in another open tab then adds no one.
 
 ## Layout
 

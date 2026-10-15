@@ -11,6 +11,7 @@ const calls = {
   countEmployees: (imports, ctx) => imports.countEmployees(ctx, []),
   listEmployees: (imports, ctx) => imports.listEmployees(ctx, {}),
   skipImport: (imports, ctx) => imports.skipImport(ctx),
+  approveImport: (imports, ctx) => imports.approveImport(ctx),
 } satisfies Record<
   keyof ImportUseCases,
   (imports: ImportUseCases, ctx: SecurityContext) => unknown

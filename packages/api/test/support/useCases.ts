@@ -38,6 +38,7 @@ export function importUseCases(
   return createImportUseCases({
     orm,
     transact: testTransactor(orm),
+    logger: createLogger("silent"),
     slack: {
       readSlackMembers: () => {
         throw new Error("Unexpected Slack read");

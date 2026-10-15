@@ -2,7 +2,11 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { ImportStepDocument, SkipImportDocument } from "@/__generated__/graphql";
+import {
+  ApproveImportDocument,
+  ImportStepDocument,
+  SkipImportDocument,
+} from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupStepForm } from "@/features/setup";
@@ -16,23 +20,33 @@ const SLACK_ERROR_MESSAGES = {
   failed: "imports.slack.failed",
 } as const;
 
+const LEAVE_FAILURES = {
+  approve: "setup.import.approveFailed",
+  skip: "setup.import.skipFailed",
+} as const;
+
 /**
- * The import step of setup: the sources people come from. Skipping leaves the step;
- * the router then reloads and routing sends the owner on into the app.
+ * The import step of setup: the sources people come from. Approving turns the
+ * imported people into employees; approving or skipping leaves the step, and the
+ * router then reloads and routing sends the owner on into the app.
  */
 export function ImportStep() {
   const router = useRouter();
   const { slackError } = useSearch({ from: "/setup/import" });
   const { data, error, refetch } = useQuery(ImportStepDocument);
+  const [approveImport, { loading: approving }] = useMutation(ApproveImportDocument);
   const [skipImport, { loading: skipping }] = useMutation(SkipImportDocument);
-  const [skipFailed, setSkipFailed] = useState(false);
+  const [failure, setFailure] = useState<keyof typeof LEAVE_FAILURES | null>(null);
+  const slackSource = data?.import.sources.find(({ kind }) => kind === "SLACK");
+  const canApprove = (slackSource?.employeeCount ?? 0) > 0;
+  const busy = approving || skipping;
 
-  const skip = async () => {
-    setSkipFailed(false);
+  const leave = async (how: keyof typeof LEAVE_FAILURES) => {
+    setFailure(null);
     try {
-      await skipImport();
+      await (how === "approve" ? approveImport() : skipImport());
     } catch {
-      setSkipFailed(true);
+      setFailure(how);
       return;
     }
     await router.invalidate();
@@ -40,11 +54,25 @@ export function ImportStep() {
 
   return (
     <SetupStepForm
-      onSubmit={() => void skip()}
+      onSubmit={() => void leave(canApprove ? "approve" : "skip")}
       footer={
-        <Button type="submit" variant="outline" size="lg" className="h-10 px-4" disabled={skipping}>
-          {t(skipping ? "setup.import.skipping" : "setup.import.skip")}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            type={canApprove ? "button" : "submit"}
+            variant="outline"
+            size="lg"
+            className="h-10 px-4"
+            disabled={busy}
+            onClick={canApprove ? () => void leave("skip") : undefined}
+          >
+            {t(skipping ? "setup.import.skipping" : "setup.import.skip")}
+          </Button>
+          {canApprove && (
+            <Button type="submit" size="lg" className="h-10 px-4" disabled={busy}>
+              {t(approving ? "setup.import.approving" : "setup.import.approve")}
+            </Button>
+          )}
+        </div>
       }
     >
       {slackError && (
@@ -53,10 +81,7 @@ export function ImportStep() {
         </p>
       )}
       {data ? (
-        <SlackSourceRow
-          connection={data.slackConnection}
-          source={data.import.sources.find(({ kind }) => kind === "SLACK")}
-        />
+        <SlackSourceRow connection={data.slackConnection} source={slackSource} />
       ) : error ? (
         <div role="alert" className="flex flex-col items-start gap-3">
           <p className="text-sm text-destructive">{t("imports.loadFailed")}</p>
@@ -67,9 +92,9 @@ export function ImportStep() {
       ) : (
         <Skeleton className="h-[66px] rounded-xl" />
       )}
-      {skipFailed && (
+      {failure && (
         <p role="alert" className="text-sm text-destructive">
-          {t("setup.import.skipFailed")}
+          {t(LEAVE_FAILURES[failure])}
         </p>
       )}
     </SetupStepForm>

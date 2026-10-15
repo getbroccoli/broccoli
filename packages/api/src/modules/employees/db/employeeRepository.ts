@@ -21,6 +21,8 @@ export interface EmployeeRepository {
   insert(newEmployee: EmployeeRow): Promise<Employee>;
   /** Inserts employees in one statement; throws `EmailTakenError` like `insert`. */
   insertMany(newEmployees: readonly EmployeeRow[]): Promise<void>;
+  /** Inserts employees, skipping emails another employee has; returns how many were inserted. */
+  insertSkippingTakenEmails(newEmployees: readonly EmployeeRow[]): Promise<number>;
   /** Deletes every demo employee; returns the ids of the avatar files they owned. */
   deleteDemo(): Promise<string[]>;
   hasAny(): Promise<boolean>;
@@ -83,6 +85,19 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       }
     },
 
+    insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]): Promise<number> => {
+      let inserted = 0;
+      for (let start = 0; start < newEmployees.length; start += INSERT_BATCH_SIZE) {
+        const rows = await orm()
+          .insert(employees)
+          .values(newEmployees.slice(start, start + INSERT_BATCH_SIZE))
+          .onConflictDoNothing({ target: employees.email })
+          .returning({ id: employees.id });
+        inserted += rows.length;
+      }
+      return inserted;
+    },
+
     deleteDemo: async (): Promise<string[]> => {
       const rows = await orm()
         .delete(employees)
@@ -127,6 +142,9 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
   };
 }
+
+/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
+const INSERT_BATCH_SIZE = 1_000;
 
 /** A new employee as stored, with the columns only the module itself sets. */
 type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };
