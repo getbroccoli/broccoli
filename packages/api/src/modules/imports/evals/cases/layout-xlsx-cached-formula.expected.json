@@ -1,0 +1,108 @@
+{
+  "records": [
+    {
+      "firstName": "Jade",
+      "lastName": "Figueroa",
+      "email": "e04108.514@people.example.test",
+      "jobTitle": "Sr. Analyst",
+      "startDate": "2012-05-14"
+    },
+    {
+      "firstName": "Everett",
+      "lastName": "Morales",
+      "email": "e02917.515@people.example.test",
+      "jobTitle": "Solutions Architect",
+      "startDate": "2014-07-10"
+    },
+    {
+      "firstName": "Genesis",
+      "lastName": "Hunter",
+      "email": "e03720.516@people.example.test",
+      "jobTitle": "Manager",
+      "startDate": "1999-04-22"
+    },
+    {
+      "firstName": "Henry",
+      "lastName": "Figueroa",
+      "email": "e03393.517@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2010-07-19"
+    },
+    {
+      "firstName": "Nicholas",
+      "lastName": "Song",
+      "email": "e02977.518@people.example.test",
+      "jobTitle": "Analyst II",
+      "startDate": "1999-05-23"
+    },
+    {
+      "firstName": "Jack",
+      "lastName": "Alexander",
+      "email": "e03371.519@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2006-05-29"
+    },
+    {
+      "firstName": "Jameson",
+      "lastName": "Foster",
+      "email": "e02531.520@people.example.test",
+      "jobTitle": "Analyst",
+      "startDate": "2021-07-18"
+    },
+    {
+      "firstName": "Leonardo",
+      "lastName": "Lo",
+      "email": "e02473.521@people.example.test",
+      "jobTitle": "Quality Engineer",
+      "startDate": "2021-11-15"
+    },
+    {
+      "firstName": "Ella",
+      "lastName": "Huang",
+      "email": "e02468.522@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2016-02-28"
+    }
+  ],
+  "forbidden": [
+    "Jade Figueroa",
+    "Jade",
+    "Figueroa",
+    "e04108.514@people.example.test",
+    "Adam Dang",
+    "Everett Morales",
+    "Everett",
+    "Morales",
+    "e02917.515@people.example.test",
+    "Emily Davis",
+    "Genesis Hunter",
+    "Genesis",
+    "Hunter",
+    "e03720.516@people.example.test",
+    "Luna Sanders",
+    "Henry Figueroa",
+    "Henry",
+    "e03393.517@people.example.test",
+    "Nicholas Song",
+    "Nicholas",
+    "Song",
+    "e02977.518@people.example.test",
+    "Isabella Xi",
+    "Jack Alexander",
+    "Jack",
+    "Alexander",
+    "e03371.519@people.example.test",
+    "Jameson Foster",
+    "Jameson",
+    "Foster",
+    "e02531.520@people.example.test",
+    "Leonardo Lo",
+    "Leonardo",
+    "e02473.521@people.example.test",
+    "Wyatt Chin",
+    "Ella Huang",
+    "Ella",
+    "Huang",
+    "e02468.522@people.example.test"
+  ]
+}

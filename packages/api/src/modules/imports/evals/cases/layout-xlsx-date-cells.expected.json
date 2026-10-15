@@ -1,0 +1,184 @@
+{
+  "records": [
+    {
+      "firstName": "Melody",
+      "lastName": "Chin",
+      "email": "e00711.533@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2022-01-13"
+    },
+    {
+      "firstName": "Eloise",
+      "lastName": "Alexander",
+      "email": "e04795.534@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2018-01-21"
+    },
+    {
+      "firstName": "Carter",
+      "lastName": "Turner",
+      "email": "e03912.535@people.example.test",
+      "jobTitle": "Sr. Analyst",
+      "startDate": "2015-11-17"
+    },
+    {
+      "firstName": "Andrew",
+      "lastName": "Ma",
+      "email": "e02103.536@people.example.test",
+      "jobTitle": "HRIS Analyst",
+      "startDate": "2017-09-24"
+    },
+    {
+      "firstName": "Hailey",
+      "lastName": "Xi",
+      "email": "e04213.537@people.example.test",
+      "jobTitle": "Manager",
+      "startDate": "2021-11-19"
+    },
+    {
+      "firstName": "Aiden",
+      "lastName": "Le",
+      "email": "e04756.538@people.example.test",
+      "jobTitle": "Cloud Infrastructure Architect",
+      "startDate": "1994-12-24"
+    },
+    {
+      "firstName": "Christopher",
+      "lastName": "Lim",
+      "email": "e04114.539@people.example.test",
+      "jobTitle": "Director",
+      "startDate": "2007-03-13"
+    },
+    {
+      "firstName": "James",
+      "lastName": "Castillo",
+      "email": "e01423.540@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2001-07-19"
+    },
+    {
+      "firstName": "Greyson",
+      "lastName": "Dang",
+      "email": "e03181.541@people.example.test",
+      "jobTitle": "Development Engineer",
+      "startDate": "2009-05-11"
+    },
+    {
+      "firstName": "Hannah",
+      "lastName": "King",
+      "email": "e03305.542@people.example.test",
+      "jobTitle": "Manager",
+      "startDate": "2014-10-07"
+    },
+    {
+      "firstName": "Wesley",
+      "lastName": "Dominguez",
+      "email": "e00703.543@people.example.test",
+      "jobTitle": "Engineering Manager",
+      "startDate": "2018-04-27"
+    },
+    {
+      "firstName": "Dominic",
+      "lastName": "Hu",
+      "email": "e04403.544@people.example.test",
+      "jobTitle": "Manager",
+      "startDate": "2012-02-13"
+    },
+    {
+      "firstName": "Nora",
+      "lastName": "Park",
+      "email": "e00103.545@people.example.test",
+      "jobTitle": "Director",
+      "startDate": "2017-06-28"
+    },
+    {
+      "firstName": "Audrey",
+      "lastName": "Hwang",
+      "email": "e04487.546@people.example.test",
+      "jobTitle": "Sr. Analyst",
+      "startDate": "2020-06-17"
+    },
+    {
+      "firstName": "Ella",
+      "lastName": "Jenkins",
+      "email": "e01194.547@people.example.test",
+      "jobTitle": "Analyst II",
+      "startDate": "2019-12-20"
+    },
+    {
+      "firstName": "Peyton",
+      "lastName": "Owens",
+      "email": "e02179.548@people.example.test",
+      "jobTitle": "Controls Engineer",
+      "startDate": "2014-09-25"
+    }
+  ],
+  "forbidden": [
+    "Melody Chin",
+    "Melody",
+    "Chin",
+    "e00711.533@people.example.test",
+    "Luna Sanders",
+    "Eloise Alexander",
+    "Eloise",
+    "Alexander",
+    "e04795.534@people.example.test",
+    "Savannah Ali",
+    "Carter Turner",
+    "Carter",
+    "Turner",
+    "e03912.535@people.example.test",
+    "Isabella Xi",
+    "Andrew Ma",
+    "Andrew",
+    "e02103.536@people.example.test",
+    "Hailey Xi",
+    "Hailey",
+    "e04213.537@people.example.test",
+    "Easton Bailey",
+    "Aiden Le",
+    "Aiden",
+    "e04756.538@people.example.test",
+    "Emily Davis",
+    "Christopher Lim",
+    "Christopher",
+    "Lim",
+    "e04114.539@people.example.test",
+    "James Castillo",
+    "James",
+    "Castillo",
+    "e01423.540@people.example.test",
+    "Greyson Dang",
+    "Greyson",
+    "Dang",
+    "e03181.541@people.example.test",
+    "Wyatt Chin",
+    "Hannah King",
+    "Hannah",
+    "King",
+    "e03305.542@people.example.test",
+    "Wesley Dominguez",
+    "Wesley",
+    "Dominguez",
+    "e00703.543@people.example.test",
+    "Dominic Hu",
+    "Dominic",
+    "e04403.544@people.example.test",
+    "Nora Park",
+    "Nora",
+    "Park",
+    "e00103.545@people.example.test",
+    "Audrey Hwang",
+    "Audrey",
+    "Hwang",
+    "e04487.546@people.example.test",
+    "Ella Jenkins",
+    "Ella",
+    "Jenkins",
+    "e01194.547@people.example.test",
+    "Peyton Owens",
+    "Peyton",
+    "Owens",
+    "e02179.548@people.example.test"
+  ]
+}

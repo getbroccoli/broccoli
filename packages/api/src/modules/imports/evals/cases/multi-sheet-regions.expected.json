@@ -1,0 +1,83 @@
+{
+  "records": [
+    {
+      "firstName": "Jana",
+      "lastName": "Richter",
+      "email": "jana@globex.example.test",
+      "jobTitle": "Country Manager",
+      "startDate": "2019-05-23"
+    },
+    {
+      "firstName": "Moritz",
+      "lastName": "Braun",
+      "email": "moritz@globex.example.test",
+      "jobTitle": "Sales Engineer",
+      "startDate": "2021-09-14"
+    },
+    {
+      "firstName": "Elif",
+      "lastName": "Yıldız",
+      "email": "elif@globex.example.test",
+      "jobTitle": "Office Manager",
+      "startDate": "2022-07-01"
+    },
+    {
+      "firstName": "George",
+      "lastName": "Patel",
+      "email": "george@globex.example.test",
+      "jobTitle": "Account Executive",
+      "startDate": "2020-03-30"
+    },
+    {
+      "firstName": "Harriet",
+      "lastName": "Cole",
+      "email": "harriet@globex.example.test",
+      "jobTitle": "Sales Director",
+      "startDate": "2016-11-21"
+    },
+    {
+      "firstName": "Marcus",
+      "lastName": "Reed",
+      "email": "marcus@globex.example.test",
+      "jobTitle": "Solutions Architect",
+      "startDate": null
+    },
+    {
+      "firstName": "Tina",
+      "lastName": "Brooks",
+      "email": "tina@globex.example.test",
+      "jobTitle": "VP Engineering",
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Jana Richter",
+    "Jana",
+    "Richter",
+    "jana@globex.example.test",
+    "Moritz Braun",
+    "Moritz",
+    "Braun",
+    "moritz@globex.example.test",
+    "Elif Yıldız",
+    "Elif",
+    "Yıldız",
+    "elif@globex.example.test",
+    "George Patel",
+    "George",
+    "Patel",
+    "george@globex.example.test",
+    "Harriet Cole",
+    "Harriet",
+    "Cole",
+    "harriet@globex.example.test",
+    "Marcus Reed",
+    "Marcus",
+    "Reed",
+    "marcus@globex.example.test",
+    "Tina Brooks",
+    "Tina",
+    "Brooks",
+    "tina@globex.example.test"
+  ]
+}
