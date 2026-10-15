@@ -39,4 +39,4 @@ export {
 } from "./testBroccoliServer";
 export { startFakeDecisions, type FakeDecisions } from "./fakeDecisions";
 export { EXAMPLE_JOB } from "./exampleJob";
-export { startLiveDecisions, type LiveDecisions } from "./liveDecisions";
+export { startLiveDecisions } from "./liveDecisions";
