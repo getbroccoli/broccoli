@@ -21,8 +21,6 @@ import { IMPORT_REVIEW_COLUMNS, useImportReviewRows } from "./importReviewColumn
 import { ApproveNote } from "./ApproveNote";
 import { SourceChips } from "./SourceChips";
 
-const POLL_INTERVAL_MS = 5_000;
-
 /**
  * The setup review step: everyone the import found, read-only, and Approve. Approve
  * adds the ready people; the router then reloads and routing sends the owner on.
@@ -38,13 +36,8 @@ export function ImportReview() {
   );
   const { data, previousData, error, loading, refetch } = useQuery(
     ImportReviewDocument,
-    // Sources change on the import page, while files are read and in other tabs: show the
-    // cache, refresh it on entry, and keep polling while the review is open.
-    {
-      variables: toEmployeeListVariables(search),
-      fetchPolicy: "cache-and-network",
-      pollInterval: POLL_INTERVAL_MS,
-    },
+    // Sources change on the import page: show the cache, then refresh it on entry.
+    { variables: toEmployeeListVariables(search), fetchPolicy: "cache-and-network" },
   );
   const list = useListPage({
     search,
