@@ -5,10 +5,26 @@ import { type Orm, ormOf, type Tx } from "../../db";
 import type { ManagedAssignment, SetupStep } from "../domain";
 import { instance } from "./instanceTable";
 
-export type InstanceRepository = ReturnType<typeof instanceRepository>;
-
 /** The instance row in Postgres, through the pool or inside a transaction. */
-export function instanceRepository(db: Orm | Tx) {
+export interface InstanceRepository {
+  readStep(): Promise<SetupStep>;
+  /** Null before setup. */
+  readOwnerUserId(): Promise<string | null>;
+  /** The owner's id and sign-in email, or null before an owner exists. */
+  readOwner(): Promise<{ userId: string; email: string } | null>;
+  /** Locks the row until the transaction ends, so concurrent claims run one after another. */
+  lockOwnerUserId(): Promise<string | null>;
+  /** Null before a managed instance's init, and always on self-hosted instances. */
+  readAssignment(): Promise<ManagedAssignment | null>;
+  /** Locks the row until the transaction ends, so concurrent inits run one after another. */
+  lockAssignment(): Promise<{ ownerUserId: string | null; assignment: ManagedAssignment | null }>;
+  setAssignment(assignment: ManagedAssignment): Promise<void>;
+  setOwner(userId: string, step: SetupStep): Promise<void>;
+  /** Moves the step from `from` to `to`; does nothing at any other step. Returns whether it moved. */
+  advanceStep(from: SetupStep, to: SetupStep): Promise<boolean>;
+}
+
+export function instanceRepository(db: Orm | Tx): InstanceRepository {
   const orm = () => ormOf(db);
 
   return {
@@ -20,13 +36,11 @@ export function instanceRepository(db: Orm | Tx) {
       return row.step;
     },
 
-    /** Null before setup. */
     readOwnerUserId: async (): Promise<string | null> => {
       const [row] = await orm().select({ ownerUserId: instance.ownerUserId }).from(instance);
       return row?.ownerUserId ?? null;
     },
 
-    /** The owner's id and sign-in email, or null before an owner exists. */
     readOwner: async (): Promise<{ userId: string; email: string } | null> => {
       const [row] = await orm()
         .select({ userId: user.id, email: user.email })
@@ -35,7 +49,6 @@ export function instanceRepository(db: Orm | Tx) {
       return row ?? null;
     },
 
-    /** Locks the row until the transaction ends, so concurrent claims run one after another. */
     lockOwnerUserId: async (): Promise<string | null> => {
       const [row] = await orm()
         .select({ ownerUserId: instance.ownerUserId })
@@ -47,13 +60,11 @@ export function instanceRepository(db: Orm | Tx) {
       return row.ownerUserId;
     },
 
-    /** Null before a managed instance's init, and always on self-hosted instances. */
     readAssignment: async (): Promise<ManagedAssignment | null> => {
       const [row] = await orm().select(assignmentColumns).from(instance);
       return row ? toAssignment(row) : null;
     },
 
-    /** Locks the row until the transaction ends, so concurrent inits run one after another. */
     lockAssignment: async (): Promise<{
       ownerUserId: string | null;
       assignment: ManagedAssignment | null;
@@ -81,7 +92,6 @@ export function instanceRepository(db: Orm | Tx) {
       await orm().update(instance).set({ ownerUserId: userId, setupStep: step });
     },
 
-    /** Moves the step from `from` to `to`; does nothing at any other step. Returns whether it moved. */
     advanceStep: async (from: SetupStep, to: SetupStep): Promise<boolean> => {
       const result = await orm()
         .update(instance)
