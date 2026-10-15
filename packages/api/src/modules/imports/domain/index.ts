@@ -6,3 +6,4 @@ export {
   type IncomingRecord,
 } from "./importEmployee";
 export type { ImportSource } from "./importSource";
+export { nonBlank, parseEmail, splitFullName } from "./personValues";

@@ -1,7 +1,11 @@
-import { z } from "zod";
-
 import type { SlackMember } from "../../../slack";
-import type { ImportEmployeeValues, IncomingRecord } from "../../domain";
+import {
+  type ImportEmployeeValues,
+  type IncomingRecord,
+  nonBlank,
+  parseEmail,
+  splitFullName,
+} from "../../domain";
 
 /**
  * The workspace's people as employee records. Deleted members, bots, apps, guests and
@@ -38,13 +42,6 @@ function isPerson(member: SlackMember): boolean {
   );
 }
 
-const email = z.email();
-
-function parseEmail(raw: string | undefined): string | null {
-  const normalised = raw?.trim().toLowerCase() ?? "";
-  return email.safeParse(normalised).success ? normalised : null;
-}
-
 /** Slack's own name fields; else the full name split at its last space. */
 function nameOf(member: SlackMember): Pick<ImportEmployeeValues, "firstName" | "lastName"> {
   const firstName = nonBlank(member.profile?.first_name);
@@ -57,15 +54,7 @@ function nameOf(member: SlackMember): Pick<ImportEmployeeValues, "firstName" | "
   if (fullName === null) {
     return { firstName, lastName };
   }
-  const lastSpace = fullName.lastIndexOf(" ");
-  return lastSpace === -1
-    ? { firstName: fullName, lastName: null }
-    : { firstName: fullName.slice(0, lastSpace).trim(), lastName: fullName.slice(lastSpace + 1) };
-}
-
-function nonBlank(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+  return splitFullName(fullName);
 }
 
 /** Only the fields the mapping reads: no avatars, phones or time zones are kept. */
