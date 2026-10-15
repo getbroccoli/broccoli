@@ -4,6 +4,16 @@ import { invalidInput } from "../applicationError";
 
 export const PAGE_SIZE = { default: 100, max: 10_000 } as const;
 
+/** How a list is sorted: by one of its fields, then by id. */
+export interface ListOrder<Field extends string> {
+  field: Field;
+  direction: "ASC" | "DESC";
+}
+
+/** A list's `orderBy` argument as a client sends it; the direction defaults to ascending. */
+export type OrderArg<Field extends string> =
+  { field: Field; direction?: ListOrder<Field>["direction"] | null } | null | undefined;
+
 /** Relay page arguments as a client sends them. */
 export interface PageArgs {
   first?: number;
@@ -35,6 +45,14 @@ export function parsePage<K>(
     throw invalidInput([{ field: "after", code: "invalid" }]);
   }
   return { first, after: decoded.data };
+}
+
+/** The order a client asked for, or `fallback` when it sent none. */
+export function parseOrder<Field extends string>(
+  orderBy: OrderArg<Field>,
+  fallback: ListOrder<Field>,
+): ListOrder<Field> {
+  return orderBy ? { field: orderBy.field, direction: orderBy.direction ?? "ASC" } : fallback;
 }
 
 /** `rows` holds up to `first + 1` rows; the extra row only signals a next page. */

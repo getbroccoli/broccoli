@@ -4,13 +4,13 @@ type Import {
   id: ID!
   "Oldest first."
   sources: [ImportSource!]!
-  "The employee records of every source. Owner only."
+  "The employee records of every source; records without an email or a start date sort last by it. Owner only."
   employees(
     "Page size, 1 to 10000."
     first: Int = 100
     after: String
-    orderBy: ImportEmployeeOrder = { field: NAME, direction: ASC }
-    filter: ImportEmployeeFilter
+    orderBy: EmployeeOrder = { field: NAME, direction: ASC }
+    filter: EmployeeFilter
   ): ImportEmployeeConnection!
   "How many employee records Approve would add: those complete enough to be an employee."
   readyEmployeeCount: Int!
@@ -57,8 +57,8 @@ type ImportSource {
     "Page size, 1 to 10000."
     first: Int = 100
     after: String
-    orderBy: ImportEmployeeOrder = { field: NAME, direction: ASC }
-    filter: ImportEmployeeFilter
+    orderBy: EmployeeOrder = { field: NAME, direction: ASC }
+    filter: EmployeeFilter
   ): ImportEmployeeConnection!
 }
 
@@ -84,25 +84,6 @@ enum ImportEmployeeIncompleteReason {
   EMAIL
   "Another detail breaks the employee rules, such as a job title over 100 characters."
   OTHER
-}
-
-enum ImportEmployeeOrderField {
-  "First name, then last name, ignoring case."
-  NAME
-  "Records without an email come last in both directions."
-  EMAIL
-  "Records without a start date come last in both directions."
-  START_DATE
-}
-
-input ImportEmployeeOrder {
-  field: ImportEmployeeOrderField!
-  direction: OrderDirection! = ASC
-}
-
-input ImportEmployeeFilter {
-  "Matches first name, last name or email containing it, ignoring case; at most 100 characters."
-  search: String
 }
 
 type ImportEmployeeEdge {

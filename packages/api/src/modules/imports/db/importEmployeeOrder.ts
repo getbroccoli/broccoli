@@ -2,7 +2,7 @@ import { ilike, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import { containsPattern, keysetOrder, type KeysetOrder, nullsLast } from "../../../core/db";
-import type { ImportEmployeeOrder } from "../domain";
+import type { EmployeeOrder } from "../../employees";
 import { importRecords } from "./importRecordsTable";
 
 /** The sort values of the last record seen, as Postgres computed them, behind the order they belong to. */
@@ -18,12 +18,12 @@ const KEYSET_VALUES = {
 export function importEmployeeKeyset({
   field,
   direction,
-}: ImportEmployeeOrder): z.ZodType<ImportEmployeeKeyset> {
+}: EmployeeOrder): z.ZodType<ImportEmployeeKeyset> {
   return z.tuple([z.literal(field), z.literal(direction), ...KEYSET_VALUES[field]]);
 }
 
 /** The keyset order of the records in `order`. */
-export function importEmployeeOrderColumns({ field, direction }: ImportEmployeeOrder): KeysetOrder {
+export function importEmployeeOrderColumns({ field, direction }: EmployeeOrder): KeysetOrder {
   const descending = direction === "DESC";
   const id = sql`${importRecords.id}`;
   switch (field) {

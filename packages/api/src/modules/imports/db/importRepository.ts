@@ -4,7 +4,6 @@ import { afterKeyset, type Orm, orderByKeyset, ormOf, type Tx } from "../../../c
 import {
   IMPORT_EMPLOYEE_VERSION,
   type ImportEmployee,
-  type ImportEmployeeOrder,
   type FileSource,
   type ImportSource,
   type IncomingRecord,
@@ -16,6 +15,7 @@ import {
   type ImportEmployeeKeyset,
   matchesSearch,
 } from "./importEmployeeOrder";
+import type { EmployeeOrder } from "../../employees";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
 
@@ -63,7 +63,7 @@ export interface ImportRepository {
 export interface ImportEmployeePageQuery {
   first: number;
   after: ImportEmployeeKeyset | null;
-  order: ImportEmployeeOrder;
+  order: EmployeeOrder;
   /** Part of a first name, last name or email; null lists every record. */
   search: string | null;
   /** Null lists the records of every source. */

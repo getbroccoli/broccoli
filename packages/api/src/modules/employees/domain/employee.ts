@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { invalidInput, type FieldError } from "../../../core/applicationError";
+import type { ListOrder } from "../../../core/pagination";
 import { type CalendarDate, parseCalendarDate } from "../../../utils";
 
 const NAME_MAX_LENGTH = 100;
@@ -22,11 +23,11 @@ export interface Employee {
   createdAt: Date;
 }
 
-/** How a list of employees is sorted. */
-export interface EmployeeOrder {
-  field: "NAME" | "EMAIL" | "START_DATE";
-  direction: "ASC" | "DESC";
-}
+/** What a list of employees can be sorted by. */
+export type EmployeeOrderField = "NAME" | "EMAIL" | "START_DATE";
+
+/** How a list of employees, or of people about to become employees, is sorted. */
+export type EmployeeOrder = ListOrder<EmployeeOrderField>;
 
 export interface NewEmployeeInput {
   firstName: string;

@@ -1,13 +1,16 @@
 import {
   type Connection,
+  type OrderArg,
   type PageArgs,
+  parseOrder,
   parsePage,
   toConnection,
 } from "../../../../core/pagination";
 import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
 import { importEmployeeKeyset, type ImportRepository } from "../../db";
-import type { ImportEmployee, ImportEmployeeOrder, ImportSource } from "../../domain";
+import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
+import type { ImportEmployee, ImportSource } from "../../domain";
 import { readyEmployee } from "./readyEmployee";
 
 /** Reading the import: its sources and their employee records. Every function checks `ctx`. */
@@ -31,14 +34,11 @@ export interface ImportEmployeeListArgs extends PageArgs {
   /** Only this source's records; unset lists every source. */
   sourceId?: string;
   /** Defaults to name order; the direction to ascending. */
-  orderBy?: {
-    field: ImportEmployeeOrder["field"];
-    direction?: ImportEmployeeOrder["direction"] | null;
-  } | null;
+  orderBy?: OrderArg<EmployeeOrderField>;
   filter?: { search?: string | null } | null;
 }
 
-const DEFAULT_ORDER: ImportEmployeeOrder = { field: "NAME", direction: "ASC" };
+const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 
 export function createImportReadService(imports: ImportRepository): ImportReadService {
   return {
@@ -72,9 +72,7 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       { sourceId, orderBy, filter, ...pageArgs }: ImportEmployeeListArgs,
     ): Promise<Connection<ImportEmployee>> => {
       ctx.requireOwnerOrSystem();
-      const order: ImportEmployeeOrder = orderBy
-        ? { field: orderBy.field, direction: orderBy.direction ?? "ASC" }
-        : DEFAULT_ORDER;
+      const order = parseOrder(orderBy, DEFAULT_ORDER);
       const search = parseSearch(filter?.search);
       const page = parsePage(pageArgs, importEmployeeKeyset(order));
       return toConnection(

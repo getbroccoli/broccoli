@@ -20,12 +20,6 @@ export interface ImportEmployee extends ImportEmployeeValues {
   sourceId: string;
 }
 
-/** How a list of import employees is sorted. */
-export interface ImportEmployeeOrder {
-  field: "NAME" | "EMAIL" | "START_DATE";
-  direction: "ASC" | "DESC";
-}
-
 /** A record as a source delivers it, before it is stored. */
 export interface IncomingRecord {
   /** The record's id in its source, such as a Slack user id. */
