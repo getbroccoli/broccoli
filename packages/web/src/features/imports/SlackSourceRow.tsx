@@ -3,7 +3,7 @@ import { SlackLogo } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import { ReadSlackDocument, type ImportStepQuery } from "@/__generated__/graphql";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 /** Where the browser starts connecting Slack; the API sends it on to Slack. */
@@ -63,7 +63,9 @@ export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
             {t(readLabel(reading, source !== undefined))}
           </Button>
         ) : (
-          <Button render={<a href={CONNECT_SLACK_URL} />}>{t("imports.slack.connect")}</Button>
+          <a href={CONNECT_SLACK_URL} className={buttonVariants()}>
+            {t("imports.slack.connect")}
+          </a>
         )}
       </div>
       {connection && (

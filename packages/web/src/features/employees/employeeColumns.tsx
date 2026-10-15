@@ -20,14 +20,14 @@ export const EMPLOYEE_COLUMNS: DataTableColumn<EmployeeRow, SortKey>[] = [
     id: "name",
     header: t("people.column.name"),
     sortKey: "name",
-    className: "w-[220px] min-w-[220px] max-w-[220px]",
+    className: "w-40 min-w-40 max-w-40 md:w-[220px] md:min-w-[220px] md:max-w-[220px]",
     cell: (employee) => <EmployeeNameCell employee={employee} />,
   },
   {
     id: "email",
     header: t("people.column.email"),
     sortKey: "email",
-    className: "max-w-[280px]",
+    className: "min-w-48 max-w-[280px]",
     cell: ({ email }) => (
       <a
         href={`mailto:${email}`}
@@ -40,7 +40,7 @@ export const EMPLOYEE_COLUMNS: DataTableColumn<EmployeeRow, SortKey>[] = [
   {
     id: "jobTitle",
     header: t("people.column.jobTitle"),
-    className: "max-w-[240px] truncate",
+    className: "min-w-40 max-w-[240px] truncate",
     cell: ({ jobTitle }) => jobTitle,
   },
   {

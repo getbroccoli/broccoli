@@ -15,7 +15,7 @@ Three layers, most tests in the middle one:
 
 - Trivial code: constants, types, pass-through glue and placeholders.
 - Implementation details: private helpers, call order, or mocks of our own modules.
-- Frontend components and pages, for now. Pure frontend functions, such as search-param parsing, get unit tests.
+- Frontend components in isolation. Pure frontend functions, such as search-param parsing, get unit tests; layout and browser semantics bugs get focused browser regressions.
 - Integrations (`src/integrations/`) on their own. They are thin clients over shared helpers such as `fetchJson`, which have their own tests; use-case tests replace them with a fake, and end-to-end tests run them against a local fake service.
 - Configuration files by matching their text. Run the tool that reads them instead.
 
@@ -45,3 +45,14 @@ docker compose rm --stop --force postgres-test
 ```
 
 Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; removing the container discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.
+
+### Browser regressions
+
+With `agent-browser` and its Chromium installed on the host, run these before stopping `postgres-test`:
+
+```sh
+pnpm --filter @broccoli/web build
+pnpm --filter @broccoli/api exec vitest run -c vitest.browser.config.ts
+```
+
+The tests in `packages/api/test/browser` reuse the isolated database and real server fixtures, serve the built web app, and close their browser sessions afterward. They require no live third-party credentials. These checks are opt-in; CI does not install a browser. Check development-only console warnings separately with `pnpm dev`.
