@@ -1,0 +1,54 @@
+{
+  "records": [
+    {
+      "firstName": "Matthias",
+      "lastName": "Brandt",
+      "email": "matthias.brandt@acme-corp.example",
+      "jobTitle": "Buchhalter",
+      "startDate": "2023-03-14"
+    },
+    {
+      "firstName": "Franziska",
+      "lastName": "Lehmann",
+      "email": "franziska.lehmann@acme-corp.example",
+      "jobTitle": "Entwicklerin",
+      "startDate": "2024-09-01"
+    },
+    {
+      "firstName": "Jonas",
+      "lastName": "Krüger",
+      "email": "jonas.kruger@acme-corp.example",
+      "jobTitle": "Teamleiter",
+      "startDate": "2022-11-25"
+    },
+    {
+      "firstName": "Ursula",
+      "lastName": "Vogel",
+      "email": "ursula.vogel@acme-corp.example",
+      "jobTitle": "Sachbearbeiterin",
+      "startDate": "2021-05-08"
+    }
+  ],
+  "forbidden": [
+    "Matthias Brandt",
+    "Matthias",
+    "Brandt",
+    "matthias.brandt@acme-corp.example",
+    "Franziska Lehmann",
+    "Franziska",
+    "Lehmann",
+    "franziska.lehmann@acme-corp.example",
+    "Jonas Krüger",
+    "Jonas",
+    "Krüger",
+    "jonas.kruger@acme-corp.example",
+    "Ursula Vogel",
+    "Ursula",
+    "Vogel",
+    "ursula.vogel@acme-corp.example",
+    "14.03.2023",
+    "01.09.2024",
+    "25.11.2022",
+    "08.05.2021"
+  ]
+}

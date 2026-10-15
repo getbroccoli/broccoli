@@ -1,0 +1,60 @@
+{
+  "records": [
+    {
+      "firstName": "Clara",
+      "lastName": "Whitfield",
+      "email": "clara.whitfield@acme-corp.example",
+      "jobTitle": "Accounts Assistant",
+      "startDate": "2024-02-12"
+    },
+    {
+      "firstName": "Idris",
+      "lastName": "Okonkwo",
+      "email": "idris.okonkwo@acme-corp.example",
+      "jobTitle": "Maintenance Technician",
+      "startDate": "2023-06-26"
+    },
+    {
+      "firstName": "Petra",
+      "lastName": "Novak",
+      "email": "petra.novak@acme-corp.example",
+      "jobTitle": "Marketing Specialist",
+      "startDate": "2022-09-03"
+    },
+    {
+      "firstName": "Harvey",
+      "lastName": "Stroud",
+      "email": "harvey.stroud@acme-corp.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2024-11-18"
+    }
+  ],
+  "forbidden": [
+    "Marguerite Delacroix",
+    "Marguerite",
+    "Delacroix",
+    "Bertrand Lenoir",
+    "Bertrand",
+    "Lenoir",
+    "Clara Whitfield",
+    "Clara",
+    "Whitfield",
+    "clara.whitfield@acme-corp.example",
+    "Idris Okonkwo",
+    "Idris",
+    "Okonkwo",
+    "idris.okonkwo@acme-corp.example",
+    "Petra Novak",
+    "Petra",
+    "Novak",
+    "petra.novak@acme-corp.example",
+    "Harvey Stroud",
+    "Harvey",
+    "Stroud",
+    "harvey.stroud@acme-corp.example",
+    "12/02/2024",
+    "26/06/2023",
+    "03/09/2022",
+    "18/11/2024"
+  ]
+}

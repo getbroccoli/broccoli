@@ -1,0 +1,90 @@
+{
+  "records": [
+    {
+      "firstName": "Jeroen",
+      "lastName": "Bakker",
+      "email": "jeroen.bakker@acme-corp.example",
+      "jobTitle": "Maintenance Technician",
+      "startDate": "2024-03-12"
+    },
+    {
+      "firstName": "Sanne",
+      "lastName": "Visser",
+      "email": "sanne.visser@acme-corp.example",
+      "jobTitle": "Finance Assistant",
+      "startDate": "2023-09-25"
+    },
+    {
+      "firstName": "Daan",
+      "lastName": "Smit",
+      "email": "daan.smit@acme-corp.example",
+      "jobTitle": "Marketing Specialist",
+      "startDate": "2025-02-01"
+    },
+    {
+      "firstName": "Katrin",
+      "lastName": "Müller",
+      "email": "katrin.muller@acme-corp.example",
+      "jobTitle": "HR Administrator",
+      "startDate": "2022-06-17"
+    },
+    {
+      "firstName": "Lukas",
+      "lastName": "Schneider",
+      "email": "lukas.schneider@acme-corp.example",
+      "jobTitle": "Research Analyst",
+      "startDate": "2023-11-03"
+    },
+    {
+      "firstName": "Marta",
+      "lastName": "Fischer",
+      "email": "marta.fischer@acme-corp.example",
+      "jobTitle": "Customer Support Representative",
+      "startDate": "2024-04-28"
+    },
+    {
+      "firstName": "Tobias",
+      "lastName": "Meyer",
+      "email": "tobias.meyer@acme-corp.example",
+      "jobTitle": "Operations Coordinator",
+      "startDate": "2021-08-14"
+    }
+  ],
+  "forbidden": [
+    "Jeroen Bakker",
+    "Jeroen",
+    "Bakker",
+    "jeroen.bakker@acme-corp.example",
+    "Sanne Visser",
+    "Sanne",
+    "Visser",
+    "sanne.visser@acme-corp.example",
+    "Daan Smit",
+    "Daan",
+    "Smit",
+    "daan.smit@acme-corp.example",
+    "Katrin Müller",
+    "Katrin",
+    "Müller",
+    "katrin.muller@acme-corp.example",
+    "Lukas Schneider",
+    "Lukas",
+    "Schneider",
+    "lukas.schneider@acme-corp.example",
+    "Marta Fischer",
+    "Marta",
+    "Fischer",
+    "marta.fischer@acme-corp.example",
+    "Tobias Meyer",
+    "Tobias",
+    "Meyer",
+    "tobias.meyer@acme-corp.example",
+    "12/03/2024",
+    "25/09/2023",
+    "01/02/2025",
+    "17/06/2022",
+    "03/11/2023",
+    "28/04/2024",
+    "14/08/2021"
+  ]
+}

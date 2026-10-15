@@ -1,0 +1,67 @@
+{
+  "records": [
+    {
+      "firstName": "Priya Anand",
+      "lastName": "Rao",
+      "email": "priya.rao@acme-corp.example",
+      "jobTitle": "Backend Engineer",
+      "startDate": "2022-02-14"
+    },
+    {
+      "firstName": "Oluwaseun",
+      "lastName": "Adebayo",
+      "email": "oluwaseun.adebayo@acme-corp.example",
+      "jobTitle": "Payroll Analyst",
+      "startDate": "2021-09-27"
+    },
+    {
+      "firstName": "Mikael",
+      "lastName": "Johansson",
+      "email": "mikael.johansson@acme-corp.example",
+      "jobTitle": "Facilities Coordinator",
+      "startDate": "2023-04-17"
+    },
+    {
+      "firstName": "Chiara",
+      "lastName": "Bellandi",
+      "email": "chiara.bellandi@acme-corp.example",
+      "jobTitle": "Recruiter",
+      "startDate": "2024-01-08"
+    }
+  ],
+  "forbidden": [
+    "Priya Anand Rao",
+    "Priya",
+    "Anand",
+    "Rao",
+    "priya.rao@acme-corp.example",
+    "2022-02-14",
+    "2019-06-03",
+    "W-30001",
+    "Oluwaseun Adebayo",
+    "Oluwaseun",
+    "Adebayo",
+    "oluwaseun.adebayo@acme-corp.example",
+    "2021-09-27",
+    "W-30002",
+    "Mikael Johansson",
+    "Mikael",
+    "Johansson",
+    "mikael.johansson@acme-corp.example",
+    "2023-04-17",
+    "2016-01-11",
+    "W-30003",
+    "Chiara Bellandi",
+    "Chiara",
+    "Bellandi",
+    "chiara.bellandi@acme-corp.example",
+    "2024-01-08",
+    "W-30004",
+    "Delia Hargrove",
+    "Delia",
+    "Hargrove",
+    "Owen Pellew",
+    "Owen",
+    "Pellew"
+  ]
+}

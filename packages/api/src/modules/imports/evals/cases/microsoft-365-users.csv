@@ -1,0 +1,5 @@
+User principal name,First name,Last name,Display name,Job title,Department,Usage location,Mobile phone,Alternate email address,When created
+hana.novakova@acme-corp.example,Hana,Nováková,Hana Nováková,IT Administrator,Information Technology,Czechia,+420 555 010 101,hana.n@mail.example,2021-03-12T09:14:00Z
+liam.oconnor@acme-corp.example,Liam,O'Connor,Liam O'Connor,Sales Director,Sales,Ireland,+353 55 501 0102,liam.oc@mail.example,2021-07-05T08:30:00Z
+beatriz.cardoso@acme-corp.example,Beatriz,Cardoso,Beatriz Cardoso,Marketing Specialist,Marketing,Portugal,+351 555 010 103,beatriz.c@mail.example,2022-01-18T10:02:00Z
+dmitri.volkov@acme-corp.example,Dmitri,Volkov,Dmitri Volkov,,Legal,United Kingdom,+44 7700 900104,dmitri.v@mail.example,2023-09-25T13:45:00Z

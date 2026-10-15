@@ -1,0 +1,5 @@
+Employee ID,First name,Last name,Email,Position,Supervisor,Cost center,Hire date,Department,Office,Employment type,Weekly hours,Birthday,Status
+P-5001,Helena,Marsh,helena.marsh@acme-corp.example,Frontend Developer,Delia Hargrove,CC-210,2021-05-03,Engineering,Berlin,Full-time,40,1992-10-21,Active
+P-5002,Andrei,Popescu,andrei.popescu@acme-corp.example,QA Engineer,Delia Hargrove,CC-210,2022-09-19,Engineering,Berlin,Full-time,40,1989-04-08,Active
+P-5003,Fiona,Gallagher-Moss,fiona.gallagher-moss@acme-corp.example,Marketing Lead,Owen Pellew,CC-330,2023-02-27,Marketing,Munich,Part-time,24,1995-01-30,Active
+P-5004,Yusuf,Demir,yusuf.demir@acme-corp.example,Accountant,Owen Pellew,CC-410,2023-11-13,Finance,Munich,Full-time,40,1987-07-16,Active

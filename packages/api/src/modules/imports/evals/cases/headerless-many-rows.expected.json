@@ -1,0 +1,150 @@
+{
+  "records": [
+    {
+      "firstName": "Amelia",
+      "lastName": "Hartley",
+      "email": "amelia.hartley@acme-corp.example",
+      "jobTitle": "Customer Service Adviser",
+      "startDate": "2024-01-13"
+    },
+    {
+      "firstName": "Rohan",
+      "lastName": "Desai",
+      "email": "rohan.desai@acme-corp.example",
+      "jobTitle": "Accounts Assistant",
+      "startDate": "2023-02-27"
+    },
+    {
+      "firstName": "Freya",
+      "lastName": "Lindqvist",
+      "email": "freya.lindqvist@acme-corp.example",
+      "jobTitle": "Customer Service Adviser",
+      "startDate": "2022-04-02"
+    },
+    {
+      "firstName": "Callum",
+      "lastName": "Reid",
+      "email": "callum.reid@acme-corp.example",
+      "jobTitle": "Maintenance Technician",
+      "startDate": "2024-06-19"
+    },
+    {
+      "firstName": "Imogen",
+      "lastName": "Ashworth",
+      "email": "imogen.ashworth@acme-corp.example",
+      "jobTitle": "Accounts Assistant",
+      "startDate": "2021-08-30"
+    },
+    {
+      "firstName": "Kwame",
+      "lastName": "Boateng",
+      "email": "kwame.boateng@acme-corp.example",
+      "jobTitle": "Customer Service Adviser",
+      "startDate": "2023-10-15"
+    },
+    {
+      "firstName": "Sofia",
+      "lastName": "Marchetti",
+      "email": "sofia.marchetti@acme-corp.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2022-12-06"
+    },
+    {
+      "firstName": "Dylan",
+      "lastName": "Pritchard",
+      "email": "dylan.pritchard@acme-corp.example",
+      "jobTitle": "Maintenance Technician",
+      "startDate": "2025-03-21"
+    },
+    {
+      "firstName": "Niamh",
+      "lastName": "Gallagher",
+      "email": "niamh.gallagher@acme-corp.example",
+      "jobTitle": "Accounts Assistant",
+      "startDate": "2024-07-10"
+    },
+    {
+      "firstName": "Tariq",
+      "lastName": "Hussain",
+      "email": "tariq.hussain@acme-corp.example",
+      "jobTitle": "Customer Service Adviser",
+      "startDate": "2021-09-24"
+    },
+    {
+      "firstName": "Elodie",
+      "lastName": "Fontaine",
+      "email": "elodie.fontaine@acme-corp.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2023-11-16"
+    },
+    {
+      "firstName": "Rhys",
+      "lastName": "Pugh",
+      "email": "rhys.pugh@acme-corp.example",
+      "jobTitle": "Maintenance Technician",
+      "startDate": "2025-01-29"
+    }
+  ],
+  "forbidden": [
+    "Amelia Hartley",
+    "Amelia",
+    "Hartley",
+    "amelia.hartley@acme-corp.example",
+    "Rohan Desai",
+    "Rohan",
+    "Desai",
+    "rohan.desai@acme-corp.example",
+    "Freya Lindqvist",
+    "Freya",
+    "Lindqvist",
+    "freya.lindqvist@acme-corp.example",
+    "Callum Reid",
+    "Callum",
+    "Reid",
+    "callum.reid@acme-corp.example",
+    "Imogen Ashworth",
+    "Imogen",
+    "Ashworth",
+    "imogen.ashworth@acme-corp.example",
+    "Kwame Boateng",
+    "Kwame",
+    "Boateng",
+    "kwame.boateng@acme-corp.example",
+    "Sofia Marchetti",
+    "Sofia",
+    "Marchetti",
+    "sofia.marchetti@acme-corp.example",
+    "Dylan Pritchard",
+    "Dylan",
+    "Pritchard",
+    "dylan.pritchard@acme-corp.example",
+    "Niamh Gallagher",
+    "Niamh",
+    "Gallagher",
+    "niamh.gallagher@acme-corp.example",
+    "Tariq Hussain",
+    "Tariq",
+    "Hussain",
+    "tariq.hussain@acme-corp.example",
+    "Elodie Fontaine",
+    "Elodie",
+    "Fontaine",
+    "elodie.fontaine@acme-corp.example",
+    "Rhys Pugh",
+    "Rhys",
+    "Pugh",
+    "rhys.pugh@acme-corp.example",
+    "13/01/2024",
+    "27/02/2023",
+    "02/04/2022",
+    "19/06/2024",
+    "30/08/2021",
+    "15/10/2023",
+    "06/12/2022",
+    "21/03/2025",
+    "10/07/2024",
+    "24/09/2021",
+    "16/11/2023",
+    "29/01/2025"
+  ]
+}
