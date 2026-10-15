@@ -15,9 +15,11 @@ test("maps a file in one request when every answer is confident", async ({
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toMatchObject([
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -45,9 +47,11 @@ test("uses the fallback header and columns when a field answer is unsure", async
   );
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toMatchObject([
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -72,12 +76,14 @@ test("maps a semicolon file with a title above the header", async ({
   fake.answer({ headerRow: "2", fullName: "A", email: "B", jobTitle: "C", startDate: "D" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.listSources(OWNER)).toMatchObject([
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "mapped", failure: null },
   ]);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toMatchObject([
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -102,12 +108,12 @@ test("fails the file when no row is the header", async ({ orm, seed, fakeDecisio
   fake.answer({ headerRow: "none" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.listSources(OWNER)).toMatchObject([
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "failed", failure: "no_header" },
   ]);
-  expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
 test("fails the file when no name or email column is found", async ({
@@ -119,12 +125,12 @@ test("fails the file when no name or email column is found", async ({
   fake.answer({ headerRow: "1", jobTitle: "A" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.listSources(OWNER)).toMatchObject([
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "failed", failure: "no_people_columns" },
   ]);
-  expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
 test("a stale attempt leaves the source and its records unchanged", async ({
@@ -139,19 +145,21 @@ test("a stale attempt leaves the source and its records unchanged", async ({
   fake.answer({ headerRow: "1", fullName: "A" });
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.listSources(OWNER)).toEqual([source]);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(records);
+  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
+    records,
+  );
 });
 
 test("a removed source writes nothing and does not throw", async ({ orm, fakeDecisions: fake }) => {
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: randomUUID(), attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: randomUUID(), attempt: 0 });
 
-  expect(await imports.listSources(OWNER)).toEqual([]);
-  expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect(await imports.reads.listSources(OWNER)).toEqual([]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
 test("a retryable model failure leaves the source mapping", async ({
@@ -163,12 +171,12 @@ test("a retryable model failure leaves the source mapping", async ({
   fake.fail(503);
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  const result = imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  const result = imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   await expect(result).rejects.toBeInstanceOf(DecisionsError);
   await expect(result).rejects.toMatchObject({ retryable: true });
-  expect(await imports.listSources(OWNER)).toEqual([source]);
-  expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
 test("an unauthorized model request fails the file as unavailable", async ({
@@ -180,12 +188,12 @@ test("an unauthorized model request fails the file as unavailable", async ({
   fake.fail(401);
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
-  await imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.listSources(OWNER)).toMatchObject([
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "failed", failure: "unavailable" },
   ]);
-  expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
 test("an in-flight answer leaves a retried source mapping without records", async ({
@@ -197,13 +205,13 @@ test("an in-flight answer leaves a retried source mapping without records", asyn
   fake.answer({ headerRow: "1", fullName: "A" });
   const held = fake.holdNextAnswer();
   const imports = importUseCases(orm, { decisions: fake.decisions });
-  const mapping = imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  const mapping = imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   try {
     await held.received;
-    await imports.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
-    await imports.retryFile(OWNER, source.id);
-    const restarted = await imports.listSources(OWNER);
+    await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
+    await imports.files.retryFile(OWNER, source.id);
+    const restarted = await imports.reads.listSources(OWNER);
     expect(restarted).toMatchObject([{ id: source.id, status: "mapping", failure: null }]);
     expect(imports.sentJobs).toEqual([
       { name: "imports.mapFile", payload: { sourceId: source.id, attempt: 1 } },
@@ -212,8 +220,8 @@ test("an in-flight answer leaves a retried source mapping without records", asyn
     held.release();
     await mapping;
 
-    expect(await imports.listSources(OWNER)).toEqual(restarted);
-    expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+    expect(await imports.reads.listSources(OWNER)).toEqual(restarted);
+    expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
   } finally {
     held.release();
     await mapping;
@@ -229,16 +237,16 @@ test("an in-flight answer does not restore a removed source or its records", asy
   fake.answer({ headerRow: "1", fullName: "A" });
   const held = fake.holdNextAnswer();
   const imports = importUseCases(orm, { decisions: fake.decisions });
-  const mapping = imports.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  const mapping = imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   try {
     await held.received;
-    await imports.removeFile(OWNER, source.id);
+    await imports.files.removeFile(OWNER, source.id);
     held.release();
     await mapping;
 
-    expect(await imports.listSources(OWNER)).toEqual([]);
-    expect((await imports.listEmployees(OWNER, {})).edges).toEqual([]);
+    expect(await imports.reads.listSources(OWNER)).toEqual([]);
+    expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
   } finally {
     held.release();
     await mapping;

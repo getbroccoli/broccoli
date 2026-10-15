@@ -34,20 +34,20 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
         return IMPORT;
       },
       retryFile: async (_parent, { sourceId }, context) => {
-        await useCases.retryFile(context.getActor(), sourceId);
+        await useCases.files.retryFile(context.getActor(), sourceId);
         return IMPORT;
       },
       removeFile: async (_parent, { sourceId }, context) => {
-        await useCases.removeFile(context.getActor(), sourceId);
+        await useCases.files.removeFile(context.getActor(), sourceId);
         return IMPORT;
       },
     },
     Import: {
       id: () => "import",
-      sources: (_parent, _args, context) => useCases.listSources(context.getActor()),
+      sources: (_parent, _args, context) => useCases.reads.listSources(context.getActor()),
       employees: (_parent, { first, after }, context) =>
-        useCases.listEmployees(context.getActor(), { first: first ?? undefined, after }),
-      canReadFiles: (_parent, _args, context) => useCases.canReadFiles(context.getActor()),
+        useCases.reads.listEmployees(context.getActor(), { first: first ?? undefined, after }),
+      canReadFiles: (_parent, _args, context) => useCases.files.canReadFiles(context.getActor()),
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],
@@ -55,7 +55,7 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       failure: ({ failure }) => (failure ? FAILURES[failure] : null),
       employeeCount: ({ id }, _args, context) => loaders(context).employeeCount.load(id),
       employees: ({ id }, { first, after }, context) =>
-        useCases.listEmployees(context.getActor(), {
+        useCases.reads.listEmployees(context.getActor(), {
           first: first ?? undefined,
           after,
           sourceId: id,

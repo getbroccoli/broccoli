@@ -30,8 +30,8 @@ export function importsModule(
     router: (resolveSecurity) => filesRouter(useCases, resolveSecurity),
     jobs: {
       "imports.mapFile": {
-        run: (job) => useCases.mapFile(PrincipalSecurityContext.system(), job),
-        onFailed: (job) => useCases.markFileFailed(PrincipalSecurityContext.system(), job),
+        run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
+        onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },
     },
   };

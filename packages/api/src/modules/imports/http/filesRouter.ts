@@ -27,7 +27,7 @@ export function filesRouter(
         const name = parseFileName(request.query.name);
         // Without a body Express leaves `body` unset; an empty file is refused like any other.
         const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
-        response.json({ sourceId: await useCases.uploadFile(ctx, { name, bytes }) });
+        response.json({ sourceId: await useCases.files.uploadFile(ctx, { name, bytes }) });
       } catch (error) {
         sendApplicationError(error, response);
       }

@@ -50,7 +50,9 @@ test("approving leaves a record without a last name in the import without creati
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
   ).toEqual([]);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(records);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
+    records,
+  );
 });
 
 test("approving twice creates the employees once", async ({ orm, seed }) => {
@@ -137,7 +139,9 @@ test("refuses approval while a file is mapping without advancing setup", async (
 
   expect(await readSetupStep(orm)).toBe("import");
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(records);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
+    records,
+  );
 });
 
 test("approves available records when a failed file is present", async ({ orm, seed }) => {
@@ -179,7 +183,7 @@ test("waits for an uncommitted upload before refusing approval", async ({
       },
     },
   });
-  const upload = imports.uploadFile(owner, {
+  const upload = imports.files.uploadFile(owner, {
     name: "staff.csv",
     bytes: Buffer.from("Name\nAvery Stone"),
   });

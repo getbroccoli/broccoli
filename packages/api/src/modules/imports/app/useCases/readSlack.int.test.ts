@@ -23,13 +23,13 @@ test("the first Slack read creates a source and imports its members", async ({ o
 
   await imports.readSlack(OWNER);
 
-  const sources = await imports.listSources(OWNER);
+  const sources = await imports.reads.listSources(OWNER);
   expect(sources).toMatchObject([{ kind: "slack", name: "Acme Workspace" }]);
   expect(sources).toHaveLength(1);
   expect(sources[0]!.readAt).toBeInstanceOf(Date);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toMatchObject([
-    { sourceId: sources[0]!.id, firstName: "Avery", email: "avery@example.com" },
-  ]);
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([{ sourceId: sources[0]!.id, firstName: "Avery", email: "avery@example.com" }]);
 });
 
 test("another read keeps surviving member ids, updates values, adds newcomers and removes leavers", async ({
@@ -69,7 +69,7 @@ test("another read keeps surviving member ids, updates values, adds newcomers an
 
   await imports.readSlack(OWNER);
 
-  const employees = await imports.listEmployees(OWNER, {});
+  const employees = await imports.reads.listEmployees(OWNER, {});
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
     { ...avery, lastName: "Reed", email: "avery.reed@example.com", jobTitle: "Designer" },
     {
@@ -82,7 +82,9 @@ test("another read keeps surviving member ids, updates values, adds newcomers an
     },
   ]);
   expect(employees.edges[1]!.node.id).not.toBe(avery!.id);
-  expect(await imports.listSources(OWNER)).toMatchObject([{ id: source.id, name: source.name }]);
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, name: source.name },
+  ]);
 });
 
 test("reading another workspace renames the same source and replaces its employees", async ({
@@ -110,11 +112,11 @@ test("reading another workspace renames the same source and replaces its employe
 
   await imports.readSlack(OWNER);
 
-  expect(await imports.listSources(OWNER)).toMatchObject([
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, kind: "slack", name: "Acme Labs" },
   ]);
   expect(
-    (await imports.listEmployees(OWNER, {})).edges.map(({ node }) => ({
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => ({
       sourceId: node.sourceId,
       email: node.email,
     })),
@@ -136,8 +138,10 @@ test("a failed Slack read passes the error through and preserves the source and 
 
   await expect(imports.readSlack(OWNER)).rejects.toBe(error);
 
-  expect(await imports.listSources(OWNER)).toEqual([source]);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(employees);
+  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
+    employees,
+  );
 });
 
 test("a refresh whose connection is no longer current leaves the records", async ({
@@ -166,8 +170,10 @@ test("a refresh whose connection is no longer current leaves the records", async
 
   await imports.readSlack(OWNER);
 
-  expect(await imports.listSources(OWNER)).toEqual([source]);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(employees);
+  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
+    employees,
+  );
 });
 
 test("passes through the error when Slack is not connected", async ({ orm }) => {

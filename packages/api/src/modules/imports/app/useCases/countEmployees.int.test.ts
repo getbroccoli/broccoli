@@ -6,7 +6,7 @@ test("counts a source's employees and returns zero for an absent source", async 
   const absentId = "00000000-0000-4000-8000-000000000001";
   const imports = importUseCases(orm);
 
-  const counts = await imports.countEmployees(OWNER, [source.id, absentId]);
+  const counts = await imports.reads.countEmployees(OWNER, [source.id, absentId]);
 
   expect(counts).toEqual(
     new Map([

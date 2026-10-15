@@ -31,8 +31,8 @@ export function createImportUseCases({
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     skipImport: (ctx: SecurityContext) => skipImport(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
-    ...createFileSourceService({ orm, transact, decisions, jobs }),
-    ...createImportReadService(imports),
+    reads: createImportReadService(imports),
+    files: createFileSourceService({ orm, transact, decisions, jobs }),
   };
 }
 
