@@ -11,7 +11,7 @@ import type { SecurityContext } from "../../../../core/security";
 import { importEmployeeKeyset, type ImportRepository } from "../../db";
 import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
 import type { ImportEmployee, ImportSource } from "../../domain";
-import { readyEmployee } from "./readyEmployee";
+import { readyEmployee } from "./importEmployeeService";
 
 /** Reading the import: its sources and their employee records. Every function checks `ctx`. */
 export interface ImportReadService {

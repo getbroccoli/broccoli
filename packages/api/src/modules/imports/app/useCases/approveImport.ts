@@ -4,7 +4,7 @@ import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
 import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
-import { toNewEmployeeInput } from "./readyEmployee";
+import { toNewEmployeeInput } from "./importEmployeeService";
 
 /**
  * Turns the import's employee records into employees and completes setup, in one
