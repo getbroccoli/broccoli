@@ -34,14 +34,14 @@ for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
     });
     const imports = importUseCases(orm, { decisions: model.decisions });
 
-    const sourceId = await imports.uploadFile(OWNER, {
+    const sourceId = await imports.files.uploadFile(OWNER, {
       name: file,
       bytes: readFileSync(join(CASES, file)),
     });
-    await imports.mapFile(SYSTEM, { sourceId, attempt: 0 });
+    await imports.files.mapFile(SYSTEM, { sourceId, attempt: 0 });
 
-    const [source] = await imports.listSources(OWNER);
-    const records = (await imports.listEmployees(OWNER, { first: 10_000 })).edges.map(
+    const [source] = await imports.reads.listSources(OWNER);
+    const records = (await imports.reads.listEmployees(OWNER, { first: 10_000 })).edges.map(
       ({ node: { firstName, lastName, email, jobTitle, startDate } }) => ({
         firstName,
         lastName,
