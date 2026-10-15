@@ -21,7 +21,7 @@
 - `hibob-people`: HiBob-style people export with only a Display name column, split given-first including a "van" particle and a two-part given name, day-first start dates and a Reports to decoy.
 - `datev-lodas`: DATEV-style payroll export, semicolon-separated with German headings, Familienname before Vorname and Eintritt as start date; there is no email column, and tax ID, social security number, IBAN, birth and exit dates stay out.
 - `workday-worker`: Workday-style worker report with a Legal Name column including a middle name, Hire Date taken as the start over Original Hire Date, Primary Work Email, ISO dates and a Manager decoy.
-- `microsoft-365-users`: Microsoft 365-style user export with First name and Last name beside Display name, the user principal name as work email, an empty job title, no start date, and alternate email, mobile and When created decoys.
+- `microsoft-365-users`: Microsoft 365-style user export with First name and Last name beside Display name, the user principal name as work email, an empty job title, no start date, and alternate email and mobile decoys.
 - `personio-english`: Personio-style export with English attribute names, a hyphenated surname, ISO Hire dates and Supervisor, Cost center and Birthday decoys.
 - `occupational-surnames`: Dutch and German occupational surnames (Bakker, Visser, Smit, Müller, Schneider, Fischer, Meyer) beside job titles; surnames stay masked while the titles pass.
 - `job-word-surnames`: English surnames that are job words (Baker, Cook, Mason, Taylor, Smith, Porter) beside real job titles; surnames stay masked.

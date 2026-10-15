@@ -8,5 +8,11 @@
       "startDate": "2023-03-27"
     }
   ],
-  "forbidden": ["Margit Halvorsen", "Margit", "Halvorsen", "margit.halvorsen@acme-corp.example"]
+  "forbidden": [
+    "Margit Halvorsen",
+    "Margit",
+    "Halvorsen",
+    "margit.halvorsen@acme-corp.example",
+    "27/03/2023"
+  ]
 }
