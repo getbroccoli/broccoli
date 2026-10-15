@@ -30,6 +30,21 @@ it("refuses a date with a time", () => {
   expect(parseCalendarDate("2026-02-28T00:00:00Z")).toBeUndefined();
 });
 
+it.each([
+  ["dayFirst", "2026-03-02"],
+  ["monthFirst", "2026-02-03"],
+] as const)("reads 02.03.2026 in %s order", (order, expected) => {
+  expect(parseCalendarDate("02.03.2026", order)).toBe(expected);
+});
+
+it("refuses a numeric date without an order", () => {
+  expect(parseCalendarDate("02/03/2026")).toBeUndefined();
+});
+
+it("refuses a numeric date that does not exist in its order", () => {
+  expect(parseCalendarDate("31/02/2026", "dayFirst")).toBeUndefined();
+});
+
 it("adds days across a month end", () => {
   expect(addDays(parseCalendarDate("2026-04-30")!, 1)).toBe("2026-05-01");
 });
