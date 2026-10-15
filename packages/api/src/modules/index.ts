@@ -15,7 +15,7 @@ export interface ModuleSettings {
   publicUrl?: string;
   brandLookupUrl: string | null;
   slack: SlackUrls;
-  /** The model that maps files: the provider's address and Broccoli's key; null without a key. */
+  /** The model that maps files: the provider's address and key; null without a key. */
   model: { url: string; apiKey: string } | null;
 }
 

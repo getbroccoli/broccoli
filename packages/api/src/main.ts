@@ -13,9 +13,9 @@ const server = await startServer(env, logger, (core) =>
     brandLookupUrl: env.brandLookupUrl,
     slack: { relayUrl: env.slackRelayUrl, apiUrl: "https://slack.com/api" },
     model:
-      deployment.mode === "managed"
-        ? { url: "https://openrouter.ai/api", apiKey: deployment.modelApiKey }
-        : null,
+      env.modelApiKey === null
+        ? null
+        : { url: "https://openrouter.ai/api", apiKey: env.modelApiKey },
   }),
 );
 logger.info({ url: server.url }, "Broccoli API listening");

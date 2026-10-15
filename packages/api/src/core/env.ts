@@ -30,8 +30,6 @@ export interface ManagedDeployment {
   instanceId: string;
   /** Issuer of init tokens and sign-in tickets; its keys are at `/.well-known/jwks.json`. */
   accountsOrigin: string;
-  /** Broccoli's key for the model provider. */
-  modelApiKey: string;
 }
 
 export interface Env {
@@ -41,6 +39,8 @@ export interface Env {
   /** Folder of the built web app to serve; unset serves only the API. */
   webDir?: string;
   deployment: Deployment;
+  /** The OpenRouter key that maps files; required when managed, null turns file mapping off. */
+  modelApiKey: string | null;
   /** Folder for files that must survive restarts, such as `secrets/`. */
   dataDir: string;
   /** Service that finds the brand of an email domain; null makes no lookup. */
@@ -57,11 +57,7 @@ function blankAsUnset(value: unknown): unknown {
   return typeof value === "string" && value.trim() === "" ? undefined : value;
 }
 
-const MANAGED_VARIABLES = [
-  "MANAGED_INSTANCE_ID",
-  "MANAGED_ACCOUNTS_URL",
-  "MANAGED_MODEL_API_KEY",
-] as const;
+const MANAGED_VARIABLES = ["MANAGED_INSTANCE_ID", "MANAGED_ACCOUNTS_URL"] as const;
 
 const envSchema = z
   .object({
@@ -74,7 +70,7 @@ const envSchema = z
     SELF_HOSTED_PUBLIC_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
     MANAGED_INSTANCE_ID: z.preprocess(blankAsUnset, z.string().optional()),
     MANAGED_ACCOUNTS_URL: z.preprocess(blankAsUnset, z.string().optional()),
-    MANAGED_MODEL_API_KEY: z.preprocess(blankAsUnset, z.string().optional()),
+    OPENROUTER_API_KEY: z.preprocess(blankAsUnset, z.string().optional()),
     BRAND_LOOKUP_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
     SLACK_RELAY_URL: z.preprocess(
       blankAsUnset,
@@ -96,7 +92,7 @@ const envSchema = z
     if (variables.SELF_HOSTED_PUBLIC_URL !== undefined) {
       refuse("SELF_HOSTED_PUBLIC_URL", "Only for BROCCOLI_MODE=self_hosted");
     }
-    for (const name of ["MANAGED_INSTANCE_ID", "MANAGED_MODEL_API_KEY"] as const) {
+    for (const name of ["MANAGED_INSTANCE_ID", "OPENROUTER_API_KEY"] as const) {
       if (variables[name] === undefined) {
         refuse(name, "Required when BROCCOLI_MODE=managed");
       }
@@ -116,9 +112,9 @@ const envSchema = z
             mode: "managed",
             instanceId: variables.MANAGED_INSTANCE_ID!,
             accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
-            modelApiKey: variables.MANAGED_MODEL_API_KEY!,
           }
         : { mode: "self_hosted", publicUrl: variables.SELF_HOSTED_PUBLIC_URL },
+    modelApiKey: variables.OPENROUTER_API_KEY ?? null,
     dataDir: variables.DATA_DIR,
     brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
     slackRelayUrl: variables.SLACK_RELAY_URL,
