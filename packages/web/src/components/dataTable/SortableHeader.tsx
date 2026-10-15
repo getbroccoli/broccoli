@@ -13,10 +13,17 @@ interface SortableHeaderProps<SortKey extends string> {
   sortKey: SortKey | undefined;
   sort: DataTableSort<SortKey>;
   onSortChange: (sort: DataTableSort<SortKey>) => void;
+  density: DataTableDensity;
   className?: string;
 }
 
-const HEAD_TEXT = "text-[10.5px] font-medium tracking-wider text-muted-foreground uppercase";
+/** Compact lists such as the directory, or comfortable ones with fewer, taller rows. */
+export type DataTableDensity = "compact" | "comfortable";
+
+const HEAD_TEXT: Record<DataTableDensity, string> = {
+  compact: "h-9 px-3 text-[10.5px] font-medium tracking-wider text-muted-foreground uppercase",
+  comfortable: "h-11 px-4 text-sm font-medium text-foreground",
+};
 
 /** A column header; a button that sorts by the column when it has a `sortKey`. */
 export function SortableHeader<SortKey extends string>({
@@ -24,9 +31,10 @@ export function SortableHeader<SortKey extends string>({
   sortKey,
   sort,
   onSortChange,
+  density,
   className,
 }: SortableHeaderProps<SortKey>) {
-  const headClassName = cn("h-9 px-3", HEAD_TEXT, className);
+  const headClassName = cn(HEAD_TEXT[density], className);
   if (!sortKey) {
     return <TableHead className={headClassName}>{label}</TableHead>;
   }
@@ -39,7 +47,7 @@ export function SortableHeader<SortKey extends string>({
       <button
         type="button"
         onClick={() => onSortChange({ key: sortKey, direction: nextDirection })}
-        className="group/head -mx-1 inline-flex items-center gap-1 rounded-sm px-1 uppercase outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="group/head -mx-1 inline-flex items-center gap-1 rounded-sm px-1 [text-transform:inherit] outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         {label}
         <SortIcon direction={direction} />

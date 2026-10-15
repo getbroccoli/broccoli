@@ -1,10 +1,15 @@
 import { useMutation, useQuery } from "@apollo/client/react";
-import { MagnifyingGlass, UserCircle, WarningCircle } from "@phosphor-icons/react";
+import { ArrowLeft, MagnifyingGlass, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 
 import { ApproveImportDocument, ImportReviewDocument } from "@/__generated__/graphql";
-import { DataTable, TableSearchField, TableState } from "@/components/dataTable";
+import {
+  DataTable,
+  type DataTablePager,
+  TableSearchField,
+  TableState,
+} from "@/components/dataTable";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
@@ -66,6 +71,7 @@ export function ImportReview() {
   const [approveImport, { loading: approving }] = useMutation(ApproveImportDocument);
   const [approveFailed, setApproveFailed] = useState(false);
   const readyCount = (data ?? previousData)?.import.readyEmployeeCount ?? 0;
+  const peopleSources = sources.filter(({ employeeCount }) => employeeCount > 0);
   const totalCount = sources.reduce((total, { employeeCount }) => total + employeeCount, 0);
   const leftOutCount = totalCount - readyCount;
 
@@ -89,9 +95,10 @@ export function ImportReview() {
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <Link
             to="/setup/import"
-            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-10 px-4")}
+            className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
             disabled={approving}
           >
+            <ArrowLeft aria-hidden />
             {t("setup.review.back")}
           </Link>
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -112,9 +119,16 @@ export function ImportReview() {
         </div>
       }
     >
-      {sources.some(({ employeeCount }) => employeeCount > 0) && (
-        <SourceChips sources={sources.filter(({ employeeCount }) => employeeCount > 0)} />
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {peopleSources.length > 0 && <SourceChips sources={peopleSources} />}
+        <TableSearchField
+          query={search.q}
+          onQueryChange={list.changeQuery}
+          label={t("setup.review.search.label")}
+          placeholder={t("setup.review.search.placeholder")}
+          maxLength={SEARCH_MAX_LENGTH}
+        />
+      </div>
       <DataTable
         columns={IMPORT_REVIEW_COLUMNS}
         rows={list.rows}
@@ -122,18 +136,11 @@ export function ImportReview() {
         sort={list.sort}
         onSortChange={list.changeSort}
         isLoading={loading}
-        toolbar={
-          <TableSearchField
-            query={search.q}
-            onQueryChange={list.changeQuery}
-            label={t("setup.review.search.label")}
-            placeholder={t("setup.review.search.placeholder")}
-            maxLength={SEARCH_MAX_LENGTH}
-          />
-        }
         notice={list.error ? errorNotice() : undefined}
         emptyState={search.q ? noMatches(search.q) : noPeople()}
         pager={list.pager}
+        density="comfortable"
+        summary={peopleCount(totalCount, search.q ? list.rows : undefined, list.pager)}
       />
       {approveFailed && (
         <p role="alert" className="text-sm text-destructive">
@@ -195,4 +202,18 @@ function approveLabel({
   return readyCount === 1
     ? t("setup.review.approveOne")
     : t("setup.review.approve", { count: String(readyCount) });
+}
+
+/** "60 people", or "Showing 6 of 60 people" for a search whose matches fit on one page. */
+function peopleCount(
+  total: number,
+  matches: unknown[] | undefined,
+  pager: DataTablePager | undefined,
+): string {
+  const people =
+    total === 1 ? t("setup.review.countOne") : t("setup.review.count", { count: String(total) });
+  if (!matches || pager?.hasNextPage || pager?.isFirstPage === false) {
+    return people;
+  }
+  return t("setup.review.showing", { count: String(matches.length), people });
 }

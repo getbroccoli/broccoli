@@ -16,27 +16,28 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     id: "person",
     header: t("setup.review.column.person"),
     sortKey: "name",
-    className: "w-48 min-w-48 max-w-48 md:w-[240px] md:min-w-[240px] md:max-w-[240px]",
+    className: "w-[28%] min-w-48 max-w-0",
     cell: (person) => <ImportPersonCell person={person} />,
   },
   {
     id: "email",
     header: t("setup.review.column.email"),
     sortKey: "email",
-    className: "min-w-48 max-w-[280px] truncate",
+    className: "w-[26%] min-w-48 max-w-0 truncate",
     cell: ({ email, incompleteReason }) =>
       email ?? <NotSet missing={incompleteReason === "EMAIL"} />,
   },
   {
     id: "jobTitle",
     header: t("setup.review.column.jobTitle"),
-    className: "min-w-40 max-w-[240px] truncate",
+    className: "w-[18%] min-w-36 max-w-0 truncate",
     cell: ({ jobTitle }) => jobTitle ?? <NotSet />,
   },
   {
     id: "startDate",
     header: t("setup.review.column.startDate"),
     sortKey: "startDate",
+    className: "w-[13%] min-w-28",
     cell: ({ startDate }) =>
       startDate ? (
         <span className="text-foreground/80 tabular-nums">{formatCalendarDate(startDate)}</span>
@@ -47,7 +48,7 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
   {
     id: "source",
     header: t("setup.review.column.source"),
-    className: "min-w-40 max-w-[220px]",
+    className: "w-[15%] min-w-36 max-w-0",
     cell: ({ source }) => (
       <span className="flex items-center gap-1.5 truncate text-muted-foreground">
         <SourceIcon kind={source.kind} />
