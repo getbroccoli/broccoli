@@ -1,0 +1,17 @@
+{
+  "booleans": ["ja", "nee"],
+  "headings": [
+    "voornaam",
+    "achternaam",
+    "naam",
+    "telefoonnummer",
+    "functie",
+    "afdeling",
+    "geboortedatum",
+    "indiensttreding",
+    "adres",
+    "medewerker",
+    "werknemer"
+  ],
+  "jobTitles": []
+}

@@ -1,0 +1,22 @@
+{
+  "booleans": ["sí", "no"],
+  "headings": [
+    "nombre",
+    "apellido",
+    "apellidos",
+    "correo",
+    "electrónico",
+    "teléfono",
+    "móvil",
+    "puesto",
+    "cargo",
+    "departamento",
+    "fecha",
+    "inicio",
+    "ingreso",
+    "nacimiento",
+    "dirección",
+    "empleado"
+  ],
+  "jobTitles": []
+}

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { withPlaceholders } from "./placeholders";
+import { withPlaceholders } from "./sanitize";
 
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
 export type JsonObject = { [key: string]: Json };

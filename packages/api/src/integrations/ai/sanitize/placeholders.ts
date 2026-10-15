@@ -1,4 +1,9 @@
-import type { Json, JsonObject } from "./decisions";
+import type { Json, JsonObject } from "../decisions";
+import de from "./words/de.json" with { type: "json" };
+import en from "./words/en.json" with { type: "json" };
+import es from "./words/es.json" with { type: "json" };
+import fr from "./words/fr.json" with { type: "json" };
+import nl from "./words/nl.json" with { type: "json" };
 
 /**
  * A copy of `state` where every string that could identify someone is replaced by a
@@ -33,7 +38,13 @@ export function withPlaceholders(state: JsonObject): JsonObject {
 /** An email domain shared by this many distinct addresses is the company's, not a person's. */
 const MIN_SHARED = 3;
 
-const BOOLEANS = new Set("yes no true false y n x ja nein oui non sí".split(" "));
+/**
+ * Per language, lower case: booleans pass whole; heading and job-title words pass inside a
+ * value. Never a word that is also a common name, such as Baker, Cook, Mason or Sales.
+ */
+const LANGUAGES = [de, en, es, fr, nl];
+
+const BOOLEANS = new Set(LANGUAGES.flatMap(({ booleans }) => booleans));
 
 const PUBLIC_MAIL_DOMAINS = new Set([
   "gmail.com",
@@ -52,36 +63,8 @@ const PUBLIC_MAIL_DOMAINS = new Set([
   "protonmail.com",
 ]);
 
-/** Words of staff-file headings and job titles, without those that are also common surnames. */
 const HEADING_WORDS = new Set(
-  [
-    // English
-    "name names first last given family middle full display preferred known as surname forename",
-    "forenames email e-mail mail work business personal private phone mobile telephone tel number",
-    "no job title position role department dept team manager start started joined hire hired entry",
-    "date end leaving left birth born birthday dob next of kin address street city postcode zip",
-    "country employee staff id ni payroll location office status type contract salary notes note",
-    "emergency contact",
-    // German
-    "vorname nachname familienname telefon telefonnummer handy mobilnummer stelle titel abteilung",
-    "eintritt eintrittsdatum austritt austrittsdatum geburtsdatum geburtstag adresse straße ort plz",
-    "land mitarbeiter mitarbeiterin personalnummer vorgesetzter notizen datum",
-    // French
-    "nom prénom courriel téléphone poste fonction service département embauche naissance ville pays",
-    "salarié employé d'embauche",
-    // Spanish
-    "nombre apellido apellidos correo electrónico teléfono móvil puesto cargo departamento fecha",
-    "inicio ingreso nacimiento dirección empleado",
-    // Dutch
-    "voornaam achternaam naam telefoonnummer functie afdeling geboortedatum indiensttreding adres",
-    "medewerker werknemer",
-    // Job titles, without surnames such as Baker, Cook, Mason, Sales, Senior, Taylor
-    "administrator technician adviser advisor assistant officer coordinator director developer",
-    "designer engineer accountant analyst consultant specialist supervisor executive",
-    "representative receptionist recruiter bookkeeper administration marketing maintenance",
-    "support finance accounts customer operations it hr research junior chief office",
-    "entwickler entwicklerin designerin buchhalter buchhalterin leiter leiterin",
-  ].flatMap((line) => line.split(" ")),
+  LANGUAGES.flatMap(({ headings, jobTitles }) => [...headings, ...jobTitles]),
 );
 
 function collectStrings(value: Json): string[] {

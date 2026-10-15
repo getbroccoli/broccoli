@@ -1,0 +1,21 @@
+{
+  "booleans": ["oui", "non"],
+  "headings": [
+    "nom",
+    "prénom",
+    "courriel",
+    "téléphone",
+    "poste",
+    "fonction",
+    "service",
+    "département",
+    "embauche",
+    "naissance",
+    "ville",
+    "pays",
+    "salarié",
+    "employé",
+    "d'embauche"
+  ],
+  "jobTitles": []
+}

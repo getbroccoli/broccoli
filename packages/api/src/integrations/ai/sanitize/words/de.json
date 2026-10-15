@@ -1,0 +1,41 @@
+{
+  "booleans": ["ja", "nein"],
+  "headings": [
+    "vorname",
+    "nachname",
+    "familienname",
+    "telefon",
+    "telefonnummer",
+    "handy",
+    "mobilnummer",
+    "stelle",
+    "titel",
+    "abteilung",
+    "eintritt",
+    "eintrittsdatum",
+    "austritt",
+    "austrittsdatum",
+    "geburtsdatum",
+    "geburtstag",
+    "adresse",
+    "straße",
+    "ort",
+    "plz",
+    "land",
+    "mitarbeiter",
+    "mitarbeiterin",
+    "personalnummer",
+    "vorgesetzter",
+    "notizen",
+    "datum"
+  ],
+  "jobTitles": [
+    "entwickler",
+    "entwicklerin",
+    "designerin",
+    "buchhalter",
+    "buchhalterin",
+    "leiter",
+    "leiterin"
+  ]
+}
