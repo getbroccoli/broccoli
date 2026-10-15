@@ -1,7 +1,7 @@
 import type { Answers, JsonObject, Question } from "../../../integrations/ai";
 import { parseDateColumn } from "../../../utils";
 import type { ImportEmployeeValues, IncomingRecord } from "./importEmployee";
-import { nonBlank, parseEmail, splitFullName } from "./personValues";
+import { nonBlank, parseEmail, splitFullNames } from "./personValues";
 import type { Sheet } from "./sheet";
 
 export const FILE_FIELDS = [
@@ -164,6 +164,7 @@ export function readFileRecords(
   const cellsOf = (field: FileField) =>
     rows.map((row) => (mapping[field] === null ? "" : (row[mapping[field]] ?? "")));
   const startDates = parseDateColumn(cellsOf("startDate"));
+  const fullNames = splitFullNames(cellsOf("fullName"));
   const records: IncomingRecord[] = [];
   rows.forEach((row, index) => {
     const cell = (field: FileField) => {
@@ -171,7 +172,7 @@ export function readFileRecords(
       return column === null ? undefined : row[column];
     };
     const values: ImportEmployeeValues = {
-      ...nameOf(cell),
+      ...nameOf(cell, fullNames[index]!),
       email: parseEmail(cell("email")),
       jobTitle: nonBlank(cell("jobTitle")),
       startDate: startDates[index]!,
@@ -227,14 +228,11 @@ function fieldQuestions(
 /** Separate first and last name columns win over a full name column. */
 function nameOf(
   cell: (field: FileField) => string | undefined,
+  fullName: Pick<ImportEmployeeValues, "firstName" | "lastName">,
 ): Pick<ImportEmployeeValues, "firstName" | "lastName"> {
   const firstName = nonBlank(cell("firstName"));
   const lastName = nonBlank(cell("lastName"));
-  const fullName = nonBlank(cell("fullName"));
-  if (firstName || lastName || fullName === null) {
-    return { firstName, lastName };
-  }
-  return splitFullName(fullName);
+  return firstName || lastName ? { firstName, lastName } : fullName;
 }
 
 /**

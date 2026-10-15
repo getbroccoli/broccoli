@@ -15,5 +15,5 @@ export {
   type IncomingRecord,
 } from "./importEmployee";
 export type { FileSource, ImportSource, MappingOutcome } from "./importSource";
-export { nonBlank, parseEmail, splitFullName } from "./personValues";
+export { nonBlank, parseEmail, splitFullName, splitFullNames } from "./personValues";
 export { readSheet, type Sheet } from "./sheet";

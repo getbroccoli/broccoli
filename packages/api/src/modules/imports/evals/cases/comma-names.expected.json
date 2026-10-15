@@ -1,0 +1,51 @@
+{
+  "records": [
+    {
+      "firstName": "Eva",
+      "lastName": "van der Meer",
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Lucía",
+      "lastName": "Vega Rojas",
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Luca",
+      "lastName": "D'Angelo",
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Lena",
+      "lastName": "Vogel",
+      "email": null,
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "van",
+    "der",
+    "Meer",
+    "Eva",
+    "van der Meer",
+    "van der Meer, Eva",
+    "Vega",
+    "Rojas",
+    "Lucía",
+    "Vega Rojas",
+    "Vega Rojas, Lucía",
+    "D'Angelo",
+    "Luca",
+    "D'Angelo, Luca",
+    "Vogel",
+    "Lena",
+    "Vogel, Lena"
+  ]
+}

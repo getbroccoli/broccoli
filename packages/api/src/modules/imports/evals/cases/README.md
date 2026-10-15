@@ -1,4 +1,7 @@
-- `simple`: Comma delimiter, first-row header, full names split at the last space, lowercased work emails, job titles and ISO start dates.
+- `simple`: Comma delimiter, first-row header, two-word Latin names split and uncertain names kept whole, lowercased work emails, job titles and ISO start dates.
+- `comma-names`: A whole column of quoted family-first comma names preserves compound family names.
+- `russian-fio`: Russian headings and patronymics in either order; initials and two-word Cyrillic names stay whole.
+- `world-names`: Hyphenated and apostrophised Latin names split; uncertain multiword names, native CJK and mononyms stay whole.
 - `title-row-semicolons`: Title and blank line before a semicolon table, day-first dates and an empty work email.
 - `tabs-month-first`: Tab delimiter, reordered columns and month-first dates.
 - `split-names`: Separate first and last names take precedence over display names.

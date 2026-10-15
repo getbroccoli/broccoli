@@ -15,8 +15,8 @@
       "startDate": "2023-11-20"
     },
     {
-      "firstName": "Inés María",
-      "lastName": "Costa",
+      "firstName": "Inés María Costa",
+      "lastName": null,
       "email": "ines.costa@acme-corp.example",
       "jobTitle": "Office Manager",
       "startDate": "2025-01-06"
