@@ -7,6 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
@@ -76,10 +77,10 @@ export function ImportStep() {
               to="/setup/import/review"
               disabled={skipping || reading}
               aria-disabled={skipping || reading}
-              className={buttonVariants({
-                size: "lg",
-                className: "h-10 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-              })}
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "h-10 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+              )}
             >
               {t(reading ? "setup.import.reading" : "setup.import.next")}
             </Link>

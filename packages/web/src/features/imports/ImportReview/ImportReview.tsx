@@ -8,6 +8,7 @@ import { DataTable, TableSearchField, TableState } from "@/components/dataTable"
 import { Button, buttonVariants } from "@/components/ui/button";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 import { useListPage } from "@/lib/listPage";
 
 import { IMPORT_REVIEW_COLUMNS } from "./importReviewColumns";
@@ -79,7 +80,7 @@ export function ImportReview() {
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <Link
             to="/setup/import"
-            className={buttonVariants({ variant: "outline", size: "lg", className: "h-10 px-4" })}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-10 px-4")}
             disabled={approving}
           >
             {t("setup.review.back")}

@@ -31,8 +31,8 @@ export function ImportPersonCell({ person }: { person: ImportPerson }) {
       <div className="min-w-0">
         <p className="truncate font-medium text-foreground">{name || <NotSet missing />}</p>
         {person.incompleteReason && (
-          <p className="flex items-center gap-1.5 truncate text-[13px] text-amber-800">
-            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-amber-500" />
+          <p className="flex items-start gap-1.5 text-[13px] leading-snug whitespace-normal text-amber-800">
+            <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" />
             {t("setup.review.wontBeAdded", { reason: t(REASONS[person.incompleteReason]) })}
           </p>
         )}

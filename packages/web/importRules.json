@@ -35,6 +35,7 @@
       "src/components/ui",
       "src/features/setup",
       "src/i18n",
+      "src/lib/class-names",
       "src/lib/formatDate",
       "src/lib/initials",
       "src/lib/listPage"
