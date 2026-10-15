@@ -5,7 +5,8 @@ import type { StepView } from "./setupSteps";
 
 /** The current step's title over one bar per step, on narrow screens. */
 export function StepBars({ steps }: { steps: StepView[] }) {
-  const current = steps.find(({ state }) => state === "current");
+  const step = steps.find(({ state }) => state === "current");
+  const current = step?.pages.find(({ state }) => state === "current") ?? step;
   return (
     <div className="md:hidden">
       <p aria-hidden className="text-sm font-semibold">
