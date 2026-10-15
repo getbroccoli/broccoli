@@ -1,4 +1,10 @@
-export { addDays, parseCalendarDate, todayInUtc, type CalendarDate } from "./calendarDate";
+export {
+  addDays,
+  parseCalendarDate,
+  parseDateColumn,
+  todayInUtc,
+  type CalendarDate,
+} from "./calendarDate";
 export { fetchJson } from "./fetchJson";
 export { parseRasterImage, type RasterImage } from "./rasterImage";
 export { parseCsv } from "./csv";

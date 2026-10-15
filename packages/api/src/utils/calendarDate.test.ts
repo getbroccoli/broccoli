@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { addDays, parseCalendarDate } from ".";
+import { addDays, parseCalendarDate, parseDateColumn } from ".";
 
 it("returns a real date unchanged", () => {
   expect(parseCalendarDate("2026-02-28")).toBe("2026-02-28");
@@ -44,4 +44,40 @@ it("subtracts a day onto leap day", () => {
 
 it("moves backwards for a negative offset", () => {
   expect(addDays(parseCalendarDate("2026-10-13")!, -30)).toBe("2026-09-13");
+});
+
+it("reads ISO dates without inferring an order", () => {
+  expect(parseDateColumn(["2026-01-02", "2024-02-29"])).toEqual(["2026-01-02", "2024-02-29"]);
+});
+
+it.each(["/", ".", "-"])("reads the whole column as day-first with %s separators", (separator) => {
+  expect(
+    parseDateColumn([`02${separator}03${separator}2026`, `14${separator}01${separator}2026`]),
+  ).toEqual(["2026-03-02", "2026-01-14"]);
+});
+
+it.each(["/", ".", "-"])(
+  "reads the whole column as month-first with %s separators",
+  (separator) => {
+    expect(
+      parseDateColumn([`02${separator}03${separator}2026`, `01${separator}14${separator}2026`]),
+    ).toEqual(["2026-02-03", "2026-01-14"]);
+  },
+);
+
+it("leaves an ambiguous column empty", () => {
+  expect(parseDateColumn(["02/03/2026", "04/05/2026"])).toEqual([null, null]);
+});
+
+it("ignores impossible dates when inferring the column's date order", () => {
+  expect(parseDateColumn(["14/01/2026", "02/99/2026"])).toEqual(["2026-01-14", null]);
+});
+
+it("leaves a cell that is not a date empty", () => {
+  expect(parseDateColumn(["14/01/2026", "not a date", "31/02/2026", ""])).toEqual([
+    "2026-01-14",
+    null,
+    null,
+    null,
+  ]);
 });
