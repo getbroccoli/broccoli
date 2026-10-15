@@ -115,7 +115,9 @@ test("maps a file without a header from its cells", async ({ orm, seed, fakeDeci
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "mapped", failure: null },
   ]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toMatchObject([
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
