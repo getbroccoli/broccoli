@@ -9,6 +9,7 @@
 - Files and folders are camelCase (`useCases/getCompany.ts`, `useListPage.ts`); React components and the folders named after them are PascalCase (`OwnerSetupForm.tsx`, `SetupLayout/`). Suffixes keep their dots (`getCompany.int.test.ts`). Tools name their own files: route files (their names are URLs), the shadcn CLI's kebab-case files, generated code and migrations. ESLint enforces this with `eslint-plugin-check-file`. Make a case-only rename through a temporary name, because case-insensitive file systems miss it.
 - One React component per file. A component built from smaller components of its own is a folder named after it (`features/setup/SetupLayout/`), with each component in its own file and `index.ts` exporting only what the rest of the code uses.
 - Commit titles use Conventional Commits. Pull requests are squash-merged.
+- A service or repository opens its file with its contract: an exported interface carrying the doc comments. Its factory returns that interface, not `ReturnType<typeof …>`.
 - Parse, don't validate: turn raw input into a typed value once, at the boundary (`parseCalendarDate`, `parseNewEmployee`, `parsePage`), and pass that value on. Never check with an `isX` function and then keep using the raw input.
 - Prefer zero-config solutions and modules: they work without setup, and every setting has a safe default.
 - Nothing internal: no secrets, no `.env` files, no internal URLs.

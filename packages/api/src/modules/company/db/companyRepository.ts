@@ -3,16 +3,30 @@ import { isNull, sql } from "drizzle-orm";
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import { company } from "./companyTable";
 
+/** The company stored in Postgres, through the pool or inside a transaction. */
+export interface CompanyRepository {
+  read(): Promise<CompanyRecord>;
+  saveName(name: string): Promise<void>;
+  /**
+   * Stores the first brand lookup's result and returns true; does nothing and
+   * returns false once a lookup was stored, so a repeated or late lookup never
+   * overrides the owner's changes.
+   */
+  saveBrandOnce(brandName: string | null, logoFileId: string | null): Promise<boolean>;
+  /**
+   * Sets the owner's own logo, or none, and returns the previous logo's file id.
+   * Also counts as the first lookup, so a lookup still running cannot replace it.
+   */
+  replaceLogo(logoFileId: string | null): Promise<string | null>;
+}
+
 export interface CompanyRecord {
   name: string | null;
   brandName: string | null;
   logoFileId: string | null;
 }
 
-export type CompanyRepository = ReturnType<typeof companyRepository>;
-
-/** The company stored in Postgres, through the pool or inside a transaction. */
-export function companyRepository(db: Orm | Tx) {
+export function companyRepository(db: Orm | Tx): CompanyRepository {
   const orm = () => ormOf(db);
   return {
     read: async (): Promise<CompanyRecord> => {
@@ -33,11 +47,6 @@ export function companyRepository(db: Orm | Tx) {
       await orm().update(company).set({ name });
     },
 
-    /**
-     * Stores the first brand lookup's result and returns true; does nothing and
-     * returns false once a lookup was stored, so a repeated or late lookup never
-     * overrides the owner's changes.
-     */
     saveBrandOnce: async (
       brandName: string | null,
       logoFileId: string | null,
@@ -50,10 +59,6 @@ export function companyRepository(db: Orm | Tx) {
       return rows.length > 0;
     },
 
-    /**
-     * Sets the owner's own logo, or none, and returns the previous logo's file id.
-     * Also counts as the first lookup, so a lookup still running cannot replace it.
-     */
     replaceLogo: async (logoFileId: string | null): Promise<string | null> => {
       const [current] = await orm()
         .select({ logoFileId: company.logoFileId })

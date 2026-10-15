@@ -3,14 +3,21 @@ import { eq, inArray } from "drizzle-orm";
 import { type Orm, ormOf, type Tx } from "../../db";
 import { files } from "./filesTable";
 
+/** The files stored in Postgres, through the pool or inside a transaction. */
+export interface FileRepository {
+  /** Stores the file and returns its id. */
+  insert(file: StoredFile): Promise<string>;
+  deleteMany(ids: readonly string[]): Promise<void>;
+  read(id: string): Promise<StoredFile | null>;
+}
+
 /** A stored file's bytes and their MIME type. */
 export interface StoredFile {
   content: Buffer;
   mimeType: string;
 }
 
-/** The files stored in Postgres, through the pool or inside a transaction. */
-export function fileRepository(db: Orm | Tx) {
+export function fileRepository(db: Orm | Tx): FileRepository {
   const orm = () => ormOf(db);
   return {
     insert: async (file: StoredFile): Promise<string> => {

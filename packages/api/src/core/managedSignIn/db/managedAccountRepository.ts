@@ -6,11 +6,18 @@ import { account, user } from "../../auth";
 import { ormOf, type Tx } from "../../db";
 import type { ManagedTicket } from "../domain";
 
+/** Users who sign in through the accounts service, inside a transaction. */
+export interface ManagedAccountRepository {
+  /** The user linked to this subject, or null. */
+  findUserId(subject: string): Promise<string | null>;
+  /** A user without a password, linked to the ticket's subject. */
+  createUser(ticket: ManagedTicket): Promise<{ id: string; email: string }>;
+}
+
 /** Accounts linked to the accounts service: one per subject, never matched by email. */
 export const MANAGED_PROVIDER_ID = "broccoli-accounts";
 
-/** Users who sign in through the accounts service, inside a transaction. */
-export function managedAccountRepository(tx: Tx) {
+export function managedAccountRepository(tx: Tx): ManagedAccountRepository {
   const orm = () => ormOf(tx);
 
   return {
@@ -22,7 +29,6 @@ export function managedAccountRepository(tx: Tx) {
       return row?.userId ?? null;
     },
 
-    /** A user without a password, linked to the ticket's subject. */
     createUser: async ({
       subject,
       email,
