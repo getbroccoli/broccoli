@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { useRouter, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   ApproveImportDocument,
@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 
+import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
 
 const SLACK_ERROR_MESSAGES = {
@@ -19,6 +20,8 @@ const SLACK_ERROR_MESSAGES = {
   state: "imports.slack.state",
   failed: "imports.slack.failed",
 } as const;
+
+const POLL_INTERVAL_MS = 2_000;
 
 const LEAVE_FAILURES = {
   approve: "setup.import.approveFailed",
@@ -33,13 +36,26 @@ const LEAVE_FAILURES = {
 export function ImportStep() {
   const router = useRouter();
   const { slackError } = useSearch({ from: "/setup/import" });
-  const { data, error, refetch } = useQuery(ImportStepDocument);
+  const { data, error, refetch, startPolling, stopPolling } = useQuery(ImportStepDocument);
+  const sources = data?.import.sources ?? [];
+  const mapping = sources.some(({ status }) => status === "MAPPING");
+  // Files are read in the background: poll while one is.
+  useEffect(() => {
+    if (!mapping) {
+      return;
+    }
+    startPolling(POLL_INTERVAL_MS);
+    return stopPolling;
+  }, [mapping, startPolling, stopPolling]);
   const [approveImport, { loading: approving }] = useMutation(ApproveImportDocument);
   const [skipImport, { loading: skipping }] = useMutation(SkipImportDocument);
   const [failure, setFailure] = useState<keyof typeof LEAVE_FAILURES | null>(null);
-  const slackSource = data?.import.sources.find(({ kind }) => kind === "SLACK");
-  const canApprove = (slackSource?.employeeCount ?? 0) > 0;
+  const slackSource = sources.find(({ kind }) => kind === "SLACK");
+  const fileSources = sources.filter(({ kind }) => kind === "FILE");
+  const canApprove = sources.some(({ employeeCount }) => employeeCount > 0);
+  const [uploading, setUploading] = useState(false);
   const busy = approving || skipping;
+  const reading = mapping || uploading;
 
   const leave = async (how: keyof typeof LEAVE_FAILURES) => {
     setFailure(null);
@@ -68,8 +84,8 @@ export function ImportStep() {
             {t(skipping ? "setup.import.skipping" : "setup.import.skip")}
           </Button>
           {canApprove && (
-            <Button type="submit" size="lg" className="h-10 px-4" disabled={busy}>
-              {t(approving ? "setup.import.approving" : "setup.import.approve")}
+            <Button type="submit" size="lg" className="h-10 px-4" disabled={busy || reading}>
+              {t(approveLabel(approving, reading))}
             </Button>
           )}
         </div>
@@ -81,7 +97,16 @@ export function ImportStep() {
         </p>
       )}
       {data ? (
-        <SlackSourceRow connection={data.slackConnection} source={slackSource} />
+        <>
+          <SlackSourceRow connection={data.slackConnection} source={slackSource} />
+          {data.import.canReadFiles && (
+            <FileSources
+              sources={fileSources}
+              onUploaded={() => refetch()}
+              onUploadingChange={setUploading}
+            />
+          )}
+        </>
       ) : error ? (
         <div role="alert" className="flex flex-col items-start gap-3">
           <p className="text-sm text-destructive">{t("imports.loadFailed")}</p>
@@ -99,4 +124,11 @@ export function ImportStep() {
       )}
     </SetupStepForm>
   );
+}
+
+function approveLabel(approving: boolean, reading: boolean) {
+  if (approving) {
+    return "setup.import.approving";
+  }
+  return reading ? "setup.import.reading" : "setup.import.approve";
 }

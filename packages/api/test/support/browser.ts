@@ -1,7 +1,7 @@
 export type Browser = ReturnType<typeof createBrowser>;
 
 /** A client that keeps cookies like a browser and sends its own address as the Origin. */
-export function createBrowser(baseUrl: string) {
+export function createBrowser(baseUrl: string, origin = baseUrl) {
   const cookies = new Map<string, string>();
 
   async function request(
@@ -9,16 +9,29 @@ export function createBrowser(baseUrl: string) {
     method: string,
     body?: unknown,
     redirect: "follow" | "manual" = "follow",
+    requestOrigin = origin,
   ): Promise<Response> {
     const response = await fetch(new URL(path, baseUrl), {
       method,
       redirect,
       headers: {
-        "content-type": Buffer.isBuffer(body) ? "application/octet-stream" : "application/json",
-        origin: baseUrl,
+        "content-type":
+          body instanceof URLSearchParams
+            ? "application/x-www-form-urlencoded"
+            : Buffer.isBuffer(body)
+              ? "application/octet-stream"
+              : "application/json",
+        origin: requestOrigin,
         cookie: [...cookies].map(([name, value]) => `${name}=${value}`).join("; "),
       },
-      body: Buffer.isBuffer(body) ? body : body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body instanceof URLSearchParams
+          ? body.toString()
+          : Buffer.isBuffer(body)
+            ? body
+            : body === undefined
+              ? undefined
+              : JSON.stringify(body),
     });
 
     for (const cookie of response.headers.getSetCookie()) {
@@ -34,6 +47,8 @@ export function createBrowser(baseUrl: string) {
   }
 
   return {
+    postForm: (path: string, body: URLSearchParams, formOrigin: string) =>
+      request(path, "POST", body, "manual", formOrigin),
     post: (path: string, body: unknown) => request(path, "POST", body),
     put: (path: string, body: Buffer) => request(path, "PUT", body),
     get: (path: string) => request(path, "GET"),

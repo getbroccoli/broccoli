@@ -1,7 +1,10 @@
+import type { Decisions } from "../../../../integrations/ai";
+import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
 import { approveImport } from "./approveImport";
+import { createFileSourceService } from "./fileSourceService";
 import type { SlackReader } from "./importContext";
 import { createImportReadService } from "./importReadService";
 import { readSlack } from "./readSlack";
@@ -15,14 +18,21 @@ export function createImportUseCases({
   transact,
   logger,
   slack,
-}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & { slack: SlackReader }) {
+  decisions,
+  jobs,
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+  slack: SlackReader;
+  decisions: Decisions | null;
+  jobs: JobQueue;
+}) {
   const imports = importRepository(orm);
   const context = { transact, logger, slack, imports };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     skipImport: (ctx: SecurityContext) => skipImport(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
-    ...createImportReadService(imports),
+    reads: createImportReadService(imports),
+    files: createFileSourceService({ orm, transact, decisions, jobs }),
   };
 }
 

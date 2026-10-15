@@ -18,12 +18,12 @@ function createLoaders(useCases: ImportUseCases, context: GraphqlContext) {
   return {
     source: new DataLoader<string, ImportSource>(async (ids) => {
       const sources = new Map(
-        (await useCases.readSources(ctx, ids)).map((source) => [source.id, source]),
+        (await useCases.reads.readSources(ctx, ids)).map((source) => [source.id, source]),
       );
       return ids.map((id) => sources.get(id) ?? new Error(`No import source ${id}`));
     }),
     employeeCount: new DataLoader<string, number>(async (sourceIds) => {
-      const counts = await useCases.countEmployees(ctx, sourceIds);
+      const counts = await useCases.reads.countEmployees(ctx, sourceIds);
       return sourceIds.map((id) => counts.get(id)!);
     }),
   };

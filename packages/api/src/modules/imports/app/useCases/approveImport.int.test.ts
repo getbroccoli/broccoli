@@ -1,5 +1,8 @@
+import { sql } from "drizzle-orm";
+
 import { expect, importUseCases, NON_OWNER, OWNER, test } from "#test/support";
 
+import { ormOf } from "../../../../core/db";
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
@@ -47,7 +50,9 @@ test("approving leaves a record without a last name in the import without creati
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
   ).toEqual([]);
-  expect((await imports.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(records);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
+    records,
+  );
 });
 
 test("approving twice creates the employees once", async ({ orm, seed }) => {
@@ -115,4 +120,101 @@ test("refuses a non-owner approving the import", async ({ orm, seed }) => {
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
   ).toEqual([]);
+});
+
+test("refuses approval while a file is mapping without advancing setup", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const source = await seed.importSource();
+  const records = await seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone" },
+  ]);
+  await seed.fileSource({ content: "Name\nRobin Reed" });
+  const imports = importUseCases(orm);
+
+  await expect(imports.approveImport(owner)).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "Files are still being read.",
+  });
+
+  expect(await readSetupStep(orm)).toBe("import");
+  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
+    records,
+  );
+});
+
+test("approves available records when a failed file is present", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  ]);
+  await seed.fileSource({ content: "Name\nRobin Reed", status: "failed", failure: "unavailable" });
+  const imports = importUseCases(orm);
+
+  await imports.approveImport(owner);
+
+  expect(await readSetupStep(orm)).toBe("done");
+  expect(
+    (await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);
+});
+
+test("waits for an uncommitted upload before refusing approval", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const inserted = Promise.withResolvers<number>();
+  const release = Promise.withResolvers<void>();
+  const imports = importUseCases(orm, {
+    decisions: fake.decisions,
+    jobs: {
+      send: async (tx) => {
+        const { rows } = await ormOf(tx).execute<{ pid: number }>(
+          sql`select pg_backend_pid() as pid`,
+        );
+        inserted.resolve(rows[0]!.pid);
+        await release.promise;
+      },
+    },
+  });
+  const upload = imports.files.uploadFile(owner, {
+    name: "staff.csv",
+    bytes: Buffer.from("Name\nAvery Stone"),
+  });
+  const blockingPid = await inserted.promise;
+  let approvalSettled = false;
+  const approval = Promise.allSettled([imports.approveImport(owner)]).then((results) => {
+    approvalSettled = true;
+    return results;
+  });
+
+  try {
+    await expect
+      .poll(async () => {
+        const { rows } = await orm.execute<{ waiting: boolean }>(sql`
+        select exists (
+          select from pg_stat_activity
+          where datname = current_database()
+            and ${blockingPid} = any(pg_blocking_pids(pid))
+        ) as waiting
+      `);
+        return approvalSettled || rows[0]!.waiting;
+      })
+      .toBe(true);
+    expect(approvalSettled).toBe(false);
+  } finally {
+    release.resolve();
+    await upload;
+    await approval;
+  }
+
+  expect(await approval).toMatchObject([{ status: "rejected", reason: { code: "CONFLICT" } }]);
+  expect(await readSetupStep(orm)).toBe("import");
+  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
 });

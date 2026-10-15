@@ -30,6 +30,8 @@ export interface ManagedDeployment {
   instanceId: string;
   /** Issuer of init tokens and sign-in tickets; its keys are at `/.well-known/jwks.json`. */
   accountsOrigin: string;
+  /** Broccoli's key for the model provider. */
+  modelApiKey: string;
 }
 
 export interface Env {
@@ -55,7 +57,11 @@ function blankAsUnset(value: unknown): unknown {
   return typeof value === "string" && value.trim() === "" ? undefined : value;
 }
 
-const MANAGED_VARIABLES = ["MANAGED_INSTANCE_ID", "MANAGED_ACCOUNTS_URL"] as const;
+const MANAGED_VARIABLES = [
+  "MANAGED_INSTANCE_ID",
+  "MANAGED_ACCOUNTS_URL",
+  "MANAGED_MODEL_API_KEY",
+] as const;
 
 const envSchema = z
   .object({
@@ -68,6 +74,7 @@ const envSchema = z
     SELF_HOSTED_PUBLIC_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
     MANAGED_INSTANCE_ID: z.preprocess(blankAsUnset, z.string().optional()),
     MANAGED_ACCOUNTS_URL: z.preprocess(blankAsUnset, z.string().optional()),
+    MANAGED_MODEL_API_KEY: z.preprocess(blankAsUnset, z.string().optional()),
     BRAND_LOOKUP_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
     SLACK_RELAY_URL: z.preprocess(
       blankAsUnset,
@@ -89,8 +96,10 @@ const envSchema = z
     if (variables.SELF_HOSTED_PUBLIC_URL !== undefined) {
       refuse("SELF_HOSTED_PUBLIC_URL", "Only for BROCCOLI_MODE=self_hosted");
     }
-    if (variables.MANAGED_INSTANCE_ID === undefined) {
-      refuse("MANAGED_INSTANCE_ID", "Required when BROCCOLI_MODE=managed");
+    for (const name of ["MANAGED_INSTANCE_ID", "MANAGED_MODEL_API_KEY"] as const) {
+      if (variables[name] === undefined) {
+        refuse(name, "Required when BROCCOLI_MODE=managed");
+      }
     }
     if (accountsOrigin(variables.MANAGED_ACCOUNTS_URL) === null) {
       refuse("MANAGED_ACCOUNTS_URL", "Must be an https origin without a path");
@@ -107,6 +116,7 @@ const envSchema = z
             mode: "managed",
             instanceId: variables.MANAGED_INSTANCE_ID!,
             accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
+            modelApiKey: variables.MANAGED_MODEL_API_KEY!,
           }
         : { mode: "self_hosted", publicUrl: variables.SELF_HOSTED_PUBLIC_URL },
     dataDir: variables.DATA_DIR,

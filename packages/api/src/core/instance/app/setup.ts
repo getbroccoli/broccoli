@@ -3,9 +3,9 @@ import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import type { SetupStep } from "../domain";
 
-/** Where the instance is in its first-run flow. */
-export function readSetupStep(orm: Orm): Promise<SetupStep> {
-  return instanceRepository(orm).readStep();
+/** Where the instance is in its first-run flow, through the pool or joining `tx`. */
+export function readSetupStep(db: Orm | Tx): Promise<SetupStep> {
+  return instanceRepository(db).readStep();
 }
 
 /**

@@ -1,7 +1,10 @@
+import type { Decisions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import { PrincipalSecurityContext } from "../../core/security";
 import { createImportUseCases, type SlackReader } from "./app";
 import { createResolvers } from "./graphql";
+import { filesRouter } from "./http";
 
 export { createImportUseCases, type ImportUseCases } from "./app";
 /** For test seeding only; other modules go through the use cases. */
@@ -10,14 +13,26 @@ export type { ImportEmployeeValues } from "./domain";
 
 /**
  * Bringing people in before they become employees: sources such as the Slack
- * workspace deliver records, which wait in the import for review.
+ * workspace and uploaded files deliver records, which wait in the import for review.
  */
 export function importsModule(
-  dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & { slack: SlackReader },
+  dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs"> & {
+    slack: SlackReader;
+    /** The model that maps files; null where the instance has no model key. */
+    decisions: Decisions | null;
+  },
 ): ModuleManifest {
+  const useCases = createImportUseCases(dependencies);
   return {
     name: "imports",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(createImportUseCases(dependencies)),
+    resolvers: createResolvers(useCases),
+    router: (resolveSecurity) => filesRouter(useCases, resolveSecurity),
+    jobs: {
+      "imports.mapFile": {
+        run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
+        onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
+      },
+    },
   };
 }

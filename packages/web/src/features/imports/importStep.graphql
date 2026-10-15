@@ -5,10 +5,13 @@ query ImportStep {
   }
   import {
     id
+    canReadFiles
     sources {
       id
       kind
+      status
       employeeCount
+      ...FileSourceCard_source
     }
   }
 }
@@ -20,7 +23,39 @@ mutation ReadSlack {
       sources {
         id
         kind
+        status
         employeeCount
+        ...FileSourceCard_source
+      }
+    }
+  }
+}
+
+mutation RetryFile($sourceId: ID!) {
+  import {
+    retryFile(sourceId: $sourceId) {
+      id
+      sources {
+        id
+        kind
+        status
+        employeeCount
+        ...FileSourceCard_source
+      }
+    }
+  }
+}
+
+mutation RemoveFile($sourceId: ID!) {
+  import {
+    removeFile(sourceId: $sourceId) {
+      id
+      sources {
+        id
+        kind
+        status
+        employeeCount
+        ...FileSourceCard_source
       }
     }
   }

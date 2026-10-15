@@ -30,6 +30,18 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 - [ ] Opening the callback URL from a finished connection again shows "Connecting Slack took too long or started in another browser. Try again."
 - [ ] After removing the app from the workspace, "Refresh" shows "Couldn’t read Slack. Try again, or connect Slack again."
 
+## Files
+
+On a managed instance with `MANAGED_MODEL_API_KEY` set. A self-hosted instance shows no file section.
+
+- [ ] Under the Slack row, "Add your files" shows a dashed area "Drop your files here", the hint "CSV, up to 5 MB per file." and the line about the first rows going to the AI provider.
+- [ ] Dropping a CSV with a title row above the table, semicolons and day-first start dates shows "Uploading staff.csv…", then a card "staff.csv · Reading columns…", then "N people"; `query { import { employees { edges { node { firstName lastName email jobTitle startDate } } } } }` lists them with the right names, emails, titles and dates.
+- [ ] Choosing two files at once adds two cards; "Add more files" adds another.
+- [ ] A `.xlsx` file, an empty `.csv` and a file over 5 MB each show one red line naming the file and the reason; no card appears.
+- [ ] A CSV without a name or email column ends as "Couldn’t find a name or email column." with "Retry".
+- [ ] "Remove" in a card's menu removes the card and its people.
+- [ ] While a card reads "Reading columns…", the footer's button reads "Reading your files…" and is disabled; afterwards "Approve" adds the file's people next to the Slack members.
+
 ## Leaving the step
 
 - [ ] Before Slack is imported, the footer shows only "Skip for now".
@@ -42,4 +54,4 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 ## Layout
 
 - [ ] On a narrow window the Slack row and its button fit without scrolling sideways.
-- [ ] Screenshots of `/setup/import` (not connected, connected, with an error; desktop and narrow) go in the pull request description.
+- [ ] Screenshots of `/setup/import` (not connected, connected, with an error, with files; desktop and narrow) go in the pull request description.

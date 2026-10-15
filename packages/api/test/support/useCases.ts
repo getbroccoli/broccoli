@@ -1,3 +1,5 @@
+import type { Decisions } from "../../src/integrations/ai";
+import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
@@ -31,14 +33,26 @@ export function importUseCases(
   orm: Parameters<typeof createImportUseCases>[0]["orm"],
   {
     slack = {},
+    decisions = null,
+    jobs,
   }: {
     slack?: Partial<Pick<SlackConnectionService, "readSlackMembers" | "isCurrentSlackConnection">>;
+    decisions?: Decisions | null;
+    jobs?: JobQueue;
   } = {},
 ) {
-  return createImportUseCases({
+  const sentJobs: { name: JobName; payload: Jobs[JobName] }[] = [];
+  const useCases = createImportUseCases({
     orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),
+    decisions,
+    jobs: jobs ?? {
+      send: (_tx, name, payload) => {
+        sentJobs.push({ name, payload });
+        return Promise.resolve();
+      },
+    },
     slack: {
       readSlackMembers: () => {
         throw new Error("Unexpected Slack read");
@@ -49,6 +63,7 @@ export function importUseCases(
       ...slack,
     },
   });
+  return { ...useCases, sentJobs };
 }
 
 export function slackUseCases(
