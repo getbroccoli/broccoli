@@ -1,6 +1,12 @@
+import type { FragmentType } from "@apollo/client";
+import { useFragment } from "@apollo/client/react";
 import { DotsThree, FileCsv } from "@phosphor-icons/react";
 
-import type { ImportSourceFailure, ImportStepQuery } from "@/__generated__/graphql";
+import {
+  FileSourceCard_SourceFragmentDoc,
+  type FileSourceCard_SourceFragment,
+  type ImportSourceFailure,
+} from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,15 +23,26 @@ const FAILURE_MESSAGES = {
 } as const satisfies Record<ImportSourceFailure, string>;
 
 interface FileSourceCardProps {
-  source: ImportStepQuery["import"]["sources"][number];
+  source: FragmentType<FileSourceCard_SourceFragment>;
   /** While another change to the files runs. */
   busy: boolean;
   onRetry: () => void;
   onRemove: () => void;
 }
 
-/** One uploaded file: its name and how reading it went. */
-export function FileSourceCard({ source, busy, onRetry, onRemove }: FileSourceCardProps) {
+/** One uploaded file: its name and how reading it went; owns the `FileSourceCard_source` fragment. */
+export function FileSourceCard({
+  source: sourceRef,
+  busy,
+  onRetry,
+  onRemove,
+}: FileSourceCardProps) {
+  const { data: source, complete } = useFragment({
+    fragment: FileSourceCard_SourceFragmentDoc,
+    from: sourceRef,
+  });
+  // The query that listed this file has just written the fragment, so it is complete.
+  if (!complete) return null;
   const failed = source.status === "FAILED";
   return (
     <li className="flex items-center gap-3 rounded-xl border border-border px-4 py-3">
@@ -71,7 +88,7 @@ export function FileSourceCard({ source, busy, onRetry, onRemove }: FileSourceCa
   );
 }
 
-function statusLine({ status, failure, employeeCount }: FileSourceCardProps["source"]): string {
+function statusLine({ status, failure, employeeCount }: FileSourceCard_SourceFragment): string {
   if (status === "MAPPING") {
     return t("imports.files.mapping");
   }

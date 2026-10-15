@@ -122,7 +122,8 @@ export const en = {
   "imports.files.options": "Options for {name}",
   "imports.files.remove": "Remove",
   "imports.files.changeFailed": "Couldn’t change the file. Try again.",
-  "imports.files.reloadFailed": "Your files were added, but the list couldn’t load.",
+  "imports.files.reloadFailed":
+    "Your files were added, but the list couldn’t load. Reload the page.",
   "workspace.name": "Broccoli",
   "workspace.company": "Company",
   "nav.label": "Main",

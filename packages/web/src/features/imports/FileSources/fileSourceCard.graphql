@@ -1,0 +1,7 @@
+fragment FileSourceCard_source on ImportSource {
+  id
+  name
+  status
+  failure
+  employeeCount
+}

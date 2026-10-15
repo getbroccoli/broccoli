@@ -9,10 +9,9 @@ query ImportStep {
     sources {
       id
       kind
-      name
       status
-      failure
       employeeCount
+      ...FileSourceCard_source
     }
   }
 }
@@ -24,10 +23,9 @@ mutation ReadSlack {
       sources {
         id
         kind
-        name
         status
-        failure
         employeeCount
+        ...FileSourceCard_source
       }
     }
   }
@@ -40,10 +38,9 @@ mutation RetryFile($sourceId: ID!) {
       sources {
         id
         kind
-        name
         status
-        failure
         employeeCount
+        ...FileSourceCard_source
       }
     }
   }
@@ -56,10 +53,9 @@ mutation RemoveFile($sourceId: ID!) {
       sources {
         id
         kind
-        name
         status
-        failure
         employeeCount
+        ...FileSourceCard_source
       }
     }
   }

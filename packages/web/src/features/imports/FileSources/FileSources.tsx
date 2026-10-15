@@ -34,58 +34,40 @@ interface FileSourcesProps {
 /** Staff files as sources of people: drop or choose CSV files, retry or remove them. */
 export function FileSources({ sources, onUploaded, onUploadingChange }: FileSourcesProps) {
   const input = useRef<HTMLInputElement>(null);
+  /** The file being uploaded, if any. */
   const [uploading, setUploading] = useState<string | null>(null);
-  const [refusals, setRefusals] = useState<string[]>([]);
+  /** What went wrong with the last batch of files. */
+  const [problems, setProblems] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [retryFile, retryState] = useMutation(RetryFileDocument);
-  const [removeFile, removeState] = useMutation(RemoveFileDocument);
-  const [changeFailed, setChangeFailed] = useState(false);
-  const [reloadFailed, setReloadFailed] = useState(false);
-  const busy = uploading !== null || retryState.loading || removeState.loading;
+  const [retryFile, retry] = useMutation(RetryFileDocument);
+  const [removeFile, remove] = useMutation(RemoveFileDocument);
+  const busy = uploading !== null || retry.loading || remove.loading;
+  const alerts =
+    retry.error || remove.error ? [...problems, t("imports.files.changeFailed")] : problems;
 
   const upload = async (files: FileList | null) => {
     if (!files?.length || busy) {
       return;
     }
-    setRefusals([]);
     onUploadingChange(true);
-    const refused: string[] = [];
+    const found: string[] = [];
     try {
       for (const file of Array.from(files)) {
         setUploading(file.name);
         const result = await uploadFile(file);
-        if (result === "ok") {
-          // The file is stored either way; a failed reload is offered again below.
-          await reload();
-        } else {
-          refused.push(t(REFUSALS[result], { name: file.name }));
+        if (result !== "ok") {
+          found.push(t(REFUSALS[result], { name: file.name }));
         }
       }
+      // One reload shows every new file.
+      await onUploaded().catch(() => found.push(t("imports.files.reloadFailed")));
     } finally {
       setUploading(null);
-      setRefusals(refused);
+      setProblems(found);
       onUploadingChange(false);
       if (input.current) {
         input.current.value = "";
       }
-    }
-  };
-
-  const reload = async () => {
-    setReloadFailed(false);
-    try {
-      await onUploaded();
-    } catch {
-      setReloadFailed(true);
-    }
-  };
-
-  const change = async (run: () => Promise<unknown>) => {
-    setChangeFailed(false);
-    try {
-      await run();
-    } catch {
-      setChangeFailed(true);
     }
   };
 
@@ -138,8 +120,11 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
               key={source.id}
               source={source}
               busy={busy}
-              onRetry={() => void change(() => retryFile({ variables: { sourceId: source.id } }))}
-              onRemove={() => void change(() => removeFile({ variables: { sourceId: source.id } }))}
+              // A failure shows through the mutation's `error`.
+              onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
+              onRemove={() =>
+                void removeFile({ variables: { sourceId: source.id } }).catch(() => {})
+              }
             />
           ))}
         </ul>
@@ -162,17 +147,9 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
       <p role="status" className="text-[13px] text-muted-foreground">
         {uploading ? t("imports.files.uploading", { name: uploading }) : ""}
       </p>
-      {reloadFailed && (
-        <div role="alert" className="flex flex-col items-start gap-2">
-          <p className="text-sm text-destructive">{t("imports.files.reloadFailed")}</p>
-          <Button type="button" variant="outline" onClick={() => void reload()}>
-            {t("imports.retry")}
-          </Button>
-        </div>
-      )}
-      {(refusals.length > 0 || changeFailed) && (
+      {alerts.length > 0 && (
         <p role="alert" className="text-sm whitespace-pre-line text-destructive">
-          {[...refusals, ...(changeFailed ? [t("imports.files.changeFailed")] : [])].join("\n")}
+          {alerts.join("\n")}
         </p>
       )}
     </section>
