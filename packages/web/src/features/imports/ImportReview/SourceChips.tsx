@@ -1,16 +1,25 @@
-import type { ImportSourceKind } from "@/__generated__/graphql";
+import type { FragmentType } from "@apollo/client";
+import { useFragment } from "@apollo/client/react";
+
+import {
+  SourceChips_SourceFragmentDoc,
+  type SourceChips_SourceFragment,
+} from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
 import { SourceIcon } from "./SourceIcon";
 
-interface Source {
-  id: string;
-  kind: ImportSourceKind;
-  name: string;
-}
-
-/** "Details came from" and a chip per source that has people. */
-export function SourceChips({ sources }: { sources: Source[] }) {
+/** "Details came from" and a chip per source; owns the `SourceChips_source` fragment. */
+export function SourceChips({
+  sources: from,
+}: {
+  sources: FragmentType<SourceChips_SourceFragment>[];
+}) {
+  const { data: sources, complete } = useFragment({
+    fragment: SourceChips_SourceFragmentDoc,
+    from,
+  });
+  if (!complete) return null;
   return (
     <div className="flex flex-wrap items-center gap-2.5 text-sm text-muted-foreground">
       <span>{t("setup.review.cameFrom")}</span>

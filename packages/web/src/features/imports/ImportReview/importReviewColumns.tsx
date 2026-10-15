@@ -1,15 +1,21 @@
-import type { ImportReviewQuery } from "@/__generated__/graphql";
+import type { FragmentType } from "@apollo/client";
+import { useFragment } from "@apollo/client/react";
+
+import {
+  ImportReviewColumns_ImportEmployeeFragmentDoc,
+  type ImportReviewColumns_ImportEmployeeFragment,
+} from "@/__generated__/graphql";
 import type { DataTableColumn } from "@/components/dataTable";
 import { t } from "@/i18n";
+import { type SortKey } from "@/features/employees";
 import { formatCalendarDate } from "@/lib/formatDate";
 
 import { ImportPersonCell } from "./ImportPersonCell";
-import type { SortKey } from "./importReviewSearch";
 import { NotSet } from "./NotSet";
 import { SourceIcon } from "./SourceIcon";
 
 /** A row of the review: one import employee as its source proposes it. */
-export type ImportReviewRow = ImportReviewQuery["import"]["employees"]["edges"][number]["node"];
+export type ImportReviewRow = ImportReviewColumns_ImportEmployeeFragment;
 
 export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] = [
   {
@@ -57,3 +63,19 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     ),
   },
 ];
+
+/**
+ * Reads the table's fragment for the import employees a query returned. Undefined while
+ * the first page loads, so the table shows its skeleton.
+ */
+export function useImportReviewRows(
+  people: FragmentType<ImportReviewColumns_ImportEmployeeFragment>[] | undefined,
+): ImportReviewRow[] | undefined {
+  const { data, complete } = useFragment({
+    fragment: ImportReviewColumns_ImportEmployeeFragmentDoc,
+    // The document also holds the person cell's fragment it spreads.
+    fragmentName: "ImportReviewColumns_importEmployee",
+    from: people ?? [],
+  });
+  return people && complete ? data : undefined;
+}

@@ -1,0 +1,6 @@
+fragment ImportPersonCell_importEmployee on ImportEmployee {
+  id
+  firstName
+  lastName
+  incompleteReason
+}

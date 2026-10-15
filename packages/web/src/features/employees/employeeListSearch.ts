@@ -14,15 +14,16 @@ const ORDER_FIELDS = {
 const SORT_KEYS = ["name", "email", "startDate"] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 
-/** The directory's search params. */
-export const directorySearch = listSearchSchema(SORT_KEYS);
+/** The search params of a list of employees, such as the directory or the import review. */
+export const employeeListSearch = listSearchSchema(SORT_KEYS);
 
-export type DirectorySearch = z.infer<typeof directorySearch>;
+export type EmployeeListSearch = z.infer<typeof employeeListSearch>;
 
 /** The defaults, left out of the URL. */
-export const DEFAULT_DIRECTORY_SEARCH = { sort: "name", dir: "asc" } as const;
+export const DEFAULT_EMPLOYEE_LIST_SEARCH = { sort: "name", dir: "asc" } as const;
 
-export function toEmployeesVariables({ q, sort, dir, after }: DirectorySearch) {
+/** The variables of an employee list query: the same `first`, `after`, `orderBy` and `filter` everywhere. */
+export function toEmployeeListVariables({ q, sort, dir, after }: EmployeeListSearch) {
   return {
     first: PAGE_SIZE,
     orderBy: { field: ORDER_FIELDS[sort], direction: dir === "asc" ? "ASC" : "DESC" },

@@ -9,7 +9,7 @@ import type { DataTableColumn } from "@/components/dataTable";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
-import type { SortKey } from "./directorySearch";
+import type { SortKey } from "./employeeListSearch";
 import { EmployeeNameCell } from "./EmployeeNameCell";
 
 /** A row of the employee table: the fields of the `EmployeeColumns_employee` fragment. */

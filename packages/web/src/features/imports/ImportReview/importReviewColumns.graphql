@@ -1,0 +1,13 @@
+fragment ImportReviewColumns_importEmployee on ImportEmployee {
+  id
+  ...ImportPersonCell_importEmployee
+  email
+  jobTitle
+  startDate
+  incompleteReason
+  source {
+    id
+    kind
+    name
+  }
+}

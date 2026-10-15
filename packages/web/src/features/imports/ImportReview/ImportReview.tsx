@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { ArrowLeft, MagnifyingGlass, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 
 import { ApproveImportDocument, ImportReviewDocument } from "@/__generated__/graphql";
 import {
@@ -11,13 +11,13 @@ import {
   TableState,
 } from "@/components/dataTable";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { type EmployeeListSearch, toEmployeeListVariables } from "@/features/employees";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
 
-import { IMPORT_REVIEW_COLUMNS } from "./importReviewColumns";
-import { type ImportReviewSearch, toImportReviewVariables } from "./importReviewSearch";
+import { IMPORT_REVIEW_COLUMNS, useImportReviewRows } from "./importReviewColumns";
 import { ApproveNote } from "./ApproveNote";
 import { SourceChips } from "./SourceChips";
 
@@ -32,7 +32,7 @@ export function ImportReview() {
   const search = useSearch({ from: "/setup/import_/review" });
   const navigate = useNavigate({ from: "/setup/import/review" });
   const writeSearch = useCallback(
-    (patch: Partial<ImportReviewSearch>, replace: boolean) =>
+    (patch: Partial<EmployeeListSearch>, replace: boolean) =>
       void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
     [navigate],
   );
@@ -41,7 +41,7 @@ export function ImportReview() {
     // Sources change on the import page, while files are read and in other tabs: show the
     // cache, refresh it on entry, and keep polling while the review is open.
     {
-      variables: toImportReviewVariables(search),
+      variables: toEmployeeListVariables(search),
       fetchPolicy: "cache-and-network",
       pollInterval: POLL_INTERVAL_MS,
     },
@@ -53,22 +53,21 @@ export function ImportReview() {
     previous: previousData?.import.employees,
     error,
   });
+  const rows = useImportReviewRows(list.rows);
   const sources = (data ?? previousData)?.import.sources ?? [];
   const reading = sources.some(({ status }) => status === "MAPPING");
-  const [approveImport, { loading: approving }] = useMutation(ApproveImportDocument);
-  const [approveFailed, setApproveFailed] = useState(false);
+  const [approveImport, { loading: approving, error: approveError }] =
+    useMutation(ApproveImportDocument);
   const readyCount = (data ?? previousData)?.import.readyEmployeeCount ?? 0;
   const peopleSources = sources.filter(({ employeeCount }) => employeeCount > 0);
   const totalCount = sources.reduce((total, { employeeCount }) => total + employeeCount, 0);
   const leftOutCount = totalCount - readyCount;
 
   const approve = async () => {
-    setApproveFailed(false);
     try {
       await approveImport();
     } catch {
-      setApproveFailed(true);
-      return;
+      return; // useMutation's `error` shows it
     }
     await router.invalidate();
   };
@@ -118,7 +117,7 @@ export function ImportReview() {
       </div>
       <DataTable
         columns={IMPORT_REVIEW_COLUMNS}
-        rows={list.rows}
+        rows={rows}
         getRowId={(person) => person.id}
         sort={list.sort}
         onSortChange={list.changeSort}
@@ -129,7 +128,7 @@ export function ImportReview() {
         density="comfortable"
         summary={peopleCount(totalCount, search.q ? list.rows : undefined, list.pager)}
       />
-      {approveFailed && (
+      {approveError && (
         <p role="alert" className="text-sm text-destructive">
           {t("setup.review.approveFailed")}
         </p>

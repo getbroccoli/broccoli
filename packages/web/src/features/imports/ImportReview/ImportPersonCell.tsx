@@ -1,4 +1,11 @@
-import type { ImportEmployeeIncompleteReason } from "@/__generated__/graphql";
+import type { FragmentType } from "@apollo/client";
+import { useFragment } from "@apollo/client/react";
+
+import {
+  ImportPersonCell_ImportEmployeeFragmentDoc,
+  type ImportEmployeeIncompleteReason,
+  type ImportPersonCell_ImportEmployeeFragment,
+} from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { initialsOf } from "@/lib/initials";
 
@@ -11,14 +18,21 @@ const REASONS = {
   OTHER: "setup.review.reason.other",
 } as const satisfies Record<ImportEmployeeIncompleteReason, string>;
 
-interface ImportPerson {
-  firstName?: string | null;
-  lastName?: string | null;
-  incompleteReason?: ImportEmployeeIncompleteReason | null;
-}
-
-/** Initials and name; a person Approve leaves out gets an amber pill with the reason. */
-export function ImportPersonCell({ person }: { person: ImportPerson }) {
+/**
+ * Initials and name; a person Approve leaves out gets an amber pill with the reason.
+ * Owns the `ImportPersonCell_importEmployee` fragment.
+ */
+export function ImportPersonCell({
+  person: from,
+}: {
+  person: FragmentType<ImportPersonCell_ImportEmployeeFragment>;
+}) {
+  const { data: person, complete } = useFragment({
+    fragment: ImportPersonCell_ImportEmployeeFragmentDoc,
+    from,
+  });
+  // The query that rendered this row has just written the fragment, so it is complete.
+  if (!complete) return null;
   const name = [person.firstName, person.lastName].filter(Boolean).join(" ");
   return (
     <div className="flex items-center gap-3">

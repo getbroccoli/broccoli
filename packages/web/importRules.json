@@ -33,6 +33,7 @@
       "src/__generated__",
       "src/components/dataTable",
       "src/components/ui",
+      "src/features/employees",
       "src/features/setup",
       "src/i18n",
       "src/lib/class-names",

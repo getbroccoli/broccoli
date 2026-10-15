@@ -1,34 +1,18 @@
-query ImportReview(
-  $first: Int
-  $after: String
-  $orderBy: ImportEmployeeOrder
-  $filter: ImportEmployeeFilter
-) {
+query ImportReview($first: Int, $after: String, $orderBy: EmployeeOrder, $filter: EmployeeFilter) {
   import {
     id
     readyEmployeeCount
     sources {
       id
-      kind
-      name
       status
       employeeCount
+      ...SourceChips_source
     }
     employees(first: $first, after: $after, orderBy: $orderBy, filter: $filter) {
       edges {
         node {
           id
-          firstName
-          lastName
-          email
-          jobTitle
-          startDate
-          incompleteReason
-          source {
-            id
-            kind
-            name
-          }
+          ...ImportReviewColumns_importEmployee
         }
       }
       pageInfo {
