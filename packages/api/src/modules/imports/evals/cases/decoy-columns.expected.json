@@ -1,0 +1,57 @@
+{
+  "records": [
+    {
+      "firstName": "Iris",
+      "lastName": "Chen",
+      "email": "iris.chen@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2022-04-11"
+    },
+    {
+      "firstName": "Felix",
+      "lastName": "Bauer",
+      "email": "felix.bauer@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2023-06-19"
+    },
+    {
+      "firstName": "Sofia",
+      "lastName": "Alves",
+      "email": "sofia.alves@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": "2024-01-15"
+    }
+  ],
+  "forbidden": [
+    "iris.chen@mail.example",
+    "Victor",
+    "Chen",
+    "Victor Chen",
+    "+1 202 555 0101",
+    "1990-08-17",
+    "2025-12-31",
+    "Iris",
+    "Iris Chen",
+    "iris.chen@acme-corp.example",
+    "felix.bauer@mail.example",
+    "Clara",
+    "Bauer",
+    "Clara Bauer",
+    "+1 202 555 0102",
+    "1987-02-24",
+    "2025-10-31",
+    "Felix",
+    "Felix Bauer",
+    "felix.bauer@acme-corp.example",
+    "sofia.alves@mail.example",
+    "Bruno",
+    "Alves",
+    "Bruno Alves",
+    "+1 202 555 0103",
+    "1994-11-06",
+    "2026-03-31",
+    "Sofia",
+    "Sofia Alves",
+    "sofia.alves@acme-corp.example"
+  ]
+}

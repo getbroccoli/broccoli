@@ -1,0 +1,42 @@
+{
+  "records": [
+    {
+      "firstName": "Gabriela",
+      "lastName": "Moreno",
+      "email": "gabriela.moreno@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2024-05-13"
+    },
+    {
+      "firstName": "Benjamin",
+      "lastName": "Keller",
+      "email": "benjamin.keller@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2023-09-18"
+    },
+    {
+      "firstName": "Alexandra",
+      "lastName": "Petrova",
+      "email": "alexandra.petrova@acme-corp.example",
+      "jobTitle": "Recruiter",
+      "startDate": "2025-02-03"
+    }
+  ],
+  "forbidden": [
+    "Gabriela",
+    "Moreno",
+    "Gabi",
+    "Gabi Moreno",
+    "gabriela.moreno@acme-corp.example",
+    "Benjamin",
+    "Keller",
+    "Ben",
+    "Ben Keller",
+    "benjamin.keller@acme-corp.example",
+    "Alexandra",
+    "Petrova",
+    "Sasha",
+    "Sasha Petrova",
+    "alexandra.petrova@acme-corp.example"
+  ]
+}

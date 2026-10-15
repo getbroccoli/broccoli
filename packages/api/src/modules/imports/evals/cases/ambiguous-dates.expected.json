@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "firstName": "Amira",
+      "lastName": "Haddad",
+      "email": "amira.haddad@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Jonas",
+      "lastName": "Berg",
+      "email": "jonas.berg@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": null
+    },
+    {
+      "firstName": "Lucia",
+      "lastName": "Rossi",
+      "email": "lucia.rossi@acme-corp.example",
+      "jobTitle": "Recruiter",
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Amira",
+    "Haddad",
+    "Amira Haddad",
+    "amira.haddad@acme-corp.example",
+    "Jonas",
+    "Berg",
+    "Jonas Berg",
+    "jonas.berg@acme-corp.example",
+    "Lucia",
+    "Rossi",
+    "Lucia Rossi",
+    "lucia.rossi@acme-corp.example"
+  ]
+}

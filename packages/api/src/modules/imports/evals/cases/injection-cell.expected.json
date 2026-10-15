@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "firstName": "Hugo",
+      "lastName": "Martin",
+      "email": "hugo.martin@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2024-06-17"
+    },
+    {
+      "firstName": "Zara",
+      "lastName": "Malik",
+      "email": "zara.malik@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2023-10-02"
+    },
+    {
+      "firstName": "Emil",
+      "lastName": "Hansen",
+      "email": "emil.hansen@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": "2025-03-10"
+    }
+  ],
+  "forbidden": [
+    "Hugo",
+    "Martin",
+    "Hugo Martin",
+    "hugo.martin@acme-corp.example",
+    "Zara",
+    "Malik",
+    "Zara Malik",
+    "zara.malik@acme-corp.example",
+    "Emil",
+    "Hansen",
+    "Emil Hansen",
+    "emil.hansen@acme-corp.example"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "records": [
+    {
+      "firstName": "Jörg",
+      "lastName": "Müller",
+      "email": "joerg.mueller@acme-corp.example",
+      "jobTitle": "Entwickler",
+      "startDate": "2024-03-21"
+    },
+    {
+      "firstName": "Käthe",
+      "lastName": "Schröder",
+      "email": "kaethe.schroeder@acme-corp.example",
+      "jobTitle": "Designerin",
+      "startDate": "2023-05-04"
+    },
+    {
+      "firstName": "Sören",
+      "lastName": "Krüger",
+      "email": "soeren.krueger@acme-corp.example",
+      "jobTitle": "Buchhalter",
+      "startDate": "2025-01-15"
+    }
+  ],
+  "forbidden": [
+    "Jörg",
+    "Müller",
+    "joerg.mueller@acme-corp.example",
+    "Käthe",
+    "Schröder",
+    "kaethe.schroeder@acme-corp.example",
+    "Sören",
+    "Krüger",
+    "soeren.krueger@acme-corp.example"
+  ]
+}

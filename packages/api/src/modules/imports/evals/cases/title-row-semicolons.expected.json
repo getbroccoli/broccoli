@@ -1,0 +1,38 @@
+{
+  "records": [
+    {
+      "firstName": "Nora",
+      "lastName": "Stein",
+      "email": "nora.stein@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": "2024-04-23"
+    },
+    {
+      "firstName": "Mateo",
+      "lastName": "Silva",
+      "email": "mateo.silva@acme-corp.example",
+      "jobTitle": "Recruiter",
+      "startDate": "2023-06-05"
+    },
+    {
+      "firstName": "Elise",
+      "lastName": "Laurent",
+      "email": null,
+      "jobTitle": "Designer",
+      "startDate": "2025-02-14"
+    }
+  ],
+  "forbidden": [
+    "Nora",
+    "Stein",
+    "Nora Stein",
+    "nora.stein@acme-corp.example",
+    "Mateo",
+    "Silva",
+    "Mateo Silva",
+    "mateo.silva@acme-corp.example",
+    "Elise",
+    "Laurent",
+    "Elise Laurent"
+  ]
+}

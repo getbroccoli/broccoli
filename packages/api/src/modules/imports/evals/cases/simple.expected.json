@@ -1,0 +1,41 @@
+{
+  "records": [
+    {
+      "firstName": "Lena",
+      "lastName": "Vogel",
+      "email": "lena.vogel@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2024-03-01"
+    },
+    {
+      "firstName": "Tomás",
+      "lastName": "Ruiz",
+      "email": "tomas.ruiz@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2023-11-20"
+    },
+    {
+      "firstName": "Inés María",
+      "lastName": "Costa",
+      "email": "ines.costa@acme-corp.example",
+      "jobTitle": "Office Manager",
+      "startDate": "2025-01-06"
+    }
+  ],
+  "forbidden": [
+    "Lena",
+    "Vogel",
+    "Lena Vogel",
+    "Lena.Vogel@acme-corp.example",
+    "Tomás",
+    "Ruiz",
+    "Tomás Ruiz",
+    "tomas.ruiz@acme-corp.example",
+    "Inés",
+    "María",
+    "Inés María",
+    "Costa",
+    "Inés María Costa",
+    "ines.costa@acme-corp.example"
+  ]
+}

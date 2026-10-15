@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: { alias: [{ find: /^graphql$/, replacement: "graphql/index.js" }] },
   test: {
     include: ["src/**/*.test.ts"],
-    // Integration tests need Postgres; `pnpm test:integration` runs them.
-    exclude: ["src/**/*.int.test.ts"],
+    // Integration tests need Postgres; `pnpm test:integration` runs them. Evals call the real model; `pnpm eval` runs them.
+    exclude: ["src/**/*.int.test.ts", "src/**/*.eval.test.ts"],
   },
 });

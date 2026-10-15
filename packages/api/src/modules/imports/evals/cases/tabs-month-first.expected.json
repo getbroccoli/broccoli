@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "firstName": "Owen",
+      "lastName": "Reed",
+      "email": "owen.reed@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2024-04-23"
+    },
+    {
+      "firstName": "Priya",
+      "lastName": "Shah",
+      "email": "priya.shah@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2023-06-05"
+    },
+    {
+      "firstName": "Mila",
+      "lastName": "Novak",
+      "email": "mila.novak@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": "2025-02-14"
+    }
+  ],
+  "forbidden": [
+    "Owen",
+    "Reed",
+    "Owen Reed",
+    "owen.reed@acme-corp.example",
+    "Priya",
+    "Shah",
+    "Priya Shah",
+    "priya.shah@acme-corp.example",
+    "Mila",
+    "Novak",
+    "Mila Novak",
+    "mila.novak@acme-corp.example"
+  ]
+}
