@@ -113,6 +113,16 @@ export function importRepository(db: Orm | Tx) {
         .from(importSources)
         .where(inArray(importSources.id, [...ids])),
 
+    /** Every employee record of every source, oldest first. */
+    listEmployeeRecords: async (): Promise<ImportEmployee[]> => {
+      const records = await orm()
+        .select()
+        .from(importRecords)
+        .where(eq(importRecords.type, "employee"))
+        .orderBy(importRecords.createdAt, importRecords.id);
+      return records.map(toImportEmployee);
+    },
+
     /** The number of employee records of each source that has any; the others are absent. */
     countEmployees: async (sourceIds: readonly string[]): Promise<Map<string, number>> => {
       const rows = await orm()

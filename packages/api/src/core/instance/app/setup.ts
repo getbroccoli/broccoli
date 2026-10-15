@@ -10,17 +10,18 @@ export function readSetupStep(orm: Orm): Promise<SetupStep> {
 
 /**
  * Moves the setup step from `from` to `to`, joining `tx`; does nothing at any other
- * step. Reaching `done` publishes `instance.setup_completed`.
+ * step. Returns whether it moved. Reaching `done` publishes `instance.setup_completed`.
  */
 export async function advanceStep(
   ctx: SecurityContext,
   tx: Tx,
   from: SetupStep,
   to: SetupStep,
-): Promise<void> {
+): Promise<boolean> {
   ctx.requireOwnerOrSystem();
   const moved = await instanceRepository(tx).advanceStep(from, to);
   if (moved && to === "done") {
     tx.publish("instance.setup_completed", null);
   }
+  return moved;
 }

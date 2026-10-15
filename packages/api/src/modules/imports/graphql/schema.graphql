@@ -58,6 +58,8 @@ type ImportMutations {
   readSlack: Import!
   "Leaves the import step of setup for now; the records stay."
   skip: Import!
+  "Turns the import's employee records into employees and completes setup. Records that are not complete stay in the import. Approving again does nothing."
+  approve: Import!
 }
 
 type Mutation {

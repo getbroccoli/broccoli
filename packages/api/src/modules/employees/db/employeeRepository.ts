@@ -72,6 +72,20 @@ export function employeeRepository(db: Orm | Tx) {
       }
     },
 
+    /** Inserts employees, skipping emails another employee has; returns how many were inserted. */
+    insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]): Promise<number> => {
+      let inserted = 0;
+      for (let start = 0; start < newEmployees.length; start += INSERT_BATCH_SIZE) {
+        const rows = await orm()
+          .insert(employees)
+          .values(newEmployees.slice(start, start + INSERT_BATCH_SIZE))
+          .onConflictDoNothing({ target: employees.email })
+          .returning({ id: employees.id });
+        inserted += rows.length;
+      }
+      return inserted;
+    },
+
     /** Deletes every demo employee; returns the ids of the avatar files they owned. */
     deleteDemo: async (): Promise<string[]> => {
       const rows = await orm()
@@ -121,6 +135,9 @@ export function employeeRepository(db: Orm | Tx) {
 }
 
 /** A new employee as stored, with the columns only the module itself sets. */
+/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
+const INSERT_BATCH_SIZE = 1_000;
+
 type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };
 
 async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {

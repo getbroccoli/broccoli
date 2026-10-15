@@ -10,7 +10,13 @@
     ],
     "src/modules/demo": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
     "src/modules/employees": ["src/core/*", "!src/core/server", "src/utils"],
-    "src/modules/imports": ["src/core/*", "!src/core/server", "src/modules/slack", "src/utils"],
+    "src/modules/imports": [
+      "src/core/*",
+      "!src/core/server",
+      "src/modules/employees",
+      "src/modules/slack",
+      "src/utils"
+    ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
     "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/integrations/brandLookup": ["src/utils"],

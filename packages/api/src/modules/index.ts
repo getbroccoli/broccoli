@@ -29,6 +29,6 @@ export function createModules(
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule({ slackConnection, orm: core.orm, mode, publicUrl }),
-    importsModule({ orm: core.orm, transact: core.transact, slack: slackConnection }),
+    importsModule({ ...core, slack: slackConnection }),
   ];
 }

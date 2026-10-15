@@ -1,8 +1,22 @@
 import { expect, it } from "vitest";
 
-import { parseNewEmployee } from "./employee";
+import { parseNewEmployee, tryParseNewEmployee } from "./employee";
 
 const input = { firstName: "Employee", lastName: "One", email: "employee1@example.com" };
+
+it("returns null when a new employee has no last name", () => {
+  expect(tryParseNewEmployee({ ...input, lastName: "" })).toBeNull();
+});
+
+it("returns the normalised employee when the input is complete", () => {
+  const employee = tryParseNewEmployee({
+    firstName: "  Employee  ",
+    lastName: "  One  ",
+    email: "  Employee1@EXAMPLE.COM  ",
+  });
+
+  expect(employee).toEqual({ ...input, jobTitle: null, startDate: null });
+});
 
 it("trims names and lowercases the email", () => {
   const employee = parseNewEmployee({

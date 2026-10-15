@@ -1,4 +1,4 @@
-import { expect, startFakeSlack, TestEnv, test as baseTest } from "#test/support";
+import { type Browser, expect, startFakeSlack, TestEnv, test as baseTest } from "#test/support";
 
 const test = baseTest.extend<{ slack: Awaited<ReturnType<typeof startFakeSlack>>; env: TestEnv }>({
   // eslint-disable-next-line no-empty-pattern -- Vitest reads fixture dependencies from this pattern.
@@ -266,6 +266,52 @@ test("a callback after signing out redirects with state and clears the OAuth coo
   );
   expect(slack.requests).toEqual([]);
 });
+
+test("approving creates the Slack members as employees once and completes setup", async ({
+  env,
+  slack,
+}) => {
+  slack.pages[0] = [
+    { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
+    { id: "U2", profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" } },
+  ];
+  const { browser } = await env.signInAsOwner();
+  await browser.graphql('mutation { company { update(input: { name: "Acme Corp" }) { id } } }');
+  await connectAndReadSlack(browser);
+  const approve = "mutation { import { approve { id } } }";
+  const people = `query {
+    employees(orderBy: { field: EMAIL, direction: ASC }) { edges { node { firstName lastName email } } }
+    setup { step }
+  }`;
+
+  expect(await (await browser.graphql(approve)).json()).toEqual(APPROVED);
+  const approved: unknown = await (await browser.graphql(people)).json();
+  expect(await (await browser.graphql(approve)).json()).toEqual(APPROVED);
+
+  expect(approved).toEqual({
+    data: {
+      employees: {
+        edges: [
+          { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
+          { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+        ],
+      },
+      setup: { step: "DONE" },
+    },
+  });
+  expect(await (await browser.graphql(people)).json()).toEqual(approved);
+});
+
+const APPROVED = { data: { import: { approve: { id: "import" } } } };
+
+/** Connects Slack through the fake relay and reads its members into the import. */
+async function connectAndReadSlack(browser: Browser) {
+  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
+  await browser.getManual(
+    `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
+  );
+  await browser.graphql("mutation { import { readSlack { id } } }");
+}
 
 function authorization(response: Response) {
   const cookie = response.headers
