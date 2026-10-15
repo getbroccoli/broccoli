@@ -51,7 +51,6 @@ export async function startTestBroccoliServer(
         mode: "managed",
         instanceId: managed.instanceId,
         accountsOrigin: managed.accountsUrl,
-        modelApiKey: "test-model-key",
       }
     : { mode: "self_hosted", publicUrl };
   const server = await startServer(
@@ -69,10 +68,7 @@ export async function startTestBroccoliServer(
         brandLookupUrl,
         publicUrl,
         slack,
-        model:
-          deployment.mode === "managed"
-            ? { url: decisionsUrl, apiKey: deployment.modelApiKey }
-            : null,
+        model: managed ? { url: decisionsUrl, apiKey: "test-model-key" } : null,
       }),
   );
   return {

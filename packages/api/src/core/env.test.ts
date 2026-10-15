@@ -7,11 +7,17 @@ const MANAGED = {
   ...DATABASE,
   BROCCOLI_MODE: "managed",
   MANAGED_INSTANCE_ID: "slot-1",
-  MANAGED_MODEL_API_KEY: "test-model-key",
+  OPENROUTER_API_KEY: "test-model-key",
 };
 
 it("needs no settings when self-hosted", () => {
   expect(loadEnv(DATABASE).deployment).toEqual({ mode: "self_hosted" });
+});
+
+it("reads the model key when self-hosted", () => {
+  expect(loadEnv({ ...DATABASE, OPENROUTER_API_KEY: "test-model-key" }).modelApiKey).toBe(
+    "test-model-key",
+  );
 });
 
 it("reads the self-hosted public URL", () => {
@@ -21,7 +27,6 @@ it("reads the self-hosted public URL", () => {
 
 it.each([
   ["MANAGED_INSTANCE_ID", "slot-1"],
-  ["MANAGED_MODEL_API_KEY", "test-model-key"],
   ["MANAGED_ACCOUNTS_URL", "https://accounts.example.com"],
 ])("refuses %s when self-hosted", (variable, value) => {
   expect(() => loadEnv({ ...DATABASE, [variable]: value })).toThrow(variable);
@@ -38,7 +43,7 @@ it("uses the configured accounts origin", () => {
 
 it("requires the instance id and the model key when managed", () => {
   expect(() => loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed" })).toThrow(
-    /MANAGED_INSTANCE_ID[\s\S]*MANAGED_MODEL_API_KEY/,
+    /MANAGED_INSTANCE_ID[\s\S]*OPENROUTER_API_KEY/,
   );
 });
 
@@ -47,7 +52,6 @@ it("defaults the accounts origin when managed", () => {
   expect(env.deployment).toEqual({
     mode: "managed",
     instanceId: "slot-1",
-    modelApiKey: "test-model-key",
     accountsOrigin: DEFAULT_ACCOUNTS_URL,
   });
 });

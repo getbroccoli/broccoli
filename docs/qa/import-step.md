@@ -32,7 +32,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 ## Files
 
-On a managed instance with `MANAGED_MODEL_API_KEY` set. A self-hosted instance shows no file section.
+On an instance with `OPENROUTER_API_KEY` set, managed or self-hosted. Without it, a self-hosted instance shows no file section.
 
 - [ ] Under the Slack row, "Add your files" shows a dashed area "Drop your files here", the hint "CSV, up to 5 MB per file." and the line saying the AI provider sees the first rows with personal details replaced by placeholders and keeps nothing.
 - [ ] Dropping a CSV with a title row above the table, semicolons and day-first start dates shows "Uploading staff.csv…", then a card "staff.csv · Reading columns…", then "N people"; `query { import { employees { edges { node { firstName lastName email jobTitle startDate } } } } }` lists them with the right names, emails, titles and dates.
