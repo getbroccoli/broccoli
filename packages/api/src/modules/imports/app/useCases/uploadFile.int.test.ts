@@ -1,6 +1,7 @@
 import { expect, importUseCases, OWNER, storedFileIds, test } from "#test/support";
 
 import { files } from "../../../../core/files";
+import { instanceRepository } from "../../../../core/instance";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -30,6 +31,24 @@ test("refuses an upload without a model key", async ({ orm }) => {
   ).rejects.toMatchObject({ code: "UNAVAILABLE", message: "Reading files needs a model key." });
 
   expect(await imports.listSources(OWNER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses an upload after setup is complete without storing anything or sending a job", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "done");
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await expect(
+    imports.uploadFile(owner, { name: "staff.csv", bytes: Buffer.from("Name\nAvery Stone") }),
+  ).rejects.toMatchObject({ code: "CONFLICT", message: "Setup is complete." });
+
+  expect(await imports.listSources(owner)).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(imports.sentJobs).toEqual([]);
 });

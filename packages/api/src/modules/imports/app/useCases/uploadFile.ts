@@ -1,9 +1,9 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import { storeFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
 import { readSheet } from "../../domain";
 import type { ImportContext } from "./importContext";
+import { lockSourcesForMapping } from "./lockSourcesForMapping";
 
 /** A staff file as the owner uploads it. */
 export interface UploadedFile {
@@ -29,8 +29,7 @@ export async function uploadFile(
     throw invalidInput([{ field: "file", code: sheet }]);
   }
   return transact(async (tx) => {
-    const imports = importRepository(tx);
-    await imports.lockSources();
+    const imports = await lockSourcesForMapping(tx);
     const fileId = await storeFile(tx, { content: Buffer.from(bytes), mimeType: "text/csv" });
     const sourceId = await imports.insertFileSource(name, fileId);
     await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });

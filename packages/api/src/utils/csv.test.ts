@@ -77,6 +77,13 @@ it("trims spaces inside quoted cells", () => {
   ]);
 });
 
+it("reads quoted delimiters when spaces surround the quoted cells", () => {
+  expect(parseCsv(Buffer.from('Name,Email\n "Stone, Avery", "avery@example.com"'))).toEqual([
+    ["Name", "Email"],
+    ["Stone, Avery", "avery@example.com"],
+  ]);
+});
+
 it("drops a row of quoted blanks", () => {
   expect(parseCsv(Buffer.from('Name,Email\n" "," "\nAvery Stone,avery@example.com'))).toEqual([
     ["Name", "Email"],

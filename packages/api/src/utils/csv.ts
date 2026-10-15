@@ -39,11 +39,11 @@ function decode(bytes: Uint8Array): string {
 function parseWith(text: string, delimiter: string): string[][] | null {
   let rows: string[][];
   try {
-    rows = parse(text, { delimiter, relax_column_count: true, relax_quotes: true });
+    rows = parse(text, { delimiter, relax_column_count: true, relax_quotes: true, trim: true });
   } catch {
     return null;
   }
-  // Trimmed here, not by the parser, which leaves spaces inside quotes.
+  // The parser trims around quotes; spaces inside them are trimmed here.
   return rows
     .map((row) => row.map((cell) => cell.trim()))
     .filter((row) => row.some((cell) => cell !== ""));
