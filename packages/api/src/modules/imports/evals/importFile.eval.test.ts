@@ -60,6 +60,9 @@ function readExpected(name: string): ExpectedImport {
 }
 
 function reportModelUse(name: string, model: LiveDecisions, forbidden: string[]): void {
+  model.requests().forEach((request, index) => {
+    console.info(`${name}: request ${index + 1}\n${JSON.stringify(request, null, 2)}`);
+  });
   const leaked = model.leaked(forbidden);
   totalCost += model.cost();
   console.info(`${name}: model cost ${dollars(model.cost())}`);

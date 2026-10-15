@@ -76,8 +76,28 @@ it("masks job words that are also common surnames", () => {
   expect(withPlaceholders({ name: "Mason Cook" })).toEqual({ name: "Xxxxx Xxxx" });
 });
 
+it("masks surname-like words from the job vocabulary", () => {
+  expect(withPlaceholders({ names: ["Sam Sales", "Robin Senior"] })).toEqual({
+    names: ["Xxx Xxxxx", "Xxxxx Xxxxxx"],
+  });
+});
+
 it("recognises heading words regardless of case and surrounding punctuation", () => {
   expect(withPlaceholders({ header: "(WORK) EMAIL:" })).toEqual({ header: "(WORK) EMAIL:" });
+});
+
+it("masks a heading word with attached digits", () => {
+  expect(withPlaceholders({ id: "ID123456" })).toEqual({ id: "XXdddddd" });
+});
+
+it("masks a heading word attached to a phone number", () => {
+  expect(withPlaceholders({ phone: "phone:+491512345678" })).toEqual({
+    phone: "xxxxx:+dddddddddddd",
+  });
+});
+
+it("masks a heading word with attached non-ASCII digits", () => {
+  expect(withPlaceholders({ id: "ID１２３４５" })).toEqual({ id: "XXddddd" });
 });
 
 it("replaces a name with its letter shapes", () => {

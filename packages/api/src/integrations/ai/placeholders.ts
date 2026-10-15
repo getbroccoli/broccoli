@@ -47,7 +47,7 @@ const PUBLIC_MAIL_DOMAINS = new Set([
   "protonmail.com",
 ]);
 
-/** Words of staff-file headings and job titles; never names. */
+/** Words of staff-file headings and job titles, without those that are also common surnames. */
 const HEADING_WORDS = new Set(
   [
     // English
@@ -70,11 +70,11 @@ const HEADING_WORDS = new Set(
     // Dutch
     "voornaam achternaam naam telefoonnummer functie afdeling geboortedatum indiensttreding adres",
     "medewerker werknemer",
-    // Job titles, without words that are also common surnames (Baker, Cook, Mason, Taylor…)
+    // Job titles, without surnames such as Baker, Cook, Mason, Sales, Senior, Taylor
     "administrator technician adviser advisor assistant officer coordinator director developer",
     "designer engineer accountant analyst consultant specialist supervisor executive",
-    "representative receptionist recruiter bookkeeper administration sales marketing maintenance",
-    "support finance accounts customer operations it hr research senior junior chief office",
+    "representative receptionist recruiter bookkeeper administration marketing maintenance",
+    "support finance accounts customer operations it hr research junior chief office",
     "entwickler entwicklerin designerin buchhalter buchhalterin leiter leiterin",
   ].flatMap((line) => line.split(" ")),
 );
@@ -164,7 +164,8 @@ function wordPlaceholder(token: string): string {
 }
 
 function isHeadingWord(token: string): boolean {
-  const word = token.replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "").toLowerCase();
+  // Only punctuation may surround the word: a digit or symbol next to it can be data.
+  const word = token.replace(/^\p{P}+|\p{P}+$/gu, "").toLowerCase();
   return HEADING_WORDS.has(word);
 }
 
