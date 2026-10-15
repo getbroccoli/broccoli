@@ -14,7 +14,7 @@ export async function updateCompany(
   const name = parseCompanyName(input.name);
   await context.transact(async (tx) => {
     await companyRepository(tx).saveName(name);
-    await advanceStep(ctx, tx, "company", "done");
+    await advanceStep(ctx, tx, "company", "import");
   });
   return readCompany(context);
 }

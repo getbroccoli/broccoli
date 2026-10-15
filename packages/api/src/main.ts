@@ -5,8 +5,14 @@ import { createModules } from "./modules";
 
 const env = loadEnv();
 const logger = createLogger(env.logLevel);
+const { deployment } = env;
 const server = await startServer(env, logger, (core) =>
-  createModules(core, { mode: env.deployment.mode, brandLookupUrl: env.brandLookupUrl }),
+  createModules(core, {
+    mode: deployment.mode,
+    publicUrl: deployment.mode === "self_hosted" ? deployment.publicUrl : undefined,
+    brandLookupUrl: env.brandLookupUrl,
+    slack: { relayUrl: env.slackRelayUrl, apiUrl: "https://slack.com/api" },
+  }),
 );
 logger.info({ url: server.url }, "Broccoli API listening");
 

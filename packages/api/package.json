@@ -40,6 +40,7 @@
     "@better-auth/drizzle-adapter": "1.7.7",
     "@graphql-tools/schema": "10.1.1",
     "better-auth": "1.7.7",
+    "dataloader": "2.2.3",
     "drizzle-orm": "0.45.3",
     "express": "5.2.1",
     "express-rate-limit": "8.7.0",

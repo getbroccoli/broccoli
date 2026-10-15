@@ -8,8 +8,8 @@ The words Broccoli's code and docs use, and what each one means.
 - **User**: a person who can sign in (Better Auth's `user` table).
 - **Account**: one way a user signs in, such as a password (`credential`) or managed sign-in (Better Auth's `account` table). A user can have several.
 - **Session**: a signed-in browser, carried in a cookie and stored in the `session` table.
-- **Setup**: the first-run flow of a new instance, step by step: the owner account (on self-hosted instances the first visitor creates it, once, through `POST /api/auth/setup`), then the company name.
-- **Setup step**: where a new instance is in setup: `owner`, `company`, `done`. Not to be confused with employee onboarding, an HR process.
+- **Setup**: the first-run flow of a new instance, step by step: the owner account (on self-hosted instances the first visitor creates it, once, through `POST /api/auth/setup`), then the company name, then the import of their people.
+- **Setup step**: where a new instance is in setup: `owner`, `company`, `import`, `done`. Not to be confused with employee onboarding, an HR process.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
@@ -21,3 +21,7 @@ The words Broccoli's code and docs use, and what each one means.
 - **Brand lookup**: finding a company's name and logo from the owner's email domain, through the service at `BRAND_LOOKUP_URL`.
 - **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.
 - **Demo data**: the sample company a new instance starts with, marked so that clearing it removes nothing else. People added while it is present stay.
+- **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
+- **Import source**: one place people come from, such as the connected Slack workspace. It owns its import records.
+- **Import record**: one record as one source proposes it, such as an import employee, with the source's values as they came; not yet a record of its module.
+- **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.

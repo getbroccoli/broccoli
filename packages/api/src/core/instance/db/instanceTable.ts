@@ -18,7 +18,7 @@ export const instance = pgTable(
   },
   (table) => [
     check("instance_singleton", sql`${table.id}`),
-    check("instance_setup_step", sql`${table.setupStep} in ('owner', 'company', 'done')`),
+    check("instance_setup_step", sql`${table.setupStep} in ('owner', 'company', 'import', 'done')`),
     check(
       "instance_managed_assignment",
       sql`num_nonnulls(${table.managedCompanyId}, ${table.managedPublicOrigin}, ${table.managedWebsiteOrigin}) in (0, 3)`,

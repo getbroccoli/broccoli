@@ -1,7 +1,12 @@
 import { createLogger, type Logger } from "../../src/core/logger";
+import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
+import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases } from "../../src/modules/demo";
+import { createImportUseCases } from "../../src/modules/imports";
+import { createSlackConnectionService, type SlackConnectionService } from "../../src/modules/slack";
+import { TEST_SECRET_BOX } from "./testSecretBox";
 import { testTransactor } from "./testTransactor";
 
 /**
@@ -20,4 +25,69 @@ export function companyUseCases(
 
 export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"]) {
   return createDemoUseCases({ orm, transact: testTransactor(orm) });
+}
+
+export function importUseCases(
+  orm: Parameters<typeof createImportUseCases>[0]["orm"],
+  {
+    slack = {},
+  }: {
+    slack?: Partial<Pick<SlackConnectionService, "readSlackMembers" | "isCurrentSlackConnection">>;
+  } = {},
+) {
+  return createImportUseCases({
+    orm,
+    transact: testTransactor(orm),
+    slack: {
+      readSlackMembers: () => {
+        throw new Error("Unexpected Slack read");
+      },
+      isCurrentSlackConnection: () => {
+        throw new Error("Unexpected Slack connection check");
+      },
+      ...slack,
+    },
+  });
+}
+
+export function slackUseCases(
+  orm: Parameters<typeof createSlackConnectionService>[0]["orm"],
+  {
+    secretBox = TEST_SECRET_BOX,
+    slackAuthorization = {},
+    slackApi = {},
+  }: {
+    slackAuthorization?: Partial<SlackAuthorization>;
+    slackApi?: Partial<SlackApi>;
+    secretBox?: SecretBox;
+  } = {},
+) {
+  const logger = createLogger("silent");
+  return createSlackConnectionService({
+    orm,
+    transact: testTransactor(orm),
+    logger,
+    secretBox,
+    slackAuthorization: {
+      authorizeUrl: ({ returnTo, state, codeChallenge }) => {
+        const url = new URL("https://example.com/slack/authorize");
+        url.search = new URLSearchParams({
+          return_to: returnTo,
+          state,
+          code_challenge: codeChallenge,
+        }).toString();
+        return url;
+      },
+      exchange: () => {
+        throw new Error("Unexpected Slack exchange");
+      },
+      ...slackAuthorization,
+    },
+    slackApi: {
+      listMembers: () => {
+        throw new Error("Unexpected Slack read");
+      },
+      ...slackApi,
+    },
+  });
 }

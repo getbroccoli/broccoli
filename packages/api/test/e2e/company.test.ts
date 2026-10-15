@@ -2,7 +2,7 @@ import { onTestFinished } from "vitest";
 
 import { expect, PNG as logo, startFakeBrandServer, TestEnv, test } from "#test/support";
 
-test("completes setup when the owner names the company", async ({ env }) => {
+test("advances to import when the owner names the company", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const before = await browser.graphql("query { setup { id step } company { id suggestedName } }");
   expect(before.status).toBe(200);
@@ -24,7 +24,7 @@ test("completes setup when the owner names the company", async ({ env }) => {
     },
   });
   const after = await browser.graphql("query { setup { id step } }");
-  expect(await after.json()).toEqual({ data: { setup: { id: "instance", step: "DONE" } } });
+  expect(await after.json()).toEqual({ data: { setup: { id: "instance", step: "IMPORT" } } });
 });
 
 test("serves the looked-up logo to the owner with private caching", async () => {

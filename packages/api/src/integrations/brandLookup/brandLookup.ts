@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { getJson } from "../../utils";
+import { fetchJson, urlUnder } from "../../utils";
 
 /** What the brand lookup service knows about a company, by its email domain. */
 export interface Brand {
@@ -31,10 +31,14 @@ export function createBrandLookup(
     return () => Promise.resolve(null);
   }
   return async (domain) => {
-    const brand = await getJson(brandUrl(url, domain), brandResponse, {
-      timeoutMs,
-      maxBytes: MAX_RESPONSE_BYTES,
-    });
+    const brand = await fetchJson(
+      urlUnder(url, `brands/${encodeURIComponent(domain)}`),
+      brandResponse,
+      {
+        timeoutMs,
+        maxBytes: MAX_RESPONSE_BYTES,
+      },
+    );
     if (!brand) {
       return null;
     }
@@ -50,8 +54,3 @@ const brandResponse = z.object({
   name: z.string().nullable(),
   logo: z.object({ contentType: z.string(), base64: z.base64() }).nullable(),
 });
-
-/** `<url>/brands/<domain>`; `new URL` would drop the last path segment of a base without a trailing slash. */
-function brandUrl(url: string, domain: string): URL {
-  return new URL(`brands/${encodeURIComponent(domain)}`, url.endsWith("/") ? url : `${url}/`);
-}

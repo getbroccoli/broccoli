@@ -5,7 +5,7 @@ import { setImmediate } from "node:timers/promises";
 
 import { expect, it, onTestFinished } from "vitest";
 
-import { readOrCreateSecret } from ".";
+import { ensureSecret } from ".";
 
 it("returns the same persisted secret to every concurrent creator", async () => {
   const root = await mkdtemp(join(tmpdir(), "broccoli-secrets-"));
@@ -16,9 +16,7 @@ it("returns the same persisted secret to every concurrent creator", async () => 
     const batches: Promise<PromiseSettledResult<string>[]>[] = [];
     for (let batch = 0; batch < 10; batch++) {
       batches.push(
-        Promise.allSettled(
-          Array.from({ length: 10 }, () => readOrCreateSecret(dataDir, "auth-secret")),
-        ),
+        Promise.allSettled(Array.from({ length: 10 }, () => ensureSecret(dataDir, "auth-secret"))),
       );
       await setImmediate();
     }

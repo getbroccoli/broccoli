@@ -4,6 +4,7 @@ import type { MessageKey } from "@/i18n";
 const SETUP_STEPS = [
   { id: "owner", title: "setup.owner.title" },
   { id: "company", title: "setup.company.title" },
+  { id: "import", title: "setup.import.title" },
 ] as const satisfies readonly { id: string; title: MessageKey }[];
 
 export type SetupStepId = (typeof SETUP_STEPS)[number]["id"];

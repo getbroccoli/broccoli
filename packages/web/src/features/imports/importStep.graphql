@@ -1,0 +1,35 @@
+query ImportStep {
+  slackConnection {
+    id
+    workspaceName
+  }
+  import {
+    id
+    sources {
+      id
+      kind
+      employeeCount
+    }
+  }
+}
+
+mutation ReadSlack {
+  import {
+    readSlack {
+      id
+      sources {
+        id
+        kind
+        employeeCount
+      }
+    }
+  }
+}
+
+mutation SkipImport {
+  import {
+    skip {
+      id
+    }
+  }
+}
