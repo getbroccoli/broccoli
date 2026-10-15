@@ -1,29 +1,54 @@
-import { parseCsv } from "../../../utils";
+import { parseCsv, parseXlsx } from "../../../utils";
 
 /** A file's rows of cells, as they came; rows may differ in length. */
 export type Sheet = readonly (readonly string[])[];
 
-/** Why a file is not read. */
-export type SheetRefusal = "not_csv" | "empty" | "too_many_rows" | "too_many_columns";
+/** A sheet of a file; a CSV has one, without a name. */
+export interface FileSheet {
+  name: string | null;
+  rows: Sheet;
+}
 
-/** The file's rows; refused over 10,000 rows or 100 columns. */
-export function readSheet(bytes: Uint8Array): Sheet | SheetRefusal {
-  const rows = parseCsv(bytes);
-  if (rows === null) {
-    return "not_csv";
+/** Why a file is not read. */
+export type SheetRefusal =
+  "unsupported_file" | "empty" | "too_many_rows" | "too_many_columns" | "too_many_sheets";
+
+/**
+ * A CSV file's one sheet, or an Excel workbook's visible sheets; refused over 10 sheets,
+ * 10,000 rows in all or 100 columns.
+ */
+export async function readSheets(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
+  const sheets = await parseSheets(bytes);
+  if (typeof sheets === "string") {
+    return sheets === "unreadable" ? "unsupported_file" : sheets;
   }
-  if (rows.length === 0) {
+  if (sheets.every(({ rows }) => rows.length === 0)) {
     return "empty";
   }
-  if (rows.length > MAX_ROWS) {
+  if (sheets.length > MAX_SHEETS) {
+    return "too_many_sheets";
+  }
+  if (sheets.reduce((count, { rows }) => count + rows.length, 0) > MAX_ROWS) {
     return "too_many_rows";
   }
-  if (rows.some((row) => row.length > MAX_COLUMNS)) {
+  if (sheets.some(({ rows }) => rows.some((row) => row.length > MAX_COLUMNS))) {
     return "too_many_columns";
   }
-  return rows;
+  return sheets;
 }
 
 /** Large enough for any company's staff list, small enough to map in one job. */
 const MAX_ROWS = 10_000;
 const MAX_COLUMNS = 100;
+/** Each sheet is mapped on its own, so this bounds the model calls of one file. */
+const MAX_SHEETS = 10;
+/** Every Excel workbook is a ZIP archive, which starts with this signature. */
+const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
+
+async function parseSheets(bytes: Uint8Array): Promise<FileSheet[] | "unreadable" | SheetRefusal> {
+  if (ZIP_SIGNATURE.every((byte, index) => bytes[index] === byte)) {
+    return parseXlsx(bytes, { maxRows: MAX_ROWS, maxColumns: MAX_COLUMNS });
+  }
+  const rows = parseCsv(bytes);
+  return rows === null ? "unreadable" : [{ name: null, rows }];
+}

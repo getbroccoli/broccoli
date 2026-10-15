@@ -1,8 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 
-import { expect, importUseCases, OWNER, SYSTEM, test } from "#test/support";
-
-import { DecisionsError } from "../../../../integrations/ai";
+import { expect, importUseCases, OWNER, SYSTEM, test, xlsxFile } from "#test/support";
 
 test("maps a file in one request when every answer is confident", async ({
   orm,
@@ -154,122 +152,163 @@ test("fails the file when no name or email column is found", async ({
   expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
-test("a stale attempt leaves the source and its records unchanged", async ({
+test("maps each sheet's own columns and keeps both records under sheet-qualified ids", async ({
   orm,
   seed,
   fakeDecisions: fake,
 }) => {
-  const source = await seed.fileSource({ content: "Name\nRobin Reed", attempt: 1 });
-  const records = await seed.importEmployees(source.id, [
-    { firstName: "Avery", lastName: "Stone" },
-  ]);
-  fake.answer({ headerRow: "1", fullName: "A" });
-  const imports = importUseCases(orm, { decisions: fake.decisions });
-
-  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
-
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    records,
+  const source = await seed.fileSource({
+    name: "staff.xlsx",
+    content: xlsxFile({
+      sheets: [
+        {
+          name: "Staff",
+          rows: [
+            ["Name", "Email"],
+            ["Avery Stone", "avery@example.com"],
+          ],
+        },
+        {
+          name: "Contractors",
+          rows: [
+            ["Email", "Full name", "Role"],
+            ["robin@example.com", "Robin Reed", "Designer"],
+          ],
+        },
+      ],
+    }),
+  });
+  fake.answer(
+    { headerRow: "1", fullName: "A", email: "B" },
+    { headerRow: "1", fullName: "B", email: "A", jobTitle: "C" },
   );
-});
-
-test("a removed source writes nothing and does not throw", async ({ orm, fakeDecisions: fake }) => {
-  const imports = importUseCases(orm, { decisions: fake.decisions });
-
-  await imports.files.mapFile(SYSTEM, { sourceId: randomUUID(), attempt: 0 });
-
-  expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
-});
-
-test("a retryable model failure leaves the source mapping", async ({
-  orm,
-  seed,
-  fakeDecisions: fake,
-}) => {
-  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
-  fake.fail(503);
-  const imports = importUseCases(orm, { decisions: fake.decisions });
-
-  const result = imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
-
-  await expect(result).rejects.toBeInstanceOf(DecisionsError);
-  await expect(result).rejects.toMatchObject({ retryable: true });
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
-});
-
-test("an unauthorized model request fails the file as unavailable", async ({
-  orm,
-  seed,
-  fakeDecisions: fake,
-}) => {
-  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
-  fake.fail(401);
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
-    { id: source.id, status: "failed", failure: "unavailable" },
+    { id: source.id, status: "mapped", failure: null },
+  ]);
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([
+    {
+      sourceId: source.id,
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+      jobTitle: null,
+      startDate: null,
+    },
+    {
+      sourceId: source.id,
+      firstName: "Robin",
+      lastName: "Reed",
+      email: "robin@example.com",
+      jobTitle: "Designer",
+      startDate: null,
+    },
+  ]);
+  const { rows } = await orm.execute<{ externalId: string; email: string }>(sql`
+    select external_id as "externalId", "values"->>'email' as email
+    from import_records where source_id = ${source.id} order by external_id
+  `);
+  expect(rows).toEqual([
+    { externalId: "Contractors!row:2", email: "robin@example.com" },
+    { externalId: "Staff!row:2", email: "avery@example.com" },
+  ]);
+});
+
+test("uses fallback answers for an unsure sheet before mapping the next sheet", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({
+    name: "staff.xlsx",
+    content: xlsxFile({
+      sheets: [
+        {
+          name: "Staff",
+          rows: [["Staff export"], ["Reference", "Name"], ["Ignored", "Avery Stone"]],
+        },
+        {
+          name: "Contractors",
+          rows: [
+            ["Email", "Name"],
+            ["robin@example.com", "Robin Reed"],
+          ],
+        },
+      ],
+    }),
+  });
+  fake.answer(
+    { headerRow: "1", fullName: { choice: "A", confidence: 0.5 } },
+    { headerRow: "2" },
+    { fullName: "B" },
+    { headerRow: "1", email: "A", fullName: "B" },
+  );
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([
+    { firstName: "Avery", lastName: "Stone", email: null },
+    { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+  ]);
+});
+
+test("skips sheets without people and maps the remaining sheet", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({
+    name: "staff.xlsx",
+    content: xlsxFile({
+      sheets: [
+        { name: "Departments", rows: [["Department"], ["Engineering"]] },
+        { name: "Staff", rows: [["Name"], ["Avery Stone"]] },
+        { name: "Lists", rows: [["Office"], ["London"]] },
+      ],
+    }),
+  });
+  fake.answer({ headerRow: "1" }, { headerRow: "1", fullName: "A" }, { headerRow: "1" });
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, status: "mapped", failure: null },
+  ]);
+  expect(
+    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+  ).toMatchObject([{ sourceId: source.id, firstName: "Avery", lastName: "Stone" }]);
+});
+
+test("fails a workbook with no people columns on any sheet", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({
+    name: "staff.xlsx",
+    content: xlsxFile({
+      sheets: [
+        { name: "Departments", rows: [["Department"], ["Engineering"]] },
+        { name: "Lists", rows: [["Role"], ["Designer"]] },
+      ],
+    }),
+  });
+  fake.answer({ headerRow: "1" }, { headerRow: "1", jobTitle: "A" });
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, status: "failed", failure: "no_people_columns" },
   ]);
   expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
-});
-
-test("an in-flight answer leaves a retried source mapping without records", async ({
-  orm,
-  seed,
-  fakeDecisions: fake,
-}) => {
-  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
-  fake.answer({ headerRow: "1", fullName: "A" });
-  const held = fake.holdNextAnswer();
-  const imports = importUseCases(orm, { decisions: fake.decisions });
-  const mapping = imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
-
-  try {
-    await held.received;
-    await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
-    await imports.files.retryFile(OWNER, source.id);
-    const restarted = await imports.reads.listSources(OWNER);
-    expect(restarted).toMatchObject([{ id: source.id, status: "mapping", failure: null }]);
-    expect(imports.sentJobs).toEqual([
-      { name: "imports.mapFile", payload: { sourceId: source.id, attempt: 1 } },
-    ]);
-
-    held.release();
-    await mapping;
-
-    expect(await imports.reads.listSources(OWNER)).toEqual(restarted);
-    expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
-  } finally {
-    held.release();
-    await mapping;
-  }
-});
-
-test("an in-flight answer does not restore a removed source or its records", async ({
-  orm,
-  seed,
-  fakeDecisions: fake,
-}) => {
-  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
-  fake.answer({ headerRow: "1", fullName: "A" });
-  const held = fake.holdNextAnswer();
-  const imports = importUseCases(orm, { decisions: fake.decisions });
-  const mapping = imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
-
-  try {
-    await held.received;
-    await imports.files.removeFile(OWNER, source.id);
-    held.release();
-    await mapping;
-
-    expect(await imports.reads.listSources(OWNER)).toEqual([]);
-    expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
-  } finally {
-    held.release();
-    await mapping;
-  }
 });

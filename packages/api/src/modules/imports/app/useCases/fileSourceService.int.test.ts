@@ -1,3 +1,5 @@
+import { strToU8, zipSync } from "fflate";
+
 import { expect, importUseCases, OWNER, storedFileIds, SYSTEM, test } from "#test/support";
 
 import { files } from "../../../../core/files";
@@ -53,7 +55,7 @@ test("refuses an upload after setup is complete without storing anything or send
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("refuses a NUL byte as not_csv without storing the file", async ({
+test("refuses a NUL byte as unsupported without storing the file", async ({
   orm,
   fakeDecisions: fake,
 }) => {
@@ -63,7 +65,7 @@ test("refuses a NUL byte as not_csv without storing the file", async ({
     imports.files.uploadFile(OWNER, { name: "staff.csv", bytes: Buffer.from("Name\nAvery\0") }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
-    fieldErrors: [{ field: "file", code: "not_csv" }],
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
   });
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
@@ -165,4 +167,23 @@ test("leaves the Slack source and its records unchanged", async ({ orm, seed }) 
   expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
     records,
   );
+});
+
+test("refuses a ZIP without a workbook without storing it or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const bytes = zipSync({ "staff.txt": strToU8("Name\nAvery Stone") });
+
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
+  });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
 });

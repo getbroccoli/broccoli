@@ -73,12 +73,18 @@ export class TestSeed {
     failure = null,
   }: {
     name?: string;
-    content: string;
+    content: string | Uint8Array;
     status?: "mapping" | "mapped" | "failed";
     attempt?: number;
     failure?: "no_people_columns" | "unavailable" | null;
   }) {
-    const fileId = await this.file({ content: Buffer.from(content), mimeType: "text/csv" });
+    const fileId = await this.file({
+      content: Buffer.from(content),
+      mimeType:
+        typeof content === "string"
+          ? "text/csv"
+          : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
     const repository = importRepository(this.orm);
     const id = await repository.insertFileSource(name, fileId);
     for (let previous = 0; previous < attempt; previous++) {

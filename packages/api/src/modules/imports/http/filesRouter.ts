@@ -10,7 +10,7 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_NAME_LENGTH = 255;
 
 /**
- * `POST /api/imports/files?name=<file name>` takes a CSV staff file as the raw body and
+ * `POST /api/imports/files?name=<file name>` takes a CSV or Excel staff file as the raw body and
  * answers the new source's id; its mapping runs in the background.
  */
 export function filesRouter(
@@ -19,7 +19,7 @@ export function filesRouter(
 ): express.Router {
   return express.Router().post(
     "/imports/files",
-    // The content decides whether it is a CSV, so any Content-Type is read; larger bodies get 413.
+    // The content decides how the file is read, so any Content-Type is read; larger bodies get 413.
     express.raw({ type: () => true, limit: MAX_FILE_BYTES }),
     async (request, response) => {
       try {
@@ -35,10 +35,10 @@ export function filesRouter(
   );
 }
 
-/** The file's name as the browser sent it; only `.csv` files are read. */
+/** The file's name as the browser sent it; only `.csv` and `.xlsx` files are read. */
 function parseFileName(name: unknown): string {
-  if (typeof name !== "string" || !name.toLowerCase().endsWith(".csv")) {
-    throw invalidInput([{ field: "file", code: "not_csv" }]);
+  if (typeof name !== "string" || !/\.(csv|xlsx)$/i.test(name)) {
+    throw invalidInput([{ field: "file", code: "unsupported_file" }]);
   }
   return name.slice(-MAX_NAME_LENGTH);
 }

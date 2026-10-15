@@ -1,12 +1,20 @@
 /** How an upload of a staff file ended. */
 export type UploadFileResult =
-  "ok" | "notCsv" | "empty" | "tooManyRows" | "tooManyColumns" | "tooLarge" | "failed";
+  | "ok"
+  | "unsupportedFile"
+  | "empty"
+  | "tooManyRows"
+  | "tooManyColumns"
+  | "tooManySheets"
+  | "tooLarge"
+  | "failed";
 
 const RESULT_BY_FIELD_CODE: Partial<Record<string, UploadFileResult>> = {
-  not_csv: "notCsv",
+  unsupported_file: "unsupportedFile",
   empty: "empty",
   too_many_rows: "tooManyRows",
   too_many_columns: "tooManyColumns",
+  too_many_sheets: "tooManySheets",
 };
 
 /** Adds `file` to the import; the API reads it and maps its columns in the background. */
