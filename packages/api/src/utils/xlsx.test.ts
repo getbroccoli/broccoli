@@ -196,6 +196,42 @@ it.each([
   ]);
 });
 
+it("keeps hidden-sheet positions when the workbook lists a sheet without a name", async () => {
+  const bytes = withWorkbookXml(
+    xlsxFile({
+      sheets: [
+        { name: "Staff", rows: [["Avery"]] },
+        { name: "Leavers", hidden: "hidden", rows: [["Robin"]] },
+        { name: "Contractors", rows: [["Sam"]] },
+      ],
+    }),
+    (xml) => xml.replace("<sheets>", '<sheets><sheet name="" sheetId="9" r:id="rId9"/>'),
+  );
+
+  expect(await parseXlsx(bytes)).toEqual([
+    { name: "Staff", rows: [["Avery"]] },
+    { name: "Contractors", rows: [["Sam"]] },
+  ]);
+});
+
+it("reads the worksheets of a workbook that also has a chart sheet", async () => {
+  const entries = unzipSync(xlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] }));
+  const edit = (name: string, find: string, insert: string) => {
+    entries[name] = strToU8(strFromU8(entries[name]!).replace(find, insert + find));
+  };
+  edit("xl/workbook.xml", "</sheets>", '<sheet name="Chart1" sheetId="9" r:id="rId99"/>');
+  edit(
+    "xl/_rels/workbook.xml.rels",
+    "</Relationships>",
+    '<Relationship Id="rId99" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chartsheet" Target="chartsheets/sheet1.xml"/>',
+  );
+  entries["xl/chartsheets/sheet1.xml"] = strToU8(
+    '<chartsheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>',
+  );
+
+  expect(await parseXlsx(zipSync(entries))).toEqual([{ name: "Staff", rows: [["Avery"]] }]);
+});
+
 function worksheet(rows: string): string {
   return `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows}</sheetData></worksheet>`;
 }

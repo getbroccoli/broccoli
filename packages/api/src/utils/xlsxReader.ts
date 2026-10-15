@@ -16,11 +16,17 @@ async function readWorkbook(bytes: Uint8Array): Promise<XlsxSheet[]> {
   }
   const hidden = hiddenSheetPositions(strFromU8(workbook));
   // Repacked, so the reader's buffers follow the verified sizes, not the declared ones.
-  const sheets = await readXlsxFile(Buffer.from(zipSync(entries, { level: 0 })));
-  return sheets
-    .filter((_, position) => !hidden.has(position))
-    .map(({ sheet, data }) => ({ name: sheet, rows: readRows(data) }))
-    .filter(({ rows }) => rows.length > 0);
+  const repacked = zipSync(entries, { level: 0 });
+  const sheets = await readXlsxFile(
+    Buffer.from(repacked.buffer, repacked.byteOffset, repacked.length),
+  );
+  return (
+    sheets
+      .filter((_, position) => !hidden.has(position))
+      // A chart sheet has no cells.
+      .map(({ sheet, data }) => ({ name: sheet, rows: readRows(data ?? []) }))
+      .filter(({ rows }) => rows.length > 0)
+  );
 }
 
 /** A few megabytes of ZIP can declare or expand to gigabytes, outside the worker's heap limit. */
@@ -87,8 +93,15 @@ function hiddenSheetPositions(workbook: string): Set<number> {
     if (withoutPrefix(name) !== "sheet") {
       return;
     }
-    const state = Object.entries(attributes()).find(([key]) => withoutPrefix(key) === "state");
-    if (state && HIDDEN_STATES.has(decodeEntities(state[1]))) {
+    const attribute = (wanted: string) => {
+      const found = Object.entries(attributes()).find(([key]) => withoutPrefix(key) === wanted);
+      return found && decodeEntities(found[1]);
+    };
+    // The reader leaves out a sheet without a name, so it takes no position.
+    if (!attribute("name")) {
+      return;
+    }
+    if (HIDDEN_STATES.has(attribute("state") ?? "")) {
       hidden.add(position);
     }
     position += 1;
