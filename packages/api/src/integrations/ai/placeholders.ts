@@ -3,15 +3,14 @@ import type { Json, JsonObject } from "./decisions";
 /**
  * A copy of `state` where every string that could identify someone is replaced by a
  * placeholder of the same form; keys and structure stay. Deny by default: a string
- * passes as itself only when it is blank, a boolean, or occurs at least 3 times.
+ * passes as itself only when it is blank or a boolean; inside one, heading and job words stay.
  */
 export function withPlaceholders(state: JsonObject): JsonObject {
   const strings = collectStrings(state);
-  const counts = countOf(strings);
   const emailDomains = countOf(strings.flatMap(tokensOf).filter(isEmail).map(domainOf));
   const emailNumbers = new Map<string, number>();
   const rewrite = (value: string): string => {
-    if (passesAsItself(value, counts)) {
+    if (passesAsItself(value)) {
       return value;
     }
     return tokensOf(value)
@@ -25,7 +24,7 @@ export function withPlaceholders(state: JsonObject): JsonObject {
   return mapStrings(state, rewrite) as JsonObject;
 }
 
-/** A value shared by this many cells says nothing about one person: a department, a title. */
+/** An email domain shared by this many addresses is the company's, not a person's. */
 const MIN_SHARED = 3;
 
 const BOOLEANS = new Set("yes no true false y n x ja nein oui non sí".split(" "));
@@ -112,11 +111,9 @@ function countOf(values: string[]): Map<string, number> {
   return counts;
 }
 
-function passesAsItself(value: string, counts: Map<string, number>): boolean {
+function passesAsItself(value: string): boolean {
   const trimmed = value.trim();
-  return (
-    trimmed === "" || BOOLEANS.has(trimmed.toLowerCase()) || (counts.get(value) ?? 0) >= MIN_SHARED
-  );
+  return trimmed === "" || BOOLEANS.has(trimmed.toLowerCase());
 }
 
 /** Words and the whitespace between them, so joining them gives the value back. */

@@ -130,21 +130,9 @@ it("keeps whitespace between masked tokens", () => {
   expect(withPlaceholders({ name: " Lena\t  Vogel\n" })).toEqual({ name: " Xxxx\t  Xxxxx\n" });
 });
 
-it("keeps an exact value found three times across the state", () => {
-  expect(
-    withPlaceholders({ role: "Gardening", rows: { "1": ["Gardening", { role: "Gardening" }] } }),
-  ).toEqual({ role: "Gardening", rows: { "1": ["Gardening", { role: "Gardening" }] } });
-});
-
-it("masks a value found only twice", () => {
-  expect(withPlaceholders({ roles: ["Gardening", "Gardening"] })).toEqual({
-    roles: ["Xxxxxxxxx", "Xxxxxxxxx"],
-  });
-});
-
-it("counts repeated values by exact equality", () => {
-  expect(withPlaceholders({ roles: ["Gardening", "Gardening", "gardening"] })).toEqual({
-    roles: ["Xxxxxxxxx", "Xxxxxxxxx", "xxxxxxxxx"],
+it("masks a name that appears in three cells", () => {
+  expect(withPlaceholders({ managers: ["Robin Reed", "Robin Reed", "Robin Reed"] })).toEqual({
+    managers: ["Xxxxx Xxxx", "Xxxxx Xxxx", "Xxxxx Xxxx"],
   });
 });
 
