@@ -6,8 +6,8 @@ import {
   toConnection,
 } from "../../../../core/pagination";
 import { parseSearch } from "../../../../core/search";
-import { employeeKeyset, type EmployeeOrder, type EmployeeRepository } from "../../db";
-import type { Employee } from "../../domain";
+import { employeeKeyset, type EmployeeRepository } from "../../db";
+import type { Employee, EmployeeOrder } from "../../domain";
 
 const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 

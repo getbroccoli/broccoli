@@ -4,6 +4,7 @@ import { afterKeyset, type Orm, orderByKeyset, ormOf, type Tx } from "../../../c
 import {
   IMPORT_EMPLOYEE_VERSION,
   type ImportEmployee,
+  type ImportEmployeeOrder,
   type FileSource,
   type ImportSource,
   type IncomingRecord,
@@ -13,7 +14,6 @@ import {
 import {
   importEmployeeOrderColumns,
   type ImportEmployeeKeyset,
-  type ImportEmployeeOrder,
   matchesSearch,
 } from "./importEmployeeOrder";
 import { importRecords } from "./importRecordsTable";

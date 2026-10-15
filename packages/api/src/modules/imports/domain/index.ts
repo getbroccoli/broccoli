@@ -11,6 +11,7 @@ export {
   IMPORT_EMPLOYEE_VERSION,
   parseImportEmployeeValues,
   type ImportEmployee,
+  type ImportEmployeeOrder,
   type ImportEmployeeValues,
   type IncomingRecord,
 } from "./importEmployee";

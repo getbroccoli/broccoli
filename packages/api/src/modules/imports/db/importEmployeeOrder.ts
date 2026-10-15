@@ -2,13 +2,8 @@ import { ilike, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import { containsPattern, keysetOrder, type KeysetOrder, nullsLast } from "../../../core/db";
+import type { ImportEmployeeOrder } from "../domain";
 import { importRecords } from "./importRecordsTable";
-
-/** How a page of import employees is sorted. */
-export interface ImportEmployeeOrder {
-  field: "NAME" | "EMAIL" | "START_DATE";
-  direction: "ASC" | "DESC";
-}
 
 /** The sort values of the last record seen, as Postgres computed them, behind the order they belong to. */
 export type ImportEmployeeKeyset = [field: string, direction: string, ...values: unknown[]];

@@ -22,6 +22,12 @@ export interface Employee {
   createdAt: Date;
 }
 
+/** How a list of employees is sorted. */
+export interface EmployeeOrder {
+  field: "NAME" | "EMAIL" | "START_DATE";
+  direction: "ASC" | "DESC";
+}
+
 export interface NewEmployeeInput {
   firstName: string;
   lastName: string;
