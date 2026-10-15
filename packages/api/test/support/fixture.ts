@@ -5,6 +5,7 @@ import { createLogger } from "../../src/core/logger";
 import { type FakeDecisions, startFakeDecisions } from "./fakeDecisions";
 import { createTestDatabase } from "./testDatabases";
 import { TestEnv } from "./testEnv";
+import { startFakeSlack } from "./fakeSlack";
 import { TestSeed } from "./testSeed";
 import { testTransactor } from "./testTransactor";
 
@@ -59,6 +60,30 @@ export const test = baseTest.extend<{
       await use(fake);
     } finally {
       await fake.stop();
+    }
+  },
+});
+
+/** The API with a local Slack relay and workspace. */
+export const slackTest = test.extend<{
+  slack: Awaited<ReturnType<typeof startFakeSlack>>;
+  env: TestEnv;
+}>({
+  // eslint-disable-next-line no-empty-pattern -- Vitest reads fixture dependencies from this pattern.
+  slack: async ({}, use) => {
+    const slack = await startFakeSlack();
+    try {
+      await use(slack);
+    } finally {
+      await slack.stop();
+    }
+  },
+  env: async ({ slack }, use) => {
+    const env = await TestEnv.start({ slack: { relayUrl: slack.url, apiUrl: slack.url } });
+    try {
+      await use(env);
+    } finally {
+      await env.stop();
     }
   },
 });

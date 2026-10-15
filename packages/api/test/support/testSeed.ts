@@ -120,6 +120,8 @@ export class TestSeed {
     const records = await repository.findEmployeePage({
       first: employees.length,
       after: null,
+      order: { field: "NAME", direction: "ASC" },
+      search: null,
       sourceId,
     });
     return records.map(({ node }) => node);

@@ -1,5 +1,5 @@
 import type { Resolvers } from "../../../core/graphql";
-import type { ImportUseCases } from "../app";
+import { incompleteReason, type ImportUseCases } from "../app";
 import { importLoaders } from "./loaders";
 
 const IMPORT = {};
@@ -8,6 +8,12 @@ const STATUSES = { mapping: "MAPPING", mapped: "MAPPED", failed: "FAILED" } as c
 const FAILURES = {
   no_people_columns: "NO_PEOPLE_COLUMNS",
   unavailable: "UNAVAILABLE",
+} as const;
+const INCOMPLETE_REASONS = {
+  firstName: "FIRST_NAME",
+  lastName: "LAST_NAME",
+  email: "EMAIL",
+  other: "OTHER",
 } as const;
 
 export function createResolvers(useCases: ImportUseCases): Resolvers {
@@ -44,8 +50,15 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
     Import: {
       id: () => "import",
       sources: (_parent, _args, context) => useCases.reads.listSources(context.getActor()),
-      employees: (_parent, { first, after }, context) =>
-        useCases.reads.listEmployees(context.getActor(), { first: first ?? undefined, after }),
+      employees: (_parent, { first, after, orderBy, filter }, context) =>
+        useCases.reads.listEmployees(context.getActor(), {
+          first: first ?? undefined,
+          after,
+          orderBy,
+          filter,
+        }),
+      readyEmployeeCount: (_parent, _args, context) =>
+        useCases.reads.readyEmployeeCount(context.getActor()),
       canReadFiles: (_parent, _args, context) => useCases.files.canReadFiles(context.getActor()),
     },
     ImportSource: {
@@ -53,15 +66,21 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       status: ({ status }) => STATUSES[status],
       failure: ({ failure }) => (failure ? FAILURES[failure] : null),
       employeeCount: ({ id }, _args, context) => loaders(context).employeeCount.load(id),
-      employees: ({ id }, { first, after }, context) =>
+      employees: ({ id }, { first, after, orderBy, filter }, context) =>
         useCases.reads.listEmployees(context.getActor(), {
           first: first ?? undefined,
           after,
+          orderBy,
+          filter,
           sourceId: id,
         }),
     },
     ImportEmployee: {
       source: ({ sourceId }, _args, context) => loaders(context).source.load(sourceId),
+      incompleteReason: (record) => {
+        const reason = incompleteReason(record);
+        return reason ? INCOMPLETE_REASONS[reason] : null;
+      },
     },
   };
 }

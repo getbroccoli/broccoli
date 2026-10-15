@@ -16,7 +16,13 @@ export {
 } from "./app";
 /** For test seeding only; other modules go through the use cases. */
 export { employeeRepository } from "./db";
-export type { Employee, NewEmployee, NewEmployeeInput } from "./domain";
+export {
+  employeeFieldErrors,
+  tryParseNewEmployee,
+  type Employee,
+  type NewEmployee,
+  type NewEmployeeInput,
+} from "./domain";
 
 /** The people who work for the company: create and list them, and serve their avatars. */
 export function employeesModule({ orm }: Pick<ModuleDependencies, "orm">): ModuleManifest {

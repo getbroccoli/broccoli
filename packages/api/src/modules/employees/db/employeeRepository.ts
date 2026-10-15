@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   afterKeyset,
+  containsPattern,
   isUniqueViolation,
   type KeysetOrder,
   keysetOrder,
@@ -179,7 +180,7 @@ function keysetColumns({ field, direction }: EmployeeOrder): KeysetOrder {
 }
 
 function matches(search: string): SQL {
-  const pattern = `%${search.replace(/[\\%_]/g, (character) => `\\${character}`)}%`;
+  const pattern = containsPattern(search);
   return or(
     ilike(employees.firstName, pattern),
     ilike(employees.lastName, pattern),

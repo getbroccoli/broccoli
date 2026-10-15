@@ -1,8 +1,25 @@
 import { expect, it } from "vitest";
 
-import { parseNewEmployee, tryParseNewEmployee } from "./employee";
+import { employeeFieldErrors, parseNewEmployee, tryParseNewEmployee } from "./employee";
 
 const input = { firstName: "Employee", lastName: "One", email: "employee1@example.com" };
+
+it("returns no field errors for a complete employee", () => {
+  expect(employeeFieldErrors(input)).toEqual([]);
+});
+
+it("reports an empty last name as required", () => {
+  expect(employeeFieldErrors({ ...input, lastName: "" })).toEqual([
+    { field: "lastName", code: "required" },
+  ]);
+});
+
+it("returns one error per failing field in field order", () => {
+  expect(employeeFieldErrors({ ...input, firstName: "", email: "avery@" })).toEqual([
+    { field: "firstName", code: "required" },
+    { field: "email", code: "invalid" },
+  ]);
+});
 
 it("returns null when a new employee has no last name", () => {
   expect(tryParseNewEmployee({ ...input, lastName: "" })).toBeNull();

@@ -1,15 +1,6 @@
-import { and, count, eq, inArray, notInArray, sql, type SQL } from "drizzle-orm";
-import { z } from "zod";
+import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
 
-import {
-  afterKeyset,
-  keysetOrder,
-  type KeysetOrder,
-  type Orm,
-  orderByKeyset,
-  ormOf,
-  type Tx,
-} from "../../../core/db";
+import { afterKeyset, type Orm, orderByKeyset, ormOf, type Tx } from "../../../core/db";
 import {
   IMPORT_EMPLOYEE_VERSION,
   type ImportEmployee,
@@ -19,6 +10,12 @@ import {
   type MappingOutcome,
   parseImportEmployeeValues,
 } from "../domain";
+import {
+  importEmployeeOrderColumns,
+  type ImportEmployeeKeyset,
+  type ImportEmployeeOrder,
+  matchesSearch,
+} from "./importEmployeeOrder";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
 
@@ -57,24 +54,18 @@ export interface ImportRepository {
   listEmployeeRecords(): Promise<ImportEmployee[]>;
   /** The number of employee records of each source that has any; the others are absent. */
   countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
-  /** Up to `first + 1` employee records after `after`, by name; the extra one signals a next page. */
+  /** Up to `first + 1` employee records after `after`, in `order`; the extra one signals a next page. */
   findEmployeePage(
     query: ImportEmployeePageQuery,
   ): Promise<{ node: ImportEmployee; keyset: ImportEmployeeKeyset }[]>;
 }
 
-/** The sort values of the last employee record seen: first name, last name, id. */
-export type ImportEmployeeKeyset = [firstName: string, lastName: string, id: string];
-
-export const importEmployeeKeyset: z.ZodType<ImportEmployeeKeyset> = z.tuple([
-  z.string(),
-  z.string(),
-  z.uuid(),
-]);
-
 export interface ImportEmployeePageQuery {
   first: number;
   after: ImportEmployeeKeyset | null;
+  order: ImportEmployeeOrder;
+  /** Part of a first name, last name or email; null lists every record. */
+  search: string | null;
   /** Null lists the records of every source. */
   sourceId: string | null;
 }
@@ -251,23 +242,37 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
     },
 
-    findEmployeePage: async ({ first, after, sourceId }: ImportEmployeePageQuery) => {
+    findEmployeePage: async ({
+      first,
+      after,
+      order,
+      search,
+      sourceId,
+    }: ImportEmployeePageQuery) => {
+      const columns = importEmployeeOrderColumns(order);
+      const keys = Object.fromEntries(
+        columns.map(({ expression }, index) => [`key${index}`, expression]),
+      );
       const rows = await orm()
-        .select({ record: importRecords, firstName: FIRST_NAME, lastName: LAST_NAME })
+        .select({ record: importRecords, ...keys })
         .from(importRecords)
         .where(
           and(
             eq(importRecords.type, "employee"),
             sourceId === null ? undefined : eq(importRecords.sourceId, sourceId),
-            after === null ? undefined : afterKeyset(EMPLOYEE_ORDER, after),
+            search === null ? undefined : matchesSearch(search),
+            after === null ? undefined : afterKeyset(columns, after.slice(2)),
           ),
         )
-        .orderBy(...orderByKeyset(EMPLOYEE_ORDER))
+        .orderBy(...orderByKeyset(columns))
         .limit(first + 1);
-      return rows.map(({ record, firstName, lastName }) => ({
-        node: toImportEmployee(record),
-        keyset: [firstName, lastName, record.id] satisfies ImportEmployeeKeyset,
-      }));
+      return rows.map((row) => {
+        const values = columns.map((_, index) => (row as Record<string, unknown>)[`key${index}`]);
+        return {
+          node: toImportEmployee(row.record),
+          keyset: [order.field, order.direction, ...values] satisfies ImportEmployeeKeyset,
+        };
+      });
     },
   };
 }
@@ -285,20 +290,6 @@ const sourceColumns = {
   status: importSources.status,
   failure: importSources.failure,
 };
-
-const nameField = (field: string): SQL<string> =>
-  sql<string>`lower(coalesce(${importRecords.values}->>${field}, ''))`;
-const FIRST_NAME = nameField("firstName");
-const LAST_NAME = nameField("lastName");
-
-const EMPLOYEE_ORDER: KeysetOrder = keysetOrder(
-  [
-    { expression: FIRST_NAME, descending: false },
-    { expression: LAST_NAME, descending: false },
-  ],
-  sql`${importRecords.id}`,
-  false,
-);
 
 function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployee {
   return {

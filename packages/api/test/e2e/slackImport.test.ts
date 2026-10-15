@@ -1,24 +1,4 @@
-import { type Browser, expect, startFakeSlack, TestEnv, test as baseTest } from "#test/support";
-
-const test = baseTest.extend<{ slack: Awaited<ReturnType<typeof startFakeSlack>>; env: TestEnv }>({
-  // eslint-disable-next-line no-empty-pattern -- Vitest reads fixture dependencies from this pattern.
-  slack: async ({}, use) => {
-    const slack = await startFakeSlack();
-    try {
-      await use(slack);
-    } finally {
-      await slack.stop();
-    }
-  },
-  env: async ({ slack }, use) => {
-    const env = await TestEnv.start({ slack: { relayUrl: slack.url, apiUrl: slack.url } });
-    try {
-      await use(env);
-    } finally {
-      await env.stop();
-    }
-  },
-});
+import { connectAndReadSlack, expect, slackAuthorization, slackTest as test } from "#test/support";
 
 test("connecting redirects the owner to the relay with an OAuth cookie and callback URL", async ({
   env,
@@ -29,7 +9,7 @@ test("connecting redirects the owner to the relay with an OAuth cookie and callb
   const response = await browser.getManual("/api/integrations/slack/connect");
 
   expect(response.status).toBe(302);
-  const { cookie, authorizeUrl } = authorization(response);
+  const { cookie, authorizeUrl } = slackAuthorization(response);
   expect(cookie).toContain("Path=/api/integrations/slack");
   expect(cookie).toContain("Max-Age=600");
   expect(cookie).toContain("HttpOnly");
@@ -52,7 +32,7 @@ test("connecting saves the workspace and an explicit read imports all Slack page
     { id: "U2", profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" } },
   ]);
   const { browser } = await env.signInAsOwner();
-  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
+  const { state } = slackAuthorization(await browser.getManual("/api/integrations/slack/connect"));
 
   const callback = await browser.getManual(
     `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
@@ -155,7 +135,7 @@ test("a mismatched callback state redirects with an error without redeeming", as
 
 test("declining Slack authorization redirects with the cancelled error", async ({ env, slack }) => {
   const { browser } = await env.signInAsOwner();
-  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
+  const { state } = slackAuthorization(await browser.getManual("/api/integrations/slack/connect"));
 
   const response = await browser.getManual(
     `/api/integrations/slack/callback?${new URLSearchParams({ state, error: "access_denied" }).toString()}`,
@@ -172,12 +152,7 @@ test("declining Slack authorization redirects with the cancelled error", async (
 test("refresh returns the updated import and skipping completes setup", async ({ env, slack }) => {
   const { browser } = await env.signInAsOwner();
   await browser.graphql('mutation { company { update(input: { name: "Acme Corp" }) { id } } }');
-  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
-  await browser.getManual(
-    `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
-  );
-  const imported = await browser.graphql("mutation { import { readSlack { id } } }");
-  expect(await imported.json()).toEqual({ data: { import: { readSlack: { id: "import" } } } });
+  await connectAndReadSlack(browser);
   slack.pages[0] = [
     { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
   ];
@@ -213,14 +188,7 @@ test("a malformed Slack response refuses refresh and preserves the imported empl
     { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
   ];
   const { browser } = await env.signInAsOwner();
-  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
-  const callback = await browser.getManual(
-    `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
-  );
-  expect(callback.status).toBe(302);
-  expect(callback.headers.get("location")).toBe("/setup/import");
-  const imported = await browser.graphql("mutation { import { readSlack { id } } }");
-  expect(await imported.json()).toEqual({ data: { import: { readSlack: { id: "import" } } } });
+  await connectAndReadSlack(browser);
   slack.replyToNextUsersList({ ok: true });
 
   const refreshed = await browser.graphql("mutation { import { readSlack { id } } }");
@@ -252,7 +220,7 @@ test("a callback after signing out redirects with state and clears the OAuth coo
   slack,
 }) => {
   const { browser } = await env.signInAsOwner();
-  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
+  const { state } = slackAuthorization(await browser.getManual("/api/integrations/slack/connect"));
   await browser.post("/api/auth/sign-out", {});
 
   const response = await browser.getManual(
@@ -302,26 +270,54 @@ test("approving creates the Slack members as employees once and completes setup"
   expect(await (await browser.graphql(people)).json()).toEqual(approved);
 });
 
+test("review counts only complete Slack members and Approve adds exactly those members", async ({
+  env,
+  slack,
+}) => {
+  slack.pages[0] = [
+    { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
+    { id: "U2", profile: { real_name: "Morgan", email: "morgan@example.com" } },
+    { id: "U3", profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" } },
+  ];
+  const { browser } = await env.signInAsOwner();
+  await browser.graphql('mutation { company { update(input: { name: "Acme Corp" }) { id } } }');
+  await connectAndReadSlack(browser);
+
+  const review = await browser.graphql(`query {
+    import {
+      readyEmployeeCount
+      employees(first: 100) { edges { node { email incompleteReason } } }
+    }
+  }`);
+  const reviewed: unknown = await review.json();
+
+  expect(reviewed).toEqual({
+    data: {
+      import: {
+        readyEmployeeCount: 2,
+        employees: {
+          edges: [
+            { node: { email: "avery@example.com", incompleteReason: null } },
+            { node: { email: "morgan@example.com", incompleteReason: "LAST_NAME" } },
+            { node: { email: "robin@example.com", incompleteReason: null } },
+          ],
+        },
+      },
+    },
+  });
+
+  const approved = await browser.graphql("mutation { import { approve { id } } }");
+  expect(await approved.json()).toEqual(APPROVED);
+  const people = await browser.graphql(`query {
+    employees(first: 100, orderBy: { field: EMAIL, direction: ASC }) { edges { node { email } } }
+  }`);
+  expect(await people.json()).toEqual({
+    data: {
+      employees: {
+        edges: [{ node: { email: "avery@example.com" } }, { node: { email: "robin@example.com" } }],
+      },
+    },
+  });
+});
+
 const APPROVED = { data: { import: { approve: { id: "import" } } } };
-
-/** Connects Slack through the fake relay and reads its members into the import. */
-async function connectAndReadSlack(browser: Browser) {
-  const { state } = authorization(await browser.getManual("/api/integrations/slack/connect"));
-  await browser.getManual(
-    `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
-  );
-  await browser.graphql("mutation { import { readSlack { id } } }");
-}
-
-function authorization(response: Response) {
-  const cookie = response.headers
-    .getSetCookie()
-    .find((value) => value.startsWith("broccoli_slack_oauth="));
-  if (!cookie) throw new Error("The Slack OAuth cookie is missing");
-  const location = response.headers.get("location");
-  if (!location) throw new Error("The authorization redirect is missing");
-  const authorizeUrl = new URL(location);
-  const state = authorizeUrl.searchParams.get("state");
-  if (!state) throw new Error("The authorization state is missing");
-  return { cookie, state, authorizeUrl };
-}

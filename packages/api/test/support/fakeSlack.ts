@@ -1,7 +1,9 @@
 import express from "express";
+import { expect } from "vitest";
 
 import type { SlackMember } from "../../src/integrations/slack";
 import { startSimpleHttpServer } from "./simpleHttpServer";
+import type { Browser } from "./browser";
 
 /** A local relay and Slack API; tests control pages and inspect the HTTP requests. */
 export async function startFakeSlack() {
@@ -57,4 +59,29 @@ export async function startFakeSlack() {
       nextUsersListBody = body;
     },
   };
+}
+
+/** Connects Slack through the fake relay and reads its members into the import. */
+export async function connectAndReadSlack(browser: Browser) {
+  const { state } = slackAuthorization(await browser.getManual("/api/integrations/slack/connect"));
+  const callback = await browser.getManual(
+    `/api/integrations/slack/callback?${new URLSearchParams({ state, handle: "test-handle" }).toString()}`,
+  );
+  expect(callback.status).toBe(302);
+  expect(callback.headers.get("location")).toBe("/setup/import");
+  const imported = await browser.graphql("mutation { import { readSlack { id } } }");
+  expect(await imported.json()).toEqual({ data: { import: { readSlack: { id: "import" } } } });
+}
+
+export function slackAuthorization(response: Response) {
+  const cookie = response.headers
+    .getSetCookie()
+    .find((value) => value.startsWith("broccoli_slack_oauth="));
+  if (!cookie) throw new Error("The Slack OAuth cookie is missing");
+  const location = response.headers.get("location");
+  if (!location) throw new Error("The authorization redirect is missing");
+  const authorizeUrl = new URL(location);
+  const state = authorizeUrl.searchParams.get("state");
+  if (!state) throw new Error("The authorization state is missing");
+  return { cookie, state, authorizeUrl };
 }

@@ -2,7 +2,7 @@ export { expect } from "vitest";
 export { NON_OWNER, OWNER, SYSTEM, TestSecurityContext } from "./testSecurityContext";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
-export { test } from "./fixture";
+export { test, slackTest } from "./fixture";
 export { startFakeBrandServer } from "./fakeBrandServer";
 export {
   startFakeAccounts,
@@ -11,7 +11,7 @@ export {
   MANAGED_INSTANCE_ID,
 } from "./fakeAccounts";
 export { startFakeHttpServer } from "./fakeHttpServer";
-export { startFakeSlack } from "./fakeSlack";
+export { startFakeSlack, connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";

@@ -1,15 +1,14 @@
 import type { SecurityContext } from "../../../../core/security";
-import { invalidInput } from "../../../../core/applicationError";
 import {
   type Connection,
   type PageArgs,
   parsePage,
+  parseSearch,
   toConnection,
 } from "../../../../core/pagination";
 import { employeeKeyset, type EmployeeOrder, type EmployeeRepository } from "../../db";
 import type { Employee } from "../../domain";
 
-const SEARCH_MAX_LENGTH = 100;
 const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 
 export interface EmployeeListArgs extends PageArgs {
@@ -31,16 +30,4 @@ export async function listEmployees(
   const search = parseSearch(filter?.search);
   const page = parsePage(pageArgs, employeeKeyset(order));
   return toConnection(await employees.findPage({ ...page, order, search }), page.first);
-}
-
-/** Trimmed, or null when blank. */
-function parseSearch(search: string | null | undefined): string | null {
-  const trimmed = search?.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (trimmed.length > SEARCH_MAX_LENGTH) {
-    throw invalidInput([{ field: "search", code: "too_long" }]);
-  }
-  return trimmed;
 }
