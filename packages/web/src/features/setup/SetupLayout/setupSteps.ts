@@ -5,6 +5,8 @@ const SETUP_STEPS = [
   { id: "owner", title: "setup.owner.title" },
   { id: "company", title: "setup.company.title" },
   { id: "import", title: "setup.import.title" },
+  // A page of the server's `import` step: the owner reviews the import before Approve.
+  { id: "review", title: "setup.review.title" },
 ] as const satisfies readonly { id: string; title: MessageKey }[];
 
 export type SetupStepId = (typeof SETUP_STEPS)[number]["id"];

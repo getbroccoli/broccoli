@@ -26,13 +26,18 @@
       "src/components/ui",
       "src/i18n",
       "src/lib/formatDate",
+      "src/lib/initials",
       "src/lib/listPage"
     ],
     "src/features/imports": [
       "src/__generated__",
+      "src/components/dataTable",
       "src/components/ui",
       "src/features/setup",
-      "src/i18n"
+      "src/i18n",
+      "src/lib/formatDate",
+      "src/lib/initials",
+      "src/lib/listPage"
     ],
     "src/features/setup": [
       "src/__generated__",
@@ -55,7 +60,8 @@
     "src/apollo": ["src/__generated__"],
     "src/i18n": [],
     "src/__generated__": [],
-    "src/styles.css": []
+    "src/styles.css": [],
+    "src/lib/initials": []
   },
   "deepImports": ["src/components/ui", "src/__generated__"]
 }

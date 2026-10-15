@@ -6,6 +6,7 @@ import {
   EmployeeNameCell_EmployeeFragmentDoc,
   type EmployeeNameCell_EmployeeFragment,
 } from "@/__generated__/graphql";
+import { initialsOf } from "@/lib/initials";
 
 /**
  * The name with the avatar, or initials without one or when it fails to load; owns the
@@ -46,11 +47,4 @@ export function EmployeeNameCell({
       <span className="truncate font-medium text-foreground">{`${firstName} ${lastName}`}</span>
     </div>
   );
-}
-
-function initialsOf(firstName: string, lastName: string): string {
-  // By code point, so a name starting with an emoji or astral letter keeps it whole.
-  const [first = ""] = firstName;
-  const [last = ""] = lastName;
-  return `${first}${last}`.toUpperCase();
 }

@@ -1,14 +1,25 @@
 import type { ReactNode } from "react";
 
+import { cn } from "@/lib/class-names";
+
+import type { SetupWidth } from "./SetupLayout";
+
 interface SetupStepFormProps {
   onSubmit: () => void;
   children: ReactNode;
   /** The step's button, on the right of the footer. */
   footer: ReactNode;
+  /** Match the layout's width. */
+  width?: SetupWidth;
 }
 
 /** The body of a setup step: the fields scroll inside the card above a fixed footer. */
-export function SetupStepForm({ onSubmit, children, footer }: SetupStepFormProps) {
+export function SetupStepForm({
+  onSubmit,
+  children,
+  footer,
+  width = "default",
+}: SetupStepFormProps) {
   return (
     <form
       noValidate
@@ -19,7 +30,14 @@ export function SetupStepForm({ onSubmit, children, footer }: SetupStepFormProps
       }}
     >
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 p-6 sm:p-10">{children}</div>
+        <div
+          className={cn(
+            "mx-auto flex w-full flex-col gap-8 p-6 sm:p-10",
+            width === "wide" ? "max-w-[1180px]" : "max-w-2xl",
+          )}
+        >
+          {children}
+        </div>
       </div>
       <footer className="flex shrink-0 justify-end border-t border-border px-6 py-3 sm:px-10">
         {footer}

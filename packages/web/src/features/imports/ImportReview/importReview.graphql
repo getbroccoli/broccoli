@@ -1,0 +1,48 @@
+query ImportReview(
+  $first: Int
+  $after: String
+  $orderBy: ImportEmployeeOrder
+  $filter: ImportEmployeeFilter
+) {
+  import {
+    id
+    readyEmployeeCount
+    sources {
+      id
+      kind
+      name
+      status
+      employeeCount
+    }
+    employees(first: $first, after: $after, orderBy: $orderBy, filter: $filter) {
+      edges {
+        node {
+          id
+          firstName
+          lastName
+          email
+          jobTitle
+          startDate
+          incompleteReason
+          source {
+            id
+            kind
+            name
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+mutation ApproveImport {
+  import {
+    approve {
+      id
+    }
+  }
+}
