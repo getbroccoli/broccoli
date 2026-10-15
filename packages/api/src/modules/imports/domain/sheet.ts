@@ -19,8 +19,8 @@ export type SheetRefusal =
  */
 export async function readSheets(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
   const sheets = await parseSheets(bytes);
-  if (typeof sheets === "string") {
-    return sheets === "unreadable" ? "unsupported_file" : sheets;
+  if (sheets === null) {
+    return "unsupported_file";
   }
   if (sheets.every(({ rows }) => rows.length === 0)) {
     return "empty";
@@ -45,10 +45,10 @@ const MAX_SHEETS = 10;
 /** Every Excel workbook is a ZIP archive, which starts with this signature. */
 const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
 
-async function parseSheets(bytes: Uint8Array): Promise<FileSheet[] | "unreadable" | SheetRefusal> {
+async function parseSheets(bytes: Uint8Array): Promise<FileSheet[] | null> {
   if (ZIP_SIGNATURE.every((byte, index) => bytes[index] === byte)) {
-    return parseXlsx(bytes, { maxRows: MAX_ROWS, maxColumns: MAX_COLUMNS });
+    return parseXlsx(bytes);
   }
   const rows = parseCsv(bytes);
-  return rows === null ? "unreadable" : [{ name: null, rows }];
+  return rows === null ? null : [{ name: null, rows }];
 }

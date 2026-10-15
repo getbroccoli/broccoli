@@ -80,6 +80,9 @@ importers:
       read-excel-file:
         specifier: 9.3.10
         version: 9.3.10
+      saxen:
+        specifier: 11.2.0
+        version: 11.2.0
       tldts:
         specifier: 7.4.16
         version: 7.4.16
