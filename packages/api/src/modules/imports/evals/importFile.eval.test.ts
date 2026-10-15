@@ -1,9 +1,17 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { afterAll, onTestFinished } from "vitest";
+import { afterAll } from "vitest";
 
-import { expect, importUseCases, OWNER, startLiveDecisions, SYSTEM, test } from "#test/support";
+import {
+  expect,
+  importUseCases,
+  type LiveDecisions,
+  OWNER,
+  startLiveDecisions,
+  SYSTEM,
+  test,
+} from "#test/support";
 
 import type { ImportEmployeeValues, ImportSource } from "../domain";
 
@@ -14,47 +22,58 @@ afterAll(() => {
   console.info(`Model cost of the run: ${dollars(totalCost)}`);
 });
 
-for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
-  const name = file.slice(0, -".csv".length);
-
-  test(name, async ({ orm }) => {
-    const expected = JSON.parse(
-      readFileSync(join(CASES, `${name}.expected.json`), "utf8"),
-    ) as ExpectedImport;
-    const model = await startLiveDecisions();
-    onTestFinished(() => {
-      // shortcut: leaks are only reported until personal data is replaced by placeholders before model calls; then assert none.
-      const leaked = model.leaked(expected.forbidden);
-      if (leaked.length > 0) {
-        console.warn(`${name}: ${leaked.length} forbidden values reached the model:`, leaked);
-      }
-      totalCost += model.cost();
-      console.info(`${name}: model cost ${dollars(model.cost())}`);
-      return model.stop();
-    });
-    const imports = importUseCases(orm, { decisions: model.decisions });
-
-    const sourceId = await imports.files.uploadFile(OWNER, {
-      name: file,
-      bytes: readFileSync(join(CASES, file)),
-    });
-    await imports.files.mapFile(SYSTEM, { sourceId, attempt: 0 });
-
-    const [source] = await imports.reads.listSources(OWNER);
-    const records = (await imports.reads.listEmployees(OWNER, { first: 10_000 })).edges.map(
-      ({ node: { firstName, lastName, email, jobTitle, startDate } }) => ({
-        firstName,
-        lastName,
-        email,
-        jobTitle,
-        startDate,
-      }),
-    );
-    expect({ failure: source?.failure, records: sorted(records) }).toEqual({
-      failure: expected.failure ?? null,
-      records: sorted(expected.records ?? []),
-    });
+test.for(caseNames())("%s", async (name, { orm, onTestFinished }) => {
+  const expected = readExpected(name);
+  const model = await startLiveDecisions();
+  onTestFinished(() => {
+    reportModelUse(name, model, expected.forbidden);
+    return model.stop();
   });
+  const imports = importUseCases(orm, { decisions: model.decisions });
+
+  const sourceId = await imports.files.uploadFile(OWNER, {
+    name: `${name}.csv`,
+    bytes: readFileSync(join(CASES, `${name}.csv`)),
+  });
+  await imports.files.mapFile(SYSTEM, { sourceId, attempt: 0 });
+
+  const [source] = await imports.reads.listSources(OWNER);
+  const { edges } = await imports.reads.listEmployees(OWNER, { first: 10_000 });
+  expect({
+    failure: source?.failure,
+    records: sorted(edges.map(({ node }) => valuesOf(node))),
+  }).toEqual({ failure: expected.failure ?? null, records: sorted(expected.records ?? []) });
+});
+
+/** Each case is a CSV file with its expected result beside it. */
+function caseNames(): string[] {
+  return readdirSync(CASES)
+    .filter((file) => file.endsWith(".csv"))
+    .map((file) => file.slice(0, -".csv".length));
+}
+
+function readExpected(name: string): ExpectedImport {
+  return JSON.parse(readFileSync(join(CASES, `${name}.expected.json`), "utf8")) as ExpectedImport;
+}
+
+function reportModelUse(name: string, model: LiveDecisions, forbidden: string[]): void {
+  // shortcut: leaks are only reported until personal data is replaced by placeholders before model calls; then assert none.
+  const leaked = model.leaked(forbidden);
+  if (leaked.length > 0) {
+    console.warn(`${name}: ${leaked.length} forbidden values reached the model:`, leaked);
+  }
+  totalCost += model.cost();
+  console.info(`${name}: model cost ${dollars(model.cost())}`);
+}
+
+function valuesOf({
+  firstName,
+  lastName,
+  email,
+  jobTitle,
+  startDate,
+}: ImportEmployeeValues): ImportEmployeeValues {
+  return { firstName, lastName, email, jobTitle, startDate };
 }
 
 function dollars(cost: number): string {
