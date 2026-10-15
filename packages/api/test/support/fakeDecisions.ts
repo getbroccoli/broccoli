@@ -6,12 +6,12 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 /** A local decisions provider with scripted choices; unspecified questions answer none. */
 export async function startFakeDecisions() {
   let answers: Record<string, string | Answer>[] = [{}];
-  let requestCount = 0;
+  const requests: unknown[] = [];
   let status = 200;
   let nextAnswer: { received: () => void; released: Promise<void> } | undefined;
   const app = express().use(express.json());
   app.post("/alpha/decisions", async (request, response) => {
-    requestCount++;
+    requests.push(request.body);
     if (status !== 200) {
       response.status(status).json({ error: "Decisions unavailable" });
       return;
@@ -47,8 +47,9 @@ export async function startFakeDecisions() {
       apiKey: "test-model-key",
     }),
     get requestCount() {
-      return requestCount;
+      return requests.length;
     },
+    requests: (): unknown[] => requests,
     /** Answers each request in order, repeating the last script for later requests. */
     answer(next: Record<string, string | Answer>, ...following: Record<string, string | Answer>[]) {
       answers = [next, ...following];

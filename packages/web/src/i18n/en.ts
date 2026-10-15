@@ -103,7 +103,7 @@ export const en = {
   "imports.files.dropHint": "Staff lists or exports. Or click to choose.",
   "imports.files.limits": "CSV, up to 5 MB per file.",
   "imports.files.disclosure":
-    "The first rows of each file go to our AI provider to read the columns.",
+    "To read the columns, our AI provider sees the first rows of each file with names, emails and other personal details replaced by placeholders. It keeps nothing.",
   "imports.files.addMore": "Add more files",
   "imports.files.uploading": "Uploading {name}…",
   "imports.files.notCsv": "{name}: not a CSV file.",

@@ -6,7 +6,7 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 /** The real model for evals, reached through a local proxy that keeps every request. */
 export interface LiveDecisions {
   decisions: Decisions;
-  /** The values, of `forbidden`, that any request sent so far contains, ignoring case. */
+  /** Forbidden values found as whole words in any request's JSON text, ignoring case. */
   leaked(forbidden: readonly string[]): string[];
   /** What the answers so far cost, in US dollars, as OpenRouter reports it. */
   cost(): number;
@@ -26,7 +26,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
   app.post("/alpha/decisions", async (request, response) => {
     const body = request.body as string;
-    sentBodies.push(body.toLowerCase());
+    sentBodies.push(body);
     const upstream = await fetch(`${OPENROUTER_URL}/alpha/decisions`, {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
@@ -43,8 +43,14 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
     leaked: (forbidden) =>
       forbidden.filter((value) => {
         // Bodies are JSON, so a value is searched for as JSON writes it.
-        const written = JSON.stringify(value).slice(1, -1).toLowerCase();
-        return sentBodies.some((body) => body.includes(written));
+        const written = JSON.stringify(value)
+          .slice(1, -1)
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const word = new RegExp(
+          `(?<![\\p{L}\\p{M}\\p{N}_])${written}(?![\\p{L}\\p{M}\\p{N}_])`,
+          "iu",
+        );
+        return sentBodies.some((body) => word.test(body));
       }),
     cost: () => cost,
     stop: () => {

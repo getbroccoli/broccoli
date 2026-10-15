@@ -29,20 +29,14 @@ export function sheetQuestions(sheet: Sheet): {
 } {
   const { state, questions } = headerQuestion(sheet);
   const width = Math.max(...sheet.slice(0, HEADER_CANDIDATES).map((row) => row.length));
-  const options: Record<string, string> = {
-    ...Object.fromEntries(
-      Array.from({ length: width }, (_cell, index) => columnLetter(index)).map((letter) => [
-        letter,
-        `Column ${letter}`,
-      ]),
-    ),
-    [NONE]: "No column holds this",
-  };
   return {
     state,
     questions: {
       ...questions,
-      ...fieldQuestions(options, "Columns are lettered A, B, C… by their position in a row."),
+      ...fieldQuestions(
+        columnOptions(width),
+        "Columns are lettered A, B, C… by their position in a row.",
+      ),
     },
   };
 }
@@ -90,15 +84,6 @@ export function columnQuestions(
   const samples = sheet.slice(firstRow, firstRow + SAMPLE_ROWS);
   const width = Math.max(header?.length ?? 0, ...samples.map((row) => row.length));
   const letters = Array.from({ length: width }, (_cell, index) => columnLetter(index));
-  const options: Record<string, string> = {
-    ...Object.fromEntries(
-      letters.map((letter, index) => [
-        letter,
-        header ? `Column ${letter}: ${cutCell(header[index] ?? "")}` : `Column ${letter}`,
-      ]),
-    ),
-    [NONE]: "No column holds this",
-  };
   return {
     state: {
       columns: Object.fromEntries(
@@ -111,7 +96,7 @@ export function columnQuestions(
         ]),
       ),
     },
-    questions: fieldQuestions(options),
+    questions: fieldQuestions(columnOptions(width)),
   };
 }
 
@@ -209,6 +194,19 @@ const FIELD_QUESTIONS: Record<FileField, string> = {
 
 function firstRecordRow(headerRow: number | null): number {
   return headerRow === null ? 0 : headerRow + 1;
+}
+
+/** One option per column letter, and none. */
+function columnOptions(width: number): Record<string, string> {
+  return {
+    ...Object.fromEntries(
+      Array.from({ length: width }, (_cell, index) => columnLetter(index)).map((letter) => [
+        letter,
+        `Column ${letter}`,
+      ]),
+    ),
+    [NONE]: "No column holds this",
+  };
 }
 
 function fieldQuestions(

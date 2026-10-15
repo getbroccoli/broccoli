@@ -89,7 +89,11 @@ it("shows at most five samples below the chosen header", () => {
     },
   });
   for (const question of Object.values(questions)) {
-    expect(Object.keys(question.options)).toEqual(["A", "B", "none"]);
+    expect(question.options).toEqual({
+      A: "Column A",
+      B: "Column B",
+      none: "No column holds this",
+    });
   }
 });
 
