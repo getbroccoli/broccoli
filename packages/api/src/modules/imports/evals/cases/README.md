@@ -17,3 +17,21 @@
 - `spanish-contract-dates`: Factorial-style Spanish contract sheet distinguishes contract start from effective, end and birth dates, with a repeated manager-email decoy.
 - `dutch-payroll-names`: Nmbrs employee-tab columns distinguish legal given names from everyday names, employee surnames from partner surnames, and work emails from private emails.
 - `french-user-civility`: Sage-style French user CSV has surnames before given names, work emails under Login, civility and permission codes but no job title or start date.
+- `bamboohr-directory`: BambooHR-style employee report with legal First Name beside Preferred Name nicknames, month-first Hire Dates and "Last, First" supervisors.
+- `hibob-people`: HiBob-style people export with only a Display name column, split given-first including a "van" particle and a two-part given name, day-first start dates and a Reports to decoy.
+- `datev-lodas`: DATEV-style payroll export, semicolon-separated with German headings, Familienname before Vorname and Eintritt as start date; there is no email column, and tax ID, social security number, IBAN, birth and exit dates stay out.
+- `workday-worker`: Workday-style worker report with a Legal Name column including a middle name, Hire Date taken as the start over Original Hire Date, Primary Work Email, ISO dates and a Manager decoy.
+- `microsoft-365-users`: Microsoft 365-style user export with First name and Last name beside Display name, the user principal name as work email, an empty job title, no start date, and alternate email, mobile and When created decoys.
+- `personio-english`: Personio-style export with English attribute names, a hyphenated surname, ISO Hire dates and Supervisor, Cost center and Birthday decoys.
+- `occupational-surnames`: Dutch and German occupational surnames (Bakker, Visser, Smit, Müller, Schneider, Fischer, Meyer) beside job titles; surnames stay masked while the titles pass.
+- `job-word-surnames`: English surnames that are job words (Baker, Cook, Mason, Taylor, Smith, Porter) beside real job titles; surnames stay masked.
+- `heading-word-names`: Names partly made of heading words the lists allow (Junior, Born, Leiter, Team); those parts pass by design, every other part (Okafor, Lena, Max, Nia) must stay masked.
+- `repeated-manager`: Line manager and emergency contact repeated on every row; both stay masked and neither becomes a record.
+- `headerless-german`: No header row, German names and job titles, dotted day-first dates.
+- `headerless-many-rows`: No header row, 12 rows where job titles repeat across rows and names do not.
+- `headerless-name-email`: No header row and only two columns, full name and work email; job title and start date stay empty.
+- `mixed-language-headings`: Semicolon file mixing German and English headings (`Vorname`, `Last name`, `E-Mail`, `Job title`, `Eintrittsdatum`).
+- `totals-row`: Acme Corp staff export with a leading row-number column, a blank line, then a people count and an export timestamp; the footer sits in the unmapped number column, so only the four people become records.
+- `blank-columns-rows`: Staff sheet with empty columns between fields (blank headings), blank lines and a comma-only row between people; the four fields still map.
+- `wide-decoys`: Thirty-column UK payroll export with the five fields scattered among NI, tax, bank, IBAN, address, phone, personal-email, line-manager and emergency-contact decoys, plus birth and leaving dates.
+- `single-person`: One header row and one person; the single numeric start date 27/03/2023 has day above 12, so day-first order is known and parses to 2023-03-27.

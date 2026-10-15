@@ -1,0 +1,81 @@
+{
+  "records": [
+    {
+      "firstName": "Marcus",
+      "lastName": "Ellery",
+      "email": "marcus.ellery@acme-corp.example",
+      "jobTitle": "Operations Lead",
+      "startDate": "2021-03-14"
+    },
+    {
+      "firstName": "Tomasz",
+      "lastName": "Wrobel",
+      "email": "tomasz.wrobel@acme-corp.example",
+      "jobTitle": "Account Executive",
+      "startDate": "2022-08-02"
+    },
+    {
+      "firstName": "Ingrid",
+      "lastName": "Solberg",
+      "email": "ingrid.solberg@acme-corp.example",
+      "jobTitle": "Support Specialist",
+      "startDate": "2022-11-21"
+    },
+    {
+      "firstName": "Kwame",
+      "lastName": "Boateng",
+      "email": "kwame.boateng@acme-corp.example",
+      "jobTitle": "Data Analyst",
+      "startDate": "2023-05-09"
+    },
+    {
+      "firstName": "Lucia",
+      "lastName": "Ferraro",
+      "email": "lucia.ferraro@acme-corp.example",
+      "jobTitle": "Office Manager",
+      "startDate": "2024-01-16"
+    }
+  ],
+  "forbidden": [
+    "Marcus",
+    "Ellery",
+    "Marc",
+    "Marcus Ellery",
+    "marcus.ellery@acme-corp.example",
+    "101",
+    "Tomasz",
+    "Wrobel",
+    "Tommy",
+    "Tomasz Wrobel",
+    "tomasz.wrobel@acme-corp.example",
+    "102",
+    "Ingrid",
+    "Solberg",
+    "Inga",
+    "Ingrid Solberg",
+    "ingrid.solberg@acme-corp.example",
+    "103",
+    "Kwame",
+    "Boateng",
+    "Kobby",
+    "Kwame Boateng",
+    "kwame.boateng@acme-corp.example",
+    "104",
+    "Lucia",
+    "Ferraro",
+    "Lu",
+    "Lucia Ferraro",
+    "lucia.ferraro@acme-corp.example",
+    "105",
+    "Delia Hargrove",
+    "Delia",
+    "Hargrove",
+    "Owen Pellew",
+    "Owen",
+    "Pellew",
+    "Hargrove, Delia",
+    "Hargrove,",
+    "Pellew, Owen",
+    "Pellew,"
+  ]
+}

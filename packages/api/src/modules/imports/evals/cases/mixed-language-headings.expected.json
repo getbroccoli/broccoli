@@ -1,0 +1,50 @@
+{
+  "records": [
+    {
+      "firstName": "Hanna",
+      "lastName": "Kowalski",
+      "email": "hanna.kowalski@acme-corp.example",
+      "jobTitle": "Software Developer",
+      "startDate": "2024-01-15"
+    },
+    {
+      "firstName": "Felix",
+      "lastName": "Wagner",
+      "email": "felix.wagner@acme-corp.example",
+      "jobTitle": "Finance Assistant",
+      "startDate": "2023-07-02"
+    },
+    {
+      "firstName": "Mira",
+      "lastName": "Hoffmann",
+      "email": "mira.hoffmann@acme-corp.example",
+      "jobTitle": "Research Analyst",
+      "startDate": "2022-10-21"
+    },
+    {
+      "firstName": "Stefan",
+      "lastName": "Albrecht",
+      "email": "stefan.albrecht@acme-corp.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2025-03-09"
+    }
+  ],
+  "forbidden": [
+    "Hanna Kowalski",
+    "Hanna",
+    "Kowalski",
+    "hanna.kowalski@acme-corp.example",
+    "Felix Wagner",
+    "Felix",
+    "Wagner",
+    "felix.wagner@acme-corp.example",
+    "Mira Hoffmann",
+    "Mira",
+    "Hoffmann",
+    "mira.hoffmann@acme-corp.example",
+    "Stefan Albrecht",
+    "Stefan",
+    "Albrecht",
+    "stefan.albrecht@acme-corp.example"
+  ]
+}

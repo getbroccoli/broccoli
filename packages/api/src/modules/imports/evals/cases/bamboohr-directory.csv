@@ -1,0 +1,6 @@
+Employee #,First Name,Last Name,Preferred Name,Job Title,Hire Date,Supervisor,Work Email,Department,Location,Status
+101,Marcus,Ellery,Marc,Operations Lead,03/14/2021,"Hargrove, Delia",marcus.ellery@acme-corp.example,Operations,Austin,Active
+102,Tomasz,Wrobel,Tommy,Account Executive,08/02/2022,"Hargrove, Delia",tomasz.wrobel@acme-corp.example,Sales,Austin,Active
+103,Ingrid,Solberg,Inga,Support Specialist,11/21/2022,"Pellew, Owen",ingrid.solberg@acme-corp.example,Support,Denver,Active
+104,Kwame,Boateng,Kobby,Data Analyst,05/09/2023,"Pellew, Owen",kwame.boateng@acme-corp.example,Finance,Denver,Active
+105,Lucia,Ferraro,Lu,Office Manager,01/16/2024,,lucia.ferraro@acme-corp.example,Administration,Austin,Active

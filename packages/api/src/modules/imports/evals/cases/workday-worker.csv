@@ -1,0 +1,5 @@
+Employee ID,Legal Name,Business Title,Primary Work Email,Hire Date,Original Hire Date,Manager,Supervisory Organization
+W-30001,Priya Anand Rao,Backend Engineer,priya.rao@acme-corp.example,2022-02-14,2019-06-03,Delia Hargrove,Engineering
+W-30002,Oluwaseun Adebayo,Payroll Analyst,oluwaseun.adebayo@acme-corp.example,2021-09-27,2021-09-27,Owen Pellew,Finance
+W-30003,Mikael Johansson,Facilities Coordinator,mikael.johansson@acme-corp.example,2023-04-17,2016-01-11,Owen Pellew,Operations
+W-30004,Chiara Bellandi,Recruiter,chiara.bellandi@acme-corp.example,2024-01-08,2024-01-08,Delia Hargrove,People

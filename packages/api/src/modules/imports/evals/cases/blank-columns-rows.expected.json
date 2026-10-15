@@ -1,0 +1,50 @@
+{
+  "records": [
+    {
+      "firstName": "Rhiannon",
+      "lastName": "Pugh",
+      "email": "rhiannon.pugh@acme-corp.example",
+      "jobTitle": "Warehouse Supervisor",
+      "startDate": "2021-03-14"
+    },
+    {
+      "firstName": "Anselm",
+      "lastName": "Okafor",
+      "email": "anselm.okafor@acme-corp.example",
+      "jobTitle": "Payroll Clerk",
+      "startDate": "2022-11-02"
+    },
+    {
+      "firstName": "Saoirse",
+      "lastName": "Delaney",
+      "email": "saoirse.delaney@acme-corp.example",
+      "jobTitle": "Facilities Coordinator",
+      "startDate": "2023-09-25"
+    },
+    {
+      "firstName": "Margit",
+      "lastName": "Halvorsen",
+      "email": "margit.halvorsen@acme-corp.example",
+      "jobTitle": "Procurement Analyst",
+      "startDate": "2024-01-08"
+    }
+  ],
+  "forbidden": [
+    "Rhiannon Pugh",
+    "Rhiannon",
+    "Pugh",
+    "rhiannon.pugh@acme-corp.example",
+    "Anselm Okafor",
+    "Anselm",
+    "Okafor",
+    "anselm.okafor@acme-corp.example",
+    "Saoirse Delaney",
+    "Saoirse",
+    "Delaney",
+    "saoirse.delaney@acme-corp.example",
+    "Margit Halvorsen",
+    "Margit",
+    "Halvorsen",
+    "margit.halvorsen@acme-corp.example"
+  ]
+}

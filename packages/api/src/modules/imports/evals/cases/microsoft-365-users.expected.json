@@ -1,0 +1,58 @@
+{
+  "records": [
+    {
+      "firstName": "Hana",
+      "lastName": "Nováková",
+      "email": "hana.novakova@acme-corp.example",
+      "jobTitle": "IT Administrator",
+      "startDate": null
+    },
+    {
+      "firstName": "Liam",
+      "lastName": "O'Connor",
+      "email": "liam.oconnor@acme-corp.example",
+      "jobTitle": "Sales Director",
+      "startDate": null
+    },
+    {
+      "firstName": "Beatriz",
+      "lastName": "Cardoso",
+      "email": "beatriz.cardoso@acme-corp.example",
+      "jobTitle": "Marketing Specialist",
+      "startDate": null
+    },
+    {
+      "firstName": "Dmitri",
+      "lastName": "Volkov",
+      "email": "dmitri.volkov@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Hana Nováková",
+    "Hana",
+    "Nováková",
+    "hana.novakova@acme-corp.example",
+    "hana.n@mail.example",
+    "+420 555 010 101",
+    "Liam O'Connor",
+    "Liam",
+    "O'Connor",
+    "liam.oconnor@acme-corp.example",
+    "liam.oc@mail.example",
+    "+353 55 501 0102",
+    "Beatriz Cardoso",
+    "Beatriz",
+    "Cardoso",
+    "beatriz.cardoso@acme-corp.example",
+    "beatriz.c@mail.example",
+    "+351 555 010 103",
+    "Dmitri Volkov",
+    "Dmitri",
+    "Volkov",
+    "dmitri.volkov@acme-corp.example",
+    "dmitri.v@mail.example",
+    "+44 7700 900104"
+  ]
+}

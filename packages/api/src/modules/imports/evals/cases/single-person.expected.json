@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "firstName": "Margit",
+      "lastName": "Halvorsen",
+      "email": "margit.halvorsen@acme-corp.example",
+      "jobTitle": "Procurement Analyst",
+      "startDate": "2023-03-27"
+    }
+  ],
+  "forbidden": ["Margit Halvorsen", "Margit", "Halvorsen", "margit.halvorsen@acme-corp.example"]
+}

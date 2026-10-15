@@ -1,0 +1,62 @@
+{
+  "records": [
+    {
+      "firstName": "Helena",
+      "lastName": "Marsh",
+      "email": "helena.marsh@acme-corp.example",
+      "jobTitle": "Frontend Developer",
+      "startDate": "2021-05-03"
+    },
+    {
+      "firstName": "Andrei",
+      "lastName": "Popescu",
+      "email": "andrei.popescu@acme-corp.example",
+      "jobTitle": "QA Engineer",
+      "startDate": "2022-09-19"
+    },
+    {
+      "firstName": "Fiona",
+      "lastName": "Gallagher-Moss",
+      "email": "fiona.gallagher-moss@acme-corp.example",
+      "jobTitle": "Marketing Lead",
+      "startDate": "2023-02-27"
+    },
+    {
+      "firstName": "Yusuf",
+      "lastName": "Demir",
+      "email": "yusuf.demir@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": "2023-11-13"
+    }
+  ],
+  "forbidden": [
+    "P-5001",
+    "Helena",
+    "Marsh",
+    "helena.marsh@acme-corp.example",
+    "1992-10-21",
+    "P-5002",
+    "Andrei",
+    "Popescu",
+    "andrei.popescu@acme-corp.example",
+    "1989-04-08",
+    "P-5003",
+    "Fiona",
+    "Gallagher-Moss",
+    "fiona.gallagher-moss@acme-corp.example",
+    "1995-01-30",
+    "P-5004",
+    "Yusuf",
+    "Demir",
+    "yusuf.demir@acme-corp.example",
+    "1987-07-16",
+    "Gallagher",
+    "Moss",
+    "Delia Hargrove",
+    "Delia",
+    "Hargrove",
+    "Owen Pellew",
+    "Owen",
+    "Pellew"
+  ]
+}

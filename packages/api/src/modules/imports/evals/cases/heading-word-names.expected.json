@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "firstName": "Junior",
+      "lastName": "Okafor",
+      "email": "junior.okafor@acme-corp.example",
+      "jobTitle": "Maintenance Technician",
+      "startDate": "2024-02-18"
+    },
+    {
+      "firstName": "Lena",
+      "lastName": "Born",
+      "email": "lena.born@acme-corp.example",
+      "jobTitle": "Finance Assistant",
+      "startDate": "2023-09-07"
+    },
+    {
+      "firstName": "Max",
+      "lastName": "Leiter",
+      "email": "max.leiter@acme-corp.example",
+      "jobTitle": "Research Analyst",
+      "startDate": "2022-05-23"
+    },
+    {
+      "firstName": "Nia",
+      "lastName": "Team",
+      "email": "nia.team@acme-corp.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2024-11-04"
+    }
+  ],
+  "forbidden": [
+    "Junior Okafor",
+    "Okafor",
+    "junior.okafor@acme-corp.example",
+    "Lena Born",
+    "Lena",
+    "lena.born@acme-corp.example",
+    "Max Leiter",
+    "Max",
+    "max.leiter@acme-corp.example",
+    "Nia Team",
+    "Nia",
+    "nia.team@acme-corp.example"
+  ]
+}

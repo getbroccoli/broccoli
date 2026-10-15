@@ -1,0 +1,62 @@
+{
+  "records": [
+    {
+      "firstName": "Anneke",
+      "lastName": "van Dijk",
+      "email": "anneke.vandijk@acme-corp.example",
+      "jobTitle": "Senior Engineer",
+      "startDate": "2021-03-14"
+    },
+    {
+      "firstName": "Samira",
+      "lastName": "Haddad",
+      "email": "samira.haddad@acme-corp.example",
+      "jobTitle": "Product Designer",
+      "startDate": "2022-08-02"
+    },
+    {
+      "firstName": "Jonas",
+      "lastName": "Eklund",
+      "email": "jonas.eklund@acme-corp.example",
+      "jobTitle": "Customer Success Manager",
+      "startDate": "2022-11-21"
+    },
+    {
+      "firstName": "Rosa Maria",
+      "lastName": "Delgado",
+      "email": "rosa.delgado@acme-corp.example",
+      "jobTitle": "Finance Controller",
+      "startDate": "2023-05-09"
+    }
+  ],
+  "forbidden": [
+    "Anneke van Dijk",
+    "Anneke",
+    "van",
+    "Dijk",
+    "anneke.vandijk@acme-corp.example",
+    "E-2001",
+    "Samira Haddad",
+    "Samira",
+    "Haddad",
+    "samira.haddad@acme-corp.example",
+    "E-2002",
+    "Jonas Eklund",
+    "Jonas",
+    "Eklund",
+    "jonas.eklund@acme-corp.example",
+    "E-2003",
+    "Rosa Maria Delgado",
+    "Rosa",
+    "Maria",
+    "Delgado",
+    "rosa.delgado@acme-corp.example",
+    "E-2004",
+    "Delia Hargrove",
+    "Delia",
+    "Hargrove",
+    "Owen Pellew",
+    "Owen",
+    "Pellew"
+  ]
+}

@@ -1,0 +1,5 @@
+Personalnummer;Familienname;Vorname;Tätigkeit;Eintritt;Austritt;Geburtsdatum;Steuer-ID;Sozialversicherungsnummer;Steuerklasse;IBAN;Krankenkasse
+10001;Brandt;Katharina;Softwareentwicklerin;01.04.2021;31.03.2027;14.09.1990;12 345 678 901;65 140990 B 123;1;DE45 1000 0000 0000 0000 00;Musterkasse Nord
+10002;Lehmann;Jörg;Lagerist;15.08.2022;;03.02.1985;23 456 789 012;12 030285 L 456;3;DE12 2000 0000 0000 0000 01;Musterkasse Süd
+10003;Albrecht;Sabine;Sachbearbeiterin Buchhaltung;01.11.2022;;27.06.1993;34 567 890 123;53 270693 A 789;1;DE33 3000 0000 0000 0000 02;Musterkasse Nord
+10004;Yilmaz;Emre;Vertriebsmitarbeiter;20.03.2023;;11.12.1988;45 678 901 234;21 111288 Y 012;4;DE64 4000 0000 0000 0000 03;Musterkasse West

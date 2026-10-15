@@ -1,0 +1,72 @@
+{
+  "records": [
+    {
+      "firstName": "Emma",
+      "lastName": "Baker",
+      "email": "emma.baker@acme-corp.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2024-01-16"
+    },
+    {
+      "firstName": "Oliver",
+      "lastName": "Cook",
+      "email": "oliver.cook@acme-corp.example",
+      "jobTitle": "IT Support Technician",
+      "startDate": "2023-10-05"
+    },
+    {
+      "firstName": "Grace",
+      "lastName": "Mason",
+      "email": "grace.mason@acme-corp.example",
+      "jobTitle": "Customer Service Adviser",
+      "startDate": "2022-05-22"
+    },
+    {
+      "firstName": "Harry",
+      "lastName": "Taylor",
+      "email": "harry.taylor@acme-corp.example",
+      "jobTitle": "Accounts Assistant",
+      "startDate": "2024-12-09"
+    },
+    {
+      "firstName": "Zoe",
+      "lastName": "Smith",
+      "email": "zoe.smith@acme-corp.example",
+      "jobTitle": "Regional Sales Representative",
+      "startDate": "2023-07-30"
+    },
+    {
+      "firstName": "Ben",
+      "lastName": "Porter",
+      "email": "ben.porter@acme-corp.example",
+      "jobTitle": "Facilities Supervisor",
+      "startDate": "2025-03-11"
+    }
+  ],
+  "forbidden": [
+    "Emma Baker",
+    "Emma",
+    "Baker",
+    "emma.baker@acme-corp.example",
+    "Oliver Cook",
+    "Oliver",
+    "Cook",
+    "oliver.cook@acme-corp.example",
+    "Grace Mason",
+    "Grace",
+    "Mason",
+    "grace.mason@acme-corp.example",
+    "Harry Taylor",
+    "Harry",
+    "Taylor",
+    "harry.taylor@acme-corp.example",
+    "Zoe Smith",
+    "Zoe",
+    "Smith",
+    "zoe.smith@acme-corp.example",
+    "Ben Porter",
+    "Ben",
+    "Porter",
+    "ben.porter@acme-corp.example"
+  ]
+}

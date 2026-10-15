@@ -1,0 +1,61 @@
+{
+  "records": [
+    {
+      "firstName": "Ingrid",
+      "lastName": "Halvorsen",
+      "email": "ingrid.halvorsen@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Mateusz",
+      "lastName": "Wójcik",
+      "email": "mateusz.wojcik@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Priya",
+      "lastName": "Raman",
+      "email": "priya.raman@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Cormac",
+      "lastName": "O'Rourke",
+      "email": "cormac.orourke@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Yusuf",
+      "lastName": "Demir",
+      "email": "yusuf.demir@acme-corp.example",
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Ingrid Halvorsen",
+    "Ingrid",
+    "Halvorsen",
+    "ingrid.halvorsen@acme-corp.example",
+    "Mateusz Wójcik",
+    "Mateusz",
+    "Wójcik",
+    "mateusz.wojcik@acme-corp.example",
+    "Priya Raman",
+    "Priya",
+    "Raman",
+    "priya.raman@acme-corp.example",
+    "Cormac O'Rourke",
+    "Cormac",
+    "O'Rourke",
+    "cormac.orourke@acme-corp.example",
+    "Yusuf Demir",
+    "Yusuf",
+    "Demir",
+    "yusuf.demir@acme-corp.example"
+  ]
+}
