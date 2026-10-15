@@ -58,4 +58,4 @@ EVAL_OPEN_ROUTER_KEY=… pnpm --filter @broccoli/api eval
 EVAL_OPEN_ROUTER_KEY=… pnpm --filter @broccoli/api eval -t simple   # one case
 ```
 
-They call OpenRouter with your key, which costs money: a full run of the import cases costs well under one cent. Each case is one test: it fails when the saved result differs from the expected one, and lists the personal values of the file that reached the model. Evals never run in `pnpm check` or CI.
+They call OpenRouter with your key, which costs money: a full run of the import cases costs well under one cent. Each case is one test: it fails when the saved result differs from the expected one, lists the personal values of the file that reached the model and prints what its model calls cost; the run ends with its total cost. Evals never run in `pnpm check` or CI.

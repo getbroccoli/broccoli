@@ -1,13 +1,18 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { onTestFinished } from "vitest";
+import { afterAll, onTestFinished } from "vitest";
 
 import { expect, importUseCases, OWNER, startLiveDecisions, SYSTEM, test } from "#test/support";
 
 import type { ImportEmployeeValues, ImportSourceFailure } from "../domain";
 
 const CASES = join(import.meta.dirname, "cases");
+let totalCost = 0;
+
+afterAll(() => {
+  console.info(`Model cost of the run: ${dollars(totalCost)}`);
+});
 
 for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
   const name = file.slice(0, -".csv".length);
@@ -23,6 +28,8 @@ for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
       if (leaked.length > 0) {
         console.warn(`${name}: ${leaked.length} forbidden values reached the model:`, leaked);
       }
+      totalCost += model.cost();
+      console.info(`${name}: model cost ${dollars(model.cost())}`);
       return model.stop();
     });
     const imports = importUseCases(orm, { decisions: model.decisions });
@@ -48,6 +55,10 @@ for (const file of readdirSync(CASES).filter((name) => name.endsWith(".csv"))) {
       records: sorted(expected.records ?? []),
     });
   });
+}
+
+function dollars(cost: number): string {
+  return `$${cost.toFixed(6)}`;
 }
 
 /** Records in a fixed order, so the comparison ignores the order they are listed in. */

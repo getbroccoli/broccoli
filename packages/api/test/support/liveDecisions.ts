@@ -9,6 +9,8 @@ export interface LiveDecisions {
   decisions: Decisions;
   /** The values, of `forbidden`, that any request sent so far contains, ignoring case. */
   leaked(forbidden: readonly string[]): string[];
+  /** What the answers so far cost, in US dollars, as OpenRouter reports it. */
+  cost(): number;
   stop(): Promise<void>;
 }
 
@@ -19,6 +21,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
     throw new Error("Set EVAL_OPEN_ROUTER_KEY to run the evals");
   }
   const sentBodies: string[] = [];
+  let cost = 0;
   // The client's timeout ends only its call to the proxy; stopping ends the calls to OpenRouter too.
   const upstreamCalls = new AbortController();
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
@@ -31,10 +34,9 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
       body,
       signal: upstreamCalls.signal,
     });
-    response
-      .status(upstream.status)
-      .type("application/json")
-      .send(await upstream.text());
+    const answer = await upstream.text();
+    cost += readCost(answer);
+    response.status(upstream.status).type("application/json").send(answer);
   });
   const server = await startSimpleHttpServer(app);
   return {
@@ -45,6 +47,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
         const written = JSON.stringify(value).slice(1, -1).toLowerCase();
         return sentBodies.some((body) => body.includes(written));
       }),
+    cost: () => cost,
     stop: () => {
       upstreamCalls.abort();
       return server.stop();
@@ -53,3 +56,12 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
 }
 
 const OPENROUTER_URL = "https://openrouter.ai/api";
+
+function readCost(answer: string): number {
+  try {
+    const cost = (JSON.parse(answer) as { usage?: { cost?: unknown } }).usage?.cost;
+    return typeof cost === "number" ? cost : 0;
+  } catch {
+    return 0;
+  }
+}
