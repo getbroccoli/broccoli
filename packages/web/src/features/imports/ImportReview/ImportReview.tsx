@@ -13,6 +13,7 @@ import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
 
 import { IMPORT_REVIEW_COLUMNS } from "./importReviewColumns";
 import { type ImportReviewSearch, toImportReviewVariables } from "./importReviewSearch";
+import { ApproveNote } from "./ApproveNote";
 import { SourceChips } from "./SourceChips";
 
 const POLL_INTERVAL_MS = 2_000;
@@ -32,7 +33,8 @@ export function ImportReview() {
   );
   const { data, previousData, error, loading, refetch, startPolling, stopPolling } = useQuery(
     ImportReviewDocument,
-    { variables: toImportReviewVariables(search) },
+    // Sources change on the import page and in other tabs: show the cache, then refresh it.
+    { variables: toImportReviewVariables(search), fetchPolicy: "cache-and-network" },
   );
   const list = useListPage({
     search,
@@ -43,7 +45,7 @@ export function ImportReview() {
   });
   const sources = (data ?? previousData)?.import.sources ?? [];
   const reading = sources.some(({ status }) => status === "MAPPING");
-  // A file may still be read, such as after a Retry in another tab: poll until it is.
+  // A file is being read: poll until it is done.
   useEffect(() => {
     if (!reading) {
       return;
@@ -51,6 +53,16 @@ export function ImportReview() {
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
   }, [reading, startPolling, stopPolling]);
+  // Coming back from another tab, such as after a Retry there: read the import again.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        void refetch();
+      }
+    };
+    document.addEventListener("visibilitychange", refresh);
+    return () => document.removeEventListener("visibilitychange", refresh);
+  }, [refetch]);
   const [approveImport, { loading: approving }] = useMutation(ApproveImportDocument);
   const [approveFailed, setApproveFailed] = useState(false);
   const readyCount = (data ?? previousData)?.import.readyEmployeeCount ?? 0;
@@ -71,7 +83,8 @@ export function ImportReview() {
   return (
     <SetupStepForm
       width="wide"
-      onSubmit={() => void approve()}
+      // Enter in the search must not approve: only the Approve button does.
+      onSubmit={() => {}}
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <Link
@@ -84,7 +97,13 @@ export function ImportReview() {
           <div className="flex flex-wrap items-center justify-end gap-3">
             {data && <ApproveNote readyCount={readyCount} leftOutCount={leftOutCount} />}
             {readyCount > 0 && (
-              <Button type="submit" size="lg" className="h-10 px-4" disabled={approving || reading}>
+              <Button
+                type="button"
+                size="lg"
+                className="h-10 px-4"
+                disabled={approving || reading}
+                onClick={() => void approve()}
+              >
                 {approveLabel({ approving, reading, readyCount })}
               </Button>
             )}
@@ -155,23 +174,6 @@ export function ImportReview() {
       />
     );
   }
-}
-
-/** Who Approve leaves out, or that no one is ready; nothing when everyone is. */
-function ApproveNote({ readyCount, leftOutCount }: { readyCount: number; leftOutCount: number }) {
-  if (readyCount === 0) {
-    return <p className="text-sm text-muted-foreground">{t("setup.review.noneReady")}</p>;
-  }
-  if (leftOutCount === 0) {
-    return null;
-  }
-  return (
-    <p className="text-sm text-muted-foreground">
-      {leftOutCount === 1
-        ? t("setup.review.leftOutOne")
-        : t("setup.review.leftOut", { count: String(leftOutCount) })}
-    </p>
-  );
 }
 
 function approveLabel({

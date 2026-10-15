@@ -51,6 +51,18 @@ export function toConnection<T, K>(rows: { node: T; keyset: K }[], first: number
 }
 
 /** An opaque cursor: the keyset as base64url JSON. */
+/** A list's search text, trimmed, or null when blank; refused over 100 characters. */
+export function parseSearch(search: string | null | undefined): string | null {
+  const trimmed = search?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (trimmed.length > SEARCH_MAX_LENGTH) {
+    throw invalidInput([{ field: "search", code: "too_long" }]);
+  }
+  return trimmed;
+}
+
 function encodeCursor(keyset: unknown): string {
   return Buffer.from(JSON.stringify(keyset)).toString("base64url");
 }
@@ -62,16 +74,4 @@ function decodeCursor(cursor: string): unknown {
   } catch {
     return undefined;
   }
-}
-
-/** A list's search text, trimmed, or null when blank; refused over 100 characters. */
-export function parseSearch(search: string | null | undefined): string | null {
-  const trimmed = search?.trim();
-  if (!trimmed) {
-    return null;
-  }
-  if (trimmed.length > SEARCH_MAX_LENGTH) {
-    throw invalidInput([{ field: "search", code: "too_long" }]);
-  }
-  return trimmed;
 }
