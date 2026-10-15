@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@apollo/client/react";
 import { ArrowLeft, MagnifyingGlass, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { ApproveImportDocument, ImportReviewDocument } from "@/__generated__/graphql";
 import {
@@ -21,7 +21,7 @@ import { type ImportReviewSearch, toImportReviewVariables } from "./importReview
 import { ApproveNote } from "./ApproveNote";
 import { SourceChips } from "./SourceChips";
 
-const POLL_INTERVAL_MS = 2_000;
+const POLL_INTERVAL_MS = 5_000;
 
 /**
  * The setup review step: everyone the import found, read-only, and Approve. Approve
@@ -36,10 +36,15 @@ export function ImportReview() {
       void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
     [navigate],
   );
-  const { data, previousData, error, loading, refetch, startPolling, stopPolling } = useQuery(
+  const { data, previousData, error, loading, refetch } = useQuery(
     ImportReviewDocument,
-    // Sources change on the import page and in other tabs: show the cache, then refresh it.
-    { variables: toImportReviewVariables(search), fetchPolicy: "cache-and-network" },
+    // Sources change on the import page, while files are read and in other tabs: show the
+    // cache, refresh it on entry, and keep polling while the review is open.
+    {
+      variables: toImportReviewVariables(search),
+      fetchPolicy: "cache-and-network",
+      pollInterval: POLL_INTERVAL_MS,
+    },
   );
   const list = useListPage({
     search,
@@ -50,24 +55,6 @@ export function ImportReview() {
   });
   const sources = (data ?? previousData)?.import.sources ?? [];
   const reading = sources.some(({ status }) => status === "MAPPING");
-  // A file is being read: poll until it is done.
-  useEffect(() => {
-    if (!reading) {
-      return;
-    }
-    startPolling(POLL_INTERVAL_MS);
-    return stopPolling;
-  }, [reading, startPolling, stopPolling]);
-  // Coming back from another tab, such as after a Retry there: read the import again.
-  useEffect(() => {
-    const refresh = () => {
-      if (document.visibilityState === "visible") {
-        void refetch();
-      }
-    };
-    document.addEventListener("visibilitychange", refresh);
-    return () => document.removeEventListener("visibilitychange", refresh);
-  }, [refetch]);
   const [approveImport, { loading: approving }] = useMutation(ApproveImportDocument);
   const [approveFailed, setApproveFailed] = useState(false);
   const readyCount = (data ?? previousData)?.import.readyEmployeeCount ?? 0;
