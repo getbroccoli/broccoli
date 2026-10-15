@@ -24,5 +24,4 @@ The words Broccoli's code and docs use, and what each one means.
 - **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
 - **Import source**: one place people come from, such as the connected Slack workspace. It owns its import records.
 - **Import record**: one record as one source proposes it, such as an import employee, with the source's values as they came; not yet a record of its module.
-- **Approve**: turns the import's complete employee records into employees and completes setup. Incomplete records, such as one without a last name, stay in the import.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.
