@@ -12,7 +12,7 @@ export type IncompleteReason = "firstName" | "lastName" | "email" | "other";
 const NAMED_REASONS: readonly IncompleteReason[] = ["firstName", "lastName", "email"];
 
 /** The employee an import record would become, or null when it is incomplete. */
-export function readyEmployee(record: ImportEmployee): NewEmployee | null {
+export function toNewEmployee(record: ImportEmployee): NewEmployee | null {
   return tryParseNewEmployee(toNewEmployeeInput(record));
 }
 

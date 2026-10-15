@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { ImportEmployee } from "../../domain";
-import { incompleteReason, readyEmployee } from "./importEmployeeService";
+import { incompleteReason, toNewEmployee } from "./importEmployeeService";
 
 const record: ImportEmployee = {
   id: "employee-1",
@@ -14,7 +14,7 @@ const record: ImportEmployee = {
 };
 
 it("returns the normalised employee and no incomplete reason for a complete record", () => {
-  expect(readyEmployee(record)).toEqual({
+  expect(toNewEmployee(record)).toEqual({
     firstName: "Avery",
     lastName: "Stone",
     email: "avery@example.com",
@@ -37,7 +37,7 @@ it.each([
 ])("leaves out a record with $description and reports $reason", ({ values, reason }) => {
   const incomplete = { ...record, ...values };
 
-  expect(readyEmployee(incomplete)).toBeNull();
+  expect(toNewEmployee(incomplete)).toBeNull();
   expect(incompleteReason(incomplete)).toBe(reason);
 });
 
