@@ -14,16 +14,26 @@ export interface Answer {
   confidence: number;
 }
 
-/** Per question, the answer, or null when the model is not confident enough. */
+/** Per question, the answer, or null when its confidence is under the caller's minimum. */
 export type Answers<Q extends Record<string, Question>> = { [Id in keyof Q]: Answer | null };
 
 /** Asks the model multiple-choice questions; the only way a request reaches it. */
 export interface Decisions {
-  /** Asks every question about `state` in one request. Rejects with `DecisionsError`. */
-  decide<Q extends Record<string, Question>>(state: JsonObject, questions: Q): Promise<Answers<Q>>;
+  /**
+   * Asks every question about `state` in one request; an answer under `minConfidence`
+   * (default `DEFAULT_MIN_CONFIDENCE`) is null. Rejects with `DecisionsError`.
+   */
+  decide<Q extends Record<string, Question>>(
+    state: JsonObject,
+    questions: Q,
+    minConfidence?: number,
+  ): Promise<Answers<Q>>;
 }
 
 export const DECISIONS_MODEL = "typesafe/jev-1.13";
+
+/** Under this, an answer is a guess and counts as no answer. */
+const DEFAULT_MIN_CONFIDENCE = 0.8;
 
 /** A failed request; a `retryable` one may succeed later unchanged. */
 export class DecisionsError extends Error {
@@ -49,6 +59,7 @@ export function createDecisions({
     decide: async <Q extends Record<string, Question>>(
       state: JsonObject,
       questions: Q,
+      minConfidence = DEFAULT_MIN_CONFIDENCE,
     ): Promise<Answers<Q>> => {
       const response = await post(`${url}/alpha/decisions`, apiKey, timeoutMs, {
         model: DECISIONS_MODEL,
@@ -67,13 +78,10 @@ export function createDecisions({
           RETRYABLE_STATUSES.has(response.status) || response.status >= 500,
         );
       }
-      return readAnswers(parseJson(await readBody(response)), questions);
+      return readAnswers(parseJson(await readBody(response)), questions, minConfidence);
     },
   };
 }
-
-/** Under this, an answer is a guess and counts as no answer. */
-const MIN_CONFIDENCE = 0.8;
 
 const RETRYABLE_STATUSES = new Set([408, 429]);
 
@@ -116,7 +124,11 @@ function parseJson(text: string): unknown {
   }
 }
 
-function readAnswers<Q extends Record<string, Question>>(body: unknown, questions: Q): Answers<Q> {
+function readAnswers<Q extends Record<string, Question>>(
+  body: unknown,
+  questions: Q,
+  minConfidence: number,
+): Answers<Q> {
   const parsed = responseSchema.safeParse(body);
   if (!parsed.success) {
     throw new DecisionsError("The model's answer is unreadable", false);
@@ -128,7 +140,7 @@ function readAnswers<Q extends Record<string, Question>>(body: unknown, question
       throw new DecisionsError(`The model gave no valid answer to "${id}"`, false);
     }
     answers[id] =
-      answer.confidence < MIN_CONFIDENCE
+      answer.confidence < minConfidence
         ? null
         : { choice: answer.choice, confidence: answer.confidence };
   }
