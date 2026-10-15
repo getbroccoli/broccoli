@@ -1,6 +1,14 @@
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import { slackConnection } from "./slackConnectionTable";
 
+/** The Slack connection row, through the pool or inside a transaction. */
+export interface SlackConnectionRepository {
+  read(): Promise<StoredSlackConnection | null>;
+  /** Like `read`, and locks the row until the transaction ends. */
+  lock(): Promise<StoredSlackConnection | null>;
+  save(connection: StoredSlackConnection): Promise<void>;
+}
+
 /** The connected workspace as stored; the token stays encrypted. */
 export interface StoredSlackConnection {
   teamId: string;
@@ -8,10 +16,7 @@ export interface StoredSlackConnection {
   encryptedToken: string;
 }
 
-export type SlackConnectionRepository = ReturnType<typeof slackConnectionRepository>;
-
-/** The Slack connection row, through the pool or inside a transaction. */
-export function slackConnectionRepository(db: Orm | Tx) {
+export function slackConnectionRepository(db: Orm | Tx): SlackConnectionRepository {
   const orm = () => ormOf(db);
 
   return {
@@ -20,7 +25,6 @@ export function slackConnectionRepository(db: Orm | Tx) {
       return row ?? null;
     },
 
-    /** Like `read`, and locks the row until the transaction ends. */
     lock: async (): Promise<StoredSlackConnection | null> => {
       const [row] = await orm().select(columns).from(slackConnection).for("update");
       return row ?? null;

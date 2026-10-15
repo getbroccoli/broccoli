@@ -20,6 +20,25 @@ import {
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
 
+/** The import's sources and records, through the pool or inside a transaction. */
+export interface ImportRepository {
+  /** Creates the Slack source or renames it, marks it read now and returns its id. */
+  saveSlackSource(name: string): Promise<string>;
+  /**
+   * Makes the source's employee records match `records` by external id: updates the
+   * ones still there, so their ids stay, adds new ones and deletes the rest.
+   */
+  syncEmployeeRecords(sourceId: string, records: IncomingRecord[]): Promise<void>;
+  listSources(): Promise<ImportSource[]>;
+  findSources(ids: readonly string[]): Promise<ImportSource[]>;
+  /** The number of employee records of each source that has any; the others are absent. */
+  countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
+  /** Up to `first + 1` employee records after `after`, by name; the extra one signals a next page. */
+  findEmployeePage(
+    query: ImportEmployeePageQuery,
+  ): Promise<{ node: ImportEmployee; keyset: ImportEmployeeKeyset }[]>;
+}
+
 /** The sort values of the last employee record seen: first name, last name, id. */
 export type ImportEmployeeKeyset = [firstName: string, lastName: string, id: string];
 
@@ -36,14 +55,10 @@ export interface ImportEmployeePageQuery {
   sourceId: string | null;
 }
 
-export type ImportRepository = ReturnType<typeof importRepository>;
-
-/** The import's sources and records, through the pool or inside a transaction. */
-export function importRepository(db: Orm | Tx) {
+export function importRepository(db: Orm | Tx): ImportRepository {
   const orm = () => ormOf(db);
 
   return {
-    /** Creates the Slack source or renames it, marks it read now and returns its id. */
     saveSlackSource: async (name: string): Promise<string> => {
       const [row] = await orm()
         .insert(importSources)
@@ -57,10 +72,6 @@ export function importRepository(db: Orm | Tx) {
       return row!.id;
     },
 
-    /**
-     * Makes the source's employee records match `records` by external id: updates the
-     * ones still there, so their ids stay, adds new ones and deletes the rest.
-     */
     syncEmployeeRecords: async (sourceId: string, records: IncomingRecord[]): Promise<void> => {
       const ofSource = and(
         eq(importRecords.sourceId, sourceId),
@@ -113,7 +124,6 @@ export function importRepository(db: Orm | Tx) {
         .from(importSources)
         .where(inArray(importSources.id, [...ids])),
 
-    /** The number of employee records of each source that has any; the others are absent. */
     countEmployees: async (sourceIds: readonly string[]): Promise<Map<string, number>> => {
       const rows = await orm()
         .select({ sourceId: importRecords.sourceId, count: count() })
@@ -125,7 +135,6 @@ export function importRepository(db: Orm | Tx) {
       return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
     },
 
-    /** Up to `first + 1` employee records after `after`, by name; the extra one signals a next page. */
     findEmployeePage: async ({ first, after, sourceId }: ImportEmployeePageQuery) => {
       const rows = await orm()
         .select({ record: importRecords, firstName: FIRST_NAME, lastName: LAST_NAME })

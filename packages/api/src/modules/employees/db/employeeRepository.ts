@@ -15,6 +15,22 @@ import {
 import { EmailTakenError, type Employee, type NewEmployee } from "../domain";
 import { employees } from "./employeesTable";
 
+/** Employees stored in Postgres, through the pool or inside a transaction. */
+export interface EmployeeRepository {
+  /** Throws `EmailTakenError` when another employee has the email. */
+  insert(newEmployee: EmployeeRow): Promise<Employee>;
+  /** Inserts employees in one statement; throws `EmailTakenError` like `insert`. */
+  insertMany(newEmployees: readonly EmployeeRow[]): Promise<void>;
+  /** Deletes every demo employee; returns the ids of the avatar files they owned. */
+  deleteDemo(): Promise<string[]>;
+  hasAny(): Promise<boolean>;
+  hasDemo(): Promise<boolean>;
+  /** Whether an employee's avatar is this file. */
+  hasAvatar(fileId: string): Promise<boolean>;
+  /** Up to `first + 1` employees after `after`; the extra one signals a next page. */
+  findPage(query: EmployeePageQuery): Promise<{ node: Employee; keyset: EmployeeKeyset }[]>;
+}
+
 const EMAIL_UNIQUE_CONSTRAINT = "employees_email_unique";
 
 export interface EmployeeOrder {
@@ -36,8 +52,6 @@ export function employeeKeyset({ field, direction }: EmployeeOrder): z.ZodType<E
   return z.tuple([z.literal(field), z.literal(direction), ...KEYSET_VALUES[field]]);
 }
 
-export type EmployeeRepository = ReturnType<typeof employeeRepository>;
-
 export interface EmployeePageQuery {
   first: number;
   after: EmployeeKeyset | null;
@@ -46,12 +60,10 @@ export interface EmployeePageQuery {
   search: string | null;
 }
 
-/** Employees stored in Postgres, through the pool or inside a transaction. */
-export function employeeRepository(db: Orm | Tx) {
+export function employeeRepository(db: Orm | Tx): EmployeeRepository {
   const orm = () => ormOf(db);
 
   return {
-    /** Throws `EmailTakenError` when another employee has the email. */
     insert: async (newEmployee: EmployeeRow): Promise<Employee> => {
       try {
         const [employee] = await orm().insert(employees).values(newEmployee).returning();
@@ -61,7 +73,6 @@ export function employeeRepository(db: Orm | Tx) {
       }
     },
 
-    /** Inserts employees in one statement; throws `EmailTakenError` like `insert`. */
     insertMany: async (newEmployees: readonly EmployeeRow[]): Promise<void> => {
       try {
         await orm()
@@ -72,7 +83,6 @@ export function employeeRepository(db: Orm | Tx) {
       }
     },
 
-    /** Deletes every demo employee; returns the ids of the avatar files they owned. */
     deleteDemo: async (): Promise<string[]> => {
       const rows = await orm()
         .delete(employees)
@@ -85,10 +95,8 @@ export function employeeRepository(db: Orm | Tx) {
 
     hasDemo: () => exists(orm(), eq(employees.isDemo, true)),
 
-    /** Whether an employee's avatar is this file. */
     hasAvatar: (fileId: string) => exists(orm(), eq(employees.avatarFileId, fileId)),
 
-    /** Up to `first + 1` employees after `after`; the extra one signals a next page. */
     findPage: async ({ first, after, order, search }: EmployeePageQuery) => {
       const columns = keysetColumns(order);
       const keys = Object.fromEntries(
