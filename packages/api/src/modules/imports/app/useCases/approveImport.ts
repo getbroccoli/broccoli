@@ -1,10 +1,10 @@
 import { ApplicationError } from "../../../../core/applicationError";
 import { advanceStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import { createImportedEmployees, type NewEmployeeInput } from "../../../employees";
+import { createImportedEmployees } from "../../../employees";
 import { importRepository } from "../../db";
-import type { ImportEmployee } from "../../domain";
 import type { ImportContext } from "./importContext";
+import { toNewEmployeeInput } from "./readyEmployee";
 
 /**
  * Turns the import's employee records into employees and completes setup, in one
@@ -32,15 +32,4 @@ export async function approveImport(
   if (result) {
     logger.info(result, "Approved the import");
   }
-}
-
-/** Missing names and emails become empty, so the employee rules count the record as incomplete. */
-function toNewEmployeeInput(record: ImportEmployee): NewEmployeeInput {
-  return {
-    firstName: record.firstName ?? "",
-    lastName: record.lastName ?? "",
-    email: record.email ?? "",
-    jobTitle: record.jobTitle,
-    startDate: record.startDate,
-  };
 }
