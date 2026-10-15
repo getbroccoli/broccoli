@@ -54,7 +54,7 @@ it("keeps each Slack user id once", () => {
 it.each([
   { first_name: " ", last_name: "Stone" },
   { first_name: "Avery", last_name: " " },
-])("keeps an uncertain profile real name whole when either name is blank: %j", (names) => {
+])("splits the profile real name when either name is blank: %j", (names) => {
   const [record] = mapSlackMembers([
     {
       id: "U1",
@@ -64,7 +64,7 @@ it.each([
     },
   ]);
 
-  expect(record?.values).toMatchObject({ firstName: "Avery Robin Stone", lastName: null });
+  expect(record?.values).toMatchObject({ firstName: "Avery Robin", lastName: "Stone" });
 });
 
 it("falls back to the member real name when the profile real name is blank", () => {

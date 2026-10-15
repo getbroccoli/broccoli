@@ -17,13 +17,25 @@ export function parseEmail(raw: string | undefined): string | null {
 type PersonName = Pick<ImportEmployeeValues, "firstName" | "lastName">;
 
 /**
- * A full name split where the split is certain: two Latin words, or a Cyrillic name with a
- * patronymic. Any other name stays whole in `firstName` for the owner to check.
+ * A full name split given name first, as UK staff lists write it: the last word, with any
+ * particles before it (`van der Meer`), is the surname. A Cyrillic name with a patronymic
+ * is read in either order. Any other name stays whole in `firstName` for the owner to check.
  */
 export function splitFullName(fullName: string): PersonName {
-  const words = fullName.trim().split(/\s+/);
-  if (words.length === 2 && words.every((word) => LATIN_WORD.test(word))) {
-    return { firstName: words[0]!, lastName: words[1]! };
+  const words = withoutTitle(fullName.trim().split(/\s+/));
+  if (words.length > 1 && words.every((word) => LATIN_WORD.test(word) && !NASAB.test(word))) {
+    let surnameStart = words.length - 1;
+    while (surnameStart > 0 && PARTICLES.has(words[surnameStart - 1]!)) {
+      surnameStart--;
+    }
+    if (surnameStart === 0) {
+      // Only particles before the last word: no given name to keep, so they stay in front.
+      surnameStart = words.length - 1;
+    }
+    return {
+      firstName: words.slice(0, surnameStart).join(" "),
+      lastName: words.slice(surnameStart).join(" "),
+    };
   }
   if (words.length === 3 && words.every((word) => CYRILLIC_WORD.test(word))) {
     const [first, second, third] = words as [string, string, string];
@@ -61,6 +73,32 @@ export function splitFullNames(fullNames: readonly (string | null)[]): PersonNam
   });
 }
 
+/** Drops a leading title such as `Mr` or `Dr.` when a name follows it. */
+function withoutTitle(words: string[]): string[] {
+  return words.length > 1 && TITLE.test(words[0]!) ? words.slice(1) : words;
+}
+
+const TITLE = /^(mr|mrs|ms|miss|mx|dr|prof)\.?$/i;
+/** Lowercase surname particles, as in van der Meer or de la Fontaine. */
+const PARTICLES = new Set([
+  "van",
+  "der",
+  "den",
+  "de",
+  "la",
+  "le",
+  "du",
+  "da",
+  "das",
+  "do",
+  "dos",
+  "von",
+  "di",
+  "del",
+  "della",
+]);
+/** `bin`, `binti`: a name that names its father, with no family name. */
+const NASAB = /^(bin|binti|bint|ibn)$/i;
 const LATIN_WORD = /^[\p{Script=Latin}'’-]+$/u;
 const CYRILLIC_WORD = /^[\p{Script=Cyrillic}-]+$/u;
 /** Russian, Ukrainian and Belarusian patronymic endings, such as Ильич or Іванівна. */

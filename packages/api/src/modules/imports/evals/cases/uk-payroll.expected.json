@@ -1,0 +1,80 @@
+{
+  "records": [
+    {
+      "firstName": "Nora Jane",
+      "lastName": "Whitcombe",
+      "email": "nora.whitcombe@acme-corp.example",
+      "jobTitle": "Payroll Administrator",
+      "startDate": null
+    },
+    {
+      "firstName": "Priya",
+      "lastName": "Fenwick",
+      "email": "priya.fenwick@acme-corp.example",
+      "jobTitle": "Research Lead",
+      "startDate": null
+    },
+    {
+      "firstName": "Anna",
+      "lastName": "Reed-Hartley",
+      "email": "anna.reed-hartley@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": null
+    },
+    {
+      "firstName": "Siobhan",
+      "lastName": "O'Vale",
+      "email": "siobhan.ovale@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Lucas",
+      "lastName": "de Souza",
+      "email": "lucas.desouza@acme-corp.example",
+      "jobTitle": "Office Manager",
+      "startDate": null
+    },
+    {
+      "firstName": "Evan",
+      "lastName": "Brindle",
+      "email": "evan.brindle@acme-corp.example",
+      "jobTitle": "Recruiter",
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Mrs",
+    "Nora",
+    "Jane",
+    "Nora Jane",
+    "Whitcombe",
+    "Nora Jane Whitcombe",
+    "Mrs Nora Jane Whitcombe",
+    "nora.whitcombe@acme-corp.example",
+    "Dr.",
+    "Priya",
+    "Fenwick",
+    "Priya Fenwick",
+    "Dr. Priya Fenwick",
+    "priya.fenwick@acme-corp.example",
+    "Anna",
+    "Reed-Hartley",
+    "Anna Reed-Hartley",
+    "anna.reed-hartley@acme-corp.example",
+    "Siobhan",
+    "O'Vale",
+    "Siobhan O'Vale",
+    "siobhan.ovale@acme-corp.example",
+    "Lucas",
+    "de",
+    "Souza",
+    "de Souza",
+    "Lucas de Souza",
+    "lucas.desouza@acme-corp.example",
+    "Evan",
+    "Brindle",
+    "Evan Brindle",
+    "evan.brindle@acme-corp.example"
+  ]
+}

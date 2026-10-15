@@ -1,7 +1,8 @@
-- `simple`: Comma delimiter, first-row header, two-word Latin names split and uncertain names kept whole, lowercased work emails, job titles and ISO start dates.
+- `simple`: Comma delimiter, first-row header, given-first Latin names including middle names, lowercased work emails, job titles and ISO start dates.
+- `uk-payroll`: UK payroll headings, leading titles, middle names, double-barrelled and apostrophised surnames, lowercase surname particles and plain two-word names.
 - `comma-names`: A whole column of quoted family-first comma names preserves compound family names.
 - `russian-fio`: Russian headings and patronymics in either order; initials and two-word Cyrillic names stay whole.
-- `world-names`: Hyphenated and apostrophised Latin names split; uncertain multiword names, native CJK and mononyms stay whole.
+- `world-names`: Given-first Latin names split, including hyphens, apostrophes and surname particles; native CJK, mononyms and names containing binti stay whole.
 - `title-row-semicolons`: Title and blank line before a semicolon table, day-first dates and an empty work email.
 - `tabs-month-first`: Tab delimiter, reordered columns and month-first dates.
 - `split-names`: Separate first and last names take precedence over display names.

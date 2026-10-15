@@ -8,15 +8,15 @@
       "startDate": null
     },
     {
-      "firstName": "Lucía Vega Rojas",
-      "lastName": null,
+      "firstName": "Lucía Vega",
+      "lastName": "Rojas",
       "email": null,
       "jobTitle": null,
       "startDate": null
     },
     {
-      "firstName": "Eva van der Meer",
-      "lastName": null,
+      "firstName": "Eva",
+      "lastName": "van der Meer",
       "email": null,
       "jobTitle": null,
       "startDate": null
@@ -49,12 +49,14 @@
     "Anne-Marie O'Brien",
     "Lucía",
     "Vega",
+    "Lucía Vega",
     "Rojas",
     "Lucía Vega Rojas",
     "Eva",
     "van",
     "der",
     "Meer",
+    "van der Meer",
     "Eva van der Meer",
     "林美玲",
     "Wening",

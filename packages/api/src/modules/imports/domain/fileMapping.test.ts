@@ -217,12 +217,12 @@ it("reads every row without a header with letter keys and one-based sheet ids", 
   ]);
 });
 
-it("keeps an uncertain full name whole for review", () => {
+it("splits a full name into given and middle names and a surname", () => {
   const [record] = readFileRecords([["Name"], ["Avery Robin Stone"]], 0, {
     ...UNMAPPED,
     fullName: 0,
   });
-  expect(record?.values).toMatchObject({ firstName: "Avery Robin Stone", lastName: null });
+  expect(record?.values).toMatchObject({ firstName: "Avery Robin", lastName: "Stone" });
 });
 
 it("uses separate name columns ahead of the full name", () => {
