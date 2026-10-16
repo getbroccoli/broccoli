@@ -10,7 +10,7 @@ A manual check of the People page against a development stack.
 
 ## List and paging
 
-- [ ] `/people` shows 50 people in name order, each with an avatar (initials when there is none), email link, job title and start date ("4 Mar 2024"; "—" when missing).
+- [ ] `/people` shows 50 people in name order, each with an avatar (initials when there is none), email link, job title and start date in the browser's locale ("Mar 4, 2024" in English (US), "4 Mar 2024" in English (UK); "—" when missing).
 - [ ] "Next page" shows the rest; it is disabled on the last page, and "First page" is disabled on the first.
 - [ ] Reload keeps the page; the browser Back button returns to the previous page.
 - [ ] With 50 people or fewer the footer is hidden.
