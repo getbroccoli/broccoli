@@ -1,5 +1,7 @@
 import { Worker } from "node:worker_threads";
 
+import { oneReadAtATime } from "./oneReadAtATime";
+
 /** A visible sheet's rows of strings. */
 export interface XlsxSheet {
   name: string;
@@ -9,18 +11,12 @@ export interface XlsxSheet {
 /**
  * The visible sheets of an Excel workbook that hold any value, in workbook order; null when it
  * cannot be read. Formulas are never evaluated: a cell reads the value its application saved.
- * Dates read `yyyy-mm-dd`; cells are trimmed and rows without any value dropped. Workbooks are
- * read one at a time.
+ * Dates read `yyyy-mm-dd`; cells are trimmed and rows without any value dropped. It waits for
+ * any other heavy read to finish.
  */
 export function parseXlsx(bytes: Uint8Array, timeoutMs = 30_000): Promise<XlsxSheet[] | null> {
-  // One at a time: each read may hold a few hundred megabytes of buffers.
-  const sheets = queue.then(() => readInWorker(bytes, timeoutMs));
-  // The next read waits for this one, whether it succeeded or not.
-  queue = sheets.catch(() => undefined);
-  return sheets;
+  return oneReadAtATime(() => readInWorker(bytes, timeoutMs));
 }
-
-let queue: Promise<unknown> = Promise.resolve();
 
 /**
  * Why a worker: the reader allocates whatever the file asks for (rows padded up to the farthest
