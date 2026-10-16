@@ -1,4 +1,4 @@
-import { type Cell, pageLines, texts } from "./pdfLines";
+import { type Cell, isDirectlyBelow, joinWrapped, pageLines, texts } from "./pdfLines";
 import type { PdfPage } from "../../../utils";
 import type { FileSheet } from "./sheet";
 
@@ -8,7 +8,8 @@ import type { FileSheet } from "./sheet";
  * the first label that repeats, or at the one-cell unlabelled line above each of them, which then
  * is a first column with an empty header: the person's name. Without a repeating label, three or
  * more labelled lines are one person. Text above the first block is dropped, and so is a line in
- * a page's band below it without a label in any cell; labelled lines are never noise. Null when there is
+ * a page's band below it without a label in any cell; labelled lines are never noise. An
+ * unlabelled line directly under a value is the rest of that value, wrapped. Null when there is
  * no block, or when a line below the first is none of these, or repeats a label of its block.
  * Also which pages start a person's block: the pages the list is read from.
  */
@@ -29,12 +30,26 @@ export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: bool
   const blockStarts = new Set(starts.map((start) => (named ? start - 1 : start)));
   const header = named ? [""] : [];
   const blocks: Map<string, string>[] = [];
+  let labelled: { label: string; cells: Cell[] } | undefined;
   for (let index = Math.min(...blockStarts); index < lines.length; index += 1) {
-    const { cells, field, inBand } = lines[index]!;
+    const { cells, field, inBand, page } = lines[index]!;
     if (blockStarts.has(index)) {
       blocks.push(new Map(named ? [["", cells[0]!.text]] : []));
     }
     const block = blocks.at(-1)!;
+    const above = lines[index - 1];
+    if (
+      field === null &&
+      labelled !== undefined &&
+      !blockStarts.has(index) &&
+      above?.page === page &&
+      isDirectlyBelow(lines[index]!, above.y) &&
+      isUnderValue(cells, labelled.cells)
+    ) {
+      block.set(labelled.label, joinWrapped(block.get(labelled.label)!, texts(cells).join(" ")));
+      continue;
+    }
+    labelled = field === null ? undefined : { label: field.label, cells };
     if (field === null) {
       const isNoise = inBand && !cells.some(({ text }) => isLabelled(text));
       if (!blockStarts.has(index) && !isNoise) {
@@ -60,6 +75,16 @@ export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: bool
     ],
     pages: pages.map((_page, index) => startPages.has(index)),
   };
+}
+
+/**
+ * Text that starts right of a labelled line's start and before its end: under its value, where a
+ * value wrapped onto the next line goes, not at the label, where the next person's name starts.
+ */
+function isUnderValue(cells: Cell[], labelled: Cell[]): boolean {
+  const start = cells[0]!.x;
+  const line = labelled[0]!;
+  return start > line.x + line.tolerance && start < labelled.at(-1)!.end;
 }
 
 /** The first label that occurs again later: the label each person's block starts with. */

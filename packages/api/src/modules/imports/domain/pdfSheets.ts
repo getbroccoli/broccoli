@@ -79,12 +79,14 @@ function isTotal(line: Cell[]): boolean {
 
 /**
  * Every cell starts at a column of the header, and none runs over the start of a column that has
- * no cell of its own in the line, as prose does.
+ * no cell of its own in the line, as prose does. A lone cell is a row only in the first column: a
+ * person with only a name. Elsewhere it is text away from the value it might belong to.
  */
 function isRow(line: Cell[], header: Cell[]): boolean {
   const isFilled = (x: number) => line.some((cell) => Math.abs(cell.x - x) <= cell.tolerance);
   return (
     linesUp(line, header) &&
+    (line.length > 1 || isFilled(header[0]!.x)) &&
     !line.some((cell) =>
       header.some(
         ({ x }) => x > cell.x + cell.tolerance && x < cell.end - cell.tolerance && !isFilled(x),

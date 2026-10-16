@@ -3,18 +3,32 @@ import type { PdfPage, PdfTextItem } from "../../../utils";
 /** A page's top and bottom share where running headers, footers and page numbers sit. */
 const BAND = 0.1;
 
-/** Every page's lines in reading order, with where each sits on its page. */
+/**
+ * Every page's lines in reading order, with where each sits on its page. A cell wrapped onto the
+ * lines below it is joined into one: see `withWrappedCells`.
+ */
 export function pageLines(
   pages: PdfPage[],
-): { cells: Cell[]; page: number; inTopQuarter: boolean; inBand: boolean }[] {
+): { cells: Cell[]; y: number; page: number; inTopQuarter: boolean; inBand: boolean }[] {
   return pages.flatMap(({ items, height }, page) =>
-    linesOf(items).map(({ cells, y }) => ({
+    withWrappedCells(linesOf(items)).map(({ cells, y }) => ({
       cells,
+      y,
       page,
       inTopQuarter: y > height * 0.75,
       inBand: y > height * (1 - BAND) || y < height * BAND,
     })),
   );
+}
+
+/** Whether `below` lies directly under the baseline `y`: wrapped text, not the next line of a list. */
+export function isDirectlyBelow(below: { cells: Cell[]; y: number }, y: number): boolean {
+  return y - below.y <= below.cells[0]!.tolerance * 1.5;
+}
+
+/** Joins two pieces of one wrapped text: a word broken after its hyphen joins without a space. */
+export function joinWrapped(first: string, second: string): string {
+  return first.endsWith("-") ? `${first}${second}` : `${first} ${second}`;
 }
 
 export function texts(line: Cell[]): string[] {
@@ -42,6 +56,40 @@ function linesOf(items: PdfTextItem[]): { cells: Cell[]; y: number }[] {
     }
   }
   return lines.map((line) => ({ cells: cellsOf(line), y: line[0]!.y }));
+}
+
+/**
+ * The lines with each cell wrapped onto the next line joined to it. A line continues the one above
+ * when it lies directly below it, each of its cells starts where a cell above starts, and it has
+ * at most half as many cells: the rest of a few values, not the next row.
+ */
+function withWrappedCells(lines: { cells: Cell[]; y: number }[]): { cells: Cell[]; y: number }[] {
+  const joined: { cells: Cell[]; y: number }[] = [];
+  let lastY = Number.NaN;
+  for (const line of lines) {
+    const above = joined.at(-1);
+    const wrapped = above && continues(line, above.cells, lastY);
+    lastY = line.y;
+    if (!wrapped) {
+      joined.push({ cells: line.cells.map((cell) => ({ ...cell })), y: line.y });
+      continue;
+    }
+    for (const cell of line.cells) {
+      const target = above.cells.find(({ x }) => Math.abs(x - cell.x) <= cell.tolerance)!;
+      target.text = joinWrapped(target.text, cell.text);
+      target.end = Math.max(target.end, cell.end);
+    }
+  }
+  return joined;
+}
+
+/** `lastY` is the baseline of the line right above, which may itself be wrapped text. */
+function continues(line: { cells: Cell[]; y: number }, above: Cell[], lastY: number): boolean {
+  return (
+    isDirectlyBelow(line, lastY) &&
+    line.cells.length <= above.length / 2 &&
+    line.cells.every((cell) => above.some(({ x }) => Math.abs(x - cell.x) <= cell.tolerance))
+  );
 }
 
 function cellsOf(line: PdfTextItem[]): Cell[] {
