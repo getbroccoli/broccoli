@@ -1,3 +1,4 @@
+import { request } from "node:http";
 import { createBrowser, expect, PNG, TEST_OWNER, test } from "#test/support";
 
 test("a fresh instance reports the company step and nobody holding setup", async ({ env }) => {
@@ -211,6 +212,32 @@ test("refuses a setup start from another origin without cookies and leaves setup
 
   expect(response.status).toBe(403);
   expect(await response.json()).toEqual({ error: "cross_origin" });
+  const setup = await env.browser().graphql("query { setup { id holder } }");
+  expect(await setup.json()).toEqual({ data: { setup: { id: "instance", holder: "NOBODY" } } });
+});
+
+test("refuses a raw dot-segment setup start from another origin without cookies and leaves setup unclaimed", async ({
+  env,
+}) => {
+  const status = await new Promise<number | undefined>((resolve, reject) => {
+    const req = request(
+      env.url,
+      {
+        method: "POST",
+        path: "/api/auth/setup/./start",
+        headers: { origin: "https://other.example.com" },
+      },
+      (response) => {
+        response.on("error", reject);
+        response.on("end", () => resolve(response.statusCode));
+        response.resume();
+      },
+    );
+    req.on("error", reject);
+    req.end();
+  });
+
+  expect(status).toBe(403);
   const setup = await env.browser().graphql("query { setup { id holder } }");
   expect(await setup.json()).toEqual({ data: { setup: { id: "instance", holder: "NOBODY" } } });
 });
