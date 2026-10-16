@@ -1,0 +1,55 @@
+{
+  "records": [
+    {
+      "firstName": "Priya",
+      "lastName": "Nair",
+      "email": "priya.nair@harbor.example",
+      "jobTitle": "Engineering Manager",
+      "startDate": "2021-01-08"
+    },
+    {
+      "firstName": "Luka",
+      "lastName": "Bennett",
+      "email": "luka.bennett@harbor.example",
+      "jobTitle": "Backend Engineer",
+      "startDate": "2022-06-15"
+    },
+    {
+      "firstName": "Hana",
+      "lastName": "Sato",
+      "email": "hana.sato@harbor.example",
+      "jobTitle": "Research Lead",
+      "startDate": "2023-09-29"
+    },
+    {
+      "firstName": "Owen",
+      "lastName": "Morris",
+      "email": "owen.morris@harbor.example",
+      "jobTitle": "Account Manager",
+      "startDate": "2020-03-11"
+    },
+    {
+      "firstName": "Amara",
+      "lastName": "Diallo",
+      "email": "amara.diallo@harbor.example",
+      "jobTitle": "Customer Success Lead",
+      "startDate": "2021-08-24"
+    },
+    {
+      "firstName": "Felix",
+      "lastName": "Keller",
+      "email": "felix.keller@harbor.example",
+      "jobTitle": "Finance Analyst",
+      "startDate": "2022-12-02"
+    }
+  ],
+  "forbidden": [
+    "Cost summary",
+    "Annual budget",
+    "€184,000",
+    "€72,000",
+    "€151,000",
+    "€61,000",
+    "€468,000"
+  ]
+}

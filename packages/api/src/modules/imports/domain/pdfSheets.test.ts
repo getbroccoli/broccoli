@@ -218,12 +218,105 @@ it.for([
   expect(hasScannedPage([table])).toBe(false);
 });
 
+it("continues without a header and drops one-cell and two-cell running titles", () => {
+  const rows = [
+    ["Name", "Email"],
+    ["Avery Stone", "avery@example.com"],
+    ["Robin Reed", "robin@example.com"],
+  ];
+  expect(
+    pdfSheets([
+      page([line(740, rows[0]!), line(720, rows[1]!)]),
+      page([
+        line(780, ["Employee roster"]),
+        [
+          ...line(760, ["Cedar Labs · Exported"]),
+          { text: "Page 2", x: 500, y: 760, width: 30, height: 10 },
+        ],
+        line(720, rows[2]!),
+      ]),
+    ]),
+  ).toEqual([{ name: null, rows }]);
+});
+
+it.for([
+  { name: "one unnamed sheet", staffName: null, costLines: [], costSheets: [] },
+  {
+    name: "named sheets when other columns follow",
+    staffName: "Table 1",
+    costLines: [
+      line(660, ["Cost summary"]),
+      line(640, ["Cost centre", "Headcount"], 30),
+      line(620, ["Engineering", "2"], 30),
+    ],
+    costSheets: [
+      {
+        name: "Table 2",
+        rows: [
+          ["Cost centre", "Headcount"],
+          ["Engineering", "2"],
+        ],
+      },
+    ],
+  },
+])(
+  "joins shifted tables as $name without their sub-headings",
+  ({ staffName, costLines, costSheets }) => {
+    const header = ["Name", "Email", "Role"];
+    const first = ["Avery Stone", "avery@example.com", "Engineer"];
+    const second = ["Robin Reed", "robin@example.com", "Research Lead"];
+    const tables = [
+      line(780, ["Engineering"]),
+      line(760, header),
+      line(740, first),
+      line(720, ["Research"]),
+      line(700, header, -14),
+      line(680, second, -14),
+      ...costLines,
+    ];
+    expect(pdfSheets([page(tables)])).toEqual([
+      { name: staffName, rows: [header, first, second] },
+      ...costSheets,
+    ]);
+  },
+);
+
+it("refuses a header-less continuation over a full-page image", () => {
+  const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
+  const continuation = page(
+    [
+      line(740, ["Robin Reed", "robin@example.com"]),
+      line(720, ["Morgan Lake", "morgan@example.com"]),
+    ],
+    1,
+  );
+  expect(hasScannedPage([table, continuation])).toBe(true);
+});
+
+it("accepts a different table's header and row over a full-page image", () => {
+  const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
+  const second = page(
+    [
+      line(760, ["Employee", "Work email", "Role"], 14),
+      line(740, ["Robin Reed", "robin@example.com", "Engineer"], 14),
+    ],
+    1,
+  );
+  expect(hasScannedPage([table, second])).toBe(false);
+});
+
 function page(lines: PdfTextItem[][], imageCoverage = 0): PdfPage {
   return { width: 612, height: 792, items: lines.flat(), imageCoverage };
 }
 
-function line(y: number, cells: string[]): PdfTextItem[] {
+function line(y: number, cells: string[], offset = 0): PdfTextItem[] {
   return cells
-    .map((text, index) => ({ text, x: 40 + index * 160, y, width: text.length * 5, height: 10 }))
+    .map((text, index) => ({
+      text,
+      x: 40 + index * 160 + (index > 0 ? offset : 0),
+      y,
+      width: text.length * 5,
+      height: 10,
+    }))
     .filter(({ text }) => text !== "");
 }

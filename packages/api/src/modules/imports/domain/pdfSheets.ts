@@ -2,36 +2,45 @@ import type { PdfPage, PdfTextItem } from "../../../utils";
 import type { FileSheet } from "./sheet";
 
 /**
- * A PDF's staff table as one sheet without a name; null when no table is found. The table's
- * header is its first line of two or more cells that the next line's cells line up with. Text above
- * it is dropped, and so is a header repeated on a later page with the text above it there.
+ * A PDF's staff tables as sheets; null when no table is found. A table starts at a line of two or
+ * more cells that the next line's cells line up with. Text above the first one is dropped, and so
+ * is a one-cell sub-heading above a later one. On each later page, the text above the first line
+ * of the table, such as a running title or a repeated header, is dropped too. Tables with equal
+ * header texts join into one sheet: one sheet has no name, several are "Table 1", "Table 2", ….
  */
 export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
-  const table = readTable(pages);
-  if (table === null) {
+  const read = readTables(pages);
+  if (read === null) {
     return null;
   }
-  const columns = table.header.map(({ x }) => x);
-  const rows = table.pageLines.flat().map((line) => rowOf(line, columns));
-  return [{ name: null, rows: [table.header.map(({ text }) => text), ...rows] }];
+  const sheets = new Map<string, string[][]>();
+  for (const { header, lines } of read.tables) {
+    const headerRow = header.map(({ text }) => text);
+    const key = JSON.stringify(headerRow);
+    const rows = sheets.get(key) ?? [headerRow];
+    const columns = header.map(({ x }) => x);
+    rows.push(...lines.map((line) => rowOf(line, columns)));
+    sheets.set(key, rows);
+  }
+  const named = sheets.size > 1;
+  return [...sheets.values()].map((rows, index) => ({
+    name: named ? `Table ${index + 1}` : null,
+    rows,
+  }));
 }
 
 /**
  * Whether a page is a scan or photo: it has images but no visible text, or images cover at least
- * 15% of it and its text gives no staff row below the table's header on that page. A footer or a
- * title over a scan may line up with the columns, but it does not repeat the header. One such page
+ * 15% of it and its text gives no staff row below a table's header on that page. A footer or a
+ * title over a scan may line up with the columns, but it does not repeat a header. One such page
  * refuses the whole file.
  */
 export function hasScannedPage(pages: PdfPage[]): boolean {
-  const table = readTable(pages);
-  const hasStaffRow = (page: number) =>
-    table !== null &&
-    table.headedPages[page] === true &&
-    (table.pageLines[page] ?? []).some((line) => isStaffRow(line, table.header));
+  const textPages = readTables(pages)?.textPages ?? [];
   return pages.some(
     ({ items, imageCoverage }, page) =>
       (imageCoverage > 0 && items.length === 0) ||
-      (imageCoverage >= SCAN_COVERAGE && !hasStaffRow(page)),
+      (imageCoverage >= SCAN_COVERAGE && textPages[page] !== true),
   );
 }
 
@@ -46,31 +55,74 @@ function isStaffRow(line: Cell[], header: Cell[]): boolean {
   return line.filter(({ text }) => /[\p{L}\p{N}]/u.test(text)).length >= 2 && linesUp(line, header);
 }
 
+/** A table: its header and the lines below it that are its rows. */
+interface Table {
+  header: Cell[];
+  lines: Cell[][];
+}
+
 /**
- * The table's header, each page's lines below it, and which pages show the header; null when no
- * table is found.
+ * The tables in page order, and which pages show a header with a staff row of its table below
+ * it; null when no table is found.
  */
-function readTable(
-  pages: PdfPage[],
-): { header: Cell[]; pageLines: Cell[][][]; headedPages: boolean[] } | null {
-  const pageLines = pages.map(({ items }) => linesOf(items));
-  const start = findHeader(pageLines);
-  if (start === null) {
-    return null;
+function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] } | null {
+  const lines = pages.flatMap(({ items }, page) =>
+    linesOf(items).map((cells) => ({ cells, page })),
+  );
+  const tables: Table[] = [];
+  const textPages = pages.map(() => false);
+  let table: Table = { header: [], lines: [] };
+  let headerPage = -1;
+  let page = -1;
+  let pageStarted = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const { cells } = lines[index]!;
+    const next = lines[index + 1]?.cells;
+    if (lines[index]!.page !== page) {
+      page = lines[index]!.page;
+      pageStarted = false;
+    }
+    if (isNewTable(cells, next, table)) {
+      table = { header: cells, lines: [] };
+      tables.push(table);
+      headerPage = page;
+      pageStarted = true;
+      continue;
+    }
+    const isRunningTitle = !pageStarted && !(cells.length >= 2 && linesUp(cells, table.header));
+    const isSubHeading =
+      cells.length === 1 && isNewTable(next ?? [], lines[index + 2]?.cells, table);
+    if (isRunningTitle || isSubHeading) {
+      continue;
+    }
+    pageStarted = true;
+    if (isRepeatedHeader(cells, table.header)) {
+      headerPage = page;
+      continue;
+    }
+    table.lines.push(cells);
+    if (headerPage === page && isStaffRow(cells, table.header)) {
+      textPages[page] = true;
+    }
   }
-  const header = pageLines[start.page]![start.line]!;
+  return tables.length > 0 ? { tables, textPages } : null;
+}
+
+/** Two or more cells that the next line's two or more cells line up with. */
+function isHeader(line: Cell[], next: Cell[] | undefined): boolean {
+  return line.length >= 2 && next !== undefined && next.length >= 2 && linesUp(next, line);
+}
+
+function isNewTable(line: Cell[], next: Cell[] | undefined, table: Table): boolean {
+  return isHeader(line, next) && !linesUp(line, table.header);
+}
+
+function isRepeatedHeader(line: Cell[], header: Cell[]): boolean {
   const columns = header.map(({ x }) => x);
-  const headerRow = header.map(({ text }) => text);
-  const headerLines = pageLines.map((lines, page) => {
-    if (page < start.page) return lines.length;
-    if (page === start.page) return start.line;
-    return lines.findIndex((line) => sameRow(rowOf(line, columns), headerRow));
-  });
-  return {
-    header,
-    pageLines: pageLines.map((lines, page) => lines.slice(headerLines[page]! + 1)),
-    headedPages: headerLines.map((line, page) => page >= start.page && line >= 0),
-  };
+  return sameRow(
+    rowOf(line, columns),
+    header.map(({ text }) => text),
+  );
 }
 
 /** Text that reads as one piece: items on one baseline, each the next word of the one before. */
@@ -120,18 +172,6 @@ function cellsOf(line: PdfTextItem[]): Cell[] {
  */
 function isNextWord(gap: number, height: number): boolean {
   return gap > -1 && gap < height;
-}
-
-/** The first line of two or more cells whose next line, in page order, has two or more that line up with it. */
-function findHeader(pageLines: Cell[][][]): { page: number; line: number } | null {
-  const lines = pageLines.flatMap((page, pageIndex) =>
-    page.map((cells, lineIndex) => ({ cells, page: pageIndex, line: lineIndex })),
-  );
-  const header = lines.find(({ cells }, index) => {
-    const next = lines[index + 1]?.cells ?? [];
-    return cells.length >= 2 && next.length >= 2 && linesUp(next, cells);
-  });
-  return header ? { page: header.page, line: header.line } : null;
 }
 
 /** Each cell starts where one of the header's cells starts. */

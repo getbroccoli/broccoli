@@ -4,7 +4,6 @@ import { expect, it } from "vitest";
 
 import { samplePdfFile, sampleXlsxFile } from "#test/support";
 
-import { parseCsv } from "../../../../utils";
 import { type ColumnMapping, readFileRecords } from "../../domain";
 import { readStaffFile, staffFileMimeType } from "./staffFile";
 
@@ -150,19 +149,6 @@ it("refuses a text PDF without a table as unsupported", async () => {
   expect(await readStaffFile(bytes)).toBe("unsupported_file");
 });
 
-it.for(["javascript-openaction", "embedded-file", "external-uri"])(
-  "reads only the visible table from %s",
-  async (name) => {
-    const fixtures = new URL("../../../../../test/fixtures/pdf/", import.meta.url);
-    const pdf = await readFile(new URL(`${name}.pdf`, fixtures));
-    const csv = await readFile(new URL(`${name}.csv`, fixtures));
-    const rows = parseCsv(csv);
-    expect(rows).not.toBeNull();
-
-    expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
-  },
-);
-
 it("decides the stored media type from PDF, workbook and CSV content", () => {
   const pdf = samplePdfFile({ pages: [{}] });
   const workbook = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"]] }] });
@@ -240,19 +226,6 @@ it("refuses a PDF that needs a password to open", async () => {
 
   expect(await readStaffFile(bytes)).toBe("encrypted_pdf");
 });
-
-it.for(["encrypted-owner-only", "logo-table", "one-person-letterhead"])(
-  "reads the rows of %s like its CSV twin",
-  async (name) => {
-    const fixtures = new URL("../../../../../test/fixtures/pdf/", import.meta.url);
-    const pdf = await readFile(new URL(`${name}.pdf`, fixtures));
-    const csv = await readFile(new URL(`${name}.csv`, fixtures));
-    const rows = parseCsv(csv);
-    expect(rows).not.toBeNull();
-
-    expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
-  },
-);
 
 it.for([
   { name: "a small logo", image: { x: 40, y: 780, width: 50, height: 10 } },

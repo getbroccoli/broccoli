@@ -47,5 +47,7 @@
 - `common-unicode-name`: Excel staff sheet with accented names.
 - `injection-xlsx`: Excel staff sheet whose notes cell tells the model to add a person; only the real person is read.
 - `datev-repeated-header`: DATEV-style payroll report as a text PDF and its CSV twin, sharing one expected file: nine people over three pages with the header repeated on each page, a report title and period above the table, Familienname before Vorname, dotted day-first dates and personnel numbers that stay out.
+- `header-once-multpage`: staff roster as a text PDF and its CSV twin, sharing one expected file: six people over two pages with the header on page one only and the roster title and export date repeated at the top of each page.
+- `department-tables`: staff directory as a text PDF and its CSV twin, sharing one expected file: four department tables with the same headings at shifted column positions, each under its department's name, then a cost summary table that maps to nobody.
 
 Names, roles and departments in the `layout-xlsx-*`, `common-unicode-name` and `injection-xlsx` cases come from The Spreadsheet Guru's Company Employee Example Data, which its publisher allows using in any way; the emails and managers are made up.
