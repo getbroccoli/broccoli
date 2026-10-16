@@ -7,7 +7,7 @@ import {
   storedFileIds,
   SYSTEM,
   test,
-  xlsxFile,
+  sampleXlsxFile,
   xlsxFileWithDistantCell,
 } from "#test/support";
 
@@ -51,7 +51,7 @@ test("refuses a second upload while the first is being read without storing anyt
   fakeDecisions: fake,
 }) => {
   const imports = importUseCases(orm, { decisions: fake.decisions });
-  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
   const first = Promise.allSettled([
     imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
   ]);
@@ -82,7 +82,7 @@ test("accepts the next upload after the first upload finishes with an unreadable
   fakeDecisions: fake,
 }) => {
   const imports = importUseCases(orm, { decisions: fake.decisions });
-  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
   await expect(
     imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
   ).rejects.toMatchObject({

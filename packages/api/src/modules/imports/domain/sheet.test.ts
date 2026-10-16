@@ -1,7 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 import { expect, it } from "vitest";
 
-import { xlsxFile } from "#test/support";
+import { sampleXlsxFile } from "#test/support";
 
 import { type ColumnMapping, readFileRecords } from "./fileMapping";
 import { readSheets } from "./sheet";
@@ -19,7 +19,7 @@ it("reads a CSV as one unnamed sheet", async () => {
 });
 
 it("reads a workbook as named sheets", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [
       { name: "Staff", rows: [["Name"], ["Avery"]] },
       { name: "Contractors", rows: [["Email"], ["robin@example.com"]] },
@@ -59,7 +59,7 @@ it("refuses more than 100 CSV columns", async () => {
 });
 
 it("refuses more than 10 visible sheets", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: Array.from({ length: 11 }, (_, index) => ({
       name: `Staff ${index}`,
       rows: [["Name"]],
@@ -70,7 +70,7 @@ it("refuses more than 10 visible sheets", async () => {
 });
 
 it("counts rows across all sheets toward the row limit", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [
       { name: "Staff", rows: Array.from({ length: 5_000 }, () => ["Avery"]) },
       { name: "Contractors", rows: Array.from({ length: 5_001 }, () => ["Robin"]) },
@@ -81,13 +81,13 @@ it("counts rows across all sheets toward the row limit", async () => {
 });
 
 it("refuses a workbook with no values as empty", async () => {
-  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [[null], [" "]] }] });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [[null], [" "]] }] });
 
   expect(await readSheets(bytes)).toBe("empty");
 });
 
 it("reads equal employee values from Excel dates and saved formulas and their CSV export", async () => {
-  const workbook = xlsxFile({
+  const workbook = sampleXlsxFile({
     sheets: [
       {
         name: "Staff",

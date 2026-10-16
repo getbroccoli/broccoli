@@ -13,7 +13,7 @@ type Sheet = { name: string; hidden?: "hidden" | "veryHidden" } & (
 );
 
 /** A minimal workbook with real cell types and saved formula values. */
-export function xlsxFile({ sheets }: { sheets: Sheet[] }): Uint8Array {
+export function sampleXlsxFile({ sheets }: { sheets: Sheet[] }): Uint8Array {
   const strings: string[] = [];
   const entries: Record<string, Uint8Array> = {};
   const worksheetTypes: string[] = [];
@@ -70,7 +70,7 @@ export function xlsxFile({ sheets }: { sheets: Sheet[] }): Uint8Array {
 
 /** A tiny workbook whose distant value keeps the reader busy until it runs out of memory. */
 export function xlsxFileWithDistantCell(): Uint8Array {
-  return xlsxFile({
+  return sampleXlsxFile({
     sheets: [
       {
         name: "Staff",

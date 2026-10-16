@@ -5,7 +5,7 @@ import {
   type FakeDecisions,
   startManagedEnv,
   test,
-  xlsxFile,
+  sampleXlsxFile,
 } from "#test/support";
 
 const CSV = Buffer.from("Name,Email\nAvery Stone,avery@example.com\nRobin Reed,robin@example.com");
@@ -251,7 +251,7 @@ test.for(["staff.xlsx", "staff.XLSX"])(
   "the managed owner uploads %s and its people become mapped import employees",
   async (name, { fakeDecisions }) => {
     const { browser } = await managedImport(fakeDecisions);
-    const bytes = xlsxFile({
+    const bytes = sampleXlsxFile({
       sheets: [
         {
           name: "Staff",

@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { expect, importUseCases, OWNER, SYSTEM, test, xlsxFile } from "#test/support";
+import { expect, importUseCases, OWNER, SYSTEM, test, sampleXlsxFile } from "#test/support";
 
 test("maps a file in one request when every answer is confident", async ({
   orm,
@@ -159,7 +159,7 @@ test("maps each sheet's own columns and keeps both records under sheet-qualified
 }) => {
   const source = await seed.fileSource({
     name: "staff.xlsx",
-    content: xlsxFile({
+    content: sampleXlsxFile({
       sheets: [
         {
           name: "Staff",
@@ -226,7 +226,7 @@ test("uses fallback answers for an unsure sheet before mapping the next sheet", 
 }) => {
   const source = await seed.fileSource({
     name: "staff.xlsx",
-    content: xlsxFile({
+    content: sampleXlsxFile({
       sheets: [
         {
           name: "Staff",
@@ -267,7 +267,7 @@ test("skips sheets without people and maps the remaining sheet", async ({
 }) => {
   const source = await seed.fileSource({
     name: "staff.xlsx",
-    content: xlsxFile({
+    content: sampleXlsxFile({
       sheets: [
         { name: "Departments", rows: [["Department"], ["Engineering"]] },
         { name: "Staff", rows: [["Name"], ["Avery Stone"]] },
@@ -295,7 +295,7 @@ test("fails a workbook with no people columns on any sheet", async ({
 }) => {
   const source = await seed.fileSource({
     name: "staff.xlsx",
-    content: xlsxFile({
+    content: sampleXlsxFile({
       sheets: [
         { name: "Departments", rows: [["Department"], ["Engineering"]] },
         { name: "Lists", rows: [["Role"], ["Designer"]] },

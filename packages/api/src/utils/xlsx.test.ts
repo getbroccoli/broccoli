@@ -1,14 +1,14 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { xlsxFile, xlsxFileWithDistantCell } from "#test/support";
+import { sampleXlsxFile, xlsxFileWithDistantCell } from "#test/support";
 
 import { parseXlsx } from ".";
 
 afterEach(() => vi.unstubAllEnvs());
 
 it("trims text and reads numbers and booleans as strings", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [{ name: "Staff", rows: [[" Avery & Robin ", 42, true, false]] }],
   });
 
@@ -21,7 +21,7 @@ it.each(["UTC", "America/Los_Angeles", "Pacific/Kiritimati"])(
   "reads date cells as ISO calendar dates in %s",
   async (timezone) => {
     vi.stubEnv("TZ", timezone);
-    const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [[{ date: "2024-03-01" }]] }] });
+    const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [[{ date: "2024-03-01" }]] }] });
 
     expect(await parseXlsx(bytes)).toEqual([{ name: "Staff", rows: [["2024-03-01"]] }]);
   },
@@ -31,7 +31,7 @@ it.each(["UTC", "America/Los_Angeles", "Pacific/Kiritimati"])(
   "drops the time of day without shifting the date in %s",
   async (timezone) => {
     vi.stubEnv("TZ", timezone);
-    const bytes = xlsxFile({
+    const bytes = sampleXlsxFile({
       sheets: [{ name: "Staff", rows: [[{ date: "2024-03-01T23:30:00Z" }]] }],
     });
 
@@ -40,7 +40,7 @@ it.each(["UTC", "America/Los_Angeles", "Pacific/Kiritimati"])(
 );
 
 it("reads a formula's saved value without evaluating it", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [
       {
         name: "Staff",
@@ -53,7 +53,7 @@ it("reads a formula's saved value without evaluating it", async () => {
 });
 
 it("reads a formula without a saved value as an empty cell", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [{ name: "Staff", rows: [["Avery", { formula: "1+1" }, "Stone"]] }],
   });
 
@@ -61,7 +61,7 @@ it("reads a formula without a saved value as an empty cell", async () => {
 });
 
 it("reads a formula error as an empty cell", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [{ name: "Staff", rows: [["Avery", { formula: "NA()", error: "#N/A" }, "Stone"]] }],
   });
 
@@ -69,7 +69,7 @@ it("reads a formula error as an empty cell", async () => {
 });
 
 it("skips hidden and very hidden sheets while keeping visible sheets in workbook order", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [
       { name: "Staff", rows: [["Avery"]] },
       { name: "Leavers", hidden: "hidden", rows: [["Robin"]] },
@@ -85,7 +85,7 @@ it("skips hidden and very hidden sheets while keeping visible sheets in workbook
 });
 
 it("drops rows without any value", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [{ name: "Staff", rows: [[null], [" "], ["Avery"], [], ["Robin"]] }],
   });
 
@@ -93,7 +93,7 @@ it("drops rows without any value", async () => {
 });
 
 it("drops sheets without any value", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [
       { name: "Empty", rows: [] },
       { name: "Blank", rows: [[null], [" "]] },
@@ -116,7 +116,7 @@ it("reads a workbook after the previous worker could not start", async () => {
   const { parseXlsx: readWorkbook } = await import(".");
   const detached = new Uint8Array(1);
   structuredClone(detached, { transfer: [detached.buffer] });
-  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
   await readWorkbook(detached).catch(() => null);
 
   const sheets = await readWorkbook(bytes);
@@ -125,7 +125,7 @@ it("reads a workbook after the previous worker could not start", async () => {
 });
 
 it("returns null for a date out of range", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [
       { name: "Staff", xml: worksheet('<row r="1"><c r="A1" s="1"><v>1e308</v></c></row>') },
     ],
@@ -135,13 +135,13 @@ it("returns null for a date out of range", async () => {
 });
 
 it("returns null when reading takes longer than the timeout", async () => {
-  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
 
   expect(await parseXlsx(bytes, 1)).toBeNull();
 });
 
 it("allows a self-closing styled cell at the worksheet's farthest position", async () => {
-  const bytes = xlsxFile({
+  const bytes = sampleXlsxFile({
     sheets: [
       {
         name: "Staff",
@@ -154,7 +154,7 @@ it("allows a self-closing styled cell at the worksheet's farthest position", asy
 });
 
 it("returns null for more than 64 MB of unpacked contents", async () => {
-  const workbook = xlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
+  const workbook = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
   const bytes = zipSync(
     { ...unzipSync(workbook), "padding.bin": new Uint8Array(64 * 1024 * 1024 + 1) },
     { level: 1 },
@@ -174,7 +174,7 @@ it("returns null for a ZIP without a workbook", async () => {
 });
 
 it("returns null for an entry that declares more than 64 MB", async () => {
-  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
   // The first local header's uncompressed size, 22 bytes in.
   new DataView(bytes.buffer, bytes.byteOffset).setUint32(22, 64 * 1024 * 1024 + 1, true);
 
@@ -190,7 +190,7 @@ it.each([
   ["a name holding >", (xml: string) => xml.replace('name="Leavers"', 'name="Leavers &gt; 2024"')],
 ])("skips the hidden sheet in a workbook with %s", async (_, edit) => {
   const bytes = withWorkbookXml(
-    xlsxFile({
+    sampleXlsxFile({
       sheets: [
         { name: "Staff", rows: [["Avery"]] },
         { name: "Leavers", hidden: "hidden", rows: [["Robin"]] },
@@ -208,7 +208,7 @@ it.each([
 
 it("keeps hidden-sheet positions when the workbook lists a sheet without a name", async () => {
   const bytes = withWorkbookXml(
-    xlsxFile({
+    sampleXlsxFile({
       sheets: [
         { name: "Staff", rows: [["Avery"]] },
         { name: "Leavers", hidden: "hidden", rows: [["Robin"]] },
@@ -225,7 +225,7 @@ it("keeps hidden-sheet positions when the workbook lists a sheet without a name"
 });
 
 it("reads the worksheets of a workbook that also has a chart sheet", async () => {
-  const entries = unzipSync(xlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] }));
+  const entries = unzipSync(sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] }));
   const edit = (name: string, find: string, insert: string) => {
     entries[name] = strToU8(strFromU8(entries[name]!).replace(find, insert + find));
   };
