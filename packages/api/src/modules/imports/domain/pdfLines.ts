@@ -3,15 +3,12 @@ import type { PdfPage, PdfTextItem } from "../../../utils";
 /** A page's top and bottom share where running headers, footers and page numbers sit. */
 const BAND = 0.1;
 
-/**
- * Every page's lines in reading order, with where each sits on its page. A cell wrapped onto the
- * lines below it is joined into one: see `withWrappedCells`.
- */
+/** Every page's lines in reading order, with where each sits on its page. */
 export function pageLines(
   pages: PdfPage[],
 ): { cells: Cell[]; y: number; page: number; inTopQuarter: boolean; inBand: boolean }[] {
   return pages.flatMap(({ items, height }, page) =>
-    withWrappedCells(linesOf(items)).map(({ cells, y }) => ({
+    linesOf(items).map(({ cells, y }) => ({
       cells,
       y,
       page,
@@ -24,6 +21,42 @@ export function pageLines(
 /** Whether `below` lies directly under the baseline `y`: wrapped text, not the next line of a list. */
 export function isDirectlyBelow(below: { cells: Cell[]; y: number }, y: number): boolean {
   return y - below.y <= below.cells[0]!.tolerance * 1.5;
+}
+
+/**
+ * A table line's cells with the lines wrapped below it joined in, and the index after them. A line
+ * continues the one above when it lies directly below it on the same page, each of its cells
+ * starts where a cell of the table line starts, and it fills at most half of the table's `width`
+ * columns: the rest of a few values, not the next row.
+ */
+export function withWrapped(
+  lines: { cells: Cell[]; y: number; page: number }[],
+  at: number,
+  width: number,
+): { cells: Cell[]; end: number } {
+  const cells = lines[at]!.cells.map((cell) => ({ ...cell }));
+  let end = at + 1;
+  for (; end < lines.length; end += 1) {
+    const line = lines[end]!;
+    const above = lines[end - 1]!;
+    const targets = line.cells.map((cell) =>
+      cells.find(({ x }) => Math.abs(x - cell.x) <= cell.tolerance),
+    );
+    if (
+      line.page !== above.page ||
+      !isDirectlyBelow(line, above.y) ||
+      line.cells.length > width / 2 ||
+      targets.includes(undefined)
+    ) {
+      break;
+    }
+    line.cells.forEach((cell, index) => {
+      const target = targets[index]!;
+      target.text = joinWrapped(target.text, cell.text);
+      target.end = Math.max(target.end, cell.end);
+    });
+  }
+  return { cells, end };
 }
 
 /** Joins two pieces of one wrapped text: a word broken after its hyphen joins without a space. */
@@ -56,48 +89,6 @@ function linesOf(items: PdfTextItem[]): { cells: Cell[]; y: number }[] {
     }
   }
   return lines.map((line) => ({ cells: cellsOf(line), y: line[0]!.y }));
-}
-
-/**
- * The lines with each cell wrapped onto the next line joined to it. A line continues the one above
- * when it lies directly below it, each of its cells starts where a cell above starts, and it has
- * at most half as many cells as the page's widest line so far, its header or a full row: the rest
- * of a few values, not the next row.
- */
-function withWrappedCells(lines: { cells: Cell[]; y: number }[]): { cells: Cell[]; y: number }[] {
-  const joined: { cells: Cell[]; y: number }[] = [];
-  let lastY = Number.NaN;
-  let widest = 0;
-  for (const line of lines) {
-    const above = joined.at(-1);
-    const wrapped = above && continues(line, above.cells, lastY, widest);
-    lastY = line.y;
-    if (!wrapped) {
-      joined.push({ cells: line.cells.map((cell) => ({ ...cell })), y: line.y });
-      widest = Math.max(widest, line.cells.length);
-      continue;
-    }
-    for (const cell of line.cells) {
-      const target = above.cells.find(({ x }) => Math.abs(x - cell.x) <= cell.tolerance)!;
-      target.text = joinWrapped(target.text, cell.text);
-      target.end = Math.max(target.end, cell.end);
-    }
-  }
-  return joined;
-}
-
-/** `lastY` is the baseline of the line right above, which may itself be wrapped text. */
-function continues(
-  line: { cells: Cell[]; y: number },
-  above: Cell[],
-  lastY: number,
-  widest: number,
-): boolean {
-  return (
-    isDirectlyBelow(line, lastY) &&
-    line.cells.length <= widest / 2 &&
-    line.cells.every((cell) => above.some(({ x }) => Math.abs(x - cell.x) <= cell.tolerance))
-  );
 }
 
 function cellsOf(line: PdfTextItem[]): Cell[] {

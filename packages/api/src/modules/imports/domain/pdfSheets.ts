@@ -1,6 +1,6 @@
 import type { PdfPage } from "../../../utils";
 import { fieldOf, readBlocks, repeatedLabel } from "./pdfBlocks";
-import { type Cell, pageLines, texts } from "./pdfLines";
+import { type Cell, pageLines, texts, withWrapped } from "./pdfLines";
 import type { FileSheet } from "./sheet";
 
 /**
@@ -116,52 +116,61 @@ function readTables(
   const textPages = pages.map(() => false);
   let table: Table = { header: [], lines: [] };
   /**
-   * A later table starts only under a sub-heading of its own, a one-cell line that is not a
-   * running title, or with the current table's header texts: rows whose columns moved look like
-   * a header and a row.
+   * The header that starts a table at `at`, its wrapped lines joined in. A later table starts only
+   * under a sub-heading of its own, a one-cell line that is not a running title, or with the
+   * current table's header texts: rows whose columns moved look like a header and a row.
    */
-  const startsTable = (at: number) => {
-    const cells = lines[at]?.cells ?? [];
+  const headerAt = (at: number) => {
+    if (lines[at] === undefined) {
+      return null;
+    }
+    const { cells, end } = withWrapped(lines, at, lines[at].cells.length);
     const above = lines[at - 1]?.cells ?? [];
     const isHeadedOrFirst =
       table.header.length === 0 ||
       (above.length === 1 && !runningTexts.has(above[0]!.text)) ||
       sameRow(texts(cells), texts(table.header));
-    return (
-      isHeader(cells, lines[at + 1]?.cells) && !linesUp(cells, table.header) && isHeadedOrFirst
-    );
+    const starts =
+      isHeader(cells, lines[end]?.cells) && !linesUp(cells, table.header) && isHeadedOrFirst;
+    return starts ? { cells, end } : null;
   };
+  /** The table line at `at` with the lines wrapped below it joined in. */
+  const tableLineAt = (at: number) => withWrapped(lines, at, table.header.length);
   let headerPage = -1;
   let page = -1;
   let pageStarted = false;
   for (let index = 0; index < lines.length; index += 1) {
-    const { cells } = lines[index]!;
     const next = lines[index + 1]?.cells;
     if (lines[index]!.page !== page) {
       page = lines[index]!.page;
       pageStarted = false;
-      const repeated = repeatedHeaderAt(lines, index, table);
+      const repeated = repeatedHeaderAt(lines, index, table, tableLineAt);
       if (repeated > index) {
         index = repeated - 1;
         continue;
       }
     }
-    if (startsTable(index)) {
-      table = { header: cells, lines: [] };
+    const header = headerAt(index);
+    if (header !== null) {
+      table = { header: header.cells, lines: [] };
       tables.push(table);
       headerPage = page;
       pageStarted = true;
+      index = header.end - 1;
       continue;
     }
+    const { cells, end } = tableLineAt(index);
     const isRunningTitle = !pageStarted && !(cells.length >= 2 && linesUp(cells, table.header));
     const isSubHeading =
       cells.length === 1 &&
       next !== undefined &&
-      (startsTable(index + 1) || isRepeatedHeader(next, table.header));
+      (headerAt(index + 1) !== null ||
+        isRepeatedHeader(tableLineAt(index + 1).cells, table.header));
     if (isRunningTitle || isSubHeading) {
       continue;
     }
     pageStarted = true;
+    index = end - 1;
     if (isRepeatedHeader(cells, table.header)) {
       headerPage = page;
       continue;
@@ -207,10 +216,13 @@ function repeatedHeaderAt(
   lines: { cells: Cell[]; page: number; inTopQuarter: boolean }[],
   start: number,
   table: Table,
+  tableLineAt: (at: number) => { cells: Cell[] },
 ): number {
   const page = lines[start]!.page;
   const onPage = lines.slice(start).filter((line) => line.page === page);
-  const at = onPage.findIndex(({ cells }) => isRepeatedHeader(cells, table.header));
+  const at = onPage.findIndex((_line, offset) =>
+    isRepeatedHeader(tableLineAt(start + offset).cells, table.header),
+  );
   const firstOfTable = onPage.findIndex(
     ({ cells }) => cells.length >= 2 && linesUp(cells, table.header),
   );

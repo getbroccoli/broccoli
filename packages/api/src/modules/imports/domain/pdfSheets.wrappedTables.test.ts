@@ -151,3 +151,66 @@ it("joins a wrapped name in a row that has only a name", () => {
     },
   ]);
 });
+
+it("keeps close full rows of a narrower later table apart", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(740, ["Name", "Job", "Start", "Office", "Department", "Email"]),
+        line(720, [
+          "Avery Stone",
+          "Designer",
+          "2020-01-01",
+          "London",
+          "Design",
+          "avery@example.com",
+        ]),
+        line(650, ["Second department"]),
+        line(630, ["Name", "Job", "Start"], 0, 30),
+        line(610, ["Lin Wu", "Analyst", "2024-06-24"], 0, 30),
+        line(598, ["Robin Reed", "Designer", "2024-01-01"], 0, 30),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: "Table 1",
+      rows: [
+        ["Name", "Job", "Start", "Office", "Department", "Email"],
+        ["Avery Stone", "Designer", "2020-01-01", "London", "Design", "avery@example.com"],
+      ],
+    },
+    {
+      name: "Table 2",
+      rows: [
+        ["Name", "Job", "Start"],
+        ["Lin Wu", "Analyst", "2024-06-24"],
+        ["Robin Reed", "Designer", "2024-01-01"],
+      ],
+    },
+  ]);
+});
+
+it("joins a wrapped row at the top of a later page without a header", () => {
+  const header = ["Name", "Job", "Start", "Email", "Office"];
+  expect(
+    pdfSheets([
+      page([
+        line(700, header),
+        line(680, ["Avery Stone", "Designer", "2020-01-01", "avery@example.com", "London"]),
+      ]),
+      page([
+        line(700, ["Maria-Theresa von", "Senior Customer"]),
+        line(690, ["Hohenberg", "Experience Manager"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        header,
+        ["Avery Stone", "Designer", "2020-01-01", "avery@example.com", "London"],
+        ["Maria-Theresa von Hohenberg", "Senior Customer Experience Manager", "", "", ""],
+      ],
+    },
+  ]);
+});
