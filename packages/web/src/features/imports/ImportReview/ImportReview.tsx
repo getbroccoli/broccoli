@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { ArrowLeft, MagnifyingGlass, UserCircle, WarningCircle } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { ApproveImportDocument, ImportReviewDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
@@ -50,20 +50,20 @@ export function ImportReview() {
   const rows = useImportReviewRows(list.rows);
   const sources = (data ?? previousData)?.import.sources ?? [];
   const reading = sources.some(({ status }) => status === "MAPPING");
-  const [
-    approveImport,
-    { loading: approving, error: approveError, payloadError: approveConflict },
-  ] = usePayloadMutation(ApproveImportDocument);
+  const [approveImport, { loading: approving }] = usePayloadMutation(ApproveImportDocument);
+  const [approveFailed, setApproveFailed] = useState(false);
   const readyCount = (data ?? previousData)?.import.readyEmployeeCount ?? 0;
   const peopleSources = sources.filter(({ employeeCount }) => employeeCount > 0);
   const totalCount = sources.reduce((total, { employeeCount }) => total + employeeCount, 0);
   const leftOutCount = totalCount - readyCount;
 
   const approve = async () => {
+    setApproveFailed(false);
     try {
       await approveImport();
     } catch {
-      return; // `approveError` or `approveConflict` shows it
+      setApproveFailed(true);
+      return;
     }
     await router.invalidate();
   };
@@ -124,7 +124,7 @@ export function ImportReview() {
         density="comfortable"
         summary={peopleCount(totalCount, search.q ? list.rows : undefined, list.pager)}
       />
-      {(approveError || approveConflict) && (
+      {approveFailed && (
         <p role="alert" className="text-sm text-destructive">
           {t("setup.review.approveFailed")}
         </p>
