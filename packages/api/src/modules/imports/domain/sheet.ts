@@ -15,7 +15,7 @@ export type SheetRefusal =
 
 /**
  * A CSV file's one sheet, or an Excel workbook's visible sheets; refused over 10 sheets,
- * 10,000 rows in all or 100 columns. Throws `XlsxBusyError` while too many workbooks wait to be read.
+ * 10,000 rows in all or 100 columns.
  */
 export async function readSheets(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
   const sheets = await parseSheets(bytes);

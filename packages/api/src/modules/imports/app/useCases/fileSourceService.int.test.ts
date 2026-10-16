@@ -8,11 +8,11 @@ import {
   SYSTEM,
   test,
   xlsxFile,
+  xlsxFileWithDistantCell,
 } from "#test/support";
 
 import { files } from "../../../../core/files";
 import { instanceRepository } from "../../../../core/instance";
-import { parseXlsx } from "../../../../utils";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -46,21 +46,15 @@ test("refuses an upload without a model key", async ({ orm }) => {
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("refuses an upload when the workbook queue is full without storing anything or sending a job", async ({
+test("refuses a second upload while the first is being read without storing anything or sending a job", async ({
   orm,
   fakeDecisions: fake,
 }) => {
   const imports = importUseCases(orm, { decisions: fake.decisions });
-  const slow = xlsxFile({
-    sheets: [
-      {
-        name: "Staff",
-        xml: '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1000000"><c r="XFD1000000"><v>1</v></c></row></sheetData></worksheet>',
-      },
-    ],
-  });
   const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
-  const pending = Promise.allSettled([parseXlsx(slow), parseXlsx(slow), parseXlsx(slow)]);
+  const first = Promise.allSettled([
+    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+  ]);
 
   try {
     await expect(
@@ -71,8 +65,40 @@ test("refuses an upload when the workbook queue is full without storing anything
     expect(await storedFileIds(orm)).toEqual([]);
     expect(imports.sentJobs).toEqual([]);
   } finally {
-    await pending;
+    expect(await first).toMatchObject([
+      {
+        status: "rejected",
+        reason: {
+          code: "INVALID_INPUT",
+          fieldErrors: [{ field: "file", code: "unsupported_file" }],
+        },
+      },
+    ]);
   }
+});
+
+test("accepts the next upload after the first upload finishes with an unreadable workbook", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
+  });
+
+  const sourceId = await imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: sourceId, kind: "file", name: "staff.xlsx", status: "mapping" },
+  ]);
+  expect(await storedFileIds(orm)).toHaveLength(1);
+  expect(imports.sentJobs).toEqual([
+    { name: "imports.mapFile", payload: { sourceId, attempt: 0 } },
+  ]);
 });
 
 test("refuses an upload after setup is complete without storing anything or sending a job", async ({

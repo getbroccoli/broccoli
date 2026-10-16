@@ -8,7 +8,7 @@ export {
 export { fetchJson } from "./fetchJson";
 export { parseRasterImage, type RasterImage } from "./rasterImage";
 export { parseCsv } from "./csv";
-export { parseXlsx, XlsxBusyError } from "./xlsx";
+export { parseXlsx } from "./xlsx";
 export { parseOrigin } from "./origin";
 export { readCookie } from "./readCookie";
 export { urlUnder } from "./urlUnder";

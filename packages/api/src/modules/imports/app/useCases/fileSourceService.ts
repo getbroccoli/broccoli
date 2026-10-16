@@ -5,7 +5,6 @@ import { deleteFiles, readFile, storeFile } from "../../../../core/files";
 import { readSetupStep } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
-import { XlsxBusyError } from "../../../../utils";
 import { importRepository, type ImportRepository } from "../../db";
 import {
   type ColumnMapping,
@@ -80,6 +79,8 @@ export function createFileSourceService({
   decisions: Decisions | null;
   jobs: JobQueue;
 }): FileSourceService {
+  const uploads = { reading: false };
+
   return {
     canReadFiles: (ctx) => {
       ctx.requireOwnerOrSystem();
@@ -91,7 +92,7 @@ export function createFileSourceService({
       if (decisions === null) {
         throw new ApplicationError("UNAVAILABLE", "Reading files needs a model key.");
       }
-      const sheets = await readSheetsOrBusy(bytes);
+      const sheets = await readUpload(uploads, bytes);
       if (typeof sheets === "string") {
         throw invalidInput([{ field: "file", code: sheets }]);
       }
@@ -180,18 +181,22 @@ function isCurrentRun(source: FileSource | null, attempt: number): source is Fil
   return source?.status === "mapping" && source.mappingAttempt === attempt;
 }
 
-/** The file's sheets; refuses with UNAVAILABLE while too many workbooks wait to be read. */
-async function readSheetsOrBusy(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
+/**
+ * One upload is read at a time and another is refused meanwhile, so uploads can't fill the
+ * workbook reader's line; the web uploads one file after another. Jobs always wait their turn.
+ */
+async function readUpload(
+  uploads: { reading: boolean },
+  bytes: Uint8Array,
+): Promise<FileSheet[] | SheetRefusal> {
+  if (uploads.reading) {
+    throw new ApplicationError("UNAVAILABLE", "Another file is being read. Try again in a moment.");
+  }
+  uploads.reading = true;
   try {
     return await readSheets(bytes);
-  } catch (error) {
-    if (error instanceof XlsxBusyError) {
-      throw new ApplicationError(
-        "UNAVAILABLE",
-        "Other files are being read. Try again in a moment.",
-      );
-    }
-    throw error;
+  } finally {
+    uploads.reading = false;
   }
 }
 

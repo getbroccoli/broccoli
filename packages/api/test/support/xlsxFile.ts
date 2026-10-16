@@ -68,6 +68,18 @@ export function xlsxFile({ sheets }: { sheets: Sheet[] }): Uint8Array {
   return zipSync(entries);
 }
 
+/** A tiny workbook whose distant value keeps the reader busy until it runs out of memory. */
+export function xlsxFileWithDistantCell(): Uint8Array {
+  return xlsxFile({
+    sheets: [
+      {
+        name: "Staff",
+        xml: `<worksheet xmlns="${SPREADSHEET}"><sheetData><row r="1000000"><c r="XFD1000000"><v>1</v></c></row></sheetData></worksheet>`,
+      },
+    ],
+  });
+}
+
 const SPREADSHEET = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
 const DOCUMENT_RELS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
 const PACKAGE_RELS = "http://schemas.openxmlformats.org/package/2006/relationships";

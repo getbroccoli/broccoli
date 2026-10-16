@@ -6,38 +6,20 @@ export interface XlsxSheet {
   rows: string[][];
 }
 
-/** Thrown when more workbooks wait to be read than the API takes on; try again later. */
-export class XlsxBusyError extends Error {
-  constructor() {
-    super("Too many workbooks are being read");
-    this.name = "XlsxBusyError";
-  }
-}
-
 /**
  * The visible sheets of an Excel workbook that hold any value, in workbook order; null when it
  * cannot be read. Formulas are never evaluated: a cell reads the value its application saved.
  * Dates read `yyyy-mm-dd`; cells are trimmed and rows without any value dropped. Workbooks are
- * read one at a time; throws `XlsxBusyError` when three are already in line.
+ * read one at a time.
  */
 export function parseXlsx(bytes: Uint8Array, timeoutMs = 30_000): Promise<XlsxSheet[] | null> {
-  if (readsInLine >= MAX_READS_IN_LINE) {
-    return Promise.reject(new XlsxBusyError());
-  }
-  readsInLine += 1;
   // One at a time: each read may hold a few hundred megabytes of buffers.
-  const sheets = queue
-    .then(() => readInWorker(bytes, timeoutMs))
-    .finally(() => {
-      readsInLine -= 1;
-    });
-  queue = sheets;
+  const sheets = queue.then(() => readInWorker(bytes, timeoutMs));
+  // The next read waits for this one, whether it succeeded or not.
+  queue = sheets.catch(() => undefined);
   return sheets;
 }
 
-/** One reading and two waiting; a longer line would only make uploads and jobs wait longer. */
-const MAX_READS_IN_LINE = 3;
-let readsInLine = 0;
 let queue: Promise<unknown> = Promise.resolve();
 
 /**
