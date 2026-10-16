@@ -1,0 +1,48 @@
+%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /Names << /EmbeddedFiles << /Names [(embedded-payroll.csv) 6 0 R] >> >> >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [7 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 249 /Filter /FlateDecode >>
+stream
+xœ•ÑMNÃ0†á=§ø–°Hñ¤i›îPXä£tRÅvä•Ü9J©‹ö~<óÚ›Ïš£¨@PP d
+«L¡0¸ßÊ‘=>WvÚKœoP|a_Ümz¬n1åŞ›¦v­,E”jëLÃ¶…Öõ¨šÓ >\=>"[Ü.fÄœû0´\/;÷îuËxeí'k®¤‰dfYû§2¾åL~Ø4»Æ°a¦;~—;9ë“•ñÉ1ò
+S•RB”¨|2o•uâí"ñåÄ”®¯7î"vf:óßÀş†—x:şí,lùô—Ì§*ÍE	-zò¾°³œ
+endstream
+endobj
+5 0 obj
+<< /Length 180 /Type /EmbeddedFile /Subtype /text#2Fcsv >>
+stream
+Employee name,Company email,Role,Employment start
+Leila Byrne,leila.byrne@cedar.example,QA Specialist,2022-03-14
+Mateo Silva,mateo.silva@cedar.example,Account Executive,2023-08-28
+
+endstream
+endobj
+6 0 obj
+<< /Type /Filespec /F (embedded-payroll.csv) /EF << /F 5 0 R >> >>
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R  >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000130 00000 n 
+0000000187 00000 n 
+0000000257 00000 n 
+0000000578 00000 n 
+0000000850 00000 n 
+0000000932 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+1059
+%%EOF

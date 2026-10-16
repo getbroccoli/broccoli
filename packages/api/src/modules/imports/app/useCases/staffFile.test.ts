@@ -1,10 +1,14 @@
+import { readFile } from "node:fs/promises";
 import { strToU8, zipSync } from "fflate";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
-import { sampleXlsxFile } from "#test/support";
+import { samplePdfFile, sampleXlsxFile } from "#test/support";
 
 import { type ColumnMapping, readFileRecords } from "../../domain";
-import { readStaffFile } from "./staffFile";
+import { readStaffFile, staffFileMimeType } from "./staffFile";
+
+// The real PDF reader takes seconds per read while the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000 });
 
 it("reads a CSV as one unnamed sheet", async () => {
   expect(await readStaffFile(Buffer.from("Name,Email\nAvery,avery@example.com"))).toEqual([
@@ -105,6 +109,173 @@ it("reads equal employee values from Excel dates and saved formulas and their CS
     },
   ]);
 });
+
+it("reads a two-page PDF as one unnamed sheet without its repeated header", async () => {
+  const bytes = samplePdfFile({
+    pages: [
+      {
+        texts: [
+          { text: "Name", x: 40, y: 760 },
+          { text: "Email", x: 200, y: 760 },
+          { text: "Avery Stone", x: 40, y: 740 },
+          { text: "avery@example.com", x: 200, y: 740 },
+        ],
+      },
+      {
+        texts: [
+          { text: "Name", x: 40, y: 760 },
+          { text: "Email", x: 200, y: 760 },
+          { text: "Robin Reed", x: 40, y: 740 },
+          { text: "robin@example.com", x: 200, y: 740 },
+        ],
+      },
+    ],
+  });
+
+  expect(await readStaffFile(bytes)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Stone", "avery@example.com"],
+        ["Robin Reed", "robin@example.com"],
+      ],
+    },
+  ]);
+});
+
+it("refuses a text PDF without a table with no_table", async () => {
+  const bytes = samplePdfFile({
+    pages: [{ texts: [{ text: "Staff directory", x: 40, y: 760 }] }],
+  });
+
+  expect(await readStaffFile(bytes)).toBe("no_table");
+});
+
+it("decides the stored media type from PDF, workbook and CSV content", () => {
+  const pdf = samplePdfFile({ pages: [{}] });
+  const workbook = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"]] }] });
+
+  expect(staffFileMimeType(pdf)).toBe("application/pdf");
+  expect(staffFileMimeType(workbook)).toBe(
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+  expect(staffFileMimeType(Buffer.from("Name,Email"))).toBe("text/csv");
+});
+
+it.for([
+  { name: "an image-only scan", scan: { images: [{ x: 0, y: 0, width: 612, height: 792 }] } },
+  {
+    name: "a full-page scan with a visible page number",
+    scan: {
+      images: [{ x: 0, y: 0, width: 612, height: 792 }],
+      texts: [{ text: "Page 2 of 2", x: 280, y: 20 }],
+    },
+  },
+  {
+    name: "a scan covering 40% of a page",
+    scan: { images: [{ x: 0, y: 0, width: 612, height: 316.8 }] },
+  },
+  {
+    name: "a tiled scan",
+    scan: {
+      images: [
+        { x: 0, y: 0, width: 306, height: 396 },
+        { x: 306, y: 0, width: 306, height: 396 },
+        { x: 0, y: 396, width: 306, height: 396 },
+        { x: 306, y: 396, width: 306, height: 396 },
+      ],
+    },
+  },
+  {
+    name: "an OCR scan",
+    scan: {
+      images: [{ x: 0, y: 0, width: 612, height: 792 }],
+      texts: tableTexts().map((text) => ({ ...text, invisible: true })),
+    },
+  },
+  {
+    name: "an OCR scan whose hidden words touch visible dots",
+    scan: {
+      images: [{ x: 0, y: 0, width: 612, height: 792 }],
+      texts: tableTexts().flatMap((text) => [
+        { text: ".", x: text.x - 3, y: text.y },
+        { ...text, invisible: true },
+      ]),
+    },
+  },
+  {
+    name: "a full-page scan with a title and a page number in its footer",
+    scan: {
+      images: [{ x: 0, y: 0, width: 612, height: 792 }],
+      texts: [
+        { text: "Staff directory", x: 40, y: 20 },
+        { text: "Page 2 of 2", x: 500, y: 20 },
+      ],
+    },
+  },
+])("refuses $name alone or after a valid table", async ({ scan }) => {
+  const alone = samplePdfFile({ pages: [scan] });
+  const afterTable = samplePdfFile({ pages: [{ texts: tableTexts() }, scan] });
+
+  expect(await readStaffFile(alone)).toBe("scanned_pdf");
+  expect(await readStaffFile(afterTable)).toBe("scanned_pdf");
+});
+
+it("refuses a PDF that needs a password to open", async () => {
+  const bytes = await readFile(
+    new URL("../../../../../test/fixtures/pdf/encrypted-refusal.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(bytes)).toBe("encrypted_pdf");
+});
+
+it.for([
+  { name: "a small logo", image: { x: 40, y: 780, width: 50, height: 10 } },
+  { name: "a full-page letterhead", image: { x: 0, y: 0, width: 612, height: 792 } },
+])("reads a one-person table over $name", async ({ image }) => {
+  const bytes = samplePdfFile({ pages: [{ texts: tableTexts(), images: [image] }] });
+
+  expect(await readStaffFile(bytes)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Stone", "avery@example.com"],
+      ],
+    },
+  ]);
+});
+
+it.for([
+  "flate-decompression-bomb",
+  "huge-image-under-cap",
+  "scanned-refusal",
+  "phone-photo-refusal",
+  "mixed-text-scan-refusal",
+  "ocr-scan-alone",
+  "partial-scan-alone",
+  "tiled-scan-alone",
+  "fullpage-scan-native-label-alone",
+  "text-table-plus-fullpage-scan",
+  "text-table-plus-partial-scan",
+  "text-table-plus-tiled-scan",
+])("refuses %s as a scan", async (name) => {
+  const bytes = await readFile(
+    new URL(`../../../../../test/fixtures/pdf/${name}.pdf`, import.meta.url),
+  );
+
+  expect(await readStaffFile(bytes)).toBe("scanned_pdf");
+});
+
+function tableTexts() {
+  return [
+    { text: "Name", x: 40, y: 760 },
+    { text: "Email", x: 200, y: 760 },
+    { text: "Avery Stone", x: 40, y: 740 },
+    { text: "avery@example.com", x: 200, y: 740 },
+  ];
+}
 
 const UNMAPPED: ColumnMapping = {
   fullName: null,

@@ -1,0 +1,87 @@
+{
+  "records": [
+    {
+      "firstName": "Daria",
+      "lastName": "Kowalska",
+      "email": "daria.kowalska@northstar.example",
+      "jobTitle": "Payroll Specialist",
+      "startDate": "2021-02-12"
+    },
+    {
+      "firstName": "Jonas",
+      "lastName": "Mertens",
+      "email": "jonas.mertens@northstar.example",
+      "jobTitle": "Warehouse Coordinator",
+      "startDate": "2021-05-03"
+    },
+    {
+      "firstName": "Mina",
+      "lastName": "Okafor",
+      "email": "mina.okafor@northstar.example",
+      "jobTitle": "Customer Adviser",
+      "startDate": "2021-09-21"
+    },
+    {
+      "firstName": "Elias",
+      "lastName": "Novak",
+      "email": "elias.novak@northstar.example",
+      "jobTitle": "Financial Controller",
+      "startDate": "2022-01-14"
+    },
+    {
+      "firstName": "Sofia",
+      "lastName": "Rinaldi",
+      "email": "sofia.rinaldi@northstar.example",
+      "jobTitle": "People Operations Partner",
+      "startDate": "2022-06-30"
+    },
+    {
+      "firstName": "Leonie",
+      "lastName": "Hartmann",
+      "email": "leonie.hartmann@northstar.example",
+      "jobTitle": "Quality Manager",
+      "startDate": "2022-10-18"
+    },
+    {
+      "firstName": "Arman",
+      "lastName": "Petrov",
+      "email": "arman.petrov@northstar.example",
+      "jobTitle": "Systems Administrator",
+      "startDate": "2023-03-07"
+    },
+    {
+      "firstName": "Nora",
+      "lastName": "Bergström",
+      "email": "nora.bergstrom@northstar.example",
+      "jobTitle": "Logistics Planner",
+      "startDate": "2023-08-25"
+    },
+    {
+      "firstName": "Tariq",
+      "lastName": "Haddad",
+      "email": "tariq.haddad@northstar.example",
+      "jobTitle": "Procurement Lead",
+      "startDate": "2023-12-11"
+    }
+  ],
+  "forbidden": [
+    "47101",
+    "47102",
+    "47103",
+    "47104",
+    "47105",
+    "47106",
+    "47107",
+    "47108",
+    "47109",
+    "Abrechnungszeitraum",
+    "Northstar Services GmbH",
+    "DATEV Lohnreport – Northstar Services GmbH",
+    "16.10.2026",
+    "Seite 1 von 3",
+    "Seite 2 von 3",
+    "Seite 3 von 3",
+    "Anzahl Mitarbeiter: 9",
+    "Summe"
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "records": [
+    {
+      "firstName": "Priya",
+      "lastName": "Nair",
+      "email": "priya.nair@cedar.example",
+      "jobTitle": "Product Designer",
+      "startDate": "2021-11-08"
+    },
+    {
+      "firstName": "Owen",
+      "lastName": "Mercer",
+      "email": "owen.mercer@cedar.example",
+      "jobTitle": "Implementation Manager",
+      "startDate": "2024-01-15"
+    }
+  ],
+  "forbidden": [
+    "Leila Byrne",
+    "leila.byrne@cedar.example",
+    "Mateo Silva",
+    "mateo.silva@cedar.example",
+    "embedded-payroll.csv"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "records": [
+    {
+      "firstName": "Maeve",
+      "lastName": "Doyle",
+      "email": "maeve.doyle@cedar.example",
+      "jobTitle": "Office Administrator",
+      "startDate": "2020-04-17"
+    },
+    {
+      "firstName": "Ibrahim",
+      "lastName": "Santos",
+      "email": "ibrahim.santos@cedar.example",
+      "jobTitle": "Product Designer",
+      "startDate": "2021-11-09"
+    },
+    {
+      "firstName": "Clara",
+      "lastName": "Wendt",
+      "email": "clara.wendt@cedar.example",
+      "jobTitle": "Support Engineer",
+      "startDate": "2022-02-22"
+    },
+    {
+      "firstName": "Noah",
+      "lastName": "Fischer",
+      "email": "noah.fischer@cedar.example",
+      "jobTitle": "Sales Manager",
+      "startDate": "2023-07-05"
+    },
+    {
+      "firstName": "Aisha",
+      "lastName": "Rahman",
+      "email": "aisha.rahman@cedar.example",
+      "jobTitle": "Compliance Analyst",
+      "startDate": "2024-01-19"
+    },
+    {
+      "firstName": "Milo",
+      "lastName": "Chen",
+      "email": "milo.chen@cedar.example",
+      "jobTitle": "Data Engineer",
+      "startDate": "2024-03-26"
+    }
+  ],
+  "forbidden": ["Cedar Labs", "Exported 16 October 2026", "Employee roster"]
+}

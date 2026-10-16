@@ -1,0 +1,144 @@
+import { expect, it } from "vitest";
+
+import { line, page } from "#test/support";
+
+import { hasScannedPage, pdfSheets } from ".";
+
+it("reads a header-less continuation row outside the bands over a full-page letterhead", () => {
+  const header = ["Name", "Email"];
+  const first = ["Avery Abbott", "avery@example.com"];
+  const second = ["Blair Bell", "blair@example.com"];
+  const pages = [page([line(700, header), line(680, first)]), page([line(680, second)], 1)];
+
+  expect(hasScannedPage(pages)).toBe(false);
+  expect(pdfSheets(pages)).toEqual([{ name: null, rows: [header, first, second] }]);
+});
+
+it("refuses a scan whose only row-shaped text sits in the bottom band", () => {
+  const pages = [
+    page([line(700, ["Name", "Email"]), line(680, ["Avery Abbott", "avery@example.com"])]),
+    page([line(30, ["Blair Bell", "blair@example.com"])], 1),
+  ];
+
+  expect(hasScannedPage(pages)).toBe(true);
+});
+
+it.for([
+  { name: "an image-only page", scanned: page([], 1) },
+  { name: "a scan with a visible page number", scanned: page([line(20, ["Page 2 of 2"])], 1) },
+  { name: "a scan covering 40% of a page", scanned: page([], 0.4) },
+  { name: "a tiled scan", scanned: page([], 1) },
+  { name: "an OCR scan without visible text", scanned: page([], 1) },
+])("detects $name alone or after a valid table", ({ scanned }) => {
+  const table = page([
+    line(760, ["Name", "Email"]),
+    line(740, ["Avery Stone", "avery@example.com"]),
+  ]);
+
+  expect(hasScannedPage([scanned])).toBe(true);
+  expect(hasScannedPage([table, scanned])).toBe(true);
+});
+
+it.for([
+  { name: "footer", y: 20 },
+  { name: "running title", y: 780 },
+])("refuses a scan whose $name lines up with the table's columns", ({ y }) => {
+  const table = page([
+    line(760, ["Name", "Email"]),
+    line(740, ["Avery Stone", "avery@example.com"]),
+  ]);
+  const scanned = page([line(y, ["Staff directory", "Page 2 of 2"])], 1);
+
+  expect(hasScannedPage([scanned])).toBe(true);
+  expect(hasScannedPage([table, scanned])).toBe(true);
+});
+
+it.for([
+  { name: "a small logo", coverage: 0.02 },
+  { name: "a full-page letterhead image", coverage: 1 },
+  { name: "no images", coverage: 0 },
+])("accepts a one-person table with $name", ({ coverage }) => {
+  const table = page(
+    [line(760, ["Name", "Email"]), line(740, ["Avery Stone", "avery@example.com"])],
+    coverage,
+  );
+
+  expect(hasScannedPage([table])).toBe(false);
+});
+
+it("refuses a header-less continuation over a full-page image", () => {
+  const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
+  const continuation = page(
+    [
+      line(740, ["Robin Reed", "robin@example.com"]),
+      line(720, ["Morgan Lake", "morgan@example.com"]),
+    ],
+    1,
+  );
+  expect(hasScannedPage([table, continuation])).toBe(true);
+});
+
+it("accepts a different table's header and row over a full-page image", () => {
+  const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
+  const second = page(
+    [
+      line(780, ["Contractors"]),
+      line(760, ["Employee", "Work email", "Role"], 14),
+      line(740, ["Robin Reed", "robin@example.com", "Engineer"], 14),
+    ],
+    1,
+  );
+  expect(hasScannedPage([table, second])).toBe(false);
+});
+
+it("refuses a header-less continuation whose rows moved over a full-page image", () => {
+  const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
+  const continuation = page(
+    [
+      line(740, ["Robin Reed", "robin@example.com"], 20, 20),
+      line(720, ["Morgan Lake", "morgan@example.com"], 20, 20),
+    ],
+    1,
+  );
+  expect(hasScannedPage([table, continuation])).toBe(true);
+});
+
+it.for([
+  { name: "alone", title: [] },
+  { name: "under a running title", title: [line(780, ["Staff list"])] },
+])("refuses moved name and role rows $name over a full-page image", ({ title }) => {
+  const table = page([...title, line(760, ["Name", "Role"]), line(740, ["Avery", "Engineer"])]);
+  const continuation = page(
+    [
+      ...title,
+      line(740, ["Robin Reed", "Designer"], 0, 20),
+      line(720, ["Morgan Lake", "Engineer"], 0, 20),
+    ],
+    1,
+  );
+  expect(hasScannedPage([table, continuation])).toBe(true);
+});
+
+it("reads a person block over a full-page letterhead image, but not a scan after it", () => {
+  const person = page(
+    [
+      line(700, ["Name: Avery Stone"]),
+      line(680, ["Job title: Designer"]),
+      line(660, ["Email: avery@example.com"]),
+    ],
+    1,
+  );
+
+  expect(hasScannedPage([person])).toBe(false);
+  expect(hasScannedPage([person, page([line(20, ["Page 2 of 2"])], 1)])).toBe(true);
+});
+
+it("detects a scan whose only text is a labelled footer after a person block", () => {
+  const person = page([
+    line(700, ["Name: Avery Stone"]),
+    line(680, ["Job title: Designer"]),
+    line(660, ["Email: avery@example.com"]),
+  ]);
+
+  expect(hasScannedPage([person, page([line(20, ["Printed on: 16.10.2026"])], 1)])).toBe(true);
+});

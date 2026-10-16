@@ -10,6 +10,7 @@ import {
   type ColumnMapping,
   columnQuestions,
   type FileSource,
+  hasPeople,
   headerQuestion,
   type IncomingRecord,
   type MappingOutcome,
@@ -21,7 +22,7 @@ import {
   type Sheet,
   sheetQuestions,
 } from "../../domain";
-import { readStaffFile } from "./staffFile";
+import { readStaffFile, staffFileMimeType } from "./staffFile";
 
 /**
  * Staff files as import sources, through their life: upload, mapping in the background,
@@ -31,7 +32,7 @@ export interface FileSourceService {
   /** Whether files can be added: the instance has a model key. */
   canReadFiles(ctx: SecurityContext): boolean;
   /**
-   * Adds a CSV or Excel file as a source and queues its mapping, in one transaction; returns the
+   * Adds a CSV, Excel or PDF file as a source and queues its mapping, in one transaction; returns the
    * source's id. A file that cannot be read is refused and nothing is stored.
    */
   uploadFile(ctx: SecurityContext, file: UploadedFile): Promise<string>;
@@ -100,7 +101,7 @@ export function createFileSourceService({
         const imports = await lockSourcesForMapping(tx);
         const fileId = await storeFile(tx, {
           content: Buffer.from(bytes),
-          mimeType: mimeTypeOf(sheets),
+          mimeType: staffFileMimeType(bytes),
         });
         const sourceId = await imports.insertFileSource(name, fileId);
         await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
@@ -200,13 +201,6 @@ async function readUpload(
   }
 }
 
-/** A CSV has one unnamed sheet; only a workbook names its sheets. */
-function mimeTypeOf(sheets: FileSheet[]): string {
-  return sheets.some(({ name }) => name !== null)
-    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    : "text/csv";
-}
-
 /** A model failure that retrying cannot fix fails the file; any other error is thrown. */
 async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {
   try {
@@ -245,7 +239,7 @@ async function mapSheets(decisions: Decisions, sheets: FileSheet[]): Promise<Map
 }
 
 /**
- * The sheet's records, or null when it has no people columns. Asks the model outside any
+ * The sheet's records, or null when it has no people columns or no people in them. Asks the model outside any
  * transaction, which never waits on another service: first everything in one request; when
  * an answer is unsure, the header and then the columns under it, which gives the model the
  * header's text and the cells below it.
@@ -253,7 +247,9 @@ async function mapSheets(decisions: Decisions, sheets: FileSheet[]): Promise<Map
 async function mapSheet(decisions: Decisions, sheet: Sheet): Promise<IncomingRecord[] | null> {
   const { headerRow, mapping } =
     (await mapInOneRequest(decisions, sheet)) ?? (await mapHeaderThenColumns(decisions, sheet));
-  return mapping === null ? null : readFileRecords(sheet, headerRow, mapping);
+  return mapping === null || !hasPeople(sheet, headerRow, mapping)
+    ? null
+    : readFileRecords(sheet, headerRow, mapping);
 }
 
 /** The header row and the columns, each null when the model found none. */

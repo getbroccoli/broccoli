@@ -1,12 +1,35 @@
 import { expect, it } from "vitest";
 
-import { withPlaceholders } from "./placeholders";
+import { keptByPlaceholders, withPlaceholders } from "./placeholders";
 import commonNames from "./words/commonNames.json" with { type: "json" };
 import de from "./words/de.json" with { type: "json" };
 import en from "./words/en.json" with { type: "json" };
 import es from "./words/es.json" with { type: "json" };
 import fr from "./words/fr.json" with { type: "json" };
 import nl from "./words/nl.json" with { type: "json" };
+
+it.each([
+  "Engineering",
+  "Cost centre",
+  "Commercial",
+  "Kostenstelle",
+  "Research Analyst",
+  "Active employees",
+  "Subtotal payroll groups",
+  "Total",
+  "Gesamt Summe",
+  "",
+  "yes",
+])("recognises %j as a value kept by placeholders", (value) => {
+  expect(keptByPlaceholders(value)).toBe(true);
+});
+
+it.each(["Priya Nair", "Engineering 2", "priya@harbor.example", "08.01.2021", "Sum"])(
+  "recognises %j as a value masked by placeholders",
+  (value) => {
+    expect(keptByPlaceholders(value)).toBe(false);
+  },
+);
 
 it("allows no word that is a common name", () => {
   const names = new Set(commonNames);

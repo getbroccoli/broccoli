@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "firstName": "Mina",
+      "lastName": "Duarte",
+      "email": "mina.duarte@juniper.example",
+      "jobTitle": "Office Manager",
+      "startDate": "2023-07-11"
+    }
+  ],
+  "forbidden": ["Juniper & Co.", "Confidential workforce export"]
+}

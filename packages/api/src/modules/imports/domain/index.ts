@@ -1,6 +1,7 @@
 export {
   type ColumnMapping,
   columnQuestions,
+  hasPeople,
   headerQuestion,
   readColumnMapping,
   readFileRecords,
@@ -15,5 +16,6 @@ export {
   type IncomingRecord,
 } from "./importEmployee";
 export type { FileSource, ImportSource, MappingOutcome } from "./importSource";
+export { hasScannedPage, pdfSheets } from "./pdfSheets";
 export { nonBlank, parseEmail, splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";

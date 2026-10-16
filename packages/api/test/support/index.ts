@@ -41,3 +41,5 @@ export { startFakeDecisions, type FakeDecisions } from "./fakeDecisions";
 export { EXAMPLE_JOB } from "./exampleJob";
 export { startLiveDecisions, type LiveDecisions } from "./liveDecisions";
 export { sampleXlsxFile, xlsxFileWithDistantCell } from "./sampleXlsxFile";
+export { samplePdfFile, pdfWithContentBomb } from "./samplePdfFile";
+export { line, page } from "./pdfPages";

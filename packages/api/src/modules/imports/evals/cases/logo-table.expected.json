@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "firstName": "Rowan",
+      "lastName": "Bell",
+      "email": "rowan.bell@sequoia.example",
+      "jobTitle": "Implementation Lead",
+      "startDate": "2021-06-18"
+    },
+    {
+      "firstName": "Amina",
+      "lastName": "Khan",
+      "email": "amina.khan@sequoia.example",
+      "jobTitle": "Solutions Architect",
+      "startDate": "2022-10-07"
+    },
+    {
+      "firstName": "Peter",
+      "lastName": "Voss",
+      "email": "peter.voss@sequoia.example",
+      "jobTitle": "Support Manager",
+      "startDate": "2024-02-26"
+    }
+  ],
+  "forbidden": ["Sequoia Staff Directory", "Export with company logo image"]
+}

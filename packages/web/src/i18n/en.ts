@@ -132,12 +132,18 @@ export const en = {
   "imports.files.choose": "Choose staff files",
   "imports.files.drop": "Drop your files here",
   "imports.files.dropHint": "Staff lists or exports. Or click to choose.",
-  "imports.files.limits": "CSV or Excel (.xlsx), up to 5 MB per file.",
+  "imports.files.limits": "CSV, Excel (.xlsx) or PDF, up to 5 MB per file.",
   "imports.files.disclosure":
     "To read the columns, our AI provider sees the first rows of each file with names, emails and other personal details replaced by placeholders. It keeps nothing.",
   "imports.files.addMore": "Add more files",
   "imports.files.uploading": "Uploading {name}…",
-  "imports.files.unsupportedFile": "{name}: not a CSV or Excel (.xlsx) file.",
+  "imports.files.unsupportedFile": "{name}: couldn’t read it as a CSV, Excel (.xlsx) or PDF file.",
+  "imports.files.scannedPdf":
+    "{name}: has pages that are scans or photos. Broccoli reads only PDFs with text. Export the list from your payroll or HR tool as CSV, Excel or PDF instead.",
+  "imports.files.encryptedPdf":
+    "{name}: is protected by a password. Save a copy without the password and add that.",
+  "imports.files.noTable":
+    "{name}: couldn’t read a table or list of people in it. Export it from your payroll or HR tool as CSV or Excel instead.",
   "imports.files.empty": "{name}: the file is empty.",
   "imports.files.tooManyRows": "{name}: more than 10,000 rows.",
   "imports.files.tooManyColumns": "{name}: more than 100 columns.",

@@ -51,7 +51,7 @@ test.for(caseNames())("%s", async (file, { orm, onTestFinished }) => {
 
 /** Each case is a staff file with its expected result beside it. */
 function caseNames(): string[] {
-  return readdirSync(CASES).filter((file) => file.endsWith(".csv") || file.endsWith(".xlsx"));
+  return readdirSync(CASES).filter((file) => /\.(csv|xlsx|pdf)$/.test(file));
 }
 
 function readExpected(name: string): ExpectedImport {

@@ -10,3 +10,6 @@ allowBuilds:
   "@apollo/protobufjs": false
   esbuild: false
   unrs-resolver: false
+# pdf.js needs a canvas only to draw pages; the PDF reader never draws, so no native code loads.
+ignoredOptionalDependencies:
+  - "@napi-rs/canvas"

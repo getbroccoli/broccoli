@@ -1,0 +1,203 @@
+import { readFile } from "node:fs/promises";
+import { expect, it, vi } from "vitest";
+
+import { parseCsv } from "../../../../utils";
+import { readStaffFile } from "./staffFile";
+
+// The real PDF reader takes seconds per read while the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000 });
+
+it("keeps a nearby sparse person row separate in a PDF", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/tight-sparse-row.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title", "Start date"],
+        ["Avery Abbott", "avery@example.com", "Engineer", "01.01.2020"],
+        ["Blair Bell", "blair@example.com", "", ""],
+      ],
+    },
+  ]);
+});
+
+it("drops a PDF block list's printed-date footer", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/block-printed-footer.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title"],
+        ["Avery Abbott", "avery@example.com", "Engineer"],
+        ["Blair Bell", "blair@example.com", "Designer"],
+      ],
+    },
+  ]);
+});
+
+it("reads a PDF table continued without a header over a full-page letterhead", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/continued-letterhead.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Abbott", "avery@example.com"],
+        ["Blair Bell", "blair@example.com"],
+      ],
+    },
+  ]);
+});
+
+it.for(["labels-no-colons", "org-two-column", "form-no-colons"])(
+  "refuses %s, whose email column also holds names or titles",
+  async (name) => {
+    const pdf = await readFile(
+      new URL(`../../../../../test/fixtures/pdf/${name}.pdf`, import.meta.url),
+    );
+
+    expect(await readStaffFile(pdf)).toBe("no_table");
+  },
+);
+
+it.for(["javascript-openaction", "embedded-file", "external-uri"])(
+  "reads only the visible table from %s",
+  async (name) => {
+    const fixtures = new URL("../../../../../test/fixtures/pdf/", import.meta.url);
+    const pdf = await readFile(new URL(`${name}.pdf`, fixtures));
+    const csv = await readFile(new URL(`${name}.csv`, fixtures));
+    const rows = parseCsv(csv);
+    expect(rows).not.toBeNull();
+
+    expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
+  },
+);
+
+it("reads a header-once PDF like its CSV twin without running titles", async () => {
+  const fixtures = new URL("../../../../../test/fixtures/pdf/", import.meta.url);
+  const pdf = await readFile(new URL("header-once-multpage.pdf", fixtures));
+  const csv = await readFile(new URL("header-once-multpage.csv", fixtures));
+  const rows = parseCsv(csv);
+  expect(rows).not.toBeNull();
+
+  expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
+});
+
+it("joins department tables and keeps the cost summary in its own named sheet", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/department-tables.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: "Table 1",
+      rows: [
+        ["Employee", "Work email", "Role", "Start date"],
+        ["Priya Nair", "priya.nair@harbor.example", "Engineering Manager", "08.01.2021"],
+        ["Luka Bennett", "luka.bennett@harbor.example", "Backend Engineer", "15.06.2022"],
+        ["Hana Sato", "hana.sato@harbor.example", "Research Lead", "29.09.2023"],
+        ["Owen Morris", "owen.morris@harbor.example", "Account Manager", "11.03.2020"],
+        ["Amara Diallo", "amara.diallo@harbor.example", "Customer Success Lead", "24.08.2021"],
+        ["Felix Keller", "felix.keller@harbor.example", "Finance Analyst", "02.12.2022"],
+      ],
+    },
+    {
+      name: "Table 2",
+      rows: [
+        ["Cost centre", "Headcount", "Annual budget"],
+        ["Engineering", "2", "€184,000"],
+        ["Research", "1", "€72,000"],
+        ["Commercial", "2", "€151,000"],
+        ["Finance", "1", "€61,000"],
+      ],
+    },
+  ]);
+});
+
+it.for([
+  "encrypted-owner-only",
+  "logo-table",
+  "one-person-letterhead",
+  "personio-landscape",
+  "name-only-grid",
+  "bamboohr-month-first",
+])("reads the rows of %s like its CSV twin", async (name) => {
+  const fixtures = new URL("../../../../../test/fixtures/pdf/", import.meta.url);
+  const pdf = await readFile(new URL(`${name}.pdf`, fixtures));
+  const csv = await readFile(new URL(`${name}.csv`, fixtures));
+  const rows = parseCsv(csv);
+  expect(rows).not.toBeNull();
+
+  expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
+});
+
+it("reads one labelled person per page with family names first", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/datev-personaldaten-blocks.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Personalnummer", "Tätigkeit", "Eintritt"],
+        ["Müller, Anna", "61021", "Sachbearbeiterin", "12.03.2021"],
+        ["Krause, Benedikt", "61022", "Lagerleiter", "27.08.2022"],
+        ["Yilmaz, Cem", "61023", "IT-Administrator", "04.11.2023"],
+      ],
+    },
+  ]);
+});
+
+it("keeps every person's identical job title and location in page blocks", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/same-title-page-blocks.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["", "Job title", "Location", "Work email", "Start"],
+        [
+          "Sanne Bauer",
+          "Site Coordinator",
+          "Rotterdam Office",
+          "sanne.bauer@cobalt.example",
+          "05.01.2021",
+        ],
+        [
+          "Luis Marin",
+          "Site Coordinator",
+          "Rotterdam Office",
+          "luis.marin@cobalt.example",
+          "18.04.2022",
+        ],
+        [
+          "Eva Kovac",
+          "Site Coordinator",
+          "Rotterdam Office",
+          "eva.kovac@cobalt.example",
+          "29.09.2023",
+        ],
+      ],
+    },
+  ]);
+});
+
+it("refuses a block list with side-by-side blocks on a later page", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/blocks-and-columns.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toBe("no_table");
+});

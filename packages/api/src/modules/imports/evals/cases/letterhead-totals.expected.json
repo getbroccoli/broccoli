@@ -1,0 +1,38 @@
+{
+  "records": [
+    {
+      "firstName": "Elena",
+      "lastName": "Varga",
+      "email": "elena.varga@orbit.example",
+      "jobTitle": "Head of Operations",
+      "startDate": "2020-02-04"
+    },
+    {
+      "firstName": "Samuel",
+      "lastName": "Green",
+      "email": "samuel.green@orbit.example",
+      "jobTitle": "Platform Engineer",
+      "startDate": "2021-09-16"
+    },
+    {
+      "firstName": "Yara",
+      "lastName": "Moussa",
+      "email": "yara.moussa@orbit.example",
+      "jobTitle": "Recruitment Partner",
+      "startDate": "2022-05-27"
+    },
+    {
+      "firstName": "Theo",
+      "lastName": "Lind",
+      "email": "theo.lind@orbit.example",
+      "jobTitle": "Regional Sales Lead",
+      "startDate": "2023-11-13"
+    }
+  ],
+  "forbidden": [
+    "Orbit Systems Ltd.",
+    "44 Meridian Quay",
+    "Brighton BN1 4QF",
+    "Printed on 16.10.2026"
+  ]
+}

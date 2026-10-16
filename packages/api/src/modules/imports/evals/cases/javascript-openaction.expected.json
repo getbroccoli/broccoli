@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Amina",
+      "lastName": "Reyes",
+      "email": "amina.reyes@redwood.example",
+      "jobTitle": "Operations Analyst",
+      "startDate": "2022-04-18"
+    },
+    {
+      "firstName": "Felix",
+      "lastName": "Bauer",
+      "email": "felix.bauer@redwood.example",
+      "jobTitle": "Support Lead",
+      "startDate": "2023-09-02"
+    }
+  ],
+  "forbidden": ["Redwood People Report", "Confidential internal export"]
+}

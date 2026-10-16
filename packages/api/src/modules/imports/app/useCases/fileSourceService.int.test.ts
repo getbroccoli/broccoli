@@ -7,6 +7,7 @@ import {
   storedFileIds,
   SYSTEM,
   test,
+  samplePdfFile,
   sampleXlsxFile,
   xlsxFileWithDistantCell,
 } from "#test/support";
@@ -246,6 +247,48 @@ test("refuses a ZIP without a workbook without storing it or sending a job", asy
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "file", code: "unsupported_file" }],
   });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses a scanned PDF without storing a source or file or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const bytes = Buffer.from(
+    samplePdfFile({ pages: [{ images: [{ x: 0, y: 0, width: 612, height: 792 }] }] }),
+  );
+
+  await expect(imports.files.uploadFile(OWNER, { name: "staff.pdf", bytes })).rejects.toMatchObject(
+    {
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "file", code: "scanned_pdf" }],
+    },
+  );
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses a text PDF without a table without storing a source or file or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const bytes = Buffer.from(
+    samplePdfFile({ pages: [{ texts: [{ text: "Staff directory", x: 40, y: 700 }] }] }),
+  );
+
+  await expect(imports.files.uploadFile(OWNER, { name: "staff.pdf", bytes })).rejects.toMatchObject(
+    {
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "file", code: "no_table" }],
+    },
+  );
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
