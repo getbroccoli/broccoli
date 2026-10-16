@@ -18,7 +18,7 @@ export type SheetRefusal =
  * 10,000 rows in all or 100 columns.
  */
 export async function readSheets(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
-  const sheets = await parseSheets(bytes);
+  const sheets = isExcelWorkbook(bytes) ? await excelWorkbook(bytes) : csvSheet(bytes);
   if (sheets === null) {
     return "unsupported_file";
   }
@@ -45,10 +45,17 @@ const MAX_SHEETS = 10;
 /** Every Excel workbook is a ZIP archive, which starts with this signature. */
 const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
 
-async function parseSheets(bytes: Uint8Array): Promise<FileSheet[] | null> {
-  if (ZIP_SIGNATURE.every((byte, index) => bytes[index] === byte)) {
-    return parseXlsx(bytes);
-  }
+function isExcelWorkbook(bytes: Uint8Array): boolean {
+  return ZIP_SIGNATURE.every((byte, index) => bytes[index] === byte);
+}
+
+/** The workbook's visible sheets, each with its name; null when it cannot be read. */
+function excelWorkbook(bytes: Uint8Array): Promise<FileSheet[] | null> {
+  return parseXlsx(bytes);
+}
+
+/** A CSV file as one sheet without a name; null when it is not text. */
+function csvSheet(bytes: Uint8Array): FileSheet[] | null {
   const rows = parseCsv(bytes);
   return rows === null ? null : [{ name: null, rows }];
 }
