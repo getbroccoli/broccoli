@@ -1,7 +1,7 @@
 import { buildSchema } from "graphql";
 import { expect, it } from "vitest";
 
-import { checkMutationPayloads } from "./checkMutationPayloads";
+import { mutationPayloadProblems } from "./mutationPayloads.js";
 
 it("accepts payloads with an error union and without an error field", () => {
   const schema = buildSchema(`
@@ -16,7 +16,7 @@ it("accepts payloads with an error union and without an error field", () => {
     type ConflictError implements Error { message: String! }
   `);
 
-  expect(() => checkMutationPayloads(schema)).not.toThrow();
+  expect(mutationPayloadProblems(schema)).toEqual([]);
 });
 
 it("rejects a bare mutation return type", () => {
@@ -27,9 +27,9 @@ it("rejects a bare mutation return type", () => {
     type Import { id: ID! }
   `);
 
-  expect(() => checkMutationPayloads(schema)).toThrow(
+  expect(mutationPayloadProblems(schema).map(({ message }) => message)).toEqual([
     "ImportMutations.approve must return a non-null object type named …Payload.",
-  );
+  ]);
 });
 
 it("rejects a nullable mutation payload", () => {
@@ -40,9 +40,9 @@ it("rejects a nullable mutation payload", () => {
     type ImportApprovePayload { id: ID }
   `);
 
-  expect(() => checkMutationPayloads(schema)).toThrow(
+  expect(mutationPayloadProblems(schema).map(({ message }) => message)).toEqual([
     "ImportMutations.approve must return a non-null object type named …Payload.",
-  );
+  ]);
 });
 
 it("rejects a non-null payload error", () => {
@@ -56,9 +56,9 @@ it("rejects a non-null payload error", () => {
     type ConflictError implements Error { message: String! }
   `);
 
-  expect(() => checkMutationPayloads(schema)).toThrow(
+  expect(mutationPayloadProblems(schema).map(({ message }) => message)).toEqual([
     "ImportApprovePayload.error must be a nullable union of Error types.",
-  );
+  ]);
 });
 
 it("rejects a payload error typed as an object instead of a union", () => {
@@ -71,7 +71,7 @@ it("rejects a payload error typed as an object instead of a union", () => {
     type ConflictError implements Error { message: String! }
   `);
 
-  expect(() => checkMutationPayloads(schema)).toThrow(
+  expect(mutationPayloadProblems(schema).map(({ message }) => message)).toEqual([
     "ImportApprovePayload.error must be a nullable union of Error types.",
-  );
+  ]);
 });
