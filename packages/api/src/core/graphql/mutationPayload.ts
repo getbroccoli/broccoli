@@ -2,23 +2,26 @@ import { ApplicationError, type ApplicationErrorCode, type FieldError } from "..
 
 /**
  * Runs a mutation's use case into its payload, named by its generated resolver type
- * (`ResolversTypes["CompanyUpdatePayload"]`) so `tsc` checks `field` and the result. With
- * `errorCodes`, an `ApplicationError` with one of them becomes the payload's `error`; any
- * other error is thrown, so refused callers and unexpected errors stay top-level.
+ * (`ResolversTypes["CompanyUpdatePayload"]`) so `tsc` checks `field` and the result.
+ * @param field The payload's field that holds the changed object.
+ * @param run The use-case call; its result goes under `field`.
+ * @param expectedErrorCodes The `ApplicationError` codes this mutation's payload reports as
+ *   its `error`; omit them for a payload without `error`. Any other error is thrown, so
+ *   refused callers and unexpected errors stay top-level.
  */
 export async function mutationPayload<Payload>(
   // `NoInfer`: the payload type is always named, never guessed from `field`.
   field: NoInfer<ResultField<Awaited<Payload>>>,
   run: () => Promise<NonNullable<Awaited<NoInfer<Payload>>[ResultField<Awaited<Payload>>]>>,
-  errorCodes?: readonly PayloadErrorCode[],
+  expectedErrorCodes?: readonly PayloadErrorCode[],
 ): Promise<Awaited<Payload>> {
-  if (!errorCodes) {
+  if (!expectedErrorCodes) {
     return { [field]: await run() } as Awaited<Payload>;
   }
   try {
     return { [field]: await run(), error: null } as Awaited<Payload>;
   } catch (error) {
-    if (error instanceof ApplicationError && isListed(error.code, errorCodes)) {
+    if (error instanceof ApplicationError && isListed(error.code, expectedErrorCodes)) {
       return { error: payloadErrorOf(error, error.code) } as Awaited<Payload>;
     }
     throw error;
@@ -42,9 +45,9 @@ interface PayloadErrors {
 
 function isListed(
   code: ApplicationErrorCode,
-  errorCodes: readonly PayloadErrorCode[],
+  expectedErrorCodes: readonly PayloadErrorCode[],
 ): code is PayloadErrorCode {
-  return (errorCodes as readonly ApplicationErrorCode[]).includes(code);
+  return (expectedErrorCodes as readonly ApplicationErrorCode[]).includes(code);
 }
 
 function payloadErrorOf(

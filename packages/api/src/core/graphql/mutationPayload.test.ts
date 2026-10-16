@@ -3,24 +3,20 @@ import { expect, it } from "vitest";
 import { ApplicationError } from "../applicationError";
 import { mutationPayload } from "./mutationPayload";
 
-it("returns the named result without an error field when no codes are listed", async () => {
+it("returns the result under its field on success, with a null error when errors are expected", async () => {
   const company = { id: "company" };
 
-  const payload = await mutationPayload<CompanyPayload>("company", () => Promise.resolve(company));
-
-  expect(payload).toEqual({ company });
-});
-
-it("returns a null error on success when codes are listed", async () => {
-  const employee = { id: "employee" };
-
-  const payload = await mutationPayload<EmployeePayload>(
-    "employee",
-    () => Promise.resolve(employee),
+  const withoutErrors = await mutationPayload<CompanyPayload>("company", () =>
+    Promise.resolve(company),
+  );
+  const withErrors = await mutationPayload<CompanyUpdatePayload>(
+    "company",
+    () => Promise.resolve(company),
     ["INVALID_INPUT"],
   );
 
-  expect(payload).toEqual({ employee, error: null });
+  expect(withoutErrors).toEqual({ company });
+  expect(withErrors).toEqual({ company, error: null });
 });
 
 it("returns a listed invalid input error with its fields", async () => {
@@ -66,6 +62,10 @@ it("rethrows an application error whose code is not listed", async () => {
 // Payload types as codegen generates them: the changed object, and `error` where it can fail.
 interface CompanyPayload {
   company?: { id: string } | null;
+}
+interface CompanyUpdatePayload {
+  company?: { id: string } | null;
+  error?: unknown;
 }
 interface EmployeePayload {
   employee?: { id: string } | null;
