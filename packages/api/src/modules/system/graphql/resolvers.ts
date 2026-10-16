@@ -1,19 +1,24 @@
 import type { Orm } from "../../../core/db";
 import type { Mode } from "../../../core/env";
 import type { Resolvers } from "../../../core/graphql";
-import { readSetupStep } from "../../../core/instance";
+import { readSetupHolder, readSetupStep } from "../../../core/instance";
 
-const STEPS = { owner: "OWNER", company: "COMPANY", import: "IMPORT", done: "DONE" } as const;
+const STEPS = { company: "COMPANY", import: "IMPORT", owner: "OWNER", done: "DONE" } as const;
+const HOLDERS = { you: "YOU", another_device: "ANOTHER_DEVICE", nobody: "NOBODY" } as const;
 const SIGN_IN = { self_hosted: "PASSWORD", managed: "MANAGED" } as const;
 
 export function createResolvers(orm: Orm, mode: Mode): Resolvers {
   return {
     Query: {
       ping: () => "pong",
-      setup: async () => ({
+      setup: async (_parent, _args, { security }) => ({
         id: "instance",
         step: STEPS[await readSetupStep(orm)],
         signIn: SIGN_IN[mode],
+        // A live setup cookie made the request the setup holder; any other carries no live token.
+        holder: security?.isSetupHolder
+          ? "YOU"
+          : HOLDERS[await readSetupHolder(orm, { token: null, now: new Date() })],
       }),
       me: (_parent, _args, { security }) => {
         const user = security?.user;

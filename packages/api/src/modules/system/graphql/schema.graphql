@@ -16,21 +16,31 @@ type User {
   isOwner: Boolean!
 }
 
-"Where a new instance is in its first-run flow."
+"Where a new instance is in its first-run flow: company, import, then on self-hosted instances owner."
 enum SetupStep {
-  "No owner yet: a self-hosted instance asks for the owner account."
-  OWNER
-  "The owner exists and has not named the company yet."
+  "The company has no name yet."
   COMPANY
-  "The company is named; the owner brings in their people."
+  "The company is named; the people are brought in."
   IMPORT
+  "Self-hosted only: the people are in; the owner account is created last."
+  OWNER
   "Setup is finished."
   DONE
 }
 
+"Which browser holds self-hosted setup before the owner exists."
+enum SetupHolder {
+  "This browser holds setup."
+  YOU
+  "Another browser holds setup, or held it until its session expired."
+  ANOTHER_DEVICE
+  "Nobody: setup is free to start, or the owner exists."
+  NOBODY
+}
+
 "How people sign in to this instance."
 enum SignIn {
-  "Email and password; the first visitor creates the owner."
+  "Email and password; the browser holding setup creates the owner at its last step."
   PASSWORD
   "Through the Broccoli accounts service, with Google or email."
   MANAGED
@@ -41,4 +51,5 @@ type Setup {
   id: ID!
   step: SetupStep!
   signIn: SignIn!
+  holder: SetupHolder!
 }

@@ -1,7 +1,9 @@
+import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import { OwnerExistsError } from "../domain";
+import { holdsSetup, OwnerExistsError, SetupInProgressError, type SetupStep } from "../domain";
+import { advanceStep } from "./setup";
 
 /** The owner's user id, or null before setup. */
 export function readOwnerUserId(db: Orm | Tx): Promise<string | null> {
@@ -18,22 +20,64 @@ export function readOwner(orm: Orm): Promise<{ userId: string; email: string } |
 }
 
 /**
- * Makes the user that `createOwner` creates the owner, once per instance. The row
- * lock makes a concurrent claim wait and then fail with `OwnerExistsError`. Publishes
- * `instance.owner_claimed`, however the owner was created.
+ * Makes the user that `createOwner` creates the owner, once per instance, keeping the
+ * setup step. The row lock makes a concurrent claim wait and then fail with
+ * `OwnerExistsError`. Publishes `instance.owner_claimed`.
  */
-export async function claimOwner<Owner extends { user: { id: string; email: string } }>(
+export async function claimOwner<Owner extends OwnerUser>(
   ctx: SecurityContext,
   tx: Tx,
   createOwner: () => Promise<Owner>,
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  if (await instance.lockOwnerUserId()) {
+  const { ownerUserId, step } = await instance.lockSetup();
+  if (ownerUserId) {
     throw new OwnerExistsError();
   }
-  const owner = await createOwner();
-  await instance.setOwner(owner.user.id, "company");
+  return saveOwner(tx, await createOwner(), step);
+}
+
+/**
+ * The last step of self-hosted setup: makes the user that `createOwner` creates the
+ * owner, for the browser holding setup only, then completes setup and ends the setup
+ * session. Refuses with `OwnerExistsError`, `SetupInProgressError`, or CONFLICT before
+ * the owner step.
+ */
+export async function createOwnerAtSetup<Owner extends OwnerUser>(
+  ctx: SecurityContext,
+  tx: Tx,
+  { token, now }: { token: string | null; now: Date },
+  createOwner: () => Promise<Owner>,
+): Promise<Owner> {
+  ctx.requireOwnerOrSystem();
+  const instance = instanceRepository(tx);
+  const { ownerUserId, step, setupSession } = await instance.lockSetup();
+  if (ownerUserId) {
+    throw new OwnerExistsError();
+  }
+  if (!setupSession || !holdsSetup(setupSession, token, now)) {
+    throw new SetupInProgressError();
+  }
+  if (step !== "owner") {
+    throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
+  }
+  const owner = await saveOwner(tx, await createOwner(), step);
+  await advanceStep(ctx, tx, "owner", "done");
+  await instance.clearSetupSession();
+  return owner;
+}
+
+interface OwnerUser {
+  user: { id: string; email: string };
+}
+
+async function saveOwner<Owner extends OwnerUser>(
+  tx: Tx,
+  owner: Owner,
+  step: SetupStep,
+): Promise<Owner> {
+  await instanceRepository(tx).setOwner(owner.user.id, step);
   tx.publish("instance.owner_claimed", { userId: owner.user.id, email: owner.user.email });
   return owner;
 }

@@ -8,7 +8,7 @@ import { mapSlackMembers } from "./mapSlackMembers";
  * refresh, the Slack source then holds its current members.
  */
 export async function readSlack(context: ImportContext, ctx: SecurityContext): Promise<void> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   // Slack is read before the transaction, which never waits on another service.
   const { workspace, members, snapshot } = await context.slack.readSlackMembers(ctx);
   const records = mapSlackMembers(members);

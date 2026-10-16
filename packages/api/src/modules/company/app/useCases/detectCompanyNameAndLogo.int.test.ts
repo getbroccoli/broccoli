@@ -1,5 +1,6 @@
 import { companyUseCases, expect, PNG as logo, SYSTEM, test } from "#test/support";
 
+import { instanceRepository } from "../../../../core/instance";
 import { createLogger } from "../../../../core/logger";
 
 test("stores the brand name and logo found for the owner's domain", async ({ orm, seed }) => {
@@ -110,3 +111,26 @@ test("does not restore a removed logo when owner setup is delivered again", asyn
   expect((await company.getCompany(actor)).logoFileId).toBeNull();
   expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(false);
 });
+
+test.for(["import", "owner", "done"] as const)(
+  "does not look up the brand at the %s step",
+  async (step, { orm, seed }) => {
+    const actor = await seed.owner();
+    await instanceRepository(orm).advanceStep("company", step);
+    const domains: string[] = [];
+    const company = companyUseCases(orm, {
+      brandLookup: (domain) => {
+        domains.push(domain);
+        return Promise.resolve({ name: "Acme Corp", logo });
+      },
+    });
+
+    await company.detectCompanyNameAndLogo(SYSTEM, {
+      userId: actor.user!.userId,
+      email: "owner@example.com",
+    });
+
+    expect(domains).toEqual([]);
+    expect((await company.getCompany(actor)).logoFileId).toBeNull();
+  },
+);

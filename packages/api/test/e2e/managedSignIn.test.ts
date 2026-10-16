@@ -186,17 +186,20 @@ test("redirects to sign-in unavailable when the issuer's keys cannot be read", a
   expect(sessionCookie(response)).toBeUndefined();
 });
 
-test("has no self-hosted setup", async () => {
-  const { env } = await assignedEnv();
+test.for(["/api/auth/setup", "/api/auth/setup/start"])(
+  "has no self-hosted endpoint %s",
+  async (path) => {
+    const { env } = await assignedEnv();
 
-  const response = await fetch(`${env.url}/api/auth/setup`, {
-    method: "POST",
-    headers: { "content-type": "application/json", origin: publicOrigin },
-    body: JSON.stringify({}),
-  });
+    const response = await fetch(`${env.url}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: publicOrigin },
+      body: JSON.stringify({}),
+    });
 
-  expect(response.status).toBe(404);
-});
+    expect(response.status).toBe(404);
+  },
+);
 
 /** A managed instance already assigned by init. */
 async function assignedEnv(): Promise<{ env: TestEnv; accounts: FakeAccounts }> {

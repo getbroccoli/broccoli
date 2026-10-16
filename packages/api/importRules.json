@@ -1,6 +1,14 @@
 {
   "elements": {
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
+    "src/resetSetup": [
+      "src/core/db",
+      "src/core/env",
+      "src/core/events",
+      "src/core/instance",
+      "src/core/logger",
+      "src/core/security"
+    ],
     "src/modules": [
       "src/core/env",
       "src/core/moduleManifest",
@@ -52,6 +60,7 @@
       "src/core/security"
     ],
     "src/core/instance": [
+      "src/core/applicationError",
       "src/core/auth",
       "src/core/db",
       "src/core/events",

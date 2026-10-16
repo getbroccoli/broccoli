@@ -43,12 +43,12 @@ const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 export function createImportReadService(imports: ImportRepository): ImportReadService {
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       return imports.listSources();
     },
 
     readSources: (ctx: SecurityContext, ids: readonly string[]): Promise<ImportSource[]> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       return imports.findSources(ids);
     },
 
@@ -56,13 +56,13 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx: SecurityContext,
       sourceIds: readonly string[],
     ): Promise<Map<string, number>> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const counts = await imports.countEmployees(sourceIds);
       return new Map(sourceIds.map((id) => [id, counts.get(id) ?? 0]));
     },
 
     readyEmployeeCount: async (ctx: SecurityContext): Promise<number> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const records = await imports.listEmployeeRecords();
       return records.filter((record) => toNewEmployee(record) !== null).length;
     },
@@ -71,7 +71,7 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx: SecurityContext,
       { sourceId, orderBy, filter, ...pageArgs }: ImportEmployeeListArgs,
     ): Promise<Connection<ImportEmployee>> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const order = parseOrder(orderBy, DEFAULT_ORDER);
       const search = parseSearch(filter?.search);
       const page = parsePage(pageArgs, importEmployeeKeyset(order));

@@ -83,12 +83,12 @@ export function createFileSourceService({
 
   return {
     canReadFiles: (ctx) => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       return decisions !== null;
     },
 
     uploadFile: async (ctx, { name, bytes }) => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       if (decisions === null) {
         throw new ApplicationError("UNAVAILABLE", "Reading files needs a model key.");
       }
@@ -109,7 +109,7 @@ export function createFileSourceService({
     },
 
     mapFile: async (ctx, { sourceId, attempt }) => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const source = await importRepository(orm).findFileSource(sourceId);
       if (!isCurrentRun(source, attempt) || decisions === null) {
         return;
@@ -130,7 +130,7 @@ export function createFileSourceService({
     },
 
     markFileFailed: async (ctx, { sourceId, attempt }) => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       await transact((tx) =>
         importRepository(tx).finishMapping(sourceId, attempt, {
           status: "failed",
@@ -140,7 +140,7 @@ export function createFileSourceService({
     },
 
     retryFile: async (ctx, sourceId) => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       await transact(async (tx) => {
         const imports = await lockSourcesForMapping(tx);
         const attempt = await imports.restartMapping(sourceId);
@@ -151,7 +151,7 @@ export function createFileSourceService({
     },
 
     removeFile: async (ctx, sourceId) => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       await transact(async (tx) => {
         const fileId = await importRepository(tx).deleteFileSource(sourceId);
         if (fileId !== null) {

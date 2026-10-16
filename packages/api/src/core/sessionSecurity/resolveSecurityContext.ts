@@ -3,11 +3,11 @@ import type { IncomingHttpHeaders } from "node:http";
 
 import type { AuthSource } from "../auth";
 import type { Orm } from "../db";
-import { readOwnerUserId } from "../instance";
-import { PrincipalSecurityContext, type RequestSecurity } from "../security";
+import { readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
+import { PrincipalSecurityContext, type RequestSecurity, type SecurityContext } from "../security";
 
 /**
- * The signed-in user of a request. Reading the session also extends one that is due
+ * The signed-in user of a request, or the browser holding setup. Reading the session also extends one that is due
  * for renewal; the GraphQL adapter sends `renewedCookies` back, or the browser's
  * cookie would expire before the session does.
  */
@@ -28,9 +28,21 @@ export async function resolveSecurityContext(
   });
   const renewedCookies = headers.getSetCookie();
   if (!session) {
-    return { security: null, renewedCookies };
+    return { security: await resolveSetupHolder(orm, requestHeaders), renewedCookies };
   }
   const { id: userId, email } = session.user;
   const isOwner = userId === (await readOwnerUserId(orm));
   return { security: PrincipalSecurityContext.user({ userId, email, isOwner }), renewedCookies };
+}
+
+/** The setup holder, for a request carrying the live setup token; otherwise null. */
+async function resolveSetupHolder(
+  orm: Orm,
+  requestHeaders: IncomingHttpHeaders,
+): Promise<SecurityContext | null> {
+  const token = readSetupToken(requestHeaders.cookie);
+  if (!token || (await readSetupHolder(orm, { token, now: new Date() })) !== "you") {
+    return null;
+  }
+  return PrincipalSecurityContext.setupHolder();
 }

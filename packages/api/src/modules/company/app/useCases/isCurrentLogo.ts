@@ -7,6 +7,6 @@ export async function isCurrentLogo(
   ctx: SecurityContext,
   fileId: string,
 ): Promise<boolean> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   return (await companies.read()).logoFileId === fileId;
 }
