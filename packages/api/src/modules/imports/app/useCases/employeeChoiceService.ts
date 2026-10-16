@@ -47,6 +47,9 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
           throw invalidInput([{ field: "recordId", code: "not_found" }]);
         }
         const normalised = choice && "value" in choice ? typedValue(field, choice.value) : choice;
+        if (field === "email" && normalised && "value" in normalised) {
+          refuseTakenEmail(employees, employee, normalised.value);
+        }
         return withValue(employee, field, normalised);
       }),
 
@@ -121,7 +124,9 @@ function choicesOf(employee: ImportEmployee): ImportEmployeeChoices[] {
   const [key, ...merged] = employee.keys;
   return [
     { key: key!, leftOut: employee.leftOut, values: chosen },
-    ...merged.map((mergedKey) => mergedChoices(mergedKey, employee.values.email.value)),
+    ...merged.map((mergedKey) =>
+      mergedChoices(mergedKey, employee.values.email.value, employee.leftOut),
+    ),
   ];
 }
 
@@ -140,17 +145,24 @@ function withValue(
   }
   const email =
     choice && "recordId" in choice ? emailOfRecord(employee, choice.recordId) : choice?.value;
-  return [changed, ...merged.map(({ key }) => mergedChoices(key, email ?? null))];
+  return [changed, ...merged.map(({ key }) => mergedChoices(key, email ?? null, employee.leftOut))];
 }
 
+/** Leaves out every import employee it is made of, so it stays left out whichever key leads. */
 function withLeftOut(employee: ImportEmployee, leftOut: boolean): ImportEmployeeChoices[] {
-  const [own, ...merged] = choicesOf(employee);
-  return [{ ...own!, leftOut }, ...merged];
+  return choicesOf(employee).map((choices) => ({ ...choices, leftOut }));
 }
 
 /** A merged-in import employee's choices: the shared email, or none, which splits it off. */
-function mergedChoices(key: string, email: string | null): ImportEmployeeChoices {
-  return { key, leftOut: false, values: email === null ? {} : { email: { value: email } } };
+function mergedChoices(key: string, email: string | null, leftOut: boolean): ImportEmployeeChoices {
+  return { key, leftOut, values: email === null ? {} : { email: { value: email } } };
+}
+
+/** Two import employees never share an email by typing: the owner leaves one out instead. */
+function refuseTakenEmail(employees: ImportEmployee[], employee: ImportEmployee, email: string) {
+  if (employees.some((other) => other !== employee && other.values.email.value === email)) {
+    throw invalidInput([{ field: "value", code: "taken" }]);
+  }
 }
 
 function holdsRecord(employee: ImportEmployee, field: ImportEmployeeField, recordId: string) {

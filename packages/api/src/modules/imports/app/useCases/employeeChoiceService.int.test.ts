@@ -1,6 +1,4 @@
-import { expect, importUseCases, OWNER, test, type TestSeed } from "#test/support";
-
-import type { Orm } from "../../../../core/db";
+import { expect, importUseCases, OWNER, test } from "#test/support";
 
 test("stores a record pick for a later read", async ({ orm, seed }) => {
   const slack = await seed.importSource();
@@ -249,44 +247,60 @@ test("uses the default after removing the picked record’s file", async ({ orm,
   expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "default" });
 });
 
-test("normalises a typed email before merging", async ({ orm, seed }) => {
+test.for(["b@example.com", "B@EXAMPLE.COM", " B@EXAMPLE.COM "])(
+  "refuses another import employee’s email %s without changing either employee",
+  async (value, { orm, seed }) => {
+    const source = await seed.importSource();
+    await seed.importEmployees(source.id, [{ email: "a@example.com" }, { email: "b@example.com" }]);
+    const imports = importUseCases(orm);
+    const before = await imports.reads.listEmployees(OWNER, {});
+
+    await expect(
+      imports.choices.chooseEmployeeValue(OWNER, {
+        key: "a@example.com",
+        field: "email",
+        choice: { value },
+      }),
+    ).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "value", code: "taken" }],
+    });
+    expect(await imports.reads.listEmployees(OWNER, {})).toEqual(before);
+  },
+);
+
+test("allows typing the import employee’s current email", async ({ orm, seed }) => {
   const source = await seed.importSource();
-  await seed.importEmployees(source.id, [{ email: "a@example.com" }, { email: "b@example.com" }]);
+  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
 
   await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "a@example.com",
+    key: "avery@example.com",
     field: "email",
-    choice: { value: " B@EXAMPLE.COM " },
-  });
-
-  const page = await importUseCases(orm).reads.listEmployees(OWNER, {});
-  expect(page.edges.map(({ node }) => node)).toMatchObject([
-    {
-      key: "b@example.com",
-      keys: ["b@example.com", "a@example.com"],
-      values: { email: { value: "b@example.com", choice: "typed" } },
-    },
-  ]);
-});
-
-test("clears a merged-in title back to the first source’s value", async ({ orm, seed }) => {
-  const imports = await mergedEmployees(orm, seed);
-
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "b@example.com",
-    field: "jobTitle",
-    choice: null,
+    choice: { value: " AVERY@EXAMPLE.COM " },
   });
 
   const page = await imports.reads.listEmployees(OWNER, {});
-  expect(page.edges.map(({ node }) => node)).toMatchObject([
-    { values: { jobTitle: { value: "Designer", choice: "default", pickedRecordId: null } } },
+  expect(page.edges.map(({ node }) => node.values.email)).toMatchObject([
+    { value: "avery@example.com", choice: "typed" },
   ]);
 });
 
-test("keeps merged records together after another email edit", async ({ orm, seed }) => {
-  const imports = await mergedEmployees(orm, seed);
+test("keeps a merge from a re-read left out after an email edit", async ({ orm, seed }) => {
+  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  const [row] = await seed.importEmployees(file.id, [{ email: null }]);
+  const imports = importUseCases(orm);
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: `record:${row!.id}`,
+    field: "email",
+    choice: { value: "b@example.com" },
+  });
+  const slack = await seed.importSource();
+  await seed.importEmployees(slack.id, [{ email: "b@example.com" }]);
+  const merged = await imports.reads.listEmployees(OWNER, {});
+  expect(merged.edges).toHaveLength(1);
+  expect(merged.edges[0]!.node.records).toHaveLength(2);
+  await imports.choices.setLeftOut(OWNER, { key: "b@example.com", leftOut: true });
 
   await imports.choices.chooseEmployeeValue(OWNER, {
     key: "b@example.com",
@@ -295,49 +309,8 @@ test("keeps merged records together after another email edit", async ({ orm, see
   });
 
   const page = await imports.reads.listEmployees(OWNER, {});
-  expect(page.edges).toHaveLength(1);
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
+    { leftOut: true, values: { email: { value: "c@example.com", choice: "typed" } } },
+  ]);
   expect(page.edges[0]!.node.records).toHaveLength(2);
-  expect(page.edges[0]!.node.values).toMatchObject({
-    email: { value: "c@example.com", choice: "typed" },
-    jobTitle: { value: "Lead", choice: "typed" },
-  });
 });
-
-test("undoes an email merge using the merged-in import employee’s key", async ({ orm, seed }) => {
-  const imports = await mergedEmployees(orm, seed);
-
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "a@example.com",
-    field: "email",
-    choice: null,
-  });
-
-  const page = await imports.reads.listEmployees(OWNER, {
-    orderBy: { field: "EMAIL", direction: "ASC" },
-  });
-  expect(page.edges.map(({ node }) => ({ key: node.key, email: node.values.email }))).toMatchObject(
-    [
-      { key: "a@example.com", email: { value: "a@example.com", choice: "default" } },
-      { key: "b@example.com", email: { value: "b@example.com", choice: "default" } },
-    ],
-  );
-});
-
-async function mergedEmployees(orm: Orm, seed: TestSeed) {
-  const file = await seed.fileSource({ content: "x", status: "mapped" });
-  const slack = await seed.importSource();
-  await seed.importEmployees(file.id, [{ email: "a@example.com", jobTitle: "Designer" }]);
-  await seed.importEmployees(slack.id, [{ email: "b@example.com", jobTitle: "Engineer" }]);
-  const imports = importUseCases(orm);
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "a@example.com",
-    field: "jobTitle",
-    choice: { value: "Lead" },
-  });
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "a@example.com",
-    field: "email",
-    choice: { value: "b@example.com" },
-  });
-  return imports;
-}

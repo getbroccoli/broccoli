@@ -192,7 +192,7 @@ function errorMessage(field: EmployeeFieldKey, code: string): string {
   if (code === "invalid" && field === "startDate") {
     return t("setup.review.error.invalidDate");
   }
-  if (code === "required" || code === "too_long") {
+  if (code === "required" || code === "too_long" || code === "taken") {
     return t(`setup.review.error.${code}`);
   }
   return t("setup.review.error.invalid");

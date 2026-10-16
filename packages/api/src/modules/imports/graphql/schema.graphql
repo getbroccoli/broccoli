@@ -199,7 +199,7 @@ type ImportMutations {
   retryFile(sourceId: ID!): ImportRetryFilePayload!
   "Removes a file, its records and the stored file."
   removeFile(sourceId: ID!): ImportMutationPayload!
-  "Shows a record's value or a typed one for one field of an import employee; with neither, the first source's value again. A typed value must pass the employee rules for that field."
+  "Shows a record's value or a typed one for one field of an import employee; with neither, the first source's value again. A typed value must pass the employee rules for that field; a typed email another import employee shows is refused as taken."
   chooseEmployeeValue(input: ImportChooseEmployeeValueInput!): ImportChooseEmployeeValuePayload!
   "Picks this source's value for every open conflict on this field that it holds a value in."
   chooseSourceForAll(field: ImportEmployeeField!, sourceId: ID!): ImportMutationPayload!

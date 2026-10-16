@@ -5,9 +5,6 @@ fragment EmployeeValueCell_value on ImportEmployeeValue {
   pickedRecord {
     id
   }
-  pickedRecord {
-    id
-  }
   options {
     value
     records {
