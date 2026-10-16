@@ -1,0 +1,33 @@
+{
+  "records": [
+    {
+      "firstName": "Eva",
+      "lastName": "Schulz",
+      "email": null,
+      "jobTitle": "Team Coordinator",
+      "startDate": "2021-02-03"
+    },
+    {
+      "firstName": "Marco",
+      "lastName": "Rossi",
+      "email": null,
+      "jobTitle": "Operations Analyst",
+      "startDate": "2022-07-19"
+    },
+    {
+      "firstName": "Hana",
+      "lastName": "Lee",
+      "email": null,
+      "jobTitle": "Account Executive",
+      "startDate": "2024-01-14"
+    },
+    {
+      "firstName": "Ivo",
+      "lastName": "Novak",
+      "email": null,
+      "jobTitle": "Support Specialist",
+      "startDate": "2024-05-28"
+    }
+  ],
+  "forbidden": ["Solace GmbH", "legal names", "no email field"]
+}

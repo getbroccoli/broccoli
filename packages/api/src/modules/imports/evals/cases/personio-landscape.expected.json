@@ -1,0 +1,45 @@
+{
+  "records": [
+    {
+      "firstName": "Isla",
+      "lastName": "McKenna",
+      "email": "isla.mckenna@pine.example",
+      "jobTitle": "Senior Customer Experience Manager",
+      "startDate": "2020-08-17"
+    },
+    {
+      "firstName": "Bastien",
+      "lastName": "Leroux",
+      "email": "bastien.leroux@pine.example",
+      "jobTitle": "Workplace and People Experience Specialist",
+      "startDate": "2021-04-26"
+    },
+    {
+      "firstName": "Kira",
+      "lastName": "Alvarez",
+      "email": "kira.alvarez@pine.example",
+      "jobTitle": "International Partnerships Director",
+      "startDate": "2022-10-03"
+    },
+    {
+      "firstName": "Marek",
+      "lastName": "Zielinski",
+      "email": "marek.zielinski@pine.example",
+      "jobTitle": "Technical Account Manager",
+      "startDate": "2024-01-15"
+    },
+    {
+      "firstName": "Lin",
+      "lastName": "Wu",
+      "email": "lin.wu@pine.example",
+      "jobTitle": "Product Operations Analyst",
+      "startDate": "2024-06-24"
+    }
+  ],
+  "forbidden": [
+    "Pine People Export",
+    "Personio-style employee report",
+    "Helsinki",
+    "generated 24 June 2026"
+  ]
+}
