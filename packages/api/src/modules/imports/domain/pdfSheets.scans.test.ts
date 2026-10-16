@@ -63,6 +63,7 @@ it("accepts a different table's header and row over a full-page image", () => {
   const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
   const second = page(
     [
+      line(780, ["Contractors"]),
       line(760, ["Employee", "Work email", "Role"], 14),
       line(740, ["Robin Reed", "robin@example.com", "Engineer"], 14),
     ],
@@ -77,6 +78,22 @@ it("refuses a header-less continuation whose rows moved over a full-page image",
     [
       line(740, ["Robin Reed", "robin@example.com"], 20, 20),
       line(720, ["Morgan Lake", "morgan@example.com"], 20, 20),
+    ],
+    1,
+  );
+  expect(hasScannedPage([table, continuation])).toBe(true);
+});
+
+it.for([
+  { name: "alone", title: [] },
+  { name: "under a running title", title: [line(780, ["Staff list"])] },
+])("refuses moved name and role rows $name over a full-page image", ({ title }) => {
+  const table = page([...title, line(760, ["Name", "Role"]), line(740, ["Avery", "Engineer"])]);
+  const continuation = page(
+    [
+      ...title,
+      line(740, ["Robin Reed", "Designer"], 0, 20),
+      line(720, ["Morgan Lake", "Engineer"], 0, 20),
     ],
     1,
   );

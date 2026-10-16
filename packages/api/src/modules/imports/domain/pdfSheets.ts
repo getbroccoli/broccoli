@@ -66,12 +66,29 @@ interface Table {
  * it; null when no table is found.
  */
 function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] } | null {
-  const lines = pages.flatMap(({ items }, page) =>
-    linesOf(items).map((cells) => ({ cells, page })),
+  const lines = pages.flatMap(({ items, height }, page) =>
+    linesOf(items).map(({ cells, y }) => ({ cells, page, inTopQuarter: y > height * 0.75 })),
   );
+  const runningTexts = repeatedOnPages(lines);
   const tables: Table[] = [];
   const textPages = pages.map(() => false);
   let table: Table = { header: [], lines: [] };
+  /**
+   * A later table starts only under a sub-heading of its own, a one-cell line that is not a
+   * running title, or with the current table's header texts: rows whose columns moved look like
+   * a header and a row.
+   */
+  const startsTable = (at: number) => {
+    const cells = lines[at]?.cells ?? [];
+    const above = lines[at - 1]?.cells ?? [];
+    const isHeadedOrFirst =
+      table.header.length === 0 ||
+      (above.length === 1 && !runningTexts.has(above[0]!.text)) ||
+      sameRow(texts(cells), texts(table.header));
+    return (
+      isHeader(cells, lines[at + 1]?.cells) && !linesUp(cells, table.header) && isHeadedOrFirst
+    );
+  };
   let headerPage = -1;
   let page = -1;
   let pageStarted = false;
@@ -81,20 +98,13 @@ function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] }
     if (lines[index]!.page !== page) {
       page = lines[index]!.page;
       pageStarted = false;
-      // Text above the page's repeated header is a running title, unless a sub-heading sits
-      // directly above that header: then the lines above are rows of the table before it.
-      // shortcut: rows directly above an equal header with no sub-heading are dropped; upgrade
-      // when a report repeats its header mid-page without a heading.
-      const repeated = lines.findIndex(
-        (line, at) =>
-          at >= index && line.page === page && isRepeatedHeader(line.cells, table.header),
-      );
-      if (repeated > index && lines[repeated - 1]!.cells.length > 1) {
+      const repeated = repeatedHeaderAt(lines, index, table);
+      if (repeated > index) {
         index = repeated - 1;
         continue;
       }
     }
-    if (isNewTable(cells, next, table)) {
+    if (startsTable(index)) {
       table = { header: cells, lines: [] };
       tables.push(table);
       headerPage = page;
@@ -105,7 +115,7 @@ function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] }
     const isSubHeading =
       cells.length === 1 &&
       next !== undefined &&
-      (isNewTable(next, lines[index + 2]?.cells, table) || isRepeatedHeader(next, table.header));
+      (startsTable(index + 1) || isRepeatedHeader(next, table.header));
     if (isRunningTitle || isSubHeading) {
       continue;
     }
@@ -122,22 +132,41 @@ function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] }
   return tables.length > 0 ? { tables, textPages } : null;
 }
 
+/**
+ * Where the page that starts at `start` repeats the table's header with only running titles
+ * above it: when it is the page's first line of the table, or it lies in the page's top quarter.
+ * -1 otherwise: a header repeated mid-page under people keeps them.
+ */
+function repeatedHeaderAt(
+  lines: { cells: Cell[]; page: number; inTopQuarter: boolean }[],
+  start: number,
+  table: Table,
+): number {
+  const page = lines[start]!.page;
+  const onPage = lines.slice(start).filter((line) => line.page === page);
+  const at = onPage.findIndex(({ cells }) => isRepeatedHeader(cells, table.header));
+  const firstOfTable = onPage.findIndex(
+    ({ cells }) => cells.length >= 2 && linesUp(cells, table.header),
+  );
+  return at >= 0 && (at === firstOfTable || onPage[at]!.inTopQuarter) ? start + at : -1;
+}
+
+/** Texts of one-cell lines found on more than one page: running titles, not sub-headings. */
+function repeatedOnPages(lines: { cells: Cell[]; page: number }[]): Set<string> {
+  const pagesOf = new Map<string, Set<number>>();
+  for (const { cells, page } of lines.filter(({ cells }) => cells.length === 1)) {
+    pagesOf.set(cells[0]!.text, (pagesOf.get(cells[0]!.text) ?? new Set()).add(page));
+  }
+  return new Set([...pagesOf].filter(([, pages]) => pages.size > 1).map(([text]) => text));
+}
+
 /** Two or more cells that the next line's two or more cells line up with. */
 function isHeader(line: Cell[], next: Cell[] | undefined): boolean {
   return line.length >= 2 && next !== undefined && next.length >= 2 && linesUp(next, line);
 }
 
-/**
- * A header that is not the current table's. After the first table, a line with an email or a
- * number is a row whose columns moved, not a header.
- */
-function isNewTable(line: Cell[], next: Cell[] | undefined, table: Table): boolean {
-  const isFirst = table.header.length === 0;
-  return (
-    isHeader(line, next) &&
-    !linesUp(line, table.header) &&
-    (isFirst || !line.some(({ text }) => /[@\p{N}]/u.test(text)))
-  );
+function texts(line: Cell[]): string[] {
+  return line.map(({ text }) => text);
 }
 
 function isRepeatedHeader(line: Cell[], header: Cell[]): boolean {
@@ -156,8 +185,8 @@ interface Cell {
   tolerance: number;
 }
 
-/** A page's lines, top to bottom, each its cells left to right. */
-function linesOf(items: PdfTextItem[]): Cell[][] {
+/** A page's lines, top to bottom, each its cells left to right and its baseline. */
+function linesOf(items: PdfTextItem[]): { cells: Cell[]; y: number }[] {
   const lines: PdfTextItem[][] = [];
   for (const item of items.toSorted((a, b) => b.y - a.y)) {
     const line = lines.at(-1);
@@ -167,7 +196,7 @@ function linesOf(items: PdfTextItem[]): Cell[][] {
       lines.push([item]);
     }
   }
-  return lines.map(cellsOf);
+  return lines.map((line) => ({ cells: cellsOf(line), y: line[0]!.y }));
 }
 
 function cellsOf(line: PdfTextItem[]): Cell[] {
