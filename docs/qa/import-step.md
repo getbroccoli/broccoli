@@ -22,7 +22,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 ## Refresh and reconnect
 
 - [ ] After adding or deactivating a member in Slack, "Refresh" updates the count.
-- [ ] "Connect another workspace" goes through Slack again; the row then shows the other workspace and its members.
+- [ ] "Connect another workspace", in the Slack row's "⋯" menu, goes through Slack again; the row then shows the other workspace and its members.
 
 ## Failures
 
