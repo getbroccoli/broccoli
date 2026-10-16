@@ -13,7 +13,7 @@ import type { SecurityContext } from "../../../../core/security";
 import type { ImportRepository } from "../../db";
 import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
 import type { ImportEmployee, ImportEmployeeRecord, ImportSource } from "../../domain";
-import { isInCheck, type ImportCheck, listChecks } from "./importChecks";
+import { isInCheck, type ImportCheck, listChecks, parseCheckId } from "./importChecks";
 import { importEmployeeKeyset, matchesSearch, pageImportEmployees } from "./importEmployeeList";
 import { readImportEmployees, toNewEmployee } from "./importEmployeeMapping";
 
@@ -92,7 +92,7 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx.requireOwnerOrSystem();
       const order = parseOrder(orderBy, DEFAULT_ORDER);
       const search = parseSearch(filter?.search);
-      const check = filter?.check ?? null;
+      const check = filter?.check ? parseCheckId(filter.check) : null;
       const page = parsePage(pageArgs, importEmployeeKeyset(order));
       // shortcut: the whole import is grouped per request; move grouping to SQL or cache it when imports outgrow setup sizes.
       const employees = (await readImportEmployees(imports)).filter(

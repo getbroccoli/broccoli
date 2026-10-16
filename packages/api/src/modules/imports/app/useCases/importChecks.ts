@@ -54,16 +54,36 @@ export function listChecks(
   return [...conflicts, ...incomplete].filter(({ count }) => count > 0);
 }
 
-/** Whether the import employee belongs to the check with this id; an unknown id matches no one. */
-export function isInCheck(employee: ImportEmployee, checkId: string): boolean {
+/** Which import employees a check id stands for; an id that is no check stands for no one. */
+export type CheckFilter =
+  | { kind: "conflict"; field: ImportEmployeeField }
+  | { kind: "incomplete"; reason: IncompleteReason }
+  | { kind: "none" };
+
+/** Reads a check id a client sent, such as `conflict:jobTitle`. */
+export function parseCheckId(checkId: string): CheckFilter {
+  const [kind, name] = checkId.split(":");
+  const field = IMPORT_EMPLOYEE_FIELDS.find((candidate) => candidate === name);
+  if (kind === "conflict" && field) {
+    return { kind, field };
+  }
+  const reason = INCOMPLETE_REASONS.find((candidate) => candidate === name);
+  return kind === "incomplete" && reason ? { kind, reason } : { kind: "none" };
+}
+
+/** Whether the import employee belongs to the check; a left-out one belongs to none. */
+export function isInCheck(employee: ImportEmployee, check: CheckFilter): boolean {
   if (employee.leftOut) {
     return false;
   }
-  const [kind, name] = checkId.split(":");
-  if (kind === "conflict" && IMPORT_EMPLOYEE_FIELDS.includes(name as ImportEmployeeField)) {
-    return hasOpenConflict(employee.values[name as ImportEmployeeField]);
+  switch (check.kind) {
+    case "conflict":
+      return hasOpenConflict(employee.values[check.field]);
+    case "incomplete":
+      return incompleteReason(employee) === check.reason;
+    case "none":
+      return false;
   }
-  return kind === "incomplete" && incompleteReason(employee) === name;
 }
 
 /** The sources of the records holding a value of `field`, in source order. */

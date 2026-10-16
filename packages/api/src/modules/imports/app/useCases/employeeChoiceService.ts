@@ -42,10 +42,7 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
   return {
     chooseEmployeeValue: (ctx, { key, field, choice }) =>
       changeChoices(ctx, transact, (employees) => {
-        const employee = employees.find((candidate) => candidate.key === key);
-        if (!employee) {
-          throw invalidInput([{ field: "employeeId", code: "not_found" }]);
-        }
+        const employee = findEmployee(employees, key);
         if (choice && "recordId" in choice && !holdsRecord(employee, field, choice.recordId)) {
           throw invalidInput([{ field: "recordId", code: "not_found" }]);
         }
@@ -69,13 +66,9 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
       ),
 
     setLeftOut: (ctx, { key, leftOut }) =>
-      changeChoices(ctx, transact, (employees) => {
-        const employee = employees.find((candidate) => candidate.key === key);
-        if (!employee) {
-          throw invalidInput([{ field: "employeeId", code: "not_found" }]);
-        }
-        return [{ ...choicesOf(employee), leftOut }];
-      }),
+      changeChoices(ctx, transact, (employees) => [
+        { ...choicesOf(findEmployee(employees, key)), leftOut },
+      ]),
 
     leaveOutIncomplete: (ctx, { reason }) =>
       changeChoices(ctx, transact, (employees) =>
@@ -99,6 +92,15 @@ async function changeChoices(
     await imports.lockSources();
     await imports.saveChoices("employee", change(await readImportEmployees(imports)));
   });
+}
+
+/** The import employee with this key; refused, naming `employeeId`, when there is none. */
+function findEmployee(employees: ImportEmployee[], key: string): ImportEmployee {
+  const employee = employees.find((candidate) => candidate.key === key);
+  if (!employee) {
+    throw invalidInput([{ field: "employeeId", code: "not_found" }]);
+  }
+  return employee;
 }
 
 /** The import employee's stored choices: its own, under its key. */

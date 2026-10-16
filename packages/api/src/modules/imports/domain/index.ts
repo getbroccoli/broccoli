@@ -20,7 +20,6 @@ export {
   type ImportEmployeeChoices,
   type ImportEmployeeField,
   type ImportEmployeeRecord,
-  type ImportEmployeeValue,
   type ValueChoice,
   type ImportEmployeeValues,
   type IncomingRecord,

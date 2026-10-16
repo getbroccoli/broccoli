@@ -53,6 +53,10 @@ export function ThingsToCheck({
   });
   if (!complete || checks.length === 0) return null;
   const total = checks.reduce((sum, { count }) => sum + count, 0);
+  const label =
+    total === 1
+      ? t("setup.review.checks.buttonOne")
+      : t("setup.review.checks.button", { count: String(total) });
   const busy = chosen.loading || leftOut.loading;
   const failed = chosen.error || leftOut.error;
 
@@ -72,19 +76,11 @@ export function ThingsToCheck({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={<button type="button" className="rounded-full" />}>
-        <FlagPill className="h-8 px-3 text-sm">
-          {total === 1
-            ? t("setup.review.checks.buttonOne")
-            : t("setup.review.checks.button", { count: String(total) })}
-        </FlagPill>
+        <FlagPill className="h-8 px-3 text-sm">{label}</FlagPill>
       </PopoverTrigger>
       <PopoverContent align="start" sideOffset={8} className="w-[440px] gap-4 rounded-xl p-5">
         <PopoverHeader>
-          <PopoverTitle className="text-base">
-            {total === 1
-              ? t("setup.review.checks.buttonOne")
-              : t("setup.review.checks.button", { count: String(total) })}
-          </PopoverTitle>
+          <PopoverTitle className="text-base">{label}</PopoverTitle>
           <PopoverDescription className="text-sm leading-[1.5]">
             {t("setup.review.checks.description")}
           </PopoverDescription>
