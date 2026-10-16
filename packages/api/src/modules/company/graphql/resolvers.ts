@@ -1,4 +1,4 @@
-import type { Resolvers } from "../../../core/graphql";
+import { mutationPayload, type Resolvers } from "../../../core/graphql";
 import type { Company, CompanyUseCases } from "../app";
 import { logoUrl } from "../http";
 
@@ -12,10 +12,16 @@ export function createResolvers(useCases: CompanyUseCases): Resolvers {
       company: () => ({}),
     },
     CompanyMutations: {
-      update: async (_parent, { input }, context) =>
-        toGraphql(await useCases.update(context.getActor(), input)),
-      removeLogo: async (_parent, _args, context) =>
-        toGraphql(await useCases.removeLogo(context.getActor())),
+      update: (_parent, { input }, context) =>
+        mutationPayload(
+          "company",
+          async () => toGraphql(await useCases.update(context.getActor(), input)),
+          ["INVALID_INPUT"],
+        ),
+      removeLogo: (_parent, _args, context) =>
+        mutationPayload("company", async () =>
+          toGraphql(await useCases.removeLogo(context.getActor())),
+        ),
     },
   };
 }

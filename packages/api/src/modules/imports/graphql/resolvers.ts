@@ -1,4 +1,4 @@
-import type { Resolvers } from "../../../core/graphql";
+import { mutationPayload, type Resolvers } from "../../../core/graphql";
 import { incompleteReason, type ImportUseCases } from "../app";
 import { importLoaders } from "./loaders";
 
@@ -26,26 +26,26 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       import: () => ({}),
     },
     ImportMutations: {
-      readSlack: async (_parent, _args, context) => {
-        await useCases.readSlack(context.getActor());
-        return IMPORT;
-      },
-      skip: async (_parent, _args, context) => {
-        await useCases.skipImport(context.getActor());
-        return IMPORT;
-      },
-      approve: async (_parent, _args, context) => {
-        await useCases.approveImport(context.getActor());
-        return IMPORT;
-      },
-      retryFile: async (_parent, { sourceId }, context) => {
-        await useCases.files.retryFile(context.getActor(), sourceId);
-        return IMPORT;
-      },
-      removeFile: async (_parent, { sourceId }, context) => {
-        await useCases.files.removeFile(context.getActor(), sourceId);
-        return IMPORT;
-      },
+      readSlack: (_parent, _args, context) =>
+        mutationPayload("import", () => thenImport(useCases.readSlack(context.getActor())), [
+          "UNAVAILABLE",
+        ]),
+      skip: (_parent, _args, context) =>
+        mutationPayload("import", () => thenImport(useCases.skipImport(context.getActor()))),
+      approve: (_parent, _args, context) =>
+        mutationPayload("import", () => thenImport(useCases.approveImport(context.getActor())), [
+          "CONFLICT",
+        ]),
+      retryFile: (_parent, { sourceId }, context) =>
+        mutationPayload(
+          "import",
+          () => thenImport(useCases.files.retryFile(context.getActor(), sourceId)),
+          ["CONFLICT"],
+        ),
+      removeFile: (_parent, { sourceId }, context) =>
+        mutationPayload("import", () =>
+          thenImport(useCases.files.removeFile(context.getActor(), sourceId)),
+        ),
     },
     Import: {
       id: () => "import",
@@ -83,4 +83,10 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       },
     },
   };
+}
+
+/** The import, once a use case that returns nothing has finished; its fields load what the client selects. */
+async function thenImport(work: Promise<void>): Promise<typeof IMPORT> {
+  await work;
+  return IMPORT;
 }

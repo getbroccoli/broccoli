@@ -52,8 +52,16 @@ input EmployeeCreateInput {
 
 type EmployeeMutations {
   "Adds an employee. Owner only."
-  create(input: EmployeeCreateInput!): Employee!
+  create(input: EmployeeCreateInput!): EmployeeCreatePayload!
 }
+
+"The new employee, or why it was refused."
+type EmployeeCreatePayload {
+  employee: Employee
+  error: EmployeeCreateError
+}
+
+union EmployeeCreateError = InvalidInputError
 
 # Each module declares its own root fields; the server merges them into one type.
 type Query {

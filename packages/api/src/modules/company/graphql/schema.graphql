@@ -23,9 +23,22 @@ input CompanyInput {
 
 type CompanyMutations {
   "Saves the company's details; completes the company step of setup."
-  update(input: CompanyInput!): Company!
-  removeLogo: Company!
+  update(input: CompanyInput!): CompanyUpdatePayload!
+  removeLogo: CompanyPayload!
 }
+
+"The company after a mutation that cannot fail in an expected way."
+type CompanyPayload {
+  company: Company
+}
+
+"The company after `update`, or why it was refused."
+type CompanyUpdatePayload {
+  company: Company
+  error: CompanyUpdateError
+}
+
+union CompanyUpdateError = InvalidInputError
 
 type Mutation {
   company: CompanyMutations!

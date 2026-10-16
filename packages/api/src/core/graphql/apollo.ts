@@ -10,6 +10,7 @@ import { GraphQLError } from "graphql";
 
 import type { Logger } from "../logger";
 import { requireSignedIn, type RequestSecurity, type SecurityContext } from "../security";
+import { checkMutationPayloads } from "./checkMutationPayloads";
 import { depthLimit } from "./depthLimit";
 import { errorLoggingPlugin } from "./errorLogging";
 import { formatError } from "./errors";
@@ -62,13 +63,13 @@ export async function startGraphqlApi(
   logger: Logger,
   resolveSecurity: SecurityResolver,
 ): Promise<GraphqlApi> {
+  const schema = makeExecutableSchema({
+    typeDefs: [CORE_TYPE_DEFS, ...manifests.map((manifest) => manifest.typeDefs)],
+    resolvers: [CORE_RESOLVERS, ...manifests.map((manifest) => manifest.resolvers)],
+  });
+  checkMutationPayloads(schema);
   const apollo = new ApolloServer<GraphqlContext>({
-    schema: requireSessionOutsidePublicFields(
-      makeExecutableSchema({
-        typeDefs: [CORE_TYPE_DEFS, ...manifests.map((manifest) => manifest.typeDefs)],
-        resolvers: [CORE_RESOLVERS, ...manifests.map((manifest) => manifest.resolvers)],
-      }),
-    ),
+    schema: requireSessionOutsidePublicFields(schema),
     parseOptions: { maxTokens: MAX_TOKENS },
     validationRules: [depthLimit(MAX_DEPTH), singleMutationField],
     introspection: false,
