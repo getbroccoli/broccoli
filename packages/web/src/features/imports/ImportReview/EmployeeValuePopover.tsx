@@ -66,7 +66,7 @@ export function EmployeeValuePopover({
           onClick: () =>
             void chooseValue({
               variables: { input: { employeeId, field: FIELD_ENUMS[field], ...previous } },
-            }).then(refreshReview),
+            }).then(refreshReview, () => toast.error(t("setup.review.saveFailed"))),
         },
       },
     );
@@ -148,26 +148,23 @@ export function EmployeeValuePopover({
           {value.choice === "TYPED" && (
             <p className="text-xs text-muted-foreground">{t("setup.review.typed")}</p>
           )}
-          {(fieldError || error) && (
-            <p role="alert" className="text-sm text-destructive">
-              {fieldError ? errorMessage(field, fieldError.code) : t("setup.review.saveFailed")}
-            </p>
-          )}
         </form>
+      )}
+      {(fieldError || error) && (
+        <p role="alert" className="text-sm text-destructive">
+          {fieldError ? errorMessage(field, fieldError.code) : t("setup.review.saveFailed")}
+        </p>
       )}
     </>
   );
 }
 
 /** What Undo sends: the choice shown before this one; neither field puts the default back. */
-function previousChoice({ choice, value, options }: EmployeeValueCell_ValueFragment): Choice {
+function previousChoice({ choice, value, pickedRecord }: EmployeeValueCell_ValueFragment): Choice {
   if (choice === "TYPED") {
     return { value };
   }
-  if (choice === "PICKED") {
-    return { recordId: options.find((option) => option.value === value)?.records[0]?.id };
-  }
-  return {};
+  return pickedRecord ? { recordId: pickedRecord.id } : {};
 }
 
 /** "staff.csv and Slack disagree…", or a general line for three sources or more. */

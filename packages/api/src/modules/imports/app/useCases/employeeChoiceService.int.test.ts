@@ -1,4 +1,6 @@
-import { expect, importUseCases, OWNER, test } from "#test/support";
+import { expect, importUseCases, OWNER, test, type TestSeed } from "#test/support";
+
+import type { Orm } from "../../../../core/db";
 
 test("stores a record pick for a later read", async ({ orm, seed }) => {
   const slack = await seed.importSource();
@@ -15,11 +17,8 @@ test("stores a record pick for a later read", async ({ orm, seed }) => {
     choice: { recordId: member!.id },
   });
 
-  const page = await importUseCases(orm).reads.listEmployees(OWNER, {});
-  expect(page.edges[0]!.node.values.jobTitle).toMatchObject({
-    value: "Engineer",
-    choice: "picked",
-  });
+  const { edges } = await importUseCases(orm).reads.listEmployees(OWNER, {});
+  expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "picked" });
 });
 
 test("clears a choice back to the source default", async ({ orm, seed }) => {
@@ -38,11 +37,8 @@ test("clears a choice back to the source default", async ({ orm, seed }) => {
     choice: null,
   });
 
-  const page = await imports.reads.listEmployees(OWNER, {});
-  expect(page.edges[0]!.node.values.jobTitle).toMatchObject({
-    value: "Engineer",
-    choice: "default",
-  });
+  const { edges } = await imports.reads.listEmployees(OWNER, {});
+  expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "default" });
 });
 
 test("stores a typed value that fixes an incomplete import employee", async ({ orm, seed }) => {
@@ -101,6 +97,7 @@ test.for([
   { field: "email", value: "avery@", code: "invalid" },
   { field: "firstName", value: "a".repeat(101), code: "too_long" },
   { field: "lastName", value: "   ", code: "required" },
+  { field: "jobTitle", value: "   ", code: "required" },
 ] as const)(
   "refuses a typed $field with the employee rule’s $code error",
   async ({ field, value, code }, { orm, seed }) => {
@@ -183,10 +180,7 @@ test("stores leaving an import employee out and adding it back", async ({ orm, s
   );
 });
 
-test("leaves out only import employees with the requested incomplete reason", async ({
-  orm,
-  seed,
-}) => {
+test("leaves out employees with the requested incomplete reason", async ({ orm, seed }) => {
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [
     { email: "first@example.com", lastName: null },
@@ -209,19 +203,19 @@ test("leaves out only import employees with the requested incomplete reason", as
   ]);
 });
 
-test("keeps a record pick after Slack re-reads the same member", async ({ orm, seed }) => {
+test("keeps the Slack pick through leave-out changes and refresh", async ({ orm, seed }) => {
+  const older = await seed.fileSource({ content: "x", status: "mapped", name: "older.csv" });
+  const newer = await seed.fileSource({ content: "x", status: "mapped", name: "newer.csv" });
   const slack = await seed.importSource();
-  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  await seed.importEmployees(older.id, [{ email: "avery@example.com", jobTitle: "Designer" }]);
+  await seed.importEmployees(newer.id, [{ email: "avery@example.com", jobTitle: "Engineer" }]);
   const [member] = await seed.importEmployees(slack.id, [
     { externalId: "U1", email: "avery@example.com", jobTitle: "Engineer" },
   ]);
-  await seed.importEmployees(file.id, [{ email: "avery@example.com", jobTitle: "Designer" }]);
   const imports = importUseCases(orm);
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "avery@example.com",
-    field: "jobTitle",
-    choice: { recordId: member!.id },
-  });
+  await imports.choices.chooseSourceForAll(OWNER, { field: "jobTitle", sourceId: slack.id });
+  await imports.choices.setLeftOut(OWNER, { key: "avery@example.com", leftOut: true });
+  await imports.choices.setLeftOut(OWNER, { key: "avery@example.com", leftOut: false });
 
   await seed.importEmployees(slack.id, [
     { externalId: "U1", email: "avery@example.com", jobTitle: "Lead engineer" },
@@ -231,13 +225,11 @@ test("keeps a record pick after Slack re-reads the same member", async ({ orm, s
   expect(page.edges[0]!.node.values.jobTitle).toMatchObject({
     value: "Lead engineer",
     choice: "picked",
+    pickedRecordId: member!.id,
   });
 });
 
-test("falls back to the default when the file containing a picked record is removed", async ({
-  orm,
-  seed,
-}) => {
+test("uses the default after removing the picked record’s file", async ({ orm, seed }) => {
   const slack = await seed.importSource();
   const file = await seed.fileSource({ content: "x", status: "mapped" });
   await seed.importEmployees(slack.id, [{ email: "avery@example.com", jobTitle: "Engineer" }]);
@@ -253,9 +245,99 @@ test("falls back to the default when the file containing a picked record is remo
 
   await imports.files.removeFile(OWNER, file.id);
 
+  const { edges } = await importUseCases(orm).reads.listEmployees(OWNER, {});
+  expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "default" });
+});
+
+test("normalises a typed email before merging", async ({ orm, seed }) => {
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [{ email: "a@example.com" }, { email: "b@example.com" }]);
+  const imports = importUseCases(orm);
+
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: "a@example.com",
+    field: "email",
+    choice: { value: " B@EXAMPLE.COM " },
+  });
+
   const page = await importUseCases(orm).reads.listEmployees(OWNER, {});
-  expect(page.edges[0]!.node.values.jobTitle).toMatchObject({
-    value: "Engineer",
-    choice: "default",
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
+    {
+      key: "b@example.com",
+      keys: ["b@example.com", "a@example.com"],
+      values: { email: { value: "b@example.com", choice: "typed" } },
+    },
+  ]);
+});
+
+test("clears a merged-in title back to the first source’s value", async ({ orm, seed }) => {
+  const imports = await mergedEmployees(orm, seed);
+
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: "b@example.com",
+    field: "jobTitle",
+    choice: null,
+  });
+
+  const page = await imports.reads.listEmployees(OWNER, {});
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
+    { values: { jobTitle: { value: "Designer", choice: "default", pickedRecordId: null } } },
+  ]);
+});
+
+test("keeps merged records together after another email edit", async ({ orm, seed }) => {
+  const imports = await mergedEmployees(orm, seed);
+
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: "b@example.com",
+    field: "email",
+    choice: { value: "c@example.com" },
+  });
+
+  const page = await imports.reads.listEmployees(OWNER, {});
+  expect(page.edges).toHaveLength(1);
+  expect(page.edges[0]!.node.records).toHaveLength(2);
+  expect(page.edges[0]!.node.values).toMatchObject({
+    email: { value: "c@example.com", choice: "typed" },
+    jobTitle: { value: "Lead", choice: "typed" },
   });
 });
+
+test("undoes an email merge using the merged-in import employee’s key", async ({ orm, seed }) => {
+  const imports = await mergedEmployees(orm, seed);
+
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: "a@example.com",
+    field: "email",
+    choice: null,
+  });
+
+  const page = await imports.reads.listEmployees(OWNER, {
+    orderBy: { field: "EMAIL", direction: "ASC" },
+  });
+  expect(page.edges.map(({ node }) => ({ key: node.key, email: node.values.email }))).toMatchObject(
+    [
+      { key: "a@example.com", email: { value: "a@example.com", choice: "default" } },
+      { key: "b@example.com", email: { value: "b@example.com", choice: "default" } },
+    ],
+  );
+});
+
+async function mergedEmployees(orm: Orm, seed: TestSeed) {
+  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  const slack = await seed.importSource();
+  await seed.importEmployees(file.id, [{ email: "a@example.com", jobTitle: "Designer" }]);
+  await seed.importEmployees(slack.id, [{ email: "b@example.com", jobTitle: "Engineer" }]);
+  const imports = importUseCases(orm);
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: "a@example.com",
+    field: "jobTitle",
+    choice: { value: "Lead" },
+  });
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: "a@example.com",
+    field: "email",
+    choice: { value: "b@example.com" },
+  });
+  return imports;
+}

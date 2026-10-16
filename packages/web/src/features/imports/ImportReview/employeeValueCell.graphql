@@ -2,6 +2,12 @@ fragment EmployeeValueCell_value on ImportEmployeeValue {
   value
   choice
   conflict
+  pickedRecord {
+    id
+  }
+  pickedRecord {
+    id
+  }
   options {
     value
     records {

@@ -48,14 +48,15 @@ function employee(
   };
   return {
     key: "avery@example.com",
+    keys: ["avery@example.com"],
     records: [],
     leftOut: false,
     values: {
-      firstName: { value: shown.firstName, choice: "typed", options: [] },
-      lastName: { value: shown.lastName, choice: "typed", options: [] },
-      email: { value: shown.email, choice: "typed", options: [] },
-      jobTitle: { value: shown.jobTitle, choice: "typed", options: [] },
-      startDate: { value: shown.startDate, choice: "typed", options: [] },
+      firstName: { value: shown.firstName, choice: "typed", pickedRecordId: null, options: [] },
+      lastName: { value: shown.lastName, choice: "typed", pickedRecordId: null, options: [] },
+      email: { value: shown.email, choice: "typed", pickedRecordId: null, options: [] },
+      jobTitle: { value: shown.jobTitle, choice: "typed", pickedRecordId: null, options: [] },
+      startDate: { value: shown.startDate, choice: "typed", pickedRecordId: null, options: [] },
     },
   };
 }

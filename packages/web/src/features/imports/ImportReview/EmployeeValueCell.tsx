@@ -45,7 +45,11 @@ export function EmployeeValueCell({
           shown(field, value.value, missing)
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={8} className="w-[380px] gap-4 rounded-xl p-5">
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="w-[380px] max-w-[calc(100vw-2rem)] gap-4 rounded-xl p-5"
+      >
         <EmployeeValuePopover
           employeeId={employeeId}
           employeeName={employeeName}

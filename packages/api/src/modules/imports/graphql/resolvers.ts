@@ -165,10 +165,11 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
 
 /** One field of an import employee, with the records behind each of its values. */
 function employeeValue({ records, values }: ImportEmployee, field: ImportEmployeeField) {
-  const { value, choice, options } = values[field];
+  const { value, choice, pickedRecordId, options } = values[field];
   return {
     value,
     choice: CHOICES[choice],
+    pickedRecord: records.find(({ id }) => id === pickedRecordId) ?? null,
     conflict: hasOpenConflict(values[field]),
     options: options.map((option) => ({
       value: option.value,

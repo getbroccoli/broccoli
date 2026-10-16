@@ -1,4 +1,5 @@
 import { DotsThree } from "@phosphor-icons/react";
+import { toast } from "sonner";
 
 import { SetEmployeeLeftOutDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
@@ -30,7 +31,8 @@ export function EmployeeMenu({
     try {
       await setLeftOut({ variables: { employeeId, leftOut: !leftOut } });
     } catch {
-      return; // the row stays as it was
+      toast.error(t("setup.review.saveFailed"));
+      return;
     }
     await refreshReview();
   };

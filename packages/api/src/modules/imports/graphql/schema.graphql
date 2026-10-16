@@ -108,6 +108,8 @@ type ImportEmployeeValue {
   choice: ImportValueChoice!
   "Whether the records disagree and the owner has not chosen."
   conflict: Boolean!
+  "The record whose value the owner picked; null unless PICKED."
+  pickedRecord: ImportEmployeeRecord
   "The records' distinct values, in source order."
   options: [ImportValueOption!]!
 }

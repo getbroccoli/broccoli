@@ -43,7 +43,12 @@ it("groups a Slack member and a file row with one email into one import employee
   const employees = groupEmployeeRecords([slack, file], [member, row], []);
 
   expect(employees).toHaveLength(1);
-  expect(employees[0]).toMatchObject({ key: row.email, records: [row, member], leftOut: false });
+  expect(employees[0]).toMatchObject({
+    key: row.email,
+    keys: [row.email],
+    records: [row, member],
+    leftOut: false,
+  });
 });
 
 it("keeps each record without an email alone", () => {
@@ -134,6 +139,7 @@ it("shows a value from only one source without a conflict", () => {
   expect(employee!.values.jobTitle).toEqual({
     value: "Engineer",
     choice: "default",
+    pickedRecordId: null,
     options: [{ value: "Engineer", recordIds: [member.id] }],
   });
   expect(hasOpenConflict(employee!.values.jobTitle)).toBe(false);
@@ -158,6 +164,7 @@ it("shows the default and both record options for an open conflict", () => {
   expect(employee!.values.jobTitle).toEqual({
     value: "Designer",
     choice: "default",
+    pickedRecordId: null,
     options: [
       { value: "Designer", recordIds: [row.id] },
       { value: "Engineer", recordIds: [member.id] },
@@ -166,7 +173,7 @@ it("shows the default and both record options for an open conflict", () => {
   expect(hasOpenConflict(employee!.values.jobTitle)).toBe(true);
 });
 
-it("shows the picked record value and settles the conflict", () => {
+it("reports the picked record id with its value and settles the conflict", () => {
   const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
   const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
   const row: ImportEmployeeRecord = {
@@ -186,7 +193,11 @@ it("shows the picked record value and settles the conflict", () => {
     [{ key: row.email!, leftOut: false, values: { jobTitle: { recordId: member.id } } }],
   );
 
-  expect(employee!.values.jobTitle).toMatchObject({ value: "Engineer", choice: "picked" });
+  expect(employee!.values.jobTitle).toMatchObject({
+    value: "Engineer",
+    choice: "picked",
+    pickedRecordId: member.id,
+  });
   expect(hasOpenConflict(employee!.values.jobTitle)).toBe(false);
 });
 
@@ -212,7 +223,11 @@ it("falls back to the default when a picked record is outside the group", () => 
     [{ key: row.email!, leftOut: false, values: { jobTitle: { recordId: outsider.id } } }],
   );
 
-  expect(employee!.values.jobTitle).toMatchObject({ value: "Designer", choice: "default" });
+  expect(employee!.values.jobTitle).toMatchObject({
+    value: "Designer",
+    choice: "default",
+    pickedRecordId: null,
+  });
   expect(hasOpenConflict(employee!.values.jobTitle)).toBe(true);
 });
 
@@ -236,11 +251,15 @@ it("shows a typed value and settles the conflict", () => {
     [{ key: row.email!, leftOut: false, values: { jobTitle: { value: "Lead" } } }],
   );
 
-  expect(employee!.values.jobTitle).toMatchObject({ value: "Lead", choice: "typed" });
+  expect(employee!.values.jobTitle).toMatchObject({
+    value: "Lead",
+    choice: "typed",
+    pickedRecordId: null,
+  });
   expect(hasOpenConflict(employee!.values.jobTitle)).toBe(false);
 });
 
-it("merges a typed email into its existing group and keeps that group’s choices", () => {
+it("merges a typed email with the target’s key first and its choices kept", () => {
   const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
   const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
   const row: ImportEmployeeRecord = {
@@ -276,6 +295,7 @@ it("merges a typed email into its existing group and keeps that group’s choice
   expect(employees).toHaveLength(1);
   expect(employees[0]).toMatchObject({
     key: row.email,
+    keys: [row.email, other.email],
     records: [row, other],
     values: {
       email: { value: row.email },

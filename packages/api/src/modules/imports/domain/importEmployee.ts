@@ -58,6 +58,8 @@ export interface ImportEmployeeChoices {
 export interface ImportEmployee {
   /** The shared email, or `record:<id>` for a record without one; stable across re-reads. */
   key: string;
+  /** Its key first, then the keys of the import employees a typed email merged into it. */
+  keys: string[];
   /** In source order: file sources oldest first, then Slack; within a source, oldest first. */
   records: ImportEmployeeRecord[];
   values: Record<ImportEmployeeField, ImportEmployeeValue>;
@@ -69,6 +71,8 @@ export interface ImportEmployeeValue {
   /** A start date is `YYYY-MM-DD`. */
   value: string | null;
   choice: "default" | "picked" | "typed";
+  /** The record whose value a pick shows; null unless picked. */
+  pickedRecordId: string | null;
   /** The records' distinct non-empty values, in source order, with the records holding each. */
   options: { value: string; recordIds: string[] }[];
 }
@@ -92,24 +96,26 @@ export function groupEmployeeRecords(
     const identity = email ?? key;
     const group = groups.get(identity);
     if (!group) {
-      groups.set(identity, { key, records: members, choices: own ? [own] : [] });
+      groups.set(identity, { keys: [key], records: members, choices: own ? [own] : [] });
     } else if (key === identity) {
       // The import employee keyed by this email keeps its key, and its choices win.
       groups.set(identity, {
-        key,
+        keys: [key, ...group.keys],
         records: [...group.records, ...members],
         choices: own ? [own, ...group.choices] : group.choices,
       });
     } else {
+      group.keys.push(key);
       group.records.push(...members);
       group.choices.push(...(own ? [own] : []));
     }
   }
   const order = new Map(ordered.map((record, index) => [record, index]));
-  return [...groups.values()].map(({ key, records: members, choices: owned }) => {
+  return [...groups.values()].map(({ keys, records: members, choices: owned }) => {
     const sorted = members.toSorted((a, b) => order.get(a)! - order.get(b)!);
     return {
-      key,
+      key: keys[0]!,
+      keys,
       records: sorted,
       values: Object.fromEntries(
         IMPORT_EMPLOYEE_FIELDS.map((field) => [
@@ -158,7 +164,7 @@ export function inSourceOrder(sources: readonly ImportSource[]): ImportSource[] 
 }
 
 interface Group {
-  key: string;
+  keys: string[];
   records: ImportEmployeeRecord[];
   choices: ImportEmployeeChoices[];
 }
@@ -200,13 +206,13 @@ function employeeValue(
     }
   }
   if (choice && "value" in choice) {
-    return { value: choice.value, choice: "typed", options };
+    return { value: choice.value, choice: "typed", pickedRecordId: null, options };
   }
   const picked = choice && options.find(({ recordIds }) => recordIds.includes(choice.recordId));
   if (picked) {
-    return { value: picked.value, choice: "picked", options };
+    return { value: picked.value, choice: "picked", pickedRecordId: choice.recordId, options };
   }
-  return { value: options[0]?.value ?? null, choice: "default", options };
+  return { value: options[0]?.value ?? null, choice: "default", pickedRecordId: null, options };
 }
 
 const valueChoice = z.union([

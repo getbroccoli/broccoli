@@ -1,10 +1,11 @@
 import { invalidInput } from "../../../../core/applicationError";
 import type { Transact } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
-import { employeeFieldErrors } from "../../../employees";
+import { parseEmployeeField } from "../../../employees";
 import { importRepository, type ImportRepository } from "../../db";
 import {
   hasOpenConflict,
+  IMPORT_EMPLOYEE_FIELDS,
   type ImportEmployee,
   type ImportEmployeeChoices,
   type ImportEmployeeField,
@@ -14,7 +15,6 @@ import {
   incompleteReason,
   type IncompleteReason,
   readImportEmployees,
-  toNewEmployeeInput,
 } from "./importEmployeeMapping";
 
 /** What the owner settles in review: picked and typed values, and who is left out. Every function checks `ctx`. */
@@ -46,10 +46,8 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
         if (choice && "recordId" in choice && !holdsRecord(employee, field, choice.recordId)) {
           throw invalidInput([{ field: "recordId", code: "not_found" }]);
         }
-        if (choice && "value" in choice) {
-          refuseBrokenValue(employee, field, choice.value);
-        }
-        return [withValue(employee, field, choice)];
+        const normalised = choice && "value" in choice ? typedValue(field, choice.value) : choice;
+        return withValue(employee, field, normalised);
       }),
 
     chooseSourceForAll: (ctx, { field, sourceId }) =>
@@ -60,21 +58,21 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
               candidate.sourceId === sourceId && holdsRecord(employee, field, candidate.id),
           );
           return hasOpenConflict(employee.values[field]) && record
-            ? [withValue(employee, field, { recordId: record.id })]
+            ? withValue(employee, field, { recordId: record.id })
             : [];
         }),
       ),
 
     setLeftOut: (ctx, { key, leftOut }) =>
-      changeChoices(ctx, transact, (employees) => [
-        { ...choicesOf(findEmployee(employees, key)), leftOut },
-      ]),
+      changeChoices(ctx, transact, (employees) =>
+        withLeftOut(findEmployee(employees, key), leftOut),
+      ),
 
     leaveOutIncomplete: (ctx, { reason }) =>
       changeChoices(ctx, transact, (employees) =>
         employees
           .filter((employee) => !employee.leftOut && incompleteReason(employee) === reason)
-          .map((employee) => ({ ...choicesOf(employee), leftOut: true })),
+          .flatMap((employee) => withLeftOut(employee, true)),
       ),
   };
 }
@@ -94,49 +92,86 @@ async function changeChoices(
   });
 }
 
-/** The import employee with this key; refused, naming `employeeId`, when there is none. */
+/**
+ * The import employee with this key, also when a typed email merged it into another one;
+ * refused, naming `employeeId`, when there is none.
+ */
 function findEmployee(employees: ImportEmployee[], key: string): ImportEmployee {
-  const employee = employees.find((candidate) => candidate.key === key);
+  const employee = employees.find((candidate) => candidate.keys.includes(key));
   if (!employee) {
     throw invalidInput([{ field: "employeeId", code: "not_found" }]);
   }
   return employee;
 }
 
-/** The import employee's stored choices: its own, under its key. */
-function choicesOf({ key, values, leftOut }: ImportEmployee): ImportEmployeeChoices {
+/**
+ * The stored choices of everything the import employee is made of: all of them under its
+ * own key, and for each import employee merged into it only the email that keeps them merged.
+ */
+function choicesOf(employee: ImportEmployee): ImportEmployeeChoices[] {
   const chosen: ImportEmployeeChoices["values"] = {};
-  for (const [field, { value, choice, options }] of Object.entries(values)) {
+  for (const field of IMPORT_EMPLOYEE_FIELDS) {
+    const { value, choice, pickedRecordId } = employee.values[field];
     if (choice === "typed" && value !== null) {
-      chosen[field as ImportEmployeeField] = { value };
-    } else if (choice === "picked") {
-      const recordId = options.find((option) => option.value === value)!.recordIds[0]!;
-      chosen[field as ImportEmployeeField] = { recordId };
+      chosen[field] = { value };
+    } else if (choice === "picked" && pickedRecordId !== null) {
+      chosen[field] = { recordId: pickedRecordId };
     }
   }
-  return { key, leftOut, values: chosen };
+  const [key, ...merged] = employee.keys;
+  return [
+    { key: key!, leftOut: employee.leftOut, values: chosen },
+    ...merged.map((mergedKey) => mergedChoices(mergedKey, employee.values.email.value)),
+  ];
 }
 
+/** The choices with one field changed; an email change moves every merged import employee along. */
 function withValue(
   employee: ImportEmployee,
   field: ImportEmployeeField,
   choice: ValueChoice | null,
-): ImportEmployeeChoices {
-  const choices = choicesOf(employee);
-  const values = { ...choices.values };
+): ImportEmployeeChoices[] {
+  const [own, ...merged] = choicesOf(employee);
+  const values = { ...own!.values };
   delete values[field];
-  return { ...choices, values: choice ? { ...values, [field]: choice } : values };
+  const changed = { ...own!, values: choice ? { ...values, [field]: choice } : values };
+  if (field !== "email") {
+    return [changed, ...merged];
+  }
+  const email =
+    choice && "recordId" in choice ? emailOfRecord(employee, choice.recordId) : choice?.value;
+  return [changed, ...merged.map(({ key }) => mergedChoices(key, email ?? null))];
+}
+
+function withLeftOut(employee: ImportEmployee, leftOut: boolean): ImportEmployeeChoices[] {
+  const [own, ...merged] = choicesOf(employee);
+  return [{ ...own!, leftOut }, ...merged];
+}
+
+/** A merged-in import employee's choices: the shared email, or none, which splits it off. */
+function mergedChoices(key: string, email: string | null): ImportEmployeeChoices {
+  return { key, leftOut: false, values: email === null ? {} : { email: { value: email } } };
 }
 
 function holdsRecord(employee: ImportEmployee, field: ImportEmployeeField, recordId: string) {
   return employee.values[field].options.some(({ recordIds }) => recordIds.includes(recordId));
 }
 
-/** Refuses a typed value that breaks the employee rule of its field, naming `value`. */
-function refuseBrokenValue(employee: ImportEmployee, field: ImportEmployeeField, value: string) {
-  const input = { ...toNewEmployeeInput(employee), [field]: value };
-  const error = employeeFieldErrors(input).find((fieldError) => fieldError.field === field);
-  if (error) {
-    throw invalidInput([{ field: "value", code: error.code }]);
+function emailOfRecord(employee: ImportEmployee, recordId: string): string | null {
+  return (
+    employee.values.email.options.find(({ recordIds }) => recordIds.includes(recordId))?.value ??
+    null
+  );
+}
+
+/** A typed value as the employee rules normalise it; refused, naming `value`, when they refuse it or it is blank. */
+function typedValue(field: ImportEmployeeField, value: string): ValueChoice {
+  const parsed = parseEmployeeField(field, value);
+  if ("code" in parsed) {
+    throw invalidInput([{ field: "value", code: parsed.code }]);
   }
+  if (!parsed.value) {
+    throw invalidInput([{ field: "value", code: "required" }]);
+  }
+  return { value: parsed.value };
 }

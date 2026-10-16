@@ -18,6 +18,7 @@ export {
 export { employeeRepository } from "./db";
 export {
   employeeFieldErrors,
+  parseEmployeeField,
   tryParseNewEmployee,
   type Employee,
   type EmployeeOrder,
