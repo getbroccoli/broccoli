@@ -1,8 +1,26 @@
 {
   "records": [
-    {"firstName": "Sanne", "lastName": "Bauer", "email": "sanne.bauer@cobalt.example", "jobTitle": "Site Coordinator", "startDate": "2021-01-05"},
-    {"firstName": "Luis", "lastName": "Marin", "email": "luis.marin@cobalt.example", "jobTitle": "Site Coordinator", "startDate": "2022-04-18"},
-    {"firstName": "Eva", "lastName": "Kovac", "email": "eva.kovac@cobalt.example", "jobTitle": "Site Coordinator", "startDate": "2023-09-29"}
+    {
+      "firstName": "Sanne",
+      "lastName": "Bauer",
+      "email": "sanne.bauer@cobalt.example",
+      "jobTitle": "Site Coordinator",
+      "startDate": "2021-01-05"
+    },
+    {
+      "firstName": "Luis",
+      "lastName": "Marin",
+      "email": "luis.marin@cobalt.example",
+      "jobTitle": "Site Coordinator",
+      "startDate": "2022-04-18"
+    },
+    {
+      "firstName": "Eva",
+      "lastName": "Kovac",
+      "email": "eva.kovac@cobalt.example",
+      "jobTitle": "Site Coordinator",
+      "startDate": "2023-09-29"
+    }
   ],
   "forbidden": ["Cobalt Site Roster", "Rotterdam Office"]
 }
