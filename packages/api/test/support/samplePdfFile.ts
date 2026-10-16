@@ -4,7 +4,9 @@ import { createDeflate, deflateSync } from "node:zlib";
 type Page = {
   width?: number;
   height?: number;
-  texts?: { text: string; x: number; y: number }[];
+  texts?: { text: string; x: number; y: number; invisible?: boolean }[];
+  images?: { x: number; y: number; width: number; height: number }[];
+  formImage?: boolean;
   image?: { width: number; height: number };
 };
 
@@ -21,13 +23,18 @@ export function samplePdfFile({
       ...page,
       content: deflateSync(
         [
-          ...(page.texts ?? []).map(
-            ({ text, x, y }) =>
-              `BT /F1 10 Tf 1 0 0 1 ${x} ${y} Tm (${text.replace(/[\\()]/g, "\\$&")}) Tj ET`,
+          ...(page.images ?? []).map(
+            ({ x, y, width, height }, index) =>
+              `q ${width} 0 0 ${height} ${x} ${y} cm /Image${index} Do Q`,
           ),
+          ...(page.formImage ? ["q /Form1 Do Q"] : []),
           ...(page.image
             ? [`q ${page.width ?? 612} 0 0 ${page.height ?? 792} 0 0 cm /Im1 Do Q`]
             : []),
+          ...(page.texts ?? []).map(
+            ({ text, x, y, invisible }) =>
+              `BT ${invisible ? 3 : 0} Tr /F1 10 Tf 1 0 0 1 ${x} ${y} Tm (${text.replace(/[\\()]/g, "\\$&")}) Tj ET`,
+          ),
         ].join("\n"),
       ),
     })),
@@ -69,7 +76,7 @@ function pdfDocument(pages: (Page & { content: Buffer })[], extras?: "script-att
 
   const pageIds = pages.map((page, index) => {
     const content = objects.push(pdfStream(page.content, "/Filter /FlateDecode"));
-    let imageResource = "";
+    const imageResources: string[] = [];
     if (page.image) {
       const image = objects.push(
         pdfStream(
@@ -77,11 +84,27 @@ function pdfDocument(pages: (Page & { content: Buffer })[], extras?: "script-att
           `/Type /XObject /Subtype /Image /Width ${page.image.width} /Height ${page.image.height} /ColorSpace /DeviceGray /BitsPerComponent 8`,
         ),
       );
-      imageResource = `/XObject << /Im1 ${image} 0 R >>`;
+      imageResources.push(`/Im1 ${image} 0 R`);
+    }
+    for (const [index] of (page.images ?? []).entries()) {
+      const image = objects.push(pixelImage());
+      imageResources.push(`/Image${index} ${image} 0 R`);
+    }
+    if (page.formImage) {
+      const image = objects.push(pixelImage());
+      const width = page.width ?? 612;
+      const height = page.height ?? 792;
+      const form = objects.push(
+        pdfStream(
+          Buffer.from(`q ${width} 0 0 ${height} 0 0 cm /Image Do Q`),
+          `/Type /XObject /Subtype /Form /BBox [0 0 ${width} ${height}] /Resources << /XObject << /Image ${image} 0 R >> >>`,
+        ),
+      );
+      imageResources.push(`/Form1 ${form} 0 R`);
     }
     return objects.push(
       Buffer.from(
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${page.width ?? 612} ${page.height ?? 792}] /Resources << /Font << /F1 ${font} 0 R >> ${imageResource} >> /Contents ${content} 0 R ${annotation && index === 0 ? `/Annots [${annotation} 0 R]` : ""} >>`,
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${page.width ?? 612} ${page.height ?? 792}] /Resources << /Font << /F1 ${font} 0 R >> /XObject << ${imageResources.join(" ")} >> >> /Contents ${content} 0 R ${annotation && index === 0 ? `/Annots [${annotation} 0 R]` : ""} >>`,
       ),
     );
   });
@@ -90,6 +113,13 @@ function pdfDocument(pages: (Page & { content: Buffer })[], extras?: "script-att
     `<< /Type /Pages /Count ${pageIds.length} /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] >>`,
   );
   return serializePdf(objects);
+}
+
+function pixelImage() {
+  return pdfStream(
+    Buffer.from([128]),
+    "/Type /XObject /Subtype /Image /Width 1 /Height 1 /ColorSpace /DeviceGray /BitsPerComponent 8",
+  );
 }
 
 function pdfStream(content: Buffer, dictionary: string) {

@@ -9,7 +9,13 @@ export interface FileSheet {
 
 /** Why a file is not read. */
 export type SheetRefusal =
-  "unsupported_file" | "empty" | "too_many_rows" | "too_many_columns" | "too_many_sheets";
+  | "unsupported_file"
+  | "scanned_pdf"
+  | "encrypted_pdf"
+  | "empty"
+  | "too_many_rows"
+  | "too_many_columns"
+  | "too_many_sheets";
 
 /** The sheets within Broccoli's limits: 10 sheets, 10,000 rows in all and 100 columns. */
 export function checkSheets(sheets: FileSheet[]): FileSheet[] | SheetRefusal {

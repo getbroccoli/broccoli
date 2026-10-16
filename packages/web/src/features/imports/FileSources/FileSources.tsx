@@ -15,6 +15,8 @@ import { FileSourceCard } from "./FileSourceCard";
 
 const REFUSALS = {
   unsupportedFile: "imports.files.unsupportedFile",
+  scannedPdf: "imports.files.scannedPdf",
+  encryptedPdf: "imports.files.encryptedPdf",
   empty: "imports.files.empty",
   tooManyRows: "imports.files.tooManyRows",
   tooManyColumns: "imports.files.tooManyColumns",

@@ -2,6 +2,8 @@
 export type UploadFileResult =
   | "ok"
   | "unsupportedFile"
+  | "scannedPdf"
+  | "encryptedPdf"
   | "empty"
   | "tooManyRows"
   | "tooManyColumns"
@@ -11,6 +13,8 @@ export type UploadFileResult =
 
 const RESULT_BY_FIELD_CODE: Partial<Record<string, UploadFileResult>> = {
   unsupported_file: "unsupportedFile",
+  scanned_pdf: "scannedPdf",
+  encrypted_pdf: "encryptedPdf",
   empty: "empty",
   too_many_rows: "tooManyRows",
   too_many_columns: "tooManyColumns",

@@ -12,18 +12,25 @@ export interface PdfTextItem {
   height: number;
 }
 
-/** A page's size in PDF points and the text drawn on it. */
+/** A page's size in PDF points, the text it shows and how much of it images cover. */
 export interface PdfPage {
   width: number;
   height: number;
+  /** Visible text only: text drawn invisibly, as OCR layers are, is left out. */
   items: PdfTextItem[];
+  /** The share of the page that images cover, 0 to 1, summed over every image and clipped to the page. */
+  imageCoverage: number;
 }
 
 /**
- * Every page's text, read in a contained process; null when the PDF cannot be read within its
- * memory, time, page and text limits. It waits for any other heavy read to finish.
+ * Every page's text and images, read in a contained process; "encrypted" when the PDF needs a
+ * password to open; null when it cannot be read within its memory, time, page and text limits. It
+ * waits for any other heavy read to finish.
  */
-export function parsePdf(bytes: Uint8Array, timeoutMs = 30_000): Promise<PdfPage[] | null> {
+export function parsePdf(
+  bytes: Uint8Array,
+  timeoutMs = 30_000,
+): Promise<PdfPage[] | "encrypted" | null> {
   return oneReadAtATime(() => readInProcess(bytes, timeoutMs));
 }
 
@@ -33,9 +40,12 @@ export function parsePdf(bytes: Uint8Array, timeoutMs = 30_000): Promise<PdfPage
  * reader process's whole memory, and when it ends, the API keeps running. macOS does not enforce
  * the limit; Linux, where the image runs, does.
  */
-function readInProcess(bytes: Uint8Array, timeoutMs: number): Promise<PdfPage[] | null> {
+function readInProcess(
+  bytes: Uint8Array,
+  timeoutMs: number,
+): Promise<PdfPage[] | "encrypted" | null> {
   return new Promise((resolve) => {
-    let pages: PdfPage[] | null = null;
+    let pages: PdfPage[] | "encrypted" | null = null;
     // `--jitless`: compiled code reserves memory that counts against the limit, gigabytes of it.
     const reader = spawn(
       "/bin/sh",
@@ -56,7 +66,7 @@ function readInProcess(bytes: Uint8Array, timeoutMs: number): Promise<PdfPage[] 
       resolve(pages);
     };
     const timer = setTimeout(finish, timeoutMs);
-    reader.once("message", (json: string) => (pages = JSON.parse(json) as PdfPage[]));
+    reader.once("message", (json: string) => (pages = JSON.parse(json) as PdfPage[] | "encrypted"));
     reader.once("exit", finish);
     // The reader could not start, or ended before it took the bytes.
     reader.once("error", finish);

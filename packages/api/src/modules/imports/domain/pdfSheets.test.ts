@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { PdfPage, PdfTextItem } from "../../../utils";
-import { pdfSheets } from "./pdfSheets";
+import { hasScannedPage, pdfSheets } from ".";
 
 it("keeps every row in page order with the repeated header only once", () => {
   const header = line(760, ["Name", "Email"]);
@@ -159,8 +159,53 @@ it("returns null when no page has a line with two cells", () => {
   ).toBeNull();
 });
 
-function page(lines: PdfTextItem[][]): PdfPage {
-  return { width: 612, height: 792, items: lines.flat() };
+it("finds a header followed by just one staff row", () => {
+  expect(
+    pdfSheets([
+      page([line(760, ["Name", "Email"]), line(740, ["Avery Stone", "avery@example.com"])]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Stone", "avery@example.com"],
+      ],
+    },
+  ]);
+});
+
+it.for([
+  { name: "an image-only page", scanned: page([], 1) },
+  { name: "a scan with a visible page number", scanned: page([line(20, ["Page 2 of 2"])], 1) },
+  { name: "a scan covering 40% of a page", scanned: page([], 0.4) },
+  { name: "a tiled scan", scanned: page([], 1) },
+  { name: "an OCR scan without visible text", scanned: page([], 1) },
+])("detects $name alone or after a valid table", ({ scanned }) => {
+  const table = page([
+    line(760, ["Name", "Email"]),
+    line(740, ["Avery Stone", "avery@example.com"]),
+  ]);
+
+  expect(hasScannedPage([scanned])).toBe(true);
+  expect(hasScannedPage([table, scanned])).toBe(true);
+});
+
+it.for([
+  { name: "a small logo", coverage: 0.02 },
+  { name: "a full-page letterhead image", coverage: 1 },
+  { name: "no images", coverage: 0 },
+])("accepts a one-person table with $name", ({ coverage }) => {
+  const table = page(
+    [line(760, ["Name", "Email"]), line(740, ["Avery Stone", "avery@example.com"])],
+    coverage,
+  );
+
+  expect(hasScannedPage([table])).toBe(false);
+});
+
+function page(lines: PdfTextItem[][], imageCoverage = 0): PdfPage {
+  return { width: 612, height: 792, items: lines.flat(), imageCoverage };
 }
 
 function line(y: number, cells: string[]): PdfTextItem[] {

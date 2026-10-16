@@ -3,10 +3,37 @@ import type { FileSheet } from "./sheet";
 
 /**
  * A PDF's staff table as one sheet without a name; null when no table is found. The table's
- * header is its first line of two or more cells that the next two lines line up with. Text above
+ * header is its first line of two or more cells that the next line's cells line up with. Text above
  * it is dropped, and so is a header repeated on a later page with the text above it there.
  */
 export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
+  const table = readTable(pages);
+  return table && [{ name: null, rows: [table.header, ...table.pageRows.flat()] }];
+}
+
+/**
+ * Whether a page is a scan or photo: it has images but no visible text, or images cover at least
+ * 15% of it and its text gives no staff row. One such page refuses the whole file.
+ */
+export function hasScannedPage(pages: PdfPage[]): boolean {
+  const pageRows = readTable(pages)?.pageRows ?? [];
+  return pages.some(
+    ({ items, imageCoverage }, page) =>
+      (imageCoverage > 0 && items.length === 0) ||
+      (imageCoverage >= SCAN_COVERAGE && !(pageRows[page] ?? []).some(isStaffRow)),
+  );
+}
+
+/** Less than a scan of a list: a logo, a signature, a stamp. */
+const SCAN_COVERAGE = 0.15;
+
+/** A row with values in two or more columns, unlike a page number or a title. */
+function isStaffRow(row: string[]): boolean {
+  return row.filter((value) => value !== "").length >= 2;
+}
+
+/** The table's header row and each page's rows; null when no table is found. */
+function readTable(pages: PdfPage[]): { header: string[]; pageRows: string[][][] } | null {
   const pageLines = pages.map(({ items }) => linesOf(items));
   const start = findHeader(pageLines);
   if (start === null) {
@@ -15,14 +42,14 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const header = pageLines[start.page]![start.line]!;
   const columns = header.map(({ x }) => x);
   const headerRow = header.map(({ text }) => text);
-  const rows = pageLines.flatMap((lines, page) => {
+  const pageRows = pageLines.map((lines, page) => {
     if (page < start.page) return [];
     const placed = lines.map((line) => rowOf(line, columns));
     const after =
       page === start.page ? start.line : placed.findIndex((row) => sameRow(row, headerRow));
     return placed.slice(after + 1);
   });
-  return [{ name: null, rows: [headerRow, ...rows] }];
+  return { header: headerRow, pageRows };
 }
 
 /** Text that reads as one piece: items on one baseline, each the next word of the one before. */
@@ -74,17 +101,15 @@ function isNextWord(gap: number, height: number): boolean {
   return gap > -1 && gap < height;
 }
 
-/** The first line of two or more cells whose next two lines, in page order, line up with it. */
+/** The first line of two or more cells whose next line, in page order, has two or more that line up with it. */
 function findHeader(pageLines: Cell[][][]): { page: number; line: number } | null {
   const lines = pageLines.flatMap((page, pageIndex) =>
     page.map((cells, lineIndex) => ({ cells, page: pageIndex, line: lineIndex })),
   );
-  const header = lines.find(
-    ({ cells }, index) =>
-      cells.length >= 2 &&
-      lines.slice(index + 1, index + 3).length === 2 &&
-      lines.slice(index + 1, index + 3).every((next) => linesUp(next.cells, cells)),
-  );
+  const header = lines.find(({ cells }, index) => {
+    const next = lines[index + 1]?.cells ?? [];
+    return cells.length >= 2 && next.length >= 2 && linesUp(next, cells);
+  });
   return header ? { page: header.page, line: header.line } : null;
 }
 

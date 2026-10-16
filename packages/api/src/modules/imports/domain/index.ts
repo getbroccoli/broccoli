@@ -15,6 +15,6 @@ export {
   type IncomingRecord,
 } from "./importEmployee";
 export type { FileSource, ImportSource, MappingOutcome } from "./importSource";
-export { pdfSheets } from "./pdfSheets";
+export { hasScannedPage, pdfSheets } from "./pdfSheets";
 export { nonBlank, parseEmail, splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";

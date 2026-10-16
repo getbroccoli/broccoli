@@ -1,5 +1,11 @@
 import { parseCsv, parsePdf, parseXlsx } from "../../../../utils";
-import { checkSheets, type FileSheet, pdfSheets, type SheetRefusal } from "../../domain";
+import {
+  checkSheets,
+  type FileSheet,
+  hasScannedPage,
+  pdfSheets,
+  type SheetRefusal,
+} from "../../domain";
 
 /**
  * A staff file's sheets, within the limits: a CSV file's one, an Excel workbook's visible ones, or
@@ -7,7 +13,8 @@ import { checkSheets, type FileSheet, pdfSheets, type SheetRefusal } from "../..
  */
 export async function readStaffFile(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
   const sheets = await readSheets(bytes);
-  return sheets === null ? "unsupported_file" : checkSheets(sheets);
+  if (sheets === null) return "unsupported_file";
+  return typeof sheets === "string" ? sheets : checkSheets(sheets);
 }
 
 /** The media type of a staff file, decided by its content like `readStaffFile`. */
@@ -35,7 +42,9 @@ function isPdf(bytes: Uint8Array): boolean {
   return Buffer.from(bytes.subarray(0, 1024)).includes("%PDF-");
 }
 
-function readSheets(bytes: Uint8Array): Promise<FileSheet[] | null> | FileSheet[] | null {
+function readSheets(
+  bytes: Uint8Array,
+): Promise<FileSheet[] | PdfRefusal | null> | FileSheet[] | null {
   switch (staffFileKind(bytes)) {
     case "excel":
       return parseXlsx(bytes);
@@ -46,9 +55,16 @@ function readSheets(bytes: Uint8Array): Promise<FileSheet[] | null> | FileSheet[
   }
 }
 
-/** The PDF's table as one sheet without a name; null when it cannot be read or has no table. */
-async function pdfTable(bytes: Uint8Array): Promise<FileSheet[] | null> {
+type PdfRefusal = "scanned_pdf" | "encrypted_pdf";
+
+/**
+ * The PDF's table as one sheet without a name, or why it is refused: a password or a scanned
+ * page. Null when it cannot be read or has no table.
+ */
+async function pdfTable(bytes: Uint8Array): Promise<FileSheet[] | PdfRefusal | null> {
   const pages = await parsePdf(bytes);
+  if (pages === "encrypted") return "encrypted_pdf";
+  if (pages && hasScannedPage(pages)) return "scanned_pdf";
   return pages && pdfSheets(pages);
 }
 
