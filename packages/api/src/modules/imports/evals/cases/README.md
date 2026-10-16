@@ -50,5 +50,7 @@
 - `header-once-multpage`: staff roster as a text PDF and its CSV twin, sharing one expected file: six people over two pages with the header on page one only and the roster title and export date repeated at the top of each page.
 - `letterhead-totals`: workforce report as a text PDF and its CSV twin, sharing one expected file: four people under a company letterhead, address block and report line, then a subtotal table, a totals note and a "Printed on" running line that stay out.
 - `department-tables`: staff directory as a text PDF and its CSV twin, sharing one expected file: four department tables with the same headings at shifted column positions, each under its department's name, then a cost summary table that maps to nobody.
+- `datev-personaldaten-blocks`: German `Personaldaten` list as a text PDF and its CSV twin, sharing one expected file: one person per page as a block of `Label: value` lines, the name as "Nachname, Vorname", no email, under a company title that stays out.
+- `same-title-page-blocks`: site roster as a text PDF and its CSV twin, sharing one expected file: one person per page, each block an unlabelled name line over `Label: value` lines, with the same job title and location at the same place on every page.
 
 Names, roles and departments in the `layout-xlsx-*`, `common-unicode-name` and `injection-xlsx` cases come from The Spreadsheet Guru's Company Employee Example Data, which its publisher allows using in any way; the emails and managers are made up.
