@@ -14,13 +14,17 @@ it.each([
   "Commercial",
   "Kostenstelle",
   "Research Analyst",
+  "Active employees",
+  "Subtotal payroll groups",
+  "Total",
+  "Gesamt Summe",
   "",
   "yes",
 ])("recognises %j as a value kept by placeholders", (value) => {
   expect(keptByPlaceholders(value)).toBe(true);
 });
 
-it.each(["Priya Nair", "Engineering 2", "priya@harbor.example", "08.01.2021"])(
+it.each(["Priya Nair", "Engineering 2", "priya@harbor.example", "08.01.2021", "Sum"])(
   "recognises %j as a value masked by placeholders",
   (value) => {
     expect(keptByPlaceholders(value)).toBe(false);

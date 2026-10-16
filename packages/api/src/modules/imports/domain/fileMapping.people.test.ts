@@ -14,6 +14,16 @@ it("finds no people in a name column of department words without an email column
   expect(hasPeople(sheet, 0, { ...UNMAPPED, fullName: 0 })).toBe(false);
 });
 
+it("finds no people in a Metric column of summary labels without an email column", () => {
+  const sheet = [
+    ["Metric", "Value"],
+    ["Active employees", "4"],
+    ["Subtotal payroll groups", "4"],
+  ];
+
+  expect(hasPeople(sheet, 0, { ...UNMAPPED, fullName: 0 })).toBe(false);
+});
+
 it("keeps people with department words as names when an email column is mapped", () => {
   const sheet = [
     ["Cost centre", "Headcount", "Email"],
