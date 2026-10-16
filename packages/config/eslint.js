@@ -29,7 +29,7 @@ export function eslintConfig(packageDir) {
           "error",
           { max: MAX_LINES_PER_FILE, skipBlankLines: true, skipComments: true },
         ],
-        // Rules Q1 and Q10 in docs/code-quality.md.
+        // RULE1 and RULE10 in docs/code-quality.md.
         "no-restricted-syntax": [
           "error",
           {
