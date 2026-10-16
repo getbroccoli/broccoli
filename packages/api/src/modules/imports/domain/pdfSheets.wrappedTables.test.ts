@@ -132,3 +132,22 @@ it.for([
     ]);
   },
 );
+
+it("joins a wrapped name in a row that has only a name", () => {
+  const header = ["Name", "Job title", "Start"];
+  expect(
+    pdfSheets([
+      page([
+        line(700, header),
+        line(680, ["Lin Wu", "Analyst", "2024-06-24"]),
+        line(650, ["Maria-Theresa von"]),
+        line(640, ["Hohenberg"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [header, ["Lin Wu", "Analyst", "2024-06-24"], ["Maria-Theresa von Hohenberg", "", ""]],
+    },
+  ]);
+});

@@ -61,17 +61,20 @@ function linesOf(items: PdfTextItem[]): { cells: Cell[]; y: number }[] {
 /**
  * The lines with each cell wrapped onto the next line joined to it. A line continues the one above
  * when it lies directly below it, each of its cells starts where a cell above starts, and it has
- * at most half as many cells: the rest of a few values, not the next row.
+ * at most half as many cells as the page's widest line so far, its header or a full row: the rest
+ * of a few values, not the next row.
  */
 function withWrappedCells(lines: { cells: Cell[]; y: number }[]): { cells: Cell[]; y: number }[] {
   const joined: { cells: Cell[]; y: number }[] = [];
   let lastY = Number.NaN;
+  let widest = 0;
   for (const line of lines) {
     const above = joined.at(-1);
-    const wrapped = above && continues(line, above.cells, lastY);
+    const wrapped = above && continues(line, above.cells, lastY, widest);
     lastY = line.y;
     if (!wrapped) {
       joined.push({ cells: line.cells.map((cell) => ({ ...cell })), y: line.y });
+      widest = Math.max(widest, line.cells.length);
       continue;
     }
     for (const cell of line.cells) {
@@ -84,10 +87,15 @@ function withWrappedCells(lines: { cells: Cell[]; y: number }[]): { cells: Cell[
 }
 
 /** `lastY` is the baseline of the line right above, which may itself be wrapped text. */
-function continues(line: { cells: Cell[]; y: number }, above: Cell[], lastY: number): boolean {
+function continues(
+  line: { cells: Cell[]; y: number },
+  above: Cell[],
+  lastY: number,
+  widest: number,
+): boolean {
   return (
     isDirectlyBelow(line, lastY) &&
-    line.cells.length <= above.length / 2 &&
+    line.cells.length <= widest / 2 &&
     line.cells.every((cell) => above.some(({ x }) => Math.abs(x - cell.x) <= cell.tolerance))
   );
 }

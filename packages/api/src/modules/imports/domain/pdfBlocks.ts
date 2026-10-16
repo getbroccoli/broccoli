@@ -14,7 +14,10 @@ import type { FileSheet } from "./sheet";
  * Also which pages start a person's block: the pages the list is read from.
  */
 export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: boolean[] } | null {
-  const lines = pageLines(pages).map((line) => ({ ...line, field: fieldOf(line.cells) }));
+  const lines = withWrappedValues(pageLines(pages)).map((line) => ({
+    ...line,
+    field: fieldOf(line.cells),
+  }));
   const labels = lines.flatMap(({ field }) => (field ? [field.label] : []));
   const blockLabel =
     repeatedLabel(labels) ?? (labels.length >= MIN_BLOCK_LINES ? labels[0] : undefined);
@@ -30,26 +33,12 @@ export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: bool
   const blockStarts = new Set(starts.map((start) => (named ? start - 1 : start)));
   const header = named ? [""] : [];
   const blocks: Map<string, string>[] = [];
-  let labelled: { label: string; cells: Cell[] } | undefined;
   for (let index = Math.min(...blockStarts); index < lines.length; index += 1) {
-    const { cells, field, inBand, page } = lines[index]!;
+    const { cells, field, inBand } = lines[index]!;
     if (blockStarts.has(index)) {
       blocks.push(new Map(named ? [["", cells[0]!.text]] : []));
     }
     const block = blocks.at(-1)!;
-    const above = lines[index - 1];
-    if (
-      field === null &&
-      labelled !== undefined &&
-      !blockStarts.has(index) &&
-      above?.page === page &&
-      isDirectlyBelow(lines[index]!, above.y) &&
-      isUnderValue(cells, labelled.cells)
-    ) {
-      block.set(labelled.label, joinWrapped(block.get(labelled.label)!, texts(cells).join(" ")));
-      continue;
-    }
-    labelled = field === null ? undefined : { label: field.label, cells };
     if (field === null) {
       const isNoise = inBand && !cells.some(({ text }) => isLabelled(text));
       if (!blockStarts.has(index) && !isNoise) {
@@ -75,6 +64,36 @@ export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: bool
     ],
     pages: pages.map((_page, index) => startPages.has(index)),
   };
+}
+
+/**
+ * The lines with each block value wrapped onto the lines below it joined to it, before names and
+ * blocks are found: an unlabelled line directly below a labelled line, or below its wrapped text,
+ * that starts under its value.
+ */
+function withWrappedValues<Line extends { cells: Cell[]; y: number; page: number }>(
+  lines: Line[],
+): Line[] {
+  const joined: Line[] = [];
+  let labelled: Cell[] | undefined;
+  for (const [index, line] of lines.entries()) {
+    const above = lines[index - 1];
+    const isWrapped =
+      labelled !== undefined &&
+      fieldOf(line.cells) === null &&
+      above?.page === line.page &&
+      isDirectlyBelow(line, above.y) &&
+      isUnderValue(line.cells, labelled);
+    if (isWrapped) {
+      const value = labelled!.at(-1)!;
+      value.text = joinWrapped(value.text, texts(line.cells).join(" "));
+      value.end = Math.max(value.end, line.cells.at(-1)!.end);
+      continue;
+    }
+    joined.push(line);
+    labelled = fieldOf(line.cells) === null ? undefined : line.cells;
+  }
+  return joined;
 }
 
 /**

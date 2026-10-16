@@ -52,3 +52,27 @@ it("refuses an unlabelled line at the label column directly below a block value"
     ]),
   ).toBeNull();
 });
+
+it("joins a wrapped block value under a report title without reading it as a name", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(760, ["Staff report"]),
+        line(700, ["Name: Avery Stone"]),
+        line(680, ["Tätigkeit: Leiterin Einkauf und"]),
+        line(665, ["Logistik"], 0, 55),
+        line(600, ["Name: Robin Reed"]),
+        line(580, ["Tätigkeit: Designer"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Tätigkeit"],
+        ["Avery Stone", "Leiterin Einkauf und Logistik"],
+        ["Robin Reed", "Designer"],
+      ],
+    },
+  ]);
+});
