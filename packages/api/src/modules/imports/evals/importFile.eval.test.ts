@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, parse } from "node:path";
 
 import { afterAll } from "vitest";
 
@@ -22,7 +22,8 @@ afterAll(() => {
   console.info(`Model cost of the run: ${dollars(totalCost)}`);
 });
 
-test.for(caseNames())("%s", async (name, { orm, onTestFinished }) => {
+test.for(caseNames())("%s", async (file, { orm, onTestFinished }) => {
+  const { name } = parse(file);
   const expected = readExpected(name);
   const model = await startLiveDecisions();
   onTestFinished(async () => {
@@ -35,8 +36,8 @@ test.for(caseNames())("%s", async (name, { orm, onTestFinished }) => {
   const imports = importUseCases(orm, { decisions: model.decisions });
 
   const sourceId = await imports.files.uploadFile(OWNER, {
-    name: `${name}.csv`,
-    bytes: readFileSync(join(CASES, `${name}.csv`)),
+    name: file,
+    bytes: readFileSync(join(CASES, file)),
   });
   await imports.files.mapFile(SYSTEM, { sourceId, attempt: 0 });
 
@@ -48,11 +49,9 @@ test.for(caseNames())("%s", async (name, { orm, onTestFinished }) => {
   }).toEqual({ failure: expected.failure ?? null, records: sorted(expected.records ?? []) });
 });
 
-/** Each case is a CSV file with its expected result beside it. */
+/** Each case is a staff file with its expected result beside it. */
 function caseNames(): string[] {
-  return readdirSync(CASES)
-    .filter((file) => file.endsWith(".csv"))
-    .map((file) => file.slice(0, -".csv".length));
+  return readdirSync(CASES).filter((file) => file.endsWith(".csv") || file.endsWith(".xlsx"));
 }
 
 function readExpected(name: string): ExpectedImport {

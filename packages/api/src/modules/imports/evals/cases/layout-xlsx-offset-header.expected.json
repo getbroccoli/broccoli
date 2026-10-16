@@ -1,0 +1,40 @@
+{
+  "records": [
+    {
+      "firstName": "Adam",
+      "lastName": "Dang",
+      "email": "e04625.20@people.example.test",
+      "jobTitle": "Director",
+      "startDate": "2002-07-09"
+    },
+    {
+      "firstName": "Elias",
+      "lastName": "Alvarado",
+      "email": "e03680.21@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2012-01-09"
+    },
+    {
+      "firstName": "Eva",
+      "lastName": "Rivera",
+      "email": "e04732.22@people.example.test",
+      "jobTitle": "Director",
+      "startDate": "2021-04-02"
+    }
+  ],
+  "forbidden": [
+    "Adam Dang",
+    "Adam",
+    "Dang",
+    "e04625.20@people.example.test",
+    "Eva Rivera",
+    "Elias Alvarado",
+    "Elias",
+    "Alvarado",
+    "e03680.21@people.example.test",
+    "Emily Davis",
+    "Eva",
+    "Rivera",
+    "e04732.22@people.example.test"
+  ]
+}

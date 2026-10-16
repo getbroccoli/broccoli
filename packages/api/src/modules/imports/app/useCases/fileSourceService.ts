@@ -16,10 +16,12 @@ import {
   readColumnMapping,
   readFileRecords,
   readHeaderRow,
-  readSheet,
+  type FileSheet,
+  type SheetRefusal,
   type Sheet,
   sheetQuestions,
 } from "../../domain";
+import { readStaffFile } from "./staffFile";
 
 /**
  * Staff files as import sources, through their life: upload, mapping in the background,
@@ -29,13 +31,13 @@ export interface FileSourceService {
   /** Whether files can be added: the instance has a model key. */
   canReadFiles(ctx: SecurityContext): boolean;
   /**
-   * Adds a CSV file as a source and queues its mapping, in one transaction; returns the
+   * Adds a CSV or Excel file as a source and queues its mapping, in one transaction; returns the
    * source's id. A file that cannot be read is refused and nothing is stored.
    */
   uploadFile(ctx: SecurityContext, file: UploadedFile): Promise<string>;
   /**
-   * The job: the model finds the header row and the columns, code copies the cells into
-   * records. A run that is no longer current writes nothing; a retryable model failure
+   * The job: for each sheet, the model finds the header row and the columns, code copies
+   * the cells into records. A run that is no longer current writes nothing; a retryable model failure
    * rejects, so the job runs again.
    */
   mapFile(ctx: SecurityContext, job: MapFileJob): Promise<void>;
@@ -77,6 +79,8 @@ export function createFileSourceService({
   decisions: Decisions | null;
   jobs: JobQueue;
 }): FileSourceService {
+  const uploads = { reading: false };
+
   return {
     canReadFiles: (ctx) => {
       ctx.requireOwnerOrSystem();
@@ -88,13 +92,16 @@ export function createFileSourceService({
       if (decisions === null) {
         throw new ApplicationError("UNAVAILABLE", "Reading files needs a model key.");
       }
-      const sheet = readSheet(bytes);
-      if (typeof sheet === "string") {
-        throw invalidInput([{ field: "file", code: sheet }]);
+      const sheets = await readUpload(uploads, bytes);
+      if (typeof sheets === "string") {
+        throw invalidInput([{ field: "file", code: sheets }]);
       }
       return transact(async (tx) => {
         const imports = await lockSourcesForMapping(tx);
-        const fileId = await storeFile(tx, { content: Buffer.from(bytes), mimeType: "text/csv" });
+        const fileId = await storeFile(tx, {
+          content: Buffer.from(bytes),
+          mimeType: mimeTypeOf(sheets),
+        });
         const sourceId = await imports.insertFileSource(name, fileId);
         await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
         return sourceId;
@@ -108,12 +115,12 @@ export function createFileSourceService({
         return;
       }
       const file = await readFile(orm, source.fileId);
-      const sheet = file && readSheet(file.content);
-      if (!sheet || typeof sheet === "string") {
+      const sheets = file && (await readStaffFile(file.content));
+      if (!sheets || typeof sheets === "string") {
         // Upload read the same bytes, so only a changed file gets here.
         throw new Error(`File source ${sourceId} cannot be read`);
       }
-      const { outcome, records } = await mapSheetOrFail(decisions, sheet);
+      const { outcome, records } = await mapFileOrFail(decisions, sheets);
       await transact(async (tx) => {
         const imports = importRepository(tx);
         if (await imports.finishMapping(sourceId, attempt, outcome)) {
@@ -174,10 +181,36 @@ function isCurrentRun(source: FileSource | null, attempt: number): source is Fil
   return source?.status === "mapping" && source.mappingAttempt === attempt;
 }
 
-/** A model failure that retrying cannot fix fails the file; any other error is thrown. */
-async function mapSheetOrFail(decisions: Decisions, sheet: Sheet): Promise<MappingResult> {
+/**
+ * One upload is read at a time and another is refused meanwhile, so uploads can't fill the
+ * workbook reader's line; the web uploads one file after another. Jobs always wait their turn.
+ */
+async function readUpload(
+  uploads: { reading: boolean },
+  bytes: Uint8Array,
+): Promise<FileSheet[] | SheetRefusal> {
+  if (uploads.reading) {
+    throw new ApplicationError("UNAVAILABLE", "Another file is being read. Try again in a moment.");
+  }
+  uploads.reading = true;
   try {
-    return await mapSheet(decisions, sheet);
+    return await readStaffFile(bytes);
+  } finally {
+    uploads.reading = false;
+  }
+}
+
+/** A CSV has one unnamed sheet; only a workbook names its sheets. */
+function mimeTypeOf(sheets: FileSheet[]): string {
+  return sheets.some(({ name }) => name !== null)
+    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    : "text/csv";
+}
+
+/** A model failure that retrying cannot fix fails the file; any other error is thrown. */
+async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {
+  try {
+    return await mapSheets(decisions, sheets);
   } catch (error) {
     if (!(error instanceof DecisionsError) || error.retryable) {
       throw error;
@@ -187,20 +220,40 @@ async function mapSheetOrFail(decisions: Decisions, sheet: Sheet): Promise<Mappi
 }
 
 /**
- * Asks the model outside any transaction, which never waits on another service: first
- * everything in one request; when an answer is unsure, the header and then the columns
- * under it, which gives the model the header's text and the cells below it.
+ * Maps each sheet on its own, one after another, since sheets may lay out their columns
+ * differently. A sheet without people is skipped; the file fails only when every sheet does.
  */
-async function mapSheet(decisions: Decisions, sheet: Sheet): Promise<MappingResult> {
+async function mapSheets(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {
+  const records: IncomingRecord[] = [];
+  let mapped = false;
+  for (const { name, rows } of sheets) {
+    const sheetRecords = await mapSheet(decisions, rows);
+    if (sheetRecords === null) {
+      continue;
+    }
+    mapped = true;
+    // Two sheets share row numbers, so a named sheet's records carry its name.
+    records.push(
+      ...sheetRecords.map((record) =>
+        name === null ? record : { ...record, externalId: `${name}!${record.externalId}` },
+      ),
+    );
+  }
+  return mapped
+    ? { outcome: { status: "mapped" }, records }
+    : { outcome: { status: "failed", failure: "no_people_columns" }, records: [] };
+}
+
+/**
+ * The sheet's records, or null when it has no people columns. Asks the model outside any
+ * transaction, which never waits on another service: first everything in one request; when
+ * an answer is unsure, the header and then the columns under it, which gives the model the
+ * header's text and the cells below it.
+ */
+async function mapSheet(decisions: Decisions, sheet: Sheet): Promise<IncomingRecord[] | null> {
   const { headerRow, mapping } =
     (await mapInOneRequest(decisions, sheet)) ?? (await mapHeaderThenColumns(decisions, sheet));
-  if (mapping === null) {
-    return { outcome: { status: "failed", failure: "no_people_columns" }, records: [] };
-  }
-  return {
-    outcome: { status: "mapped" },
-    records: readFileRecords(sheet, headerRow, mapping),
-  };
+  return mapping === null ? null : readFileRecords(sheet, headerRow, mapping);
 }
 
 /** The header row and the columns, each null when the model found none. */

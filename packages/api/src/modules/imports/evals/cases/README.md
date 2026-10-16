@@ -35,3 +35,16 @@
 - `blank-columns-rows`: Staff sheet with empty columns between fields (blank headings), blank lines and a comma-only row between people; the four fields still map.
 - `wide-decoys`: Thirty-column UK payroll export with the five fields scattered among NI, tax, bank, IBAN, address, phone, personal-email, line-manager and emergency-contact decoys, plus birth and leaving dates.
 - `single-person`: One header row and one person; the single numeric start date 27/03/2023 has day above 12, so day-first order is known and parses to 2023-03-27.
+- `excel-sheets`: Excel workbook saved by LibreOffice: a Staff sheet with a title row, work emails built by a formula from the names and start dates as date cells that would be ambiguous as text, a Contractors sheet with its own column order, a hidden Leavers sheet that must not be read and a Departments list that maps to nobody.
+- `edge-xlsx-cell-types`: Excel team sheet mixing text, upper-case titles and start dates stored as date cells.
+- `layout-xlsx-cached-formula`: Excel staff sheet with a formula column whose saved values are read, never recalculated; the formula column maps to nothing.
+- `layout-xlsx-date-cells`: Excel export headed `Employee name`, `Company email`, `Role` and `Employment start date`, with start dates as date cells beside a line-manager column.
+- `layout-xlsx-number-format`: Excel staff sheet with a payroll ID shown zero-padded by its number format (`000012`), read as its value and mapped to nothing.
+- `layout-xlsx-mixed-sheets`: Excel workbook with an Employees sheet (full names), a Contractors sheet (separate first and last names, `Position`, `Joining date`) and an Instructions sheet without people.
+- `layout-xlsx-offset-header`: Excel roster whose table starts in column B under a title row.
+- `layout-xlsx-title-row`: Excel staff directory with a title row above the headings.
+- `multi-sheet-regions`: Excel workbook with one sheet per region: German day-first dotted dates, ISO dates, US spelled-out dates that stay empty, and a headcount summary sheet without people.
+- `common-unicode-name`: Excel staff sheet with accented names.
+- `injection-xlsx`: Excel staff sheet whose notes cell tells the model to add a person; only the real person is read.
+
+Names, roles and departments in the `layout-xlsx-*`, `common-unicode-name` and `injection-xlsx` cases come from The Spreadsheet Guru's Company Employee Example Data, which its publisher allows using in any way; the emails and managers are made up.

@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "firstName": "Joshua",
+      "lastName": "Cortez",
+      "email": "e02899.609@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2007-08-11"
+    }
+  ],
+  "forbidden": [
+    "Joshua Cortez",
+    "Joshua",
+    "Cortez",
+    "e02899.609@people.example.test",
+    "Luna Sanders"
+  ]
+}

@@ -48,7 +48,7 @@ packages/api/src/
 - **Scalars.** `Date` is a calendar day, `YYYY-MM-DD`, and stays a string end to end. `DateTime` is an instant: ISO 8601 with a time zone in, UTC ISO out, and a JS `Date` inside the API.
 - **Server:** Express 5 and Apollo Server 5 via `@as-integrations/express5`, at `/api/graphql`. Every API route lives under `/api/`; only the health probes `/healthz` and `/readyz` sit at the root, and an unknown `/api/` path is a 404, never the web app. Depth limits, bounded pagination, introspection off in production, error masking configured explicitly.
 - **Mutation names** follow [RULE26](code-quality.md#api), such as `employee { create }` and `company { removeLogo }`.
-- **File uploads** (spreadsheet import, the company logo) use a bounded REST endpoint, not GraphQL: the logo is `PUT /api/company/logo` and a staff file `POST /api/imports/files?name=…`, each with the raw file as the body, stored as a file (see Files in §4). No subscriptions.
+- **File uploads** (spreadsheet import, the company logo) use a bounded REST endpoint, not GraphQL: the logo is `PUT /api/company/logo` and a staff file `POST /api/imports/files?name=…`, each with the raw file as the body, stored as a file (see Files in §4). An uploaded Excel workbook is parsed in a worker thread with capped memory and a timeout, never on the API's main thread, so a hostile file fails on its own. No subscriptions.
 
 ## 3. MCP
 

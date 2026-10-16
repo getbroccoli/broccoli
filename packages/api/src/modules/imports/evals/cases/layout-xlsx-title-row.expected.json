@@ -1,0 +1,240 @@
+{
+  "records": [
+    {
+      "firstName": "Athena",
+      "lastName": "Vasquez",
+      "email": "e04811.476@people.example.test",
+      "jobTitle": "Field Engineer",
+      "startDate": "2014-09-16"
+    },
+    {
+      "firstName": "William",
+      "lastName": "Watson",
+      "email": "e00624.477@people.example.test",
+      "jobTitle": "Director",
+      "startDate": "2013-06-04"
+    },
+    {
+      "firstName": "Everleigh",
+      "lastName": "Nunez",
+      "email": "e03404.478@people.example.test",
+      "jobTitle": "Field Engineer",
+      "startDate": "2021-02-05"
+    },
+    {
+      "firstName": "Leo",
+      "lastName": "Fernandez",
+      "email": "e01845.479@people.example.test",
+      "jobTitle": "Manager",
+      "startDate": "1998-04-28"
+    },
+    {
+      "firstName": "Joshua",
+      "lastName": "Lin",
+      "email": "e04784.480@people.example.test",
+      "jobTitle": "Technical Architect",
+      "startDate": "2016-02-05"
+    },
+    {
+      "firstName": "Alexander",
+      "lastName": "Rivera",
+      "email": "e00145.481@people.example.test",
+      "jobTitle": "Sr. Analyst",
+      "startDate": "2009-04-27"
+    },
+    {
+      "firstName": "David",
+      "lastName": "Desai",
+      "email": "e00218.482@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2016-11-22"
+    },
+    {
+      "firstName": "Aubrey",
+      "lastName": "Yoon",
+      "email": "e02185.483@people.example.test",
+      "jobTitle": "Sr. Business Partner",
+      "startDate": "2005-11-11"
+    },
+    {
+      "firstName": "Grayson",
+      "lastName": "Brown",
+      "email": "e01070.484@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2016-06-22"
+    },
+    {
+      "firstName": "Noah",
+      "lastName": "Chen",
+      "email": "e03807.485@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2015-03-01"
+    },
+    {
+      "firstName": "Ella",
+      "lastName": "Nguyen",
+      "email": "e00784.486@people.example.test",
+      "jobTitle": "Service Desk Analyst",
+      "startDate": "2004-02-10"
+    },
+    {
+      "firstName": "Athena",
+      "lastName": "Jordan",
+      "email": "e04925.487@people.example.test",
+      "jobTitle": "System Administrator",
+      "startDate": "2011-02-19"
+    },
+    {
+      "firstName": "Adrian",
+      "lastName": "Ruiz",
+      "email": "e04448.488@people.example.test",
+      "jobTitle": "Sr. Analyst",
+      "startDate": "2014-09-04"
+    },
+    {
+      "firstName": "Zoe",
+      "lastName": "Sanchez",
+      "email": "e04817.489@people.example.test",
+      "jobTitle": "Sr. Analyst",
+      "startDate": "2004-12-23"
+    },
+    {
+      "firstName": "Jameson",
+      "lastName": "Chen",
+      "email": "e00325.490@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2019-12-05"
+    },
+    {
+      "firstName": "Liliana",
+      "lastName": "Soto",
+      "email": "e00403.491@people.example.test",
+      "jobTitle": "Business Partner",
+      "startDate": "2010-10-12"
+    },
+    {
+      "firstName": "Lincoln",
+      "lastName": "Reyes",
+      "email": "e00436.492@people.example.test",
+      "jobTitle": "Computer Systems Manager",
+      "startDate": "1998-08-03"
+    },
+    {
+      "firstName": "Grayson",
+      "lastName": "Soto",
+      "email": "e04358.493@people.example.test",
+      "jobTitle": "Business Partner",
+      "startDate": "2015-08-03"
+    },
+    {
+      "firstName": "Julia",
+      "lastName": "Morris",
+      "email": "e04662.494@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2008-10-18"
+    },
+    {
+      "firstName": "Ava",
+      "lastName": "Ortiz",
+      "email": "e01496.495@people.example.test",
+      "jobTitle": "Enterprise Architect",
+      "startDate": "2004-07-20"
+    },
+    {
+      "firstName": "Carson",
+      "lastName": "Chau",
+      "email": "e01870.496@people.example.test",
+      "jobTitle": "Director",
+      "startDate": "2007-10-12"
+    }
+  ],
+  "forbidden": [
+    "Athena Vasquez",
+    "Athena",
+    "Vasquez",
+    "e04811.476@people.example.test",
+    "Wyatt Chin",
+    "William Watson",
+    "William",
+    "Watson",
+    "e00624.477@people.example.test",
+    "Easton Bailey",
+    "Everleigh Nunez",
+    "Everleigh",
+    "Nunez",
+    "e03404.478@people.example.test",
+    "Leo Fernandez",
+    "Leo",
+    "Fernandez",
+    "e01845.479@people.example.test",
+    "Luna Sanders",
+    "Joshua Lin",
+    "Joshua",
+    "Lin",
+    "e04784.480@people.example.test",
+    "Emily Davis",
+    "Alexander Rivera",
+    "Alexander",
+    "Rivera",
+    "e00145.481@people.example.test",
+    "Adam Dang",
+    "David Desai",
+    "David",
+    "Desai",
+    "e00218.482@people.example.test",
+    "Aubrey Yoon",
+    "Aubrey",
+    "Yoon",
+    "e02185.483@people.example.test",
+    "Savannah Ali",
+    "Grayson Brown",
+    "Grayson",
+    "Brown",
+    "e01070.484@people.example.test",
+    "Noah Chen",
+    "Noah",
+    "Chen",
+    "e03807.485@people.example.test",
+    "Isabella Xi",
+    "Ella Nguyen",
+    "Ella",
+    "Nguyen",
+    "e00784.486@people.example.test",
+    "Athena Jordan",
+    "Jordan",
+    "e04925.487@people.example.test",
+    "Adrian Ruiz",
+    "Adrian",
+    "Ruiz",
+    "e04448.488@people.example.test",
+    "Zoe Sanchez",
+    "Zoe",
+    "Sanchez",
+    "e04817.489@people.example.test",
+    "Jameson Chen",
+    "Jameson",
+    "e00325.490@people.example.test",
+    "Liliana Soto",
+    "Liliana",
+    "Soto",
+    "e00403.491@people.example.test",
+    "Lincoln Reyes",
+    "Lincoln",
+    "Reyes",
+    "e00436.492@people.example.test",
+    "Grayson Soto",
+    "e04358.493@people.example.test",
+    "Julia Morris",
+    "Julia",
+    "Morris",
+    "e04662.494@people.example.test",
+    "Ava Ortiz",
+    "Ava",
+    "Ortiz",
+    "e01496.495@people.example.test",
+    "Carson Chau",
+    "Carson",
+    "Chau",
+    "e01870.496@people.example.test"
+  ]
+}

@@ -14,10 +14,11 @@ import { uploadFile, type UploadFileResult } from "../fileApi";
 import { FileSourceCard } from "./FileSourceCard";
 
 const REFUSALS = {
-  notCsv: "imports.files.notCsv",
+  unsupportedFile: "imports.files.unsupportedFile",
   empty: "imports.files.empty",
   tooManyRows: "imports.files.tooManyRows",
   tooManyColumns: "imports.files.tooManyColumns",
+  tooManySheets: "imports.files.tooManySheets",
   tooLarge: "imports.files.tooLarge",
   failed: "imports.files.uploadFailed",
 } as const satisfies Record<Exclude<UploadFileResult, "ok">, string>;
@@ -31,7 +32,7 @@ interface FileSourcesProps {
   onUploadingChange: (uploading: boolean) => void;
 }
 
-/** Staff files as sources of people: drop or choose CSV files, retry or remove them. */
+/** Staff files as sources of people: drop or choose CSV or Excel files, retry or remove them. */
 export function FileSources({ sources, onUploaded, onUploadingChange }: FileSourcesProps) {
   const input = useRef<HTMLInputElement>(null);
   /** The file being uploaded, if any. */
@@ -92,7 +93,7 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
       <input
         ref={input}
         type="file"
-        accept=".csv,text/csv"
+        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         multiple
         className="sr-only"
         tabIndex={-1}

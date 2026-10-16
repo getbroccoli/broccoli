@@ -1,4 +1,15 @@
-import { expect, importUseCases, OWNER, storedFileIds, SYSTEM, test } from "#test/support";
+import { strToU8, zipSync } from "fflate";
+
+import {
+  expect,
+  importUseCases,
+  OWNER,
+  storedFileIds,
+  SYSTEM,
+  test,
+  sampleXlsxFile,
+  xlsxFileWithDistantCell,
+} from "#test/support";
 
 import { files } from "../../../../core/files";
 import { instanceRepository } from "../../../../core/instance";
@@ -35,6 +46,61 @@ test("refuses an upload without a model key", async ({ orm }) => {
   expect(imports.sentJobs).toEqual([]);
 });
 
+test("refuses a second upload while the first is being read without storing anything or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  const first = Promise.allSettled([
+    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+  ]);
+
+  try {
+    await expect(
+      imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes }),
+    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+
+    expect(await imports.reads.listSources(OWNER)).toEqual([]);
+    expect(await storedFileIds(orm)).toEqual([]);
+    expect(imports.sentJobs).toEqual([]);
+  } finally {
+    expect(await first).toMatchObject([
+      {
+        status: "rejected",
+        reason: {
+          code: "INVALID_INPUT",
+          fieldErrors: [{ field: "file", code: "unsupported_file" }],
+        },
+      },
+    ]);
+  }
+});
+
+test("accepts the next upload after the first upload finishes with an unreadable workbook", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
+  });
+
+  const sourceId = await imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: sourceId, kind: "file", name: "staff.xlsx", status: "mapping" },
+  ]);
+  expect(await storedFileIds(orm)).toHaveLength(1);
+  expect(imports.sentJobs).toEqual([
+    { name: "imports.mapFile", payload: { sourceId, attempt: 0 } },
+  ]);
+});
+
 test("refuses an upload after setup is complete without storing anything or sending a job", async ({
   orm,
   seed,
@@ -53,7 +119,7 @@ test("refuses an upload after setup is complete without storing anything or send
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("refuses a NUL byte as not_csv without storing the file", async ({
+test("refuses a NUL byte as unsupported without storing the file", async ({
   orm,
   fakeDecisions: fake,
 }) => {
@@ -63,7 +129,7 @@ test("refuses a NUL byte as not_csv without storing the file", async ({
     imports.files.uploadFile(OWNER, { name: "staff.csv", bytes: Buffer.from("Name\nAvery\0") }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
-    fieldErrors: [{ field: "file", code: "not_csv" }],
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
   });
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
@@ -165,4 +231,23 @@ test("leaves the Slack source and its records unchanged", async ({ orm, seed }) 
   expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
     records,
   );
+});
+
+test("refuses a ZIP without a workbook without storing it or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const bytes = zipSync({ "staff.txt": strToU8("Name\nAvery Stone") });
+
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
+  });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
 });

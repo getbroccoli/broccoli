@@ -1,0 +1,88 @@
+{
+  "records": [
+    {
+      "firstName": "Zoë",
+      "lastName": "García",
+      "email": "e01633.58@people.example.test",
+      "jobTitle": "Operations Engineer",
+      "startDate": "2001-05-30"
+    },
+    {
+      "firstName": "Zoey",
+      "lastName": "Jackson",
+      "email": "e01848.59@people.example.test",
+      "jobTitle": "Business Partner",
+      "startDate": "2008-08-21"
+    },
+    {
+      "firstName": "John",
+      "lastName": "Chow",
+      "email": "e00716.60@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2021-03-11"
+    },
+    {
+      "firstName": "Ava",
+      "lastName": "Ayala",
+      "email": "e00699.61@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2006-08-16"
+    },
+    {
+      "firstName": "Natalia",
+      "lastName": "Salazar",
+      "email": "e00502.62@people.example.test",
+      "jobTitle": "Sr. Analyst",
+      "startDate": "2019-01-02"
+    },
+    {
+      "firstName": "Skylar",
+      "lastName": "Carrillo",
+      "email": "e04000.63@people.example.test",
+      "jobTitle": "Engineering Manager",
+      "startDate": "2008-12-18"
+    },
+    {
+      "firstName": "Christian",
+      "lastName": "Sanders",
+      "email": "e02112.64@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2013-08-07"
+    }
+  ],
+  "forbidden": [
+    "Zoë García",
+    "Zoë",
+    "García",
+    "e01633.58@people.example.test",
+    "Wyatt Chin",
+    "Zoey Jackson",
+    "Zoey",
+    "Jackson",
+    "e01848.59@people.example.test",
+    "Savannah Ali",
+    "John Chow",
+    "John",
+    "Chow",
+    "e00716.60@people.example.test",
+    "Isabella Xi",
+    "Ava Ayala",
+    "Ava",
+    "Ayala",
+    "e00699.61@people.example.test",
+    "Emily Davis",
+    "Natalia Salazar",
+    "Natalia",
+    "Salazar",
+    "e00502.62@people.example.test",
+    "Easton Bailey",
+    "Skylar Carrillo",
+    "Skylar",
+    "Carrillo",
+    "e04000.63@people.example.test",
+    "Christian Sanders",
+    "Christian",
+    "Sanders",
+    "e02112.64@people.example.test"
+  ]
+}

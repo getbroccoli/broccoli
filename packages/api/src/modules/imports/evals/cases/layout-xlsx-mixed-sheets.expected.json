@@ -1,0 +1,52 @@
+{
+  "records": [
+    {
+      "firstName": "Addison",
+      "lastName": "Do",
+      "email": "e01633.58@people.example.test",
+      "jobTitle": "Operations Engineer",
+      "startDate": "2001-05-30"
+    },
+    {
+      "firstName": "Zoey",
+      "lastName": "Jackson",
+      "email": "e01848.59@people.example.test",
+      "jobTitle": "Business Partner",
+      "startDate": "2008-08-21"
+    },
+    {
+      "firstName": "Mia",
+      "lastName": "Cheng",
+      "email": "e01427.96@people.example.test",
+      "jobTitle": "Sr. Manger",
+      "startDate": "2015-04-22"
+    },
+    {
+      "firstName": "Rylee",
+      "lastName": "Yu",
+      "email": "e04568.97@people.example.test",
+      "jobTitle": "Vice President",
+      "startDate": "2011-07-10"
+    }
+  ],
+  "forbidden": [
+    "Addison Do",
+    "Addison",
+    "e01633.58@people.example.test",
+    "Wyatt Chin",
+    "Zoey Jackson",
+    "Zoey",
+    "Jackson",
+    "e01848.59@people.example.test",
+    "Savannah Ali",
+    "Mia Cheng",
+    "Mia",
+    "Cheng",
+    "e01427.96@people.example.test",
+    "Adam Dang",
+    "Rylee Yu",
+    "Rylee",
+    "e04568.97@people.example.test",
+    "Luna Sanders"
+  ]
+}
