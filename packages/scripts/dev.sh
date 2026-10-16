@@ -1,6 +1,7 @@
 #!/bin/sh
 # Starts this checkout's development stack on a free host port unless HOST_WEB_PORT is set,
-# prints its URL and follows the logs. Any exit removes the containers; the database volume stays.
+# prints its URL and follows the logs. Any exit removes the containers; the database volume stays
+# unless --drop-db removes it before the start.
 set -eu
 cd "$(dirname "$0")/../.."
 
@@ -13,6 +14,22 @@ export HOST_UID HOST_GID BROCCOLI_CHECKOUT
 compose() {
   docker compose -f docker-compose.yml -f packages/scripts/docker-compose.dev.yml "$@"
 }
+
+case "${1:-}" in
+  '') ;;
+  --drop-db)
+    # Only this checkout's database volume: `down --volumes` would also take other profiles'
+    # volumes, or another checkout's when project names collide.
+    database=$(docker volume ls --quiet --filter "label=org.getbroccoli.checkout=$PWD" \
+      --filter label=com.docker.compose.volume=dev-postgres-data)
+    compose down
+    if [ -n "$database" ]; then docker volume rm $database; fi
+    ;;
+  *)
+    echo "Usage: pnpm dev [--drop-db]" >&2
+    exit 2
+    ;;
+esac
 
 # The containers run on the checkout's node_modules.
 pnpm install --frozen-lockfile

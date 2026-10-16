@@ -4,7 +4,7 @@ A manual check of naming the company and adding its logo in the browser, on a de
 
 ## Setup
 
-1. Run `pnpm dev` on a database without an owner (remove the development database volume, or use a fresh checkout).
+1. Run `pnpm dev --drop-db` to start on a database without an owner.
 2. On `/setup`, create the owner with `owner@acme-corp.example`.
 
 ## Name

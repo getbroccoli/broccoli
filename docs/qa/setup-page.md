@@ -4,7 +4,7 @@ A manual check of creating the owner in the browser, on a development stack.
 
 ## Setup
 
-1. Run `pnpm dev` on a database without an owner (remove the development database volume, or use a fresh checkout).
+1. Run `pnpm dev --drop-db` to start on a database without an owner.
 2. Use a fresh browser profile, so no session cookie is left over.
 
 ## Routing before setup
