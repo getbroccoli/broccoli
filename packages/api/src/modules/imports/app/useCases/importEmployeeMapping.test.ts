@@ -1,27 +1,17 @@
 import { expect, it } from "vitest";
 
-import type { ImportEmployeeRecord } from "../../domain";
+import type { ImportEmployee } from "../../domain";
 import { incompleteReason, toNewEmployee } from "./importEmployeeMapping";
 
-const record: ImportEmployeeRecord = {
-  id: "employee-1",
-  sourceId: "source-1",
-  firstName: "  Avery  ",
-  lastName: "  Stone  ",
-  email: "  Avery@EXAMPLE.COM  ",
-  jobTitle: "  Designer  ",
-  startDate: null,
-};
-
-it("returns the normalised employee and no incomplete reason for a complete record", () => {
-  expect(toNewEmployee(record)).toEqual({
+it("returns the normalised employee and no incomplete reason for a complete import employee", () => {
+  expect(toNewEmployee(employee())).toEqual({
     firstName: "Avery",
     lastName: "Stone",
     email: "avery@example.com",
     jobTitle: "Designer",
     startDate: null,
   });
-  expect(incompleteReason(record)).toBeNull();
+  expect(incompleteReason(employee())).toBeNull();
 });
 
 it.each([
@@ -34,13 +24,38 @@ it.each([
     values: { jobTitle: "a".repeat(101) },
     reason: "other",
   },
-])("leaves out a record with $description and reports $reason", ({ values, reason }) => {
-  const incomplete = { ...record, ...values };
+])("leaves out an import employee with $description and reports $reason", ({ values, reason }) => {
+  const incomplete = employee(values);
 
   expect(toNewEmployee(incomplete)).toBeNull();
   expect(incompleteReason(incomplete)).toBe(reason);
 });
 
 it("reports the missing last name before the missing email", () => {
-  expect(incompleteReason({ ...record, lastName: null, email: null })).toBe("lastName");
+  expect(incompleteReason(employee({ lastName: null, email: null }))).toBe("lastName");
 });
+
+function employee(
+  overrides: Partial<Record<keyof ImportEmployee["values"], string | null>> = {},
+): ImportEmployee {
+  const shown = {
+    firstName: "  Avery  ",
+    lastName: "  Stone  ",
+    email: "  Avery@EXAMPLE.COM  ",
+    jobTitle: "  Designer  ",
+    startDate: null,
+    ...overrides,
+  };
+  return {
+    key: "avery@example.com",
+    records: [],
+    leftOut: false,
+    values: {
+      firstName: { value: shown.firstName, choice: "typed", options: [] },
+      lastName: { value: shown.lastName, choice: "typed", options: [] },
+      email: { value: shown.email, choice: "typed", options: [] },
+      jobTitle: { value: shown.jobTitle, choice: "typed", options: [] },
+      startDate: { value: shown.startDate, choice: "typed", options: [] },
+    },
+  };
+}

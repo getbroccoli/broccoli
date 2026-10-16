@@ -4,34 +4,50 @@ import {
   type NewEmployeeInput,
   tryParseNewEmployee,
 } from "../../../employees";
-import type { ImportEmployeeRecord } from "../../domain";
+import { groupEmployeeRecords, type ImportEmployee } from "../../domain";
+import type { ImportRepository } from "../../db";
 
 /** Why Approve would leave an import employee out; the first failing field wins. */
 export type IncompleteReason = "firstName" | "lastName" | "email" | "other";
 
-const NAMED_REASONS: readonly IncompleteReason[] = ["firstName", "lastName", "email"];
+export const INCOMPLETE_REASONS: readonly IncompleteReason[] = [
+  "firstName",
+  "lastName",
+  "email",
+  "other",
+];
 
-/** The employee an import record would become, or null when it is incomplete. */
-export function toNewEmployee(record: ImportEmployeeRecord): NewEmployee | null {
-  return tryParseNewEmployee(toNewEmployeeInput(record));
+/** Every import employee: the import's records grouped, with the owner's choices applied. */
+export async function readImportEmployees(imports: ImportRepository): Promise<ImportEmployee[]> {
+  const [sources, records, choices] = await Promise.all([
+    imports.listSources(),
+    imports.listEmployeeRecords(),
+    imports.listChoices("employee"),
+  ]);
+  return groupEmployeeRecords(sources, records, choices);
 }
 
-/** Why the record is incomplete, or null when it is ready. */
-export function incompleteReason(record: ImportEmployeeRecord): IncompleteReason | null {
-  const fields = employeeFieldErrors(toNewEmployeeInput(record)).map(({ field }) => field);
+/** The employee an import employee would become, or null when it is incomplete. */
+export function toNewEmployee(employee: ImportEmployee): NewEmployee | null {
+  return tryParseNewEmployee(toNewEmployeeInput(employee));
+}
+
+/** Why the import employee is incomplete, or null when it is ready. */
+export function incompleteReason(employee: ImportEmployee): IncompleteReason | null {
+  const fields = employeeFieldErrors(toNewEmployeeInput(employee)).map(({ field }) => field);
   if (fields.length === 0) {
     return null;
   }
-  return NAMED_REASONS.find((reason) => fields.includes(reason)) ?? "other";
+  return INCOMPLETE_REASONS.find((reason) => fields.includes(reason)) ?? "other";
 }
 
-/** Missing names and emails become empty, so the employee rules count the record as incomplete. */
-export function toNewEmployeeInput(record: ImportEmployeeRecord): NewEmployeeInput {
+/** Missing names and emails become empty, so the employee rules count it as incomplete. */
+export function toNewEmployeeInput({ values }: ImportEmployee): NewEmployeeInput {
   return {
-    firstName: record.firstName ?? "",
-    lastName: record.lastName ?? "",
-    email: record.email ?? "",
-    jobTitle: record.jobTitle,
-    startDate: record.startDate,
+    firstName: values.firstName.value ?? "",
+    lastName: values.lastName.value ?? "",
+    email: values.email.value ?? "",
+    jobTitle: values.jobTitle.value,
+    startDate: values.startDate.value,
   };
 }

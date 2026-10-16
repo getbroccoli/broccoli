@@ -123,14 +123,8 @@ export class TestSeed {
         };
       }),
     );
-    const records = await repository.findEmployeePage({
-      first: employees.length,
-      after: null,
-      order: { field: "NAME", direction: "ASC" },
-      search: null,
-      sourceId,
-    });
-    return records.map(({ node }) => node);
+    const records = await repository.listEmployeeRecords();
+    return records.filter((record) => record.sourceId === sourceId);
   }
 
   slackConnection(accessToken = "test-slack-token") {

@@ -25,8 +25,20 @@ const calls = {
   "reads.listSources": (imports, ctx) => imports.reads.listSources(ctx),
   "reads.readSources": (imports, ctx) => imports.reads.readSources(ctx, []),
   "reads.countEmployees": (imports, ctx) => imports.reads.countEmployees(ctx, []),
+  "reads.employeeCount": (imports, ctx) => imports.reads.employeeCount(ctx),
   "reads.readyEmployeeCount": (imports, ctx) => imports.reads.readyEmployeeCount(ctx),
   "reads.listEmployees": (imports, ctx) => imports.reads.listEmployees(ctx, {}),
+  "reads.listEmployeeRecords": (imports, ctx) =>
+    imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),
+  "reads.listChecks": (imports, ctx) => imports.reads.listChecks(ctx),
+  "choices.chooseEmployeeValue": (imports, ctx) =>
+    imports.choices.chooseEmployeeValue(ctx, { key: "missing", field: "jobTitle", choice: null }),
+  "choices.chooseSourceForAll": (imports, ctx) =>
+    imports.choices.chooseSourceForAll(ctx, { field: "jobTitle", sourceId: "missing" }),
+  "choices.setLeftOut": (imports, ctx) =>
+    imports.choices.setLeftOut(ctx, { key: "missing", leftOut: true }),
+  "choices.leaveOutIncomplete": (imports, ctx) =>
+    imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
   skipImport: (imports, ctx) => imports.skipImport(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;

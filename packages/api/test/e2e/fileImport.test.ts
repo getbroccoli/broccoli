@@ -13,7 +13,7 @@ const IMPORT = `query {
   import {
     canReadFiles
     sources { id kind name status failure }
-    employees { edges { node { firstName lastName email } } }
+    employees { edges { node { firstName { value } lastName { value } email { value } } } }
   }
 }`;
 
@@ -38,8 +38,20 @@ test("the managed owner uploads a CSV and its people become mapped import employ
           ],
           employees: {
             edges: [
-              { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
-              { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+              {
+                node: {
+                  firstName: { value: "Avery" },
+                  lastName: { value: "Stone" },
+                  email: { value: "avery@example.com" },
+                },
+              },
+              {
+                node: {
+                  firstName: { value: "Robin" },
+                  lastName: { value: "Reed" },
+                  email: { value: "robin@example.com" },
+                },
+              },
             ],
           },
         },
@@ -110,8 +122,8 @@ test("a failed file becomes mapped after retrying with working decisions", async
           sources: [{ id: sourceId, status: "MAPPED", failure: null }],
           employees: {
             edges: [
-              { node: { email: "avery@example.com" } },
-              { node: { email: "robin@example.com" } },
+              { node: { email: { value: "avery@example.com" } } },
+              { node: { email: { value: "robin@example.com" } } },
             ],
           },
         },
@@ -278,8 +290,20 @@ test.for(["staff.xlsx", "staff.XLSX"])(
             sources: [{ id: sourceId, kind: "FILE", name, status: "MAPPED", failure: null }],
             employees: {
               edges: [
-                { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
-                { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+                {
+                  node: {
+                    firstName: { value: "Avery" },
+                    lastName: { value: "Stone" },
+                    email: { value: "avery@example.com" },
+                  },
+                },
+                {
+                  node: {
+                    firstName: { value: "Robin" },
+                    lastName: { value: "Reed" },
+                    email: { value: "robin@example.com" },
+                  },
+                },
               ],
             },
           },

@@ -71,10 +71,9 @@ test("connecting saves the workspace and an explicit read imports all Slack page
   }
   expect(new URL(reads[1]!.path, slack.url).searchParams.get("cursor")).toBe("1");
   const response = await browser.graphql(`query {
-    import {
-      id
-      sources { kind name employeeCount employees { edges { node { firstName } } } }
-      employees { edges { node { firstName email source { name } } } }
+    import { id
+      sources { kind name employeeCount records { edges { node { firstName } } } }
+      employees { edges { node { firstName { value } email { value } records { source { name } } } } }
     }
   }`);
   expect(response.status).toBe(200);
@@ -87,7 +86,7 @@ test("connecting saves the workspace and an explicit read imports all Slack page
             kind: "SLACK",
             name: "Acme Workspace",
             employeeCount: 2,
-            employees: {
+            records: {
               edges: [{ node: { firstName: "Avery" } }, { node: { firstName: "Robin" } }],
             },
           },
@@ -96,16 +95,16 @@ test("connecting saves the workspace and an explicit read imports all Slack page
           edges: [
             {
               node: {
-                firstName: "Avery",
-                email: "avery@example.com",
-                source: { name: "Acme Workspace" },
+                firstName: { value: "Avery" },
+                email: { value: "avery@example.com" },
+                records: [{ source: { name: "Acme Workspace" } }],
               },
             },
             {
               node: {
-                firstName: "Robin",
-                email: "robin@example.com",
-                source: { name: "Acme Workspace" },
+                firstName: { value: "Robin" },
+                email: { value: "robin@example.com" },
+                records: [{ source: { name: "Acme Workspace" } }],
               },
             },
           ],
@@ -159,7 +158,7 @@ test("refresh returns the updated import and skipping completes setup", async ({
   ];
 
   const refreshed = await browser.graphql(`mutation {
-    import { readSlack { import { id sources { employeeCount } employees { edges { node { email } } } } error { __typename ... on Error { message } } } }
+    import { readSlack { import { id sources { employeeCount } employees { edges { node { email { value } } } } } error { __typename ... on Error { message } } } }
   }`);
 
   expect(await refreshed.json()).toEqual({
@@ -169,7 +168,7 @@ test("refresh returns the updated import and skipping completes setup", async ({
           import: {
             id: "import",
             sources: [{ employeeCount: 1 }],
-            employees: { edges: [{ node: { email: "avery@example.com" } }] },
+            employees: { edges: [{ node: { email: { value: "avery@example.com" } } }] },
           },
           error: null,
         },
@@ -204,12 +203,16 @@ test("a malformed Slack response refuses refresh and preserves the imported empl
     data: { import: { readSlack: { import: null, error } } },
   });
   const employees = await browser.graphql(
-    "query { import { employees { edges { node { firstName email } } } } }",
+    "query { import { employees { edges { node { firstName { value } email { value } } } } } }",
   );
   expect(await employees.json()).toEqual({
     data: {
       import: {
-        employees: { edges: [{ node: { firstName: "Avery", email: "avery@example.com" } }] },
+        employees: {
+          edges: [
+            { node: { firstName: { value: "Avery" }, email: { value: "avery@example.com" } } },
+          ],
+        },
       },
     },
   });
@@ -290,10 +293,7 @@ test("review counts only complete Slack members and Approve adds exactly those m
   await connectAndReadSlack(browser);
 
   const review = await browser.graphql(`query {
-    import {
-      readyEmployeeCount
-      employees(first: 100) { edges { node { email incompleteReason } } }
-    }
+    import { readyEmployeeCount employees(first: 100) { edges { node { email { value } incompleteReason } } } }
   }`);
 
   expect(await review.json()).toEqual({
@@ -302,9 +302,9 @@ test("review counts only complete Slack members and Approve adds exactly those m
         readyEmployeeCount: 2,
         employees: {
           edges: [
-            { node: { email: "avery@example.com", incompleteReason: null } },
-            { node: { email: "morgan@example.com", incompleteReason: "LAST_NAME" } },
-            { node: { email: "robin@example.com", incompleteReason: null } },
+            { node: { email: { value: "avery@example.com" }, incompleteReason: null } },
+            { node: { email: { value: "morgan@example.com" }, incompleteReason: "LAST_NAME" } },
+            { node: { email: { value: "robin@example.com" }, incompleteReason: null } },
           ],
         },
       },
@@ -312,9 +312,9 @@ test("review counts only complete Slack members and Approve adds exactly those m
   });
 
   expect(await (await browser.graphql(APPROVE)).json()).toEqual(APPROVED);
-  const people = await browser.graphql(`query {
-    employees(first: 100, orderBy: { field: EMAIL, direction: ASC }) { edges { node { email } } }
-  }`);
+  const people = await browser.graphql(
+    `query { employees(first: 100, orderBy: { field: EMAIL, direction: ASC }) { edges { node { email } } } }`,
+  );
   expect(await people.json()).toEqual({
     data: {
       employees: {

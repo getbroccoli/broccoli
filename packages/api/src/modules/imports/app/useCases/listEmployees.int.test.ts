@@ -2,88 +2,62 @@ import { expect, importUseCases, OWNER, test } from "#test/support";
 
 import { parseCalendarDate } from "../../../../utils";
 
-test("lists the import's employees without a source filter", async ({ orm, seed }) => {
-  const source = await seed.importSource();
-  await seed.importEmployees(source.id, [{ firstName: "Avery" }, { firstName: "Robin" }]);
+test("groups a Slack member and a file row with one email into one import employee", async ({
+  orm,
+  seed,
+}) => {
+  const slack = await seed.importSource();
+  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  const members = await seed.importEmployees(slack.id, [{ email: "avery@example.com" }]);
+  const rows = await seed.importEmployees(file.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
 
   const page = await imports.reads.listEmployees(OWNER, {});
 
   expect(page.edges.map(({ node }) => node)).toMatchObject([
-    { sourceId: source.id, firstName: "Avery" },
-    { sourceId: source.id, firstName: "Robin" },
+    { key: "avery@example.com", records: [...rows, ...members] },
   ]);
 });
 
-test("lists only employees belonging to the requested source", async ({ orm, seed }) => {
-  const source = await seed.importSource();
-  const employees = await seed.importEmployees(source.id, [{ firstName: "Avery" }]);
+test("lists only the requested source’s records in their input order", async ({ orm, seed }) => {
+  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  const slack = await seed.importSource();
+  const rows = await seed.importEmployees(file.id, [{ firstName: "Zoe" }, { firstName: "Avery" }]);
+  await seed.importEmployees(slack.id, [{}]);
   const imports = importUseCases(orm);
 
-  const matching = await imports.reads.listEmployees(OWNER, { sourceId: source.id });
-  const missing = await imports.reads.listEmployees(OWNER, {
-    sourceId: "00000000-0000-4000-8000-000000000001",
-  });
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: file.id });
 
-  expect(matching.edges.map(({ node }) => node)).toEqual(employees);
-  expect(missing.edges).toEqual([]);
+  expect(page.edges.map(({ node }) => node)).toEqual(rows);
 });
 
-test("pages employees by first name, last name and id, ignoring name case", async ({
+test("finds part of a shown first name, last name or email, ignoring case", async ({
   orm,
   seed,
 }) => {
   const source = await seed.importSource();
-  const employees = await seed.importEmployees(source.id, [
-    { firstName: "Zoe", lastName: "Adams" },
-    { firstName: "Sam", lastName: "Zimmer" },
-    { firstName: "ada", lastName: "Stone" },
-    { firstName: "sam", lastName: "adams" },
-    { firstName: "Sam", lastName: "Adams" },
-  ]);
-  const ada = employees.find(({ firstName }) => firstName === "ada")!;
-  const tiedIds = employees
-    .filter(
-      ({ firstName, lastName }) =>
-        firstName?.toLowerCase() === "sam" && lastName?.toLowerCase() === "adams",
-    )
-    .map(({ id }) => id)
-    .sort();
-  const samZ = employees.find(({ lastName }) => lastName === "Zimmer")!;
-  const zoe = employees.find(({ firstName }) => firstName === "Zoe")!;
-  const imports = importUseCases(orm);
-
-  const first = await imports.reads.listEmployees(OWNER, { first: 2 });
-  const second = await imports.reads.listEmployees(OWNER, {
-    first: 2,
-    after: first.pageInfo.endCursor,
-  });
-  const third = await imports.reads.listEmployees(OWNER, {
-    first: 2,
-    after: second.pageInfo.endCursor,
-  });
-
-  expect(first.edges.map(({ node }) => node.id)).toEqual([ada.id, tiedIds[0]]);
-  expect(first.pageInfo).toEqual({ hasNextPage: true, endCursor: first.edges.at(-1)?.cursor });
-  expect(second.edges.map(({ node }) => node.id)).toEqual([tiedIds[1], samZ.id]);
-  expect(second.pageInfo).toEqual({ hasNextPage: true, endCursor: second.edges.at(-1)?.cursor });
-  expect(third.edges.map(({ node }) => node.id)).toEqual([zoe.id]);
-  expect(third.pageInfo).toEqual({ hasNextPage: false, endCursor: third.edges.at(-1)?.cursor });
-});
-
-test("finds part of a first name, last name or email, ignoring case", async ({ orm, seed }) => {
-  const source = await seed.importSource();
   await seed.importEmployees(source.id, [
-    { firstName: "AlphaBeta" },
+    { firstName: "Original", email: "avery@example.com" },
     { firstName: "Ben", lastName: "MyALPHAName" },
     { firstName: "Cara", email: "team.alpha@example.com" },
-    { firstName: "Dora", lastName: "Stone", email: "dora@example.com" },
+    { firstName: "Dora", lastName: "Stone" },
   ]);
   const imports = importUseCases(orm);
+  await imports.choices.chooseEmployeeValue(OWNER, {
+    key: "avery@example.com",
+    field: "firstName",
+    choice: { value: "AlphaBeta" },
+  });
 
   const page = await imports.reads.listEmployees(OWNER, { filter: { search: " aLpHa " } });
+  const original = await imports.reads.listEmployees(OWNER, { filter: { search: "Original" } });
 
-  expect(page.edges.map(({ node }) => node.firstName)).toEqual(["AlphaBeta", "Ben", "Cara"]);
+  expect(page.edges.map(({ node }) => node.values.firstName.value)).toEqual([
+    "AlphaBeta",
+    "Ben",
+    "Cara",
+  ]);
+  expect(original.edges).toEqual([]);
 });
 
 test("treats percent and underscore in a search literally", async ({ orm, seed }) => {
@@ -98,8 +72,10 @@ test("treats percent and underscore in a search literally", async ({ orm, seed }
   const percent = await imports.reads.listEmployees(OWNER, { filter: { search: "%" } });
   const underscore = await imports.reads.listEmployees(OWNER, { filter: { search: "_" } });
 
-  expect(percent.edges.map(({ node }) => node.firstName)).toEqual(["Percent%Name"]);
-  expect(underscore.edges.map(({ node }) => node.firstName)).toEqual(["Underscore_Name"]);
+  expect(percent.edges.map(({ node }) => node.values.firstName.value)).toEqual(["Percent%Name"]);
+  expect(underscore.edges.map(({ node }) => node.values.firstName.value)).toEqual([
+    "Underscore_Name",
+  ]);
 });
 
 test("refuses a search longer than 100 characters", async ({ orm }) => {
@@ -113,58 +89,57 @@ test("refuses a search longer than 100 characters", async ({ orm }) => {
   });
 });
 
-test("orders by email descending", async ({ orm, seed }) => {
-  const source = await seed.importSource();
-  await seed.importEmployees(source.id, [
-    { firstName: "Ada", email: "ada@example.com" },
-    { firstName: "Ben", email: "zoe@example.com" },
-    { firstName: "Zoe", email: "ben@example.com" },
-  ]);
-  const imports = importUseCases(orm);
-
-  const page = await imports.reads.listEmployees(OWNER, {
-    orderBy: { field: "EMAIL", direction: "DESC" },
-  });
-
-  expect(page.edges.map(({ node }) => node.email)).toEqual([
-    "zoe@example.com",
-    "ben@example.com",
-    "ada@example.com",
-  ]);
-});
-
-test.for(["ASC", "DESC"] as const)(
-  "pages by start date %s with records without one last",
-  async (direction, { orm, seed }) => {
+test.for([
+  { field: "NAME", direction: "ASC", names: ["ada", "Sam", "sam", "Zoe"] },
+  { field: "NAME", direction: "DESC", names: ["Zoe", "sam", "Sam", "ada"] },
+  { field: "EMAIL", direction: "ASC", names: ["Zoe", "Sam", "sam", "ada"] },
+  { field: "EMAIL", direction: "DESC", names: ["sam", "Sam", "Zoe", "ada"] },
+  { field: "START_DATE", direction: "ASC", names: ["sam", "Sam", "Zoe", "ada"] },
+  { field: "START_DATE", direction: "DESC", names: ["Sam", "sam", "ada", "Zoe"] },
+] as const)(
+  "pages every import employee once by $field $direction with nulls last",
+  async ({ field, direction, names }, { orm, seed }) => {
     const source = await seed.importSource();
-    const employees = await seed.importEmployees(source.id, [
-      { firstName: "Ada", startDate: null },
-      { firstName: "Ben", startDate: parseCalendarDate("2026-03-01")! },
-      { firstName: "Cara", startDate: parseCalendarDate("2026-02-28")! },
-      { firstName: "Dora", startDate: null },
+    await seed.importEmployees(source.id, [
+      { firstName: "Zoe", email: "a@example.com" },
+      {
+        firstName: "Sam",
+        lastName: "Adams",
+        email: "b@example.com",
+        startDate: parseCalendarDate("2026-03-01")!,
+      },
+      {
+        firstName: "sam",
+        lastName: "Adams",
+        email: "c@example.com",
+        startDate: parseCalendarDate("2026-02-28")!,
+      },
+      { firstName: "ada", email: null },
     ]);
-    const undatedIds = employees
-      .filter(({ startDate }) => startDate === null)
-      .map(({ id }) => id)
-      .sort();
+    const file = await seed.fileSource({ content: "x", status: "mapped" });
+    await seed.importEmployees(file.id, [
+      {
+        firstName: "Sam",
+        lastName: "Adams",
+        email: "b@example.com",
+        startDate: parseCalendarDate("2026-03-01")!,
+      },
+    ]);
     const imports = importUseCases(orm);
-    const orderBy = { field: "START_DATE", direction } as const;
-
+    const orderBy = { field, direction };
     const first = await imports.reads.listEmployees(OWNER, { first: 2, orderBy });
+
     const second = await imports.reads.listEmployees(OWNER, {
       first: 2,
       after: first.pageInfo.endCursor,
       orderBy,
     });
 
-    expect(first.edges.map(({ node }) => node.firstName)).toEqual(
-      direction === "ASC" ? ["Cara", "Ben"] : ["Ben", "Cara"],
-    );
-    expect(first.pageInfo.hasNextPage).toBe(true);
-    expect(second.edges.map(({ node }) => node.id)).toEqual(
-      direction === "ASC" ? undatedIds : undatedIds.toReversed(),
-    );
-    expect(second.pageInfo.hasNextPage).toBe(false);
+    const employees = [...first.edges, ...second.edges].map(({ node }) => node);
+    expect(employees.map(({ values }) => values.firstName.value)).toEqual(names);
+    expect(new Set(employees.map(({ key }) => key)).size).toBe(4);
+    expect(first.pageInfo).toEqual({ hasNextPage: true, endCursor: first.edges.at(-1)!.cursor });
+    expect(second.pageInfo).toEqual({ hasNextPage: false, endCursor: second.edges.at(-1)!.cursor });
   },
 );
 
@@ -187,4 +162,23 @@ test("refuses a cursor from another order", async ({ orm, seed }) => {
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "after", code: "invalid" }],
   });
+});
+
+test.for([
+  { check: "conflict:jobTitle", email: "avery@example.com" },
+  { check: "incomplete:lastName", email: "robin@example.com" },
+])("filters import employees by $check", async ({ check, email }, { orm, seed }) => {
+  const slack = await seed.importSource();
+  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  await seed.importEmployees(slack.id, [
+    { email: "avery@example.com", jobTitle: "Engineer" },
+    { email: "robin@example.com", lastName: null },
+    {},
+  ]);
+  await seed.importEmployees(file.id, [{ email: "avery@example.com", jobTitle: "Designer" }]);
+  const imports = importUseCases(orm);
+
+  const page = await imports.reads.listEmployees(OWNER, { filter: { check } });
+
+  expect(page.edges.map(({ node }) => node.key)).toEqual([email]);
 });

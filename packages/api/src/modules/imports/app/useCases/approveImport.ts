@@ -4,12 +4,13 @@ import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
 import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
-import { toNewEmployeeInput } from "./importEmployeeMapping";
+import { readImportEmployees, toNewEmployeeInput } from "./importEmployeeMapping";
 
 /**
- * Turns the import's employee records into employees and completes setup, in one
- * transaction; at any step but `import` it does nothing, so approving twice creates
- * them once. Incomplete records stay in the import; refused while a file is being mapped.
+ * Turns the import employees that are not left out into employees, with the values review
+ * shows, and completes setup, in one transaction; at any step but `import` it does nothing,
+ * so approving twice creates them once. Incomplete ones stay in the import; refused while a
+ * file is being mapped.
  */
 export async function approveImport(
   { transact, logger }: ImportContext,
@@ -26,8 +27,12 @@ export async function approveImport(
     if (!(await advanceStep(ctx, tx, "import", "done"))) {
       return null;
     }
-    const records = await imports.listEmployeeRecords();
-    return createImportedEmployees(ctx, tx, records.map(toNewEmployeeInput));
+    const employees = await readImportEmployees(imports);
+    return createImportedEmployees(
+      ctx,
+      tx,
+      employees.filter(({ leftOut }) => !leftOut).map(toNewEmployeeInput),
+    );
   });
   if (result) {
     logger.info(result, "Approved the import");

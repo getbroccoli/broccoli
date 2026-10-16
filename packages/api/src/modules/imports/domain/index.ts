@@ -8,9 +8,20 @@ export {
   sheetQuestions,
 } from "./fileMapping";
 export {
+  groupEmployeeRecords,
+  hasOpenConflict,
+  IMPORT_EMPLOYEE_CHOICES_VERSION,
+  IMPORT_EMPLOYEE_FIELDS,
   IMPORT_EMPLOYEE_VERSION,
+  inSourceOrder,
+  parseImportEmployeeChoices,
   parseImportEmployeeValues,
+  type ImportEmployee,
+  type ImportEmployeeChoices,
+  type ImportEmployeeField,
   type ImportEmployeeRecord,
+  type ImportEmployeeValue,
+  type ValueChoice,
   type ImportEmployeeValues,
   type IncomingRecord,
 } from "./importEmployee";
