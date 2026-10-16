@@ -13,12 +13,12 @@ Three layers, most tests in the middle one:
 
 ## What not to test
 
-The rules are [Q40 and Q41](code-quality.md#tests). Two of them are choices for now: frontend components and pages get no tests, only pure frontend functions such as search-param parsing; and integrations (`src/integrations/`) are thin clients over shared helpers such as `fetchJson`, which have their own tests, so use-case tests replace them with a fake and end-to-end tests run them against a local fake service.
+The rules are [RULE40 and RULE41](code-quality.md#tests). Two of them are choices for now: frontend components and pages get no tests, only pure frontend functions such as search-param parsing; and integrations (`src/integrations/`) are thin clients over shared helpers such as `fetchJson`, which have their own tests, so use-case tests replace them with a fake and end-to-end tests run them against a local fake service.
 
 ## Writing a test
 
 - Work test-first: a failing test, the smallest code that passes, then refactor.
-- Follow [Q42 to Q46](code-quality.md#tests); a name reads like `it("rejects a request that overlaps an approved absence")`.
+- Follow [RULE42 to RULE46](code-quality.md#tests); a name reads like `it("rejects a request that overlaps an approved absence")`.
 - Build test data with `seed` (`TestSeed` in `packages/api/test/support`), which inserts through each module's repository, skipping use cases, permissions, audit and events. Seed values must be what the app would store (normalised, such as a lowercased email). Set only the fields the test is about. A module adds its own seed methods.
 - Build the use cases under test with the module's helper in `#test/support`, such as `companyUseCases(orm, { brandLookup })`. It fills every dependency with a test default (a new event bus, a silent logger, no external calls), so a test passes only the one it is about and the factory call is not repeated in every test. A module whose factory needs more than `{ orm }` adds such a helper.
 - Core tests publish the test-only `example.happened` domain event (`EXAMPLE_PAYLOAD`), never a module's event, so they do not depend on any module.
