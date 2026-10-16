@@ -5,15 +5,12 @@ export {
   readAssignment,
   claimOwner,
   completeImportStep,
-  createOwnerAtSetup,
   hasOwner,
   readSetupHolder,
   readSetupStep,
   readOwner,
   readOwnerUserId,
   resetSetup,
-  startSetup,
-  type SetupHolder,
 } from "./app";
 export { readSetupToken, selfHostedAuth } from "./betterAuth";
 export { setupRouter } from "./http";
@@ -24,7 +21,6 @@ export {
   hashSetupToken,
   OwnerExistsError,
   SETUP_STEPS,
-  SetupInProgressError,
   type ManagedAssignment,
   type SetupStep,
 } from "./domain";
