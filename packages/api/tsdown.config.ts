@@ -1,8 +1,13 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  // The Excel reader runs as a worker, loaded by URL rather than imported.
-  entry: ["src/main.ts", "src/utils/xlsxReader.ts"],
+  // The Excel and PDF readers run as a worker or process, loaded by URL rather than imported.
+  entry: [
+    "src/main.ts",
+    "src/utils/xlsxReader.ts",
+    "src/utils/pdfProcess.ts",
+    "src/utils/pdfReader.ts",
+  ],
   platform: "node",
   format: "esm",
   // Keep the source layout in dist, so paths resolved from import.meta.url still hold.
