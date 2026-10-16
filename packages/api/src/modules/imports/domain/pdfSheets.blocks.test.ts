@@ -4,31 +4,6 @@ import { line, page } from "#test/support";
 
 import { pdfSheets } from ".";
 
-it("drops a labelled printed-date footer without adding it to the last person's block", () => {
-  expect(
-    pdfSheets([
-      page([
-        line(700, ["Name: Avery Abbott"]),
-        line(680, ["Email: avery@example.com"]),
-        line(660, ["Job title: Engineer"]),
-        line(600, ["Name: Blair Bell"]),
-        line(580, ["Email: blair@example.com"]),
-        line(560, ["Job title: Designer"]),
-        line(30, ["Printed on: 16.10.2026"]),
-      ]),
-    ]),
-  ).toEqual([
-    {
-      name: null,
-      rows: [
-        ["Name", "Email", "Job title"],
-        ["Avery Abbott", "avery@example.com", "Engineer"],
-        ["Blair Bell", "blair@example.com", "Designer"],
-      ],
-    },
-  ]);
-});
-
 it("reads labelled blocks in page order and drops the title", () => {
   expect(
     pdfSheets([

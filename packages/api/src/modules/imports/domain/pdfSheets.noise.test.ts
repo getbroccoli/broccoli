@@ -173,3 +173,54 @@ it("refuses a different-columns table without a heading after the staff table", 
     ]),
   ).toBeNull();
 });
+
+it("drops a labelled printed-date footer without adding it to the last person's block", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(700, ["Name: Avery Abbott"]),
+        line(680, ["Email: avery@example.com"]),
+        line(660, ["Job title: Engineer"]),
+        line(600, ["Name: Blair Bell"]),
+        line(580, ["Email: blair@example.com"]),
+        line(560, ["Job title: Designer"]),
+        line(30, ["Printed on: 16.10.2026"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title"],
+        ["Avery Abbott", "avery@example.com", "Engineer"],
+        ["Blair Bell", "blair@example.com", "Designer"],
+      ],
+    },
+  ]);
+});
+
+it("keeps a block's labels that start in the top band above the rest of the block", () => {
+  const block = (name: string, email: string, title: string, start: string) =>
+    page([
+      line(730, [`Name: ${name}`]),
+      line(700, [`Email: ${email}`]),
+      line(680, [`Job title: ${title}`]),
+      line(660, [`Start date: ${start}`]),
+    ]);
+
+  expect(
+    pdfSheets([
+      block("Avery Abbott", "avery@example.com", "Engineer", "01.01.2020"),
+      block("Blair Bell", "blair@example.com", "Designer", "02.02.2021"),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title", "Start date"],
+        ["Avery Abbott", "avery@example.com", "Engineer", "01.01.2020"],
+        ["Blair Bell", "blair@example.com", "Designer", "02.02.2021"],
+      ],
+    },
+  ]);
+});
