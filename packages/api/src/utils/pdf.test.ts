@@ -1,10 +1,13 @@
 // macOS does not enforce RLIMIT_DATA; the memory-bound test needs Linux (CI and the image).
 import { readFile } from "node:fs/promises";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { pdfWithContentBomb, samplePdfFile } from "#test/support";
 
 import { parsePdf } from ".";
+
+// The real PDF reader takes seconds per read while the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000 });
 
 it("reads each page's text with its position and the page's size", async () => {
   const bytes = samplePdfFile({

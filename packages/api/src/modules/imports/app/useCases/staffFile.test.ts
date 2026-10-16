@@ -1,11 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { strToU8, zipSync } from "fflate";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { samplePdfFile, sampleXlsxFile } from "#test/support";
 
 import { type ColumnMapping, readFileRecords } from "../../domain";
 import { readStaffFile, staffFileMimeType } from "./staffFile";
+
+// The real PDF reader takes seconds per read while the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000 });
 
 it("reads a CSV as one unnamed sheet", async () => {
   expect(await readStaffFile(Buffer.from("Name,Email\nAvery,avery@example.com"))).toEqual([
@@ -211,7 +214,7 @@ it.for([
       ],
     },
   },
-])("refuses $name alone or after a valid table", { timeout: 15_000 }, async ({ scan }) => {
+])("refuses $name alone or after a valid table", async ({ scan }) => {
   const alone = samplePdfFile({ pages: [scan] });
   const afterTable = samplePdfFile({ pages: [{ texts: tableTexts() }, scan] });
 

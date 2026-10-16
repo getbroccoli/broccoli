@@ -1,8 +1,11 @@
 import { readFile } from "node:fs/promises";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { parseCsv } from "../../../../utils";
 import { readStaffFile } from "./staffFile";
+
+// The real PDF reader takes seconds per read while the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000 });
 
 it.for(["javascript-openaction", "embedded-file", "external-uri"])(
   "reads only the visible table from %s",

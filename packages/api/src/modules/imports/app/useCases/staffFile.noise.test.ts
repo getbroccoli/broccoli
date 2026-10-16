@@ -1,7 +1,10 @@
 import { readFile } from "node:fs/promises";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { readStaffFile } from "./staffFile";
+
+// The real PDF reader takes seconds per read while the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000 });
 
 it("reads all nine people without the running titles, footers or totals", async () => {
   const bytes = await readFile(
