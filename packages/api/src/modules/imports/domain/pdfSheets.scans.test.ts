@@ -113,3 +113,13 @@ it("reads a person block over a full-page letterhead image, but not a scan after
   expect(hasScannedPage([person])).toBe(false);
   expect(hasScannedPage([person, page([line(20, ["Page 2 of 2"])], 1)])).toBe(true);
 });
+
+it("detects a scan whose only text is a labelled footer after a person block", () => {
+  const person = page([
+    line(700, ["Name: Avery Stone"]),
+    line(680, ["Job title: Designer"]),
+    line(660, ["Email: avery@example.com"]),
+  ]);
+
+  expect(hasScannedPage([person, page([line(20, ["Printed on: 16.10.2026"])], 1)])).toBe(true);
+});

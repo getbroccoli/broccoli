@@ -233,7 +233,10 @@ it("refuses blocks after a table instead of falling back to a block list", () =>
   ).toBeNull();
 });
 
-it("refuses side-by-side blocks in a page's bottom band", () => {
+it.for([
+  ["Name: Morgan Lake", "Name: Taylor Hill"],
+  ["Name:", "Morgan Lake", "Name:", "Taylor Hill"],
+])("refuses side-by-side blocks %j in a page's bottom band", (footer) => {
   expect(
     pdfSheets([
       page([
@@ -241,7 +244,7 @@ it("refuses side-by-side blocks in a page's bottom band", () => {
         line(680, ["Job title: Designer"]),
         line(600, ["Name: Robin Reed"]),
         line(580, ["Job title: Engineer"]),
-        line(30, ["Name: Morgan Lake", "Name: Taylor Hill"]),
+        line(30, footer),
       ]),
     ]),
   ).toBeNull();

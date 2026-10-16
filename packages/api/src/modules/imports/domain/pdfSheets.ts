@@ -1,5 +1,5 @@
 import type { PdfPage } from "../../../utils";
-import { blockPages, blockSheets, fieldOf, repeatedLabel } from "./pdfBlocks";
+import { fieldOf, readBlocks, repeatedLabel } from "./pdfBlocks";
 import { type Cell, pageLines, texts } from "./pdfLines";
 import type { FileSheet } from "./sheet";
 
@@ -17,7 +17,7 @@ import type { FileSheet } from "./sheet";
 export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const read = readTables(pages);
   if (read === null) {
-    return blockSheets(pages);
+    return readBlocks(pages)?.sheets ?? null;
   }
   const bodyLabels = pageLines(pages)
     .filter(({ inBand }) => !inBand)
@@ -43,13 +43,13 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
 
 /**
  * Whether a page is a scan or photo: it has images but no visible text, or images cover at least
- * 15% of it and its text gives no staff row below a table's header, and no person block, on that
- * page. A footer or a
+ * 15% of it and its text gives no staff row below a table's header, and starts no person block, on
+ * that page. A footer or a
  * title over a scan may line up with the columns, but it does not repeat a header. One such page
  * refuses the whole file.
  */
 export function hasScannedPage(pages: PdfPage[]): boolean {
-  const textPages = readTables(pages)?.textPages ?? blockPages(pages);
+  const textPages = readTables(pages)?.textPages ?? readBlocks(pages)?.pages ?? [];
   return pages.some(
     ({ items, imageCoverage }, page) =>
       (imageCoverage > 0 && items.length === 0) ||

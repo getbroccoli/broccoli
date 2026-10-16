@@ -10,8 +10,9 @@ import type { FileSheet } from "./sheet";
  * more labelled lines are one person. Text above the first block is dropped, and so is a line in
  * a page's band below it without a label in any cell; labelled lines are never noise. Null when there is
  * no block, or when a line below the first is none of these, or repeats a label of its block.
+ * Also which pages start a person's block: the pages the list is read from.
  */
-export function blockSheets(pages: PdfPage[]): FileSheet[] | null {
+export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: boolean[] } | null {
   const lines = pageLines(pages).map((line) => ({ ...line, field: fieldOf(line.cells) }));
   const labels = lines.flatMap(({ field }) => (field ? [field.label] : []));
   const blockLabel =
@@ -35,7 +36,7 @@ export function blockSheets(pages: PdfPage[]): FileSheet[] | null {
     }
     const block = blocks.at(-1)!;
     if (field === null) {
-      const isNoise = inBand && !cells.some((cell) => fieldOf([cell]) !== null);
+      const isNoise = inBand && !cells.some(({ text }) => isLabelled(text));
       if (!blockStarts.has(index) && !isNoise) {
         return null;
       }
@@ -49,25 +50,16 @@ export function blockSheets(pages: PdfPage[]): FileSheet[] | null {
       header.push(field.label);
     }
   }
-  return [
-    {
-      name: null,
-      rows: [header, ...blocks.map((block) => header.map((label) => block.get(label) ?? ""))],
-    },
-  ];
-}
-
-/** Which pages hold a line of the PDF's person blocks; none when it has no block list. */
-export function blockPages(pages: PdfPage[]): boolean[] {
-  if (blockSheets(pages) === null) {
-    return [];
-  }
-  const labelled = new Set(
-    pageLines(pages)
-      .filter(({ cells }) => fieldOf(cells) !== null)
-      .map(({ page }) => page),
-  );
-  return pages.map((_page, index) => labelled.has(index));
+  const startPages = new Set([...blockStarts].map((start) => lines[start]!.page));
+  return {
+    sheets: [
+      {
+        name: null,
+        rows: [header, ...blocks.map((block) => header.map((label) => block.get(label) ?? ""))],
+      },
+    ],
+    pages: pages.map((_page, index) => startPages.has(index)),
+  };
 }
 
 /** The first label that occurs again later: the label each person's block starts with. */
@@ -87,9 +79,18 @@ export function fieldOf(cells: Cell[]): { label: string; value: string } | null 
     return null;
   }
   const match = /^([^\d:]+):\s+(\S.*)$/u.exec(texts(cells).join(" "));
-  const label = match?.[1]?.trim() ?? "";
-  if (!match || !/\p{L}/u.test(label) || label.split(/\s+/u).length > 4) {
+  if (!match || !isLabel(match[1]!)) {
     return null;
   }
-  return { label, value: match[2]!.trim() };
+  return { label: match[1]!.trim(), value: match[2]!.trim() };
+}
+
+/** Text that starts with a label, with or without its value: "Name:" or "Name: Avery Stone". */
+function isLabelled(text: string): boolean {
+  const label = /^([^\d:]+):(?:\s|$)/u.exec(text)?.[1];
+  return label !== undefined && isLabel(label);
+}
+
+function isLabel(text: string): boolean {
+  return /\p{L}/u.test(text) && text.trim().split(/\s+/u).length <= 4;
 }
