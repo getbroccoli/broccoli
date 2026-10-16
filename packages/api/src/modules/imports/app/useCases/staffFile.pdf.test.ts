@@ -58,18 +58,22 @@ it("joins department tables and keeps the cost summary in its own named sheet", 
   ]);
 });
 
-it.for(["encrypted-owner-only", "logo-table", "one-person-letterhead"])(
-  "reads the rows of %s like its CSV twin",
-  async (name) => {
-    const fixtures = new URL("../../../../../test/fixtures/pdf/", import.meta.url);
-    const pdf = await readFile(new URL(`${name}.pdf`, fixtures));
-    const csv = await readFile(new URL(`${name}.csv`, fixtures));
-    const rows = parseCsv(csv);
-    expect(rows).not.toBeNull();
+it.for([
+  "encrypted-owner-only",
+  "logo-table",
+  "one-person-letterhead",
+  "personio-landscape",
+  "name-only-grid",
+  "bamboohr-month-first",
+])("reads the rows of %s like its CSV twin", async (name) => {
+  const fixtures = new URL("../../../../../test/fixtures/pdf/", import.meta.url);
+  const pdf = await readFile(new URL(`${name}.pdf`, fixtures));
+  const csv = await readFile(new URL(`${name}.csv`, fixtures));
+  const rows = parseCsv(csv);
+  expect(rows).not.toBeNull();
 
-    expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
-  },
-);
+  expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
+});
 
 it("reads one labelled person per page with family names first", async () => {
   const pdf = await readFile(
