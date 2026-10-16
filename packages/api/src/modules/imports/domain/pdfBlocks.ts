@@ -67,6 +67,26 @@ export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: bool
   };
 }
 
+/** The first label that occurs again later: the label each person's block starts with. */
+export function repeatedLabel(labels: string[]): string | undefined {
+  return labels.find((label, index) => labels.indexOf(label, index + 1) > index);
+}
+
+/**
+ * The label and value of a block line: "Label: value" in one cell, or "Label:" and the value in
+ * two. A label is one to four words with a letter and no digit, so "at 10:30" is none.
+ */
+export function fieldOf(cells: Cell[]): { label: string; value: string } | null {
+  if (cells.length > 2 || (cells.length === 2 && !cells[0]!.text.endsWith(":"))) {
+    return null;
+  }
+  const match = /^([^\d:]+):\s+(\S.*)$/u.exec(texts(cells).join(" "));
+  if (!match || !isLabel(match[1]!)) {
+    return null;
+  }
+  return { label: match[1]!.trim(), value: match[2]!.trim() };
+}
+
 /**
  * The lines without labelled footers such as "Printed on: 16.10.2026": a line in a page's band,
  * below all of its page's other text, whose label no line outside the bands has, and that lies
@@ -153,28 +173,8 @@ function isUnderValue(cells: Cell[], labelled: Cell[]): boolean {
   return start > line.x + line.tolerance && start < labelled.at(-1)!.end;
 }
 
-/** The first label that occurs again later: the label each person's block starts with. */
-export function repeatedLabel(labels: string[]): string | undefined {
-  return labels.find((label, index) => labels.indexOf(label, index + 1) > index);
-}
-
 /** The fewest labelled lines that read as one person's details, not a letter's date and subject. */
 const MIN_BLOCK_LINES = 3;
-
-/**
- * The label and value of a block line: "Label: value" in one cell, or "Label:" and the value in
- * two. A label is one to four words with a letter and no digit, so "at 10:30" is none.
- */
-export function fieldOf(cells: Cell[]): { label: string; value: string } | null {
-  if (cells.length > 2 || (cells.length === 2 && !cells[0]!.text.endsWith(":"))) {
-    return null;
-  }
-  const match = /^([^\d:]+):\s+(\S.*)$/u.exec(texts(cells).join(" "));
-  if (!match || !isLabel(match[1]!)) {
-    return null;
-  }
-  return { label: match[1]!.trim(), value: match[2]!.trim() };
-}
 
 /** Text that starts with a label, with or without its value: "Name:" or "Name: Avery Stone". */
 function isLabelled(text: string): boolean {

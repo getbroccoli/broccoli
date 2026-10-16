@@ -47,19 +47,6 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
 }
 
 /**
- * A column with an email address in some rows and other text in others. A placeholder for a
- * missing email, four characters at most without an "@" such as "n/a" or "k.A.", is no text.
- */
-function hasMixedEmailColumn([header, ...rows]: string[][]): boolean {
-  return header!.some((_label, column) => {
-    const values = rows
-      .map((row) => row[column]!)
-      .filter((text) => text.includes("@") || text.length > 4);
-    return values.some(isEmail) && !values.every(isEmail);
-  });
-}
-
-/**
  * Whether a page is a scan or photo: it has images but no visible text, or images cover at least
  * 15% of it and its text gives no staff row below a table's header on that page, or outside the
  * page's bands, and starts no person block on that page. A footer or a title over a scan may line
@@ -72,6 +59,19 @@ export function hasScannedPage(pages: PdfPage[]): boolean {
       (imageCoverage > 0 && items.length === 0) ||
       (imageCoverage >= SCAN_COVERAGE && textPages[page] !== true),
   );
+}
+
+/**
+ * A column with an email address in some rows and other text in others. A placeholder for a
+ * missing email, four characters at most without an "@" such as "n/a" or "k.A.", is no text.
+ */
+function hasMixedEmailColumn([header, ...rows]: string[][]): boolean {
+  return header!.some((_label, column) => {
+    const values = rows
+      .map((row) => row[column]!)
+      .filter((text) => text.includes("@") || text.length > 4);
+    return values.some(isEmail) && !values.every(isEmail);
+  });
 }
 
 /** Less than a scan of a list: a logo, a signature, a stamp. */

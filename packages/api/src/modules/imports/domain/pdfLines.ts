@@ -1,8 +1,5 @@
 import type { PdfPage, PdfTextItem } from "../../../utils";
 
-/** A page's top and bottom share where running headers, footers and page numbers sit. */
-const BAND = 0.1;
-
 /** Every page's lines in reading order, with where each sits on its page. */
 export function pageLines(
   pages: PdfPage[],
@@ -69,9 +66,6 @@ export function isEmail(text: string): boolean {
   return /^\S+@\S+\.\S+$/u.test(text);
 }
 
-/** A date as payroll exports print it: 01.01.2020, 2020-01-01, 1/14/2022. */
-const DATE = /\d{1,4}[./-]\d{1,2}[./-]\d{1,4}/u;
-
 export function texts(line: Cell[]): string[] {
   return line.map(({ text }) => text);
 }
@@ -84,6 +78,12 @@ export interface Cell {
   /** How far a neighbour may be and still count as close: the text's height. */
   tolerance: number;
 }
+
+/** A page's top and bottom share where running headers, footers and page numbers sit. */
+const BAND = 0.1;
+
+/** A date as payroll exports print it: 01.01.2020, 2020-01-01, 1/14/2022. */
+const DATE = /\d{1,4}[./-]\d{1,2}[./-]\d{1,4}/u;
 
 /** A page's lines, top to bottom, each its cells left to right and its baseline. */
 function linesOf(items: PdfTextItem[]): { cells: Cell[]; y: number }[] {

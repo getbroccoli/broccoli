@@ -5,7 +5,6 @@ export {
   todayInUtc,
   type CalendarDate,
 } from "./calendarDate";
-export { installFetchGuard } from "./fetchGuard";
 export { fetchJson } from "./fetchJson";
 export { parseRasterImage, type RasterImage } from "./rasterImage";
 export { parseCsv } from "./csv";
