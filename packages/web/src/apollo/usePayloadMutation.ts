@@ -5,7 +5,7 @@ import type {
   TypedDocumentNode,
 } from "@apollo/client";
 import { useMutation } from "@apollo/client/react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { payloadOf } from "./payloadOf";
 
@@ -30,16 +30,22 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
 ) {
   const [mutate, { loading, error, reset: resetMutation }] = useMutation(document, options);
   const [payloadError, setPayloadError] = useState<PayloadErrorOf<Data> | null>(null);
+  // Only the latest run, and none after `reset`, may show its payload error.
+  const latestRun = useRef(0);
 
   const run = useCallback(
-    async (...args: Parameters<typeof mutate>) => {
+    async (...args: RunArgs<Parameters<typeof mutate>>) => {
+      const thisRun = ++latestRun.current;
       setPayloadError(null);
-      const { data } = await mutate(...args);
+      // Only options were removed, so the arguments still fit Apollo's generic signature.
+      const { data } = await mutate(...(args as Parameters<typeof mutate>));
       const outcome = payloadOf(data);
       if (outcome.error) {
         // The document's generated type describes the error `payloadOf` read from its data.
         const failure = outcome.error as unknown as PayloadErrorOf<Data>;
-        setPayloadError(failure);
+        if (thisRun === latestRun.current) {
+          setPayloadError(failure);
+        }
         throw new PayloadFailure(failure);
       }
       return outcome.payload as PayloadOf<Data>;
@@ -48,6 +54,7 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
   );
 
   const reset = useCallback(() => {
+    latestRun.current++;
     setPayloadError(null);
     resetMutation();
   }, [resetMutation]);
@@ -61,3 +68,8 @@ type ValueOf<T> = T[Exclude<keyof T, "__typename">];
 /** The payload's selected `error`, when the mutation has one. */
 type PayloadErrorOf<Data> =
   PayloadOf<Data> extends { error?: infer Error } ? NonNullable<Error> : never;
+/** Apollo's run options without those that would treat a payload error as success. */
+type RunArgs<Args extends unknown[]> = { [K in keyof Args]: WithoutFailureOptions<Args[K]> };
+type WithoutFailureOptions<Options> = Options extends object
+  ? Omit<Options, "onCompleted" | "onError" | "errorPolicy">
+  : Options;
