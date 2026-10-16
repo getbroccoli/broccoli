@@ -2,7 +2,26 @@ import { expect, it } from "vitest";
 
 import { line, page } from "#test/support";
 
-import { hasScannedPage } from ".";
+import { hasScannedPage, pdfSheets } from ".";
+
+it("reads a header-less continuation row outside the bands over a full-page letterhead", () => {
+  const header = ["Name", "Email"];
+  const first = ["Avery Abbott", "avery@example.com"];
+  const second = ["Blair Bell", "blair@example.com"];
+  const pages = [page([line(700, header), line(680, first)]), page([line(680, second)], 1)];
+
+  expect(hasScannedPage(pages)).toBe(false);
+  expect(pdfSheets(pages)).toEqual([{ name: null, rows: [header, first, second] }]);
+});
+
+it("refuses a scan whose only row-shaped text sits in the bottom band", () => {
+  const pages = [
+    page([line(700, ["Name", "Email"]), line(680, ["Avery Abbott", "avery@example.com"])]),
+    page([line(30, ["Blair Bell", "blair@example.com"])], 1),
+  ];
+
+  expect(hasScannedPage(pages)).toBe(true);
+});
 
 it.for([
   { name: "an image-only page", scanned: page([], 1) },

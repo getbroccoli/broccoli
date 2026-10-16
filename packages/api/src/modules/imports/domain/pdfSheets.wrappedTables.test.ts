@@ -5,6 +5,18 @@ import { line, page } from "#test/support";
 import { pdfSheets } from ".";
 
 it.for([
+  { name: "an email", second: ["Blair Bell", "blair@example.com", "", ""] },
+  { name: "a date", second: ["Blair Bell", "", "", "02.02.2021"] },
+])("keeps a nearby sparse row with $name as a separate person", ({ second }) => {
+  const header = ["Name", "Email", "Job title", "Start date"];
+  const first = ["Avery Abbott", "avery@example.com", "Engineer", "01.01.2020"];
+
+  expect(pdfSheets([page([line(700, header), line(680, first), line(669, second)])])).toEqual([
+    { name: null, rows: [header, first, second] },
+  ]);
+});
+
+it.for([
   { name: "a second line", y: 680, continuation: "Manager" },
   { name: "a line in the bottom band", y: 85, continuation: "Manager" },
   { name: "a line starting with Total", y: 680, continuation: "Total Rewards" },

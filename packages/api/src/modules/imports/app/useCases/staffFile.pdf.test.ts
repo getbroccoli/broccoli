@@ -7,6 +7,68 @@ import { readStaffFile } from "./staffFile";
 // The real PDF reader takes seconds per read while the whole suite runs at once.
 vi.setConfig({ testTimeout: 30_000 });
 
+it("keeps a nearby sparse person row separate in a PDF", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/tight-sparse-row.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title", "Start date"],
+        ["Avery Abbott", "avery@example.com", "Engineer", "01.01.2020"],
+        ["Blair Bell", "blair@example.com", "", ""],
+      ],
+    },
+  ]);
+});
+
+it("drops a PDF block list's printed-date footer", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/block-printed-footer.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title"],
+        ["Avery Abbott", "avery@example.com", "Engineer"],
+        ["Blair Bell", "blair@example.com", "Designer"],
+      ],
+    },
+  ]);
+});
+
+it("reads a PDF table continued without a header over a full-page letterhead", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/continued-letterhead.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Abbott", "avery@example.com"],
+        ["Blair Bell", "blair@example.com"],
+      ],
+    },
+  ]);
+});
+
+it.for(["labels-no-colons", "org-two-column", "form-no-colons"])(
+  "refuses %s, whose email column also holds names or titles",
+  async (name) => {
+    const pdf = await readFile(
+      new URL(`../../../../../test/fixtures/pdf/${name}.pdf`, import.meta.url),
+    );
+
+    expect(await readStaffFile(pdf)).toBe("no_table");
+  },
+);
+
 it.for(["javascript-openaction", "embedded-file", "external-uri"])(
   "reads only the visible table from %s",
   async (name) => {

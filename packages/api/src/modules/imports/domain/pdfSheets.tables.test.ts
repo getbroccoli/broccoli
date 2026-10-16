@@ -4,6 +4,50 @@ import { line, page } from "#test/support";
 
 import { pdfSheets } from ".";
 
+it("refuses labels without colons whose value column mixes emails with names and titles", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(700, ["Name", "Avery Abbott"]),
+        line(680, ["Email", "avery@example.com"]),
+        line(660, ["Job title", "Engineer"]),
+        line(600, ["Name", "Blair Bell"]),
+        line(580, ["Email", "blair@example.com"]),
+        line(560, ["Job title", "Designer"]),
+      ]),
+    ]),
+  ).toBeNull();
+});
+
+it("refuses people stacked in two columns whose rows mix emails with names and titles", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(700, ["Avery Abbott", "Blair Bell"]),
+        line(680, ["Engineer", "Designer"]),
+        line(660, ["avery@example.com", "blair@example.com"]),
+        line(600, ["Casey Cole", "Drew Dale"]),
+        line(580, ["Manager", "Analyst"]),
+        line(560, ["casey@example.com", "drew@example.com"]),
+      ]),
+    ]),
+  ).toBeNull();
+});
+
+it("preserves short missing-email placeholders alongside real email addresses", () => {
+  const rows = [
+    ["Name", "Email", "Job title"],
+    ["Avery Abbott", "avery@example.com", "Engineer"],
+    ["Blair Bell", "n/a", "Designer"],
+    ["Casey Cole", "k.A.", "Manager"],
+    ["Drew Dale", "drew@example.com", "Analyst"],
+  ];
+
+  expect(pdfSheets([page(rows.map((row, index) => line(700 - index * 20, row)))])).toEqual([
+    { name: null, rows },
+  ]);
+});
+
 it("continues without a header and drops one-cell and two-cell running titles", () => {
   const rows = [
     ["Name", "Email"],
