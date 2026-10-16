@@ -1,6 +1,6 @@
 import type { PdfPage } from "../../../utils";
 import { fieldOf, readBlocks, repeatedLabel } from "./pdfBlocks";
-import { type Cell, pageLines, texts, withWrapped } from "./pdfLines";
+import { type Cell, isEmail, pageLines, texts, withWrapped } from "./pdfLines";
 import type { FileSheet } from "./sheet";
 
 /**
@@ -13,6 +13,8 @@ import type { FileSheet } from "./sheet";
  * such as a running title or a repeated header, is dropped too. Tables with equal header texts
  * join into one sheet: one sheet has no name, several are "Table 1", "Table 2", …. A table beside
  * person blocks, a label repeated outside the page bands, is refused: the blocks would be left out.
+ * So is a column with an email address in some rows and other text in others: a layout, such as
+ * label and value columns or an org chart, read as a table of wrong people.
  */
 export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const read = readTables(pages);
@@ -34,6 +36,9 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
     rows.push(...lines.map((line) => rowOf(line, columns)));
     sheets.set(key, rows);
   }
+  if ([...sheets.values()].some(hasMixedEmailColumn)) {
+    return null;
+  }
   const named = sheets.size > 1;
   return [...sheets.values()].map((rows, index) => ({
     name: named ? `Table ${index + 1}` : null,
@@ -42,11 +47,23 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
 }
 
 /**
+ * A column with an email address in some rows and other text in others. A placeholder for a
+ * missing email, four characters at most without an "@" such as "n/a" or "k.A.", is no text.
+ */
+function hasMixedEmailColumn([header, ...rows]: string[][]): boolean {
+  return header!.some((_label, column) => {
+    const values = rows
+      .map((row) => row[column]!)
+      .filter((text) => text.includes("@") || text.length > 4);
+    return values.some(isEmail) && !values.every(isEmail);
+  });
+}
+
+/**
  * Whether a page is a scan or photo: it has images but no visible text, or images cover at least
- * 15% of it and its text gives no staff row below a table's header, and starts no person block, on
- * that page. A footer or a
- * title over a scan may line up with the columns, but it does not repeat a header. One such page
- * refuses the whole file.
+ * 15% of it and its text gives no staff row below a table's header on that page, or outside the
+ * page's bands, and starts no person block on that page. A footer or a title over a scan may line
+ * up with the columns, but it sits in the bands. One such page refuses the whole file.
  */
 export function hasScannedPage(pages: PdfPage[]): boolean {
   const textPages = readTables(pages)?.textPages ?? readBlocks(pages)?.pages ?? [];
@@ -159,6 +176,7 @@ function readTables(
       index = header.end - 1;
       continue;
     }
+    const { inBand } = lines[index]!;
     const { cells, end } = tableLineAt(index);
     const isRunningTitle = !pageStarted && !(cells.length >= 2 && linesUp(cells, table.header));
     const isSubHeading =
@@ -186,7 +204,7 @@ function readTables(
       continue;
     }
     table.lines.push(cells);
-    if (headerPage === page && isStaffRow(cells, table.header)) {
+    if ((headerPage === page || !inBand) && isStaffRow(cells, table.header)) {
       textPages[page] = true;
     }
   }

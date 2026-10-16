@@ -26,8 +26,8 @@ export function isDirectlyBelow(below: { cells: Cell[]; y: number }, y: number):
 /**
  * A table line's cells with the lines wrapped below it joined in, and the index after them. A line
  * continues the one above when it lies directly below it on the same page, each of its cells
- * starts where a cell of the table line starts, and it fills at most half of the table's `width`
- * columns: the rest of a few values, not the next row.
+ * starts where a cell of the table line starts, it fills at most half of the table's `width`
+ * columns and holds no email address or date: the rest of a few values, not the next row.
  */
 export function withWrapped(
   lines: { cells: Cell[]; y: number; page: number }[],
@@ -46,7 +46,8 @@ export function withWrapped(
       line.page !== above.page ||
       !isDirectlyBelow(line, above.y) ||
       line.cells.length > width / 2 ||
-      targets.includes(undefined)
+      targets.includes(undefined) ||
+      line.cells.some(({ text }) => isEmail(text) || DATE.test(text))
     ) {
       break;
     }
@@ -63,6 +64,13 @@ export function withWrapped(
 export function joinWrapped(first: string, second: string): string {
   return first.endsWith("-") ? `${first}${second}` : `${first} ${second}`;
 }
+
+export function isEmail(text: string): boolean {
+  return /^\S+@\S+\.\S+$/u.test(text);
+}
+
+/** A date as payroll exports print it: 01.01.2020, 2020-01-01, 1/14/2022. */
+const DATE = /\d{1,4}[./-]\d{1,2}[./-]\d{1,4}/u;
 
 export function texts(line: Cell[]): string[] {
   return line.map(({ text }) => text);

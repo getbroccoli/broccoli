@@ -8,16 +8,24 @@ import type { FileSheet } from "./sheet";
  * the first label that repeats, or at the one-cell unlabelled line above each of them, which then
  * is a first column with an empty header: the person's name. Without a repeating label, three or
  * more labelled lines are one person. Text above the first block is dropped, and so is a line in
- * a page's band below it without a label in any cell; labelled lines are never noise. An
- * unlabelled line directly under a value is the rest of that value, wrapped. Null when there is
- * no block, or when a line below the first is none of these, or repeats a label of its block.
+ * a page's band below it without a label in any cell, or with a label no line outside the bands
+ * has when some do: a footer such as "Printed on: 16.10.2026". Other labelled lines are never
+ * noise. An unlabelled line directly under a value is the rest of that value, wrapped. Null when
+ * there is no block, or when a line below the first is none of these, or repeats a label of its
+ * block.
  * Also which pages start a person's block: the pages the list is read from.
  */
 export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: boolean[] } | null {
-  const lines = withWrappedValues(pageLines(pages)).map((line) => ({
+  const fields = withWrappedValues(pageLines(pages)).map((line) => ({
     ...line,
     field: fieldOf(line.cells),
   }));
+  const bodyLabels = new Set(
+    fields.flatMap(({ field, inBand }) => (field && !inBand ? [field.label] : [])),
+  );
+  const isFooter = ({ field, inBand }: (typeof fields)[number]) =>
+    inBand && field !== null && bodyLabels.size > 0 && !bodyLabels.has(field.label);
+  const lines = fields.filter((line) => !isFooter(line));
   const labels = lines.flatMap(({ field }) => (field ? [field.label] : []));
   const blockLabel =
     repeatedLabel(labels) ?? (labels.length >= MIN_BLOCK_LINES ? labels[0] : undefined);

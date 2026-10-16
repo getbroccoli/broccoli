@@ -54,7 +54,10 @@ On an instance with `OPENROUTER_API_KEY` set, managed or self-hosted. Without it
 - [ ] A PDF that asks for a password to open shows one red line "<name>: is protected by a password. Save a copy without the password and add that."; no card appears. A PDF with only copy or print restrictions (owner password) imports its people like any text PDF.
 - [ ] A text table with a small logo, and a one-person table over a full-page letterhead image, import their people.
 - [ ] A PDF that runs a script on opening (`javascript-openaction.pdf`), one with an embedded CSV of other people (`embedded-file.pdf`) and one with a web link (`external-uri.pdf`), all from the eval cases, each show the people of their visible table and no one else.
-- [ ] Known limits, each still as described: a table continued on a page over a full-page letterhead image is refused as a scan; a `Printed on: <date>` line below the last person block becomes an extra column that maps to nothing; in a tightly spaced table, a person's row filling at most half the columns right under the row above joins that row, so check that such a report shows every person.
+- [ ] A tightly spaced PDF table whose last person has only a name and an email (`tight-sparse-row.pdf` from `packages/api/test/fixtures/pdf/`) shows "2 people"; nobody is named "Avery Abbott Blair Bell".
+- [ ] A PDF of person blocks with a `Printed on: <date>` footer (`block-printed-footer.pdf`) shows "2 people"; Blair Bell has no start date.
+- [ ] A PDF table continued without its header on a page over a full-page letterhead image (`continued-letterhead.pdf`) shows "2 people".
+- [ ] A PDF of person blocks with labels without colons (`labels-no-colons.pdf`, `form-no-colons.pdf`) and a two-column organisation chart (`org-two-column.pdf`) each show the red "couldn’t read a table or list of people in it" line; no card appears and nobody is named after an email or a job title.
 - [ ] A `.xls` file, a `.docx` renamed to `.pdf`, an empty `.csv`, a workbook of 11 sheets and a file over 5 MB each show one red line naming the file and the reason; no card appears.
 - [ ] A CSV without a name or email column ends as "Couldn’t find a name or email column." with "Retry".
 - [ ] "Remove" in a card's menu removes the card and its people.
