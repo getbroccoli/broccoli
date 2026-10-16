@@ -1,20 +1,12 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { CompanyStepForm, SetupLayout } from "@/features/setup";
+import { CompanyStepForm, requireSetupStep, SetupLayout } from "@/features/setup";
 import { t } from "@/i18n";
 
 /** The owner names the company; outside the app shell until setup is done. */
 export const Route = createFileRoute("/setup/company")({
-  beforeLoad: ({ context: { me, setupStep }, location }) => {
-    if (!me) {
-      throw redirect({ to: "/login", search: { redirect: location.href }, replace: true });
-    }
-    if (setupStep === "DONE") {
-      throw redirect({ to: "/people", replace: true });
-    }
-    if (setupStep === "IMPORT") {
-      throw redirect({ to: "/setup/import", replace: true });
-    }
+  beforeLoad: (gate) => {
+    requireSetupStep("COMPANY", gate);
   },
   component: () => (
     <SetupLayout
