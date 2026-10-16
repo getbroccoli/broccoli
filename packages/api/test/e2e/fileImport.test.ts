@@ -5,6 +5,7 @@ import {
   type FakeDecisions,
   startManagedEnv,
   test,
+  samplePdfFile,
   sampleXlsxFile,
 } from "#test/support";
 
@@ -73,6 +74,46 @@ test("the model receives placeholders instead of the file's people and asks for 
   expect(sent).not.toContain("Robin");
   expect(sent).not.toContain("Reed");
   expect(sent).not.toContain("robin@example.com");
+});
+
+test("imports PDF people while keeping their details from the model", async ({ fakeDecisions }) => {
+  const { browser, fake } = await managedImport(fakeDecisions);
+  const bytes = samplePdfFile({
+    pages: [
+      ["Avery Stone", "avery@example.com"],
+      ["Robin Reed", "robin@example.com"],
+    ].map((cells) => ({
+      texts: [
+        { text: "Name", x: 40, y: 760 },
+        { text: "Email", x: 200, y: 760 },
+        ...cells.map((text, index) => ({ text, x: 40 + index * 160, y: 740 })),
+      ],
+    })),
+  });
+
+  const response = await browser.post("/api/imports/files?name=staff.pdf", Buffer.from(bytes));
+
+  expect(response.status).toBe(200);
+  const { sourceId } = (await response.json()) as { sourceId: string };
+  await expect
+    .poll(() => readImport(browser), { timeout: 15_000 })
+    .toMatchObject({
+      data: {
+        import: {
+          sources: [{ id: sourceId, status: "MAPPED" }],
+          employees: {
+            edges: [
+              { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
+              { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+            ],
+          },
+        },
+      },
+    });
+  const requests = fake.requests();
+  expect(requests.length).toBeGreaterThan(0);
+  const sent = JSON.stringify(requests);
+  expect(sent).not.toMatch(/Avery|Stone|avery@example\.com|Robin|Reed|robin@example\.com/);
 });
 
 test("a failed file becomes mapped after retrying with working decisions", async ({

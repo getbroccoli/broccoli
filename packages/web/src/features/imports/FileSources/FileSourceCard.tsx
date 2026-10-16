@@ -1,6 +1,6 @@
 import type { FragmentType } from "@apollo/client";
 import { useFragment } from "@apollo/client/react";
-import { DotsThree, FileCsv, FileXls } from "@phosphor-icons/react";
+import { DotsThree, FileCsv, FilePdf, FileXls } from "@phosphor-icons/react";
 
 import {
   FileSourceCard_SourceFragmentDoc,
@@ -43,7 +43,8 @@ export function FileSourceCard({
   // The query that listed this file has just written the fragment, so it is complete.
   if (!complete) return null;
   const failed = source.status === "FAILED";
-  const FileIcon = source.name.toLowerCase().endsWith(".xlsx") ? FileXls : FileCsv;
+  const name = source.name.toLowerCase();
+  const FileIcon = name.endsWith(".xlsx") ? FileXls : name.endsWith(".pdf") ? FilePdf : FileCsv;
   return (
     <li className="flex items-center gap-3 rounded-xl border border-border px-4 py-3">
       <FileIcon size={22} weight="duotone" aria-hidden className="shrink-0" />

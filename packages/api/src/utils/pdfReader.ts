@@ -1,12 +1,11 @@
-// The worker `pdfProcess` runs: Node loads this file by URL, so it imports no file of ours.
+// The worker `pdfProcess` runs, loaded by URL.
 import { parentPort, workerData } from "node:worker_threads";
 
+import { installFetchGuard } from "./fetchGuard";
 import type { PdfPage } from "./pdf";
 
 // The reader passes pdf.js no URL, so nothing should be fetched; a future default must not either.
-globalThis.fetch = () => {
-  throw new Error("The PDF reader never fetches");
-};
+installFetchGuard();
 
 const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
 

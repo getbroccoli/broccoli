@@ -21,7 +21,7 @@ import {
   type Sheet,
   sheetQuestions,
 } from "../../domain";
-import { readStaffFile } from "./staffFile";
+import { readStaffFile, staffFileMimeType } from "./staffFile";
 
 /**
  * Staff files as import sources, through their life: upload, mapping in the background,
@@ -31,7 +31,7 @@ export interface FileSourceService {
   /** Whether files can be added: the instance has a model key. */
   canReadFiles(ctx: SecurityContext): boolean;
   /**
-   * Adds a CSV or Excel file as a source and queues its mapping, in one transaction; returns the
+   * Adds a CSV, Excel or PDF file as a source and queues its mapping, in one transaction; returns the
    * source's id. A file that cannot be read is refused and nothing is stored.
    */
   uploadFile(ctx: SecurityContext, file: UploadedFile): Promise<string>;
@@ -100,7 +100,7 @@ export function createFileSourceService({
         const imports = await lockSourcesForMapping(tx);
         const fileId = await storeFile(tx, {
           content: Buffer.from(bytes),
-          mimeType: mimeTypeOf(sheets),
+          mimeType: staffFileMimeType(bytes),
         });
         const sourceId = await imports.insertFileSource(name, fileId);
         await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
@@ -198,13 +198,6 @@ async function readUpload(
   } finally {
     uploads.reading = false;
   }
-}
-
-/** A CSV has one unnamed sheet; only a workbook names its sheets. */
-function mimeTypeOf(sheets: FileSheet[]): string {
-  return sheets.some(({ name }) => name !== null)
-    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    : "text/csv";
 }
 
 /** A model failure that retrying cannot fix fails the file; any other error is thrown. */

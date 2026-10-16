@@ -13,7 +13,7 @@ const MAX_NAME_LENGTH = 255;
 const UPLOADS_PER_MINUTE = 30;
 
 /**
- * `POST /api/imports/files?name=<file name>` takes a CSV or Excel staff file as the raw body and
+ * `POST /api/imports/files?name=<file name>` takes a CSV, Excel or PDF staff file as the raw body and
  * answers the new source's id; its mapping runs in the background.
  */
 export function filesRouter(
@@ -56,9 +56,9 @@ function signedInContext(response: express.Response): SecurityContext {
   return response.locals.ctx as SecurityContext;
 }
 
-/** The file's name as the browser sent it; only `.csv` and `.xlsx` files are read. */
+/** The file's name as the browser sent it; only `.csv`, `.xlsx` and `.pdf` files are read. */
 function parseFileName(name: unknown): string {
-  if (typeof name !== "string" || !/\.(csv|xlsx)$/i.test(name)) {
+  if (typeof name !== "string" || !/\.(csv|xlsx|pdf)$/i.test(name)) {
     throw invalidInput([{ field: "file", code: "unsupported_file" }]);
   }
   return name.slice(-MAX_NAME_LENGTH);

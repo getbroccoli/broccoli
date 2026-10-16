@@ -32,7 +32,7 @@ interface FileSourcesProps {
   onUploadingChange: (uploading: boolean) => void;
 }
 
-/** Staff files as sources of people: drop or choose CSV or Excel files, retry or remove them. */
+/** Staff files as sources of people: drop or choose CSV, Excel or PDF files, retry or remove them. */
 export function FileSources({ sources, onUploaded, onUploadingChange }: FileSourcesProps) {
   const input = useRef<HTMLInputElement>(null);
   /** The file being uploaded, if any. */
@@ -93,7 +93,7 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
       <input
         ref={input}
         type="file"
-        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".csv,.xlsx,.pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf"
         multiple
         className="sr-only"
         tabIndex={-1}
