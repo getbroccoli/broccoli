@@ -1,4 +1,3 @@
-import { useMutation } from "@apollo/client/react";
 import { Plus, UploadSimple } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 
@@ -7,6 +6,7 @@ import {
   RemoveFileDocument,
   RetryFileDocument,
 } from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
@@ -39,11 +39,11 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
   /** What went wrong with the last batch of files. */
   const [problems, setProblems] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
-  const [retryFile, retry] = useMutation(RetryFileDocument);
-  const [removeFile, remove] = useMutation(RemoveFileDocument);
+  const [retryFile, retry] = usePayloadMutation(RetryFileDocument);
+  const [removeFile, remove] = usePayloadMutation(RemoveFileDocument);
   const busy = uploading !== null || retry.loading || remove.loading;
-  const alerts =
-    retry.error || remove.error ? [...problems, t("imports.files.changeFailed")] : problems;
+  const changeFailed = retry.error || retry.payloadError || remove.error;
+  const alerts = changeFailed ? [...problems, t("imports.files.changeFailed")] : problems;
 
   const upload = async (files: FileList | null) => {
     if (!files?.length || busy) {
@@ -120,7 +120,7 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
               key={source.id}
               source={source}
               busy={busy}
-              // A failure shows through the mutation's `error`.
+              // A failure shows through the mutation's `error` or `payloadError`.
               onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
               onRemove={() =>
                 void removeFile({ variables: { sourceId: source.id } }).catch(() => {})

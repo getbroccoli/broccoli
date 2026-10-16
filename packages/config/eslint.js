@@ -5,6 +5,8 @@ import tseslint from "typescript-eslint";
 
 import { importRulesConfig } from "./importRules.js";
 
+export { mutationPayloadsConfig } from "./mutationPayloads.js";
+
 const MAX_LINES_PER_FILE = 300;
 
 // Letters and digits only: camelCase, or PascalCase for React components and their folders.

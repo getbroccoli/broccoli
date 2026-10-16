@@ -1,8 +1,9 @@
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useQuery } from "@apollo/client/react";
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { ImportStepDocument, SkipImportDocument } from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupStepForm } from "@/features/setup";
@@ -39,7 +40,7 @@ export function ImportStep() {
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
   }, [mapping, startPolling, stopPolling]);
-  const [skipImport, { loading: skipping }] = useMutation(SkipImportDocument);
+  const [skipImport, { loading: skipping }] = usePayloadMutation(SkipImportDocument);
   const [skipFailed, setSkipFailed] = useState(false);
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");

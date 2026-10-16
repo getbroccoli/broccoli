@@ -21,3 +21,32 @@ enum OrderDirection {
   ASC
   DESC
 }
+
+# A mutation's expected failure is a payload error, typed by these shared types; see
+# "Errors" in docs/architecture.md §2.
+"An expected failure of a mutation. `message` is for people and agents; clients read the type and fields."
+interface Error {
+  message: String!
+}
+
+"The input was refused; one field error per refused field."
+type InvalidInputError implements Error {
+  message: String!
+  fields: [FieldError!]!
+}
+
+"Why one input field was refused, such as `email` and `taken`."
+type FieldError {
+  field: String!
+  code: String!
+}
+
+"The data is not in a state that allows this yet, such as a file still being read."
+type ConflictError implements Error {
+  message: String!
+}
+
+"An external service, such as Slack, refused or failed."
+type UnavailableError implements Error {
+  message: String!
+}

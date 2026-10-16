@@ -26,7 +26,8 @@ await fetch("/api/graphql", {
   method: "POST",
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
-    query: 'mutation { company { update(input: { name: "Example Inc" }) { id } } }',
+    query:
+      'mutation { company { update(input: { name: "Example Inc" }) { company { id } error { __typename ... on Error { message } } } } }',
   }),
 });
 ```
@@ -35,12 +36,12 @@ Or from a terminal with the cookie jar:
 
 ```sh
 curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-  -d '{"query":"mutation { company { update(input: { name: \"Example Inc\" }) { id } } }"}'
+  -d '{"query":"mutation { company { update(input: { name: \"Example Inc\" }) { company { id } error { __typename ... on Error { message } } } } }"}'
 ```
 
 ## Skip the import
 
-After the company step, every signed-in page opens `/setup/import`. Choose "Skip for now", or call `mutation { import { skip { id } } }` the same way.
+After the company step, every signed-in page opens `/setup/import`. Choose "Skip for now", or call `mutation { import { skip { import { id } } } }` the same way.
 
 ## Sign in again
 
@@ -52,5 +53,5 @@ With the session, call the `employee { create(input: …) }` mutation:
 
 ```sh
 curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-  -d '{"query":"mutation { employee { create(input: { firstName: \"Avery\", lastName: \"Abbott\", email: \"avery@example.com\", jobTitle: \"Designer\", startDate: \"2024-03-04\" }) { id } } }"}'
+  -d '{"query":"mutation { employee { create(input: { firstName: \"Avery\", lastName: \"Abbott\", email: \"avery@example.com\", jobTitle: \"Designer\", startDate: \"2024-03-04\" }) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }"}'
 ```

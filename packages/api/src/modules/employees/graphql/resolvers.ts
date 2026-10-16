@@ -1,4 +1,4 @@
-import type { Resolvers } from "../../../core/graphql";
+import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import type { EmployeeUseCases } from "../app";
 import type { Employee } from "../domain";
 import { avatarUrl } from "../http";
@@ -23,8 +23,12 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
       employee: () => ({}),
     },
     EmployeeMutations: {
-      create: async (_parent, { input }, context) =>
-        toGraphql(await useCases.createEmployee(context.getActor(), input)),
+      create: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["EmployeeCreatePayload"]>(
+          "employee",
+          async () => toGraphql(await useCases.createEmployee(context.getActor(), input)),
+          ["INVALID_INPUT"],
+        ),
     },
   };
 }

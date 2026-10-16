@@ -44,11 +44,23 @@ export default defineConfig(
       "no-restricted-imports": [
         "error",
         {
-          // `shadcn add` sometimes writes this import (and adds an unrelated `cn` package).
-          paths: [{ name: "cn", message: 'Import cn from "@/lib/class-names".' }],
+          paths: [
+            // `shadcn add` sometimes writes this import (and adds an unrelated `cn` package).
+            { name: "cn", message: 'Import cn from "@/lib/class-names".' },
+            // RULE51 in docs/code-quality.md: a payload error must never pass as success.
+            {
+              name: "@apollo/client/react",
+              importNames: ["useMutation"],
+              message: 'Run mutations with usePayloadMutation from "@/apollo".',
+            },
+          ],
         },
       ],
     },
+  },
+  {
+    files: ["src/apollo/usePayloadMutation.ts"],
+    rules: { "no-restricted-imports": "off" },
   },
   {
     files: ["src/**/*.graphql"],
@@ -61,8 +73,9 @@ export default defineConfig(
     plugins: { "@graphql-eslint": graphql, "check-file": checkFile },
     rules: {
       "check-file/filename-naming-convention": ["error", { "**/*.graphql": "CAMEL_CASE" }],
-      // Every query selects `id`, so the normalised cache can identify each object.
-      "@graphql-eslint/require-selections": "error",
+      // Every query selects `id`, so the normalised cache can identify each object, and every
+      // mutation selects its payload's `error` (RULE34 in docs/code-quality.md). No type has both.
+      "@graphql-eslint/require-selections": ["error", { fieldName: ["id", "error"] }],
       "@graphql-eslint/executable-definitions": "error",
       "@graphql-eslint/fields-on-correct-type": "error",
       "@graphql-eslint/known-argument-names": "error",

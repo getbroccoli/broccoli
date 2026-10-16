@@ -38,10 +38,10 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 ## API
 
 - **RULE23.** The GraphQL schema is hairy: types link to each other, both ways, wherever a client may walk, so a component's fragment reaches what it needs without a new root query. A parent lists its children as a connection, and a child returns its parent as an object, never as a bare id ([architecture §2](architecture.md#2-api)).
-- **RULE24.** A mutation returns the object it changed, or its parent.
+- **RULE24.** A mutation returns a payload, never a bare type. A namespace's mutations that return only its object share `<Namespace>MutationPayload` (`ImportMutationPayload { import }`); a mutation with an expected failure has its own `<Namespace><Verb>Payload`. The changed object, or its parent after a removal, sits in a nullable field named after its type (`company`, `import`), never a generic `record`. See [architecture §2](architecture.md#2-api). `lint: broccoli/mutation-payloads` (the payload type and its `error`)
 - **RULE25.** A field resolver that loads related objects batches through a per-request DataLoader (`perRequest`), never one query per parent. The exception is a paged connection on a parent (`ImportSource.employees`): one query per parent, so it belongs on types a client lists only a few of.
 - **RULE26.** Inside a namespace, `create`, `update` and `delete` cover ordinary record changes; a domain action or a named part gets its own verb (`approve`, `removeLogo`). A name never repeats the namespace's object.
-- **RULE27.** A use case reports an expected failure as an `ApplicationError` with one of its codes; field errors go in `extensions`.
+- **RULE27.** A use case reports an expected failure as an `ApplicationError`, and the mutation's resolver turns the codes it lists into the payload's `error` with `mutationPayload<ResolversTypes["<Payload>"]>`, naming the payload's generated resolver type. `error` is nullable, `null` on success, and typed as a union named after the payload (`ImportApproveError`), even with one member, of `…Error` types implementing `Error`. A type is generic per code (`InvalidInputError`, `ConflictError`, `UnavailableError`); a specific one is added only when the client needs extra fields or must handle the failure differently. A mutation without an expected failure has no `error`. Refused callers, failures before execution, failures of queries and unexpected (masked) errors stay top-level.
 - **RULE28.** A list is a Relay connection over a keyset query, built with `core/pagination` and `core/db`.
 
 ## Data, configuration and logs
@@ -54,12 +54,13 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 ## Frontend
 
 - **RULE33.** A component that renders an entity in more than one place owns a colocated fragment named `<Component>_<field>` and reads it with `useFragment`; a component used by a single query reads that query's fields.
-- **RULE34.** Every query selects `id`. `lint: @graphql-eslint/require-selections`
+- **RULE34.** Every query selects `id`, and every mutation selects its payload's `error` where it has one, as `error { __typename ... on Error { message } }`, under its own name and without `@skip` or `@include`. `lint: @graphql-eslint/require-selections` (a missing `id` or `error`)
 - **RULE35.** GraphQL types come from codegen; none is written by hand.
 - **RULE36.** Every user-facing string goes through `t()`.
 - **RULE37.** Server data lives in the Apollo cache, navigation state in validated search params, and React state only for UI; component state stays minimal.
 - **RULE38.** Route files stay thin; feature components live in `features/<module>/`.
 - **RULE39.** App code uses Phosphor icons; Lucide appears only inside shadcn components.
+- **RULE51.** Web code runs a mutation with `usePayloadMutation` from `@/apollo`, never Apollo's `useMutation`, so a payload error never passes as success. `lint: no-restricted-imports`
 
 ## Tests
 

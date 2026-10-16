@@ -103,16 +103,45 @@ type Query {
 
 type ImportMutations {
   "Reads the connected Slack workspace into the import, the first time and on every refresh; its source then holds the current members."
-  readSlack: Import!
+  readSlack: ImportReadSlackPayload!
   "Leaves the import step of setup for now; the records stay."
-  skip: Import!
-  "Turns the import's employee records into employees and completes setup. Records that are not complete stay in the import. Approving again does nothing. Refused with CONFLICT while a file is being mapped."
-  approve: Import!
+  skip: ImportMutationPayload!
+  "Turns the import's employee records into employees and completes setup. Records that are not complete stay in the import. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
+  approve: ImportApprovePayload!
   "Maps a failed file again; any other source is left as it is."
-  retryFile(sourceId: ID!): Import!
+  retryFile(sourceId: ID!): ImportRetryFilePayload!
   "Removes a file, its records and the stored file."
-  removeFile(sourceId: ID!): Import!
+  removeFile(sourceId: ID!): ImportMutationPayload!
 }
+
+"The import after a mutation that cannot fail in an expected way."
+type ImportMutationPayload {
+  import: Import
+}
+
+"The import after reading Slack, or why Slack could not be read."
+type ImportReadSlackPayload {
+  import: Import
+  error: ImportReadSlackError
+}
+
+union ImportReadSlackError = UnavailableError
+
+"The import after `approve`, or why it was refused."
+type ImportApprovePayload {
+  import: Import
+  error: ImportApproveError
+}
+
+union ImportApproveError = ConflictError
+
+"The import after `retryFile`, or why it was refused."
+type ImportRetryFilePayload {
+  import: Import
+  error: ImportRetryFileError
+}
+
+union ImportRetryFileError = ConflictError
 
 type Mutation {
   import: ImportMutations!

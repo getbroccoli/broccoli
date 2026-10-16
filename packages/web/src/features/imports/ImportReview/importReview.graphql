@@ -26,7 +26,15 @@ query ImportReview($first: Int, $after: String, $orderBy: EmployeeOrder, $filter
 mutation ApproveImport {
   import {
     approve {
-      id
+      import {
+        id
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
     }
   }
 }

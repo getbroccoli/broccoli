@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useQuery } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useRouter } from "@tanstack/react-router";
@@ -10,6 +10,7 @@ import {
   UpdateCompanyDocument,
   type CompanyStepQuery,
 } from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
 import { FieldError } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +67,7 @@ interface CompanyFormProps {
  */
 function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
   const router = useRouter();
-  const [updateCompany] = useMutation(UpdateCompanyDocument);
+  const [updateCompany] = usePayloadMutation(UpdateCompanyDocument);
   const [logoBusy, setLogoBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);

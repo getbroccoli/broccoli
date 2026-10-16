@@ -1,3 +1,4 @@
-import { eslintConfig } from "@broccoli/config/eslint";
+import { eslintConfig, mutationPayloadsConfig } from "@broccoli/config/eslint";
+import { defineConfig } from "eslint/config";
 
-export default eslintConfig(import.meta.dirname);
+export default defineConfig(eslintConfig(import.meta.dirname), mutationPayloadsConfig());

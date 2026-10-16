@@ -1,8 +1,8 @@
-import { useMutation } from "@apollo/client/react";
 import { SlackLogo } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import { ReadSlackDocument, type ImportStepQuery } from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { t } from "@/i18n";
 
@@ -21,7 +21,7 @@ interface SlackSourceRowProps {
  * without imported members is imported as soon as the row shows it.
  */
 export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
-  const [readSlack, { loading: reading }] = useMutation(ReadSlackDocument);
+  const [readSlack, { loading: reading }] = usePayloadMutation(ReadSlackDocument);
   const [readFailed, setReadFailed] = useState(false);
 
   const read = async () => {

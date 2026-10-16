@@ -1,8 +1,8 @@
-import { useMutation } from "@apollo/client/react";
 import { Camera, CircleNotch, ImageSquare, X } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 
 import { RemoveCompanyLogoDocument } from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
 import { t, type MessageKey } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
@@ -30,7 +30,7 @@ export function LogoField({ logoUrl, disabled, onBusyChange, onUploaded }: LogoF
   const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<MessageKey | null>(null);
-  const [removeLogo] = useMutation(RemoveCompanyLogoDocument);
+  const [removeLogo] = usePayloadMutation(RemoveCompanyLogoDocument);
 
   const run = async (change: () => Promise<MessageKey | null>) => {
     setFailure(null);

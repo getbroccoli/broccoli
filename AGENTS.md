@@ -5,4 +5,5 @@
 - Follow `docs/testing.md` when writing or changing tests.
 - Use the words of `docs/thesaurus.md`.
 - Check a change as "Running integration and end-to-end tests" in `docs/testing.md` describes, and a UI change with the checklists in `docs/qa/`, starting from `docs/qa/setup.md`.
+- Design contracts (APIs, GraphQL types, interfaces) simple for today's use and extendable without breaking.
 - Commit titles use Conventional Commits. Pull requests are squash-merged.

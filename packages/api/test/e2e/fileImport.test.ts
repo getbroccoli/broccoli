@@ -94,11 +94,13 @@ test("a failed file becomes mapped after retrying with working decisions", async
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
 
   const retried = await browser.graphql(
-    "mutation($id: ID!) { import { retryFile(sourceId: $id) { id } } }",
+    "mutation($id: ID!) { import { retryFile(sourceId: $id) { import { id } error { __typename ... on Error { message } } } } }",
     { id: sourceId },
   );
 
-  expect(await retried.json()).toEqual({ data: { import: { retryFile: { id: "import" } } } });
+  expect(await retried.json()).toEqual({
+    data: { import: { retryFile: { import: { id: "import" }, error: null } } },
+  });
   await expect
     .poll(() => readImport(browser), { timeout: 15_000 })
     .toMatchObject({
@@ -132,7 +134,7 @@ test("removeFile removes the uploaded source", async ({ fakeDecisions }) => {
     });
 
   const removed = await browser.graphql(
-    "mutation($id: ID!) { import { removeFile(sourceId: $id) { sources { id } employees { edges { node { id } } } } } }",
+    "mutation($id: ID!) { import { removeFile(sourceId: $id) { import { sources { id } employees { edges { node { id } } } } } } }",
     { id: sourceId },
   );
 
@@ -140,8 +142,34 @@ test("removeFile removes the uploaded source", async ({ fakeDecisions }) => {
     data: {
       import: {
         removeFile: {
-          sources: [],
-          employees: { edges: [] },
+          import: { sources: [], employees: { edges: [] } },
+        },
+      },
+    },
+  });
+});
+
+test("returns an approval conflict in the payload while a file is mapping", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  await env.seed.fileSource({ content: CSV.toString(), status: "mapping" });
+
+  const response = await browser.graphql(`
+    mutation {
+      import {
+        approve {
+          import { id }
+          error { __typename ... on Error { message } }
+        }
+      }
+    }
+  `);
+
+  expect(await response.json()).toEqual({
+    data: {
+      import: {
+        approve: {
+          import: null,
+          error: { __typename: "ConflictError", message: "Files are still being read." },
         },
       },
     },
