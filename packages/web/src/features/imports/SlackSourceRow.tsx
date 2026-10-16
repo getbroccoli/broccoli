@@ -71,18 +71,18 @@ export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
           {t("imports.tools.readOnly")}
         </p>
       </div>
-      <div className="flex items-center gap-4 border-t border-border px-5 py-4">
+      <div className="flex flex-wrap items-center gap-4 border-t border-border px-5 py-4">
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card ring-1 ring-border">
           <SlackMark size={20} />
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-32 flex-1">
           <p className="text-[15px] font-semibold">{t("imports.slack.name")}</p>
           <p className="text-sm leading-[1.5] text-muted-foreground">
             {connection ? workspaceLine(connection.workspaceName, source) : t("imports.slack.hint")}
           </p>
         </div>
         {connection ? (
-          <span className="flex shrink-0 items-center gap-1.5">
+          <span className="ml-auto flex shrink-0 items-center gap-1.5">
             <Button
               type="button"
               size="sm"
@@ -117,7 +117,10 @@ export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
         ) : (
           <a
             href={CONNECT_SLACK_URL}
-            className={cn(buttonVariants({ size: "sm" }), "h-7 rounded-full px-3 text-[13px]")}
+            className={cn(
+              buttonVariants({ size: "sm" }),
+              "ml-auto h-7 rounded-full px-3 text-[13px]",
+            )}
           >
             {t("imports.slack.connect")}
           </a>

@@ -52,5 +52,5 @@ On an instance with `OPENROUTER_API_KEY` set, managed or self-hosted. Without it
 
 ## Layout
 
-- [ ] On a narrow window the Slack row and its button fit without scrolling sideways.
+- [ ] At 320px wide the Slack row fits without scrolling sideways, and its text never runs under the buttons, which move to their own line when connected, importing or failed.
 - [ ] Screenshots of `/setup/import` (not connected, connected, with an error, with files; desktop and narrow) go in the pull request description.
