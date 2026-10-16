@@ -4,8 +4,8 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 ## Setup
 
-1. Run `pnpm dev` (and once in the Docker image) and follow the [import step](import-step.md) on a managed instance with `MANAGED_MODEL_API_KEY` set: connect Slack and upload a CSV.
-2. Have one Slack member whose name is one word, and in the CSV one row without an email and one without a start date.
+1. Run `pnpm dev` (and once in the Docker image) with `OPENROUTER_API_KEY` set and follow the [import step](import-step.md): upload a CSV and, when a Slack workspace is available, connect Slack.
+2. Give the CSV over 50 people, one row without an email, one without a start date and one whose name is one word. With Slack, also have one member whose name is one word.
 
 ## The page
 
