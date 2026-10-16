@@ -192,6 +192,20 @@ it.for([
 });
 
 it.for([
+  { name: "footer", y: 20 },
+  { name: "running title", y: 780 },
+])("refuses a scan whose $name lines up with the table's columns", ({ y }) => {
+  const table = page([
+    line(760, ["Name", "Email"]),
+    line(740, ["Avery Stone", "avery@example.com"]),
+  ]);
+  const scanned = page([line(y, ["Staff directory", "Page 2 of 2"])], 1);
+
+  expect(hasScannedPage([scanned])).toBe(true);
+  expect(hasScannedPage([table, scanned])).toBe(true);
+});
+
+it.for([
   { name: "a small logo", coverage: 0.02 },
   { name: "a full-page letterhead image", coverage: 1 },
   { name: "no images", coverage: 0 },

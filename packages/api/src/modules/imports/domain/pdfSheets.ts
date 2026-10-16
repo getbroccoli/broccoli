@@ -18,12 +18,16 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
 
 /**
  * Whether a page is a scan or photo: it has images but no visible text, or images cover at least
- * 15% of it and its text gives no staff row. One such page refuses the whole file.
+ * 15% of it and its text gives no staff row below the table's header on that page. A footer or a
+ * title over a scan may line up with the columns, but it does not repeat the header. One such page
+ * refuses the whole file.
  */
 export function hasScannedPage(pages: PdfPage[]): boolean {
   const table = readTable(pages);
   const hasStaffRow = (page: number) =>
-    table !== null && (table.pageLines[page] ?? []).some((line) => isStaffRow(line, table.header));
+    table !== null &&
+    table.headedPages[page] === true &&
+    (table.pageLines[page] ?? []).some((line) => isStaffRow(line, table.header));
   return pages.some(
     ({ items, imageCoverage }, page) =>
       (imageCoverage > 0 && items.length === 0) ||
@@ -42,8 +46,13 @@ function isStaffRow(line: Cell[], header: Cell[]): boolean {
   return line.filter(({ text }) => /[\p{L}\p{N}]/u.test(text)).length >= 2 && linesUp(line, header);
 }
 
-/** The table's header and each page's lines below it; null when no table is found. */
-function readTable(pages: PdfPage[]): { header: Cell[]; pageLines: Cell[][][] } | null {
+/**
+ * The table's header, each page's lines below it, and which pages show the header; null when no
+ * table is found.
+ */
+function readTable(
+  pages: PdfPage[],
+): { header: Cell[]; pageLines: Cell[][][]; headedPages: boolean[] } | null {
   const pageLines = pages.map(({ items }) => linesOf(items));
   const start = findHeader(pageLines);
   if (start === null) {
@@ -52,15 +61,16 @@ function readTable(pages: PdfPage[]): { header: Cell[]; pageLines: Cell[][][] } 
   const header = pageLines[start.page]![start.line]!;
   const columns = header.map(({ x }) => x);
   const headerRow = header.map(({ text }) => text);
-  const linesBelow = pageLines.map((lines, page) => {
-    if (page < start.page) return [];
-    const after =
-      page === start.page
-        ? start.line
-        : lines.findIndex((line) => sameRow(rowOf(line, columns), headerRow));
-    return lines.slice(after + 1);
+  const headerLines = pageLines.map((lines, page) => {
+    if (page < start.page) return lines.length;
+    if (page === start.page) return start.line;
+    return lines.findIndex((line) => sameRow(rowOf(line, columns), headerRow));
   });
-  return { header, pageLines: linesBelow };
+  return {
+    header,
+    pageLines: pageLines.map((lines, page) => lines.slice(headerLines[page]! + 1)),
+    headedPages: headerLines.map((line, page) => page >= start.page && line >= 0),
+  };
 }
 
 /** Text that reads as one piece: items on one baseline, each the next word of the one before. */
