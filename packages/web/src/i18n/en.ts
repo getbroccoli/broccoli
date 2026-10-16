@@ -104,6 +104,7 @@ export const en = {
   "setup.review.values.jobTitle": "{count} job titles",
   "setup.review.values.startDate": "{count} start dates",
   "setup.review.conflictTitle": "{name} has {values}",
+  "setup.review.valueLabel": "{field} for {name}: {value}",
   "setup.review.fieldTitle": "{field} for {name}",
   "setup.review.twoSourcesDisagree": "{first} and {second} disagree. Pick the one to keep.",
   "setup.review.sourcesDisagree": "Your sources disagree. Pick the one to keep.",

@@ -2,9 +2,10 @@ import { useState } from "react";
 
 import type { EmployeeValueCell_ValueFragment } from "@/__generated__/graphql";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
-import { type EmployeeFieldKey, valuesLabel } from "./employeeFields";
+import { type EmployeeFieldKey, fieldLabel, valuesLabel } from "./employeeFields";
 import { EmployeeValuePopover } from "./EmployeeValuePopover";
 import { FlagPill } from "./FlagPill";
 import { NotSet } from "./NotSet";
@@ -35,6 +36,13 @@ export function EmployeeValueCell({
         render={
           <button
             type="button"
+            aria-label={t("setup.review.valueLabel", {
+              field: fieldLabel(field),
+              name: employeeName,
+              value: value.conflict
+                ? valuesLabel(field, value.options.length)
+                : (displayed(field, value.value) ?? t("setup.review.notSet")),
+            })}
             className="max-w-full truncate rounded-sm text-left hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           />
         }
@@ -62,12 +70,17 @@ export function EmployeeValueCell({
   );
 }
 
+/** The value as review shows it: a start date formatted, the rest as they are. */
+function displayed(field: EmployeeFieldKey, value: string | null): string | null {
+  return field === "startDate" ? formatCalendarDate(value) : value;
+}
+
 function shown(field: EmployeeFieldKey, value: string | null, missing: boolean) {
   if (value === null) {
     return <NotSet missing={missing} />;
   }
   return field === "startDate" ? (
-    <span className="text-foreground/80 tabular-nums">{formatCalendarDate(value)}</span>
+    <span className="text-foreground/80 tabular-nums">{displayed(field, value)}</span>
   ) : (
     value
   );
