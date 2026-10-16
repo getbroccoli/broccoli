@@ -37,11 +37,11 @@ Each rule ends with how it is enforced: `lint: <rule>` and `tsc` fail `pnpm chec
 
 ## API
 
-- **Q23.** The GraphQL schema is a connected graph: a parent lists its children as a connection, and a child returns its parent as an object, never as a bare id ([architecture §2](architecture.md#2-api)). `review`
-- **Q24.** A mutation returns the object it changed, or its parent. `review`
+- **Q23.** The GraphQL schema is hairy: types link to each other, both ways, wherever a client may walk, so a component's fragment reaches what it needs without a new root query. A parent lists its children as a connection, and a child returns its parent as an object, never as a bare id ([architecture §2](architecture.md#2-api)). `review`
+- **Q24.** Every mutation returns its own payload type, named `<Namespace><Verb>Payload` (`CompanyUpdatePayload`), never a bare or shared type. The payload carries `record`, the object the mutation changed, and `recordId`, its id; `status`, a non-null enum of the outcome; `query`, of type `Query`, so the client reads what else changed in the same request; and `errors` (Q27). `record` is nullable, because a failure leaves it empty. `review`
 - **Q25.** A field resolver that loads related objects batches through a per-request DataLoader (`perRequest`), never one query per parent. The exception is a paged connection on a parent (`ImportSource.employees`): one query per parent, so it belongs on types a client lists only a few of. `review`
 - **Q26.** Inside a namespace, `create`, `update` and `delete` cover ordinary record changes; a domain action or a named part gets its own verb (`approve`, `removeLogo`). A name never repeats the namespace's object. `review`
-- **Q27.** A use case reports an expected failure as an `ApplicationError` with one of its codes; field errors go in `extensions`. `review`
+- **Q27.** A mutation returns an expected failure, such as a taken email or a file still being read, as a typed problem in its payload's `errors`, never as a thrown error: a `<Name>Problem` type that implements `ProblemInterface { message }`, with a union of the problems each mutation can return (`CompanyUpdateProblem`). A query, and a refused caller (`UNAUTHENTICATED`, `FORBIDDEN`), reports an `ApplicationError` with one of its codes. `review`
 - **Q28.** A list is a Relay connection over a keyset query, built with `core/pagination` and `core/db`. `review`
 
 ## Data, configuration and logs
