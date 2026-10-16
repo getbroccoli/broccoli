@@ -16,6 +16,7 @@
     "beschäftigungsart",
     "bürgerlich",
     "datum",
+    "durchschnitt",
     "einkauf",
     "eintritt",
     "eintrittsdatum",
@@ -27,9 +28,11 @@
     "geburtsname",
     "geburtsort",
     "geburtstag",
+    "gesamt",
     "geschlecht",
     "handy",
     "hausnummer",
+    "kennzahl",
     "kontoinhaber",
     "kostenstelle",
     "mitarbeiter",
@@ -51,6 +54,7 @@
     "stelle",
     "steueridentifikationsnummer",
     "straße",
+    "summe",
     "tätigkeit",
     "telefon",
     "telefonnummer",
@@ -59,7 +63,8 @@
     "verwaltung",
     "vorgesetzter",
     "vorname",
-    "vorsatzwort"
+    "vorsatzwort",
+    "wert"
   ],
   "jobTitles": [
     "buchhalter",
