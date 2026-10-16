@@ -1,9 +1,18 @@
 import { strToU8, zipSync } from "fflate";
 
-import { expect, importUseCases, OWNER, storedFileIds, SYSTEM, test } from "#test/support";
+import {
+  expect,
+  importUseCases,
+  OWNER,
+  storedFileIds,
+  SYSTEM,
+  test,
+  xlsxFile,
+} from "#test/support";
 
 import { files } from "../../../../core/files";
 import { instanceRepository } from "../../../../core/instance";
+import { parseXlsx } from "../../../../utils";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -35,6 +44,35 @@ test("refuses an upload without a model key", async ({ orm }) => {
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses an upload when the workbook queue is full without storing anything or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+  const slow = xlsxFile({
+    sheets: [
+      {
+        name: "Staff",
+        xml: '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1000000"><c r="XFD1000000"><v>1</v></c></row></sheetData></worksheet>',
+      },
+    ],
+  });
+  const bytes = xlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  const pending = Promise.allSettled([parseXlsx(slow), parseXlsx(slow), parseXlsx(slow)]);
+
+  try {
+    await expect(
+      imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes }),
+    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+
+    expect(await imports.reads.listSources(OWNER)).toEqual([]);
+    expect(await storedFileIds(orm)).toEqual([]);
+    expect(imports.sentJobs).toEqual([]);
+  } finally {
+    await pending;
+  }
 });
 
 test("refuses an upload after setup is complete without storing anything or sending a job", async ({

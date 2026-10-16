@@ -5,6 +5,7 @@ import { deleteFiles, readFile, storeFile } from "../../../../core/files";
 import { readSetupStep } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
+import { XlsxBusyError } from "../../../../utils";
 import { importRepository, type ImportRepository } from "../../db";
 import {
   type ColumnMapping,
@@ -18,6 +19,7 @@ import {
   readHeaderRow,
   type FileSheet,
   readSheets,
+  type SheetRefusal,
   type Sheet,
   sheetQuestions,
 } from "../../domain";
@@ -89,7 +91,7 @@ export function createFileSourceService({
       if (decisions === null) {
         throw new ApplicationError("UNAVAILABLE", "Reading files needs a model key.");
       }
-      const sheets = await readSheets(bytes);
+      const sheets = await readSheetsOrBusy(bytes);
       if (typeof sheets === "string") {
         throw invalidInput([{ field: "file", code: sheets }]);
       }
@@ -176,6 +178,21 @@ async function lockSourcesForMapping(tx: Tx): Promise<ImportRepository> {
 
 function isCurrentRun(source: FileSource | null, attempt: number): source is FileSource {
   return source?.status === "mapping" && source.mappingAttempt === attempt;
+}
+
+/** The file's sheets; refuses with UNAVAILABLE while too many workbooks wait to be read. */
+async function readSheetsOrBusy(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
+  try {
+    return await readSheets(bytes);
+  } catch (error) {
+    if (error instanceof XlsxBusyError) {
+      throw new ApplicationError(
+        "UNAVAILABLE",
+        "Other files are being read. Try again in a moment.",
+      );
+    }
+    throw error;
+  }
 }
 
 /** A CSV has one unnamed sheet; only a workbook names its sheets. */

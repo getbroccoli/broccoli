@@ -195,6 +195,32 @@ test("the upload route refuses a request without a session", async ({ fakeDecisi
   expect(response.status).toBe(401);
 });
 
+test("the upload route refuses an oversized request without a session as unauthenticated", async ({
+  fakeDecisions,
+}) => {
+  const { env } = await managedImport(fakeDecisions);
+
+  const response = await env
+    .browser()
+    .post("/api/imports/files?name=staff.csv", Buffer.alloc(5 * 1024 * 1024 + 1, "a"));
+
+  expect(response.status).toBe(401);
+});
+
+test("the upload route limits a signed-in user to 30 requests per minute", async ({
+  fakeDecisions,
+}) => {
+  const { browser } = await managedImport(fakeDecisions);
+  for (let request = 0; request < 30; request++) {
+    const response = await browser.post("/api/imports/files?name=staff.txt", CSV);
+    expect(response.status).toBe(400);
+  }
+
+  const response = await browser.post("/api/imports/files?name=staff.txt", CSV);
+
+  expect(response.status).toBe(429);
+});
+
 test("the upload route refuses files above 5 MB", async ({ fakeDecisions }) => {
   const { browser } = await managedImport(fakeDecisions);
 

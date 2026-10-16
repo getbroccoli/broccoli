@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { xlsxFile } from "#test/support";
 
-import { parseXlsx } from ".";
+import { parseXlsx, XlsxBusyError } from ".";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -112,6 +112,44 @@ it("returns null when reading a value far out runs out of memory", async () => {
   });
 
   expect(await parseXlsx(bytes)).toBeNull();
+});
+
+it("rejects a fourth workbook before any of the three pending reads finishes", async () => {
+  const bytes = xlsxFile({
+    sheets: [
+      { name: "Staff", xml: worksheet('<row r="1000000"><c r="XFD1000000"><v>1</v></c></row>') },
+    ],
+  });
+  const pending = [parseXlsx(bytes), parseXlsx(bytes), parseXlsx(bytes)];
+  const accepted = Promise.all(pending);
+
+  const fourth = parseXlsx(bytes);
+
+  try {
+    await expect(Promise.race([...pending, fourth])).rejects.toBeInstanceOf(XlsxBusyError);
+    expect(await accepted).toEqual([null, null, null]);
+  } finally {
+    await Promise.allSettled([accepted, fourth]);
+  }
+});
+
+it("reads another workbook once the full queue has room again", async () => {
+  const bytes = xlsxFile({
+    sheets: [
+      { name: "Staff", xml: worksheet('<row r="1000000"><c r="XFD1000000"><v>1</v></c></row>') },
+    ],
+  });
+  const next = xlsxFile({ sheets: [{ name: "Staff", rows: [["Avery"]] }] });
+  const pending = [parseXlsx(bytes), parseXlsx(bytes), parseXlsx(bytes)];
+  const settled = Promise.allSettled(pending);
+
+  try {
+    await pending[0];
+
+    expect(await parseXlsx(next)).toEqual([{ name: "Staff", rows: [["Avery"]] }]);
+  } finally {
+    await settled;
+  }
 });
 
 it("returns null for a date out of range", async () => {
