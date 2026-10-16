@@ -26,7 +26,7 @@ export class PayloadFailure<PayloadError> extends Error {
  */
 export function usePayloadMutation<Data, Variables extends OperationVariables>(
   document: TypedDocumentNode<Data, Variables>,
-  options?: { update?: MutationUpdaterFunction<Data, Variables, ApolloCache> },
+  options?: { update?: MutationUpdaterFunction<Data, Variables, ApolloCache> } & NoFailureOptions,
 ) {
   const [mutate, { loading, error, reset: resetMutation }] = useMutation(document, options);
   const [payloadError, setPayloadError] = useState<PayloadErrorOf<Data> | null>(null);
@@ -71,5 +71,11 @@ type PayloadErrorOf<Data> =
 /** Apollo's run options without those that would treat a payload error as success. */
 type RunArgs<Args extends unknown[]> = { [K in keyof Args]: WithoutFailureOptions<Args[K]> };
 type WithoutFailureOptions<Options> = Options extends object
-  ? Omit<Options, "onCompleted" | "onError" | "errorPolicy">
+  ? Omit<Options, keyof NoFailureOptions> & NoFailureOptions
   : Options;
+/** Forbidden even in an options variable, which `Omit` alone would let through. */
+interface NoFailureOptions {
+  onCompleted?: never;
+  onError?: never;
+  errorPolicy?: never;
+}
