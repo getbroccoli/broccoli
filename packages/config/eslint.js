@@ -36,7 +36,7 @@ export function eslintConfig(packageDir) {
       extends: [tseslint.configs.disableTypeChecked],
     },
     {
-      // File and folder names: see "Naming" in AGENTS.md.
+      // File and folder names: see RULE4 in docs/code-quality.md.
       files: ["src/**/*.{ts,tsx}", "test/**/*.ts"],
       plugins: { "check-file": checkFile },
       rules: {

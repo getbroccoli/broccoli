@@ -13,24 +13,17 @@ Three layers, most tests in the middle one:
 
 ## What not to test
 
-- Trivial code: constants, types, pass-through glue and placeholders.
-- Implementation details: private helpers, call order, or mocks of our own modules.
-- Frontend components and pages, for now. Pure frontend functions, such as search-param parsing, get unit tests.
-- Integrations (`src/integrations/`) on their own. They are thin clients over shared helpers such as `fetchJson`, which have their own tests; use-case tests replace them with a fake, and end-to-end tests run them against a local fake service.
-- Configuration files by matching their text. Run the tool that reads them instead.
+The rules are [RULE40 and RULE41](code-quality.md#tests). Two of them are choices for now: frontend components and pages get no tests, only pure frontend functions such as search-param parsing; and integrations (`src/integrations/`) are thin clients over shared helpers such as `fetchJson`, which have their own tests, so use-case tests replace them with a fake and end-to-end tests run them against a local fake service.
 
 ## Writing a test
 
 - Work test-first: a failing test, the smallest code that passes, then refactor.
-- Name the test after the expected behaviour: `it("rejects a request that overlaps an approved absence")`.
-- Cover one behaviour per test, with short setup and a visible arrange, act and assert.
-- Put each test in the file of the code it checks. A concern shared by many modules, such as sessions or paging, gets its own test file.
-- Keep tests deterministic. Inject the clock and ID generators. No sleeps, no network, no dependence on test order.
+- Follow [RULE42 to RULE46](code-quality.md#tests); a name reads like `it("rejects a request that overlaps an approved absence")`.
 - Build test data with `seed` (`TestSeed` in `packages/api/test/support`), which inserts through each module's repository, skipping use cases, permissions, audit and events. Seed values must be what the app would store (normalised, such as a lowercased email). Set only the fields the test is about. A module adds its own seed methods.
 - Build the use cases under test with the module's helper in `#test/support`, such as `companyUseCases(orm, { brandLookup })`. It fills every dependency with a test default (a new event bus, a silent logger, no external calls), so a test passes only the one it is about and the factory call is not repeated in every test. A module whose factory needs more than `{ orm }` adds such a helper.
 - Core tests publish the test-only `example.happened` domain event (`EXAMPLE_PAYLOAD`), never a module's event, so they do not depend on any module.
 - Assert on outcomes a caller can see: return values, GraphQL responses, state read back through public queries, and emitted events.
-- Mock only external systems such as email, Slack and third-party HTTP. Never mock Postgres. The one stand-in for our own code is `TestSecurityContext` from `#test/support`, which answers whatever the test sets; `OWNER`, `NON_OWNER` and `SYSTEM` are instances of it.
+- External systems such as email, Slack and third-party HTTP get fakes. `TestSecurityContext` from `#test/support` answers whatever the test sets; `OWNER`, `NON_OWNER` and `SYSTEM` are instances of it.
 - Add property-based tests only when the module design agrees on them.
 
 ## Running integration and end-to-end tests
