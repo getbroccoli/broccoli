@@ -8,13 +8,8 @@ import { seedDemoData } from "./seedDemoData";
 /** Everything that can be done with demo data; the adapters call nothing else. */
 export interface DemoUseCases {
   seedDemoData: (ctx: SecurityContext, today: CalendarDate) => Promise<void>;
-  clearDemoData: (ctx: SecurityContext) => Promise<DemoData>;
-  getDemoData: (ctx: SecurityContext) => Promise<DemoData>;
-}
-
-/** Whether the instance holds demo data. */
-export interface DemoData {
-  isPresent: boolean;
+  clearDemoData: (ctx: SecurityContext) => Promise<{ isPresent: boolean }>;
+  getDemoData: (ctx: SecurityContext) => Promise<{ isPresent: boolean }>;
 }
 
 export function createDemoUseCases(context: DemoContext): DemoUseCases {
