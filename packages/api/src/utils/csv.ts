@@ -10,6 +10,10 @@ export function parseCsv(bytes: Uint8Array): string[][] | null {
     return null;
   }
   const text = decode(bytes);
+  // PDFs can contain only printable bytes, but their syntax is not CSV data.
+  if (text.startsWith("%PDF-")) {
+    return null;
+  }
   let best: { rows: string[][]; regularRows: number } | null = null;
   for (const delimiter of DELIMITERS) {
     const rows = parseWith(text, delimiter);
