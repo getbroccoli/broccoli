@@ -42,7 +42,10 @@ export function EmployeeValuePopover({
   );
   const disagree = value.options.length > 1;
   const [typing, setTyping] = useState(!disagree);
-  const [typed, setTyped] = useState(value.choice === "TYPED" ? (value.value ?? "") : "");
+  // A value no source disputes starts as it is shown, ready to correct.
+  const [typed, setTyped] = useState(
+    value.choice === "TYPED" || !disagree ? (value.value ?? "") : "",
+  );
 
   const choose = async (choice: Choice, shownValue: string) => {
     const previous = previousChoice(value);
@@ -132,7 +135,9 @@ export function EmployeeValuePopover({
               autoFocus
               aria-label={fieldLabel(field)}
               aria-invalid={Boolean(fieldError)}
-              type={field === "startDate" ? "date" : field === "email" ? "email" : "text"}
+              // Not `type="email"`: the browser's own check would hide the employee rule's message.
+              type={field === "startDate" ? "date" : "text"}
+              inputMode={field === "email" ? "email" : undefined}
               value={typed}
               onChange={(event) => setTyped(event.target.value)}
             />

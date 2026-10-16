@@ -4,10 +4,10 @@ fragment ImportPersonCell_importEmployee on ImportEmployee {
   incompleteReason
   firstName {
     value
-    ...EmployeeValueCell_value
+    ...EmployeeValueCell_value @unmask
   }
   lastName {
     value
-    ...EmployeeValueCell_value
+    ...EmployeeValueCell_value @unmask
   }
 }

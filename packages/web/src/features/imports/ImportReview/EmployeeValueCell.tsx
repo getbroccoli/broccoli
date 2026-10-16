@@ -1,11 +1,6 @@
-import type { FragmentType } from "@apollo/client";
-import { useFragment } from "@apollo/client/react";
 import { useState } from "react";
 
-import {
-  EmployeeValueCell_ValueFragmentDoc,
-  type EmployeeValueCell_ValueFragment,
-} from "@/__generated__/graphql";
+import type { EmployeeValueCell_ValueFragment } from "@/__generated__/graphql";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatCalendarDate } from "@/lib/formatDate";
 
@@ -16,28 +11,24 @@ import { NotSet } from "./NotSet";
 
 /**
  * One value of an import employee, or an amber pill while its sources disagree; a click
- * opens the popover to pick or type it. Owns the `EmployeeValueCell_value` fragment.
+ * opens the popover to pick or type it. Owns the `EmployeeValueCell_value` fragment, which
+ * parents spread with `@unmask`: a value has no id of its own to read it from the cache by.
  */
 export function EmployeeValueCell({
   employeeId,
   employeeName,
   field,
-  value: from,
+  value,
   missing = false,
 }: {
   employeeId: string;
   employeeName: string;
   field: EmployeeFieldKey;
-  value: FragmentType<EmployeeValueCell_ValueFragment>;
+  value: EmployeeValueCell_ValueFragment;
   /** Whether an empty value is why Approve leaves the import employee out. */
   missing?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { data: value, complete } = useFragment({
-    fragment: EmployeeValueCell_ValueFragmentDoc,
-    from,
-  });
-  if (!complete) return null;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger

@@ -11,13 +11,13 @@ fragment ImportReviewColumns_importEmployee on ImportEmployee {
   }
   email {
     value
-    ...EmployeeValueCell_value
+    ...EmployeeValueCell_value @unmask
   }
   jobTitle {
-    ...EmployeeValueCell_value
+    ...EmployeeValueCell_value @unmask
   }
   startDate {
-    ...EmployeeValueCell_value
+    ...EmployeeValueCell_value @unmask
   }
   records {
     id

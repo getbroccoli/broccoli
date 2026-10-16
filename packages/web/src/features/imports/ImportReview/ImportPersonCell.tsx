@@ -31,6 +31,8 @@ export function ImportPersonCell({
 }) {
   const { data: employee, complete } = useFragment({
     fragment: ImportPersonCell_ImportEmployeeFragmentDoc,
+    // The document also holds the value cell's fragment it spreads.
+    fragmentName: "ImportPersonCell_importEmployee",
     from,
   });
   // The query that rendered this row has just written the fragment, so it is complete.

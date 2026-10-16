@@ -120,7 +120,7 @@ export function ImportReview() {
         </div>
       }
     >
-      <Toaster position="bottom-center" />
+      <Toaster position="top-center" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           {peopleSources.length > 0 && <SourceChips sources={peopleSources} />}
