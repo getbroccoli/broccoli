@@ -57,6 +57,7 @@ On an instance with `OPENROUTER_API_KEY` set, managed or self-hosted. Without it
 - [ ] A tightly spaced PDF table whose last person has only a name and an email (`tight-sparse-row.pdf` from `packages/api/test/fixtures/pdf/`) shows "2 people"; nobody is named "Avery Abbott Blair Bell".
 - [ ] A PDF of person blocks with a `Printed on: <date>` footer (`block-printed-footer.pdf`) shows "2 people"; Blair Bell has no start date.
 - [ ] A PDF table continued without its header on a page over a full-page letterhead image (`continued-letterhead.pdf`) shows "2 people".
+- [ ] A continuation page over a full-page letterhead image whose rows start in the page's top tenth is refused as a scan; ask for a CSV or Excel export.
 - [ ] A PDF of person blocks with labels without colons (`labels-no-colons.pdf`, `form-no-colons.pdf`) and a two-column organisation chart (`org-two-column.pdf`) each show the red "couldn’t read a table or list of people in it" line; no card appears and nobody is named after an email or a job title.
 - [ ] A `.xls` file, a `.docx` renamed to `.pdf`, an empty `.csv`, a workbook of 11 sheets and a file over 5 MB each show one red line naming the file and the reason; no card appears.
 - [ ] The stock list `no-people-columns.csv` from the eval cases ends as "Couldn’t find a name or email column." with "Retry". A shorter list without stock codes (`Item,Quantity,Price`) may show its items as people without emails: the model reads the item column as names, a known limit of the mapping, and Approve adds none of them.
