@@ -224,3 +224,49 @@ it("keeps a block's labels that start in the top band above the rest of the bloc
     },
   ]);
 });
+
+/** One person's page: three labelled lines and a last line in the bottom band at their spacing. */
+function personPage(name: string, email: string, last: string) {
+  return page([
+    line(130, [`Name: ${name}`]),
+    line(110, [`Email: ${email}`]),
+    line(90, ["Job title: Engineer"]),
+    line(70, [last]),
+  ]);
+}
+
+it("keeps a block's last field set in the bottom band at the block's spacing", () => {
+  expect(
+    pdfSheets([
+      personPage("Avery Abbott", "avery@example.com", "Start date: 01.01.2020"),
+      personPage("Blair Bell", "blair@example.com", "Start date: 02.02.2021"),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title", "Start date"],
+        ["Avery Abbott", "avery@example.com", "Engineer", "01.01.2020"],
+        ["Blair Bell", "blair@example.com", "Engineer", "02.02.2021"],
+      ],
+    },
+  ]);
+});
+
+it("drops a labelled footer with the same value at the block's spacing on every page", () => {
+  expect(
+    pdfSheets([
+      personPage("Avery Abbott", "avery@example.com", "Printed on: 16.10.2026"),
+      personPage("Blair Bell", "blair@example.com", "Printed on: 16.10.2026"),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email", "Job title"],
+        ["Avery Abbott", "avery@example.com", "Engineer"],
+        ["Blair Bell", "blair@example.com", "Engineer"],
+      ],
+    },
+  ]);
+});

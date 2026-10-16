@@ -8,27 +8,17 @@ import type { FileSheet } from "./sheet";
  * the first label that repeats, or at the one-cell unlabelled line above each of them, which then
  * is a first column with an empty header: the person's name. Without a repeating label, three or
  * more labelled lines are one person. Text above the first block is dropped, and so is a line in
- * a page's band below it without a label in any cell, or below all of its page's text outside
- * the bands with a label no line outside the bands has: a footer such as "Printed on: 16.10.2026".
+ * a page's band below it without a label in any cell, and labelled footers (see `withoutFooters`).
  * Other labelled lines are never noise. An unlabelled line directly under a value is the rest of
  * that value, wrapped. Null when there is no block, or when a line below the first is none of
  * these, or repeats a label of its block. Also which pages start a person's block: the pages the
  * list is read from.
  */
 export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: boolean[] } | null {
-  const fields = withWrappedValues(pageLines(pages)).map((line) => ({
-    ...line,
-    field: fieldOf(line.cells),
-  }));
-  const body = fields.filter(({ inBand }) => !inBand);
-  const bodyLabels = new Set(body.flatMap(({ field }) => (field ? [field.label] : [])));
-  const isFooter = ({ field, inBand, page, y }: (typeof fields)[number]) =>
-    inBand &&
-    field !== null &&
-    !bodyLabels.has(field.label) &&
-    body.some((line) => line.page === page) &&
-    body.every((line) => line.page !== page || line.y > y);
-  const lines = fields.filter((line) => !isFooter(line));
+  const lines = withoutFooters(
+    withWrappedValues(pageLines(pages)).map((line) => ({ ...line, field: fieldOf(line.cells) })),
+    pages.length,
+  );
   const labels = lines.flatMap(({ field }) => (field ? [field.label] : []));
   const blockLabel =
     repeatedLabel(labels) ?? (labels.length >= MIN_BLOCK_LINES ? labels[0] : undefined);
@@ -75,6 +65,52 @@ export function readBlocks(pages: PdfPage[]): { sheets: FileSheet[]; pages: bool
     ],
     pages: pages.map((_page, index) => startPages.has(index)),
   };
+}
+
+/**
+ * The lines without labelled footers such as "Printed on: 16.10.2026": a line in a page's band,
+ * below all of its page's other text, whose label no line outside the bands has, and that lies
+ * further below that text than any two lines outside the bands lie apart on one page, or repeats
+ * with the same value in the band of every page of a longer document. A block's field set in a
+ * band continues at the block's line spacing and varies per person.
+ */
+function withoutFooters<
+  Line extends {
+    y: number;
+    page: number;
+    inBand: boolean;
+    field: { label: string; value: string } | null;
+  },
+>(lines: Line[], pageCount: number): Line[] {
+  const body = lines.filter(({ inBand }) => !inBand);
+  const bodyLabels = new Set(body.flatMap(({ field }) => (field ? [field.label] : [])));
+  const bodyGap = Math.max(
+    ...body
+      .slice(1)
+      .map((line, index) => (line.page === body[index]!.page ? body[index]!.y - line.y : 0)),
+  );
+  const pagesOf = new Map<string, Set<number>>();
+  for (const { field, inBand, page } of lines) {
+    if (inBand && field !== null) {
+      const key = JSON.stringify(field);
+      pagesOf.set(key, (pagesOf.get(key) ?? new Set()).add(page));
+    }
+  }
+  /** Below every line outside the bands on its page, by more than `gap`. */
+  const isBelowBody = ({ page, y }: Line, gap: number) =>
+    body.some((line) => line.page === page) &&
+    body.every((line) => line.page !== page || line.y - y > gap);
+  const isOnEveryPage = ({ field }: Line) =>
+    pageCount > 1 && pagesOf.get(JSON.stringify(field))?.size === pageCount;
+  return lines.filter(
+    (line) =>
+      !(
+        line.inBand &&
+        line.field !== null &&
+        !bodyLabels.has(line.field.label) &&
+        (isBelowBody(line, bodyGap) || (isBelowBody(line, 0) && isOnEveryPage(line)))
+      ),
+  );
 }
 
 /**
