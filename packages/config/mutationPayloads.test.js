@@ -7,9 +7,9 @@ it("accepts payloads with an error union and without an error field", () => {
   const schema = buildSchema(`
     type Query { ping: String }
     type Mutation { import: ImportMutations! }
-    type ImportMutations { approve: ImportApprovePayload!, skip: ImportPayload! }
+    type ImportMutations { approve: ImportApprovePayload!, skip: ImportMutationPayload! }
     type Import { id: ID! }
-    type ImportPayload { import: Import }
+    type ImportMutationPayload { import: Import }
     type ImportApprovePayload { import: Import, error: ImportApproveError }
     union ImportApproveError = ConflictError
     interface Error { message: String! }

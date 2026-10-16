@@ -33,7 +33,7 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
           ["UNAVAILABLE"],
         ),
       skip: (_parent, _args, context) =>
-        mutationPayload<ResolversTypes["ImportPayload"]>("import", () =>
+        mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
           thenImport(useCases.skipImport(context.getActor())),
         ),
       approve: (_parent, _args, context) =>
@@ -49,7 +49,7 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
           ["CONFLICT"],
         ),
       removeFile: (_parent, { sourceId }, context) =>
-        mutationPayload<ResolversTypes["ImportPayload"]>("import", () =>
+        mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
           thenImport(useCases.files.removeFile(context.getActor(), sourceId)),
         ),
     },

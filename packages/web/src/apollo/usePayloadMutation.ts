@@ -38,9 +38,10 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
 }
 
 /** The variables, required when the mutation has any that are required. */
-type RunOptions<Variables> = Record<string, never> extends Variables
-  ? [options?: { variables?: Variables }]
-  : [options: { variables: Variables }];
+type RunOptions<Variables> =
+  Record<string, never> extends Variables
+    ? [options?: { variables?: Variables }]
+    : [options: { variables: Variables }];
 /** A mutation's payload: the value of its one operation in its one namespace. */
 type PayloadOf<Data> = ValueOf<ValueOf<Data>>;
 type ValueOf<T> = T[Exclude<keyof T, "__typename">];

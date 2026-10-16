@@ -12,11 +12,11 @@ type Query {
 
 type DemoMutations {
   "Deletes every demo record; records people added stay. Owner only."
-  clear: DemoPayload!
+  clear: DemoMutationPayload!
 }
 
 "Demo data after a mutation."
-type DemoPayload {
+type DemoMutationPayload {
   demoData: DemoData
 }
 

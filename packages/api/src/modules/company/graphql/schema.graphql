@@ -24,11 +24,11 @@ input CompanyInput {
 type CompanyMutations {
   "Saves the company's details; completes the company step of setup."
   update(input: CompanyInput!): CompanyUpdatePayload!
-  removeLogo: CompanyPayload!
+  removeLogo: CompanyMutationPayload!
 }
 
 "The company after a mutation that cannot fail in an expected way."
-type CompanyPayload {
+type CompanyMutationPayload {
   company: Company
 }
 

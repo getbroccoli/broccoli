@@ -19,7 +19,7 @@ export function createResolvers(useCases: CompanyUseCases): Resolvers {
           ["INVALID_INPUT"],
         ),
       removeLogo: (_parent, _args, context) =>
-        mutationPayload<ResolversTypes["CompanyPayload"]>("company", async () =>
+        mutationPayload<ResolversTypes["CompanyMutationPayload"]>("company", async () =>
           toGraphql(await useCases.removeLogo(context.getActor())),
         ),
     },

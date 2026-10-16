@@ -6,7 +6,7 @@ import { mutationPayload } from "./mutationPayload";
 it("returns the result under its field on success, with a null error when errors are expected", async () => {
   const company = { id: "company" };
 
-  const withoutErrors = await mutationPayload<CompanyPayload>("company", () =>
+  const withoutErrors = await mutationPayload<CompanyMutationPayload>("company", () =>
     Promise.resolve(company),
   );
   const withErrors = await mutationPayload<CompanyUpdatePayload>(
@@ -40,9 +40,11 @@ it("returns a listed invalid input error with its fields", async () => {
 it("returns a listed conflict error", async () => {
   const error = new ApplicationError("CONFLICT", "Files are still being read.");
 
-  const payload = await mutationPayload<ImportPayload>("import", () => Promise.reject(error), [
-    "CONFLICT",
-  ]);
+  const payload = await mutationPayload<ImportMutationPayload>(
+    "import",
+    () => Promise.reject(error),
+    ["CONFLICT"],
+  );
 
   expect(payload).toEqual({
     error: { __typename: "ConflictError", message: "Files are still being read." },
@@ -60,7 +62,7 @@ it("rethrows an application error whose code is not listed", async () => {
 });
 
 // Payload types as codegen generates them: the changed object, and `error` where it can fail.
-interface CompanyPayload {
+interface CompanyMutationPayload {
   company?: { id: string } | null;
 }
 interface CompanyUpdatePayload {
@@ -71,7 +73,7 @@ interface EmployeePayload {
   employee?: { id: string } | null;
   error?: unknown;
 }
-interface ImportPayload {
+interface ImportMutationPayload {
   import?: Record<string, never> | null;
   error?: unknown;
 }
