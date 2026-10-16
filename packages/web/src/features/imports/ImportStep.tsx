@@ -72,7 +72,7 @@ export function ImportStep() {
           >
             {t(skipping ? "setup.import.skipping" : "setup.import.skip")}
           </Button>
-          {canReview && (
+          {(canReview || reading) && (
             <Link
               to="/setup/import/review"
               disabled={skipping || reading}
