@@ -222,6 +222,24 @@ it("leaves invisible OCR text out while keeping visible text on the same page", 
   expect(pages[0]!.items.map(({ text }) => text)).toEqual(["Visible label"]);
 });
 
+it("leaves invisible OCR text out of an item it shares with visible text", async () => {
+  const bytes = samplePdfFile({
+    pages: [
+      {
+        texts: [
+          { text: ".", x: 40, y: 700 },
+          { text: "Hidden OCR", x: 43, y: 700, invisible: true },
+        ],
+      },
+    ],
+  });
+
+  const pages = await parsePdf(bytes);
+
+  if (!Array.isArray(pages)) throw new Error("The PDF must be readable");
+  expect(pages[0]!.items.map(({ text }) => text.trim())).toEqual(["."]);
+});
+
 it("identifies a PDF that needs a password to open", async () => {
   const bytes = await readFile(
     new URL("../../test/fixtures/pdf/encrypted-refusal.pdf", import.meta.url),

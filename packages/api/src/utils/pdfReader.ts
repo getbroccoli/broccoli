@@ -164,9 +164,11 @@ const IDENTITY: Matrix = [1, 0, 0, 1, 0, 0];
 const INVISIBLE_MODES = new Set([3, 7]);
 
 /**
- * The text items with a visible character. Items come in the order their glyphs were shown, so
- * the glyphs are matched to them character by character, spaces aside. When they do not line
- * up, every item counts as invisible, so a page is never read as text it may not show.
+ * The text items with only their visible characters, so text drawn invisibly, such as an OCR
+ * layer, never reaches the reader even when pdf.js joins it with visible text in one item. Items
+ * come in the order their glyphs were shown, so glyphs are matched to their characters one by
+ * one, spaces aside. When they do not line up, no text counts as visible, so a page is never read
+ * as text it may not show.
  */
 function visibleItems(items: TextItem[], glyphs: Glyph[]): TextItem[] {
   if (glyphs.every(({ visible }) => visible)) {
@@ -176,12 +178,12 @@ function visibleItems(items: TextItem[], glyphs: Glyph[]): TextItem[] {
     [...text.replace(/\s/g, "")].map(() => visible),
   );
   let next = 0;
-  const visible = items.filter((item) => {
-    const length = [...item.str.replace(/\s/g, "")].length;
-    const shown = characters.slice(next, next + length).some(Boolean);
-    next += length;
-    return shown;
-  });
+  const visible = items.map((item) => ({
+    ...item,
+    str: [...item.str]
+      .filter((character) => /\s/.test(character) || characters[next++] === true)
+      .join(""),
+  }));
   return next === characters.length ? visible : [];
 }
 

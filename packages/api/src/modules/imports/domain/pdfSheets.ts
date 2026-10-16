@@ -8,7 +8,12 @@ import type { FileSheet } from "./sheet";
  */
 export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const table = readTable(pages);
-  return table && [{ name: null, rows: [table.header, ...table.pageRows.flat()] }];
+  if (table === null) {
+    return null;
+  }
+  const columns = table.header.map(({ x }) => x);
+  const rows = table.pageLines.flat().map((line) => rowOf(line, columns));
+  return [{ name: null, rows: [table.header.map(({ text }) => text), ...rows] }];
 }
 
 /**
@@ -16,24 +21,29 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
  * 15% of it and its text gives no staff row. One such page refuses the whole file.
  */
 export function hasScannedPage(pages: PdfPage[]): boolean {
-  const pageRows = readTable(pages)?.pageRows ?? [];
+  const table = readTable(pages);
+  const hasStaffRow = (page: number) =>
+    table !== null && (table.pageLines[page] ?? []).some((line) => isStaffRow(line, table.header));
   return pages.some(
     ({ items, imageCoverage }, page) =>
       (imageCoverage > 0 && items.length === 0) ||
-      (imageCoverage >= SCAN_COVERAGE && !(pageRows[page] ?? []).some(isStaffRow)),
+      (imageCoverage >= SCAN_COVERAGE && !hasStaffRow(page)),
   );
 }
 
 /** Less than a scan of a list: a logo, a signature, a stamp. */
 const SCAN_COVERAGE = 0.15;
 
-/** A row with values in two or more columns, unlike a page number or a title. */
-function isStaffRow(row: string[]): boolean {
-  return row.filter((value) => value !== "").length >= 2;
+/**
+ * A line that reads as a row of the table: two or more cells with words or numbers, each
+ * starting at a header column. A title beside a page number, or dots over a scan, is not one.
+ */
+function isStaffRow(line: Cell[], header: Cell[]): boolean {
+  return line.filter(({ text }) => /[\p{L}\p{N}]/u.test(text)).length >= 2 && linesUp(line, header);
 }
 
-/** The table's header row and each page's rows; null when no table is found. */
-function readTable(pages: PdfPage[]): { header: string[]; pageRows: string[][][] } | null {
+/** The table's header and each page's lines below it; null when no table is found. */
+function readTable(pages: PdfPage[]): { header: Cell[]; pageLines: Cell[][][] } | null {
   const pageLines = pages.map(({ items }) => linesOf(items));
   const start = findHeader(pageLines);
   if (start === null) {
@@ -42,14 +52,15 @@ function readTable(pages: PdfPage[]): { header: string[]; pageRows: string[][][]
   const header = pageLines[start.page]![start.line]!;
   const columns = header.map(({ x }) => x);
   const headerRow = header.map(({ text }) => text);
-  const pageRows = pageLines.map((lines, page) => {
+  const linesBelow = pageLines.map((lines, page) => {
     if (page < start.page) return [];
-    const placed = lines.map((line) => rowOf(line, columns));
     const after =
-      page === start.page ? start.line : placed.findIndex((row) => sameRow(row, headerRow));
-    return placed.slice(after + 1);
+      page === start.page
+        ? start.line
+        : lines.findIndex((line) => sameRow(rowOf(line, columns), headerRow));
+    return lines.slice(after + 1);
   });
-  return { header: headerRow, pageRows };
+  return { header, pageLines: linesBelow };
 }
 
 /** Text that reads as one piece: items on one baseline, each the next word of the one before. */

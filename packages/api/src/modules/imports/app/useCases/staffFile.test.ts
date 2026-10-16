@@ -205,6 +205,26 @@ it.for([
       texts: tableTexts().map((text) => ({ ...text, invisible: true })),
     },
   },
+  {
+    name: "an OCR scan whose hidden words touch visible dots",
+    scan: {
+      images: [{ x: 0, y: 0, width: 612, height: 792 }],
+      texts: tableTexts().flatMap((text) => [
+        { text: ".", x: text.x - 3, y: text.y },
+        { ...text, invisible: true },
+      ]),
+    },
+  },
+  {
+    name: "a full-page scan with a title and a page number in its footer",
+    scan: {
+      images: [{ x: 0, y: 0, width: 612, height: 792 }],
+      texts: [
+        { text: "Staff directory", x: 40, y: 20 },
+        { text: "Page 2 of 2", x: 500, y: 20 },
+      ],
+    },
+  },
 ])("refuses $name alone or after a valid table", { timeout: 15_000 }, async ({ scan }) => {
   const alone = samplePdfFile({ pages: [scan] });
   const afterTable = samplePdfFile({ pages: [{ texts: tableTexts() }, scan] });
