@@ -1,0 +1,33 @@
+{
+  "records": [
+    {
+      "firstName": "Lena",
+      "lastName": "Hart",
+      "email": "lena.hart@birch.example",
+      "jobTitle": "HR Generalist",
+      "startDate": "2022-01-14"
+    },
+    {
+      "firstName": "Marcus",
+      "lastName": "Reed",
+      "email": "marcus.reed@birch.example",
+      "jobTitle": "Product Manager",
+      "startDate": "2023-02-28"
+    },
+    {
+      "firstName": "Noor",
+      "lastName": "Patel",
+      "email": "noor.patel@birch.example",
+      "jobTitle": "Customer Success Manager",
+      "startDate": "2024-11-05"
+    },
+    {
+      "firstName": "Evan",
+      "lastName": "Brooks",
+      "email": "evan.brooks@birch.example",
+      "jobTitle": "Data Analyst",
+      "startDate": "2025-12-17"
+    }
+  ],
+  "forbidden": ["B-201", "B-202", "B-203", "B-204"]
+}

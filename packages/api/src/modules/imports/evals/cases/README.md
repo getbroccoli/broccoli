@@ -55,5 +55,11 @@
 - `personio-landscape`: Personio-style English export on a landscape page as a text PDF and its CSV twin, sharing one expected file: five people under a report title, two job titles wrapped onto a second line in their cell, ISO hire dates and an office column that maps to nobody.
 - `name-only-grid`: payroll grid as a text PDF and its CSV twin, sharing one expected file: four people with one `Name` column of "Nachname, Vorname" values, no email, dotted day-first dates.
 - `bamboohr-month-first`: BambooHR-style English report as a text PDF and its CSV twin, sharing one expected file: four people with US month-first hire dates, some with a day above 12, and employee numbers that stay out.
+- `encrypted-owner-only`: BambooHR-style report as a text PDF with an owner password only (copy and print restricted, opens without a password) and its CSV twin, sharing one expected file: four people with US month-first hire dates and employee numbers that stay out.
+- `logo-table`: staff directory as a text PDF with a small logo image and its CSV twin, sharing one expected file: three people under a title and subtitle that stay out.
+- `one-person-letterhead`: workforce export as a text PDF over a full-page letterhead image and its CSV twin, sharing one expected file: one person under the company name and a confidentiality line that stay out.
+- `javascript-openaction`: people report as a text PDF that runs a JavaScript action on opening, and its CSV twin, sharing one expected file: two people from the visible table; the script never runs and the title stays out.
+- `embedded-file`: staff table as a text PDF with an embedded CSV of two other people, and its CSV twin, sharing one expected file: only the two visible people; the attachment's people and file name never reach the model.
+- `external-uri`: workforce export as a text PDF with a web link and a remote go-to action, and its CSV twin, sharing one expected file: two people; nothing is fetched and the title stays out.
 
 Names, roles and departments in the `layout-xlsx-*`, `common-unicode-name` and `injection-xlsx` cases come from The Spreadsheet Guru's Company Employee Example Data, which its publisher allows using in any way; the emails and managers are made up.

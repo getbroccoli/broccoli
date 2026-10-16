@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Carmen",
+      "lastName": "Ito",
+      "email": "carmen.ito@bluebird.example",
+      "jobTitle": "People Partner",
+      "startDate": "2020-06-22"
+    },
+    {
+      "firstName": "Nils",
+      "lastName": "Eriksen",
+      "email": "nils.eriksen@bluebird.example",
+      "jobTitle": "Finance Analyst",
+      "startDate": "2022-10-03"
+    }
+  ],
+  "forbidden": ["Bluebird Workforce Export", "Confidential external reference"]
+}

