@@ -17,7 +17,14 @@ compose() {
 
 case "${1:-}" in
   '') ;;
-  --drop-db) compose down --volumes ;;
+  --drop-db)
+    # Only this checkout's database volume: `down --volumes` would also take other profiles'
+    # volumes, or another checkout's when project names collide.
+    database=$(docker volume ls --quiet --filter "label=org.getbroccoli.checkout=$PWD" \
+      --filter label=com.docker.compose.volume=dev-postgres-data)
+    compose down
+    if [ -n "$database" ]; then docker volume rm $database; fi
+    ;;
   *)
     echo "Usage: pnpm dev [--drop-db]" >&2
     exit 2
