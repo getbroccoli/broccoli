@@ -1,7 +1,7 @@
-import { useMutation } from "@apollo/client/react";
 import { useState } from "react";
 
 import { ClearDemoDataDocument } from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,7 @@ import { t } from "@/i18n";
 /** "Clear demo data" and its confirmation; the banner hides itself once the data is gone. */
 export function ClearDemoDataDialog() {
   const [open, setOpen] = useState(false);
-  const [clearDemoData, { loading, error, reset }] = useMutation(ClearDemoDataDocument, {
+  const [clearDemoData, { loading, error, reset }] = usePayloadMutation(ClearDemoDataDocument, {
     // Every cached page, search and sort of the list held demo people: drop them all, so
     // the list on screen refetches and any other one fetches fresh when it is opened.
     update: (cache) => {

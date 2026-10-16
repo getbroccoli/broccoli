@@ -19,13 +19,21 @@ query ImportStep {
 mutation ReadSlack {
   import {
     readSlack {
-      id
-      sources {
+      import {
         id
-        kind
-        status
-        employeeCount
-        ...FileSourceCard_source
+        sources {
+          id
+          kind
+          status
+          employeeCount
+          ...FileSourceCard_source
+        }
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
@@ -34,13 +42,21 @@ mutation ReadSlack {
 mutation RetryFile($sourceId: ID!) {
   import {
     retryFile(sourceId: $sourceId) {
-      id
-      sources {
+      import {
         id
-        kind
-        status
-        employeeCount
-        ...FileSourceCard_source
+        sources {
+          id
+          kind
+          status
+          employeeCount
+          ...FileSourceCard_source
+        }
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
@@ -49,13 +65,15 @@ mutation RetryFile($sourceId: ID!) {
 mutation RemoveFile($sourceId: ID!) {
   import {
     removeFile(sourceId: $sourceId) {
-      id
-      sources {
+      import {
         id
-        kind
-        status
-        employeeCount
-        ...FileSourceCard_source
+        sources {
+          id
+          kind
+          status
+          employeeCount
+          ...FileSourceCard_source
+        }
       }
     }
   }
@@ -64,7 +82,9 @@ mutation RemoveFile($sourceId: ID!) {
 mutation SkipImport {
   import {
     skip {
-      id
+      import {
+        id
+      }
     }
   }
 }

@@ -8,8 +8,10 @@ query DemoData {
 mutation ClearDemoData {
   demo {
     clear {
-      id
-      isPresent
+      demoData {
+        id
+        isPresent
+      }
     }
   }
 }

@@ -19,7 +19,7 @@
       "src/lib/postJson"
     ],
     "src/features/company": [],
-    "src/features/demo": ["src/__generated__", "src/components/ui", "src/i18n"],
+    "src/features/demo": ["src/__generated__", "src/apollo", "src/components/ui", "src/i18n"],
     "src/features/employees": [
       "src/__generated__",
       "src/components/dataTable",
@@ -31,6 +31,7 @@
     ],
     "src/features/imports": [
       "src/__generated__",
+      "src/apollo",
       "src/components/dataTable",
       "src/components/ui",
       "src/features/employees",
@@ -43,6 +44,7 @@
     ],
     "src/features/setup": [
       "src/__generated__",
+      "src/apollo",
       "src/components/form",
       "src/components/ui",
       "src/features/company",
