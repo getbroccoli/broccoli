@@ -25,13 +25,33 @@
     "test:e2e": "turbo run test:e2e",
     "format": "prettier --write . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
     "format:check": "prettier --check . --ignore-path .gitignore --ignore-path packages/config/.prettierignore",
-    "check": "pnpm format:check && turbo run lint typecheck test",
+    "duplicates": "jscpd packages/api/src packages/web/src",
+    "check": "pnpm format:check && pnpm duplicates && turbo run lint typecheck test",
     "codegen": "turbo run codegen",
     "postinstall": "pnpm codegen"
   },
   "devDependencies": {
     "@broccoli/config": "workspace:*",
+    "jscpd": "5.4.0",
     "prettier": "3.9.9",
     "turbo": "2.11.7"
+  },
+  "jscpd": {
+    "minTokens": 70,
+    "format": [
+      "typescript",
+      "tsx"
+    ],
+    "ignore": [
+      "**/*.test.ts",
+      "**/*.gen.ts",
+      "**/__generated__/**",
+      "**/components/ui/**"
+    ],
+    "reporters": [
+      "console"
+    ],
+    "threshold": 0,
+    "exitCode": 1
   }
 }

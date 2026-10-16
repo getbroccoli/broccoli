@@ -128,7 +128,7 @@ Kysely with generated types and Prisma were considered. Drizzle was chosen for a
 - Packages live under `packages/`: `api`, `web`, `updater`, `scripts` and shared packages, which are added when there is code to share.
 - The repository root stays short ([RULE8](code-quality.md#modules-and-files)): the workspace files, the Compose file and `.env.example` are the tool files there.
 - **Builds.** The web app builds with Vite and the API with tsdown, so TypeScript resolves imports like a bundler, which is what lets imports follow [RULE2](code-quality.md#modules-and-files).
-- **ESLint** (typescript-eslint, import rules from `importRules.json` through `eslint-plugin-boundaries`, `@graphql-eslint` for the web app's GraphQL documents) and **Prettier**.
+- **ESLint** (typescript-eslint, import rules from `importRules.json` through `eslint-plugin-boundaries`, `@graphql-eslint` for the web app's GraphQL documents) and **Prettier**. **jscpd** fails `pnpm check` on code repeated outside tests.
 - **Scripts** are kept to a minimum: `packages/scripts/dev.sh` and `packages/scripts/prune.mjs`. Everything else is a pnpm script or a Compose file. New scripts are added only for a demonstrated need.
 - **CI** on GitHub Actions: format, lint and type check; unit tests; end-to-end tests against a Postgres service; secret scanning. Jobs that need Docker services run on self-hosted runners inside a container and reach services by hostname, never through host ports.
 

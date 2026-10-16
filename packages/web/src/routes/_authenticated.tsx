@@ -1,5 +1,6 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
+import { requireSetupStep } from "@/features/setup";
 import { AppShell } from "@/shell";
 
 /**
@@ -7,18 +8,7 @@ import { AppShell } from "@/shell";
  * the app shell.
  */
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: ({ context: { me, setupStep }, location }) => {
-    if (!me) {
-      throw redirect({ to: "/login", search: { redirect: location.href }, replace: true });
-    }
-    if (setupStep === "COMPANY") {
-      throw redirect({ to: "/setup/company", replace: true });
-    }
-    if (setupStep === "IMPORT") {
-      throw redirect({ to: "/setup/import", replace: true });
-    }
-    return { me };
-  },
+  beforeLoad: (gate) => ({ me: requireSetupStep("DONE", gate) }),
   component: () => (
     <AppShell>
       <Outlet />

@@ -19,6 +19,8 @@ export interface AuthConfig {
   logger: Logger;
 }
 
+// Better Auth infers its API from the options, which no hand-written interface can state.
+// eslint-disable-next-line no-restricted-syntax
 export type Auth = ReturnType<typeof createAuth>;
 
 /** Better Auth with email and password sign-in; nobody can sign up. */

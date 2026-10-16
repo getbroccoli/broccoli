@@ -18,13 +18,17 @@ export type EventHandlers = {
   [Type in EventType]?: (payload: DomainEvents[Type]) => Promise<void>;
 };
 
-export type EventBus = ReturnType<typeof createEventBus>;
-
 /**
  * Delivers events to the handlers of every module, in process. Events are
  * dispatched after the transaction that published them commits.
  */
-export function createEventBus(logger: Logger) {
+export interface EventBus {
+  subscribe(handlers: EventHandlers): void;
+  /** Runs each subscribed handler in turn; a failing handler is logged, never thrown. */
+  dispatch(events: readonly DomainEvent[]): Promise<void>;
+}
+
+export function createEventBus(logger: Logger): EventBus {
   const subscriptions: EventHandlers[] = [];
 
   async function deliver({ type, payload }: DomainEvent): Promise<void> {
@@ -40,12 +44,11 @@ export function createEventBus(logger: Logger) {
   }
 
   return {
-    subscribe(handlers: EventHandlers): void {
+    subscribe(handlers) {
       subscriptions.push(handlers);
     },
 
-    /** Runs each subscribed handler in turn; a failing handler is logged, never thrown. */
-    async dispatch(events: readonly DomainEvent[]): Promise<void> {
+    async dispatch(events) {
       for (const event of events) {
         await deliver(event);
       }

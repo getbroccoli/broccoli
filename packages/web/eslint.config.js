@@ -18,7 +18,7 @@ export default defineConfig(
   },
   {
     // Route guards throw TanStack Router's redirect, which narrows the route context.
-    files: ["src/routes/**"],
+    files: ["src/routes/**", "src/features/setup/requireSetupStep.ts"],
     rules: {
       "@typescript-eslint/only-throw-error": [
         "error",

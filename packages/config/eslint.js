@@ -29,6 +29,20 @@ export function eslintConfig(packageDir) {
           "error",
           { max: MAX_LINES_PER_FILE, skipBlankLines: true, skipComments: true },
         ],
+        // RULE1 and RULE10 in docs/code-quality.md.
+        "no-restricted-syntax": [
+          "error",
+          {
+            selector: "ExportAllDeclaration",
+            message: "List each export by name, so index.ts states the module's contract.",
+          },
+          {
+            selector:
+              "ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeReference[typeName.name='ReturnType']",
+            message:
+              "Declare the contract as an exported interface and have the factory return it.",
+          },
+        ],
       },
     },
     {
