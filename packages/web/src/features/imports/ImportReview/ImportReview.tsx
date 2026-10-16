@@ -3,7 +3,11 @@ import { ArrowLeft, MagnifyingGlass, UserCircle, WarningCircle } from "@phosphor
 import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
-import { ApproveImportDocument, ImportReviewDocument } from "@/__generated__/graphql";
+import {
+  ApproveImportDocument,
+  type ImportCheckKind,
+  ImportReviewDocument,
+} from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import {
   DataTable,
@@ -12,33 +16,37 @@ import {
   TableState,
 } from "@/components/dataTable";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { type EmployeeListSearch, toEmployeeListVariables } from "@/features/employees";
+import { Toaster } from "@/components/ui/sonner";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
 
 import { IMPORT_REVIEW_COLUMNS, useImportReviewRows } from "./importReviewColumns";
+import { type ImportReviewSearch, toImportReviewVariables } from "./importReviewSearch";
 import { ApproveNote } from "./ApproveNote";
+import { CheckFilterLine } from "./CheckFilterLine";
 import { SourceChips } from "./SourceChips";
+import { ThingsToCheck } from "./ThingsToCheck";
 
 /**
- * The setup review step: everyone the import found, read-only, and Approve. Approve
- * adds the ready people; the router then reloads and routing sends the owner on.
+ * The setup review step: one row per import employee, where the owner settles what the
+ * sources disagree on, fixes values and leaves people out, then approves. Approve adds
+ * the ready ones; the router then reloads and routing sends the owner on.
  */
 export function ImportReview() {
   const router = useRouter();
   const search = useSearch({ from: "/setup/import_/review" });
   const navigate = useNavigate({ from: "/setup/import/review" });
   const writeSearch = useCallback(
-    (patch: Partial<EmployeeListSearch>, replace: boolean) =>
+    (patch: Partial<ImportReviewSearch>, replace: boolean) =>
       void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
     [navigate],
   );
   const { data, previousData, error, loading, refetch } = useQuery(
     ImportReviewDocument,
     // Sources change on the import page: show the cache, then refresh it on entry.
-    { variables: toEmployeeListVariables(search), fetchPolicy: "cache-and-network" },
+    { variables: toImportReviewVariables(search), fetchPolicy: "cache-and-network" },
   );
   const list = useListPage({
     search,
@@ -54,10 +62,14 @@ export function ImportReview() {
     approveImport,
     { loading: approving, error: approveError, payloadError: approveConflict },
   ] = usePayloadMutation(ApproveImportDocument);
-  const readyCount = (data ?? previousData)?.import.readyEmployeeCount ?? 0;
+  const current = (data ?? previousData)?.import;
+  const readyCount = current?.readyEmployeeCount ?? 0;
+  const totalCount = current?.employeeCount ?? 0;
+  const checks = current?.checks ?? [];
   const peopleSources = sources.filter(({ employeeCount }) => employeeCount > 0);
-  const totalCount = sources.reduce((total, { employeeCount }) => total + employeeCount, 0);
-  const leftOutCount = totalCount - readyCount;
+  const incompleteCount = countOf(checks, "INCOMPLETE");
+  const uncheckedCount = countOf(checks, "CONFLICT");
+  const leftOutCount = totalCount - readyCount - incompleteCount;
 
   const approve = async () => {
     try {
@@ -84,7 +96,14 @@ export function ImportReview() {
             {t("setup.review.back")}
           </Link>
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {data && <ApproveNote readyCount={readyCount} leftOutCount={leftOutCount} />}
+            {data && (
+              <ApproveNote
+                readyCount={readyCount}
+                leftOutCount={leftOutCount}
+                incompleteCount={incompleteCount}
+                uncheckedCount={uncheckedCount}
+              />
+            )}
             {readyCount > 0 && (
               <Button
                 type="button"
@@ -101,8 +120,15 @@ export function ImportReview() {
         </div>
       }
     >
+      <Toaster position="bottom-center" />
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {peopleSources.length > 0 && <SourceChips sources={peopleSources} />}
+        <div className="flex flex-wrap items-center gap-3">
+          {peopleSources.length > 0 && <SourceChips sources={peopleSources} />}
+          <ThingsToCheck
+            checks={checks}
+            onShow={(check) => writeSearch({ check, after: undefined }, false)}
+          />
+        </div>
         <TableSearchField
           query={search.q}
           onQueryChange={list.changeQuery}
@@ -111,6 +137,13 @@ export function ImportReview() {
           maxLength={SEARCH_MAX_LENGTH}
         />
       </div>
+      {search.check && (
+        <CheckFilterLine
+          checkId={search.check}
+          open={checks.some(({ id }) => id === search.check)}
+          onShowEveryone={() => writeSearch({ check: undefined, after: undefined }, false)}
+        />
+      )}
       <DataTable
         columns={IMPORT_REVIEW_COLUMNS}
         rows={rows}
@@ -184,6 +217,13 @@ function approveLabel({
   return readyCount === 1
     ? t("setup.review.approveOne")
     : t("setup.review.approve", { count: String(readyCount) });
+}
+
+function countOf(
+  checks: { kind: ImportCheckKind; count: number }[],
+  kind: ImportCheckKind,
+): number {
+  return checks.filter((check) => check.kind === kind).reduce((sum, { count }) => sum + count, 0);
 }
 
 /** "60 people", or "Showing 6 of 60 people" for a search whose matches fit on one page. */

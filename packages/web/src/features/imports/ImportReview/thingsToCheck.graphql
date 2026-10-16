@@ -1,0 +1,31 @@
+fragment ThingsToCheck_check on ImportCheck {
+  id
+  kind
+  count
+  field
+  reason
+  sources {
+    id
+    name
+  }
+}
+
+mutation ChooseSourceForAll($field: ImportEmployeeField!, $sourceId: ID!) {
+  import {
+    chooseSourceForAll(field: $field, sourceId: $sourceId) {
+      import {
+        id
+      }
+    }
+  }
+}
+
+mutation LeaveOutIncomplete($reason: ImportEmployeeIncompleteReason!) {
+  import {
+    leaveOutIncomplete(reason: $reason) {
+      import {
+        id
+      }
+    }
+  }
+}

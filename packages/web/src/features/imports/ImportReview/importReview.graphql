@@ -1,12 +1,24 @@
-query ImportReview($first: Int, $after: String, $orderBy: EmployeeOrder, $filter: EmployeeFilter) {
+query ImportReview(
+  $first: Int
+  $after: String
+  $orderBy: EmployeeOrder
+  $filter: ImportEmployeeFilter
+) {
   import {
     id
+    employeeCount
     readyEmployeeCount
     sources {
       id
       status
       employeeCount
       ...SourceChips_source
+    }
+    checks {
+      id
+      kind
+      count
+      ...ThingsToCheck_check
     }
     employees(first: $first, after: $after, orderBy: $orderBy, filter: $filter) {
       edges {

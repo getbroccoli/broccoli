@@ -1,0 +1,18 @@
+mutation ChooseEmployeeValue($input: ImportChooseEmployeeValueInput!) {
+  import {
+    chooseEmployeeValue(input: $input) {
+      import {
+        id
+      }
+      error {
+        __typename
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}

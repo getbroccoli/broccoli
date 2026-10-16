@@ -1,13 +1,30 @@
 fragment ImportReviewColumns_importEmployee on ImportEmployee {
   id
-  ...ImportPersonCell_importEmployee
-  email
-  jobTitle
-  startDate
+  leftOut
   incompleteReason
-  source {
+  ...ImportPersonCell_importEmployee
+  firstName {
+    value
+  }
+  lastName {
+    value
+  }
+  email {
+    value
+    ...EmployeeValueCell_value
+  }
+  jobTitle {
+    ...EmployeeValueCell_value
+  }
+  startDate {
+    ...EmployeeValueCell_value
+  }
+  records {
     id
-    kind
-    name
+    source {
+      id
+      kind
+      name
+    }
   }
 }

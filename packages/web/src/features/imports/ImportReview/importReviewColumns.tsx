@@ -6,15 +6,17 @@ import {
   type ImportReviewColumns_ImportEmployeeFragment,
 } from "@/__generated__/graphql";
 import type { DataTableColumn } from "@/components/dataTable";
-import { t } from "@/i18n";
 import { type SortKey } from "@/features/employees";
-import { formatCalendarDate } from "@/lib/formatDate";
+import { t } from "@/i18n";
 
+import { EmployeeMenu } from "./EmployeeMenu";
+import { employeeNameOf } from "./employeeFields";
+import { EmployeeValueCell } from "./EmployeeValueCell";
 import { ImportPersonCell } from "./ImportPersonCell";
-import { NotSet } from "./NotSet";
-import { SourceIcon } from "./SourceIcon";
+import { LeftOutCell } from "./LeftOutCell";
+import { SourceStack } from "./SourceStack";
 
-/** A row of the review: one import employee as its source proposes it. */
+/** A row of the review: one import employee, from one source or more. */
 export type ImportReviewRow = ImportReviewColumns_ImportEmployeeFragment;
 
 export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] = [
@@ -23,43 +25,80 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     header: t("setup.review.column.person"),
     sortKey: "name",
     className: "w-[28%] min-w-48 max-w-0",
-    cell: (person) => <ImportPersonCell person={person} />,
+    cell: (employee) => (
+      <LeftOutCell leftOut={employee.leftOut}>
+        <ImportPersonCell employee={employee} />
+      </LeftOutCell>
+    ),
   },
   {
     id: "email",
     header: t("setup.review.column.email"),
     sortKey: "email",
-    className: "w-[26%] min-w-48 max-w-0 truncate",
-    cell: ({ email, incompleteReason }) =>
-      email ?? <NotSet missing={incompleteReason === "EMAIL"} />,
+    className: "w-[24%] min-w-48 max-w-0",
+    cell: (employee) => (
+      <LeftOutCell leftOut={employee.leftOut}>
+        <EmployeeValueCell
+          employeeId={employee.id}
+          employeeName={nameOf(employee)}
+          field="email"
+          value={employee.email}
+          missing={employee.incompleteReason === "EMAIL"}
+        />
+      </LeftOutCell>
+    ),
   },
   {
     id: "jobTitle",
     header: t("setup.review.column.jobTitle"),
-    className: "w-[18%] min-w-36 max-w-0 truncate",
-    cell: ({ jobTitle }) => jobTitle ?? <NotSet />,
+    className: "w-[18%] min-w-36 max-w-0",
+    cell: (employee) => (
+      <LeftOutCell leftOut={employee.leftOut}>
+        <EmployeeValueCell
+          employeeId={employee.id}
+          employeeName={nameOf(employee)}
+          field="jobTitle"
+          value={employee.jobTitle}
+        />
+      </LeftOutCell>
+    ),
   },
   {
     id: "startDate",
     header: t("setup.review.column.startDate"),
     sortKey: "startDate",
-    className: "w-[13%] min-w-28",
-    cell: ({ startDate }) =>
-      startDate ? (
-        <span className="text-foreground/80 tabular-nums">{formatCalendarDate(startDate)}</span>
-      ) : (
-        <NotSet />
-      ),
+    className: "w-[14%] min-w-32",
+    cell: (employee) => (
+      <LeftOutCell leftOut={employee.leftOut}>
+        <EmployeeValueCell
+          employeeId={employee.id}
+          employeeName={nameOf(employee)}
+          field="startDate"
+          value={employee.startDate}
+        />
+      </LeftOutCell>
+    ),
   },
   {
-    id: "source",
-    header: t("setup.review.column.source"),
-    className: "w-[15%] min-w-36 max-w-0",
-    cell: ({ source }) => (
-      <span className="flex items-center gap-1.5 truncate text-muted-foreground">
-        <SourceIcon kind={source.kind} />
-        <span className="truncate">{source.name}</span>
-      </span>
+    id: "sources",
+    header: t("setup.review.column.sources"),
+    className: "w-[12%] min-w-28",
+    cell: (employee) => (
+      <LeftOutCell leftOut={employee.leftOut}>
+        <SourceStack sources={sourcesOf(employee)} />
+      </LeftOutCell>
+    ),
+  },
+  {
+    id: "menu",
+    header: "",
+    className: "w-12",
+    cell: (employee) => (
+      <EmployeeMenu
+        employeeId={employee.id}
+        employeeName={nameOf(employee)}
+        leftOut={employee.leftOut}
+      />
     ),
   },
 ];
@@ -69,13 +108,22 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
  * the first page loads, so the table shows its skeleton.
  */
 export function useImportReviewRows(
-  people: FragmentType<ImportReviewColumns_ImportEmployeeFragment>[] | undefined,
+  employees: FragmentType<ImportReviewColumns_ImportEmployeeFragment>[] | undefined,
 ): ImportReviewRow[] | undefined {
   const { data, complete } = useFragment({
     fragment: ImportReviewColumns_ImportEmployeeFragmentDoc,
-    // The document also holds the person cell's fragment it spreads.
+    // The document also holds the fragments of the cells it spreads.
     fragmentName: "ImportReviewColumns_importEmployee",
-    from: people ?? [],
+    from: employees ?? [],
   });
-  return people && complete ? data : undefined;
+  return employees && complete ? data : undefined;
+}
+
+function nameOf({ firstName, lastName }: ImportReviewRow): string {
+  return employeeNameOf(firstName.value, lastName.value);
+}
+
+/** The distinct sources of the import employee's records, in their order. */
+function sourcesOf({ records }: ImportReviewRow) {
+  return [...new Map(records.map(({ source }) => [source.id, source])).values()];
 }
