@@ -14,17 +14,65 @@ test("advances to import when the owner names the company", async ({ env }) => {
   });
 
   const saved = await browser.graphql(`
-    mutation { company { update(input: { name: "Example Ltd" }) { id name } } }
+    mutation { company { update(input: { name: "Example Ltd" }) { company { id name } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }
   `);
 
   expect(saved.status).toBe(200);
   expect(await saved.json()).toEqual({
     data: {
-      company: { update: { id: "company", name: "Example Ltd" } },
+      company: { update: { company: { id: "company", name: "Example Ltd" }, error: null } },
     },
   });
   const after = await browser.graphql("query { setup { id step } }");
   expect(await after.json()).toEqual({ data: { setup: { id: "instance", step: "IMPORT" } } });
+});
+
+test("returns invalid company input in the mutation payload", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+
+  const response = await browser.graphql(`
+    mutation {
+      company {
+        update(input: { name: "" }) {
+          company { id }
+          error {
+            __typename
+            ... on Error { message }
+            ... on InvalidInputError { fields { field code } }
+          }
+        }
+      }
+    }
+  `);
+
+  expect(await response.json()).toEqual({
+    data: {
+      company: {
+        update: {
+          company: null,
+          error: {
+            __typename: "InvalidInputError",
+            message: "The input is invalid.",
+            fields: [{ field: "name", code: "required" }],
+          },
+        },
+      },
+    },
+  });
+});
+
+test("removes the company logo through the mutation payload", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const uploaded = await browser.put("/api/company/logo", logo);
+  expect(uploaded.status).toBe(200);
+
+  const response = await browser.graphql(`
+    mutation { company { removeLogo { company { id logoUrl } } } }
+  `);
+
+  expect(await response.json()).toEqual({
+    data: { company: { removeLogo: { company: { id: "company", logoUrl: null } } } },
+  });
 });
 
 test("serves the looked-up logo to the owner with private caching", async () => {

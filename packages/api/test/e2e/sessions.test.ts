@@ -13,7 +13,7 @@ import {
 
 const createMutation = `
   mutation CreateEmployee($input: EmployeeCreateInput!) {
-    employee { create(input: $input) { id } }
+    employee { create(input: $input) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }
   }
 `;
 
