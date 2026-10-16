@@ -1,18 +1,28 @@
-import type { PdfPage, PdfTextItem } from "../../../utils";
+import type { PdfPage } from "../../../utils";
+import { blockSheets, fieldOf, repeatedLabel } from "./pdfBlocks";
+import { type Cell, pageLines, texts } from "./pdfLines";
 import type { FileSheet } from "./sheet";
 
 /**
- * A PDF's staff tables as sheets; null when no table is found, or when a line below the first
- * header is none of a header, a row, a total, a sub-heading, a running title or a page's band
- * text: then part of the staff content could not be read, and none of it is. A table starts at a line of two or
- * more cells that the next line's cells line up with. Text above the first one is dropped, and so
- * is a one-cell sub-heading above a later one. On each later page, the text above the first line
- * of the table, such as a running title or a repeated header, is dropped too. Tables with equal
- * header texts join into one sheet: one sheet has no name, several are "Table 1", "Table 2", ….
+ * A PDF's staff tables as sheets, or, in a PDF without a table, its person blocks as one sheet;
+ * null when neither is found, or when a line below the first header is none of a header, a row,
+ * a total, a sub-heading, a running title or a page's band text: then part of the staff content
+ * could not be read, and none of it is. A table starts at a line of two or more cells that the
+ * next line's cells line up with. Text above the first one is dropped, and so is a one-cell
+ * sub-heading above a later one. On each later page, the text above the first line of the table,
+ * such as a running title or a repeated header, is dropped too. Tables with equal header texts
+ * join into one sheet: one sheet has no name, several are "Table 1", "Table 2", …. A table beside
+ * person blocks, a label repeated outside the page bands, is refused: the blocks would be left out.
  */
 export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const read = readTables(pages);
-  if (read === null || !read.complete) {
+  if (read === null) {
+    return blockSheets(pages);
+  }
+  const bodyLabels = pageLines(pages)
+    .filter(({ inBand }) => !inBand)
+    .flatMap(({ cells }) => fieldOf(cells)?.label ?? []);
+  if (!read.complete || repeatedLabel(bodyLabels) !== undefined) {
     return null;
   }
   const sheets = new Map<string, string[][]>();
@@ -95,14 +105,7 @@ interface Table {
 function readTables(
   pages: PdfPage[],
 ): { tables: Table[]; textPages: boolean[]; complete: boolean } | null {
-  const lines = pages.flatMap(({ items, height }, page) =>
-    linesOf(items).map(({ cells, y }) => ({
-      cells,
-      page,
-      inTopQuarter: y > height * 0.75,
-      inBand: y > height * (1 - BAND) || y < height * BAND,
-    })),
-  );
+  const lines = pageLines(pages);
   const runningTexts = repeatedOnPages(lines);
   const bandTexts = repeatedInBands(lines);
   let complete = true;
@@ -178,9 +181,6 @@ function readTables(
   return tables.length > 0 ? { tables, textPages, complete } : null;
 }
 
-/** A page's top and bottom share where running headers, footers and page numbers sit. */
-const BAND = 0.1;
-
 /** Band lines found on more than one page once their digits are dropped: "Seite 2 von 3". */
 function repeatedInBands(lines: { cells: Cell[]; page: number; inBand: boolean }[]): Set<string> {
   const pagesOf = new Map<string, Set<number>>();
@@ -228,66 +228,12 @@ function isHeader(line: Cell[], next: Cell[] | undefined): boolean {
   return line.length >= 2 && next !== undefined && next.length >= 2 && linesUp(next, line);
 }
 
-function texts(line: Cell[]): string[] {
-  return line.map(({ text }) => text);
-}
-
 function isRepeatedHeader(line: Cell[], header: Cell[]): boolean {
   const columns = header.map(({ x }) => x);
   return sameRow(
     rowOf(line, columns),
     header.map(({ text }) => text),
   );
-}
-
-/** Text that reads as one piece: items on one baseline, each the next word of the one before. */
-interface Cell {
-  text: string;
-  x: number;
-  end: number;
-  /** How far a neighbour may be and still count as close: the text's height. */
-  tolerance: number;
-}
-
-/** A page's lines, top to bottom, each its cells left to right and its baseline. */
-function linesOf(items: PdfTextItem[]): { cells: Cell[]; y: number }[] {
-  const lines: PdfTextItem[][] = [];
-  for (const item of items.toSorted((a, b) => b.y - a.y)) {
-    const line = lines.at(-1);
-    if (line && Math.abs(line[0]!.y - item.y) <= item.height / 2) {
-      line.push(item);
-    } else {
-      lines.push([item]);
-    }
-  }
-  return lines.map((line) => ({ cells: cellsOf(line), y: line[0]!.y }));
-}
-
-function cellsOf(line: PdfTextItem[]): Cell[] {
-  const cells: Cell[] = [];
-  for (const item of line.toSorted((a, b) => a.x - b.x)) {
-    const cell = cells.at(-1);
-    if (cell && isNextWord(item.x - cell.end, item.height)) {
-      cell.text = `${cell.text} ${item.text.trim()}`;
-      cell.end = item.x + item.width;
-    } else {
-      cells.push({
-        text: item.text.trim(),
-        x: item.x,
-        tolerance: item.height,
-        end: item.x + item.width,
-      });
-    }
-  }
-  return cells;
-}
-
-/**
- * Close enough to be the next word of the same text. A run that starts well inside the previous
- * one is the next column's text, drawn over a value too long for its column.
- */
-function isNextWord(gap: number, height: number): boolean {
-  return gap > -1 && gap < height;
 }
 
 /** Each cell starts where one of the header's cells starts. */
