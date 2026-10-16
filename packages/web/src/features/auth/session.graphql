@@ -8,5 +8,6 @@ query Session {
     id
     step
     signIn
+    holder
   }
 }
