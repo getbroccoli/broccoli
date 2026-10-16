@@ -39,14 +39,14 @@ Each rule ends with how it is enforced: `lint: <rule>` and `tsc` fail `pnpm chec
 
 - **Q23.** The GraphQL schema is a connected graph: a parent lists its children as a connection, and a child returns its parent as an object, never as a bare id ([architecture §2](architecture.md#2-api)). `review`
 - **Q24.** A mutation returns the object it changed, or its parent. `review`
-- **Q25.** A field resolver that loads related objects batches through a per-request DataLoader (`perRequest`), never one query per parent. `review`
+- **Q25.** A field resolver that loads related objects batches through a per-request DataLoader (`perRequest`), never one query per parent. The exception is a paged connection on a parent (`ImportSource.employees`): one query per parent, so it belongs on types a client lists only a few of. `review`
 - **Q26.** Inside a namespace, `create`, `update` and `delete` cover ordinary record changes; a domain action or a named part gets its own verb (`approve`, `removeLogo`). A name never repeats the namespace's object. `review`
 - **Q27.** A use case reports an expected failure as an `ApplicationError` with one of its codes; field errors go in `extensions`. `review`
 - **Q28.** A list is a Relay connection over a keyset query, built with `core/pagination` and `core/db`. `review`
 
 ## Data, configuration and logs
 
-- **Q29.** `Date` and `DateTime` values stay strings. A calendar `Date` never becomes a JS `Date`; a `DateTime` becomes one only inside display formatting ([architecture §8](architecture.md#8-frontend)). `review`
+- **Q29.** A calendar `Date` is a `YYYY-MM-DD` string end to end and never becomes a JS `Date`. In the web app a `DateTime` stays a string too, and becomes a JS `Date` only inside display formatting; the API turns it into one at the scalar ([architecture §2](architecture.md#2-api), [§8](architecture.md#8-frontend)). `review`
 - **Q30.** Configuration is environment variables parsed with Zod in the package's `env.ts`. A variable for one mode only carries that mode as its prefix (`MANAGED_…`, `SELF_HOSTED_…`). `review`
 - **Q31.** Logs carry identifiers, never contents. A model request goes through `integrations/ai` and carries only what the question needs. `review`
 - **Q32.** Nothing internal: no secrets, no `.env` files, no internal URLs. `review`
