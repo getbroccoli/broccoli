@@ -81,13 +81,15 @@ function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] }
     if (lines[index]!.page !== page) {
       page = lines[index]!.page;
       pageStarted = false;
-      // shortcut: also drops rows of a table that ends above an equal header on this page (layout C
-      // across pages); upgrade when a report has one.
+      // Text above the page's repeated header is a running title, unless a sub-heading sits
+      // directly above that header: then the lines above are rows of the table before it.
+      // shortcut: rows directly above an equal header with no sub-heading are dropped; upgrade
+      // when a report repeats its header mid-page without a heading.
       const repeated = lines.findIndex(
         (line, at) =>
-          at > index && line.page === page && isRepeatedHeader(line.cells, table.header),
+          at >= index && line.page === page && isRepeatedHeader(line.cells, table.header),
       );
-      if (repeated > index) {
+      if (repeated > index && lines[repeated - 1]!.cells.length > 1) {
         index = repeated - 1;
         continue;
       }

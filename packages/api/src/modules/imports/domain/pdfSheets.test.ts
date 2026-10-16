@@ -286,3 +286,21 @@ it("drops a sub-heading above a table with the same columns", () => {
     },
   ]);
 });
+
+it("keeps the rows above a later department's equal header on a continued page", () => {
+  const header = line(760, ["Name", "Email"]);
+  const rows = [
+    ["Avery Stone", "avery@example.com"],
+    ["Robin Reed", "robin@example.com"],
+    ["Morgan Lake", "morgan@example.com"],
+  ];
+  const second = [
+    header,
+    line(740, rows[1]!),
+    line(720, ["Research"]),
+    line(700, ["Name", "Email"]),
+  ];
+  expect(
+    pdfSheets([page([header, line(740, rows[0]!)]), page([...second, line(680, rows[2]!)])]),
+  ).toEqual([{ name: null, rows: [["Name", "Email"], ...rows] }]);
+});
