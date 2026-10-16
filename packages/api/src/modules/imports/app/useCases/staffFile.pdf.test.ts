@@ -70,3 +70,65 @@ it.for(["encrypted-owner-only", "logo-table", "one-person-letterhead"])(
     expect(await readStaffFile(pdf)).toEqual([{ name: null, rows }]);
   },
 );
+
+it("reads one labelled person per page with family names first", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/datev-personaldaten-blocks.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Personalnummer", "Tätigkeit", "Eintritt"],
+        ["Müller, Anna", "61021", "Sachbearbeiterin", "12.03.2021"],
+        ["Krause, Benedikt", "61022", "Lagerleiter", "27.08.2022"],
+        ["Yilmaz, Cem", "61023", "IT-Administrator", "04.11.2023"],
+      ],
+    },
+  ]);
+});
+
+it("keeps every person's identical job title and location in page blocks", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/same-title-page-blocks.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["", "Job title", "Location", "Work email", "Start"],
+        [
+          "Sanne Bauer",
+          "Site Coordinator",
+          "Rotterdam Office",
+          "sanne.bauer@cobalt.example",
+          "05.01.2021",
+        ],
+        [
+          "Luis Marin",
+          "Site Coordinator",
+          "Rotterdam Office",
+          "luis.marin@cobalt.example",
+          "18.04.2022",
+        ],
+        [
+          "Eva Kovac",
+          "Site Coordinator",
+          "Rotterdam Office",
+          "eva.kovac@cobalt.example",
+          "29.09.2023",
+        ],
+      ],
+    },
+  ]);
+});
+
+it("refuses a block list with side-by-side blocks on a later page", async () => {
+  const pdf = await readFile(
+    new URL("../../../../../test/fixtures/pdf/blocks-and-columns.pdf", import.meta.url),
+  );
+
+  expect(await readStaffFile(pdf)).toBe("no_table");
+});
