@@ -1,4 +1,5 @@
-import { parseCsv, parseXlsx } from "../../../utils";
+import { csvSheet } from "./csvSheet";
+import { excelWorkbook, isExcelWorkbook } from "./excelWorkbook";
 
 /** A file's rows of cells, as they came; rows may differ in length. */
 export type Sheet = readonly (readonly string[])[];
@@ -42,20 +43,3 @@ const MAX_ROWS = 10_000;
 const MAX_COLUMNS = 100;
 /** Each sheet is mapped on its own, so this bounds the model calls of one file. */
 const MAX_SHEETS = 10;
-/** Every Excel workbook is a ZIP archive, which starts with this signature. */
-const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
-
-function isExcelWorkbook(bytes: Uint8Array): boolean {
-  return ZIP_SIGNATURE.every((byte, index) => bytes[index] === byte);
-}
-
-/** The workbook's visible sheets, each with its name; null when it cannot be read. */
-function excelWorkbook(bytes: Uint8Array): Promise<FileSheet[] | null> {
-  return parseXlsx(bytes);
-}
-
-/** A CSV file as one sheet without a name; null when it is not text. */
-function csvSheet(bytes: Uint8Array): FileSheet[] | null {
-  const rows = parseCsv(bytes);
-  return rows === null ? null : [{ name: null, rows }];
-}
