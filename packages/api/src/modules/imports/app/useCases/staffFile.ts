@@ -55,17 +55,18 @@ function readSheets(
   }
 }
 
-type PdfRefusal = "scanned_pdf" | "encrypted_pdf";
+type PdfRefusal = "scanned_pdf" | "encrypted_pdf" | "no_table";
 
 /**
- * The PDF's table as one sheet without a name, or why it is refused: a password or a scanned
- * page. Null when it cannot be read or has no table.
+ * The PDF's tables as sheets, or why it is refused: a password, a scanned page, or no table or
+ * staff content that cannot be read in full. Null when it cannot be read.
  */
 async function pdfTable(bytes: Uint8Array): Promise<FileSheet[] | PdfRefusal | null> {
   const pages = await parsePdf(bytes);
   if (pages === "encrypted") return "encrypted_pdf";
   if (pages && hasScannedPage(pages)) return "scanned_pdf";
-  return pages && pdfSheets(pages);
+  if (pages === null) return null;
+  return pdfSheets(pages) ?? "no_table";
 }
 
 /** A CSV file as one sheet without a name; null when it is not text. */

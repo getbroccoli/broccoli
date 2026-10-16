@@ -141,12 +141,12 @@ it("reads a two-page PDF as one unnamed sheet without its repeated header", asyn
   ]);
 });
 
-it("refuses a text PDF without a table as unsupported", async () => {
+it("refuses a text PDF without a table with no_table", async () => {
   const bytes = samplePdfFile({
     pages: [{ texts: [{ text: "Staff directory", x: 40, y: 760 }] }],
   });
 
-  expect(await readStaffFile(bytes)).toBe("unsupported_file");
+  expect(await readStaffFile(bytes)).toBe("no_table");
 });
 
 it("decides the stored media type from PDF, workbook and CSV content", () => {

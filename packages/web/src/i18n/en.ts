@@ -142,6 +142,8 @@ export const en = {
     "{name}: has pages that are scans or photos. Broccoli reads only PDFs with text. Export the list from your payroll or HR tool as CSV, Excel or PDF instead.",
   "imports.files.encryptedPdf":
     "{name}: is protected by a password. Save a copy without the password and add that.",
+  "imports.files.noTable":
+    "{name}: couldn’t read a table or list of people in it. Export it from your payroll or HR tool as CSV or Excel instead.",
   "imports.files.empty": "{name}: the file is empty.",
   "imports.files.tooManyRows": "{name}: more than 10,000 rows.",
   "imports.files.tooManyColumns": "{name}: more than 100 columns.",

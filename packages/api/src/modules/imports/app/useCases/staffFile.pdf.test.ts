@@ -53,7 +53,6 @@ it("joins department tables and keeps the cost summary in its own named sheet", 
         ["Research", "1", "€72,000"],
         ["Commercial", "2", "€151,000"],
         ["Finance", "1", "€61,000"],
-        ["Total", "6", "€468,000"],
       ],
     },
   ]);

@@ -2,7 +2,9 @@ import type { PdfPage, PdfTextItem } from "../../../utils";
 import type { FileSheet } from "./sheet";
 
 /**
- * A PDF's staff tables as sheets; null when no table is found. A table starts at a line of two or
+ * A PDF's staff tables as sheets; null when no table is found, or when a line below the first
+ * header is none of a header, a row, a total, a sub-heading, a running title or a page's band
+ * text: then part of the staff content could not be read, and none of it is. A table starts at a line of two or
  * more cells that the next line's cells line up with. Text above the first one is dropped, and so
  * is a one-cell sub-heading above a later one. On each later page, the text above the first line
  * of the table, such as a running title or a repeated header, is dropped too. Tables with equal
@@ -10,7 +12,7 @@ import type { FileSheet } from "./sheet";
  */
 export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const read = readTables(pages);
-  if (read === null) {
+  if (read === null || !read.complete) {
     return null;
   }
   const sheets = new Map<string, string[][]>();
@@ -55,6 +57,31 @@ function isStaffRow(line: Cell[], header: Cell[]): boolean {
   return line.filter(({ text }) => /[\p{L}\p{N}]/u.test(text)).length >= 2 && linesUp(line, header);
 }
 
+/** Lines starting with one of these words in their first worded cell are totals, not people. */
+const TOTAL_WORDS = /^(summe|gesamt|totals?|anzahl|subtotals?)\b/iu;
+
+/** A total or subtotal: its first worded cell is a total word, or no cell has a letter. */
+function isTotal(line: Cell[]): boolean {
+  const worded = line.find(({ text }) => /\p{L}/u.test(text));
+  return worded === undefined || TOTAL_WORDS.test(worded.text);
+}
+
+/**
+ * Every cell starts at a column of the header, and none runs over the start of a column that has
+ * no cell of its own in the line, as prose does.
+ */
+function isRow(line: Cell[], header: Cell[]): boolean {
+  const isFilled = (x: number) => line.some((cell) => Math.abs(cell.x - x) <= cell.tolerance);
+  return (
+    linesUp(line, header) &&
+    !line.some((cell) =>
+      header.some(
+        ({ x }) => x > cell.x + cell.tolerance && x < cell.end - cell.tolerance && !isFilled(x),
+      ),
+    )
+  );
+}
+
 /** A table: its header and the lines below it that are its rows. */
 interface Table {
   header: Cell[];
@@ -62,14 +89,23 @@ interface Table {
 }
 
 /**
- * The tables in page order, and which pages show a header with a staff row of its table below
- * it; null when no table is found.
+ * The tables in page order, which pages show a header with a staff row of its table below it, and
+ * whether every line below the first header was read; null when no table is found.
  */
-function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] } | null {
+function readTables(
+  pages: PdfPage[],
+): { tables: Table[]; textPages: boolean[]; complete: boolean } | null {
   const lines = pages.flatMap(({ items, height }, page) =>
-    linesOf(items).map(({ cells, y }) => ({ cells, page, inTopQuarter: y > height * 0.75 })),
+    linesOf(items).map(({ cells, y }) => ({
+      cells,
+      page,
+      inTopQuarter: y > height * 0.75,
+      inBand: y > height * (1 - BAND) || y < height * BAND,
+    })),
   );
   const runningTexts = repeatedOnPages(lines);
+  const bandTexts = repeatedInBands(lines);
+  let complete = true;
   const tables: Table[] = [];
   const textPages = pages.map(() => false);
   let table: Table = { header: [], lines: [] };
@@ -124,12 +160,38 @@ function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] }
       headerPage = page;
       continue;
     }
+    const isBandText =
+      lines[index]!.inBand && (cells.length < 2 || bandTexts.has(withoutDigits(cells)));
+    if (isBandText || isTotal(cells)) {
+      continue;
+    }
+    if (!isRow(cells, table.header)) {
+      complete = false;
+      continue;
+    }
     table.lines.push(cells);
     if (headerPage === page && isStaffRow(cells, table.header)) {
       textPages[page] = true;
     }
   }
-  return tables.length > 0 ? { tables, textPages } : null;
+  return tables.length > 0 ? { tables, textPages, complete } : null;
+}
+
+/** A page's top and bottom share where running headers, footers and page numbers sit. */
+const BAND = 0.1;
+
+/** Band lines found on more than one page once their digits are dropped: "Seite 2 von 3". */
+function repeatedInBands(lines: { cells: Cell[]; page: number; inBand: boolean }[]): Set<string> {
+  const pagesOf = new Map<string, Set<number>>();
+  for (const { cells, page } of lines.filter(({ inBand }) => inBand)) {
+    const text = withoutDigits(cells);
+    pagesOf.set(text, (pagesOf.get(text) ?? new Set()).add(page));
+  }
+  return new Set([...pagesOf].filter(([, pages]) => pages.size > 1).map(([text]) => text));
+}
+
+function withoutDigits(line: Cell[]): string {
+  return JSON.stringify(texts(line)).replace(/\d/gu, "");
 }
 
 /**
@@ -181,6 +243,7 @@ function isRepeatedHeader(line: Cell[], header: Cell[]): boolean {
 interface Cell {
   text: string;
   x: number;
+  end: number;
   /** How far a neighbour may be and still count as close: the text's height. */
   tolerance: number;
 }
@@ -200,7 +263,7 @@ function linesOf(items: PdfTextItem[]): { cells: Cell[]; y: number }[] {
 }
 
 function cellsOf(line: PdfTextItem[]): Cell[] {
-  const cells: (Cell & { end: number })[] = [];
+  const cells: Cell[] = [];
   for (const item of line.toSorted((a, b) => a.x - b.x)) {
     const cell = cells.at(-1);
     if (cell && isNextWord(item.x - cell.end, item.height)) {
@@ -215,7 +278,7 @@ function cellsOf(line: PdfTextItem[]): Cell[] {
       });
     }
   }
-  return cells.map(({ text, x, tolerance }) => ({ text, x, tolerance }));
+  return cells;
 }
 
 /**

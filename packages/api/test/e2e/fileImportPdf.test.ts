@@ -2,15 +2,19 @@ import { readFile } from "node:fs/promises";
 
 import { expect, samplePdfFile, signInAsManagedOwner, startManagedEnv, test } from "#test/support";
 
-test.for(["scanned_pdf", "encrypted_pdf"])(
-  "the upload route refuses a PDF with field code %s",
-  async (code, { fakeDecisions }) => {
+test.for([
+  { code: "scanned_pdf", fixture: null },
+  { code: "encrypted_pdf", fixture: "encrypted-refusal.pdf" },
+  { code: "no_table", fixture: "table-plus-prose-refusal.pdf" },
+])(
+  "the upload route refuses a PDF with field code $code",
+  async ({ code, fixture }, { fakeDecisions }) => {
     const { env, accounts } = await startManagedEnv({ decisionsUrl: fakeDecisions.url });
     const browser = await signInAsManagedOwner(env, accounts);
     const bytes =
-      code === "scanned_pdf"
+      fixture === null
         ? samplePdfFile({ pages: [{ images: [{ x: 0, y: 0, width: 612, height: 792 }] }] })
-        : await readFile(new URL("../fixtures/pdf/encrypted-refusal.pdf", import.meta.url));
+        : await readFile(new URL(`../fixtures/pdf/${fixture}`, import.meta.url));
 
     const response = await browser.post("/api/imports/files?name=staff.pdf", Buffer.from(bytes));
 
