@@ -4,7 +4,7 @@ import {
   type NewEmployeeInput,
   tryParseNewEmployee,
 } from "../../../employees";
-import type { ImportEmployee } from "../../domain";
+import type { ImportEmployeeRecord } from "../../domain";
 
 /** Why Approve would leave an import employee out; the first failing field wins. */
 export type IncompleteReason = "firstName" | "lastName" | "email" | "other";
@@ -12,12 +12,12 @@ export type IncompleteReason = "firstName" | "lastName" | "email" | "other";
 const NAMED_REASONS: readonly IncompleteReason[] = ["firstName", "lastName", "email"];
 
 /** The employee an import record would become, or null when it is incomplete. */
-export function toNewEmployee(record: ImportEmployee): NewEmployee | null {
+export function toNewEmployee(record: ImportEmployeeRecord): NewEmployee | null {
   return tryParseNewEmployee(toNewEmployeeInput(record));
 }
 
 /** Why the record is incomplete, or null when it is ready. */
-export function incompleteReason(record: ImportEmployee): IncompleteReason | null {
+export function incompleteReason(record: ImportEmployeeRecord): IncompleteReason | null {
   const fields = employeeFieldErrors(toNewEmployeeInput(record)).map(({ field }) => field);
   if (fields.length === 0) {
     return null;
@@ -26,7 +26,7 @@ export function incompleteReason(record: ImportEmployee): IncompleteReason | nul
 }
 
 /** Missing names and emails become empty, so the employee rules count the record as incomplete. */
-export function toNewEmployeeInput(record: ImportEmployee): NewEmployeeInput {
+export function toNewEmployeeInput(record: ImportEmployeeRecord): NewEmployeeInput {
   return {
     firstName: record.firstName ?? "",
     lastName: record.lastName ?? "",

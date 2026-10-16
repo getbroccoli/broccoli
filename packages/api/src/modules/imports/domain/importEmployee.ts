@@ -15,7 +15,7 @@ export interface ImportEmployeeValues {
 }
 
 /** An employee record of the import: not yet an employee. */
-export interface ImportEmployee extends ImportEmployeeValues {
+export interface ImportEmployeeRecord extends ImportEmployeeValues {
   id: string;
   sourceId: string;
 }

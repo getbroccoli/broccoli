@@ -3,7 +3,7 @@ import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { afterKeyset, type Orm, orderByKeyset, ormOf, type Tx } from "../../../core/db";
 import {
   IMPORT_EMPLOYEE_VERSION,
-  type ImportEmployee,
+  type ImportEmployeeRecord,
   type FileSource,
   type ImportSource,
   type IncomingRecord,
@@ -51,13 +51,13 @@ export interface ImportRepository {
   listSources(): Promise<ImportSource[]>;
   findSources(ids: readonly string[]): Promise<ImportSource[]>;
   /** Every employee record of every source, oldest first. */
-  listEmployeeRecords(): Promise<ImportEmployee[]>;
+  listEmployeeRecords(): Promise<ImportEmployeeRecord[]>;
   /** The number of employee records of each source that has any; the others are absent. */
   countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
   /** Up to `first + 1` employee records after `after`, in `order`; the extra one signals a next page. */
   findEmployeePage(
     query: ImportEmployeePageQuery,
-  ): Promise<{ node: ImportEmployee; keyset: ImportEmployeeKeyset }[]>;
+  ): Promise<{ node: ImportEmployeeRecord; keyset: ImportEmployeeKeyset }[]>;
 }
 
 export interface ImportEmployeePageQuery {
@@ -222,7 +222,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .from(importSources)
         .where(inArray(importSources.id, [...ids])),
 
-    listEmployeeRecords: async (): Promise<ImportEmployee[]> => {
+    listEmployeeRecords: async (): Promise<ImportEmployeeRecord[]> => {
       const records = await orm()
         .select()
         .from(importRecords)
@@ -291,7 +291,7 @@ const sourceColumns = {
   failure: importSources.failure,
 };
 
-function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployee {
+function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployeeRecord {
   return {
     id: record.id,
     sourceId: record.sourceId,

@@ -10,7 +10,7 @@ export {
 export {
   IMPORT_EMPLOYEE_VERSION,
   parseImportEmployeeValues,
-  type ImportEmployee,
+  type ImportEmployeeRecord,
   type ImportEmployeeValues,
   type IncomingRecord,
 } from "./importEmployee";

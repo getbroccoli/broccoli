@@ -5,5 +5,5 @@ export const codegenMappers = {
   // The import has one fixed id; its fields load what they need.
   Import: "Record<PropertyKey, never>",
   ImportSource: "../../modules/imports/domain#ImportSource as ImportSourceModel",
-  ImportEmployee: "../../modules/imports/domain#ImportEmployee as ImportEmployeeModel",
+  ImportEmployee: "../../modules/imports/domain#ImportEmployeeRecord as ImportEmployeeModel",
 };

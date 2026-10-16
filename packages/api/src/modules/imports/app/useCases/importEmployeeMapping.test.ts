@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 
-import type { ImportEmployee } from "../../domain";
+import type { ImportEmployeeRecord } from "../../domain";
 import { incompleteReason, toNewEmployee } from "./importEmployeeMapping";
 
-const record: ImportEmployee = {
+const record: ImportEmployeeRecord = {
   id: "employee-1",
   sourceId: "source-1",
   firstName: "  Avery  ",

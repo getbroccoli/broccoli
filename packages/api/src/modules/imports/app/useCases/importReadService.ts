@@ -10,7 +10,7 @@ import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
 import { importEmployeeKeyset, type ImportRepository } from "../../db";
 import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
-import type { ImportEmployee, ImportSource } from "../../domain";
+import type { ImportEmployeeRecord, ImportSource } from "../../domain";
 import { toNewEmployee } from "./importEmployeeMapping";
 
 /** Reading the import: its sources and their employee records. Every function checks `ctx`. */
@@ -27,7 +27,7 @@ export interface ImportReadService {
   listEmployees(
     ctx: SecurityContext,
     args: ImportEmployeeListArgs,
-  ): Promise<Connection<ImportEmployee>>;
+  ): Promise<Connection<ImportEmployeeRecord>>;
 }
 
 export interface ImportEmployeeListArgs extends PageArgs {
@@ -70,7 +70,7 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
     listEmployees: async (
       ctx: SecurityContext,
       { sourceId, orderBy, filter, ...pageArgs }: ImportEmployeeListArgs,
-    ): Promise<Connection<ImportEmployee>> => {
+    ): Promise<Connection<ImportEmployeeRecord>> => {
       ctx.requireOwnerOrSystem();
       const order = parseOrder(orderBy, DEFAULT_ORDER);
       const search = parseSearch(filter?.search);
