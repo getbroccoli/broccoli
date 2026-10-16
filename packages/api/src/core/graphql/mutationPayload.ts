@@ -1,6 +1,36 @@
 import { ApplicationError, type ApplicationErrorCode, type FieldError } from "../applicationError";
 
 /**
+ * Runs a mutation's use case into its payload, named by its generated resolver type
+ * (`ResolversTypes["CompanyUpdatePayload"]`) so `tsc` checks `field` and the result. With
+ * `errorCodes`, an `ApplicationError` with one of them becomes the payload's `error`; any
+ * other error is thrown, so refused callers and unexpected errors stay top-level.
+ */
+export async function mutationPayload<Payload>(
+  // `NoInfer`: the payload type is always named, never guessed from `field`.
+  field: NoInfer<ResultField<Awaited<Payload>>>,
+  run: () => Promise<NonNullable<Awaited<NoInfer<Payload>>[ResultField<Awaited<Payload>>]>>,
+  errorCodes?: readonly PayloadErrorCode[],
+): Promise<Awaited<Payload>> {
+  if (!errorCodes) {
+    return { [field]: await run() } as Awaited<Payload>;
+  }
+  try {
+    return { [field]: await run(), error: null } as Awaited<Payload>;
+  } catch (error) {
+    if (error instanceof ApplicationError && isListed(error.code, errorCodes)) {
+      return { error: payloadErrorOf(error, error.code) } as Awaited<Payload>;
+    }
+    throw error;
+  }
+}
+
+export type PayloadErrorCode = keyof PayloadErrors & ApplicationErrorCode;
+
+/** The payload's field that holds the changed object. */
+type ResultField<Payload> = Exclude<keyof Payload, "error" | "__typename">;
+
+/**
  * The payload error of each `ApplicationError` code a mutation can return; `__typename`
  * resolves its GraphQL `Error` type.
  */
@@ -8,40 +38,6 @@ interface PayloadErrors {
   INVALID_INPUT: { __typename: "InvalidInputError"; message: string; fields: FieldError[] };
   CONFLICT: { __typename: "ConflictError"; message: string };
   UNAVAILABLE: { __typename: "UnavailableError"; message: string };
-}
-
-export type PayloadErrorCode = keyof PayloadErrors & ApplicationErrorCode;
-
-/**
- * Runs a mutation's use case into its payload: the result under `field`. With `errorCodes`,
- * an `ApplicationError` with one of them becomes the payload's `error`; any other error is
- * thrown, so refused callers and unexpected errors stay top-level.
- */
-export async function mutationPayload<Field extends string, T>(
-  field: Field,
-  run: () => Promise<T>,
-): Promise<Record<Field, T>>;
-export async function mutationPayload<Field extends string, T, Code extends PayloadErrorCode>(
-  field: Field,
-  run: () => Promise<T>,
-  errorCodes: readonly Code[],
-): Promise<Partial<Record<Field, T>> & { error: PayloadErrors[Code] | null }>;
-export async function mutationPayload<Field extends string, T>(
-  field: Field,
-  run: () => Promise<T>,
-  errorCodes?: readonly PayloadErrorCode[],
-) {
-  if (!errorCodes) {
-    return { [field]: await run() };
-  }
-  try {
-    return { [field]: await run(), error: null };
-  } catch (error) {
-    if (error instanceof ApplicationError && isListed(error.code, errorCodes)) {
-      return { error: payloadErrorOf(error, error.code) };
-    }
-    throw error;
-  }
 }
 
 function isListed(

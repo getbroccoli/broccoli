@@ -1,4 +1,4 @@
-import { mutationPayload, type Resolvers } from "../../../core/graphql";
+import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import { incompleteReason, type ImportUseCases } from "../app";
 import { importLoaders } from "./loaders";
 
@@ -27,23 +27,29 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
     },
     ImportMutations: {
       readSlack: (_parent, _args, context) =>
-        mutationPayload("import", () => thenImport(useCases.readSlack(context.getActor())), [
-          "UNAVAILABLE",
-        ]),
+        mutationPayload<ResolversTypes["ImportReadSlackPayload"]>(
+          "import",
+          () => thenImport(useCases.readSlack(context.getActor())),
+          ["UNAVAILABLE"],
+        ),
       skip: (_parent, _args, context) =>
-        mutationPayload("import", () => thenImport(useCases.skipImport(context.getActor()))),
+        mutationPayload<ResolversTypes["ImportPayload"]>("import", () =>
+          thenImport(useCases.skipImport(context.getActor())),
+        ),
       approve: (_parent, _args, context) =>
-        mutationPayload("import", () => thenImport(useCases.approveImport(context.getActor())), [
-          "CONFLICT",
-        ]),
+        mutationPayload<ResolversTypes["ImportApprovePayload"]>(
+          "import",
+          () => thenImport(useCases.approveImport(context.getActor())),
+          ["CONFLICT"],
+        ),
       retryFile: (_parent, { sourceId }, context) =>
-        mutationPayload(
+        mutationPayload<ResolversTypes["ImportRetryFilePayload"]>(
           "import",
           () => thenImport(useCases.files.retryFile(context.getActor(), sourceId)),
           ["CONFLICT"],
         ),
       removeFile: (_parent, { sourceId }, context) =>
-        mutationPayload("import", () =>
+        mutationPayload<ResolversTypes["ImportPayload"]>("import", () =>
           thenImport(useCases.files.removeFile(context.getActor(), sourceId)),
         ),
     },

@@ -1,4 +1,4 @@
-import { mutationPayload, type Resolvers } from "../../../core/graphql";
+import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import type { DemoUseCases } from "../app";
 
 export function createResolvers(useCases: DemoUseCases): Resolvers {
@@ -12,7 +12,7 @@ export function createResolvers(useCases: DemoUseCases): Resolvers {
     },
     DemoMutations: {
       clear: (_parent, _args, context) =>
-        mutationPayload("demoData", async () =>
+        mutationPayload<ResolversTypes["DemoPayload"]>("demoData", async () =>
           toGraphql(await useCases.clearDemoData(context.getActor())),
         ),
     },
