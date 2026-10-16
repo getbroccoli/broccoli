@@ -81,6 +81,16 @@ function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] }
     if (lines[index]!.page !== page) {
       page = lines[index]!.page;
       pageStarted = false;
+      // shortcut: also drops rows of a table that ends above an equal header on this page (layout C
+      // across pages); upgrade when a report has one.
+      const repeated = lines.findIndex(
+        (line, at) =>
+          at > index && line.page === page && isRepeatedHeader(line.cells, table.header),
+      );
+      if (repeated > index) {
+        index = repeated - 1;
+        continue;
+      }
     }
     if (isNewTable(cells, next, table)) {
       table = { header: cells, lines: [] };
@@ -91,7 +101,9 @@ function readTables(pages: PdfPage[]): { tables: Table[]; textPages: boolean[] }
     }
     const isRunningTitle = !pageStarted && !(cells.length >= 2 && linesUp(cells, table.header));
     const isSubHeading =
-      cells.length === 1 && isNewTable(next ?? [], lines[index + 2]?.cells, table);
+      cells.length === 1 &&
+      next !== undefined &&
+      (isNewTable(next, lines[index + 2]?.cells, table) || isRepeatedHeader(next, table.header));
     if (isRunningTitle || isSubHeading) {
       continue;
     }
@@ -113,8 +125,17 @@ function isHeader(line: Cell[], next: Cell[] | undefined): boolean {
   return line.length >= 2 && next !== undefined && next.length >= 2 && linesUp(next, line);
 }
 
+/**
+ * A header that is not the current table's. After the first table, a line with an email or a
+ * number is a row whose columns moved, not a header.
+ */
 function isNewTable(line: Cell[], next: Cell[] | undefined, table: Table): boolean {
-  return isHeader(line, next) && !linesUp(line, table.header);
+  const isFirst = table.header.length === 0;
+  return (
+    isHeader(line, next) &&
+    !linesUp(line, table.header) &&
+    (isFirst || !line.some(({ text }) => /[@\p{N}]/u.test(text)))
+  );
 }
 
 function isRepeatedHeader(line: Cell[], header: Cell[]): boolean {

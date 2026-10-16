@@ -1,7 +1,8 @@
 import { expect, it } from "vitest";
 
-import type { PdfPage, PdfTextItem } from "../../../utils";
-import { hasScannedPage, pdfSheets } from ".";
+import { line, page } from "#test/support";
+
+import { pdfSheets } from ".";
 
 it("keeps every row in page order with the repeated header only once", () => {
   const header = line(760, ["Name", "Email"]);
@@ -175,49 +176,6 @@ it("finds a header followed by just one staff row", () => {
   ]);
 });
 
-it.for([
-  { name: "an image-only page", scanned: page([], 1) },
-  { name: "a scan with a visible page number", scanned: page([line(20, ["Page 2 of 2"])], 1) },
-  { name: "a scan covering 40% of a page", scanned: page([], 0.4) },
-  { name: "a tiled scan", scanned: page([], 1) },
-  { name: "an OCR scan without visible text", scanned: page([], 1) },
-])("detects $name alone or after a valid table", ({ scanned }) => {
-  const table = page([
-    line(760, ["Name", "Email"]),
-    line(740, ["Avery Stone", "avery@example.com"]),
-  ]);
-
-  expect(hasScannedPage([scanned])).toBe(true);
-  expect(hasScannedPage([table, scanned])).toBe(true);
-});
-
-it.for([
-  { name: "footer", y: 20 },
-  { name: "running title", y: 780 },
-])("refuses a scan whose $name lines up with the table's columns", ({ y }) => {
-  const table = page([
-    line(760, ["Name", "Email"]),
-    line(740, ["Avery Stone", "avery@example.com"]),
-  ]);
-  const scanned = page([line(y, ["Staff directory", "Page 2 of 2"])], 1);
-
-  expect(hasScannedPage([scanned])).toBe(true);
-  expect(hasScannedPage([table, scanned])).toBe(true);
-});
-
-it.for([
-  { name: "a small logo", coverage: 0.02 },
-  { name: "a full-page letterhead image", coverage: 1 },
-  { name: "no images", coverage: 0 },
-])("accepts a one-person table with $name", ({ coverage }) => {
-  const table = page(
-    [line(760, ["Name", "Email"]), line(740, ["Avery Stone", "avery@example.com"])],
-    coverage,
-  );
-
-  expect(hasScannedPage([table])).toBe(false);
-});
-
 it("continues without a header and drops one-cell and two-cell running titles", () => {
   const rows = [
     ["Name", "Email"],
@@ -281,42 +239,50 @@ it.for([
   },
 );
 
-it("refuses a header-less continuation over a full-page image", () => {
-  const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
-  const continuation = page(
-    [
-      line(740, ["Robin Reed", "robin@example.com"]),
-      line(720, ["Morgan Lake", "morgan@example.com"]),
-    ],
-    1,
-  );
-  expect(hasScannedPage([table, continuation])).toBe(true);
+it("drops a two-cell title at the columns above a later page's repeated header", () => {
+  const header = line(760, ["Name", "Email"]);
+  expect(
+    pdfSheets([
+      page([header, line(740, ["Avery Stone", "avery@example.com"])]),
+      page([
+        line(780, ["Acme Corp", "Page 2"]),
+        header,
+        line(740, ["Robin Reed", "robin@example.com"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Stone", "avery@example.com"],
+        ["Robin Reed", "robin@example.com"],
+      ],
+    },
+  ]);
 });
 
-it("accepts a different table's header and row over a full-page image", () => {
-  const table = page([line(760, ["Name", "Email"]), line(740, ["Avery", "a@example.com"])]);
-  const second = page(
-    [
-      line(760, ["Employee", "Work email", "Role"], 14),
-      line(740, ["Robin Reed", "robin@example.com", "Engineer"], 14),
-    ],
-    1,
-  );
-  expect(hasScannedPage([table, second])).toBe(false);
+it("drops a sub-heading above a table with the same columns", () => {
+  const header = line(760, ["Name", "Email"]);
+  expect(
+    pdfSheets([
+      page([
+        line(780, ["Engineering"]),
+        header,
+        line(740, ["Avery Stone", "avery@example.com"]),
+        line(720, ["Research"]),
+        line(700, ["Name", "Email"]),
+        line(680, ["Robin Reed", "robin@example.com"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Stone", "avery@example.com"],
+        ["Robin Reed", "robin@example.com"],
+      ],
+    },
+  ]);
 });
-
-function page(lines: PdfTextItem[][], imageCoverage = 0): PdfPage {
-  return { width: 612, height: 792, items: lines.flat(), imageCoverage };
-}
-
-function line(y: number, cells: string[], offset = 0): PdfTextItem[] {
-  return cells
-    .map((text, index) => ({
-      text,
-      x: 40 + index * 160 + (index > 0 ? offset : 0),
-      y,
-      width: text.length * 5,
-      height: 10,
-    }))
-    .filter(({ text }) => text !== "");
-}
