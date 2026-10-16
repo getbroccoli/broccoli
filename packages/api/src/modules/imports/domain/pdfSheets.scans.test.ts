@@ -99,3 +99,17 @@ it.for([
   );
   expect(hasScannedPage([table, continuation])).toBe(true);
 });
+
+it("reads a person block over a full-page letterhead image, but not a scan after it", () => {
+  const person = page(
+    [
+      line(700, ["Name: Avery Stone"]),
+      line(680, ["Job title: Designer"]),
+      line(660, ["Email: avery@example.com"]),
+    ],
+    1,
+  );
+
+  expect(hasScannedPage([person])).toBe(false);
+  expect(hasScannedPage([person, page([line(20, ["Page 2 of 2"])], 1)])).toBe(true);
+});

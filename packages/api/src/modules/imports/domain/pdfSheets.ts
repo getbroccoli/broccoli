@@ -1,5 +1,5 @@
 import type { PdfPage } from "../../../utils";
-import { blockSheets, fieldOf, repeatedLabel } from "./pdfBlocks";
+import { blockPages, blockSheets, fieldOf, repeatedLabel } from "./pdfBlocks";
 import { type Cell, pageLines, texts } from "./pdfLines";
 import type { FileSheet } from "./sheet";
 
@@ -43,12 +43,13 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
 
 /**
  * Whether a page is a scan or photo: it has images but no visible text, or images cover at least
- * 15% of it and its text gives no staff row below a table's header on that page. A footer or a
+ * 15% of it and its text gives no staff row below a table's header, and no person block, on that
+ * page. A footer or a
  * title over a scan may line up with the columns, but it does not repeat a header. One such page
  * refuses the whole file.
  */
 export function hasScannedPage(pages: PdfPage[]): boolean {
-  const textPages = readTables(pages)?.textPages ?? [];
+  const textPages = readTables(pages)?.textPages ?? blockPages(pages);
   return pages.some(
     ({ items, imageCoverage }, page) =>
       (imageCoverage > 0 && items.length === 0) ||
@@ -223,9 +224,18 @@ function repeatedOnPages(lines: { cells: Cell[]; page: number }[]): Set<string> 
   return new Set([...pagesOf].filter(([, pages]) => pages.size > 1).map(([text]) => text));
 }
 
-/** Two or more cells that the next line's two or more cells line up with. */
+/**
+ * Two or more cells that the next line's two or more cells line up with, unless both are a label
+ * and its value: a person block's lines in label and value columns.
+ */
 function isHeader(line: Cell[], next: Cell[] | undefined): boolean {
-  return line.length >= 2 && next !== undefined && next.length >= 2 && linesUp(next, line);
+  return (
+    line.length >= 2 &&
+    next !== undefined &&
+    next.length >= 2 &&
+    linesUp(next, line) &&
+    !(fieldOf(line) !== null && fieldOf(next) !== null)
+  );
 }
 
 function isRepeatedHeader(line: Cell[], header: Cell[]): boolean {

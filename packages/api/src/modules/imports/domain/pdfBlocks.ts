@@ -7,8 +7,8 @@ import type { FileSheet } from "./sheet";
  * row, and each block is a row of the values after its labels. A block starts at each line with
  * the first label that repeats, or at the one-cell unlabelled line above each of them, which then
  * is a first column with an empty header: the person's name. Without a repeating label, three or
- * more labelled lines are one person. Text above the first block is dropped, and so is an
- * unlabelled line in a page's band below it; labelled lines are never noise. Null when there is
+ * more labelled lines are one person. Text above the first block is dropped, and so is a line in
+ * a page's band below it without a label in any cell; labelled lines are never noise. Null when there is
  * no block, or when a line below the first is none of these, or repeats a label of its block.
  */
 export function blockSheets(pages: PdfPage[]): FileSheet[] | null {
@@ -35,7 +35,8 @@ export function blockSheets(pages: PdfPage[]): FileSheet[] | null {
     }
     const block = blocks.at(-1)!;
     if (field === null) {
-      if (!blockStarts.has(index) && !inBand) {
+      const isNoise = inBand && !cells.some((cell) => fieldOf([cell]) !== null);
+      if (!blockStarts.has(index) && !isNoise) {
         return null;
       }
       continue;
@@ -54,6 +55,19 @@ export function blockSheets(pages: PdfPage[]): FileSheet[] | null {
       rows: [header, ...blocks.map((block) => header.map((label) => block.get(label) ?? ""))],
     },
   ];
+}
+
+/** Which pages hold a line of the PDF's person blocks; none when it has no block list. */
+export function blockPages(pages: PdfPage[]): boolean[] {
+  if (blockSheets(pages) === null) {
+    return [];
+  }
+  const labelled = new Set(
+    pageLines(pages)
+      .filter(({ cells }) => fieldOf(cells) !== null)
+      .map(({ page }) => page),
+  );
+  return pages.map((_page, index) => labelled.has(index));
 }
 
 /** The first label that occurs again later: the label each person's block starts with. */

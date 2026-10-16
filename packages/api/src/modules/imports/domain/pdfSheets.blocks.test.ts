@@ -232,3 +232,59 @@ it("refuses blocks after a table instead of falling back to a block list", () =>
     ]),
   ).toBeNull();
 });
+
+it("refuses side-by-side blocks in a page's bottom band", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(700, ["Name: Avery Stone"]),
+        line(680, ["Job title: Designer"]),
+        line(600, ["Name: Robin Reed"]),
+        line(580, ["Job title: Engineer"]),
+        line(30, ["Name: Morgan Lake", "Name: Taylor Hill"]),
+      ]),
+    ]),
+  ).toBeNull();
+});
+
+it("reads people whose labels and values sit in two columns", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(700, ["Name:", "Avery Stone"]),
+        line(680, ["Job title:", "Designer"]),
+        line(600, ["Name:", "Robin Reed"]),
+        line(580, ["Job title:", "Engineer"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Job title"],
+        ["Avery Stone", "Designer"],
+        ["Robin Reed", "Engineer"],
+      ],
+    },
+  ]);
+});
+
+it("reads one person whose labels and values sit in two columns", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(700, ["Name:", "Avery Stone"]),
+        line(680, ["Job title:", "Designer"]),
+        line(660, ["Email:", "avery@example.com"]),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Job title", "Email"],
+        ["Avery Stone", "Designer", "avery@example.com"],
+      ],
+    },
+  ]);
+});
