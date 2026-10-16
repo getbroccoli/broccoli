@@ -161,7 +161,8 @@ function readTables(
       continue;
     }
     const isBandText =
-      lines[index]!.inBand && (cells.length < 2 || bandTexts.has(withoutDigits(cells)));
+      lines[index]!.inBand &&
+      (cells.length < 2 || bandTexts.has(withoutDigits(cells)) || !isRow(cells, table.header));
     if (isBandText || isTotal(cells)) {
       continue;
     }

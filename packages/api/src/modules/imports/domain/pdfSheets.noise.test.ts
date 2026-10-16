@@ -52,6 +52,26 @@ it("drops a one-cell footer even when there is only one page", () => {
   ]);
 });
 
+it("drops a two-cell footer off the table's columns", () => {
+  expect(
+    pdfSheets([
+      page([
+        line(700, ["Name", "Email"]),
+        line(680, ["Avery Stone", "avery@example.com"]),
+        line(30, ["Printed on", "16.10.2026"], 0, 80),
+      ]),
+    ]),
+  ).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Email"],
+        ["Avery Stone", "avery@example.com"],
+      ],
+    },
+  ]);
+});
+
 it("keeps a two-cell staff row in the bottom page band", () => {
   expect(
     pdfSheets([
