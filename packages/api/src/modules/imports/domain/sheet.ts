@@ -1,6 +1,3 @@
-import { csvSheet } from "./csvSheet";
-import { excelWorkbook, isExcelWorkbook } from "./excelWorkbook";
-
 /** A file's rows of cells, as they came; rows may differ in length. */
 export type Sheet = readonly (readonly string[])[];
 
@@ -14,15 +11,8 @@ export interface FileSheet {
 export type SheetRefusal =
   "unsupported_file" | "empty" | "too_many_rows" | "too_many_columns" | "too_many_sheets";
 
-/**
- * A CSV file's one sheet, or an Excel workbook's visible sheets; refused over 10 sheets,
- * 10,000 rows in all or 100 columns.
- */
-export async function readSheets(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
-  const sheets = isExcelWorkbook(bytes) ? await excelWorkbook(bytes) : csvSheet(bytes);
-  if (sheets === null) {
-    return "unsupported_file";
-  }
+/** The sheets within Broccoli's limits: 10 sheets, 10,000 rows in all and 100 columns. */
+export function checkSheets(sheets: FileSheet[]): FileSheet[] | SheetRefusal {
   if (sheets.every(({ rows }) => rows.length === 0)) {
     return "empty";
   }

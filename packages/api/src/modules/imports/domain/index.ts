@@ -16,4 +16,4 @@ export {
 } from "./importEmployee";
 export type { FileSource, ImportSource, MappingOutcome } from "./importSource";
 export { nonBlank, parseEmail, splitFullName } from "./personValues";
-export { readSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";
+export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";

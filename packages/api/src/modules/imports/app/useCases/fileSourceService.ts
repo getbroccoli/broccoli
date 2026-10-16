@@ -17,11 +17,11 @@ import {
   readFileRecords,
   readHeaderRow,
   type FileSheet,
-  readSheets,
   type SheetRefusal,
   type Sheet,
   sheetQuestions,
 } from "../../domain";
+import { readStaffFile } from "./staffFile";
 
 /**
  * Staff files as import sources, through their life: upload, mapping in the background,
@@ -115,7 +115,7 @@ export function createFileSourceService({
         return;
       }
       const file = await readFile(orm, source.fileId);
-      const sheets = file && (await readSheets(file.content));
+      const sheets = file && (await readStaffFile(file.content));
       if (!sheets || typeof sheets === "string") {
         // Upload read the same bytes, so only a changed file gets here.
         throw new Error(`File source ${sourceId} cannot be read`);
@@ -194,7 +194,7 @@ async function readUpload(
   }
   uploads.reading = true;
   try {
-    return await readSheets(bytes);
+    return await readStaffFile(bytes);
   } finally {
     uploads.reading = false;
   }
