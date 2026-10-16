@@ -6,6 +6,9 @@ mutation ChooseEmployeeValue($input: ImportChooseEmployeeValueInput!) {
       }
       error {
         __typename
+        ... on Error {
+          message
+        }
         ... on InvalidInputError {
           fields {
             field
