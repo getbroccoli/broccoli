@@ -11,8 +11,13 @@ export function requireSetupStep<Me>(step: SetupStep, { context, location }: Gat
     throw loginRedirect(location.href);
   }
   if (context.setupStep !== step) {
-    throw redirect({ to: STEP_PAGES[context.setupStep], replace: true });
+    throw redirect({ to: setupStepPage(context.setupStep), replace: true });
   }
+}
+
+/** The page of a setup step. */
+export function setupStepPage(step: SetupStep): (typeof STEP_PAGES)[SetupStep] {
+  return STEP_PAGES[step];
 }
 
 /** The gate of the app itself: a signed-in user once setup is done. Returns them. */

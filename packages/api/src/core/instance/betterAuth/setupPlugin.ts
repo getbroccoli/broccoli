@@ -24,9 +24,6 @@ const NOT_AT_OWNER_STEP = {
   message: "Finish the import before creating the owner",
 };
 
-/** Setup requests per address and minute; enough for a person, little for guessing. */
-const SETUP_ATTEMPTS_PER_MINUTE = 10;
-
 const setupBody = z.object({
   email: z.string(),
   password: z.string(),
@@ -39,7 +36,8 @@ type SetupBody = z.infer<typeof setupBody>;
  * to the first browser, or renews it for the browser holding it, through the
  * `broccoli_setup` cookie. `POST /api/auth/setup`, the last step, creates the owner
  * for that browser and signs them in; it answers after the handlers of
- * `instance.owner_claimed` and `instance.setup_completed` have run.
+ * `instance.owner_claimed` and `instance.setup_completed` have run. `setupRouter`
+ * limits and origin-checks both before they run.
  */
 export function setupPlugin(orm: Orm, transact: Transact) {
   return {
@@ -70,13 +68,6 @@ export function setupPlugin(orm: Orm, transact: Transact) {
         return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
       }),
     },
-    rateLimit: [
-      {
-        pathMatcher: (path) => path.startsWith("/setup"),
-        window: 60,
-        max: SETUP_ATTEMPTS_PER_MINUTE,
-      },
-    ],
   } satisfies BetterAuthPlugin;
 }
 

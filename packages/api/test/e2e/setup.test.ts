@@ -1,4 +1,4 @@
-import { expect, PNG, TEST_OWNER, test } from "#test/support";
+import { createBrowser, expect, PNG, TEST_OWNER, test } from "#test/support";
 
 test("a fresh instance reports the company step and nobody holding setup", async ({ env }) => {
   const response = await env.browser().graphql("query { setup { id step holder } }");
@@ -182,7 +182,10 @@ test.for(["/api/auth/setup/start", "/api/auth/setup"])(
 test("sets a Secure setup cookie when the public URL uses HTTPS", async ({ env }) => {
   await env.restart({ publicUrl: "https://broccoli.example.com" });
 
-  const response = await fetch(`${env.url}/api/auth/setup/start`, { method: "POST" });
+  const response = await createBrowser(env.url, "https://broccoli.example.com").post(
+    "/api/auth/setup/start",
+    undefined,
+  );
 
   expect(response.status).toBe(200);
   expect(setupCookieOf(response)).toMatch(/;\s*Secure(?:;|$)/i);
@@ -196,6 +199,46 @@ test("keeps the owner's session across a restart", async ({ env }) => {
   const session = await browser.get(`${env.url}/api/auth/get-session`);
   expect(session.status).toBe(200);
   expect(await session.json()).toMatchObject({ user });
+});
+
+test("refuses a setup start from another origin without cookies and leaves setup unclaimed", async ({
+  env,
+}) => {
+  const response = await fetch(`${env.url}/api/auth/setup/start`, {
+    method: "POST",
+    headers: { origin: "https://other.example.com" },
+  });
+
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: "cross_origin" });
+  const setup = await env.browser().graphql("query { setup { id holder } }");
+  expect(await setup.json()).toEqual({ data: { setup: { id: "instance", holder: "NOBODY" } } });
+});
+
+test("refuses a setup start without an Origin header", async ({ env }) => {
+  const response = await fetch(`${env.url}/api/auth/setup/start`, { method: "POST" });
+
+  expect(response.status).toBe(403);
+  expect(await response.json()).toEqual({ error: "cross_origin" });
+});
+
+test("refuses the eleventh setup start even when each request changes X-Forwarded-For", async ({
+  env,
+}) => {
+  for (let request = 0; request < 10; request++) {
+    const response = await fetch(`${env.url}/api/auth/setup/start`, {
+      method: "POST",
+      headers: { origin: env.url, "x-forwarded-for": `192.0.2.${request + 1}` },
+    });
+    expect(response.status).toBe(request === 0 ? 200 : 409);
+  }
+
+  const response = await fetch(`${env.url}/api/auth/setup/start`, {
+    method: "POST",
+    headers: { origin: env.url, "x-forwarded-for": "192.0.2.11" },
+  });
+
+  expect(response.status).toBe(429);
 });
 
 function setupCookieOf(response: Response): string | undefined {

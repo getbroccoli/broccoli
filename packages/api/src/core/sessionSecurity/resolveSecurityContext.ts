@@ -4,6 +4,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import type { AuthSource } from "../auth";
 import type { Orm } from "../db";
 import { readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
+import { isCrossOrigin } from "../sameOrigin";
 import { PrincipalSecurityContext, type RequestSecurity, type SecurityContext } from "../security";
 
 /**
@@ -17,8 +18,9 @@ export async function resolveSecurityContext(
   requestHeaders: IncomingHttpHeaders,
 ): Promise<RequestSecurity> {
   const auth = await authSource.current();
-  // A managed instance waiting for init has no auth, so nobody is signed in.
-  if (!auth) {
+  // A managed instance waiting for init has no auth, so nobody is signed in. A page on
+  // another origin gets no authority from the browser's cookies.
+  if (!auth || isCrossOrigin(requestHeaders, auth.options.baseURL)) {
     return { security: null, renewedCookies: [] };
   }
   // Better Auth answers a request without a session cookie without a query.

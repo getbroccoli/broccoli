@@ -1,7 +1,7 @@
 import type { ApolloClient } from "@apollo/client";
 import { createRootRouteWithContext, Outlet, redirect } from "@tanstack/react-router";
 
-import { readSession } from "@/features/setup";
+import { readSession, setupStepPage } from "@/features/setup";
 import { NotFoundPage, UnreachablePage } from "@/shell";
 
 export interface RouterContext {
@@ -12,9 +12,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   // Who is signed in and how far setup is, for the gates of every route below.
   beforeLoad: async ({ context, location }) => {
     const { me, setup } = await readSession(context.apolloClient);
-    // Another browser holds setup: this one sees only that, never its pages.
-    if (setup.holder === "ANOTHER_DEVICE" && location.pathname !== SETUP_IN_PROGRESS) {
-      throw redirect({ to: SETUP_IN_PROGRESS, replace: true });
+    // Another browser holds setup: this one sees only that, and only then.
+    const heldElsewhere = setup.holder === "ANOTHER_DEVICE";
+    if (heldElsewhere !== (location.pathname === SETUP_IN_PROGRESS)) {
+      throw redirect({ to: heldElsewhere ? SETUP_IN_PROGRESS : "/", replace: true });
+    }
+    // The setup holder has no account yet, so sign-in and other pages lead back to setup.
+    if (setup.holder === "YOU" && !location.pathname.startsWith("/setup")) {
+      throw redirect({ to: setupStepPage(setup.step), replace: true });
     }
     return {
       me: me ?? null,
