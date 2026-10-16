@@ -39,17 +39,11 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
   /** What went wrong with the last batch of files. */
   const [problems, setProblems] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
-  /** Whether the last retry or removal failed. */
-  const [changeFailed, setChangeFailed] = useState(false);
   const [retryFile, retry] = usePayloadMutation(RetryFileDocument);
   const [removeFile, remove] = usePayloadMutation(RemoveFileDocument);
   const busy = uploading !== null || retry.loading || remove.loading;
+  const changeFailed = retry.error || retry.payloadError || remove.error;
   const alerts = changeFailed ? [...problems, t("imports.files.changeFailed")] : problems;
-
-  const change = (work: Promise<unknown>) => {
-    setChangeFailed(false);
-    work.catch(() => setChangeFailed(true));
-  };
 
   const upload = async (files: FileList | null) => {
     if (!files?.length || busy) {
@@ -126,8 +120,11 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
               key={source.id}
               source={source}
               busy={busy}
-              onRetry={() => change(retryFile({ variables: { sourceId: source.id } }))}
-              onRemove={() => change(removeFile({ variables: { sourceId: source.id } }))}
+              // A failure shows through the mutation's `error` or `payloadError`.
+              onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
+              onRemove={() =>
+                void removeFile({ variables: { sourceId: source.id } }).catch(() => {})
+              }
             />
           ))}
         </ul>
