@@ -8,3 +8,4 @@ export {
   type JsonObject,
   type Question,
 } from "./decisions";
+export { keptByPlaceholders } from "./sanitize";

@@ -1,6 +1,7 @@
 export {
   type ColumnMapping,
   columnQuestions,
+  hasPeople,
   headerQuestion,
   readColumnMapping,
   readFileRecords,

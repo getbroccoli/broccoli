@@ -10,6 +10,7 @@ import {
   type ColumnMapping,
   columnQuestions,
   type FileSource,
+  hasPeople,
   headerQuestion,
   type IncomingRecord,
   type MappingOutcome,
@@ -238,7 +239,7 @@ async function mapSheets(decisions: Decisions, sheets: FileSheet[]): Promise<Map
 }
 
 /**
- * The sheet's records, or null when it has no people columns. Asks the model outside any
+ * The sheet's records, or null when it has no people columns or no people in them. Asks the model outside any
  * transaction, which never waits on another service: first everything in one request; when
  * an answer is unsure, the header and then the columns under it, which gives the model the
  * header's text and the cells below it.
@@ -246,7 +247,9 @@ async function mapSheets(decisions: Decisions, sheets: FileSheet[]): Promise<Map
 async function mapSheet(decisions: Decisions, sheet: Sheet): Promise<IncomingRecord[] | null> {
   const { headerRow, mapping } =
     (await mapInOneRequest(decisions, sheet)) ?? (await mapHeaderThenColumns(decisions, sheet));
-  return mapping === null ? null : readFileRecords(sheet, headerRow, mapping);
+  return mapping === null || !hasPeople(sheet, headerRow, mapping)
+    ? null
+    : readFileRecords(sheet, headerRow, mapping);
 }
 
 /** The header row and the columns, each null when the model found none. */

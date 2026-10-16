@@ -21,7 +21,7 @@ export function withPlaceholders(state: JsonObject): JsonObject {
   const emailDomains = countOf([...emails].map(domainOf));
   const emailNumbers = new Map<string, number>();
   const rewrite = (value: string): string => {
-    if (passesAsItself(value)) {
+    if (keptByPlaceholders(value)) {
       return value;
     }
     return tokensOf(value)
@@ -33,6 +33,14 @@ export function withPlaceholders(state: JsonObject): JsonObject {
       .join("");
   };
   return mapStrings(state, rewrite) as JsonObject;
+}
+
+/** Whether `withPlaceholders` sends the value as itself: blank, a boolean, or only heading and job words. */
+export function keptByPlaceholders(value: string): boolean {
+  return (
+    passesAsItself(value) ||
+    tokensOf(value).every((token) => /^\s*$/.test(token) || isHeadingWord(token))
+  );
 }
 
 /** An email domain shared by this many distinct addresses is the company's, not a person's. */
