@@ -1,13 +1,20 @@
 import type { SecurityContext } from "../../../../core/security";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import { employeeRepository } from "../../db";
-import type { NewEmployeeInput } from "../../domain";
+import type { Employee, NewEmployeeInput } from "../../domain";
+import type { Connection } from "../../../../core/pagination";
 import { createEmployee } from "./createEmployee";
 import { isEmployeeAvatarFile } from "./isEmployeeAvatarFile";
 import { type EmployeeListArgs, listEmployees } from "./listEmployees";
 
 /** Everything a user can do with employees; the adapters call nothing else. */
-export function createEmployeeUseCases({ orm }: Pick<ModuleDependencies, "orm">) {
+export interface EmployeeUseCases {
+  createEmployee: (ctx: SecurityContext, input: NewEmployeeInput) => Promise<Employee>;
+  listEmployees: (ctx: SecurityContext, args: EmployeeListArgs) => Promise<Connection<Employee>>;
+  isEmployeeAvatarFile: (ctx: SecurityContext, fileId: string) => Promise<boolean>;
+}
+
+export function createEmployeeUseCases({ orm }: Pick<ModuleDependencies, "orm">): EmployeeUseCases {
   const employees = employeeRepository(orm);
   return {
     createEmployee: (ctx: SecurityContext, input: NewEmployeeInput) =>
@@ -18,5 +25,3 @@ export function createEmployeeUseCases({ orm }: Pick<ModuleDependencies, "orm">)
       isEmployeeAvatarFile(employees, ctx, fileId),
   };
 }
-
-export type EmployeeUseCases = ReturnType<typeof createEmployeeUseCases>;

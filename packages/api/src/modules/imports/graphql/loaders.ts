@@ -4,7 +4,11 @@ import { type GraphqlContext, perRequest } from "../../../core/graphql";
 import type { ImportUseCases } from "../app";
 import type { ImportSource } from "../domain";
 
-export type ImportLoaders = ReturnType<typeof createLoaders>;
+/** One request's loaders for import data. */
+export interface ImportLoaders {
+  source: DataLoader<string, ImportSource>;
+  employeeCount: DataLoader<string, number>;
+}
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function importLoaders(
@@ -13,7 +17,7 @@ export function importLoaders(
   return perRequest((context) => createLoaders(useCases, context));
 }
 
-function createLoaders(useCases: ImportUseCases, context: GraphqlContext) {
+function createLoaders(useCases: ImportUseCases, context: GraphqlContext): ImportLoaders {
   const ctx = context.getActor();
   return {
     source: new DataLoader<string, ImportSource>(async (ids) => {

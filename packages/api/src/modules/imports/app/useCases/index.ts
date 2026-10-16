@@ -4,9 +4,9 @@ import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
 import { approveImport } from "./approveImport";
-import { createFileSourceService } from "./fileSourceService";
+import { createFileSourceService, type FileSourceService } from "./fileSourceService";
 import type { SlackReader } from "./importContext";
-import { createImportReadService } from "./importReadService";
+import { createImportReadService, type ImportReadService } from "./importReadService";
 import { readSlack } from "./readSlack";
 import { skipImport } from "./skipImport";
 
@@ -14,6 +14,14 @@ export type { SlackReader } from "./importContext";
 export { incompleteReason } from "./importEmployeeMapping";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
+export interface ImportUseCases {
+  readSlack: (ctx: SecurityContext) => Promise<void>;
+  skipImport: (ctx: SecurityContext) => Promise<void>;
+  approveImport: (ctx: SecurityContext) => Promise<void>;
+  reads: ImportReadService;
+  files: FileSourceService;
+}
+
 export function createImportUseCases({
   orm,
   transact,
@@ -25,7 +33,7 @@ export function createImportUseCases({
   slack: SlackReader;
   decisions: Decisions | null;
   jobs: JobQueue;
-}) {
+}): ImportUseCases {
   const imports = importRepository(orm);
   const context = { transact, logger, slack, imports };
   return {
@@ -36,5 +44,3 @@ export function createImportUseCases({
     files: createFileSourceService({ orm, transact, decisions, jobs }),
   };
 }
-
-export type ImportUseCases = ReturnType<typeof createImportUseCases>;

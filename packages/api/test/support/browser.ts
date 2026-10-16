@@ -1,7 +1,15 @@
-export type Browser = ReturnType<typeof createBrowser>;
-
 /** A client that keeps cookies like a browser and sends its own address as the Origin. */
-export function createBrowser(baseUrl: string, origin = baseUrl) {
+export interface Browser {
+  postForm(path: string, body: URLSearchParams, formOrigin: string): Promise<Response>;
+  post(path: string, body: unknown): Promise<Response>;
+  put(path: string, body: Buffer): Promise<Response>;
+  get(path: string): Promise<Response>;
+  /** Answers a redirect with the redirect itself instead of following it. */
+  getManual(path: string): Promise<Response>;
+  graphql(query: string, variables?: Record<string, unknown>): Promise<Response>;
+}
+
+export function createBrowser(baseUrl: string, origin = baseUrl): Browser {
   const cookies = new Map<string, string>();
 
   async function request(

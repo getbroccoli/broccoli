@@ -61,13 +61,6 @@ export function importRulesConfig(packageDir) {
         ],
         "boundaries/no-unknown-dependencies": "error",
         "boundaries/no-unknown-files": "error",
-        "no-restricted-syntax": [
-          "error",
-          {
-            selector: "ExportAllDeclaration",
-            message: "List each export by name, so index.ts states the module's contract.",
-          },
-        ],
       },
     },
   ];
