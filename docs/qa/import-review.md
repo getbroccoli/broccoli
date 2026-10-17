@@ -32,6 +32,20 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] "Leave them out" leaves out every person without a work email.
 - [ ] Back and returning, and a reload, keep every choice; removing the CSV on the import page makes its picks fall back to Slack's values.
 
+## Edge cases
+
+- [ ] Two files with the same email in another case or with spaces (`AVERY@…` and `avery@…`) show one row.
+- [ ] Two rows of one file with the same email show one row; its values list that file once.
+- [ ] Three files with three job titles show "3 job titles", and the popover reads "Your sources disagree. Pick the one to keep."
+- [ ] A value only one source has shows without a pill.
+- [ ] A blank typed value, job title and start date included, shows "Enter a value"; typing a person's own current email again is accepted.
+- [ ] After a Slack pick, refreshing Slack with a changed value for that member shows the new value, still picked.
+- [ ] A left-out person with an email stays left out after their file is removed and uploaded again.
+- [ ] Once the toast has closed there is no Undo; clicking the cell again changes the value back. With the network off, Undo shows "Couldn’t save. Try again.", and so does "Leave out".
+- [ ] `/setup/import/review?check=bogus` shows an empty table with "All checked" and "Show everyone".
+- [ ] At 375 px the value popover and "N things to check" fit the screen.
+- [ ] A screen reader reads each value with its field and person, such as "Last name for Madonna: Not set".
+
 ## Search, sort and paging
 
 - [ ] Clicking Person, Email or Start date sorts ascending, then descending; people without a start date stay last both ways. Job title and Source are not sortable.
