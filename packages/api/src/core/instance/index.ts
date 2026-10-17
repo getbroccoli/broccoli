@@ -10,7 +10,6 @@ export {
   readSetupStep,
   readOwner,
   readOwnerUserId,
-  resetSetup,
 } from "./app";
 export { readSetupToken, selfHostedAuth } from "./betterAuth";
 export { setupRouter } from "./http";
