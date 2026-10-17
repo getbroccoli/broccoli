@@ -17,9 +17,8 @@ services:
       # Secrets such as the session signing key; back it up with the database.
       - broccoli-data:/data
     ports:
-      # Loopback only: reach it from another machine through a reverse proxy.
       # HOST_WEB_PORT=0 picks a free port, so worktrees run side by side.
-      - 127.0.0.1:${HOST_WEB_PORT:-8080}:3000
+      - ${HOST_WEB_PORT:-8080}:3000
     depends_on:
       postgres:
         condition: service_healthy

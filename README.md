@@ -30,7 +30,7 @@
 docker compose up
 ```
 
-Open http://localhost:8080 right away: the first browser to open it holds setup, and you create your account at the end. Broccoli listens on this machine only; to reach it from elsewhere, put a reverse proxy in front and set `SELF_HOSTED_PUBLIC_URL` to its address.
+Open http://localhost:8080 right away: the first browser to open it holds setup, and you create your account at the end.
 
 If setup is held by a browser you no longer have, free it with `docker compose exec broccoli reset-setup`.
 
