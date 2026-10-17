@@ -3,9 +3,9 @@ import { expect, TEST_OWNER, test } from "#test/support";
 const query = "{ me { id email isOwner } }";
 
 test("tells the web app a self-hosted instance signs in with a password", async ({ env }) => {
-  const response = await env.browser().graphql("{ setup { signIn } }");
+  const response = await env.browser().graphql("{ setup { mode } }");
 
-  expect(await response.json()).toEqual({ data: { setup: { signIn: "PASSWORD" } } });
+  expect(await response.json()).toEqual({ data: { setup: { mode: "SELF_HOSTED" } } });
 });
 
 test("returns no current user without a session", async ({ env }) => {

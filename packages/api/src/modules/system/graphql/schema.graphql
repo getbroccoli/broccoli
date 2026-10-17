@@ -38,11 +38,11 @@ enum SetupHolder {
   NOBODY
 }
 
-"How people sign in to this instance."
-enum SignIn {
-  "Email and password; the browser holding setup creates the owner at its last step."
-  PASSWORD
-  "Through the Broccoli accounts service, with Google or email."
+"How this instance is run, which decides how people sign in and the order of setup."
+enum Mode {
+  "Run by its owner: email and password, and the browser holding setup creates the owner at its last step."
+  SELF_HOSTED
+  "Run by Broccoli: people sign in through the Broccoli accounts service, with Google or email."
   MANAGED
 }
 
@@ -50,6 +50,6 @@ type Setup {
   "Always `instance`: one instance, so the client caches one object."
   id: ID!
   step: SetupStep!
-  signIn: SignIn!
+  mode: Mode!
   holder: SetupHolder!
 }

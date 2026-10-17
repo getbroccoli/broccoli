@@ -5,7 +5,7 @@ import { readSetupHolder, readSetupStep } from "../../../core/instance";
 
 const STEPS = { company: "COMPANY", import: "IMPORT", owner: "OWNER", done: "DONE" } as const;
 const HOLDERS = { you: "YOU", another_device: "ANOTHER_DEVICE", nobody: "NOBODY" } as const;
-const SIGN_IN = { self_hosted: "PASSWORD", managed: "MANAGED" } as const;
+const MODES = { self_hosted: "SELF_HOSTED", managed: "MANAGED" } as const;
 
 export function createResolvers(orm: Orm, mode: Mode): Resolvers {
   return {
@@ -14,7 +14,7 @@ export function createResolvers(orm: Orm, mode: Mode): Resolvers {
       setup: async (_parent, _args, { security }) => ({
         id: "instance",
         step: STEPS[await readSetupStep(orm)],
-        signIn: SIGN_IN[mode],
+        mode: MODES[mode],
         // A live setup cookie made the request the setup holder; any other carries no live token.
         holder: security?.isSetupHolder
           ? "YOU"

@@ -54,7 +54,7 @@ it("keeps people current with import done while reviewing", () => {
 });
 
 it("keeps the self-hosted owner later while reviewing people", () => {
-  const steps = stepViews("review", "PASSWORD");
+  const steps = stepViews("review", "SELF_HOSTED");
 
   expect(steps).toMatchObject([
     { id: "company", state: "done" },
@@ -71,7 +71,7 @@ it("keeps the self-hosted owner later while reviewing people", () => {
 });
 
 it("marks company and people done while the self-hosted owner is current", () => {
-  const steps = stepViews("owner", "PASSWORD");
+  const steps = stepViews("owner", "SELF_HOSTED");
 
   expect(steps).toMatchObject([
     { id: "company", state: "done" },

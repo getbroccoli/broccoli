@@ -7,7 +7,7 @@ query Session {
   setup {
     id
     step
-    signIn
+    mode
     holder
   }
 }

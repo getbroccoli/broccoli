@@ -32,8 +32,8 @@ export function SetupLayout({
   children,
 }: SetupLayoutProps) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const { signIn } = useRouteContext({ from: "__root__" });
-  const steps = stepViews(step, signIn);
+  const { mode } = useRouteContext({ from: "__root__" });
+  const steps = stepViews(step, mode);
 
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });

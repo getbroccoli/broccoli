@@ -1,4 +1,4 @@
-import type { SignIn } from "@/__generated__/graphql";
+import type { Mode } from "@/__generated__/graphql";
 import type { MessageKey } from "@/i18n";
 
 interface StepDefinition {
@@ -25,9 +25,9 @@ const PEOPLE = {
  * creates their account last; a managed one signed up before setup.
  */
 const SETUP_STEPS = {
-  PASSWORD: [COMPANY, PEOPLE, OWNER],
+  SELF_HOSTED: [COMPANY, PEOPLE, OWNER],
   MANAGED: [OWNER, COMPANY, PEOPLE],
-} as const satisfies Record<SignIn, readonly StepDefinition[]>;
+} as const satisfies Record<Mode, readonly StepDefinition[]>;
 
 type Step = typeof OWNER | typeof COMPANY | typeof PEOPLE;
 
@@ -50,8 +50,8 @@ export interface StepView extends PageView {
 }
 
 /** Each step and its pages with their state, seen from the current page. */
-export function stepViews(current: SetupStepId, signIn: SignIn): StepView[] {
-  const steps: readonly StepDefinition[] = SETUP_STEPS[signIn];
+export function stepViews(current: SetupStepId, mode: Mode): StepView[] {
+  const steps: readonly StepDefinition[] = SETUP_STEPS[mode];
   const order: string[] = steps.flatMap((step) =>
     step.pages ? step.pages.map(({ id }) => id) : [step.id],
   );

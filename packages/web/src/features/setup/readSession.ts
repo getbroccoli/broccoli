@@ -15,7 +15,7 @@ let renewedSetup = false;
 export async function readSession(apolloClient: ApolloClient): Promise<SessionQuery> {
   const session = await querySession(apolloClient);
   const { me, setup } = session;
-  const beforeOwner = setup.signIn === "PASSWORD" && setup.step !== "DONE" && !me;
+  const beforeOwner = setup.mode === "SELF_HOSTED" && setup.step !== "DONE" && !me;
   const shouldStart = setup.holder === "NOBODY" || (setup.holder === "YOU" && !renewedSetup);
   if (!beforeOwner || !shouldStart) {
     return session;

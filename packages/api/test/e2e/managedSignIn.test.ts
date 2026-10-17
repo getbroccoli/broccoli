@@ -63,7 +63,7 @@ test("the first ticket creates the owner and signs them in", async () => {
   expect(cookie).toBeDefined();
   expect((await me(env, cookie)).data).toEqual({
     me: { isOwner: true },
-    setup: { step: "COMPANY", signIn: "MANAGED" },
+    setup: { step: "COMPANY", mode: "MANAGED" },
   });
 });
 
@@ -266,9 +266,9 @@ async function me(env: TestEnv, cookie: string) {
   const response = await fetch(`${env.url}/api/graphql`, {
     method: "POST",
     headers: { "content-type": "application/json", cookie },
-    body: JSON.stringify({ query: "{ me { isOwner } setup { step signIn } }" }),
+    body: JSON.stringify({ query: "{ me { isOwner } setup { step mode } }" }),
   });
   return (await response.json()) as {
-    data: { me: { isOwner: boolean } | null; setup: { step: string; signIn: string } };
+    data: { me: { isOwner: boolean } | null; setup: { step: string; mode: string } };
   };
 }
