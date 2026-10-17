@@ -120,7 +120,12 @@ export const en = {
   "setup.review.noneReady": "No one is ready to add. Go back to add a source, or skip for now.",
   "imports.loadFailed": "Couldn’t load your import.",
   "imports.retry": "Try again",
+  "imports.tools.title": "Connect your tools",
+  "imports.tools.line": "Broccoli builds your employee list from the tools your team already uses.",
+  "imports.tools.readOnly":
+    "Broccoli only reads. Your team won’t hear from us until you invite them.",
   "imports.slack.name": "Slack",
+  "imports.slack.options": "Slack options",
   "imports.slack.hint": "Import the members of your Slack workspace.",
   "imports.slack.connect": "Connect Slack",
   "imports.slack.connectAnother": "Connect another workspace",
@@ -135,6 +140,8 @@ export const en = {
   "imports.slack.state": "Connecting Slack took too long or started in another browser. Try again.",
   "imports.slack.failed": "Couldn’t connect Slack. Try again.",
   "imports.files.title": "Add your files",
+  "imports.files.line":
+    "Staff lists and exports fill in what your tools don’t know, like start dates and job titles.",
   "imports.files.choose": "Choose staff files",
   "imports.files.drop": "Drop your files here",
   "imports.files.dropHint": "Staff lists or exports. Or click to choose.",

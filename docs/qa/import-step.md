@@ -22,7 +22,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 ## Refresh and reconnect
 
 - [ ] After adding or deactivating a member in Slack, "Refresh" updates the count.
-- [ ] "Connect another workspace" goes through Slack again; the row then shows the other workspace and its members.
+- [ ] "Connect another workspace", in the Slack row's "⋯" menu, goes through Slack again; the row then shows the other workspace and its members.
 
 ## Failures
 
@@ -52,5 +52,5 @@ On an instance with `OPENROUTER_API_KEY` set, managed or self-hosted. Without it
 
 ## Layout
 
-- [ ] On a narrow window the Slack row and its button fit without scrolling sideways.
+- [ ] At 320px wide the Slack row fits without scrolling sideways, and its text never runs under the buttons, which move to their own line when connected, importing or failed.
 - [ ] Screenshots of `/setup/import` (not connected, connected, with an error, with files; desktop and narrow) go in the pull request description.
