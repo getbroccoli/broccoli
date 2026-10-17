@@ -30,9 +30,7 @@
 docker compose up
 ```
 
-Open http://localhost:8080 right away: the first browser to open it holds setup, and you create your account at the end.
-
-If setup is held by a browser you no longer have, free it with `docker compose exec broccoli reset-setup`.
+Open http://localhost:8080 and follow the [setup guide](docs/guides/setup-guide.md).
 
 ## License
 
