@@ -28,7 +28,8 @@ export const en = {
   "setup.inProgress.title": "Setup is in progress on another device",
   "setup.inProgress.description":
     "Someone started setting up this workspace in another browser. Continue there.",
-  "setup.inProgress.reset": "If that browser is gone, whoever runs the server can free setup with",
+  "setup.inProgress.reset":
+    "If that browser is gone, whoever runs the server can start over on an empty database with",
   "setup.completed": "(completed)",
   "setup.owner.title": "Create your account",
   "setup.owner.description":

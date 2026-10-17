@@ -17,7 +17,7 @@ export type SetupHolder = "you" | "another_device" | "nobody";
 /**
  * Gives setup to the first browser, or extends the session of the browser holding it.
  * Any other browser gets `SetupInProgressError`, also once the session has expired:
- * only `resetSetup` frees setup again.
+ * only a new, empty database frees setup again.
  */
 export async function startSetup(
   ctx: SecurityContext,
@@ -50,16 +50,6 @@ export async function readSetupHolder(
     return "nobody";
   }
   return holdsSetup(setupSession, token, now) ? "you" : "another_device";
-}
-
-/** Frees setup held by a lost or stolen browser; the step and the data stay. */
-export async function resetSetup(ctx: SecurityContext, tx: Tx): Promise<void> {
-  ctx.requireOwnerOrSystem();
-  const instance = instanceRepository(tx);
-  if ((await instance.lockSetup()).ownerUserId) {
-    throw new OwnerExistsError();
-  }
-  await instance.clearSetupSession();
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

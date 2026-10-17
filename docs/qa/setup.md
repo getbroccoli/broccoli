@@ -8,7 +8,7 @@ Run `pnpm dev` and set `URL` to the address it prints. Development data is kept 
 
 ## Hold setup
 
-On a database without an owner, the first browser to open the app holds setup and lands on `/setup/company`; every other browser lands on `/setup/in-progress`. To free setup held by another browser, run `docker compose exec api node --import tsx src/resetSetup.ts` in the dev stack.
+On a database without an owner, the first browser to open the app holds setup and lands on `/setup/company`; every other browser lands on `/setup/in-progress`. To free setup held by another browser, restart the dev stack with `pnpm dev --drop-db`.
 
 From a terminal, keep the setup cookie in a cookie jar instead:
 

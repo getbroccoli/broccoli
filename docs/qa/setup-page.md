@@ -12,7 +12,7 @@ A manual check of a self-hosted setup held by one browser, with the owner accoun
 - [ ] In A, `/people?q=a`, `/login` and `/nope` each land on `/setup/company`, without the app's navigation.
 - [ ] The sidebar shows "Your workspace", "Setup Company" as the current step, then "Add your people" and "Create your account".
 - [ ] In devtools, A has a `broccoli_setup` cookie: HttpOnly, SameSite Lax, expiring in three days.
-- [ ] In B, any path lands on `/setup/in-progress`, titled "Setup is in progress on another device", with the `reset-setup` command. B sees no company name, step or people, and `/setup/company` goes back to it.
+- [ ] In B, any path lands on `/setup/in-progress`, titled "Setup is in progress on another device", with the `docker compose down --volumes && docker compose up` command. B sees no company name, step or people, and `/setup/company` goes back to it.
 - [ ] Closing and reopening A keeps it on its step.
 
 ## Owner form, the last step
@@ -30,12 +30,11 @@ Name the company and skip the import in A ([QA setup](setup.md)); A lands on `/s
 - [ ] `/setup` and `/setup/company` both end on `/people`.
 - [ ] In B, any path now lands on `/login`; signing in as the owner ends on `/people`.
 
-## Reset
+## Starting over
 
-On a new database, start setup in A, then run `docker compose exec api node --import tsx src/resetSetup.ts` in the dev stack (`reset-setup` in the image).
+Start setup in A, then restart the dev stack with `pnpm dev --drop-db`.
 
-- [ ] It prints that setup is free; B, reloaded, now holds setup on the same step, and A lands on `/setup/in-progress`.
-- [ ] Run once the owner exists, it says setup is over and exits with an error.
+- [ ] B, reloaded, now holds setup on "Setup Company", and A lands on `/setup/in-progress`.
 
 ## Layout
 

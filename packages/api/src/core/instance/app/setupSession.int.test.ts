@@ -2,10 +2,9 @@ import { createHash } from "node:crypto";
 
 import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
 
-import { user } from "../../auth";
 import { instanceRepository } from "../db";
 import { hashSetupToken } from "../domain";
-import { readSetupHolder, readSetupStep, resetSetup, startSetup } from ".";
+import { readSetupHolder, startSetup } from ".";
 
 test("starts a setup session on a fresh instance and stores only its hash", async ({
   orm,
@@ -150,38 +149,4 @@ test("reports nobody once an owner exists even with a setup session", async ({ o
   expect(
     await readSetupHolder(orm, { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") }),
   ).toBe("nobody");
-});
-
-test("reset lets another browser start setup without losing the step or data", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  await seed.setupSession({ expiresAt: new Date("2026-01-01T12:00:00Z") });
-  await instanceRepository(orm).advanceStep("company", "import");
-  const existingUser = { id: "user-1", name: "Avery Stone", email: "avery@example.com" };
-  await orm.insert(user).values(existingUser);
-
-  await transact((tx) => resetSetup(SYSTEM, tx));
-
-  expect(await instanceRepository(orm).readSetupSession()).toBeNull();
-  const session = await transact((tx) =>
-    startSetup(SYSTEM, tx, {
-      token: null,
-      now: new Date("2026-01-05T12:00:00Z"),
-    }),
-  );
-  expect(session.token).not.toBe("setup-token");
-  expect(await readSetupStep(orm)).toBe("import");
-  expect(await orm.select().from(user)).toMatchObject([existingUser]);
-});
-
-test("refuses reset once an owner exists", async ({ orm, seed, transact }) => {
-  await seed.owner();
-
-  await expect(transact((tx) => resetSetup(SYSTEM, tx))).rejects.toMatchObject({
-    name: "OwnerExistsError",
-  });
-
-  expect(await readSetupStep(orm)).toBe("company");
 });
