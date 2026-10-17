@@ -4,16 +4,20 @@ type Import {
   id: ID!
   "Oldest first."
   sources: [ImportSource!]!
-  "The employee records of every source; records without an email or a start date sort last by it. Owner only."
+  "The employees the import will create: records sharing an email make one. Records without an email or a start date sort last by it. Owner only."
   employees(
     "Page size, 1 to 10000."
     first: Int = 100
     after: String
     orderBy: EmployeeOrder = { field: NAME, direction: ASC }
-    filter: EmployeeFilter
+    filter: ImportEmployeeFilter
   ): ImportEmployeeConnection!
-  "How many employee records Approve would add: those complete enough to be an employee."
+  "How many import employees there are, left out or not."
+  employeeCount: Int!
+  "How many employees Approve would add: the import employees that are ready and not left out."
   readyEmployeeCount: Int!
+  "What the owner may want to settle, by kind. Nothing here blocks Approve."
+  checks: [ImportCheck!]!
   "Whether files can be added; the model that reads them needs a key."
   canReadFiles: Boolean!
 }
@@ -52,18 +56,72 @@ type ImportSource {
   "Set when FAILED."
   failure: ImportSourceFailure
   employeeCount: Int!
-  "This source's employee records."
-  employees(
-    "Page size, 1 to 10000."
-    first: Int = 100
-    after: String
-    orderBy: EmployeeOrder = { field: NAME, direction: ASC }
-    filter: EmployeeFilter
-  ): ImportEmployeeConnection!
+  "This source's rows, in the order it delivered them."
+  records("Page size, 1 to 10000." first: Int = 100, after: String): ImportEmployeeRecordConnection!
 }
 
-"An employee as one source proposes it; not yet an employee. Any field may be missing."
+"Which import employees to list."
+input ImportEmployeeFilter {
+  "Part of a shown first name, last name or email, any case."
+  search: String
+  "Only the import employees of this check."
+  check: ID
+}
+
+"A field of an import employee the owner can choose."
+enum ImportEmployeeField {
+  FIRST_NAME
+  LAST_NAME
+  EMAIL
+  JOB_TITLE
+  START_DATE
+}
+
+"How a shown value was chosen."
+enum ImportValueChoice {
+  "The first source's value: files oldest first, then Slack."
+  DEFAULT
+  PICKED
+  TYPED
+}
+
+"An employee the import will create, from the records that share an email, or one record without an email."
 type ImportEmployee {
+  "The shared email, or the record's id for a record without one."
+  id: ID!
+  "Its records, files first."
+  records: [ImportEmployeeRecord!]!
+  firstName: ImportEmployeeValue!
+  lastName: ImportEmployeeValue!
+  email: ImportEmployeeValue!
+  jobTitle: ImportEmployeeValue!
+  "Its value and options are YYYY-MM-DD."
+  startDate: ImportEmployeeValue!
+  leftOut: Boolean!
+  "Null when Approve would add this employee, if not left out; otherwise what it lacks."
+  incompleteReason: ImportEmployeeIncompleteReason
+}
+
+"One field of an import employee: what review shows and Approve uses."
+type ImportEmployeeValue {
+  value: String
+  choice: ImportValueChoice!
+  "Whether the records disagree and the owner has not chosen."
+  conflict: Boolean!
+  "The record whose value the owner picked; null unless PICKED."
+  pickedRecord: ImportEmployeeRecord
+  "The records' distinct values, in source order."
+  options: [ImportValueOption!]!
+}
+
+type ImportValueOption {
+  value: String!
+  "The records holding it."
+  records: [ImportEmployeeRecord!]!
+}
+
+"One source's row: an employee as that source proposes it, not yet an employee. Any field may be missing."
+type ImportEmployeeRecord {
   id: ID!
   source: ImportSource!
   firstName: String
@@ -72,11 +130,9 @@ type ImportEmployee {
   email: String
   jobTitle: String
   startDate: Date
-  "Null when Approve would add this record; otherwise what it lacks."
-  incompleteReason: ImportEmployeeIncompleteReason
 }
 
-"Why Approve would leave an employee record out."
+"Why Approve would leave an import employee out."
 enum ImportEmployeeIncompleteReason {
   FIRST_NAME
   LAST_NAME
@@ -86,6 +142,27 @@ enum ImportEmployeeIncompleteReason {
   OTHER
 }
 
+enum ImportCheckKind {
+  "Records of one import employee disagree on a field."
+  CONFLICT
+  "Import employees that Approve would leave out for one reason."
+  INCOMPLETE
+}
+
+"One kind of thing to settle in review, with how many import employees it concerns."
+type ImportCheck {
+  "Stable: filter employees by it."
+  id: ID!
+  kind: ImportCheckKind!
+  count: Int!
+  "Set for CONFLICT."
+  field: ImportEmployeeField
+  "Set for INCOMPLETE."
+  reason: ImportEmployeeIncompleteReason
+  "For CONFLICT: the sources with a value in these conflicts, files first."
+  sources: [ImportSource!]!
+}
+
 type ImportEmployeeEdge {
   cursor: String!
   node: ImportEmployee!
@@ -93,6 +170,16 @@ type ImportEmployeeEdge {
 
 type ImportEmployeeConnection {
   edges: [ImportEmployeeEdge!]!
+  pageInfo: PageInfo!
+}
+
+type ImportEmployeeRecordEdge {
+  cursor: String!
+  node: ImportEmployeeRecord!
+}
+
+type ImportEmployeeRecordConnection {
+  edges: [ImportEmployeeRecordEdge!]!
   pageInfo: PageInfo!
 }
 
@@ -106,12 +193,29 @@ type ImportMutations {
   readSlack: ImportReadSlackPayload!
   "Leaves the import step of setup for now; the records stay."
   skip: ImportMutationPayload!
-  "Turns the import's employee records into employees and completes setup. Records that are not complete stay in the import. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
+  "Turns the import employees that are not left out into employees, with the values review shows, and completes setup. Incomplete ones stay in the import. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
   approve: ImportApprovePayload!
   "Maps a failed file again; any other source is left as it is."
   retryFile(sourceId: ID!): ImportRetryFilePayload!
   "Removes a file, its records and the stored file."
   removeFile(sourceId: ID!): ImportMutationPayload!
+  "Shows a record's value or a typed one for one field of an import employee; with neither, the first source's value again. A typed value must pass the employee rules for that field; a typed email another import employee shows is refused as taken."
+  chooseEmployeeValue(input: ImportChooseEmployeeValueInput!): ImportChooseEmployeeValuePayload!
+  "Picks this source's value for every open conflict on this field that it holds a value in."
+  chooseSourceForAll(field: ImportEmployeeField!, sourceId: ID!): ImportMutationPayload!
+  "Leaves an import employee out of Approve, or adds it back."
+  setEmployeeLeftOut(employeeId: ID!, leftOut: Boolean!): ImportSetEmployeeLeftOutPayload!
+  "Leaves out every incomplete import employee with this reason."
+  leaveOutIncomplete(reason: ImportEmployeeIncompleteReason!): ImportMutationPayload!
+}
+
+input ImportChooseEmployeeValueInput {
+  employeeId: ID!
+  field: ImportEmployeeField!
+  "Show this record's value. Not with `value`."
+  recordId: ID
+  "Show this typed value."
+  value: String
 }
 
 "The import after a mutation that cannot fail in an expected way."
@@ -142,6 +246,22 @@ type ImportRetryFilePayload {
 }
 
 union ImportRetryFileError = ConflictError
+
+"The import after `chooseEmployeeValue`, or why the choice was refused."
+type ImportChooseEmployeeValuePayload {
+  import: Import
+  error: ImportChooseEmployeeValueError
+}
+
+union ImportChooseEmployeeValueError = InvalidInputError
+
+"The import after `setEmployeeLeftOut`, or why it was refused."
+type ImportSetEmployeeLeftOutPayload {
+  import: Import
+  error: ImportSetEmployeeLeftOutError
+}
+
+union ImportSetEmployeeLeftOutError = InvalidInputError
 
 type Mutation {
   import: ImportMutations!

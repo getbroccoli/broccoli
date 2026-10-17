@@ -228,9 +228,11 @@ test("leaves the Slack source and its records unchanged", async ({ orm, seed }) 
   await imports.files.removeFile(OWNER, source.id);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    records,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(records);
 });
 
 test("refuses a ZIP without a workbook without storing it or sending a job", async ({

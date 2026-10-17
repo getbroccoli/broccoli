@@ -19,9 +19,11 @@ test("a stale attempt leaves the source and its records unchanged", async ({
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    records,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(records);
 });
 
 test("a removed source writes nothing and does not throw", async ({ orm, fakeDecisions: fake }) => {

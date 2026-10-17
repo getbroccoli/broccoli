@@ -6,4 +6,7 @@ export const codegenMappers = {
   Import: "Record<PropertyKey, never>",
   ImportSource: "../../modules/imports/domain#ImportSource as ImportSourceModel",
   ImportEmployee: "../../modules/imports/domain#ImportEmployee as ImportEmployeeModel",
+  ImportEmployeeRecord:
+    "../../modules/imports/domain#ImportEmployeeRecord as ImportEmployeeRecordModel",
+  ImportCheck: "../../modules/imports/domain#ImportCheck as ImportCheckModel",
 };

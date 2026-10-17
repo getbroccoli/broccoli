@@ -1,3 +1,3 @@
-export { ImportReview } from "./ImportReview";
+export { ImportReview, importReviewSearch } from "./ImportReview";
 export { ImportStep } from "./ImportStep";
 export { importSearch } from "./importSearch";

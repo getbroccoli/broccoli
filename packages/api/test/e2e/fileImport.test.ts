@@ -13,7 +13,7 @@ const IMPORT = `query {
   import {
     canReadFiles
     sources { id kind name status failure }
-    employees { edges { node { firstName lastName email } } }
+    employees { edges { node { firstName { value } lastName { value } email { value } } } }
   }
 }`;
 
@@ -38,8 +38,8 @@ test("the managed owner uploads a CSV and its people become mapped import employ
           ],
           employees: {
             edges: [
-              { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
-              { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+              employee("Avery", "Stone", "avery@example.com"),
+              employee("Robin", "Reed", "robin@example.com"),
             ],
           },
         },
@@ -110,8 +110,8 @@ test("a failed file becomes mapped after retrying with working decisions", async
           sources: [{ id: sourceId, status: "MAPPED", failure: null }],
           employees: {
             edges: [
-              { node: { email: "avery@example.com" } },
-              { node: { email: "robin@example.com" } },
+              { node: { email: { value: "avery@example.com" } } },
+              { node: { email: { value: "robin@example.com" } } },
             ],
           },
         },
@@ -278,8 +278,8 @@ test.for(["staff.xlsx", "staff.XLSX"])(
             sources: [{ id: sourceId, kind: "FILE", name, status: "MAPPED", failure: null }],
             employees: {
               edges: [
-                { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
-                { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+                employee("Avery", "Stone", "avery@example.com"),
+                employee("Robin", "Reed", "robin@example.com"),
               ],
             },
           },
@@ -320,4 +320,15 @@ async function managedImport(fake: FakeDecisions) {
 
 async function readImport(browser: Browser): Promise<unknown> {
   return (await browser.graphql(IMPORT)).json();
+}
+
+/** An import employee's edge as `IMPORT` selects it. */
+function employee(firstName: string, lastName: string, email: string) {
+  return {
+    node: {
+      firstName: { value: firstName },
+      lastName: { value: lastName },
+      email: { value: email },
+    },
+  };
 }

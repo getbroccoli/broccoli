@@ -12,7 +12,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Setup step**: where a new instance is in setup: `company`, `import`, `owner` (self-hosted only), `done`. Not to be confused with employee onboarding, an HR process. The web app's step list shows one more, the setup review step, inside `import`.
 - **Setup session**: on a self-hosted instance before the owner exists, the server-side record that one browser holds setup: the hash of a token in the `broccoli_setup` cookie, valid three days after the holder last opened setup. Setup stays locked to it, even after it expires, until the database is dropped.
 - **Setup holder**: the browser holding the setup session, and the security context it acts as. It may do the setup steps and nothing else.
-- **Setup review step**: the setup page after the import step, "Review your people", where the owner sees every import employee, read-only, and approves. Only the web app knows it: the instance stays at the `import` setup step until setup approve.
+- **Setup review step**: the setup page after the import step, "Review your people", where the owner sees every import employee, settles what its records disagree on, fixes values, leaves some out, and approves. Only the web app knows it: the instance stays at the `import` setup step until setup approve.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
@@ -27,7 +27,8 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
 - **Import source**: one place people come from, such as the connected Slack workspace or an uploaded file. It owns its import records.
 - **File source**: a staff file the owner uploaded as an import source. Its records come from the file's rows once the file is mapped.
-- **Import record**: one record as one source proposes it, such as an import employee, with the source's values as they came; not yet a record of its module.
+- **Import record**: one record as one source proposes it, such as one row of a staff file, with the source's values as they came; not yet a record of its module.
+- **Import employee**: the employee an import will create: the import records that share a work email, or one without an email. Each value is the owner's pick or typed value, else the first source's: files oldest first, then Slack.
 - **Ready import employee**: an import employee complete enough to become an employee under the employee rules. The others are incomplete import employees.
-- **Setup approve**: the setup review step's Approve, which turns the ready import employees into employees and completes the import step, once; incomplete ones stay in the import.
+- **Setup approve**: the setup review step's Approve, which turns the ready import employees that are not left out into employees, with the values review shows, and completes the import step, once; the others stay in the import.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.
