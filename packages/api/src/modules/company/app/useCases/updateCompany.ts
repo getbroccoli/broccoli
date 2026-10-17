@@ -10,7 +10,7 @@ export async function updateCompany(
   ctx: SecurityContext,
   input: { name: string },
 ): Promise<Company> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   const name = parseCompanyName(input.name);
   await context.transact(async (tx) => {
     await companyRepository(tx).saveName(name);

@@ -38,20 +38,8 @@ test("the managed owner uploads a CSV and its people become mapped import employ
           ],
           employees: {
             edges: [
-              {
-                node: {
-                  firstName: { value: "Avery" },
-                  lastName: { value: "Stone" },
-                  email: { value: "avery@example.com" },
-                },
-              },
-              {
-                node: {
-                  firstName: { value: "Robin" },
-                  lastName: { value: "Reed" },
-                  email: { value: "robin@example.com" },
-                },
-              },
+              employee("Avery", "Stone", "avery@example.com"),
+              employee("Robin", "Reed", "robin@example.com"),
             ],
           },
         },
@@ -290,20 +278,8 @@ test.for(["staff.xlsx", "staff.XLSX"])(
             sources: [{ id: sourceId, kind: "FILE", name, status: "MAPPED", failure: null }],
             employees: {
               edges: [
-                {
-                  node: {
-                    firstName: { value: "Avery" },
-                    lastName: { value: "Stone" },
-                    email: { value: "avery@example.com" },
-                  },
-                },
-                {
-                  node: {
-                    firstName: { value: "Robin" },
-                    lastName: { value: "Reed" },
-                    email: { value: "robin@example.com" },
-                  },
-                },
+                employee("Avery", "Stone", "avery@example.com"),
+                employee("Robin", "Reed", "robin@example.com"),
               ],
             },
           },
@@ -311,6 +287,29 @@ test.for(["staff.xlsx", "staff.XLSX"])(
       });
   },
 );
+
+test("refuses a file upload from another origin with a valid setup cookie and adds no source", async ({
+  env,
+}) => {
+  const browser = env.browser();
+  const started = await browser.post("/api/auth/setup/start", undefined);
+  expect(started.status).toBe(200);
+  const cookie = started.headers
+    .getSetCookie()
+    .find((value) => value.startsWith("broccoli_setup="))!
+    .split(";", 1)[0]!;
+
+  const response = await fetch(`${env.url}/api/imports/files?name=staff.csv`, {
+    method: "POST",
+    headers: { origin: "https://other.example.com", cookie, "content-type": "text/plain" },
+    body: CSV,
+  });
+
+  expect(response.status).toBe(401);
+  expect(await response.text()).toBe("Unauthorized");
+  const sources = await browser.graphql("query { import { id sources { id } } }");
+  expect(await sources.json()).toEqual({ data: { import: { id: "import", sources: [] } } });
+});
 
 async function managedImport(fake: FakeDecisions) {
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
@@ -321,4 +320,15 @@ async function managedImport(fake: FakeDecisions) {
 
 async function readImport(browser: Browser): Promise<unknown> {
   return (await browser.graphql(IMPORT)).json();
+}
+
+/** An import employee's edge as `IMPORT` selects it. */
+function employee(firstName: string, lastName: string, email: string) {
+  return {
+    node: {
+      firstName: { value: firstName },
+      lastName: { value: lastName },
+      email: { value: email },
+    },
+  };
 }

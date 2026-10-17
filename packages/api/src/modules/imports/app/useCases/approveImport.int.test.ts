@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { expect, importUseCases, NON_OWNER, OWNER, test } from "#test/support";
+import { expect, importUseCases, NON_OWNER, OWNER, SETUP_HOLDER, test } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
@@ -258,4 +258,21 @@ test("approves one employee per group with picked and typed values, excluding le
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
     { firstName: "Robin", lastName: "Stone", email: "avery@example.com", jobTitle: "Engineer" },
   ]);
+});
+
+test("the setup holder approves employees without an owner and moves setup to owner", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.importSource();
+  const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
+  await seed.importEmployees(source.id, [avery]);
+  const imports = importUseCases(orm);
+
+  await imports.approveImport(SETUP_HOLDER);
+
+  expect(await readSetupStep(orm)).toBe("owner");
+  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  expect(employees.edges.map(({ node }) => node)).toMatchObject([avery]);
 });

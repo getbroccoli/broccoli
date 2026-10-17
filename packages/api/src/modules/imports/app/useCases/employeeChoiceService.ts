@@ -16,6 +16,7 @@ import {
   type IncompleteReason,
   readImportEmployees,
 } from "./importEmployeeMapping";
+import { requireImportAccess } from "./requireImportAccess";
 
 /** What the owner settles in review: picked and typed values, and who is left out. Every function checks `ctx`. */
 export interface EmployeeChoiceService {
@@ -86,7 +87,7 @@ async function changeChoices(
   transact: Transact,
   change: (employees: ImportEmployee[]) => ImportEmployeeChoices[],
 ): Promise<void> {
-  ctx.requireOwnerOrSystem();
+  requireImportAccess(ctx);
   await transact(async (tx) => {
     const imports: ImportRepository = importRepository(tx);
     // Waits for a mapping run or Approve to finish, so the choices meet the records they read.

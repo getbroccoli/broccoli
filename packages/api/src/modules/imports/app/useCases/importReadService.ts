@@ -16,6 +16,7 @@ import type { ImportEmployee, ImportEmployeeRecord, ImportSource } from "../../d
 import { isInCheck, type ImportCheck, listChecks, parseCheckId } from "./importChecks";
 import { importEmployeeKeyset, matchesSearch, pageImportEmployees } from "./importEmployeeList";
 import { readImportEmployees, toNewEmployee } from "./importEmployeeMapping";
+import { requireImportAccess } from "./requireImportAccess";
 
 /** Reading the import: its sources, their records and the employees they make. Every function checks `ctx`. */
 export interface ImportReadService {
@@ -55,12 +56,12 @@ const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 export function createImportReadService(imports: ImportRepository): ImportReadService {
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       return imports.listSources();
     },
 
     readSources: (ctx: SecurityContext, ids: readonly string[]): Promise<ImportSource[]> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       return imports.findSources(ids);
     },
 
@@ -68,18 +69,18 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx: SecurityContext,
       sourceIds: readonly string[],
     ): Promise<Map<string, number>> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const counts = await imports.countEmployees(sourceIds);
       return new Map(sourceIds.map((id) => [id, counts.get(id) ?? 0]));
     },
 
     employeeCount: async (ctx: SecurityContext): Promise<number> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       return (await readImportEmployees(imports)).length;
     },
 
     readyEmployeeCount: async (ctx: SecurityContext): Promise<number> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const employees = await readImportEmployees(imports);
       return employees.filter((employee) => !employee.leftOut && toNewEmployee(employee) !== null)
         .length;
@@ -89,7 +90,7 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx: SecurityContext,
       { orderBy, filter, ...pageArgs }: ImportEmployeeListArgs,
     ): Promise<Connection<ImportEmployee>> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const order = parseOrder(orderBy, DEFAULT_ORDER);
       const search = parseSearch(filter?.search);
       const check = filter?.check ? parseCheckId(filter.check) : null;
@@ -107,13 +108,13 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx: SecurityContext,
       { sourceId, ...pageArgs }: PageArgs & { sourceId: string },
     ): Promise<Connection<ImportEmployeeRecord>> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const page = parsePage(pageArgs, RECORD_KEYSET);
       return toConnection(await imports.findRecordPage({ sourceId, ...page }), page.first);
     },
 
     listChecks: async (ctx: SecurityContext): Promise<ImportCheck[]> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const [sources, employees] = await Promise.all([
         imports.listSources(),
         readImportEmployees(imports),

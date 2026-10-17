@@ -1,4 +1,5 @@
 import { Plant } from "@phosphor-icons/react";
+import { useRouteContext } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import { t } from "@/i18n";
@@ -31,7 +32,8 @@ export function SetupLayout({
   children,
 }: SetupLayoutProps) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const steps = stepViews(step);
+  const { mode } = useRouteContext({ from: "__root__" });
+  const steps = stepViews(step, mode);
 
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });

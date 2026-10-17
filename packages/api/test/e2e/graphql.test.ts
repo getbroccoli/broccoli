@@ -11,7 +11,7 @@ test("answers the public fields without a session", async ({ env }) => {
   const response = await env.browser().graphql("{ ping setup { id step } me { id } }");
 
   expect(await response.json()).toEqual({
-    data: { ping: "pong", setup: { id: "instance", step: "OWNER" }, me: null },
+    data: { ping: "pong", setup: { id: "instance", step: "COMPANY" }, me: null },
   });
 });
 

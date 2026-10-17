@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { user } from "../../src/core/auth";
+import { hashPassword } from "better-auth/crypto";
+
+import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
-import { instanceRepository } from "../../src/core/instance";
+import { hashSetupToken, instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import { importRepository, type ImportEmployeeValues } from "../../src/modules/imports";
 import { slackConnectionRepository } from "../../src/modules/slack";
@@ -25,12 +27,37 @@ export class TestSeed {
 
   constructor(private readonly orm: Orm) {}
 
-  async owner({ email = "owner@example.com" } = {}): Promise<TestSecurityContext> {
+  async owner({
+    email = "owner@example.com",
+    password,
+  }: { email?: string; password?: string } = {}): Promise<TestSecurityContext> {
     const userId = randomUUID();
     const normalisedEmail = email.toLowerCase();
     await this.orm.insert(user).values({ id: userId, name: "Owner", email: normalisedEmail });
+    if (password !== undefined) {
+      await this.orm.insert(account).values({
+        id: randomUUID(),
+        accountId: userId,
+        providerId: "credential",
+        userId,
+        password: await hashPassword(password),
+      });
+    }
     await instanceRepository(this.orm).setOwner(userId, "company");
     return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
+  }
+
+  async setupSession({
+    token = "setup-token",
+    expiresAt,
+  }: {
+    token?: string;
+    expiresAt: Date;
+  }): Promise<void> {
+    await instanceRepository(this.orm).saveSetupSession({
+      tokenHash: hashSetupToken(token),
+      expiresAt,
+    });
   }
 
   async file({ content, mimeType }: { content: Buffer; mimeType: string }): Promise<string> {

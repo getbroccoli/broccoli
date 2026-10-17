@@ -1,5 +1,8 @@
-/** Where a new instance is in its first-run flow, in order. */
-export const SETUP_STEPS = ["owner", "company", "import", "done"] as const;
+/**
+ * Where a new instance is in its first-run flow. Every instance starts at `company`;
+ * a self-hosted one creates its owner at `owner`, after the import.
+ */
+export const SETUP_STEPS = ["company", "import", "owner", "done"] as const;
 
 export type SetupStep = (typeof SETUP_STEPS)[number];
 

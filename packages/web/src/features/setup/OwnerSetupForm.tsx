@@ -26,16 +26,17 @@ const ownerSetupSchema = z.object({
     .max(PASSWORD_LENGTH.max, t("setup.owner.passwordTooLong")),
 });
 
-const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "ownerExists">, MessageKey> = {
+const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "conflict">, MessageKey> = {
   invalidInput: "setup.owner.invalidInput",
   tooManyAttempts: "setup.owner.tooManyAttempts",
   failed: "setup.owner.failed",
 };
 
 /**
- * Creates the owner account. On success the cache is cleared and the router reloads,
- * so routing sends the now signed-in owner on to the company step. When someone else
- * created the owner first, the reload sends the visitor to sign-in.
+ * Creates the owner account, the last step of self-hosted setup. On success the cache
+ * is cleared and the router reloads, so routing sends the now signed-in owner to the
+ * directory. On a conflict, such as an owner created first, the reload routes the
+ * visitor to wherever setup now is.
  */
 export function OwnerSetupForm() {
   const apolloClient = useApolloClient();
@@ -55,7 +56,7 @@ export function OwnerSetupForm() {
         await router.invalidate();
         return;
       }
-      if (result === "ownerExists") {
+      if (result === "conflict") {
         await router.invalidate();
         return;
       }

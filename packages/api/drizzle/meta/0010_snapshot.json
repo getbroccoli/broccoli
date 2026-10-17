@@ -1,5 +1,5 @@
 {
-  "id": "ba0a2e08-d792-4cc3-8650-88698a1bbbbb",
+  "id": "53eb535c-dfc9-4f47-b92b-3c9821327da1",
   "prevId": "2951154b-621d-4ccb-a5f1-350ff1fe7562",
   "version": "7",
   "dialect": "postgresql",
@@ -408,7 +408,19 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'owner'"
+          "default": "'company'"
+        },
+        "setup_token_hash": {
+          "name": "setup_token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "setup_expires_at": {
+          "name": "setup_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "managed_company_id": {
           "name": "managed_company_id",
@@ -451,7 +463,11 @@
         },
         "instance_setup_step": {
           "name": "instance_setup_step",
-          "value": "\"instance\".\"setup_step\" in ('owner', 'company', 'import', 'done')"
+          "value": "\"instance\".\"setup_step\" in ('company', 'import', 'owner', 'done')"
+        },
+        "instance_setup_session": {
+          "name": "instance_setup_session",
+          "value": "num_nonnulls(\"instance\".\"setup_token_hash\", \"instance\".\"setup_expires_at\") in (0, 2)"
         },
         "instance_managed_assignment": {
           "name": "instance_managed_assignment",
@@ -668,78 +684,6 @@
           "name": "employees_email_unique",
           "nullsNotDistinct": false,
           "columns": ["email"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.import_choices": {
-      "name": "import_choices",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "type": {
-          "name": "type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type_version": {
-          "name": "type_version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "key": {
-          "name": "key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "left_out": {
-          "name": "left_out",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "values": {
-          "name": "values",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "import_choices_type_key": {
-          "name": "import_choices_type_key",
-          "nullsNotDistinct": false,
-          "columns": ["type", "key"]
         }
       },
       "policies": {},

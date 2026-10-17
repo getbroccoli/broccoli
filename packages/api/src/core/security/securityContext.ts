@@ -7,16 +7,22 @@ import { ApplicationError } from "../applicationError";
  */
 export interface SecurityContext {
   /**
-   * The effective signed-in user; null only for work Broccoli does on its own. A
-   * request without a session has no security context at all, never one without a user.
+   * The effective signed-in user; null for work Broccoli does on its own and for the
+   * setup holder. A request without either session has no security context at all.
    */
   readonly user: Readonly<SignedInUser> | null;
 
-  /** Whether Broccoli acts on its own; always `user === null`. */
+  /** Whether Broccoli acts on its own; then `user` is null. */
   readonly isSystem: boolean;
+
+  /** Whether the browser holding setup calls, before the owner exists; then `user` is null. */
+  readonly isSetupHolder: boolean;
 
   /** Until permissions exist: the owner or Broccoli itself; refuses others with FORBIDDEN. */
   requireOwnerOrSystem(): void;
+
+  /** Setup work: the owner, Broccoli itself or the setup holder; refuses others with FORBIDDEN. */
+  requireSetupAccess(): void;
 
   // Planned with the permission system and uncommented with their first caller,
   // together with their types: use cases will ask record scopes and field access
@@ -51,27 +57,41 @@ export interface SignedInUser {
   isOwner: boolean;
 }
 
-/** The security context of a user or of Broccoli itself, under today's owner-only rule. */
+/** The security context of a user, the setup holder or Broccoli itself, under today's owner-only rule. */
 export class PrincipalSecurityContext implements SecurityContext {
-  private constructor(readonly user: Readonly<SignedInUser> | null) {}
+  private constructor(
+    readonly user: Readonly<SignedInUser> | null,
+    readonly isSetupHolder: boolean,
+  ) {}
 
   /** A signed-in user; built by `resolveSecurityContext`. */
   static user(user: SignedInUser): SecurityContext {
-    return new PrincipalSecurityContext({ ...user });
+    return new PrincipalSecurityContext({ ...user }, false);
+  }
+
+  /** The browser holding setup; built by `resolveSecurityContext`. */
+  static setupHolder(): SecurityContext {
+    return new PrincipalSecurityContext(null, true);
   }
 
   /** Broccoli acting on its own: setup, sign-in, init and event handlers. */
   static system(): SecurityContext {
-    return new PrincipalSecurityContext(null);
+    return new PrincipalSecurityContext(null, false);
   }
 
   get isSystem(): boolean {
-    return this.user === null;
+    return this.user === null && !this.isSetupHolder;
   }
 
   requireOwnerOrSystem(): void {
-    if (this.user && !this.user.isOwner) {
+    if (!this.isSystem && !this.user?.isOwner) {
       throw new ApplicationError("FORBIDDEN", "Only the owner can do this.");
+    }
+  }
+
+  requireSetupAccess(): void {
+    if (!this.isSetupHolder) {
+      this.requireOwnerOrSystem();
     }
   }
 }

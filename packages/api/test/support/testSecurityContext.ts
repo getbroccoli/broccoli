@@ -7,17 +7,29 @@ import type { SecurityContext, SignedInUser } from "../../src/core/security";
  */
 export class TestSecurityContext implements SecurityContext {
   readonly user: Readonly<SignedInUser> | null;
+  readonly isSetupHolder: boolean;
 
-  constructor({ user }: { user: SignedInUser | null }) {
+  constructor({
+    user,
+    isSetupHolder = false,
+  }: {
+    user: SignedInUser | null;
+    isSetupHolder?: boolean;
+  }) {
     this.user = user;
+    this.isSetupHolder = isSetupHolder;
   }
 
   get isSystem(): boolean {
-    return this.user === null;
+    return this.user === null && !this.isSetupHolder;
+  }
+
+  requireSetupAccess(): void {
+    if (!this.isSetupHolder) this.requireOwnerOrSystem();
   }
 
   requireOwnerOrSystem(): void {
-    if (this.user && !this.user.isOwner) {
+    if (!this.isSystem && !this.user?.isOwner) {
       throw new ApplicationError("FORBIDDEN", "Only the owner can do this.");
     }
   }
@@ -35,3 +47,6 @@ export const NON_OWNER = new TestSecurityContext({
 
 /** Broccoli acting on its own. */
 export const SYSTEM = new TestSecurityContext({ user: null });
+
+/** The browser holding setup before the owner exists. */
+export const SETUP_HOLDER = new TestSecurityContext({ user: null, isSetupHolder: true });

@@ -25,9 +25,15 @@ export const en = {
   "auth.signOut": "Sign out",
   "setup.workspaceName": "Your workspace",
   "setup.progress": "Setup progress",
+  "setup.inProgress.title": "Setup is in progress on another device",
+  "setup.inProgress.description":
+    "Someone started setting up this workspace in another browser. Continue there.",
+  "setup.inProgress.reset":
+    "If that browser is gone, whoever runs the server can start over on an empty database with",
   "setup.completed": "(completed)",
-  "setup.owner.title": "Setup Workspace",
-  "setup.owner.description": "Create your owner account to get started.",
+  "setup.owner.title": "Create your account",
+  "setup.owner.description":
+    "Last step: the email and password you will sign in with. You own this workspace.",
   "setup.owner.email": "Your email",
   "setup.owner.emailPlaceholder": "name@company.com",
   "setup.owner.emailHint": "Used to sign in to this workspace.",
@@ -48,7 +54,7 @@ export const en = {
   "setup.owner.copy": "Copy",
   "setup.owner.copied": "Copied",
   "setup.owner.copyFailed": "Couldn’t copy. Select the password and copy it manually.",
-  "setup.owner.submit": "Next: set up company",
+  "setup.owner.submit": "Create account and finish",
   "setup.owner.submitting": "Creating your account…",
   "setup.owner.invalidInput": "Check your email and password and try again.",
   "setup.owner.tooManyAttempts": "Too many attempts. Try again in a moment.",
@@ -175,7 +181,12 @@ export const en = {
   "setup.review.noneReady": "No one is ready to add. Go back to add a source, or skip for now.",
   "imports.loadFailed": "Couldn’t load your import.",
   "imports.retry": "Try again",
+  "imports.tools.title": "Connect your tools",
+  "imports.tools.line": "Broccoli builds your employee list from the tools your team already uses.",
+  "imports.tools.readOnly":
+    "Broccoli only reads. Your team won’t hear from us until you invite them.",
   "imports.slack.name": "Slack",
+  "imports.slack.options": "Slack options",
   "imports.slack.hint": "Import the members of your Slack workspace.",
   "imports.slack.connect": "Connect Slack",
   "imports.slack.connectAnother": "Connect another workspace",
@@ -190,6 +201,8 @@ export const en = {
   "imports.slack.state": "Connecting Slack took too long or started in another browser. Try again.",
   "imports.slack.failed": "Couldn’t connect Slack. Try again.",
   "imports.files.title": "Add your files",
+  "imports.files.line":
+    "Staff lists and exports fill in what your tools don’t know, like start dates and job titles.",
   "imports.files.choose": "Choose staff files",
   "imports.files.drop": "Drop your files here",
   "imports.files.dropHint": "Staff lists or exports. Or click to choose.",

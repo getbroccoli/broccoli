@@ -1,4 +1,4 @@
-import { companyUseCases, expect, SYSTEM, test } from "#test/support";
+import { companyUseCases, expect, SETUP_HOLDER, SYSTEM, test } from "#test/support";
 
 test("suggests a name from the owner's domain before the company is named", async ({
   orm,
@@ -27,6 +27,16 @@ test("suggests the stored brand name after owner setup", async ({ orm, seed }) =
   expect(await company.getCompany(actor)).toEqual({
     name: null,
     suggestedName: "Example Labs",
+    logoFileId: null,
+  });
+});
+
+test("returns no suggested name before an owner or brand exists", async ({ orm }) => {
+  const company = companyUseCases(orm);
+
+  expect(await company.getCompany(SETUP_HOLDER)).toEqual({
+    name: null,
+    suggestedName: null,
     logoFileId: null,
   });
 });

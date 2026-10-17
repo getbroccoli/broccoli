@@ -1,3 +1,4 @@
+import type { Mode } from "@/__generated__/graphql";
 import type { MessageKey } from "@/i18n";
 
 interface StepDefinition {
@@ -7,22 +8,28 @@ interface StepDefinition {
   pages?: readonly { id: string; title: MessageKey }[];
 }
 
-/** The setup steps in order, each with the copy key of its title. */
-const SETUP_STEPS = [
-  { id: "owner", title: "setup.owner.title" },
-  { id: "company", title: "setup.company.title" },
-  {
-    id: "people",
-    title: "setup.import.title",
-    // Both pages belong to the server's `import` step, until Approve.
-    pages: [
-      { id: "import", title: "setup.import.gather" },
-      { id: "review", title: "setup.review.title" },
-    ],
-  },
-] as const satisfies readonly StepDefinition[];
+const OWNER = { id: "owner", title: "setup.owner.title" } as const satisfies StepDefinition;
+const COMPANY = { id: "company", title: "setup.company.title" } as const satisfies StepDefinition;
+const PEOPLE = {
+  id: "people",
+  title: "setup.import.title",
+  // Both pages belong to the server's `import` step, until Approve.
+  pages: [
+    { id: "import", title: "setup.import.gather" },
+    { id: "review", title: "setup.review.title" },
+  ],
+} as const satisfies StepDefinition;
 
-type Step = (typeof SETUP_STEPS)[number];
+/**
+ * The setup steps in order, each with the copy key of its title. A self-hosted owner
+ * creates their account last; a managed one signed up before setup.
+ */
+const SETUP_STEPS = {
+  SELF_HOSTED: [COMPANY, PEOPLE, OWNER],
+  MANAGED: [OWNER, COMPANY, PEOPLE],
+} as const satisfies Record<Mode, readonly StepDefinition[]>;
+
+type Step = typeof OWNER | typeof COMPANY | typeof PEOPLE;
 
 /** A setup page: a step's own page, or one of its pages. */
 export type SetupStepId =
@@ -43,8 +50,9 @@ export interface StepView extends PageView {
 }
 
 /** Each step and its pages with their state, seen from the current page. */
-export function stepViews(current: SetupStepId): StepView[] {
-  const order: string[] = SETUP_STEPS.flatMap((step: StepDefinition) =>
+export function stepViews(current: SetupStepId, mode: Mode): StepView[] {
+  const steps: readonly StepDefinition[] = SETUP_STEPS[mode];
+  const order: string[] = steps.flatMap((step) =>
     step.pages ? step.pages.map(({ id }) => id) : [step.id],
   );
   const currentIndex = order.indexOf(current);
@@ -56,7 +64,7 @@ export function stepViews(current: SetupStepId): StepView[] {
       currentIndex,
     ),
   });
-  return SETUP_STEPS.map((step: StepDefinition) => {
+  return steps.map((step) => {
     const pages = step.pages?.map((page) => view(page, [page.id])) ?? [];
     return { ...view(step, pages.length ? pages.map(({ id }) => id) : [step.id]), pages };
   });

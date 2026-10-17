@@ -63,10 +63,11 @@ export class TestEnv {
 
   /** Sets up the owner and returns a browser signed in as them. */
   async signInAsOwner(owner = TEST_OWNER): Promise<SignedInOwner> {
+    await this.seed.owner(owner);
     const browser = this.browser();
-    const response = await browser.post("/api/auth/setup", owner);
+    const response = await browser.post("/api/auth/sign-in/email", owner);
     if (response.status !== 200) {
-      throw new Error(`Owner setup failed with ${response.status}: ${await response.text()}`);
+      throw new Error(`Owner sign-in failed with ${response.status}: ${await response.text()}`);
     }
     const { user } = (await response.json()) as Pick<SignedInOwner, "user">;
     return { browser, user };
