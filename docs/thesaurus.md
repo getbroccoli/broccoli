@@ -12,7 +12,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Setup step**: where a new instance is in setup: `company`, `import`, `owner` (self-hosted only), `done`. Not to be confused with employee onboarding, an HR process. The web app's step list shows one more, the setup review step, inside `import`.
 - **Setup session**: on a self-hosted instance before the owner exists, the server-side record that one browser holds setup: the hash of a token in the `broccoli_setup` cookie, valid three days after the holder last opened setup. Setup stays locked to it, even after it expires, until `reset-setup` frees it.
 - **Setup holder**: the browser holding the setup session, and the security context it acts as. It may do the setup steps and nothing else.
-- **Setup review step**: the setup page after the import step, "Review your people", where the owner sees every import employee, read-only, and approves. Only the web app knows it: the instance stays at the `import` setup step until Approve.
+- **Setup review step**: the setup page after the import step, "Review your people", where the owner sees every import employee, read-only, and approves. Only the web app knows it: the instance stays at the `import` setup step until setup approve.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
@@ -29,5 +29,5 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **File source**: a staff file the owner uploaded as an import source. Its records come from the file's rows once the file is mapped.
 - **Import record**: one record as one source proposes it, such as an import employee, with the source's values as they came; not yet a record of its module.
 - **Ready import employee**: an import employee complete enough to become an employee under the employee rules. The others are incomplete import employees.
-- **Approve**: turns the ready import employees into employees and completes the import step, once; incomplete ones stay in the import.
+- **Setup approve**: the setup review step's Approve, which turns the ready import employees into employees and completes the import step, once; incomplete ones stay in the import.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.
