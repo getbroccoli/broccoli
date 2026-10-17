@@ -9,13 +9,11 @@ import {
   type ImportEmployee,
   type ImportEmployeeChoices,
   type ImportEmployeeField,
-  type ValueChoice,
-} from "../../domain";
-import {
   incompleteReason,
   type IncompleteReason,
-  readImportEmployees,
-} from "./importEmployeeMapping";
+  type ValueChoice,
+} from "../../domain";
+import { readImportEmployees } from "./readImportEmployees";
 import { requireImportAccess } from "./requireImportAccess";
 
 /** What the owner settles in review: picked and typed values, and who is left out. Every function checks `ctx`. */

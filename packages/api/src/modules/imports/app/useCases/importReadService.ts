@@ -12,10 +12,18 @@ import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
 import type { ImportRepository } from "../../db";
 import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
-import type { ImportEmployee, ImportEmployeeRecord, ImportSource } from "../../domain";
-import { isInCheck, type ImportCheck, listChecks, parseCheckId } from "./importChecks";
+import {
+  type ImportCheck,
+  type ImportEmployee,
+  type ImportEmployeeRecord,
+  type ImportSource,
+  isInCheck,
+  listChecks,
+  parseCheckId,
+  toNewEmployee,
+} from "../../domain";
 import { importEmployeeKeyset, matchesSearch, pageImportEmployees } from "./importEmployeeList";
-import { readImportEmployees, toNewEmployee } from "./importEmployeeMapping";
+import { readImportEmployees } from "./readImportEmployees";
 import { requireImportAccess } from "./requireImportAccess";
 
 /** Reading the import: its sources, their records and the employees they make. Every function checks `ctx`. */

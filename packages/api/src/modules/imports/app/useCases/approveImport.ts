@@ -4,7 +4,8 @@ import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
 import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
-import { readImportEmployees, toNewEmployeeInput } from "./importEmployeeMapping";
+import { toNewEmployeeInput } from "../../domain";
+import { readImportEmployees } from "./readImportEmployees";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**

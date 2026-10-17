@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import type { ImportEmployee } from "../../domain";
+import type { ImportEmployee } from "./importEmployee";
 import { incompleteReason, toNewEmployee } from "./importEmployeeMapping";
 
 it("returns the normalised employee and no incomplete reason for a complete import employee", () => {

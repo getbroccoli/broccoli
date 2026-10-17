@@ -8,5 +8,5 @@ export const codegenMappers = {
   ImportEmployee: "../../modules/imports/domain#ImportEmployee as ImportEmployeeModel",
   ImportEmployeeRecord:
     "../../modules/imports/domain#ImportEmployeeRecord as ImportEmployeeRecordModel",
-  ImportCheck: "../../modules/imports/app#ImportCheck as ImportCheckModel",
+  ImportCheck: "../../modules/imports/domain#ImportCheck as ImportCheckModel",
 };
