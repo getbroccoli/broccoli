@@ -5,6 +5,7 @@ import { createImportedEmployees } from "../../../employees";
 import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { toNewEmployeeInput } from "./importEmployeeMapping";
+import { requireImportAccess } from "./requireImportAccess";
 
 /**
  * Turns the import's employee records into employees and completes the import step,
@@ -15,7 +16,7 @@ export async function approveImport(
   { transact, logger }: ImportContext,
   ctx: SecurityContext,
 ): Promise<void> {
-  ctx.requireSetupAccess();
+  requireImportAccess(ctx);
   const result = await transact(async (tx) => {
     const imports = importRepository(tx);
     await imports.lockSources();
