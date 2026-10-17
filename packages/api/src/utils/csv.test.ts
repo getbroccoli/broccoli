@@ -46,8 +46,22 @@ it("reads invalid UTF-8 as windows-1252", () => {
   ).toEqual([["Name"], ["Renée"]]);
 });
 
-it("refuses a NUL byte anywhere in the file", () => {
-  expect(parseCsv(Buffer.from("Name,Email\nAvery,avery@example.com\0"))).toBeNull();
+it.each(["\0", "\x1B", "\x7F"])(
+  "refuses the control character %j anywhere in the file",
+  (control) => {
+    expect(parseCsv(Buffer.from(`Name,Email\nAvery,avery@example.com${control}`))).toBeNull();
+  },
+);
+
+it("refuses a PDF", () => {
+  expect(
+    parseCsv(
+      Buffer.from(
+        "%PDF-1.7\n%\xE2\xE3\xCF\xD3\n1 0 obj\n<< /Length 4 >>\nstream\n\x78\x9C\x03\x81\nendstream",
+        "latin1",
+      ),
+    ),
+  ).toBeNull();
 });
 
 it("trims cells and drops rows whose cells are all empty", () => {
