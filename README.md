@@ -30,7 +30,9 @@
 docker compose up
 ```
 
-Open http://localhost:8080 and follow the [setup guide](docs/guides/setup-guide.md).
+Open http://localhost:8080.
+
+[Self-hosted setup guide](docs/guides/setup-guide.md)
 
 ## License
 

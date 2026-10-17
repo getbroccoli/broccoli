@@ -1,4 +1,4 @@
-# Setup guide
+# Self-hosted setup guide
 
 How a new self-hosted Broccoli is set up after `docker compose up`.
 
