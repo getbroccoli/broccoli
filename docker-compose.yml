@@ -24,6 +24,25 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  # Prints Broccoli's address once it is ready, then exits.
+  ready:
+    # Already pulled for postgres, and it has a shell.
+    image: postgres:18-alpine
+    environment:
+      ADDRESS: ${SELF_HOSTED_PUBLIC_URL:-http://localhost:${HOST_WEB_PORT:-8080}}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        case "$$ADDRESS" in
+          # Compose picked a free port, which only the host knows.
+          *:0) ADDRESS='the address `docker compose port broccoli 3000` prints' ;;
+        esac
+        printf '\n\033[1;32m🥦🥦🥦  Broccoli is ready!\033[0m  ➜  \033[1;36m%s\033[0m\n\n' "$$ADDRESS"
+    depends_on:
+      broccoli:
+        condition: service_healthy
+
   postgres:
     image: postgres:18-alpine
     environment:
