@@ -3,27 +3,45 @@ import { redirect } from "@tanstack/react-router";
 import type { SetupStep } from "@/__generated__/graphql";
 
 /**
- * A route gate: sends a signed-out visitor to login, and a user whose setup is at another step
- * to that step's page. Returns the signed-in user.
+ * A route gate for a setup page: sends a visitor who is neither signed in nor holding
+ * setup to login, and anyone whose setup is at another step to that step's page.
  */
-export function requireSetupStep<Me>(step: SetupStep, { context, location }: Gate<Me>): Me {
-  if (!context.me) {
-    throw redirect({ to: "/login", search: { redirect: location.href }, replace: true });
+export function requireSetupStep<Me>(step: SetupStep, { context, location }: Gate<Me>): void {
+  if (!context.me && !context.holdsSetup) {
+    throw loginRedirect(location.href);
   }
   if (context.setupStep !== step) {
-    throw redirect({ to: STEP_PAGES[context.setupStep], replace: true });
+    throw redirect({ to: setupStepPage(context.setupStep), replace: true });
   }
-  return context.me;
+}
+
+/** The page of a setup step. */
+export function setupStepPage(step: SetupStep): (typeof STEP_PAGES)[SetupStep] {
+  return STEP_PAGES[step];
+}
+
+/** The gate of the app itself: a signed-in user once setup is done. Returns them. */
+export function requireFinishedSetup<Me>(gate: Gate<Me>): Me {
+  requireSetupStep("DONE", gate);
+  // Setup ends by signing the new owner in, so only a signed-in user gets here.
+  if (!gate.context.me) {
+    throw loginRedirect(gate.location.href);
+  }
+  return gate.context.me;
 }
 
 const STEP_PAGES = {
-  OWNER: "/setup",
   COMPANY: "/setup/company",
   IMPORT: "/setup/import",
+  OWNER: "/setup",
   DONE: "/people",
 } as const satisfies Record<SetupStep, string>;
 
 interface Gate<Me> {
-  context: { me: Me | null; setupStep: SetupStep };
+  context: { me: Me | null; holdsSetup: boolean; setupStep: SetupStep };
   location: { href: string };
+}
+
+function loginRedirect(href: string) {
+  return redirect({ to: "/login", search: { redirect: href }, replace: true });
 }

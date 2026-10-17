@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { ManagedAssignment, SetupStep } from "../domain";
+import type { ManagedAssignment, SetupSession, SetupStep } from "../domain";
 import { instance } from "./instanceTable";
 
 /** The instance row in Postgres, through the pool or inside a transaction. */
@@ -12,8 +12,19 @@ export interface InstanceRepository {
   readOwnerUserId(): Promise<string | null>;
   /** The owner's id and sign-in email, or null before an owner exists. */
   readOwner(): Promise<{ userId: string; email: string } | null>;
-  /** Locks the row until the transaction ends, so concurrent claims run one after another. */
-  lockOwnerUserId(): Promise<string | null>;
+  /**
+   * Reads the owner, step and setup session, locking the row until the transaction
+   * ends, so concurrent claims and setup sessions run one after another.
+   */
+  lockSetup(): Promise<{
+    ownerUserId: string | null;
+    step: SetupStep;
+    setupSession: SetupSession | null;
+  }>;
+  /** Null when nobody holds setup. */
+  readSetupSession(): Promise<SetupSession | null>;
+  saveSetupSession(session: SetupSession): Promise<void>;
+  clearSetupSession(): Promise<void>;
   /** Null before a managed instance's init, and always on self-hosted instances. */
   readAssignment(): Promise<ManagedAssignment | null>;
   /** Locks the row until the transaction ends, so concurrent inits run one after another. */
@@ -49,15 +60,28 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
       return row ?? null;
     },
 
-    lockOwnerUserId: async (): Promise<string | null> => {
+    lockSetup: async () => {
       const [row] = await orm()
-        .select({ ownerUserId: instance.ownerUserId })
+        .select({ ownerUserId: instance.ownerUserId, step: instance.setupStep, ...sessionColumns })
         .from(instance)
         .for("update");
       if (!row) {
         throw new Error("The instance row is missing; migrations insert it");
       }
-      return row.ownerUserId;
+      return { ownerUserId: row.ownerUserId, step: row.step, setupSession: toSetupSession(row) };
+    },
+
+    readSetupSession: async (): Promise<SetupSession | null> => {
+      const [row] = await orm().select(sessionColumns).from(instance);
+      return row ? toSetupSession(row) : null;
+    },
+
+    saveSetupSession: async ({ tokenHash, expiresAt }: SetupSession): Promise<void> => {
+      await orm().update(instance).set({ setupTokenHash: tokenHash, setupExpiresAt: expiresAt });
+    },
+
+    clearSetupSession: async (): Promise<void> => {
+      await orm().update(instance).set({ setupTokenHash: null, setupExpiresAt: null });
     },
 
     readAssignment: async (): Promise<ManagedAssignment | null> => {
@@ -108,6 +132,22 @@ const assignmentColumns = {
   publicOrigin: instance.managedPublicOrigin,
   websiteOrigin: instance.managedWebsiteOrigin,
 };
+
+const sessionColumns = {
+  tokenHash: instance.setupTokenHash,
+  expiresAt: instance.setupExpiresAt,
+};
+
+function toSetupSession({
+  tokenHash,
+  expiresAt,
+}: {
+  tokenHash: string | null;
+  expiresAt: Date | null;
+}): SetupSession | null {
+  // A check constraint keeps both columns null or both set.
+  return tokenHash && expiresAt ? { tokenHash, expiresAt } : null;
+}
 
 function toAssignment({
   companyId,

@@ -288,6 +288,29 @@ test.for(["staff.xlsx", "staff.XLSX"])(
   },
 );
 
+test("refuses a file upload from another origin with a valid setup cookie and adds no source", async ({
+  env,
+}) => {
+  const browser = env.browser();
+  const started = await browser.post("/api/auth/setup/start", undefined);
+  expect(started.status).toBe(200);
+  const cookie = started.headers
+    .getSetCookie()
+    .find((value) => value.startsWith("broccoli_setup="))!
+    .split(";", 1)[0]!;
+
+  const response = await fetch(`${env.url}/api/imports/files?name=staff.csv`, {
+    method: "POST",
+    headers: { origin: "https://other.example.com", cookie, "content-type": "text/plain" },
+    body: CSV,
+  });
+
+  expect(response.status).toBe(401);
+  expect(await response.text()).toBe("Unauthorized");
+  const sources = await browser.graphql("query { import { id sources { id } } }");
+  expect(await sources.json()).toEqual({ data: { import: { id: "import", sources: [] } } });
+});
+
 async function managedImport(fake: FakeDecisions) {
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
   const { env, accounts } = await startManagedEnv({ decisionsUrl: fake.url });

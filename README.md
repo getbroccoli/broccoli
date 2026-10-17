@@ -32,6 +32,8 @@ docker compose up
 
 Open http://localhost:8080.
 
+[Self-hosted setup guide](docs/guides/setup-guide.md)
+
 ## License
 
 Copyright (C) 2026 Minari Limited.

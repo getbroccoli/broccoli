@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { expect, importUseCases, NON_OWNER, OWNER, test } from "#test/support";
+import { expect, importUseCases, NON_OWNER, OWNER, SETUP_HOLDER, test } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
@@ -217,4 +217,21 @@ test("waits for an uncommitted upload before refusing approval", async ({
   expect(await approval).toMatchObject([{ status: "rejected", reason: { code: "CONFLICT" } }]);
   expect(await readSetupStep(orm)).toBe("import");
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+});
+
+test("the setup holder approves employees without an owner and moves setup to owner", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.importSource();
+  const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
+  await seed.importEmployees(source.id, [avery]);
+  const imports = importUseCases(orm);
+
+  await imports.approveImport(SETUP_HOLDER);
+
+  expect(await readSetupStep(orm)).toBe("owner");
+  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  expect(employees.edges.map(({ node }) => node)).toMatchObject([avery]);
 });

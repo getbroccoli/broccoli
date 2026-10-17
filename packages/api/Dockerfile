@@ -17,7 +17,10 @@ WORKDIR /app/api
 COPY --from=build /out/api ./
 COPY --from=build /repo/packages/web/dist /app/web
 # A new named volume copies this folder's owner, so the app can write its secrets.
-RUN mkdir /data && chown node:node /data
+# `docker compose exec broccoli reset-setup` frees setup held by a lost browser.
+RUN mkdir /data && chown node:node /data \
+  && printf '#!/bin/sh\nexec node /app/api/dist/resetSetup.js "$@"\n' > /usr/local/bin/reset-setup \
+  && chmod 755 /usr/local/bin/reset-setup
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=30s \

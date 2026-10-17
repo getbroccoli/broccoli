@@ -1,6 +1,13 @@
 import { onTestFinished } from "vitest";
 
-import { expect, PNG as logo, startFakeBrandServer, TestEnv, test } from "#test/support";
+import {
+  expect,
+  PNG as logo,
+  startFakeBrandServer,
+  startManagedEnv,
+  signInAsManagedOwner,
+  test,
+} from "#test/support";
 
 test("advances to import when the owner names the company", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
@@ -84,9 +91,8 @@ test("serves the looked-up logo to the owner with private caching", async () => 
     },
   }));
   onTestFinished(() => brands.stop());
-  const env = await TestEnv.start({ brandLookupUrl: brands.url });
-  onTestFinished(() => env.stop());
-  const { browser } = await env.signInAsOwner();
+  const { env, accounts } = await startManagedEnv({ brandLookupUrl: brands.url });
+  const browser = await signInAsManagedOwner(env, accounts);
 
   const response = await browser.graphql("query { company { id suggestedName logoUrl } }");
   const body = (await response.json()) as {

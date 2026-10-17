@@ -26,14 +26,14 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 - [ ] The footer shows "← Back" and "Approve N people", N counting the people without a "Won’t be added" line; beside it, "M people won’t be added: they are missing a name or work email."
 - [ ] "Back" returns to `/setup/import` with the sources as they were.
-- [ ] "Approve N people" shows "Approving…" and lands on `/people`, which lists exactly those N people and no demo people; `/setup/import/review` now goes to `/people`.
+- [ ] "Approve N people" shows "Approving…" and lands on `/setup`, "Create your account"; `/setup/import/review` now goes there. Creating the account lands on `/people`, which lists exactly those N people and no demo people.
 - [ ] With `/setup/import/review` open in two tabs, "Approve" in both adds each person once.
 - [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), Approve reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
 - [ ] With only incomplete people (for example a Slack workspace of one-word names), Approve is hidden and the footer reads "No one is ready to add. Go back to add a source, or skip for now."
 
 ## Guards
 
-- [ ] Signed out, `/setup/import/review` goes to sign-in and back.
+- [ ] In a second browser profile, `/setup/import/review` goes to `/setup/in-progress`.
 - [ ] Before the company is named it goes to `/setup/company`; after setup it goes to `/people`.
 
 ## Layout

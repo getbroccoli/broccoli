@@ -1,4 +1,4 @@
-import { expect, importUseCases, test } from "#test/support";
+import { expect, importUseCases, SETUP_HOLDER, test } from "#test/support";
 
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
 
@@ -24,3 +24,12 @@ test.for(["owner", "company", "done"] as const)(
     expect(await readSetupStep(orm)).toBe(step);
   },
 );
+
+test("the setup holder skips import without an owner and moves setup to owner", async ({ orm }) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const imports = importUseCases(orm);
+
+  await imports.skipImport(SETUP_HOLDER);
+
+  expect(await readSetupStep(orm)).toBe("owner");
+});

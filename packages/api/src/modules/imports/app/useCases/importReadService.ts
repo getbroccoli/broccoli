@@ -12,6 +12,7 @@ import { importEmployeeKeyset, type ImportRepository } from "../../db";
 import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
 import type { ImportEmployee, ImportSource } from "../../domain";
 import { toNewEmployee } from "./importEmployeeMapping";
+import { requireImportAccess } from "./requireImportAccess";
 
 /** Reading the import: its sources and their employee records. Every function checks `ctx`. */
 export interface ImportReadService {
@@ -43,12 +44,12 @@ const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 export function createImportReadService(imports: ImportRepository): ImportReadService {
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       return imports.listSources();
     },
 
     readSources: (ctx: SecurityContext, ids: readonly string[]): Promise<ImportSource[]> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       return imports.findSources(ids);
     },
 
@@ -56,13 +57,13 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx: SecurityContext,
       sourceIds: readonly string[],
     ): Promise<Map<string, number>> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const counts = await imports.countEmployees(sourceIds);
       return new Map(sourceIds.map((id) => [id, counts.get(id) ?? 0]));
     },
 
     readyEmployeeCount: async (ctx: SecurityContext): Promise<number> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const records = await imports.listEmployeeRecords();
       return records.filter((record) => toNewEmployee(record) !== null).length;
     },
@@ -71,7 +72,7 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
       ctx: SecurityContext,
       { sourceId, orderBy, filter, ...pageArgs }: ImportEmployeeListArgs,
     ): Promise<Connection<ImportEmployee>> => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const order = parseOrder(orderBy, DEFAULT_ORDER);
       const search = parseSearch(filter?.search);
       const page = parsePage(pageArgs, importEmployeeKeyset(order));

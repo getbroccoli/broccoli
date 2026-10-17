@@ -54,3 +54,38 @@ it("distinguishes the system from a signed-in user", () => {
   expect(signedIn.user).toEqual(user);
   expect(signedIn.isSystem).toBe(false);
 });
+
+it("allows the setup holder to access setup without a user or system privileges", () => {
+  const ctx = PrincipalSecurityContext.setupHolder();
+
+  expect(() => ctx.requireSetupAccess()).not.toThrow();
+  expect(ctx.user).toBeNull();
+  expect(ctx.isSystem).toBe(false);
+  expect(ctx.isSetupHolder).toBe(true);
+});
+
+it("refuses the setup holder access reserved for the owner or system", () => {
+  const ctx = PrincipalSecurityContext.setupHolder();
+
+  expect(() => ctx.requireOwnerOrSystem()).toThrowError(
+    expect.objectContaining({
+      code: "FORBIDDEN",
+      message: "Only the owner can do this.",
+    }),
+  );
+});
+
+it("refuses a non-owner access to setup", () => {
+  const ctx = PrincipalSecurityContext.user({
+    userId: "user-1",
+    email: "user@example.com",
+    isOwner: false,
+  });
+
+  expect(() => ctx.requireSetupAccess()).toThrowError(
+    expect.objectContaining({
+      code: "FORBIDDEN",
+      message: "Only the owner can do this.",
+    }),
+  );
+});

@@ -18,7 +18,7 @@ export async function createImportedEmployees(
   tx: Tx,
   inputs: readonly NewEmployeeInput[],
 ): Promise<ImportedEmployees> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   const newEmployees = inputs
     .map(tryParseNewEmployee)
     .filter((employee): employee is NewEmployee => employee !== null);

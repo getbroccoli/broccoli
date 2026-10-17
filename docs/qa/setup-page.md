@@ -1,33 +1,43 @@
-# QA: Setup page for the first owner
+# QA: Setup before the owner exists
 
-A manual check of creating the owner in the browser, on a development stack.
+A manual check of a self-hosted setup held by one browser, with the owner account created last, on a development stack.
 
 ## Setup
 
 1. Run `pnpm dev --drop-db` to start on a database without an owner.
-2. Use a fresh browser profile, so no session cookie is left over.
+2. Use two fresh browser profiles, A and B, so no cookie is left over.
 
-## Routing before setup
+## Holding setup
 
-- [ ] `/people?q=a`, `/login` and `/nope` each land on `/setup`, without the app's navigation.
-- [ ] The sidebar shows "Your workspace", "Setup Workspace" as the current step and "Setup Company" after it.
+- [ ] In A, `/people?q=a`, `/login` and `/nope` each land on `/setup/company`, without the app's navigation.
+- [ ] The sidebar shows "Your workspace", "Setup Company" as the current step, then "Add your people" and "Create your account".
+- [ ] In devtools, A has a `broccoli_setup` cookie: HttpOnly, SameSite Lax, expiring in three days.
+- [ ] In B, any path lands on `/setup/in-progress`, titled "Setup is in progress on another device", with the `reset-setup` command. B sees no company name, step or people, and `/setup/company` goes back to it.
+- [ ] Closing and reopening A keeps it on its step.
 
-## Owner form
+## Owner form, the last step
 
-- [ ] "Next: set up company" stays disabled until the email is filled in and the password has 8 characters.
+Name the company and skip the import in A ([QA setup](setup.md)); A lands on `/setup` with "Setup Company" and "Add your people" done and "Create your account" current.
+
+- [ ] "Create account and finish" stays disabled until the email is filled in and the password has 8 characters.
 - [ ] `bad` as the email with an 8-character password shows "Enter a valid email address." after submitting.
 - [ ] "Generate" fills a 20-character password, shows it in clear text and says "Save this password in your password manager."
 - [ ] "Hide" hides it; "Copy" shows "Copied"; typing brings back "Use at least 8 characters."
 
 ## After setup
 
-- [ ] Submitting `owner@example.com` ends on `/setup/company`, with "Setup Workspace" done and "Setup Company" current.
-- [ ] `/setup` and `/people` both end on `/setup/company`.
-- [ ] In a second browser profile, `/setup` lands on `/login`; signing in ends on `/setup/company`.
-- [ ] On a new database, two tabs on `/setup` submitted one after the other: the first ends on `/setup/company`, the second on `/login`.
-- [ ] After naming the company (see [QA setup](setup.md)), `/setup/company` goes to `/people`.
+- [ ] Submitting `owner@acme-corp.example` ends on `/people` with the app's navigation; the `broccoli_setup` cookie is gone.
+- [ ] `/setup` and `/setup/company` both end on `/people`.
+- [ ] In B, any path now lands on `/login`; signing in as the owner ends on `/people`.
+
+## Reset
+
+On a new database, start setup in A, then run `docker compose exec api node --import tsx src/resetSetup.ts` in the dev stack (`reset-setup` in the image).
+
+- [ ] It prints that setup is free; B, reloaded, now holds setup on the same step, and A lands on `/setup/in-progress`.
+- [ ] Run once the owner exists, it says setup is over and exits with an error.
 
 ## Layout
 
 - [ ] On a narrow window, one bar per step replaces the step list, and nothing scrolls sideways.
-- [ ] Screenshots of `/setup` (desktop and narrow; empty, with a generated password, with a field error) and `/setup/company` (desktop and narrow) go in the pull request description.
+- [ ] Screenshots of `/setup` (desktop and narrow; empty, with a generated password, with a field error) and `/setup/in-progress` (desktop and narrow) go in the pull request description.

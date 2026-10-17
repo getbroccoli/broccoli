@@ -13,7 +13,7 @@ import { createEventBus } from "./events";
 import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { selfHostedAuth } from "./instance";
+import { selfHostedAuth, setupRouter } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
@@ -54,11 +54,14 @@ export async function startServer(
   const jobRunner = createJobRunner(env.databaseUrl, logger);
   const readiness = new Readiness(() => database.checkConnection());
   const services = { orm: database.orm, transact, secret: authSecret, logger };
-  // Self-hosted instances add only their auth; managed ones also init routes and status.
+  // Self-hosted instances add their auth and its setup guard; managed ones init routes and status.
   const deploymentParts: Pick<ManagedServer, "auth"> & Partial<ManagedServer> =
     env.deployment.mode === "managed"
       ? managedServer({ ...services, deployment: env.deployment, readiness })
-      : { auth: selfHostedAuth({ ...services, publicUrl: env.deployment.publicUrl }) };
+      : {
+          auth: selfHostedAuth({ ...services, publicUrl: env.deployment.publicUrl }),
+          router: setupRouter(env.deployment.publicUrl),
+        };
   const resolveSecurity: SecurityResolver = (headers) =>
     resolveSecurityContext(deploymentParts.auth, database.orm, headers);
 

@@ -20,14 +20,15 @@ export interface CompanyContext {
   companies: CompanyRepository;
 }
 
-/** Called by the company use cases, which run only once setup has created the owner. */
+/** Called by the company use cases. */
 export async function readCompany({ orm, companies }: CompanyContext): Promise<Company> {
   const [{ name, brandName, logoFileId }, owner] = await Promise.all([
     companies.read(),
     readOwner(orm),
   ]);
-  if (!owner) {
-    throw new Error("The instance has no owner");
-  }
-  return { name, suggestedName: suggestName({ brandName, ownerEmail: owner.email }), logoFileId };
+  return {
+    name,
+    suggestedName: suggestName({ brandName, ownerEmail: owner?.email ?? null }),
+    logoFileId,
+  };
 }

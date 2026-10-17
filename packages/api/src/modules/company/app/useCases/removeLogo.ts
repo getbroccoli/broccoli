@@ -4,7 +4,7 @@ import { companyRepository } from "../../db";
 import { type Company, type CompanyContext, readCompany } from "./company";
 
 export async function removeLogo(context: CompanyContext, ctx: SecurityContext): Promise<Company> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   await context.transact(async (tx) => {
     const previousFileId = await companyRepository(tx).replaceLogo(null);
     await deleteFiles(tx, previousFileId ? [previousFileId] : []);

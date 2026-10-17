@@ -1,4 +1,4 @@
-import { companyUseCases, expect, NON_OWNER, test } from "#test/support";
+import { companyUseCases, expect, NON_OWNER, SETUP_HOLDER, test } from "#test/support";
 
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
 
@@ -54,4 +54,16 @@ test("leaves the company step unfinished when the name is invalid", async ({ orm
 
   expect((await company.getCompany(ctx)).name).toBeNull();
   expect(await readSetupStep(orm)).toBe("company");
+});
+
+test("the setup holder names the company without an owner and moves setup to import", async ({
+  orm,
+}) => {
+  const company = companyUseCases(orm);
+
+  const saved = await company.update(SETUP_HOLDER, { name: "Acme Corp" });
+
+  expect(saved.name).toBe("Acme Corp");
+  expect((await company.getCompany(SETUP_HOLDER)).name).toBe("Acme Corp");
+  expect(await readSetupStep(orm)).toBe("import");
 });
