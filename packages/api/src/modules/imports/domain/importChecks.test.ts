@@ -168,6 +168,7 @@ const file: ImportSource = {
   readAt: new Date("2026-10-01"),
   status: "mapped",
   failure: null,
+  failureMessage: null,
 };
 const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
 const row: ImportEmployeeRecord = {

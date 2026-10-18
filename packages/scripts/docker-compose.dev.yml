@@ -35,6 +35,7 @@ services:
       SELF_HOSTED_PUBLIC_URL: ""
       BRAND_LOOKUP_URL: ${BRAND_LOOKUP_URL:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      SELF_HOSTED_BROCCOLI_AI_URL: ${SELF_HOSTED_BROCCOLI_AI_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

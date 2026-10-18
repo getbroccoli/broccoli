@@ -17,6 +17,8 @@ export interface ImportSource {
   status: ImportSourceStatus;
   /** Set when `failed`. */
   failure: ImportSourceFailure | null;
+  /** The AI provider's own words, when it refused the file for good. */
+  failureMessage: string | null;
 }
 
 /** A file source with what its mapping runs need. */
@@ -28,4 +30,5 @@ export interface FileSource extends ImportSource {
 
 /** How a mapping run ended. */
 export type MappingOutcome =
-  { status: "mapped" } | { status: "failed"; failure: ImportSourceFailure };
+  | { status: "mapped" }
+  | { status: "failed"; failure: ImportSourceFailure; failureMessage?: string | null };

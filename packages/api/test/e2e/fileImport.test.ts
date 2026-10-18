@@ -11,7 +11,6 @@ import {
 const CSV = Buffer.from("Name,Email\nAvery Stone,avery@example.com\nRobin Reed,robin@example.com");
 const IMPORT = `query {
   import {
-    canReadFiles
     sources { id kind name status failure }
     employees { edges { node { firstName { value } lastName { value } email { value } } } }
   }
@@ -32,7 +31,6 @@ test("the managed owner uploads a CSV and its people become mapped import employ
     .toEqual({
       data: {
         import: {
-          canReadFiles: true,
           sources: [
             { id: sourceId, kind: "FILE", name: "staff.csv", status: "MAPPED", failure: null },
           ],
@@ -177,16 +175,6 @@ test("returns an approval conflict in the payload while a file is mapping", asyn
   });
 });
 
-test("self-hosted instances cannot read files and refuse uploads", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-
-  const available = await browser.graphql("query { import { canReadFiles } }");
-  const uploaded = await browser.post("/api/imports/files?name=staff.csv", CSV);
-
-  expect(await available.json()).toEqual({ data: { import: { canReadFiles: false } } });
-  expect(uploaded.status).toBe(503);
-});
-
 test("the upload route refuses a request without a session", async ({ fakeDecisions }) => {
   const { env } = await managedImport(fakeDecisions);
 
@@ -274,7 +262,6 @@ test.for(["staff.xlsx", "staff.XLSX"])(
       .toEqual({
         data: {
           import: {
-            canReadFiles: true,
             sources: [{ id: sourceId, kind: "FILE", name, status: "MAPPED", failure: null }],
             employees: {
               edges: [

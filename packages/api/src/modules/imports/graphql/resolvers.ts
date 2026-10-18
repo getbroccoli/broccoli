@@ -30,7 +30,6 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       readyEmployeeCount: (_parent, _args, context) =>
         useCases.reads.readyEmployeeCount(context.getActor()),
       checks: (_parent, _args, context) => useCases.reads.listChecks(context.getActor()),
-      canReadFiles: (_parent, _args, context) => useCases.files.canReadFiles(context.getActor()),
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],

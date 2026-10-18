@@ -97,13 +97,11 @@ export function ImportStep() {
       {data ? (
         <>
           <SlackSourceRow connection={data.slackConnection} source={slackSource} />
-          {data.import.canReadFiles && (
-            <FileSources
-              sources={fileSources}
-              onUploaded={() => refetch()}
-              onUploadingChange={setUploading}
-            />
-          )}
+          <FileSources
+            sources={fileSources}
+            onUploaded={() => refetch()}
+            onUploadingChange={setUploading}
+          />
         </>
       ) : error ? (
         <div role="alert" className="flex flex-col items-start gap-3">

@@ -4,7 +4,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 ## Setup
 
-1. Run `pnpm dev` (and once in the Docker image) with `OPENROUTER_API_KEY` set and follow the [import step](import-step.md): upload a CSV and, when a Slack workspace is available, connect Slack.
+1. Run `pnpm dev` (and once in the Docker image) with or without `OPENROUTER_API_KEY` and follow the [import step](import-step.md): upload a CSV and, when a Slack workspace is available, connect Slack.
 2. Give the CSV over 50 people, one row without an email, one without a start date and one whose name is one word. With Slack, also have one member whose name is one word, and give two CSV rows the emails of Slack members, one with a different job title.
 
 ## The page

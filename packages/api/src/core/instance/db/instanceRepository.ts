@@ -33,6 +33,9 @@ export interface InstanceRepository {
   setOwner(userId: string, step: SetupStep): Promise<void>;
   /** Moves the step from `from` to `to`; does nothing at any other step. Returns whether it moved. */
   advanceStep(from: SetupStep, to: SetupStep): Promise<boolean>;
+  /** The encrypted Broccoli AI token; null before the first one is issued. */
+  readBroccoliAiToken(): Promise<string | null>;
+  saveBroccoliAiToken(encryptedToken: string): Promise<void>;
 }
 
 export function instanceRepository(db: Orm | Tx): InstanceRepository {
@@ -122,6 +125,15 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
         .set({ setupStep: to })
         .where(eq(instance.setupStep, from));
       return (result.rowCount ?? 0) > 0;
+    },
+
+    readBroccoliAiToken: async (): Promise<string | null> => {
+      const [row] = await orm().select({ token: instance.encryptedBroccoliAiToken }).from(instance);
+      return row?.token ?? null;
+    },
+
+    saveBroccoliAiToken: async (encryptedToken: string): Promise<void> => {
+      await orm().update(instance).set({ encryptedBroccoliAiToken: encryptedToken });
     },
   };
 }

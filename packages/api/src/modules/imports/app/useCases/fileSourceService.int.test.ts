@@ -34,18 +34,6 @@ test("stores a mapping source named after the file and sends its first job", asy
   ).toEqual([{ content: bytes, mimeType: "text/csv" }]);
 });
 
-test("refuses an upload without a model key", async ({ orm }) => {
-  const imports = importUseCases(orm);
-
-  await expect(
-    imports.files.uploadFile(OWNER, { name: "staff.csv", bytes: Buffer.from("Name\nAvery Stone") }),
-  ).rejects.toMatchObject({ code: "UNAVAILABLE", message: "Reading files needs a model key." });
-
-  expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect(await storedFileIds(orm)).toEqual([]);
-  expect(imports.sentJobs).toEqual([]);
-});
-
 test("refuses a second upload while the first is being read without storing anything or sending a job", async ({
   orm,
   fakeDecisions: fake,

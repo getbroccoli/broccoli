@@ -25,6 +25,8 @@ export interface TestBroccoliServerOptions {
   publicUrl?: string;
   brandLookupUrl?: string | null;
   decisionsUrl?: string;
+  openRouterKey?: string;
+  broccoliAiUrl?: string;
   slack?: { relayUrl: string; apiUrl: string };
 }
 
@@ -41,6 +43,8 @@ export async function startTestBroccoliServer(
     publicUrl,
     brandLookupUrl = null,
     decisionsUrl = "http://127.0.0.1:9",
+    openRouterKey,
+    broccoliAiUrl = "http://127.0.0.1:9",
     slack = { relayUrl: "http://127.0.0.1:9", apiUrl: "http://127.0.0.1:9" },
   }: TestBroccoliServerOptions = {},
 ): Promise<RunningServer> {
@@ -52,7 +56,7 @@ export async function startTestBroccoliServer(
         instanceId: managed.instanceId,
         accountsOrigin: managed.accountsUrl,
       }
-    : { mode: "self_hosted", publicUrl };
+    : { mode: "self_hosted", publicUrl, broccoliAiUrl };
   const server = await startServer(
     {
       databaseUrl,
@@ -68,7 +72,11 @@ export async function startTestBroccoliServer(
         brandLookupUrl,
         publicUrl,
         slack,
-        model: managed ? { url: decisionsUrl, apiKey: "test-model-key" } : null,
+        ai: {
+          openRouterUrl: decisionsUrl,
+          openRouterKey: managed ? "test-model-key" : (openRouterKey ?? null),
+          broccoliAiUrl: managed ? null : broccoliAiUrl,
+        },
       }),
   );
   return {

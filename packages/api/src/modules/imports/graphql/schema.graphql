@@ -18,8 +18,6 @@ type Import {
   readyEmployeeCount: Int!
   "What the owner may want to settle, by kind. Nothing here blocks Approve."
   checks: [ImportCheck!]!
-  "Whether files can be added; the model that reads them needs a key."
-  canReadFiles: Boolean!
 }
 
 "Where people came from."
@@ -55,6 +53,8 @@ type ImportSource {
   status: ImportSourceStatus!
   "Set when FAILED."
   failure: ImportSourceFailure
+  "The AI provider's own words, when it refused the file for good."
+  failureMessage: String
   employeeCount: Int!
   "This source's rows, in the order it delivered them."
   records("Page size, 1 to 10000." first: Int = 100, after: String): ImportEmployeeRecordConnection!

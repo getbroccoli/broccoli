@@ -118,6 +118,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .set({
           status: outcome.status,
           failure: outcome.status === "failed" ? outcome.failure : null,
+          failureMessage: outcome.status === "failed" ? (outcome.failureMessage ?? null) : null,
           readAt: sql`now()`,
         })
         .where(
@@ -137,6 +138,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .set({
           status: "mapping",
           failure: null,
+          failureMessage: null,
           mappingAttempt: sql`${importSources.mappingAttempt} + 1`,
         })
         .where(
@@ -308,6 +310,7 @@ const sourceColumns = {
   readAt: importSources.readAt,
   status: importSources.status,
   failure: importSources.failure,
+  failureMessage: importSources.failureMessage,
 };
 
 function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployeeRecord {

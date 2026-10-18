@@ -29,8 +29,6 @@ import { requireImportAccess } from "./requireImportAccess";
  * retry and removal. Every function checks `ctx`.
  */
 export interface FileSourceService {
-  /** Whether files can be added: the instance has a model key. */
-  canReadFiles(ctx: SecurityContext): boolean;
   /**
    * Adds a CSV or Excel file as a source and queues its mapping, in one transaction; returns the
    * source's id. A file that cannot be read is refused and nothing is stored.
@@ -76,23 +74,15 @@ export function createFileSourceService({
 }: {
   orm: Orm;
   transact: Transact;
-  /** The model that maps files; null where the instance has no model key. */
-  decisions: Decisions | null;
+  /** The model that maps files. */
+  decisions: Decisions;
   jobs: JobQueue;
 }): FileSourceService {
   const uploads = { reading: false };
 
   return {
-    canReadFiles: (ctx) => {
-      requireImportAccess(ctx);
-      return decisions !== null;
-    },
-
     uploadFile: async (ctx, { name, bytes }) => {
       requireImportAccess(ctx);
-      if (decisions === null) {
-        throw new ApplicationError("UNAVAILABLE", "Reading files needs a model key.");
-      }
       const sheets = await readUpload(uploads, bytes);
       if (typeof sheets === "string") {
         throw invalidInput([{ field: "file", code: sheets }]);
@@ -112,7 +102,7 @@ export function createFileSourceService({
     mapFile: async (ctx, { sourceId, attempt }) => {
       requireImportAccess(ctx);
       const source = await importRepository(orm).findFileSource(sourceId);
-      if (!isCurrentRun(source, attempt) || decisions === null) {
+      if (!isCurrentRun(source, attempt)) {
         return;
       }
       const file = await readFile(orm, source.fileId);
@@ -216,7 +206,10 @@ async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise
     if (!(error instanceof DecisionsError) || error.retryable) {
       throw error;
     }
-    return { outcome: { status: "failed", failure: "unavailable" }, records: [] };
+    return {
+      outcome: { status: "failed", failure: "unavailable", failureMessage: error.providerMessage },
+      records: [],
+    };
   }
 }
 

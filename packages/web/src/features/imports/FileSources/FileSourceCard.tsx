@@ -103,12 +103,17 @@ export function FileSourceCard({
   );
 }
 
-function statusLine({ status, failure, employeeCount }: FileSourceCard_SourceFragment): string {
+function statusLine({
+  status,
+  failure,
+  failureMessage,
+  employeeCount,
+}: FileSourceCard_SourceFragment): string {
   if (status === "MAPPING") {
     return t("imports.files.mapping");
   }
   if (status === "FAILED") {
-    return t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
+    return failureMessage ?? t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
   }
   return employeeCount === 1
     ? t("imports.files.onePerson")

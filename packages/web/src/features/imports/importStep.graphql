@@ -5,7 +5,6 @@ query ImportStep {
   }
   import {
     id
-    canReadFiles
     sources {
       id
       kind
