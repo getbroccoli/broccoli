@@ -5,7 +5,7 @@ export {
   todayInUtc,
   type CalendarDate,
 } from "./calendarDate";
-export { fetchJson } from "./fetchJson";
+export { fetchJson, readText } from "./fetchJson";
 export { parseRasterImage, type RasterImage } from "./rasterImage";
 export { parseCsv } from "./csv";
 export { parseXlsx } from "./xlsx";

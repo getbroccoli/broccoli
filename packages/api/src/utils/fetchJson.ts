@@ -22,7 +22,7 @@ export async function fetchJson<T>(
 }
 
 /** The body as text; stops reading and fails beyond `maxBytes`. */
-async function readText(response: Response, maxBytes: number): Promise<string> {
+export async function readText(response: Response, maxBytes: number): Promise<string> {
   if (!response.body) {
     return "";
   }

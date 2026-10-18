@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { urlUnder } from "../../utils";
+
 import {
   createDecisions,
   type Decisions,
@@ -39,13 +41,13 @@ export function createResolvedDecisions({
       const source = await readSource();
       if (source.kind === "openrouter") {
         return createDecisions({
-          endpoint: `${source.url}/alpha/decisions`,
+          endpoint: urlUnder(source.url, "alpha/decisions").href,
           credential: source.key,
         }).decide(state, questions, minConfidence);
       }
       const decideWith = (token: string) =>
         createDecisions({
-          endpoint: `${source.url}/v1/decisions`,
+          endpoint: urlUnder(source.url, "v1/decisions").href,
           credential: token,
           headers: CLIENT_HEADERS,
         }).decide(state, questions, minConfidence);
@@ -71,34 +73,46 @@ const ISSUE_TIMEOUT_MS = 30_000;
 const issuedTokenSchema = z.object({ token: z.string().min(1) });
 
 /**
- * The stored token, issued when missing. Concurrent callers share one issue, since the relay
- * gives an address only one free token.
+ * The stored token, issued when missing. One caller at a time reads, issues and saves, and an
+ * issued token stays in memory until it is saved, since the relay gives an address only one
+ * free token.
  */
 function broccoliAiTokens(store: BroccoliAiTokenStore) {
-  let issuing: Promise<string> | null = null;
-  const issueOnce = (url: string): Promise<string> => {
-    issuing ??= issueToken(url)
-      .then(async (token) => {
-        await store.save(token);
-        return token;
-      })
-      .finally(() => {
-        issuing = null;
-      });
-    return issuing;
+  let unsaved: string | null = null;
+  let queue: Promise<unknown> = Promise.resolve();
+  const tokenOtherThan = async (url: string, rejected: string | null): Promise<string> => {
+    if (unsaved !== null) {
+      await store.save(unsaved);
+      unsaved = null;
+    }
+    const stored = await store.read();
+    if (stored !== null && stored !== rejected) {
+      return stored;
+    }
+    unsaved = await issueToken(url);
+    await store.save(unsaved);
+    const token = unsaved;
+    unsaved = null;
+    return token;
+  };
+  const oneAtATime = (url: string, rejected: string | null): Promise<string> => {
+    const next = queue.then(() => tokenOtherThan(url, rejected));
+    queue = next.catch(() => undefined);
+    return next;
   };
   return {
-    current: async (url: string) => (await store.read()) ?? issueOnce(url),
+    current: (url: string) => oneAtATime(url, null),
     /** A new token unless another request already replaced `rejected`. */
-    replace: async (url: string, rejected: string) => {
-      const stored = await store.read();
-      return stored !== null && stored !== rejected ? stored : issueOnce(url);
-    },
+    replace: (url: string, rejected: string) => oneAtATime(url, rejected),
   };
 }
 
 async function issueToken(url: string): Promise<string> {
-  const response = await postJson(`${url}/v1/tokens`, CLIENT_HEADERS, ISSUE_TIMEOUT_MS);
+  const response = await postJson(
+    urlUnder(url, "v1/tokens").href,
+    CLIENT_HEADERS,
+    ISSUE_TIMEOUT_MS,
+  );
   if (!response.ok) {
     throw await refusal(response);
   }

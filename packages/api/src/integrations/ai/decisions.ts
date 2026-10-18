@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { readText } from "../../utils";
 import { withPlaceholders } from "./sanitize";
 
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -106,6 +107,9 @@ export function createDecisions({
 
 const RETRYABLE_STATUSES = new Set([408, 429]);
 
+/** A provider's refusal is a sentence; a longer body is read no further and its message dropped. */
+const MAX_REFUSAL_BYTES = 4096;
+
 /** Refusals that waiting cannot fix, though their status alone says "later". */
 const FINAL_REASONS = new Set(["free_period_used"]);
 
@@ -142,7 +146,8 @@ export async function postJson(
 /** The error for an unsuccessful answer, with the provider's message when it sent one. */
 export async function refusal(response: Response): Promise<DecisionsError> {
   const { status } = response;
-  const parsed = providerErrorSchema.safeParse(parseJson(await readBody(response)));
+  const body = await readText(response, MAX_REFUSAL_BYTES).catch(() => "");
+  const parsed = providerErrorSchema.safeParse(parseJson(body));
   const providerMessage = parsed.success ? parsed.data.error.message : null;
   const reason = parsed.success ? parsed.data.error.metadata?.reason : undefined;
   const message = `The model answered ${status}`;
