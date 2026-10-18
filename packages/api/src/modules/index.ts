@@ -37,7 +37,7 @@ export function createModules(
       ...core,
       slack: slackConnection,
       decisions: createResolvedDecisions({
-        readSource: async () => decisionsSource(ai),
+        readSource: () => Promise.resolve(decisionsSource(ai)),
         tokens: {
           read: () => readBroccoliAiToken(core.orm, core.secretBox),
           save: (token) => saveBroccoliAiToken(core.orm, core.secretBox, token),

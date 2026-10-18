@@ -3,6 +3,7 @@
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
     "src/modules": [
       "src/core/env",
+      "src/core/instance",
       "src/core/moduleManifest",
       "src/integrations/ai",
       "src/modules/*"
@@ -59,6 +60,7 @@
       "src/core/db",
       "src/core/events",
       "src/core/logger",
+      "src/core/secrets",
       "src/core/security"
     ],
     "src/core/managedSignIn": [

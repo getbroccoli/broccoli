@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import packageJson from "../../../package.json" with { type: "json" };
 import {
   createDecisions,
   type Decisions,
@@ -64,7 +63,8 @@ export function createResolvedDecisions({
 }
 
 /** Lets the relay tell Broccoli from scanners; not a secret. */
-const CLIENT_HEADERS = { "x-broccoli-client": `broccoli/${packageJson.version}` };
+// shortcut: Broccoli has no release version yet; send it here once releases carry one.
+const CLIENT_HEADERS = { "x-broccoli-client": "broccoli/0.0.0" };
 
 const ISSUE_TIMEOUT_MS = 30_000;
 
