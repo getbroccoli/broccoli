@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { readText } from "../../utils";
+import { AnswerTooLargeError, readText } from "../../utils";
 import { withPlaceholders } from "./sanitize";
 
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -146,7 +146,14 @@ export async function postJson(
 /** The error for an unsuccessful answer, with the provider's message when it sent one. */
 export async function refusal(response: Response): Promise<DecisionsError> {
   const { status } = response;
-  const body = await readText(response, MAX_REFUSAL_BYTES).catch(() => "");
+  let body = "";
+  try {
+    body = await readText(response, MAX_REFUSAL_BYTES);
+  } catch (error) {
+    if (!(error instanceof AnswerTooLargeError)) {
+      return new DecisionsError(`The model's answer was cut off: ${String(error)}`, true);
+    }
+  }
   const parsed = providerErrorSchema.safeParse(parseJson(body));
   const providerMessage = parsed.success ? parsed.data.error.message : null;
   const reason = parsed.success ? parsed.data.error.metadata?.reason : undefined;

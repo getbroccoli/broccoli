@@ -31,23 +31,25 @@ it("keeps an issued token when its first save fails", async () => {
   expect(await tokens.read()).toBe(relay.issuedTokens()[0]);
 });
 
-it("a late token read reuses the token another request has already saved", async () => {
+it("serializes token reads across concurrent decisions", async () => {
   const relay = await startFakeDecisions();
   onTestFinished(() => relay.stop());
   const tokens = tokenStore();
   const reading = Promise.withResolvers<void>();
-  const lateRead = Promise.withResolvers<string | null>();
-  let firstRead = true;
+  const releaseRead = Promise.withResolvers<void>();
+  let readsInFlight = 0;
+  let maxReadsInFlight = 0;
   const decisions = createResolvedDecisions({
     readSource: () => Promise.resolve({ kind: "broccoli_ai", url: relay.url }),
     tokens: {
-      read: () => {
-        if (firstRead) {
-          firstRead = false;
-          reading.resolve();
-          return lateRead.promise;
-        }
-        return tokens.read();
+      read: async () => {
+        readsInFlight += 1;
+        maxReadsInFlight = Math.max(maxReadsInFlight, readsInFlight);
+        reading.resolve();
+        await releaseRead.promise;
+        const token = await tokens.read();
+        readsInFlight -= 1;
+        return token;
       },
       save: tokens.save,
     },
@@ -56,9 +58,12 @@ it("a late token read reuses the token another request has already saved", async
   const first = decisions.decide({}, QUESTIONS);
   await reading.promise;
   const second = decisions.decide({}, QUESTIONS);
-  lateRead.resolve(null);
+  // Let the second request read its source while the first token read is held.
+  await Promise.resolve();
+  releaseRead.resolve();
 
   expect(await Promise.all([first, second])).toEqual([ANSWER, ANSWER]);
+  expect(maxReadsInFlight).toBe(1);
   expect(relay.issuedTokens()).toHaveLength(1);
 });
 
