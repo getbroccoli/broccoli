@@ -23,21 +23,30 @@ export function applicationErrorOf(error: unknown): ApplicationError | undefined
 }
 
 /**
- * A request error's message without the input value graphql-js quotes in it, since a
- * value may be a secret such as an API key. Other messages stay as they are.
+ * A request error's message without the input values graphql-js puts in it, since a value
+ * may be a secret such as an API key; the names it quotes, such as `"Query"`, stay.
  */
 export function withoutInputValues(message: string): string {
   const variable = INVALID_VARIABLE.exec(message);
   if (variable) {
     return `Variable "$${variable[1]}" got an invalid value.`;
   }
-  return INVALID_LITERAL.test(message) ? "An argument got an invalid value." : message;
+  if (INVALID_LITERAL.test(message)) {
+    return "An argument got an invalid value.";
+  }
+  return message.replace(QUOTED, (quoted, text?: string) =>
+    text !== undefined && QUOTED_NAME.test(text) ? quoted : '"…"',
+  );
 }
 
 /** graphql-js's coercion error for a variable: `Variable "$input" got invalid value {…}; …`. */
 const INVALID_VARIABLE = /^Variable "\$(\w+)" got invalid value/;
 /** Its validation errors for an inline value, such as `String cannot represent …: 5`. */
 const INVALID_LITERAL = /cannot represent|Expected value of type/;
+/** A quoted string or block string, such as the one a syntax error reports it found. */
+const QUOTED = /"""[\s\S]*?"""|"((?:[^"\\]|\\.)*)"/g;
+/** What graphql-js quotes of the schema and query: a name, type or path, such as `[String!]`. */
+const QUOTED_NAME = /^[$@[]*[_A-Za-z][\w.]*[\]!]*$/;
 
 /**
  * Apollo `formatError`: passes request errors, without input values, and application

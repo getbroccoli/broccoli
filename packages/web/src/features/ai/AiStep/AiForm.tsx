@@ -30,6 +30,8 @@ export function AiForm({ ai }: { ai: Ai }) {
   const knownKey = replacingKey ? null : ai.openRouterKey;
   const asksForKey = source === "OPENROUTER" && knownKey === null;
   const failure = failed ? failureOf(payloadError, source) : null;
+  // A refused key shows under the key field; a known key has no field, so it shows below.
+  const keyFieldError = failure?.onKey && asksForKey ? t(failure.message) : undefined;
 
   const choose = async () => {
     setFailed(false);
@@ -79,11 +81,7 @@ export function AiForm({ ai }: { ai: Ai }) {
             {knownKey ? (
               <KnownKey origin={knownKey} onReplace={() => setReplacingKey(true)} />
             ) : (
-              <KeyField
-                value={key}
-                onChange={setKey}
-                error={failure?.onKey ? t(failure.message) : undefined}
-              />
+              <KeyField value={key} onChange={setKey} error={keyFieldError} />
             )}
           </SourceOption>
           <AgentOption />
@@ -91,7 +89,7 @@ export function AiForm({ ai }: { ai: Ai }) {
         <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.ai.privacy")}</p>
       </div>
       <DemoDataCard disabled={busy} skipping={demo.skipping} onUse={() => void demo.skip()} />
-      {failure && !failure.onKey && (
+      {failure && keyFieldError === undefined && (
         <p role="alert" className="text-sm text-destructive">
           {t(failure.message)}
         </p>

@@ -28,6 +28,7 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 - [ ] A working key opens `/setup/import`; a CSV is read through OpenRouter. Going back to `/setup/ai` shows OpenRouter selected with "Key saved" and "Replace".
 - [ ] With `OPENROUTER_API_KEY` set on a fresh instance, OpenRouter is selected with "Using OPENROUTER_API_KEY from your .env file." and "Key found in .env"; "Replace" swaps it for the key field.
 - [ ] With `OPENROUTER_API_KEY` set, choosing "Broccoli AI" and "Next" reads files through Broccoli AI.
+- [ ] With an invalid `OPENROUTER_API_KEY`, "Next" without Replace stays on the page and shows "OpenRouter didn’t accept this key. Check it and try again." under the options.
 
 ## Demo data
 

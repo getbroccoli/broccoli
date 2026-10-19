@@ -1,4 +1,4 @@
-import { buildSchema, execute, GraphQLError, parse } from "graphql";
+import { buildSchema, execute, graphql, GraphQLError, parse } from "graphql";
 import { assert, expect, it } from "vitest";
 
 import { ApplicationError } from "../applicationError";
@@ -50,6 +50,17 @@ it("masks a plain resolver error while preserving its location and path", () => 
 
 it("passes through a GraphQLError raised before execution", () => {
   const error = new GraphQLError("Unknown field", {
+    extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+  });
+  const formatted = error.toJSON();
+
+  const result = formatError(formatted, error);
+
+  expect(result).toEqual(formatted);
+});
+
+it("preserves field and type names in a safe validation message", () => {
+  const error = new GraphQLError('Cannot query field "nope" on type "Query".', {
     extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
   });
   const formatted = error.toJSON();
@@ -136,5 +147,24 @@ it("removes input values from a variable coercion error", async () => {
 
   expect(result.message).toEqual(expect.any(String));
   expect(result.message.length).toBeGreaterThan(0);
+  expect(JSON.stringify(result)).not.toContain("sk-or-v1-synthetic-secret");
+});
+
+it("removes an inline key from a syntax error", async () => {
+  const schema = buildSchema(`
+    input AiInput { openRouterKey: String }
+    type Query { choose(input: AiInput!): Boolean }
+  `);
+  const execution = await graphql({
+    schema,
+    source: 'query { choose(input: { openRouterKey "sk-or-v1-synthetic-secret" }) }',
+  });
+  const error = execution.errors?.[0];
+  assert(error);
+  expect(error.message).toContain("Syntax Error");
+  expect(error.message).toContain("sk-or-v1-synthetic-secret");
+
+  const result = formatError(error.toJSON(), error);
+
   expect(JSON.stringify(result)).not.toContain("sk-or-v1-synthetic-secret");
 });
