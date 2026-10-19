@@ -1,9 +1,8 @@
 import { useQuery } from "@apollo/client/react";
-import { Link, useRouter, useSearch } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { ImportStepDocument, SkipImportDocument } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { ImportStepDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SetupStepForm } from "@/features/setup";
@@ -12,6 +11,7 @@ import { cn } from "@/lib/class-names";
 
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
+import { useSkipWithDemoData } from "./useSkipWithDemoData";
 
 const SLACK_ERROR_MESSAGES = {
   cancelled: "imports.slack.cancelled",
@@ -23,11 +23,9 @@ const POLL_INTERVAL_MS = 2_000;
 
 /**
  * The import step of setup: the sources people come from. Next leads to the review,
- * where the owner approves; skipping leaves the step, and the router then reloads
- * and routing sends the owner on into the app.
+ * where the owner approves; skipping leaves the step with the demo company instead.
  */
 export function ImportStep() {
-  const router = useRouter();
   const { slackError } = useSearch({ from: "/setup/import" });
   const { data, error, refetch, startPolling, stopPolling } = useQuery(ImportStepDocument);
   const sources = data?.import.sources ?? [];
@@ -40,24 +38,12 @@ export function ImportStep() {
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
   }, [mapping, startPolling, stopPolling]);
-  const [skipImport, { loading: skipping }] = usePayloadMutation(SkipImportDocument);
-  const [skipFailed, setSkipFailed] = useState(false);
+  const { skip, skipping, failed: skipFailed } = useSkipWithDemoData();
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
   const canReview = sources.some(({ employeeCount }) => employeeCount > 0);
   const [uploading, setUploading] = useState(false);
   const reading = mapping || uploading;
-
-  const skip = async () => {
-    setSkipFailed(false);
-    try {
-      await skipImport();
-    } catch {
-      setSkipFailed(true);
-      return;
-    }
-    await router.invalidate();
-  };
 
   return (
     <SetupStepForm

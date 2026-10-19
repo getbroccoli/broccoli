@@ -6,12 +6,12 @@ import { importRepository } from "../../db";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
-import type { SlackReader } from "./importContext";
+import type { DemoFill, SlackReader } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { readSlack } from "./readSlack";
 import { skipImport } from "./skipImport";
 
-export type { SlackReader } from "./importContext";
+export type { DemoFill, SlackReader } from "./importContext";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
 export interface ImportUseCases {
@@ -30,13 +30,15 @@ export function createImportUseCases({
   slack,
   decisions,
   jobs,
+  prepareDemoFill,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: SlackReader;
   decisions: Decisions;
   jobs: JobQueue;
+  prepareDemoFill: () => Promise<DemoFill>;
 }): ImportUseCases {
   const imports = importRepository(orm);
-  const context = { transact, logger, slack, imports };
+  const context = { transact, logger, slack, imports, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     skipImport: (ctx: SecurityContext) => skipImport(context, ctx),

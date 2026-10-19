@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { ManagedAssignment, SetupSession, SetupStep } from "../domain";
+import type { AiSource, ManagedAssignment, SetupSession, SetupStep } from "../domain";
 import { instance } from "./instanceTable";
 
 /** The instance row in Postgres, through the pool or inside a transaction. */
@@ -36,6 +36,9 @@ export interface InstanceRepository {
   /** The encrypted Broccoli AI token; null before the first one is issued. */
   readBroccoliAiToken(): Promise<string | null>;
   saveBroccoliAiToken(encryptedToken: string): Promise<void>;
+  readAiSource(): Promise<{ source: AiSource | null; encryptedOpenRouterKey: string | null }>;
+  /** Saves the source; a given key replaces the saved one, else it stays. */
+  storeAiSource(source: AiSource, encryptedOpenRouterKey?: string): Promise<void>;
 }
 
 export function instanceRepository(db: Orm | Tx): InstanceRepository {
@@ -134,6 +137,20 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
 
     saveBroccoliAiToken: async (encryptedToken: string): Promise<void> => {
       await orm().update(instance).set({ encryptedBroccoliAiToken: encryptedToken });
+    },
+
+    readAiSource: async () => {
+      const [row] = await orm()
+        .select({
+          source: instance.aiSource,
+          encryptedOpenRouterKey: instance.encryptedOpenRouterKey,
+        })
+        .from(instance);
+      return row ?? { source: null, encryptedOpenRouterKey: null };
+    },
+
+    storeAiSource: async (source: AiSource, encryptedOpenRouterKey?: string): Promise<void> => {
+      await orm().update(instance).set({ aiSource: source, encryptedOpenRouterKey });
     },
   };
 }

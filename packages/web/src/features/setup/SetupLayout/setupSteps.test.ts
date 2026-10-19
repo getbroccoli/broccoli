@@ -58,6 +58,7 @@ it("keeps the self-hosted owner later while reviewing people", () => {
 
   expect(steps).toMatchObject([
     { id: "company", state: "done" },
+    { id: "ai", title: "setup.ai.title", state: "done" },
     {
       id: "people",
       state: "current",
@@ -75,6 +76,7 @@ it("marks company and people done while the self-hosted owner is current", () =>
 
   expect(steps).toMatchObject([
     { id: "company", state: "done" },
+    { id: "ai", title: "setup.ai.title", state: "done" },
     {
       id: "people",
       state: "done",
@@ -84,5 +86,41 @@ it("marks company and people done while the self-hosted owner is current", () =>
       ],
     },
     { id: "owner", state: "current" },
+  ]);
+});
+
+it("places Setup AI between company and people on a self-hosted instance", () => {
+  const steps = stepViews("ai", "SELF_HOSTED");
+
+  expect(steps).toMatchObject([
+    { id: "company", state: "done" },
+    { id: "ai", title: "setup.ai.title", state: "current" },
+    {
+      id: "people",
+      state: "later",
+      pages: [
+        { id: "import", state: "later" },
+        { id: "review", state: "later" },
+      ],
+    },
+    { id: "owner", state: "later" },
+  ]);
+});
+
+it("marks Setup AI done while gathering people on a self-hosted instance", () => {
+  const steps = stepViews("import", "SELF_HOSTED");
+
+  expect(steps).toMatchObject([
+    { id: "company", state: "done" },
+    { id: "ai", title: "setup.ai.title", state: "done" },
+    {
+      id: "people",
+      state: "current",
+      pages: [
+        { id: "import", state: "current" },
+        { id: "review", state: "later" },
+      ],
+    },
+    { id: "owner", state: "later" },
   ]);
 });

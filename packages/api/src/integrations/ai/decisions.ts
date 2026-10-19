@@ -47,13 +47,15 @@ const DEFAULT_MIN_CONFIDENCE = 0.8;
 
 /**
  * A failed request; a `retryable` one may succeed later unchanged. `providerMessage` is the
- * provider's own explanation, when it gave one, worded for the person who uploaded the file.
+ * provider's own explanation, when it gave one, worded for the person who uploaded the file;
+ * `reason` is its machine-readable cause, such as Broccoli AI's `free_period_over`.
  */
 export class DecisionsError extends Error {
   constructor(
     message: string,
     readonly retryable: boolean,
     readonly providerMessage: string | null = null,
+    readonly reason: string | null = null,
   ) {
     super(message);
     this.name = "DecisionsError";
@@ -156,14 +158,14 @@ export async function refusal(response: Response): Promise<DecisionsError> {
   }
   const parsed = providerErrorSchema.safeParse(parseJson(body));
   const providerMessage = parsed.success ? parsed.data.error.message : null;
-  const reason = parsed.success ? parsed.data.error.metadata?.reason : undefined;
+  const reason = (parsed.success ? parsed.data.error.metadata?.reason : undefined) ?? null;
   const message = `The model answered ${status}`;
   if (status === 401) {
-    return new UnauthorizedDecisionsError(message, false, providerMessage);
+    return new UnauthorizedDecisionsError(message, false, providerMessage, reason);
   }
   const retryable =
     (RETRYABLE_STATUSES.has(status) || status >= 500) && !FINAL_REASONS.has(reason ?? "");
-  return new DecisionsError(message, retryable, providerMessage);
+  return new DecisionsError(message, retryable, providerMessage, reason);
 }
 
 /** The body as text; a connection that breaks or times out mid-answer may succeed later. */

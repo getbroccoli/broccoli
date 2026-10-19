@@ -1,7 +1,7 @@
 import { isRedirect } from "@tanstack/react-router";
 import { assert, expect, it } from "vitest";
 
-import { requireFinishedSetup, requireSetupStep } from "./requireSetupStep";
+import { requireFinishedSetup, requireSetupStep, setupStepPage } from "./requireSetupStep";
 
 it("sends a signed-out visitor without setup to login with their destination", () => {
   const href = "/setup/import?source=slack";
@@ -9,7 +9,7 @@ it("sends a signed-out visitor without setup to login with their destination", (
 
   try {
     requireSetupStep("IMPORT", {
-      context: { me: null, holdsSetup: false, setupStep: "COMPANY" },
+      context: { me: null, holdsSetup: false, setupStep: "COMPANY", mode: "SELF_HOSTED" },
       location: { href },
     });
   } catch (error) {
@@ -26,7 +26,7 @@ it("sends a signed-out visitor without setup to login with their destination", (
 
 it("lets the signed-out setup holder through their current step", () => {
   const result = requireSetupStep("IMPORT", {
-    context: { me: null, holdsSetup: true, setupStep: "IMPORT" },
+    context: { me: null, holdsSetup: true, setupStep: "IMPORT", mode: "SELF_HOSTED" },
     location: { href: "/setup/import" },
   });
 
@@ -35,7 +35,7 @@ it("lets the signed-out setup holder through their current step", () => {
 
 it.each([
   ["COMPANY", "/setup/company", "DONE", "/people"],
-  ["IMPORT", "/setup/import", "DONE", "/people"],
+  ["IMPORT", "/setup/ai", "DONE", "/people"],
   ["OWNER", "/setup", "DONE", "/people"],
   ["DONE", "/people", "IMPORT", "/setup/import"],
 ] as const)(
@@ -46,7 +46,7 @@ it.each([
 
     try {
       requireSetupStep(requestedStep, {
-        context: { me, holdsSetup: false, setupStep },
+        context: { me, holdsSetup: false, setupStep, mode: "SELF_HOSTED" },
         location: { href },
       });
     } catch (error) {
@@ -63,7 +63,7 @@ it("sends the setup holder at owner from the import page to owner setup", () => 
 
   try {
     requireSetupStep("IMPORT", {
-      context: { me: null, holdsSetup: true, setupStep: "OWNER" },
+      context: { me: null, holdsSetup: true, setupStep: "OWNER", mode: "SELF_HOSTED" },
       location: { href: "/setup/import" },
     });
   } catch (error) {
@@ -78,9 +78,26 @@ it("returns the signed-in user when setup is done", () => {
   const me = { id: "owner" };
 
   const result = requireFinishedSetup({
-    context: { me, holdsSetup: false, setupStep: "DONE" },
+    context: { me, holdsSetup: false, setupStep: "DONE", mode: "SELF_HOSTED" },
     location: { href: "/people" },
   });
 
   expect(result).toBe(me);
 });
+
+it("enters self-hosted import through Setup AI", () => {
+  expect(setupStepPage("IMPORT", "SELF_HOSTED")).toBe("/setup/ai");
+});
+
+it("enters managed import through gathering people", () => {
+  expect(setupStepPage("IMPORT", "MANAGED")).toBe("/setup/import");
+});
+
+it.each(["SELF_HOSTED", "MANAGED"] as const)(
+  "keeps other setup destinations unchanged in %s",
+  (mode) => {
+    expect(setupStepPage("COMPANY", mode)).toBe("/setup/company");
+    expect(setupStepPage("OWNER", mode)).toBe("/setup");
+    expect(setupStepPage("DONE", mode)).toBe("/people");
+  },
+);

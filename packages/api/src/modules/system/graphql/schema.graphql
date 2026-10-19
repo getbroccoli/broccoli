@@ -52,4 +52,55 @@ type Setup {
   step: SetupStep!
   mode: Mode!
   holder: SetupHolder!
+  "How files are read with AI. Owner or setup holder only, though the rest of `Setup` is public; null when managed, which keeps its own key."
+  ai: Ai
+}
+
+"How a self-hosted instance reads files with AI."
+type Ai {
+  "Always `ai`: one per instance."
+  id: ID!
+  "The source files are read with now: the owner's choice, else OpenRouter when a key exists, else Broccoli AI."
+  source: AiSource!
+  "Where the OpenRouter key comes from; null without one. Never the key itself."
+  openRouterKey: AiKeyOrigin
+}
+
+"Where AI decisions go."
+enum AiSource {
+  "Broccoli's own AI, free for setup and a trial; needs no key."
+  BROCCOLI_AI
+  "OpenRouter with the instance's own key."
+  OPENROUTER
+}
+
+"Where the instance's OpenRouter key comes from."
+enum AiKeyOrigin {
+  "`OPENROUTER_API_KEY` in the environment."
+  ENVIRONMENT
+  "Pasted by the owner during setup; it wins over the environment's."
+  SAVED
+}
+
+input AiSourceInput {
+  source: AiSource!
+  "Replaces the saved key; needed for `OPENROUTER` when the instance has no key yet."
+  openRouterKey: String
+}
+
+type SetupMutations {
+  "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
+  saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
+}
+
+"Setup after choosing how files are read."
+type SetupSaveAiSourcePayload {
+  setup: Setup
+  error: SetupSaveAiSourceError
+}
+
+union SetupSaveAiSourceError = InvalidInputError | UnavailableError | ConflictError
+
+type Mutation {
+  setup: SetupMutations!
 }

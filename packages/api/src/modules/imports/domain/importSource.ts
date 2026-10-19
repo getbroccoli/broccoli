@@ -4,8 +4,19 @@ export type ImportSourceKind = "slack" | "file";
 /** Whether a source's records are ready; a Slack source always is. */
 export type ImportSourceStatus = "mapping" | "mapped" | "failed";
 
-/** Why a file could not be mapped. */
-export type ImportSourceFailure = "no_people_columns" | "unavailable";
+/**
+ * Why a file could not be mapped: no people in it, the model failed, or Broccoli AI's free use
+ * is used up (`ai_*`), which the owner's own key gets past.
+ */
+export const IMPORT_SOURCE_FAILURES = [
+  "no_people_columns",
+  "unavailable",
+  "ai_free_period_used",
+  "ai_free_period_over",
+  "ai_limit_reached",
+] as const;
+
+export type ImportSourceFailure = (typeof IMPORT_SOURCE_FAILURES)[number];
 
 /** One place people came from; it owns its records. */
 export interface ImportSource {

@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { boolean, check, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "../../auth";
-import { SETUP_STEPS } from "../domain";
+import { AI_SOURCES, SETUP_STEPS } from "../domain";
 
 /** The one row describing this installation; the migration inserts it. */
 export const instance = pgTable(
@@ -20,6 +20,10 @@ export const instance = pgTable(
     managedWebsiteOrigin: text("managed_website_origin"),
     /** Self-hosted only, after its first AI decision without a key: the encrypted relay token. */
     encryptedBroccoliAiToken: text("encrypted_broccoli_ai_token"),
+    /** Self-hosted only: where the owner chose to send AI decisions; null until they choose. */
+    aiSource: text("ai_source", { enum: AI_SOURCES }),
+    /** Self-hosted only: the OpenRouter key the owner pasted, encrypted. */
+    encryptedOpenRouterKey: text("encrypted_openrouter_key"),
   },
   (table) => [
     check("instance_singleton", sql`${table.id}`),
@@ -28,6 +32,7 @@ export const instance = pgTable(
       "instance_setup_session",
       sql`num_nonnulls(${table.setupTokenHash}, ${table.setupExpiresAt}) in (0, 2)`,
     ),
+    check("instance_ai_source", sql`${table.aiSource} in ('broccoli_ai', 'openrouter')`),
     check(
       "instance_managed_assignment",
       sql`num_nonnulls(${table.managedCompanyId}, ${table.managedPublicOrigin}, ${table.managedWebsiteOrigin}) in (0, 3)`,
