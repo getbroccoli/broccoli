@@ -7,7 +7,7 @@ import { parse } from "csv-parse/sync";
  */
 export function parseCsv(bytes: Uint8Array): string[][] | null {
   const text = decode(bytes);
-  if (CONTROL_CHARACTER.test(text)) {
+  if (text.startsWith("%PDF-") || CONTROL_CHARACTER.test(text)) {
     return null;
   }
   let best: { rows: string[][]; regularRows: number } | null = null;
@@ -26,7 +26,7 @@ export function parseCsv(bytes: Uint8Array): string[][] | null {
 
 const DELIMITERS = [",", ";", "\t"] as const;
 
-/** Text holds no control characters but tabs and line breaks; PDFs, images and documents do. */
+/** Delimited text holds no control characters but tabs and line breaks. */
 const CONTROL_CHARACTER = /[^\P{Cc}\t\n\r]/u;
 
 /** UTF-8, the BOM dropped; text that is not valid UTF-8 is most likely an older Excel export. */
