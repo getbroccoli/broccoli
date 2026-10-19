@@ -13,7 +13,7 @@ const MANAGED = {
 it("needs no settings when self-hosted and defaults to Broccoli AI", () => {
   expect(loadEnv(DATABASE).deployment).toEqual({
     mode: "self_hosted",
-    broccoliAiUrl: "https://accounts.getbroccoli.com/ai",
+    broccoliAiUrl: "https://accounts.dev.getbroccoli.com/ai",
   });
 });
 
