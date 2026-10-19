@@ -34,7 +34,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE19.** Every business function in `app` takes the caller's `SecurityContext` first, as `ctx`, and checks it. Work Broccoli does on its own runs as the system, never without a context.
 - **RULE20.** A use case opens the transaction with `transact`; an operation meant to compose takes a required `tx`. Code never awaits work that needs another connection while holding locks, such as an HTTP call.
 - **RULE21.** A module never reads another module's tables: it calls the other module's public functions or handles its events.
-- **RULE22.** An integration reaches the network through `fetchJson` in `utils`, with no HTTP library, and nothing retries by default.
+- **RULE22.** An integration reaches the network through `fetchJson`, or `fetchBytes` for a binary answer, in `utils`, with no HTTP library, and nothing retries by default.
 
 ## API
 

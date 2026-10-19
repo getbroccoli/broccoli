@@ -16,7 +16,7 @@ packages/api/src/
 
 ## 1. Shape of the system
 
-- **Modular monolith.** One API process, one web single-page app, one container image. The folders of the API are listed above. An integration handles transport (URL, timeout, response format); the rules about the data it returns stay in the module. Integrations use Node's built-in `fetch` through `fetchJson` (timeout, size cap, schema; [RULE22](code-quality.md#layers-and-place)); a vendor SDK is added only where it removes real work.
+- **Modular monolith.** One API process, one web single-page app, one container image. The folders of the API are listed above. An integration handles transport (URL, timeout, response format); the rules about the data it returns stay in the module. Integrations use Node's built-in `fetch` through `fetchJson` (timeout, size cap, schema) or `fetchBytes` for images ([RULE22](code-quality.md#layers-and-place)); a vendor SDK is added only where it removes real work.
 - **Single-tenant.** One deployment and one Postgres database per company, for self-hosted and managed installs alike. There is no tenant column and no row-level security; the managed service runs one instance per company and migrates each.
 - **Layers per module.**
   - `domain`: pure TypeScript, no I/O.
