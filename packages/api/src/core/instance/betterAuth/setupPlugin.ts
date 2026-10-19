@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { ApplicationError } from "../../applicationError";
 import { authDatabase } from "../../auth";
-import { type Orm, ormOf, type Transact } from "../../db";
+import { type Orm, ormOf, type Transact, type Tx } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
 import {
   createOwnerAtSetup,
@@ -28,6 +28,8 @@ import {
   SetupInProgressError,
 } from "../domain";
 import { readSetupToken, SETUP_COOKIE } from "./setupCookie";
+
+const SYSTEM = PrincipalSecurityContext.system();
 
 const OWNER_EXISTS = { code: "OWNER_EXISTS", message: "The owner account already exists" };
 const SETUP_IN_PROGRESS = {
@@ -76,9 +78,7 @@ export function setupPlugin(
       startSetup: createAuthEndpoint("/setup/start", { method: "POST" }, async (ctx) => {
         const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
         const session = await refusingSetupConflicts(() =>
-          transact((tx) =>
-            startSetup(PrincipalSecurityContext.system(), tx, { token, now: new Date() }),
-          ),
+          transact((tx) => startSetup(SYSTEM, tx, { token, now: new Date() })),
         );
         setSetupCookie(ctx, session.token, SETUP_SESSION_DAYS * DAY_SECONDS);
         return ctx.json({ holder: "you" });
@@ -165,29 +165,16 @@ function createOwner(
   email: string,
   passwordHash: string,
 ) {
-  const { internalAdapter, options } = ctx.context;
-  return transact((tx) =>
-    // Better Auth's writes join the transaction that holds the instance lock.
-    runWithAdapter(authDatabase(ormOf(tx))(options), () =>
-      createOwnerAtSetup(
-        PrincipalSecurityContext.system(),
-        tx,
-        { token, now: new Date() },
-        async () => {
-          const user = await internalAdapter.createUser(
-            { email, name: "", emailVerified: false },
-            { method: "email-password" },
-          );
-          await internalAdapter.linkAccount({
-            userId: user.id,
-            providerId: "credential",
-            accountId: user.id,
-            password: passwordHash,
-          });
-          return { user, session: await internalAdapter.createSession(user.id) };
-        },
-      ),
-    ),
+  const { internalAdapter } = ctx.context;
+  return inAuthTransaction(transact, ctx, (tx) =>
+    createOwnerAtSetup(SYSTEM, tx, { token, now: new Date() }, async () => {
+      const user = await internalAdapter.createUser(
+        { email, name: "", emailVerified: false },
+        { method: "email-password" },
+      );
+      await linkPassword(ctx, user.id, passwordHash);
+      return { user, session: await internalAdapter.createSession(user.id) };
+    }),
   );
 }
 
@@ -201,31 +188,25 @@ function createDemoOwner(
   token: string | null,
   startDemo: DemoStart,
 ) {
-  const { internalAdapter, options } = ctx.context;
+  const { internalAdapter } = ctx.context;
   const now = new Date();
-  return transact((tx) =>
-    runWithAdapter(authDatabase(ormOf(tx))(options), () =>
-      startDemoAtSetup(
-        PrincipalSecurityContext.system(),
-        tx,
-        { token, now },
-        async () => {
-          const user = await internalAdapter.createUser(
-            {
-              email: provisionalOwnerEmail(),
-              name: "",
-              emailVerified: false,
-            },
-            { method: "anonymous" },
-          );
-          // The session ends with the demo; session resolution refuses it after that too.
-          const session = await internalAdapter.createSession(user.id, false, {
-            expiresAt: demoExpiry(now),
-          });
-          return { user, session };
-        },
-        startDemo,
-      ),
+  return inAuthTransaction(transact, ctx, (tx) =>
+    startDemoAtSetup(
+      SYSTEM,
+      tx,
+      { token, now },
+      async () => {
+        const user = await internalAdapter.createUser(
+          { email: provisionalOwnerEmail(), name: "", emailVerified: false },
+          { method: "anonymous" },
+        );
+        // The session ends with the demo; session resolution refuses it after that too.
+        const session = await internalAdapter.createSession(user.id, false, {
+          expiresAt: demoExpiry(now),
+        });
+        return { user, session };
+      },
+      startDemo,
     ),
   );
 }
@@ -239,22 +220,40 @@ function upgradeDemoOwner(
   ctx: GenericEndpointContext,
   { userId, email, passwordHash }: { userId: string; email: string; passwordHash: string },
 ) {
-  const { internalAdapter, options } = ctx.context;
-  return transact((tx) =>
-    runWithAdapter(authDatabase(ormOf(tx))(options), () =>
-      finishDemo(PrincipalSecurityContext.system(), tx, { userId, now: new Date() }, async () => {
-        const user = await internalAdapter.updateUser(userId, { email });
-        await internalAdapter.linkAccount({
-          userId,
-          providerId: "credential",
-          accountId: userId,
-          password: passwordHash,
-        });
-        await internalAdapter.deleteUserSessions(userId);
-        return { user, session: await internalAdapter.createSession(userId) };
-      }),
-    ),
+  const { internalAdapter } = ctx.context;
+  return inAuthTransaction(transact, ctx, (tx) =>
+    finishDemo(SYSTEM, tx, { userId, now: new Date() }, async () => {
+      const user = await internalAdapter.updateUser(userId, { email });
+      await linkPassword(ctx, userId, passwordHash);
+      await internalAdapter.deleteUserSessions(userId);
+      return { user, session: await internalAdapter.createSession(userId) };
+    }),
   );
+}
+
+/** Runs `work` in one transaction that Better Auth's writes join, so they hold the instance lock. */
+function inAuthTransaction<T>(
+  transact: Transact,
+  ctx: GenericEndpointContext,
+  work: (tx: Tx) => Promise<T>,
+): Promise<T> {
+  return transact(
+    async (tx) =>
+      await runWithAdapter(authDatabase(ormOf(tx))(ctx.context.options), () => work(tx)),
+  );
+}
+
+async function linkPassword(
+  ctx: GenericEndpointContext,
+  userId: string,
+  passwordHash: string,
+): Promise<void> {
+  await ctx.context.internalAdapter.linkAccount({
+    userId,
+    providerId: "credential",
+    accountId: userId,
+    password: passwordHash,
+  });
 }
 
 /** Answers the refusals of setup as HTTP conflicts; `stepConflict` names a wrong step. */
