@@ -19,6 +19,8 @@ export interface ImportEmployeeValues {
 export interface ImportEmployeeRecord extends ImportEmployeeValues {
   id: string;
   sourceId: string;
+  /** The stored copy of the person's Slack photo; null for initials. */
+  photoFileId: string | null;
 }
 
 /** A record as a source delivers it, before it is stored. */
@@ -28,6 +30,8 @@ export interface IncomingRecord {
   /** The source's values as they came. */
   raw: unknown;
   values: ImportEmployeeValues;
+  /** Where the person's own photo can be downloaded; only Slack members have one. */
+  photoUrl?: string | null;
 }
 
 /** The version of the employee choices schema that new choices are written with. */
@@ -63,6 +67,8 @@ export interface ImportEmployee {
   /** In source order: file sources oldest first, then Slack; within a source, oldest first. */
   records: ImportEmployeeRecord[];
   values: Record<ImportEmployeeField, ImportEmployeeValue>;
+  /** The photo of its first record that has one. */
+  photoFileId: string | null;
   leftOut: boolean;
 }
 
@@ -123,6 +129,7 @@ export function groupEmployeeRecords(
           employeeValue(sorted, field, owned.find((choice) => choice.values[field])?.values[field]),
         ]),
       ) as Record<ImportEmployeeField, ImportEmployeeValue>,
+      photoFileId: sorted.find((record) => record.photoFileId)?.photoFileId ?? null,
       leftOut: owned[0]?.leftOut ?? false,
     };
   });

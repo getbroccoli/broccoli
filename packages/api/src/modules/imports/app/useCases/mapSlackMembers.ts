@@ -27,6 +27,7 @@ export function mapSlackMembers(members: SlackMember[]): IncomingRecord[] {
         jobTitle: nonBlank(member.profile?.title),
         startDate: null,
       },
+      photoUrl: photoUrlOf(member),
     });
   }
   return [...records.values()];
@@ -57,7 +58,23 @@ function nameOf(member: SlackMember): Pick<ImportEmployeeValues, "firstName" | "
   return splitFullName(fullName);
 }
 
-/** Only the fields the mapping reads: no avatars, phones or time zones are kept. */
+/**
+ * The link of the member's own photo: Slack generates a placeholder for members without
+ * one, which shows as initials instead, and only Slack's photo hosts are ever asked.
+ */
+function photoUrlOf(member: SlackMember): string | null {
+  const link = member.profile?.image_512;
+  if (!member.profile?.is_custom_image || !link || !URL.canParse(link)) {
+    return null;
+  }
+  const url = new URL(link);
+  return url.protocol === "https:" && url.hostname.endsWith(SLACK_PHOTO_HOST) ? link : null;
+}
+
+/** Slack serves profile photos from its subdomains, such as `avatars.slack-edge.com`. */
+const SLACK_PHOTO_HOST = ".slack-edge.com";
+
+/** Only the fields the mapping reads: no phones or time zones are kept. */
 function rawOf({ id, name, real_name, profile }: SlackMember) {
   return {
     id,
@@ -70,6 +87,8 @@ function rawOf({ id, name, real_name, profile }: SlackMember) {
       display_name: profile?.display_name,
       email: profile?.email,
       title: profile?.title,
+      image_512: profile?.image_512,
+      is_custom_image: profile?.is_custom_image,
     },
   };
 }

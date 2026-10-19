@@ -6,7 +6,7 @@ import type { ImportRepository } from "../../db";
 /** What the Slack module offers the import. */
 export type SlackReader = Pick<
   SlackConnectionService,
-  "readSlackMembers" | "isCurrentSlackConnection"
+  "readSlackMembers" | "isCurrentSlackConnection" | "readSlackPhoto"
 >;
 
 /** What the import use cases share. */

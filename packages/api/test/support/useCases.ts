@@ -139,6 +139,9 @@ export function slackUseCases(
       listMembers: () => {
         throw new Error("Unexpected Slack read");
       },
+      readPhoto: () => {
+        throw new Error("Unexpected Slack photo download");
+      },
       ...slackApi,
     },
   });

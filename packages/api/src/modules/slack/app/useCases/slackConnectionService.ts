@@ -39,6 +39,8 @@ export interface SlackConnectionService {
    * `snapshot` came from, so a caller never stores members read before a newer connect.
    */
   isCurrentSlackConnection(ctx: SecurityContext, tx: Tx, snapshot: string): Promise<boolean>;
+  /** The bytes at a member's photo link; rejects when the download fails. */
+  readSlackPhoto(ctx: SecurityContext, url: URL): Promise<Buffer>;
 }
 
 /** Where to send the browser to connect Slack, and what the browser keeps until it returns. */
@@ -169,6 +171,11 @@ export function createSlackConnectionService({
       ctx.requireSetupAccess();
       const connection = await slackConnectionRepository(tx).lock();
       return connection?.encryptedToken === snapshot;
+    },
+
+    readSlackPhoto: (ctx: SecurityContext, url: URL): Promise<Buffer> => {
+      ctx.requireSetupAccess();
+      return slackApi.readPhoto(url);
     },
   };
 }
