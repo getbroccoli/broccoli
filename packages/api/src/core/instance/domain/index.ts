@@ -1,5 +1,11 @@
 export { SETUP_STEPS, OwnerExistsError, type SetupStep } from "./setup";
-export { AI_SOURCES, currentAi, type AiChoice, type AiSource, type CurrentAi } from "./aiChoice";
+export {
+  AI_SOURCES,
+  currentAi,
+  type SavedAiSource,
+  type AiSource,
+  type CurrentAi,
+} from "./aiSource";
 export { AssignmentConflictError, type ManagedAssignment } from "./managed";
 export {
   hashSetupToken,

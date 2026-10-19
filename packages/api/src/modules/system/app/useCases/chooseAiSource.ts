@@ -1,8 +1,8 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import {
   currentAi,
-  readAiChoice,
-  saveAiChoice,
+  readAiSource,
+  saveAiSource,
   type AiSource,
   type CurrentAi,
 } from "../../../../core/instance";
@@ -10,17 +10,17 @@ import type { SecurityContext } from "../../../../core/security";
 import { DecisionsError } from "../../../../integrations/ai";
 import type { SystemContext } from "./systemContext";
 
-export interface ChooseAiInput {
+export interface AiSourceInput {
   source: AiSource;
   /** Replaces the saved key; blank counts as none. */
   openRouterKey?: string | null;
 }
 
 /** Checks that the chosen source works, then saves it, so files are read with it from now on. */
-export async function chooseAi(
+export async function chooseAiSource(
   context: SystemContext,
   ctx: SecurityContext,
-  { source, openRouterKey }: ChooseAiInput,
+  { source, openRouterKey }: AiSourceInput,
 ): Promise<CurrentAi> {
   ctx.requireSetupAccess();
   if (context.mode === "managed") {
@@ -33,9 +33,9 @@ export async function chooseAi(
     await checkBroccoliAi(context);
   }
   await context.transact((tx) =>
-    saveAiChoice(tx, context.secretBox, { source, openRouterKey: givenKey }),
+    saveAiSource(tx, context.secretBox, { source, openRouterKey: givenKey }),
   );
-  return currentAi(await readAiChoice(context.orm, context.secretBox), context.ai.environmentKey);
+  return currentAi(await readAiSource(context.orm, context.secretBox), context.ai.environmentKey);
 }
 
 /** Checks the given key, else the one files would be read with now. */
@@ -43,7 +43,7 @@ async function checkOpenRouter(
   { orm, secretBox, ai }: SystemContext,
   givenKey: string | undefined,
 ): Promise<void> {
-  const key = givenKey ?? (await readAiChoice(orm, secretBox)).openRouterKey ?? ai.environmentKey;
+  const key = givenKey ?? (await readAiSource(orm, secretBox)).openRouterKey ?? ai.environmentKey;
   if (key === null) {
     throw invalidInput([{ field: "openRouterKey", code: "required" }]);
   }

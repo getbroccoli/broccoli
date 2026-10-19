@@ -1,9 +1,9 @@
-import type { AiSource, ChooseAiMutation } from "@/__generated__/graphql";
+import type { AiSource, ChooseAiSourceMutation } from "@/__generated__/graphql";
 import type { MessageKey } from "@/i18n";
 
 /** What went wrong, worded for the owner; `onKey` when it is about the pasted key. */
 export function failureOf(
-  error: ChooseAiError | null,
+  error: ChooseAiSourceError | null,
   source: AiSource,
 ): { message: MessageKey; onKey: boolean } {
   if (error?.__typename === "InvalidInputError") {
@@ -28,4 +28,4 @@ export function failureOf(
   return { message: "setup.ai.failed", onKey: false };
 }
 
-type ChooseAiError = NonNullable<ChooseAiMutation["setup"]["chooseAi"]["error"]>;
+type ChooseAiSourceError = NonNullable<ChooseAiSourceMutation["setup"]["chooseAiSource"]["error"]>;

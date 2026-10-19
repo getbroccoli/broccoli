@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { currentAi } from "./aiChoice";
+import { currentAi } from "./aiSource";
 
 it("uses Broccoli AI when no source or key is configured", () => {
   const ai = currentAi({ source: null, openRouterKey: null }, null);

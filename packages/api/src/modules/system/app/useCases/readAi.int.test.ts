@@ -11,10 +11,10 @@ import {
   TEST_SECRET_BOX,
 } from "#test/support";
 
-import { readAiChoice, saveAiChoice } from "../../../../core/instance";
+import { readAiSource, saveAiSource } from "../../../../core/instance";
 
 test("reports no AI choice on a managed instance", async ({ orm, transact }) => {
-  await transact((tx) => saveAiChoice(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
+  await transact((tx) => saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
   const system = systemUseCases(orm, { mode: "managed", environmentKey: "managed-key" });
 
   expect(await system.readAi(OWNER)).toBeNull();
@@ -30,7 +30,7 @@ test("reports the environment key and its origin", async ({ orm }) => {
 });
 
 test("reports the saved choice instead of the environment's default", async ({ orm, transact }) => {
-  await transact((tx) => saveAiChoice(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
+  await transact((tx) => saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
   const system = systemUseCases(orm, { environmentKey: "environment-key" });
 
   expect(await system.readAi(OWNER)).toEqual({
@@ -60,5 +60,5 @@ test("refuses a non-owner without checking providers or saving a choice", async 
 
   expect(checkOpenRouterKey).not.toHaveBeenCalled();
   expect(prepareBroccoliAi).not.toHaveBeenCalled();
-  expect(await readAiChoice(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
+  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
 });

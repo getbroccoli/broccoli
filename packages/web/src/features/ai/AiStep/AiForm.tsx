@@ -2,7 +2,7 @@ import { ShieldCheck } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { ChooseAiDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
+import { ChooseAiSourceDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { useSkipWithDemoData } from "@/features/imports";
 import { SetupStepForm } from "@/features/setup";
@@ -22,7 +22,8 @@ export function AiForm({ ai }: { ai: Ai }) {
   const [source, setSource] = useState<AiSource>(ai.source);
   const [replacingKey, setReplacingKey] = useState(false);
   const [key, setKey] = useState("");
-  const [chooseAi, { loading: checking, payloadError }] = usePayloadMutation(ChooseAiDocument);
+  const [chooseAiSource, { loading: checking, payloadError }] =
+    usePayloadMutation(ChooseAiSourceDocument);
   const [failed, setFailed] = useState(false);
   const demo = useSkipWithDemoData();
   const busy = checking || demo.skipping;
@@ -36,7 +37,7 @@ export function AiForm({ ai }: { ai: Ai }) {
   const choose = async () => {
     setFailed(false);
     try {
-      await chooseAi({
+      await chooseAiSource({
         variables: { input: { source, openRouterKey: asksForKey ? key : null } },
       });
     } catch {

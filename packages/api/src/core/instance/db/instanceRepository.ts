@@ -36,9 +36,9 @@ export interface InstanceRepository {
   /** The encrypted Broccoli AI token; null before the first one is issued. */
   readBroccoliAiToken(): Promise<string | null>;
   saveBroccoliAiToken(encryptedToken: string): Promise<void>;
-  readAiChoice(): Promise<{ source: AiSource | null; encryptedOpenRouterKey: string | null }>;
+  readAiSource(): Promise<{ source: AiSource | null; encryptedOpenRouterKey: string | null }>;
   /** Saves the source; a given key replaces the saved one, else it stays. */
-  saveAiChoice(source: AiSource, encryptedOpenRouterKey?: string): Promise<void>;
+  saveAiSource(source: AiSource, encryptedOpenRouterKey?: string): Promise<void>;
 }
 
 export function instanceRepository(db: Orm | Tx): InstanceRepository {
@@ -139,7 +139,7 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
       await orm().update(instance).set({ encryptedBroccoliAiToken: encryptedToken });
     },
 
-    readAiChoice: async () => {
+    readAiSource: async () => {
       const [row] = await orm()
         .select({
           source: instance.aiSource,
@@ -149,7 +149,7 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
       return row ?? { source: null, encryptedOpenRouterKey: null };
     },
 
-    saveAiChoice: async (source: AiSource, encryptedOpenRouterKey?: string): Promise<void> => {
+    saveAiSource: async (source: AiSource, encryptedOpenRouterKey?: string): Promise<void> => {
       await orm().update(instance).set({ aiSource: source, encryptedOpenRouterKey });
     },
   };

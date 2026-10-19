@@ -82,7 +82,7 @@ enum AiKeyOrigin {
   SAVED
 }
 
-input AiChooseInput {
+input AiSourceInput {
   source: AiSource!
   "Replaces the saved key; needed for `OPENROUTER` when the instance has no key yet."
   openRouterKey: String
@@ -90,16 +90,16 @@ input AiChooseInput {
 
 type SetupMutations {
   "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
-  chooseAi(input: AiChooseInput!): SetupChooseAiPayload!
+  chooseAiSource(input: AiSourceInput!): SetupChooseAiSourcePayload!
 }
 
 "Setup after choosing how files are read."
-type SetupChooseAiPayload {
+type SetupChooseAiSourcePayload {
   setup: Setup
-  error: SetupChooseAiError
+  error: SetupChooseAiSourceError
 }
 
-union SetupChooseAiError = InvalidInputError | UnavailableError | ConflictError
+union SetupChooseAiSourceError = InvalidInputError | UnavailableError | ConflictError
 
 type Mutation {
   setup: SetupMutations!

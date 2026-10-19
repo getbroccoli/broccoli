@@ -6,7 +6,7 @@ import {
 } from "../integrations/ai";
 import {
   currentAi,
-  readAiChoice,
+  readAiSource,
   readBroccoliAiToken,
   saveBroccoliAiToken,
 } from "../core/instance";
@@ -81,7 +81,7 @@ async function decisionsSource(
     }
     return { kind: "openrouter", url: openRouterUrl, key: openRouterKey };
   }
-  const ai = currentAi(await readAiChoice(orm, secretBox), openRouterKey);
+  const ai = currentAi(await readAiSource(orm, secretBox), openRouterKey);
   if (ai.source === "broccoli_ai") {
     return { kind: "broccoli_ai", url: broccoliAiUrl };
   }

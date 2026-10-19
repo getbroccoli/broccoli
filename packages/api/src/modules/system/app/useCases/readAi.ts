@@ -1,4 +1,4 @@
-import { currentAi, readAiChoice, type CurrentAi } from "../../../../core/instance";
+import { currentAi, readAiSource, type CurrentAi } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import type { SystemContext } from "./systemContext";
 
@@ -11,5 +11,5 @@ export async function readAi(
   if (mode === "managed") {
     return null;
   }
-  return currentAi(await readAiChoice(orm, secretBox), ai.environmentKey);
+  return currentAi(await readAiSource(orm, secretBox), ai.environmentKey);
 }

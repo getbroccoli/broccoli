@@ -2,10 +2,10 @@ import { sql } from "drizzle-orm";
 
 import { expect, test, TEST_SECRET_BOX } from "#test/support";
 
-import { readAiChoice, saveAiChoice } from "./aiChoice";
+import { readAiSource, saveAiSource } from "./aiSource";
 
 test("a new instance has no AI choice", async ({ orm }) => {
-  expect(await readAiChoice(orm, TEST_SECRET_BOX)).toEqual({
+  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
     source: null,
     openRouterKey: null,
   });
@@ -13,10 +13,10 @@ test("a new instance has no AI choice", async ({ orm }) => {
 
 test("reads back the saved choice and key", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiChoice(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
+    saveAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
   );
 
-  expect(await readAiChoice(orm, TEST_SECRET_BOX)).toEqual({
+  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
     source: "openrouter",
     openRouterKey: "saved-key",
   });
@@ -24,7 +24,7 @@ test("reads back the saved choice and key", async ({ orm, transact }) => {
 
 test("encrypts the saved key at rest", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiChoice(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
+    saveAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
   );
 
   const { rows } = await orm.execute<{ encrypted_openrouter_key: string }>(
@@ -37,12 +37,12 @@ test("encrypts the saved key at rest", async ({ orm, transact }) => {
 
 test("choosing Broccoli AI without a key keeps the saved key", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiChoice(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
+    saveAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
   );
 
-  await transact((tx) => saveAiChoice(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
+  await transact((tx) => saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
 
-  expect(await readAiChoice(orm, TEST_SECRET_BOX)).toEqual({
+  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
     source: "broccoli_ai",
     openRouterKey: "saved-key",
   });

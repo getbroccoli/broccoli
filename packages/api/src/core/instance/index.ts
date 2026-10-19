@@ -10,9 +10,9 @@ export {
   readSetupStep,
   readOwner,
   readOwnerUserId,
-  readAiChoice,
+  readAiSource,
   readBroccoliAiToken,
-  saveAiChoice,
+  saveAiSource,
   saveBroccoliAiToken,
 } from "./app";
 export { readSetupToken, selfHostedAuth } from "./betterAuth";
