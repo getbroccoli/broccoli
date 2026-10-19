@@ -22,7 +22,6 @@ export { instanceRepository } from "./db";
 export {
   AssignmentConflictError,
   currentAi,
-  type AiChoice,
   type AiSource,
   type CurrentAi,
   hashSetupToken,

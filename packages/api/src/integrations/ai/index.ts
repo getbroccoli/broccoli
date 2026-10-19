@@ -9,8 +9,4 @@ export {
   type Question,
 } from "./decisions";
 export { checkOpenRouterKey } from "./openRouterKey";
-export {
-  createResolvedDecisions,
-  type DecisionsSource,
-  type ResolvedDecisions,
-} from "./resolvedDecisions";
+export { createResolvedDecisions, type DecisionsSource } from "./resolvedDecisions";
