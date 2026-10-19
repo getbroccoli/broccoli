@@ -2,13 +2,14 @@ import type { Decisions } from "../../../../integrations/ai";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
+import { importPhotoRepository, importRepository } from "../../db";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
 import type { DemoFill, SlackReader } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { readSlack } from "./readSlack";
+import { downloadSlackPhotos, type SlackPhotoJob } from "./slackPhotos";
 import { startDemo } from "./startDemo";
 
 export type { DemoFill, SlackReader } from "./importContext";
@@ -19,6 +20,8 @@ export interface ImportUseCases {
   readSlack: (ctx: SecurityContext) => Promise<void>;
   startDemo: (ctx: SecurityContext) => Promise<void>;
   approveImport: (ctx: SecurityContext) => Promise<void>;
+  /** The photo job's run: downloads the source's photos still missing, a batch at a time. */
+  downloadSlackPhotos: (ctx: SecurityContext, job: SlackPhotoJob) => Promise<void>;
   reads: ImportReadService;
   choices: EmployeeChoiceService;
   files: FileSourceService;
@@ -39,12 +42,14 @@ export function createImportUseCases({
   prepareDemoFill: () => Promise<DemoFill>;
 }): ImportUseCases {
   const imports = importRepository(orm);
-  const context = { transact, logger, slack, imports, prepareDemoFill };
+  const context = { orm, transact, logger, slack, imports, jobs, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
-    reads: createImportReadService(imports),
+    downloadSlackPhotos: (ctx: SecurityContext, job: SlackPhotoJob) =>
+      downloadSlackPhotos(context, ctx, job),
+    reads: createImportReadService(imports, importPhotoRepository(orm)),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs }),
   };

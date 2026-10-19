@@ -30,6 +30,8 @@ const calls = {
   "reads.listEmployeeRecords": (imports, ctx) =>
     imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),
   "reads.listChecks": (imports, ctx) => imports.reads.listChecks(ctx),
+  "reads.isImportPhotoFile": (imports, ctx) =>
+    imports.reads.isImportPhotoFile(ctx, "0199f6c4-0000-7000-8000-000000000000"),
   "choices.chooseEmployeeValue": (imports, ctx) =>
     imports.choices.chooseEmployeeValue(ctx, { key: "missing", field: "jobTitle", choice: null }),
   "choices.chooseSourceForAll": (imports, ctx) =>
@@ -40,6 +42,11 @@ const calls = {
     imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
   startDemo: (imports, ctx) => imports.startDemo(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx),
+  downloadSlackPhotos: (imports, ctx) =>
+    imports.downloadSlackPhotos(ctx, {
+      sourceId: "0199f6c4-0000-7000-8000-000000000000",
+      after: null,
+    }),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;
 
 test.for(Object.entries(calls))(

@@ -7,7 +7,11 @@ import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
 import { hashSetupToken, instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
-import { importRepository, type ImportEmployeeValues } from "../../src/modules/imports";
+import {
+  importPhotoRepository,
+  importRepository,
+  type ImportEmployeeValues,
+} from "../../src/modules/imports";
 import { slackConnectionRepository } from "../../src/modules/slack";
 import { parseCalendarDate } from "../../src/utils";
 import { TEST_SECRET_BOX } from "./testSecretBox";
@@ -185,7 +189,7 @@ export class TestSeed {
     { photoUrl, content, mimeType }: { photoUrl: string; content: Buffer; mimeType: string },
   ): Promise<string> {
     const fileId = await this.file({ content, mimeType });
-    const attached = await importRepository(this.orm).attachPhoto(recordId, photoUrl, fileId);
+    const attached = await importPhotoRepository(this.orm).attachPhoto(recordId, photoUrl, fileId);
     if (!attached) throw new Error(`Could not seed the photo of import record ${recordId}`);
     return fileId;
   }

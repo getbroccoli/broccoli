@@ -26,6 +26,12 @@ export async function advanceStep(
   return moved;
 }
 
+/** Whether the import still takes changes: setup has not moved past the import step. */
+export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
+  const step = await readSetupStep(db);
+  return step === "company" || step === "import";
+}
+
 /**
  * Leaves the import step, joining `tx`: to `owner` while the instance has no owner,
  * which self-hosted setup creates last, else to `done`. Returns whether it moved.

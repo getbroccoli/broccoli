@@ -1,11 +1,12 @@
 import type { SecurityContext } from "../../../../core/security";
 import { completeImportStep, type DemoStart } from "../../../../core/instance";
 import type { ImportContext } from "./importContext";
+import { clearImport } from "./clearImport";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
  * Leaves the import step of setup with the demo company, in one transaction so the step only
- * moves once the demo company is in; the import's records stay.
+ * moves once the demo company is in; the import is deleted, so none of its people are added.
  */
 export async function startDemo(context: ImportContext, ctx: SecurityContext): Promise<void> {
   requireImportAccess(ctx);
@@ -24,6 +25,7 @@ export async function prepareDemoStart({
   return async (ctx, tx) => {
     requireImportAccess(ctx);
     if (await completeImportStep(ctx, tx)) {
+      await clearImport(tx);
       await fillDemo(tx);
     }
   };

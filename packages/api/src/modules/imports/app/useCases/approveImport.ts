@@ -5,14 +5,15 @@ import { createImportedEmployees } from "../../../employees";
 import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { toNewEmployeeInput } from "../../domain";
+import { clearImport } from "./clearImport";
 import { readImportEmployees } from "./readImportEmployees";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
- * Turns the import employees that are not left out into employees, with the values review
- * shows, and completes the import step, in one transaction; at any step but `import` it does nothing,
- * so approving twice creates them once. Incomplete ones stay in the import; refused while a
- * file is being mapped.
+ * Turns the import employees that are not left out into employees, with the values and
+ * photo review shows, completes the import step and deletes the import, in one
+ * transaction; at any step but `import` it does nothing, so approving twice creates them
+ * once. Incomplete ones are not created; refused while a file is being mapped.
  */
 export async function approveImport(
   { transact, logger }: ImportContext,
@@ -30,11 +31,18 @@ export async function approveImport(
       return null;
     }
     const employees = await readImportEmployees(imports);
-    return createImportedEmployees(
+    const { avatarFileIds, ...counts } = await createImportedEmployees(
       ctx,
       tx,
-      employees.filter(({ leftOut }) => !leftOut).map(toNewEmployeeInput),
+      employees
+        .filter(({ leftOut }) => !leftOut)
+        .map((employee) => ({
+          ...toNewEmployeeInput(employee),
+          avatarFileId: employee.photoFileId ?? undefined,
+        })),
     );
+    await clearImport(tx, avatarFileIds);
+    return counts;
   });
   if (result) {
     logger.info(result, "Approved the import");

@@ -43,9 +43,12 @@ export interface ImportRepository {
   lockSources(): Promise<void>;
   /**
    * Makes the source's employee records match `records` by external id: updates the
-   * ones still there, so their ids stay, adds new ones and deletes the rest.
+   * ones still there, so their ids stay, adds new ones and deletes the rest. Detach
+   * photos that no longer match first (`detachReplacedPhotos`).
    */
   syncEmployeeRecords(sourceId: string, records: IncomingRecord[]): Promise<void>;
+  /** Deletes every source, record and choice; returns the files they referenced. */
+  deleteAll(): Promise<string[]>;
   listSources(): Promise<ImportSource[]>;
   findSources(ids: readonly string[]): Promise<ImportSource[]>;
   /** Every employee record of every source, oldest first. */
@@ -195,14 +198,17 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         await orm()
           .insert(importRecords)
           .values(
-            records.slice(start, start + INSERT_BATCH_SIZE).map(({ externalId, raw, values }) => ({
-              sourceId,
-              type: "employee" as const,
-              typeVersion: IMPORT_EMPLOYEE_VERSION,
-              externalId,
-              raw,
-              values,
-            })),
+            records
+              .slice(start, start + INSERT_BATCH_SIZE)
+              .map(({ externalId, raw, values, photoUrl }) => ({
+                sourceId,
+                type: "employee" as const,
+                typeVersion: IMPORT_EMPLOYEE_VERSION,
+                externalId,
+                raw,
+                values,
+                photoUrl: photoUrl ?? null,
+              })),
           )
           .onConflictDoUpdate({
             target: [importRecords.sourceId, importRecords.type, importRecords.externalId],
@@ -210,10 +216,22 @@ export function importRepository(db: Orm | Tx): ImportRepository {
               typeVersion: sql`excluded.type_version`,
               raw: sql`excluded.raw`,
               values: sql`excluded.values`,
+              photoUrl: sql`excluded.photo_url`,
               updatedAt: sql`now()`,
             },
           });
       }
+    },
+
+    deleteAll: async (): Promise<string[]> => {
+      const photos = await orm()
+        .delete(importRecords)
+        .returning({ fileId: importRecords.photoFileId });
+      const uploads = await orm().delete(importSources).returning({ fileId: importSources.fileId });
+      await orm().delete(importChoices);
+      return [...photos, ...uploads]
+        .map(({ fileId }) => fileId)
+        .filter((id): id is string => id !== null);
     },
 
     listSources: (): Promise<ImportSource[]> =>
@@ -318,5 +336,6 @@ function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmpl
     id: record.id,
     sourceId: record.sourceId,
     ...parseImportEmployeeValues(record.typeVersion, record.values),
+    photoFileId: record.photoFileId,
   };
 }

@@ -8,7 +8,7 @@ import { filesRouter } from "./http";
 
 export { createImportUseCases, type ImportUseCases } from "./app";
 /** For test seeding only; other modules go through the use cases. */
-export { importRepository } from "./db";
+export { importPhotoRepository, importRepository } from "./db";
 export type { ImportEmployeeValues } from "./domain";
 
 /**
@@ -35,6 +35,14 @@ export function importsModule(
       "imports.mapFile": {
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
         onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
+      },
+      "imports.downloadSlackPhotos": {
+        run: (job) => useCases.downloadSlackPhotos(PrincipalSecurityContext.system(), job),
+        // A missing photo shows initials; Refresh downloads it again.
+        onFailed: (job) => {
+          dependencies.logger.warn({ sourceId: job.sourceId }, "Downloading Slack photos failed");
+          return Promise.resolve();
+        },
       },
     },
   };
