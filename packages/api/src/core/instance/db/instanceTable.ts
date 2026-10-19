@@ -14,6 +14,8 @@ export const instance = pgTable(
     /** Self-hosted only, before the owner exists: the hash of the setup holder's token. */
     setupTokenHash: text("setup_token_hash"),
     setupExpiresAt: timestamp("setup_expires_at", { withTimezone: true }),
+    /** Self-hosted only, while the owner is the demo's provisional one: when their access ends. */
+    demoExpiresAt: timestamp("demo_expires_at", { withTimezone: true }),
     /** Managed instances only: what their signed init assigned; all three set or none. */
     managedCompanyId: text("managed_company_id"),
     managedPublicOrigin: text("managed_public_origin"),

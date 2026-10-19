@@ -12,6 +12,7 @@ import { readSlack } from "./readSlack";
 import { startDemo } from "./startDemo";
 
 export type { DemoFill, SlackReader } from "./importContext";
+export { prepareDemoStart } from "./startDemo";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
 export interface ImportUseCases {

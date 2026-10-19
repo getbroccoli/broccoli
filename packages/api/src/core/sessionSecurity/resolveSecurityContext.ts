@@ -3,12 +3,13 @@ import type { IncomingHttpHeaders } from "node:http";
 
 import type { AuthSource } from "../auth";
 import type { Orm } from "../db";
-import { readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
+import { readDemoExpiresAt, readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
 import { isCrossOrigin } from "../sameOrigin";
 import { PrincipalSecurityContext, type RequestSecurity, type SecurityContext } from "../security";
 
 /**
- * The signed-in user of a request, or the browser holding setup. Reading the session also extends one that is due
+ * The signed-in user of a request, or the browser holding setup; the demo's provisional
+ * owner only until the demo ends. Reading the session also extends one that is due
  * for renewal; the GraphQL adapter sends `renewedCookies` back, or the browser's
  * cookie would expire before the session does.
  */
@@ -34,7 +35,16 @@ export async function resolveSecurityContext(
   }
   const { id: userId, email } = session.user;
   const isOwner = userId === (await readOwnerUserId(orm));
+  if (isOwner && (await hasDemoEnded(orm))) {
+    return { security: null, renewedCookies: [] };
+  }
   return { security: PrincipalSecurityContext.user({ userId, email, isOwner }), renewedCookies };
+}
+
+/** Whether the owner is still the demo's provisional one after its deadline; renewal cannot extend it. */
+async function hasDemoEnded(orm: Orm): Promise<boolean> {
+  const expiresAt = await readDemoExpiresAt(orm);
+  return expiresAt !== null && expiresAt <= new Date();
 }
 
 /** The setup holder, for a request carrying the live setup token; otherwise null. */

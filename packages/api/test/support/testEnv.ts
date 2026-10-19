@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +8,7 @@ import { inject } from "vitest";
 
 import { session, user } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
+import { instanceRepository } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
 import { createTestDatabase, type TestDatabase } from "./testDatabases";
@@ -71,6 +73,35 @@ export class TestEnv {
     }
     const { user } = (await response.json()) as Pick<SignedInOwner, "user">;
     return { browser, user };
+  }
+
+  async startSetupAtImport(): Promise<Browser> {
+    const browser = this.browser();
+    const started = await browser.post("/api/auth/setup/start", undefined);
+    if (started.status !== 200) {
+      throw new Error(`Setup start failed with ${started.status}: ${await started.text()}`);
+    }
+    const named = await browser.graphql(`
+      mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } } }
+    `);
+    assert.deepEqual(await named.json(), {
+      data: { company: { update: { company: { id: "company" }, error: null } } },
+    });
+    return browser;
+  }
+
+  async startDemo(): Promise<SignedInOwner & { response: Response }> {
+    const browser = await this.startSetupAtImport();
+    const response = await browser.post("/api/auth/setup/demo", undefined);
+    if (response.status !== 200) {
+      throw new Error(`Demo start failed with ${response.status}: ${await response.text()}`);
+    }
+    const { user } = (await response.json()) as Pick<SignedInOwner, "user">;
+    return { browser, user, response };
+  }
+
+  async expireDemo(): Promise<void> {
+    await instanceRepository(this.database.orm).saveDemoExpiresAt(new Date("2000-01-01T00:00:00Z"));
   }
 
   async changeUserEmail(userId: string, email: string): Promise<void> {

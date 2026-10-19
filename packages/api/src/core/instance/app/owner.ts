@@ -52,13 +52,7 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, step, setupSession } = await instance.lockSetup();
-  if (ownerUserId) {
-    throw new OwnerExistsError();
-  }
-  if (!setupSession || !holdsSetup(setupSession, token, now)) {
-    throw new SetupInProgressError();
-  }
+  const step = await lockHeldSetup(tx, { token, now });
   if (step !== "owner") {
     throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
   }
@@ -68,11 +62,30 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
   return owner;
 }
 
-interface OwnerUser {
+/**
+ * Locks the instance row for the browser holding setup before an owner exists and returns
+ * the step; refuses with `OwnerExistsError` or `SetupInProgressError`.
+ */
+export async function lockHeldSetup(
+  tx: Tx,
+  { token, now }: { token: string | null; now: Date },
+): Promise<SetupStep> {
+  const { ownerUserId, step, setupSession } = await instanceRepository(tx).lockSetup();
+  if (ownerUserId) {
+    throw new OwnerExistsError();
+  }
+  if (!setupSession || !holdsSetup(setupSession, token, now)) {
+    throw new SetupInProgressError();
+  }
+  return step;
+}
+
+export interface OwnerUser {
   user: { id: string; email: string };
 }
 
-async function saveOwner<Owner extends OwnerUser>(
+/** Makes `owner` the instance's owner at `step` and publishes `instance.owner_claimed`. */
+export async function saveOwner<Owner extends OwnerUser>(
   tx: Tx,
   owner: Owner,
   step: SetupStep,

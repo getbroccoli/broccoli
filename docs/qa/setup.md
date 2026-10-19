@@ -40,11 +40,11 @@ curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
 
 ## Skip the import
 
-After the company step, a self-hosted setup opens `/setup/ai`: choose "Use demo data" there, or "Next" and then "Skip and use demo data" on `/setup/import`. Either fills the demo company; `mutation { import { startDemo { import { id } } } }` does the same.
+After the company step, a self-hosted setup opens `/setup/ai`: choose "Use demo data" there, or "Next" and then "Skip and use demo data" on `/setup/import`. Either fills the demo company and signs you in as the demo's owner, without an account; `POST /api/auth/setup/demo` does the same. Then choose "Create account" in the green banner, which opens the same form as the owner step below.
 
 ## Create the owner
 
-The last step opens `/setup`. Enter `owner@example.com` and a password of at least 8 characters, then choose "Create account and finish". This signs you in and ends on `/people`, which then shows the demo company.
+After an import, the last step opens `/setup`. Enter `owner@example.com` and a password of at least 8 characters, then choose "Create account and finish". This signs you in and ends on `/people`, which then shows the demo company.
 
 From a terminal:
 

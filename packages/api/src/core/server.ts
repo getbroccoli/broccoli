@@ -13,7 +13,7 @@ import { createEventBus } from "./events";
 import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { selfHostedAuth, setupRouter } from "./instance";
+import { type DemoStart, selfHostedAuth, setupRouter } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
@@ -53,22 +53,12 @@ export async function startServer(
   const transact = transactor(database.orm, eventBus);
   const jobRunner = createJobRunner(env.databaseUrl, logger);
   const readiness = new Readiness(() => database.checkConnection());
-  const services = { orm: database.orm, transact, secret: authSecret, logger };
-  // Self-hosted instances add their auth and its setup guard; managed ones init routes and status.
-  const deploymentParts: Pick<ManagedServer, "auth"> & Partial<ManagedServer> =
-    env.deployment.mode === "managed"
-      ? managedServer({ ...services, deployment: env.deployment, readiness })
-      : {
-          auth: selfHostedAuth({ ...services, publicUrl: env.deployment.publicUrl }),
-          router: setupRouter(env.deployment.publicUrl),
-        };
-  const resolveSecurity: SecurityResolver = (headers) =>
-    resolveSecurityContext(deploymentParts.auth, database.orm, headers);
-
   const app = express();
   app.disable("x-powered-by");
   const httpServer = createServer(app);
   let modules: readonly ModuleManifest[];
+  let deploymentParts: Pick<ManagedServer, "auth"> & Partial<ManagedServer>;
+  let resolveSecurity: SecurityResolver;
   let graphql: GraphqlApi;
   try {
     modules = createModules({
@@ -78,6 +68,21 @@ export async function startServer(
       secretBox,
       jobs: jobRunner.queue,
     });
+    const services = { orm: database.orm, transact, secret: authSecret, logger };
+    // Self-hosted instances add their auth and its setup guard; managed ones init routes and status.
+    deploymentParts =
+      env.deployment.mode === "managed"
+        ? managedServer({ ...services, deployment: env.deployment, readiness })
+        : {
+            auth: selfHostedAuth({
+              ...services,
+              publicUrl: env.deployment.publicUrl,
+              prepareDemoStart: demoStartOf(modules),
+            }),
+            router: setupRouter(env.deployment.publicUrl),
+          };
+    const auth = deploymentParts.auth;
+    resolveSecurity = (headers) => resolveSecurityContext(auth, database.orm, headers);
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
   } catch (error) {
     await database.close();
@@ -127,6 +132,17 @@ export async function startServer(
       })();
       return stopping;
     },
+  };
+}
+
+/** The demo start of the module that provides it; self-hosted setup calls it on demand. */
+function demoStartOf(modules: readonly ModuleManifest[]): () => Promise<DemoStart> {
+  return () => {
+    const prepare = modules.find((module) => module.prepareDemoStart)?.prepareDemoStart;
+    if (!prepare) {
+      throw new Error("No module starts the demo");
+    }
+    return prepare();
   };
 }
 

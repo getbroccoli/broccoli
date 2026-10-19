@@ -1,7 +1,9 @@
 import { expect, importUseCases, SETUP_HOLDER, SYSTEM, test } from "#test/support";
 
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import type { Tx } from "../../../../core/db";
 import { hasEmployees } from "../../../employees";
+import { prepareDemoStart } from "./startDemo";
 
 test("starting the demo completes setup", async ({ orm, seed }) => {
   const owner = await seed.owner();
@@ -9,6 +11,30 @@ test("starting the demo completes setup", async ({ orm, seed }) => {
   const imports = importUseCases(orm);
 
   await imports.startDemo(owner);
+
+  expect(await readSetupStep(orm)).toBe("done");
+});
+
+test("the prepared demo start completes setup and fills the demo company in the caller's transaction", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const filledIn: Tx[] = [];
+  const startDemo = await prepareDemoStart({
+    prepareDemoFill: () =>
+      Promise.resolve((tx: Tx) => {
+        filledIn.push(tx);
+        return Promise.resolve();
+      }),
+  });
+
+  await transact(async (tx) => {
+    await startDemo(owner, tx);
+    expect(filledIn).toEqual([tx]);
+  });
 
   expect(await readSetupStep(orm)).toBe("done");
 });

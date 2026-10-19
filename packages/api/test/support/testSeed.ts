@@ -47,6 +47,14 @@ export class TestSeed {
     return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
   }
 
+  async demoOwner({ expiresAt }: { expiresAt: Date }): Promise<TestSecurityContext> {
+    const owner = await this.owner();
+    const instance = instanceRepository(this.orm);
+    await instance.setOwner(owner.user!.userId, "done");
+    await instance.saveDemoExpiresAt(expiresAt);
+    return owner;
+  }
+
   async setupSession({
     token = "setup-token",
     expiresAt,

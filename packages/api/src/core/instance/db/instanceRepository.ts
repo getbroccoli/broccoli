@@ -20,11 +20,15 @@ export interface InstanceRepository {
     ownerUserId: string | null;
     step: SetupStep;
     setupSession: SetupSession | null;
+    demoExpiresAt: Date | null;
   }>;
   /** Null when nobody holds setup. */
   readSetupSession(): Promise<SetupSession | null>;
   saveSetupSession(session: SetupSession): Promise<void>;
   clearSetupSession(): Promise<void>;
+  /** When the provisional owner's demo ends; null without one. */
+  readDemoExpiresAt(): Promise<Date | null>;
+  saveDemoExpiresAt(expiresAt: Date | null): Promise<void>;
   /** Null before a managed instance's init, and always on self-hosted instances. */
   readAssignment(): Promise<ManagedAssignment | null>;
   /** Locks the row until the transaction ends, so concurrent inits run one after another. */
@@ -68,13 +72,23 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
 
     lockSetup: async () => {
       const [row] = await orm()
-        .select({ ownerUserId: instance.ownerUserId, step: instance.setupStep, ...sessionColumns })
+        .select({
+          ownerUserId: instance.ownerUserId,
+          step: instance.setupStep,
+          demoExpiresAt: instance.demoExpiresAt,
+          ...sessionColumns,
+        })
         .from(instance)
         .for("update");
       if (!row) {
         throw new Error("The instance row is missing; migrations insert it");
       }
-      return { ownerUserId: row.ownerUserId, step: row.step, setupSession: toSetupSession(row) };
+      return {
+        ownerUserId: row.ownerUserId,
+        step: row.step,
+        setupSession: toSetupSession(row),
+        demoExpiresAt: row.demoExpiresAt,
+      };
     },
 
     readSetupSession: async (): Promise<SetupSession | null> => {
@@ -88,6 +102,15 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
 
     clearSetupSession: async (): Promise<void> => {
       await orm().update(instance).set({ setupTokenHash: null, setupExpiresAt: null });
+    },
+
+    readDemoExpiresAt: async (): Promise<Date | null> => {
+      const [row] = await orm().select({ expiresAt: instance.demoExpiresAt }).from(instance);
+      return row?.expiresAt ?? null;
+    },
+
+    saveDemoExpiresAt: async (expiresAt: Date | null): Promise<void> => {
+      await orm().update(instance).set({ demoExpiresAt: expiresAt });
     },
 
     readAssignment: async (): Promise<ManagedAssignment | null> => {

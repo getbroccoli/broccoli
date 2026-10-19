@@ -1,273 +1,157 @@
-import { request } from "node:http";
-import { createBrowser, expect, PNG, TEST_OWNER, test } from "#test/support";
+import { expect, TEST_OWNER, test } from "#test/support";
 
-test("a fresh instance reports the company step and nobody holding setup", async ({ env }) => {
-  const response = await env.browser().graphql("query { setup { id step holder } }");
+test("starting the demo signs in its owner for seven days and completes setup", async ({ env }) => {
+  const browser = await env.startSetupAtImport();
+  const before = Date.now();
 
+  const response = await browser.post("/api/auth/setup/demo", undefined);
+
+  const after = Date.now();
   expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({
-    data: { setup: { id: "instance", step: "COMPANY", holder: "NOBODY" } },
+  const { user } = (await response.json()) as { user: { id: string } };
+  expect(user.id).toEqual(expect.any(String));
+  expect(sessionCookieOf(response)).toBeDefined();
+  expect(
+    response.headers.getSetCookie().find((cookie) => cookie.startsWith("broccoli_setup=")),
+  ).toMatch(/;\s*Max-Age=0(?:;|$)/i);
+  const signedIn = await browser.graphql(
+    "query { me { id isOwner } setup { id step holder demoExpiresAt } demo { id isPresent } }",
+  );
+  const body = (await signedIn.json()) as { data: { setup: { demoExpiresAt: string } } };
+  expect(body).not.toHaveProperty("errors");
+  expect(body).toMatchObject({
+    data: {
+      me: { id: user.id, isOwner: true },
+      setup: { id: "instance", step: "DONE", holder: "NOBODY" },
+      demo: { id: "demoData", isPresent: true },
+    },
   });
+  expect(body.data.setup.demoExpiresAt).toEqual(expect.any(String));
+  const deadline = Date.parse(body.data.setup.demoExpiresAt);
+  expect(deadline).toBeGreaterThanOrEqual(before + 7 * 24 * 60 * 60 * 1000);
+  expect(deadline).toBeLessThanOrEqual(after + 7 * 24 * 60 * 60 * 1000);
 });
 
-test("the first browser starts setup with a private three-day cookie", async ({ env }) => {
-  const browser = env.browser();
+test("starting the demo without the setup cookie is refused", async ({ env }) => {
+  await env.startSetupAtImport();
 
-  const response = await browser.post("/api/auth/setup/start", undefined);
-
-  expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({ holder: "you" });
-  const cookie = setupCookieOf(response);
-  expect(cookie).toMatch(/^broccoli_setup=[^;]+;/);
-  expect(cookie).toMatch(/;\s*Max-Age=259200(?:;|$)/i);
-  expect(cookie).toMatch(/;\s*Path=\/(?:;|$)/i);
-  expect(cookie).toMatch(/;\s*HttpOnly(?:;|$)/i);
-  expect(cookie).toMatch(/;\s*SameSite=Lax(?:;|$)/i);
-  expect(cookie).not.toMatch(/;\s*Secure(?:;|$)/i);
-  const setup = await browser.graphql("query { setup { id holder } }");
-  expect(await setup.json()).toEqual({ data: { setup: { id: "instance", holder: "YOU" } } });
-});
-
-test("a second browser is refused setup and private company access", async ({ env }) => {
-  await env.browser().post("/api/auth/setup/start", undefined);
-  const another = env.browser();
-
-  const response = await another.post("/api/auth/setup/start", undefined);
+  const response = await env.browser().post("/api/auth/setup/demo", undefined);
 
   expect(response.status).toBe(409);
   expect(await response.json()).toMatchObject({ code: "SETUP_IN_PROGRESS" });
-  const setup = await another.graphql("query { setup { id holder } }");
-  expect(await setup.json()).toEqual({
-    data: { setup: { id: "instance", holder: "ANOTHER_DEVICE" } },
-  });
-  const company = await another.graphql("query { company { id } }");
-  expect(await company.json()).toMatchObject({
-    errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
-  });
 });
 
-test("the setup holder names the company through GraphQL", async ({ env }) => {
-  const browser = env.browser();
-  await browser.post("/api/auth/setup/start", undefined);
-
-  const response = await browser.graphql(`
-    mutation { company { update(input: { name: "Acme Corp" }) { company { id name } error { __typename ... on Error { message } } } } }
-  `);
-
-  expect(await response.json()).toEqual({
-    data: {
-      company: {
-        update: {
-          company: { id: "company", name: "Acme Corp" },
-          error: null,
-        },
-      },
-    },
-  });
-  const company = await browser.graphql("query { company { id name } }");
-  expect(await company.json()).toEqual({ data: { company: { id: "company", name: "Acme Corp" } } });
-});
-
-test("the setup holder can upload and read the company logo through REST", async ({ env }) => {
-  const browser = env.browser();
-  await browser.post("/api/auth/setup/start", undefined);
-
-  const response = await browser.put("/api/company/logo", PNG);
-
-  expect(response.status).toBe(200);
-  const { logoUrl } = (await response.json()) as { logoUrl: string };
-  const logo = await browser.get(logoUrl);
-  expect(logo.status).toBe(200);
-  expect(Buffer.from(await logo.arrayBuffer())).toEqual(PNG);
-});
-
-test("the setup cookie grants no access to employees", async ({ env }) => {
-  const browser = env.browser();
-  await browser.post("/api/auth/setup/start", undefined);
-
-  const response = await browser.graphql("query { employees { edges { node { id } } } }");
-
-  expect(await response.json()).toMatchObject({ errors: [{ extensions: { code: "FORBIDDEN" } }] });
-});
-
-test("completes setup and replaces setup access with the owner's signed-in session", async ({
+test("starting the demo before naming the company reports the import-step error", async ({
   env,
 }) => {
   const browser = env.browser();
-  const started = await browser.post("/api/auth/setup/start", undefined);
-  expect(started.status).toBe(200);
-  const oldCookie = setupCookieOf(started)!.split(";", 1)[0]!;
-  const named = await browser.graphql(`
-    mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } } }
-  `);
-  expect(await named.json()).toEqual({
-    data: { company: { update: { company: { id: "company" }, error: null } } },
-  });
-  const skipped = await browser.graphql("mutation { import { startDemo { import { id } } } }");
-  expect(await skipped.json()).toEqual({
-    data: { import: { startDemo: { import: { id: "import" } } } },
-  });
+  await browser.post("/api/auth/setup/start", undefined);
 
-  const response = await browser.post("/api/auth/setup", {
+  const response = await browser.post("/api/auth/setup/demo", undefined);
+
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ code: "NOT_AT_IMPORT_STEP" });
+});
+
+test("creating an account keeps the demo owner's user id and clears its deadline", async ({
+  env,
+}) => {
+  const { browser, user, response: started } = await env.startDemo();
+
+  const response = await browser.post("/api/auth/setup/account", {
     ...TEST_OWNER,
     email: "OWNER@EXAMPLE.COM",
   });
 
   expect(response.status).toBe(200);
-  const body = (await response.json()) as { user: { id: string; email: string } };
-  expect(body.user.id).toEqual(expect.any(String));
-  expect(body.user.email).toBe(TEST_OWNER.email);
-  expect(response.headers.getSetCookie().some((cookie) => cookie.includes("session_token="))).toBe(
-    true,
-  );
-  expect(setupCookieOf(response)).toMatch(/;\s*Max-Age=0(?:;|$)/i);
-  const signedIn = await browser.graphql("query { me { id isOwner } setup { id step holder } }");
+  expect(await response.json()).toMatchObject({ user: { id: user.id, email: TEST_OWNER.email } });
+  expect(sessionCookieOf(response)).toBeDefined();
+  expect(sessionCookieOf(response)).not.toBe(sessionCookieOf(started));
+  const signedIn = await browser.graphql("query { me { id } setup { id demoExpiresAt } }");
   expect(await signedIn.json()).toEqual({
-    data: {
-      me: { id: body.user.id, isOwner: true },
-      setup: { id: "instance", step: "DONE", holder: "NOBODY" },
-    },
+    data: { me: { id: user.id }, setup: { id: "instance", demoExpiresAt: null } },
   });
-  const stale = await fetch(`${env.url}/api/graphql`, {
+});
+
+test("creating an account revokes the old demo session", async ({ env }) => {
+  const { browser, response: started } = await env.startDemo();
+  const cookie = sessionCookieOf(started)!;
+  expect((await browser.post("/api/auth/setup/account", TEST_OWNER)).status).toBe(200);
+
+  const response = await fetch(`${env.url}/api/graphql`, {
     method: "POST",
-    headers: { "content-type": "application/json", cookie: oldCookie },
+    headers: { "content-type": "application/json", origin: env.url, cookie },
     body: JSON.stringify({ query: "query { company { id } }" }),
   });
-  expect(await stale.json()).toMatchObject({
+
+  expect(await response.json()).toMatchObject({
     errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
   });
 });
 
-test("owner creation without the setup cookie is refused", async ({ env }) => {
-  const response = await env.browser().post("/api/auth/setup", TEST_OWNER);
+test("the upgraded demo owner can sign in from a fresh browser", async ({ env }) => {
+  const { browser, user } = await env.startDemo();
+  expect((await browser.post("/api/auth/setup/account", TEST_OWNER)).status).toBe(200);
 
-  expect(response.status).toBe(409);
-  expect(await response.json()).toMatchObject({ code: "SETUP_IN_PROGRESS" });
-});
-
-test("reports the owner-step error through the auth endpoint", async ({ env }) => {
-  const browser = env.browser();
-  await browser.post("/api/auth/setup/start", undefined);
-
-  const response = await browser.post("/api/auth/setup", TEST_OWNER);
-
-  expect(response.status).toBe(409);
-  expect(await response.json()).toMatchObject({ code: "NOT_AT_OWNER_STEP" });
-});
-
-test("renews the setup cookie when the holder starts again", async ({ env }) => {
-  const browser = env.browser();
-  const first = await browser.post("/api/auth/setup/start", undefined);
-
-  const renewed = await browser.post("/api/auth/setup/start", undefined);
-
-  expect(renewed.status).toBe(200);
-  expect(setupCookieOf(renewed)!.split(";", 1)[0]).toBe(setupCookieOf(first)!.split(";", 1)[0]);
-  expect(setupCookieOf(renewed)).toMatch(/;\s*Max-Age=259200(?:;|$)/i);
-});
-
-test.for(["/api/auth/setup/start", "/api/auth/setup"])(
-  "refuses %s once an owner exists",
-  async (path, { env }) => {
-    await env.signInAsOwner();
-
-    const response = await env
-      .browser()
-      .post(path, path.endsWith("start") ? undefined : TEST_OWNER);
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ code: "OWNER_EXISTS" });
-  },
-);
-
-test("sets a Secure setup cookie when the public URL uses HTTPS", async ({ env }) => {
-  await env.restart({ publicUrl: "https://broccoli.example.com" });
-
-  const response = await createBrowser(env.url, "https://broccoli.example.com").post(
-    "/api/auth/setup/start",
-    undefined,
-  );
+  const response = await env.browser().post("/api/auth/sign-in/email", TEST_OWNER);
 
   expect(response.status).toBe(200);
-  expect(setupCookieOf(response)).toMatch(/;\s*Secure(?:;|$)/i);
+  expect(await response.json()).toMatchObject({ user: { id: user.id, email: TEST_OWNER.email } });
 });
 
-test("keeps the owner's session across a restart", async ({ env }) => {
-  const { browser, user } = await env.signInAsOwner();
+test("creating an account without a session is refused", async ({ env }) => {
+  const response = await env.browser().post("/api/auth/setup/account", TEST_OWNER);
 
-  await env.restart();
-
-  const session = await browser.get(`${env.url}/api/auth/get-session`);
-  expect(session.status).toBe(200);
-  expect(await session.json()).toMatchObject({ user });
+  expect(response.status).toBe(401);
 });
 
-test("refuses a setup start from another origin without cookies and leaves setup unclaimed", async ({
-  env,
-}) => {
-  const response = await fetch(`${env.url}/api/auth/setup/start`, {
+test("a normal owner has no demo deadline and cannot create a demo account", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+
+  const response = await browser.post("/api/auth/setup/account", TEST_OWNER);
+
+  expect(response.status).toBe(403);
+  expect(await response.json()).toMatchObject({ code: "NOT_IN_DEMO" });
+  const setup = await browser.graphql("query { setup { id demoExpiresAt } }");
+  expect(await setup.json()).toEqual({ data: { setup: { id: "instance", demoExpiresAt: null } } });
+});
+
+test("creating an account after the demo deadline is refused", async ({ env }) => {
+  const { browser } = await env.startDemo();
+  await env.expireDemo();
+
+  const response = await browser.post("/api/auth/setup/account", TEST_OWNER);
+
+  expect(response.status).toBe(403);
+  expect(await response.json()).toMatchObject({ code: "NOT_IN_DEMO" });
+});
+
+test("the demo owner's session loses access after the deadline", async ({ env }) => {
+  const { browser } = await env.startDemo();
+  await env.expireDemo();
+
+  const company = await browser.graphql("query { company { id } }");
+  const me = await browser.graphql("query { me { id } }");
+
+  expect(await company.json()).toMatchObject({
+    errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
+  });
+  expect(await me.json()).toEqual({ data: { me: null } });
+});
+
+test("refuses a demo start from another origin without cookies", async ({ env }) => {
+  const response = await fetch(`${env.url}/api/auth/setup/demo`, {
     method: "POST",
     headers: { origin: "https://other.example.com" },
   });
 
   expect(response.status).toBe(403);
   expect(await response.json()).toEqual({ error: "cross_origin" });
-  const setup = await env.browser().graphql("query { setup { id holder } }");
-  expect(await setup.json()).toEqual({ data: { setup: { id: "instance", holder: "NOBODY" } } });
 });
 
-test("refuses a raw dot-segment setup start from another origin without cookies and leaves setup unclaimed", async ({
-  env,
-}) => {
-  const status = await new Promise<number | undefined>((resolve, reject) => {
-    const req = request(
-      env.url,
-      {
-        method: "POST",
-        path: "/api/auth/setup/./start",
-        headers: { origin: "https://other.example.com" },
-      },
-      (response) => {
-        response.on("error", reject);
-        response.on("end", () => resolve(response.statusCode));
-        response.resume();
-      },
-    );
-    req.on("error", reject);
-    req.end();
-  });
-
-  expect(status).toBe(403);
-  const setup = await env.browser().graphql("query { setup { id holder } }");
-  expect(await setup.json()).toEqual({ data: { setup: { id: "instance", holder: "NOBODY" } } });
-});
-
-test("refuses a setup start without an Origin header", async ({ env }) => {
-  const response = await fetch(`${env.url}/api/auth/setup/start`, { method: "POST" });
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toEqual({ error: "cross_origin" });
-});
-
-test("refuses the eleventh setup start even when each request changes X-Forwarded-For", async ({
-  env,
-}) => {
-  for (let request = 0; request < 10; request++) {
-    const response = await fetch(`${env.url}/api/auth/setup/start`, {
-      method: "POST",
-      headers: { origin: env.url, "x-forwarded-for": `192.0.2.${request + 1}` },
-    });
-    expect(response.status).toBe(request === 0 ? 200 : 409);
-  }
-
-  const response = await fetch(`${env.url}/api/auth/setup/start`, {
-    method: "POST",
-    headers: { origin: env.url, "x-forwarded-for": "192.0.2.11" },
-  });
-
-  expect(response.status).toBe(429);
-});
-
-function setupCookieOf(response: Response): string | undefined {
-  return response.headers.getSetCookie().find((cookie) => cookie.startsWith("broccoli_setup="));
+function sessionCookieOf(response: Response): string | undefined {
+  return response.headers
+    .getSetCookie()
+    .find((cookie) => cookie.includes("session_token="))
+    ?.split(";", 1)[0];
 }

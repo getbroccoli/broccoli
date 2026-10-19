@@ -73,6 +73,20 @@ test("refuses demo data and employee avatars without a session", async ({ env })
   expect(image.status).toBe(401);
 });
 
+test("the provisional owner cannot clear demo data and the demo records remain", async ({
+  env,
+}) => {
+  const { browser } = await env.startDemo();
+
+  const response = await browser.graphql(
+    "mutation { demo { clear { demoData { id isPresent } } } }",
+  );
+
+  expect(await response.json()).toMatchObject({ errors: [{ extensions: { code: "FORBIDDEN" } }] });
+  const demo = await browser.graphql("query { demo { id isPresent } }");
+  expect(await demo.json()).toEqual({ data: { demo: { id: "demoData", isPresent: true } } });
+});
+
 test("finishing setup by approving an empty import leaves the directory without demo people", async ({
   env,
 }) => {

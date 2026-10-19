@@ -37,7 +37,7 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 
 ## Demo data
 
-- [ ] "Use demo data" shows "Filling demo data…" and opens "Create your account"; after it, `/people` shows the 40 demo people.
+- [ ] "Use demo data" shows "Filling demo data…" and opens `/people` with the 40 demo people, signed in as the demo's owner, without asking for an account.
 
 ## File refusals
 
