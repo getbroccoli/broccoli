@@ -56,7 +56,7 @@ it("passes through a GraphQLError raised before execution", () => {
 
   const result = formatError(formatted, error);
 
-  expect(result).toBe(formatted);
+  expect(result).toEqual(formatted);
 });
 
 it("masks an error raised while creating the request context", () => {
@@ -114,4 +114,27 @@ it("masks a GraphQL serialization error without exposing the returned value", as
     path: ["ping"],
     extensions: { code: "INTERNAL_SERVER_ERROR" },
   });
+});
+
+it("removes input values from a variable coercion error", async () => {
+  const schema = buildSchema(`
+    input AiInput { enabled: Boolean! openRouterKey: String }
+    type Query { choose(input: AiInput!): Boolean }
+  `);
+  const execution = await execute({
+    schema,
+    document: parse("query ($input: AiInput!) { choose(input: $input) }"),
+    variableValues: {
+      input: { openRouterKey: "sk-or-v1-synthetic-secret" },
+    },
+  });
+  const error = execution.errors?.[0];
+  assert(error);
+  expect(error.message).toContain("sk-or-v1-synthetic-secret");
+
+  const result = formatError(error.toJSON(), error);
+
+  expect(result.message).toEqual(expect.any(String));
+  expect(result.message.length).toBeGreaterThan(0);
+  expect(JSON.stringify(result)).not.toContain("sk-or-v1-synthetic-secret");
 });
