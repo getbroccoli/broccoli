@@ -15,6 +15,11 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 - [ ] The privacy line sits under the options, and the "Demo data" card under it with "Use demo data".
 - [ ] The footer holds only "Next: gather everyone’s details".
 
+## Stale generated code (development only)
+
+- [ ] Temporarily rename the `ChooseAiDocument` export in `packages/web/src/__generated__/graphql.ts`, then reload `/setup/ai`. The error card says "Generated GraphQL code is out of date" and asks for `pnpm codegen`.
+- [ ] Run `pnpm --filter @broccoli/web codegen`, then choose "Reload page". Setup AI loads again.
+
 ## Broccoli AI
 
 - [ ] "Next" shows "Checking…", then opens `/setup/import`; the sidebar shows "Setup AI" done.
