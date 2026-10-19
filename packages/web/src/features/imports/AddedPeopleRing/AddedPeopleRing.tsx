@@ -2,7 +2,7 @@ import { useQuery } from "@apollo/client/react";
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
 
 import { AddedPeopleRingDocument } from "@/__generated__/graphql";
-import { initialsOf } from "@/lib/initials";
+import { Avatar } from "@/features/employees";
 
 import { RING_SEATS, ringSeats } from "./ringSeats";
 
@@ -13,8 +13,8 @@ const SWAP_INTERVAL_MS = 3_200;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /**
- * The people setup approve added, as initials circling the company's logo while the owner
- * creates their account; nothing until they load, or when no one was added.
+ * The people setup approve added, their photos first, circling the company's logo while the
+ * owner creates their account; nothing until they load, or when no one was added.
  */
 export function AddedPeopleRing() {
   // shortcut: faces come from the first 100 import employees only; filter added ones on the
@@ -22,7 +22,9 @@ export function AddedPeopleRing() {
   const { data } = useQuery(AddedPeopleRingDocument);
   const people = (data?.import.employees.edges ?? [])
     .map(({ node }) => node)
-    .filter(({ leftOut, incompleteReason }) => !leftOut && incompleteReason === null);
+    .filter(({ leftOut, incompleteReason }) => !leftOut && incompleteReason === null)
+    // Stable, so each group keeps its name order.
+    .sort((a, b) => Number(b.avatarUrl !== null) - Number(a.avatarUrl !== null));
   const swaps = useSwaps(people.length > RING_SEATS);
 
   if (!data || data.import.readyEmployeeCount === 0) {
@@ -40,12 +42,18 @@ export function AddedPeopleRing() {
           >
             {/* Turns back as the ring turns, so the face stays upright. */}
             <span className="block motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite_reverse]">
+              {/* The hue colours the initials of someone without a photo. */}
               <span
                 key={person.id}
                 style={{ "--tint-hue": hueOf(person.id) } as CSSProperties}
-                className="avatar-tint flex size-11 items-center justify-center rounded-full text-[13px] font-medium text-white ring-[3px] ring-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-60 motion-safe:duration-200"
+                className="block motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-60 motion-safe:duration-200"
               >
-                {initialsOf(person.firstName.value ?? "", person.lastName.value ?? "") || "?"}
+                <Avatar
+                  url={person.avatarUrl ?? null}
+                  firstName={person.firstName.value ?? ""}
+                  lastName={person.lastName.value ?? ""}
+                  className="size-11 text-[13px] ring-[3px] ring-card"
+                />
               </span>
             </span>
           </span>

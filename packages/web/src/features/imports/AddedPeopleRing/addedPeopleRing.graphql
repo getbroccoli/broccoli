@@ -17,6 +17,7 @@ query AddedPeopleRing {
           lastName {
             value
           }
+          avatarUrl
           leftOut
           incompleteReason
         }
