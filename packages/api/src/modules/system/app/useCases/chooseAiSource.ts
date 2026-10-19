@@ -1,10 +1,9 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import {
-  selfHostedAiConfig,
-  readAiSource,
+  readAiConfig,
   saveAiSource,
+  type AiConfig,
   type AiSource,
-  type SelfHostedAiConfig,
 } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { DecisionsError } from "../../../../integrations/ai";
@@ -21,7 +20,7 @@ export async function chooseAiSource(
   context: SystemContext,
   ctx: SecurityContext,
   { source, openRouterKey }: AiSourceInput,
-): Promise<SelfHostedAiConfig> {
+): Promise<AiConfig> {
   ctx.requireSetupAccess();
   if (context.mode === "managed") {
     throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
@@ -35,18 +34,22 @@ export async function chooseAiSource(
   await context.transact((tx) =>
     saveAiSource(tx, context.secretBox, { source, openRouterKey: givenKey }),
   );
-  return selfHostedAiConfig(
-    await readAiSource(context.orm, context.secretBox),
-    context.ai.environmentKey,
-  );
+  return readAiConfig(context.orm, context.secretBox, {
+    mode: context.mode,
+    environmentKey: context.ai.environmentKey,
+  });
 }
 
 /** Checks the given key, else the one files would be read with now. */
 async function checkOpenRouter(
-  { orm, secretBox, ai }: SystemContext,
+  { orm, secretBox, mode, ai }: SystemContext,
   givenKey: string | undefined,
 ): Promise<void> {
-  const key = givenKey ?? (await readAiSource(orm, secretBox)).openRouterKey ?? ai.environmentKey;
+  const key =
+    givenKey ??
+    (await readAiConfig(orm, secretBox, { mode, environmentKey: ai.environmentKey })).openRouterKey
+      ?.key ??
+    null;
   if (key === null) {
     throw invalidInput([{ field: "openRouterKey", code: "required" }]);
   }

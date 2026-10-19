@@ -10,6 +10,7 @@ export {
   readSetupStep,
   readOwner,
   readOwnerUserId,
+  readAiConfig,
   readAiSource,
   readBroccoliAiToken,
   saveAiSource,
@@ -21,9 +22,9 @@ export { setupRouter } from "./http";
 export { instanceRepository } from "./db";
 export {
   AssignmentConflictError,
-  selfHostedAiConfig,
+  aiConfig,
   type AiSource,
-  type SelfHostedAiConfig,
+  type AiConfig,
   hashSetupToken,
   OwnerExistsError,
   SETUP_STEPS,

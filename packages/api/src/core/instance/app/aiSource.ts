@@ -1,7 +1,17 @@
 import type { Orm, Tx } from "../../db";
 import type { SecretBox } from "../../secrets";
 import { instanceRepository } from "../db";
-import type { SavedAiSource, AiSource } from "../domain";
+import type { Mode } from "../../env";
+import { aiConfig, type AiConfig, type AiSource, type SavedAiSource } from "../domain";
+
+/** The AI files are read with now: the saved source, decided by `aiConfig` for the mode. */
+export async function readAiConfig(
+  db: Orm | Tx,
+  secretBox: SecretBox,
+  { mode, environmentKey }: { mode: Mode; environmentKey: string | null },
+): Promise<AiConfig> {
+  return aiConfig(mode, await readAiSource(db, secretBox), environmentKey);
+}
 
 /** Where the owner chose to send AI decisions, with their key decrypted. */
 export async function readAiSource(db: Orm | Tx, secretBox: SecretBox): Promise<SavedAiSource> {

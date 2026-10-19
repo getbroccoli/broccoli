@@ -4,12 +4,7 @@ import {
   DecisionsError,
   type DecisionsSource,
 } from "../integrations/ai";
-import {
-  selfHostedAiConfig,
-  readAiSource,
-  readBroccoliAiToken,
-  saveBroccoliAiToken,
-} from "../core/instance";
+import { readAiConfig, readBroccoliAiToken, saveBroccoliAiToken } from "../core/instance";
 import type { Mode } from "../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
@@ -38,7 +33,7 @@ export function createModules(
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
   const decisions = createResolvedDecisions({
-    readSource: () => decisionsSource(core, ai),
+    readSource: () => decisionsSource(core, mode, ai),
     tokens: {
       read: () => readBroccoliAiToken(core.orm, core.secretBox),
       save: (token) => saveBroccoliAiToken(core.orm, core.secretBox, token),
@@ -67,28 +62,20 @@ export function createModules(
   ];
 }
 
-/**
- * Managed: always the instance's own key. Self-hosted: the source the owner chose, else
- * OpenRouter when a key exists, else Broccoli AI.
- */
+/** Where this request's decisions go, for the AI `readAiConfig` picks. */
 async function decisionsSource(
   { orm, secretBox }: ModuleDependencies,
-  { openRouterUrl, openRouterKey, broccoliAiUrl }: ModuleSettings["ai"],
+  mode: Mode,
+  settings: ModuleSettings["ai"],
 ): Promise<DecisionsSource> {
-  if (broccoliAiUrl === null) {
-    if (openRouterKey === null) {
-      throw new Error("A managed instance needs its OpenRouter key");
-    }
-    return { kind: "openrouter", url: openRouterUrl, key: openRouterKey };
-  }
-  const ai = selfHostedAiConfig(await readAiSource(orm, secretBox), openRouterKey);
+  const ai = await readAiConfig(orm, secretBox, { mode, environmentKey: settings.openRouterKey });
   if (ai.source === "broccoli_ai") {
-    return { kind: "broccoli_ai", url: broccoliAiUrl };
+    return { kind: "broccoli_ai", url: broccoliAiUrlOf(settings) };
   }
   if (ai.openRouterKey === null) {
-    throw new DecisionsError("OpenRouter was chosen without a key", false);
+    throw new DecisionsError("OpenRouter has no key", false);
   }
-  return { kind: "openrouter", url: openRouterUrl, key: ai.openRouterKey.key };
+  return { kind: "openrouter", url: settings.openRouterUrl, key: ai.openRouterKey.key };
 }
 
 function broccoliAiUrlOf({ broccoliAiUrl }: ModuleSettings["ai"]): string {

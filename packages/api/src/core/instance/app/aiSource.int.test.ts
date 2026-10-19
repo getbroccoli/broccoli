@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 
 import { expect, test, TEST_SECRET_BOX } from "#test/support";
 
-import { readAiSource, saveAiSource } from "./aiSource";
+import { readAiConfig, readAiSource, saveAiSource } from "./aiSource";
 
 test("a new instance has no AI choice", async ({ orm }) => {
   expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
@@ -19,6 +19,38 @@ test("reads back the saved choice and key", async ({ orm, transact }) => {
   expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
     source: "openrouter",
     openRouterKey: "saved-key",
+  });
+});
+
+test("managed AI ignores the saved source and key", async ({ orm, transact }) => {
+  await transact((tx) =>
+    saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
+  );
+
+  const ai = await readAiConfig(orm, TEST_SECRET_BOX, {
+    mode: "managed",
+    environmentKey: "environment-key",
+  });
+
+  expect(ai).toEqual({
+    source: "openrouter",
+    openRouterKey: { key: "environment-key", origin: "environment" },
+  });
+});
+
+test("self-hosted AI uses the saved source and key", async ({ orm, transact }) => {
+  await transact((tx) =>
+    saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
+  );
+
+  const ai = await readAiConfig(orm, TEST_SECRET_BOX, {
+    mode: "self_hosted",
+    environmentKey: "environment-key",
+  });
+
+  expect(ai).toEqual({
+    source: "broccoli_ai",
+    openRouterKey: { key: "saved-key", origin: "saved" },
   });
 });
 

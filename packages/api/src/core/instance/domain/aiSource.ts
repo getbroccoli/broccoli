@@ -1,4 +1,6 @@
-/** Where a self-hosted instance sends AI decisions. */
+import type { Mode } from "../../env";
+
+/** Where an instance sends AI decisions. */
 export const AI_SOURCES = ["broccoli_ai", "openrouter"] as const;
 
 export type AiSource = (typeof AI_SOURCES)[number];
@@ -11,20 +13,29 @@ export interface SavedAiSource {
 
 export type OpenRouterKeyOrigin = "environment" | "saved";
 
-/** A self-hosted instance's AI: the source files are read with now, and its OpenRouter key. */
-export interface SelfHostedAiConfig {
+/** The AI files are read with now, and the OpenRouter key it would use. */
+export interface AiConfig {
   source: AiSource;
   openRouterKey: { key: string; origin: OpenRouterKeyOrigin } | null;
 }
 
 /**
- * The saved source, else OpenRouter when any key exists, else Broccoli AI. A saved key beats
- * the environment's, since the owner pasted it on purpose.
+ * Managed: OpenRouter with the environment key, whatever is saved, since Broccoli provides it.
+ * Self-hosted: the saved source, else OpenRouter when any key exists, else Broccoli AI; a saved
+ * key beats the environment's, since the owner pasted it on purpose.
  */
-export function selfHostedAiConfig(
+export function aiConfig(
+  mode: Mode,
   saved: SavedAiSource,
   environmentKey: string | null,
-): SelfHostedAiConfig {
+): AiConfig {
+  if (mode === "managed") {
+    return {
+      source: "openrouter",
+      openRouterKey:
+        environmentKey === null ? null : { key: environmentKey, origin: "environment" },
+    };
+  }
   const openRouterKey =
     saved.openRouterKey !== null
       ? { key: saved.openRouterKey, origin: "saved" as const }

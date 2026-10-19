@@ -1,15 +1,15 @@
 import { expect, it } from "vitest";
 
-import { selfHostedAiConfig } from "./aiSource";
+import { aiConfig } from "./aiSource";
 
 it("uses Broccoli AI when no source or key is configured", () => {
-  const ai = selfHostedAiConfig({ source: null, openRouterKey: null }, null);
+  const ai = aiConfig("self_hosted", { source: null, openRouterKey: null }, null);
 
   expect(ai).toEqual({ source: "broccoli_ai", openRouterKey: null });
 });
 
 it("uses the environment key when no source is chosen", () => {
-  const ai = selfHostedAiConfig({ source: null, openRouterKey: null }, "environment-key");
+  const ai = aiConfig("self_hosted", { source: null, openRouterKey: null }, "environment-key");
 
   expect(ai).toEqual({
     source: "openrouter",
@@ -18,7 +18,11 @@ it("uses the environment key when no source is chosen", () => {
 });
 
 it("keeps the Broccoli AI choice when an environment key exists", () => {
-  const ai = selfHostedAiConfig({ source: "broccoli_ai", openRouterKey: null }, "environment-key");
+  const ai = aiConfig(
+    "self_hosted",
+    { source: "broccoli_ai", openRouterKey: null },
+    "environment-key",
+  );
 
   expect(ai).toEqual({
     source: "broccoli_ai",
@@ -27,7 +31,8 @@ it("keeps the Broccoli AI choice when an environment key exists", () => {
 });
 
 it("uses the saved key before the environment key", () => {
-  const ai = selfHostedAiConfig(
+  const ai = aiConfig(
+    "self_hosted",
     { source: "openrouter", openRouterKey: "saved-key" },
     "environment-key",
   );
@@ -39,7 +44,29 @@ it("uses the saved key before the environment key", () => {
 });
 
 it("keeps the OpenRouter choice when no key exists", () => {
-  const ai = selfHostedAiConfig({ source: "openrouter", openRouterKey: null }, null);
+  const ai = aiConfig("self_hosted", { source: "openrouter", openRouterKey: null }, null);
 
   expect(ai).toEqual({ source: "openrouter", openRouterKey: null });
+});
+
+it("uses OpenRouter in managed mode despite a saved Broccoli AI choice", () => {
+  const ai = aiConfig("managed", { source: "broccoli_ai", openRouterKey: null }, "environment-key");
+
+  expect(ai).toEqual({
+    source: "openrouter",
+    openRouterKey: { key: "environment-key", origin: "environment" },
+  });
+});
+
+it("uses the environment key in managed mode despite a saved key", () => {
+  const ai = aiConfig(
+    "managed",
+    { source: "openrouter", openRouterKey: "saved-key" },
+    "environment-key",
+  );
+
+  expect(ai).toEqual({
+    source: "openrouter",
+    openRouterKey: { key: "environment-key", origin: "environment" },
+  });
 });

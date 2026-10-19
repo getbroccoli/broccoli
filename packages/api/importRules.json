@@ -55,6 +55,7 @@
     ],
     "src/core/instance": [
       "src/core/applicationError",
+      "src/core/env",
       "src/core/sameOrigin",
       "src/core/auth",
       "src/core/db",
