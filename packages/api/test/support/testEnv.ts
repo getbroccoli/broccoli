@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -101,7 +102,29 @@ export class TestEnv {
   }
 
   async expireDemo(): Promise<void> {
-    await instanceRepository(this.database.orm).saveDemoExpiresAt(new Date("2000-01-01T00:00:00Z"));
+    await this.setDemoDeadline(new Date("2000-01-01T00:00:00Z"));
+  }
+
+  async setDemoDeadline(expiresAt: Date): Promise<void> {
+    await instanceRepository(this.database.orm).saveDemoExpiresAt(expiresAt);
+  }
+
+  async readDemoSession(userId: string): Promise<{ expiresAt: Date; demoExpiresAt: Date | null }> {
+    const [savedSession] = await this.database.orm
+      .select({ expiresAt: session.expiresAt })
+      .from(session)
+      .where(eq(session.userId, userId));
+    assert(savedSession);
+    const demoExpiresAt = await instanceRepository(this.database.orm).readDemoExpiresAt();
+    return { ...savedSession, demoExpiresAt };
+  }
+
+  async expireSessionAt(userId: string, expiresAt: Date): Promise<void> {
+    await this.database.orm.update(session).set({ expiresAt }).where(eq(session.userId, userId));
+  }
+
+  async createUser(email: string): Promise<void> {
+    await this.database.orm.insert(user).values({ id: randomUUID(), name: "User", email });
   }
 
   async changeUserEmail(userId: string, email: string): Promise<void> {

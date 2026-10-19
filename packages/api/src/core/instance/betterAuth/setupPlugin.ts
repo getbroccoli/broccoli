@@ -1,20 +1,15 @@
 import type { GenericEndpointContext } from "@better-auth/core";
 import { createAuthEndpoint } from "@better-auth/core/api";
-import { runWithAdapter } from "@better-auth/core/context";
-import { APIError, BASE_ERROR_CODES } from "@better-auth/core/error";
+import { APIError } from "@better-auth/core/error";
 import type { BetterAuthPlugin } from "better-auth";
-import { sessionMiddleware } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
-import { z } from "zod";
 
 import { ApplicationError } from "../../applicationError";
-import { authDatabase } from "../../auth";
-import { type Orm, ormOf, type Transact, type Tx } from "../../db";
+import type { Orm, Transact } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
 import {
   createOwnerAtSetup,
   type DemoStart,
-  finishDemo,
   hasOwner,
   readSetupHolder,
   startDemoAtSetup,
@@ -27,6 +22,8 @@ import {
   SETUP_SESSION_DAYS,
   SetupInProgressError,
 } from "../domain";
+import { inAuthTransaction } from "./authTransaction";
+import { assertValidCredentials, credentialsBody, linkPassword } from "./credentials";
 import { readSetupToken, SETUP_COOKIE } from "./setupCookie";
 
 const SYSTEM = PrincipalSecurityContext.system();
@@ -44,17 +41,6 @@ const NOT_AT_IMPORT_STEP = {
   code: "NOT_AT_IMPORT_STEP",
   message: "Name the company before starting the demo",
 };
-const NOT_IN_DEMO = {
-  code: "NOT_IN_DEMO",
-  message: "Only the demo's owner can create the account before the demo ends",
-};
-
-const setupBody = z.object({
-  email: z.string(),
-  password: z.string(),
-});
-
-type SetupBody = z.infer<typeof setupBody>;
 
 /**
  * Self-hosted setup before the owner exists. `POST /api/auth/setup/start` gives setup
@@ -63,8 +49,7 @@ type SetupBody = z.infer<typeof setupBody>;
  * for that browser and signs them in; it answers after the handlers of
  * `instance.owner_claimed` and `instance.setup_completed` have run. Instead of the
  * import, `POST /api/auth/setup/demo` starts the demo for that browser, signed in as a
- * provisional owner without credentials, who gives themselves an email and password with
- * `POST /api/auth/setup/account` before the demo ends. `setupRouter` limits and
+ * provisional owner without credentials (see `demoPlugin`). `setupRouter` limits and
  * origin-checks all of them before they run.
  */
 export function setupPlugin(
@@ -83,21 +68,25 @@ export function setupPlugin(
         setSetupCookie(ctx, session.token, SETUP_SESSION_DAYS * DAY_SECONDS);
         return ctx.json({ holder: "you" });
       }),
-      setup: createAuthEndpoint("/setup", { method: "POST", body: setupBody }, async (ctx) => {
-        assertValidCredentials(ctx.body, ctx.context.password.config);
-        const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
-        // Checked early to skip the slow hashing; the transaction checks again.
-        await assertHoldsSetup(orm, token);
-        // Hashing is slow, so it happens before the transaction takes its lock.
-        const passwordHash = await ctx.context.password.hash(ctx.body.password);
-        const owner = await refusingSetupConflicts(
-          () => createOwner(transact, ctx, token, ctx.body.email.toLowerCase(), passwordHash),
-          NOT_AT_OWNER_STEP,
-        );
-        await setSessionCookie(ctx, owner);
-        setSetupCookie(ctx, "", 0);
-        return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
-      }),
+      setup: createAuthEndpoint(
+        "/setup",
+        { method: "POST", body: credentialsBody },
+        async (ctx) => {
+          assertValidCredentials(ctx.body, ctx.context.password.config);
+          const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
+          // Checked early to skip the slow hashing; the transaction checks again.
+          await assertHoldsSetup(orm, token);
+          // Hashing is slow, so it happens before the transaction takes its lock.
+          const passwordHash = await ctx.context.password.hash(ctx.body.password);
+          const owner = await refusingSetupConflicts(
+            () => createOwner(transact, ctx, token, ctx.body.email.toLowerCase(), passwordHash),
+            NOT_AT_OWNER_STEP,
+          );
+          await setSessionCookie(ctx, owner);
+          setSetupCookie(ctx, "", 0);
+          return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
+        },
+      ),
       startDemo: createAuthEndpoint("/setup/demo", { method: "POST" }, async (ctx) => {
         const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
         // Reading the demo company's images is slow, so it happens before the lock.
@@ -110,23 +99,6 @@ export function setupPlugin(
         setSetupCookie(ctx, "", 0);
         return ctx.json({ user: { id: owner.user.id } });
       }),
-      createAccount: createAuthEndpoint(
-        "/setup/account",
-        { method: "POST", body: setupBody, use: [sessionMiddleware] },
-        async (ctx) => {
-          assertValidCredentials(ctx.body, ctx.context.password.config);
-          const passwordHash = await ctx.context.password.hash(ctx.body.password);
-          const owner = await refusingOthersThanDemoOwner(() =>
-            upgradeDemoOwner(transact, ctx, {
-              userId: ctx.context.session.user.id,
-              email: ctx.body.email.toLowerCase(),
-              passwordHash,
-            }),
-          );
-          await setSessionCookie(ctx, owner);
-          return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
-        },
-      ),
     },
   } satisfies BetterAuthPlugin;
 }
@@ -139,21 +111,6 @@ async function assertHoldsSetup(orm: Orm, token: string | null): Promise<void> {
   }
   if ((await readSetupHolder(orm, { token, now: new Date() })) !== "you") {
     throw APIError.from("CONFLICT", SETUP_IN_PROGRESS);
-  }
-}
-
-function assertValidCredentials(
-  { email, password }: SetupBody,
-  limits: { minPasswordLength: number; maxPasswordLength: number },
-): void {
-  if (!z.email().safeParse(email).success) {
-    throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.INVALID_EMAIL);
-  }
-  if (password.length < limits.minPasswordLength) {
-    throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_SHORT);
-  }
-  if (password.length > limits.maxPasswordLength) {
-    throw APIError.from("BAD_REQUEST", BASE_ERROR_CODES.PASSWORD_TOO_LONG);
   }
 }
 
@@ -200,60 +157,18 @@ function createDemoOwner(
           { email: provisionalOwnerEmail(), name: "", emailVerified: false },
           { method: "anonymous" },
         );
-        // The session ends with the demo; session resolution refuses it after that too.
-        const session = await internalAdapter.createSession(user.id, false, {
-          expiresAt: demoExpiry(now),
-        });
+        // The session ends with the demo; Better Auth would otherwise give it its usual length.
+        const session = await internalAdapter.createSession(
+          user.id,
+          false,
+          { expiresAt: demoExpiry(now) },
+          true,
+        );
         return { user, session };
       },
       startDemo,
     ),
   );
-}
-
-/**
- * Gives the demo's provisional owner an email and password, keeping their user, and
- * replaces their sessions with a new one, in one transaction.
- */
-function upgradeDemoOwner(
-  transact: Transact,
-  ctx: GenericEndpointContext,
-  { userId, email, passwordHash }: { userId: string; email: string; passwordHash: string },
-) {
-  const { internalAdapter } = ctx.context;
-  return inAuthTransaction(transact, ctx, (tx) =>
-    finishDemo(SYSTEM, tx, { userId, now: new Date() }, async () => {
-      const user = await internalAdapter.updateUser(userId, { email });
-      await linkPassword(ctx, userId, passwordHash);
-      await internalAdapter.deleteUserSessions(userId);
-      return { user, session: await internalAdapter.createSession(userId) };
-    }),
-  );
-}
-
-/** Runs `work` in one transaction that Better Auth's writes join, so they hold the instance lock. */
-function inAuthTransaction<T>(
-  transact: Transact,
-  ctx: GenericEndpointContext,
-  work: (tx: Tx) => Promise<T>,
-): Promise<T> {
-  return transact(
-    async (tx) =>
-      await runWithAdapter(authDatabase(ormOf(tx))(ctx.context.options), () => work(tx)),
-  );
-}
-
-async function linkPassword(
-  ctx: GenericEndpointContext,
-  userId: string,
-  passwordHash: string,
-): Promise<void> {
-  await ctx.context.internalAdapter.linkAccount({
-    userId,
-    providerId: "credential",
-    accountId: userId,
-    password: passwordHash,
-  });
 }
 
 /** Answers the refusals of setup as HTTP conflicts; `stepConflict` names a wrong step. */
@@ -272,18 +187,6 @@ async function refusingSetupConflicts<T>(
     }
     if (stepConflict && error instanceof ApplicationError && error.code === "CONFLICT") {
       throw APIError.from("CONFLICT", stepConflict);
-    }
-    throw error;
-  }
-}
-
-/** Answers anyone but the demo's owner before its end with 403. */
-async function refusingOthersThanDemoOwner<T>(run: () => Promise<T>): Promise<T> {
-  try {
-    return await run();
-  } catch (error) {
-    if (error instanceof ApplicationError && error.code === "FORBIDDEN") {
-      throw APIError.from("FORBIDDEN", NOT_IN_DEMO);
     }
     throw error;
   }

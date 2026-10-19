@@ -3,7 +3,7 @@ import type { IncomingHttpHeaders } from "node:http";
 
 import type { AuthSource } from "../auth";
 import type { Orm } from "../db";
-import { readDemoExpiresAt, readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
+import { readDemoDeadlineOf, readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
 import { isCrossOrigin } from "../sameOrigin";
 import { PrincipalSecurityContext, type RequestSecurity, type SecurityContext } from "../security";
 
@@ -35,16 +35,16 @@ export async function resolveSecurityContext(
   }
   const { id: userId, email } = session.user;
   const isOwner = userId === (await readOwnerUserId(orm));
-  if (isOwner && (await hasDemoEnded(orm))) {
+  if (await hasDemoEnded(orm, userId)) {
     return { security: null, renewedCookies: [] };
   }
   return { security: PrincipalSecurityContext.user({ userId, email, isOwner }), renewedCookies };
 }
 
-/** Whether the owner is still the demo's provisional one after its deadline; renewal cannot extend it. */
-async function hasDemoEnded(orm: Orm): Promise<boolean> {
-  const expiresAt = await readDemoExpiresAt(orm);
-  return expiresAt !== null && expiresAt <= new Date();
+/** Whether the user is the demo's provisional owner after its deadline, which nothing extends. */
+async function hasDemoEnded(orm: Orm, userId: string): Promise<boolean> {
+  const deadline = await readDemoDeadlineOf(orm, userId);
+  return deadline !== null && deadline <= new Date();
 }
 
 /** The setup holder, for a request carrying the live setup token; otherwise null. */

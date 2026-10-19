@@ -2,6 +2,7 @@ import { createAuth, fixedAuth, type AuthSource } from "../../auth";
 import type { Orm, Transact } from "../../db";
 import type { Logger } from "../../logger";
 import type { DemoStart } from "../app";
+import { demoPlugin } from "./demoPlugin";
 import { setupPlugin } from "./setupPlugin";
 
 export interface SelfHostedAuthOptions {
@@ -23,6 +24,12 @@ export function selfHostedAuth({
   ...options
 }: SelfHostedAuthOptions): AuthSource {
   return fixedAuth(
-    createAuth({ ...options, plugins: [setupPlugin(options.orm, transact, prepareDemoStart)] }),
+    createAuth({
+      ...options,
+      plugins: [
+        setupPlugin(options.orm, transact, prepareDemoStart),
+        demoPlugin(options.orm, transact),
+      ],
+    }),
   );
 }

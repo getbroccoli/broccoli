@@ -1,6 +1,12 @@
 export { advanceStep, completeImportStep, readSetupStep } from "./setup";
 export { claimOwner, createOwnerAtSetup, hasOwner, readOwner, readOwnerUserId } from "./owner";
-export { finishDemo, readDemoExpiresAt, startDemoAtSetup, type DemoStart } from "./demo";
+export {
+  finishDemo,
+  readDemoDeadlineOf,
+  readDemoExpiresAt,
+  startDemoAtSetup,
+  type DemoStart,
+} from "./demo";
 export { assignInstance, readAssignment } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
 export { readAiConfig, readAiSource, storeAiSource } from "./aiSource";

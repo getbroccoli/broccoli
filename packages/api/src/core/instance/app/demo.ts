@@ -59,6 +59,12 @@ export async function finishDemo<Owner>(
   return owner;
 }
 
+/** When `userId` loses access as the demo's provisional owner; null for anyone else. */
+export async function readDemoDeadlineOf(db: Orm | Tx, userId: string): Promise<Date | null> {
+  const instance = instanceRepository(db);
+  return (await instance.readOwnerUserId()) === userId ? instance.readDemoExpiresAt() : null;
+}
+
 /** When the provisional owner's demo ends; null when the owner has an account or none exists. */
 export function readDemoExpiresAt(db: Orm | Tx): Promise<Date | null> {
   return instanceRepository(db).readDemoExpiresAt();

@@ -6,6 +6,7 @@ export {
   claimOwner,
   completeImportStep,
   finishDemo,
+  readDemoDeadlineOf,
   readDemoExpiresAt,
   startDemoAtSetup,
   type DemoStart,

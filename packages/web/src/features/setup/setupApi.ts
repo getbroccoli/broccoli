@@ -6,6 +6,8 @@ export type SetupResult = "ok" | "invalidInput" | "conflict" | "tooManyAttempts"
 const SETUP_RESULT_BY_STATUS: Partial<Record<number, SetupResult>> = {
   200: "ok",
   400: "invalidInput",
+  // Another account already has the email.
+  422: "invalidInput",
   // The owner exists, another browser holds setup, or setup is at another step.
   409: "conflict",
   // The demo ended or already has its account.
