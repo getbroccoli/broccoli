@@ -16,8 +16,12 @@ import { KnownKey } from "./KnownKey";
 import { NextButton } from "./NextButton";
 import { SourceOption } from "./SourceOption";
 
+type Props = {
+  ai: NonNullable<AiStepQuery["setup"]["ai"]>;
+};
+
 /** Next checks the chosen source and saves it, then the owner gathers their files. */
-export function AiForm({ ai }: { ai: Ai }) {
+export function AiForm({ ai }: Props) {
   const navigate = useNavigate();
   const [source, setSource] = useState<AiSource>(ai.source);
   // The key being typed; null while the known key is used, and Replace starts one.
@@ -100,5 +104,3 @@ export function AiForm({ ai }: { ai: Ai }) {
     </SetupStepForm>
   );
 }
-
-type Ai = NonNullable<AiStepQuery["setup"]["ai"]>;

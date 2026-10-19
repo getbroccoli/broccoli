@@ -3,16 +3,14 @@ import { UsersThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
-/** Demo data in place of the owner's people; it needs no AI. */
-export function DemoDataCard({
-  disabled,
-  skipping,
-  onUse,
-}: {
+type Props = {
   disabled: boolean;
   skipping: boolean;
   onUse: () => void;
-}) {
+};
+
+/** Demo data in place of the owner's people; it needs no AI. */
+export function DemoDataCard({ disabled, skipping, onUse }: Props) {
   return (
     <div className="flex items-center gap-3.5 rounded-xl border border-border px-4 py-3.5">
       <UsersThree size={20} aria-hidden className="shrink-0 text-muted-foreground" />

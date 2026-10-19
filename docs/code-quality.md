@@ -59,6 +59,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE35.** GraphQL types come from codegen; none is written by hand.
 - **RULE36.** Every user-facing string goes through `t()`.
 - **RULE37.** Server data lives in the Apollo cache, navigation state in validated search params, and React state only for UI; component state stays minimal.
+- **RULE53.** A component with props declares them as `type Props = { … }` right above the component, not inline in its parameters and not below it; this is the one type that comes before the code using it (RULE9).
 - **RULE38.** Route files stay thin; feature components live in `features/<module>/`.
 - **RULE39.** App code uses Phosphor icons; Lucide appears only inside shadcn components.
 - **RULE51.** Web code runs a mutation with `usePayloadMutation` from `@/apollo`, never Apollo's `useMutation`, so a payload error never passes as success. `lint: no-restricted-imports`

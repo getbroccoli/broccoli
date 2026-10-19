@@ -4,8 +4,13 @@ import type { AiKeyOrigin } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
+type Props = {
+  origin: AiKeyOrigin;
+  onReplace: () => void;
+};
+
 /** The key OpenRouter is already used with; Replace asks for another. */
-export function KnownKey({ origin, onReplace }: { origin: AiKeyOrigin; onReplace: () => void }) {
+export function KnownKey({ origin, onReplace }: Props) {
   return (
     <div className="flex items-center gap-3">
       <span className="flex items-center gap-1.5 text-sm text-brand-deep">

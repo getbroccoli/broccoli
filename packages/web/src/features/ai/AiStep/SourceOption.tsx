@@ -3,15 +3,18 @@ import type { ReactNode } from "react";
 import type { AiSource } from "@/__generated__/graphql";
 import { cn } from "@/lib/class-names";
 
+type Props = {
+  value: AiSource;
+  selected: AiSource;
+  onSelect: (source: AiSource) => void;
+  title: string;
+  hint: string;
+  /** Shown under the hint while this option is selected. */
+  children?: ReactNode;
+};
+
 /** One way to read files, as a card holding its radio button. */
-export function SourceOption({
-  value,
-  selected,
-  onSelect,
-  title,
-  hint,
-  children,
-}: SourceOptionProps) {
+export function SourceOption({ value, selected, onSelect, title, hint, children }: Props) {
   const isSelected = value === selected;
   const id = `ai-source-${value}`;
   return (
@@ -39,14 +42,4 @@ export function SourceOption({
       {isSelected && children && <div className="mt-3 pl-[30px]">{children}</div>}
     </div>
   );
-}
-
-interface SourceOptionProps {
-  value: AiSource;
-  selected: AiSource;
-  onSelect: (source: AiSource) => void;
-  title: string;
-  hint: string;
-  /** Shown under the hint while this option is selected. */
-  children?: ReactNode;
 }

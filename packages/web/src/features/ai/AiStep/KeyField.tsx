@@ -3,16 +3,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 
-/** The OpenRouter key field, with where to get a key. */
-export function KeyField({
-  value,
-  onChange,
-  error,
-}: {
+type Props = {
   value: string;
   onChange: (key: string) => void;
   error: string | undefined;
-}) {
+};
+
+/** The OpenRouter key field, with where to get a key. */
+export function KeyField({ value, onChange, error }: Props) {
   return (
     <div className="flex max-w-md flex-col gap-2">
       <Label htmlFor="openrouter-key">{t("setup.ai.apiKey")}</Label>
