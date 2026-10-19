@@ -2,7 +2,7 @@ import { useApolloClient } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useRouter } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 
 import { FieldError } from "@/components/form";
@@ -35,6 +35,8 @@ const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "conflict">, MessageK
 type Props = {
   /** Sends the credentials: the owner at the end of setup, or the demo's owner. */
   createAccount: (email: string, password: string) => Promise<SetupResult>;
+  /** Shown above the fields. */
+  intro?: ReactNode;
 };
 
 /**
@@ -42,7 +44,7 @@ type Props = {
  * so routing sends the now signed-in owner to the directory. On a conflict, such as an
  * owner created first, the reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm({ createAccount }: Props) {
+export function OwnerSetupForm({ createAccount, intro }: Props) {
   const apolloClient = useApolloClient();
   const router = useRouter();
   const emailInput = useRef<HTMLInputElement>(null);
@@ -95,6 +97,7 @@ export function OwnerSetupForm({ createAccount }: Props) {
         </Button>
       }
     >
+      {intro}
       <form.Field name="email">
         {(field) => {
           const error = field.state.meta.errors[0]?.message;

@@ -19,7 +19,7 @@ A manual check of a self-hosted setup held by one browser, with the owner accoun
 
 Name the company and skip the import in A ([QA setup](setup.md)); A lands on `/setup` with "Setup Company" and "Add your people" done and "Create your account" current.
 
-- [ ] "Create account and finish" stays disabled until the email is filled in and the password has 8 characters.
+- [ ] "Create account" stays disabled until the email is filled in and the password has 8 characters.
 - [ ] `bad` as the email with an 8-character password shows "Enter a valid email address." after submitting.
 - [ ] "Generate" fills a 20-character password, shows it in clear text and says "Save this password in your password manager."
 - [ ] "Hide" hides it; "Copy" shows "Copied"; typing brings back "Use at least 8 characters."

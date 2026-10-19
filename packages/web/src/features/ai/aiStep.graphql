@@ -7,6 +7,14 @@ query AiStep {
       openRouterKey
     }
   }
+  import {
+    id
+    sources {
+      id
+      status
+      employeeCount
+    }
+  }
 }
 
 mutation SaveAiSource($input: AiSourceInput!) {

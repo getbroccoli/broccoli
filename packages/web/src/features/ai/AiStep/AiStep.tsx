@@ -11,14 +11,19 @@ import { NextButton } from "./NextButton";
 
 /** The Setup AI step: how Broccoli reads the owner's files, or demo data instead. */
 export function AiStep() {
-  const { data, error, refetch } = useQuery(AiStepDocument);
+  // Back from Gather: refresh, as the people gathered there decide whether demo data is offered.
+  const { data, error, refetch } = useQuery(AiStepDocument, { fetchPolicy: "cache-and-network" });
   const ai = data?.setup.ai;
 
   if (ai) {
-    return <AiForm ai={ai} />;
+    // A file still being read may gather people, so it counts too.
+    const peopleGathered = data.import.sources.some(
+      ({ employeeCount, status }) => employeeCount > 0 || status === "MAPPING",
+    );
+    return <AiForm ai={ai} peopleGathered={peopleGathered} />;
   }
   return (
-    <SetupStepForm onSubmit={() => {}} footer={<NextButton checking={false} disabled />}>
+    <SetupStepForm onSubmit={() => {}} footer={<NextButton checking={null} disabled />}>
       {error ? (
         <div role="alert" className="flex flex-col items-start gap-3">
           <p className="text-sm text-destructive">{t("setup.ai.loadFailed")}</p>

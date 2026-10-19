@@ -10,7 +10,7 @@ A manual check of naming the company and adding its logo in the browser, on a de
 ## Name
 
 - [ ] The page is `/setup/company`, with "Setup Company" current.
-- [ ] The name field is empty and "Save and continue" is disabled: there is no owner email to suggest a name from yet.
+- [ ] The name field is empty and "Continue" is disabled: there is no owner email to suggest a name from yet.
 - [ ] A blank name keeps the button disabled; 101 characters show "Use at most 100 characters." after submitting.
 
 ## Logo
@@ -21,7 +21,7 @@ A manual check of naming the company and adding its logo in the browser, on a de
 
 ## Saving
 
-- [ ] "Save and continue" lands on `/setup/import`, with "Setup Company" done and "Add your people" current. `/setup/company` now goes to `/setup/import`.
+- [ ] "Continue" lands on `/setup/import`, with "Setup Company" done and "Add your people" current. `/setup/company` now goes to `/setup/import`.
 - [ ] Before saving, a second browser profile lands on `/setup/in-progress`.
 
 ## Layout

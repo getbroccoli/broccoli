@@ -78,6 +78,21 @@
   --avatar-fill-c: 0.13;
 }
 
+/* The added-people ring on the account step: the ring turns, and each face flies in from
+   `--ring-from` to its seat. */
+@keyframes ring-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+@keyframes ring-seat-in {
+  from {
+    translate: var(--ring-from);
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
