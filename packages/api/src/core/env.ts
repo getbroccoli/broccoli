@@ -54,7 +54,8 @@ export interface Env {
 // shortcut: the production accounts service is not live yet; switch to https://accounts.getbroccoli.com before the release.
 const DEFAULT_SLACK_RELAY_URL = "https://accounts.dev.getbroccoli.com";
 
-const DEFAULT_BROCCOLI_AI_URL = "https://accounts.getbroccoli.com/ai";
+// shortcut: the production accounts service is not live yet; switch to https://accounts.getbroccoli.com/ai before the release.
+const DEFAULT_BROCCOLI_AI_URL = "https://accounts.dev.getbroccoli.com/ai";
 
 /** Compose passes unset variables as empty strings, so blank means unset. */
 function blankAsUnset(value: unknown): unknown {
