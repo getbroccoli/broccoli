@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 /** How long the demo's provisional owner may use the app before creating their account. */
-export const DEMO_DAYS = 7;
+const DEMO_DAYS = 7;
 
 /** When a demo started at `now` ends; it never moves. */
 export function demoExpiry(now: Date): Date {
