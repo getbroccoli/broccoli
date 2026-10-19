@@ -8,6 +8,8 @@ const SETUP_RESULT_BY_STATUS: Partial<Record<number, SetupResult>> = {
   400: "invalidInput",
   // The owner exists, another browser holds setup, or setup is at another step.
   409: "conflict",
+  // The demo ended or already has its account.
+  403: "conflict",
   429: "tooManyAttempts",
 };
 
@@ -24,9 +26,34 @@ export async function startSetup(): Promise<boolean> {
 }
 
 /** Creates the instance's owner and signs them in; the API sets the session cookie. */
-export async function setUpOwner(email: string, password: string): Promise<SetupResult> {
+export function setUpOwner(email: string, password: string): Promise<SetupResult> {
+  return postCredentials("/api/auth/setup", email, password);
+}
+
+/** Gives the demo's owner an email and password; the API replaces the session cookie. */
+export function createDemoAccount(email: string, password: string): Promise<SetupResult> {
+  return postCredentials("/api/auth/setup/account", email, password);
+}
+
+/**
+ * Starts the demo in place of the import for the browser holding setup, which the API
+ * signs in as the demo's owner. Returns whether it started.
+ */
+export async function startDemoSetup(): Promise<boolean> {
   try {
-    const response = await postJson("/api/auth/setup", { email, password });
+    return (await postJson("/api/auth/setup/demo", {})).ok;
+  } catch {
+    return false;
+  }
+}
+
+async function postCredentials(
+  path: string,
+  email: string,
+  password: string,
+): Promise<SetupResult> {
+  try {
+    const response = await postJson(path, { email, password });
     return SETUP_RESULT_BY_STATUS[response.status] ?? "failed";
   } catch {
     return "failed";

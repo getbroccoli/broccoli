@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { OwnerSetupForm, requireSetupStep, SetupLayout } from "@/features/setup";
+import { OwnerSetupForm, requireSetupStep, SetupLayout, setUpOwner } from "@/features/setup";
 import { t } from "@/i18n";
 
 /** The last step of self-hosted setup: the browser holding it creates the owner account. */
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/setup/")({
       title={t("setup.owner.title")}
       description={t("setup.owner.description")}
     >
-      <OwnerSetupForm />
+      <OwnerSetupForm createAccount={setUpOwner} />
     </SetupLayout>
   ),
 });

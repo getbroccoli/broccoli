@@ -26,6 +26,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       holdsSetup: setup.holder === "YOU",
       setupStep: setup.step,
       mode: setup.mode,
+      demoExpiresAt: setup.demoExpiresAt ?? null,
     };
   },
   component: Outlet,

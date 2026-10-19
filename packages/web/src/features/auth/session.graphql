@@ -9,5 +9,6 @@ query Session {
     step
     mode
     holder
+    demoExpiresAt
   }
 }
