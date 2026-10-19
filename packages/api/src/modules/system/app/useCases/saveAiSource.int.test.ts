@@ -11,7 +11,7 @@ import {
   TEST_SECRET_BOX,
 } from "#test/support";
 
-import { readAiSource, saveAiSource } from "../../../../core/instance";
+import { readAiSource, storeAiSource } from "../../../../core/instance";
 import { DecisionsError } from "../../../../integrations/ai";
 
 test.for(["broccoli_ai", "openrouter"] as const)(
@@ -22,7 +22,7 @@ test.for(["broccoli_ai", "openrouter"] as const)(
     const system = systemUseCases(orm, { checkOpenRouterKey, prepareBroccoliAi });
 
     await expect(
-      system.chooseAiSource(NON_OWNER, { source, openRouterKey: "given-key" }),
+      system.saveAiSource(NON_OWNER, { source, openRouterKey: "given-key" }),
     ).rejects.toMatchObject({ name: "ApplicationError", code: "FORBIDDEN" });
 
     expect(checkOpenRouterKey).not.toHaveBeenCalled();
@@ -39,7 +39,7 @@ test.for(["broccoli_ai", "openrouter"] as const)(
     const system = systemUseCases(orm, { mode: "managed", checkOpenRouterKey, prepareBroccoliAi });
 
     await expect(
-      system.chooseAiSource(OWNER, { source, openRouterKey: "given-key" }),
+      system.saveAiSource(OWNER, { source, openRouterKey: "given-key" }),
     ).rejects.toMatchObject({ name: "ApplicationError", code: "CONFLICT" });
 
     expect(checkOpenRouterKey).not.toHaveBeenCalled();
@@ -53,12 +53,12 @@ test("checks and saves the trimmed replacement before returning the current AI",
   transact,
 }) => {
   await transact((tx) =>
-    saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "old-key" }),
+    storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "old-key" }),
   );
   const checkOpenRouterKey = vi.fn(() => Promise.resolve());
   const system = systemUseCases(orm, { environmentKey: "environment-key", checkOpenRouterKey });
 
-  const ai = await system.chooseAiSource(OWNER, {
+  const ai = await system.saveAiSource(OWNER, {
     source: "openrouter",
     openRouterKey: "  replacement-key \n",
   });
@@ -81,7 +81,7 @@ test.for([undefined, null, " \n "])(
     const system = systemUseCases(orm);
 
     await expect(
-      system.chooseAiSource(OWNER, { source: "openrouter", openRouterKey }),
+      system.saveAiSource(OWNER, { source: "openrouter", openRouterKey }),
     ).rejects.toMatchObject({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "openRouterKey", code: "required" }],
@@ -95,12 +95,12 @@ test.for([undefined, null, " \n "])(
   "checks the saved key before the environment key when no replacement is given (%s)",
   async (openRouterKey, { orm, transact }) => {
     await transact((tx) =>
-      saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
+      storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
     );
     const checkOpenRouterKey = vi.fn(() => Promise.resolve());
     const system = systemUseCases(orm, { environmentKey: "environment-key", checkOpenRouterKey });
 
-    const ai = await system.chooseAiSource(OWNER, { source: "openrouter", openRouterKey });
+    const ai = await system.saveAiSource(OWNER, { source: "openrouter", openRouterKey });
 
     expect(checkOpenRouterKey).toHaveBeenCalledWith("saved-key");
     expect(ai).toEqual({
@@ -118,7 +118,7 @@ test("checks the environment key without saving a copy", async ({ orm }) => {
   const checkOpenRouterKey = vi.fn(() => Promise.resolve());
   const system = systemUseCases(orm, { environmentKey: "environment-key", checkOpenRouterKey });
 
-  const ai = await system.chooseAiSource(OWNER, { source: "openrouter" });
+  const ai = await system.saveAiSource(OWNER, { source: "openrouter" });
 
   expect(checkOpenRouterKey).toHaveBeenCalledWith("environment-key");
   expect(ai).toEqual({
@@ -136,14 +136,14 @@ test("keeps the saved key and source when the replacement is rejected", async ({
   transact,
 }) => {
   await transact((tx) =>
-    saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
+    storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
   );
   const system = systemUseCases(orm, {
     checkOpenRouterKey: () => Promise.reject(new DecisionsError("Key refused", false)),
   });
 
   await expect(
-    system.chooseAiSource(OWNER, { source: "openrouter", openRouterKey: "rejected-key" }),
+    system.saveAiSource(OWNER, { source: "openrouter", openRouterKey: "rejected-key" }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "openRouterKey", code: "rejected" }],
@@ -161,7 +161,7 @@ test("reports a retryable OpenRouter failure without saving the choice", async (
   });
 
   await expect(
-    system.chooseAiSource(OWNER, { source: "openrouter", openRouterKey: "given-key" }),
+    system.saveAiSource(OWNER, { source: "openrouter", openRouterKey: "given-key" }),
   ).rejects.toMatchObject({ code: "UNAVAILABLE" });
 
   expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
@@ -173,7 +173,7 @@ test.for([OWNER, SETUP_HOLDER, SYSTEM])(
     const prepareBroccoliAi = vi.fn(() => Promise.resolve());
     const system = systemUseCases(orm, { prepareBroccoliAi });
 
-    const ai = await system.chooseAiSource(ctx, { source: "broccoli_ai" });
+    const ai = await system.saveAiSource(ctx, { source: "broccoli_ai" });
 
     expect(prepareBroccoliAi).toHaveBeenCalledOnce();
     expect(ai).toEqual({ source: "broccoli_ai", openRouterKey: null });
@@ -190,7 +190,7 @@ test("reports an already used free period on the source without saving it", asyn
       Promise.reject(new DecisionsError("Token refused", false, null, "free_period_used")),
   });
 
-  await expect(system.chooseAiSource(OWNER, { source: "broccoli_ai" })).rejects.toMatchObject({
+  await expect(system.saveAiSource(OWNER, { source: "broccoli_ai" })).rejects.toMatchObject({
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "source", code: "free_period_used" }],
   });
@@ -205,7 +205,7 @@ test.for([false, true])(
       prepareBroccoliAi: () => Promise.reject(new DecisionsError("Relay unavailable", retryable)),
     });
 
-    await expect(system.chooseAiSource(OWNER, { source: "broccoli_ai" })).rejects.toMatchObject({
+    await expect(system.saveAiSource(OWNER, { source: "broccoli_ai" })).rejects.toMatchObject({
       code: "UNAVAILABLE",
     });
 

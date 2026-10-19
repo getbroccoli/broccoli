@@ -38,7 +38,7 @@ export interface InstanceRepository {
   saveBroccoliAiToken(encryptedToken: string): Promise<void>;
   readAiSource(): Promise<{ source: AiSource | null; encryptedOpenRouterKey: string | null }>;
   /** Saves the source; a given key replaces the saved one, else it stays. */
-  saveAiSource(source: AiSource, encryptedOpenRouterKey?: string): Promise<void>;
+  storeAiSource(source: AiSource, encryptedOpenRouterKey?: string): Promise<void>;
 }
 
 export function instanceRepository(db: Orm | Tx): InstanceRepository {
@@ -149,7 +149,7 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
       return row ?? { source: null, encryptedOpenRouterKey: null };
     },
 
-    saveAiSource: async (source: AiSource, encryptedOpenRouterKey?: string): Promise<void> => {
+    storeAiSource: async (source: AiSource, encryptedOpenRouterKey?: string): Promise<void> => {
       await orm().update(instance).set({ aiSource: source, encryptedOpenRouterKey });
     },
   };

@@ -24,12 +24,12 @@ export async function readAiSource(db: Orm | Tx, secretBox: SecretBox): Promise<
 }
 
 /** Saves the owner's choice; a given key replaces the saved one, without one the saved key stays. */
-export async function saveAiSource(
+export async function storeAiSource(
   tx: Tx,
   secretBox: SecretBox,
   { source, openRouterKey }: { source: AiSource; openRouterKey?: string },
 ): Promise<void> {
-  await instanceRepository(tx).saveAiSource(
+  await instanceRepository(tx).storeAiSource(
     source,
     openRouterKey === undefined ? undefined : secretBox.encrypt(openRouterKey),
   );

@@ -90,16 +90,16 @@ input AiSourceInput {
 
 type SetupMutations {
   "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
-  chooseAiSource(input: AiSourceInput!): SetupChooseAiSourcePayload!
+  saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
 }
 
 "Setup after choosing how files are read."
-type SetupChooseAiSourcePayload {
+type SetupSaveAiSourcePayload {
   setup: Setup
-  error: SetupChooseAiSourceError
+  error: SetupSaveAiSourceError
 }
 
-union SetupChooseAiSourceError = InvalidInputError | UnavailableError | ConflictError
+union SetupSaveAiSourceError = InvalidInputError | UnavailableError | ConflictError
 
 type Mutation {
   setup: SetupMutations!

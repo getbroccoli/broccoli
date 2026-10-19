@@ -13,7 +13,7 @@ export {
   readAiConfig,
   readAiSource,
   readBroccoliAiToken,
-  saveAiSource,
+  storeAiSource,
   saveBroccoliAiToken,
 } from "./app";
 export { readSetupToken, selfHostedAuth } from "./betterAuth";

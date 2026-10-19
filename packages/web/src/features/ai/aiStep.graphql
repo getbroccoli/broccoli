@@ -9,9 +9,9 @@ query AiStep {
   }
 }
 
-mutation ChooseAiSource($input: AiSourceInput!) {
+mutation SaveAiSource($input: AiSourceInput!) {
   setup {
-    chooseAiSource(input: $input) {
+    saveAiSource(input: $input) {
       setup {
         id
         ai {

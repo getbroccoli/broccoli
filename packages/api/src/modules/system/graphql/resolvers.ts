@@ -38,12 +38,12 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       setup: () => ({}),
     },
     SetupMutations: {
-      chooseAiSource: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["SetupChooseAiSourcePayload"]>(
+      saveAiSource: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["SetupSaveAiSourcePayload"]>(
           "setup",
           async () => {
             const actor = context.getActor();
-            await useCases.chooseAiSource(actor, {
+            await useCases.saveAiSource(actor, {
               source: AI_SOURCE_INPUTS[input.source],
               openRouterKey: input.openRouterKey,
             });

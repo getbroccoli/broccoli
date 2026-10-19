@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 
 import { expect, test, TEST_SECRET_BOX } from "#test/support";
 
-import { readAiConfig, readAiSource, saveAiSource } from "./aiSource";
+import { readAiConfig, readAiSource, storeAiSource } from "./aiSource";
 
 test("a new instance has no AI choice", async ({ orm }) => {
   expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
@@ -13,7 +13,7 @@ test("a new instance has no AI choice", async ({ orm }) => {
 
 test("reads back the saved choice and key", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
+    storeAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
   );
 
   expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
@@ -24,7 +24,7 @@ test("reads back the saved choice and key", async ({ orm, transact }) => {
 
 test("managed AI ignores the saved source and key", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
+    storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
   );
 
   const ai = await readAiConfig(orm, TEST_SECRET_BOX, {
@@ -40,7 +40,7 @@ test("managed AI ignores the saved source and key", async ({ orm, transact }) =>
 
 test("self-hosted AI uses the saved source and key", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
+    storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
   );
 
   const ai = await readAiConfig(orm, TEST_SECRET_BOX, {
@@ -56,7 +56,7 @@ test("self-hosted AI uses the saved source and key", async ({ orm, transact }) =
 
 test("encrypts the saved key at rest", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
+    storeAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
   );
 
   const { rows } = await orm.execute<{ encrypted_openrouter_key: string }>(
@@ -69,10 +69,10 @@ test("encrypts the saved key at rest", async ({ orm, transact }) => {
 
 test("choosing Broccoli AI without a key keeps the saved key", async ({ orm, transact }) => {
   await transact((tx) =>
-    saveAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
+    storeAiSource(tx, TEST_SECRET_BOX, { source: "openrouter", openRouterKey: "saved-key" }),
   );
 
-  await transact((tx) => saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
+  await transact((tx) => storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
 
   expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
     source: "broccoli_ai",

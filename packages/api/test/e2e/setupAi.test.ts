@@ -23,12 +23,12 @@ test("choosing Broccoli AI prepares one token and maps a CSV with it despite an 
     openRouterKey: "environment-key",
   });
 
-  const chosen = await browser.graphql(CHOOSE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
+  const chosen = await browser.graphql(SAVE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
 
   expect(await chosen.json()).toEqual({
     data: {
       setup: {
-        chooseAiSource: {
+        saveAiSource: {
           setup: {
             id: "instance",
             ai: { id: "ai", source: "BROCCOLI_AI", openRouterKey: "ENVIRONMENT" },
@@ -66,14 +66,14 @@ test("choosing a pasted OpenRouter key checks it and maps a CSV with it instead 
     openRouterKey: "environment-key",
   });
 
-  const chosen = await browser.graphql(CHOOSE_AI_SOURCE, {
+  const chosen = await browser.graphql(SAVE_AI_SOURCE, {
     input: { source: "OPENROUTER", openRouterKey: "pasted-key" },
   });
 
   expect(await chosen.json()).toEqual({
     data: {
       setup: {
-        chooseAiSource: {
+        saveAiSource: {
           setup: { id: "instance", ai: { id: "ai", source: "OPENROUTER", openRouterKey: "SAVED" } },
           error: null,
         },
@@ -125,14 +125,14 @@ test("returns a field error when OpenRouter rejects the pasted key", async ({
 }) => {
   const browser = await setupHolder({ decisionsUrl: openRouter.url });
 
-  const response = await browser.graphql(CHOOSE_AI_SOURCE, {
+  const response = await browser.graphql(SAVE_AI_SOURCE, {
     input: { source: "OPENROUTER", openRouterKey: "rejected-key" },
   });
 
   expect(await response.json()).toMatchObject({
     data: {
       setup: {
-        chooseAiSource: {
+        saveAiSource: {
           setup: null,
           error: {
             __typename: "InvalidInputError",
@@ -150,12 +150,12 @@ test("returns a source error when the relay refuses an already used free period"
   relay.refuseTokens(429, "free_period_used");
   const browser = await setupHolder({ broccoliAiUrl: relay.url });
 
-  const response = await browser.graphql(CHOOSE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
+  const response = await browser.graphql(SAVE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
 
   expect(await response.json()).toMatchObject({
     data: {
       setup: {
-        chooseAiSource: {
+        saveAiSource: {
           setup: null,
           error: {
             __typename: "InvalidInputError",
@@ -178,18 +178,18 @@ test("refuses an AI choice on a managed instance without contacting either provi
   });
   const browser = await signInAsManagedOwner(env, accounts);
 
-  const response = await browser.graphql(CHOOSE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
+  const response = await browser.graphql(SAVE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
 
   expect(await response.json()).toMatchObject({
-    data: { setup: { chooseAiSource: { setup: null, error: { __typename: "ConflictError" } } } },
+    data: { setup: { saveAiSource: { setup: null, error: { __typename: "ConflictError" } } } },
   });
   expect(openRouter.httpRequests()).toEqual([]);
   expect(relay.httpRequests()).toEqual([]);
 });
 
-const CHOOSE_AI_SOURCE = `mutation ChooseAiSource($input: AiSourceInput!) {
+const SAVE_AI_SOURCE = `mutation SaveAiSource($input: AiSourceInput!) {
   setup {
-    chooseAiSource(input: $input) {
+    saveAiSource(input: $input) {
       setup { id ai { id source openRouterKey } }
       error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } }
     }

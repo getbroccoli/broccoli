@@ -1,7 +1,7 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import {
   readAiConfig,
-  saveAiSource,
+  storeAiSource,
   type AiConfig,
   type AiSource,
 } from "../../../../core/instance";
@@ -16,7 +16,7 @@ export interface AiSourceInput {
 }
 
 /** Checks that the chosen source works, then saves it, so files are read with it from now on. */
-export async function chooseAiSource(
+export async function saveAiSource(
   context: SystemContext,
   ctx: SecurityContext,
   { source, openRouterKey }: AiSourceInput,
@@ -32,7 +32,7 @@ export async function chooseAiSource(
     await checkBroccoliAi(context);
   }
   await context.transact((tx) =>
-    saveAiSource(tx, context.secretBox, { source, openRouterKey: givenKey }),
+    storeAiSource(tx, context.secretBox, { source, openRouterKey: givenKey }),
   );
   return readAiConfig(context.orm, context.secretBox, {
     mode: context.mode,

@@ -11,10 +11,10 @@ import {
   TEST_SECRET_BOX,
 } from "#test/support";
 
-import { readAiSource, saveAiSource } from "../../../../core/instance";
+import { readAiSource, storeAiSource } from "../../../../core/instance";
 
 test("reports no AI choice on a managed instance", async ({ orm, transact }) => {
-  await transact((tx) => saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
+  await transact((tx) => storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
   const system = systemUseCases(orm, { mode: "managed", environmentKey: "managed-key" });
 
   expect(await system.readAi(OWNER)).toBeNull();
@@ -30,7 +30,7 @@ test("reports the environment key and its origin", async ({ orm }) => {
 });
 
 test("reports the saved choice instead of the environment's default", async ({ orm, transact }) => {
-  await transact((tx) => saveAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
+  await transact((tx) => storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai" }));
   const system = systemUseCases(orm, { environmentKey: "environment-key" });
 
   expect(await system.readAi(OWNER)).toEqual({

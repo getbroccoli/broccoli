@@ -2,7 +2,7 @@ import { ShieldCheck } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { ChooseAiSourceDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
+import { SaveAiSourceDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { useSkipWithDemoData } from "@/features/imports";
 import { SetupStepForm } from "@/features/setup";
@@ -22,8 +22,8 @@ export function AiForm({ ai }: { ai: Ai }) {
   const [source, setSource] = useState<AiSource>(ai.source);
   const [replacingKey, setReplacingKey] = useState(false);
   const [key, setKey] = useState("");
-  const [chooseAiSource, { loading: checking, payloadError }] =
-    usePayloadMutation(ChooseAiSourceDocument);
+  const [saveAiSource, { loading: checking, payloadError }] =
+    usePayloadMutation(SaveAiSourceDocument);
   const [failed, setFailed] = useState(false);
   const demo = useSkipWithDemoData();
   const busy = checking || demo.skipping;
@@ -34,10 +34,10 @@ export function AiForm({ ai }: { ai: Ai }) {
   // A refused key shows under the key field; a known key has no field, so it shows below.
   const keyFieldError = failure?.onKey && asksForKey ? t(failure.message) : undefined;
 
-  const choose = async () => {
+  const save = async () => {
     setFailed(false);
     try {
-      await chooseAiSource({
+      await saveAiSource({
         variables: { input: { source, openRouterKey: asksForKey ? key : null } },
       });
     } catch {
@@ -49,7 +49,7 @@ export function AiForm({ ai }: { ai: Ai }) {
 
   return (
     <SetupStepForm
-      onSubmit={() => void choose()}
+      onSubmit={() => void save()}
       footer={
         <NextButton checking={checking} disabled={busy || (asksForKey && key.trim() === "")} />
       }
