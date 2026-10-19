@@ -123,11 +123,11 @@ test("a self-hosted OpenRouter key maps the CSV without issuing a Broccoli AI to
   expect(relay.httpRequests()).toEqual([]);
 });
 
-test("a Broccoli AI refusal shows the provider's message on the file", async ({
+test("an expired Broccoli AI free period is reported on the file without the provider's message", async ({
   fakeDecisions: relay,
 }) => {
   const { browser } = await selfHostedImport(relay);
-  relay.fail(403, "The free period of Broccoli AI is over.");
+  relay.fail(403, "The free period of Broccoli AI is over.", "free_period_over");
 
   const sourceId = await uploadFile(browser, "staff.csv");
 
@@ -149,8 +149,8 @@ test("a Broccoli AI refusal shows the provider's message on the file", async ({
             {
               id: sourceId,
               status: "FAILED",
-              failure: "UNAVAILABLE",
-              failureMessage: "The free period of Broccoli AI is over.",
+              failure: "AI_FREE_PERIOD_OVER",
+              failureMessage: null,
             },
           ],
         },

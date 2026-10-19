@@ -28,7 +28,13 @@ export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./
 export { TestSeed } from "./testSeed";
 export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
-export { companyUseCases, demoUseCases, importUseCases, slackUseCases } from "./useCases";
+export {
+  companyUseCases,
+  demoUseCases,
+  importUseCases,
+  slackUseCases,
+  systemUseCases,
+} from "./useCases";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,

@@ -37,6 +37,12 @@ export {
   toNewEmployee,
   toNewEmployeeInput,
 } from "./importEmployeeMapping";
-export type { FileSource, ImportSource, MappingOutcome } from "./importSource";
+export {
+  IMPORT_SOURCE_FAILURES,
+  type FileSource,
+  type ImportSource,
+  type ImportSourceFailure,
+  type MappingOutcome,
+} from "./importSource";
 export { nonBlank, parseEmail, splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";

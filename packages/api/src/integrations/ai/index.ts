@@ -8,4 +8,9 @@ export {
   type JsonObject,
   type Question,
 } from "./decisions";
-export { createResolvedDecisions, type DecisionsSource } from "./resolvedDecisions";
+export { checkOpenRouterKey } from "./openRouterKey";
+export {
+  createResolvedDecisions,
+  type DecisionsSource,
+  type ResolvedDecisions,
+} from "./resolvedDecisions";

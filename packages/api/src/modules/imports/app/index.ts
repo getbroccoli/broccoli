@@ -1,1 +1,6 @@
-export { createImportUseCases, type ImportUseCases, type SlackReader } from "./useCases";
+export {
+  createImportUseCases,
+  type DemoFill,
+  type ImportUseCases,
+  type SlackReader,
+} from "./useCases";

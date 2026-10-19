@@ -25,7 +25,7 @@
       "src/utils"
     ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
-    "src/modules/system": ["src/core/*", "!src/core/server"],
+    "src/modules/system": ["src/core/*", "!src/core/server", "src/integrations/ai"],
     "src/integrations/ai": ["src/utils"],
     "src/integrations/brandLookup": ["src/utils"],
     "src/integrations/slack": ["src/utils"],

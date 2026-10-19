@@ -1,15 +1,18 @@
-import { demoUseCases, expect, NON_OWNER, OWNER, storedFileIds, SYSTEM, test } from "#test/support";
+import { demoUseCases, expect, NON_OWNER, OWNER, storedFileIds, test } from "#test/support";
 
+import { prepareDemoFill } from "./prepareDemoFill";
 import { createEmployeeUseCases } from "../../../employees";
 import { parseCalendarDate } from "../../../../utils";
 
 test("removes demo employees and their avatars while keeping a real employee", async ({
   orm,
   seed,
+  transact,
 }) => {
   const demo = demoUseCases(orm);
   const { listEmployees } = createEmployeeUseCases({ orm });
-  await demo.seedDemoData(SYSTEM, parseCalendarDate("2026-10-13")!);
+  const today = parseCalendarDate("2026-10-13")!;
+  await transact(await prepareDemoFill(today));
   const employee = await seed.employee();
 
   const cleared = await demo.clearDemoData(OWNER);

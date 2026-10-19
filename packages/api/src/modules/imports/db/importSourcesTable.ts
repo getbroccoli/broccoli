@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { files } from "../../../core/files";
+import { IMPORT_SOURCE_FAILURES } from "../domain";
 
 /** Where the import's records come from: the Slack workspace and uploaded files. */
 export const importSources = pgTable(
@@ -16,7 +17,7 @@ export const importSources = pgTable(
     status: text("status", { enum: ["mapping", "mapped", "failed"] })
       .notNull()
       .default("mapped"),
-    failure: text("failure", { enum: ["no_people_columns", "unavailable"] }),
+    failure: text("failure", { enum: IMPORT_SOURCE_FAILURES }),
     /** The AI provider's own words when it refused a file for good. */
     failureMessage: text("failure_message"),
     /** The current mapping run of a file: a job of an earlier run writes nothing. */

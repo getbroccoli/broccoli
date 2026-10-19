@@ -23,6 +23,12 @@ export interface BroccoliAiTokenStore {
 export type DecisionsSource =
   { kind: "openrouter"; url: string; key: string } | { kind: "broccoli_ai"; url: string };
 
+/** Decisions whose source is picked per request, and the Broccoli AI token they use. */
+export interface ResolvedDecisions extends Decisions {
+  /** Makes sure the install holds a Broccoli AI token, issuing one when it has none. */
+  prepareBroccoliAi(url: string): Promise<void>;
+}
+
 /**
  * Decisions that pick their source on every request through `readSource`, so a source the
  * owner chooses later applies at once. Broccoli AI gets a token on first use and a new one
@@ -34,7 +40,7 @@ export function createResolvedDecisions({
 }: {
   readSource: () => Promise<DecisionsSource>;
   tokens: BroccoliAiTokenStore;
-}): Decisions {
+}): ResolvedDecisions {
   const broccoliAi = broccoliAiTokens(tokens);
   return {
     decide: async (state, questions, minConfidence) => {
@@ -60,6 +66,9 @@ export function createResolvedDecisions({
         }
         return decideWith(await broccoliAi.replace(source.url, token));
       }
+    },
+    prepareBroccoliAi: async (url) => {
+      await broccoliAi.current(url);
     },
   };
 }

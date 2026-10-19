@@ -2,7 +2,7 @@ import type { Decisions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import { createImportUseCases, type SlackReader } from "./app";
+import { createImportUseCases, type DemoFill, type SlackReader } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter } from "./http";
 
@@ -20,6 +20,8 @@ export function importsModule(
     slack: SlackReader;
     /** The model that maps files. */
     decisions: Decisions;
+    /** The demo company that skipping the import fills in. */
+    prepareDemoFill: () => Promise<DemoFill>;
   },
 ): ModuleManifest {
   const useCases = createImportUseCases(dependencies);

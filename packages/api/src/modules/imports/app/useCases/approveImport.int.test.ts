@@ -99,13 +99,13 @@ test.for(["skipped", "company"] as const)(
     await seed.importEmployees(source.id, [{}]);
     const imports = importUseCases(orm);
     if (step === "skipped") await imports.skipImport(owner);
+    const employees = createEmployeeUseCases({ orm });
+    const before = await employees.listEmployees(OWNER, { first: 100 });
 
     await imports.approveImport(owner);
 
     expect(await readSetupStep(orm)).toBe(step === "skipped" ? "done" : "company");
-    expect(
-      (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
-    ).toEqual([]);
+    expect(await employees.listEmployees(OWNER, { first: 100 })).toEqual(before);
   },
 );
 

@@ -7,6 +7,9 @@ export const STATUSES = { mapping: "MAPPING", mapped: "MAPPED", failed: "FAILED"
 export const FAILURES = {
   no_people_columns: "NO_PEOPLE_COLUMNS",
   unavailable: "UNAVAILABLE",
+  ai_free_period_used: "AI_FREE_PERIOD_USED",
+  ai_free_period_over: "AI_FREE_PERIOD_OVER",
+  ai_limit_reached: "AI_LIMIT_REACHED",
 } as const;
 export const INCOMPLETE_REASONS = {
   firstName: "FIRST_NAME",

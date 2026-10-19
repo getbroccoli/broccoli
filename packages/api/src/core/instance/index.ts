@@ -10,7 +10,9 @@ export {
   readSetupStep,
   readOwner,
   readOwnerUserId,
+  readAiChoice,
   readBroccoliAiToken,
+  saveAiChoice,
   saveBroccoliAiToken,
 } from "./app";
 export { readSetupToken, selfHostedAuth } from "./betterAuth";
@@ -19,6 +21,10 @@ export { setupRouter } from "./http";
 export { instanceRepository } from "./db";
 export {
   AssignmentConflictError,
+  currentAi,
+  type AiChoice,
+  type AiSource,
+  type CurrentAi,
   hashSetupToken,
   OwnerExistsError,
   SETUP_STEPS,

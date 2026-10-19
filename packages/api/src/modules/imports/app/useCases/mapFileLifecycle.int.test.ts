@@ -108,6 +108,27 @@ test("retrying a failed file clears its failure message", async ({ orm, seed }) 
   ]);
 });
 
+test("an expired Broccoli AI free period fails the file without the provider's message", async ({
+  orm,
+  seed,
+}) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
+  const imports = importUseCases(orm, {
+    decisions: {
+      decide: () =>
+        Promise.reject(
+          new DecisionsError("Forbidden", false, "The free period is over.", "free_period_over"),
+        ),
+    },
+  });
+
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, status: "failed", failure: "ai_free_period_over", failureMessage: null },
+  ]);
+});
+
 test("an in-flight answer leaves a retried source mapping without records", async ({
   orm,
   seed,

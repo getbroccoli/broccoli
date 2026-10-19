@@ -1,20 +1,8 @@
-import { expect, test, WEBP } from "#test/support";
+import { expect, test, TEST_OWNER, WEBP } from "#test/support";
 
-interface DemoDataResponse {
-  data: {
-    employees: { edges: { node: { avatarUrl: string | null } }[] };
-    demo: { id: string; isPresent: boolean };
-  };
-}
-
-const saveCompany = `mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }`;
-const demoQuery = `query {
-  employees(first: 100) { edges { node { avatarUrl } } }
-  demo { id isPresent }
-}`;
-
-test("fills the directory and serves demo avatars when setup completes", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
+test("skipping import fills the directory and serves demo avatars", async ({ env }) => {
+  const browser = env.browser();
+  expect((await browser.post("/api/auth/setup/start", undefined)).status).toBe(200);
 
   const saved = await browser.graphql(saveCompany);
 
@@ -22,6 +10,7 @@ test("fills the directory and serves demo avatars when setup completes", async (
     data: { company: { update: { company: { id: "company" }, error: null } } },
   });
   await browser.graphql("mutation { import { skip { import { id } } } }");
+  expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
   const response = await browser.graphql(demoQuery);
   const body = (await response.json()) as DemoDataResponse;
   expect(response.status).toBe(200);
@@ -83,3 +72,36 @@ test("refuses demo data and employee avatars without a session", async ({ env })
   });
   expect(image.status).toBe(401);
 });
+
+test("finishing setup by approving an empty import leaves the directory without demo people", async ({
+  env,
+}) => {
+  const browser = env.browser();
+  expect((await browser.post("/api/auth/setup/start", undefined)).status).toBe(200);
+  await browser.graphql(saveCompany);
+
+  const approved = await browser.graphql(`mutation {
+    import { approve { import { id } error { __typename ... on Error { message } } } }
+  }`);
+  expect(await approved.json()).toEqual({
+    data: { import: { approve: { import: { id: "import" }, error: null } } },
+  });
+  expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
+
+  expect(await (await browser.graphql(demoQuery)).json()).toEqual({
+    data: { employees: { edges: [] }, demo: { id: "demoData", isPresent: false } },
+  });
+});
+
+interface DemoDataResponse {
+  data: {
+    employees: { edges: { node: { avatarUrl: string | null } }[] };
+    demo: { id: string; isPresent: boolean };
+  };
+}
+
+const saveCompany = `mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }`;
+const demoQuery = `query {
+  employees(first: 100) { edges { node { avatarUrl } } }
+  demo { id isPresent }
+}`;

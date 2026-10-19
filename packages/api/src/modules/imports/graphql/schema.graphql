@@ -40,6 +40,12 @@ enum ImportSourceFailure {
   NO_PEOPLE_COLUMNS
   "The model could not be reached or refused."
   UNAVAILABLE
+  "This server already used its free Broccoli AI period; an own OpenRouter key reads the file."
+  AI_FREE_PERIOD_USED
+  "The free Broccoli AI period is over; an own OpenRouter key reads the file."
+  AI_FREE_PERIOD_OVER
+  "The free Broccoli AI allowance is used up; an own OpenRouter key reads the file."
+  AI_LIMIT_REACHED
 }
 
 "One place people came from, such as the Slack workspace; it owns its records."
@@ -191,7 +197,7 @@ type Query {
 type ImportMutations {
   "Reads the connected Slack workspace into the import, the first time and on every refresh; its source then holds the current members."
   readSlack: ImportReadSlackPayload!
-  "Leaves the import step of setup for now; the records stay."
+  "Leaves the import step of setup with the demo company instead of the import, which fills only an instance without employees; the import's records stay."
   skip: ImportMutationPayload!
   "Turns the import employees that are not left out into employees, with the values review shows, and completes setup. Incomplete ones stay in the import. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
   approve: ImportApprovePayload!

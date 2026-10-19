@@ -11,6 +11,7 @@ import {
   columnQuestions,
   type FileSource,
   headerQuestion,
+  type ImportSourceFailure,
   type IncomingRecord,
   type MappingOutcome,
   readColumnMapping,
@@ -198,6 +199,13 @@ function mimeTypeOf(sheets: FileSheet[]): string {
     : "text/csv";
 }
 
+/** Broccoli AI's refusals that only the owner's own key can get past. */
+const AI_REFUSAL_FAILURES = new Map<string, ImportSourceFailure>([
+  ["free_period_used", "ai_free_period_used"],
+  ["free_period_over", "ai_free_period_over"],
+  ["limit_reached", "ai_limit_reached"],
+]);
+
 /** A model failure that retrying cannot fix fails the file; any other error is thrown. */
 async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {
   try {
@@ -206,8 +214,11 @@ async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise
     if (!(error instanceof DecisionsError) || error.retryable) {
       throw error;
     }
+    const aiRefusal = AI_REFUSAL_FAILURES.get(error.reason ?? "");
     return {
-      outcome: { status: "failed", failure: "unavailable", failureMessage: error.providerMessage },
+      outcome: aiRefusal
+        ? { status: "failed", failure: aiRefusal }
+        : { status: "failed", failure: "unavailable", failureMessage: error.providerMessage },
       records: [],
     };
   }
