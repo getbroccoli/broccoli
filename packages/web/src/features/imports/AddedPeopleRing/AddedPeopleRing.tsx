@@ -2,7 +2,6 @@ import { useQuery } from "@apollo/client/react";
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
 
 import { AddedPeopleRingDocument } from "@/__generated__/graphql";
-import { t } from "@/i18n";
 import { initialsOf } from "@/lib/initials";
 
 import { RING_SEATS, ringSeats } from "./ringSeats";
@@ -15,7 +14,7 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /**
  * The people setup approve added, as initials circling the company's logo while the owner
- * creates their account; nothing until they load.
+ * creates their account; nothing until they load, or when no one was added.
  */
 export function AddedPeopleRing() {
   // shortcut: faces come from the first 100 import employees only; filter added ones on the
@@ -30,40 +29,35 @@ export function AddedPeopleRing() {
     return null;
   }
   const { company } = data;
-  const count = data.import.readyEmployeeCount;
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div aria-hidden className="relative h-[280px] w-[300px]">
-        <div className="absolute inset-0 motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite]">
-          {ringSeats(people, swaps).map((person, seat) => (
-            <span
-              key={seat}
-              className="absolute top-1/2 left-1/2 -mt-[22px] -ml-[22px] motion-safe:animate-[ring-seat-in_0.9s_cubic-bezier(0.22,1,0.36,1)_both]"
-              style={seatStyle(seat)}
-            >
-              {/* Turns back as the ring turns, so the face stays upright. */}
-              <span className="block motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite_reverse]">
-                <span
-                  key={person.id}
-                  className="avatar-tint flex size-11 items-center justify-center rounded-full text-[13px] font-medium text-white ring-[3px] ring-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-60 motion-safe:duration-200"
-                >
-                  {initialsOf(person.firstName.value ?? "", person.lastName.value ?? "") || "?"}
-                </span>
+    <div aria-hidden className="relative mx-auto h-[280px] w-[300px]">
+      <div className="absolute inset-0 motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite]">
+        {ringSeats(people, swaps).map((person, seat) => (
+          <span
+            key={seat}
+            className="absolute top-1/2 left-1/2 -mt-[22px] -ml-[22px] motion-safe:animate-[ring-seat-in_0.9s_cubic-bezier(0.22,1,0.36,1)_both]"
+            style={seatStyle(seat)}
+          >
+            {/* Turns back as the ring turns, so the face stays upright. */}
+            <span className="block motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite_reverse]">
+              <span
+                key={person.id}
+                style={{ "--tint-hue": hueOf(person.id) } as CSSProperties}
+                className="avatar-tint flex size-11 items-center justify-center rounded-full text-[13px] font-medium text-white ring-[3px] ring-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-60 motion-safe:duration-200"
+              >
+                {initialsOf(person.firstName.value ?? "", person.lastName.value ?? "") || "?"}
               </span>
             </span>
-          ))}
-        </div>
-        <span className="absolute top-1/2 left-1/2 -mt-10 -ml-10 flex size-20 items-center justify-center overflow-hidden rounded-[28%] bg-brand-soft text-3xl font-semibold text-brand-deep shadow-[0_12px_30px_-12px_rgba(33,30,23,0.35)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-90 motion-safe:duration-500">
-          {company.logoUrl ? (
-            <img src={company.logoUrl} alt="" className="size-full object-cover" />
-          ) : (
-            [...(company.name ?? "")][0]?.toUpperCase()
-          )}
-        </span>
+          </span>
+        ))}
       </div>
-      <p className="text-sm text-muted-foreground">
-        {count === 1 ? t("setup.owner.addedOne") : t("setup.owner.added", { count: String(count) })}
-      </p>
+      <span className="absolute top-1/2 left-1/2 -mt-10 -ml-10 flex size-20 items-center justify-center overflow-hidden rounded-[28%] bg-brand-soft text-3xl font-semibold text-brand-deep shadow-[0_12px_30px_-12px_rgba(33,30,23,0.35)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-90 motion-safe:duration-500">
+        {company.logoUrl ? (
+          <img src={company.logoUrl} alt="" className="size-full object-cover" />
+        ) : (
+          [...(company.name ?? "")][0]?.toUpperCase()
+        )}
+      </span>
     </div>
   );
 }
@@ -78,6 +72,15 @@ function seatStyle(seat: number): CSSProperties {
     animationDelay: `${0.1 + seat * 0.05}s`,
     "--ring-from": `${x * ENTRANCE_SCALE}px ${y * ENTRANCE_SCALE}px`,
   } as CSSProperties;
+}
+
+/** A hue of its own for each person, the same on every visit. */
+function hueOf(id: string): number {
+  let hash = 0;
+  for (const char of id) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 360;
+  }
+  return hash;
 }
 
 /** Counts swaps every few seconds while there are more people than seats, unless motion is reduced. */

@@ -13,12 +13,8 @@ export const Route = createFileRoute("/setup/")({
     requireSetupStep("OWNER", gate);
   },
   component: () => (
-    <SetupLayout
-      step="owner"
-      title={t("setup.owner.title")}
-      description={t("setup.owner.description")}
-    >
-      <OwnerSetupForm createAccount={setUpOwner} intro={<AddedPeopleRing />} />
+    <SetupLayout step="owner" title={t("setup.owner.heading")} width="narrow">
+      <OwnerSetupForm createAccount={setUpOwner} intro={<AddedPeopleRing />} width="narrow" />
     </SetupLayout>
   ),
 });

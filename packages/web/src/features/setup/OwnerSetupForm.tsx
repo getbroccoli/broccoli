@@ -13,6 +13,7 @@ import { t, type MessageKey } from "@/i18n";
 
 import { NewPasswordField } from "./NewPasswordField";
 import type { SetupResult } from "./setupApi";
+import type { SetupWidth } from "./SetupLayout";
 import { SetupStepForm } from "./SetupStepForm";
 
 // The API's password policy.
@@ -37,6 +38,7 @@ type Props = {
   createAccount: (email: string, password: string) => Promise<SetupResult>;
   /** Shown above the fields. */
   intro?: ReactNode;
+  width?: SetupWidth;
 };
 
 /**
@@ -44,7 +46,7 @@ type Props = {
  * so routing sends the now signed-in owner to the directory. On a conflict, such as an
  * owner created first, the reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm({ createAccount, intro }: Props) {
+export function OwnerSetupForm({ createAccount, intro, width }: Props) {
   const apolloClient = useApolloClient();
   const router = useRouter();
   const emailInput = useRef<HTMLInputElement>(null);
@@ -84,6 +86,7 @@ export function OwnerSetupForm({ createAccount, intro }: Props) {
 
   return (
     <SetupStepForm
+      width={width}
       onSubmit={() => void form.handleSubmit()}
       footer={
         <Button

@@ -10,8 +10,7 @@ export const setupEn = {
   "setup.completed": "(completed)",
   "setup.back": "Back",
   "setup.owner.title": "Create your account",
-  "setup.owner.description":
-    "Last step: the email and password you will sign in with. You own this workspace.",
+  "setup.owner.heading": "Create owner account",
   "setup.owner.email": "Your email",
   "setup.owner.emailPlaceholder": "name@company.com",
   "setup.owner.emailHint": "Used to sign in to this workspace.",
@@ -32,8 +31,6 @@ export const setupEn = {
   "setup.owner.copy": "Copy",
   "setup.owner.copied": "Copied",
   "setup.owner.copyFailed": "Couldn’t copy. Select the password and copy it manually.",
-  "setup.owner.added": "{count} people are in.",
-  "setup.owner.addedOne": "1 person is in.",
   "setup.owner.submit": "Create account",
   "setup.owner.submitting": "Creating your account…",
   "setup.owner.invalidInput": "Check your email and password and try again.",
