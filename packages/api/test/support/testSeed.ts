@@ -143,15 +143,19 @@ export class TestSeed {
 
   async importEmployees(
     sourceId: string,
-    employees: (Partial<ImportEmployeeValues> & { externalId?: string })[],
+    employees: (Partial<ImportEmployeeValues> & {
+      externalId?: string;
+      photoUrl?: string | null;
+    })[],
   ) {
     const repository = importRepository(this.orm);
     await repository.syncEmployeeRecords(
       sourceId,
-      employees.map(({ externalId, ...values }) => {
+      employees.map(({ externalId, photoUrl, ...values }) => {
         const number = ++this.#count;
         return {
           externalId: externalId ?? `U${number}`,
+          photoUrl,
           raw: {},
           values: {
             firstName: "Employee",
@@ -174,6 +178,16 @@ export class TestSeed {
       teamName: "Acme Workspace",
       encryptedToken: TEST_SECRET_BOX.encrypt(accessToken),
     });
+  }
+
+  async importPhoto(
+    recordId: string,
+    { photoUrl, content, mimeType }: { photoUrl: string; content: Buffer; mimeType: string },
+  ): Promise<string> {
+    const fileId = await this.file({ content, mimeType });
+    const attached = await importRepository(this.orm).attachPhoto(recordId, photoUrl, fileId);
+    if (!attached) throw new Error(`Could not seed the photo of import record ${recordId}`);
+    return fileId;
   }
 }
 

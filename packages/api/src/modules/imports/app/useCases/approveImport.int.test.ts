@@ -31,16 +31,18 @@ test("approving creates an employee per ready import employee and completes setu
     expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
   );
   expect(employees.edges).toHaveLength(2);
+  expect(await imports.reads.listSources(owner)).toEqual([]);
+  expect((await imports.reads.listEmployees(owner, {})).edges).toEqual([]);
 });
 
-test("approving leaves a record without a last name in the import without creating it", async ({
+test("approving discards a record without a last name without creating an employee", async ({
   orm,
   seed,
 }) => {
   const owner = await seed.owner();
   await instanceRepository(orm).setOwner(owner.user!.userId, "import");
   const source = await seed.importSource();
-  const records = await seed.importEmployees(source.id, [
+  await seed.importEmployees(source.id, [
     { firstName: "Avery", lastName: null, email: "avery@example.com" },
   ]);
   const imports = importUseCases(orm);
@@ -54,7 +56,8 @@ test("approving leaves a record without a last name in the import without creati
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
       ({ node }) => node,
     ),
-  ).toEqual(records);
+  ).toEqual([]);
+  expect(await imports.reads.listSources(owner)).toEqual([]);
 });
 
 test("approving twice creates the employees once", async ({ orm, seed }) => {

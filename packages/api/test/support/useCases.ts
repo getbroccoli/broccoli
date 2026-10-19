@@ -10,7 +10,7 @@ import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
 import { createImportUseCases } from "../../src/modules/imports";
 import { createSystemUseCases } from "../../src/modules/system";
 import { parseCalendarDate } from "../../src/utils";
-import { createSlackConnectionService, type SlackConnectionService } from "../../src/modules/slack";
+import { createSlackConnectionService } from "../../src/modules/slack";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { testTransactor } from "./testTransactor";
 
@@ -67,7 +67,7 @@ export function importUseCases(
     jobs,
     prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
   }: {
-    slack?: Partial<Pick<SlackConnectionService, "readSlackMembers" | "isCurrentSlackConnection">>;
+    slack?: Partial<Parameters<typeof createImportUseCases>[0]["slack"]>;
     decisions?: Decisions;
     jobs?: JobQueue;
     prepareDemoFill?: Parameters<typeof createImportUseCases>[0]["prepareDemoFill"];
@@ -92,6 +92,9 @@ export function importUseCases(
       },
       isCurrentSlackConnection: () => {
         throw new Error("Unexpected Slack connection check");
+      },
+      readSlackPhoto: () => {
+        throw new Error("Unexpected Slack photo download");
       },
       ...slack,
     },

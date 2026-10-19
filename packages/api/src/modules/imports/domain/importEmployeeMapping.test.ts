@@ -50,6 +50,7 @@ function employee(
     key: "avery@example.com",
     keys: ["avery@example.com"],
     records: [],
+    photoFileId: null,
     leftOut: false,
     values: {
       firstName: { value: shown.firstName, choice: "typed", pickedRecordId: null, options: [] },
