@@ -1,4 +1,8 @@
-import { currentAi, readAiSource, type CurrentAi } from "../../../../core/instance";
+import {
+  selfHostedAiConfig,
+  readAiSource,
+  type SelfHostedAiConfig,
+} from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import type { SystemContext } from "./systemContext";
 
@@ -6,10 +10,10 @@ import type { SystemContext } from "./systemContext";
 export async function readAi(
   { orm, secretBox, mode, ai }: SystemContext,
   ctx: SecurityContext,
-): Promise<CurrentAi | null> {
+): Promise<SelfHostedAiConfig | null> {
   ctx.requireSetupAccess();
   if (mode === "managed") {
     return null;
   }
-  return currentAi(await readAiSource(orm, secretBox), ai.environmentKey);
+  return selfHostedAiConfig(await readAiSource(orm, secretBox), ai.environmentKey);
 }

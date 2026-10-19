@@ -1,15 +1,15 @@
 import { expect, it } from "vitest";
 
-import { currentAi } from "./aiSource";
+import { selfHostedAiConfig } from "./aiSource";
 
 it("uses Broccoli AI when no source or key is configured", () => {
-  const ai = currentAi({ source: null, openRouterKey: null }, null);
+  const ai = selfHostedAiConfig({ source: null, openRouterKey: null }, null);
 
   expect(ai).toEqual({ source: "broccoli_ai", openRouterKey: null });
 });
 
 it("uses the environment key when no source is chosen", () => {
-  const ai = currentAi({ source: null, openRouterKey: null }, "environment-key");
+  const ai = selfHostedAiConfig({ source: null, openRouterKey: null }, "environment-key");
 
   expect(ai).toEqual({
     source: "openrouter",
@@ -18,7 +18,7 @@ it("uses the environment key when no source is chosen", () => {
 });
 
 it("keeps the Broccoli AI choice when an environment key exists", () => {
-  const ai = currentAi({ source: "broccoli_ai", openRouterKey: null }, "environment-key");
+  const ai = selfHostedAiConfig({ source: "broccoli_ai", openRouterKey: null }, "environment-key");
 
   expect(ai).toEqual({
     source: "broccoli_ai",
@@ -27,7 +27,10 @@ it("keeps the Broccoli AI choice when an environment key exists", () => {
 });
 
 it("uses the saved key before the environment key", () => {
-  const ai = currentAi({ source: "openrouter", openRouterKey: "saved-key" }, "environment-key");
+  const ai = selfHostedAiConfig(
+    { source: "openrouter", openRouterKey: "saved-key" },
+    "environment-key",
+  );
 
   expect(ai).toEqual({
     source: "openrouter",
@@ -36,7 +39,7 @@ it("uses the saved key before the environment key", () => {
 });
 
 it("keeps the OpenRouter choice when no key exists", () => {
-  const ai = currentAi({ source: "openrouter", openRouterKey: null }, null);
+  const ai = selfHostedAiConfig({ source: "openrouter", openRouterKey: null }, null);
 
   expect(ai).toEqual({ source: "openrouter", openRouterKey: null });
 });

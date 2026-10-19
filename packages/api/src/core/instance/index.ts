@@ -21,9 +21,9 @@ export { setupRouter } from "./http";
 export { instanceRepository } from "./db";
 export {
   AssignmentConflictError,
-  currentAi,
+  selfHostedAiConfig,
   type AiSource,
-  type CurrentAi,
+  type SelfHostedAiConfig,
   hashSetupToken,
   OwnerExistsError,
   SETUP_STEPS,

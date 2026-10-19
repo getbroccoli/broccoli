@@ -5,7 +5,7 @@ import {
   type DecisionsSource,
 } from "../integrations/ai";
 import {
-  currentAi,
+  selfHostedAiConfig,
   readAiSource,
   readBroccoliAiToken,
   saveBroccoliAiToken,
@@ -81,7 +81,7 @@ async function decisionsSource(
     }
     return { kind: "openrouter", url: openRouterUrl, key: openRouterKey };
   }
-  const ai = currentAi(await readAiSource(orm, secretBox), openRouterKey);
+  const ai = selfHostedAiConfig(await readAiSource(orm, secretBox), openRouterKey);
   if (ai.source === "broccoli_ai") {
     return { kind: "broccoli_ai", url: broccoliAiUrl };
   }

@@ -11,25 +11,28 @@ export interface SavedAiSource {
 
 export type OpenRouterKeyOrigin = "environment" | "saved";
 
-/** The source files are read with now, and the OpenRouter key it would use. */
-export interface CurrentAi {
+/** A self-hosted instance's AI: the source files are read with now, and its OpenRouter key. */
+export interface SelfHostedAiConfig {
   source: AiSource;
   openRouterKey: { key: string; origin: OpenRouterKeyOrigin } | null;
 }
 
 /**
- * Self-hosted: the owner's choice, else OpenRouter when any key exists, else Broccoli AI.
- * A saved key beats the environment's, since the owner pasted it on purpose.
+ * The saved source, else OpenRouter when any key exists, else Broccoli AI. A saved key beats
+ * the environment's, since the owner pasted it on purpose.
  */
-export function currentAi(choice: SavedAiSource, environmentKey: string | null): CurrentAi {
+export function selfHostedAiConfig(
+  saved: SavedAiSource,
+  environmentKey: string | null,
+): SelfHostedAiConfig {
   const openRouterKey =
-    choice.openRouterKey !== null
-      ? { key: choice.openRouterKey, origin: "saved" as const }
+    saved.openRouterKey !== null
+      ? { key: saved.openRouterKey, origin: "saved" as const }
       : environmentKey !== null
         ? { key: environmentKey, origin: "environment" as const }
         : null;
   return {
-    source: choice.source ?? (openRouterKey ? "openrouter" : "broccoli_ai"),
+    source: saved.source ?? (openRouterKey ? "openrouter" : "broccoli_ai"),
     openRouterKey,
   };
 }

@@ -1,10 +1,10 @@
 export { SETUP_STEPS, OwnerExistsError, type SetupStep } from "./setup";
 export {
   AI_SOURCES,
-  currentAi,
+  selfHostedAiConfig,
   type SavedAiSource,
   type AiSource,
-  type CurrentAi,
+  type SelfHostedAiConfig,
 } from "./aiSource";
 export { AssignmentConflictError, type ManagedAssignment } from "./managed";
 export {

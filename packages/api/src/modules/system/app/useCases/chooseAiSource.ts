@@ -1,10 +1,10 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import {
-  currentAi,
+  selfHostedAiConfig,
   readAiSource,
   saveAiSource,
   type AiSource,
-  type CurrentAi,
+  type SelfHostedAiConfig,
 } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { DecisionsError } from "../../../../integrations/ai";
@@ -21,7 +21,7 @@ export async function chooseAiSource(
   context: SystemContext,
   ctx: SecurityContext,
   { source, openRouterKey }: AiSourceInput,
-): Promise<CurrentAi> {
+): Promise<SelfHostedAiConfig> {
   ctx.requireSetupAccess();
   if (context.mode === "managed") {
     throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
@@ -35,7 +35,10 @@ export async function chooseAiSource(
   await context.transact((tx) =>
     saveAiSource(tx, context.secretBox, { source, openRouterKey: givenKey }),
   );
-  return currentAi(await readAiSource(context.orm, context.secretBox), context.ai.environmentKey);
+  return selfHostedAiConfig(
+    await readAiSource(context.orm, context.secretBox),
+    context.ai.environmentKey,
+  );
 }
 
 /** Checks the given key, else the one files would be read with now. */

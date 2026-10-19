@@ -1,7 +1,7 @@
 import type { Orm } from "../../../core/db";
 import type { Mode } from "../../../core/env";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import { readSetupHolder, readSetupStep, type CurrentAi } from "../../../core/instance";
+import { readSetupHolder, readSetupStep, type SelfHostedAiConfig } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import type { SystemUseCases } from "../app";
 
@@ -55,7 +55,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
   };
 }
 
-function toGraphql(ai: CurrentAi | null) {
+function toGraphql(ai: SelfHostedAiConfig | null) {
   return (
     ai && {
       id: "ai",
