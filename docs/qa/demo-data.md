@@ -16,6 +16,7 @@ A manual check that skipping the import fills the demo company and that clearing
 - [ ] Sign out, then sign in with that email and password: the same people are there.
 
 ## Seeded
+
 - [ ] Sorting by start date shows two people starting in the coming weeks.
 - [ ] The company keeps the name saved in the setup step.
 - [ ] The banner shows on every page of the shell, such as `/company`.
