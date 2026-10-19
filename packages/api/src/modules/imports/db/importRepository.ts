@@ -48,7 +48,7 @@ export interface ImportRepository {
    */
   syncEmployeeRecords(sourceId: string, records: IncomingRecord[]): Promise<void>;
   /** Deletes every source, record and choice; returns the files they referenced. */
-  deleteAll(): Promise<string[]>;
+  deleteAll(): Promise<{ photoFileIds: string[]; uploadFileIds: string[] }>;
   listSources(): Promise<ImportSource[]>;
   findSources(ids: readonly string[]): Promise<ImportSource[]>;
   /** Every employee record of every source, oldest first. */
@@ -223,15 +223,13 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       }
     },
 
-    deleteAll: async (): Promise<string[]> => {
+    deleteAll: async () => {
       const photos = await orm()
         .delete(importRecords)
         .returning({ fileId: importRecords.photoFileId });
       const uploads = await orm().delete(importSources).returning({ fileId: importSources.fileId });
       await orm().delete(importChoices);
-      return [...photos, ...uploads]
-        .map(({ fileId }) => fileId)
-        .filter((id): id is string => id !== null);
+      return { photoFileIds: presentIds(photos), uploadFileIds: presentIds(uploads) };
     },
 
     listSources: (): Promise<ImportSource[]> =>
@@ -338,4 +336,8 @@ function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmpl
     ...parseImportEmployeeValues(record.typeVersion, record.values),
     photoFileId: record.photoFileId,
   };
+}
+
+function presentIds(rows: { fileId: string | null }[]): string[] {
+  return rows.flatMap(({ fileId }) => (fileId ? [fileId] : []));
 }

@@ -37,6 +37,9 @@ export function importsModule(
         .use(filesRouter(useCases, resolveSecurity))
         .use(photoRouter(useCases, resolveSecurity, dependencies.orm)),
     prepareDemoStart: () => prepareDemoStart(dependencies),
+    events: {
+      "instance.setup_completed": () => useCases.finishImport(PrincipalSecurityContext.system()),
+    },
     jobs: {
       "imports.mapFile": {
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),

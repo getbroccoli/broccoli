@@ -26,6 +26,8 @@ export interface ImportPhotoRepository {
    * `records` leaves out; returns those photo files.
    */
   detachReplacedPhotos(sourceId: string, records: readonly IncomingRecord[]): Promise<string[]>;
+  /** Takes every photo but `keptFileIds` off its record; returns those photo files. */
+  detachPhotosExcept(keptFileIds: readonly string[]): Promise<string[]>;
   /** Whether a record's photo is this file. */
   hasPhoto(fileId: string): Promise<boolean>;
 }
@@ -113,6 +115,22 @@ export function importPhotoRepository(db: Orm | Tx): ImportPhotoRepository {
           );
       }
       return replaced.map(({ photoFileId }) => photoFileId!);
+    },
+
+    detachPhotosExcept: async (keptFileIds: readonly string[]): Promise<string[]> => {
+      const kept = new Set(keptFileIds);
+      const rows = await orm()
+        .select({ fileId: importRecords.photoFileId })
+        .from(importRecords)
+        .where(isNotNull(importRecords.photoFileId));
+      const detached = rows.map(({ fileId }) => fileId!).filter((id) => !kept.has(id));
+      if (detached.length > 0) {
+        await orm()
+          .update(importRecords)
+          .set({ photoFileId: null })
+          .where(inArray(importRecords.photoFileId, detached));
+      }
+      return detached;
     },
 
     hasPhoto: async (fileId: string): Promise<boolean> => {

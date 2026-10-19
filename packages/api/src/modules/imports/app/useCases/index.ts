@@ -8,6 +8,7 @@ import { createEmployeeChoiceService, type EmployeeChoiceService } from "./emplo
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
 import type { DemoFill, SlackReader } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
+import { finishImport } from "./finishImport";
 import { readSlack } from "./readSlack";
 import { downloadSlackPhotos, type SlackPhotoJob } from "./slackPhotos";
 import { startDemo } from "./startDemo";
@@ -20,6 +21,8 @@ export interface ImportUseCases {
   readSlack: (ctx: SecurityContext) => Promise<void>;
   startDemo: (ctx: SecurityContext) => Promise<void>;
   approveImport: (ctx: SecurityContext) => Promise<void>;
+  /** Deletes the approved import once setup is complete; its photos stay with the employees. */
+  finishImport: (ctx: SecurityContext) => Promise<void>;
   /** The photo job's run: downloads the source's photos still missing, a batch at a time. */
   downloadSlackPhotos: (ctx: SecurityContext, job: SlackPhotoJob) => Promise<void>;
   reads: ImportReadService;
@@ -47,6 +50,7 @@ export function createImportUseCases({
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
+    finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
     downloadSlackPhotos: (ctx: SecurityContext, job: SlackPhotoJob) =>
       downloadSlackPhotos(context, ctx, job),
     reads: createImportReadService(imports, importPhotoRepository(orm)),

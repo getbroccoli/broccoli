@@ -2,18 +2,18 @@ import { ApplicationError } from "../../../../core/applicationError";
 import { completeImportStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
-import { importRepository } from "../../db";
+import { deleteFiles } from "../../../../core/files";
+import { importPhotoRepository, importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { toNewEmployeeInput } from "../../domain";
-import { clearImport } from "./clearImport";
 import { readImportEmployees } from "./readImportEmployees";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
  * Turns the import employees that are not left out into employees, with the values and
- * photo review shows, completes the import step and deletes the import, in one
- * transaction; at any step but `import` it does nothing, so approving twice creates them
- * once. Incomplete ones are not created; refused while a file is being mapped.
+ * photo review shows, and completes the import step, in one transaction; at any step but
+ * `import` it does nothing, so approving twice creates them once. Incomplete ones are not
+ * created and lose their photos; refused while a file is being mapped.
  */
 export async function approveImport(
   { transact, logger }: ImportContext,
@@ -42,7 +42,8 @@ export async function approveImport(
           avatarFileId: employee.photoFileId ?? undefined,
         })),
     );
-    await clearImport(tx, avatarFileIds);
+    // The import stays for the account step until setup completes (`finishImport`).
+    await deleteFiles(tx, await importPhotoRepository(tx).detachPhotosExcept(avatarFileIds));
     return counts;
   });
   if (result) {

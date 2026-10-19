@@ -30,13 +30,16 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
   ).toEqual([{ email: "avery@example.com", avatarFileId: fileId }]);
   expect(await storedFileIds(orm)).toEqual([fileId]);
   expect(await readFile(orm, fileId!)).toEqual({ content: PNG, mimeType: "image/png" });
+  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(imported);
 });
 
-test("approving deletes unused import photos and staff files while keeping employee avatars", async ({
+test("approving deletes unused photos while keeping import rows and staff files", async ({
   orm,
   seed,
 }) => {
   await instanceRepository(orm).advanceStep("company", "import");
+  const staff = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
+  const [staffFileId] = await storedFileIds(orm);
   const existingAvatar = await seed.file({ content: PNG, mimeType: "image/png" });
   await seed.employee({ email: "taken@example.com", avatarFileId: existingAvatar });
   const source = await seed.importSource();
@@ -57,7 +60,6 @@ test("approving deletes unused import photos and staff files while keeping emplo
       }),
     );
   }
-  await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   const imports = importUseCases(orm);
   await imports.choices.setLeftOut(SETUP_HOLDER, { key: "leftout@example.com", leftOut: true });
 
@@ -73,7 +75,21 @@ test("approving deletes unused import photos and staff files while keeping emplo
     { email: "kept@example.com", avatarFileId: keptPhoto },
     { email: "taken@example.com", avatarFileId: existingAvatar },
   ]);
-  expect(await storedFileIds(orm)).toEqual([keptPhoto, existingAvatar].sort());
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([keptPhoto, existingAvatar, staffFileId!].sort());
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([staff, source]);
+  const reviewed = await imports.reads.listEmployees(SETUP_HOLDER, {
+    orderBy: { field: "EMAIL" },
+  });
+  expect(
+    reviewed.edges.map(({ node }) => ({
+      email: node.values.email.value,
+      photoFileId: node.photoFileId,
+      leftOut: node.leftOut,
+    })),
+  ).toEqual([
+    { email: "incomplete@example.com", photoFileId: null, leftOut: false },
+    { email: "kept@example.com", photoFileId: keptPhoto, leftOut: false },
+    { email: "leftout@example.com", photoFileId: null, leftOut: true },
+    { email: "taken@example.com", photoFileId: null, leftOut: false },
+  ]);
 });
