@@ -5,13 +5,13 @@ A manual check of the setup review step, between the import and Approve, on a de
 ## Setup
 
 1. Run `pnpm dev` (and once in the Docker image) with or without `OPENROUTER_API_KEY` and follow the [import step](import-step.md): upload a CSV and, when a Slack workspace is available, connect Slack.
-2. Give the CSV over 50 people, one row without an email, one without a start date and one whose name is one word. With Slack, also have one member whose name is one word, and give two CSV rows the emails of Slack members, one with a different job title.
+2. Give the CSV over 50 people, one row without an email, one without a start date and one whose name is one word. With Slack, also have one member whose name is one word, members with and without an uploaded profile photo, and give two CSV rows the emails of Slack members, one with a different job title.
 
 ## The page
 
 - [ ] "Next: review your people" opens `/setup/import/review`, titled "Review your people". In the step list, "Add your people" is current with its pages beneath it: "Gather everyone’s details" checked and "Review your people" in a card.
 - [ ] "Details came from" lists the Slack workspace and the file, each with its mark; the search field sits at the right of that row.
-- [ ] The table lists one row per person, by name: Person (initials and name), Email, Job title, Start date ("Not set" when missing), Sources, and a menu; its footer reads "N people".
+- [ ] The table lists one row per person, by name: Person (Slack photo or initials, and name), Email, Job title, Start date ("Not set" when missing), Sources, and a menu; its footer reads "N people".
 - [ ] The one-word Slack member shows an amber "No last name" pill under the name; the row without an email shows "No valid work email" and its email "Not set" in amber.
 - [ ] Someone in both Slack and the file shows once, with both source marks overlapping in Sources; hovering them names the sources.
 
@@ -46,6 +46,13 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] At 375 px the value popover and "N things to check" fit the screen.
 - [ ] A screen reader reads each value with its field and person, such as "Last name for Madonna: Not set".
 
+## Photos
+
+- [ ] A Slack member with an uploaded profile photo shows it in Person; one on Slack's generated placeholder shows initials, as does everyone from the file only.
+- [ ] Changing a member's photo in Slack and choosing "Refresh" shows the new photo.
+- [ ] With the network to Slack's photo host blocked, reading Slack still succeeds and those people show initials.
+- [ ] A workspace of over 50 people with photos shows the first 50 by name with photos right after the read, and the rest within a minute or two after a reload.
+
 ## Search, sort and paging
 
 - [ ] Clicking Person, Email or Start date sorts ascending, then descending; people without a start date stay last both ways. Job title and Source are not sortable.
@@ -57,7 +64,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 - [ ] The footer shows "← Back" and "Approve N people", N counting the people neither left out nor with a "Won’t be added" pill; beside it, "L left out.", "M people won’t be added: they are missing a name or work email." and "K values were not checked; the first source’s are used.", each only when it applies.
 - [ ] "Back" returns to `/setup/import` with the sources as they were.
-- [ ] "Approve N people" shows "Approving…" and lands on `/setup`, "Create your account"; `/setup/import/review` now goes there. Creating the account lands on `/people`, which lists exactly those N people, each once, with the values review showed, and no demo people.
+- [ ] "Approve N people" shows "Approving…" and lands on `/setup`, "Create your account"; `/setup/import/review` now goes there. Creating the account lands on `/people`, which lists exactly those N people, each once, with the values and photos review showed, and no demo people.
 - [ ] With `/setup/import/review` open in two tabs, "Approve" in both adds each person once.
 - [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), Approve reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
 - [ ] With only incomplete people (for example a Slack workspace of one-word names), Approve is hidden and the footer reads "No one is ready to add. Go back to add a source, or skip and use demo data."

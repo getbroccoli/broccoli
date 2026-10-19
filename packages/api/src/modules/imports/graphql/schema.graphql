@@ -199,9 +199,9 @@ type Query {
 type ImportMutations {
   "Reads the connected Slack workspace into the import, the first time and on every refresh; its source then holds the current members."
   readSlack: ImportReadSlackPayload!
-  "Leaves the import step of setup with the demo company instead of the import, which fills only an instance without employees; the import's records stay."
+  "Leaves the import step of setup with the demo company instead of the import, which fills only an instance without employees; the import is deleted."
   startDemo: ImportMutationPayload!
-  "Turns the import employees that are not left out into employees, with the values review shows, and completes setup. Incomplete ones stay in the import. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
+  "Turns the import employees that are not left out into employees, with the values and photos review shows, completes setup and deletes the import. Incomplete ones are not added. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
   approve: ImportApprovePayload!
   "Maps a failed file again; any other source is left as it is."
   retryFile(sourceId: ID!): ImportRetryFilePayload!
