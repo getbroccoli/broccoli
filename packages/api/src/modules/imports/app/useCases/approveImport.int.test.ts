@@ -98,7 +98,7 @@ test.for(["skipped", "company"] as const)(
     const source = await seed.importSource();
     await seed.importEmployees(source.id, [{}]);
     const imports = importUseCases(orm);
-    if (step === "skipped") await imports.skipImport(owner);
+    if (step === "skipped") await imports.startDemo(owner);
     const employees = createEmployeeUseCases({ orm });
     const before = await employees.listEmployees(OWNER, { first: 100 });
 

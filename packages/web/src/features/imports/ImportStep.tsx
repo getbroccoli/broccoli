@@ -11,7 +11,7 @@ import { cn } from "@/lib/class-names";
 
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
-import { useSkipWithDemoData } from "./useSkipWithDemoData";
+import { useStartDemo } from "./useStartDemo";
 
 const SLACK_ERROR_MESSAGES = {
   cancelled: "imports.slack.cancelled",
@@ -38,7 +38,7 @@ export function ImportStep() {
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
   }, [mapping, startPolling, stopPolling]);
-  const { skip, skipping, failed: skipFailed } = useSkipWithDemoData();
+  const { start: startDemo, starting, failed: startFailed } = useStartDemo();
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
   const canReview = sources.some(({ employeeCount }) => employeeCount > 0);
@@ -47,7 +47,7 @@ export function ImportStep() {
 
   return (
     <SetupStepForm
-      onSubmit={() => void skip()}
+      onSubmit={() => void startDemo()}
       footer={
         <div className="flex gap-2">
           <Button
@@ -55,15 +55,15 @@ export function ImportStep() {
             variant="outline"
             size="lg"
             className="h-10 px-4"
-            disabled={skipping}
+            disabled={starting}
           >
-            {t(skipping ? "setup.import.skipping" : "setup.import.skip")}
+            {t(starting ? "setup.import.skipping" : "setup.import.skip")}
           </Button>
           {(canReview || reading) && (
             <Link
               to="/setup/import/review"
-              disabled={skipping || reading}
-              aria-disabled={skipping || reading}
+              disabled={starting || reading}
+              aria-disabled={starting || reading}
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "h-10 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
@@ -99,7 +99,7 @@ export function ImportStep() {
       ) : (
         <Skeleton className="h-[66px] rounded-xl" />
       )}
-      {skipFailed && (
+      {startFailed && (
         <p role="alert" className="text-sm text-destructive">
           {t("setup.import.skipFailed")}
         </p>

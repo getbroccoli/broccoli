@@ -40,7 +40,7 @@ curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
 
 ## Skip the import
 
-After the company step, a self-hosted setup opens `/setup/ai`: choose "Use demo data" there, or "Next" and then "Skip and use demo data" on `/setup/import`. Either fills the demo company; `mutation { import { skip { import { id } } } }` does the same.
+After the company step, a self-hosted setup opens `/setup/ai`: choose "Use demo data" there, or "Next" and then "Skip and use demo data" on `/setup/import`. Either fills the demo company; `mutation { import { startDemo { import { id } } } }` does the same.
 
 ## Create the owner
 

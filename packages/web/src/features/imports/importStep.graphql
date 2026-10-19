@@ -78,9 +78,9 @@ mutation RemoveFile($sourceId: ID!) {
   }
 }
 
-mutation SkipImport {
+mutation StartDemo {
   import {
-    skip {
+    startDemo {
       import {
         id
       }

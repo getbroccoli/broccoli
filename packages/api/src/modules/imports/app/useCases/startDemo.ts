@@ -7,7 +7,7 @@ import { requireImportAccess } from "./requireImportAccess";
  * Leaves the import step of setup with the demo company, in one transaction so the step only
  * moves once the demo company is in; the import's records stay.
  */
-export async function skipImport(
+export async function startDemo(
   { transact, prepareDemoFill }: ImportContext,
   ctx: SecurityContext,
 ): Promise<void> {

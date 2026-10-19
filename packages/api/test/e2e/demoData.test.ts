@@ -9,7 +9,7 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   expect(await saved.json()).toEqual({
     data: { company: { update: { company: { id: "company" }, error: null } } },
   });
-  await browser.graphql("mutation { import { skip { import { id } } } }");
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
   const response = await browser.graphql(demoQuery);
   const body = (await response.json()) as DemoDataResponse;
@@ -31,7 +31,7 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
 test("clears demo data through the API and stops serving its avatars", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   await browser.graphql(saveCompany);
-  await browser.graphql("mutation { import { skip { import { id } } } }");
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   const before = await browser.graphql(demoQuery);
   const body = (await before.json()) as DemoDataResponse;
   expect(body).not.toHaveProperty("errors");

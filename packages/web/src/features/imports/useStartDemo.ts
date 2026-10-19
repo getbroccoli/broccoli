@@ -1,22 +1,22 @@
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { SkipImportDocument } from "@/__generated__/graphql";
+import { StartDemoDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 
 /**
  * Leaves the import step with the demo company in place of the owner's people; the router
  * then reloads and routing sends the owner on.
  */
-export function useSkipWithDemoData() {
+export function useStartDemo() {
   const router = useRouter();
-  const [skipImport, { loading: skipping }] = usePayloadMutation(SkipImportDocument);
+  const [startDemoMutation, { loading: starting }] = usePayloadMutation(StartDemoDocument);
   const [failed, setFailed] = useState(false);
 
-  const skip = async () => {
+  const start = async () => {
     setFailed(false);
     try {
-      await skipImport();
+      await startDemoMutation();
     } catch {
       setFailed(true);
       return;
@@ -24,5 +24,5 @@ export function useSkipWithDemoData() {
     await router.invalidate();
   };
 
-  return { skip, skipping, failed };
+  return { start, starting, failed };
 }

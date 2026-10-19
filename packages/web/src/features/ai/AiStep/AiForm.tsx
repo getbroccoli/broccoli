@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { SaveAiSourceDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
-import { useSkipWithDemoData } from "@/features/imports";
+import { useStartDemo } from "@/features/imports";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 
@@ -28,8 +28,8 @@ export function AiForm({ ai }: Props) {
   const [newKey, setNewKey] = useState<string | null>(null);
   const [saveAiSource, { loading: checking, error, payloadError }] =
     usePayloadMutation(SaveAiSourceDocument);
-  const demo = useSkipWithDemoData();
-  const busy = checking || demo.skipping;
+  const demo = useStartDemo();
+  const busy = checking || demo.starting;
   const knownKey = newKey === null ? ai.openRouterKey : null;
   const key = newKey ?? "";
   const asksForKey = source === "OPENROUTER" && knownKey === null;
@@ -90,7 +90,7 @@ export function AiForm({ ai }: Props) {
         </fieldset>
         <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.ai.privacy")}</p>
       </div>
-      <DemoDataCard disabled={busy} skipping={demo.skipping} onUse={() => void demo.skip()} />
+      <DemoDataCard disabled={busy} starting={demo.starting} onUse={() => void demo.start()} />
       {failure && keyFieldError === undefined && (
         <p role="alert" className="text-sm text-destructive">
           {t(failure.message)}

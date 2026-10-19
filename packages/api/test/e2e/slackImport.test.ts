@@ -176,10 +176,10 @@ test("refresh returns the updated import and skipping completes setup", async ({
     },
   });
 
-  const skipped = await browser.graphql("mutation { import { skip { import { id } } } }");
+  const skipped = await browser.graphql("mutation { import { startDemo { import { id } } } }");
 
   expect(await skipped.json()).toEqual({
-    data: { import: { skip: { import: { id: "import" } } } },
+    data: { import: { startDemo: { import: { id: "import" } } } },
   });
   const setup = await browser.graphql("query { setup { step } }");
   expect(await setup.json()).toEqual({ data: { setup: { step: "DONE" } } });
