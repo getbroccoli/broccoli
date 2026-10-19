@@ -1,5 +1,5 @@
 import { ApolloServer } from "@apollo/server";
-import { assert, expect, it, onTestFinished } from "vitest";
+import { assert, expect, it, onTestFinished, test } from "vitest";
 
 import { createLogger } from "../logger";
 import { errorLoggingPlugin } from "./errorLogging";
@@ -33,7 +33,11 @@ it("logs a rejected variable without its input values", async () => {
   expect(lines.join("\n")).not.toContain("sk-or-v1-synthetic-secret");
 });
 
-it("logs a syntax error without its inline key", async () => {
+test.for([
+  'query { choose(input: { openRouterKey "sk-or-v1-synthetic-secret" }) }',
+  'query { choose(input: { openRouterKey "\\"sk-or-v1-synthetic-secret\\"" }) }',
+  'query { choose(input: { openRouterKey """prefix "sk-or-v1-synthetic-secret" suffix""" }) }',
+])("logs a syntax error without its inline key (%s)", async (query) => {
   const lines: string[] = [];
   const logger = createLogger("debug", {
     write: (line) => {
@@ -50,7 +54,7 @@ it("logs a syntax error without its inline key", async () => {
   onTestFinished(() => server.stop());
 
   const response = await server.executeOperation({
-    query: 'query { choose(input: { openRouterKey "sk-or-v1-synthetic-secret" }) }',
+    query,
   });
 
   assert(response.body.kind === "single");

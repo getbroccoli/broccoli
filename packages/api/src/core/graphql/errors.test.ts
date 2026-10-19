@@ -1,5 +1,5 @@
 import { buildSchema, execute, graphql, GraphQLError, parse } from "graphql";
-import { assert, expect, it } from "vitest";
+import { assert, expect, it, test } from "vitest";
 
 import { ApplicationError } from "../applicationError";
 import { formatError } from "./errors";
@@ -150,14 +150,18 @@ it("removes input values from a variable coercion error", async () => {
   expect(JSON.stringify(result)).not.toContain("sk-or-v1-synthetic-secret");
 });
 
-it("removes an inline key from a syntax error", async () => {
+test.for([
+  'query { choose(input: { openRouterKey "sk-or-v1-synthetic-secret" }) }',
+  'query { choose(input: { openRouterKey "\\"sk-or-v1-synthetic-secret\\"" }) }',
+  'query { choose(input: { openRouterKey """prefix "sk-or-v1-synthetic-secret" suffix""" }) }',
+])("removes an inline key from a syntax error (%s)", async (source) => {
   const schema = buildSchema(`
     input AiInput { openRouterKey: String }
     type Query { choose(input: AiInput!): Boolean }
   `);
   const execution = await graphql({
     schema,
-    source: 'query { choose(input: { openRouterKey "sk-or-v1-synthetic-secret" }) }',
+    source,
   });
   const error = execution.errors?.[0];
   assert(error);
