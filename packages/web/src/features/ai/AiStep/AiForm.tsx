@@ -20,29 +20,26 @@ import { SourceOption } from "./SourceOption";
 export function AiForm({ ai }: { ai: Ai }) {
   const navigate = useNavigate();
   const [source, setSource] = useState<AiSource>(ai.source);
-  const [replacingKey, setReplacingKey] = useState(false);
-  const [key, setKey] = useState("");
-  const [saveAiSource, { loading: checking, payloadError }] =
+  // The key being typed; null while the known key is used, and Replace starts one.
+  const [newKey, setNewKey] = useState<string | null>(null);
+  const [saveAiSource, { loading: checking, error, payloadError }] =
     usePayloadMutation(SaveAiSourceDocument);
-  const [failed, setFailed] = useState(false);
   const demo = useSkipWithDemoData();
   const busy = checking || demo.skipping;
-  // Replace sets the known key aside until another one is saved.
-  const knownKey = replacingKey ? null : ai.openRouterKey;
+  const knownKey = newKey === null ? ai.openRouterKey : null;
+  const key = newKey ?? "";
   const asksForKey = source === "OPENROUTER" && knownKey === null;
-  const failure = failed ? failureOf(payloadError, source) : null;
+  const failure = payloadError || error ? failureOf(payloadError, source) : null;
   // A refused key shows under the key field; a known key has no field, so it shows below.
   const keyFieldError = failure?.onKey && asksForKey ? t(failure.message) : undefined;
 
   const save = async () => {
-    setFailed(false);
     try {
       await saveAiSource({
         variables: { input: { source, openRouterKey: asksForKey ? key : null } },
       });
     } catch {
-      setFailed(true);
-      return;
+      return; // The hook keeps the error for display.
     }
     await navigate({ to: "/setup/import" });
   };
@@ -80,9 +77,9 @@ export function AiForm({ ai }: { ai: Ai }) {
             )}
           >
             {knownKey ? (
-              <KnownKey origin={knownKey} onReplace={() => setReplacingKey(true)} />
+              <KnownKey origin={knownKey} onReplace={() => setNewKey("")} />
             ) : (
-              <KeyField value={key} onChange={setKey} error={keyFieldError} />
+              <KeyField value={key} onChange={setNewKey} error={keyFieldError} />
             )}
           </SourceOption>
           <AgentOption />
