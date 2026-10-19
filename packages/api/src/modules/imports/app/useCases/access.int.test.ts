@@ -38,7 +38,7 @@ const calls = {
     imports.choices.setLeftOut(ctx, { key: "missing", leftOut: true }),
   "choices.leaveOutIncomplete": (imports, ctx) =>
     imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
-  skipImport: (imports, ctx) => imports.skipImport(ctx),
+  startDemo: (imports, ctx) => imports.startDemo(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;
 

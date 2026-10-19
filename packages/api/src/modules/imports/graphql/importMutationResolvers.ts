@@ -13,9 +13,9 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Im
         () => thenImport(useCases.readSlack(context.getActor())),
         ["UNAVAILABLE"],
       ),
-    skip: (_parent, _args, context) =>
+    startDemo: (_parent, _args, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
-        thenImport(useCases.skipImport(context.getActor())),
+        thenImport(useCases.startDemo(context.getActor())),
       ),
     approve: (_parent, _args, context) =>
       mutationPayload<ResolversTypes["ImportApprovePayload"]>(

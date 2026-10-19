@@ -52,6 +52,8 @@ type Setup {
   step: SetupStep!
   mode: Mode!
   holder: SetupHolder!
+  "When the demo's provisional owner loses access unless they create their account; null for anyone else and once the account exists."
+  demoExpiresAt: DateTime
   "How files are read with AI. Owner or setup holder only, though the rest of `Setup` is public; null when managed, which keeps its own key."
   ai: Ai
 }

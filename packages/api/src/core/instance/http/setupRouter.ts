@@ -6,7 +6,12 @@ import { requireSameOriginWrites } from "../../sameOrigin";
 /** Setup requests per address and minute: enough for a person, little for guessing. */
 const SETUP_ATTEMPTS_PER_MINUTE = 10;
 
-const SETUP_PATHS = new Set(["/api/auth/setup", "/api/auth/setup/start"]);
+const SETUP_PATHS = new Set([
+  "/api/auth/setup",
+  "/api/auth/setup/start",
+  "/api/auth/setup/demo",
+  "/api/auth/setup/account",
+]);
 
 /**
  * Guards the setup endpoints of the Better Auth plugin before they run: a limit per

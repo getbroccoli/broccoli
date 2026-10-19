@@ -85,7 +85,7 @@ test("masks a database failure while reading the session", async () => {
   await browser.graphql(
     `mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } } }`,
   );
-  await browser.graphql("mutation { import { skip { import { id } } } }");
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   const setupResponse = await browser.post("/api/auth/setup", TEST_OWNER);
   expect(setupResponse.status).toBe(200);
 

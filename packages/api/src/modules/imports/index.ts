@@ -2,7 +2,7 @@ import type { Decisions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import { createImportUseCases, type DemoFill, type SlackReader } from "./app";
+import { createImportUseCases, type DemoFill, prepareDemoStart, type SlackReader } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter } from "./http";
 
@@ -30,6 +30,7 @@ export function importsModule(
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
     router: (resolveSecurity) => filesRouter(useCases, resolveSecurity),
+    prepareDemoStart: () => prepareDemoStart(dependencies),
     jobs: {
       "imports.mapFile": {
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),

@@ -9,7 +9,7 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   expect(await saved.json()).toEqual({
     data: { company: { update: { company: { id: "company" }, error: null } } },
   });
-  await browser.graphql("mutation { import { skip { import { id } } } }");
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
   const response = await browser.graphql(demoQuery);
   const body = (await response.json()) as DemoDataResponse;
@@ -31,7 +31,7 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
 test("clears demo data through the API and stops serving its avatars", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   await browser.graphql(saveCompany);
-  await browser.graphql("mutation { import { skip { import { id } } } }");
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   const before = await browser.graphql(demoQuery);
   const body = (await before.json()) as DemoDataResponse;
   expect(body).not.toHaveProperty("errors");
@@ -71,6 +71,20 @@ test("refuses demo data and employee avatars without a session", async ({ env })
     errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
   });
   expect(image.status).toBe(401);
+});
+
+test("the provisional owner cannot clear demo data and the demo records remain", async ({
+  env,
+}) => {
+  const { browser } = await env.startDemo();
+
+  const response = await browser.graphql(
+    "mutation { demo { clear { demoData { id isPresent } } } }",
+  );
+
+  expect(await response.json()).toMatchObject({ errors: [{ extensions: { code: "FORBIDDEN" } }] });
+  const demo = await browser.graphql("query { demo { id isPresent } }");
+  expect(await demo.json()).toEqual({ data: { demo: { id: "demoData", isPresent: true } } });
 });
 
 test("finishing setup by approving an empty import leaves the directory without demo people", async ({

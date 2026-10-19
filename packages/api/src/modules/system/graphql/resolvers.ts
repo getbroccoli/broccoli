@@ -1,7 +1,12 @@
 import type { Orm } from "../../../core/db";
 import type { Mode } from "../../../core/env";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import { readSetupHolder, readSetupStep, type AiConfig } from "../../../core/instance";
+import {
+  readDemoExpiresAt,
+  readSetupHolder,
+  readSetupStep,
+  type AiConfig,
+} from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import type { SystemUseCases } from "../app";
 
@@ -21,6 +26,8 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
     holder: security?.isSetupHolder
       ? ("YOU" as const)
       : HOLDERS[await readSetupHolder(orm, { token: null, now: new Date() })],
+    // Only the owner learns when their demo ends.
+    demoExpiresAt: security?.user?.isOwner ? await readDemoExpiresAt(orm) : null,
   });
   return {
     Query: {

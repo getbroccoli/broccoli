@@ -9,14 +9,15 @@ import { createFileSourceService, type FileSourceService } from "./fileSourceSer
 import type { DemoFill, SlackReader } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { readSlack } from "./readSlack";
-import { skipImport } from "./skipImport";
+import { startDemo } from "./startDemo";
 
 export type { DemoFill, SlackReader } from "./importContext";
+export { prepareDemoStart } from "./startDemo";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
 export interface ImportUseCases {
   readSlack: (ctx: SecurityContext) => Promise<void>;
-  skipImport: (ctx: SecurityContext) => Promise<void>;
+  startDemo: (ctx: SecurityContext) => Promise<void>;
   approveImport: (ctx: SecurityContext) => Promise<void>;
   reads: ImportReadService;
   choices: EmployeeChoiceService;
@@ -41,7 +42,7 @@ export function createImportUseCases({
   const context = { transact, logger, slack, imports, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
-    skipImport: (ctx: SecurityContext) => skipImport(context, ctx),
+    startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
     reads: createImportReadService(imports),
     choices: createEmployeeChoiceService(transact),

@@ -35,6 +35,7 @@
       "src/core/db",
       "src/core/events",
       "src/core/graphql",
+      "src/core/instance",
       "src/core/jobs",
       "src/core/logger",
       "src/core/secrets"

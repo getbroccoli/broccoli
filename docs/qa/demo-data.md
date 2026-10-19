@@ -4,12 +4,19 @@ A manual check that skipping the import fills the demo company and that clearing
 
 ## Setup
 
-1. Start the stack with a fresh development database and create the owner as in [QA setup](setup.md).
+1. Start the stack with a fresh development database as in [QA setup](setup.md).
 2. Save the company step with a name such as "Acme Corp", then choose "Use demo data" on Setup AI.
+
+## Demo mode
+
+- [ ] `/people` opens without asking for an account and shows 40 people, each with a photo avatar, and the green banner "Demo mode · Create your account within 7 days to keep access." with "Create account".
+- [ ] The workspace menu shows "Demo" and "Create account", and no "Sign out".
+- [ ] A reload, a new tab and a restart of the stack keep you in the app; none opens setup.
+- [ ] "Create account" opens "Create your account"; `owner@example.com` and a password sign you in again on `/people`, and the banner becomes "You’re looking at demo data." with "Clear demo data".
+- [ ] Sign out, then sign in with that email and password: the same people are there.
 
 ## Seeded
 
-- [ ] `/people` shows 40 people, each with a photo avatar, and the banner "You’re looking at demo data." with "Clear demo data" above the page.
 - [ ] Sorting by start date shows two people starting in the coming weeks.
 - [ ] The company keeps the name saved in the setup step.
 - [ ] The banner shows on every page of the shell, such as `/company`.

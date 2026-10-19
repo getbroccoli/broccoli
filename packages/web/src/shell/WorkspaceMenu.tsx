@@ -1,5 +1,5 @@
 import { useApolloClient } from "@apollo/client/react";
-import { Buildings, CaretDown, Plant, SignOut } from "@phosphor-icons/react";
+import { Buildings, CaretDown, Plant, SignOut, UserPlus } from "@phosphor-icons/react";
 import { Link, useRouteContext, useRouter } from "@tanstack/react-router";
 import { useRef } from "react";
 
@@ -18,7 +18,7 @@ import { t } from "@/i18n";
 export function WorkspaceMenu() {
   const router = useRouter();
   const apolloClient = useApolloClient();
-  const { me } = useRouteContext({ from: "/_authenticated" });
+  const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
   const openedOnPath = useRef<string | null>(null);
   // Return focus to the trigger unless the page changed, in which case the new page's
   // heading takes it (see `useFocusHeadingOnNavigation`).
@@ -58,15 +58,26 @@ export function WorkspaceMenu() {
           {t("workspace.company")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="truncate">
-            {t("auth.signedInAs", { email: me.email })}
-          </DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => void signOutAndReload()}>
-            <SignOut size={14} />
-            {t("auth.signOut")}
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+        {demoExpiresAt ? (
+          // The demo's owner has no password, so signing out would lock them out.
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>{t("demo.menu.label")}</DropdownMenuLabel>
+            <DropdownMenuItem render={<Link to="/account" />}>
+              <UserPlus size={14} />
+              {t("demo.banner.createAccount")}
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        ) : (
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="truncate">
+              {t("auth.signedInAs", { email: me.email })}
+            </DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => void signOutAndReload()}>
+              <SignOut size={14} />
+              {t("auth.signOut")}
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

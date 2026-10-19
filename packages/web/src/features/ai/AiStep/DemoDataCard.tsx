@@ -5,12 +5,12 @@ import { t } from "@/i18n";
 
 type Props = {
   disabled: boolean;
-  skipping: boolean;
+  starting: boolean;
   onUse: () => void;
 };
 
 /** Demo data in place of the owner's people; it needs no AI. */
-export function DemoDataCard({ disabled, skipping, onUse }: Props) {
+export function DemoDataCard({ disabled, starting, onUse }: Props) {
   return (
     <div className="flex items-center gap-3.5 rounded-xl border border-border px-4 py-3.5">
       <UsersThree size={20} aria-hidden className="shrink-0 text-muted-foreground" />
@@ -19,7 +19,7 @@ export function DemoDataCard({ disabled, skipping, onUse }: Props) {
         <span className="text-sm text-muted-foreground">{t("setup.ai.demoHint")}</span>
       </div>
       <Button type="button" variant="outline" disabled={disabled} onClick={onUse}>
-        {t(skipping ? "setup.import.skipping" : "setup.ai.useDemo")}
+        {t(starting ? "setup.import.skipping" : "setup.ai.useDemo")}
       </Button>
     </div>
   );
