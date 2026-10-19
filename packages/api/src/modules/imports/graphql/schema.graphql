@@ -103,6 +103,8 @@ type ImportEmployee {
   jobTitle: ImportEmployeeValue!
   "Its value and options are YYYY-MM-DD."
   startDate: ImportEmployeeValue!
+  "Path of the person's Slack photo, such as `/api/imports/photos/<id>`; null without one."
+  avatarUrl: String
   leftOut: Boolean!
   "Null when Approve would add this employee, if not left out; otherwise what it lacks."
   incompleteReason: ImportEmployeeIncompleteReason
