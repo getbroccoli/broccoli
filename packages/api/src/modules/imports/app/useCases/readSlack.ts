@@ -5,35 +5,33 @@ import { importPhotoRepository, importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { mapSlackMembers } from "./mapSlackMembers";
 import { requireImportAccess } from "./requireImportAccess";
-import { downloadFirstSlackPhotos } from "./slackPhotos";
+import { attachFirstSlackPhotos, readFirstSlackPhotos } from "./slackPhotos";
 
 /**
  * Reads the connected Slack workspace into the import: the first time and on every
- * refresh, the Slack source then holds its current members, and the first of their
- * photos are downloaded.
+ * refresh, the Slack source then holds its current members with the first of their
+ * photos, and the photo job downloads the rest.
  */
 export async function readSlack(context: ImportContext, ctx: SecurityContext): Promise<void> {
   requireImportAccess(ctx);
   // Slack is read before the transaction, which never waits on another service.
   const { workspace, members, snapshot } = await context.slack.readSlackMembers(ctx);
   const records = mapSlackMembers(members);
-  const sourceId = await context.transact(async (tx) => {
+  const photos = await readFirstSlackPhotos(context, ctx, records);
+  await context.transact(async (tx) => {
     // A connect since the read stored another connection; its members are read next time.
     if (!(await context.slack.isCurrentSlackConnection(ctx, tx, snapshot))) {
-      return null;
+      return;
     }
     const imports = importRepository(tx);
     await imports.lockSources();
     // A read that outlived Approve finds the import gone and must not bring it back.
     if (!(await isImportOpen(tx))) {
-      return null;
+      return;
     }
     const sourceId = await imports.saveSlackSource(workspace.name);
     await deleteFiles(tx, await importPhotoRepository(tx).detachReplacedPhotos(sourceId, records));
     await imports.syncEmployeeRecords(sourceId, records);
-    return sourceId;
+    await attachFirstSlackPhotos(context, tx, sourceId, photos);
   });
-  if (sourceId) {
-    await downloadFirstSlackPhotos(context, ctx, sourceId);
-  }
 }

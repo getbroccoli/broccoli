@@ -17,6 +17,7 @@ import {
 
 import { readFile } from "../../../../core/files";
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { createEmployeeUseCases } from "../../../employees";
 
 test.for([
   { content: PNG, mimeType: "image/png" },
@@ -142,6 +143,53 @@ test("replaces a changed Slack photo and deletes its old file", async ({ orm, se
   expect(readSlackPhoto).toHaveBeenCalledExactlyOnceWith(OWNER, new URL(photoUrl));
 });
 
+test("Approve keeps the stored photo while Refresh downloads its replacement", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.importSource();
+  const [record] = await seed.importEmployees(source.id, [
+    { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
+  ]);
+  const oldFileId = await seed.importPhoto(record!.id, {
+    photoUrl: SLACK_PHOTO_URL,
+    content: PNG,
+    mimeType: "image/png",
+  });
+  const member = {
+    ...SLACK_MEMBER_WITH_PHOTO,
+    profile: {
+      ...SLACK_MEMBER_WITH_PHOTO.profile,
+      image_512: "https://avatars.slack-edge.com/new-photo.jpg",
+    },
+  };
+  const downloadStarted = Promise.withResolvers<void>();
+  const download = Promise.withResolvers<Buffer>();
+  const imports = importUseCases(orm, {
+    slack: {
+      ...slackPhotoReader([member]),
+      readSlackPhoto: () => {
+        downloadStarted.resolve();
+        return download.promise;
+      },
+    },
+  });
+
+  const refresh = imports.readSlack(SETUP_HOLDER);
+  try {
+    await downloadStarted.promise;
+    await imports.approveImport(SETUP_HOLDER);
+  } finally {
+    download.resolve(JPEG);
+    await refresh;
+  }
+
+  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  expect(employees.edges.map(({ node }) => node.avatarFileId)).toEqual([oldFileId]);
+  expect(await storedFileIds(orm)).toEqual([oldFileId]);
+});
+
 test("downloads only the first 50 photos by name and queues the rest", async ({ orm }) => {
   await instanceRepository(orm).advanceStep("company", "import");
   const members = Array.from({ length: 52 }, (_, index) => ({
@@ -174,6 +222,50 @@ test("downloads only the first 50 photos by name and queues the rest", async ({ 
   expect(imports.sentJobs).toEqual([
     { name: "imports.downloadSlackPhotos", payload: { sourceId: source!.id, after: null } },
   ]);
+});
+
+test("downloads the first 50 photos in review order with missing names, mixed case and email ties", async ({
+  orm,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const profiles = [
+    { first_name: "Zoe", last_name: "Stone", email: "zoe.z@example.com" },
+    { first_name: "zoe", last_name: "Stone", email: "zoe.a@example.com" },
+    ...Array.from({ length: 48 }, (_, index) => ({
+      first_name: index % 2 === 0 ? "Avery" : "avery",
+      last_name: String(index).padStart(2, "0"),
+      email: `employee${index}@example.com`,
+    })),
+    { email: "unnamed@example.com" },
+  ];
+  const members = profiles.map((profile, index) => ({
+    id: `U${index}`,
+    profile: {
+      ...profile,
+      is_custom_image: true,
+      image_512: `https://avatars.slack-edge.com/photo-${index}.png`,
+    },
+  }));
+  const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
+  const imports = importUseCases(orm, {
+    slack: { ...slackPhotoReader(members), readSlackPhoto },
+  });
+
+  await imports.readSlack(OWNER);
+
+  const employees = await imports.reads.listEmployees(OWNER, { first: 100 });
+  expect(employees.edges[0]!.node.values.email.value).toBe("unnamed@example.com");
+  expect(employees.edges[50]!.node).toMatchObject({
+    values: { email: { value: "zoe.z@example.com" } },
+    photoFileId: null,
+  });
+  expect(
+    employees.edges
+      .filter(({ node }) => node.photoFileId !== null)
+      .map(({ node }) => node.values.email.value),
+  ).toEqual(employees.edges.slice(0, 50).map(({ node }) => node.values.email.value));
+  expect(readSlackPhoto).toHaveBeenCalledTimes(50);
+  expect(await storedFileIds(orm)).toHaveLength(50);
 });
 
 test("queues no photo job when every photo was downloaded", async ({ orm }) => {

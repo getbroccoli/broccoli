@@ -14,6 +14,7 @@ export {
   IMPORT_EMPLOYEE_FIELDS,
   IMPORT_EMPLOYEE_VERSION,
   inSourceOrder,
+  nameSortKey,
   parseImportEmployeeChoices,
   parseImportEmployeeValues,
   type ImportEmployee,

@@ -43,12 +43,12 @@ test("attaches the photos still missing after the record cursor", async ({ orm, 
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("continues after a full batch with the last record id", async ({ orm, seed }) => {
+test("continues after a full batch of 40 with the last record id", async ({ orm, seed }) => {
   await instanceRepository(orm).advanceStep("company", "import");
   const source = await seed.importSource();
   const records = await seed.importEmployees(
     source.id,
-    Array.from({ length: 101 }, () => ({ photoUrl: SLACK_PHOTO_URL })),
+    Array.from({ length: 41 }, () => ({ photoUrl: SLACK_PHOTO_URL })),
   );
   const ordered = records.toSorted((a, b) => a.id.localeCompare(b.id));
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
@@ -58,18 +58,18 @@ test("continues after a full batch with the last record id", async ({ orm, seed 
 
   const employees = await imports.reads.listEmployeeRecords(OWNER, {
     sourceId: source.id,
-    first: 101,
+    first: 41,
   });
   expect(
     employees.edges.filter(({ node }) => node.photoFileId !== null).map(({ node }) => node.id),
-  ).toEqual(ordered.slice(0, 100).map(({ id }) => id));
-  expect(employees.edges[100]!.node.photoFileId).toBeNull();
-  expect(readSlackPhoto).toHaveBeenCalledTimes(100);
-  expect(await storedFileIds(orm)).toHaveLength(100);
+  ).toEqual(ordered.slice(0, 40).map(({ id }) => id));
+  expect(employees.edges[40]!.node.photoFileId).toBeNull();
+  expect(readSlackPhoto).toHaveBeenCalledTimes(40);
+  expect(await storedFileIds(orm)).toHaveLength(40);
   expect(imports.sentJobs).toEqual([
     {
       name: "imports.downloadSlackPhotos",
-      payload: { sourceId: source.id, after: ordered[99]!.id },
+      payload: { sourceId: source.id, after: ordered[39]!.id },
     },
   ]);
 });

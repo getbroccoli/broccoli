@@ -4,6 +4,7 @@ import {
   expect,
   importUseCases,
   OWNER,
+  SETUP_HOLDER,
   storedFileIds,
   SYSTEM,
   test,
@@ -12,7 +13,7 @@ import {
 } from "#test/support";
 
 import { files } from "../../../../core/files";
-import { instanceRepository } from "../../../../core/instance";
+import { instanceRepository, readSetupStep } from "../../../../core/instance";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -103,6 +104,24 @@ test("refuses an upload after setup is complete without storing anything or send
   ).rejects.toMatchObject({ code: "CONFLICT", message: "Setup is complete." });
 
   expect(await imports.reads.listSources(owner)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses an upload after Approve while setup still awaits the owner", async ({ orm }) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const imports = importUseCases(orm);
+  await imports.approveImport(SETUP_HOLDER);
+  expect(await readSetupStep(orm)).toBe("owner");
+
+  await expect(
+    imports.files.uploadFile(SETUP_HOLDER, {
+      name: "staff.csv",
+      bytes: Buffer.from("Name,Email\nAvery Stone,avery@example.com"),
+    }),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(imports.sentJobs).toEqual([]);
 });

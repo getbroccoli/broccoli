@@ -68,7 +68,8 @@ function photoUrlOf(member: SlackMember): string | null {
     return null;
   }
   const url = new URL(link);
-  return url.protocol === "https:" && url.hostname.endsWith(SLACK_PHOTO_HOST) ? link : null;
+  const onSlack = url.protocol === "https:" && url.hostname.endsWith(SLACK_PHOTO_HOST);
+  return onSlack && !url.username && !url.password ? link : null;
 }
 
 /** Slack serves profile photos from its subdomains, such as `avatars.slack-edge.com`. */

@@ -174,6 +174,20 @@ it("leaves a photo link on another host without a photo", () => {
   expect(record?.photoUrl).toBeNull();
 });
 
+it("leaves a photo link containing user info without a photo", () => {
+  const member = {
+    ...SLACK_MEMBER_WITH_PHOTO,
+    profile: {
+      ...SLACK_MEMBER_WITH_PHOTO.profile,
+      image_512: "https://user:secret@avatars.slack-edge.com/p.jpg",
+    },
+  };
+
+  const [record] = mapSlackMembers([member]);
+
+  expect(record?.photoUrl).toBeNull();
+});
+
 it("leaves an HTTP photo link without a photo", () => {
   const member = {
     ...SLACK_MEMBER_WITH_PHOTO,

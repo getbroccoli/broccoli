@@ -146,6 +146,18 @@ export function parseImportEmployeeValues(
   return employeeValuesV1.parse(json);
 }
 
+/**
+ * How review orders people by name: by first, then last name, ignoring case, a missing
+ * name first; `key` breaks ties.
+ */
+export function nameSortKey(
+  firstName: string | null,
+  lastName: string | null,
+  key: string,
+): [string, string, string] {
+  return [firstName?.toLowerCase() ?? "", lastName?.toLowerCase() ?? "", key];
+}
+
 /** A conflict the owner has not settled: two values or more and the default still shown. */
 export function hasOpenConflict({ options, choice }: ImportEmployeeValue): boolean {
   return options.length > 1 && choice === "default";

@@ -21,14 +21,15 @@ export async function approveImport(
 ): Promise<void> {
   requireImportAccess(ctx);
   const result = await transact(async (tx) => {
+    // The step move locks the instance row, so a concurrent Approve waits and then finds
+    // the step moved. Every setup step change takes that lock before the sources lock.
+    if (!(await completeImportStep(ctx, tx))) {
+      return null;
+    }
     const imports = importRepository(tx);
     await imports.lockSources();
     if (await imports.hasMappingSource()) {
       throw new ApplicationError("CONFLICT", "Files are still being read.");
-    }
-    // The step move locks the instance row, so a concurrent Approve waits and then finds `done`.
-    if (!(await completeImportStep(ctx, tx))) {
-      return null;
     }
     const employees = await readImportEmployees(imports);
     const { avatarFileIds, ...counts } = await createImportedEmployees(

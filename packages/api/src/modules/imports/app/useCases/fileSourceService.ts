@@ -2,7 +2,7 @@ import { type Decisions, DecisionsError } from "../../../../integrations/ai";
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import { deleteFiles, readFile, storeFile } from "../../../../core/files";
-import { readSetupStep } from "../../../../core/instance";
+import { isImportOpen } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository, type ImportRepository } from "../../db";
@@ -145,7 +145,9 @@ export function createFileSourceService({
     removeFile: async (ctx, sourceId) => {
       requireImportAccess(ctx);
       await transact(async (tx) => {
-        const fileId = await importRepository(tx).deleteFileSource(sourceId);
+        const imports = importRepository(tx);
+        await imports.lockSources();
+        const fileId = await imports.deleteFileSource(sourceId);
         if (fileId !== null) {
           await deleteFiles(tx, [fileId]);
         }
@@ -163,7 +165,7 @@ type MappingResult = { outcome: MappingOutcome; records: IncomingRecord[] };
 async function lockSourcesForMapping(tx: Tx): Promise<ImportRepository> {
   const imports = importRepository(tx);
   await imports.lockSources();
-  if ((await readSetupStep(tx)) === "done") {
+  if (!(await isImportOpen(tx))) {
     throw new ApplicationError("CONFLICT", "Setup is complete.");
   }
   return imports;

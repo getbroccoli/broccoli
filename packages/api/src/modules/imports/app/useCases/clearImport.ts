@@ -8,7 +8,10 @@ import { importRepository } from "../../db";
  */
 export async function clearImport(tx: Tx, keptFileIds: readonly string[] = []): Promise<void> {
   const kept = new Set(keptFileIds);
-  const fileIds = await importRepository(tx).deleteAll();
+  const imports = importRepository(tx);
+  // Callers hold the instance row already, so this keeps the instance-then-sources order.
+  await imports.lockSources();
+  const fileIds = await imports.deleteAll();
   await deleteFiles(
     tx,
     fileIds.filter((id) => !kept.has(id)),

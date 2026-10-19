@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { EmployeeOrder } from "../../../employees";
-import type { ImportEmployee } from "../../domain";
+import { type ImportEmployee, nameSortKey } from "../../domain";
 
 /** The sort values of the last import employee seen, behind the order they belong to. */
 export type ImportEmployeeKeyset = [field: string, direction: string, ...values: SortValue[]];
@@ -52,11 +52,7 @@ const KEYSET_VALUES = {
 function sortValues({ key, values }: ImportEmployee, { field }: EmployeeOrder): SortValue[] {
   switch (field) {
     case "NAME":
-      return [
-        values.firstName.value?.toLowerCase() ?? "",
-        values.lastName.value?.toLowerCase() ?? "",
-        key,
-      ];
+      return nameSortKey(values.firstName.value, values.lastName.value, key);
     case "EMAIL":
       return [values.email.value === null, values.email.value ?? "", key];
     case "START_DATE":
