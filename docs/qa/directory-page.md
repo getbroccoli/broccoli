@@ -5,7 +5,7 @@ A manual check of the People page against a development stack.
 ## Setup
 
 1. Start the stack and create the owner as in [QA setup](setup.md).
-2. Saving the company fills the instance with demo data; clear it from the banner ("Clear demo data"). `/people` then shows the empty state "No people yet".
+2. Skipping the import with "Skip and use demo data" fills the instance with demo data; clear it from the banner ("Clear demo data"). `/people` then shows the empty state "No people yet".
 3. Add about 60 employees, leaving some without a job title or start date.
 
 ## List and paging

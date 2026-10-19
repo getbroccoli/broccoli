@@ -19,7 +19,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     }
     // The setup holder has no account yet, so sign-in and other pages lead back to setup.
     if (setup.holder === "YOU" && !location.pathname.startsWith("/setup")) {
-      throw redirect({ to: setupStepPage(setup.step), replace: true });
+      throw redirect({ to: setupStepPage(setup.step, setup.mode), replace: true });
     }
     return {
       me: me ?? null,

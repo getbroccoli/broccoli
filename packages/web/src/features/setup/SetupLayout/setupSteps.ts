@@ -10,10 +10,11 @@ interface StepDefinition {
 
 const OWNER = { id: "owner", title: "setup.owner.title" } as const satisfies StepDefinition;
 const COMPANY = { id: "company", title: "setup.company.title" } as const satisfies StepDefinition;
+const AI = { id: "ai", title: "setup.ai.title" } as const satisfies StepDefinition;
 const PEOPLE = {
   id: "people",
   title: "setup.import.title",
-  // Both pages belong to the server's `import` step, until Approve.
+  // Both pages, and Setup AI before them, belong to the server's `import` step, until Approve.
   pages: [
     { id: "import", title: "setup.import.gather" },
     { id: "review", title: "setup.review.title" },
@@ -22,14 +23,15 @@ const PEOPLE = {
 
 /**
  * The setup steps in order, each with the copy key of its title. A self-hosted owner
- * creates their account last; a managed one signed up before setup.
+ * picks how files are read with AI and creates their account last; a managed one keeps
+ * its provided key and signed up before setup.
  */
 const SETUP_STEPS = {
-  SELF_HOSTED: [COMPANY, PEOPLE, OWNER],
+  SELF_HOSTED: [COMPANY, AI, PEOPLE, OWNER],
   MANAGED: [OWNER, COMPANY, PEOPLE],
 } as const satisfies Record<Mode, readonly StepDefinition[]>;
 
-type Step = typeof OWNER | typeof COMPANY | typeof PEOPLE;
+type Step = typeof OWNER | typeof COMPANY | typeof AI | typeof PEOPLE;
 
 /** A setup page: a step's own page, or one of its pages. */
 export type SetupStepId =

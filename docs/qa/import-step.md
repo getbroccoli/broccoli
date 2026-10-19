@@ -11,7 +11,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 ## Connect
 
-- [ ] The page is `/setup/import`, titled "Add your people", with "Setup Company" done and "Add your people" current.
+- [ ] The page is `/setup/import`, titled "Add your people", with "Setup Company" (and, self-hosted, "Setup AI") done and "Add your people" current.
 - [ ] The Slack row reads "Import the members of your Slack workspace." with "Connect Slack".
 - [ ] "Connect Slack" opens Slack's consent screen for the workspace.
 - [ ] Allowing it returns to `/setup/import`, which imports the members by itself: the row shows "Importing…", then "<workspace> · N people" with "Refresh", where N counts the members with an email, without bots, apps, guests or deactivated accounts.
@@ -47,9 +47,9 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 
 ## Leaving the step
 
-- [ ] Before Slack is imported, the footer shows only "Skip for now".
-- [ ] With members imported, the footer shows "Skip for now" and "Next: review your people", which opens the [review](import-review.md).
-- [ ] On a fresh instance, "Skip for now" lands on `/people` with the demo people.
+- [ ] Before Slack is imported, the footer shows only "Skip and use demo data".
+- [ ] With members imported, the footer shows "Skip and use demo data" and "Next: review your people", which opens the [review](import-review.md).
+- [ ] On a fresh instance, "Skip and use demo data" shows "Filling demo data…" and moves on (managed: `/people`; self-hosted: "Create your account"), and the people page then shows the demo people.
 
 ## Layout
 

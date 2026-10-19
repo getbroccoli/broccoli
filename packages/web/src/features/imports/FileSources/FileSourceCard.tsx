@@ -1,6 +1,7 @@
 import type { FragmentType } from "@apollo/client";
 import { useFragment } from "@apollo/client/react";
 import { CheckCircle, DotsThree, FileCsv, FileXls } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 
 import {
   FileSourceCard_SourceFragmentDoc,
@@ -20,7 +21,17 @@ import { cn } from "@/lib/class-names";
 const FAILURE_MESSAGES = {
   NO_PEOPLE_COLUMNS: "imports.files.noPeopleColumns",
   UNAVAILABLE: "imports.files.unavailable",
+  AI_FREE_PERIOD_USED: "imports.files.aiFreePeriodUsed",
+  AI_FREE_PERIOD_OVER: "imports.files.aiFreePeriodOver",
+  AI_LIMIT_REACHED: "imports.files.aiLimitReached",
 } as const satisfies Record<ImportSourceFailure, string>;
+
+/** Broccoli AI's free use is used up: only the owner's own key reads the file. */
+const NEEDS_OWN_KEY: ReadonlySet<ImportSourceFailure> = new Set([
+  "AI_FREE_PERIOD_USED",
+  "AI_FREE_PERIOD_OVER",
+  "AI_LIMIT_REACHED",
+]);
 
 interface FileSourceCardProps {
   source: FragmentType<FileSourceCard_SourceFragment>;
@@ -69,6 +80,14 @@ export function FileSourceCard({
         >
           {statusLine(source)}
         </span>
+        {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
+          <Link
+            to="/setup/ai"
+            className="w-fit text-[13px] font-medium text-foreground underline underline-offset-2"
+          >
+            {t("imports.files.useOwnKey")}
+          </Link>
+        )}
       </div>
       {failed && (
         <Button type="button" variant="outline" disabled={busy} onClick={onRetry}>

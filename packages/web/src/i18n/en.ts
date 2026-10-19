@@ -1,5 +1,8 @@
+import { setupAiEn } from "./setupAiEn";
+
 /** English copy. Every user-facing string lives here and is read through `t()`. */
 export const en = {
+  ...setupAiEn,
   "app.name": "Broccoli",
   "app.unreachable.title": "Couldn’t reach Broccoli",
   "app.unreachable.detail": "Check your connection and try again.",
@@ -80,8 +83,8 @@ export const en = {
   "setup.company.failed": "Couldn’t save. Try again.",
   "setup.import.title": "Add your people",
   "setup.import.description": "Bring in your team from Slack and your files, then review them.",
-  "setup.import.skip": "Skip for now",
-  "setup.import.skipping": "Skipping…",
+  "setup.import.skip": "Skip and use demo data",
+  "setup.import.skipping": "Filling demo data…",
   "setup.import.skipFailed": "Couldn’t continue. Try again.",
   "setup.import.gather": "Gather everyone’s details",
   "setup.import.next": "Next: review your people",
@@ -178,7 +181,8 @@ export const en = {
   "setup.review.incompleteOne": "1 person won’t be added: they are missing a name or work email.",
   "setup.review.unchecked": "{count} values were not checked; the first source’s are used.",
   "setup.review.uncheckedOne": "1 value was not checked; the first source’s is used.",
-  "setup.review.noneReady": "No one is ready to add. Go back to add a source, or skip for now.",
+  "setup.review.noneReady":
+    "No one is ready to add. Go back to add a source, or skip and use demo data.",
   "imports.loadFailed": "Couldn’t load your import.",
   "imports.retry": "Try again",
   "imports.tools.title": "Connect your tools",
@@ -223,6 +227,13 @@ export const en = {
   "imports.files.people": "{count} people",
   "imports.files.noPeopleColumns": "Couldn’t find a name or email column.",
   "imports.files.unavailable": "Couldn’t reach the AI provider.",
+  "imports.files.aiFreePeriodUsed":
+    "This server already used its free Broccoli AI period. Add your own OpenRouter key to continue.",
+  "imports.files.aiFreePeriodOver":
+    "Your free Broccoli AI period is over. Add your own OpenRouter key to keep reading files.",
+  "imports.files.aiLimitReached":
+    "You’ve used the free Broccoli AI allowance. Add your own OpenRouter key to keep reading files.",
+  "imports.files.useOwnKey": "Use your own key",
   "imports.files.retry": "Retry",
   "imports.files.options": "Options for {name}",
   "imports.files.remove": "Remove",

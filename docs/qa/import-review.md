@@ -60,7 +60,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] "Approve N people" shows "Approving…" and lands on `/setup`, "Create your account"; `/setup/import/review` now goes there. Creating the account lands on `/people`, which lists exactly those N people, each once, with the values review showed, and no demo people.
 - [ ] With `/setup/import/review` open in two tabs, "Approve" in both adds each person once.
 - [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), Approve reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
-- [ ] With only incomplete people (for example a Slack workspace of one-word names), Approve is hidden and the footer reads "No one is ready to add. Go back to add a source, or skip for now."
+- [ ] With only incomplete people (for example a Slack workspace of one-word names), Approve is hidden and the footer reads "No one is ready to add. Go back to add a source, or skip and use demo data."
 
 ## Guards
 

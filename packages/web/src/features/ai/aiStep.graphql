@@ -1,0 +1,37 @@
+query AiStep {
+  setup {
+    id
+    ai {
+      id
+      source
+      openRouterKey
+    }
+  }
+}
+
+mutation ChooseAi($input: AiChooseInput!) {
+  setup {
+    chooseAi(input: $input) {
+      setup {
+        id
+        ai {
+          id
+          source
+          openRouterKey
+        }
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
