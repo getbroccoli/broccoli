@@ -10,19 +10,31 @@ const MANAGED = {
   OPENROUTER_API_KEY: "test-model-key",
 };
 
-it("needs no settings when self-hosted", () => {
-  expect(loadEnv(DATABASE).deployment).toEqual({ mode: "self_hosted" });
+it("needs no settings when self-hosted and defaults to Broccoli AI", () => {
+  expect(loadEnv(DATABASE).deployment).toEqual({
+    mode: "self_hosted",
+    broccoliAiUrl: "https://accounts.getbroccoli.com/ai",
+  });
 });
 
 it("reads the model key when self-hosted", () => {
-  expect(loadEnv({ ...DATABASE, OPENROUTER_API_KEY: "test-model-key" }).modelApiKey).toBe(
+  expect(loadEnv({ ...DATABASE, OPENROUTER_API_KEY: "test-model-key" }).openRouterKey).toBe(
     "test-model-key",
   );
 });
 
+it("refuses the self-hosted Broccoli AI URL when managed", () => {
+  expect(() =>
+    loadEnv({
+      ...MANAGED,
+      SELF_HOSTED_BROCCOLI_AI_URL: "https://accounts.example.com/ai",
+    }),
+  ).toThrow("Only for BROCCOLI_MODE=self_hosted");
+});
+
 it("reads the self-hosted public URL", () => {
   const env = loadEnv({ ...DATABASE, SELF_HOSTED_PUBLIC_URL: "https://hr.example.com" });
-  expect(env.deployment).toEqual({ mode: "self_hosted", publicUrl: "https://hr.example.com" });
+  expect(env.deployment).toMatchObject({ publicUrl: "https://hr.example.com" });
 });
 
 it.each([

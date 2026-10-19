@@ -41,7 +41,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   });
   const server = await startSimpleHttpServer(app);
   return {
-    decisions: createDecisions({ url: server.url, apiKey }),
+    decisions: createDecisions({ endpoint: `${server.url}/alpha/decisions`, credential: apiKey }),
     leaked: (forbidden) => {
       const texts = sentBodies.map((body) => stringsOf(JSON.parse(body)).join("\n"));
       return forbidden.filter((value) => {

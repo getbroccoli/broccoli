@@ -21,8 +21,16 @@ export async function fetchJson<T>(
   return schema.parse(JSON.parse(await readText(response, maxBytes)));
 }
 
+/** An answer whose body exceeded the bytes its reader allowed. */
+export class AnswerTooLargeError extends Error {
+  constructor(maxBytes: number) {
+    super(`Answer is larger than ${maxBytes} bytes`);
+    this.name = "AnswerTooLargeError";
+  }
+}
+
 /** The body as text; stops reading and fails beyond `maxBytes`. */
-async function readText(response: Response, maxBytes: number): Promise<string> {
+export async function readText(response: Response, maxBytes: number): Promise<string> {
   if (!response.body) {
     return "";
   }
@@ -33,7 +41,7 @@ async function readText(response: Response, maxBytes: number): Promise<string> {
     size += read.value.length;
     if (size > maxBytes) {
       await reader.cancel();
-      throw new Error(`Answer is larger than ${maxBytes} bytes`);
+      throw new AnswerTooLargeError(maxBytes);
     }
     chunks.push(read.value);
   }

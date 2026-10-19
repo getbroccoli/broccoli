@@ -18,8 +18,8 @@ export type { ImportEmployeeValues } from "./domain";
 export function importsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs"> & {
     slack: SlackReader;
-    /** The model that maps files; null where the instance has no model key. */
-    decisions: Decisions | null;
+    /** The model that maps files. */
+    decisions: Decisions;
   },
 ): ModuleManifest {
   const useCases = createImportUseCases(dependencies);

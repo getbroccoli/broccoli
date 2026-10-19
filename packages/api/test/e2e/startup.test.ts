@@ -85,7 +85,12 @@ it("rejects startup and closes the database pool when a module router throws", a
   let orm!: Orm;
 
   const startup = startServer(
-    { databaseUrl: database.url, port: 0, deployment: { mode: "self_hosted" }, dataDir },
+    {
+      databaseUrl: database.url,
+      port: 0,
+      deployment: { mode: "self_hosted", broccoliAiUrl: "http://127.0.0.1:9" },
+      dataDir,
+    },
     createLogger("silent"),
     (dependencies) => {
       orm = dependencies.orm;

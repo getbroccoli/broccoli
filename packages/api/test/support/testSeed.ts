@@ -98,12 +98,14 @@ export class TestSeed {
     status = "mapping",
     attempt = 0,
     failure = null,
+    failureMessage = null,
   }: {
     name?: string;
     content: string | Uint8Array;
     status?: "mapping" | "mapped" | "failed";
     attempt?: number;
     failure?: "no_people_columns" | "unavailable" | null;
+    failureMessage?: string | null;
   }) {
     const fileId = await this.file({
       content: Buffer.from(content),
@@ -119,7 +121,11 @@ export class TestSeed {
       await repository.restartMapping(id);
     }
     if (status === "failed") {
-      await repository.finishMapping(id, attempt, { status, failure: failure ?? "unavailable" });
+      await repository.finishMapping(id, attempt, {
+        status,
+        failure: failure ?? "unavailable",
+        failureMessage,
+      });
     } else if (status === "mapped") {
       await repository.finishMapping(id, attempt, { status });
     }

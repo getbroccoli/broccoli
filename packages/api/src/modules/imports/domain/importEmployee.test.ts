@@ -326,4 +326,9 @@ it("keeps the left-out choice on the import employee", () => {
   expect(employee!.leftOut).toBe(true);
 });
 
-const mapped = { readAt: new Date("2026-10-01"), status: "mapped", failure: null } as const;
+const mapped = {
+  readAt: new Date("2026-10-01"),
+  status: "mapped",
+  failure: null,
+  failureMessage: null,
+} as const;

@@ -17,6 +17,8 @@ export const importSources = pgTable(
       .notNull()
       .default("mapped"),
     failure: text("failure", { enum: ["no_people_columns", "unavailable"] }),
+    /** The AI provider's own words when it refused a file for good. */
+    failureMessage: text("failure_message"),
     /** The current mapping run of a file: a job of an earlier run writes nothing. */
     mappingAttempt: integer("mapping_attempt").notNull().default(0),
     /** The uploaded file; set exactly for file sources. */

@@ -33,11 +33,11 @@ export function importUseCases(
   orm: Parameters<typeof createImportUseCases>[0]["orm"],
   {
     slack = {},
-    decisions = null,
+    decisions = NO_DECISIONS,
     jobs,
   }: {
     slack?: Partial<Pick<SlackConnectionService, "readSlackMembers" | "isCurrentSlackConnection">>;
-    decisions?: Decisions | null;
+    decisions?: Decisions;
     jobs?: JobQueue;
   } = {},
 ) {
@@ -107,3 +107,8 @@ export function slackUseCases(
     },
   });
 }
+
+/** The default model of use-case tests: one that is never asked. */
+const NO_DECISIONS: Decisions = {
+  decide: () => Promise.reject(new Error("Unexpected model request")),
+};

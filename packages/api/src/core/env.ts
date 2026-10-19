@@ -18,6 +18,8 @@ export interface SelfHostedDeployment {
   mode: "self_hosted";
   /** The address browsers use; unset means it is taken from each request. */
   publicUrl?: string;
+  /** Broccoli AI, which makes the AI decisions of an install without its own OpenRouter key. */
+  broccoliAiUrl: string;
 }
 
 /** The public accounts service; dev and tests point `MANAGED_ACCOUNTS_URL` elsewhere. */
@@ -39,8 +41,8 @@ export interface Env {
   /** Folder of the built web app to serve; unset serves only the API. */
   webDir?: string;
   deployment: Deployment;
-  /** The OpenRouter key that maps files; required when managed, null turns file mapping off. */
-  modelApiKey: string | null;
+  /** The OpenRouter key for AI decisions; required when managed, null uses Broccoli AI. */
+  openRouterKey: string | null;
   /** Folder for files that must survive restarts, such as `secrets/`. */
   dataDir: string;
   /** Service that finds the brand of an email domain; null makes no lookup. */
@@ -51,6 +53,8 @@ export interface Env {
 
 // shortcut: the production accounts service is not live yet; switch to https://accounts.getbroccoli.com before the release.
 const DEFAULT_SLACK_RELAY_URL = "https://accounts.dev.getbroccoli.com";
+
+const DEFAULT_BROCCOLI_AI_URL = "https://accounts.getbroccoli.com/ai";
 
 /** Compose passes unset variables as empty strings, so blank means unset. */
 function blankAsUnset(value: unknown): unknown {
@@ -68,6 +72,10 @@ const envSchema = z
     BROCCOLI_MODE: z.preprocess(blankAsUnset, z.enum(MODES).default("self_hosted")),
     DATA_DIR: z.preprocess(blankAsUnset, z.string().default("/data")),
     SELF_HOSTED_PUBLIC_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
+    SELF_HOSTED_BROCCOLI_AI_URL: z.preprocess(
+      blankAsUnset,
+      z.url({ protocol: /^https?$/ }).optional(),
+    ),
     MANAGED_INSTANCE_ID: z.preprocess(blankAsUnset, z.string().optional()),
     MANAGED_ACCOUNTS_URL: z.preprocess(blankAsUnset, z.string().optional()),
     OPENROUTER_API_KEY: z.preprocess(blankAsUnset, z.string().optional()),
@@ -89,8 +97,10 @@ const envSchema = z
       }
       return;
     }
-    if (variables.SELF_HOSTED_PUBLIC_URL !== undefined) {
-      refuse("SELF_HOSTED_PUBLIC_URL", "Only for BROCCOLI_MODE=self_hosted");
+    for (const name of ["SELF_HOSTED_PUBLIC_URL", "SELF_HOSTED_BROCCOLI_AI_URL"] as const) {
+      if (variables[name] !== undefined) {
+        refuse(name, "Only for BROCCOLI_MODE=self_hosted");
+      }
     }
     for (const name of ["MANAGED_INSTANCE_ID", "OPENROUTER_API_KEY"] as const) {
       if (variables[name] === undefined) {
@@ -113,8 +123,12 @@ const envSchema = z
             instanceId: variables.MANAGED_INSTANCE_ID!,
             accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
           }
-        : { mode: "self_hosted", publicUrl: variables.SELF_HOSTED_PUBLIC_URL },
-    modelApiKey: variables.OPENROUTER_API_KEY ?? null,
+        : {
+            mode: "self_hosted",
+            publicUrl: variables.SELF_HOSTED_PUBLIC_URL,
+            broccoliAiUrl: variables.SELF_HOSTED_BROCCOLI_AI_URL ?? DEFAULT_BROCCOLI_AI_URL,
+          },
+    openRouterKey: variables.OPENROUTER_API_KEY ?? null,
     dataDir: variables.DATA_DIR,
     brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
     slackRelayUrl: variables.SLACK_RELAY_URL,

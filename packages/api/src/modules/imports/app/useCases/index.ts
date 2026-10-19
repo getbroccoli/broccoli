@@ -32,7 +32,7 @@ export function createImportUseCases({
   jobs,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: SlackReader;
-  decisions: Decisions | null;
+  decisions: Decisions;
   jobs: JobQueue;
 }): ImportUseCases {
   const imports = importRepository(orm);

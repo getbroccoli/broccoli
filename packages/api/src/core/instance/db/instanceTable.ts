@@ -18,6 +18,8 @@ export const instance = pgTable(
     managedCompanyId: text("managed_company_id"),
     managedPublicOrigin: text("managed_public_origin"),
     managedWebsiteOrigin: text("managed_website_origin"),
+    /** Self-hosted only, after its first AI decision without a key: the encrypted relay token. */
+    encryptedBroccoliAiToken: text("encrypted_broccoli_ai_token"),
   },
   (table) => [
     check("instance_singleton", sql`${table.id}`),
