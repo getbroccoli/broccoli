@@ -3,7 +3,7 @@ import type { ModuleManifest } from "../../core/moduleManifest";
 import { createSystemUseCases, type SystemContext } from "./app";
 import { createResolvers } from "./graphql";
 
-export { type AiChecks, createSystemUseCases, type SystemUseCases } from "./app";
+export { createSystemUseCases } from "./app";
 
 /** Platform-level API fields that belong to no business module: setup, the user, AI sources. */
 export function systemModule(context: SystemContext): ModuleManifest {

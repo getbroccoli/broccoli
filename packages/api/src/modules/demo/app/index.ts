@@ -1,1 +1,1 @@
-export { createDemoUseCases, type DemoFill, type DemoUseCases, prepareDemoFill } from "./useCases";
+export { createDemoUseCases, type DemoUseCases, prepareDemoFill } from "./useCases";

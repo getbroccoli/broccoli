@@ -4,8 +4,7 @@ import { chooseAi, type ChooseAiInput } from "./chooseAi";
 import { readAi } from "./readAi";
 import type { SystemContext } from "./systemContext";
 
-export type { ChooseAiInput } from "./chooseAi";
-export type { AiChecks, SystemContext } from "./systemContext";
+export type { SystemContext } from "./systemContext";
 
 /** Everything the instance-wide setup does beyond its steps; the adapters call nothing else. */
 export interface SystemUseCases {

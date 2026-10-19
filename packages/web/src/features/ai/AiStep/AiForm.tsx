@@ -1,0 +1,108 @@
+import { ShieldCheck } from "@phosphor-icons/react";
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+
+import { ChooseAiDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
+import { usePayloadMutation } from "@/apollo";
+import { useSkipWithDemoData } from "@/features/imports";
+import { SetupStepForm } from "@/features/setup";
+import { t } from "@/i18n";
+
+import { AgentOption } from "./AgentOption";
+import { DemoDataCard } from "./DemoDataCard";
+import { failureOf } from "./failureOf";
+import { KeyField } from "./KeyField";
+import { KnownKey } from "./KnownKey";
+import { NextButton } from "./NextButton";
+import { SourceOption } from "./SourceOption";
+
+/** Next checks the chosen source and saves it, then the owner gathers their files. */
+export function AiForm({ ai }: { ai: Ai }) {
+  const navigate = useNavigate();
+  const [source, setSource] = useState<AiSource>(ai.source);
+  const [replacingKey, setReplacingKey] = useState(false);
+  const [key, setKey] = useState("");
+  const [chooseAi, { loading: checking, payloadError }] = usePayloadMutation(ChooseAiDocument);
+  const [failed, setFailed] = useState(false);
+  const demo = useSkipWithDemoData();
+  const busy = checking || demo.skipping;
+  // Replace sets the known key aside until another one is saved.
+  const knownKey = replacingKey ? null : ai.openRouterKey;
+  const asksForKey = source === "OPENROUTER" && knownKey === null;
+  const failure = failed ? failureOf(payloadError, source) : null;
+
+  const choose = async () => {
+    setFailed(false);
+    try {
+      await chooseAi({
+        variables: { input: { source, openRouterKey: asksForKey ? key : null } },
+      });
+    } catch {
+      setFailed(true);
+      return;
+    }
+    await navigate({ to: "/setup/import" });
+  };
+
+  return (
+    <SetupStepForm
+      onSubmit={() => void choose()}
+      footer={
+        <NextButton checking={checking} disabled={busy || (asksForKey && key.trim() === "")} />
+      }
+    >
+      <p className="-mt-4 flex items-center gap-2 text-sm text-brand-deep">
+        <ShieldCheck size={16} aria-hidden className="shrink-0" />
+        {t("setup.ai.promise")}
+      </p>
+      <div className="flex flex-col gap-4">
+        <fieldset className="flex flex-col gap-3" disabled={busy}>
+          <legend className="sr-only">{t("setup.ai.options")}</legend>
+          <SourceOption
+            value="BROCCOLI_AI"
+            selected={source}
+            onSelect={setSource}
+            title={t("setup.ai.broccoliAi")}
+            hint={t("setup.ai.broccoliAiHint")}
+          />
+          <SourceOption
+            value="OPENROUTER"
+            selected={source}
+            onSelect={setSource}
+            title={t("setup.ai.openRouter")}
+            hint={t(
+              knownKey === "ENVIRONMENT"
+                ? "setup.ai.openRouterEnvironmentHint"
+                : "setup.ai.openRouterHint",
+            )}
+          >
+            {knownKey ? (
+              <KnownKey origin={knownKey} onReplace={() => setReplacingKey(true)} />
+            ) : (
+              <KeyField
+                value={key}
+                onChange={setKey}
+                error={failure?.onKey ? t(failure.message) : undefined}
+              />
+            )}
+          </SourceOption>
+          <AgentOption />
+        </fieldset>
+        <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.ai.privacy")}</p>
+      </div>
+      <DemoDataCard disabled={busy} skipping={demo.skipping} onUse={() => void demo.skip()} />
+      {failure && !failure.onKey && (
+        <p role="alert" className="text-sm text-destructive">
+          {t(failure.message)}
+        </p>
+      )}
+      {demo.failed && (
+        <p role="alert" className="text-sm text-destructive">
+          {t("setup.import.skipFailed")}
+        </p>
+      )}
+    </SetupStepForm>
+  );
+}
+
+type Ai = NonNullable<AiStepQuery["setup"]["ai"]>;

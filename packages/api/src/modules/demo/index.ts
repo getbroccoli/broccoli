@@ -3,7 +3,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import { createDemoUseCases } from "./app";
 import { createResolvers } from "./graphql";
 
-export { createDemoUseCases, type DemoFill, type DemoUseCases, prepareDemoFill } from "./app";
+export { createDemoUseCases, type DemoUseCases, prepareDemoFill } from "./app";
 
 /** The sample company an owner can start with instead of importing their people; and clearing it. */
 export function demoModule(
