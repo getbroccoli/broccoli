@@ -27,7 +27,12 @@ export interface InitRouterOptions {
  */
 export function initRouter({ transact, tokenCheck, readiness, auth }: InitRouterOptions): Router {
   const router = Router();
-  const limit = rateLimit({ windowMs: 60_000, limit: INIT_ATTEMPTS_PER_MINUTE });
+  const limit = rateLimit({
+    windowMs: 60_000,
+    limit: INIT_ATTEMPTS_PER_MINUTE,
+    // Without a trusted proxy the socket address counts; a forwarded header is ignored.
+    validate: { xForwardedForHeader: false },
+  });
   router.post("/api/init", limit, async (request, response) => {
     response.set("Cache-Control", "no-store");
     if ((await readiness.check()) !== "ready") {
