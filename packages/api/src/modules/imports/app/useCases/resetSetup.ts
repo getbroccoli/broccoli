@@ -1,4 +1,4 @@
-import { advanceStep } from "../../../../core/instance";
+import { returnToCompanyStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { deleteAllEmployees } from "../../../employees";
 import type { ImportContext } from "./importContext";
@@ -15,10 +15,7 @@ export async function resetSetup(
 ): Promise<void> {
   requireImportAccess(ctx);
   await transact(async (tx) => {
-    const reset =
-      (await advanceStep(ctx, tx, "owner", "company")) ||
-      (await advanceStep(ctx, tx, "ready", "company"));
-    if (reset) {
+    if (await returnToCompanyStep(ctx, tx)) {
       await deleteAllEmployees(ctx, tx);
     }
   });

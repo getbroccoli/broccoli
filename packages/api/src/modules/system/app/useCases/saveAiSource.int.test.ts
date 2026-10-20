@@ -6,12 +6,11 @@ import {
   OWNER,
   SETUP_HOLDER,
   SYSTEM,
+  readSavedAiSource,
   systemUseCases,
   test,
-  TEST_SECRET_BOX,
 } from "#test/support";
 
-import { readAiSource, storeAiSource } from "../../../../core/instance";
 import { DecisionsError } from "../../../../integrations/ai";
 
 test.for(["broccoli_ai", "openrouter"] as const)(
@@ -27,7 +26,7 @@ test.for(["broccoli_ai", "openrouter"] as const)(
 
     expect(checkOpenRouterKey).not.toHaveBeenCalled();
     expect(prepareBroccoliAi).not.toHaveBeenCalled();
-    expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
+    expect(await readSavedAiSource(orm)).toEqual({ source: null, openRouterKey: null });
   },
 );
 
@@ -44,17 +43,15 @@ test.for(["broccoli_ai", "openrouter"] as const)(
 
     expect(checkOpenRouterKey).not.toHaveBeenCalled();
     expect(prepareBroccoliAi).not.toHaveBeenCalled();
-    expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
+    expect(await readSavedAiSource(orm)).toEqual({ source: null, openRouterKey: null });
   },
 );
 
 test("checks and saves the trimmed replacement before returning the current AI", async ({
   orm,
-  transact,
+  seed,
 }) => {
-  await transact((tx) =>
-    storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "old-key" }),
-  );
+  await seed.aiSource("broccoli_ai", "old-key");
   const checkOpenRouterKey = vi.fn(() => Promise.resolve());
   const system = systemUseCases(orm, { environmentKey: "environment-key", checkOpenRouterKey });
 
@@ -64,7 +61,7 @@ test("checks and saves the trimmed replacement before returning the current AI",
   });
 
   expect(checkOpenRouterKey).toHaveBeenCalledWith("replacement-key");
-  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
+  expect(await readSavedAiSource(orm)).toEqual({
     source: "openrouter",
     openRouterKey: "replacement-key",
   });
@@ -87,16 +84,14 @@ test.for([undefined, null, " \n "])(
       fieldErrors: [{ field: "openRouterKey", code: "required" }],
     });
 
-    expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
+    expect(await readSavedAiSource(orm)).toEqual({ source: null, openRouterKey: null });
   },
 );
 
 test.for([undefined, null, " \n "])(
   "checks the saved key before the environment key when no replacement is given (%s)",
-  async (openRouterKey, { orm, transact }) => {
-    await transact((tx) =>
-      storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
-    );
+  async (openRouterKey, { orm, seed }) => {
+    await seed.aiSource("broccoli_ai", "saved-key");
     const checkOpenRouterKey = vi.fn(() => Promise.resolve());
     const system = systemUseCases(orm, { environmentKey: "environment-key", checkOpenRouterKey });
 
@@ -107,7 +102,7 @@ test.for([undefined, null, " \n "])(
       source: "openrouter",
       openRouterKey: { key: "saved-key", origin: "saved" },
     });
-    expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
+    expect(await readSavedAiSource(orm)).toEqual({
       source: "openrouter",
       openRouterKey: "saved-key",
     });
@@ -125,19 +120,14 @@ test("checks the environment key without saving a copy", async ({ orm }) => {
     source: "openrouter",
     openRouterKey: { key: "environment-key", origin: "environment" },
   });
-  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
+  expect(await readSavedAiSource(orm)).toEqual({
     source: "openrouter",
     openRouterKey: null,
   });
 });
 
-test("keeps the saved key and source when the replacement is rejected", async ({
-  orm,
-  transact,
-}) => {
-  await transact((tx) =>
-    storeAiSource(tx, TEST_SECRET_BOX, { source: "broccoli_ai", openRouterKey: "saved-key" }),
-  );
+test("keeps the saved key and source when the replacement is rejected", async ({ orm, seed }) => {
+  await seed.aiSource("broccoli_ai", "saved-key");
   const system = systemUseCases(orm, {
     checkOpenRouterKey: () => Promise.reject(new DecisionsError("Key refused", false)),
   });
@@ -149,7 +139,7 @@ test("keeps the saved key and source when the replacement is rejected", async ({
     fieldErrors: [{ field: "openRouterKey", code: "rejected" }],
   });
 
-  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
+  expect(await readSavedAiSource(orm)).toEqual({
     source: "broccoli_ai",
     openRouterKey: "saved-key",
   });
@@ -164,7 +154,7 @@ test("reports a retryable OpenRouter failure without saving the choice", async (
     system.saveAiSource(OWNER, { source: "openrouter", openRouterKey: "given-key" }),
   ).rejects.toMatchObject({ code: "UNAVAILABLE" });
 
-  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
+  expect(await readSavedAiSource(orm)).toEqual({ source: null, openRouterKey: null });
 });
 
 test.for([OWNER, SETUP_HOLDER, SYSTEM])(
@@ -177,7 +167,7 @@ test.for([OWNER, SETUP_HOLDER, SYSTEM])(
 
     expect(prepareBroccoliAi).toHaveBeenCalledOnce();
     expect(ai).toEqual({ source: "broccoli_ai", openRouterKey: null });
-    expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({
+    expect(await readSavedAiSource(orm)).toEqual({
       source: "broccoli_ai",
       openRouterKey: null,
     });
@@ -195,7 +185,7 @@ test("reports an already used free period on the source without saving it", asyn
     fieldErrors: [{ field: "source", code: "free_period_used" }],
   });
 
-  expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
+  expect(await readSavedAiSource(orm)).toEqual({ source: null, openRouterKey: null });
 });
 
 test.for([false, true])(
@@ -209,6 +199,6 @@ test.for([false, true])(
       code: "UNAVAILABLE",
     });
 
-    expect(await readAiSource(orm, TEST_SECRET_BOX)).toEqual({ source: null, openRouterKey: null });
+    expect(await readSavedAiSource(orm)).toEqual({ source: null, openRouterKey: null });
   },
 );

@@ -4,8 +4,9 @@ import {
   DecisionsError,
   type DecisionsSource,
 } from "../integrations/ai";
-import { readAiConfig, readBroccoliAiToken, saveBroccoliAiToken } from "../core/instance";
+import { type AiSettings, createAiSettings, createBroccoliAiTokens } from "../core/instance";
 import type { Mode } from "../core/env";
+import { PrincipalSecurityContext, type SecurityContext } from "../core/security";
 import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
@@ -32,19 +33,20 @@ export function createModules(
 ): ModuleManifest[] {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
+  const aiSettings = createAiSettings({ ...core, mode, environmentKey: ai.openRouterKey });
+  const tokens = createBroccoliAiTokens(core);
+  // Broccoli reads its AI source and token for decisions it makes on its own.
+  const system = PrincipalSecurityContext.system();
   const decisions = createResolvedDecisions({
-    readSource: () => decisionsSource(core, mode, ai),
-    tokens: {
-      read: () => readBroccoliAiToken(core.orm, core.secretBox, core.dataDir),
-      save: (token) => saveBroccoliAiToken(core.secretBox, core.dataDir, token),
-    },
+    readSource: () => decisionsSource(system, aiSettings, ai),
+    tokens: { read: () => tokens.read(system), save: (token) => tokens.save(system, token) },
   });
   return [
     systemModule({
       ...core,
       mode,
+      aiSettings,
       ai: {
-        environmentKey: ai.openRouterKey,
         checkOpenRouterKey: (key) => checkOpenRouterKey({ url: ai.openRouterUrl, key }),
         prepareBroccoliAi: () => decisions.prepareBroccoliAi(broccoliAiUrlOf(ai)),
       },
@@ -62,13 +64,13 @@ export function createModules(
   ];
 }
 
-/** Where this request's decisions go, for the AI `readAiConfig` picks. */
+/** Where this request's decisions go, for the AI the settings pick. */
 async function decisionsSource(
-  { orm, secretBox }: ModuleDependencies,
-  mode: Mode,
+  ctx: SecurityContext,
+  aiSettings: AiSettings,
   settings: ModuleSettings["ai"],
 ): Promise<DecisionsSource> {
-  const ai = await readAiConfig(orm, secretBox, { mode, environmentKey: settings.openRouterKey });
+  const ai = await aiSettings.read(ctx);
   if (ai.source === "broccoli_ai") {
     return { kind: "broccoli_ai", url: broccoliAiUrlOf(settings) };
   }

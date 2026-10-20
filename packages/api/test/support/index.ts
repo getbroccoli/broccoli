@@ -29,6 +29,7 @@ export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./
 export { TestSeed } from "./testSeed";
 export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
+export { readSavedAiSource } from "./readSavedAiSource";
 export {
   companyUseCases,
   demoUseCases,

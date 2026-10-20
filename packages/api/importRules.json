@@ -5,6 +5,7 @@
       "src/core/env",
       "src/core/instance",
       "src/core/moduleManifest",
+      "src/core/security",
       "src/integrations/ai",
       "src/modules/*"
     ],

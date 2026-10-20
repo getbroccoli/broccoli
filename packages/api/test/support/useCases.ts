@@ -1,5 +1,6 @@
 import type { Decisions } from "../../src/integrations/ai";
 import type { Mode } from "../../src/core/env";
+import { createAiSettings } from "../../src/core/instance";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
@@ -53,9 +54,9 @@ export function systemUseCases(
   return createSystemUseCases({
     orm,
     transact: testTransactor(orm),
-    secretBox: TEST_SECRET_BOX,
     mode,
-    ai: { environmentKey, checkOpenRouterKey, prepareBroccoliAi },
+    aiSettings: createAiSettings({ orm, secretBox: TEST_SECRET_BOX, mode, environmentKey }),
+    ai: { checkOpenRouterKey, prepareBroccoliAi },
   });
 }
 

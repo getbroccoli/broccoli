@@ -1,7 +1,7 @@
 import type { Tx } from "../../../../core/db";
 import { PrincipalSecurityContext } from "../../../../core/security";
 import { type CalendarDate, todayInUtc } from "../../../../utils";
-import { createDemoEmployees, hasEmployees } from "../../../employees";
+import { createDemoEmployees } from "../../../employees";
 import { demoPeople } from "../../domain";
 import { readAvatars } from "./readAvatars";
 
@@ -17,14 +17,10 @@ export async function prepareDemoFill(today: CalendarDate = todayInUtc()): Promi
   const avatars = await readAvatars(people.map(({ key }) => key));
   // Broccoli fills the sample company; the caller's own access was checked before.
   const ctx = PrincipalSecurityContext.system();
-  return async (tx) => {
-    if (await hasEmployees(ctx, tx)) {
-      return;
-    }
-    await createDemoEmployees(
+  return (tx) =>
+    createDemoEmployees(
       ctx,
       tx,
       people.map(({ employee }, index) => ({ employee, avatar: avatars[index]! })),
     );
-  };
 }

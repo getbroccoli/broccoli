@@ -4,7 +4,6 @@ import type { DemoContext } from "./demoContext";
 import { getDemoData } from "./getDemoData";
 
 export { prepareDemoFill } from "./prepareDemoFill";
-export { resetDemoPeople } from "./resetDemoPeople";
 
 /** Everything that can be done with demo data; the adapters call nothing else. */
 export interface DemoUseCases {
