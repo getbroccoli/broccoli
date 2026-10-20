@@ -1,9 +1,9 @@
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
 import { oneReadAtATime } from "./oneReadAtATime";
+import { spawnWithMemoryLimit } from "./spawnWithMemoryLimit";
 
 /** A word PyMuPDF read, in PDF points from the shown page's top-left corner. */
 export interface PdfWord {
@@ -63,9 +63,10 @@ function readInProcess(
 ): Promise<PdfWordPage[] | null> {
   return new Promise((resolve, reject) => {
     signal?.throwIfAborted();
-    const reader = spawn(
-      "/bin/sh",
-      ["-c", `ulimit -d ${MEMORY_LIMIT_MB * 1024} && exec "$@"`, "sh", program!, ...args],
+    const reader = spawnWithMemoryLimit(
+      MEMORY_LIMIT_MB,
+      program!,
+      args,
       // No secrets reach the reader. NumPy, which PyMuPDF loads, otherwise reserves memory for a
       // thread per CPU, past the limit.
       { env: { OPENBLAS_NUM_THREADS: "1" }, stdio: ["pipe", "pipe", "ignore"] },
@@ -85,22 +86,27 @@ function readInProcess(
     const abort = () => finish(() => reject(signal!.reason as Error));
     const timer = setTimeout(() => finish(() => resolve(null)), TIMEOUT_MS);
     signal?.addEventListener("abort", abort, { once: true });
-    reader.stdout.on("data", (chunk: Buffer) => {
+    reader.stdout!.on("data", (chunk: Buffer) => {
       size += chunk.length;
       if (size > MAX_OUTPUT_BYTES) finish(() => resolve(null));
       else chunks.push(chunk);
     });
-    reader.once("error", () => finish(() => resolve(null)));
+    // Without `prlimit` (macOS) a missing program fails to start instead of exiting with 127.
+    reader.once("error", (error: NodeJS.ErrnoException) =>
+      finish(() =>
+        error.code === "ENOENT" ? reject(new PdfWordsUnavailableError()) : resolve(null),
+      ),
+    );
     reader.once("close", (code) =>
       finish(() =>
-        // 127: the shell found no program to run.
+        // 127: prlimit found no program to run.
         code === 127
           ? reject(new PdfWordsUnavailableError())
           : resolve(code === 0 ? parsedPages(Buffer.concat(chunks)) : null),
       ),
     );
-    reader.stdin.on("error", () => {});
-    reader.stdin.end(bytes);
+    reader.stdin!.on("error", () => {});
+    reader.stdin!.end(bytes);
   });
 }
 

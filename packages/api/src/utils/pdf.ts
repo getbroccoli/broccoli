@@ -1,7 +1,7 @@
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 import { oneReadAtATime } from "./oneReadAtATime";
+import { spawnWithMemoryLimit } from "./spawnWithMemoryLimit";
 
 /** A run of text pdf.js drew, in PDF points from the page's bottom-left corner. */
 export interface PdfTextItem {
@@ -49,17 +49,10 @@ function readInProcess(
     signal?.throwIfAborted();
     let pages: PdfPage[] | "encrypted" | null = null;
     // `--jitless`: compiled code reserves memory that counts against the limit, gigabytes of it.
-    const reader = spawn(
-      "/bin/sh",
-      [
-        "-c",
-        `ulimit -d ${MEMORY_LIMIT_MB * 1024} && exec "$@"`,
-        "sh",
-        process.execPath,
-        "--jitless",
-        ...SOURCE_LOADER,
-        fileURLToPath(PROCESS),
-      ],
+    const reader = spawnWithMemoryLimit(
+      MEMORY_LIMIT_MB,
+      process.execPath,
+      ["--jitless", ...SOURCE_LOADER, fileURLToPath(PROCESS)],
       { stdio: ["ignore", "ignore", "ignore", "ipc"], serialization: "advanced" },
     );
     const end = () => {
