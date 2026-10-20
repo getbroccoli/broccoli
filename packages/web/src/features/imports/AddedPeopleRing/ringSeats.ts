@@ -1,5 +1,5 @@
 /** How many people the ring shows at once. */
-export const RING_SEATS = 10;
+export const RING_SEATS = 7;
 
 /**
  * Who sits in each seat after `swaps` swaps: each swap gives the next seat, in turn, to the

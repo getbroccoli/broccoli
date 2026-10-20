@@ -104,6 +104,10 @@ it("enters managed import through gathering people", () => {
   expect(setupStepPage("IMPORT", "MANAGED")).toBe("/setup/import");
 });
 
+it("enters managed ready through the ready page", () => {
+  expect(setupStepPage("READY", "MANAGED")).toBe("/setup/ready");
+});
+
 it.each(["SELF_HOSTED", "MANAGED"] as const)(
   "keeps other setup destinations unchanged in %s",
   (mode) => {

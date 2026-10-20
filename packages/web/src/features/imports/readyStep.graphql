@@ -1,0 +1,15 @@
+query ReadyStep {
+  company {
+    id
+    name
+  }
+  import {
+    id
+    readyEmployeeCount
+    sources {
+      id
+      kind
+      employeeCount
+    }
+  }
+}
