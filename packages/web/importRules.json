@@ -12,19 +12,26 @@
       "src/i18n",
       "src/shell"
     ],
-    "src/shell": ["src/components/ui", "src/features/auth", "src/features/demo", "src/i18n"],
+    "src/shell": [
+      "src/components/ui",
+      "src/features/auth",
+      "src/features/demo",
+      "src/i18n",
+      "src/lib/useSessionChange"
+    ],
     "src/features/auth": [
       "src/components/form",
       "src/components/ui",
       "src/i18n",
-      "src/lib/postJson"
+      "src/lib/postJson",
+      "src/lib/useSessionChange"
     ],
     "src/features/ai": [
       "src/__generated__",
       "src/apollo",
       "src/components/form",
       "src/components/ui",
-      "src/features/imports",
+      "src/features/demo",
       "src/features/setup",
       "src/i18n",
       "src/lib/class-names",
@@ -37,7 +44,7 @@
       "src/components/ui",
       "src/i18n",
       "src/lib/postJson",
-      "src/lib/useRouteAction"
+      "src/lib/useSessionChange"
     ],
     "src/features/employees": [
       "src/__generated__",
@@ -54,6 +61,7 @@
       "src/apollo",
       "src/components/dataTable",
       "src/components/ui",
+      "src/features/demo",
       "src/features/employees",
       "src/features/setup",
       "src/i18n",
@@ -72,7 +80,8 @@
       "src/i18n",
       "src/lib/class-names",
       "src/lib/postJson",
-      "src/lib/useCopyToClipboard"
+      "src/lib/useCopyToClipboard",
+      "src/lib/useSessionChange"
     ],
     "src/components/dataTable": ["src/components/ui", "src/i18n", "src/lib/class-names"],
     "src/components/form": [],
@@ -87,7 +96,8 @@
     "src/__generated__": [],
     "src/styles.css": [],
     "src/lib/initials": [],
-    "src/lib/useRouteAction": []
+    "src/lib/useRouteAction": [],
+    "src/lib/useSessionChange": ["src/lib/useRouteAction"]
   },
   "deepImports": ["src/components/ui", "src/__generated__"]
 }
