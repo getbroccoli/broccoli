@@ -38,6 +38,8 @@ export interface ImportReadService {
   employeeCount(ctx: SecurityContext): Promise<number>;
   /** How many employees Approve would add: the import employees that are ready and not left out. */
   readyEmployeeCount(ctx: SecurityContext): Promise<number>;
+  /** The sources of the employees Approve would add, oldest first. */
+  listReadyEmployeeSources(ctx: SecurityContext): Promise<ImportSource[]>;
   /** The import employees, one page at a time; by name unless ordered otherwise. */
   listEmployees(
     ctx: SecurityContext,
@@ -94,9 +96,16 @@ export function createImportReadService(
 
     readyEmployeeCount: async (ctx: SecurityContext): Promise<number> => {
       requireImportAccess(ctx);
-      const employees = await readImportEmployees(imports);
-      return employees.filter((employee) => !employee.leftOut && toNewEmployee(employee) !== null)
-        .length;
+      return (await readReadyEmployees(imports)).length;
+    },
+
+    listReadyEmployeeSources: async (ctx: SecurityContext): Promise<ImportSource[]> => {
+      requireImportAccess(ctx);
+      const ready = await readReadyEmployees(imports);
+      const sourceIds = new Set(
+        ready.flatMap(({ records }) => records.map((record) => record.sourceId)),
+      );
+      return (await imports.listSources()).filter(({ id }) => sourceIds.has(id));
     },
 
     listEmployees: async (
@@ -145,3 +154,9 @@ export function createImportReadService(
 }
 
 const RECORD_KEYSET = z.tuple([z.uuid()]);
+
+/** The import employees Approve would add: ready and not left out. */
+async function readReadyEmployees(imports: ImportRepository): Promise<ImportEmployee[]> {
+  const employees = await readImportEmployees(imports);
+  return employees.filter((employee) => !employee.leftOut && toNewEmployee(employee) !== null);
+}

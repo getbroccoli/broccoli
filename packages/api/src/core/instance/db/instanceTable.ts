@@ -29,7 +29,10 @@ export const instance = pgTable(
   },
   (table) => [
     check("instance_singleton", sql`${table.id}`),
-    check("instance_setup_step", sql`${table.setupStep} in ('company', 'import', 'owner', 'done')`),
+    check(
+      "instance_setup_step",
+      sql`${table.setupStep} in ('company', 'import', 'owner', 'ready', 'done')`,
+    ),
     check(
       "instance_setup_session",
       sql`num_nonnulls(${table.setupTokenHash}, ${table.setupExpiresAt}) in (0, 2)`,

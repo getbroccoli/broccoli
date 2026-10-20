@@ -1,4 +1,4 @@
-/* The ring turns, and each face flies in from `--ring-from` to its seat. */
+/* The ring turns, each face flies in from `--ring-from` to its seat, and a new face flips in. */
 @keyframes ring-turn {
   to {
     rotate: 360deg;
@@ -9,5 +9,10 @@
     translate: var(--ring-from);
     opacity: 0;
     filter: blur(6px);
+  }
+}
+@keyframes ring-face-flip {
+  from {
+    transform: perspective(240px) rotateY(-180deg);
   }
 }

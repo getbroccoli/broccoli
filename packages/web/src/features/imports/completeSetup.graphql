@@ -1,0 +1,10 @@
+mutation CompleteSetup {
+  setup {
+    complete {
+      setup {
+        id
+        step
+      }
+    }
+  }
+}

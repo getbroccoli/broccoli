@@ -2,11 +2,10 @@ import { expect, it } from "vitest";
 
 import { stepViews } from "./setupSteps";
 
-it("marks owner done and people later while company is current", () => {
+it("marks people and ready later while company is current", () => {
   const steps = stepViews("company", "MANAGED");
 
   expect(steps).toMatchObject([
-    { id: "owner", state: "done" },
     { id: "company", state: "current" },
     {
       id: "people",
@@ -16,6 +15,7 @@ it("marks owner done and people later while company is current", () => {
         { id: "review", state: "later" },
       ],
     },
+    { id: "ready", state: "later" },
   ]);
 });
 
@@ -23,7 +23,6 @@ it("marks people current and earlier steps done while importing", () => {
   const steps = stepViews("import", "MANAGED");
 
   expect(steps).toMatchObject([
-    { id: "owner", state: "done" },
     { id: "company", state: "done" },
     {
       id: "people",
@@ -33,6 +32,7 @@ it("marks people current and earlier steps done while importing", () => {
         { id: "review", state: "later" },
       ],
     },
+    { id: "ready", state: "later" },
   ]);
 });
 
@@ -40,7 +40,6 @@ it("keeps people current with import done while reviewing", () => {
   const steps = stepViews("review", "MANAGED");
 
   expect(steps).toMatchObject([
-    { id: "owner", state: "done" },
     { id: "company", state: "done" },
     {
       id: "people",
@@ -50,6 +49,24 @@ it("keeps people current with import done while reviewing", () => {
         { id: "review", state: "current" },
       ],
     },
+    { id: "ready", state: "later" },
+  ]);
+});
+
+it("marks company and people done while ready is current", () => {
+  const steps = stepViews("ready", "MANAGED");
+
+  expect(steps).toMatchObject([
+    { id: "company", state: "done" },
+    {
+      id: "people",
+      state: "done",
+      pages: [
+        { id: "import", state: "done" },
+        { id: "review", state: "done" },
+      ],
+    },
+    { id: "ready", state: "current" },
   ]);
 });
 

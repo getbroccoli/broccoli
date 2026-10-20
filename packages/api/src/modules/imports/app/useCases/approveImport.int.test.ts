@@ -6,7 +6,7 @@ import { ormOf } from "../../../../core/db";
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
-test("approving creates an employee per ready import employee and completes setup", async ({
+test("approving creates an employee per ready import employee and moves setup to ready", async ({
   orm,
   seed,
 }) => {
@@ -26,7 +26,7 @@ test("approving creates an employee per ready import employee and completes setu
 
   await imports.approveImport(owner);
 
-  expect(await readSetupStep(orm)).toBe("done");
+  expect(await readSetupStep(orm)).toBe("ready");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual(
     expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
@@ -86,7 +86,7 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
 
   await Promise.all([imports.approveImport(owner), imports.approveImport(owner)]);
 
-  expect(await readSetupStep(orm)).toBe("done");
+  expect(await readSetupStep(orm)).toBe("ready");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).toEqual([record!.email]);
 });
@@ -164,7 +164,7 @@ test("approves available records when a failed file is present", async ({ orm, s
 
   await imports.approveImport(owner);
 
-  expect(await readSetupStep(orm)).toBe("done");
+  expect(await readSetupStep(orm)).toBe("ready");
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges.map(({ node }) => node),
   ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);

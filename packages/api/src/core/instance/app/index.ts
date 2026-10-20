@@ -1,4 +1,10 @@
-export { advanceStep, completeImportStep, isImportOpen, readSetupStep } from "./setup";
+export {
+  advanceStep,
+  approveImportStep,
+  completeImportStep,
+  isImportOpen,
+  readSetupStep,
+} from "./setup";
 export { claimOwner, createOwnerAtSetup, hasOwner, readOwner, readOwnerUserId } from "./owner";
 export {
   finishDemo,
