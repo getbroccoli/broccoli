@@ -158,6 +158,19 @@ test("fails the file when its current attempt is exhausted", async ({ orm, seed 
   ]);
 });
 
+test("a failure reported after setup moved on leaves the source mapping", async ({ orm, seed }) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", attempt: 0 });
+  await seed.setupStep("owner");
+  const imports = importUseCases(orm);
+
+  await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
+});
+
 test("a stale failure leaves the source unchanged", async ({ orm, seed }) => {
   const source = await seed.fileSource({ content: "Name\nAvery Stone", attempt: 2 });
   const imports = importUseCases(orm);

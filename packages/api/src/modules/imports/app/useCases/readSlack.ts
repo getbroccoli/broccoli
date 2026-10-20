@@ -1,8 +1,7 @@
-import { isImportOpen } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { mapSlackMembers } from "./mapSlackMembers";
+import { openImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
 import { attachSlackPhotos, readSlackPhotos } from "./slackPhotos";
 
@@ -23,10 +22,9 @@ export async function readSlack(context: ImportContext, ctx: SecurityContext): P
     if (!(await context.slack.isCurrentSlackConnection(ctx, tx, snapshot))) {
       return;
     }
-    const imports = importRepository(tx);
-    await imports.lockSources();
-    // A read that outlived Approve finds the import gone and must not bring it back.
-    if (!(await isImportOpen(tx))) {
+    const imports = await openImport(tx);
+    // A read that outlived Approve finds the import closed and must not bring it back.
+    if (!imports) {
       return;
     }
     const sourceId = await imports.saveSlackSource(workspace.name);

@@ -1,7 +1,7 @@
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import type { Logger } from "../../../../core/logger";
 import type { SlackConnectionService } from "../../../slack";
-import type { ImportRepository } from "../../db";
+import type { ImportReader } from "../../db";
 
 /** What the Slack module offers the import. */
 export type SlackReader = Pick<
@@ -15,7 +15,7 @@ export interface ImportContext {
   transact: Transact;
   logger: Logger;
   slack: SlackReader;
-  imports: ImportRepository;
+  imports: ImportReader;
   /** Now; tests pass their own. */
   clock: () => Date;
   /** Reads what the demo company needs, then returns its fill for the caller's transaction. */

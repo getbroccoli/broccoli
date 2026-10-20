@@ -10,7 +10,7 @@ import { filesRouter, photoRouter } from "./http";
 
 export { createImportUseCases, type ImportUseCases, prepareDemoStart } from "./app";
 /** For test seeding only; other modules go through the use cases. */
-export { importPhotoRepository, importRepository } from "./db";
+export { importPhotoRepository, importReader, lockImport } from "./db";
 export type { ImportEmployeeValues } from "./domain";
 
 /**

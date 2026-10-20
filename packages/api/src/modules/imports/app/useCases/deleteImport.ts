@@ -1,6 +1,6 @@
 import type { Tx } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
+import { lockImport } from "../../db";
 import type { ImportContext } from "./importContext";
 import { requireImportAccess } from "./requireImportAccess";
 
@@ -9,9 +9,7 @@ import { requireImportAccess } from "./requireImportAccess";
  * files, and its photos unless `keepPhotos`, as when Approve gave them to the employees.
  */
 export async function deleteImport(tx: Tx, { keepPhotos }: { keepPhotos: boolean }): Promise<void> {
-  const imports = importRepository(tx);
-  // Callers that hold the instance row keep the instance-then-sources order.
-  await imports.lockSources();
+  const imports = await lockImport(tx);
   await imports.deleteAll({ keepPhotos });
 }
 

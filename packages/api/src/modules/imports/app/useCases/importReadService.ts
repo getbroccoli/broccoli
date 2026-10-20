@@ -8,7 +8,7 @@ import {
   paginate,
 } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
+import { importReader } from "../../db";
 import {
   type ImportEmployeeRecord,
   type ImportProgress,
@@ -38,7 +38,7 @@ export interface ImportReadService {
 }
 
 export function createImportReadService(orm: Orm): ImportReadService {
-  const imports = importRepository(orm);
+  const imports = importReader(orm);
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
       requireImportAccess(ctx);

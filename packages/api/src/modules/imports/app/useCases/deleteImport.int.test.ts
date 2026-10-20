@@ -12,7 +12,7 @@ import {
 
 import { readFile } from "../../../../core/files";
 import { createEmployeeUseCases } from "../../../employees";
-import { importRepository } from "../../db";
+import { importReader } from "../../db";
 
 test("finishing the import deletes its rows and staff files but keeps employee avatars", async ({
   orm,
@@ -43,7 +43,7 @@ test("finishing the import deletes its rows and staff files but keeps employee a
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
   expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
-  expect(await importRepository(orm).listChoices("employee")).toEqual([]);
+  expect(await importReader(orm).listChoices("employee")).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([avatarFileId]);
   expect(await readFile(orm, avatarFileId)).toEqual({ content: PNG, mimeType: "image/png" });
   expect(await employees.listEmployees(OWNER, {})).toEqual(approved);

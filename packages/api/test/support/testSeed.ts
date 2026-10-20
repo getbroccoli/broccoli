@@ -10,13 +10,15 @@ import { instanceRepository } from "../../src/core/instance/db";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import {
   importPhotoRepository,
-  importRepository,
+  importReader,
+  lockImport,
   type ImportEmployeeValues,
 } from "../../src/modules/imports";
 import { slackConnectionRepository } from "../../src/modules/slack";
 import { parseCalendarDate } from "../../src/utils";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { TestSecurityContext } from "./testSecurityContext";
+import { testTransactor } from "./testTransactor";
 
 type SeedEmployee = Partial<
   Omit<NewEmployee, "startDate"> & { startDate: string | null; avatarFileId: string | null }
@@ -117,9 +119,11 @@ export class TestSeed {
   }
 
   async importSource(name = "Acme Workspace") {
-    const repository = importRepository(this.orm);
-    const id = await repository.saveSlackSource(name);
-    const [source] = await repository.findSources([id]);
+    const id = await testTransactor(this.orm)(async (tx) => {
+      const imports = await lockImport(tx);
+      return imports.saveSlackSource(name);
+    });
+    const [source] = await importReader(this.orm).findSources([id]);
     return source!;
   }
 
@@ -138,28 +142,31 @@ export class TestSeed {
     failure?: "no_people_columns" | "unavailable" | null;
     failureMessage?: string | null;
   }) {
-    const repository = importRepository(this.orm);
-    const id = await repository.insertFileSource(name, {
-      content: Buffer.from(content),
-      mimeType:
-        typeof content === "string"
-          ? "text/csv"
-          : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    for (let previous = 0; previous < attempt; previous++) {
-      await repository.finishMapping(id, previous, { status: "failed", failure: "unavailable" });
-      await repository.restartMapping(id);
-    }
-    if (status === "failed") {
-      await repository.finishMapping(id, attempt, {
-        status,
-        failure: failure ?? "unavailable",
-        failureMessage,
+    const id = await testTransactor(this.orm)(async (tx) => {
+      const imports = await lockImport(tx);
+      const id = await imports.insertFileSource(name, {
+        content: Buffer.from(content),
+        mimeType:
+          typeof content === "string"
+            ? "text/csv"
+            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-    } else if (status === "mapped") {
-      await repository.finishMapping(id, attempt, { status });
-    }
-    const [source] = await repository.findSources([id]);
+      for (let previous = 0; previous < attempt; previous++) {
+        await imports.finishMapping(id, previous, { status: "failed", failure: "unavailable" });
+        await imports.restartMapping(id);
+      }
+      if (status === "failed") {
+        await imports.finishMapping(id, attempt, {
+          status,
+          failure: failure ?? "unavailable",
+          failureMessage,
+        });
+      } else if (status === "mapped") {
+        await imports.finishMapping(id, attempt, { status });
+      }
+      return id;
+    });
+    const [source] = await importReader(this.orm).findSources([id]);
     return source!;
   }
 
@@ -170,27 +177,29 @@ export class TestSeed {
       photoUrl?: string | null;
     })[],
   ) {
-    const repository = importRepository(this.orm);
-    await repository.syncEmployeeRecords(
-      sourceId,
-      employees.map(({ externalId, photoUrl, ...values }) => {
-        const number = ++this.#count;
-        return {
-          externalId: externalId ?? `U${number}`,
-          photoUrl,
-          raw: {},
-          values: {
-            firstName: "Employee",
-            lastName: String(number),
-            email: `employee${number}@example.com`,
-            jobTitle: null,
-            startDate: null,
-            ...values,
-          },
-        };
-      }),
-    );
-    const records = await repository.listEmployeeRecords();
+    await testTransactor(this.orm)(async (tx) => {
+      const imports = await lockImport(tx);
+      await imports.syncEmployeeRecords(
+        sourceId,
+        employees.map(({ externalId, photoUrl, ...values }) => {
+          const number = ++this.#count;
+          return {
+            externalId: externalId ?? `U${number}`,
+            photoUrl,
+            raw: {},
+            values: {
+              firstName: "Employee",
+              lastName: String(number),
+              email: `employee${number}@example.com`,
+              jobTitle: null,
+              startDate: null,
+              ...values,
+            },
+          };
+        }),
+      );
+    });
+    const records = await importReader(this.orm).listEmployeeRecords();
     return records.filter((record) => record.sourceId === sourceId);
   }
 
@@ -206,11 +215,14 @@ export class TestSeed {
     recordId: string,
     { photoUrl, content, mimeType }: { photoUrl: string; content: Buffer; mimeType: string },
   ): Promise<string> {
-    const photos = importPhotoRepository(this.orm);
-    if (!(await photos.attachPhoto(recordId, photoUrl, { content, mimeType }))) {
-      throw new Error(`Could not seed the photo of import record ${recordId}`);
-    }
-    const records = await importRepository(this.orm).listEmployeeRecords();
+    await testTransactor(this.orm)(async (tx) => {
+      await lockImport(tx);
+      const photos = importPhotoRepository(tx);
+      if (!(await photos.attachPhoto(recordId, photoUrl, { content, mimeType }))) {
+        throw new Error(`Could not seed the photo of import record ${recordId}`);
+      }
+    });
+    const records = await importReader(this.orm).listEmployeeRecords();
     return records.find(({ id }) => id === recordId)!.photoFileId!;
   }
 }

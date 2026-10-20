@@ -3,7 +3,7 @@ import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { StoredFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
+import { importReader } from "../../db";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
@@ -51,7 +51,7 @@ export function createImportUseCases({
   clock?: () => Date;
   prepareDemoFill: () => Promise<DemoFill>;
 }): ImportUseCases {
-  const imports = importRepository(orm);
+  const imports = importReader(orm);
   const context = { orm, transact, logger, slack, imports, clock, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),

@@ -3,7 +3,7 @@ import { type Connection, type ListArgs, paginate } from "../../../../core/pagin
 import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
 import { type EmployeeOrder, type EmployeeOrderField, findTakenEmails } from "../../../employees";
-import { importRepository } from "../../db";
+import { importReader } from "../../db";
 import {
   groupEmployeeRecords,
   type ImportCheck,
@@ -41,7 +41,7 @@ export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
 
 /** Reads the import's sources, records and choices, and the emails employees already have, joining `db`. */
 export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Promise<ImportReview> {
-  const imports = importRepository(db);
+  const imports = importReader(db);
   const [sources, records, choices] = await Promise.all([
     imports.listSources(),
     imports.listEmployeeRecords(),
