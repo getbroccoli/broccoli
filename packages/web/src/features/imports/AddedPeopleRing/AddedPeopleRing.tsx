@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "r
 import { AddedPeopleRingDocument } from "@/__generated__/graphql";
 import { Avatar } from "@/features/employees";
 
+import "./addedPeopleRing.css";
 import { RING_SEATS, ringSeats } from "./ringSeats";
 
 const RADIUS_PX = 108;
