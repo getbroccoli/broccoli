@@ -1,4 +1,4 @@
-import { Plus, UploadSimple } from "@phosphor-icons/react";
+import { Plus, Terminal, UploadSimple } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 
 import {
@@ -10,7 +10,7 @@ import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
-import { uploadFile, type UploadFileResult } from "../fileApi";
+import type { FileUploader, UploadFileResult } from "../fileApi";
 import { FileSourceCard } from "./FileSourceCard";
 
 const REFUSALS = {
@@ -30,10 +30,26 @@ interface FileSourcesProps {
   onUploaded: () => Promise<unknown>;
   /** Tells whether files are being uploaded, so nothing is approved before they arrive. */
   onUploadingChange: (uploading: boolean) => void;
+  /** Where a dropped file goes: the import, or the owner's agent's masked questions. */
+  uploadFile: FileUploader;
+  /** False while the owner's agent reads the original files itself: nothing is dropped here. */
+  canDrop: boolean;
+  /** Whether the owner's agent reads the files, so a file waiting for it shows no Broccoli action. */
+  agentChosen: boolean;
 }
 
-/** Staff files as sources of people: drop or choose CSV or Excel files, retry or remove them. */
-export function FileSources({ sources, onUploaded, onUploadingChange }: FileSourcesProps) {
+/**
+ * Staff files as sources of people: drop or choose CSV or Excel files, retry or remove them; while
+ * the owner's agent reads the files itself, a pointer to the agent instead of the drop zone.
+ */
+export function FileSources({
+  sources,
+  onUploaded,
+  onUploadingChange,
+  uploadFile,
+  canDrop,
+  agentChosen,
+}: FileSourcesProps) {
   const input = useRef<HTMLInputElement>(null);
   /** The file being uploaded, if any. */
   const [uploading, setUploading] = useState<string | null>(null);
@@ -47,7 +63,7 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
   const alerts = changeFailed ? [...problems, t("imports.files.changeFailed")] : problems;
 
   const upload = async (files: FileList | null) => {
-    if (!files?.length || busy) {
+    if (!files?.length || busy || !canDrop) {
       return;
     }
     onUploadingChange(true);
@@ -105,20 +121,31 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
         aria-label={t("imports.files.choose")}
         onChange={(event) => void upload(event.target.files)}
       />
-      {sources.length === 0 ? (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => input.current?.click()}
-          aria-describedby="import-files-hint"
-          className={`flex w-full flex-col items-center gap-3 rounded-2xl border-[1.5px] border-dashed px-8 py-14 text-center transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 ${dragging ? "border-brand bg-brand-soft/40" : "border-border bg-app-backdrop hover:border-muted-foreground/40"}`}
-        >
-          <span className="flex size-12 items-center justify-center rounded-xl bg-card shadow-[0_1px_2px_rgba(33,30,23,0.06)] ring-1 ring-border">
-            <UploadSimple size={22} aria-hidden />
+      {!canDrop && (
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-app-backdrop px-8 py-10 text-center">
+          <Terminal size={22} aria-hidden />
+          <span className="text-base font-semibold">{t("externalAgents.goToAgent")}</span>
+          <span className="max-w-[52ch] text-sm text-muted-foreground">
+            {t("externalAgents.goToAgentHint")}
           </span>
-          <span className="text-base font-semibold">{t("imports.files.drop")}</span>
-          <span className="text-sm text-muted-foreground">{t("imports.files.dropHint")}</span>
-        </button>
+        </div>
+      )}
+      {sources.length === 0 ? (
+        canDrop && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => input.current?.click()}
+            aria-describedby="import-files-hint"
+            className={`flex w-full flex-col items-center gap-3 rounded-2xl border-[1.5px] border-dashed px-8 py-14 text-center transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 ${dragging ? "border-brand bg-brand-soft/40" : "border-border bg-app-backdrop hover:border-muted-foreground/40"}`}
+          >
+            <span className="flex size-12 items-center justify-center rounded-xl bg-card shadow-[0_1px_2px_rgba(33,30,23,0.06)] ring-1 ring-border">
+              <UploadSimple size={22} aria-hidden />
+            </span>
+            <span className="text-base font-semibold">{t("imports.files.drop")}</span>
+            <span className="text-sm text-muted-foreground">{t("imports.files.dropHint")}</span>
+          </button>
+        )
       ) : (
         <ul
           className={`flex flex-col gap-2.5 rounded-xl ${dragging ? "outline-2 outline-offset-4 outline-brand" : ""}`}
@@ -128,6 +155,7 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
               key={source.id}
               source={source}
               busy={busy}
+              agentChosen={agentChosen}
               // A failure shows through the mutation's `error` or `payloadError`.
               onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
               onRemove={() =>
@@ -137,10 +165,13 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
           ))}
         </ul>
       )}
-      <p id="import-files-hint" className="text-[13px] text-muted-foreground">
-        {t("imports.files.limits")} {t("imports.files.disclosure")}
-      </p>
-      {sources.length > 0 && (
+      {canDrop && (
+        <p id="import-files-hint" className="text-[13px] text-muted-foreground">
+          {t("imports.files.limits")}{" "}
+          {t(agentChosen ? "externalAgents.disclosure" : "imports.files.disclosure")}
+        </p>
+      )}
+      {sources.length > 0 && canDrop && (
         <Button
           type="button"
           variant="outline"
@@ -151,6 +182,9 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
           <Plus aria-hidden />
           {t("imports.files.addMore")}
         </Button>
+      )}
+      {agentChosen && canDrop && (
+        <p className="text-[13px] text-muted-foreground">{t("externalAgents.askToContinue")}</p>
       )}
       <p role="status" className="text-[13px] text-muted-foreground">
         {uploading ? t("imports.files.uploading", { name: uploading }) : ""}

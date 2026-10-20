@@ -1,4 +1,20 @@
 query ImportStep {
+  setup {
+    id
+    ai {
+      id
+      source
+      # The page shows the drop zone for the way of the connected agent or of its waiting code.
+      agent {
+        id
+        way
+      }
+      agentCode {
+        way
+      }
+      ...AgentStatus_ai
+    }
+  }
   slackConnection {
     id
     workspaceName

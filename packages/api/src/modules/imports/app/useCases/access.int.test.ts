@@ -2,7 +2,11 @@ import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 
 import type { SecurityContext } from "../../../../core/security";
 
-type ImportUseCases = Omit<ReturnType<typeof importUseCases>, "sentJobs">;
+// The external agent's operations admit their own callers; their tests check them.
+type ImportUseCases = Omit<
+  ReturnType<typeof importUseCases>,
+  "sentJobs" | "answeredMapping" | "parsedSources"
+>;
 
 /** Every use case by name; a service's as `service.name`, so none can be left out below. */
 type UseCaseName = {
@@ -31,6 +35,8 @@ const calls = {
   "reads.listEmployeeRecords": (imports, ctx) =>
     imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),
   "reads.listChecks": (imports, ctx) => imports.reads.listChecks(ctx),
+  "reads.readVersion": (imports, ctx) => imports.reads.readVersion(ctx),
+  "reads.readSnapshot": (imports, ctx) => imports.reads.readSnapshot(ctx),
   "reads.isImportPhotoFile": (imports, ctx) =>
     imports.reads.isImportPhotoFile(ctx, "0199f6c4-0000-7000-8000-000000000000"),
   "choices.chooseEmployeeValue": (imports, ctx) =>
@@ -42,7 +48,7 @@ const calls = {
   "choices.leaveOutIncomplete": (imports, ctx) =>
     imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
   startDemo: (imports, ctx) => imports.startDemo(ctx),
-  approveImport: (imports, ctx) => imports.approveImport(ctx),
+  approveImport: (imports, ctx) => imports.approveImport(ctx, "any-version"),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
   resetSetup: (imports, ctx) => imports.resetSetup(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;

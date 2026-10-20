@@ -1,4 +1,5 @@
 import {
+  approveReviewedImport,
   type Browser,
   expect,
   signInAsManagedOwner,
@@ -152,16 +153,7 @@ test("returns an approval conflict in the payload while a file is mapping", asyn
   const browser = await env.startSetupAtImport();
   await env.seed.fileSource({ content: CSV.toString(), status: "mapping" });
 
-  const response = await browser.graphql(`
-    mutation {
-      import {
-        approve {
-          import { id }
-          error { __typename ... on Error { message } }
-        }
-      }
-    }
-  `);
+  const response = await approveReviewedImport(browser);
 
   expect(await response.json()).toEqual({
     data: {

@@ -1,14 +1,19 @@
 import express from "express";
 
-import type { Decisions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import { createImportUseCases, type DemoFill, prepareDemoStart, type SlackReader } from "./app";
+import { type DemoFill, type ImportUseCases, prepareDemoStart } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
-export { createImportUseCases, type ImportUseCases } from "./app";
+export {
+  type AnsweredSourceSummary,
+  createImportUseCases,
+  type ImportUseCases,
+  type MappingQuestions,
+} from "./app";
+export { type MappingAnswersInput, parseStaffFileName } from "./domain";
 /** For test seeding only; other modules go through the use cases. */
 export { importPhotoRepository, importRepository } from "./db";
 export type { ImportEmployeeValues } from "./domain";
@@ -18,15 +23,14 @@ export type { ImportEmployeeValues } from "./domain";
  * workspace and uploaded files deliver records, which wait in the import for review.
  */
 export function importsModule(
-  dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs"> & {
-    slack: SlackReader;
-    /** The model that maps files. */
-    decisions: Decisions;
+  dependencies: Pick<ModuleDependencies, "orm"> & {
+    /** Built once by `createModules`, which also gives them to the external agent. */
+    useCases: ImportUseCases;
     /** The demo company that skipping the import fills in. */
     prepareDemoFill: () => Promise<DemoFill>;
   },
 ): ModuleManifest {
-  const useCases = createImportUseCases(dependencies);
+  const { useCases } = dependencies;
   return {
     name: "imports",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),

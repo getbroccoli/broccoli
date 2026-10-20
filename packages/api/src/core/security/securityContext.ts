@@ -18,11 +18,17 @@ export interface SecurityContext {
   /** Whether the browser holding setup calls, before the owner exists; then `user` is null. */
   readonly isSetupHolder: boolean;
 
+  /** The session of the owner's own coding agent that calls, during setup; null for anyone else. */
+  readonly agentSessionId: string | null;
+
   /** Until permissions exist: the owner or Broccoli itself; refuses others with FORBIDDEN. */
   requireOwnerOrSystem(): void;
 
   /** Setup work: the owner, Broccoli itself or the setup holder; refuses others with FORBIDDEN. */
   requireSetupAccess(): void;
+
+  /** The external agent's own work: its session id; refuses everyone else with FORBIDDEN. */
+  requireSetupAgent(): string;
 
   // Planned with the permission system and uncommented with their first caller,
   // together with their types: use cases will ask record scopes and field access
@@ -57,11 +63,15 @@ export interface SignedInUser {
   isOwner: boolean;
 }
 
-/** The security context of a user, the setup holder or Broccoli itself, under today's owner-only rule. */
+/**
+ * The security context of a user, the setup holder, the owner's external agent or Broccoli
+ * itself, under today's owner-only rule.
+ */
 export class PrincipalSecurityContext implements SecurityContext {
   private constructor(
     readonly user: Readonly<SignedInUser> | null,
     readonly isSetupHolder: boolean,
+    readonly agentSessionId: string | null = null,
   ) {}
 
   /** A signed-in user; built by `resolveSecurityContext`. */
@@ -74,13 +84,18 @@ export class PrincipalSecurityContext implements SecurityContext {
     return new PrincipalSecurityContext(null, true);
   }
 
+  /** The owner's external agent during setup, by its session; built by the agent routes. */
+  static setupAgent(sessionId: string): SecurityContext {
+    return new PrincipalSecurityContext(null, false, sessionId);
+  }
+
   /** Broccoli acting on its own: setup, sign-in, init and event handlers. */
   static system(): SecurityContext {
     return new PrincipalSecurityContext(null, false);
   }
 
   get isSystem(): boolean {
-    return this.user === null && !this.isSetupHolder;
+    return this.user === null && !this.isSetupHolder && this.agentSessionId === null;
   }
 
   requireOwnerOrSystem(): void {
@@ -93,6 +108,13 @@ export class PrincipalSecurityContext implements SecurityContext {
     if (!this.isSetupHolder) {
       this.requireOwnerOrSystem();
     }
+  }
+
+  requireSetupAgent(): string {
+    if (this.agentSessionId === null) {
+      throw new ApplicationError("FORBIDDEN", "Only your agent can do this.");
+    }
+    return this.agentSessionId;
   }
 }
 

@@ -56,3 +56,7 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 
 - [ ] At 320px wide the Slack row fits without scrolling sideways, and its text never runs under the buttons, which move to their own line when connected, importing or failed.
 - [ ] Screenshots of `/setup/import` (not connected, connected, with an error, with files; desktop and narrow) go in the pull request description.
+
+## Your own agent
+
+With "Your agent" chosen on Setup AI, the page shows the agent's status above the Slack row; [agent setup](agent-setup.md) checks it.

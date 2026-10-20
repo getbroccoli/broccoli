@@ -20,6 +20,10 @@ export async function saveAiSource(
   if (context.mode === "managed") {
     throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
   }
+  if (source === "agent") {
+    // Choosing the external agent also ends its earlier sessions, which only its module does.
+    throw invalidInput([{ field: "source", code: "invalid" }]);
+  }
   const givenKey = openRouterKey?.trim() || undefined;
   if (source === "openrouter") {
     await checkOpenRouter(context, ctx, givenKey);

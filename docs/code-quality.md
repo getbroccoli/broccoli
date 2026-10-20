@@ -24,6 +24,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE55.** Prefer deep modules to wide ones: a module, service or function hides much work behind a small interface. Callers make one call that does the whole job (`storeFile`), never a series of small steps they must know to run in order; a new need adds work behind the existing interface before it adds another export or parameter.
 - **RULE13.** Reuse existing hooks, helpers and test support. Code that appears twice becomes one shared piece. `lint: jscpd` (outside tests)
 - **RULE14.** A name says what the thing does (`detectCompanyNameAndLogo`, `eventBus`), not where it is used, in the words of [`thesaurus.md`](thesaurus.md).
+- **RULE54.** An enum value says its whole meaning on its own, so a reader understands it without the enum's name or a comment: who or what it is about and what it states (`PARSED_BY_EXTERNAL_AGENT`, `ANSWERED_BY_EXTERNAL_AGENT`, not `PARSED`, `ANSWERS`). Its stored and TypeScript forms say the same (`parsed_by_external_agent`).
 - **RULE15.** Prefer zero-config solutions and modules: they work without setup, and every setting has a safe default.
 
 ## Layers and place

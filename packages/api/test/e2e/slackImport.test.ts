@@ -1,3 +1,4 @@
+import { approveReviewedImport } from "#test/support";
 import { connectAndReadSlack, expect, slackAuthorization, slackTest as test } from "#test/support";
 
 test("connecting redirects the owner to the relay with an OAuth cookie and callback URL", async ({
@@ -261,9 +262,9 @@ test("approving creates the Slack members as employees once and moves setup to r
     setup { step }
   }`;
 
-  expect(await (await browser.graphql(APPROVE)).json()).toEqual(APPROVED);
+  expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
   const approved: unknown = await (await browser.graphql(people)).json();
-  expect(await (await browser.graphql(APPROVE)).json()).toEqual(APPROVED);
+  expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
 
   expect(approved).toEqual({
     data: {
@@ -311,7 +312,7 @@ test("review counts only complete Slack members and Approve adds exactly those m
     },
   });
 
-  expect(await (await browser.graphql(APPROVE)).json()).toEqual(APPROVED);
+  expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
   const people = await browser.graphql(
     `query { employees(first: 100, orderBy: { field: EMAIL, direction: ASC }) { edges { node { email } } } }`,
   );
@@ -330,5 +331,3 @@ const READ_SLACK =
   "mutation { import { readSlack { import { id } error { __typename ... on Error { message } } } } }";
 const SAVE_COMPANY =
   'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }';
-const APPROVE =
-  "mutation { import { approve { import { id } error { __typename ... on Error { message } } } } }";

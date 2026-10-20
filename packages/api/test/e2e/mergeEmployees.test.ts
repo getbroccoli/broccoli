@@ -1,4 +1,5 @@
 import {
+  approveReviewedImport,
   type Browser,
   connectAndReadSlack,
   expect,
@@ -119,7 +120,7 @@ test("merges Slack and a CSV and approves one employee with the bulk-picked Slac
   expect(await picked.json()).toEqual({
     data: { import: { chooseSourceForAll: { import: { id: "import" } } } },
   });
-  expect(await (await browser.graphql(APPROVE)).json()).toEqual(APPROVED);
+  expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
   expect(await (await browser.graphql(DIRECTORY)).json()).toEqual({
     data: {
       employees: {
@@ -181,7 +182,7 @@ test("fixes a CSV row’s last name, leaves another row out and approves only th
   expect(await leftOut.json()).toEqual({
     data: { import: { setEmployeeLeftOut: { import: { id: "import" } } } },
   });
-  expect(await (await browser.graphql(APPROVE)).json()).toEqual(APPROVED);
+  expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
 
   expect(await (await browser.graphql(DIRECTORY)).json()).toEqual({
     data: {
@@ -228,8 +229,6 @@ test("returns a typed bad email as an InvalidInputError naming value", async ({ 
 
 const SAVE_COMPANY =
   'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } } }';
-const APPROVE =
-  "mutation { import { approve { import { id } error { __typename ... on Error { message } } } } }";
 const APPROVED = { data: { import: { approve: { import: { id: "import" }, error: null } } } };
 const DIRECTORY =
   "query { employees(orderBy: { field: EMAIL, direction: ASC }) { edges { node { firstName lastName email jobTitle } } } }";

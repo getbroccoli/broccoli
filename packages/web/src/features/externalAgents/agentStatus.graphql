@@ -1,0 +1,29 @@
+fragment AgentStatus_ai on Ai {
+  id
+  agent {
+    id
+    client
+    way
+    connectedAt
+    lastCallAt
+    expiresAt
+  }
+  agentCode {
+    way
+    expiresAt
+  }
+}
+
+mutation DisconnectAgent {
+  setup {
+    disconnectAgent {
+      setup {
+        id
+        ai {
+          id
+          ...AgentStatus_ai
+        }
+      }
+    }
+  }
+}

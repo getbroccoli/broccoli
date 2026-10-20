@@ -29,8 +29,12 @@ export const MAX_TOKENS = 2000;
  * prototype: Apollo Server copies the context's own properties for each operation.
  */
 export class GraphqlContext {
-  /** The signed-in user's security context, or null without a session. */
-  constructor(readonly security: SecurityContext | null) {}
+  constructor(
+    /** The signed-in user's security context, or null without a session. */
+    readonly security: SecurityContext | null,
+    /** The request's `Origin`, the browser's own address; null without one. */
+    readonly origin: string | null = null,
+  ) {}
 
   /**
    * The security context to pass to a use case; throws `UNAUTHENTICATED` without a
@@ -105,12 +109,19 @@ export function createContext(resolveSecurity: SecurityResolver) {
     req: { headers: IncomingHttpHeaders };
     res: ServerResponse;
   }): Promise<GraphqlContext> => {
+    // A bearer token belongs to the external agent, which GraphQL never serves, not even its public fields.
+    if (req.headers.authorization !== undefined) {
+      throw new GraphQLError("Sign in to continue.", {
+        extensions: { code: "UNAUTHENTICATED", http: { status: 401 } },
+      });
+    }
     try {
       const { security, renewedCookies } = await resolveSecurity(req.headers);
       if (renewedCookies.length > 0) {
         res.appendHeader("Set-Cookie", renewedCookies);
       }
-      return new GraphqlContext(security);
+      const { origin } = req.headers;
+      return new GraphqlContext(security, typeof origin === "string" ? origin : null);
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass
       // through as a request error; the code marks this one as internal.

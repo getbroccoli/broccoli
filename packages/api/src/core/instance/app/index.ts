@@ -20,3 +20,9 @@ export { assignInstance, readAssignment } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
 export { createAiSettings, type AiSettings } from "./aiSettings";
 export { createBroccoliAiTokens } from "./broccoliAiTokens";
+export {
+  chooseAgentSource,
+  lockAgentChoice,
+  lockSetupOpenToAgent,
+  readSetupOpenToAgent,
+} from "./externalAgent";

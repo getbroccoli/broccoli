@@ -19,7 +19,7 @@ import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
 import { Readiness } from "./readiness";
 import { createSecretBox, ensureSecret } from "./secrets";
-import { resolveSecurityContext } from "./sessionSecurity";
+import { refuseBearerAuth, resolveSecurityContext } from "./sessionSecurity";
 
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;
@@ -92,6 +92,7 @@ export async function startServer(
   }
   try {
     app.use(healthRouter(readiness, deploymentParts.initStatus));
+    app.use("/api/auth", refuseBearerAuth);
     if (deploymentParts.router) {
       app.use(deploymentParts.router);
     }

@@ -7,6 +7,7 @@ import {
   FileSourceCard_SourceFragmentDoc,
   type FileSourceCard_SourceFragment,
   type ImportSourceFailure,
+  type ImportSourceReader,
 } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { t } from "@/i18n";
+import { type MessageKey, t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 const FAILURE_MESSAGES = {
@@ -37,6 +38,8 @@ interface FileSourceCardProps {
   source: FragmentType<FileSourceCard_SourceFragment>;
   /** While another change to the files runs. */
   busy: boolean;
+  /** Whether the owner's agent reads the files; else a file still waiting for it can go to Broccoli. */
+  agentChosen: boolean;
   onRetry: () => void;
   onRemove: () => void;
 }
@@ -45,6 +48,7 @@ interface FileSourceCardProps {
 export function FileSourceCard({
   source: sourceRef,
   busy,
+  agentChosen,
   onRetry,
   onRemove,
 }: FileSourceCardProps) {
@@ -55,6 +59,13 @@ export function FileSourceCard({
   // The query that listed this file has just written the fragment, so it is complete.
   if (!complete) return null;
   const failed = source.status === "FAILED";
+  // Retry asks Broccoli's model: again for its own file, instead of the agent for a waiting one.
+  const canRetry =
+    source.readBy === "PARSED_BY_BROCCOLI"
+      ? failed
+      : source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+        source.status === "MAPPING" &&
+        !agentChosen;
   const FileIcon = source.name.toLowerCase().endsWith(".xlsx") ? FileXls : FileCsv;
   return (
     <li className="flex min-h-[68px] items-center gap-3.5 rounded-xl border border-border bg-card px-4 py-3">
@@ -89,9 +100,9 @@ export function FileSourceCard({
           </Link>
         )}
       </div>
-      {failed && (
+      {canRetry && (
         <Button type="button" variant="outline" disabled={busy} onClick={onRetry}>
-          {t("imports.files.retry")}
+          {t(failed ? "imports.files.retry" : "imports.files.readWithBroccoli")}
         </Button>
       )}
       {source.status === "MAPPED" && (
@@ -127,14 +138,28 @@ function statusLine({
   failure,
   failureMessage,
   employeeCount,
+  readBy,
 }: FileSourceCard_SourceFragment): string {
   if (status === "MAPPING") {
-    return t("imports.files.mapping");
+    return t(
+      readBy === "ANSWERED_BY_EXTERNAL_AGENT"
+        ? "imports.files.waitingForAgent"
+        : "imports.files.mapping",
+    );
   }
   if (status === "FAILED") {
     return failureMessage ?? t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
   }
-  return employeeCount === 1
-    ? t("imports.files.onePerson")
-    : t("imports.files.people", { count: String(employeeCount) });
+  const people =
+    employeeCount === 1
+      ? t("imports.files.onePerson")
+      : t("imports.files.people", { count: String(employeeCount) });
+  return READ_BY_AGENT[readBy] ? `${people} · ${t(READ_BY_AGENT[readBy])}` : people;
 }
+
+/** How a mapped file names the agent that read it. */
+const READ_BY_AGENT = {
+  PARSED_BY_BROCCOLI: null,
+  ANSWERED_BY_EXTERNAL_AGENT: "imports.files.mappedByAgent",
+  PARSED_BY_EXTERNAL_AGENT: "imports.files.parsedByAgent",
+} as const satisfies Record<ImportSourceReader, MessageKey | null>;

@@ -89,3 +89,33 @@ it("refuses a non-owner access to setup", () => {
     }),
   );
 });
+
+it("identifies a setup agent by its session without system privileges", () => {
+  const ctx = PrincipalSecurityContext.setupAgent("agent-session");
+
+  expect(ctx.requireSetupAgent()).toBe("agent-session");
+  expect(ctx.agentSessionId).toBe("agent-session");
+  expect(ctx.user).toBeNull();
+  expect(ctx.isSystem).toBe(false);
+  expect(ctx.isSetupHolder).toBe(false);
+});
+
+it.each(["requireSetupAccess", "requireOwnerOrSystem"] as const)(
+  "%s refuses a setup agent",
+  (access) => {
+    const ctx = PrincipalSecurityContext.setupAgent("agent-session");
+
+    expect(() => ctx[access]()).toThrowError(expect.objectContaining({ code: "FORBIDDEN" }));
+  },
+);
+
+it.each([
+  PrincipalSecurityContext.system(),
+  PrincipalSecurityContext.setupHolder(),
+  PrincipalSecurityContext.user({ userId: "owner", email: "owner@example.com", isOwner: true }),
+  PrincipalSecurityContext.user({ userId: "other", email: "other@example.com", isOwner: false }),
+])("refuses agent access to a caller without an agent session", (ctx) => {
+  expect(() => ctx.requireSetupAgent()).toThrowError(
+    expect.objectContaining({ code: "FORBIDDEN", message: "Only your agent can do this." }),
+  );
+});

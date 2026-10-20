@@ -1,4 +1,4 @@
-import { expect, test, TEST_OWNER, WEBP } from "#test/support";
+import { approveReviewedImport, expect, test, TEST_OWNER, WEBP } from "#test/support";
 
 test("skipping import fills the directory and serves demo avatars", async ({ env }) => {
   const browser = env.browser();
@@ -94,9 +94,7 @@ test("finishing setup by approving an empty import leaves the directory without 
   expect((await browser.post("/api/auth/setup/start", undefined)).status).toBe(200);
   await browser.graphql(saveCompany);
 
-  const approved = await browser.graphql(`mutation {
-    import { approve { import { id } error { __typename ... on Error { message } } } }
-  }`);
+  const approved = await approveReviewedImport(browser);
   expect(await approved.json()).toEqual({
     data: { import: { approve: { import: { id: "import" }, error: null } } },
   });

@@ -11,15 +11,8 @@ import nl from "./words/nl.json" with { type: "json" };
  * passes as itself only when it is blank or a boolean; inside one, heading and job words stay.
  */
 export function withPlaceholders(state: JsonObject): JsonObject {
-  const strings = collectStrings(state);
-  const emails = new Set(
-    strings
-      .flatMap(tokensOf)
-      .filter(isEmail)
-      .map((email) => email.toLowerCase()),
-  );
-  const emailDomains = countOf([...emails].map(domainOf));
   const emailNumbers = new Map<string, number>();
+  const domainNumbers = new Map<string, number>();
   const rewrite = (value: string): string => {
     if (passesAsItself(value)) {
       return value;
@@ -27,16 +20,13 @@ export function withPlaceholders(state: JsonObject): JsonObject {
     return tokensOf(value)
       .map((token) =>
         isEmail(token)
-          ? emailPlaceholder(token, emailNumbers, emailDomains)
+          ? emailPlaceholder(token, emailNumbers, domainNumbers)
           : wordPlaceholder(token),
       )
       .join("");
   };
   return mapStrings(state, rewrite) as JsonObject;
 }
-
-/** An email domain shared by this many distinct addresses is the company's, not a person's. */
-const MIN_SHARED = 3;
 
 /**
  * Per language, lower case: booleans pass whole; heading and job-title words pass inside a
@@ -67,16 +57,6 @@ const HEADING_WORDS = new Set(
   LANGUAGES.flatMap(({ headings, jobTitles }) => [...headings, ...jobTitles]),
 );
 
-function collectStrings(value: Json): string[] {
-  if (typeof value === "string") {
-    return [value];
-  }
-  if (value === null || typeof value !== "object") {
-    return [];
-  }
-  return Object.values(value).flatMap(collectStrings);
-}
-
 function mapStrings(value: Json, rewrite: (value: string) => string): Json {
   if (typeof value === "string") {
     return rewrite(value);
@@ -90,14 +70,6 @@ function mapStrings(value: Json, rewrite: (value: string) => string): Json {
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => [key, mapStrings(item, rewrite)]),
   );
-}
-
-function countOf(values: string[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const value of values) {
-    counts.set(value, (counts.get(value) ?? 0) + 1);
-  }
-  return counts;
 }
 
 function passesAsItself(value: string): boolean {
@@ -120,19 +92,28 @@ function domainOf(email: string): string {
   return email.slice(email.lastIndexOf("@") + 1).toLowerCase();
 }
 
-/** `person<N>@<domain>`, N by distinct email; the domain stays only when it names no one. */
+/**
+ * `person<N>@<domain>`, N by distinct email. A public mail domain stays, telling a personal
+ * address apart; any other becomes `company<M>.example`, M by distinct domain, so addresses that
+ * share a domain still share it, while the domain itself, which can carry a name or any text, goes.
+ */
 function emailPlaceholder(
   email: string,
   numbers: Map<string, number>,
-  domains: Map<string, number>,
+  domainNumbers: Map<string, number>,
 ): string {
-  const key = email.toLowerCase();
+  const domain = domainOf(email);
+  return `person${numberOf(email.toLowerCase(), numbers)}@${
+    PUBLIC_MAIL_DOMAINS.has(domain) ? domain : `company${numberOf(domain, domainNumbers)}.example`
+  }`;
+}
+
+/** The number of `key` in order of first appearance, from 1. */
+function numberOf(key: string, numbers: Map<string, number>): number {
   if (!numbers.has(key)) {
     numbers.set(key, numbers.size + 1);
   }
-  const domain = domainOf(email);
-  const sharedDomain = (domains.get(domain) ?? 0) >= MIN_SHARED || PUBLIC_MAIL_DOMAINS.has(domain);
-  return `person${numbers.get(key)}@${sharedDomain ? domain : "example.com"}`;
+  return numbers.get(key)!;
 }
 
 const DATE = /^\d+([./-])\d+(\1\d+)?$/;

@@ -1,0 +1,66 @@
+type Ai {
+  "The owner's connected external agent; null when none is."
+  agent: AgentConnection
+  "The agent one-time code waiting to be exchanged, without its secret; null when none waits."
+  agentCode: PendingAgentCode
+}
+
+"An agent one-time code shown earlier and not yet used: its way and deadline, never the code."
+type PendingAgentCode {
+  way: AgentWay!
+  expiresAt: DateTime!
+}
+
+"How the owner's external agent may work, chosen per agent one-time code."
+enum AgentWay {
+  "It answers Broccoli's masked questions about the files the owner drops; it never gets a file."
+  ANSWERS_MASKED_QUESTIONS
+  "It reads the original files itself and sends their people."
+  PARSES_ORIGINAL_FILES
+}
+
+"The owner's external agent connected to setup. One at a time."
+type AgentConnection {
+  "Always `agent`: one at a time."
+  id: ID!
+  "The name the agent gave itself; not proof of what it is."
+  client: String!
+  way: AgentWay!
+  connectedAt: DateTime!
+  lastCallAt: DateTime
+  "When its session ends, two hours after it connected."
+  expiresAt: DateTime!
+}
+
+"An agent one-time code: the secret in the sentence the owner pastes into their agent."
+type AgentCode {
+  "Shown once; only its hash is stored."
+  code: String!
+  way: AgentWay!
+  expiresAt: DateTime!
+}
+
+type SetupMutations {
+  "Reads files with the owner's own external agent from now on, ending any agent session. Self-hosted, at the import step, before the owner exists; owner or setup holder."
+  chooseAgent: SetupChooseAgentPayload!
+  "A new agent one-time code for this way, valid once for two hours, ending any agent session and earlier code. Refused with a ConflictError unless the agent is chosen, and on a browser address other than https or this computer."
+  createAgentCode(way: AgentWay!): SetupCreateAgentCodePayload!
+  "Ends the agent's session and any unused code; its next call is refused."
+  disconnectAgent: SetupMutationPayload!
+}
+
+"Setup after choosing the external agent, or why it was refused."
+type SetupChooseAgentPayload {
+  setup: Setup
+  error: SetupChooseAgentError
+}
+
+union SetupChooseAgentError = ConflictError
+
+"The new agent one-time code, or why none was made."
+type SetupCreateAgentCodePayload {
+  agentCode: AgentCode
+  error: SetupCreateAgentCodeError
+}
+
+union SetupCreateAgentCodeError = ConflictError

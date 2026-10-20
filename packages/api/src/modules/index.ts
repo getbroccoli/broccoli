@@ -11,7 +11,8 @@ import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest"
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { employeesModule } from "./employees";
-import { importsModule } from "./imports";
+import { externalAgentsModule } from "./externalAgents";
+import { createImportUseCases, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
@@ -41,6 +42,14 @@ export function createModules(
     readSource: () => decisionsSource(system, aiSettings, ai),
     tokens: { read: () => tokens.read(system), save: (token) => tokens.save(system, token) },
   });
+  const prepareImportDemoFill = () => prepareDemoFill();
+  // Built once: the import serves them and the external agent puts its files through them.
+  const importUseCases = createImportUseCases({
+    ...core,
+    slack: slackConnection,
+    decisions,
+    prepareDemoFill: prepareImportDemoFill,
+  });
   return [
     systemModule({
       ...core,
@@ -56,11 +65,11 @@ export function createModules(
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule({ slackConnection, orm: core.orm, mode, publicUrl }),
     importsModule({
-      ...core,
-      slack: slackConnection,
-      decisions,
-      prepareDemoFill: () => prepareDemoFill(),
+      orm: core.orm,
+      useCases: importUseCases,
+      prepareDemoFill: prepareImportDemoFill,
     }),
+    externalAgentsModule({ ...core, mode, imports: importUseCases }),
   ];
 }
 
@@ -71,6 +80,10 @@ async function decisionsSource(
   settings: ModuleSettings["ai"],
 ): Promise<DecisionsSource> {
   const ai = await aiSettings.read(ctx);
+  if (ai.source === "agent") {
+    // The owner's external agent answers its files itself; an older file's job has no model.
+    throw new DecisionsError("The external agent reads the files", false);
+  }
   if (ai.source === "broccoli_ai") {
     return { kind: "broccoli_ai", url: broccoliAiUrlOf(settings) };
   }

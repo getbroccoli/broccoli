@@ -1,4 +1,4 @@
-import { and, count, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, notInArray, or, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import {
@@ -8,6 +8,7 @@ import {
   type ImportEmployeeRecord,
   type FileSource,
   type ImportSource,
+  type ImportSourceReader,
   type IncomingRecord,
   type MappingOutcome,
   parseImportEmployeeChoices,
@@ -21,8 +22,12 @@ import { importSources } from "./importSourcesTable";
 export interface ImportRepository {
   /** Creates the Slack source or renames it, marks it read now and returns its id. */
   saveSlackSource(name: string): Promise<string>;
-  /** Adds an uploaded file as a source waiting for its first mapping run; returns its id. */
-  insertFileSource(name: string, fileId: string): Promise<string>;
+  /**
+   * Adds a file as a source and returns its id: an uploaded one waits to be mapped, by Broccoli's
+   * first mapping run or by the external agent's answers; one the agent parsed, without a stored
+   * file, is mapped at once.
+   */
+  insertFileSource(name: string, readBy: ImportSourceReader, fileId?: string): Promise<string>;
   /** The file source with this id, or null when there is none. */
   findFileSource(id: string): Promise<FileSource | null>;
   /**
@@ -30,7 +35,10 @@ export interface ImportRepository {
    * whether it did. A late run, or one of a removed source, changes nothing.
    */
   finishMapping(id: string, attempt: number, outcome: MappingOutcome): Promise<boolean>;
-  /** Starts the next mapping run of a failed file source; returns its attempt, or null. */
+  /**
+   * Starts Broccoli's next mapping run of a file it failed to map, or of a file still waiting for
+   * the external agent's answers; returns its attempt, or null for any other source.
+   */
   restartMapping(id: string): Promise<number | null>;
   /** Deletes a file source and its records; returns its file's id, or null when there is none. */
   deleteFileSource(id: string): Promise<string | null>;
@@ -91,10 +99,11 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return row!.id;
     },
 
-    insertFileSource: async (name: string, fileId: string): Promise<string> => {
+    insertFileSource: async (name, readBy, fileId): Promise<string> => {
+      const status = readBy === "parsed_by_external_agent" ? "mapped" : "mapping";
       const [row] = await orm()
         .insert(importSources)
-        .values({ kind: "file", name, fileId, status: "mapping" })
+        .values({ kind: "file", name, readBy, fileId, status })
         .returning({ id: importSources.id });
       return row!.id;
     },
@@ -108,7 +117,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         })
         .from(importSources)
         .where(and(eq(importSources.id, id), eq(importSources.kind, "file")));
-      return row ? { ...row, fileId: row.fileId! } : null;
+      return row ?? null;
     },
 
     finishMapping: async (
@@ -142,13 +151,22 @@ export function importRepository(db: Orm | Tx): ImportRepository {
           status: "mapping",
           failure: null,
           failureMessage: null,
+          readBy: "parsed_by_broccoli",
           mappingAttempt: sql`${importSources.mappingAttempt} + 1`,
         })
         .where(
           and(
             eq(importSources.id, id),
-            eq(importSources.kind, "file"),
-            eq(importSources.status, "failed"),
+            or(
+              and(
+                eq(importSources.readBy, "parsed_by_broccoli"),
+                eq(importSources.status, "failed"),
+              ),
+              and(
+                eq(importSources.readBy, "answered_by_external_agent"),
+                eq(importSources.status, "mapping"),
+              ),
+            ),
           ),
         )
         .returning({ mappingAttempt: importSources.mappingAttempt });
@@ -327,6 +345,7 @@ const sourceColumns = {
   status: importSources.status,
   failure: importSources.failure,
   failureMessage: importSources.failureMessage,
+  readBy: importSources.readBy,
 };
 
 function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployeeRecord {

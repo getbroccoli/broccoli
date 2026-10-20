@@ -34,7 +34,7 @@ test("a self-hosted CSV uses Broccoli AI with an install token and placeholders"
   }
   const sent = JSON.stringify(relay.requests());
   expect(sent).toContain("Xxxxx Xxxxx");
-  expect(sent).toContain("person1@example.com");
+  expect(sent).toContain("person1@company1.example");
   expect(sent).not.toContain("Avery");
   expect(sent).not.toContain("Stone");
   expect(sent).not.toContain("avery@example.com");

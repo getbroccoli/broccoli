@@ -20,8 +20,13 @@ export async function resolveSecurityContext(
 ): Promise<RequestSecurity> {
   const auth = await authSource.current();
   // A managed instance waiting for init has no auth, so nobody is signed in. A page on
-  // another origin gets no authority from the browser's cookies.
-  if (!auth || isCrossOrigin(requestHeaders, auth.options.baseURL)) {
+  // another origin gets no authority from the browser's cookies, nor does a request carrying
+  // the external agent's bearer token, which only the agent routes read.
+  if (
+    !auth ||
+    isCrossOrigin(requestHeaders, auth.options.baseURL) ||
+    requestHeaders.authorization !== undefined
+  ) {
     return { security: null, renewedCookies: [] };
   }
   // Better Auth answers a request without a session cookie without a query.

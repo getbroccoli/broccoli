@@ -87,6 +87,13 @@ export class TestSeed {
     return file!.id;
   }
 
+  async agentSetup(): Promise<void> {
+    const instance = instanceRepository(this.orm);
+    await instance.advanceStep("company", "import");
+    await this.setupSession({ expiresAt: new Date("2026-10-23T12:00:00Z") });
+    await instance.storeAiSource("agent");
+  }
+
   employee({
     startDate = null,
     avatarFileId = null,
@@ -118,6 +125,7 @@ export class TestSeed {
     attempt = 0,
     failure = null,
     failureMessage = null,
+    readBy = "parsed_by_broccoli",
   }: {
     name?: string;
     content: string | Uint8Array;
@@ -125,6 +133,7 @@ export class TestSeed {
     attempt?: number;
     failure?: "no_people_columns" | "unavailable" | null;
     failureMessage?: string | null;
+    readBy?: "parsed_by_broccoli" | "answered_by_external_agent";
   }) {
     const fileId = await this.file({
       content: Buffer.from(content),
@@ -134,7 +143,7 @@ export class TestSeed {
           : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     const repository = importRepository(this.orm);
-    const id = await repository.insertFileSource(name, fileId);
+    const id = await repository.insertFileSource(name, readBy, fileId);
     for (let previous = 0; previous < attempt; previous++) {
       await repository.finishMapping(id, previous, { status: "failed", failure: "unavailable" });
       await repository.restartMapping(id);

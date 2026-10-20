@@ -2,6 +2,7 @@ export {
   type ColumnMapping,
   columnQuestions,
   headerQuestion,
+  inSheet,
   readColumnMapping,
   readFileRecords,
   readHeaderRow,
@@ -37,11 +38,17 @@ export {
   toNewEmployee,
   toNewEmployeeInput,
 } from "./importEmployeeMapping";
+export { importVersion } from "./importVersion";
+export { type MappingAnswersInput, parseMappingAnswers } from "./mappingAnswers";
+export { parseParsedFileName, parseStaffFileName } from "./fileName";
+export { parseParsedPeople } from "./parsedPeople";
 export {
   IMPORT_SOURCE_FAILURES,
+  IMPORT_SOURCE_READERS,
   type FileSource,
   type ImportSource,
   type ImportSourceFailure,
+  type ImportSourceReader,
   type MappingOutcome,
 } from "./importSource";
 export { nonBlank, parseEmail, splitFullName } from "./personValues";

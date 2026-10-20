@@ -81,7 +81,6 @@ export const setupEn = {
   "setup.ai.replace": "Replace",
   "setup.ai.agent": "Your agent",
   "setup.ai.agentHint": "Let Claude Code, Codex or another agent do the setup.",
-  "setup.ai.comingSoon": "Coming soon",
   "setup.ai.privacy":
     "To read the columns, the AI sees the first rows of each file with names, emails and other personal details replaced by placeholders. It keeps nothing.",
   "setup.ai.demo": "Demo data",
@@ -207,6 +206,8 @@ export const setupEn = {
   "setup.review.approving": "Adding people…",
   "setup.review.reading": "Reading your files…",
   "setup.review.approveFailed": "Couldn’t add your people. Try again.",
+  "setup.review.peopleChanged":
+    "Your people changed while you were reviewing. Check them, then add them again.",
   "setup.review.leftOutCount": "{count} left out.",
   "setup.review.incomplete":
     "{count} people won’t be added: they are missing a name or work email.",

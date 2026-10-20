@@ -1,12 +1,10 @@
-import { expect, test } from "#test/support";
+import { approveReviewedImport, expect, test } from "#test/support";
 
 test("the setup holder resets the account step through the import mutation", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   const source = await env.seed.importSource();
   await env.seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
-  const approval = await browser.graphql(`mutation {
-    import { approve { import { id } error { __typename ... on Error { message } } } }
-  }`);
+  const approval = await approveReviewedImport(browser);
   expect(await approval.json()).toEqual({
     data: { import: { approve: { import: { id: "import" }, error: null } } },
   });

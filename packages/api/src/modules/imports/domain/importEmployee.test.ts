@@ -243,6 +243,7 @@ const mapped = {
   status: "mapped",
   failure: null,
   failureMessage: null,
+  readBy: "parsed_by_broccoli",
 } as const;
 
 const row: ImportEmployeeRecord = {

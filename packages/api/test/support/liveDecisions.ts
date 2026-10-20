@@ -42,17 +42,7 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   const server = await startSimpleHttpServer(app);
   return {
     decisions: createDecisions({ endpoint: `${server.url}/alpha/decisions`, credential: apiKey }),
-    leaked: (forbidden) => {
-      const texts = sentBodies.map((body) => stringsOf(JSON.parse(body)).join("\n"));
-      return forbidden.filter((value) => {
-        const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const word = new RegExp(
-          `(?<![\\p{L}\\p{M}\\p{N}_])${escaped}(?![\\p{L}\\p{M}\\p{N}_])`,
-          "iu",
-        );
-        return texts.some((text) => word.test(text));
-      });
-    },
+    leaked: (forbidden) => leakedValues(sentBodies, forbidden),
     requests: () => sentBodies.map((body) => JSON.parse(body) as unknown),
     cost: () => cost,
     stop: () => {
@@ -62,7 +52,27 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   };
 }
 
-const OPENROUTER_URL = "https://openrouter.ai/api";
+export const OPENROUTER_URL = "https://openrouter.ai/api";
+
+/** Forbidden values found as whole words in any JSON body's keys or values, ignoring case. */
+export function leakedValues(bodies: readonly string[], forbidden: readonly string[]): string[] {
+  const texts = bodies.map((body) => stringsOf(JSON.parse(body)).join("\n"));
+  return forbidden.filter((value) => {
+    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const word = new RegExp(`(?<![\\p{L}\\p{M}\\p{N}_])${escaped}(?![\\p{L}\\p{M}\\p{N}_])`, "iu");
+    return texts.some((text) => word.test(text));
+  });
+}
+
+/** What an OpenRouter answer cost, in US dollars, as it reports it; 0 when it does not. */
+export function readCost(answer: string): number {
+  try {
+    const cost = (JSON.parse(answer) as { usage?: { cost?: unknown } }).usage?.cost;
+    return typeof cost === "number" ? cost : 0;
+  } catch {
+    return 0;
+  }
+}
 
 /** Every key and string value, so a value is matched as the model reads it, not as JSON escapes it. */
 function stringsOf(value: unknown): string[] {
@@ -76,13 +86,4 @@ function stringsOf(value: unknown): string[] {
     ...(Array.isArray(value) ? [] : [key]),
     ...stringsOf(item),
   ]);
-}
-
-function readCost(answer: string): number {
-  try {
-    const cost = (JSON.parse(answer) as { usage?: { cost?: unknown } }).usage?.cost;
-    return typeof cost === "number" ? cost : 0;
-  } catch {
-    return 0;
-  }
 }

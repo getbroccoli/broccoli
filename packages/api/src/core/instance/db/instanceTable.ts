@@ -37,7 +37,7 @@ export const instance = pgTable(
       "instance_setup_session",
       sql`num_nonnulls(${table.setupTokenHash}, ${table.setupExpiresAt}) in (0, 2)`,
     ),
-    check("instance_ai_source", sql`${table.aiSource} in ('broccoli_ai', 'openrouter')`),
+    check("instance_ai_source", sql`${table.aiSource} in ('broccoli_ai', 'openrouter', 'agent')`),
     check(
       "instance_managed_assignment",
       sql`num_nonnulls(${table.managedCompanyId}, ${table.managedPublicOrigin}, ${table.managedWebsiteOrigin}) in (0, 3)`,

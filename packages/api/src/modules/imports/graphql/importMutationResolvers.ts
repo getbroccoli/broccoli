@@ -17,10 +17,10 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Im
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
         thenImport(useCases.startDemo(context.getActor())),
       ),
-    approve: (_parent, _args, context) =>
+    approve: (_parent, { version }, context) =>
       mutationPayload<ResolversTypes["ImportApprovePayload"]>(
         "import",
-        () => thenImport(useCases.approveImport(context.getActor())),
+        () => thenImport(useCases.approveImport(context.getActor(), version)),
         ["CONFLICT"],
       ),
     resetSetup: (_parent, _args, context) =>

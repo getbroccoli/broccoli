@@ -184,7 +184,7 @@ test("Approve keeps the stored photo while Refresh downloads its replacement", a
   const refresh = imports.readSlack(SETUP_HOLDER);
   try {
     await downloadStarted.promise;
-    await imports.approveImport(SETUP_HOLDER);
+    await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
   } finally {
     download.resolve(JPEG);
     await refresh;
@@ -301,7 +301,7 @@ test("a later Refresh downloads the photos still missing", async ({ orm }) => {
 test("a Slack read after Approve writes nothing", async ({ orm }) => {
   await instanceRepository(orm).advanceStep("company", "import");
   const imports = importUseCases(orm, { slack: slackPhotoReader() });
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
   expect(await readSetupStep(orm)).toBe("owner");
 
   await imports.readSlack(SETUP_HOLDER);

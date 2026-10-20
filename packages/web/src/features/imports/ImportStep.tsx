@@ -6,10 +6,12 @@ import { useEffect, useState } from "react";
 import { ImportStepDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AgentStatus } from "@/features/externalAgents";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
+import { uploadFile, uploadFileForAgent } from "./fileApi";
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
 import { useStartDemo } from "./useStartDemo";
@@ -32,14 +34,19 @@ export function ImportStep() {
   const { data, error, refetch, startPolling, stopPolling } = useQuery(ImportStepDocument);
   const sources = data?.import.sources ?? [];
   const mapping = sources.some(({ status }) => status === "MAPPING");
-  // Files are read in the background: poll while one is.
+  const ai = data?.setup.ai;
+  const agentChosen = ai?.source === "AGENT";
+  // The way of the connected agent, else of the prompt waiting for one; set on Setup AI.
+  const agentWay = ai?.agent?.way ?? ai?.agentCode?.way;
+  // Files are read in the background, and the owner's agent connects and sends them from
+  // outside the page: poll while either may happen.
   useEffect(() => {
-    if (!mapping) {
+    if (!mapping && !agentChosen) {
       return;
     }
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
-  }, [mapping, startPolling, stopPolling]);
+  }, [mapping, agentChosen, startPolling, stopPolling]);
   const { start: startDemo, starting, failed: startFailed } = useStartDemo();
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
@@ -103,11 +110,15 @@ export function ImportStep() {
       )}
       {data ? (
         <>
+          {ai && agentChosen && <AgentStatus ai={ai} />}
           <SlackSourceRow connection={data.slackConnection} source={slackSource} />
           <FileSources
             sources={fileSources}
             onUploaded={() => refetch()}
             onUploadingChange={setUploading}
+            uploadFile={agentChosen ? uploadFileForAgent : uploadFile}
+            canDrop={agentWay !== "PARSES_ORIGINAL_FILES"}
+            agentChosen={agentChosen}
           />
         </>
       ) : error ? (

@@ -2,6 +2,10 @@ import "./events";
 export {
   advanceStep,
   assignInstance,
+  chooseAgentSource,
+  lockAgentChoice,
+  lockSetupOpenToAgent,
+  readSetupOpenToAgent,
   readAssignment,
   claimOwner,
   approveImportStep,

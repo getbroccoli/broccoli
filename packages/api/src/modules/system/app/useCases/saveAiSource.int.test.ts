@@ -13,6 +13,17 @@ import {
 
 import { DecisionsError } from "../../../../integrations/ai";
 
+test("refuses choosing an agent through saveAiSource", async ({ orm }) => {
+  const system = systemUseCases(orm);
+
+  await expect(system.saveAiSource(SETUP_HOLDER, { source: "agent" })).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "source", code: "invalid" }],
+  });
+
+  expect(await readSavedAiSource(orm)).toEqual({ source: null, openRouterKey: null });
+});
+
 test.for(["broccoli_ai", "openrouter"] as const)(
   "refuses a non-owner choosing %s before checking or saving it",
   async (source, { orm }) => {

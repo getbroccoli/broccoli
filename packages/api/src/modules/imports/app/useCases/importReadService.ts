@@ -10,13 +10,15 @@ import {
 } from "../../../../core/pagination";
 import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
-import type { ImportPhotoRepository, ImportRepository } from "../../db";
+import { readSnapshot, type Orm } from "../../../../core/db";
+import { importRepository, type ImportPhotoRepository, type ImportRepository } from "../../db";
 import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
 import {
   type ImportCheck,
   type ImportEmployee,
   type ImportEmployeeRecord,
   type ImportSource,
+  importVersion,
   isInCheck,
   listChecks,
   parseCheckId,
@@ -40,10 +42,11 @@ export interface ImportReadService {
   readyEmployeeCount(ctx: SecurityContext): Promise<number>;
   /** The sources of the employees Approve would add, oldest first. */
   listReadyEmployeeSources(ctx: SecurityContext): Promise<ImportSource[]>;
-  /** The import employees, one page at a time; by name unless ordered otherwise. */
+  /** The import employees, one page at a time; by name unless ordered otherwise; of `snapshot` when given. */
   listEmployees(
     ctx: SecurityContext,
     args: ImportEmployeeListArgs,
+    snapshot?: ImportSnapshot,
   ): Promise<Connection<ImportEmployee>>;
   /** One source's employee records, oldest first, one page at a time. */
   listEmployeeRecords(
@@ -52,8 +55,21 @@ export interface ImportReadService {
   ): Promise<Connection<ImportEmployeeRecord>>;
   /** What the owner may want to settle before Approve, by kind. */
   listChecks(ctx: SecurityContext): Promise<ImportCheck[]>;
+  /** The fingerprint of what Approve would create now, which Approve takes back (`importVersion`). */
+  readVersion(ctx: SecurityContext): Promise<string>;
+  /**
+   * Every import employee and their version, read from one snapshot, so a list paged from it
+   * shows exactly what its version lets Approve create.
+   */
+  readSnapshot(ctx: SecurityContext): Promise<ImportSnapshot>;
   /** Whether this file is an import record's photo, so the photo route may serve it. */
   isImportPhotoFile(ctx: SecurityContext, fileId: string): Promise<boolean>;
+}
+
+/** The import employees as one snapshot read them, and the version Approve takes for them. */
+export interface ImportSnapshot {
+  employees: ImportEmployee[];
+  version: string;
 }
 
 export interface ImportEmployeeListArgs extends PageArgs {
@@ -66,9 +82,15 @@ export interface ImportEmployeeListArgs extends PageArgs {
 const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 
 export function createImportReadService(
+  orm: Orm,
   imports: ImportRepository,
   photos: ImportPhotoRepository,
 ): ImportReadService {
+  const readSnapshotOf = async (ctx: SecurityContext): Promise<ImportSnapshot> => {
+    requireImportAccess(ctx);
+    const employees = await readSnapshot(orm, (tx) => readImportEmployees(importRepository(tx)));
+    return { employees, version: importVersion(employees) };
+  };
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
       requireImportAccess(ctx);
@@ -111,6 +133,7 @@ export function createImportReadService(
     listEmployees: async (
       ctx: SecurityContext,
       { orderBy, filter, ...pageArgs }: ImportEmployeeListArgs,
+      snapshot?: ImportSnapshot,
     ): Promise<Connection<ImportEmployee>> => {
       requireImportAccess(ctx);
       const order = parseOrder(orderBy, DEFAULT_ORDER);
@@ -118,13 +141,18 @@ export function createImportReadService(
       const check = filter?.check ? parseCheckId(filter.check) : null;
       const page = parsePage(pageArgs, importEmployeeKeyset(order));
       // shortcut: the whole import is grouped per request; move grouping to SQL or cache it when imports outgrow setup sizes.
-      const employees = (await readImportEmployees(imports)).filter(
+      const employees = (snapshot?.employees ?? (await readImportEmployees(imports))).filter(
         (employee) =>
           (search === null || matchesSearch(employee, search)) &&
           (check === null || isInCheck(employee, check)),
       );
       return toConnection(pageImportEmployees(employees, order, page), page.first);
     },
+
+    readVersion: async (ctx: SecurityContext): Promise<string> =>
+      (await readSnapshotOf(ctx)).version,
+
+    readSnapshot: readSnapshotOf,
 
     listEmployeeRecords: async (
       ctx: SecurityContext,

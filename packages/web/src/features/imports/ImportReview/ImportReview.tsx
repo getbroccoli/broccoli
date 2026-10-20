@@ -78,10 +78,17 @@ export function ImportReview() {
   const leftOutCount = totalCount - readyCount - incompleteCount;
 
   const approve = async () => {
+    if (!current) {
+      return;
+    }
     try {
-      await approveImport();
+      // The version of what this page shows: people added meanwhile, such as by the owner's
+      // agent, refuse Approve until the page shows them.
+      await approveImport({ variables: { version: current.version } });
     } catch {
-      return; // `approveError` or `approveConflict` shows it
+      // `approveError` or `approveConflict` shows it; a conflict means the people changed.
+      void refetch();
+      return;
     }
     await router.invalidate();
   };
@@ -166,7 +173,7 @@ export function ImportReview() {
       />
       {(approveError || approveConflict) && (
         <p role="alert" className="text-sm text-destructive">
-          {t("setup.review.approveFailed")}
+          {t(approveConflict ? "setup.review.peopleChanged" : "setup.review.approveFailed")}
         </p>
       )}
     </SetupStepForm>

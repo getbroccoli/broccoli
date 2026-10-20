@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  approveReviewedImport,
   expect,
   MANAGED_ASSIGNMENT,
   managedOptions,
@@ -73,9 +74,7 @@ test("a managed owner completes setup from the ready step over GraphQL", async (
   await browser.graphql(`mutation {
     company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } }
   }`);
-  const approval = await browser.graphql(`mutation {
-    import { approve { import { id } error { __typename ... on Error { message } } } }
-  }`);
+  const approval = await approveReviewedImport(browser);
   expect(await approval.json()).toEqual({
     data: { import: { approve: { import: { id: "import" }, error: null } } },
   });

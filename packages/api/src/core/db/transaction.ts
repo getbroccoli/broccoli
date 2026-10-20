@@ -45,6 +45,25 @@ export function transactor(orm: Orm, eventBus: EventBus): Transact {
   return (work) => runInTransaction(orm, eventBus, work);
 }
 
+/**
+ * Runs reads in one read-only `REPEATABLE READ` transaction, so every query of `work` sees the
+ * same snapshot of the database, whatever commits meanwhile.
+ */
+export async function readSnapshot<T>(orm: Orm, work: (tx: Tx) => Promise<T>): Promise<T> {
+  let transaction: Transaction | undefined;
+  try {
+    return await orm.transaction(
+      (ormTransaction) => {
+        transaction = new Transaction(ormTransaction);
+        return work(transaction);
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
+  } finally {
+    transaction?.end();
+  }
+}
+
 /** The ORM to query: the pool, or the open transaction behind `db`. */
 export function ormOf(db: Orm | Tx): Orm | OrmTransaction {
   return db instanceof Transaction ? db.orm : (db as Orm);

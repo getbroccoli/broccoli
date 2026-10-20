@@ -11,7 +11,7 @@ export function deleteFiles(tx: Tx, ids: readonly string[]): Promise<void> {
   return fileRepository(tx).deleteMany(ids);
 }
 
-/** The file with this id, or null. */
-export function readFile(orm: Orm, id: string): Promise<StoredFile | null> {
-  return fileRepository(orm).read(id);
+/** The file with this id, or null; joins `tx` when given one. */
+export function readFile(db: Orm | Tx, id: string): Promise<StoredFile | null> {
+  return fileRepository(db).read(id);
 }

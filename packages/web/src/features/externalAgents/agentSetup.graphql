@@ -1,0 +1,17 @@
+mutation CreateAgentCode($way: AgentWay!) {
+  setup {
+    createAgentCode(way: $way) {
+      agentCode {
+        code
+        way
+        expiresAt
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}

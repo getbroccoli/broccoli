@@ -2,13 +2,18 @@ import { ShieldCheck } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { SaveAiSourceDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
+import {
+  ChooseAgentDocument,
+  SaveAiSourceDocument,
+  type AiSource,
+  type AiStepQuery,
+} from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
+import { AgentSetup } from "@/features/externalAgents";
 import { useStartDemo } from "@/features/imports";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 
-import { AgentOption } from "./AgentOption";
 import { AiFooter } from "./AiFooter";
 import { DemoDataCard } from "./DemoDataCard";
 import { failureOf } from "./failureOf";
@@ -22,28 +27,44 @@ type Props = {
   peopleGathered: boolean;
 };
 
-/** Next checks the chosen source and saves it, then the owner gathers their files. */
+/**
+ * Next checks the chosen source and saves it, then the owner gathers their files; with Your agent,
+ * Gather is where the agent connects.
+ */
 export function AiForm({ ai, peopleGathered }: Props) {
   const navigate = useNavigate();
   const [source, setSource] = useState<AiSource>(ai.source);
   // The key being typed; null while the known key is used, and Replace starts one.
   const [newKey, setNewKey] = useState<string | null>(null);
-  const [saveAiSource, { loading: checking, error, payloadError }] =
-    usePayloadMutation(SaveAiSourceDocument);
+  const [saveAiSource, saving] = usePayloadMutation(SaveAiSourceDocument);
+  const [chooseAgent, choosing] = usePayloadMutation(ChooseAgentDocument);
+  const checking = saving.loading || choosing.loading;
+  // Choosing the agent checks nothing, so it fails only in ways `failureOf` words as a retry.
+  const failed =
+    source === "AGENT"
+      ? choosing.error || choosing.payloadError
+      : saving.error || saving.payloadError;
   const demo = useStartDemo();
   const busy = checking || demo.starting;
   const knownKey = newKey === null ? ai.openRouterKey : null;
   const key = newKey ?? "";
   const asksForKey = source === "OPENROUTER" && knownKey === null;
-  const failure = payloadError || error ? failureOf(payloadError, source) : null;
+  const failure = failed
+    ? failureOf(source === "AGENT" ? null : (saving.payloadError ?? null), source)
+    : null;
   // A refused key shows under the key field; a known key has no field, so it shows below.
   const keyFieldError = failure?.onKey && asksForKey ? t(failure.message) : undefined;
 
   const save = async () => {
     try {
-      await saveAiSource({
-        variables: { input: { source, openRouterKey: asksForKey ? key : null } },
-      });
+      // Showing a prompt already chose the agent; choosing again would end its session.
+      if (source === "AGENT" && ai.source !== "AGENT") {
+        await chooseAgent();
+      } else if (source !== "AGENT") {
+        await saveAiSource({
+          variables: { input: { source, openRouterKey: asksForKey ? key : null } },
+        });
+      }
     } catch {
       return; // The hook keeps the error for display.
     }
@@ -55,7 +76,7 @@ export function AiForm({ ai, peopleGathered }: Props) {
       onSubmit={() => void save()}
       footer={
         <AiFooter
-          checking={checking ? source : null}
+          checking={checking && source !== "AGENT" ? source : null}
           disabled={busy || (asksForKey && key.trim() === "")}
           busy={busy}
         />
@@ -92,9 +113,20 @@ export function AiForm({ ai, peopleGathered }: Props) {
               <KeyField value={key} onChange={setNewKey} error={keyFieldError} />
             )}
           </SourceOption>
-          <AgentOption />
+          <SourceOption
+            value="AGENT"
+            selected={source}
+            onSelect={setSource}
+            title={t("setup.ai.agent")}
+            hint={t("setup.ai.agentHint")}
+          >
+            <AgentSetup chosen={ai.source === "AGENT"} connectedClient={ai.agent?.client ?? null} />
+          </SourceOption>
         </fieldset>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.ai.privacy")}</p>
+        {/* It describes Broccoli's own model; the agent's way is chosen on the next page. */}
+        {source !== "AGENT" && (
+          <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.ai.privacy")}</p>
+        )}
       </div>
       <DemoDataCard
         disabled={busy}

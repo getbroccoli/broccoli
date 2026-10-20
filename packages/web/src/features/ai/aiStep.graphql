@@ -5,6 +5,10 @@ query AiStep {
       id
       source
       openRouterKey
+      agent {
+        id
+        client
+      }
     }
   }
   import {
@@ -13,6 +17,26 @@ query AiStep {
       id
       status
       employeeCount
+    }
+  }
+}
+
+mutation ChooseAgent {
+  setup {
+    chooseAgent {
+      setup {
+        id
+        ai {
+          id
+          source
+        }
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
     }
   }
 }
