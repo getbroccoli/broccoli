@@ -75,7 +75,7 @@ export const setupEn = {
   "setup.ai.agentHint": "Let Claude Code, Codex or another agent do the setup.",
   "setup.ai.comingSoon": "Coming soon",
   "setup.ai.privacy":
-    "To read the columns, the AI sees the first rows of each file with names, emails and other personal details replaced by placeholders. It keeps nothing.",
+    "To read your files, the AI sees the first rows of a spreadsheet, or the layout of a PDF, with names, emails and other personal details replaced by placeholders. It keeps nothing.",
   "setup.ai.demo": "Demo data",
   "setup.ai.demoHint": "Look around with a sample company. No AI needed.",
   "setup.ai.useDemo": "Use demo data",

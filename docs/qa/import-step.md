@@ -32,9 +32,9 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 ## Files
 
-On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files through Broccoli AI; run the list once each way.
+On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files through Broccoli AI; run the list once each way. Broccoli AI reads no PDFs: there a PDF's card ends as "Couldn’t reach the AI provider." with "Retry".
 
-- [ ] Under the Slack row, "Add your files" shows a dashed area "Drop your files here", the hint "CSV, Excel (.xlsx) or PDF, up to 5 MB per file." and the line saying the AI provider sees the first rows with personal details replaced by placeholders and keeps nothing.
+- [ ] Under the Slack row, "Add your files" shows a dashed area "Drop your files here", the hint "CSV, Excel (.xlsx) or PDF, up to 5 MB per file." and the line saying the AI provider sees the first rows of a spreadsheet, or the layout of a PDF, with personal details replaced by placeholders and keeps nothing.
 - [ ] Dropping a CSV with a title row above the table, semicolons and day-first start dates shows "Uploading staff.csv…", then a card "staff.csv · Reading columns…", then "N people"; `query { import { employees { edges { node { firstName lastName email jobTitle startDate } } } } }` lists them with the right names, emails, titles and dates.
 - [ ] Choosing two files at once adds two cards; "Add more files" adds another.
 - [ ] An Excel workbook saved by Excel or LibreOffice, with start dates as date cells and the work email as a formula, shows an Excel icon and reads the same people, emails and dates as the same sheet saved as CSV.
@@ -48,8 +48,7 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 - [ ] A landscape PDF export with two job titles wrapped onto a second line in their cell (`personio-landscape.pdf` from the eval cases) shows "5 people", the same as its CSV twin, with "Senior Customer Experience Manager" and "Workplace and People Experience Specialist" whole; nobody is named "Manager" or "Specialist".
 - [ ] A PDF payroll grid with one `Name` column of "Schulz, Eva" values and no email (`name-only-grid.pdf`) shows "4 people" with first and last names split as in its CSV twin; Eva Schulz starts on 3 February 2021, shown in the browser's locale.
 - [ ] A BambooHR-style PDF report with US month-first hire dates (`bamboohr-month-first.pdf`) shows "4 people" with the same start dates as its CSV twin, shown in the browser's locale: Lena Hart 14 January 2022, Noor Patel 5 November 2024; no employee number shows.
-- [ ] A PDF with a list of person blocks followed by a page of blocks side by side (`blocks-and-columns.pdf` from `packages/api/test/fixtures/pdf/`) shows the red "couldn’t read a table or list of people in it" line; no card appears.
-- [ ] A text PDF without a table, and a staff table followed by prose naming other people (`table-plus-prose-refusal.pdf` from `packages/api/test/fixtures/pdf/`), each show one red line "<name>: couldn’t read a table or list of people in it. Export it from your payroll or HR tool as CSV or Excel instead."; no card appears.
+- [ ] A text PDF without a table, a list of person blocks followed by a page of blocks side by side (`blocks-and-columns.pdf` from `packages/api/test/fixtures/pdf/`) and a staff table followed by prose naming other people (`table-plus-prose-refusal.pdf`) each upload and show a card "Reading columns…"; it ends with people printed in the file, or with "Couldn’t find a name or email column." and "Retry", never with a person the file does not show.
 - [ ] A scanned PDF, a phone photo saved as PDF, an OCR'd scan, and a text table followed by a scanned page each show one red line "<name>: has pages that are scans or photos. Broccoli reads only PDFs with text. Export the list from your payroll or HR tool as CSV, Excel or PDF instead."; no card appears.
 - [ ] A PDF that asks for a password to open shows one red line "<name>: is protected by a password. Save a copy without the password and add that."; no card appears. A PDF with only copy or print restrictions (owner password) imports its people like any text PDF.
 - [ ] A text table with a small logo, and a one-person table over a full-page letterhead image, import their people.
@@ -58,7 +57,7 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 - [ ] A PDF of person blocks with a `Printed on: <date>` footer (`block-printed-footer.pdf`) shows "2 people"; Blair Bell has no start date.
 - [ ] A PDF table continued without its header on a page over a full-page letterhead image (`continued-letterhead.pdf`) shows "2 people".
 - [ ] A continuation page over a full-page letterhead image whose rows start in the page's top tenth is refused as a scan; ask for a CSV or Excel export.
-- [ ] A PDF of person blocks with labels without colons (`labels-no-colons.pdf`, `form-no-colons.pdf`) and a two-column organisation chart (`org-two-column.pdf`) each show the red "couldn’t read a table or list of people in it" line; no card appears and nobody is named after an email or a job title.
+- [ ] A PDF of person blocks with labels without colons (`labels-no-colons.pdf`, `form-no-colons.pdf`) and a two-column organisation chart (`org-two-column.pdf`) each upload and end with people printed in the file or with "Couldn’t find a name or email column."; nobody is named after an email or a job title.
 - [ ] A `.xls` file, a `.docx` renamed to `.pdf`, a `.pdf` renamed to `.xlsx`, an empty `.csv`, a workbook of 11 sheets and a file over 5 MB each show one red line naming the file and the reason; no card appears.
 - [ ] A CSV without a name or email column ends as "Couldn’t find a name or email column." with "Retry".
 - [ ] When Broccoli AI refuses (its free period is over), the card shows the refusal's own words with "Retry".

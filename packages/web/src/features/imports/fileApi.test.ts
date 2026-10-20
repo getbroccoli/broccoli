@@ -5,7 +5,6 @@ import { uploadFile } from "./fileApi";
 it.for([
   { code: "scanned_pdf", result: "scannedPdf" },
   { code: "encrypted_pdf", result: "encryptedPdf" },
-  { code: "no_table", result: "noTable" },
 ])("reports $code with its upload result", async ({ code, result }) => {
   vi.stubGlobal(
     "fetch",

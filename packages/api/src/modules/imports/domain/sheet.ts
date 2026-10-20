@@ -12,7 +12,6 @@ export type SheetRefusal =
   | "unsupported_file"
   | "scanned_pdf"
   | "encrypted_pdf"
-  | "no_table"
   | "empty"
   | "too_many_rows"
   | "too_many_columns"
