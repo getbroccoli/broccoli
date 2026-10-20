@@ -37,18 +37,6 @@ export function createDemoAccount(email: string, password: string): Promise<Setu
   return postCredentials("/api/auth/setup/account", email, password);
 }
 
-/**
- * Starts the demo in place of the import for the browser holding setup, which the API
- * signs in as the demo's owner. Returns whether it started.
- */
-export async function startDemoSetup(): Promise<boolean> {
-  try {
-    return (await postJson("/api/auth/setup/demo", {})).ok;
-  } catch {
-    return false;
-  }
-}
-
 async function postCredentials(
   path: string,
   email: string,

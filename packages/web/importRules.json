@@ -31,7 +31,7 @@
       "src/apollo",
       "src/components/form",
       "src/components/ui",
-      "src/features/imports",
+      "src/features/demo",
       "src/features/setup",
       "src/i18n",
       "src/lib/class-names",
@@ -61,6 +61,7 @@
       "src/apollo",
       "src/components/dataTable",
       "src/components/ui",
+      "src/features/demo",
       "src/features/employees",
       "src/features/setup",
       "src/i18n",
@@ -68,8 +69,7 @@
       "src/lib/formatDate",
       "src/lib/initials",
       "src/lib/listPage",
-      "src/lib/useRouteAction",
-      "src/lib/useSessionChange"
+      "src/lib/useRouteAction"
     ],
     "src/features/setup": [
       "src/__generated__",

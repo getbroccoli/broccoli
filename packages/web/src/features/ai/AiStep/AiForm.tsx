@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { SaveAiSourceDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
-import { useStartDemo } from "@/features/imports";
+import { useStartDemo } from "@/features/demo";
 import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { useRouteAction } from "@/lib/useRouteAction";

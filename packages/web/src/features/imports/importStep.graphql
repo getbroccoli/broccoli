@@ -77,13 +77,3 @@ mutation RemoveFile($sourceId: ID!) {
     }
   }
 }
-
-mutation StartDemo {
-  import {
-    startDemo {
-      import {
-        id
-      }
-    }
-  }
-}

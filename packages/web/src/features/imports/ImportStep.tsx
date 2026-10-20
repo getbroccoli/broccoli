@@ -6,13 +6,13 @@ import { useEffect, useState } from "react";
 import { ImportStepDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useStartDemo } from "@/features/demo";
 import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
-import { useStartDemo } from "./useStartDemo";
 
 const SLACK_ERROR_MESSAGES = {
   cancelled: "imports.slack.cancelled",

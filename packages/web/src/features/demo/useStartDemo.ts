@@ -3,8 +3,9 @@ import { useState } from "react";
 
 import { StartDemoDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
-import { startDemoSetup } from "@/features/setup";
 import { useSessionChange } from "@/lib/useSessionChange";
+
+import { startDemoSetup } from "./demoApi";
 
 /**
  * Leaves the import step with the demo company in place of the owner's people, then
