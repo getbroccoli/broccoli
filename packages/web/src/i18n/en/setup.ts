@@ -130,6 +130,7 @@ export const setupEn = {
   "setup.review.typeAnother": "Type another",
   "setup.review.typed": "Typed by you",
   "setup.review.save": "Save",
+  "setup.review.pickDate": "Pick a date",
   "setup.review.saveFailed": "Couldn’t save. Try again.",
   "setup.review.valueSet": "{field} set to {value}",
   "setup.review.undo": "Undo",
