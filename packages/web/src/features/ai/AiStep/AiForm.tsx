@@ -9,19 +9,21 @@ import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 
 import { AgentOption } from "./AgentOption";
+import { AiFooter } from "./AiFooter";
 import { DemoDataCard } from "./DemoDataCard";
 import { failureOf } from "./failureOf";
 import { KeyField } from "./KeyField";
 import { KnownKey } from "./KnownKey";
-import { NextButton } from "./NextButton";
 import { SourceOption } from "./SourceOption";
 
 type Props = {
   ai: NonNullable<AiStepQuery["setup"]["ai"]>;
+  /** Demo data is only for an import without people. */
+  peopleGathered: boolean;
 };
 
 /** Next checks the chosen source and saves it, then the owner gathers their files. */
-export function AiForm({ ai }: Props) {
+export function AiForm({ ai, peopleGathered }: Props) {
   const navigate = useNavigate();
   const [source, setSource] = useState<AiSource>(ai.source);
   // The key being typed; null while the known key is used, and Replace starts one.
@@ -52,7 +54,11 @@ export function AiForm({ ai }: Props) {
     <SetupStepForm
       onSubmit={() => void save()}
       footer={
-        <NextButton checking={checking} disabled={busy || (asksForKey && key.trim() === "")} />
+        <AiFooter
+          checking={checking ? source : null}
+          disabled={busy || (asksForKey && key.trim() === "")}
+          busy={busy}
+        />
       }
     >
       <p className="-mt-4 flex items-center gap-2 text-sm text-brand-deep">
@@ -90,7 +96,12 @@ export function AiForm({ ai }: Props) {
         </fieldset>
         <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.ai.privacy")}</p>
       </div>
-      <DemoDataCard disabled={busy} starting={demo.starting} onUse={() => void demo.start()} />
+      <DemoDataCard
+        disabled={busy}
+        unavailable={peopleGathered}
+        starting={demo.starting}
+        onUse={() => void demo.start()}
+      />
       {failure && keyFieldError === undefined && (
         <p role="alert" className="text-sm text-destructive">
           {t(failure.message)}

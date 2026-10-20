@@ -40,7 +40,7 @@ enum ImportSourceFailure {
   NO_PEOPLE_COLUMNS
   "The model could not be reached or refused."
   UNAVAILABLE
-  "This server already used its free Broccoli AI period; an own OpenRouter key reads the file."
+  "A free trial was already issued for this network, but this installation cannot access it."
   AI_FREE_PERIOD_USED
   "The free Broccoli AI period is over; an own OpenRouter key reads the file."
   AI_FREE_PERIOD_OVER
@@ -203,6 +203,8 @@ type ImportMutations {
   startDemo: ImportMutationPayload!
   "Turns the import employees that are not left out into employees, with the values and photos review shows, and completes the import step; the import is deleted once setup completes. Incomplete ones are not added. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
   approve: ImportApprovePayload!
+  "Takes setup from the owner step back to the company step and deletes the employees `approve` created; the company, the AI source and the import stay. Does nothing at any other step."
+  resetSetup: ImportMutationPayload!
   "Maps a failed file again; any other source is left as it is."
   retryFile(sourceId: ID!): ImportRetryFilePayload!
   "Removes a file, its records and the stored file."

@@ -11,13 +11,16 @@ import { type SetupStepId, stepViews } from "./setupSteps";
 import { StepBars } from "./StepBars";
 import { StepList } from "./StepList";
 
-/** How wide the card's content runs: a form, or a table such as the import review. */
-export type SetupWidth = "default" | "wide";
+/**
+ * How wide the card's content runs: a short centred column such as the owner step, a form,
+ * or a table such as the import review.
+ */
+export type SetupWidth = "narrow" | "default" | "wide";
 
 interface SetupLayoutProps {
   step: SetupStepId;
   title: string;
-  description: string;
+  description?: string;
   width?: SetupWidth;
   children?: ReactNode;
 }
@@ -73,7 +76,7 @@ export function SetupLayout({
       </aside>
       <main className="m-2 mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 md:my-3 md:mr-3 md:ml-0">
         <header className="shrink-0 px-6 pt-8 sm:px-10 sm:pt-12">
-          <div className={cn("mx-auto", width === "wide" ? "max-w-[1180px]" : "max-w-[592px]")}>
+          <div className={cn("mx-auto", HEADER_WIDTHS[width])}>
             <h1
               ref={heading}
               tabIndex={-1}
@@ -81,7 +84,9 @@ export function SetupLayout({
             >
               {title}
             </h1>
-            <p className="mt-3 text-[17px] leading-[1.55] text-muted-foreground">{description}</p>
+            {description && (
+              <p className="mt-3 text-[17px] leading-[1.55] text-muted-foreground">{description}</p>
+            )}
           </div>
         </header>
         {children}
@@ -89,3 +94,9 @@ export function SetupLayout({
     </div>
   );
 }
+
+const HEADER_WIDTHS: Record<SetupWidth, string> = {
+  narrow: "max-w-[420px] text-center",
+  default: "max-w-[592px]",
+  wide: "max-w-[1180px]",
+};

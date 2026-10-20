@@ -1,5 +1,6 @@
 import { useQuery } from "@apollo/client/react";
-import { Link, useSearch } from "@tanstack/react-router";
+import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
+import { Link, useRouteContext, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { ImportStepDocument } from "@/__generated__/graphql";
@@ -22,11 +23,12 @@ const SLACK_ERROR_MESSAGES = {
 const POLL_INTERVAL_MS = 2_000;
 
 /**
- * The import step of setup: the sources people come from. Next leads to the review,
- * where the owner approves; skipping leaves the step with the demo company instead.
+ * The import step of setup: the sources people come from. Review leads to the review,
+ * where the owner approves; before any people are gathered, the demo company can replace them.
  */
 export function ImportStep() {
   const { slackError } = useSearch({ from: "/setup/import" });
+  const { mode } = useRouteContext({ from: "__root__" });
   const { data, error, refetch, startPolling, stopPolling } = useQuery(ImportStepDocument);
   const sources = data?.import.sources ?? [];
   const mapping = sources.some(({ status }) => status === "MAPPING");
@@ -44,34 +46,57 @@ export function ImportStep() {
   const canReview = sources.some(({ employeeCount }) => employeeCount > 0);
   const [uploading, setUploading] = useState(false);
   const reading = mapping || uploading;
+  const gathering = canReview || reading;
 
   return (
     <SetupStepForm
-      onSubmit={() => void startDemo()}
+      // Enter must not start the demo: only its button does.
+      onSubmit={() => {}}
       footer={
-        <div className="flex gap-2">
-          <Button
-            type="submit"
-            variant="outline"
-            size="lg"
-            className="h-10 px-4"
-            disabled={starting}
-          >
-            {t(starting ? "setup.import.skipping" : "setup.import.skip")}
-          </Button>
-          {(canReview || reading) && (
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          {mode === "SELF_HOSTED" && (
             <Link
-              to="/setup/import/review"
-              disabled={starting || reading}
-              aria-disabled={starting || reading}
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "h-10 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-              )}
+              to="/setup/ai"
+              className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
+              disabled={starting}
             >
-              {t(reading ? "setup.import.reading" : "setup.import.next")}
+              <ArrowLeft aria-hidden />
+              {t("setup.back")}
             </Link>
           )}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+            {gathering && (
+              <p id="demo-unavailable" className="text-sm text-muted-foreground">
+                {t("setup.import.demoUnavailable")}
+              </p>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="h-10 px-4"
+              // Until the import loads, it may already hold people.
+              disabled={starting || gathering || !data}
+              aria-describedby={gathering ? "demo-unavailable" : undefined}
+              onClick={() => void startDemo()}
+            >
+              {t(starting ? "setup.import.demoStarting" : "setup.import.demo")}
+            </Button>
+            {gathering && (
+              <Link
+                to="/setup/import/review"
+                disabled={starting || reading}
+                aria-disabled={starting || reading}
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "h-10 gap-2 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
+                )}
+              >
+                {t(reading ? "setup.import.reading" : "setup.import.next")}
+                <ArrowRight weight="bold" aria-hidden />
+              </Link>
+            )}
+          </div>
         </div>
       }
     >

@@ -210,6 +210,57 @@ test("refuses a demo start from another origin without cookies", async ({ env })
   expect(await response.json()).toEqual({ error: "cross_origin" });
 });
 
+test("resetting the demo gives its browser setup and revokes the old session", async ({ env }) => {
+  const { browser, response: started } = await env.startDemo();
+  const oldSession = sessionCookieOf(started)!;
+
+  const response = await browser.post("/api/auth/setup/demo/reset", undefined);
+
+  expect(response.status).toBe(200);
+  expect(
+    response.headers.getSetCookie().find((cookie) => cookie.startsWith("broccoli_setup=")),
+  ).toMatch(/^broccoli_setup=[^;]+;/);
+  expect(
+    response.headers.getSetCookie().find((cookie) => cookie.includes("session_token=")),
+  ).toMatch(/;\s*Max-Age=0(?:;|$)/i);
+  const setup = await browser.graphql("query { me { id } setup { id step holder demoExpiresAt } }");
+  expect(await setup.json()).toEqual({
+    data: {
+      me: null,
+      setup: { id: "instance", step: "COMPANY", holder: "YOU", demoExpiresAt: null },
+    },
+  });
+  const revoked = await fetch(`${env.url}/api/graphql`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: env.url, cookie: oldSession },
+    body: JSON.stringify({ query: "query { me { id } }" }),
+  });
+  expect(await revoked.json()).toEqual({ data: { me: null } });
+});
+
+test("refuses to reset a real owner's setup and keeps their session and employees", async ({
+  env,
+}) => {
+  const { browser, user } = await env.signInAsOwner();
+  const employee = await env.seed.employee();
+
+  const response = await browser.post("/api/auth/setup/demo/reset", undefined);
+
+  expect(response.status).toBe(403);
+  const unchanged = await browser.graphql(`query {
+    me { id }
+    setup { id step demoExpiresAt }
+    employees { edges { node { id } } }
+  }`);
+  expect(await unchanged.json()).toEqual({
+    data: {
+      me: { id: user.id },
+      setup: { id: "instance", step: "COMPANY", demoExpiresAt: null },
+      employees: { edges: [{ node: { id: employee.id } }] },
+    },
+  });
+});
+
 function sessionCookieOf(response: Response): string | undefined {
   return response.headers
     .getSetCookie()

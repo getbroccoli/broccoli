@@ -1,0 +1,9 @@
+mutation ResetSetup {
+  import {
+    resetSetup {
+      import {
+        id
+      }
+    }
+  }
+}

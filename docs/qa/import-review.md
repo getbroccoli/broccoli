@@ -9,7 +9,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 ## The page
 
-- [ ] "Next: review your people" opens `/setup/import/review`, titled "Review your people". In the step list, "Add your people" is current with its pages beneath it: "Gather everyone’s details" checked and "Review your people" in a card.
+- [ ] "Review your people" opens `/setup/import/review`, titled "Review your people". In the step list, "Add your people" is current with its pages beneath it: "Gather everyone’s details" checked and "Review your people" in a card.
 - [ ] "Details came from" lists the Slack workspace and the file, each with its mark; the search field sits at the right of that row.
 - [ ] The table lists one row per person, by name: Person (Slack photo or initials, and name), Email, Job title, Start date ("Not set" when missing), Sources, and a menu; its footer reads "N people".
 - [ ] The one-word Slack member shows an amber "No last name" pill under the name; the row without an email shows "No valid work email" and its email "Not set" in amber.
@@ -62,12 +62,13 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 ## Approve
 
-- [ ] The footer shows "← Back" and "Approve N people", N counting the people neither left out nor with a "Won’t be added" pill; beside it, "L left out.", "M people won’t be added: they are missing a name or work email." and "K values were not checked; the first source’s are used.", each only when it applies.
+- [ ] The footer shows "← Back" and "Add N people →", N counting the people neither left out nor with a "Won’t be added" pill; beside it, "L left out.", "M people won’t be added: they are missing a name or work email." and "K values were not checked; the first source’s are used.", each only when it applies.
 - [ ] "Back" returns to `/setup/import` with the sources as they were.
-- [ ] "Approve N people" shows "Approving…" and lands on `/setup`, "Create your account"; `/setup/import/review` now goes there. Creating the account lands on `/people`, which lists exactly those N people, each once, with the values and photos review showed, and no demo people.
-- [ ] With `/setup/import/review` open in two tabs, "Approve" in both adds each person once.
-- [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), Approve reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
-- [ ] With only incomplete people (for example a Slack workspace of one-word names), Approve is hidden and the footer reads "No one is ready to add. Go back to add a source, or skip and use demo data."
+- [ ] "Add N people" shows "Adding people…" and lands on `/setup`, headed "Create owner account" in one centred column; `/setup/import/review` now goes there. Above the form, up to 10 of them circle the company's logo, those with a Slack photo first, the others as initials each in its own colour; with more than 10, one face changes every few seconds. With reduced motion the ring stands still. Creating the account lands on `/people`, which lists exactly those N people, each once, with the values and photos review showed, and no demo people.
+- [ ] On `/setup`, "Reset setup" (bottom left) opens "Reset setup?"; "Cancel" changes nothing. "Reset setup" lands on `/setup/company` with the company name filled in; "Continue" through Setup AI shows the same sources, and the review keeps its choices. "Add N people" brings back the ring on `/setup`.
+- [ ] With `/setup/import/review` open in two tabs, "Add N people" in both adds each person once.
+- [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), the button reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
+- [ ] With only incomplete people (for example a Slack workspace of one-word names), "Add N people" is hidden and the footer reads "No one is ready to add. Fix the highlighted details, or go back to add a source."
 
 ## Guards
 

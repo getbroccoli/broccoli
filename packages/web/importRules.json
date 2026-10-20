@@ -30,12 +30,19 @@
       "src/lib/class-names"
     ],
     "src/features/company": [],
-    "src/features/demo": ["src/__generated__", "src/apollo", "src/components/ui", "src/i18n"],
+    "src/features/demo": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/ui",
+      "src/i18n",
+      "src/lib/postJson"
+    ],
     "src/features/employees": [
       "src/__generated__",
       "src/components/dataTable",
       "src/components/ui",
       "src/i18n",
+      "src/lib/class-names",
       "src/lib/formatDate",
       "src/lib/initials",
       "src/lib/listPage"

@@ -1,0 +1,1 @@
+export { AddedPeopleRing } from "./AddedPeopleRing";
