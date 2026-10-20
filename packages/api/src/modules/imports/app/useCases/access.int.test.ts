@@ -43,11 +43,6 @@ const calls = {
   startDemo: (imports, ctx) => imports.startDemo(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
-  downloadSlackPhotos: (imports, ctx) =>
-    imports.downloadSlackPhotos(ctx, {
-      sourceId: "0199f6c4-0000-7000-8000-000000000000",
-      after: null,
-    }),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;
 
 test.for(Object.entries(calls))(

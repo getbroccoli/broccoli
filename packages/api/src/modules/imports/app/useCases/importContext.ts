@@ -1,5 +1,4 @@
 import type { Orm, Transact, Tx } from "../../../../core/db";
-import type { JobQueue } from "../../../../core/jobs";
 import type { Logger } from "../../../../core/logger";
 import type { SlackConnectionService } from "../../../slack";
 import type { ImportRepository } from "../../db";
@@ -17,7 +16,8 @@ export interface ImportContext {
   logger: Logger;
   slack: SlackReader;
   imports: ImportRepository;
-  jobs: JobQueue;
+  /** Now; tests pass their own. */
+  clock: () => Date;
   /** Reads what the demo company needs, then returns its fill for the caller's transaction. */
   prepareDemoFill: () => Promise<DemoFill>;
 }

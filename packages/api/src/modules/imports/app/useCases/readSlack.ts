@@ -5,19 +5,19 @@ import { importPhotoRepository, importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { mapSlackMembers } from "./mapSlackMembers";
 import { requireImportAccess } from "./requireImportAccess";
-import { attachFirstSlackPhotos, readFirstSlackPhotos } from "./slackPhotos";
+import { attachSlackPhotos, readSlackPhotos } from "./slackPhotos";
 
 /**
  * Reads the connected Slack workspace into the import: the first time and on every
- * refresh, the Slack source then holds its current members with the first of their
- * photos, and the photo job downloads the rest.
+ * refresh, the Slack source then holds its current members with the photos downloaded
+ * within the read's time budget.
  */
 export async function readSlack(context: ImportContext, ctx: SecurityContext): Promise<void> {
   requireImportAccess(ctx);
   // Slack is read before the transaction, which never waits on another service.
   const { workspace, members, snapshot } = await context.slack.readSlackMembers(ctx);
   const records = mapSlackMembers(members);
-  const photos = await readFirstSlackPhotos(context, ctx, records);
+  const photos = await readSlackPhotos(context, ctx, records);
   await context.transact(async (tx) => {
     // A connect since the read stored another connection; its members are read next time.
     if (!(await context.slack.isCurrentSlackConnection(ctx, tx, snapshot))) {
@@ -32,6 +32,6 @@ export async function readSlack(context: ImportContext, ctx: SecurityContext): P
     const sourceId = await imports.saveSlackSource(workspace.name);
     await deleteFiles(tx, await importPhotoRepository(tx).detachReplacedPhotos(sourceId, records));
     await imports.syncEmployeeRecords(sourceId, records);
-    await attachFirstSlackPhotos(context, tx, sourceId, photos);
+    await attachSlackPhotos(tx, sourceId, photos);
   });
 }

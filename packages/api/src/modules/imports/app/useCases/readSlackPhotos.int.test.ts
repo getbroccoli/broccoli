@@ -190,97 +190,77 @@ test("Approve keeps the stored photo while Refresh downloads its replacement", a
   expect(await storedFileIds(orm)).toEqual([oldFileId]);
 });
 
-test("downloads only the first 50 photos by name and queues the rest", async ({ orm }) => {
+test("downloads every new photo during the read", async ({ orm }) => {
   await instanceRepository(orm).advanceStep("company", "import");
-  const members = Array.from({ length: 52 }, (_, index) => ({
-    id: `U${index}`,
-    profile: {
-      first_name: index < 26 ? "Avery" : "Robin",
-      last_name: String(index % 26).padStart(2, "0"),
-      email: `employee${index}@example.com`,
-      is_custom_image: true,
-      image_512: `https://avatars.slack-edge.com/photo-${index}.png`,
-    },
-  }));
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
   const imports = importUseCases(orm, {
-    slack: { ...slackPhotoReader(members.toReversed()), readSlackPhoto },
+    slack: { ...slackPhotoReader(photoMembers(60)), readSlackPhoto },
+    clock: () => new Date("2026-10-20T12:00:00Z"),
   });
 
   await imports.readSlack(OWNER);
 
   const employees = await imports.reads.listEmployees(OWNER, { first: 100 });
-  expect(
-    employees.edges
-      .filter(({ node }) => node.photoFileId !== null)
-      .map(({ node }) => node.values.email.value),
-  ).toEqual(members.slice(0, 50).map(({ profile }) => profile.email));
-  expect(employees.edges.slice(50).map(({ node }) => node.photoFileId)).toEqual([null, null]);
-  expect(readSlackPhoto).toHaveBeenCalledTimes(50);
-  expect(await storedFileIds(orm)).toHaveLength(50);
-  const [source] = await imports.reads.listSources(OWNER);
-  expect(imports.sentJobs).toEqual([
-    { name: "imports.downloadSlackPhotos", payload: { sourceId: source!.id, after: null } },
-  ]);
+  expect(employees.edges).toHaveLength(60);
+  expect(employees.edges.filter(({ node }) => node.photoFileId !== null)).toHaveLength(60);
+  expect(readSlackPhoto).toHaveBeenCalledTimes(60);
+  expect(await storedFileIds(orm)).toHaveLength(60);
+  expect(imports.sentJobs).toEqual([]);
 });
 
-test("downloads the first 50 photos in review order with missing names, mixed case and email ties", async ({
+test("stops starting downloads after 20 seconds and leaves the rest with initials", async ({
   orm,
 }) => {
   await instanceRepository(orm).advanceStep("company", "import");
-  const profiles = [
-    { first_name: "Zoe", last_name: "Stone", email: "zoe.z@example.com" },
-    { first_name: "zoe", last_name: "Stone", email: "zoe.a@example.com" },
-    ...Array.from({ length: 48 }, (_, index) => ({
-      first_name: index % 2 === 0 ? "Avery" : "avery",
-      last_name: String(index).padStart(2, "0"),
-      email: `employee${index}@example.com`,
-    })),
-    { email: "unnamed@example.com" },
-  ];
-  const members = profiles.map((profile, index) => ({
-    id: `U${index}`,
-    profile: {
-      ...profile,
-      is_custom_image: true,
-      image_512: `https://avatars.slack-edge.com/photo-${index}.png`,
-    },
-  }));
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
+  const startedAt = new Date("2026-10-20T12:00:00Z");
   const imports = importUseCases(orm, {
-    slack: { ...slackPhotoReader(members), readSlackPhoto },
+    slack: { ...slackPhotoReader(photoMembers(40)), readSlackPhoto },
+    clock: () =>
+      new Date(startedAt.getTime() + (readSlackPhoto.mock.calls.length === 0 ? 0 : 21_000)),
   });
 
   await imports.readSlack(OWNER);
 
   const employees = await imports.reads.listEmployees(OWNER, { first: 100 });
-  expect(employees.edges[0]!.node.values.email.value).toBe("unnamed@example.com");
-  expect(employees.edges[50]!.node).toMatchObject({
-    values: { email: { value: "zoe.z@example.com" } },
-    photoFileId: null,
-  });
-  expect(
-    employees.edges
-      .filter(({ node }) => node.photoFileId !== null)
-      .map(({ node }) => node.values.email.value),
-  ).toEqual(employees.edges.slice(0, 50).map(({ node }) => node.values.email.value));
-  expect(readSlackPhoto).toHaveBeenCalledTimes(50);
-  expect(await storedFileIds(orm)).toHaveLength(50);
+  expect(employees.edges).toHaveLength(40);
+  expect(employees.edges.filter(({ node }) => node.photoFileId !== null)).toHaveLength(16);
+  expect(employees.edges.filter(({ node }) => node.photoFileId === null)).toHaveLength(24);
+  expect(readSlackPhoto).toHaveBeenCalledTimes(16);
+  expect(await storedFileIds(orm)).toHaveLength(16);
+  expect(imports.sentJobs).toEqual([]);
 });
 
-test("queues no photo job when every photo was downloaded", async ({ orm }) => {
+test("a later Refresh downloads the photos still missing", async ({ orm }) => {
   await instanceRepository(orm).advanceStep("company", "import");
-  const members = Array.from({ length: 50 }, (_, index) => ({
-    ...SLACK_MEMBER_WITH_PHOTO,
-    id: `U${index}`,
-    profile: { ...SLACK_MEMBER_WITH_PHOTO.profile, email: `employee${index}@example.com` },
-  }));
-  const imports = importUseCases(orm, { slack: slackPhotoReader(members) });
-
+  const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
+  const slack = { ...slackPhotoReader(photoMembers(40)), readSlackPhoto };
+  const startedAt = new Date("2026-10-20T12:00:00Z");
+  const imports = importUseCases(orm, {
+    slack,
+    clock: () =>
+      new Date(startedAt.getTime() + (readSlackPhoto.mock.calls.length === 0 ? 0 : 21_000)),
+  });
   await imports.readSlack(OWNER);
+  const firstFiles = await storedFileIds(orm);
+  expect(firstFiles).toHaveLength(16);
+  readSlackPhoto.mockClear();
+  const refresh = importUseCases(orm, {
+    slack,
+    clock: () => new Date("2026-10-20T12:01:00Z"),
+  });
 
-  expect(await storedFileIds(orm)).toHaveLength(50);
+  await refresh.readSlack(OWNER);
+
+  const employees = await refresh.reads.listEmployees(OWNER, { first: 100 });
+  const files = await storedFileIds(orm);
+  expect(employees.edges).toHaveLength(40);
+  expect(employees.edges.filter(({ node }) => node.photoFileId !== null)).toHaveLength(40);
+  expect(readSlackPhoto).toHaveBeenCalledTimes(24);
+  expect(files).toHaveLength(40);
+  expect(files).toEqual(expect.arrayContaining(firstFiles));
   expect(imports.sentJobs).toEqual([]);
+  expect(refresh.sentJobs).toEqual([]);
 });
 
 test("a Slack read after Approve writes nothing", async ({ orm }) => {
@@ -296,3 +276,15 @@ test("a Slack read after Approve writes nothing", async ({ orm }) => {
   expect(await storedFileIds(orm)).toEqual([]);
   expect(imports.sentJobs).toEqual([]);
 });
+
+function photoMembers(count: number) {
+  return Array.from({ length: count }, (_, index) => ({
+    ...SLACK_MEMBER_WITH_PHOTO,
+    id: `U${index}`,
+    profile: {
+      ...SLACK_MEMBER_WITH_PHOTO.profile,
+      email: `employee${index}@example.com`,
+      image_512: `https://avatars.slack-edge.com/photo-${index}.png`,
+    },
+  }));
+}

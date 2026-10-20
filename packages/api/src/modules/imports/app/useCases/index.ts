@@ -10,7 +10,6 @@ import type { DemoFill, SlackReader } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { finishImport } from "./finishImport";
 import { readSlack } from "./readSlack";
-import { downloadSlackPhotos, type SlackPhotoJob } from "./slackPhotos";
 import { startDemo } from "./startDemo";
 
 export type { DemoFill, SlackReader } from "./importContext";
@@ -23,8 +22,6 @@ export interface ImportUseCases {
   approveImport: (ctx: SecurityContext) => Promise<void>;
   /** Deletes the approved import once setup is complete; its photos stay with the employees. */
   finishImport: (ctx: SecurityContext) => Promise<void>;
-  /** The photo job's run: downloads the source's photos still missing, a batch at a time. */
-  downloadSlackPhotos: (ctx: SecurityContext, job: SlackPhotoJob) => Promise<void>;
   reads: ImportReadService;
   choices: EmployeeChoiceService;
   files: FileSourceService;
@@ -37,22 +34,22 @@ export function createImportUseCases({
   slack,
   decisions,
   jobs,
+  clock = () => new Date(),
   prepareDemoFill,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: SlackReader;
   decisions: Decisions;
   jobs: JobQueue;
+  clock?: () => Date;
   prepareDemoFill: () => Promise<DemoFill>;
 }): ImportUseCases {
   const imports = importRepository(orm);
-  const context = { orm, transact, logger, slack, imports, jobs, prepareDemoFill };
+  const context = { orm, transact, logger, slack, imports, clock, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
-    downloadSlackPhotos: (ctx: SecurityContext, job: SlackPhotoJob) =>
-      downloadSlackPhotos(context, ctx, job),
     reads: createImportReadService(imports, importPhotoRepository(orm)),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs }),

@@ -51,7 +51,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] A Slack member with an uploaded profile photo shows it in Person; one on Slack's generated placeholder shows initials, as does everyone from the file only.
 - [ ] Changing a member's photo in Slack and choosing "Refresh" shows the new photo.
 - [ ] With the network to Slack's photo host blocked, reading Slack still succeeds and those people show initials.
-- [ ] A workspace of over 50 people with photos shows the first 50 by name with photos right after the read, and the rest within a minute or two after a reload.
+- [ ] A workspace of a few hundred people with photos shows every photo right after the read, which takes only a few seconds longer.
 
 ## Search, sort and paging
 

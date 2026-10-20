@@ -65,11 +65,13 @@ export function importUseCases(
     slack = {},
     decisions = NO_DECISIONS,
     jobs,
+    clock = () => new Date(),
     prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
   }: {
     slack?: Partial<Parameters<typeof createImportUseCases>[0]["slack"]>;
     decisions?: Decisions;
     jobs?: JobQueue;
+    clock?: () => Date;
     prepareDemoFill?: Parameters<typeof createImportUseCases>[0]["prepareDemoFill"];
   } = {},
 ) {
@@ -79,6 +81,7 @@ export function importUseCases(
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     decisions,
+    clock,
     prepareDemoFill: prepareFill,
     jobs: jobs ?? {
       send: (_tx, name, payload) => {

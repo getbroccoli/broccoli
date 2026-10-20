@@ -45,14 +45,6 @@ export function importsModule(
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
         onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },
-      "imports.downloadSlackPhotos": {
-        run: (job) => useCases.downloadSlackPhotos(PrincipalSecurityContext.system(), job),
-        // A missing photo shows initials; Refresh downloads it again.
-        onFailed: (job) => {
-          dependencies.logger.warn({ sourceId: job.sourceId }, "Downloading Slack photos failed");
-          return Promise.resolve();
-        },
-      },
     },
   };
 }

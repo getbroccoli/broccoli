@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { IncomingRecord } from "../domain";
@@ -10,12 +10,6 @@ export interface ImportPhotoRepository {
   listPhotoLinks(sourceId: string): Promise<Map<string, string>>;
   /** Every one of the source's records with a photo link but no photo. */
   findPhotoDownloads(sourceId: string): Promise<PhotoDownload[]>;
-  /** Up to `first` of the source's records with a photo link but no photo, by id after `after`. */
-  findPhotoDownloadsAfter(
-    sourceId: string,
-    after: string | null,
-    first: number,
-  ): Promise<PhotoDownload[]>;
   /**
    * Makes the file the record's photo, only while the record still has no photo and its
    * link is still `photoUrl`; returns whether it did.
@@ -56,19 +50,6 @@ export function importPhotoRepository(db: Orm | Tx): ImportPhotoRepository {
         .select(photoDownloadColumns)
         .from(importRecords)
         .where(needsPhoto(sourceId))
-        .then(toPhotoDownloads),
-
-    findPhotoDownloadsAfter: (
-      sourceId: string,
-      after: string | null,
-      first: number,
-    ): Promise<PhotoDownload[]> =>
-      orm()
-        .select(photoDownloadColumns)
-        .from(importRecords)
-        .where(and(needsPhoto(sourceId), after === null ? undefined : gt(importRecords.id, after)))
-        .orderBy(importRecords.id)
-        .limit(first)
         .then(toPhotoDownloads),
 
     attachPhoto: async (recordId: string, photoUrl: string, fileId: string): Promise<boolean> => {
