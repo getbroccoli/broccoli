@@ -7,7 +7,6 @@ export {
   completeCompanyStep,
   completeImportStep,
   completeReadyStep,
-  readDemoDeadlineOf,
   readDemoExpiresAt,
   type DemoStart,
   type SetupDemo,
@@ -21,7 +20,7 @@ export {
   createAiSettings,
   type AiSettings,
 } from "./app";
-export { readSetupToken } from "./betterAuth";
+export { resolveSecurityContext } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
 export {
   AssignmentConflictError,

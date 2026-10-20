@@ -24,6 +24,17 @@ test("returns the signed-in owner as the current user", async ({ env }) => {
   });
 });
 
+test("returns a signed-in non-owner without owner authority", async ({ env }) => {
+  const { browser, user } = await env.signInAsOwner();
+  await env.seed.owner({ email: "another.owner@example.com" });
+
+  const response = await browser.graphql(query);
+
+  expect(await response.json()).toEqual({
+    data: { me: { id: user.id, email: TEST_OWNER.email, isOwner: false } },
+  });
+});
+
 test("returns the updated email after the owner's email changes", async ({ env }) => {
   const { browser, user } = await env.signInAsOwner();
   const email = "updated.owner@example.com";
