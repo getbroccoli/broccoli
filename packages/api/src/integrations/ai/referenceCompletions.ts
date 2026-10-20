@@ -64,7 +64,7 @@ export interface CompletionResult {
   requestSha256: string;
 }
 
-export const COMPLETION_MODEL = "deepseek/deepseek-v4.1-flash-1017";
+const COMPLETION_MODEL = "deepseek/deepseek-v4.1-flash-1017";
 
 export function createReferenceCompletions({
   readSource,

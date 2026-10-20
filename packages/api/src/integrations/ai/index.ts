@@ -19,10 +19,7 @@ export {
   parseCompletionInput,
 } from "./maskedEvidence";
 export {
-  COMPLETION_MODEL,
   CompletionError,
-  type CompletionFailure,
-  type CompletionResult,
   type CompletionTask,
   type CompletionTaskId,
   createReferenceCompletions,

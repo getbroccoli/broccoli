@@ -1,6 +1,1 @@
-export {
-  createPdfExtractor,
-  PdfExtractionError,
-  type PdfExtractionFailure,
-  type PdfExtractor,
-} from "./pdfExtractor";
+export { createPdfExtractor, PdfExtractionError, type PdfExtractor } from "./pdfExtractor";
