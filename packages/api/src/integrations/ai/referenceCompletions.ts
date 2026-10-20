@@ -6,6 +6,15 @@ import { AnswerTooLargeError, fetchJson, FetchStatusError, urlUnder } from "../.
 import { type CompletionInput, parseCompletionInput } from "./maskedEvidence";
 import type { DecisionsSource } from "./resolvedDecisions";
 
+/**
+ * Asks the model one registered task about masked evidence. Nothing leaves before the input passes
+ * `parseCompletionInput`. A failure worth repeating is retried once with the recovery settings;
+ * a second failure, or any other, rejects with `CompletionError`.
+ */
+export interface ReferenceCompletions {
+  complete(task: CompletionTaskId, input: unknown, signal: AbortSignal): Promise<CompletionResult>;
+}
+
 /** The four PDF stages; each has one registered task. */
 export type CompletionTaskId =
   "select_rows" | "qualify_layout" | "extract_references" | "assign_emails";
@@ -25,7 +34,7 @@ export interface CompletionTask {
   timeoutMs: number;
 }
 
-/** Why a completion failed; `retryable` ones may succeed later unchanged. */
+/** Why a completion failed; a `retryable` one may succeed when asked again unchanged. */
 export type CompletionFailure =
   | "privacy_violation"
   | "too_large"
@@ -53,15 +62,6 @@ export interface CompletionResult {
   cost: number;
   /** The SHA-256 of the request body that was sent, so an audit can match it to its proof. */
   requestSha256: string;
-}
-
-/**
- * Asks the model one registered task about masked evidence. Nothing leaves before the input passes
- * `parseCompletionInput`. A failure worth repeating is retried once with the recovery settings;
- * a second failure, or any other, rejects with `CompletionError`.
- */
-export interface ReferenceCompletions {
-  complete(task: CompletionTaskId, input: unknown, signal: AbortSignal): Promise<CompletionResult>;
 }
 
 export const COMPLETION_MODEL = "deepseek/deepseek-v4.1-flash-1017";
