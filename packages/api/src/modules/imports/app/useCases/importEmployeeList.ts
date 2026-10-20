@@ -1,20 +1,17 @@
 import { z } from "zod";
 
-import type { EmployeeOrder } from "../../../employees";
+import type { KeysetQuery, KeysetRow } from "../../../../core/pagination";
+import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
 import type { ImportEmployee } from "../../domain";
-
-/** The sort values of the last import employee seen, behind the order they belong to. */
-export type ImportEmployeeKeyset = [field: string, direction: string, ...values: SortValue[]];
 
 type SortValue = string | boolean;
 
-/** Parses the keyset of a cursor; a cursor from another order does not match. */
-export function importEmployeeKeyset({
-  field,
-  direction,
-}: EmployeeOrder): z.ZodType<ImportEmployeeKeyset> {
-  return z.tuple([z.literal(field), z.literal(direction), ...KEYSET_VALUES[field]]);
-}
+/** The sort values of an import employee in each order, the key last. */
+export const IMPORT_EMPLOYEE_SORT_VALUES: Record<EmployeeOrderField, z.ZodType<SortValue[]>> = {
+  NAME: z.tuple([z.string(), z.string(), z.string()]),
+  EMAIL: z.tuple([z.boolean(), z.string(), z.string()]),
+  START_DATE: z.tuple([z.boolean(), z.string(), z.string()]),
+};
 
 /** Import employees whose shown first name, last name or email contains `search`, ignoring case. */
 export function matchesSearch({ values }: ImportEmployee, search: string): boolean {
@@ -24,29 +21,17 @@ export function matchesSearch({ values }: ImportEmployee, search: string): boole
   );
 }
 
-/** Up to `first + 1` import employees after `after`, in `order`, with their keysets. */
+/** Up to `limit` import employees after `after`, in `order`, with their sort values. */
 export function pageImportEmployees(
   employees: readonly ImportEmployee[],
-  order: EmployeeOrder,
-  { first, after }: { first: number; after: ImportEmployeeKeyset | null },
-): { node: ImportEmployee; keyset: ImportEmployeeKeyset }[] {
+  { order, after, limit }: KeysetQuery<EmployeeOrderField, SortValue[]>,
+): KeysetRow<ImportEmployee, SortValue[]>[] {
   const keyed = employees.map((node) => ({ node, values: sortValues(node, order) }));
   const sorted = keyed.toSorted((a, b) => compare(a.values, b.values, order));
   const start =
-    after === null
-      ? 0
-      : sorted.findIndex(({ values }) => compare(values, after.slice(2), order) > 0);
-  return (start === -1 ? [] : sorted.slice(start, start + first + 1)).map(({ node, values }) => ({
-    node,
-    keyset: [order.field, order.direction, ...values],
-  }));
+    after === null ? 0 : sorted.findIndex(({ values }) => compare(values, after, order) > 0);
+  return start === -1 ? [] : sorted.slice(start, start + limit);
 }
-
-const KEYSET_VALUES = {
-  NAME: [z.string(), z.string(), z.string()],
-  EMAIL: [z.boolean(), z.string(), z.string()],
-  START_DATE: [z.boolean(), z.string(), z.string()],
-} as const;
 
 /** What the list sorts by, the key last; a missing email or start date carries `true` to sort last. */
 function sortValues({ key, values }: ImportEmployee, { field }: EmployeeOrder): SortValue[] {

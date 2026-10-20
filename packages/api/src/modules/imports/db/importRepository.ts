@@ -2,6 +2,7 @@ import { and, count, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
+import type { KeysetRow } from "../../../core/pagination";
 import {
   IMPORT_EMPLOYEE_CHOICES_VERSION,
   IMPORT_EMPLOYEE_VERSION,
@@ -60,23 +61,20 @@ export interface ImportRepository {
   listEmployeeRecords(): Promise<ImportEmployeeRecord[]>;
   /** The number of employee records of each source that has any; the others are absent. */
   countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
-  /** Up to `first + 1` of one source's employee records after `after`, oldest first; the extra one signals a next page. */
+  /** Up to `limit` of one source's employee records after the one with id `after`, oldest first. */
   findRecordPage(
     query: ImportRecordPageQuery,
-  ): Promise<{ node: ImportEmployeeRecord; keyset: ImportRecordKeyset }[]>;
+  ): Promise<KeysetRow<ImportEmployeeRecord, [id: string]>[]>;
   /** What the owner settled for each group of records of `type`. */
   listChoices(type: "employee"): Promise<ImportEmployeeChoices[]>;
   /** Stores these choices, replacing any of the same keys. */
   saveChoices(type: "employee", choices: ImportEmployeeChoices[]): Promise<void>;
 }
 
-/** The id of the last record seen. */
-export type ImportRecordKeyset = [id: string];
-
 export interface ImportRecordPageQuery {
   sourceId: string;
-  first: number;
-  after: ImportRecordKeyset | null;
+  after: [id: string] | null;
+  limit: number;
 }
 
 export function importRepository(db: Orm | Tx): ImportRepository {
@@ -268,7 +266,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
     },
 
-    findRecordPage: async ({ sourceId, first, after }: ImportRecordPageQuery) => {
+    findRecordPage: async ({ sourceId, after, limit }: ImportRecordPageQuery) => {
       const records = await orm()
         .select()
         .from(importRecords)
@@ -281,8 +279,8 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         )
         // uuidv7 ids follow the order the records were added in.
         .orderBy(importRecords.id)
-        .limit(first + 1);
-      return records.map((record) => ({ node: toImportEmployee(record), keyset: [record.id] }));
+        .limit(limit);
+      return records.map((record) => ({ node: toImportEmployee(record), values: [record.id] }));
     },
 
     listChoices: async (type: "employee"): Promise<ImportEmployeeChoices[]> => {

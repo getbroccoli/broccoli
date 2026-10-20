@@ -14,8 +14,15 @@ import {
   type Tx,
 } from "../../../core/db";
 import { deleteFiles, storeFile } from "../../../core/files";
+import type { KeysetQuery, KeysetRow } from "../../../core/pagination";
 import type { RasterImage } from "../../../utils";
-import { EmailTakenError, type Employee, type EmployeeOrder, type NewEmployee } from "../domain";
+import {
+  EmailTakenError,
+  type Employee,
+  type EmployeeOrder,
+  type EmployeeOrderField,
+  type NewEmployee,
+} from "../domain";
 import { employees } from "./employeesTable";
 
 /** Employees stored in Postgres, through the pool or inside a transaction. */
@@ -38,30 +45,20 @@ export interface EmployeeRepository {
   hasDemo(): Promise<boolean>;
   /** Whether an employee's avatar is this file. */
   hasAvatar(fileId: string): Promise<boolean>;
-  /** Up to `first + 1` employees after `after`; the extra one signals a next page. */
-  findPage(query: EmployeePageQuery): Promise<{ node: Employee; keyset: EmployeeKeyset }[]>;
+  /** Up to `limit` employees after `after`, with their sort values as Postgres computed them. */
+  findPage(query: EmployeePageQuery): Promise<KeysetRow<Employee, unknown[]>[]>;
 }
 
 const EMAIL_UNIQUE_CONSTRAINT = "employees_email_unique";
 
-/** The sort values of the last row seen, as Postgres computed them, behind the order they belong to. */
-export type EmployeeKeyset = [field: string, direction: string, ...values: unknown[]];
+/** The sort values of an employee in each order, as `findPage` returns them. */
+export const EMPLOYEE_SORT_VALUES: Record<EmployeeOrderField, z.ZodType<unknown[]>> = {
+  NAME: z.tuple([z.string(), z.string(), z.uuid()]),
+  EMAIL: z.tuple([z.string(), z.uuid()]),
+  START_DATE: z.tuple([z.boolean(), z.string(), z.uuid()]),
+};
 
-const KEYSET_VALUES = {
-  NAME: [z.string(), z.string(), z.uuid()],
-  EMAIL: [z.string(), z.uuid()],
-  START_DATE: [z.boolean(), z.string(), z.uuid()],
-} as const;
-
-/** Parses the keyset of a cursor; a cursor from another order does not match. */
-export function employeeKeyset({ field, direction }: EmployeeOrder): z.ZodType<EmployeeKeyset> {
-  return z.tuple([z.literal(field), z.literal(direction), ...KEYSET_VALUES[field]]);
-}
-
-export interface EmployeePageQuery {
-  first: number;
-  after: EmployeeKeyset | null;
-  order: EmployeeOrder;
+export interface EmployeePageQuery extends KeysetQuery<EmployeeOrderField, unknown[]> {
   /** Trimmed and non-blank, or null for no filter. */
   search: string | null;
 }
@@ -140,7 +137,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
     hasAvatar: (fileId: string) => exists(orm(), eq(employees.avatarFileId, fileId)),
 
-    findPage: async ({ first, after, order, search }: EmployeePageQuery) => {
+    findPage: async ({ order, after, limit, search }: EmployeePageQuery) => {
       const columns = keysetColumns(order);
       const keys = Object.fromEntries(
         columns.map(({ expression }, index) => [`key${index}`, expression]),
@@ -153,20 +150,17 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
             [
               sql`true`,
               ...(search ? [matches(search)] : []),
-              ...(after ? [afterKeyset(columns, after.slice(2))] : []),
+              ...(after ? [afterKeyset(columns, after)] : []),
             ],
             sql` and `,
           ),
         )
         .orderBy(...orderByKeyset(columns))
-        .limit(first + 1);
-      return rows.map((row) => {
-        const values = columns.map((_, index) => (row as Record<string, unknown>)[`key${index}`]);
-        return {
-          node: row.employee,
-          keyset: [order.field, order.direction, ...values] satisfies EmployeeKeyset,
-        };
-      });
+        .limit(limit);
+      return rows.map((row) => ({
+        node: row.employee,
+        values: columns.map((_, index) => (row as Record<string, unknown>)[`key${index}`]),
+      }));
     },
   };
 }
