@@ -54,7 +54,7 @@ const MAX_PAGES = 50;
 /** A page of 200 full Slack profiles stays well below this. */
 const MAX_PAGE_BYTES = 8 * 1024 * 1024;
 const PHOTO_TIMEOUT_MS = 10_000;
-/** Far above a 512-pixel profile photo. */
+/** Far above a 192-pixel profile photo. */
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 const member = z.object({
@@ -75,7 +75,7 @@ const member = z.object({
       email: z.string().optional(),
       title: z.string().optional(),
       // Malformed photo fields mean no photo, never a refused page.
-      image_512: z.string().optional().catch(undefined),
+      image_192: z.string().optional().catch(undefined),
       is_custom_image: z.boolean().optional().catch(undefined),
     })
     .optional(),

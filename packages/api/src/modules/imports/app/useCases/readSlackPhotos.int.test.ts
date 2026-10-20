@@ -127,7 +127,7 @@ test("replaces a changed Slack photo and deletes its old file", async ({ orm, se
   const photoUrl = "https://avatars.slack-edge.com/new-photo.jpg";
   const member = {
     ...SLACK_MEMBER_WITH_PHOTO,
-    profile: { ...SLACK_MEMBER_WITH_PHOTO.profile, image_512: photoUrl },
+    profile: { ...SLACK_MEMBER_WITH_PHOTO.profile, image_192: photoUrl },
   };
   const readSlackPhoto = vi.fn(() => Promise.resolve(JPEG));
   const imports = importUseCases(orm, { slack: { ...slackPhotoReader([member]), readSlackPhoto } });
@@ -161,7 +161,7 @@ test("Approve keeps the stored photo while Refresh downloads its replacement", a
     ...SLACK_MEMBER_WITH_PHOTO,
     profile: {
       ...SLACK_MEMBER_WITH_PHOTO.profile,
-      image_512: "https://avatars.slack-edge.com/new-photo.jpg",
+      image_192: "https://avatars.slack-edge.com/new-photo.jpg",
     },
   };
   const downloadStarted = Promise.withResolvers<void>();
@@ -314,7 +314,7 @@ function photoMembers(count: number) {
     profile: {
       ...SLACK_MEMBER_WITH_PHOTO.profile,
       email: `employee${index}@example.com`,
-      image_512: `https://avatars.slack-edge.com/photo-${index}.png`,
+      image_192: `https://avatars.slack-edge.com/photo-${index}.png`,
     },
   }));
 }

@@ -80,7 +80,7 @@ export async function attachSlackPhotos(
 const PARALLEL_DOWNLOADS = 16;
 /** How long a Slack read keeps starting photo downloads; Refresh downloads the rest. */
 const DOWNLOAD_BUDGET_MS = 20_000;
-/** Far above a 512-pixel profile photo. */
+/** Far above a 192-pixel profile photo. */
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 /** The photo's image, or null; the log never carries the link, which may hold a token. */
