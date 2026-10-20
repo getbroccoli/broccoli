@@ -16,6 +16,7 @@ export {
   startDemoAtSetup,
   type DemoReset,
   type DemoStart,
+  type SetupDemo,
 } from "./demo";
 export { assignInstance, readAssignment } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";

@@ -1,7 +1,7 @@
 import type express from "express";
 
 import type { Orm, Transact } from "./db";
-import type { DemoReset, DemoStart } from "./instance";
+import type { SetupDemo } from "./instance";
 import type { EventHandlers } from "./events";
 import type { JobHandlers, JobQueue } from "./jobs";
 import type { Resolvers, SecurityResolver } from "./graphql";
@@ -36,10 +36,18 @@ export interface ModuleManifest {
   events?: EventHandlers;
   /** The module's background jobs, run as the system. */
   jobs?: JobHandlers;
-  /** HTTP routes under `/api/` that GraphQL cannot serve, such as images. */
-  router?: (resolveSecurity: SecurityResolver) => express.Router;
-  /** The demo company's start, which self-hosted setup runs when it signs in the demo's owner. */
-  prepareDemoStart?: () => Promise<DemoStart>;
-  /** Deletes the demo's people, which self-hosted setup runs when the demo's owner resets setup. */
-  clearDemoPeople?: DemoReset;
+  /**
+   * HTTP routes under `/api/` that GraphQL cannot serve, such as images; `publicOrigin` is the
+   * origin browsers reach the instance at.
+   */
+  router?: (
+    resolveSecurity: SecurityResolver,
+    publicOrigin: (request: express.Request) => Promise<string>,
+  ) => express.Router;
+}
+
+/** Every module of the API, and what self-hosted setup needs from them for the demo. */
+export interface Modules {
+  manifests: readonly ModuleManifest[];
+  setupDemo: SetupDemo;
 }

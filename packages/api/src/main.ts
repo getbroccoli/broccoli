@@ -5,17 +5,14 @@ import { createModules } from "./modules";
 
 const env = loadEnv();
 const logger = createLogger(env.logLevel);
-const { deployment } = env;
 const server = await startServer(env, logger, (core) =>
   createModules(core, {
-    mode: deployment.mode,
-    publicUrl: deployment.mode === "self_hosted" ? deployment.publicUrl : undefined,
+    deployment: env.deployment,
     brandLookupUrl: env.brandLookupUrl,
     slack: { relayUrl: env.slackRelayUrl, apiUrl: "https://slack.com/api" },
     ai: {
       openRouterUrl: "https://openrouter.ai/api",
       openRouterKey: env.openRouterKey,
-      broccoliAiUrl: deployment.mode === "self_hosted" ? deployment.broccoliAiUrl : null,
     },
   }),
 );

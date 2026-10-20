@@ -5,32 +5,35 @@ import {
   type DecisionsSource,
 } from "../integrations/ai";
 import { type AiSettings, createAiSettings, createBroccoliAiTokens } from "../core/instance";
-import type { Mode } from "../core/env";
+import type { Deployment } from "../core/env";
 import { PrincipalSecurityContext, type SecurityContext } from "../core/security";
-import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
+import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
-import { employeesModule } from "./employees";
-import { importsModule } from "./imports";
+import { deleteAllEmployees, employeesModule } from "./employees";
+import { importsModule, prepareDemoStart } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
 /** Settings that only some modules need, read from the environment by `main.ts`. */
 export interface ModuleSettings {
-  mode: Mode;
-  /** Self-hosted only: the address browsers use. */
-  publicUrl?: string;
+  deployment: Deployment;
   brandLookupUrl: string | null;
   slack: SlackUrls;
-  /** Where AI decisions go: OpenRouter with a key, else Broccoli AI (self-hosted only). */
-  ai: { openRouterUrl: string; openRouterKey: string | null; broccoliAiUrl: string | null };
+  /** Where AI decisions go with an OpenRouter key. */
+  ai: { openRouterUrl: string; openRouterKey: string | null };
 }
 
 /** Every module of the API, each given only the dependencies it uses. */
 export function createModules(
   core: ModuleDependencies,
-  { mode, publicUrl, brandLookupUrl, slack, ai }: ModuleSettings,
-): ModuleManifest[] {
+  { deployment, brandLookupUrl, slack, ai: openRouter }: ModuleSettings,
+): Modules {
+  const { mode } = deployment;
+  const ai = {
+    ...openRouter,
+    broccoliAiUrl: deployment.mode === "self_hosted" ? deployment.broccoliAiUrl : null,
+  };
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
   const aiSettings = createAiSettings({ ...core, mode, environmentKey: ai.openRouterKey });
@@ -41,7 +44,7 @@ export function createModules(
     readSource: () => decisionsSource(system, aiSettings, ai),
     tokens: { read: () => tokens.read(system), save: (token) => tokens.save(system, token) },
   });
-  return [
+  const manifests = [
     systemModule({
       ...core,
       mode,
@@ -54,7 +57,7 @@ export function createModules(
     employeesModule({ orm: core.orm }),
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, transact: core.transact }),
-    slackModule({ slackConnection, orm: core.orm, mode, publicUrl }),
+    slackModule(slackConnection),
     importsModule({
       ...core,
       slack: slackConnection,
@@ -62,13 +65,20 @@ export function createModules(
       prepareDemoFill: () => prepareDemoFill(),
     }),
   ];
+  return {
+    manifests,
+    setupDemo: {
+      prepareStart: () => prepareDemoStart({ prepareDemoFill: () => prepareDemoFill() }),
+      deleteAllEmployees,
+    },
+  };
 }
 
 /** Where this request's decisions go, for the AI the settings pick. */
 async function decisionsSource(
   ctx: SecurityContext,
   aiSettings: AiSettings,
-  settings: ModuleSettings["ai"],
+  settings: AiUrls,
 ): Promise<DecisionsSource> {
   const ai = await aiSettings.read(ctx);
   if (ai.source === "broccoli_ai") {
@@ -80,9 +90,11 @@ async function decisionsSource(
   return { kind: "openrouter", url: settings.openRouterUrl, key: ai.openRouterKey.key };
 }
 
-function broccoliAiUrlOf({ broccoliAiUrl }: ModuleSettings["ai"]): string {
+function broccoliAiUrlOf({ broccoliAiUrl }: AiUrls): string {
   if (broccoliAiUrl === null) {
     throw new Error("Only a self-hosted instance uses Broccoli AI");
   }
   return broccoliAiUrl;
 }
+
+type AiUrls = ModuleSettings["ai"] & { broccoliAiUrl: string | null };

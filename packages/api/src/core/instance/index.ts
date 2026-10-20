@@ -11,6 +11,7 @@ export {
   readDemoExpiresAt,
   type DemoReset,
   type DemoStart,
+  type SetupDemo,
   hasOwner,
   isImportOpen,
   readSetupHolder,
@@ -22,8 +23,8 @@ export {
   type AiSettings,
   createBroccoliAiTokens,
 } from "./app";
-export { readSetupToken, selfHostedAuth } from "./betterAuth";
-export { setupRouter } from "./http";
+export { readSetupToken } from "./betterAuth";
+export { selfHostedServer } from "./selfHostedServer";
 export {
   AssignmentConflictError,
   type AiSource,

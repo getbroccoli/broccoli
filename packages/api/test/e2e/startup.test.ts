@@ -94,16 +94,22 @@ it("rejects startup and closes the database pool when a module router throws", a
     createLogger("silent"),
     (dependencies) => {
       orm = dependencies.orm;
-      return [
-        {
-          name: "broken",
-          typeDefs: "type Query { ping: String }",
-          resolvers: {},
-          router: () => {
-            throw routerError;
+      return {
+        manifests: [
+          {
+            name: "broken",
+            typeDefs: "type Query { ping: String }",
+            resolvers: {},
+            router: () => {
+              throw routerError;
+            },
           },
+        ],
+        setupDemo: {
+          prepareStart: () => Promise.reject(new Error("No demo")),
+          deleteAllEmployees: () => Promise.resolve(),
         },
-      ];
+      };
     },
   );
 

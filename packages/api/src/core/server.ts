@@ -6,17 +6,17 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import express from "express";
 
-import { authHandler } from "./auth";
+import { authHandler, type DeploymentServer } from "./auth";
 import { connectDatabase, type Database, transactor } from "./db";
 import type { Env } from "./env";
 import { createEventBus } from "./events";
 import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { type DemoReset, type DemoStart, selfHostedAuth, setupRouter } from "./instance";
+import { selfHostedServer } from "./instance";
 import type { Logger } from "./logger";
-import { managedServer, type ManagedServer } from "./managedSignIn";
-import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
+import { managedServer } from "./managedSignIn";
+import type { ModuleDependencies, ModuleManifest, Modules } from "./moduleManifest";
 import { Readiness } from "./readiness";
 import { createSecretBox, ensureSecret } from "./secrets";
 import { resolveSecurityContext } from "./sessionSecurity";
@@ -42,7 +42,7 @@ export interface RunningServer {
 export async function startServer(
   env: ServerEnv,
   logger: Logger,
-  createModules: (dependencies: ModuleDependencies) => readonly ModuleManifest[],
+  createModules: (dependencies: ModuleDependencies) => Modules,
 ): Promise<RunningServer> {
   // Built first: a web app folder without `index.html` fails startup before anything opens.
   const webApp = env.webDir ? webAppRouter(env.webDir) : undefined;
@@ -57,11 +57,11 @@ export async function startServer(
   app.disable("x-powered-by");
   const httpServer = createServer(app);
   let modules: readonly ModuleManifest[];
-  let deploymentParts: Pick<ManagedServer, "auth"> & Partial<ManagedServer>;
+  let deployment: DeploymentServer;
   let resolveSecurity: SecurityResolver;
   let graphql: GraphqlApi;
   try {
-    modules = createModules({
+    const { manifests, setupDemo } = createModules({
       dataDir: env.dataDir,
       orm: database.orm,
       transact,
@@ -69,21 +69,13 @@ export async function startServer(
       secretBox,
       jobs: jobRunner.queue,
     });
+    modules = manifests;
     const services = { orm: database.orm, transact, secret: authSecret, logger };
-    // Self-hosted instances add their auth and its setup guard; managed ones init routes and status.
-    deploymentParts =
+    deployment =
       env.deployment.mode === "managed"
         ? managedServer({ ...services, deployment: env.deployment, readiness })
-        : {
-            auth: selfHostedAuth({
-              ...services,
-              publicUrl: env.deployment.publicUrl,
-              prepareDemoStart: demoStartOf(modules),
-              clearDemoPeople: demoResetOf(modules),
-            }),
-            router: setupRouter(env.deployment.publicUrl),
-          };
-    const auth = deploymentParts.auth;
+        : selfHostedServer({ ...services, publicUrl: env.deployment.publicUrl, demo: setupDemo });
+    const auth = deployment.auth;
     resolveSecurity = (headers) => resolveSecurityContext(auth, database.orm, headers);
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
   } catch (error) {
@@ -91,18 +83,16 @@ export async function startServer(
     throw error;
   }
   try {
-    app.use(healthRouter(readiness, deploymentParts.initStatus));
-    if (deploymentParts.router) {
-      app.use(deploymentParts.router);
-    }
-    app.all("/api/auth/{*path}", authHandler(deploymentParts.auth));
+    app.use(healthRouter(readiness, deployment.initStatus));
+    app.use(deployment.router);
+    app.all("/api/auth/{*path}", authHandler(deployment.auth));
     app.use(graphql.router);
     for (const module of modules) {
       if (module.events) {
         eventBus.subscribe(module.events);
       }
       if (module.router) {
-        app.use("/api", module.router(resolveSecurity));
+        app.use("/api", module.router(resolveSecurity, deployment.publicOrigin));
       }
     }
     if (webApp) {
@@ -134,28 +124,6 @@ export async function startServer(
       })();
       return stopping;
     },
-  };
-}
-
-/** The demo start of the module that provides it; self-hosted setup calls it on demand. */
-function demoStartOf(modules: readonly ModuleManifest[]): () => Promise<DemoStart> {
-  return () => {
-    const prepare = modules.find((module) => module.prepareDemoStart)?.prepareDemoStart;
-    if (!prepare) {
-      throw new Error("No module starts the demo");
-    }
-    return prepare();
-  };
-}
-
-/** The demo reset of the module that provides it; self-hosted setup calls it on demand. */
-function demoResetOf(modules: readonly ModuleManifest[]): DemoReset {
-  return (ctx, tx) => {
-    const clear = modules.find((module) => module.clearDemoPeople)?.clearDemoPeople;
-    if (!clear) {
-      throw new Error("No module resets the demo");
-    }
-    return clear(ctx, tx);
   };
 }
 
