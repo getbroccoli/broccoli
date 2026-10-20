@@ -16,6 +16,8 @@ const test = baseTest.extend<{ runner: JobRunner; queues: PgBoss }>({
   },
   queues: async ({ databaseUrl }, use) => {
     const queues = new PgBoss({ connectionString: databaseUrl, schedule: false });
+    // Dropping the test database after the test ends the pool's connections, as the runner expects.
+    queues.on("error", () => {});
     await queues.start();
     try {
       await use(queues);
