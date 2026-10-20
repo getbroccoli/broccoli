@@ -1,7 +1,5 @@
 import { useQuery } from "@apollo/client/react";
 import { ArrowRight, Stack, Users } from "@phosphor-icons/react";
-import { useRouter } from "@tanstack/react-router";
-import { useTransition } from "react";
 
 import {
   CompleteSetupDocument,
@@ -12,6 +10,7 @@ import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { SetupLayout, SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 import { AddedPeopleRing } from "./AddedPeopleRing";
 import { ResetSetupDialog } from "./ResetSetupDialog";
@@ -21,22 +20,14 @@ import { ResetSetupDialog } from "./ResetSetupDialog";
  * completes setup, which routing follows into the app; Reset setup starts over.
  */
 export function ReadyStep() {
-  const router = useRouter();
   // Approve and reset don't return the import's sources, so a cached answer may be stale.
   const { data } = useQuery(ReadyStepDocument, { fetchPolicy: "network-only" });
   const [completeSetup, { error }] = usePayloadMutation(CompleteSetupDocument);
-  const [starting, startTransition] = useTransition();
+  const [run, starting] = useRouteAction();
   const company = data?.company.name;
 
-  const start = () =>
-    startTransition(async () => {
-      try {
-        await completeSetup();
-      } catch {
-        return; // `error` shows it
-      }
-      await router.invalidate();
-    });
+  // `error` shows a failure.
+  const start = () => run(() => completeSetup());
 
   return (
     <SetupLayout

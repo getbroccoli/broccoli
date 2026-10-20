@@ -1,6 +1,5 @@
 import { useApolloClient } from "@apollo/client/react";
-import { useRouter } from "@tanstack/react-router";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import {
   AlertDialog,
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { t } from "@/i18n";
 import { postJson } from "@/lib/postJson";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 type Props = {
   open: boolean;
@@ -25,9 +25,8 @@ type Props = {
  * holds setup again, and the routing sends it there. Opened from the workspace menu.
  */
 export function ResetDemoDialog({ open, onOpenChange }: Props) {
-  const router = useRouter();
   const apolloClient = useApolloClient();
-  const [resetting, startTransition] = useTransition();
+  const [run, resetting] = useRouteAction();
   const [failed, setFailed] = useState(false);
 
   const changeOpen = (nextOpen: boolean) => {
@@ -38,17 +37,16 @@ export function ResetDemoDialog({ open, onOpenChange }: Props) {
 
   const confirm = () => {
     setFailed(false);
-    startTransition(async () => {
+    run(async () => {
       const reset = await postJson("/api/auth/setup/demo/reset", {}).then(
         (response) => response.ok,
         () => false,
       );
       if (!reset) {
         setFailed(true);
-        return;
+        return false;
       }
       await apolloClient.clearStore();
-      await router.invalidate();
     });
   };
 

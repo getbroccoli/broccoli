@@ -1,6 +1,5 @@
 import { ArrowCounterClockwise } from "@phosphor-icons/react";
-import { useRouter } from "@tanstack/react-router";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { ResetSetupDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
@@ -17,16 +16,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 /**
  * "Reset setup" on the account and ready steps and its confirmation: setup goes back to the company
  * step, where the routing then sends the owner.
  */
 export function ResetSetupDialog() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [resetSetup, { error, reset }] = usePayloadMutation(ResetSetupDocument);
-  const [isResetting, startTransition] = useTransition();
+  const [run, isResetting] = useRouteAction();
 
   const changeOpen = (nextOpen: boolean) => {
     if (isResetting) return;
@@ -34,15 +33,8 @@ export function ResetSetupDialog() {
     setOpen(nextOpen);
   };
 
-  const confirm = () =>
-    startTransition(async () => {
-      try {
-        await resetSetup();
-      } catch {
-        return; // The dialog stays open and shows `error`.
-      }
-      await router.invalidate();
-    });
+  // On failure the dialog stays open and shows `error`.
+  const confirm = () => run(() => resetSetup());
 
   return (
     <AlertDialog open={open} onOpenChange={changeOpen}>

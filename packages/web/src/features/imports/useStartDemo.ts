@@ -1,10 +1,11 @@
 import { useApolloClient } from "@apollo/client/react";
-import { useRouteContext, useRouter } from "@tanstack/react-router";
-import { useState, useTransition } from "react";
+import { useRouteContext } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { StartDemoDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { startDemoSetup } from "@/features/setup";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 /**
  * Leaves the import step with the demo company in place of the owner's people; the router
@@ -12,32 +13,26 @@ import { startDemoSetup } from "@/features/setup";
  * signed in as the demo's owner, so the cache is cleared as on any sign-in.
  */
 export function useStartDemo() {
-  const router = useRouter();
   const apolloClient = useApolloClient();
   const { holdsSetup } = useRouteContext({ from: "__root__" });
   const [startDemoMutation] = usePayloadMutation(StartDemoDocument);
-  const [starting, startTransition] = useTransition();
+  const [run, starting] = useRouteAction();
   const [failed, setFailed] = useState(false);
 
   const start = () => {
     setFailed(false);
-    startTransition(async () => {
-      if (holdsSetup) {
-        const started = await startDemoSetup();
-        if (!started) {
-          setFailed(true);
-          return;
-        }
-        await apolloClient.clearStore();
-      } else {
-        try {
-          await startDemoMutation();
-        } catch {
-          setFailed(true);
-          return;
-        }
+    run(async () => {
+      const started = holdsSetup
+        ? await startDemoSetup()
+        : await startDemoMutation().then(
+            () => true,
+            () => false,
+          );
+      if (!started) {
+        setFailed(true);
+        return false;
       }
-      await router.invalidate();
+      if (holdsSetup) await apolloClient.clearStore();
     });
   };
 
