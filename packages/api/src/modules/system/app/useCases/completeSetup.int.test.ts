@@ -1,11 +1,11 @@
 import { expect, NON_OWNER, systemUseCases, test } from "#test/support";
 
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 
 test("completes setup from the ready step", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "ready");
-  const system = systemUseCases(orm, { mode: "managed" });
+  await seed.setupStep("ready");
+  const system = systemUseCases(orm);
 
   await system.completeSetup(owner);
 
@@ -14,8 +14,8 @@ test("completes setup from the ready step", async ({ orm, seed }) => {
 
 test("does nothing at the import step", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
-  const system = systemUseCases(orm, { mode: "managed" });
+  await seed.setupStep("import");
+  const system = systemUseCases(orm);
 
   await system.completeSetup(owner);
 
@@ -23,9 +23,9 @@ test("does nothing at the import step", async ({ orm, seed }) => {
 });
 
 test("refuses a non-owner completing setup and keeps the ready step", async ({ orm, seed }) => {
-  const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "ready");
-  const system = systemUseCases(orm, { mode: "managed" });
+  await seed.owner();
+  await seed.setupStep("ready");
+  const system = systemUseCases(orm);
 
   await expect(system.completeSetup(NON_OWNER)).rejects.toMatchObject({ code: "FORBIDDEN" });
 

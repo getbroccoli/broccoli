@@ -31,7 +31,7 @@ const NOT_IN_DEMO_RESET = {
  * renewing their session never takes it past the deadline, so Better Auth itself refuses
  * it afterwards.
  */
-export function demoPlugin(orm: Orm, transact: Transact, clearDemoPeople: DemoReset) {
+export function demoPlugin(orm: Orm, transact: Transact, deleteAllEmployees: DemoReset) {
   return {
     id: "demo",
     init: () => ({
@@ -82,7 +82,7 @@ export function demoPlugin(orm: Orm, transact: Transact, clearDemoPeople: DemoRe
                 tx,
                 { userId, now: new Date() },
                 {
-                  clearPeople: clearDemoPeople,
+                  clearPeople: deleteAllEmployees,
                   deleteOwner: async () => {
                     await internalAdapter.deleteUserSessions(userId);
                     await internalAdapter.deleteUser(userId);

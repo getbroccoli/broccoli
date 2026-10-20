@@ -8,22 +8,22 @@ export function readSetupStep(db: Orm | Tx): Promise<SetupStep> {
   return instanceRepository(db).readStep();
 }
 
+/** Leaves the company step for the import step, joining `tx`; does nothing at any other step. Returns whether it moved. */
+export function completeCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return advanceStep(ctx, tx, "company", "import");
+}
+
 /**
- * Moves the setup step from `from` to `to`, joining `tx`; does nothing at any other
- * step. Returns whether it moved. Reaching `done` publishes `instance.setup_completed`.
+ * Leaves the ready step for `done` once the managed owner has seen what setup added, joining
+ * `tx`; does nothing at any other step. Returns whether it moved.
  */
-export async function advanceStep(
-  ctx: SecurityContext,
-  tx: Tx,
-  from: SetupStep,
-  to: SetupStep,
-): Promise<boolean> {
-  ctx.requireSetupAccess();
-  const moved = await instanceRepository(tx).advanceStep(from, to);
-  if (moved && to === "done") {
-    tx.publish("instance.setup_completed", null);
-  }
-  return moved;
+export function completeReadyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return advanceStep(ctx, tx, "ready", "done");
+}
+
+/** Leaves the owner step for `done` once setup created the owner, joining `tx`. */
+export function completeOwnerStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return advanceStep(ctx, tx, "owner", "done");
 }
 
 /**
@@ -67,4 +67,22 @@ async function leaveImportStep(
 ): Promise<boolean> {
   const next = (await instanceRepository(tx).readOwnerUserId()) ? withOwner : "owner";
   return advanceStep(ctx, tx, "import", next);
+}
+
+/**
+ * Moves the setup step from `from` to `to`, joining `tx`; does nothing at any other
+ * step. Returns whether it moved. Reaching `done` publishes `instance.setup_completed`.
+ */
+async function advanceStep(
+  ctx: SecurityContext,
+  tx: Tx,
+  from: SetupStep,
+  to: SetupStep,
+): Promise<boolean> {
+  ctx.requireSetupAccess();
+  const moved = await instanceRepository(tx).advanceStep(from, to);
+  if (moved && to === "done") {
+    tx.publish("instance.setup_completed", null);
+  }
+  return moved;
 }

@@ -1,15 +1,15 @@
 import "./events";
 export {
-  advanceStep,
   assignInstance,
   readAssignment,
   claimOwner,
   approveImportStep,
+  completeCompanyStep,
   completeImportStep,
-  readDemoDeadlineOf,
+  completeReadyStep,
   readDemoExpiresAt,
-  type DemoReset,
   type DemoStart,
+  type SetupDemo,
   hasOwner,
   isImportOpen,
   readSetupHolder,
@@ -19,12 +19,9 @@ export {
   readOwnerUserId,
   createAiSettings,
   type AiSettings,
-  createBroccoliAiTokens,
 } from "./app";
-export { readSetupToken, selfHostedAuth } from "./betterAuth";
-export { setupRouter } from "./http";
-/** For test seeding only; other code goes through the operations above. */
-export { instanceRepository } from "./db";
+export { resolveSecurityContext } from "./betterAuth";
+export { selfHostedServer } from "./selfHostedServer";
 export {
   AssignmentConflictError,
   type AiSource,

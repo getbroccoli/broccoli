@@ -13,10 +13,18 @@ import { newSetupToken, saveSetupSession } from "./setupSession";
 export type DemoStart = (ctx: SecurityContext, tx: Tx) => Promise<void>;
 
 /**
- * Deletes the demo's people in the caller's transaction when the demo is reset: the demo
- * company and anyone added during the demo. The demo module provides it.
+ * Deletes every employee in the caller's transaction when the demo is reset; during the demo
+ * they are the demo company and anyone added to it. The employees module provides it.
  */
 export type DemoReset = (ctx: SecurityContext, tx: Tx) => Promise<void>;
+
+/** What self-hosted setup needs from the modules for the demo. */
+export interface SetupDemo {
+  /** The demo company's start, run when setup starts the demo. */
+  prepareStart: () => Promise<DemoStart>;
+  /** Run when the demo's owner resets setup. */
+  deleteAllEmployees: DemoReset;
+}
 
 /**
  * Starts the demo for the browser holding self-hosted setup at the `import` step: makes the

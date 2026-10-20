@@ -1,6 +1,5 @@
 import { companyUseCases, expect, PNG as logo, SYSTEM, test } from "#test/support";
 
-import { instanceRepository } from "../../../../core/instance";
 import { createLogger } from "../../../../core/logger";
 
 test("stores the brand name and logo found for the owner's domain", async ({ orm, seed }) => {
@@ -116,7 +115,7 @@ test.for(["import", "owner", "done"] as const)(
   "does not look up the brand at the %s step",
   async (step, { orm, seed }) => {
     const actor = await seed.owner();
-    await instanceRepository(orm).advanceStep("company", step);
+    await seed.setupStep(step);
     const domains: string[] = [];
     const company = companyUseCases(orm, {
       brandLookup: (domain) => {

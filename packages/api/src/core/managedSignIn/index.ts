@@ -1,1 +1,1 @@
-export { managedServer, type ManagedServer } from "./managedServer";
+export { managedServer } from "./managedServer";

@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { expect, importUseCases, NON_OWNER, OWNER, SETUP_HOLDER, test } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test("approving creates an employee per ready import employee and moves setup to ready", async ({
@@ -11,7 +11,7 @@ test("approving creates an employee per ready import employee and moves setup to
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const avery = {
     firstName: "Avery",
@@ -41,7 +41,7 @@ test("approving adds exactly the ready import employees the review counts", asyn
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
@@ -66,7 +66,7 @@ test("approving keeps a record without a last name without creating an employee"
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const records = await seed.importEmployees(source.id, [
     { firstName: "Avery", lastName: null, email: "avery@example.com" },
@@ -88,7 +88,7 @@ test("approving keeps a record without a last name without creating an employee"
 
 test("approving twice creates the employees once", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
@@ -104,7 +104,7 @@ test("approving twice creates the employees once", async ({ orm, seed }) => {
 
 test("two concurrent approves create the employees once", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
@@ -120,10 +120,7 @@ test.for(["skipped", "company"] as const)(
   "approving at the %s step creates nothing and leaves setup unchanged",
   async (step, { orm, seed }) => {
     const owner = await seed.owner();
-    await instanceRepository(orm).setOwner(
-      owner.user!.userId,
-      step === "skipped" ? "import" : "company",
-    );
+    await seed.setupStep(step === "skipped" ? "import" : "company");
     const source = await seed.importSource();
     await seed.importEmployees(source.id, [{}]);
     const imports = importUseCases(orm);
@@ -139,8 +136,8 @@ test.for(["skipped", "company"] as const)(
 );
 
 test("refuses a non-owner approving the import", async ({ orm, seed }) => {
-  const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.owner();
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
@@ -155,7 +152,7 @@ test("refuses a non-owner approving the import", async ({ orm, seed }) => {
 
 test("refuses approval while a file is mapping without advancing setup", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const records = await seed.importEmployees(source.id, [
     { firstName: "Avery", lastName: "Stone" },
@@ -179,7 +176,7 @@ test("refuses approval while a file is mapping without advancing setup", async (
 
 test("approves available records when a failed file is present", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [
     { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
@@ -201,7 +198,7 @@ test("waits for an uncommitted upload before refusing approval", async ({
   fakeDecisions: fake,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const inserted = Promise.withResolvers<number>();
   const release = Promise.withResolvers<void>();
   const imports = importUseCases(orm, {
@@ -257,7 +254,7 @@ test("approves one employee per group with picked and typed values, excluding le
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const slack = await seed.importSource();
   const file = await seed.fileSource({ content: "x", status: "mapped" });
   const [member] = await seed.importEmployees(slack.id, [
@@ -295,7 +292,7 @@ test("the setup holder approves employees without an owner and moves setup to ow
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
   await seed.importEmployees(source.id, [avery]);

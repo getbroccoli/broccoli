@@ -1,7 +1,8 @@
 export {
-  advanceStep,
   approveImportStep,
+  completeCompanyStep,
   completeImportStep,
+  completeReadyStep,
   isImportOpen,
   readSetupStep,
   returnToCompanyStep,
@@ -15,8 +16,8 @@ export {
   startDemoAtSetup,
   type DemoReset,
   type DemoStart,
+  type SetupDemo,
 } from "./demo";
 export { assignInstance, readAssignment } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
 export { createAiSettings, type AiSettings } from "./aiSettings";
-export { createBroccoliAiTokens } from "./broccoliAiTokens";

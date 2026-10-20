@@ -3,7 +3,7 @@ import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import { holdsSetup, OwnerExistsError, SetupInProgressError, type SetupStep } from "../domain";
-import { advanceStep } from "./setup";
+import { completeOwnerStep } from "./setup";
 
 /** The owner's user id, or null before setup. */
 export function readOwnerUserId(db: Orm | Tx): Promise<string | null> {
@@ -57,7 +57,7 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
     throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
   }
   const owner = await saveOwner(tx, await createOwner(), step);
-  await advanceStep(ctx, tx, "owner", "done");
+  await completeOwnerStep(ctx, tx);
   await instance.clearSetupSession();
   return owner;
 }

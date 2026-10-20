@@ -11,7 +11,6 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { instanceRepository } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 import { importRepository } from "../../db";
 
@@ -19,7 +18,7 @@ test("finishing the import deletes its rows and staff files but keeps employee a
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },

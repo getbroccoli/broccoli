@@ -1,4 +1,4 @@
-import { advanceStep } from "../../../../core/instance";
+import { completeReadyStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import type { SystemContext } from "./systemContext";
 
@@ -10,5 +10,5 @@ export async function completeSetup(
   { transact }: Pick<SystemContext, "transact">,
   ctx: SecurityContext,
 ): Promise<void> {
-  await transact((tx) => advanceStep(ctx, tx, "ready", "done"));
+  await transact((tx) => completeReadyStep(ctx, tx));
 }

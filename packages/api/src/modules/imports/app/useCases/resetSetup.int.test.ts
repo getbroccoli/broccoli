@@ -10,14 +10,14 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test("resetting setup deletes approved employees but keeps the import and its photo files", async ({
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const records = await seed.importEmployees(source.id, [
     { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },
@@ -63,8 +63,7 @@ test("approving again after reset recreates the employees with their import phot
   orm,
   seed,
 }) => {
-  const instance = instanceRepository(orm);
-  await instance.advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },
@@ -78,7 +77,8 @@ test("approving again after reset recreates the employees with their import phot
   await imports.approveImport(SETUP_HOLDER);
 
   await imports.resetSetup(SETUP_HOLDER);
-  expect(await instance.advanceStep("company", "import")).toBe(true);
+  expect(await readSetupStep(orm)).toBe("company");
+  await seed.setupStep("import");
   await imports.approveImport(SETUP_HOLDER);
 
   expect(await readSetupStep(orm)).toBe("owner");
@@ -95,7 +95,7 @@ test("resetting the ready step returns to company and deletes approved employees
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
@@ -112,12 +112,12 @@ test("resetting the ready step returns to company and deletes approved employees
 
 test("resetting completed setup keeps the step and employees unchanged", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
   await imports.approveImport(owner);
-  await instanceRepository(orm).advanceStep("ready", "done");
+  await seed.setupStep("done");
   expect(await readSetupStep(orm)).toBe("done");
   const employees = createEmployeeUseCases({ orm });
   const approved = await employees.listEmployees(owner, {});

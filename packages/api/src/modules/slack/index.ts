@@ -1,11 +1,9 @@
-import type { Mode } from "../../core/env";
 import { readSdl } from "../../core/graphql";
-import { readAssignment } from "../../core/instance";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { createSlackApi, createSlackRelay } from "../../integrations/slack";
 import { createSlackConnectionService, type SlackConnectionService } from "./app";
 import { createResolvers } from "./graphql";
-import { type PublicOrigin, slackRouter } from "./http";
+import { slackRouter } from "./http";
 
 export {
   createSlackConnectionService,
@@ -37,28 +35,12 @@ export function createSlack({
 }
 
 /** The connection to the company's Slack workspace: connecting it and reading it for other modules. */
-export function slackModule({
-  slackConnection,
-  orm,
-  mode,
-  publicUrl,
-}: Pick<ModuleDependencies, "orm"> & {
-  slackConnection: SlackConnectionService;
-  mode: Mode;
-  /** Self-hosted only: the address browsers use; unset takes it from each request. */
-  publicUrl?: string;
-}): ModuleManifest {
-  const publicOrigin: PublicOrigin = async (request) => {
-    if (mode === "managed") {
-      // Requests reach a managed instance only after init stored its assignment.
-      return (await readAssignment(orm))!.publicOrigin;
-    }
-    return publicUrl ? new URL(publicUrl).origin : `${request.protocol}://${request.host}`;
-  };
+export function slackModule(slackConnection: SlackConnectionService): ModuleManifest {
   return {
     name: "slack",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(slackConnection),
-    router: (resolveSecurity) => slackRouter(slackConnection, resolveSecurity, publicOrigin),
+    router: (resolveSecurity, publicOrigin) =>
+      slackRouter(slackConnection, resolveSecurity, publicOrigin),
   };
 }

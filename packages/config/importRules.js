@@ -71,7 +71,7 @@ function validateRules({ elements, layers, deepImports, testsMayImport }, packag
   const requireElements = (from, targets) => {
     for (const target of targets) {
       requireExisting(packageDir, target);
-      if (!Object.hasOwn(elements, target)) {
+      if (!Object.hasOwn(elements, target) && !isLayerOfElement(target, elements, layers)) {
         fail(`"${from}" lists "${target}", which is not an element`);
       }
     }
@@ -209,6 +209,15 @@ function expandTargets(from, targets, paths) {
     }
   }
   return [...expanded];
+}
+
+/** Whether `path` is a layer folder of an element, such as `src/core/instance/db`. */
+function isLayerOfElement(path, elements, layers) {
+  const separator = path.lastIndexOf("/");
+  return (
+    Object.hasOwn(elements, path.slice(0, separator)) &&
+    Object.hasOwn(layers, path.slice(separator + 1))
+  );
 }
 
 /** Tests inside a folder element or next to a single-file element; any other test is unknown. */

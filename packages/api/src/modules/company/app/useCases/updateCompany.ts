@@ -1,5 +1,5 @@
 import type { SecurityContext } from "../../../../core/security";
-import { advanceStep } from "../../../../core/instance";
+import { completeCompanyStep } from "../../../../core/instance";
 import { companyRepository } from "../../db";
 import { parseCompanyName } from "../../domain";
 import { type Company, type CompanyContext, readCompany } from "./company";
@@ -14,7 +14,7 @@ export async function updateCompany(
   const name = parseCompanyName(input.name);
   await context.transact(async (tx) => {
     await companyRepository(tx).saveName(name);
-    await advanceStep(ctx, tx, "company", "import");
+    await completeCompanyStep(ctx, tx);
   });
   return readCompany(context);
 }

@@ -1,6 +1,6 @@
 import { expect, importUseCases, OWNER, SETUP_HOLDER, test } from "#test/support";
 
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 
 test("stores a record pick for a later read", async ({ orm, seed }) => {
   const slack = await seed.importSource();
@@ -184,7 +184,7 @@ test("refuses a leave-out change after Approve and keeps the import unchanged", 
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);

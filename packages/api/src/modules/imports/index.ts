@@ -4,11 +4,11 @@ import type { Decisions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import { createImportUseCases, type DemoFill, prepareDemoStart, type SlackReader } from "./app";
+import { createImportUseCases, type DemoFill, type SlackReader } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
-export { createImportUseCases, type ImportUseCases } from "./app";
+export { createImportUseCases, type ImportUseCases, prepareDemoStart } from "./app";
 /** For test seeding only; other modules go through the use cases. */
 export { importPhotoRepository, importRepository } from "./db";
 export type { ImportEmployeeValues } from "./domain";
@@ -36,7 +36,6 @@ export function importsModule(
         .Router()
         .use(filesRouter(useCases, resolveSecurity))
         .use(photoRouter(useCases, resolveSecurity)),
-    prepareDemoStart: () => prepareDemoStart(dependencies),
     events: {
       "instance.setup_completed": () => useCases.finishImport(PrincipalSecurityContext.system()),
     },

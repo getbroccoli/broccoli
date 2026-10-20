@@ -6,7 +6,7 @@ import type { BrandLookup } from "../../../../integrations/brandLookup";
 import { normalizeImage } from "../../../../utils";
 import { companyRepository } from "../../db";
 import { companyDomain } from "../../domain";
-import { LOGO_MAX_SIDE, MAX_LOGO_BYTES } from "./company";
+import { MAX_LOGO_BYTES } from "./company";
 
 /**
  * Looks up the brand of the new owner's email domain once and keeps it for the
@@ -32,7 +32,7 @@ export async function detectCompanyNameAndLogo(
     // The HTTP call runs before the transaction, so no connection or lock waits on it.
     const brand = await brandLookup(domain);
     const logo = brand?.logo
-      ? await normalizeImage(brand.logo, { maxBytes: MAX_LOGO_BYTES, maxSide: LOGO_MAX_SIDE })
+      ? await normalizeImage(brand.logo, { maxBytes: MAX_LOGO_BYTES })
       : null;
     await transact((tx) => companyRepository(tx).saveBrandOnce(brand?.name ?? null, logo));
   } catch (error) {

@@ -1,88 +1,47 @@
-import {
-  checkOpenRouterKey,
-  createResolvedDecisions,
-  DecisionsError,
-  type DecisionsSource,
-} from "../integrations/ai";
-import { type AiSettings, createAiSettings, createBroccoliAiTokens } from "../core/instance";
-import type { Mode } from "../core/env";
-import { PrincipalSecurityContext, type SecurityContext } from "../core/security";
-import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
+import { createAiSettings } from "../core/instance";
+import type { Deployment } from "../core/env";
+import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
-import { employeesModule } from "./employees";
-import { importsModule } from "./imports";
+import { deleteAllEmployees, employeesModule } from "./employees";
+import { importsModule, prepareDemoStart } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
 /** Settings that only some modules need, read from the environment by `main.ts`. */
 export interface ModuleSettings {
-  mode: Mode;
-  /** Self-hosted only: the address browsers use. */
-  publicUrl?: string;
+  deployment: Deployment;
   brandLookupUrl: string | null;
   slack: SlackUrls;
-  /** Where AI decisions go: OpenRouter with a key, else Broccoli AI (self-hosted only). */
-  ai: { openRouterUrl: string; openRouterKey: string | null; broccoliAiUrl: string | null };
+  /** OpenRouter's API, and `OPENROUTER_API_KEY` or null. */
+  openRouter: { url: string; key: string | null };
 }
 
 /** Every module of the API, each given only the dependencies it uses. */
 export function createModules(
   core: ModuleDependencies,
-  { mode, publicUrl, brandLookupUrl, slack, ai }: ModuleSettings,
-): ModuleManifest[] {
+  { deployment, brandLookupUrl, slack, openRouter }: ModuleSettings,
+): Modules {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
-  const aiSettings = createAiSettings({ ...core, mode, environmentKey: ai.openRouterKey });
-  const tokens = createBroccoliAiTokens(core);
-  // Broccoli reads its AI source and token for decisions it makes on its own.
-  const system = PrincipalSecurityContext.system();
-  const decisions = createResolvedDecisions({
-    readSource: () => decisionsSource(system, aiSettings, ai),
-    tokens: { read: () => tokens.read(system), save: (token) => tokens.save(system, token) },
-  });
-  return [
-    systemModule({
-      ...core,
-      mode,
-      aiSettings,
-      ai: {
-        checkOpenRouterKey: (key) => checkOpenRouterKey({ url: ai.openRouterUrl, key }),
-        prepareBroccoliAi: () => decisions.prepareBroccoliAi(broccoliAiUrlOf(ai)),
-      },
-    }),
-    employeesModule({ orm: core.orm }),
-    companyModule({ ...core, brandLookupUrl }),
-    demoModule({ orm: core.orm, transact: core.transact }),
-    slackModule({ slackConnection, orm: core.orm, mode, publicUrl }),
-    importsModule({
-      ...core,
-      slack: slackConnection,
-      decisions,
-      prepareDemoFill: () => prepareDemoFill(),
-    }),
-  ];
-}
-
-/** Where this request's decisions go, for the AI the settings pick. */
-async function decisionsSource(
-  ctx: SecurityContext,
-  aiSettings: AiSettings,
-  settings: ModuleSettings["ai"],
-): Promise<DecisionsSource> {
-  const ai = await aiSettings.read(ctx);
-  if (ai.source === "broccoli_ai") {
-    return { kind: "broccoli_ai", url: broccoliAiUrlOf(settings) };
-  }
-  if (ai.openRouterKey === null) {
-    throw new DecisionsError("OpenRouter has no key", false);
-  }
-  return { kind: "openrouter", url: settings.openRouterUrl, key: ai.openRouterKey.key };
-}
-
-function broccoliAiUrlOf({ broccoliAiUrl }: ModuleSettings["ai"]): string {
-  if (broccoliAiUrl === null) {
-    throw new Error("Only a self-hosted instance uses Broccoli AI");
-  }
-  return broccoliAiUrl;
+  const aiSettings = createAiSettings({ ...core, deployment, openRouter });
+  return {
+    manifests: [
+      systemModule({ ...core, mode: deployment.mode, aiSettings }),
+      employeesModule({ orm: core.orm }),
+      companyModule({ ...core, brandLookupUrl }),
+      demoModule({ orm: core.orm, transact: core.transact }),
+      slackModule(slackConnection),
+      importsModule({
+        ...core,
+        slack: slackConnection,
+        decisions: aiSettings.decisions,
+        prepareDemoFill: () => prepareDemoFill(),
+      }),
+    ],
+    setupDemo: {
+      prepareStart: () => prepareDemoStart({ prepareDemoFill: () => prepareDemoFill() }),
+      deleteAllEmployees,
+    },
+  };
 }

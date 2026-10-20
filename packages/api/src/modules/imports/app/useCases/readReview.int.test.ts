@@ -1,6 +1,5 @@
 import { expect, importUseCases, OWNER, test } from "#test/support";
 
-import { instanceRepository } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test("counts ready import employees across Slack and file sources, leaving incomplete records out", async ({
@@ -48,7 +47,7 @@ test("does not count an import employee whose email an employee already has as r
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };

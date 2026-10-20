@@ -102,4 +102,4 @@ it("refuses a complete-looking PNG whose pixels cannot be decoded", async () => 
   expect(await normalizeImage(bytes, limits)).toBeNull();
 });
 
-const limits = { maxBytes: 512 * 1024, maxSide: 256 };
+const limits = { maxBytes: 512 * 1024 };

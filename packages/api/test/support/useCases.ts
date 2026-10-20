@@ -1,6 +1,14 @@
+import { mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { onTestFinished } from "vitest";
+
 import type { Decisions } from "../../src/integrations/ai";
+import type { Orm } from "../../src/core/db";
 import type { Mode } from "../../src/core/env";
-import { createAiSettings } from "../../src/core/instance";
+import { type AiSettings, createAiSettings } from "../../src/core/instance";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
@@ -33,30 +41,36 @@ export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"
   return createDemoUseCases({ orm, transact: testTransactor(orm) });
 }
 
-export function systemUseCases(
-  orm: Parameters<typeof createSystemUseCases>[0]["orm"],
-  {
-    mode = "self_hosted",
-    environmentKey = null,
-    checkOpenRouterKey = () => {
-      throw new Error("Unexpected OpenRouter key check");
-    },
-    prepareBroccoliAi = () => {
-      throw new Error("Unexpected Broccoli AI preparation");
-    },
-  }: {
-    mode?: Mode;
-    environmentKey?: string | null;
-    checkOpenRouterKey?: (key: string) => Promise<void>;
-    prepareBroccoliAi?: () => Promise<void>;
-  } = {},
-) {
+export function systemUseCases(orm: Orm) {
   return createSystemUseCases({
     orm,
     transact: testTransactor(orm),
-    mode,
-    aiSettings: createAiSettings({ orm, secretBox: TEST_SECRET_BOX, mode, environmentKey }),
-    ai: { checkOpenRouterKey, prepareBroccoliAi },
+    mode: "self_hosted",
+    aiSettings: aiSettings(orm),
+  });
+}
+
+/** The AI settings on `orm` with a temporary data folder; OpenRouter and Broccoli AI both at `url`. */
+export function aiSettings(
+  orm: Orm,
+  {
+    mode = "self_hosted",
+    url = "http://127.0.0.1:9",
+    environmentKey = null,
+  }: { mode?: Mode; url?: string; environmentKey?: string | null } = {},
+): AiSettings {
+  const dataDir = mkdtempSync(join(tmpdir(), "broccoli-data-"));
+  onTestFinished(() => rm(dataDir, { recursive: true, force: true }));
+  return createAiSettings({
+    orm,
+    transact: testTransactor(orm),
+    secretBox: TEST_SECRET_BOX,
+    dataDir,
+    deployment:
+      mode === "managed"
+        ? { mode, instanceId: "test-instance", accountsOrigin: "https://accounts.example.com" }
+        : { mode, broccoliAiUrl: url },
+    openRouter: { url, key: environmentKey },
   });
 }
 

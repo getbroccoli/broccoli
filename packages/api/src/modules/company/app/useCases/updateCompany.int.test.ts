@@ -1,6 +1,6 @@
 import { companyUseCases, expect, NON_OWNER, SETUP_HOLDER, test } from "#test/support";
 
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 
 test("saves the owner's company name and moves setup on to the import step", async ({
   orm,
@@ -20,7 +20,7 @@ test("renames the company after setup is done", async ({ orm, seed }) => {
   const ctx = await seed.owner();
   const company = companyUseCases(orm);
   await company.update(ctx, { name: "Example Ltd" });
-  await instanceRepository(orm).setOwner(ctx.user!.userId, "done");
+  await seed.setupStep("done");
 
   const saved = await company.update(ctx, { name: "Example Labs" });
 
