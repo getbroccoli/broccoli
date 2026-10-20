@@ -23,7 +23,7 @@ import {
 } from "@/components/dataTable";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import { SetupStepForm } from "@/features/setup";
+import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
@@ -67,6 +67,7 @@ export function ImportReview() {
   const [approveImport, { error: approveError, payloadError: approveConflict }] =
     usePayloadMutation(ApproveImportDocument);
   const [run, approving] = useRouteAction();
+  const { previous } = useSetupPages("review");
   const current = (data ?? previousData)?.import;
   const readyCount = current?.readyEmployeeCount ?? 0;
   const totalCount = current?.employeeCount ?? 0;
@@ -86,14 +87,16 @@ export function ImportReview() {
       onSubmit={() => {}}
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <Link
-            to="/setup/import"
-            className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
-            disabled={approving}
-          >
-            <ArrowLeft aria-hidden />
-            {t("setup.back")}
-          </Link>
+          {previous && (
+            <Link
+              to={previous}
+              className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
+              disabled={approving}
+            >
+              <ArrowLeft aria-hidden />
+              {t("setup.back")}
+            </Link>
+          )}
           <div className="flex flex-wrap items-center justify-end gap-3">
             {data && (
               <ApproveNote

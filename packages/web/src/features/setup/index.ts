@@ -4,5 +4,11 @@ export { readSession } from "./readSession";
 export { createDemoAccount, setUpOwner, startDemoSetup } from "./setupApi";
 export { SetupInProgress } from "./SetupInProgress";
 export { SetupStepForm } from "./SetupStepForm";
-export { SetupLayout, type SetupStepId } from "./SetupLayout";
-export { requireFinishedSetup, requireSetupStep, setupStepPage } from "./requireSetupStep";
+export {
+  requireFinishedSetup,
+  requireSetupPage,
+  SetupLayout,
+  setupStepPage,
+  type SetupStepId,
+} from "./SetupLayout";
+export { useSetupPages } from "./useSetupPages";

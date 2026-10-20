@@ -5,7 +5,7 @@ import { useState } from "react";
 import { SaveAiSourceDocument, type AiSource, type AiStepQuery } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { useStartDemo } from "@/features/imports";
-import { SetupStepForm } from "@/features/setup";
+import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { useRouteAction } from "@/lib/useRouteAction";
 
@@ -26,6 +26,7 @@ type Props = {
 /** Next checks the chosen source and saves it, then the owner gathers their files. */
 export function AiForm({ ai, peopleGathered }: Props) {
   const navigate = useNavigate();
+  const { next } = useSetupPages("ai");
   const [source, setSource] = useState<AiSource>(ai.source);
   // The key being typed; null while the known key is used, and Replace starts one.
   const [newKey, setNewKey] = useState<string | null>(null);
@@ -45,7 +46,7 @@ export function AiForm({ ai, peopleGathered }: Props) {
     run(
       () =>
         saveAiSource({ variables: { input: { source, openRouterKey: asksForKey ? key : null } } }),
-      () => navigate({ to: "/setup/import" }),
+      () => navigate({ to: next }),
     );
 
   return (

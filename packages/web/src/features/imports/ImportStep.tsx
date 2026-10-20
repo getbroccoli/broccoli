@@ -1,12 +1,12 @@
 import { useQuery } from "@apollo/client/react";
 import { ArrowLeft, ArrowRight } from "@phosphor-icons/react";
-import { Link, useRouteContext, useSearch } from "@tanstack/react-router";
+import { Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { ImportStepDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SetupStepForm } from "@/features/setup";
+import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
@@ -28,7 +28,7 @@ const POLL_INTERVAL_MS = 2_000;
  */
 export function ImportStep() {
   const { slackError } = useSearch({ from: "/setup/import" });
-  const { mode } = useRouteContext({ from: "__root__" });
+  const { previous, next } = useSetupPages("import");
   const { data, error, refetch, startPolling, stopPolling } = useQuery(ImportStepDocument);
   const sources = data?.import.sources ?? [];
   const mapping = sources.some(({ status }) => status === "MAPPING");
@@ -54,9 +54,9 @@ export function ImportStep() {
       onSubmit={() => {}}
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          {mode === "SELF_HOSTED" && (
+          {previous && (
             <Link
-              to="/setup/ai"
+              to={previous}
               className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
               disabled={starting}
             >
@@ -80,7 +80,7 @@ export function ImportStep() {
             </Button>
             {gathering && (
               <Link
-                to="/setup/import/review"
+                to={next}
                 disabled={starting || reading}
                 aria-disabled={starting || reading}
                 className={cn(
