@@ -1,4 +1,6 @@
 import { request } from "node:http";
+import sharp from "sharp";
+
 import { createBrowser, expect, PNG, TEST_OWNER, test } from "#test/support";
 
 test("a fresh instance reports the company step and nobody holding setup", async ({ env }) => {
@@ -78,7 +80,10 @@ test("the setup holder can upload and read the company logo through REST", async
   const { logoUrl } = (await response.json()) as { logoUrl: string };
   const logo = await browser.get(logoUrl);
   expect(logo.status).toBe(200);
-  expect(Buffer.from(await logo.arrayBuffer())).toEqual(PNG);
+  expect(logo.headers.get("content-type")).toBe("image/webp");
+  expect(await sharp(Buffer.from(await logo.arrayBuffer())).metadata()).toMatchObject({
+    format: "webp",
+  });
 });
 
 test("the setup cookie grants no access to employees", async ({ env }) => {

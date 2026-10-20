@@ -4,7 +4,7 @@ import { transactor } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
 import { instanceRepository } from "../db";
-import { advanceStep, completeImportStep, readSetupStep } from ".";
+import { advanceStep, approveImportStep, completeImportStep, readSetupStep } from ".";
 
 test("refuses a non-owner advancing setup and keeps the current step", async ({
   orm,
@@ -106,3 +106,22 @@ test.for(["company", "owner", "done"] as const)(
     expect(await readSetupStep(orm)).toBe(step);
   },
 );
+
+test("approving import moves to ready when an owner exists", async ({ orm, seed, transact }) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).advanceStep("company", "import");
+
+  const moved = await transact((tx) => approveImportStep(owner, tx));
+
+  expect(moved).toBe(true);
+  expect(await readSetupStep(orm)).toBe("ready");
+});
+
+test("approving import moves to owner when no owner exists", async ({ orm, transact }) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+
+  const moved = await transact((tx) => approveImportStep(SETUP_HOLDER, tx));
+
+  expect(moved).toBe(true);
+  expect(await readSetupStep(orm)).toBe("owner");
+});

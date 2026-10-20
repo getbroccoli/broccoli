@@ -65,19 +65,15 @@ export function ImportStep() {
             </Link>
           )}
           <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
-            {gathering && (
-              <p id="demo-unavailable" className="text-sm text-muted-foreground">
-                {t("setup.import.demoUnavailable")}
-              </p>
-            )}
             <Button
               type="button"
               variant="outline"
               size="lg"
-              className="h-10 px-4"
+              // The title shows on hover only when the disabled button takes pointer events.
+              className="h-10 px-4 disabled:pointer-events-auto"
               // Until the import loads, it may already hold people.
               disabled={starting || gathering || !data}
-              aria-describedby={gathering ? "demo-unavailable" : undefined}
+              title={gathering ? t("setup.import.demoUnavailable") : undefined}
               onClick={() => void startDemo()}
             >
               {t(starting ? "setup.import.demoStarting" : "setup.import.demo")}

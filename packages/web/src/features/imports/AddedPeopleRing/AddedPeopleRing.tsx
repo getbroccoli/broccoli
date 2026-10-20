@@ -15,7 +15,7 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /**
  * The people setup approve added, their photos first, circling the company's logo while the
- * owner creates their account; nothing until they load, or when no one was added.
+ * owner creates their account or starts using Broccoli; nothing until they load, or when no one was added.
  */
 export function AddedPeopleRing() {
   // shortcut: faces come from the first 100 import employees only; filter added ones on the
@@ -44,11 +44,11 @@ export function AddedPeopleRing() {
           >
             {/* Turns back as the ring turns, so the face stays upright. */}
             <span className="block motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite_reverse]">
-              {/* The hue colours the initials of someone without a photo. */}
+              {/* Flips to each new face; the hue colours the initials of someone without a photo. */}
               <span
                 key={person.id}
                 style={{ "--tint-hue": hueOf(person.id) } as CSSProperties}
-                className="block motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-60 motion-safe:duration-200"
+                className="block backface-hidden motion-safe:animate-[ring-face-flip_0.7s_cubic-bezier(0.22,1,0.36,1)_both]"
               >
                 <Avatar
                   url={person.avatarUrl ?? null}

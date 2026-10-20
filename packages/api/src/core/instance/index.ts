@@ -4,6 +4,7 @@ export {
   assignInstance,
   readAssignment,
   claimOwner,
+  approveImportStep,
   completeImportStep,
   readDemoDeadlineOf,
   readDemoExpiresAt,

@@ -63,7 +63,7 @@ function nameOf(member: SlackMember): Pick<ImportEmployeeValues, "firstName" | "
  * one, which shows as initials instead, and only Slack's photo hosts are ever asked.
  */
 function photoUrlOf(member: SlackMember): string | null {
-  const link = member.profile?.image_512;
+  const link = member.profile?.image_192;
   if (!member.profile?.is_custom_image || !link || !URL.canParse(link)) {
     return null;
   }
@@ -88,7 +88,7 @@ function rawOf({ id, name, real_name, profile }: SlackMember) {
       display_name: profile?.display_name,
       email: profile?.email,
       title: profile?.title,
-      image_512: profile?.image_512,
+      image_192: profile?.image_192,
       is_custom_image: profile?.is_custom_image,
     },
   };

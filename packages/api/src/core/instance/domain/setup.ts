@@ -1,8 +1,9 @@
 /**
  * Where a new instance is in its first-run flow. Every instance starts at `company`;
- * a self-hosted one creates its owner at `owner`, after the import.
+ * after the import a self-hosted one creates its owner at `owner`, and a managed owner
+ * sees what setup added at `ready`.
  */
-export const SETUP_STEPS = ["company", "import", "owner", "done"] as const;
+export const SETUP_STEPS = ["company", "import", "owner", "ready", "done"] as const;
 
 export type SetupStep = (typeof SETUP_STEPS)[number];
 

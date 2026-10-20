@@ -33,10 +33,28 @@ export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
 }
 
 /**
- * Leaves the import step, joining `tx`: to `owner` while the instance has no owner,
- * which self-hosted setup creates last, else to `done`. Returns whether it moved.
+ * Leaves the import step without approving it, such as for the demo, joining `tx`: to
+ * `owner` while the instance has no owner, which self-hosted setup creates last, else to
+ * `done`. Returns whether it moved.
  */
 export async function completeImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  const next = (await instanceRepository(tx).readOwnerUserId()) ? "done" : "owner";
+  return leaveImportStep(ctx, tx, "done");
+}
+
+/**
+ * Leaves the import step on setup approve, joining `tx`: to `owner` while the instance has
+ * no owner, else to `ready`, where a managed owner sees what setup added. Returns whether
+ * it moved.
+ */
+export async function approveImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return leaveImportStep(ctx, tx, "ready");
+}
+
+async function leaveImportStep(
+  ctx: SecurityContext,
+  tx: Tx,
+  withOwner: SetupStep,
+): Promise<boolean> {
+  const next = (await instanceRepository(tx).readOwnerUserId()) ? withOwner : "owner";
   return advanceStep(ctx, tx, "import", next);
 }

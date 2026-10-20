@@ -16,6 +16,8 @@ type Import {
   employeeCount: Int!
   "How many employees Approve would add: the import employees that are ready and not left out."
   readyEmployeeCount: Int!
+  "The sources of the employees Approve would add, oldest first."
+  readyEmployeeSources: [ImportSource!]!
   "What the owner may want to settle, by kind. Nothing here blocks Approve."
   checks: [ImportCheck!]!
 }
@@ -203,7 +205,7 @@ type ImportMutations {
   startDemo: ImportMutationPayload!
   "Turns the import employees that are not left out into employees, with the values and photos review shows, and completes the import step; the import is deleted once setup completes. Incomplete ones are not added. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
   approve: ImportApprovePayload!
-  "Takes setup from the owner step back to the company step and deletes the employees `approve` created; the company, the AI source and the import stay. Does nothing at any other step."
+  "Takes setup from the owner or ready step back to the company step and deletes the employees `approve` created; the company, the AI source and the import stay. Does nothing at any other step."
   resetSetup: ImportMutationPayload!
   "Maps a failed file again; any other source is left as it is."
   retryFile(sourceId: ID!): ImportRetryFilePayload!

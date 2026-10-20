@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 /**
- * "Reset setup" on the account step and its confirmation: setup goes back to the company
+ * "Reset setup" on the account and ready steps and its confirmation: setup goes back to the company
  * step, where the routing then sends the owner.
  */
 export function ResetSetupDialog() {
