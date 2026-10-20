@@ -8,7 +8,7 @@ import {
   toConnection,
 } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
-import { importPhotoRepository, importRepository } from "../../db";
+import { importRepository } from "../../db";
 import type { ImportEmployeeRecord, ImportSource } from "../../domain";
 import { type ImportReview, readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
@@ -28,13 +28,10 @@ export interface ImportReadService {
     ctx: SecurityContext,
     args: PageArgs & { sourceId: string },
   ): Promise<Connection<ImportEmployeeRecord>>;
-  /** Whether this file is an import record's photo, so the photo route may serve it. */
-  isImportPhotoFile(ctx: SecurityContext, fileId: string): Promise<boolean>;
 }
 
 export function createImportReadService(orm: Orm): ImportReadService {
   const imports = importRepository(orm);
-  const photos = importPhotoRepository(orm);
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
       requireImportAccess(ctx);
@@ -67,13 +64,6 @@ export function createImportReadService(orm: Orm): ImportReadService {
       requireImportAccess(ctx);
       const page = parsePage(pageArgs, RECORD_KEYSET);
       return toConnection(await imports.findRecordPage({ sourceId, ...page }), page.first);
-    },
-
-    isImportPhotoFile: async (ctx: SecurityContext, fileId: string): Promise<boolean> => {
-      requireImportAccess(ctx);
-      // Postgres refuses a malformed uuid, so only a parsed one reaches the query.
-      const id = z.uuid().safeParse(fileId);
-      return id.success && (await photos.hasPhoto(id.data));
     },
   };
 }

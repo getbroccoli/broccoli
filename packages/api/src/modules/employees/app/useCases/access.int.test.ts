@@ -11,8 +11,7 @@ const calls = {
       email: "employee.one@example.com",
     }),
   listEmployees: (useCases, ctx) => useCases.listEmployees(ctx, {}),
-  isEmployeeAvatarFile: (useCases, ctx) =>
-    useCases.isEmployeeAvatarFile(ctx, "00000000-0000-4000-8000-000000000001"),
+  readAvatar: (useCases, ctx) => useCases.readAvatar(ctx, "00000000-0000-4000-8000-000000000001"),
 } satisfies Record<
   keyof EmployeeUseCases,
   (useCases: EmployeeUseCases, ctx: SecurityContext) => Promise<unknown>

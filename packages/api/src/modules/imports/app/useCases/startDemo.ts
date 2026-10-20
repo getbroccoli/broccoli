@@ -1,7 +1,7 @@
 import type { SecurityContext } from "../../../../core/security";
 import { completeImportStep, type DemoStart } from "../../../../core/instance";
 import type { ImportContext } from "./importContext";
-import { clearImport } from "./clearImport";
+import { deleteImport } from "./deleteImport";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
@@ -25,7 +25,7 @@ export async function prepareDemoStart({
   return async (ctx, tx) => {
     requireImportAccess(ctx);
     if (await completeImportStep(ctx, tx)) {
-      await clearImport(tx);
+      await deleteImport(tx, { keepPhotos: false });
       await fillDemo(tx);
     }
   };

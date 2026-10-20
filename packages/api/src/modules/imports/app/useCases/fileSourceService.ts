@@ -1,7 +1,7 @@
 import { type Decisions, DecisionsError } from "../../../../integrations/ai";
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import type { Orm, Transact } from "../../../../core/db";
-import { deleteFiles, readFile, storeFile } from "../../../../core/files";
+import { readFile } from "../../../../core/files";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
@@ -90,11 +90,10 @@ export function createFileSourceService({
       }
       return transact(async (tx) => {
         const imports = await lockOpenImport(tx);
-        const fileId = await storeFile(tx, {
+        const sourceId = await imports.insertFileSource(name, {
           content: Buffer.from(bytes),
           mimeType: mimeTypeOf(sheets),
         });
-        const sourceId = await imports.insertFileSource(name, fileId);
         await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
         return sourceId;
       });
@@ -146,10 +145,7 @@ export function createFileSourceService({
       requireImportAccess(ctx);
       await transact(async (tx) => {
         const imports = await lockOpenImport(tx);
-        const fileId = await imports.deleteFileSource(sourceId);
-        if (fileId !== null) {
-          await deleteFiles(tx, [fileId]);
-        }
+        await imports.deleteFileSource(sourceId);
       });
     },
   };

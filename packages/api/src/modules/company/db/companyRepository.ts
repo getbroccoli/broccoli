@@ -1,6 +1,8 @@
-import { isNull, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { deleteFiles, storeFile } from "../../../core/files";
+import type { RasterImage } from "../../../utils";
 import { company } from "./companyTable";
 
 /** The company stored in Postgres, through the pool or inside a transaction. */
@@ -8,16 +10,15 @@ export interface CompanyRepository {
   read(): Promise<CompanyRecord>;
   saveName(name: string): Promise<void>;
   /**
-   * Stores the first brand lookup's result and returns true; does nothing and
-   * returns false once a lookup was stored, so a repeated or late lookup never
-   * overrides the owner's changes.
+   * Stores the first brand lookup's result, with its logo, if any; does nothing once a lookup
+   * was stored, so a repeated or late lookup never overrides the owner's changes.
    */
-  saveBrandOnce(brandName: string | null, logoFileId: string | null): Promise<boolean>;
+  saveBrandOnce(brandName: string | null, logo: RasterImage | null): Promise<void>;
   /**
-   * Sets the owner's own logo, or none, and returns the previous logo's file id.
-   * Also counts as the first lookup, so a lookup still running cannot replace it.
+   * Stores the owner's own logo, or none, and deletes the previous logo's file. Also counts
+   * as the first lookup, so a lookup still running cannot replace it.
    */
-  replaceLogo(logoFileId: string | null): Promise<string | null>;
+  replaceLogo(logo: RasterImage | null): Promise<void>;
 }
 
 export interface CompanyRecord {
@@ -47,27 +48,35 @@ export function companyRepository(db: Orm | Tx): CompanyRepository {
       await orm().update(company).set({ name });
     },
 
-    saveBrandOnce: async (
-      brandName: string | null,
-      logoFileId: string | null,
-    ): Promise<boolean> => {
-      const rows = await orm()
+    saveBrandOnce: async (brandName: string | null, logo: RasterImage | null): Promise<void> => {
+      const [current] = await orm()
+        .select({ brandLookedUpAt: company.brandLookedUpAt })
+        .from(company)
+        .for("update");
+      if (current?.brandLookedUpAt) {
+        return;
+      }
+      const logoFileId = logo && (await storeLogo(db, logo));
+      await orm()
         .update(company)
-        .set({ brandName, brandLookedUpAt: sql`now()`, ...(logoFileId && { logoFileId }) })
-        .where(isNull(company.brandLookedUpAt))
-        .returning({ id: company.id });
-      return rows.length > 0;
+        .set({ brandName, brandLookedUpAt: sql`now()`, ...(logoFileId && { logoFileId }) });
     },
 
-    replaceLogo: async (logoFileId: string | null): Promise<string | null> => {
+    replaceLogo: async (logo: RasterImage | null): Promise<void> => {
       const [current] = await orm()
         .select({ logoFileId: company.logoFileId })
         .from(company)
         .for("update");
+      const logoFileId = logo && (await storeLogo(db, logo));
       await orm()
         .update(company)
         .set({ logoFileId, brandLookedUpAt: sql`coalesce(${company.brandLookedUpAt}, now())` });
-      return current?.logoFileId ?? null;
+      // After the update: a file the company still references cannot be deleted.
+      await deleteFiles(db, current?.logoFileId ? [current.logoFileId] : []);
     },
   };
+}
+
+function storeLogo(db: Orm | Tx, logo: RasterImage): Promise<string> {
+  return storeFile(db, { content: logo.bytes, mimeType: logo.mimeType });
 }

@@ -19,7 +19,7 @@ test("saves a PNG as the current logo", async ({ orm, seed }) => {
 
   expect(saved.logoFileId).toEqual(expect.any(String));
   expect((await company.getCompany(actor)).logoFileId).toBe(saved.logoFileId);
-  expect(await company.isCurrentLogo(actor, saved.logoFileId!)).toBe(true);
+  expect(await company.readLogo(actor, saved.logoFileId!)).not.toBeNull();
 });
 
 test("replaces the logo with a new file and deletes the old file", async ({ orm, seed }) => {
@@ -31,8 +31,8 @@ test("replaces the logo with a new file and deletes the old file", async ({ orm,
 
   expect(saved.logoFileId).toEqual(expect.any(String));
   expect(saved.logoFileId).not.toBe(before.logoFileId);
-  expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(false);
-  expect(await company.isCurrentLogo(actor, saved.logoFileId!)).toBe(true);
+  expect(await company.readLogo(actor, before.logoFileId!)).toBeNull();
+  expect(await company.readLogo(actor, saved.logoFileId!)).not.toBeNull();
   expect(await storedFileIds(orm)).toEqual([saved.logoFileId]);
 });
 
@@ -49,7 +49,7 @@ test("refuses an SVG and keeps the previous logo", async ({ orm, seed }) => {
   });
 
   expect(await company.getCompany(actor)).toEqual(before);
-  expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(true);
+  expect(await company.readLogo(actor, before.logoFileId!)).not.toBeNull();
 });
 
 test("refuses a truncated PNG and keeps the previous logo", async ({ orm, seed }) => {
@@ -63,7 +63,7 @@ test("refuses a truncated PNG and keeps the previous logo", async ({ orm, seed }
   });
 
   expect(await company.getCompany(actor)).toEqual(before);
-  expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(true);
+  expect(await company.readLogo(actor, before.logoFileId!)).not.toBeNull();
 });
 
 test("refuses a non-owner without changing the logo", async ({ orm, seed }) => {
@@ -105,6 +105,6 @@ test("keeps the owner's saved logo when a pending brand lookup finishes", async 
   await pending;
 
   expect((await company.getCompany(actor)).logoFileId).toBe(saved.logoFileId);
-  expect(await company.isCurrentLogo(actor, saved.logoFileId!)).toBe(true);
+  expect(await company.readLogo(actor, saved.logoFileId!)).not.toBeNull();
   expect(await storedFileIds(orm)).toEqual([saved.logoFileId]);
 });

@@ -1,10 +1,9 @@
-import type { Orm, Transact, Tx } from "../../../../core/db";
+import type { Orm, Transact } from "../../../../core/db";
 import { readSetupStep } from "../../../../core/instance";
-import { deleteFiles, storeFile } from "../../../../core/files";
 import type { Logger } from "../../../../core/logger";
 import type { SecurityContext } from "../../../../core/security";
 import type { BrandLookup } from "../../../../integrations/brandLookup";
-import { normalizeImage, type RasterImage } from "../../../../utils";
+import { normalizeImage } from "../../../../utils";
 import { companyRepository } from "../../db";
 import { companyDomain } from "../../domain";
 import { LOGO_MAX_SIDE, MAX_LOGO_BYTES } from "./company";
@@ -35,24 +34,11 @@ export async function detectCompanyNameAndLogo(
     const logo = brand?.logo
       ? await normalizeImage(brand.logo, { maxBytes: MAX_LOGO_BYTES, maxSide: LOGO_MAX_SIDE })
       : null;
-    await transact((tx) => saveBrandOnce(tx, brand?.name ?? null, logo));
+    await transact((tx) => companyRepository(tx).saveBrandOnce(brand?.name ?? null, logo));
   } catch (error) {
     logger.warn(
       { err: error },
       "Brand lookup failed; suggesting the company name from the email domain",
     );
-  }
-}
-
-/** Stores the brand unless a lookup or the owner got there first; then the new logo file goes. */
-async function saveBrandOnce(
-  tx: Tx,
-  brandName: string | null,
-  logo: RasterImage | null,
-): Promise<void> {
-  const fileId = logo && (await storeFile(tx, { content: logo.bytes, mimeType: logo.mimeType }));
-  const saved = await companyRepository(tx).saveBrandOnce(brandName, fileId);
-  if (!saved && fileId) {
-    await deleteFiles(tx, [fileId]);
   }
 }

@@ -22,7 +22,7 @@ test("stores the brand name and logo found for the owner's domain", async ({ orm
   expect(domains).toEqual(["example.com"]);
   expect(saved.suggestedName).toBe("Example Labs");
   expect(saved.logoFileId).toEqual(expect.any(String));
-  expect(await company.isCurrentLogo(actor, saved.logoFileId!)).toBe(true);
+  expect(await company.readLogo(actor, saved.logoFileId!)).not.toBeNull();
 });
 
 test("keeps the domain suggestion and no logo when no brand is found", async ({ orm, seed }) => {
@@ -109,7 +109,7 @@ test("does not restore a removed logo when owner setup is delivered again", asyn
   await company.detectCompanyNameAndLogo(SYSTEM, owner);
 
   expect((await company.getCompany(actor)).logoFileId).toBeNull();
-  expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(false);
+  expect(await company.readLogo(actor, before.logoFileId!)).toBeNull();
 });
 
 test.for(["import", "owner", "done"] as const)(

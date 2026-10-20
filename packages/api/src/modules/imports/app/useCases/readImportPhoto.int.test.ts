@@ -1,6 +1,6 @@
 import { expect, importUseCases, OWNER, PNG, SLACK_PHOTO_URL, test } from "#test/support";
 
-test("recognises an import record's photo file", async ({ orm, seed }) => {
+test("returns an import record's photo bytes and MIME type", async ({ orm, seed }) => {
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [{ photoUrl: SLACK_PHOTO_URL }]);
   const fileId = await seed.importPhoto(record!.id, {
@@ -10,19 +10,25 @@ test("recognises an import record's photo file", async ({ orm, seed }) => {
   });
   const imports = importUseCases(orm);
 
-  expect(await imports.reads.isImportPhotoFile(OWNER, fileId)).toBe(true);
+  const photo = await imports.readImportPhoto(OWNER, fileId);
+
+  expect(photo).toEqual({ content: PNG, mimeType: "image/png" });
 });
 
-test("does not recognise an employee avatar as an import photo", async ({ orm, seed }) => {
+test("returns null for an employee avatar that is not an import photo", async ({ orm, seed }) => {
   const fileId = await seed.file({ content: PNG, mimeType: "image/png" });
   await seed.employee({ avatarFileId: fileId });
   const imports = importUseCases(orm);
 
-  expect(await imports.reads.isImportPhotoFile(OWNER, fileId)).toBe(false);
+  const photo = await imports.readImportPhoto(OWNER, fileId);
+
+  expect(photo).toBeNull();
 });
 
-test("does not recognise a malformed file id as an import photo", async ({ orm }) => {
+test("returns null for a malformed import photo id", async ({ orm }) => {
   const imports = importUseCases(orm);
 
-  expect(await imports.reads.isImportPhotoFile(OWNER, "not-a-file-id")).toBe(false);
+  const photo = await imports.readImportPhoto(OWNER, "not-a-file-id");
+
+  expect(photo).toBeNull();
 });

@@ -1,6 +1,7 @@
 import { and, count, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
 import {
   IMPORT_EMPLOYEE_CHOICES_VERSION,
   IMPORT_EMPLOYEE_VERSION,
@@ -14,6 +15,7 @@ import {
   parseImportEmployeeValues,
 } from "../domain";
 import { importChoices } from "./importChoicesTable";
+import { deleteReplacedPhotos } from "./importPhotoRepository";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
 
@@ -21,8 +23,8 @@ import { importSources } from "./importSourcesTable";
 export interface ImportRepository {
   /** Creates the Slack source or renames it, marks it read now and returns its id. */
   saveSlackSource(name: string): Promise<string>;
-  /** Adds an uploaded file as a source waiting for its first mapping run; returns its id. */
-  insertFileSource(name: string, fileId: string): Promise<string>;
+  /** Stores an uploaded file as a source waiting for its first mapping run; returns its id. */
+  insertFileSource(name: string, file: StoredFile): Promise<string>;
   /** The file source with this id, or null when there is none. */
   findFileSource(id: string): Promise<FileSource | null>;
   /**
@@ -32,8 +34,8 @@ export interface ImportRepository {
   finishMapping(id: string, attempt: number, outcome: MappingOutcome): Promise<boolean>;
   /** Starts the next mapping run of a failed file source; returns its attempt, or null. */
   restartMapping(id: string): Promise<number | null>;
-  /** Deletes a file source and its records; returns its file's id, or null when there is none. */
-  deleteFileSource(id: string): Promise<string | null>;
+  /** Deletes a file source, its records and its stored file. */
+  deleteFileSource(id: string): Promise<void>;
   /** Whether any source is still being mapped. */
   hasMappingSource(): Promise<boolean>;
   /**
@@ -43,12 +45,15 @@ export interface ImportRepository {
   lockSources(): Promise<void>;
   /**
    * Makes the source's employee records match `records` by external id: updates the
-   * ones still there, so their ids stay, adds new ones and deletes the rest. Detach
-   * photos that no longer match first (`detachReplacedPhotos`).
+   * ones still there, so their ids stay, adds new ones and deletes the rest. Deletes the
+   * photos whose link changed or whose record goes.
    */
   syncEmployeeRecords(sourceId: string, records: IncomingRecord[]): Promise<void>;
-  /** Deletes every source, record and choice; returns the files they referenced. */
-  deleteAll(): Promise<{ photoFileIds: string[]; uploadFileIds: string[] }>;
+  /**
+   * Deletes every source, record and choice, with the uploaded files and, unless `keepPhotos`,
+   * the photos; kept photos are the employees' avatars after Approve.
+   */
+  deleteAll(options: { keepPhotos: boolean }): Promise<void>;
   listSources(): Promise<ImportSource[]>;
   findSources(ids: readonly string[]): Promise<ImportSource[]>;
   /** Every employee record of every source, oldest first. */
@@ -91,7 +96,8 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return row!.id;
     },
 
-    insertFileSource: async (name: string, fileId: string): Promise<string> => {
+    insertFileSource: async (name: string, file: StoredFile): Promise<string> => {
+      const fileId = await storeFile(db, file);
       const [row] = await orm()
         .insert(importSources)
         .values({ kind: "file", name, fileId, status: "mapping" })
@@ -155,12 +161,12 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return row?.mappingAttempt ?? null;
     },
 
-    deleteFileSource: async (id: string): Promise<string | null> => {
-      const [row] = await orm()
+    deleteFileSource: async (id: string): Promise<void> => {
+      const uploads = await orm()
         .delete(importSources)
         .where(and(eq(importSources.id, id), eq(importSources.kind, "file")))
         .returning({ fileId: importSources.fileId });
-      return row?.fileId ?? null;
+      await deleteFiles(db, presentIds(uploads));
     },
 
     hasMappingSource: async (): Promise<boolean> => {
@@ -177,6 +183,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
     },
 
     syncEmployeeRecords: async (sourceId: string, records: IncomingRecord[]): Promise<void> => {
+      await deleteReplacedPhotos(db, sourceId, records);
       const ofSource = and(
         eq(importRecords.sourceId, sourceId),
         eq(importRecords.type, "employee"),
@@ -223,13 +230,13 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       }
     },
 
-    deleteAll: async () => {
+    deleteAll: async ({ keepPhotos }: { keepPhotos: boolean }): Promise<void> => {
       const photos = await orm()
         .delete(importRecords)
         .returning({ fileId: importRecords.photoFileId });
       const uploads = await orm().delete(importSources).returning({ fileId: importSources.fileId });
       await orm().delete(importChoices);
-      return { photoFileIds: presentIds(photos), uploadFileIds: presentIds(uploads) };
+      await deleteFiles(db, [...(keepPhotos ? [] : presentIds(photos)), ...presentIds(uploads)]);
     },
 
     listSources: (): Promise<ImportSource[]> =>

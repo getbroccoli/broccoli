@@ -1,6 +1,5 @@
 import type { SecurityContext } from "../../../../core/security";
 import { invalidInput } from "../../../../core/applicationError";
-import { deleteFiles, storeFile } from "../../../../core/files";
 import { normalizeImage } from "../../../../utils";
 import { companyRepository } from "../../db";
 import {
@@ -22,10 +21,6 @@ export async function saveLogo(
   if (!logo) {
     throw invalidInput([{ field: "logo", code: "invalid" }]);
   }
-  await context.transact(async (tx) => {
-    const fileId = await storeFile(tx, { content: logo.bytes, mimeType: logo.mimeType });
-    const previousFileId = await companyRepository(tx).replaceLogo(fileId);
-    await deleteFiles(tx, previousFileId ? [previousFileId] : []);
-  });
+  await context.transact((tx) => companyRepository(tx).replaceLogo(logo));
   return readCompany(context);
 }
