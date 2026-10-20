@@ -1,6 +1,4 @@
-import { useApolloClient } from "@apollo/client/react";
 import { useForm } from "@tanstack/react-form";
-import { useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
 
@@ -9,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
+import { useSessionChange } from "@/lib/useSessionChange";
 
 import { signIn, type SignInResult } from "./authApi";
 
@@ -24,29 +23,26 @@ const FAILURE_MESSAGES: Record<Exclude<SignInResult, "ok">, MessageKey> = {
 };
 
 /**
- * Email and password sign-in. On success the cache is cleared and the router reloads,
- * so the login route sends the now signed-in user on to their destination.
+ * Email and password sign-in. On success the session changes, so the login route sends
+ * the now signed-in user on to their destination.
  */
 export function LoginForm() {
-  const apolloClient = useApolloClient();
-  const router = useRouter();
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
+  const [signInAndReload, signingIn] = useSessionChange(async (email: string, password: string) => {
+    setFailure(null);
+    const result = await signIn(email, password);
+    if (result !== "ok") {
+      setFailure(FAILURE_MESSAGES[result]);
+      passwordInput.current?.focus();
+    }
+    return result === "ok";
+  });
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
     validators: { onSubmit: loginSchema },
-    onSubmit: async ({ value }) => {
-      setFailure(null);
-      const result = await signIn(value.email, value.password);
-      if (result !== "ok") {
-        setFailure(FAILURE_MESSAGES[result]);
-        passwordInput.current?.focus();
-        return;
-      }
-      await apolloClient.clearStore();
-      await router.invalidate();
-    },
+    onSubmit: ({ value }) => signInAndReload(value.email, value.password),
   });
 
   return (
@@ -109,8 +105,8 @@ export function LoginForm() {
       )}
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? t("auth.login.submitting") : t("auth.login.submit")}
+          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || signingIn}>
+            {isSubmitting || signingIn ? t("auth.login.submitting") : t("auth.login.submit")}
           </Button>
         )}
       </form.Subscribe>
