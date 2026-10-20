@@ -5,10 +5,11 @@ query ImportStep {
   }
   import {
     id
+    reading
+    demoAvailable
     sources {
       id
       kind
-      status
       employeeCount
       ...FileSourceCard_source
     }
@@ -20,10 +21,11 @@ mutation ReadSlack {
     readSlack {
       import {
         id
+        reading
+        demoAvailable
         sources {
           id
           kind
-          status
           employeeCount
           ...FileSourceCard_source
         }
@@ -43,10 +45,11 @@ mutation RetryFile($sourceId: ID!) {
     retryFile(sourceId: $sourceId) {
       import {
         id
+        reading
+        demoAvailable
         sources {
           id
           kind
-          status
           employeeCount
           ...FileSourceCard_source
         }
@@ -66,10 +69,11 @@ mutation RemoveFile($sourceId: ID!) {
     removeFile(sourceId: $sourceId) {
       import {
         id
+        reading
+        demoAvailable
         sources {
           id
           kind
-          status
           employeeCount
           ...FileSourceCard_source
         }

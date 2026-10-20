@@ -24,6 +24,7 @@ const calls = {
   "reads.listSources": (imports, ctx) => imports.reads.listSources(ctx),
   "reads.readSources": (imports, ctx) => imports.reads.readSources(ctx, []),
   "reads.countEmployees": (imports, ctx) => imports.reads.countEmployees(ctx, []),
+  "reads.readProgress": (imports, ctx) => imports.reads.readProgress(ctx),
   "reads.readReview": (imports, ctx) => imports.reads.readReview(ctx),
   "reads.listEmployeeRecords": (imports, ctx) =>
     imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),

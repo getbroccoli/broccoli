@@ -20,11 +20,11 @@ import { SourceOption } from "./SourceOption";
 type Props = {
   ai: NonNullable<AiStepQuery["setup"]["ai"]>;
   /** Demo data is only for an import without people. */
-  peopleGathered: boolean;
+  demoAvailable: boolean;
 };
 
 /** Next checks the chosen source and saves it, then the owner gathers their files. */
-export function AiForm({ ai, peopleGathered }: Props) {
+export function AiForm({ ai, demoAvailable }: Props) {
   const navigate = useNavigate();
   const [source, setSource] = useState<AiSource>(ai.source);
   // The key being typed; null while the known key is used, and Replace starts one.
@@ -96,7 +96,7 @@ export function AiForm({ ai, peopleGathered }: Props) {
       </div>
       <DemoDataCard
         disabled={busy}
-        unavailable={peopleGathered}
+        unavailable={!demoAvailable}
         starting={demo.starting}
         onUse={demo.start}
       />

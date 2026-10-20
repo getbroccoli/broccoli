@@ -2,12 +2,14 @@ import DataLoader from "dataloader";
 
 import { type GraphqlContext, perRequest } from "../../../core/graphql";
 import type { ImportReview, ImportUseCases } from "../app";
-import type { ImportSource } from "../domain";
+import type { ImportProgress, ImportSource } from "../domain";
 
 /** One request's loaders for import data. */
 export interface ImportLoaders {
   source: DataLoader<string, ImportSource>;
   employeeCount: DataLoader<string, number>;
+  /** The import's progress, read once and shared by every field of the request. */
+  progress: () => Promise<ImportProgress>;
   /** The import review, read once and shared by every field of the request. */
   review: () => Promise<ImportReview>;
 }
@@ -21,6 +23,7 @@ export function importLoaders(
 
 function createLoaders(useCases: ImportUseCases, context: GraphqlContext): ImportLoaders {
   const ctx = context.getActor();
+  let progress: Promise<ImportProgress> | undefined;
   let review: Promise<ImportReview> | undefined;
   return {
     source: new DataLoader<string, ImportSource>(async (ids) => {
@@ -33,6 +36,7 @@ function createLoaders(useCases: ImportUseCases, context: GraphqlContext): Impor
       const counts = await useCases.reads.countEmployees(ctx, sourceIds);
       return sourceIds.map((id) => counts.get(id)!);
     }),
+    progress: () => (progress ??= useCases.reads.readProgress(ctx)),
     review: () => (review ??= useCases.reads.readReview(ctx)),
   };
 }

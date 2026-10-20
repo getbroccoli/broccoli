@@ -31,22 +31,21 @@ export function ImportStep() {
   const { mode } = useRouteContext({ from: "__root__" });
   const { data, error, refetch, startPolling, stopPolling } = useQuery(ImportStepDocument);
   const sources = data?.import.sources ?? [];
-  const mapping = sources.some(({ status }) => status === "MAPPING");
+  const readingFiles = data?.import.reading ?? false;
   // Files are read in the background: poll while one is.
   useEffect(() => {
-    if (!mapping) {
+    if (!readingFiles) {
       return;
     }
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
-  }, [mapping, startPolling, stopPolling]);
+  }, [readingFiles, startPolling, stopPolling]);
   const { start: startDemo, starting, failed: startFailed } = useStartDemo();
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
-  const canReview = sources.some(({ employeeCount }) => employeeCount > 0);
   const [uploading, setUploading] = useState(false);
-  const reading = mapping || uploading;
-  const gathering = canReview || reading;
+  const reading = readingFiles || uploading;
+  const gathering = data?.import.demoAvailable === false || uploading;
 
   return (
     <SetupStepForm

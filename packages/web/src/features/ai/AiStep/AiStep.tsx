@@ -16,11 +16,7 @@ export function AiStep() {
   const ai = data?.setup.ai;
 
   if (ai) {
-    // A file still being read may gather people, so it counts too.
-    const peopleGathered = data.import.sources.some(
-      ({ employeeCount, status }) => employeeCount > 0 || status === "MAPPING",
-    );
-    return <AiForm ai={ai} peopleGathered={peopleGathered} />;
+    return <AiForm ai={ai} demoAvailable={data.import.demoAvailable} />;
   }
   return (
     <SetupStepForm onSubmit={() => {}} footer={<AiFooter checking={null} disabled busy={false} />}>
