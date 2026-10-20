@@ -1,12 +1,5 @@
 import type { Orm, Tx } from "../../../../core/db";
-import {
-  type Connection,
-  type OrderArg,
-  type PageArgs,
-  parseOrder,
-  parsePage,
-  toConnection,
-} from "../../../../core/pagination";
+import { type Connection, type ListArgs, paginate } from "../../../../core/pagination";
 import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
 import { type EmployeeOrder, type EmployeeOrderField, findTakenEmails } from "../../../employees";
@@ -21,7 +14,11 @@ import {
   listChecks,
   parseCheckId,
 } from "../../domain";
-import { importEmployeeKeyset, matchesSearch, pageImportEmployees } from "./importEmployeeList";
+import {
+  IMPORT_EMPLOYEE_SORT_VALUES,
+  matchesSearch,
+  pageImportEmployees,
+} from "./importEmployeeList";
 
 /** The import as the setup review step shows it, read once, so its counts, checks and list agree. */
 export interface ImportReview {
@@ -37,9 +34,7 @@ export interface ImportReview {
   listEmployees(args: ImportEmployeeListArgs): Connection<ImportEmployee>;
 }
 
-export interface ImportEmployeeListArgs extends PageArgs {
-  /** Defaults to name order; the direction to ascending. */
-  orderBy?: OrderArg<EmployeeOrderField>;
+export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
   /** `check` is a check's id: only its import employees. */
   filter?: { search?: string | null; check?: string | null } | null;
 }
@@ -77,16 +72,18 @@ const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 
 function listEmployees(
   employees: readonly ImportEmployee[],
-  { orderBy, filter, ...pageArgs }: ImportEmployeeListArgs,
+  { filter, ...listArgs }: ImportEmployeeListArgs,
 ): Connection<ImportEmployee> {
-  const order = parseOrder(orderBy, DEFAULT_ORDER);
   const search = parseSearch(filter?.search);
   const check = filter?.check ? parseCheckId(filter.check) : null;
-  const page = parsePage(pageArgs, importEmployeeKeyset(order));
   const shown = employees.filter(
     (employee) =>
       (search === null || matchesSearch(employee, search)) &&
       (check === null || isInCheck(employee, check)),
   );
-  return toConnection(pageImportEmployees(shown, order, page), page.first);
+  return paginate(listArgs, {
+    order: DEFAULT_ORDER,
+    keysetValues: IMPORT_EMPLOYEE_SORT_VALUES,
+    fetch: (query) => pageImportEmployees(shown, query),
+  });
 }

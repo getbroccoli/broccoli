@@ -31,6 +31,30 @@ test("lists only the requested source’s records in their input order", async (
   expect(page.edges.map(({ node }) => node)).toEqual(rows);
 });
 
+test("pages only the requested source’s records in their input order", async ({ orm, seed }) => {
+  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  const slack = await seed.importSource();
+  const rows = await seed.importEmployees(file.id, [
+    { firstName: "Zoe" },
+    { firstName: "Avery" },
+    { firstName: "Ben" },
+  ]);
+  await seed.importEmployees(slack.id, [{}]);
+  const imports = importUseCases(orm);
+
+  const first = await imports.reads.listEmployeeRecords(OWNER, { sourceId: file.id, first: 2 });
+  const second = await imports.reads.listEmployeeRecords(OWNER, {
+    sourceId: file.id,
+    first: 2,
+    after: first.pageInfo.endCursor,
+  });
+
+  expect(first.edges.map(({ node }) => node)).toEqual(rows.slice(0, 2));
+  expect(first.pageInfo.hasNextPage).toBe(true);
+  expect(second.edges.map(({ node }) => node)).toEqual(rows.slice(2));
+  expect(second.pageInfo.hasNextPage).toBe(false);
+});
+
 test("finds part of a shown first name, last name or email, ignoring case", async ({
   orm,
   seed,

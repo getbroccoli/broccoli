@@ -3,9 +3,9 @@ import { z } from "zod";
 import type { Orm } from "../../../../core/db";
 import {
   type Connection,
+  type ListOrder,
   type PageArgs,
-  parsePage,
-  toConnection,
+  paginate,
 } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
@@ -62,10 +62,14 @@ export function createImportReadService(orm: Orm): ImportReadService {
       { sourceId, ...pageArgs }: PageArgs & { sourceId: string },
     ): Promise<Connection<ImportEmployeeRecord>> => {
       requireImportAccess(ctx);
-      const page = parsePage(pageArgs, RECORD_KEYSET);
-      return toConnection(await imports.findRecordPage({ sourceId, ...page }), page.first);
+      return paginate(pageArgs, {
+        order: RECORD_ORDER,
+        keysetValues: { ADDED: z.tuple([z.uuid()]) },
+        fetch: ({ after, limit }) => imports.findRecordPage({ sourceId, after, limit }),
+      });
     },
   };
 }
 
-const RECORD_KEYSET = z.tuple([z.uuid()]);
+/** Records list in the order they were added, their only order. */
+const RECORD_ORDER: ListOrder<"ADDED"> = { field: "ADDED", direction: "ASC" };
