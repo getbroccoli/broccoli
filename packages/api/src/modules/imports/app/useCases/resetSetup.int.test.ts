@@ -43,7 +43,7 @@ test("resetting setup deletes approved employees but keeps the import and its ph
   const employees = createEmployeeUseCases({ orm });
   expect((await employees.listEmployees(OWNER, {})).edges).toHaveLength(2);
   expect(await readSetupStep(orm)).toBe("owner");
-  const imported = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const imported = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const sources = await imports.reads.listSources(SETUP_HOLDER);
   const fileIds = await storedFileIds(orm);
 
@@ -51,7 +51,7 @@ test("resetting setup deletes approved employees but keeps the import and its ph
 
   expect(await readSetupStep(orm)).toBe("company");
   expect((await employees.listEmployees(OWNER, {})).edges).toEqual([]);
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(imported);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(sources);
   expect(await storedFileIds(orm)).toEqual(fileIds);
   for (const photoId of photoIds) {

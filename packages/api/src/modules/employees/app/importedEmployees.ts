@@ -1,4 +1,4 @@
-import type { Tx } from "../../../core/db";
+import type { Orm, Tx } from "../../../core/db";
 import { deleteFiles } from "../../../core/files";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository } from "../db";
@@ -36,6 +36,16 @@ export async function createImportedEmployees(
     emailTaken: newEmployees.length - created.length,
     avatarFileIds: created.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : [])),
   };
+}
+
+/** The emails among these that an employee already has, so an import adds no one with them; joins `db`. */
+export async function findTakenEmails(
+  ctx: SecurityContext,
+  db: Orm | Tx,
+  emails: readonly string[],
+): Promise<Set<string>> {
+  ctx.requireSetupAccess();
+  return new Set(await employeeRepository(db).findTakenEmails(emails));
 }
 
 /**

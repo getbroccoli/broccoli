@@ -19,19 +19,20 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
     Import: {
       id: () => "import",
       sources: (_parent, _args, context) => useCases.reads.listSources(context.getActor()),
-      employees: (_parent, { first, after, orderBy, filter }, context) =>
-        useCases.reads.listEmployees(context.getActor(), {
+      employees: async (_parent, { first, after, orderBy, filter }, context) =>
+        (await loaders(context).review()).listEmployees({
           first: first ?? undefined,
           after,
           orderBy,
           filter,
         }),
-      employeeCount: (_parent, _args, context) => useCases.reads.employeeCount(context.getActor()),
-      readyEmployeeCount: (_parent, _args, context) =>
-        useCases.reads.readyEmployeeCount(context.getActor()),
-      readyEmployeeSources: (_parent, _args, context) =>
-        useCases.reads.listReadyEmployeeSources(context.getActor()),
-      checks: (_parent, _args, context) => useCases.reads.listChecks(context.getActor()),
+      employeeCount: async (_parent, _args, context) =>
+        (await loaders(context).review()).employeeCount,
+      readyEmployeeCount: async (_parent, _args, context) =>
+        (await loaders(context).review()).readyEmployees.length,
+      readyEmployeeSources: async (_parent, _args, context) =>
+        (await loaders(context).review()).readyEmployeeSources,
+      checks: async (_parent, _args, context) => (await loaders(context).review()).checks,
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],

@@ -10,6 +10,7 @@ export {
   createEmployeeUseCases,
   createImportedEmployees,
   deleteAllEmployees,
+  findTakenEmails,
   hasDemoEmployees,
   type DemoEmployee,
   type EmployeeUseCases,

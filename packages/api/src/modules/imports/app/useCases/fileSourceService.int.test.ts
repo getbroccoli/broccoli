@@ -223,7 +223,7 @@ test("removes the source, its records and its stored file", async ({ orm, seed }
   await imports.files.removeFile(OWNER, source.id);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([otherFile]);
 });
 
@@ -237,7 +237,7 @@ test("refuses file removal after Approve and keeps the import and stored file un
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER);
   expect(await readSetupStep(orm)).toBe("owner");
-  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileIds = await storedFileIds(orm);
   expect(before.edges).toHaveLength(1);
   expect(fileIds).toHaveLength(1);
@@ -247,7 +247,7 @@ test("refuses file removal after Approve and keeps the import and stored file un
   });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
   expect(await storedFileIds(orm)).toEqual(fileIds);
 });
 

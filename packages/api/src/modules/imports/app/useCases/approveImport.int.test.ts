@@ -22,7 +22,7 @@ test("approving creates an employee per ready import employee and moves setup to
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
   await seed.importEmployees(source.id, [avery, robin]);
   const imports = importUseCases(orm);
-  const review = await imports.reads.listEmployees(owner, {});
+  const review = (await imports.reads.readReview(owner)).listEmployees({});
 
   await imports.approveImport(owner);
 
@@ -33,7 +33,32 @@ test("approving creates an employee per ready import employee and moves setup to
   );
   expect(employees.edges).toHaveLength(2);
   expect(await imports.reads.listSources(owner)).toEqual([source]);
-  expect(await imports.reads.listEmployees(owner, {})).toEqual(review);
+  expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(review);
+});
+
+test("approving adds exactly the ready import employees the review counts", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const source = await seed.importSource();
+  const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
+  const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
+  await seed.importEmployees(source.id, [avery, robin]);
+  const employees = createEmployeeUseCases({ orm });
+  const existing = await employees.createEmployee(owner, avery);
+  const imports = importUseCases(orm);
+  const review = await imports.reads.readReview(owner);
+  expect(review.readyEmployees).toHaveLength(1);
+
+  await imports.approveImport(owner);
+
+  const approved = await employees.listEmployees(owner, {});
+  expect(approved.edges.map(({ node }) => node)).toEqual([
+    existing,
+    expect.objectContaining(robin),
+  ]);
 });
 
 test("approving keeps a record without a last name without creating an employee", async ({
@@ -255,7 +280,7 @@ test("approves one employee per group with picked and typed values, excluding le
     choice: { value: "Robin" },
   });
   await imports.choices.setLeftOut(owner, { key: "leftout@example.com", leftOut: true });
-  const review = await imports.reads.listEmployees(owner, {});
+  const review = (await imports.reads.readReview(owner)).listEmployees({});
 
   await imports.approveImport(owner);
 
@@ -263,7 +288,7 @@ test("approves one employee per group with picked and typed values, excluding le
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
     { firstName: "Robin", lastName: "Stone", email: "avery@example.com", jobTitle: "Engineer" },
   ]);
-  expect(await imports.reads.listEmployees(owner, {})).toEqual(review);
+  expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(review);
 });
 
 test("the setup holder approves employees without an owner and moves setup to owner", async ({

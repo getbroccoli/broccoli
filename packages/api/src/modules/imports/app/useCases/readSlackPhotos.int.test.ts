@@ -31,7 +31,7 @@ test.for([
 
   await imports.readSlack(OWNER);
 
-  const employees = await imports.reads.listEmployees(OWNER, {});
+  const employees = (await imports.reads.readReview(OWNER)).listEmployees({});
   const [fileId] = await storedFileIds(orm);
   expect(fileId).toEqual(expect.any(String));
   expect(employees.edges.map(({ node }) => node.photoFileId)).toEqual([fileId]);
@@ -54,7 +54,9 @@ test("does not download a generated Slack placeholder", async ({ orm }) => {
 
   expect(readSlackPhoto).not.toHaveBeenCalled();
   expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node.photoFileId),
+    (await imports.reads.readReview(OWNER))
+      .listEmployees({})
+      .edges.map(({ node }) => node.photoFileId),
   ).toEqual([null]);
   expect(await storedFileIds(orm)).toEqual([]);
 });
@@ -71,7 +73,9 @@ test("a failed photo download leaves initials and the Slack read succeeds", asyn
   await imports.readSlack(OWNER);
 
   expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node.photoFileId),
+    (await imports.reads.readReview(OWNER))
+      .listEmployees({})
+      .edges.map(({ node }) => node.photoFileId),
   ).toEqual([null]);
   expect(await storedFileIds(orm)).toEqual([]);
 });
@@ -88,7 +92,9 @@ test("a non-image download leaves initials", async ({ orm }) => {
   await imports.readSlack(OWNER);
 
   expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node.photoFileId),
+    (await imports.reads.readReview(OWNER))
+      .listEmployees({})
+      .edges.map(({ node }) => node.photoFileId),
   ).toEqual([null]);
   expect(await storedFileIds(orm)).toEqual([]);
 });
@@ -111,7 +117,9 @@ test("keeps a stored photo when Slack's photo link is unchanged", async ({ orm, 
 
   expect(readSlackPhoto).not.toHaveBeenCalled();
   expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node.photoFileId),
+    (await imports.reads.readReview(OWNER))
+      .listEmployees({})
+      .edges.map(({ node }) => node.photoFileId),
   ).toEqual([fileId]);
   expect(await storedFileIds(orm)).toEqual([fileId]);
 });
@@ -137,7 +145,7 @@ test("replaces a changed Slack photo and deletes its old file", async ({ orm, se
 
   await imports.readSlack(OWNER);
 
-  const employees = await imports.reads.listEmployees(OWNER, {});
+  const employees = (await imports.reads.readReview(OWNER)).listEmployees({});
   const fileId = employees.edges[0]!.node.photoFileId;
   expect(fileId).toEqual(expect.any(String));
   expect(fileId).not.toBe(oldFileId);
@@ -205,7 +213,7 @@ test("downloads every new photo during the read", async ({ orm }) => {
 
   await imports.readSlack(OWNER);
 
-  const employees = await imports.reads.listEmployees(OWNER, { first: 100 });
+  const employees = (await imports.reads.readReview(OWNER)).listEmployees({ first: 100 });
   expect(employees.edges).toHaveLength(60);
   expect(employees.edges.filter(({ node }) => node.photoFileId !== null)).toHaveLength(60);
   expect(readSlackPhoto).toHaveBeenCalledTimes(60);
@@ -227,7 +235,7 @@ test("stops starting downloads after 20 seconds and leaves the rest with initial
 
   await imports.readSlack(OWNER);
 
-  const employees = await imports.reads.listEmployees(OWNER, { first: 100 });
+  const employees = (await imports.reads.readReview(OWNER)).listEmployees({ first: 100 });
   expect(employees.edges).toHaveLength(40);
   expect(employees.edges.filter(({ node }) => node.photoFileId !== null)).toHaveLength(16);
   expect(employees.edges.filter(({ node }) => node.photoFileId === null)).toHaveLength(24);
@@ -257,7 +265,7 @@ test("imports members without photos when reading Slack members uses the time bu
 
   await imports.readSlack(OWNER);
 
-  const employees = await imports.reads.listEmployees(OWNER, {});
+  const employees = (await imports.reads.readReview(OWNER)).listEmployees({});
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
     { values: { email: { value: SLACK_MEMBER_WITH_PHOTO.profile.email } }, photoFileId: null },
   ]);
@@ -287,7 +295,7 @@ test("a later Refresh downloads the photos still missing", async ({ orm }) => {
 
   await refresh.readSlack(OWNER);
 
-  const employees = await refresh.reads.listEmployees(OWNER, { first: 100 });
+  const employees = (await refresh.reads.readReview(OWNER)).listEmployees({ first: 100 });
   const files = await storedFileIds(orm);
   expect(employees.edges).toHaveLength(40);
   expect(employees.edges.filter(({ node }) => node.photoFileId !== null)).toHaveLength(40);
@@ -307,7 +315,7 @@ test("a Slack read after Approve writes nothing", async ({ orm }) => {
   await imports.readSlack(SETUP_HOLDER);
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(imports.sentJobs).toEqual([]);
 });

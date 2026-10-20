@@ -2,7 +2,7 @@ import type { Decisions } from "../../../../integrations/ai";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
-import { importPhotoRepository, importRepository } from "../../db";
+import { importRepository } from "../../db";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
@@ -14,6 +14,7 @@ import { resetSetup } from "./resetSetup";
 import { startDemo } from "./startDemo";
 
 export type { DemoFill, SlackReader } from "./importContext";
+export type { ImportReview } from "./importReview";
 export { prepareDemoStart } from "./startDemo";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
@@ -54,7 +55,7 @@ export function createImportUseCases({
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
     resetSetup: (ctx: SecurityContext) => resetSetup(context, ctx),
-    reads: createImportReadService(imports, importPhotoRepository(orm)),
+    reads: createImportReadService(orm),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs }),
   };

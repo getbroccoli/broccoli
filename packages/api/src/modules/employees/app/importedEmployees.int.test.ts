@@ -2,7 +2,12 @@ import { expect, NON_OWNER, OWNER, PNG, storedFileIds, test } from "#test/suppor
 
 import { employeeRepository } from "../db";
 import { parseNewEmployee } from "../domain";
-import { createEmployeeUseCases, createImportedEmployees, deleteAllEmployees } from ".";
+import {
+  createEmployeeUseCases,
+  createImportedEmployees,
+  deleteAllEmployees,
+  findTakenEmails,
+} from ".";
 
 test("creates complete employees and counts incomplete inputs", async ({ orm, transact }) => {
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
@@ -40,6 +45,15 @@ test("skips a taken email and leaves the existing employee unchanged", async ({
   expect(result).toEqual({ created: 0, incomplete: 0, emailTaken: 1, avatarFileIds: [] });
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([existing]);
+});
+
+test("finds only taken emails among 70,000 distinct emails", async ({ orm, seed }) => {
+  const existing = await seed.employee({ email: "employee69999@example.com" });
+  const emails = Array.from({ length: 70_000 }, (_, index) => `employee${index}@example.com`);
+
+  const taken = await findTakenEmails(OWNER, orm, emails);
+
+  expect(taken).toEqual(new Set([existing.email]));
 });
 
 test("creates the first input when two inputs have the same email", async ({ orm, transact }) => {

@@ -30,6 +30,8 @@ export interface EmployeeRepository {
   deleteDemo(): Promise<string[]>;
   /** Deletes every employee; their avatar files stay. */
   deleteAll(): Promise<void>;
+  /** The emails among these that an employee has. */
+  findTakenEmails(emails: readonly string[]): Promise<string[]>;
   hasAny(): Promise<boolean>;
   hasDemo(): Promise<boolean>;
   /** Whether an employee's avatar is this file. */
@@ -108,6 +110,15 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
     deleteAll: async (): Promise<void> => {
       await orm().delete(employees);
+    },
+
+    findTakenEmails: async (emails: readonly string[]): Promise<string[]> => {
+      const rows = await orm()
+        .select({ email: employees.email })
+        .from(employees)
+        // One array parameter: `inArray` binds one per email, and Postgres takes at most 65,535.
+        .where(sql`${employees.email} = any(${sql.param([...emails])}::text[])`);
+      return rows.map(({ email }) => email);
     },
 
     hasAny: () => exists(orm(), sql`true`),

@@ -107,7 +107,7 @@ test("starting the demo after a Slack read discards the import and its files", a
   await imports.startDemo(SETUP_HOLDER);
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).not.toContain("avery@example.com");
   const remainingFiles = await storedFileIds(orm);
