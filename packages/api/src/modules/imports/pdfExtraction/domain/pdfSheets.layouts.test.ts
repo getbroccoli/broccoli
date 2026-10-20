@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { line, page } from "#test/support";
 
-import { pdfSheets } from ".";
+import { pdfSheets } from "./pdfSheets";
 
 /** A cell of `text` centred on `centre`, 5 pt per character. */
 function centred(text: string, centre: number, y: number) {

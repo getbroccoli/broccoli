@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { line, page } from "#test/support";
 
-import { pdfSheets } from ".";
+import { pdfSheets } from "./pdfSheets";
 
 it("drops page-number footers aligned with a table column", () => {
   const header = line(700, ["Name", "Email"]);

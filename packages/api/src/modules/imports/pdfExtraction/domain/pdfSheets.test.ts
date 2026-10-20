@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { line, page } from "#test/support";
 
-import { pdfSheets } from ".";
+import { pdfSheets } from "./pdfSheets";
 
 it("keeps every row in page order with the repeated header only once", () => {
   const header = line(760, ["Name", "Email"]);

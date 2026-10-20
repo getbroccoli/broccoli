@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { line, page } from "#test/support";
 
-import { hasScannedPage, pdfSheets } from ".";
+import { hasScannedPage, pdfSheets } from "./pdfSheets";
 
 it("reads a header-less continuation row outside the bands over a full-page letterhead", () => {
   const header = ["Name", "Email"];

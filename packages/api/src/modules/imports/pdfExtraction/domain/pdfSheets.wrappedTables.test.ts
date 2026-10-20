@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { line, page } from "#test/support";
 
-import { pdfSheets } from ".";
+import { pdfSheets } from "./pdfSheets";
 
 it.for([
   { name: "an email", second: ["Blair Bell", "blair@example.com", "", ""] },

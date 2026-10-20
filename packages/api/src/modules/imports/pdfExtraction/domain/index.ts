@@ -11,7 +11,7 @@ export {
 } from "./maskedEvidence";
 export { nativeLayoutPages, visibleNativeWords } from "./nativeWords";
 export { EMAIL, type SourceRecord } from "./pdfNormalization";
-export { hasScannedPage, pdfSheets } from "./pdfSheets";
+export { hasScannedPage } from "./pdfSheets";
 export { PDF_EXTRACTION_VERSION } from "./prompts";
 export { type ReferenceOutput, referencedRecords } from "./referenceRecords";
 export { type RowSelection, selectedRows } from "./rowSelection";
