@@ -23,10 +23,29 @@ services:
 
   api:
     <<: *dev-service
+    # Node with uv, from the API's Dockerfile: the PDF word reader needs its own Python.
+    image: broccoli-dev-api
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+      target: dev
     working_dir: /repo/packages/api
+    # The reader's Python environment is installed for this container, over the host's.
     # Modules read their SDL at startup, so a changed .graphql file restarts the API too.
-    command: [node_modules/.bin/tsx, watch, --include, "src/**/*.graphql", src/main.ts]
+    command:
+      - sh
+      - -c
+      - uv sync --frozen --no-dev --quiet --project ../pdf-words &&
+        exec node_modules/.bin/tsx watch --include "src/**/*.graphql" src/main.ts
+    tmpfs:
+      - /repo/packages/pdf-words/.venv:mode=1777,exec
     environment:
+      # In the checkout's data folder, which the host user owns, so it survives restarts.
+      UV_CACHE_DIR: /repo/.data/uv/cache
+      UV_PYTHON_INSTALL_DIR: /repo/.data/uv/python
+      UV_PYTHON_PREFERENCE: only-managed
+      # The cache and the environment sit on different file systems.
+      UV_LINK_MODE: copy
       DATABASE_URL: postgres://broccoli@postgres:5432/broccoli
       LOG_LEVEL: ${LOG_LEVEL:-}
       BROCCOLI_MODE: ${BROCCOLI_MODE:-}
