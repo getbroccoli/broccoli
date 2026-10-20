@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { line, page } from "#test/support";
+import { page } from "#test/support";
 
 import { nativeLayoutPages, visibleNativeWords } from "./nativeWords";
 
@@ -15,40 +15,6 @@ it.each([
   expect(visibleNativeWords([pdfPage], [wordPage])).toEqual([
     { ...wordPage, words: kept ? [word] : [] },
   ]);
-});
-
-it("drops hidden text that PDF.js did not draw at the word's position", () => {
-  const wordPage = {
-    width: 612,
-    height: 792,
-    words: [{ text: "Avery", left: 40, top: 122, right: 65, bottom: 132 }],
-  };
-
-  expect(visibleNativeWords([page([line(700, ["Avery"])])], [wordPage])).toEqual([
-    { ...wordPage, words: [] },
-  ]);
-});
-
-it("drops a word whose text differs from the PDF.js text at its position", () => {
-  const wordPage = {
-    width: 612,
-    height: 792,
-    words: [{ text: "Robin", left: 40, top: 82, right: 65, bottom: 92 }],
-  };
-
-  expect(visibleNativeWords([page([line(700, ["Avery"])])], [wordPage])).toEqual([
-    { ...wordPage, words: [] },
-  ]);
-});
-
-it("matches visible text without whitespace", () => {
-  const wordPage = {
-    width: 612,
-    height: 792,
-    words: [{ text: "AveryStone", left: 40, top: 82, right: 90, bottom: 92 }],
-  };
-
-  expect(visibleNativeWords([page([line(700, ["Avery Stone"])])], [wordPage])).toEqual([wordPage]);
 });
 
 it("refuses readers that counted different numbers of pages", () => {

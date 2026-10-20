@@ -30,6 +30,21 @@ def test_reads_words_with_boxes_rounded_to_one_decimal():
     }
 
 
+def test_leaves_out_text_drawn_invisibly():
+    with pymupdf.open() as document:
+        page = document.new_page(width=200, height=300)
+        page.insert_text((40, 70), "Avery Stone")
+        page.insert_text((40, 100), "Robin Reed", render_mode=3)
+        source = io.BytesIO(document.tobytes())
+    output = io.StringIO()
+
+    status = main(source, output)
+
+    assert status == 0
+    page = json.loads(output.getvalue())["pages"][0]
+    assert [word[4] for word in page["words"]] == ["Avery", "Stone"]
+
+
 def test_reports_a_rotated_pages_shown_width_and_height():
     with pymupdf.open() as document:
         page = document.new_page(width=200, height=300)
