@@ -9,11 +9,11 @@ import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 
 import { AgentOption } from "./AgentOption";
+import { AiFooter } from "./AiFooter";
 import { DemoDataCard } from "./DemoDataCard";
 import { failureOf } from "./failureOf";
 import { KeyField } from "./KeyField";
 import { KnownKey } from "./KnownKey";
-import { NextButton } from "./NextButton";
 import { SourceOption } from "./SourceOption";
 
 type Props = {
@@ -54,9 +54,10 @@ export function AiForm({ ai, peopleGathered }: Props) {
     <SetupStepForm
       onSubmit={() => void save()}
       footer={
-        <NextButton
+        <AiFooter
           checking={checking ? source : null}
           disabled={busy || (asksForKey && key.trim() === "")}
+          busy={busy}
         />
       }
     >

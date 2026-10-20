@@ -33,10 +33,21 @@ it("lets the signed-out setup holder through their current step", () => {
   expect(result).toBeUndefined();
 });
 
+it("lets the self-hosted setup holder return from AI to company details", () => {
+  expect(() =>
+    requireSetupStep("COMPANY", {
+      context: { me: null, holdsSetup: true, setupStep: "IMPORT", mode: "SELF_HOSTED" },
+      location: { href: "/setup/company" },
+    }),
+  ).not.toThrow();
+});
+
 it.each([
   ["COMPANY", "/setup/company", "DONE", "/people"],
   ["IMPORT", "/setup/ai", "DONE", "/people"],
   ["OWNER", "/setup", "DONE", "/people"],
+  ["OWNER", "/setup", "COMPANY", "/setup/company"],
+  ["DONE", "/people", "COMPANY", "/setup/company"],
   ["DONE", "/people", "IMPORT", "/setup/import"],
 ] as const)(
   "sends a signed-in user at %s to %s from the wrong step",

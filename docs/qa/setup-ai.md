@@ -13,7 +13,9 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 - [ ] The green line reads "We don’t send private data from your documents to any model."
 - [ ] Without `OPENROUTER_API_KEY`, "Broccoli AI" is selected. "Your agent" is greyed out with "Coming soon" and cannot be selected, by mouse or keyboard.
 - [ ] The privacy line sits under the options, and the "Demo data" card under it with "Explore the demo".
-- [ ] The footer holds only "Continue".
+- [ ] The footer holds "Back" on the left and "Continue" on the right, on desktop and narrow windows.
+- [ ] "Back" opens `/setup/company` with the saved name and logo. Edit the name and choose "Continue": setup returns to AI with the new company name in the sidebar. Saved AI settings and gathered people stay.
+- [ ] "Back" remains available while AI settings load or fail to load, and while an empty OpenRouter key disables "Continue". It is disabled while connecting, checking a key or opening the demo.
 
 ## Stale generated code (development only)
 

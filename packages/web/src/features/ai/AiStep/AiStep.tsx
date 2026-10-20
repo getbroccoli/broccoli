@@ -6,8 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 
+import { AiFooter } from "./AiFooter";
 import { AiForm } from "./AiForm";
-import { NextButton } from "./NextButton";
 
 /** The Setup AI step: how Broccoli reads the owner's files, or demo data instead. */
 export function AiStep() {
@@ -23,7 +23,7 @@ export function AiStep() {
     return <AiForm ai={ai} peopleGathered={peopleGathered} />;
   }
   return (
-    <SetupStepForm onSubmit={() => {}} footer={<NextButton checking={null} disabled />}>
+    <SetupStepForm onSubmit={() => {}} footer={<AiFooter checking={null} disabled busy={false} />}>
       {error ? (
         <div role="alert" className="flex flex-col items-start gap-3">
           <p className="text-sm text-destructive">{t("setup.ai.loadFailed")}</p>
