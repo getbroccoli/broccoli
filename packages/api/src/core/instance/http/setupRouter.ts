@@ -11,6 +11,7 @@ const SETUP_PATHS = new Set([
   "/api/auth/setup/start",
   "/api/auth/setup/demo",
   "/api/auth/setup/account",
+  "/api/auth/setup/demo/reset",
 ]);
 
 /**

@@ -1,7 +1,7 @@
 import type express from "express";
 
 import type { Orm, Transact } from "./db";
-import type { DemoStart } from "./instance";
+import type { DemoReset, DemoStart } from "./instance";
 import type { EventHandlers } from "./events";
 import type { JobHandlers, JobQueue } from "./jobs";
 import type { Resolvers, SecurityResolver } from "./graphql";
@@ -40,4 +40,6 @@ export interface ModuleManifest {
   router?: (resolveSecurity: SecurityResolver) => express.Router;
   /** The demo company's start, which self-hosted setup runs when it signs in the demo's owner. */
   prepareDemoStart?: () => Promise<DemoStart>;
+  /** Deletes the demo's people, which self-hosted setup runs when the demo's owner resets setup. */
+  clearDemoPeople?: DemoReset;
 }

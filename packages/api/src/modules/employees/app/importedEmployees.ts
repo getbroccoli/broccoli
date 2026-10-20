@@ -38,11 +38,10 @@ export async function createImportedEmployees(
 }
 
 /**
- * Deletes the employees an import created, joining `tx`, when setup goes back before the
- * owner exists: then they are every employee. Their avatars are the import's photos, so the
- * files stay with the import.
+ * Deletes every employee, joining `tx`, when setup goes back to its start. Their avatar
+ * files stay: after Approve they are the import's photos, which the import still holds.
  */
-export async function deleteImportedEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
+export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
   await employeeRepository(tx).deleteAll();
 }

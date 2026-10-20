@@ -24,7 +24,7 @@ import {
 } from "../domain";
 import { inAuthTransaction } from "./authTransaction";
 import { assertValidCredentials, credentialsBody, linkPassword } from "./credentials";
-import { readSetupToken, SETUP_COOKIE } from "./setupCookie";
+import { readSetupToken, setSetupCookie } from "./setupCookie";
 
 const SYSTEM = PrincipalSecurityContext.system();
 
@@ -190,12 +190,4 @@ async function refusingSetupConflicts<T>(
     }
     throw error;
   }
-}
-
-/** Sets the setup cookie like the session cookie: HttpOnly, SameSite=Lax, Secure on HTTPS. */
-function setSetupCookie(ctx: GenericEndpointContext, token: string, maxAge: number): void {
-  ctx.setCookie(SETUP_COOKIE, token, {
-    ...ctx.context.authCookies.sessionToken.attributes,
-    maxAge,
-  });
 }

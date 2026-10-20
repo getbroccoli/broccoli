@@ -9,7 +9,7 @@ export {
   createDemoEmployees,
   createEmployeeUseCases,
   createImportedEmployees,
-  deleteImportedEmployees,
+  deleteAllEmployees,
   hasDemoEmployees,
   hasEmployees,
   type DemoEmployee,

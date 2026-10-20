@@ -10,7 +10,8 @@ A manual check that skipping the import fills the demo company and that clearing
 ## Demo mode
 
 - [ ] `/people` opens without asking for an account and shows 40 people, each with a photo avatar, and the green banner "Demo mode · Create your account within 7 days to keep access." with "Create account".
-- [ ] The workspace menu shows "Demo" and "Create account", and no "Sign out".
+- [ ] The workspace menu shows "Demo" with "Create account" and "Reset setup", and no "Sign out".
+- [ ] "Reset setup" opens "Reset setup?"; "Cancel" changes nothing. In a second run, "Reset setup" lands on `/setup/company` with the company name filled in; Setup AI keeps its choice, "Explore the demo" is offered again, and the people page no longer opens.
 - [ ] A reload, a new tab and a restart of the stack keep you in the app; none opens setup.
 - [ ] "Create account" opens "Create your account", without the ring of people; `owner@example.com` and a password sign you in again on `/people`, and the banner becomes "You’re looking at demo data." with "Clear demo data".
 - [ ] Sign out, then sign in with that email and password: the same people are there.

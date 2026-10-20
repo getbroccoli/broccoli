@@ -1,6 +1,6 @@
 import { advanceStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import { deleteImportedEmployees } from "../../../employees";
+import { deleteAllEmployees } from "../../../employees";
 import type { ImportContext } from "./importContext";
 import { requireImportAccess } from "./requireImportAccess";
 
@@ -16,7 +16,7 @@ export async function resetSetup(
   requireImportAccess(ctx);
   await transact(async (tx) => {
     if (await advanceStep(ctx, tx, "owner", "company")) {
-      await deleteImportedEmployees(ctx, tx);
+      await deleteAllEmployees(ctx, tx);
     }
   });
 }

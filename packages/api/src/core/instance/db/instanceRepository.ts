@@ -35,6 +35,8 @@ export interface InstanceRepository {
   lockAssignment(): Promise<{ ownerUserId: string | null; assignment: ManagedAssignment | null }>;
   setAssignment(assignment: ManagedAssignment): Promise<void>;
   setOwner(userId: string, step: SetupStep): Promise<void>;
+  /** Removes the owner and moves setup to `step`. */
+  clearOwner(step: SetupStep): Promise<void>;
   /** Moves the step from `from` to `to`; does nothing at any other step. Returns whether it moved. */
   advanceStep(from: SetupStep, to: SetupStep): Promise<boolean>;
   /** The encrypted Broccoli AI token; null before the first one is issued. */
@@ -143,6 +145,10 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
 
     setOwner: async (userId: string, step: SetupStep): Promise<void> => {
       await orm().update(instance).set({ ownerUserId: userId, setupStep: step });
+    },
+
+    clearOwner: async (step: SetupStep): Promise<void> => {
+      await orm().update(instance).set({ ownerUserId: null, setupStep: step });
     },
 
     advanceStep: async (from: SetupStep, to: SetupStep): Promise<boolean> => {

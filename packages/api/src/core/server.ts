@@ -13,7 +13,7 @@ import { createEventBus } from "./events";
 import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { type DemoStart, selfHostedAuth, setupRouter } from "./instance";
+import { type DemoReset, type DemoStart, selfHostedAuth, setupRouter } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer, type ManagedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest } from "./moduleManifest";
@@ -79,6 +79,7 @@ export async function startServer(
               ...services,
               publicUrl: env.deployment.publicUrl,
               prepareDemoStart: demoStartOf(modules),
+              clearDemoPeople: demoResetOf(modules),
             }),
             router: setupRouter(env.deployment.publicUrl),
           };
@@ -144,6 +145,17 @@ function demoStartOf(modules: readonly ModuleManifest[]): () => Promise<DemoStar
       throw new Error("No module starts the demo");
     }
     return prepare();
+  };
+}
+
+/** The demo reset of the module that provides it; self-hosted setup calls it on demand. */
+function demoResetOf(modules: readonly ModuleManifest[]): DemoReset {
+  return (ctx, tx) => {
+    const clear = modules.find((module) => module.clearDemoPeople)?.clearDemoPeople;
+    if (!clear) {
+      throw new Error("No module resets the demo");
+    }
+    return clear(ctx, tx);
   };
 }
 

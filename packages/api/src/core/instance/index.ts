@@ -7,6 +7,7 @@ export {
   completeImportStep,
   readDemoDeadlineOf,
   readDemoExpiresAt,
+  type DemoReset,
   type DemoStart,
   hasOwner,
   isImportOpen,

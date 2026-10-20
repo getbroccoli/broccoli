@@ -33,10 +33,23 @@ export async function startSetup(
   if (setupSession && !holdsSetup(setupSession, token, now)) {
     throw new SetupInProgressError();
   }
-  const heldToken = setupSession && token ? token : randomBytes(32).toString("base64url");
+  return saveSetupSession(tx, setupSession && token ? token : newSetupToken(), now);
+}
+
+/** Gives setup to the browser holding `token` for the next days, joining `tx`. */
+export async function saveSetupSession(
+  tx: Tx,
+  token: string,
+  now: Date,
+): Promise<{ token: string; expiresAt: Date }> {
   const expiresAt = new Date(now.getTime() + SETUP_SESSION_DAYS * DAY_MS);
-  await instance.saveSetupSession({ tokenHash: hashSetupToken(heldToken), expiresAt });
-  return { token: heldToken, expiresAt };
+  await instanceRepository(tx).saveSetupSession({ tokenHash: hashSetupToken(token), expiresAt });
+  return { token, expiresAt };
+}
+
+/** A new random setup token, for a browser that holds none. */
+export function newSetupToken(): string {
+  return randomBytes(32).toString("base64url");
 }
 
 /** Who holds setup for the browser that sent `token`; nobody once an owner exists. */
