@@ -31,14 +31,15 @@ export function AddedPeopleRing() {
     return null;
   }
   const { company } = data;
+  const seats = ringSeats(people, swaps);
   return (
     <div aria-hidden className="relative mx-auto h-[280px] w-[300px]">
       <div className="absolute inset-0 motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite]">
-        {ringSeats(people, swaps).map((person, seat) => (
+        {seats.map((person, seat) => (
           <span
             key={seat}
             className="absolute top-1/2 left-1/2 -mt-[22px] -ml-[22px] motion-safe:animate-[ring-seat-in_0.9s_cubic-bezier(0.22,1,0.36,1)_both]"
-            style={seatStyle(seat)}
+            style={seatStyle(seat, seats.length)}
           >
             {/* Turns back as the ring turns, so the face stays upright. */}
             <span className="block motion-safe:animate-[ring-turn_90s_linear_1.2s_infinite_reverse]">
@@ -71,8 +72,8 @@ export function AddedPeopleRing() {
 }
 
 /** A seat on the ring, the first at 12 o'clock; it flies in from further out on the same line. */
-function seatStyle(seat: number): CSSProperties {
-  const angle = (seat / RING_SEATS) * 2 * Math.PI - Math.PI / 2;
+function seatStyle(seat: number, count: number): CSSProperties {
+  const angle = (seat / count) * 2 * Math.PI - Math.PI / 2;
   const x = Math.cos(angle) * RADIUS_PX;
   const y = Math.sin(angle) * RADIUS_PX;
   return {
