@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "firstName": null,
+      "lastName": "Rook",
+      "email": "rook@holdout.invalid",
+      "jobTitle": "Analyst",
+      "startDate": null
+    },
+    {
+      "firstName": "Lyra",
+      "lastName": "Moss",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Arlo",
+      "lastName": "Fern",
+      "email": "arlo@holdout.invalid",
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": []
+}

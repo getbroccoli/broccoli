@@ -1,0 +1,32 @@
+{
+  "records": [
+    {
+      "firstName": "Nia",
+      "lastName": "Lark",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Mara",
+      "lastName": "Wren",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Theo",
+      "lastName": "Flint",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Owen",
+      "lastName": "Crest",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "firstName": "Baker",
+      "lastName": "Wren",
+      "email": null,
+      "jobTitle": "Analyst",
+      "startDate": null
+    },
+    {
+      "firstName": "Mason",
+      "lastName": "Pine",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Cook",
+      "lastName": "Reed",
+      "email": null,
+      "jobTitle": "Coordinator",
+      "startDate": null
+    }
+  ],
+  "forbidden": []
+}

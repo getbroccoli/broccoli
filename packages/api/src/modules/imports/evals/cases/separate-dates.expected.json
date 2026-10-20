@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "firstName": "Mara",
+      "lastName": "Quill",
+      "email": "mara@challenge.invalid",
+      "jobTitle": "Engineer",
+      "startDate": "2024-02-14"
+    },
+    {
+      "firstName": "Owen",
+      "lastName": "Vale",
+      "email": "owen@challenge.invalid",
+      "jobTitle": "Analyst",
+      "startDate": "2022-09-23"
+    }
+  ]
+}

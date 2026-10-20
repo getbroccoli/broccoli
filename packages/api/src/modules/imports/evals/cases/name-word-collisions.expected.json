@@ -1,0 +1,32 @@
+{
+  "records": [
+    {
+      "firstName": "Baker",
+      "lastName": "North",
+      "email": null,
+      "jobTitle": "Accountant",
+      "startDate": null
+    },
+    {
+      "firstName": "Mason",
+      "lastName": "Reed",
+      "email": null,
+      "jobTitle": "Analyst",
+      "startDate": null
+    },
+    {
+      "firstName": "Sales",
+      "lastName": "Brook",
+      "email": null,
+      "jobTitle": "Coordinator",
+      "startDate": null
+    },
+    {
+      "firstName": "Cook",
+      "lastName": "Fern",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    }
+  ]
+}

@@ -1,3 +1,9 @@
+Each `.csv`, `.xlsx` or `.pdf` input has a `<name>.expected.json` beside it. `records` lists the expected `firstName`, `lastName`, `email`, `jobTitle` and `startDate` values, using `null` for missing fields. An optional `failure` gives the import failure code; otherwise the import must succeed. An optional `forbidden` list names values that must not reach either model endpoint.
+
+Set `EVAL_CASES_DIR` to use a private folder outside the repository instead of this directory. Expected files are read only after the import runs. Records are compared field by field, ignoring order and counting each duplicate separately.
+
+Each case reports exact/expected records, model calls, cost and elapsed time for upload plus mapping; the final summary totals them and counts files whose records and failure code match exactly. Only decision request bodies are printed. Completion requests are checked for private routing, text-only content, valid masked input and forbidden values.
+
 - `simple`: UK staff spreadsheet with a first-row header, middle names and a Mc surname, lowercased work emails, job titles and day-first start dates.
 - `uk-payroll`: UK payroll headings, leading titles, middle names, double-barrelled and apostrophised surnames, lowercase surname particles and plain two-word names.
 - `comma-names`: Payroll export headed `Surname, Forename`; a whole column of quoted family-first names preserves compound surnames.
@@ -61,5 +67,28 @@
 - `javascript-openaction`: people report as a text PDF that runs a JavaScript action on opening, and its CSV twin, sharing one expected file: two people from the visible table; the script never runs and the title stays out.
 - `embedded-file`: staff table as a text PDF with an embedded CSV of two other people, and its CSV twin, sharing one expected file: only the two visible people; the attachment's people and file name never reach the model.
 - `external-uri`: workforce export as a text PDF with a web link and a remote go-to action, and its CSV twin, sharing one expected file: two people; nothing is fetched and the title stays out.
+
+These 20 frozen PDF regressions use generated demo data:
+
+- `blank-second-surname`: an empty second surname cell stays empty.
+- `continued-roster`: a roster continued across pages.
+- `emergency-contact-exclusion`: an emergency contact must not become an employee.
+- `missing-given-name`: a missing given name stays empty.
+- `name-word-collisions`: names that are also job or heading words.
+- `parallel-contacts`: contact details arranged in parallel columns.
+- `separate-dates`: employment dates beside other dates.
+- `stacked-honorifics`: names with honorifics in stacked records.
+- `birth-versus-employment`: employment dates must not be replaced with birth dates.
+- `blank-roster`: no employee records; the import fails with `no_people_columns`.
+- `emergency-contact-section`: an emergency-contact section stays out of the employee list.
+- `empty-second-surname`: explicit name fields with an empty second surname.
+- `german-columns`: a roster with German column headings.
+- `identifier-and-explicit-names`: identifiers beside explicit name fields.
+- `role-words-as-names`: names that are also role words.
+- `sparse-explicit-cells`: sparse records with explicit field headings.
+- `surname-first-status`: family-first names beside status fields.
+- `titles-on-stacked-cards`: honorifics on stacked person cards.
+- `two-contact-columns`: two columns of contact records.
+- `two-page-roster`: a roster spanning two pages.
 
 Names, roles and departments in the `layout-xlsx-*`, `common-unicode-name` and `injection-xlsx` cases come from The Spreadsheet Guru's Company Employee Example Data, which its publisher allows using in any way; the emails and managers are made up.

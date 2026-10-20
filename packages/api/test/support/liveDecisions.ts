@@ -1,15 +1,25 @@
 import express from "express";
 
-import { createDecisions, type Decisions } from "../../src/integrations/ai";
+import {
+  createDecisions,
+  createReferenceCompletions,
+  type Decisions,
+  type ReferenceCompletions,
+} from "../../src/integrations/ai";
+import { PDF_COMPLETION_TASKS } from "../../src/modules/imports/pdfExtraction";
+import type { FakeCompletionRequest } from "./fakeDecisions";
 import { startSimpleHttpServer } from "./simpleHttpServer";
 
 /** The real model for evals, reached through a local proxy that keeps every request. */
 export interface LiveDecisions {
   decisions: Decisions;
+  completions: ReferenceCompletions;
   /** Forbidden values found as whole words in any request's keys or values, ignoring case. */
   leaked(forbidden: readonly string[]): string[];
-  /** Every request sent so far, as the model received it. */
+  /** Decision requests only, as the model received them. */
   requests(): unknown[];
+  /** Completion requests, kept apart so reports never print their bodies. */
+  completionRequests(): FakeCompletionRequest[];
   /** What the answers so far cost, in US dollars, as OpenRouter reports it. */
   cost(): number;
   stop(): Promise<void>;
@@ -22,14 +32,15 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
     throw new Error("Set EVAL_OPEN_ROUTER_KEY to run the evals");
   }
   const sentBodies: string[] = [];
+  const sentCompletionBodies: string[] = [];
   let cost = 0;
   // The client's timeout ends only its call to the proxy; stopping ends the calls to OpenRouter too.
   const upstreamCalls = new AbortController();
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
-  app.post("/alpha/decisions", async (request, response) => {
+  app.post(["/alpha/decisions", "/v1/chat/completions"], async (request, response) => {
     const body = request.body as string;
-    sentBodies.push(body);
-    const upstream = await fetch(`${OPENROUTER_URL}/alpha/decisions`, {
+    (request.path === "/alpha/decisions" ? sentBodies : sentCompletionBodies).push(body);
+    const upstream = await fetch(`${OPENROUTER_URL}${request.path}`, {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body,
@@ -42,8 +53,14 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   const server = await startSimpleHttpServer(app);
   return {
     decisions: createDecisions({ endpoint: `${server.url}/alpha/decisions`, credential: apiKey }),
+    completions: createReferenceCompletions({
+      readSource: () => Promise.resolve({ kind: "openrouter", url: server.url, key: apiKey }),
+      tasks: PDF_COMPLETION_TASKS,
+    }),
     leaked: (forbidden) => {
-      const texts = sentBodies.map((body) => stringsOf(JSON.parse(body)).join("\n"));
+      const texts = [...sentBodies, ...sentCompletionBodies].map((body) =>
+        stringsOf(JSON.parse(body)).join("\n"),
+      );
       return forbidden.filter((value) => {
         const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const word = new RegExp(
@@ -54,6 +71,8 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
       });
     },
     requests: () => sentBodies.map((body) => JSON.parse(body) as unknown),
+    completionRequests: () =>
+      sentCompletionBodies.map((body) => JSON.parse(body) as FakeCompletionRequest),
     cost: () => cost,
     stop: () => {
       upstreamCalls.abort();

@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "firstName": null,
+      "lastName": "Kestrel",
+      "email": null,
+      "jobTitle": "Technician",
+      "startDate": null
+    },
+    {
+      "firstName": "Nia",
+      "lastName": "Flint",
+      "email": null,
+      "jobTitle": "Coordinator",
+      "startDate": null
+    }
+  ]
+}

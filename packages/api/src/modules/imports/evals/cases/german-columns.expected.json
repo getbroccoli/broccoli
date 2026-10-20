@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Enya",
+      "lastName": "Wren",
+      "email": null,
+      "jobTitle": "Technikerin",
+      "startDate": "2023-04-23"
+    },
+    {
+      "firstName": "Luca",
+      "lastName": "Alder",
+      "email": null,
+      "jobTitle": "Sachbearbeiter",
+      "startDate": "2020-11-14"
+    }
+  ],
+  "forbidden": []
+}

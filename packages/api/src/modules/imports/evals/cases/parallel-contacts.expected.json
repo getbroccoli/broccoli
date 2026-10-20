@@ -1,0 +1,18 @@
+{
+  "records": [
+    {
+      "firstName": "Aria",
+      "lastName": "Thorne",
+      "email": "aria@challenge.invalid",
+      "jobTitle": "Research Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Theo",
+      "lastName": "Marsh",
+      "email": "theo@challenge.invalid",
+      "jobTitle": "Office Manager",
+      "startDate": null
+    }
+  ]
+}

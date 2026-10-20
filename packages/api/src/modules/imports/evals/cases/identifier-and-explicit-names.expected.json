@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "firstName": "Iris",
+      "lastName": "Rowan",
+      "email": "iris@holdout.invalid",
+      "jobTitle": "Analyst",
+      "startDate": "2024-07-19"
+    },
+    {
+      "firstName": "Soren",
+      "lastName": "Vale",
+      "email": "soren@holdout.invalid",
+      "jobTitle": "Engineer",
+      "startDate": "2022-12-03"
+    },
+    {
+      "firstName": "Nora",
+      "lastName": "Finch",
+      "email": "nora@holdout.invalid",
+      "jobTitle": "Coordinator",
+      "startDate": "2021-05-28"
+    }
+  ],
+  "forbidden": []
+}

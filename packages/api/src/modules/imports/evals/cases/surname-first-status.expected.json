@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Elara",
+      "lastName": "Kestrel",
+      "email": "elara@holdout.invalid",
+      "jobTitle": "Professor",
+      "startDate": null
+    },
+    {
+      "firstName": "Finn Q.",
+      "lastName": "Wilde",
+      "email": "finn@holdout.invalid",
+      "jobTitle": "Lecturer",
+      "startDate": null
+    }
+  ],
+  "forbidden": []
+}

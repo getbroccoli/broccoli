@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Tessa",
+      "lastName": "North",
+      "email": "tessa@holdout.invalid",
+      "jobTitle": "Research Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Remy",
+      "lastName": "Brook",
+      "email": "remy@holdout.invalid",
+      "jobTitle": "Office Manager",
+      "startDate": null
+    }
+  ],
+  "forbidden": []
+}

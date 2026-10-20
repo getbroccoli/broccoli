@@ -1,0 +1,12 @@
+{
+  "records": [
+    {
+      "firstName": "Anya",
+      "lastName": "Rowan",
+      "email": null,
+      "jobTitle": "Coordinator",
+      "startDate": "2023-08-24"
+    }
+  ],
+  "forbidden": ["Felix", "Ash", "61500", "1470258369"]
+}

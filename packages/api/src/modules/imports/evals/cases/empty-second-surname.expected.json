@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Noa",
+      "lastName": "Vega",
+      "email": null,
+      "jobTitle": "Analyst",
+      "startDate": null
+    },
+    {
+      "firstName": "Gael",
+      "lastName": "Rios Soler",
+      "email": null,
+      "jobTitle": "Engineer",
+      "startDate": null
+    }
+  ],
+  "forbidden": []
+}

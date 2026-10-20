@@ -1,0 +1,33 @@
+{
+  "records": [
+    {
+      "firstName": "Milo",
+      "lastName": "Reed",
+      "email": null,
+      "jobTitle": "Planner",
+      "startDate": null
+    },
+    {
+      "firstName": "Asha",
+      "lastName": "Quill",
+      "email": null,
+      "jobTitle": "Planner",
+      "startDate": null
+    },
+    {
+      "firstName": "Ezra",
+      "lastName": "Lark",
+      "email": null,
+      "jobTitle": "Planner",
+      "startDate": null
+    },
+    {
+      "firstName": "Vera",
+      "lastName": "Ash",
+      "email": null,
+      "jobTitle": "Planner",
+      "startDate": null
+    }
+  ],
+  "forbidden": []
+}
