@@ -1,22 +1,19 @@
-import { randomBytes, randomUUID } from "node:crypto";
-import { link, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { link, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
+import { createSecretsFolder, draftPath, ignoreCode, readSecret } from "./secretFile";
 
 const SECRET_BYTES = 32;
 
-/**
- * Secrets live in `<dataDir>/secrets/<name>`, readable only by the app's user. The
- * database never holds them, so operators back up this folder with the database.
- */
+/** The secret `name` in the data folder, created at random by the first caller. */
 export async function ensureSecret(dataDir: string, name: string): Promise<string> {
   const existing = await readSecret(dataDir, name);
-  if (existing !== undefined) {
+  if (existing !== null) {
     return existing;
   }
-  const folder = secretsFolder(dataDir);
-  await mkdir(folder, { recursive: true, mode: 0o700 });
-  // A unique draft per call; `wx` refuses to reuse a file another writer owns.
-  const draft = join(folder, `.${name}.${randomUUID()}`);
+  const folder = await createSecretsFolder(dataDir);
+  const draft = draftPath(folder, name);
   await writeFile(draft, randomBytes(SECRET_BYTES).toString("base64url"), {
     mode: 0o600,
     flag: "wx",
@@ -29,25 +26,4 @@ export async function ensureSecret(dataDir: string, name: string): Promise<strin
     await rm(draft, { force: true });
   }
   return (await readSecret(dataDir, name)) as string;
-}
-
-async function readSecret(dataDir: string, name: string): Promise<string | undefined> {
-  try {
-    return await readFile(join(secretsFolder(dataDir), name), "utf8");
-  } catch (error) {
-    ignoreCode("ENOENT")(error);
-    return undefined;
-  }
-}
-
-function secretsFolder(dataDir: string): string {
-  return join(dataDir, "secrets");
-}
-
-function ignoreCode(code: string): (error: unknown) => void {
-  return (error) => {
-    if ((error as NodeJS.ErrnoException).code !== code) {
-      throw error;
-    }
-  };
 }

@@ -1,6 +1,9 @@
 import type { Orm } from "../../db";
-import type { SecretBox } from "../../secrets";
-import { instanceRepository, readBroccoliAiTokenFile, saveBroccoliAiTokenFile } from "../db";
+import { readSecret, saveSecret, type SecretBox } from "../../secrets";
+import { instanceRepository } from "../db";
+
+// Encrypted, in the data folder, so the trial token survives replacing the database.
+const TOKEN_SECRET = "broccoli-ai-token";
 
 /** Reads the persistent token, moving an older database token into the data folder on first use. */
 export async function readBroccoliAiToken(
@@ -8,7 +11,7 @@ export async function readBroccoliAiToken(
   secretBox: SecretBox,
   dataDir: string,
 ): Promise<string | null> {
-  const saved = await readBroccoliAiTokenFile(dataDir);
+  const saved = await readSecret(dataDir, TOKEN_SECRET);
   if (saved !== null) {
     return secretBox.decrypt(saved);
   }
@@ -18,7 +21,7 @@ export async function readBroccoliAiToken(
     return null;
   }
   const token = secretBox.decrypt(encrypted);
-  await saveBroccoliAiTokenFile(dataDir, encrypted);
+  await saveSecret(dataDir, TOKEN_SECRET, encrypted);
   await repository.saveBroccoliAiToken(null);
   return token;
 }
@@ -28,5 +31,5 @@ export async function saveBroccoliAiToken(
   dataDir: string,
   token: string,
 ): Promise<void> {
-  await saveBroccoliAiTokenFile(dataDir, secretBox.encrypt(token));
+  await saveSecret(dataDir, TOKEN_SECRET, secretBox.encrypt(token));
 }
