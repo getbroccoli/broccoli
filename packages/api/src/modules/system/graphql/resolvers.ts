@@ -10,7 +10,13 @@ import {
 import type { SecurityContext } from "../../../core/security";
 import type { SystemUseCases } from "../app";
 
-const STEPS = { company: "COMPANY", import: "IMPORT", owner: "OWNER", done: "DONE" } as const;
+const STEPS = {
+  company: "COMPANY",
+  import: "IMPORT",
+  owner: "OWNER",
+  ready: "READY",
+  done: "DONE",
+} as const;
 const HOLDERS = { you: "YOU", another_device: "ANOTHER_DEVICE", nobody: "NOBODY" } as const;
 const MODES = { self_hosted: "SELF_HOSTED", managed: "MANAGED" } as const;
 const AI_SOURCES = { broccoli_ai: "BROCCOLI_AI", openrouter: "OPENROUTER" } as const;
@@ -45,6 +51,11 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       setup: () => ({}),
     },
     SetupMutations: {
+      complete: async (_parent, _args, context) => {
+        const actor = context.getActor();
+        await useCases.completeSetup(actor);
+        return { setup: await readSetup(actor) };
+      },
       saveAiSource: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["SetupSaveAiSourcePayload"]>(
           "setup",
