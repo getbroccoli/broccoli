@@ -6,6 +6,7 @@ import {
 } from "../integrations/ai";
 import { type AiSettings, createAiSettings, createBroccoliAiTokens } from "../core/instance";
 import type { Mode } from "../core/env";
+import { PrincipalSecurityContext } from "../core/security";
 import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
@@ -65,7 +66,8 @@ async function decisionsSource(
   aiSettings: AiSettings,
   settings: ModuleSettings["ai"],
 ): Promise<DecisionsSource> {
-  const ai = await aiSettings.read();
+  // Broccoli reads the source for a decision it makes on its own.
+  const ai = await aiSettings.read(PrincipalSecurityContext.system());
   if (ai.source === "broccoli_ai") {
     return { kind: "broccoli_ai", url: broccoliAiUrlOf(settings) };
   }

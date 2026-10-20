@@ -11,5 +11,5 @@ export async function readAi(
   if (mode === "managed") {
     return null;
   }
-  return aiSettings.read();
+  return aiSettings.read(ctx);
 }

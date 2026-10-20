@@ -22,20 +22,23 @@ export async function saveAiSource(
   }
   const givenKey = openRouterKey?.trim() || undefined;
   if (source === "openrouter") {
-    await checkOpenRouter(context, givenKey);
+    await checkOpenRouter(context, ctx, givenKey);
   } else {
     await checkBroccoliAi(context);
   }
-  await context.transact((tx) => context.aiSettings.save(tx, { source, openRouterKey: givenKey }));
-  return context.aiSettings.read();
+  await context.transact((tx) =>
+    context.aiSettings.save(ctx, tx, { source, openRouterKey: givenKey }),
+  );
+  return context.aiSettings.read(ctx);
 }
 
 /** Checks the given key, else the one files would be read with now. */
 async function checkOpenRouter(
   { aiSettings, ai }: SystemContext,
+  ctx: SecurityContext,
   givenKey: string | undefined,
 ): Promise<void> {
-  const key = givenKey ?? (await aiSettings.read()).openRouterKey?.key ?? null;
+  const key = givenKey ?? (await aiSettings.read(ctx)).openRouterKey?.key ?? null;
   if (key === null) {
     throw invalidInput([{ field: "openRouterKey", code: "required" }]);
   }
