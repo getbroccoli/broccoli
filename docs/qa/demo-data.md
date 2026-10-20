@@ -14,6 +14,7 @@ A manual check that skipping the import fills the demo company and that clearing
 - [ ] A reload, a new tab and a restart of the stack keep you in the app; none opens setup.
 - [ ] "Create account" opens "Create your account"; `owner@example.com` and a password sign you in again on `/people`, and the banner becomes "You’re looking at demo data." with "Clear demo data".
 - [ ] Sign out, then sign in with that email and password: the same people are there.
+- [ ] Reading Slack or uploading a file first, then going back and choosing "Use demo data", shows only the 40 demo people.
 
 ## Seeded
 

@@ -5,6 +5,7 @@ import {
   type ImportEmployee,
   type ImportEmployeeField,
 } from "../domain";
+import { importPhotoUrl } from "../http";
 import { CHOICES, INCOMPLETE_REASONS } from "./graphqlValues";
 import type { ImportLoaders } from "./loaders";
 
@@ -20,6 +21,7 @@ export function importEmployeeResolvers(
       email: (employee) => employeeValue(employee, "email"),
       jobTitle: (employee) => employeeValue(employee, "jobTitle"),
       startDate: (employee) => employeeValue(employee, "startDate"),
+      avatarUrl: ({ photoFileId }) => photoFileId && importPhotoUrl(photoFileId),
       incompleteReason: (employee) => {
         const reason = incompleteReason(employee);
         return reason ? INCOMPLETE_REASONS[reason] : null;

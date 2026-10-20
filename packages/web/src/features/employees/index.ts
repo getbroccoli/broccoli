@@ -1,3 +1,4 @@
+export { Avatar } from "./Avatar";
 export { EmployeeDirectory } from "./EmployeeDirectory";
 export {
   DEFAULT_EMPLOYEE_LIST_SEARCH,

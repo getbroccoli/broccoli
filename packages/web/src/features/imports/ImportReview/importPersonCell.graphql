@@ -2,6 +2,7 @@ fragment ImportPersonCell_importEmployee on ImportEmployee {
   id
   leftOut
   incompleteReason
+  avatarUrl
   firstName {
     value
     ...EmployeeValueCell_value @unmask

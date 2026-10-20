@@ -1,11 +1,10 @@
 import { type Decisions, DecisionsError } from "../../../../integrations/ai";
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
-import type { Orm, Transact, Tx } from "../../../../core/db";
+import type { Orm, Transact } from "../../../../core/db";
 import { deleteFiles, readFile, storeFile } from "../../../../core/files";
-import { readSetupStep } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository, type ImportRepository } from "../../db";
+import { importRepository } from "../../db";
 import {
   type ColumnMapping,
   columnQuestions,
@@ -23,6 +22,7 @@ import {
   sheetQuestions,
 } from "../../domain";
 import { readStaffFile } from "./staffFile";
+import { lockOpenImport } from "./lockOpenImport";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
@@ -89,7 +89,7 @@ export function createFileSourceService({
         throw invalidInput([{ field: "file", code: sheets }]);
       }
       return transact(async (tx) => {
-        const imports = await lockSourcesForMapping(tx);
+        const imports = await lockOpenImport(tx);
         const fileId = await storeFile(tx, {
           content: Buffer.from(bytes),
           mimeType: mimeTypeOf(sheets),
@@ -134,7 +134,7 @@ export function createFileSourceService({
     retryFile: async (ctx, sourceId) => {
       requireImportAccess(ctx);
       await transact(async (tx) => {
-        const imports = await lockSourcesForMapping(tx);
+        const imports = await lockOpenImport(tx);
         const attempt = await imports.restartMapping(sourceId);
         if (attempt !== null) {
           await jobs.send(tx, "imports.mapFile", { sourceId, attempt });
@@ -145,7 +145,8 @@ export function createFileSourceService({
     removeFile: async (ctx, sourceId) => {
       requireImportAccess(ctx);
       await transact(async (tx) => {
-        const fileId = await importRepository(tx).deleteFileSource(sourceId);
+        const imports = await lockOpenImport(tx);
+        const fileId = await imports.deleteFileSource(sourceId);
         if (fileId !== null) {
           await deleteFiles(tx, [fileId]);
         }
@@ -155,19 +156,6 @@ export function createFileSourceService({
 }
 
 type MappingResult = { outcome: MappingOutcome; records: IncomingRecord[] };
-
-/**
- * Takes the sources lock that Approve takes too, so a new mapping run never slips past
- * it, and refuses one once setup is done: Approve runs only once.
- */
-async function lockSourcesForMapping(tx: Tx): Promise<ImportRepository> {
-  const imports = importRepository(tx);
-  await imports.lockSources();
-  if ((await readSetupStep(tx)) === "done") {
-    throw new ApplicationError("CONFLICT", "Setup is complete.");
-  }
-  return imports;
-}
 
 function isCurrentRun(source: FileSource | null, attempt: number): source is FileSource {
   return source?.status === "mapping" && source.mappingAttempt === attempt;

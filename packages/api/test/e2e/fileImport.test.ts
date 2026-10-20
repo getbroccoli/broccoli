@@ -149,7 +149,7 @@ test("removeFile removes the uploaded source", async ({ fakeDecisions }) => {
 });
 
 test("returns an approval conflict in the payload while a file is mapping", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
+  const browser = await env.startSetupAtImport();
   await env.seed.fileSource({ content: CSV.toString(), status: "mapping" });
 
   const response = await browser.graphql(`

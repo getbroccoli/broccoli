@@ -10,7 +10,7 @@ import {
 } from "../../../../core/pagination";
 import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
-import type { ImportRepository } from "../../db";
+import type { ImportPhotoRepository, ImportRepository } from "../../db";
 import type { EmployeeOrder, EmployeeOrderField } from "../../../employees";
 import {
   type ImportCheck,
@@ -50,6 +50,8 @@ export interface ImportReadService {
   ): Promise<Connection<ImportEmployeeRecord>>;
   /** What the owner may want to settle before Approve, by kind. */
   listChecks(ctx: SecurityContext): Promise<ImportCheck[]>;
+  /** Whether this file is an import record's photo, so the photo route may serve it. */
+  isImportPhotoFile(ctx: SecurityContext, fileId: string): Promise<boolean>;
 }
 
 export interface ImportEmployeeListArgs extends PageArgs {
@@ -61,7 +63,10 @@ export interface ImportEmployeeListArgs extends PageArgs {
 
 const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 
-export function createImportReadService(imports: ImportRepository): ImportReadService {
+export function createImportReadService(
+  imports: ImportRepository,
+  photos: ImportPhotoRepository,
+): ImportReadService {
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
       requireImportAccess(ctx);
@@ -128,6 +133,13 @@ export function createImportReadService(imports: ImportRepository): ImportReadSe
         readImportEmployees(imports),
       ]);
       return listChecks(sources, employees);
+    },
+
+    isImportPhotoFile: async (ctx: SecurityContext, fileId: string): Promise<boolean> => {
+      requireImportAccess(ctx);
+      // Postgres refuses a malformed uuid, so only a parsed one reaches the query.
+      const id = z.uuid().safeParse(fileId);
+      return id.success && (await photos.hasPhoto(id.data));
     },
   };
 }

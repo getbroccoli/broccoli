@@ -14,6 +14,7 @@ export { startFakeHttpServer } from "./fakeHttpServer";
 export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
+export { slackPhotoReader, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./slackPhotoReader";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
 export {

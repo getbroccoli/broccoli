@@ -1,8 +1,17 @@
-import { expect, importUseCases, SETUP_HOLDER, SYSTEM, test } from "#test/support";
+import {
+  expect,
+  importUseCases,
+  OWNER,
+  SETUP_HOLDER,
+  slackPhotoReader,
+  storedFileIds,
+  SYSTEM,
+  test,
+} from "#test/support";
 
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
 import type { Tx } from "../../../../core/db";
-import { hasEmployees } from "../../../employees";
+import { createEmployeeUseCases, hasEmployees } from "../../../employees";
 import { prepareDemoStart } from "./startDemo";
 
 test("starting the demo completes setup", async ({ orm, seed }) => {
@@ -86,4 +95,26 @@ test("keeps setup at import when the demo fill fails", async ({ orm, transact })
 
   expect(await readSetupStep(orm)).toBe("import");
   expect(await transact((tx) => hasEmployees(SYSTEM, tx))).toBe(false);
+});
+
+test("starting the demo after a Slack read discards the import and its files", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const imports = importUseCases(orm, { slack: slackPhotoReader() });
+  await imports.readSlack(SETUP_HOLDER);
+  await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
+  const importFiles = await storedFileIds(orm);
+  expect(importFiles).toHaveLength(2);
+
+  await imports.startDemo(SETUP_HOLDER);
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
+  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+  expect(employees.edges.map(({ node }) => node.email)).not.toContain("avery@example.com");
+  const remainingFiles = await storedFileIds(orm);
+  expect(remainingFiles.filter((id) => importFiles.includes(id))).toEqual([]);
+  expect(remainingFiles).toEqual(employees.edges.map(({ node }) => node.avatarFileId).sort());
 });

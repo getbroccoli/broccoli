@@ -31,5 +31,5 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Import record**: one record as one source proposes it, such as one row of a staff file, with the source's values as they came; not yet a record of its module.
 - **Import employee**: the employee an import will create: the import records that share a work email, or one without an email. Each value is the owner's pick or typed value, else the first source's: files oldest first, then Slack.
 - **Ready import employee**: an import employee complete enough to become an employee under the employee rules. The others are incomplete import employees.
-- **Setup approve**: the setup review step's Approve, which turns the ready import employees that are not left out into employees, with the values review shows, and completes the import step, once; the others stay in the import.
+- **Setup approve**: the setup review step's Approve, which turns the ready import employees that are not left out into employees, with the values and photos review shows, and completes the import step, once; the others are not added. The import is deleted when setup completes.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.

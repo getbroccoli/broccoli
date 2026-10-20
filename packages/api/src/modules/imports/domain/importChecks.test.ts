@@ -179,6 +179,7 @@ const row: ImportEmployeeRecord = {
   email: "avery@example.com",
   jobTitle: "Designer",
   startDate: null,
+  photoFileId: null,
 };
 const member: ImportEmployeeRecord = {
   ...row,

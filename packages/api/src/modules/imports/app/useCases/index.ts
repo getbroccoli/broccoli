@@ -2,12 +2,13 @@ import type { Decisions } from "../../../../integrations/ai";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
+import { importPhotoRepository, importRepository } from "../../db";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
 import type { DemoFill, SlackReader } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
+import { finishImport } from "./finishImport";
 import { readSlack } from "./readSlack";
 import { startDemo } from "./startDemo";
 
@@ -19,6 +20,8 @@ export interface ImportUseCases {
   readSlack: (ctx: SecurityContext) => Promise<void>;
   startDemo: (ctx: SecurityContext) => Promise<void>;
   approveImport: (ctx: SecurityContext) => Promise<void>;
+  /** Deletes the approved import once setup is complete; its photos stay with the employees. */
+  finishImport: (ctx: SecurityContext) => Promise<void>;
   reads: ImportReadService;
   choices: EmployeeChoiceService;
   files: FileSourceService;
@@ -31,20 +34,23 @@ export function createImportUseCases({
   slack,
   decisions,
   jobs,
+  clock = () => new Date(),
   prepareDemoFill,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: SlackReader;
   decisions: Decisions;
   jobs: JobQueue;
+  clock?: () => Date;
   prepareDemoFill: () => Promise<DemoFill>;
 }): ImportUseCases {
   const imports = importRepository(orm);
-  const context = { transact, logger, slack, imports, prepareDemoFill };
+  const context = { orm, transact, logger, slack, imports, clock, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
-    reads: createImportReadService(imports),
+    finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
+    reads: createImportReadService(imports, importPhotoRepository(orm)),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs }),
   };
