@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 
 import type { PdfPage } from "../../../../utils";
-import { checkSheets, type ImportEmployeeValues } from "../../domain";
+import { checkSheets, type ImportEmployeeValues, type SheetRefusal } from "../../domain";
 import { columnFields, contextHint, isNameField } from "./candidateFields";
 import { pdfCandidates, type PdfCandidate } from "./pdfCandidates";
 import { dateOrderOf, normalizedRecord } from "./pdfNormalization";
@@ -9,9 +9,10 @@ import { pdfSheets } from "./pdfSheets";
 
 /**
  * Every distinct layout the builders find, for each representation of the pages in turn: its
- * table first, then the other builders' layouts. A layout over the sheet limits is left out.
+ * table first, then the other builders' layouts. A layout over the sheet limits refuses the PDF,
+ * since leaving it out would drop its people.
  */
-export function localCandidates(representations: PdfPage[][]): PdfCandidate[] {
+export function localCandidates(representations: PdfPage[][]): PdfCandidate[] | SheetRefusal {
   const candidates: PdfCandidate[] = [];
   for (const pages of representations) {
     const table = pdfSheets(pages);
@@ -19,9 +20,12 @@ export function localCandidates(representations: PdfPage[][]): PdfCandidate[] {
       ...(table ? [{ id: "table", sheets: table }] : []),
       ...pdfCandidates(pages),
     ]) {
-      const withinLimits = typeof checkSheets(candidate.sheets) !== "string";
-      const seen = candidates.some(({ sheets }) => isDeepStrictEqual(sheets, candidate.sheets));
-      if (withinLimits && !seen) candidates.push(candidate);
+      const checked = checkSheets(candidate.sheets);
+      if (checked === "empty") continue;
+      if (typeof checked === "string") return checked;
+      if (!candidates.some(({ sheets }) => isDeepStrictEqual(sheets, candidate.sheets))) {
+        candidates.push(candidate);
+      }
     }
   }
   return candidates;

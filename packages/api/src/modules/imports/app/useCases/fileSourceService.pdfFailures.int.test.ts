@@ -56,9 +56,28 @@ test("leaves the file mapping with no records when both provider attempts fail",
   expect(fake.completionRequests()).toHaveLength(2);
 });
 
+test("recovers from a length-limited valid JSON answer and uses the recovery's rows", async ({
+  imports,
+  sourceId,
+  fakeDecisions: fake,
+}) => {
+  fake.answerCompletion("rows", { content: { rows: [] }, finishReason: "length" }, selectPdfRows);
+
+  await imports.files.mapFile(SYSTEM, { sourceId, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([{ status: "mapped" }]);
+  expect(await imports.reads.employeeCount(OWNER)).toBe(2);
+  expect(fake.completionRequests()).toHaveLength(2);
+});
+
 test.for([
   { failure: "a 401", reply: { status: 401 }, requests: 1 },
   { failure: "non-JSON output twice", reply: { content: "not json" }, requests: 2 },
+  {
+    failure: "a refusal with valid JSON content",
+    reply: { content: { rows: [] }, refusal: "Scripted model refusal" },
+    requests: 1,
+  },
   {
     failure: "an unknown selected row",
     reply: { content: { rows: [{ candidate: 0, sheet: 0, row: 9999 }] } },

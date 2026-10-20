@@ -6,6 +6,7 @@ import {
   pdfImportTest as test,
   storedFileIds,
   samplePdfFile,
+  pdfWithTooManyRows,
   sampleStaffPdf,
   selectPdfRows,
   pdfCompletionInput,
@@ -45,6 +46,7 @@ test.for([
   },
   { code: "empty", pdf: () => samplePdfFile({ pages: [{}] }) },
   { code: "unsupported_file", pdf: () => Buffer.from("%PDF-1.7\nUnreadable") },
+  { code: "too_many_rows", pdf: pdfWithTooManyRows },
 ])(
   "refuses $code without storing anything or queuing work",
   async ({ code, pdf }, { imports, orm, fakeDecisions: fake }) => {

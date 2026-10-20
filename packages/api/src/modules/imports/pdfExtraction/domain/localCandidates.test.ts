@@ -21,7 +21,7 @@ it("keeps one candidate when both text representations produce the same sheets",
   ]);
 });
 
-it("leaves out a table with eleven sheets", () => {
+it("refuses a table with eleven sheets", () => {
   const pages = Array.from({ length: 11 }, (_, index) =>
     page([
       line(740, [`Team ${index}`]),
@@ -32,14 +32,10 @@ it("leaves out a table with eleven sheets", () => {
   const sheets = pdfSheets(pages)!;
   expect(checkSheets(sheets)).toBe("too_many_sheets");
 
-  const candidates = localCandidates([pages]);
-
-  expect(candidates.map((candidate) => candidate.sheets)).not.toContainEqual(sheets);
-  for (const candidate of candidates)
-    expect(checkSheets(candidate.sheets)).toEqual(candidate.sheets);
+  expect(localCandidates([pages])).toBe("too_many_sheets");
 });
 
-it("leaves out a table with more than ten thousand rows", () => {
+it("refuses a table with more than ten thousand rows", () => {
   const pages = [
     {
       ...page([
@@ -54,14 +50,10 @@ it("leaves out a table with more than ten thousand rows", () => {
   const sheets = pdfSheets(pages)!;
   expect(checkSheets(sheets)).toBe("too_many_rows");
 
-  const candidates = localCandidates([pages]);
-
-  expect(candidates.map((candidate) => candidate.sheets)).not.toContainEqual(sheets);
-  for (const candidate of candidates)
-    expect(checkSheets(candidate.sheets)).toEqual(candidate.sheets);
+  expect(localCandidates([pages])).toBe("too_many_rows");
 });
 
-it("leaves out a table with more than one hundred columns", () => {
+it("refuses a table with more than one hundred columns", () => {
   const headers = [
     "Name",
     ...Array.from(
@@ -74,11 +66,7 @@ it("leaves out a table with more than one hundred columns", () => {
   const sheets = pdfSheets(pages)!;
   expect(checkSheets(sheets)).toBe("too_many_columns");
 
-  const candidates = localCandidates([pages]);
-
-  expect(candidates.map((candidate) => candidate.sheets)).not.toContainEqual(sheets);
-  for (const candidate of candidates)
-    expect(checkSheets(candidate.sheets)).toEqual(candidate.sheets);
+  expect(localCandidates([pages])).toBe("too_many_columns");
 });
 
 it("prunes a layout when another preserves its people and adds their emails", () => {

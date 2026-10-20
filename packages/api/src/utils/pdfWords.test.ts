@@ -1,10 +1,11 @@
 import { once } from "node:events";
-import { mkdtempSync, rmSync, watch } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, watch } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setImmediate } from "node:timers/promises";
 import { expect, it, onTestFinished, vi } from "vitest";
 
-import { samplePdfFile } from "#test/support";
+import { holdPdfRead, samplePdfFile } from "#test/support";
 
 import { PdfWordsUnavailableError, readPdfWords } from "./pdfWords";
 
@@ -109,4 +110,33 @@ it("kills an aborted reader and lets the next PDF read finish", async () => {
   const bytes = samplePdfFile({ pages: [{ texts: [{ text: "Avery", x: 40, y: 700 }] }] });
   expect(await readPdfWords(bytes)).toMatchObject([{ words: [{ text: "Avery" }] }]);
   expect(() => process.kill(Number(pid), 0)).toThrow(expect.objectContaining({ code: "ESRCH" }));
+});
+
+it("rejects an aborted queued read before the holder finishes without starting its reader", async () => {
+  const holder = await holdPdfRead();
+  const started = join(holder.directory, "queued-reader-started");
+  const controller = new AbortController();
+  const reading = readPdfWords(new Uint8Array(), {
+    signal: controller.signal,
+    command: [
+      process.execPath,
+      "--jitless",
+      "-e",
+      `require("node:fs").writeFileSync(${JSON.stringify(started)}, "started");`,
+    ],
+  });
+  const reason = new Error("Queued PDF read cancelled");
+  const outcome = reading.catch((error: unknown) => error);
+
+  controller.abort(reason);
+
+  expect(await Promise.race([outcome, setImmediate("still queued")])).toBe(reason);
+  holder.release();
+  expect(await holder.reading).toEqual([{ width: 612, height: 792, words: [] }]);
+  expect(await outcome).toBe(reason);
+  // Drain the queue before checking whether the cancelled reader ever started.
+  expect(await readPdfWords(samplePdfFile({ pages: [{}] }))).toEqual([
+    { width: 612, height: 792, words: [] },
+  ]);
+  expect(existsSync(started)).toBe(false);
 });

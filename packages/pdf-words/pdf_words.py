@@ -29,50 +29,44 @@ def main(stdin, stdout) -> int:
 
 
 def page_words(page):
-    """The page's shown words, from its top-left corner, each box rounded to 0.1 point."""
-    shown = shown_text(page)
+    """The visible words, in the frame the page is shown in, each box rounded to 0.1 point."""
+    traced = TracedCharacters(page)
+    shown = page.rotation_matrix
     return {
         "width": page.rect.width,
         "height": page.rect.height,
         "words": [
-            [*(round(value, 1) for value in word[:4]), word[4]]
+            [*(round(value, 1) for value in pymupdf.Rect(word[:4]) * shown), word[4]]
             for word in page.get_text("words")
-            if shown.covers(pymupdf.Rect(word[:4]))
+            if traced.shows(pymupdf.Rect(word[:4]))
         ],
     }
 
 
 INVISIBLE = 3  # The render mode of text that draws nothing, such as an OCR layer.
-BAND = 20  # Points per band of the index of shown text.
+BAND = 20  # Points per band of the index of traced characters.
 
 
-class ShownText:
-    """The boxes of text drawn visibly, by horizontal band, so a word meets only those near it."""
+class TracedCharacters:
+    """The centre of every character the page draws and whether it is visible, by band."""
 
-    def __init__(self, boxes):
+    def __init__(self, page):
         self.bands = {}
-        for box in boxes:
-            for band in bands_of(box):
-                self.bands.setdefault(band, []).append(box)
+        for span in page.get_texttrace():
+            visible = span["type"] != INVISIBLE and span["opacity"] > 0
+            for _, _, _, (x0, y0, x1, y1) in span["chars"]:
+                x, y = (x0 + x1) / 2, (y0 + y1) / 2
+                self.bands.setdefault(int(y // BAND), []).append((x, y, visible))
 
-    def covers(self, word):
-        """Whether the word's box meets text that is drawn: text drawn invisibly is left out."""
-        return any(
-            word.intersects(box) for band in bands_of(word) for box in self.bands.get(band, [])
-        )
-
-
-def shown_text(page):
-    trace = page.get_texttrace()
-    return ShownText(
-        pymupdf.Rect(span["bbox"])
-        for span in trace
-        if span["type"] != INVISIBLE and span["opacity"] > 0
-    )
-
-
-def bands_of(box):
-    return range(int(box.y0 // BAND), int(box.y1 // BAND) + 1)
+    def shows(self, box):
+        """Whether the characters inside the box are all visible: overlapping hidden text is not."""
+        inside = [
+            visible
+            for band in range(int(box.y0 // BAND), int(box.y1 // BAND) + 1)
+            for x, y, visible in self.bands.get(band, [])
+            if box.x0 <= x <= box.x1 and box.y0 <= y <= box.y1
+        ]
+        return bool(inside) and all(inside)
 
 
 if __name__ == "__main__":

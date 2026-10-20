@@ -78,7 +78,11 @@ export function createPdfExtractor({
   return {
     inspect: async (ctx, bytes) => {
       ctx.requireSetupAccess();
-      return pdfRefusal(await parsePdf(bytes));
+      const pages = await parsePdf(bytes);
+      const refusal = pdfRefusal(pages);
+      if (refusal !== null) return refusal;
+      const candidates = localCandidates([pages as PdfPage[]]);
+      return typeof candidates === "string" ? candidates : null;
     },
 
     extract: async (ctx, bytes, logger) => {
@@ -132,10 +136,9 @@ async function peopleOf(
   words: PdfWordPage[],
   run: Run,
 ): Promise<IncomingRecord[]> {
-  const candidates = rankedCandidates(
-    prunedCandidates(localCandidates([pages, nativeLayoutPages(pages, words)])),
-  );
-  const evidence = documentEvidence(words, candidates);
+  const candidates = localCandidates([pages, nativeLayoutPages(pages, words)]);
+  if (typeof candidates === "string") throw new PdfExtractionError("too_large", false);
+  const evidence = documentEvidence(words, rankedCandidates(prunedCandidates(candidates)));
   return evidence.candidatePages.length > 0
     ? selectedPeople(evidence, run)
     : referencedPeople(evidence, run);

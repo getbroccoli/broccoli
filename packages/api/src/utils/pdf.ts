@@ -31,7 +31,7 @@ export function parsePdf(
   bytes: Uint8Array,
   { timeoutMs = 30_000, signal }: { timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<PdfPage[] | "encrypted" | null> {
-  return oneReadAtATime(() => readInProcess(bytes, timeoutMs, signal));
+  return oneReadAtATime(() => readInProcess(bytes, timeoutMs, signal), signal);
 }
 
 /**

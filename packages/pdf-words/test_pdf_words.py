@@ -2,6 +2,7 @@ import io
 import json
 
 import pymupdf
+import pytest
 
 from pdf_words import main
 
@@ -45,10 +46,31 @@ def test_leaves_out_text_drawn_invisibly():
     assert [word[4] for word in page["words"]] == ["Avery", "Stone"]
 
 
-def test_reports_a_rotated_pages_shown_width_and_height():
+@pytest.mark.parametrize(
+    "hidden_text",
+    [{"render_mode": 3}, {"fill_opacity": 0, "stroke_opacity": 0}],
+    ids=["invisible-mode", "zero-opacity"],
+)
+def test_leaves_out_overlapping_visible_and_invisible_words(hidden_text):
     with pymupdf.open() as document:
         page = document.new_page(width=200, height=300)
         page.insert_text((40, 70), "Avery Stone")
+        page.insert_text((40, 70), "Robin Reed", **hidden_text)
+        page.insert_text((40, 120), "Morgan Lake")
+        source = io.BytesIO(document.tobytes())
+    output = io.StringIO()
+
+    status = main(source, output)
+
+    assert status == 0
+    page = json.loads(output.getvalue())["pages"][0]
+    assert [word[4] for word in page["words"]] == ["Morgan", "Lake"]
+
+
+def test_reports_word_boxes_inside_a_rotated_pages_shown_width_and_height():
+    with pymupdf.open() as document:
+        page = document.new_page(width=200, height=300)
+        page.insert_text((40, 250), "Avery Stone")
         page.set_rotation(90)
         source = io.BytesIO(document.tobytes())
     output = io.StringIO()
@@ -58,6 +80,30 @@ def test_reports_a_rotated_pages_shown_width_and_height():
     assert status == 0
     page = json.loads(output.getvalue())["pages"][0]
     assert (page["width"], page["height"]) == (300, 200)
+    assert [word[4] for word in page["words"]] == ["Avery", "Stone"]
+    for left, top, right, bottom, _ in page["words"]:
+        assert 0 <= left < right <= page["width"]
+        assert 0 <= top < bottom <= page["height"]
+
+
+def test_reports_top_words_near_the_bottom_after_a_half_turn():
+    with pymupdf.open() as document:
+        page = document.new_page(width=200, height=300)
+        page.insert_text((40, 40), "Avery")
+        page.set_rotation(180)
+        source = io.BytesIO(document.tobytes())
+    output = io.StringIO()
+
+    status = main(source, output)
+
+    assert status == 0
+    page = json.loads(output.getvalue())["pages"][0]
+    assert (page["width"], page["height"]) == (200, 300)
+    assert len(page["words"]) == 1
+    left, top, right, bottom, text = page["words"][0]
+    assert text == "Avery"
+    assert 0 <= left < right <= page["width"]
+    assert 250 <= top < bottom <= page["height"]
 
 
 def test_writes_nothing_for_bytes_that_are_not_a_pdf():

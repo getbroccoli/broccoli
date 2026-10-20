@@ -1,8 +1,9 @@
 // macOS does not enforce RLIMIT_DATA; the memory-bound test needs Linux (CI and the image).
 import { readFile } from "node:fs/promises";
+import { setImmediate } from "node:timers/promises";
 import { expect, it, vi } from "vitest";
 
-import { pdfWithContentBomb, samplePdfFile } from "#test/support";
+import { holdPdfRead, pdfWithContentBomb, samplePdfFile } from "#test/support";
 
 import { parsePdf, type PdfPage } from ".";
 
@@ -158,6 +159,22 @@ it("returns null when reading takes longer than the timeout", async () => {
   const bytes = samplePdfFile({ pages: [{ texts: [{ text: "Avery", x: 40, y: 700 }] }] });
 
   expect(await parsePdf(bytes, { timeoutMs: 1 })).toBeNull();
+});
+
+it("rejects an aborted queued parse before the holder finishes", async () => {
+  const holder = await holdPdfRead();
+  const controller = new AbortController();
+  const bytes = samplePdfFile({ pages: [{ texts: [{ text: "Avery", x: 40, y: 700 }] }] });
+  const reading = parsePdf(bytes, { signal: controller.signal });
+  const reason = new Error("Queued PDF parse cancelled");
+  const outcome = reading.catch((error: unknown) => error);
+
+  controller.abort(reason);
+
+  expect(await Promise.race([outcome, setImmediate("still queued")])).toBe(reason);
+  holder.release();
+  expect(await holder.reading).toEqual([{ width: 612, height: 792, words: [] }]);
+  expect(await outcome).toBe(reason);
 });
 
 it("reads text from a PDF with a script, an attachment and an external link", async () => {

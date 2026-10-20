@@ -52,6 +52,23 @@ export async function pdfWithContentBomb(): Promise<Uint8Array> {
   return pdfDocument([{ content: Buffer.concat(chunks) }]);
 }
 
+/** One table with 10,000 data rows plus its header, one row past the import limit. */
+export function pdfWithTooManyRows(): Uint8Array {
+  return samplePdfFile({
+    pages: Array.from({ length: 20 }, () => ({
+      height: 12_600,
+      texts: [
+        { text: "Name", x: 40, y: 11_320 },
+        { text: "Email", x: 200, y: 11_320 },
+        ...Array.from({ length: 500 }, (_, row) => [
+          { text: "Avery Stone", x: 40, y: 11_300 - row * 20 },
+          { text: "avery@example.com", x: 200, y: 11_300 - row * 20 },
+        ]).flat(),
+      ],
+    })),
+  });
+}
+
 function* contentBombChunks() {
   const spaces = Buffer.alloc(16 * 1024 * 1024, " ");
   for (let chunk = 0; chunk < 40; chunk += 1) yield spaces;

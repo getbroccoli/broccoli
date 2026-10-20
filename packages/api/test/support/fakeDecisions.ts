@@ -31,7 +31,12 @@ export interface FakeCompletionRequest {
 }
 
 type CompletionTask = "rows" | "hasEmployees" | "records" | "assignments";
-type CompletionReply = { status?: number; content?: unknown; finishReason?: string };
+type CompletionReply = {
+  status?: number;
+  content?: unknown;
+  finishReason?: string;
+  refusal?: string;
+};
 type CompletionScript = CompletionReply | ((request: FakeCompletionRequest) => unknown);
 
 /** A local decisions provider with scripted choices; unspecified questions answer none. */
@@ -146,6 +151,7 @@ export async function startFakeDecisions() {
         {
           message: {
             role: "assistant",
+            refusal: reply.refusal,
             content:
               typeof reply.content === "string" || reply.content === null
                 ? reply.content

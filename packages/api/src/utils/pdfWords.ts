@@ -38,7 +38,7 @@ export function readPdfWords(
   bytes: Uint8Array,
   { signal, command = READER }: { signal?: AbortSignal; command?: readonly string[] } = {},
 ): Promise<PdfWordPage[] | null> {
-  return oneReadAtATime(() => readInProcess(bytes, command, signal));
+  return oneReadAtATime(() => readInProcess(bytes, command, signal), signal);
 }
 
 const MEMORY_LIMIT_MB = 512;

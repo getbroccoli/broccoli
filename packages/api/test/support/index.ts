@@ -54,5 +54,6 @@ export { sampleStaffPdf } from "./sampleStaffPdf";
 export { EXAMPLE_JOB } from "./exampleJob";
 export { startLiveDecisions, type LiveDecisions } from "./liveDecisions";
 export { sampleXlsxFile, xlsxFileWithDistantCell } from "./sampleXlsxFile";
-export { samplePdfFile, pdfWithContentBomb } from "./samplePdfFile";
+export { samplePdfFile, pdfWithContentBomb, pdfWithTooManyRows } from "./samplePdfFile";
+export { holdPdfRead } from "./holdPdfRead";
 export { line, page, readPdfPages } from "./pdfPages";

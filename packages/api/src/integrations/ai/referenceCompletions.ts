@@ -233,8 +233,11 @@ function outputOf(response: CompletionResponse, task: CompletionTask): unknown {
   if (response.error !== undefined || !choice) {
     throw new CompletionError("transport", "The provider failed");
   }
-  if (!choice.message.content) {
-    if (choice.message.refusal) throw new CompletionError("refused", "The model refused");
+  if (choice.message.refusal) {
+    throw new CompletionError("refused", "The model refused");
+  }
+  // A cut-off answer may still parse, as a list missing its last people.
+  if (!choice.message.content || choice.finish_reason === "length") {
     throw new CompletionError("invalid_output", "The model's answer is empty or cut off");
   }
   let json: unknown;

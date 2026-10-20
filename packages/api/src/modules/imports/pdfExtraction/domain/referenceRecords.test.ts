@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
 
+import type { DraftRecord } from "../../../../integrations/ai";
+
 import { InvalidModelOutputError } from "./extractionErrors";
 import { documentEvidence } from "./maskedEvidence";
 import { referencedRecords } from "./referenceRecords";
@@ -41,11 +43,41 @@ it("rejects a reference that is not in the local registry", () => {
   expect(() => referencedRecords({ records: [draft] }, registry)).toThrow(InvalidModelOutputError);
 });
 
+it.each(["combined", "separate"] as const)(
+  "omits a record with no %s name references while keeping named records",
+  (nameSource) => {
+    const { registry } = referenceEvidence();
+    const nameless = { ...emptyDraft, nameSource, email: ["w00003", "w00004"] };
+    const named = { ...emptyDraft, name: ["w00001", "w00002"] };
+
+    const records = referencedRecords({ records: [nameless, named] }, registry);
+
+    expect(records).toMatchObject([{ draft: named, source: { name: "Avery Stone" } }]);
+  },
+);
+
+it.each([
+  { nameSource: "combined" as const, firstName: ["w00001"], lastName: [] },
+  { nameSource: "combined" as const, firstName: [], lastName: ["w00002"] },
+  { nameSource: "separate" as const, firstName: ["w00001"], lastName: ["w00002"] },
+])("rejects mixed name representations when nameSource is $nameSource", (names) => {
+  const { registry } = referenceEvidence();
+  const draft = { ...emptyDraft, ...names, name: ["w00001", "w00002"] };
+
+  expect(() => referencedRecords({ records: [draft] }, registry)).toThrow(InvalidModelOutputError);
+});
+
 it.each(["name", "firstName", "lastName", "email", "jobTitle", "startDate"])(
   "rejects a repeated reference in the %s field",
   (field) => {
     const { registry } = referenceEvidence();
-    const draft = { ...emptyDraft, [field]: ["w00001", "w00001"] };
+    const nameSource = field === "firstName" || field === "lastName" ? "separate" : "combined";
+    const draft: DraftRecord = {
+      ...emptyDraft,
+      nameSource,
+      name: nameSource === "combined" ? ["w00001", "w00002"] : [],
+      [field]: ["w00001", "w00001"],
+    };
 
     expect(() => referencedRecords({ records: [draft] }, registry)).toThrow(
       InvalidModelOutputError,
