@@ -1,5 +1,4 @@
-import type { Tx } from "../../../core/db";
-import { deleteFiles } from "../../../core/files";
+import type { Orm, Tx } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository } from "../db";
 import { type NewEmployeeInput, tryParseNewEmployee } from "../domain";
@@ -38,15 +37,18 @@ export async function createImportedEmployees(
   };
 }
 
-/**
- * Deletes every employee, joining `tx`, when setup or the demo goes back to its start, with
- * the demo avatars. Other avatar files stay: they are the import's photos, which it still holds.
- */
+/** The emails among these that an employee already has, so an import adds no one with them; joins `db`. */
+export async function findTakenEmails(
+  ctx: SecurityContext,
+  db: Orm | Tx,
+  emails: readonly string[],
+): Promise<Set<string>> {
+  ctx.requireSetupAccess();
+  return new Set(await employeeRepository(db).findTakenEmails(emails));
+}
+
+/** Deletes every employee, joining `tx`, when setup or the demo goes back to its start. */
 export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
-  const repository = employeeRepository(tx);
-  // Rows first: a file that an employee still references cannot be deleted.
-  const demoAvatarFileIds = await repository.deleteDemo();
-  await repository.deleteAll();
-  await deleteFiles(tx, demoAvatarFileIds);
+  await employeeRepository(tx).deleteAll();
 }

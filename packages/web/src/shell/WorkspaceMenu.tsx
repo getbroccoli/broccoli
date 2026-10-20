@@ -1,4 +1,3 @@
-import { useApolloClient } from "@apollo/client/react";
 import {
   ArrowCounterClockwise,
   Buildings,
@@ -22,14 +21,16 @@ import {
 import { signOut } from "@/features/auth";
 import { ResetDemoDialog } from "@/features/demo";
 import { t } from "@/i18n";
+import { useSessionChange } from "@/lib/useSessionChange";
 
 export function WorkspaceMenu() {
   const router = useRouter();
-  const apolloClient = useApolloClient();
   const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
   const openedOnPath = useRef<string | null>(null);
   // Outside the menu, which closes when an item is chosen.
   const [resettingDemo, setResettingDemo] = useState(false);
+  // The gate then sends the signed-out user to the login page.
+  const [signOutAndReload, signingOut] = useSessionChange(signOut);
   // Return focus to the trigger unless the page changed, in which case the new page's
   // heading takes it (see `useFocusHeadingOnNavigation`).
   const isStillOnOpeningPage = () => router.state.location.pathname === openedOnPath.current;
@@ -87,7 +88,7 @@ export function WorkspaceMenu() {
               <DropdownMenuLabel className="truncate">
                 {t("auth.signedInAs", { email: me.email })}
               </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => void signOutAndReload()}>
+              <DropdownMenuItem disabled={signingOut} onClick={() => signOutAndReload()}>
                 <SignOut size={14} />
                 {t("auth.signOut")}
               </DropdownMenuItem>
@@ -98,12 +99,4 @@ export function WorkspaceMenu() {
       <ResetDemoDialog open={resettingDemo} onOpenChange={setResettingDemo} />
     </>
   );
-
-  /** The gate then sends the signed-out user to the login page. */
-  async function signOutAndReload() {
-    if (await signOut()) {
-      await apolloClient.clearStore();
-      await router.invalidate();
-    }
-  }
 }

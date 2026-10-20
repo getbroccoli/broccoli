@@ -28,8 +28,8 @@ test("refuses a non-owner claiming ownership without creating a user or advancin
 
 test.for(["company", "import"] as const)(
   "claiming ownership keeps the %s step",
-  async (step, { orm, transact }) => {
-    await instanceRepository(orm).advanceStep("company", step);
+  async (step, { orm, seed, transact }) => {
+    await seed.setupStep(step);
 
     const owner = await transact((tx) => claimOwner(SYSTEM, tx, () => insertOwner(tx)));
 
@@ -42,7 +42,7 @@ test("creates the owner for the holder, completes setup and ends the session", a
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "owner");
+  await seed.setupStep("owner");
   await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
   const eventBus = createEventBus(createLogger("silent"));
   const transact = transactor(orm, eventBus);
@@ -81,7 +81,7 @@ test("creates the owner for the holder, completes setup and ends the session", a
 test.for([null, "another-token"])(
   "refuses owner creation with token %s and creates no user",
   async (token, { orm, seed, transact }) => {
-    await instanceRepository(orm).advanceStep("company", "owner");
+    await seed.setupStep("owner");
     await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
 
     await expect(
@@ -106,7 +106,7 @@ test.for([null, "another-token"])(
 
 test("refuses owner creation with an expired setup session", async ({ orm, seed, transact }) => {
   const now = new Date("2026-01-04T12:00:00Z");
-  await instanceRepository(orm).advanceStep("company", "owner");
+  await seed.setupStep("owner");
   await seed.setupSession({ expiresAt: now });
 
   await expect(
@@ -129,7 +129,7 @@ test("refuses owner creation with an expired setup session", async ({ orm, seed,
 test.for(["company", "import"] as const)(
   "refuses owner creation at the %s step",
   async (step, { orm, seed, transact }) => {
-    await instanceRepository(orm).advanceStep("company", step);
+    await seed.setupStep(step);
     await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
 
     await expect(
@@ -155,7 +155,7 @@ test.for(["company", "import"] as const)(
 );
 
 test("keeps one owner when two creations arrive together", async ({ orm, seed, transact }) => {
-  await instanceRepository(orm).advanceStep("company", "owner");
+  await seed.setupStep("owner");
   await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
   const credential = { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") };
 

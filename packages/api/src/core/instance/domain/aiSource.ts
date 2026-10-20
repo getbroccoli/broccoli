@@ -1,5 +1,3 @@
-import type { Mode } from "../../env";
-
 /** Where an instance sends AI decisions; `agent` is the owner's external agent, which answers instead. */
 export const AI_SOURCES = ["broccoli_ai", "openrouter", "agent"] as const;
 
@@ -20,22 +18,10 @@ export interface AiConfig {
 }
 
 /**
- * Managed: OpenRouter with the environment key, whatever is saved, since Broccoli provides it.
- * Self-hosted: the saved source, else OpenRouter when any key exists, else Broccoli AI; a saved
- * key beats the environment's, since the owner pasted it on purpose.
+ * A self-hosted instance's AI: the saved source, else OpenRouter when any key exists, else
+ * Broccoli AI; a saved key beats the environment's, since the owner pasted it on purpose.
  */
-export function aiConfig(
-  mode: Mode,
-  saved: SavedAiSource,
-  environmentKey: string | null,
-): AiConfig {
-  if (mode === "managed") {
-    return {
-      source: "openrouter",
-      openRouterKey:
-        environmentKey === null ? null : { key: environmentKey, origin: "environment" },
-    };
-  }
+export function aiConfig(saved: SavedAiSource, environmentKey: string | null): AiConfig {
   const openRouterKey =
     saved.openRouterKey !== null
       ? { key: saved.openRouterKey, origin: "saved" as const }

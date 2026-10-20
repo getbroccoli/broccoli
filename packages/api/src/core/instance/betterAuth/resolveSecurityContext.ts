@@ -1,11 +1,16 @@
 import { fromNodeHeaders } from "better-auth/node";
 import type { IncomingHttpHeaders } from "node:http";
 
-import type { AuthSource } from "../auth";
-import type { Orm } from "../db";
-import { readDemoDeadlineOf, readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
-import { isCrossOrigin } from "../sameOrigin";
-import { PrincipalSecurityContext, type RequestSecurity, type SecurityContext } from "../security";
+import type { AuthSource } from "../../auth";
+import type { Orm } from "../../db";
+import { isCrossOrigin } from "../../sameOrigin";
+import {
+  PrincipalSecurityContext,
+  type RequestSecurity,
+  type SecurityContext,
+} from "../../security";
+import { readDemoDeadlineOf, readOwnerUserId, readSetupHolder } from "../app";
+import { readSetupToken } from "./setupCookie";
 
 /**
  * The signed-in user of a request, or the browser holding setup; the demo's provisional

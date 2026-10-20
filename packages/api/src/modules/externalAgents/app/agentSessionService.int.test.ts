@@ -3,16 +3,28 @@ import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 
 import {
+  aiSettings,
   expect,
   externalAgentUseCases,
   NON_OWNER,
+  OWNER,
   SETUP_AGENT,
   SETUP_HOLDER,
   SYSTEM,
   test,
 } from "#test/support";
 
-import { instanceRepository } from "../../../core/instance";
+test("refuses choosing the agent through AI settings, which would keep its sessions", async ({
+  orm,
+}) => {
+  const settings = aiSettings(orm);
+
+  await expect(settings.save(SETUP_HOLDER, { source: "agent" })).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "source", code: "invalid" }],
+  });
+  expect(await settings.read(OWNER)).toEqual({ source: "broccoli_ai", openRouterKey: null });
+});
 
 test("allows exactly one of two parallel exchanges of a code", async ({ orm, seed }) => {
   await seed.agentSetup();
@@ -124,11 +136,7 @@ test.for(["chooseAgent", "createAgentCode", "disconnectAgent"] as const)(
   "%s refuses a managed instance",
   async (operation, { orm, seed }) => {
     await seed.agentSetup();
-    await instanceRepository(orm).setAssignment({
-      companyId: "company-1",
-      publicOrigin: "https://broccoli.example.com",
-      websiteOrigin: "https://example.com",
-    });
+    await seed.assignment();
     const { sessions } = externalAgentUseCases(orm);
 
     await expect(
@@ -143,7 +151,7 @@ test.for(["company", "owner", "ready", "done"] as const)(
   "refuses a code at the %s step",
   async (step, { orm, seed }) => {
     await seed.agentSetup();
-    await instanceRepository(orm).advanceStep("import", step);
+    await seed.setupStep(step);
     const { sessions } = externalAgentUseCases(orm);
 
     await expect(sessions.createAgentCode(SETUP_HOLDER, CODE)).rejects.toMatchObject({
@@ -231,7 +239,7 @@ test("returns no pending code when setup is no longer open to the agent", async 
   const { sessions } = externalAgentUseCases(orm);
   await sessions.createAgentCode(SETUP_HOLDER, CODE);
 
-  await instanceRepository(orm).advanceStep("import", "owner");
+  await seed.setupStep("owner");
 
   expect(await sessions.readPendingAgentCode(SETUP_HOLDER)).toBeNull();
 });

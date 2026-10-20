@@ -1,1 +1,1 @@
-export { slackRouter, type PublicOrigin } from "./slackRouter";
+export { slackRouter } from "./slackRouter";

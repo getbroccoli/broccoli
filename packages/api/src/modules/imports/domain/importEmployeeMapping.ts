@@ -1,9 +1,4 @@
-import {
-  employeeFieldErrors,
-  type NewEmployee,
-  type NewEmployeeInput,
-  tryParseNewEmployee,
-} from "../../employees";
+import { employeeFieldErrors, type NewEmployeeInput } from "../../employees";
 import type { ImportEmployee } from "./importEmployee";
 
 /** Why Approve would leave an import employee out; the first failing field wins. */
@@ -16,9 +11,9 @@ export const INCOMPLETE_REASONS: readonly IncompleteReason[] = [
   "other",
 ];
 
-/** The employee an import employee would become, or null when it is incomplete. */
-export function toNewEmployee(employee: ImportEmployee): NewEmployee | null {
-  return tryParseNewEmployee(toNewEmployeeInput(employee));
+/** Whether the import employee is ready: complete, with an email no employee has yet. */
+export function isReady(employee: ImportEmployee, takenEmails: ReadonlySet<string>): boolean {
+  return incompleteReason(employee) === null && !takenEmails.has(employee.values.email.value!);
 }
 
 /** Why the import employee is incomplete, or null when it is ready. */

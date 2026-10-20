@@ -6,7 +6,7 @@ import {
   UserCircle,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import {
@@ -23,10 +23,11 @@ import {
 } from "@/components/dataTable";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import { SetupStepForm } from "@/features/setup";
+import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 import { IMPORT_REVIEW_COLUMNS, useImportReviewRows } from "./importReviewColumns";
 import { type ImportReviewSearch, toImportReviewVariables } from "./importReviewSearch";
@@ -41,7 +42,6 @@ import { ThingsToCheck } from "./ThingsToCheck";
  * the ready ones; the router then reloads and routing sends the owner on.
  */
 export function ImportReview() {
-  const router = useRouter();
   const search = useSearch({ from: "/setup/import_/review" });
   const navigate = useNavigate({ from: "/setup/import/review" });
   const writeSearch = useCallback(
@@ -63,12 +63,12 @@ export function ImportReview() {
   });
   const rows = useImportReviewRows(list.rows);
   const sources = (data ?? previousData)?.import.sources ?? [];
-  const reading = sources.some(({ status }) => status === "MAPPING");
-  const [
-    approveImport,
-    { loading: approving, error: approveError, payloadError: approveConflict },
-  ] = usePayloadMutation(ApproveImportDocument);
+  const [approveImport, { error: approveError, payloadError: approveConflict }] =
+    usePayloadMutation(ApproveImportDocument);
+  const [run, approving] = useRouteAction();
+  const { previous } = useSetupPages("review");
   const current = (data ?? previousData)?.import;
+  const reading = current?.reading ?? false;
   const readyCount = current?.readyEmployeeCount ?? 0;
   const totalCount = current?.employeeCount ?? 0;
   const checks = current?.checks ?? [];
@@ -77,21 +77,21 @@ export function ImportReview() {
   const uncheckedCount = countOf(checks, "CONFLICT");
   const leftOutCount = totalCount - readyCount - incompleteCount;
 
-  const approve = async () => {
-    if (!current) {
-      return;
-    }
-    try {
-      // The version of what this page shows: people added meanwhile, such as by the owner's
-      // agent, refuse Approve until the page shows them.
-      await approveImport({ variables: { version: current.version } });
-    } catch {
-      // `approveError` or `approveConflict` shows it; a conflict means the people changed.
-      void refetch();
-      return;
-    }
-    await router.invalidate();
-  };
+  // `approveError` or `approveConflict` shows a failure; a conflict means the people changed.
+  const approve = () =>
+    run(async () => {
+      if (!current) {
+        return false;
+      }
+      try {
+        // The version of what this page shows: people added meanwhile, such as by the owner's
+        // agent, refuse Approve until the page shows them.
+        await approveImport({ variables: { version: current.version } });
+      } catch (failure) {
+        void refetch();
+        throw failure;
+      }
+    });
 
   return (
     <SetupStepForm
@@ -100,14 +100,16 @@ export function ImportReview() {
       onSubmit={() => {}}
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <Link
-            to="/setup/import"
-            className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
-            disabled={approving}
-          >
-            <ArrowLeft aria-hidden />
-            {t("setup.back")}
-          </Link>
+          {previous && (
+            <Link
+              to={previous}
+              className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
+              disabled={approving}
+            >
+              <ArrowLeft aria-hidden />
+              {t("setup.back")}
+            </Link>
+          )}
           <div className="flex flex-wrap items-center justify-end gap-3">
             {data && (
               <ApproveNote
@@ -124,7 +126,7 @@ export function ImportReview() {
                 className="h-10 gap-2 px-4"
                 // Only what the owner sees now: not while the review refreshes or failed to.
                 disabled={approving || reading || loading || Boolean(error)}
-                onClick={() => void approve()}
+                onClick={approve}
               >
                 {approveLabel({ approving, reading, readyCount })}
                 <ArrowRight weight="bold" aria-hidden />

@@ -71,14 +71,12 @@ export async function startTestBroccoliServer(
     logger,
     (core) =>
       createModules(core, {
-        mode: deployment.mode,
+        deployment,
         brandLookupUrl,
-        publicUrl,
         slack,
-        ai: {
-          openRouterUrl: decisionsUrl,
-          openRouterKey: managed ? "test-model-key" : (openRouterKey ?? null),
-          broccoliAiUrl: managed ? null : broccoliAiUrl,
+        openRouter: {
+          url: decisionsUrl,
+          key: managed ? "test-model-key" : (openRouterKey ?? null),
         },
       }),
   );

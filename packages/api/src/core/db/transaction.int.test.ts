@@ -1,7 +1,7 @@
 import { EXAMPLE_PAYLOAD, expect, SYSTEM, test } from "#test/support";
 
 import { createEventBus } from "../events";
-import { advanceStep, readSetupStep } from "../instance";
+import { completeCompanyStep, readSetupStep } from "../instance";
 import { createLogger } from "../logger";
 import { transactor } from ".";
 
@@ -19,13 +19,13 @@ test("dispatches queued events after the write commits", async ({ orm, seed }) =
   });
 
   await transact(async (tx) => {
-    await advanceStep(SYSTEM, tx, "company", "done");
+    await completeCompanyStep(SYSTEM, tx);
     tx.publish("example.happened", EXAMPLE_PAYLOAD);
     expect(received).toEqual([]);
   });
 
   expect(received).toEqual([EXAMPLE_PAYLOAD]);
-  expect(steps).toEqual(["done"]);
+  expect(steps).toEqual(["import"]);
 });
 
 test("rolls back the write and drops queued events when work fails", async ({ orm, seed }) => {
@@ -42,7 +42,7 @@ test("rolls back the write and drops queued events when work fails", async ({ or
 
   await expect(
     transact(async (tx) => {
-      await advanceStep(SYSTEM, tx, "company", "done");
+      await completeCompanyStep(SYSTEM, tx);
       tx.publish("example.happened", EXAMPLE_PAYLOAD);
       throw new Error("Work failed");
     }),
@@ -59,9 +59,7 @@ test("refuses to use a transaction after it has ended", async ({ orm, seed, tran
   expect(() => tx.publish("example.happened", EXAMPLE_PAYLOAD)).toThrow(
     "The transaction has ended",
   );
-  await expect(advanceStep(SYSTEM, tx, "company", "done")).rejects.toThrow(
-    "The transaction has ended",
-  );
+  await expect(completeCompanyStep(SYSTEM, tx)).rejects.toThrow("The transaction has ended");
   expect(await readSetupStep(orm)).toBe("company");
 });
 
@@ -78,7 +76,7 @@ test("refuses the publisher's transaction inside an after-commit handler", async
     eventBus.subscribe({
       "example.happened": async () => {
         try {
-          await advanceStep(SYSTEM, retainedTx, "company", "done");
+          await completeCompanyStep(SYSTEM, retainedTx);
         } catch (error) {
           rejection = error;
         }

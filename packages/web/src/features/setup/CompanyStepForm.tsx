@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useNavigate, useRouteContext } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
 
@@ -19,8 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 
 import { LogoField } from "./LogoField";
-import { setupStepPage } from "./requireSetupStep";
 import { SetupStepForm } from "./SetupStepForm";
+import { useSetupPages } from "./useSetupPages";
 
 // The API's rule, so a name it refuses is caught here with the field's own message.
 const companyStepSchema = z.object({
@@ -65,7 +65,7 @@ interface CompanyFormProps {
 /** Saving company details continues setup, including when returning from the AI step. */
 function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
   const navigate = useNavigate();
-  const { mode } = useRouteContext({ from: "__root__" });
+  const { next } = useSetupPages("company");
   const [updateCompany] = usePayloadMutation(UpdateCompanyDocument);
   const [logoBusy, setLogoBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -83,7 +83,7 @@ function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
         setFailed(true);
         return;
       }
-      await navigate({ to: setupStepPage("IMPORT", mode) });
+      await navigate({ to: next });
     },
   });
   // The name stays as sent while it is saved.

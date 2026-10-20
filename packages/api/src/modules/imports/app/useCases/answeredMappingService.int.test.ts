@@ -161,7 +161,7 @@ test("produces the same import employees as the model for the same choices", asy
   fake.answer(ANSWERS);
   const imports = importUseCases(orm, { decisions: fake.decisions });
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
-  const modeled = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const modeled = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   await imports.files.removeFile(SETUP_HOLDER, source.id);
   const answered = await seed.fileSource({ content: CSV, readBy: "answered_by_external_agent" });
 
@@ -172,7 +172,7 @@ test("produces the same import employees as the model for the same choices", asy
   );
 
   expect(result).toEqual({ status: "mapped", failure: null, people: 1 });
-  const mapped = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const mapped = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   expect(mapped.edges.map(({ node }) => valuesOf(node))).toEqual(
     modeled.edges.map(({ node }) => valuesOf(node)),
   );
@@ -186,7 +186,7 @@ test("refuses a second answer without changing the people", async ({ orm, seed, 
       sheets: [{ sheet: 1, answers: ANSWERS }],
     }),
   );
-  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
 
   await expect(
     transact((tx) =>
@@ -196,7 +196,7 @@ test("refuses a second answer without changing the people", async ({ orm, seed, 
     ),
   ).rejects.toMatchObject({ code: "CONFLICT" });
 
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
 });
 
 test("marks a file failed when no people column is selected", async ({ orm, seed, transact }) => {

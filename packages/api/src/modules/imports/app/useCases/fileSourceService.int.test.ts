@@ -13,7 +13,7 @@ import {
 } from "#test/support";
 
 import { files } from "../../../../core/files";
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -96,7 +96,7 @@ test("refuses an upload after setup is complete without storing anything or send
   fakeDecisions: fake,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "done");
+  await seed.setupStep("done");
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
   await expect(
@@ -108,10 +108,13 @@ test("refuses an upload after setup is complete without storing anything or send
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("refuses an upload after Approve while setup still awaits the owner", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("refuses an upload after Approve while setup still awaits the owner", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   expect(await readSetupStep(orm)).toBe("owner");
 
   await expect(
@@ -153,6 +156,19 @@ test("fails the file when its current attempt is exhausted", async ({ orm, seed 
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "failed", failure: "unavailable" },
   ]);
+});
+
+test("a failure reported after setup moved on leaves the source mapping", async ({ orm, seed }) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", attempt: 0 });
+  await seed.setupStep("owner");
+  const imports = importUseCases(orm);
+
+  await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
 });
 
 test("a stale failure leaves the source unchanged", async ({ orm, seed }) => {
@@ -197,7 +213,7 @@ test("refuses a retry after setup is complete without changing the source or sen
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "done");
+  await seed.setupStep("done");
   const source = await seed.fileSource({
     content: "Name\nAvery Stone",
     status: "failed",
@@ -223,7 +239,7 @@ test("removes the source, its records and its stored file", async ({ orm, seed }
   await imports.files.removeFile(OWNER, source.id);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([otherFile]);
 });
 
@@ -231,13 +247,13 @@ test("refuses file removal after Approve and keeps the import and stored file un
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   expect(await readSetupStep(orm)).toBe("owner");
-  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileIds = await storedFileIds(orm);
   expect(before.edges).toHaveLength(1);
   expect(fileIds).toHaveLength(1);
@@ -247,7 +263,7 @@ test("refuses file removal after Approve and keeps the import and stored file un
   });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
   expect(await storedFileIds(orm)).toEqual(fileIds);
 });
 

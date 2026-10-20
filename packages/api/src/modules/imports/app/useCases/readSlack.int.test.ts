@@ -1,24 +1,23 @@
-import { expect, importUseCases, OWNER, test } from "#test/support";
+import {
+  expect,
+  importUseCases,
+  OWNER,
+  PNG,
+  fakeSlackApi,
+  SLACK_PHOTO_URL,
+  storedFileIds,
+  test,
+  TEST_SECRET_BOX,
+} from "#test/support";
 
-import { ApplicationError } from "../../../../core/applicationError";
+import { slackConnectionRepository } from "../../../slack";
 
-test("the first Slack read creates a source and imports its members", async ({ orm }) => {
+test("the first Slack read creates a source and imports its members", async ({ orm, seed }) => {
+  await seed.slackConnection();
   const imports = importUseCases(orm, {
-    slack: {
-      readSlackMembers: (ctx) => {
-        expect(ctx).toBe(OWNER);
-        return Promise.resolve({
-          workspace: { id: "T1", name: "Acme Workspace" },
-          members: [{ id: "U1", profile: { first_name: "Avery", email: "avery@example.com" } }],
-          snapshot: "test-snapshot",
-        });
-      },
-      isCurrentSlackConnection: (ctx, _tx, snapshot) => {
-        expect(ctx).toBe(OWNER);
-        expect(snapshot).toBe("test-snapshot");
-        return Promise.resolve(true);
-      },
-    },
+    slackApi: fakeSlackApi([
+      { id: "U1", profile: { first_name: "Avery", email: "avery@example.com" } },
+    ]),
   });
 
   await imports.readSlack(OWNER);
@@ -38,35 +37,28 @@ test("another read keeps surviving member ids, updates values, adds newcomers an
   orm,
   seed,
 }) => {
+  await seed.slackConnection();
   const source = await seed.importSource();
   const [avery] = await seed.importEmployees(source.id, [
     { externalId: "U1", firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
     { externalId: "U2", firstName: "Robin", email: "robin@example.com" },
   ]);
   const imports = importUseCases(orm, {
-    slack: {
-      readSlackMembers: () =>
-        Promise.resolve({
-          workspace: { id: "T1", name: "Acme Workspace" },
-          members: [
-            {
-              id: "U1",
-              profile: {
-                first_name: "Avery",
-                last_name: "Reed",
-                email: "avery.reed@example.com",
-                title: "Designer",
-              },
-            },
-            {
-              id: "U3",
-              profile: { first_name: "Sam", last_name: "Vale", email: "sam@example.com" },
-            },
-          ],
-          snapshot: "test-snapshot",
-        }),
-      isCurrentSlackConnection: () => Promise.resolve(true),
-    },
+    slackApi: fakeSlackApi([
+      {
+        id: "U1",
+        profile: {
+          first_name: "Avery",
+          last_name: "Reed",
+          email: "avery.reed@example.com",
+          title: "Designer",
+        },
+      },
+      {
+        id: "U3",
+        profile: { first_name: "Sam", last_name: "Vale", email: "sam@example.com" },
+      },
+    ]),
   });
 
   await imports.readSlack(OWNER);
@@ -93,23 +85,20 @@ test("reading another workspace renames the same source and replaces its employe
   orm,
   seed,
 }) => {
+  await slackConnectionRepository(orm).save({
+    teamId: "T2",
+    teamName: "Acme Labs",
+    encryptedToken: TEST_SECRET_BOX.encrypt("test-slack-token"),
+  });
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ externalId: "U1", firstName: "Avery" }]);
   const imports = importUseCases(orm, {
-    slack: {
-      readSlackMembers: () =>
-        Promise.resolve({
-          workspace: { id: "T2", name: "Acme Labs" },
-          members: [
-            {
-              id: "U2",
-              profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" },
-            },
-          ],
-          snapshot: "test-snapshot",
-        }),
-      isCurrentSlackConnection: () => Promise.resolve(true),
-    },
+    slackApi: fakeSlackApi([
+      {
+        id: "U2",
+        profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" },
+      },
+    ]),
   });
 
   await imports.readSlack(OWNER);
@@ -131,16 +120,20 @@ test("a failed Slack read passes the error through and preserves the source and 
   orm,
   seed,
 }) => {
+  await seed.slackConnection();
   const source = await seed.importSource();
   const employees = await seed.importEmployees(source.id, [
     { externalId: "U1", firstName: "Avery" },
   ]);
-  const error = new ApplicationError("UNAVAILABLE", "Could not read Slack.");
+  const error = new Error("Slack unavailable");
   const imports = importUseCases(orm, {
-    slack: { readSlackMembers: () => Promise.reject(error) },
+    slackApi: { listMembers: () => Promise.reject(error) },
   });
 
-  await expect(imports.readSlack(OWNER)).rejects.toBe(error);
+  await expect(imports.readSlack(OWNER)).rejects.toMatchObject({
+    code: "UNAVAILABLE",
+    message: "Could not read Slack.",
+  });
 
   expect(await imports.reads.listSources(OWNER)).toEqual([source]);
   expect(
@@ -154,22 +147,16 @@ test("a refresh whose connection is no longer current leaves the records", async
   orm,
   seed,
 }) => {
+  await seed.slackConnection();
   const source = await seed.importSource();
   const employees = await seed.importEmployees(source.id, [
     { externalId: "U1", firstName: "Avery" },
   ]);
   const imports = importUseCases(orm, {
-    slack: {
-      readSlackMembers: () =>
-        Promise.resolve({
-          workspace: { id: "T2", name: "Acme Labs" },
-          members: [],
-          snapshot: "old-snapshot",
-        }),
-      isCurrentSlackConnection: (ctx, _tx, snapshot) => {
-        expect(ctx).toBe(OWNER);
-        expect(snapshot).toBe("old-snapshot");
-        return Promise.resolve(false);
+    slackApi: {
+      listMembers: async () => {
+        await seed.slackConnection();
+        return [];
       },
     },
   });
@@ -185,10 +172,35 @@ test("a refresh whose connection is no longer current leaves the records", async
 });
 
 test("passes through the error when Slack is not connected", async ({ orm }) => {
-  const error = new ApplicationError("UNAVAILABLE", "Slack is not connected.");
-  const imports = importUseCases(orm, {
-    slack: { readSlackMembers: () => Promise.reject(error) },
-  });
+  const imports = importUseCases(orm);
 
-  await expect(imports.readSlack(OWNER)).rejects.toBe(error);
+  await expect(imports.readSlack(OWNER)).rejects.toMatchObject({
+    code: "UNAVAILABLE",
+    message: "Slack is not connected.",
+  });
+});
+
+test("deletes a departed Slack member's record and stored photo on the next read", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
+  await seed.slackConnection();
+  const source = await seed.importSource();
+  const [record] = await seed.importEmployees(source.id, [
+    { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
+  ]);
+  await seed.importPhoto(record!.id, {
+    photoUrl: SLACK_PHOTO_URL,
+    content: PNG,
+    mimeType: "image/png",
+  });
+  const imports = importUseCases(orm, { slackApi: fakeSlackApi([]) });
+
+  await imports.readSlack(OWNER);
+
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
+  expect(await storedFileIds(orm)).toEqual([]);
 });

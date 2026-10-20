@@ -10,14 +10,14 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test("resetting setup deletes approved employees but keeps the import and its photo files", async ({
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const records = await seed.importEmployees(source.id, [
     { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },
@@ -39,11 +39,11 @@ test("resetting setup deletes approved employees but keeps the import and its ph
     field: "jobTitle",
     choice: { value: "Designer" },
   });
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   const employees = createEmployeeUseCases({ orm });
   expect((await employees.listEmployees(OWNER, {})).edges).toHaveLength(2);
   expect(await readSetupStep(orm)).toBe("owner");
-  const imported = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const imported = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const sources = await imports.reads.listSources(SETUP_HOLDER);
   const fileIds = await storedFileIds(orm);
 
@@ -51,7 +51,7 @@ test("resetting setup deletes approved employees but keeps the import and its ph
 
   expect(await readSetupStep(orm)).toBe("company");
   expect((await employees.listEmployees(OWNER, {})).edges).toEqual([]);
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(imported);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(sources);
   expect(await storedFileIds(orm)).toEqual(fileIds);
   for (const photoId of photoIds) {
@@ -63,8 +63,7 @@ test("approving again after reset recreates the employees with their import phot
   orm,
   seed,
 }) => {
-  const instance = instanceRepository(orm);
-  await instance.advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },
@@ -75,11 +74,12 @@ test("approving again after reset recreates the employees with their import phot
     mimeType: "image/png",
   });
   const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   await imports.resetSetup(SETUP_HOLDER);
-  expect(await instance.advanceStep("company", "import")).toBe(true);
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  expect(await readSetupStep(orm)).toBe("company");
+  await seed.setupStep("import");
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   expect(await readSetupStep(orm)).toBe("owner");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
@@ -95,11 +95,11 @@ test("resetting the ready step returns to company and deletes approved employees
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.approveImport(owner, await imports.reads.readVersion(owner));
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   const employees = createEmployeeUseCases({ orm });
   expect(await readSetupStep(orm)).toBe("ready");
   expect((await employees.listEmployees(owner, {})).edges).toHaveLength(1);
@@ -112,12 +112,12 @@ test("resetting the ready step returns to company and deletes approved employees
 
 test("resetting completed setup keeps the step and employees unchanged", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.approveImport(owner, await imports.reads.readVersion(owner));
-  await instanceRepository(orm).advanceStep("ready", "done");
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  await seed.setupStep("done");
   expect(await readSetupStep(orm)).toBe("done");
   const employees = createEmployeeUseCases({ orm });
   const approved = await employees.listEmployees(owner, {});

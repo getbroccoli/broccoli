@@ -54,14 +54,8 @@
       "src/utils"
     ],
     "src/core/security": ["src/core/applicationError"],
-    "src/core/sessionSecurity": [
-      "src/core/auth",
-      "src/core/db",
-      "src/core/instance",
-      "src/core/sameOrigin",
-      "src/core/security"
-    ],
     "src/core/instance": [
+      "src/integrations/ai",
       "src/core/applicationError",
       "src/core/env",
       "src/core/sameOrigin",
@@ -99,6 +93,7 @@
     "src/core/secrets": [],
     "test/support": [
       "src/core/*",
+      "src/core/instance/db",
       "src/integrations/*",
       "src/modules",
       "src/modules/*",

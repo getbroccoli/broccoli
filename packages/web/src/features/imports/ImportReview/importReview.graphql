@@ -9,9 +9,9 @@ query ImportReview(
     version
     employeeCount
     readyEmployeeCount
+    reading
     sources {
       id
-      status
       employeeCount
       ...SourceChips_source
     }

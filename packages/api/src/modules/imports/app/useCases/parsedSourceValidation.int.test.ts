@@ -48,7 +48,7 @@ test("refuses more than 10,000 people without storing any", async ({ orm, transa
   });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
 });
 
 test("refuses an unknown field without echoing its key or value", async ({ orm, transact }) => {
@@ -76,7 +76,7 @@ test("refuses an unknown field without echoing its key or value", async ({ orm, 
   expect(JSON.stringify(result)).not.toContain("private-key-sentinel");
   expect(JSON.stringify(result)).not.toContain("private-value-sentinel");
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
 });
 
@@ -98,7 +98,7 @@ test.for(["firstName", "lastName", "fullName", "email", "jobTitle", "startDate"]
     });
 
     expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-    expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+    expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   },
 );
 
@@ -123,7 +123,7 @@ test.for(["firstName", "lastName", "fullName", "email", "jobTitle", "startDate"]
     });
 
     expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-    expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+    expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   },
 );
 

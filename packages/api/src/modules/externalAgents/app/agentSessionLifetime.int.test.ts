@@ -6,11 +6,10 @@ import {
   importUseCases,
   SETUP_HOLDER,
   SYSTEM,
-  systemUseCases,
+  aiSettings,
   test,
 } from "#test/support";
 
-import { instanceRepository } from "../../../core/instance";
 import type { Orm } from "../../../core/db";
 
 test("refuses a code that expires while the exchange waits for the instance lock", async ({
@@ -66,7 +65,7 @@ test("refuses people when the agent session expires while waiting for the instan
   expect(result).toMatchObject([{ status: "rejected", reason: SESSION_ENDED }]);
   const imports = importUseCases(orm);
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
 });
 
 test.for(["chooseAgent", "createAgentCode", "disconnectAgent"] as const)(
@@ -118,8 +117,7 @@ test("refuses a session once an owner exists even at the import step", async ({ 
   const { token } = await agents.sessions.startAgentSession(SYSTEM, { code, client: "Test agent" });
   const ctx = (await agents.sessions.readAgentSession({ token }))!;
 
-  const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.owner();
 
   expect(await agents.sessions.readAgentSession({ token })).toBeNull();
   await expect(agents.maskedWay.listWaiting(ctx)).rejects.toMatchObject(SESSION_ENDED);
@@ -132,7 +130,7 @@ test("refuses a session after setup leaves import", async ({ orm, seed }) => {
   const { token } = await agents.sessions.startAgentSession(SYSTEM, { code, client: "Test agent" });
   const ctx = (await agents.sessions.readAgentSession({ token }))!;
 
-  await instanceRepository(orm).advanceStep("import", "owner");
+  await seed.setupStep("owner");
 
   expect(await agents.sessions.readAgentSession({ token })).toBeNull();
   await expect(agents.maskedWay.listWaiting(ctx)).rejects.toMatchObject(SESSION_ENDED);
@@ -153,15 +151,18 @@ test("refuses a session when the setup session expires", async ({ orm, seed }) =
   await expect(agents.maskedWay.listWaiting(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
-test("refuses a session after OpenRouter is saved", async ({ orm, seed }) => {
+test("refuses a session after OpenRouter is saved", async ({ orm, seed, fakeDecisions }) => {
   await seed.agentSetup();
   const agents = externalAgentUseCases(orm);
   const { code } = await agents.sessions.createAgentCode(SETUP_HOLDER, CODE);
   const { token } = await agents.sessions.startAgentSession(SYSTEM, { code, client: "Test agent" });
   const ctx = (await agents.sessions.readAgentSession({ token }))!;
-  const system = systemUseCases(orm, { checkOpenRouterKey: () => Promise.resolve() });
+  fakeDecisions.acceptKey("test-key");
 
-  await system.saveAiSource(SETUP_HOLDER, { source: "openrouter", openRouterKey: "test-key" });
+  await aiSettings(orm, { url: fakeDecisions.url }).save(SETUP_HOLDER, {
+    source: "openrouter",
+    openRouterKey: "test-key",
+  });
 
   expect(await agents.sessions.readAgentSession({ token })).toBeNull();
   await expect(agents.maskedWay.listWaiting(ctx)).rejects.toMatchObject(SESSION_ENDED);
@@ -170,14 +171,18 @@ test("refuses a session after OpenRouter is saved", async ({ orm, seed }) => {
 test("choosing the agent again never revives a session idled by OpenRouter", async ({
   orm,
   seed,
+  fakeDecisions,
 }) => {
   await seed.agentSetup();
   const agents = externalAgentUseCases(orm);
   const { code } = await agents.sessions.createAgentCode(SETUP_HOLDER, CODE);
   const { token } = await agents.sessions.startAgentSession(SYSTEM, { code, client: "Test agent" });
   const ctx = (await agents.sessions.readAgentSession({ token }))!;
-  const system = systemUseCases(orm, { checkOpenRouterKey: () => Promise.resolve() });
-  await system.saveAiSource(SETUP_HOLDER, { source: "openrouter", openRouterKey: "test-key" });
+  fakeDecisions.acceptKey("test-key");
+  await aiSettings(orm, { url: fakeDecisions.url }).save(SETUP_HOLDER, {
+    source: "openrouter",
+    openRouterKey: "test-key",
+  });
 
   await agents.sessions.chooseAgent(SETUP_HOLDER);
 
@@ -192,7 +197,7 @@ test("refuses a session after approval", async ({ orm, seed }) => {
   const { token } = await agents.sessions.startAgentSession(SYSTEM, { code, client: "Test agent" });
   const ctx = (await agents.sessions.readAgentSession({ token }))!;
   const imports = importUseCases(orm);
-  const version = await imports.reads.readVersion(SETUP_HOLDER);
+  const version = (await imports.reads.readReview(SETUP_HOLDER)).version;
 
   await imports.approveImport(SETUP_HOLDER, version);
 

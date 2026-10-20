@@ -28,17 +28,12 @@ const calls = {
   "reads.listSources": (imports, ctx) => imports.reads.listSources(ctx),
   "reads.readSources": (imports, ctx) => imports.reads.readSources(ctx, []),
   "reads.countEmployees": (imports, ctx) => imports.reads.countEmployees(ctx, []),
-  "reads.employeeCount": (imports, ctx) => imports.reads.employeeCount(ctx),
-  "reads.readyEmployeeCount": (imports, ctx) => imports.reads.readyEmployeeCount(ctx),
-  "reads.listReadyEmployeeSources": (imports, ctx) => imports.reads.listReadyEmployeeSources(ctx),
-  "reads.listEmployees": (imports, ctx) => imports.reads.listEmployees(ctx, {}),
+  "reads.readProgress": (imports, ctx) => imports.reads.readProgress(ctx),
+  "reads.readReview": (imports, ctx) => imports.reads.readReview(ctx),
   "reads.listEmployeeRecords": (imports, ctx) =>
     imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),
-  "reads.listChecks": (imports, ctx) => imports.reads.listChecks(ctx),
-  "reads.readVersion": (imports, ctx) => imports.reads.readVersion(ctx),
-  "reads.readSnapshot": (imports, ctx) => imports.reads.readSnapshot(ctx),
-  "reads.isImportPhotoFile": (imports, ctx) =>
-    imports.reads.isImportPhotoFile(ctx, "0199f6c4-0000-7000-8000-000000000000"),
+  readImportPhoto: (imports, ctx) =>
+    imports.readImportPhoto(ctx, "0199f6c4-0000-7000-8000-000000000000"),
   "choices.chooseEmployeeValue": (imports, ctx) =>
     imports.choices.chooseEmployeeValue(ctx, { key: "missing", field: "jobTitle", choice: null }),
   "choices.chooseSourceForAll": (imports, ctx) =>

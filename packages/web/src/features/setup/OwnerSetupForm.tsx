@@ -1,7 +1,5 @@
-import { useApolloClient } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useRouter } from "@tanstack/react-router";
 import { useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 
@@ -10,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
+import { useSessionChange } from "@/lib/useSessionChange";
 
 import { NewPasswordField } from "./NewPasswordField";
 import type { SetupResult } from "./setupApi";
@@ -44,35 +43,30 @@ type Props = {
 };
 
 /**
- * Creates the owner's account. On success the cache is cleared and the router reloads,
- * so routing sends the now signed-in owner to the directory. On a conflict, such as an
- * owner created first, the reload routes the visitor to wherever setup now is.
+ * Creates the owner's account. On success the session changes, so routing sends the now
+ * signed-in owner to the directory. On a conflict, such as an owner created first, the
+ * reload routes the visitor to wherever setup now is.
  */
 export function OwnerSetupForm({ createAccount, intro, secondaryAction, width }: Props) {
-  const apolloClient = useApolloClient();
-  const router = useRouter();
   const emailInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
+  const [createAndReload, creating] = useSessionChange(async (email: string, password: string) => {
+    setFailure(null);
+    const result = await createAccount(email, password);
+    // On a conflict, setup moved on in another browser: reloading shows where.
+    if (result === "ok" || result === "conflict") {
+      return true;
+    }
+    setFailure(FAILURE_MESSAGES[result]);
+    passwordInput.current?.focus();
+    return false;
+  });
 
   const form = useForm({
     defaultValues: { email: "", password: "" },
     validators: { onSubmit: ownerSetupSchema },
-    onSubmit: async ({ value }) => {
-      setFailure(null);
-      const result = await createAccount(value.email, value.password);
-      if (result === "ok") {
-        await apolloClient.clearStore();
-        await router.invalidate();
-        return;
-      }
-      if (result === "conflict") {
-        await router.invalidate();
-        return;
-      }
-      setFailure(FAILURE_MESSAGES[result]);
-      passwordInput.current?.focus();
-    },
+    onSubmit: ({ value }) => createAndReload(value.email, value.password),
     // Focus takes a screen reader to the field and reads its error with it.
     onSubmitInvalid: ({ formApi }) => {
       const emailIsInvalid = (formApi.getFieldMeta("email")?.errors.length ?? 0) > 0;
@@ -80,7 +74,7 @@ export function OwnerSetupForm({ createAccount, intro, secondaryAction, width }:
     },
   });
   // The credentials stay as sent while the account is created.
-  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+  const isSubmitting = useStore(form.store, (state) => state.isSubmitting) || creating;
   const isFilledIn = useStore(
     form.store,
     ({ values }) => values.email.trim() !== "" && values.password.length >= PASSWORD_LENGTH.min,

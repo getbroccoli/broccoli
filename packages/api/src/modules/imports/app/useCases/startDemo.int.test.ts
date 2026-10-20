@@ -3,19 +3,19 @@ import {
   importUseCases,
   OWNER,
   SETUP_HOLDER,
-  slackPhotoReader,
+  fakeSlackApi,
   storedFileIds,
   test,
 } from "#test/support";
 
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 import type { Orm, Tx } from "../../../../core/db";
 import { createEmployeeUseCases } from "../../../employees";
 import { prepareDemoStart } from "./startDemo";
 
 test("starting the demo completes setup", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const imports = importUseCases(orm);
 
   await imports.startDemo(owner);
@@ -29,7 +29,7 @@ test("the prepared demo start completes setup and fills the demo company in the 
   transact,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  await seed.setupStep("import");
   const filledIn: Tx[] = [];
   const startDemo = await prepareDemoStart({
     prepareDemoFill: () =>
@@ -51,7 +51,7 @@ test.for(["owner", "company", "done"] as const)(
   "starting the demo does nothing at the %s step",
   async (step, { orm, seed }) => {
     const owner = await seed.owner();
-    await instanceRepository(orm).setOwner(owner.user!.userId, step);
+    await seed.setupStep(step);
     const imports = importUseCases(orm);
 
     await imports.startDemo(owner);
@@ -63,8 +63,9 @@ test.for(["owner", "company", "done"] as const)(
 
 test("the setup holder starts the demo without an owner and moves setup to owner", async ({
   orm,
+  seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const imports = importUseCases(orm);
 
   await imports.startDemo(SETUP_HOLDER);
@@ -72,8 +73,8 @@ test("the setup holder starts the demo without an owner and moves setup to owner
   expect(await readSetupStep(orm)).toBe("owner");
 });
 
-test("starting the demo fills the demo company before an owner exists", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("starting the demo fills the demo company before an owner exists", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm);
 
   await imports.startDemo(SETUP_HOLDER);
@@ -81,8 +82,8 @@ test("starting the demo fills the demo company before an owner exists", async ({
   expect(await hasEmployees(orm)).toBe(true);
 });
 
-test("keeps setup at import when the demo fill fails", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("keeps setup at import when the demo fill fails", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm, {
     prepareDemoFill: () => Promise.resolve(() => Promise.reject(new Error("fill failed"))),
   });
@@ -97,8 +98,9 @@ test("starting the demo after a Slack read discards the import and its files", a
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
-  const imports = importUseCases(orm, { slack: slackPhotoReader() });
+  await seed.setupStep("import");
+  await seed.slackConnection();
+  const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
   await imports.readSlack(SETUP_HOLDER);
   await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   const importFiles = await storedFileIds(orm);
@@ -107,7 +109,7 @@ test("starting the demo after a Slack read discards the import and its files", a
   await imports.startDemo(SETUP_HOLDER);
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).not.toContain("avery@example.com");
   const remainingFiles = await storedFileIds(orm);

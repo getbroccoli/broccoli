@@ -1,10 +1,10 @@
 import { type Decisions, DecisionsError } from "../../../../integrations/ai";
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact } from "../../../../core/db";
-import { deleteFiles, readFile, storeFile } from "../../../../core/files";
+import { readFile } from "../../../../core/files";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository } from "../../db";
+import { importReader } from "../../db";
 import {
   type ColumnMapping,
   columnQuestions,
@@ -23,7 +23,7 @@ import {
 } from "../../domain";
 import { mimeTypeOf, type UploadReader } from "./uploadReader";
 import { readStaffFile } from "./staffFile";
-import { lockOpenImport } from "./lockOpenImport";
+import { lockOpenImport, openImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
@@ -38,8 +38,8 @@ export interface FileSourceService {
   uploadFile(ctx: SecurityContext, file: UploadedFile): Promise<string>;
   /**
    * The job: for each sheet, the model finds the header row and the columns, code copies
-   * the cells into records. A run that is no longer current writes nothing; a retryable model failure
-   * rejects, so the job runs again.
+   * the cells into records. A run that is no longer current, or of a closed import, writes
+   * nothing; a retryable model failure rejects, so the job runs again.
    */
   mapFile(ctx: SecurityContext, job: MapFileJob): Promise<void>;
   /** After the job's last attempt: the file is marked failed, unless a newer run has started. */
@@ -92,11 +92,10 @@ export function createFileSourceService({
       const sheets = await readUpload(bytes);
       return transact(async (tx) => {
         const imports = await lockOpenImport(tx);
-        const fileId = await storeFile(tx, {
+        const sourceId = await imports.insertFileSource(name, "parsed_by_broccoli", {
           content: Buffer.from(bytes),
           mimeType: mimeTypeOf(sheets),
         });
-        const sourceId = await imports.insertFileSource(name, "parsed_by_broccoli", fileId);
         await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
         return sourceId;
       });
@@ -104,7 +103,7 @@ export function createFileSourceService({
 
     mapFile: async (ctx, { sourceId, attempt }) => {
       requireImportAccess(ctx);
-      const source = await importRepository(orm).findFileSource(sourceId);
+      const source = await importReader(orm).findFileSource(sourceId);
       if (!isCurrentRun(source, attempt)) {
         return;
       }
@@ -117,8 +116,9 @@ export function createFileSourceService({
       }
       const { outcome, records } = await mapFileOrFail(decisions, sheets);
       await transact(async (tx) => {
-        const imports = importRepository(tx);
-        if (await imports.finishMapping(sourceId, attempt, outcome)) {
+        // Only the current run of an open import writes.
+        const imports = await openImport(tx);
+        if (imports && (await imports.finishMapping(sourceId, attempt, outcome))) {
           await imports.syncEmployeeRecords(sourceId, records);
         }
       });
@@ -126,12 +126,13 @@ export function createFileSourceService({
 
     markFileFailed: async (ctx, { sourceId, attempt }) => {
       requireImportAccess(ctx);
-      await transact((tx) =>
-        importRepository(tx).finishMapping(sourceId, attempt, {
+      await transact(async (tx) => {
+        const imports = await openImport(tx);
+        await imports?.finishMapping(sourceId, attempt, {
           status: "failed",
           failure: "unavailable",
-        }),
-      );
+        });
+      });
     },
 
     retryFile: async (ctx, sourceId) => {
@@ -154,10 +155,7 @@ export function createFileSourceService({
       requireImportAccess(ctx);
       await transact(async (tx) => {
         const imports = await lockOpenImport(tx);
-        const fileId = await imports.deleteFileSource(sourceId);
-        if (fileId !== null) {
-          await deleteFiles(tx, [fileId]);
-        }
+        await imports.deleteFileSource(sourceId);
       });
     },
   };

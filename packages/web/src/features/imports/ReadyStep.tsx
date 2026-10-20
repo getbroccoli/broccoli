@@ -1,6 +1,5 @@
 import { useQuery } from "@apollo/client/react";
 import { ArrowRight, Stack, Users } from "@phosphor-icons/react";
-import { useRouter } from "@tanstack/react-router";
 
 import {
   CompleteSetupDocument,
@@ -11,6 +10,7 @@ import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { SetupLayout, SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 import { AddedPeopleRing } from "./AddedPeopleRing";
 import { ResetSetupDialog } from "./ResetSetupDialog";
@@ -20,20 +20,14 @@ import { ResetSetupDialog } from "./ResetSetupDialog";
  * completes setup, which routing follows into the app; Reset setup starts over.
  */
 export function ReadyStep() {
-  const router = useRouter();
   // Approve and reset don't return the import's sources, so a cached answer may be stale.
   const { data } = useQuery(ReadyStepDocument, { fetchPolicy: "network-only" });
-  const [completeSetup, { loading, error }] = usePayloadMutation(CompleteSetupDocument);
+  const [completeSetup, { error }] = usePayloadMutation(CompleteSetupDocument);
+  const [run, starting] = useRouteAction();
   const company = data?.company.name;
 
-  const start = async () => {
-    try {
-      await completeSetup();
-    } catch {
-      return; // `error` shows it
-    }
-    await router.invalidate();
-  };
+  // `error` shows a failure.
+  const start = () => run(() => completeSetup());
 
   return (
     <SetupLayout
@@ -44,12 +38,12 @@ export function ReadyStep() {
     >
       <SetupStepForm
         width="narrow"
-        onSubmit={() => void start()}
+        onSubmit={start}
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <ResetSetupDialog />
-            <Button type="submit" size="lg" className="ml-auto h-10 gap-2 px-4" disabled={loading}>
-              {t(loading ? "setup.ready.starting" : "setup.ready.start")}
+            <Button type="submit" size="lg" className="ml-auto h-10 gap-2 px-4" disabled={starting}>
+              {t(starting ? "setup.ready.starting" : "setup.ready.start")}
               <ArrowRight weight="bold" aria-hidden />
             </Button>
           </div>

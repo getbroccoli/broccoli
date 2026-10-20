@@ -27,6 +27,6 @@ export function companyModule({
       "instance.owner_claimed": (owner) =>
         useCases.detectCompanyNameAndLogo(PrincipalSecurityContext.system(), owner),
     },
-    router: (resolveSecurity) => logoRouter(useCases, resolveSecurity, dependencies.orm),
+    router: (resolveSecurity) => logoRouter(useCases, resolveSecurity),
   };
 }

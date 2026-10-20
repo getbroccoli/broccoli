@@ -1,10 +1,10 @@
-import type { Router } from "express";
 import express from "express";
 import { createRemoteJWKSet } from "jose";
 
-import { createAuth, type AuthSource } from "../auth";
+import { createAuth, type DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { ManagedDeployment } from "../env";
+import { readAssignment } from "../instance";
 import type { Logger } from "../logger";
 import type { Readiness } from "../readiness";
 import { managedAuth } from "./app";
@@ -21,17 +21,10 @@ export interface ManagedServerOptions {
   logger: Logger;
 }
 
-/** What a managed instance adds to the server: its auth, its routes and its init status. */
-export interface ManagedServer {
-  auth: AuthSource;
-  /** `POST /api/init`, then the gate that answers 503 to users until init. Mount after the probes. */
-  router: Router;
-  initStatus(): Promise<"waiting" | "ready">;
-}
-
 /**
  * Wires a managed instance: it trusts init tokens and tickets signed by the accounts
- * service, and builds Better Auth from the assignment its init stored.
+ * service, and builds Better Auth from the assignment its init stored. Its router is
+ * `POST /api/init`, then the gate that answers 503 to users until init.
  */
 export function managedServer({
   deployment: { instanceId, accountsOrigin },
@@ -40,7 +33,7 @@ export function managedServer({
   secret,
   readiness,
   logger,
-}: ManagedServerOptions): ManagedServer {
+}: ManagedServerOptions): DeploymentServer {
   const signer = {
     issuer: accountsOrigin,
     keys: createRemoteJWKSet(new URL("/.well-known/jwks.json", accountsOrigin)),
@@ -63,5 +56,7 @@ export function managedServer({
       .use(initRouter({ transact, tokenCheck, readiness, auth }))
       .use(waitingGate(auth)),
     initStatus: async () => ((await auth.current()) ? "ready" : "waiting"),
+    // The waiting gate answers until init stored the assignment, so it exists here.
+    publicOrigin: async () => (await readAssignment(orm))!.publicOrigin,
   };
 }

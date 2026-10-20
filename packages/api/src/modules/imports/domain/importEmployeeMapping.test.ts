@@ -1,16 +1,9 @@
 import { expect, it } from "vitest";
 
 import type { ImportEmployee } from "./importEmployee";
-import { incompleteReason, toNewEmployee } from "./importEmployeeMapping";
+import { incompleteReason } from "./importEmployeeMapping";
 
-it("returns the normalised employee and no incomplete reason for a complete import employee", () => {
-  expect(toNewEmployee(employee())).toEqual({
-    firstName: "Avery",
-    lastName: "Stone",
-    email: "avery@example.com",
-    jobTitle: "Designer",
-    startDate: null,
-  });
+it("returns no incomplete reason for a complete import employee", () => {
   expect(incompleteReason(employee())).toBeNull();
 });
 
@@ -24,10 +17,9 @@ it.each([
     values: { jobTitle: "a".repeat(101) },
     reason: "other",
   },
-])("leaves out an import employee with $description and reports $reason", ({ values, reason }) => {
+])("reports $reason for an import employee with $description", ({ values, reason }) => {
   const incomplete = employee(values);
 
-  expect(toNewEmployee(incomplete)).toBeNull();
   expect(incompleteReason(incomplete)).toBe(reason);
 });
 

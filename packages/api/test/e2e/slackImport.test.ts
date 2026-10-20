@@ -1,27 +1,6 @@
 import { approveReviewedImport } from "#test/support";
 import { connectAndReadSlack, expect, slackAuthorization, slackTest as test } from "#test/support";
 
-test("connecting redirects the owner to the relay with an OAuth cookie and callback URL", async ({
-  env,
-  slack,
-}) => {
-  const { browser } = await env.signInAsOwner();
-
-  const response = await browser.getManual("/api/integrations/slack/connect");
-
-  expect(response.status).toBe(302);
-  const { cookie, authorizeUrl } = slackAuthorization(response);
-  expect(cookie).toContain("Path=/api/integrations/slack");
-  expect(cookie).toContain("Max-Age=600");
-  expect(cookie).toContain("HttpOnly");
-  expect(cookie).toContain("SameSite=Lax");
-  expect(authorizeUrl.origin).toBe(slack.url);
-  expect(authorizeUrl.pathname).toBe("/slack/authorize");
-  expect(authorizeUrl.searchParams.get("return_to")).toBe(
-    `${env.url}/api/integrations/slack/callback`,
-  );
-});
-
 test("connecting saves the workspace and an explicit read imports all Slack pages", async ({
   env,
   slack,

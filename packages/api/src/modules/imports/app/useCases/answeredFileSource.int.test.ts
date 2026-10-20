@@ -21,7 +21,7 @@ test("retries a waiting answered file through the model with the next attempt", 
     { name: "imports.mapFile", payload: { sourceId: source.id, attempt: 1 } },
   ]);
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 1 });
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toMatchObject([
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toMatchObject([
     { node: { values: { email: { value: "avery@example.com" } } } },
   ]);
 });

@@ -6,25 +6,25 @@ import {
   OWNER,
   PNG,
   SETUP_HOLDER,
-  slackPhotoReader,
+  fakeSlackApi,
   SLACK_PHOTO_URL,
   storedFileIds,
   test,
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { instanceRepository } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
-test("approving gives the employee the Slack photo as their avatar", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
-  const imports = importUseCases(orm, { slack: slackPhotoReader() });
+test("approving gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
+  await seed.setupStep("import");
+  await seed.slackConnection();
+  const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
   await imports.readSlack(SETUP_HOLDER);
-  const imported = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const imported = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileId = imported.edges[0]!.node.photoFileId;
   expect(fileId).toEqual(expect.any(String));
 
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(
@@ -34,14 +34,14 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
   const stored = await readFile(orm, fileId!);
   expect(stored?.mimeType).toBe("image/webp");
   expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(imported);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
 });
 
 test("approving deletes unused photos while keeping import rows and staff files", async ({
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const staff = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   const [staffFileId] = await storedFileIds(orm);
   const existingAvatar = await seed.file({ content: PNG, mimeType: "image/png" });
@@ -67,7 +67,7 @@ test("approving deletes unused photos while keeping import rows and staff files"
   const imports = importUseCases(orm);
   await imports.choices.setLeftOut(SETUP_HOLDER, { key: "leftout@example.com", leftOut: true });
 
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   const keptPhoto = photoIds.get("kept@example.com")!;
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {
@@ -81,7 +81,7 @@ test("approving deletes unused photos while keeping import rows and staff files"
   ]);
   expect(await storedFileIds(orm)).toEqual([keptPhoto, existingAvatar, staffFileId!].sort());
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([staff, source]);
-  const reviewed = await imports.reads.listEmployees(SETUP_HOLDER, {
+  const reviewed = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({
     orderBy: { field: "EMAIL" },
   });
   expect(

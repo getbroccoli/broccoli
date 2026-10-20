@@ -1,6 +1,8 @@
 import { and, count, eq, gt, inArray, notInArray, or, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
+import type { KeysetRow } from "../../../core/pagination";
 import {
   IMPORT_EMPLOYEE_CHOICES_VERSION,
   IMPORT_EMPLOYEE_VERSION,
@@ -15,21 +17,38 @@ import {
   parseImportEmployeeValues,
 } from "../domain";
 import { importChoices } from "./importChoicesTable";
+import { deleteReplacedPhotos } from "./importPhotoRepository";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
 
-/** The import's sources and records, through the pool or inside a transaction. */
-export interface ImportRepository {
+/** Reads the import's sources, records and choices, through the pool or joining a transaction. */
+export interface ImportReader {
+  listSources(): Promise<ImportSource[]>;
+  findSources(ids: readonly string[]): Promise<ImportSource[]>;
+  /** The file source with this id, or null when there is none. */
+  findFileSource(id: string): Promise<FileSource | null>;
+  /** Every employee record of every source, oldest first. */
+  listEmployeeRecords(): Promise<ImportEmployeeRecord[]>;
+  /** The number of employee records of each source that has any; the others are absent. */
+  countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
+  /** Up to `limit` of one source's employee records after the one with id `after`, oldest first. */
+  findRecordPage(
+    query: ImportRecordPageQuery,
+  ): Promise<KeysetRow<ImportEmployeeRecord, [id: string]>[]>;
+  /** What the owner settled for each group of records of `type`. */
+  listChoices(type: "employee"): Promise<ImportEmployeeChoices[]>;
+}
+
+/** Reads and changes the import in a transaction that holds its lock (`lockImport`). */
+export interface ImportRepository extends ImportReader {
   /** Creates the Slack source or renames it, marks it read now and returns its id. */
   saveSlackSource(name: string): Promise<string>;
   /**
-   * Adds a file as a source and returns its id: an uploaded one waits to be mapped, by Broccoli's
-   * first mapping run or by the external agent's answers; one the agent parsed, without a stored
-   * file, is mapped at once.
+   * Adds a file as a source and returns its id: an uploaded one, stored, waits to be mapped, by
+   * Broccoli's first mapping run or by the external agent's answers; one the agent parsed, without
+   * a stored file, is mapped at once.
    */
-  insertFileSource(name: string, readBy: ImportSourceReader, fileId?: string): Promise<string>;
-  /** The file source with this id, or null when there is none. */
-  findFileSource(id: string): Promise<FileSource | null>;
+  insertFileSource(name: string, readBy: ImportSourceReader, file?: StoredFile): Promise<string>;
   /**
    * Ends a mapping run, only while the source is still `mapping` at `attempt`; returns
    * whether it did. A late run, or one of a removed source, changes nothing.
@@ -40,52 +59,114 @@ export interface ImportRepository {
    * the external agent's answers; returns its attempt, or null for any other source.
    */
   restartMapping(id: string): Promise<number | null>;
-  /** Deletes a file source and its records; returns its file's id, or null when there is none. */
-  deleteFileSource(id: string): Promise<string | null>;
-  /** Whether any source is still being mapped. */
-  hasMappingSource(): Promise<boolean>;
-  /**
-   * Waits for and holds, until the transaction ends, the lock that Approve and the
-   * operations starting a mapping run take first, so Approve never misses a run.
-   */
-  lockSources(): Promise<void>;
+  /** Deletes a file source, its records and its stored file. */
+  deleteFileSource(id: string): Promise<void>;
   /**
    * Makes the source's employee records match `records` by external id: updates the
-   * ones still there, so their ids stay, adds new ones and deletes the rest. Detach
-   * photos that no longer match first (`detachReplacedPhotos`).
+   * ones still there, so their ids stay, adds new ones and deletes the rest. Deletes the
+   * photos whose link changed or whose record goes.
    */
   syncEmployeeRecords(sourceId: string, records: IncomingRecord[]): Promise<void>;
-  /** Deletes every source, record and choice; returns the files they referenced. */
-  deleteAll(): Promise<{ photoFileIds: string[]; uploadFileIds: string[] }>;
-  listSources(): Promise<ImportSource[]>;
-  findSources(ids: readonly string[]): Promise<ImportSource[]>;
-  /** Every employee record of every source, oldest first. */
-  listEmployeeRecords(): Promise<ImportEmployeeRecord[]>;
-  /** The number of employee records of each source that has any; the others are absent. */
-  countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
-  /** Up to `first + 1` of one source's employee records after `after`, oldest first; the extra one signals a next page. */
-  findRecordPage(
-    query: ImportRecordPageQuery,
-  ): Promise<{ node: ImportEmployeeRecord; keyset: ImportRecordKeyset }[]>;
-  /** What the owner settled for each group of records of `type`. */
-  listChoices(type: "employee"): Promise<ImportEmployeeChoices[]>;
+  /**
+   * Deletes every source, record and choice, with the uploaded files and, unless `keepPhotos`,
+   * the photos; kept photos are the employees' avatars after Approve.
+   */
+  deleteAll(options: { keepPhotos: boolean }): Promise<void>;
   /** Stores these choices, replacing any of the same keys. */
   saveChoices(type: "employee", choices: ImportEmployeeChoices[]): Promise<void>;
 }
 
-/** The id of the last record seen. */
-export type ImportRecordKeyset = [id: string];
-
 export interface ImportRecordPageQuery {
   sourceId: string;
-  first: number;
-  after: ImportRecordKeyset | null;
+  after: [id: string] | null;
+  limit: number;
 }
 
-export function importRepository(db: Orm | Tx): ImportRepository {
+export function importReader(db: Orm | Tx): ImportReader {
   const orm = () => ormOf(db);
 
   return {
+    listSources: (): Promise<ImportSource[]> =>
+      orm().select(sourceColumns).from(importSources).orderBy(importSources.createdAt),
+
+    findSources: (ids: readonly string[]): Promise<ImportSource[]> =>
+      orm()
+        .select(sourceColumns)
+        .from(importSources)
+        .where(inArray(importSources.id, [...ids])),
+
+    findFileSource: async (id: string): Promise<FileSource | null> => {
+      const [row] = await orm()
+        .select({
+          ...sourceColumns,
+          fileId: importSources.fileId,
+          mappingAttempt: importSources.mappingAttempt,
+        })
+        .from(importSources)
+        .where(and(eq(importSources.id, id), eq(importSources.kind, "file")));
+      return row ?? null;
+    },
+
+    listEmployeeRecords: async (): Promise<ImportEmployeeRecord[]> => {
+      const records = await orm()
+        .select()
+        .from(importRecords)
+        .where(eq(importRecords.type, "employee"))
+        .orderBy(importRecords.createdAt, importRecords.id);
+      return records.map(toImportEmployee);
+    },
+
+    countEmployees: async (sourceIds: readonly string[]): Promise<Map<string, number>> => {
+      const rows = await orm()
+        .select({ sourceId: importRecords.sourceId, count: count() })
+        .from(importRecords)
+        .where(
+          and(eq(importRecords.type, "employee"), inArray(importRecords.sourceId, [...sourceIds])),
+        )
+        .groupBy(importRecords.sourceId);
+      return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
+    },
+
+    findRecordPage: async ({ sourceId, after, limit }: ImportRecordPageQuery) => {
+      const records = await orm()
+        .select()
+        .from(importRecords)
+        .where(
+          and(
+            eq(importRecords.type, "employee"),
+            eq(importRecords.sourceId, sourceId),
+            after === null ? undefined : gt(importRecords.id, after[0]),
+          ),
+        )
+        // uuidv7 ids follow the order the records were added in.
+        .orderBy(importRecords.id)
+        .limit(limit);
+      return records.map((record) => ({ node: toImportEmployee(record), values: [record.id] }));
+    },
+
+    listChoices: async (type: "employee"): Promise<ImportEmployeeChoices[]> => {
+      const rows = await orm().select().from(importChoices).where(eq(importChoices.type, type));
+      return rows.map(({ key, leftOut, typeVersion, values }) => ({
+        key,
+        leftOut,
+        values: parseImportEmployeeChoices(typeVersion, values),
+      }));
+    },
+  };
+}
+
+/**
+ * Waits for and holds, until `tx` ends, the import's lock, which Approve and every change
+ * take, and returns the repository that changes the import. A transaction that moves the
+ * setup step moves it before this, so the instance row is always locked before the import.
+ */
+export async function lockImport(tx: Tx): Promise<ImportRepository> {
+  await ormOf(tx).execute(sql`select pg_advisory_xact_lock(hashtext(${IMPORT_LOCK_KEY}))`);
+  const orm = () => ormOf(tx);
+
+  return {
+    ...importReader(tx),
+
     saveSlackSource: async (name: string): Promise<string> => {
       const [row] = await orm()
         .insert(importSources)
@@ -99,25 +180,14 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return row!.id;
     },
 
-    insertFileSource: async (name, readBy, fileId): Promise<string> => {
+    insertFileSource: async (name, readBy, file): Promise<string> => {
+      const fileId = file ? await storeFile(tx, file) : null;
       const status = readBy === "parsed_by_external_agent" ? "mapped" : "mapping";
       const [row] = await orm()
         .insert(importSources)
         .values({ kind: "file", name, readBy, fileId, status })
         .returning({ id: importSources.id });
       return row!.id;
-    },
-
-    findFileSource: async (id: string): Promise<FileSource | null> => {
-      const [row] = await orm()
-        .select({
-          ...sourceColumns,
-          fileId: importSources.fileId,
-          mappingAttempt: importSources.mappingAttempt,
-        })
-        .from(importSources)
-        .where(and(eq(importSources.id, id), eq(importSources.kind, "file")));
-      return row ?? null;
     },
 
     finishMapping: async (
@@ -173,28 +243,16 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return row?.mappingAttempt ?? null;
     },
 
-    deleteFileSource: async (id: string): Promise<string | null> => {
-      const [row] = await orm()
+    deleteFileSource: async (id: string): Promise<void> => {
+      const uploads = await orm()
         .delete(importSources)
         .where(and(eq(importSources.id, id), eq(importSources.kind, "file")))
         .returning({ fileId: importSources.fileId });
-      return row?.fileId ?? null;
-    },
-
-    hasMappingSource: async (): Promise<boolean> => {
-      const [row] = await orm()
-        .select({ id: importSources.id })
-        .from(importSources)
-        .where(eq(importSources.status, "mapping"))
-        .limit(1);
-      return row !== undefined;
-    },
-
-    lockSources: async (): Promise<void> => {
-      await orm().execute(sql`select pg_advisory_xact_lock(hashtext(${SOURCES_LOCK_KEY}))`);
+      await deleteFiles(tx, presentIds(uploads));
     },
 
     syncEmployeeRecords: async (sourceId: string, records: IncomingRecord[]): Promise<void> => {
+      await deleteReplacedPhotos(tx, sourceId, records);
       const ofSource = and(
         eq(importRecords.sourceId, sourceId),
         eq(importRecords.type, "employee"),
@@ -241,68 +299,13 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       }
     },
 
-    deleteAll: async () => {
+    deleteAll: async ({ keepPhotos }: { keepPhotos: boolean }): Promise<void> => {
       const photos = await orm()
         .delete(importRecords)
         .returning({ fileId: importRecords.photoFileId });
       const uploads = await orm().delete(importSources).returning({ fileId: importSources.fileId });
       await orm().delete(importChoices);
-      return { photoFileIds: presentIds(photos), uploadFileIds: presentIds(uploads) };
-    },
-
-    listSources: (): Promise<ImportSource[]> =>
-      orm().select(sourceColumns).from(importSources).orderBy(importSources.createdAt),
-
-    findSources: (ids: readonly string[]): Promise<ImportSource[]> =>
-      orm()
-        .select(sourceColumns)
-        .from(importSources)
-        .where(inArray(importSources.id, [...ids])),
-
-    listEmployeeRecords: async (): Promise<ImportEmployeeRecord[]> => {
-      const records = await orm()
-        .select()
-        .from(importRecords)
-        .where(eq(importRecords.type, "employee"))
-        .orderBy(importRecords.createdAt, importRecords.id);
-      return records.map(toImportEmployee);
-    },
-
-    countEmployees: async (sourceIds: readonly string[]): Promise<Map<string, number>> => {
-      const rows = await orm()
-        .select({ sourceId: importRecords.sourceId, count: count() })
-        .from(importRecords)
-        .where(
-          and(eq(importRecords.type, "employee"), inArray(importRecords.sourceId, [...sourceIds])),
-        )
-        .groupBy(importRecords.sourceId);
-      return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
-    },
-
-    findRecordPage: async ({ sourceId, first, after }: ImportRecordPageQuery) => {
-      const records = await orm()
-        .select()
-        .from(importRecords)
-        .where(
-          and(
-            eq(importRecords.type, "employee"),
-            eq(importRecords.sourceId, sourceId),
-            after === null ? undefined : gt(importRecords.id, after[0]),
-          ),
-        )
-        // uuidv7 ids follow the order the records were added in.
-        .orderBy(importRecords.id)
-        .limit(first + 1);
-      return records.map((record) => ({ node: toImportEmployee(record), keyset: [record.id] }));
-    },
-
-    listChoices: async (type: "employee"): Promise<ImportEmployeeChoices[]> => {
-      const rows = await orm().select().from(importChoices).where(eq(importChoices.type, type));
-      return rows.map(({ key, leftOut, typeVersion, values }) => ({
-        key,
-        leftOut,
-        values: parseImportEmployeeChoices(typeVersion, values),
-      }));
+      await deleteFiles(tx, [...(keepPhotos ? [] : presentIds(photos)), ...presentIds(uploads)]);
     },
 
     saveChoices: async (type: "employee", choices: ImportEmployeeChoices[]): Promise<void> => {
@@ -332,7 +335,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
   };
 }
 
-const SOURCES_LOCK_KEY = "broccoli.import_sources";
+const IMPORT_LOCK_KEY = "broccoli.import_sources";
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;

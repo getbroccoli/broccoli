@@ -11,15 +11,14 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { instanceRepository } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
-import { importRepository } from "../../db";
+import { importReader } from "../../db";
 
 test("finishing the import deletes its rows and staff files but keeps employee avatars", async ({
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },
@@ -36,15 +35,15 @@ test("finishing the import deletes its rows and staff files but keeps employee a
     field: "jobTitle",
     choice: { value: "Designer" },
   });
-  await imports.approveImport(SETUP_HOLDER, await imports.reads.readVersion(SETUP_HOLDER));
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   const employees = createEmployeeUseCases({ orm });
   const approved = await employees.listEmployees(OWNER, {});
 
   await imports.finishImport(SYSTEM);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
-  expect(await importRepository(orm).listChoices("employee")).toEqual([]);
+  expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
+  expect(await importReader(orm).listChoices("employee")).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([avatarFileId]);
   expect(await readFile(orm, avatarFileId)).toEqual({ content: PNG, mimeType: "image/png" });
   expect(await employees.listEmployees(OWNER, {})).toEqual(approved);

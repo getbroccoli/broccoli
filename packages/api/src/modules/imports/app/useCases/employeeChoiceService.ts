@@ -8,12 +8,12 @@ import {
   type ImportEmployee,
   type ImportEmployeeChoices,
   type ImportEmployeeField,
-  incompleteReason,
   type IncompleteReason,
+  isInCheck,
   type ValueChoice,
 } from "../../domain";
 import { readImportEmployees } from "./readImportEmployees";
-import { lockOpenImport } from "./lockOpenImport";
+import { lockOpenImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
 
 /** What the owner settles in review: picked and typed values, and who is left out. Every function checks `ctx`. */
@@ -73,7 +73,7 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
     leaveOutIncomplete: (ctx, { reason }) =>
       changeChoices(ctx, transact, (employees) =>
         employees
-          .filter((employee) => !employee.leftOut && incompleteReason(employee) === reason)
+          .filter((employee) => isInCheck(employee, { kind: "incomplete", reason }))
           .flatMap((employee) => withLeftOut(employee, true)),
       ),
   };

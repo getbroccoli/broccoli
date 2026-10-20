@@ -3,4 +3,9 @@ export {
   type ImportPhotoRepository,
   type PhotoDownload,
 } from "./importPhotoRepository";
-export { importRepository, type ImportRepository } from "./importRepository";
+export {
+  importReader,
+  type ImportReader,
+  type ImportRepository,
+  lockImport,
+} from "./importRepository";

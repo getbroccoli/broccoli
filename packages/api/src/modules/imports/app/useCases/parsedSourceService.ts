@@ -1,7 +1,7 @@
 import type { Tx } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 import { parseParsedFileName, parseParsedPeople } from "../../domain";
-import { lockOpenImport } from "./lockOpenImport";
+import { lockOpenImport } from "./openImport";
 
 /** Staff files the external agent read itself: their people arrive already parsed, with no file. */
 export interface ParsedSourceService {

@@ -1,9 +1,9 @@
 import express from "express";
 
 import { readSdl } from "../../core/graphql";
-import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import type { ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import { type DemoFill, type ImportUseCases, prepareDemoStart } from "./app";
+import type { ImportUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
@@ -12,10 +12,11 @@ export {
   createImportUseCases,
   type ImportUseCases,
   type MappingQuestions,
+  prepareDemoStart,
 } from "./app";
 export { type MappingAnswersInput, parseStaffFileName } from "./domain";
 /** For test seeding only; other modules go through the use cases. */
-export { importPhotoRepository, importRepository } from "./db";
+export { importPhotoRepository, importReader, lockImport } from "./db";
 export type { ImportEmployeeValues } from "./domain";
 
 /**
@@ -23,14 +24,9 @@ export type { ImportEmployeeValues } from "./domain";
  * workspace and uploaded files deliver records, which wait in the import for review.
  */
 export function importsModule(
-  dependencies: Pick<ModuleDependencies, "orm"> & {
-    /** Built once by `createModules`, which also gives them to the external agent. */
-    useCases: ImportUseCases;
-    /** The demo company that skipping the import fills in. */
-    prepareDemoFill: () => Promise<DemoFill>;
-  },
+  /** Built once by `createModules`, which also gives them to the external agent. */
+  useCases: ImportUseCases,
 ): ModuleManifest {
-  const { useCases } = dependencies;
   return {
     name: "imports",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
@@ -39,8 +35,7 @@ export function importsModule(
       express
         .Router()
         .use(filesRouter(useCases, resolveSecurity))
-        .use(photoRouter(useCases, resolveSecurity, dependencies.orm)),
-    prepareDemoStart: () => prepareDemoStart(dependencies),
+        .use(photoRouter(useCases, resolveSecurity)),
     events: {
       "instance.setup_completed": () => useCases.finishImport(PrincipalSecurityContext.system()),
     },

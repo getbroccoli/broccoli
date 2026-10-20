@@ -17,22 +17,17 @@ test.for([
   "reads.listSources",
   "reads.readSources",
   "reads.countEmployees",
-  "reads.employeeCount",
-  "reads.readyEmployeeCount",
-  "reads.listReadyEmployeeSources",
-  "reads.listEmployees",
+  "reads.readProgress",
+  "reads.readReview",
   "reads.listEmployeeRecords",
-  "reads.listChecks",
-  "reads.isImportPhotoFile",
-  "reads.readVersion",
-  "reads.readSnapshot",
+  "readImportPhoto",
   "choices.chooseEmployeeValue",
   "choices.chooseSourceForAll",
   "choices.setLeftOut",
   "choices.leaveOutIncomplete",
   "company.update",
   "readSlack",
-  "saveAiSource",
+  "ai.save",
 ] as const)("%s refuses a setup agent", async (operation, { orm }) => {
   const imports = importUseCases(orm);
   const calls = {
@@ -47,16 +42,11 @@ test.for([
     "reads.listSources": () => imports.reads.listSources(SETUP_AGENT),
     "reads.readSources": () => imports.reads.readSources(SETUP_AGENT, []),
     "reads.countEmployees": () => imports.reads.countEmployees(SETUP_AGENT, []),
-    "reads.employeeCount": () => imports.reads.employeeCount(SETUP_AGENT),
-    "reads.readyEmployeeCount": () => imports.reads.readyEmployeeCount(SETUP_AGENT),
-    "reads.listReadyEmployeeSources": () => imports.reads.listReadyEmployeeSources(SETUP_AGENT),
-    "reads.listEmployees": () => imports.reads.listEmployees(SETUP_AGENT, {}),
+    "reads.readProgress": () => imports.reads.readProgress(SETUP_AGENT),
+    "reads.readReview": () => imports.reads.readReview(SETUP_AGENT),
     "reads.listEmployeeRecords": () =>
       imports.reads.listEmployeeRecords(SETUP_AGENT, { sourceId: "missing" }),
-    "reads.listChecks": () => imports.reads.listChecks(SETUP_AGENT),
-    "reads.isImportPhotoFile": () => imports.reads.isImportPhotoFile(SETUP_AGENT, "missing"),
-    "reads.readVersion": () => imports.reads.readVersion(SETUP_AGENT),
-    "reads.readSnapshot": () => imports.reads.readSnapshot(SETUP_AGENT),
+    readImportPhoto: () => imports.readImportPhoto(SETUP_AGENT, "missing"),
     "choices.chooseEmployeeValue": () =>
       imports.choices.chooseEmployeeValue(SETUP_AGENT, {
         key: "missing",
@@ -74,7 +64,7 @@ test.for([
       imports.choices.leaveOutIncomplete(SETUP_AGENT, { reason: "email" }),
     "company.update": () => companyUseCases(orm).update(SETUP_AGENT, { name: "Changed company" }),
     readSlack: () => imports.readSlack(SETUP_AGENT),
-    saveAiSource: () => systemUseCases(orm).saveAiSource(SETUP_AGENT, { source: "broccoli_ai" }),
+    "ai.save": () => systemUseCases(orm).ai.save(SETUP_AGENT, { source: "broccoli_ai" }),
   };
 
   await expect(

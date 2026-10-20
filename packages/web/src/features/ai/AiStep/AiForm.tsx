@@ -9,10 +9,11 @@ import {
   type AiStepQuery,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
+import { useStartDemo } from "@/features/demo";
 import { AgentSetup } from "@/features/externalAgents";
-import { useStartDemo } from "@/features/imports";
-import { SetupStepForm } from "@/features/setup";
+import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 import { AiFooter } from "./AiFooter";
 import { DemoDataCard } from "./DemoDataCard";
@@ -24,28 +25,29 @@ import { SourceOption } from "./SourceOption";
 type Props = {
   ai: NonNullable<AiStepQuery["setup"]["ai"]>;
   /** Demo data is only for an import without people. */
-  peopleGathered: boolean;
+  demoAvailable: boolean;
 };
 
 /**
  * Next checks the chosen source and saves it, then the owner gathers their files; with Your agent,
  * Gather is where the agent connects.
  */
-export function AiForm({ ai, peopleGathered }: Props) {
+export function AiForm({ ai, demoAvailable }: Props) {
   const navigate = useNavigate();
+  const { next } = useSetupPages("ai");
   const [source, setSource] = useState<AiSource>(ai.source);
   // The key being typed; null while the known key is used, and Replace starts one.
   const [newKey, setNewKey] = useState<string | null>(null);
   const [saveAiSource, saving] = usePayloadMutation(SaveAiSourceDocument);
   const [chooseAgent, choosing] = usePayloadMutation(ChooseAgentDocument);
-  const checking = saving.loading || choosing.loading;
+  const [run, isContinuing] = useRouteAction();
   // Choosing the agent checks nothing, so it fails only in ways `failureOf` words as a retry.
   const failed =
     source === "AGENT"
       ? choosing.error || choosing.payloadError
       : saving.error || saving.payloadError;
   const demo = useStartDemo();
-  const busy = checking || demo.starting;
+  const busy = isContinuing || demo.starting;
   const knownKey = newKey === null ? ai.openRouterKey : null;
   const key = newKey ?? "";
   const asksForKey = source === "OPENROUTER" && knownKey === null;
@@ -55,28 +57,28 @@ export function AiForm({ ai, peopleGathered }: Props) {
   // A refused key shows under the key field; a known key has no field, so it shows below.
   const keyFieldError = failure?.onKey && asksForKey ? t(failure.message) : undefined;
 
-  const save = async () => {
-    try {
-      // Showing a prompt already chose the agent; choosing again would end its session.
-      if (source === "AGENT" && ai.source !== "AGENT") {
-        await chooseAgent();
-      } else if (source !== "AGENT") {
-        await saveAiSource({
-          variables: { input: { source, openRouterKey: asksForKey ? key : null } },
-        });
-      }
-    } catch {
-      return; // The hook keeps the error for display.
-    }
-    await navigate({ to: "/setup/import" });
-  };
+  // `usePayloadMutation` keeps a failure for display.
+  const save = () =>
+    run(
+      async () => {
+        if (source !== "AGENT") {
+          await saveAiSource({
+            variables: { input: { source, openRouterKey: asksForKey ? key : null } },
+          });
+        } else if (ai.source !== "AGENT") {
+          // Showing a prompt already chose the agent; choosing again would end its session.
+          await chooseAgent();
+        }
+      },
+      () => navigate({ to: next }),
+    );
 
   return (
     <SetupStepForm
-      onSubmit={() => void save()}
+      onSubmit={save}
       footer={
         <AiFooter
-          checking={checking && source !== "AGENT" ? source : null}
+          checking={isContinuing && source !== "AGENT" ? source : null}
           disabled={busy || (asksForKey && key.trim() === "")}
           busy={busy}
         />
@@ -130,9 +132,9 @@ export function AiForm({ ai, peopleGathered }: Props) {
       </div>
       <DemoDataCard
         disabled={busy}
-        unavailable={peopleGathered}
+        unavailable={!demoAvailable}
         starting={demo.starting}
-        onUse={() => void demo.start()}
+        onUse={demo.start}
       />
       {failure && keyFieldError === undefined && (
         <p role="alert" className="text-sm text-destructive">

@@ -7,8 +7,6 @@ import {
   test,
 } from "#test/support";
 
-import { instanceRepository } from "../../../core/instance";
-
 test.for(["listWaiting", "readQuestions", "answer"] as const)(
   "%s refuses a parsed-way session",
   async (operation, { orm, seed }) => {
@@ -55,7 +53,7 @@ test("refuses a drop while a parsed-way session is live", async ({ orm, seed }) 
 
 test("refuses a drop when another AI source is chosen", async ({ orm, seed }) => {
   await seed.agentSetup();
-  await instanceRepository(orm).storeAiSource("broccoli_ai");
+  await seed.aiSource("broccoli_ai");
   const agents = externalAgentUseCases(orm);
 
   await expect(agents.maskedWay.uploadForAgent(SETUP_HOLDER, CSV)).rejects.toMatchObject({

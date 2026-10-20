@@ -16,7 +16,7 @@ test("removes the logo and stops serving its old id", async ({ orm, seed }) => {
 
   expect(removed).toEqual({ name: null, suggestedName: "Example Labs", logoFileId: null });
   expect((await company.getCompany(actor)).logoFileId).toBeNull();
-  expect(await company.isCurrentLogo(actor, before.logoFileId!)).toBe(false);
+  expect(await company.readLogo(actor, before.logoFileId!)).toBeNull();
   expect(await storedFileIds(orm)).toEqual([]);
 });
 

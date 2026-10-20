@@ -13,7 +13,7 @@ test("requires an entry for every sheet", async ({ orm, seed, transact }) => {
     fieldErrors: [{ field: "sheets", code: "missing_sheet" }],
   });
 
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
 });
 
 test("refuses an unknown sheet", async ({ orm, seed, transact }) => {
@@ -34,7 +34,7 @@ test("refuses an unknown sheet", async ({ orm, seed, transact }) => {
     fieldErrors: [{ field: "sheets[1].sheet", code: "unknown_sheet" }],
   });
 
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
 });
 
 test("requires an answer for every question", async ({ orm, seed, transact }) => {
@@ -54,7 +54,7 @@ test("requires an answer for every question", async ({ orm, seed, transact }) =>
     fieldErrors: [{ field: "sheets[0].answers.email", code: "missing_answer" }],
   });
 
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
 });
 
 test("refuses an unknown choice", async ({ orm, seed, transact }) => {
@@ -72,7 +72,7 @@ test("refuses an unknown choice", async ({ orm, seed, transact }) => {
     fieldErrors: [{ field: "sheets[0].answers.email", code: "unknown_choice" }],
   });
 
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
 });
 
 test("refuses the second field assigned to the same column", async ({ orm, seed, transact }) => {
@@ -93,7 +93,7 @@ test("refuses the second field assigned to the same column", async ({ orm, seed,
   expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
     { id: source.id, status: "mapping" },
   ]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
 });
 
 const CSV = "Name,Email\nAvery Stone,avery@example.com";

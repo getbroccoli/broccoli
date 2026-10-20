@@ -13,11 +13,7 @@ query AiStep {
   }
   import {
     id
-    sources {
-      id
-      status
-      employeeCount
-    }
+    demoAvailable
   }
 }
 

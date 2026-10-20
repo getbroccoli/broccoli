@@ -1,7 +1,7 @@
 import { withPlaceholders } from "../../../../integrations/ai";
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
-import { readFile, storeFile } from "../../../../core/files";
+import { readFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
 import type { ImportRepository } from "../../db";
 import {
@@ -17,7 +17,7 @@ import {
   readHeaderRow,
   sheetQuestions,
 } from "../../domain";
-import { lockOpenImport } from "./lockOpenImport";
+import { lockOpenImport } from "./openImport";
 import { readStaffFile } from "./staffFile";
 import { mimeTypeOf, type UploadReader } from "./uploadReader";
 
@@ -78,11 +78,10 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
     addAnsweredSource: async (ctx, tx, { name, bytes, sheets }) => {
       ctx.requireSetupAccess();
       const imports = await lockOpenImport(tx);
-      const fileId = await storeFile(tx, {
+      return imports.insertFileSource(name, "answered_by_external_agent", {
         content: Buffer.from(bytes),
         mimeType: mimeTypeOf(sheets),
       });
-      return imports.insertFileSource(name, "answered_by_external_agent", fileId);
     },
 
     readWaitingSources: async (ctx, tx) => {

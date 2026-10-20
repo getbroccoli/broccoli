@@ -9,7 +9,7 @@ import { inject } from "vitest";
 
 import { session, user } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
-import { instanceRepository } from "../../src/core/instance";
+import { readDemoExpiresAt } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
 import { createTestDatabase, type TestDatabase } from "./testDatabases";
@@ -106,7 +106,7 @@ export class TestEnv {
   }
 
   async setDemoDeadline(expiresAt: Date): Promise<void> {
-    await instanceRepository(this.database.orm).saveDemoExpiresAt(expiresAt);
+    await this.seed.demoDeadline(expiresAt);
   }
 
   async readDemoSession(userId: string): Promise<{ expiresAt: Date; demoExpiresAt: Date | null }> {
@@ -115,7 +115,7 @@ export class TestEnv {
       .from(session)
       .where(eq(session.userId, userId));
     assert(savedSession);
-    const demoExpiresAt = await instanceRepository(this.database.orm).readDemoExpiresAt();
+    const demoExpiresAt = await readDemoExpiresAt(this.database.orm);
     return { ...savedSession, demoExpiresAt };
   }
 

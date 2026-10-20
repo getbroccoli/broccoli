@@ -35,13 +35,14 @@ export {
 export {
   incompleteReason,
   type IncompleteReason,
-  toNewEmployee,
+  isReady,
   toNewEmployeeInput,
 } from "./importEmployeeMapping";
 export { importVersion } from "./importVersion";
 export { type MappingAnswersInput, parseMappingAnswers } from "./mappingAnswers";
 export { parseParsedFileName, parseStaffFileName } from "./fileName";
 export { parseParsedPeople } from "./parsedPeople";
+export { type ImportProgress, importProgress, isReading } from "./importProgress";
 export {
   IMPORT_SOURCE_FAILURES,
   IMPORT_SOURCE_READERS,

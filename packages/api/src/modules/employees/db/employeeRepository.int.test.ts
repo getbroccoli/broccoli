@@ -14,7 +14,7 @@ test("sorts by start date regardless of the database date style", async ({ orm, 
   const rows = await orm.transaction(async (tx) => {
     await tx.execute(sql`set local datestyle = 'German, DMY'`);
     return employeeRepository(tx).findPage({
-      first: 10,
+      limit: 10,
       after: null,
       order: { field: "START_DATE", direction: "ASC" },
       search: null,

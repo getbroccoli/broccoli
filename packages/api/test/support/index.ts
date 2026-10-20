@@ -23,7 +23,7 @@ export { startFakeHttpServer } from "./fakeHttpServer";
 export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
-export { slackPhotoReader, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./slackPhotoReader";
+export { fakeSlackApi, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./fakeSlackApi";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
 export {
@@ -38,7 +38,6 @@ export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./
 export { TestSeed } from "./testSeed";
 export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
-export { readSavedAiSource } from "./readSavedAiSource";
 export {
   companyUseCases,
   demoUseCases,
@@ -46,6 +45,7 @@ export {
   importUseCases,
   slackUseCases,
   systemUseCases,
+  aiSettings,
 } from "./useCases";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {

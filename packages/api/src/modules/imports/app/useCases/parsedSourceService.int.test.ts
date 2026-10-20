@@ -55,7 +55,7 @@ test("removes a parsed source and its people without deleting unrelated files", 
   await imports.files.removeFile(SETUP_HOLDER, id);
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
-  expect((await imports.reads.listEmployees(SETUP_HOLDER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([keep]);
 });
 
@@ -67,13 +67,13 @@ test("refuses retrying a parsed source", async ({ orm, transact }) => {
       people: [{ fullName: "Avery Stone" }],
     }),
   );
-  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
 
   await expect(imports.files.retryFile(SETUP_HOLDER, id)).rejects.toMatchObject({
     code: "CONFLICT",
   });
 
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
   expect(imports.sentJobs).toEqual([]);
 });
 

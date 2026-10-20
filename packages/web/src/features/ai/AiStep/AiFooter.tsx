@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 
 import type { AiSource } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
@@ -14,17 +15,21 @@ type Props = {
 };
 
 export function AiFooter({ checking, disabled, busy }: Props) {
+  const { previous } = useSetupPages("ai");
+
   return (
     <div className="flex w-full items-center justify-between gap-3">
-      <Link
-        to="/setup/company"
-        className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
-        disabled={busy}
-        aria-disabled={busy}
-      >
-        <ArrowLeft aria-hidden />
-        {t("setup.back")}
-      </Link>
+      {previous && (
+        <Link
+          to={previous}
+          className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
+          disabled={busy}
+          aria-disabled={busy}
+        >
+          <ArrowLeft aria-hidden />
+          {t("setup.back")}
+        </Link>
+      )}
       <Button type="submit" size="lg" className="h-10 gap-2 px-4" disabled={disabled}>
         {t(label(checking))}
         <ArrowRight weight="bold" aria-hidden />
