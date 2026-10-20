@@ -1,6 +1,11 @@
-import { expect, NON_OWNER, OWNER, PNG, test } from "#test/support";
+import { expect, NON_OWNER, OWNER, PNG, storedFileIds, test } from "#test/support";
 
-import { createEmployeeUseCases, createImportedEmployees } from ".";
+import {
+  createDemoEmployees,
+  createEmployeeUseCases,
+  createImportedEmployees,
+  deleteAllEmployees,
+} from ".";
 
 test("creates complete employees and counts incomplete inputs", async ({ orm, transact }) => {
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
@@ -111,4 +116,26 @@ test("returns the avatar files of the created employees only", async ({ orm, see
         avatarFileId: node.avatarFileId,
       })),
   ).toEqual([{ email: avery.email, avatarFileId: keptPhoto }]);
+});
+
+test("deleting all employees deletes the demo avatars and keeps the import's photos", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  await transact((tx) =>
+    createDemoEmployees(OWNER, tx, [
+      {
+        employee: { firstName: "Demo", lastName: "Employee", email: "demo@example.com" },
+        avatar: { bytes: PNG, mimeType: "image/png" },
+      },
+    ]),
+  );
+  const importPhoto = await seed.file({ content: PNG, mimeType: "image/png" });
+  await seed.employee({ avatarFileId: importPhoto });
+
+  await transact((tx) => deleteAllEmployees(OWNER, tx));
+
+  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([importPhoto]);
 });

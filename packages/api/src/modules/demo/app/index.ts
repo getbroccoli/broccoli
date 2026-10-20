@@ -1,6 +1,1 @@
-export {
-  createDemoUseCases,
-  type DemoUseCases,
-  prepareDemoFill,
-  resetDemoPeople,
-} from "./useCases";
+export { createDemoUseCases, type DemoUseCases, prepareDemoFill } from "./useCases";

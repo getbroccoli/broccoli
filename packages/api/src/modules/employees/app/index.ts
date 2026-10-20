@@ -2,7 +2,6 @@ export {
   clearDemoEmployees,
   createDemoEmployees,
   hasDemoEmployees,
-  hasEmployees,
   type DemoEmployee,
 } from "./demoEmployees";
 export { createImportedEmployees, deleteAllEmployees } from "./importedEmployees";

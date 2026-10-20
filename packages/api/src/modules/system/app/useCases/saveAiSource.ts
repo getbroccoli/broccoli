@@ -1,10 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
-import {
-  readAiConfig,
-  storeAiSource,
-  type AiConfig,
-  type AiSource,
-} from "../../../../core/instance";
+import type { AiConfig, AiSource } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { DecisionsError } from "../../../../integrations/ai";
 import type { SystemContext } from "./systemContext";
@@ -31,25 +26,16 @@ export async function saveAiSource(
   } else {
     await checkBroccoliAi(context);
   }
-  await context.transact((tx) =>
-    storeAiSource(tx, context.secretBox, { source, openRouterKey: givenKey }),
-  );
-  return readAiConfig(context.orm, context.secretBox, {
-    mode: context.mode,
-    environmentKey: context.ai.environmentKey,
-  });
+  await context.transact((tx) => context.aiSettings.save(tx, { source, openRouterKey: givenKey }));
+  return context.aiSettings.read();
 }
 
 /** Checks the given key, else the one files would be read with now. */
 async function checkOpenRouter(
-  { orm, secretBox, mode, ai }: SystemContext,
+  { aiSettings, ai }: SystemContext,
   givenKey: string | undefined,
 ): Promise<void> {
-  const key =
-    givenKey ??
-    (await readAiConfig(orm, secretBox, { mode, environmentKey: ai.environmentKey })).openRouterKey
-      ?.key ??
-    null;
+  const key = givenKey ?? (await aiSettings.read()).openRouterKey?.key ?? null;
   if (key === null) {
     throw invalidInput([{ field: "openRouterKey", code: "required" }]);
   }

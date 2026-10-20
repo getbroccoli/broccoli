@@ -5,7 +5,7 @@ import { hashPassword } from "better-auth/crypto";
 import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
-import { hashSetupToken, instanceRepository } from "../../src/core/instance";
+import { type AiSource, hashSetupToken, instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import {
   importPhotoRepository,
@@ -70,6 +70,13 @@ export class TestSeed {
       tokenHash: hashSetupToken(token),
       expiresAt,
     });
+  }
+
+  async aiSource(source: AiSource, openRouterKey?: string): Promise<void> {
+    await instanceRepository(this.orm).storeAiSource(
+      source,
+      openRouterKey === undefined ? undefined : TEST_SECRET_BOX.encrypt(openRouterKey),
+    );
   }
 
   async file({ content, mimeType }: { content: Buffer; mimeType: string }): Promise<string> {

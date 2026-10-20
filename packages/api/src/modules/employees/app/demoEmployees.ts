@@ -11,13 +11,19 @@ export interface DemoEmployee {
   avatar: RasterImage;
 }
 
-/** Adds the demo employees with their avatars, joining `tx`. */
+/**
+ * Adds the demo employees with their avatars, joining `tx`, to an instance without
+ * employees; otherwise does nothing.
+ */
 export async function createDemoEmployees(
   ctx: SecurityContext,
   tx: Tx,
   demoEmployees: readonly DemoEmployee[],
 ) {
   ctx.requireOwnerOrSystem();
+  if (await employeeRepository(tx).hasAny()) {
+    return;
+  }
   const newEmployees = demoEmployees.map(({ employee }) => parseNewEmployee(employee));
   const avatarFileIds: string[] = [];
   for (const { avatar } of demoEmployees) {
@@ -38,12 +44,6 @@ export async function clearDemoEmployees(ctx: SecurityContext, tx: Tx): Promise<
   // Rows first: a file that an employee still references cannot be deleted.
   const avatarFileIds = await employeeRepository(tx).deleteDemo();
   await deleteFiles(tx, avatarFileIds);
-}
-
-/** Whether any employee exists, demo or real, joining `tx`. */
-export function hasEmployees(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  ctx.requireOwnerOrSystem();
-  return employeeRepository(tx).hasAny();
 }
 
 export function hasDemoEmployees(ctx: SecurityContext, orm: Orm): Promise<boolean> {

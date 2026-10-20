@@ -21,6 +21,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE10.** A service or repository opens its file with its contract: an exported interface carrying the doc comments. Its factory returns that interface, not `ReturnType<typeof …>`. `lint: no-restricted-syntax` (the `ReturnType` part)
 - **RULE11.** Parse, don't validate: turn raw input into a typed value once, at the boundary (`parseCalendarDate`, `parseNewEmployee`, `parsePage`), and pass that value on. Never check with an `isX` function and then keep using the raw input.
 - **RULE12.** Build only what the task needs: no wrappers, pass-through files, steps, options or interfaces nobody uses. Call the helper directly.
+- **RULE55.** Prefer deep modules to wide ones: a module, service or function hides much work behind a small interface. Callers make one call that does the whole job (`storeFile`), never a series of small steps they must know to run in order; a new need adds work behind the existing interface before it adds another export or parameter.
 - **RULE13.** Reuse existing hooks, helpers and test support. Code that appears twice becomes one shared piece. `lint: jscpd` (outside tests)
 - **RULE14.** A name says what the thing does (`detectCompanyNameAndLogo`, `eventBus`), not where it is used, in the words of [`thesaurus.md`](thesaurus.md).
 - **RULE15.** Prefer zero-config solutions and modules: they work without setup, and every setting has a safe default.

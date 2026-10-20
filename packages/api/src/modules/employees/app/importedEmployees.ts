@@ -1,4 +1,5 @@
 import type { Tx } from "../../../core/db";
+import { deleteFiles } from "../../../core/files";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository } from "../db";
 import { type NewEmployeeInput, tryParseNewEmployee } from "../domain";
@@ -38,10 +39,14 @@ export async function createImportedEmployees(
 }
 
 /**
- * Deletes every employee, joining `tx`, when setup goes back to its start. Their avatar
- * files stay: after Approve they are the import's photos, which the import still holds.
+ * Deletes every employee, joining `tx`, when setup or the demo goes back to its start, with
+ * the demo avatars. Other avatar files stay: they are the import's photos, which it still holds.
  */
 export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
-  await employeeRepository(tx).deleteAll();
+  const repository = employeeRepository(tx);
+  // Rows first: a file that an employee still references cannot be deleted.
+  const demoAvatarFileIds = await repository.deleteDemo();
+  await repository.deleteAll();
+  await deleteFiles(tx, demoAvatarFileIds);
 }

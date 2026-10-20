@@ -11,7 +11,6 @@ export {
   createImportedEmployees,
   deleteAllEmployees,
   hasDemoEmployees,
-  hasEmployees,
   type DemoEmployee,
   type EmployeeUseCases,
 } from "./app";

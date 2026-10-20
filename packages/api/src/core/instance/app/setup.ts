@@ -26,6 +26,16 @@ export async function advanceStep(
   return moved;
 }
 
+/**
+ * Takes setup from the owner or ready step back to the company step, joining `tx`; does
+ * nothing at any other step. Returns whether it moved.
+ */
+export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return (
+    (await advanceStep(ctx, tx, "owner", "company")) || advanceStep(ctx, tx, "ready", "company")
+  );
+}
+
 /** Whether the import still takes changes: setup has not moved past the import step. */
 export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
   const step = await readSetupStep(db);
