@@ -1,11 +1,8 @@
 import { expect, NON_OWNER, OWNER, PNG, storedFileIds, test } from "#test/support";
 
-import {
-  createDemoEmployees,
-  createEmployeeUseCases,
-  createImportedEmployees,
-  deleteAllEmployees,
-} from ".";
+import { employeeRepository } from "../db";
+import { parseNewEmployee } from "../domain";
+import { createEmployeeUseCases, createImportedEmployees, deleteAllEmployees } from ".";
 
 test("creates complete employees and counts incomplete inputs", async ({ orm, transact }) => {
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
@@ -123,14 +120,11 @@ test("deleting all employees deletes the demo avatars and keeps the import's pho
   seed,
   transact,
 }) => {
-  await transact((tx) =>
-    createDemoEmployees(OWNER, tx, [
-      {
-        employee: { firstName: "Demo", lastName: "Employee", email: "demo@example.com" },
-        avatar: { bytes: PNG, mimeType: "image/png" },
-      },
-    ]),
-  );
+  await employeeRepository(orm).insert({
+    ...parseNewEmployee({ firstName: "Demo", lastName: "Employee", email: "demo@example.com" }),
+    avatarFileId: await seed.file({ content: PNG, mimeType: "image/png" }),
+    isDemo: true,
+  });
   const importPhoto = await seed.file({ content: PNG, mimeType: "image/png" });
   await seed.employee({ avatarFileId: importPhoto });
 

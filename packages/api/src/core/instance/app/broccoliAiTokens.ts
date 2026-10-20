@@ -3,9 +3,6 @@ import { readSecret, saveSecret, type SecretBox } from "../../secrets";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 
-// Encrypted, in the data folder, so the trial token survives replacing the database.
-const TOKEN_SECRET = "broccoli-ai-token";
-
 /** The persistent Broccoli AI trial token of this install. */
 export interface BroccoliAiTokens {
   /** Reads the token, moving an older database token into the data folder on first use. */
@@ -33,6 +30,9 @@ export function createBroccoliAiTokens({
     },
   };
 }
+
+// Encrypted, in the data folder, so the trial token survives replacing the database.
+const TOKEN_SECRET = "broccoli-ai-token";
 
 async function readToken(orm: Orm, secretBox: SecretBox, dataDir: string): Promise<string | null> {
   const saved = await readSecret(dataDir, TOKEN_SECRET);
