@@ -47,7 +47,7 @@ export function ReadyStep() {
     >
       <SetupStepForm
         width="narrow"
-        onSubmit={() => void start()}
+        onSubmit={start}
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <ResetSetupDialog />

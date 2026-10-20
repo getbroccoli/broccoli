@@ -19,9 +19,9 @@ export function useStartDemo() {
   const [starting, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
 
-  const start = () =>
+  const start = () => {
+    setFailed(false);
     startTransition(async () => {
-      setFailed(false);
       if (holdsSetup) {
         const started = await startDemoSetup();
         if (!started) {
@@ -39,6 +39,7 @@ export function useStartDemo() {
       }
       await router.invalidate();
     });
+  };
 
   return { start, starting, failed };
 }

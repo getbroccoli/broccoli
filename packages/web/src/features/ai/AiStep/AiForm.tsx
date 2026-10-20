@@ -101,7 +101,7 @@ export function AiForm({ ai, peopleGathered }: Props) {
         disabled={busy}
         unavailable={peopleGathered}
         starting={demo.starting}
-        onUse={() => void demo.start()}
+        onUse={demo.start}
       />
       {failure && keyFieldError === undefined && (
         <p role="alert" className="text-sm text-destructive">
