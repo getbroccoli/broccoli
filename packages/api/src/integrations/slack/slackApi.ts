@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { fetchJson, urlUnder } from "../../utils";
+import { fetchBytes, fetchJson, urlUnder } from "../../utils";
 
 /** A member of a Slack workspace, as `users.list` returns it. */
 export type SlackMember = z.infer<typeof member>;
@@ -9,6 +9,8 @@ export type SlackMember = z.infer<typeof member>;
 export interface SlackApi {
   /** Every member of the workspace, page by page; rejects when Slack refuses. */
   listMembers(accessToken: string): Promise<SlackMember[]>;
+  /** The bytes at a member's photo link, which needs no token; rejects when the download fails. */
+  readPhoto(url: URL): Promise<Buffer>;
 }
 
 export function createSlackApi(apiUrl: string): SlackApi {
@@ -35,6 +37,14 @@ export function createSlackApi(apiUrl: string): SlackApi {
       }
       throw new Error(`The workspace has more than ${MAX_PAGES * PAGE_SIZE} members`);
     },
+
+    // A redirect could lead off Slack's photo hosts, so none is followed.
+    readPhoto: (url) =>
+      fetchBytes(url, {
+        timeoutMs: PHOTO_TIMEOUT_MS,
+        maxBytes: MAX_PHOTO_BYTES,
+        init: { redirect: "error" },
+      }),
   };
 }
 
@@ -43,6 +53,9 @@ const PAGE_SIZE = 200;
 const MAX_PAGES = 50;
 /** A page of 200 full Slack profiles stays well below this. */
 const MAX_PAGE_BYTES = 8 * 1024 * 1024;
+const PHOTO_TIMEOUT_MS = 10_000;
+/** Far above a 512-pixel profile photo. */
+const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
 const member = z.object({
   id: z.string(),
@@ -61,6 +74,9 @@ const member = z.object({
       display_name: z.string().optional(),
       email: z.string().optional(),
       title: z.string().optional(),
+      // Malformed photo fields mean no photo, never a refused page.
+      image_512: z.string().optional().catch(undefined),
+      is_custom_image: z.boolean().optional().catch(undefined),
     })
     .optional(),
 });

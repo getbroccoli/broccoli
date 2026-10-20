@@ -1,4 +1,5 @@
-import type { Transact, Tx } from "../../../../core/db";
+import type { Orm, Transact, Tx } from "../../../../core/db";
+import { readSetupStep } from "../../../../core/instance";
 import { deleteFiles, storeFile } from "../../../../core/files";
 import type { Logger } from "../../../../core/logger";
 import type { SecurityContext } from "../../../../core/security";
@@ -10,20 +11,22 @@ import { MAX_LOGO_BYTES } from "./company";
 
 /**
  * Looks up the brand of the new owner's email domain once and keeps it for the
- * company step. A failed lookup is logged; the domain suggestion still works.
+ * company step; an owner created after that step, as self-hosted setup does, gets
+ * none. A failed lookup is logged; the domain suggestion still works.
  */
 export async function detectCompanyNameAndLogo(
   {
+    orm,
     transact,
     brandLookup,
     logger,
-  }: { transact: Transact; brandLookup: BrandLookup; logger: Logger },
+  }: { orm: Orm; transact: Transact; brandLookup: BrandLookup; logger: Logger },
   ctx: SecurityContext,
   { email }: { email: string },
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const domain = companyDomain(email);
-  if (!domain) {
+  if (!domain || (await readSetupStep(orm)) !== "company") {
     return;
   }
   try {

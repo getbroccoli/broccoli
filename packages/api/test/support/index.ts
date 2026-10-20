@@ -1,5 +1,5 @@
 export { expect } from "vitest";
-export { NON_OWNER, OWNER, SYSTEM, TestSecurityContext } from "./testSecurityContext";
+export { NON_OWNER, OWNER, SETUP_HOLDER, SYSTEM, TestSecurityContext } from "./testSecurityContext";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test, slackTest } from "./fixture";
@@ -14,6 +14,7 @@ export { startFakeHttpServer } from "./fakeHttpServer";
 export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { PNG, JPEG, WEBP } from "./images";
+export { slackPhotoReader, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./slackPhotoReader";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
 export { holdMigrationLock, type MigrationLockHolder } from "./migrationLock";
 export {
@@ -28,7 +29,13 @@ export { TEST_OWNER, TestEnv, type SignedInOwner, type TestEnvOptions } from "./
 export { TestSeed } from "./testSeed";
 export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
-export { companyUseCases, demoUseCases, importUseCases, slackUseCases } from "./useCases";
+export {
+  companyUseCases,
+  demoUseCases,
+  importUseCases,
+  slackUseCases,
+  systemUseCases,
+} from "./useCases";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,

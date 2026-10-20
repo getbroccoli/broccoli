@@ -18,10 +18,25 @@ export async function advanceStep(
   from: SetupStep,
   to: SetupStep,
 ): Promise<boolean> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   const moved = await instanceRepository(tx).advanceStep(from, to);
   if (moved && to === "done") {
     tx.publish("instance.setup_completed", null);
   }
   return moved;
+}
+
+/** Whether the import still takes changes: setup has not moved past the import step. */
+export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
+  const step = await readSetupStep(db);
+  return step === "company" || step === "import";
+}
+
+/**
+ * Leaves the import step, joining `tx`: to `owner` while the instance has no owner,
+ * which self-hosted setup creates last, else to `done`. Returns whether it moved.
+ */
+export async function completeImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  const next = (await instanceRepository(tx).readOwnerUserId()) ? "done" : "owner";
+  return advanceStep(ctx, tx, "import", next);
 }

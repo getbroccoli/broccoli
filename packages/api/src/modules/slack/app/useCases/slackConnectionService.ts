@@ -39,6 +39,8 @@ export interface SlackConnectionService {
    * `snapshot` came from, so a caller never stores members read before a newer connect.
    */
   isCurrentSlackConnection(ctx: SecurityContext, tx: Tx, snapshot: string): Promise<boolean>;
+  /** The bytes at a member's photo link; rejects when the download fails. */
+  readSlackPhoto(ctx: SecurityContext, url: URL): Promise<Buffer>;
 }
 
 /** Where to send the browser to connect Slack, and what the browser keeps until it returns. */
@@ -87,7 +89,7 @@ export function createSlackConnectionService({
 
   return {
     beginSlackConnection: (ctx: SecurityContext, returnTo: string): SlackConnectionStart => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const pending = { state: randomToken(), codeVerifier: randomToken() };
       const codeChallenge = createHash("sha256").update(pending.codeVerifier).digest("base64url");
       return {
@@ -136,13 +138,13 @@ export function createSlackConnectionService({
     getSlackConnection: async (
       ctx: SecurityContext,
     ): Promise<{ teamId: string; teamName: string } | null> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const connection = await connections.read();
       return connection && { teamId: connection.teamId, teamName: connection.teamName };
     },
 
     readSlackMembers: async (ctx: SecurityContext): Promise<SlackMembersRead> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const connection = await connections.read();
       if (!connection) {
         throw new ApplicationError("UNAVAILABLE", "Slack is not connected.");
@@ -166,9 +168,14 @@ export function createSlackConnectionService({
       tx: Tx,
       snapshot: string,
     ): Promise<boolean> => {
-      ctx.requireOwnerOrSystem();
+      ctx.requireSetupAccess();
       const connection = await slackConnectionRepository(tx).lock();
       return connection?.encryptedToken === snapshot;
+    },
+
+    readSlackPhoto: (ctx: SecurityContext, url: URL): Promise<Buffer> => {
+      ctx.requireSetupAccess();
+      return slackApi.readPhoto(url);
     },
   };
 }
@@ -197,7 +204,7 @@ const REQUIRED_SCOPES = ["users:read", "users:read.email"];
 /** Whether `ctx` may connect Slack; the context decides, the flow only turns a refusal into an outcome. */
 function mayConnect(ctx: SecurityContext): boolean {
   try {
-    ctx.requireOwnerOrSystem();
+    ctx.requireSetupAccess();
     return true;
   } catch (error) {
     if (error instanceof ApplicationError && error.code === "FORBIDDEN") {

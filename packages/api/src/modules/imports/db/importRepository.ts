@@ -1,21 +1,19 @@
-import { and, count, eq, inArray, notInArray, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 
-import { afterKeyset, type Orm, orderByKeyset, ormOf, type Tx } from "../../../core/db";
+import { type Orm, ormOf, type Tx } from "../../../core/db";
 import {
+  IMPORT_EMPLOYEE_CHOICES_VERSION,
   IMPORT_EMPLOYEE_VERSION,
-  type ImportEmployee,
+  type ImportEmployeeChoices,
+  type ImportEmployeeRecord,
   type FileSource,
   type ImportSource,
   type IncomingRecord,
   type MappingOutcome,
+  parseImportEmployeeChoices,
   parseImportEmployeeValues,
 } from "../domain";
-import {
-  importEmployeeOrderColumns,
-  type ImportEmployeeKeyset,
-  matchesSearch,
-} from "./importEmployeeOrder";
-import type { EmployeeOrder } from "../../employees";
+import { importChoices } from "./importChoicesTable";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
 
@@ -45,29 +43,35 @@ export interface ImportRepository {
   lockSources(): Promise<void>;
   /**
    * Makes the source's employee records match `records` by external id: updates the
-   * ones still there, so their ids stay, adds new ones and deletes the rest.
+   * ones still there, so their ids stay, adds new ones and deletes the rest. Detach
+   * photos that no longer match first (`detachReplacedPhotos`).
    */
   syncEmployeeRecords(sourceId: string, records: IncomingRecord[]): Promise<void>;
+  /** Deletes every source, record and choice; returns the files they referenced. */
+  deleteAll(): Promise<{ photoFileIds: string[]; uploadFileIds: string[] }>;
   listSources(): Promise<ImportSource[]>;
   findSources(ids: readonly string[]): Promise<ImportSource[]>;
   /** Every employee record of every source, oldest first. */
-  listEmployeeRecords(): Promise<ImportEmployee[]>;
+  listEmployeeRecords(): Promise<ImportEmployeeRecord[]>;
   /** The number of employee records of each source that has any; the others are absent. */
   countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
-  /** Up to `first + 1` employee records after `after`, in `order`; the extra one signals a next page. */
-  findEmployeePage(
-    query: ImportEmployeePageQuery,
-  ): Promise<{ node: ImportEmployee; keyset: ImportEmployeeKeyset }[]>;
+  /** Up to `first + 1` of one source's employee records after `after`, oldest first; the extra one signals a next page. */
+  findRecordPage(
+    query: ImportRecordPageQuery,
+  ): Promise<{ node: ImportEmployeeRecord; keyset: ImportRecordKeyset }[]>;
+  /** What the owner settled for each group of records of `type`. */
+  listChoices(type: "employee"): Promise<ImportEmployeeChoices[]>;
+  /** Stores these choices, replacing any of the same keys. */
+  saveChoices(type: "employee", choices: ImportEmployeeChoices[]): Promise<void>;
 }
 
-export interface ImportEmployeePageQuery {
+/** The id of the last record seen. */
+export type ImportRecordKeyset = [id: string];
+
+export interface ImportRecordPageQuery {
+  sourceId: string;
   first: number;
-  after: ImportEmployeeKeyset | null;
-  order: EmployeeOrder;
-  /** Part of a first name, last name or email; null lists every record. */
-  search: string | null;
-  /** Null lists the records of every source. */
-  sourceId: string | null;
+  after: ImportRecordKeyset | null;
 }
 
 export function importRepository(db: Orm | Tx): ImportRepository {
@@ -117,6 +121,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .set({
           status: outcome.status,
           failure: outcome.status === "failed" ? outcome.failure : null,
+          failureMessage: outcome.status === "failed" ? (outcome.failureMessage ?? null) : null,
           readAt: sql`now()`,
         })
         .where(
@@ -136,6 +141,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .set({
           status: "mapping",
           failure: null,
+          failureMessage: null,
           mappingAttempt: sql`${importSources.mappingAttempt} + 1`,
         })
         .where(
@@ -192,14 +198,17 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         await orm()
           .insert(importRecords)
           .values(
-            records.slice(start, start + INSERT_BATCH_SIZE).map(({ externalId, raw, values }) => ({
-              sourceId,
-              type: "employee" as const,
-              typeVersion: IMPORT_EMPLOYEE_VERSION,
-              externalId,
-              raw,
-              values,
-            })),
+            records
+              .slice(start, start + INSERT_BATCH_SIZE)
+              .map(({ externalId, raw, values, photoUrl }) => ({
+                sourceId,
+                type: "employee" as const,
+                typeVersion: IMPORT_EMPLOYEE_VERSION,
+                externalId,
+                raw,
+                values,
+                photoUrl: photoUrl ?? null,
+              })),
           )
           .onConflictDoUpdate({
             target: [importRecords.sourceId, importRecords.type, importRecords.externalId],
@@ -207,10 +216,20 @@ export function importRepository(db: Orm | Tx): ImportRepository {
               typeVersion: sql`excluded.type_version`,
               raw: sql`excluded.raw`,
               values: sql`excluded.values`,
+              photoUrl: sql`excluded.photo_url`,
               updatedAt: sql`now()`,
             },
           });
       }
+    },
+
+    deleteAll: async () => {
+      const photos = await orm()
+        .delete(importRecords)
+        .returning({ fileId: importRecords.photoFileId });
+      const uploads = await orm().delete(importSources).returning({ fileId: importSources.fileId });
+      await orm().delete(importChoices);
+      return { photoFileIds: presentIds(photos), uploadFileIds: presentIds(uploads) };
     },
 
     listSources: (): Promise<ImportSource[]> =>
@@ -222,7 +241,7 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .from(importSources)
         .where(inArray(importSources.id, [...ids])),
 
-    listEmployeeRecords: async (): Promise<ImportEmployee[]> => {
+    listEmployeeRecords: async (): Promise<ImportEmployeeRecord[]> => {
       const records = await orm()
         .select()
         .from(importRecords)
@@ -242,37 +261,55 @@ export function importRepository(db: Orm | Tx): ImportRepository {
       return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
     },
 
-    findEmployeePage: async ({
-      first,
-      after,
-      order,
-      search,
-      sourceId,
-    }: ImportEmployeePageQuery) => {
-      const columns = importEmployeeOrderColumns(order);
-      const keys = Object.fromEntries(
-        columns.map(({ expression }, index) => [`key${index}`, expression]),
-      );
-      const rows = await orm()
-        .select({ record: importRecords, ...keys })
+    findRecordPage: async ({ sourceId, first, after }: ImportRecordPageQuery) => {
+      const records = await orm()
+        .select()
         .from(importRecords)
         .where(
           and(
             eq(importRecords.type, "employee"),
-            sourceId === null ? undefined : eq(importRecords.sourceId, sourceId),
-            search === null ? undefined : matchesSearch(search),
-            after === null ? undefined : afterKeyset(columns, after.slice(2)),
+            eq(importRecords.sourceId, sourceId),
+            after === null ? undefined : gt(importRecords.id, after[0]),
           ),
         )
-        .orderBy(...orderByKeyset(columns))
+        // uuidv7 ids follow the order the records were added in.
+        .orderBy(importRecords.id)
         .limit(first + 1);
-      return rows.map((row) => {
-        const values = columns.map((_, index) => (row as Record<string, unknown>)[`key${index}`]);
-        return {
-          node: toImportEmployee(row.record),
-          keyset: [order.field, order.direction, ...values] satisfies ImportEmployeeKeyset,
-        };
-      });
+      return records.map((record) => ({ node: toImportEmployee(record), keyset: [record.id] }));
+    },
+
+    listChoices: async (type: "employee"): Promise<ImportEmployeeChoices[]> => {
+      const rows = await orm().select().from(importChoices).where(eq(importChoices.type, type));
+      return rows.map(({ key, leftOut, typeVersion, values }) => ({
+        key,
+        leftOut,
+        values: parseImportEmployeeChoices(typeVersion, values),
+      }));
+    },
+
+    saveChoices: async (type: "employee", choices: ImportEmployeeChoices[]): Promise<void> => {
+      for (let start = 0; start < choices.length; start += INSERT_BATCH_SIZE) {
+        await orm()
+          .insert(importChoices)
+          .values(
+            choices.slice(start, start + INSERT_BATCH_SIZE).map(({ key, leftOut, values }) => ({
+              type,
+              typeVersion: IMPORT_EMPLOYEE_CHOICES_VERSION,
+              key,
+              leftOut,
+              values,
+            })),
+          )
+          .onConflictDoUpdate({
+            target: [importChoices.type, importChoices.key],
+            set: {
+              typeVersion: sql`excluded.type_version`,
+              leftOut: sql`excluded.left_out`,
+              values: sql`excluded.values`,
+              updatedAt: sql`now()`,
+            },
+          });
+      }
     },
   };
 }
@@ -289,12 +326,18 @@ const sourceColumns = {
   readAt: importSources.readAt,
   status: importSources.status,
   failure: importSources.failure,
+  failureMessage: importSources.failureMessage,
 };
 
-function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployee {
+function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployeeRecord {
   return {
     id: record.id,
     sourceId: record.sourceId,
     ...parseImportEmployeeValues(record.typeVersion, record.values),
+    photoFileId: record.photoFileId,
   };
+}
+
+function presentIds(rows: { fileId: string | null }[]): string[] {
+  return rows.flatMap(({ fileId }) => (fileId ? [fileId] : []));
 }

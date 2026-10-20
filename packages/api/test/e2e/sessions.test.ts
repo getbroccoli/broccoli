@@ -81,6 +81,11 @@ test("masks a database failure while reading the session", async () => {
   onTestFinished(() => server.stop());
   expect(await waitForStartup(server)).toEqual({ httpStatus: 200, status: "ready" });
   const browser = createBrowser(server.url);
+  expect((await browser.post("/api/auth/setup/start", undefined)).status).toBe(200);
+  await browser.graphql(
+    `mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } } }`,
+  );
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   const setupResponse = await browser.post("/api/auth/setup", TEST_OWNER);
   expect(setupResponse.status).toBe(200);
 

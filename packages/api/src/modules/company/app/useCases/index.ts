@@ -43,6 +43,6 @@ export function createCompanyUseCases({
     removeLogo: (ctx: SecurityContext) => removeLogo(context, ctx),
     isCurrentLogo: (ctx: SecurityContext, fileId: string) => isCurrentLogo(context, ctx, fileId),
     detectCompanyNameAndLogo: (ctx: SecurityContext, owner: { userId: string; email: string }) =>
-      detectCompanyNameAndLogo({ transact, brandLookup, logger }, ctx, owner),
+      detectCompanyNameAndLogo({ orm, transact, brandLookup, logger }, ctx, owner),
   };
 }

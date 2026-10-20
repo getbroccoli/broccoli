@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
 
+import { SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "#test/support";
+
 import { mapSlackMembers } from "./mapSlackMembers";
 
 it("maps profile names, normalises the email and leaves the start date unknown", () => {
@@ -125,6 +127,8 @@ it("retains only the specified Slack fields in the raw record", () => {
       display_name: "Avery",
       email: "avery@example.com",
       title: "Designer",
+      image_512: SLACK_PHOTO_URL,
+      is_custom_image: true,
     },
   };
   const member = {
@@ -137,4 +141,63 @@ it("retains only the specified Slack fields in the raw record", () => {
   const [record] = mapSlackMembers([member]);
 
   expect(record?.raw).toEqual(raw);
+});
+
+it("keeps the photo link for a custom Slack photo", () => {
+  const [record] = mapSlackMembers([SLACK_MEMBER_WITH_PHOTO]);
+
+  expect(record?.photoUrl).toBe(SLACK_PHOTO_URL);
+});
+
+it("leaves Slack's generated placeholder without a photo", () => {
+  const member = {
+    ...SLACK_MEMBER_WITH_PHOTO,
+    profile: { ...SLACK_MEMBER_WITH_PHOTO.profile, is_custom_image: false },
+  };
+
+  const [record] = mapSlackMembers([member]);
+
+  expect(record?.photoUrl).toBeNull();
+});
+
+it("leaves a photo link on another host without a photo", () => {
+  const member = {
+    ...SLACK_MEMBER_WITH_PHOTO,
+    profile: {
+      ...SLACK_MEMBER_WITH_PHOTO.profile,
+      image_512: "https://avatars.slack-edge.com.example.com/photo.jpg",
+    },
+  };
+
+  const [record] = mapSlackMembers([member]);
+
+  expect(record?.photoUrl).toBeNull();
+});
+
+it("leaves a photo link containing user info without a photo", () => {
+  const member = {
+    ...SLACK_MEMBER_WITH_PHOTO,
+    profile: {
+      ...SLACK_MEMBER_WITH_PHOTO.profile,
+      image_512: "https://user:secret@avatars.slack-edge.com/p.jpg",
+    },
+  };
+
+  const [record] = mapSlackMembers([member]);
+
+  expect(record?.photoUrl).toBeNull();
+});
+
+it("leaves an HTTP photo link without a photo", () => {
+  const member = {
+    ...SLACK_MEMBER_WITH_PHOTO,
+    profile: {
+      ...SLACK_MEMBER_WITH_PHOTO.profile,
+      image_512: SLACK_PHOTO_URL.replace("https:", "http:"),
+    },
+  };
+
+  const [record] = mapSlackMembers([member]);
+
+  expect(record?.photoUrl).toBeNull();
 });

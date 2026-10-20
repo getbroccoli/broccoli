@@ -1,6 +1,7 @@
 import type { FragmentType } from "@apollo/client";
 import { useFragment } from "@apollo/client/react";
-import { DotsThree, FileCsv, FilePdf, FileXls } from "@phosphor-icons/react";
+import { CheckCircle, DotsThree, FileCsv, FilePdf, FileXls } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 
 import {
   FileSourceCard_SourceFragmentDoc,
@@ -15,11 +16,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 
 const FAILURE_MESSAGES = {
   NO_PEOPLE_COLUMNS: "imports.files.noPeopleColumns",
   UNAVAILABLE: "imports.files.unavailable",
+  AI_FREE_PERIOD_USED: "imports.files.aiFreePeriodUsed",
+  AI_FREE_PERIOD_OVER: "imports.files.aiFreePeriodOver",
+  AI_LIMIT_REACHED: "imports.files.aiLimitReached",
 } as const satisfies Record<ImportSourceFailure, string>;
+
+/** Broccoli AI's free use is used up: only the owner's own key reads the file. */
+const NEEDS_OWN_KEY: ReadonlySet<ImportSourceFailure> = new Set([
+  "AI_FREE_PERIOD_USED",
+  "AI_FREE_PERIOD_OVER",
+  "AI_LIMIT_REACHED",
+]);
 
 interface FileSourceCardProps {
   source: FragmentType<FileSourceCard_SourceFragment>;
@@ -46,10 +58,21 @@ export function FileSourceCard({
   const name = source.name.toLowerCase();
   const FileIcon = name.endsWith(".xlsx") ? FileXls : name.endsWith(".pdf") ? FilePdf : FileCsv;
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-border px-4 py-3">
-      <FileIcon size={22} weight="duotone" aria-hidden className="shrink-0" />
+    <li className="flex min-h-[68px] items-center gap-3.5 rounded-xl border border-border bg-card px-4 py-3">
+      <span
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
+          source.status === "MAPPED"
+            ? "bg-brand-soft/70 text-brand-deep"
+            : failed
+              ? "bg-destructive/10 text-destructive"
+              : "bg-muted text-muted-foreground",
+        )}
+      >
+        <FileIcon size={22} weight="duotone" aria-hidden />
+      </span>
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-[15px] font-medium" title={source.name}>
+        <span className="truncate text-[15px] font-semibold" title={source.name}>
           {source.name}
         </span>
         <span
@@ -58,11 +81,22 @@ export function FileSourceCard({
         >
           {statusLine(source)}
         </span>
+        {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
+          <Link
+            to="/setup/ai"
+            className="w-fit text-[13px] font-medium text-foreground underline underline-offset-2"
+          >
+            {t("imports.files.useOwnKey")}
+          </Link>
+        )}
       </div>
       {failed && (
         <Button type="button" variant="outline" disabled={busy} onClick={onRetry}>
           {t("imports.files.retry")}
         </Button>
+      )}
+      {source.status === "MAPPED" && (
+        <CheckCircle size={20} weight="fill" aria-hidden className="shrink-0 text-brand" />
       )}
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -71,16 +105,16 @@ export function FileSourceCard({
               type="button"
               variant="ghost"
               size="icon"
-              className="shrink-0 rounded-full"
+              className="-mr-2 shrink-0 rounded-full"
               disabled={busy}
               aria-label={t("imports.files.options", { name: source.name })}
             />
           }
         >
-          <DotsThree size={22} aria-hidden />
+          <DotsThree weight="bold" aria-hidden />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem variant="destructive" onClick={onRemove}>
+        <DropdownMenuContent align="end" className="w-48 p-1.5">
+          <DropdownMenuItem className="h-9 px-2.5" variant="destructive" onClick={onRemove}>
             {t("imports.files.remove")}
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -89,12 +123,17 @@ export function FileSourceCard({
   );
 }
 
-function statusLine({ status, failure, employeeCount }: FileSourceCard_SourceFragment): string {
+function statusLine({
+  status,
+  failure,
+  failureMessage,
+  employeeCount,
+}: FileSourceCard_SourceFragment): string {
   if (status === "MAPPING") {
     return t("imports.files.mapping");
   }
   if (status === "FAILED") {
-    return t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
+    return failureMessage ?? t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
   }
   return employeeCount === 1
     ? t("imports.files.onePerson")

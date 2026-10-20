@@ -4,6 +4,7 @@
     "src/routeTree.gen": ["src/routes"],
     "src/routes": [
       "src/__generated__",
+      "src/features/ai",
       "src/features/auth",
       "src/features/employees",
       "src/features/imports",
@@ -17,6 +18,16 @@
       "src/components/ui",
       "src/i18n",
       "src/lib/postJson"
+    ],
+    "src/features/ai": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/form",
+      "src/components/ui",
+      "src/features/imports",
+      "src/features/setup",
+      "src/i18n",
+      "src/lib/class-names"
     ],
     "src/features/company": [],
     "src/features/demo": ["src/__generated__", "src/apollo", "src/components/ui", "src/i18n"],

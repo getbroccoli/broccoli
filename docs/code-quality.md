@@ -30,10 +30,11 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE16.** Dependencies point one way, `domain ← db ← app ← graphql | mcp | http`, each through the folder's `index.ts` ([architecture §1](architecture.md#1-shape-of-the-system)). `lint: boundaries`
 - **RULE17.** Each piece lives in the module and layer that owns it, not where it was first used: the logo upload belongs to the company feature, not the setup page. A type that names a domain fact lives in `domain`; `db` keeps only its tables and storage details. `utils` is the one folder for code that knows nothing about Broccoli; there is no other catch-all.
 - **RULE18.** Related operations on one subject live in one service file, which keeps their formats and rules. Adapters (`graphql`, `mcp`, `http`) translate a request into one use-case call and keep only transport, such as cookies and redirects.
+- **RULE52.** One decision has one owner: a rule over several inputs (such as the mode, settings and stored state) is one `domain` function, and reading those inputs and applying it is one `app` function next to the data. Callers call that function; they never repeat its branches, its reads or a condition it already decides (`mode === "managed"`) in another file.
 - **RULE19.** Every business function in `app` takes the caller's `SecurityContext` first, as `ctx`, and checks it. Work Broccoli does on its own runs as the system, never without a context.
 - **RULE20.** A use case opens the transaction with `transact`; an operation meant to compose takes a required `tx`. Code never awaits work that needs another connection while holding locks, such as an HTTP call.
 - **RULE21.** A module never reads another module's tables: it calls the other module's public functions or handles its events.
-- **RULE22.** An integration reaches the network through `fetchJson` in `utils`, with no HTTP library, and nothing retries by default.
+- **RULE22.** An integration reaches the network through `fetchJson`, or `fetchBytes` for a binary answer, in `utils`, with no HTTP library, and nothing retries by default.
 
 ## API
 
@@ -58,6 +59,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE35.** GraphQL types come from codegen; none is written by hand.
 - **RULE36.** Every user-facing string goes through `t()`.
 - **RULE37.** Server data lives in the Apollo cache, navigation state in validated search params, and React state only for UI; component state stays minimal.
+- **RULE53.** A component with props declares them as `type Props = { … }` right above the component, not inline in its parameters and not below it; this is the one type that comes before the code using it (RULE9).
 - **RULE38.** Route files stay thin; feature components live in `features/<module>/`.
 - **RULE39.** App code uses Phosphor icons; Lucide appears only inside shadcn components.
 - **RULE51.** Web code runs a mutation with `usePayloadMutation` from `@/apollo`, never Apollo's `useMutation`, so a payload error never passes as success. `lint: no-restricted-imports`

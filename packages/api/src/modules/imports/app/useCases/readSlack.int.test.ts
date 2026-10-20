@@ -28,7 +28,9 @@ test("the first Slack read creates a source and imports its members", async ({ o
   expect(sources).toHaveLength(1);
   expect(sources[0]!.readAt).toBeInstanceOf(Date);
   expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: sources[0]!.id })).edges.map(
+      ({ node }) => node,
+    ),
   ).toMatchObject([{ sourceId: sources[0]!.id, firstName: "Avery", email: "avery@example.com" }]);
 });
 
@@ -69,7 +71,7 @@ test("another read keeps surviving member ids, updates values, adds newcomers an
 
   await imports.readSlack(OWNER);
 
-  const employees = await imports.reads.listEmployees(OWNER, {});
+  const employees = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
     { ...avery, lastName: "Reed", email: "avery.reed@example.com", jobTitle: "Designer" },
     {
@@ -116,10 +118,12 @@ test("reading another workspace renames the same source and replaces its employe
     { id: source.id, kind: "slack", name: "Acme Labs" },
   ]);
   expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => ({
-      sourceId: node.sourceId,
-      email: node.email,
-    })),
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => ({
+        sourceId: node.sourceId,
+        email: node.email,
+      }),
+    ),
   ).toEqual([{ sourceId: source.id, email: "robin@example.com" }]);
 });
 
@@ -139,9 +143,11 @@ test("a failed Slack read passes the error through and preserves the source and 
   await expect(imports.readSlack(OWNER)).rejects.toBe(error);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    employees,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(employees);
 });
 
 test("a refresh whose connection is no longer current leaves the records", async ({
@@ -171,9 +177,11 @@ test("a refresh whose connection is no longer current leaves the records", async
   await imports.readSlack(OWNER);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    employees,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(employees);
 });
 
 test("passes through the error when Slack is not connected", async ({ orm }) => {

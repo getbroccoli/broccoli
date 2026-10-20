@@ -42,7 +42,7 @@ test.for(caseNames())("%s", async (file, { orm, onTestFinished }) => {
   await imports.files.mapFile(SYSTEM, { sourceId, attempt: 0 });
 
   const [source] = await imports.reads.listSources(OWNER);
-  const { edges } = await imports.reads.listEmployees(OWNER, { first: 10_000 });
+  const { edges } = await imports.reads.listEmployeeRecords(OWNER, { sourceId, first: 10_000 });
   expect({
     failure: source?.failure,
     records: sorted(edges.map(({ node }) => valuesOf(node))),

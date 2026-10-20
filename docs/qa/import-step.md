@@ -11,7 +11,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 ## Connect
 
-- [ ] The page is `/setup/import`, titled "Add your people", with "Setup Company" done and "Add your people" current.
+- [ ] The page is `/setup/import`, titled "Add your people", with "Setup Company" (and, self-hosted, "Setup AI") done and "Add your people" current.
 - [ ] The Slack row reads "Import the members of your Slack workspace." with "Connect Slack".
 - [ ] "Connect Slack" opens Slack's consent screen for the workspace.
 - [ ] Allowing it returns to `/setup/import`, which imports the members by itself: the row shows "Importing…", then "<workspace> · N people" with "Refresh", where N counts the members with an email, without bots, apps, guests or deactivated accounts.
@@ -22,7 +22,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 ## Refresh and reconnect
 
 - [ ] After adding or deactivating a member in Slack, "Refresh" updates the count.
-- [ ] "Connect another workspace" goes through Slack again; the row then shows the other workspace and its members.
+- [ ] "Connect another workspace", in the Slack row's "⋯" menu, goes through Slack again; the row then shows the other workspace and its members.
 
 ## Failures
 
@@ -32,7 +32,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 ## Files
 
-On an instance with `OPENROUTER_API_KEY` set, managed or self-hosted. Without it, a self-hosted instance shows no file section.
+On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files through Broccoli AI; run the list once each way.
 
 - [ ] Under the Slack row, "Add your files" shows a dashed area "Drop your files here", the hint "CSV, Excel (.xlsx) or PDF, up to 5 MB per file." and the line saying the AI provider sees the first rows with personal details replaced by placeholders and keeps nothing.
 - [ ] Dropping a CSV with a title row above the table, semicolons and day-first start dates shows "Uploading staff.csv…", then a card "staff.csv · Reading columns…", then "N people"; `query { import { employees { edges { node { firstName lastName email jobTitle startDate } } } } }` lists them with the right names, emails, titles and dates.
@@ -59,18 +59,19 @@ On an instance with `OPENROUTER_API_KEY` set, managed or self-hosted. Without it
 - [ ] A PDF table continued without its header on a page over a full-page letterhead image (`continued-letterhead.pdf`) shows "2 people".
 - [ ] A continuation page over a full-page letterhead image whose rows start in the page's top tenth is refused as a scan; ask for a CSV or Excel export.
 - [ ] A PDF of person blocks with labels without colons (`labels-no-colons.pdf`, `form-no-colons.pdf`) and a two-column organisation chart (`org-two-column.pdf`) each show the red "couldn’t read a table or list of people in it" line; no card appears and nobody is named after an email or a job title.
-- [ ] A `.xls` file, a `.docx` renamed to `.pdf`, an empty `.csv`, a workbook of 11 sheets and a file over 5 MB each show one red line naming the file and the reason; no card appears.
-- [ ] The stock list `no-people-columns.csv` from the eval cases ends as "Couldn’t find a name or email column." with "Retry". A shorter list without stock codes (`Item,Quantity,Price`) may show its items as people without emails: the model reads the item column as names, a known limit of the mapping, and Approve adds none of them.
+- [ ] A `.xls` file, a `.docx` renamed to `.pdf`, a `.pdf` renamed to `.xlsx`, an empty `.csv`, a workbook of 11 sheets and a file over 5 MB each show one red line naming the file and the reason; no card appears.
+- [ ] A CSV without a name or email column ends as "Couldn’t find a name or email column." with "Retry".
+- [ ] When Broccoli AI refuses (its free period is over), the card shows the refusal's own words with "Retry".
 - [ ] "Remove" in a card's menu removes the card and its people.
 - [ ] While a card reads "Reading columns…", the footer's button reads "Reading your files…" and is disabled; afterwards it reads "Next: review your people" again.
 
 ## Leaving the step
 
-- [ ] Before Slack is imported, the footer shows only "Skip for now".
-- [ ] With members imported, the footer shows "Skip for now" and "Next: review your people", which opens the [review](import-review.md).
-- [ ] On a fresh instance, "Skip for now" lands on `/people` with the demo people.
+- [ ] Before Slack is imported, the footer shows only "Skip and use demo data".
+- [ ] With members imported, the footer shows "Skip and use demo data" and "Next: review your people", which opens the [review](import-review.md).
+- [ ] On a fresh instance, "Skip and use demo data" shows "Filling demo data…" and moves on (managed: `/people`; self-hosted: "Create your account"), and the people page then shows the demo people.
 
 ## Layout
 
-- [ ] On a narrow window the Slack row and its button fit without scrolling sideways.
+- [ ] At 320px wide the Slack row fits without scrolling sideways, and its text never runs under the buttons, which move to their own line when connected, importing or failed.
 - [ ] Screenshots of `/setup/import` (not connected, connected, with an error, with files; desktop and narrow) go in the pull request description.

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
+import { files } from "../../../core/files";
 import { importSources } from "./importSourcesTable";
 
 /**
@@ -21,6 +22,10 @@ export const importRecords = pgTable(
     externalId: text("external_id").notNull(),
     raw: jsonb("raw").notNull(),
     values: jsonb("values").notNull(),
+    /** Where the person's own photo can be downloaded; null for initials. */
+    photoUrl: text("photo_url"),
+    /** The stored copy of the photo at `photo_url`, once downloaded. */
+    photoFileId: uuid("photo_file_id").references(() => files.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

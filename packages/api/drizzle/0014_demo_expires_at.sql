@@ -1,0 +1,1 @@
+ALTER TABLE "instance" ADD COLUMN "demo_expires_at" timestamp with time zone;

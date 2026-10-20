@@ -90,9 +90,14 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
         void upload(event.dataTransfer.files);
       }}
     >
-      <h2 id="import-files-title" className="text-[15px] font-medium">
-        {t("imports.files.title")}
-      </h2>
+      <div className="mb-2">
+        <h2 id="import-files-title" className="text-[19px] font-semibold tracking-[-0.01em]">
+          {t("imports.files.title")}
+        </h2>
+        <p className="mt-1.5 max-w-[62ch] text-[15px] leading-[1.55] text-pretty text-muted-foreground">
+          {t("imports.files.line")}
+        </p>
+      </div>
       <input
         ref={input}
         type="file"
@@ -109,15 +114,17 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
           disabled={busy}
           onClick={() => input.current?.click()}
           aria-describedby="import-files-hint"
-          className={`flex min-h-40 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed px-6 py-8 text-center focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring disabled:opacity-60 ${dragging ? "border-primary bg-accent" : "border-border bg-muted/30 hover:bg-muted/50"}`}
+          className={`flex w-full flex-col items-center gap-3 rounded-2xl border-[1.5px] border-dashed px-8 py-14 text-center transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 ${dragging ? "border-brand bg-brand-soft/40" : "border-border bg-app-backdrop hover:border-muted-foreground/40"}`}
         >
-          <UploadSimple size={22} aria-hidden />
-          <span className="text-[15px] font-medium">{t("imports.files.drop")}</span>
-          <span className="text-[13px] text-muted-foreground">{t("imports.files.dropHint")}</span>
+          <span className="flex size-12 items-center justify-center rounded-xl bg-card shadow-[0_1px_2px_rgba(33,30,23,0.06)] ring-1 ring-border">
+            <UploadSimple size={22} aria-hidden />
+          </span>
+          <span className="text-base font-semibold">{t("imports.files.drop")}</span>
+          <span className="text-sm text-muted-foreground">{t("imports.files.dropHint")}</span>
         </button>
       ) : (
         <ul
-          className={`flex flex-col gap-2 rounded-xl ${dragging ? "outline-2 outline-primary" : ""}`}
+          className={`flex flex-col gap-2.5 rounded-xl ${dragging ? "outline-2 outline-offset-4 outline-brand" : ""}`}
         >
           {sources.map((source) => (
             <FileSourceCard
@@ -140,7 +147,7 @@ export function FileSources({ sources, onUploaded, onUploadingChange }: FileSour
         <Button
           type="button"
           variant="outline"
-          className="self-start"
+          className="h-9 gap-2 self-start"
           disabled={busy}
           onClick={() => input.current?.click()}
         >

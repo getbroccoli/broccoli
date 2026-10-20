@@ -22,8 +22,10 @@ export interface EmployeeRepository {
   insert(newEmployee: EmployeeRow): Promise<Employee>;
   /** Inserts employees in one statement; throws `EmailTakenError` like `insert`. */
   insertMany(newEmployees: readonly EmployeeRow[]): Promise<void>;
-  /** Inserts employees, skipping emails another employee has; returns how many were inserted. */
-  insertSkippingTakenEmails(newEmployees: readonly EmployeeRow[]): Promise<number>;
+  /** Inserts employees, skipping emails another employee has; returns the avatar of each one inserted. */
+  insertSkippingTakenEmails(
+    newEmployees: readonly EmployeeRow[],
+  ): Promise<{ avatarFileId: string | null }[]>;
   /** Deletes every demo employee; returns the ids of the avatar files they owned. */
   deleteDemo(): Promise<string[]>;
   hasAny(): Promise<boolean>;
@@ -81,15 +83,15 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       }
     },
 
-    insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]): Promise<number> => {
-      let inserted = 0;
+    insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]) => {
+      const inserted: { avatarFileId: string | null }[] = [];
       for (let start = 0; start < newEmployees.length; start += INSERT_BATCH_SIZE) {
         const rows = await orm()
           .insert(employees)
           .values(newEmployees.slice(start, start + INSERT_BATCH_SIZE))
           .onConflictDoNothing({ target: employees.email })
-          .returning({ id: employees.id });
-        inserted += rows.length;
+          .returning({ avatarFileId: employees.avatarFileId });
+        inserted.push(...rows);
       }
       return inserted;
     },

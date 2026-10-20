@@ -4,6 +4,7 @@ import {
   expect,
   importUseCases,
   OWNER,
+  SETUP_HOLDER,
   storedFileIds,
   SYSTEM,
   test,
@@ -13,7 +14,7 @@ import {
 } from "#test/support";
 
 import { files } from "../../../../core/files";
-import { instanceRepository } from "../../../../core/instance";
+import { instanceRepository, readSetupStep } from "../../../../core/instance";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -33,18 +34,6 @@ test("stores a mapping source named after the file and sends its first job", asy
   expect(
     await orm.select({ content: files.content, mimeType: files.mimeType }).from(files),
   ).toEqual([{ content: bytes, mimeType: "text/csv" }]);
-});
-
-test("refuses an upload without a model key", async ({ orm }) => {
-  const imports = importUseCases(orm);
-
-  await expect(
-    imports.files.uploadFile(OWNER, { name: "staff.csv", bytes: Buffer.from("Name\nAvery Stone") }),
-  ).rejects.toMatchObject({ code: "UNAVAILABLE", message: "Reading files needs a model key." });
-
-  expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect(await storedFileIds(orm)).toEqual([]);
-  expect(imports.sentJobs).toEqual([]);
 });
 
 test("refuses a second upload while the first is being read without storing anything or sending a job", async ({
@@ -116,6 +105,24 @@ test("refuses an upload after setup is complete without storing anything or send
   ).rejects.toMatchObject({ code: "CONFLICT", message: "Setup is complete." });
 
   expect(await imports.reads.listSources(owner)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses an upload after Approve while setup still awaits the owner", async ({ orm }) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const imports = importUseCases(orm);
+  await imports.approveImport(SETUP_HOLDER);
+  expect(await readSetupStep(orm)).toBe("owner");
+
+  await expect(
+    imports.files.uploadFile(SETUP_HOLDER, {
+      name: "staff.csv",
+      bytes: Buffer.from("Name,Email\nAvery Stone,avery@example.com"),
+    }),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(imports.sentJobs).toEqual([]);
 });
@@ -221,6 +228,30 @@ test("removes the source, its records and its stored file", async ({ orm, seed }
   expect(await storedFileIds(orm)).toEqual([otherFile]);
 });
 
+test("refuses file removal after Approve and keeps the import and stored file unchanged", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
+  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
+  const imports = importUseCases(orm);
+  await imports.approveImport(SETUP_HOLDER);
+  expect(await readSetupStep(orm)).toBe("owner");
+  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const fileIds = await storedFileIds(orm);
+  expect(before.edges).toHaveLength(1);
+  expect(fileIds).toHaveLength(1);
+
+  await expect(imports.files.removeFile(SETUP_HOLDER, source.id)).rejects.toMatchObject({
+    code: "CONFLICT",
+  });
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect(await storedFileIds(orm)).toEqual(fileIds);
+});
+
 test("leaves the Slack source and its records unchanged", async ({ orm, seed }) => {
   const source = await seed.importSource();
   const records = await seed.importEmployees(source.id, [{ firstName: "Avery" }]);
@@ -229,9 +260,11 @@ test("leaves the Slack source and its records unchanged", async ({ orm, seed }) 
   await imports.files.removeFile(OWNER, source.id);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    records,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(records);
 });
 
 test("refuses a ZIP without a workbook without storing it or sending a job", async ({

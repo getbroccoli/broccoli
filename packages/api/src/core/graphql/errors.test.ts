@@ -1,5 +1,5 @@
-import { buildSchema, execute, GraphQLError, parse } from "graphql";
-import { assert, expect, it } from "vitest";
+import { buildSchema, execute, graphql, GraphQLError, parse } from "graphql";
+import { assert, expect, it, test } from "vitest";
 
 import { ApplicationError } from "../applicationError";
 import { formatError } from "./errors";
@@ -56,7 +56,18 @@ it("passes through a GraphQLError raised before execution", () => {
 
   const result = formatError(formatted, error);
 
-  expect(result).toBe(formatted);
+  expect(result).toEqual(formatted);
+});
+
+it("preserves field and type names in a safe validation message", () => {
+  const error = new GraphQLError('Cannot query field "nope" on type "Query".', {
+    extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
+  });
+  const formatted = error.toJSON();
+
+  const result = formatError(formatted, error);
+
+  expect(result).toEqual(formatted);
 });
 
 it("masks an error raised while creating the request context", () => {
@@ -114,4 +125,50 @@ it("masks a GraphQL serialization error without exposing the returned value", as
     path: ["ping"],
     extensions: { code: "INTERNAL_SERVER_ERROR" },
   });
+});
+
+it("removes input values from a variable coercion error", async () => {
+  const schema = buildSchema(`
+    input AiInput { enabled: Boolean! openRouterKey: String }
+    type Query { choose(input: AiInput!): Boolean }
+  `);
+  const execution = await execute({
+    schema,
+    document: parse("query ($input: AiInput!) { choose(input: $input) }"),
+    variableValues: {
+      input: { openRouterKey: "sk-or-v1-synthetic-secret" },
+    },
+  });
+  const error = execution.errors?.[0];
+  assert(error);
+  expect(error.message).toContain("sk-or-v1-synthetic-secret");
+
+  const result = formatError(error.toJSON(), error);
+
+  expect(result.message).toEqual(expect.any(String));
+  expect(result.message.length).toBeGreaterThan(0);
+  expect(JSON.stringify(result)).not.toContain("sk-or-v1-synthetic-secret");
+});
+
+test.for([
+  'query { choose(input: { openRouterKey "sk-or-v1-synthetic-secret" }) }',
+  'query { choose(input: { openRouterKey "\\"sk-or-v1-synthetic-secret\\"" }) }',
+  'query { choose(input: { openRouterKey """prefix "sk-or-v1-synthetic-secret" suffix""" }) }',
+])("removes an inline key from a syntax error (%s)", async (source) => {
+  const schema = buildSchema(`
+    input AiInput { openRouterKey: String }
+    type Query { choose(input: AiInput!): Boolean }
+  `);
+  const execution = await graphql({
+    schema,
+    source,
+  });
+  const error = execution.errors?.[0];
+  assert(error);
+  expect(error.message).toContain("Syntax Error");
+  expect(error.message).toContain("sk-or-v1-synthetic-secret");
+
+  const result = formatError(error.toJSON(), error);
+
+  expect(JSON.stringify(result)).not.toContain("sk-or-v1-synthetic-secret");
 });

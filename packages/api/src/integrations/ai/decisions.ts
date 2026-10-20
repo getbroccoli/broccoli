@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { AnswerTooLargeError, readText } from "../../utils";
 import { withPlaceholders } from "./sanitize";
 
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -44,24 +45,36 @@ const NO_RETENTION = { data_collection: "deny", zdr: true };
 /** Under this, an answer is a guess and counts as no answer. */
 const DEFAULT_MIN_CONFIDENCE = 0.8;
 
-/** A failed request; a `retryable` one may succeed later unchanged. */
+/**
+ * A failed request; a `retryable` one may succeed later unchanged. `providerMessage` is the
+ * provider's own explanation, when it gave one, worded for the person who uploaded the file;
+ * `reason` is its machine-readable cause, such as Broccoli AI's `free_period_over`.
+ */
 export class DecisionsError extends Error {
   constructor(
     message: string,
     readonly retryable: boolean,
+    readonly providerMessage: string | null = null,
+    readonly reason: string | null = null,
   ) {
     super(message);
     this.name = "DecisionsError";
   }
 }
 
+/** A failed request whose answer was 401, so a new credential may succeed. */
+export class UnauthorizedDecisionsError extends DecisionsError {}
+
+/** Decisions from `endpoint`, OpenRouter's decisions API or one that speaks it, as `credential`. */
 export function createDecisions({
-  url,
-  apiKey,
+  endpoint,
+  credential,
+  headers = {},
   timeoutMs = 30_000,
 }: {
-  url: string;
-  apiKey: string;
+  endpoint: string;
+  credential: string;
+  headers?: Record<string, string>;
   timeoutMs?: number;
 }): Decisions {
   return {
@@ -70,23 +83,24 @@ export function createDecisions({
       questions: Q,
       minConfidence = DEFAULT_MIN_CONFIDENCE,
     ): Promise<Answers<Q>> => {
-      const response = await post(`${url}/alpha/decisions`, apiKey, timeoutMs, {
-        model: DECISIONS_MODEL,
-        provider: NO_RETENTION,
-        state: withPlaceholders(state),
-        questions: Object.fromEntries(
-          Object.entries(questions).map(([id, { instructions, options }]) => [
-            id,
-            { type: "choice", instructions, criteria: options },
-          ]),
-        ),
-      });
+      const response = await postJson(
+        endpoint,
+        { ...headers, authorization: `Bearer ${credential}` },
+        timeoutMs,
+        {
+          model: DECISIONS_MODEL,
+          provider: NO_RETENTION,
+          state: withPlaceholders(state),
+          questions: Object.fromEntries(
+            Object.entries(questions).map(([id, { instructions, options }]) => [
+              id,
+              { type: "choice", instructions, criteria: options },
+            ]),
+          ),
+        },
+      );
       if (!response.ok) {
-        await response.body?.cancel();
-        throw new DecisionsError(
-          `The model answered ${response.status}`,
-          RETRYABLE_STATUSES.has(response.status) || response.status >= 500,
-        );
+        throw await refusal(response);
       }
       return readAnswers(parseJson(await readBody(response)), questions, minConfidence);
     },
@@ -95,20 +109,34 @@ export function createDecisions({
 
 const RETRYABLE_STATUSES = new Set([408, 429]);
 
+/** A provider's refusal is a sentence; a longer body is read no further and its message dropped. */
+const MAX_REFUSAL_BYTES = 4096;
+
+/** Refusals that waiting cannot fix, though their status alone says "later". */
+const FINAL_REASONS = new Set(["free_period_used"]);
+
+const providerErrorSchema = z.object({
+  error: z.object({
+    message: z.string(),
+    metadata: z.object({ reason: z.string() }).partial().optional(),
+  }),
+});
+
 const responseSchema = z.object({
   answers: z.record(z.string(), z.object({ choice: z.string(), confidence: z.number() })),
 });
 
-async function post(
+/** POSTs `body` as JSON, or nothing without one; a request that gets no answer may succeed later. */
+export async function postJson(
   url: string,
-  apiKey: string,
+  headers: Record<string, string>,
   timeoutMs: number,
-  body: unknown,
+  body?: unknown,
 ): Promise<Response> {
   try {
     return await fetch(url, {
       method: "POST",
-      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+      headers: { ...headers, "content-type": "application/json" },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(timeoutMs),
     });
@@ -117,8 +145,31 @@ async function post(
   }
 }
 
+/** The error for an unsuccessful answer, with the provider's message when it sent one. */
+export async function refusal(response: Response): Promise<DecisionsError> {
+  const { status } = response;
+  let body = "";
+  try {
+    body = await readText(response, MAX_REFUSAL_BYTES);
+  } catch (error) {
+    if (!(error instanceof AnswerTooLargeError)) {
+      return new DecisionsError(`The model's answer was cut off: ${String(error)}`, true);
+    }
+  }
+  const parsed = providerErrorSchema.safeParse(parseJson(body));
+  const providerMessage = parsed.success ? parsed.data.error.message : null;
+  const reason = (parsed.success ? parsed.data.error.metadata?.reason : undefined) ?? null;
+  const message = `The model answered ${status}`;
+  if (status === 401) {
+    return new UnauthorizedDecisionsError(message, false, providerMessage, reason);
+  }
+  const retryable =
+    (RETRYABLE_STATUSES.has(status) || status >= 500) && !FINAL_REASONS.has(reason ?? "");
+  return new DecisionsError(message, retryable, providerMessage, reason);
+}
+
 /** The body as text; a connection that breaks or times out mid-answer may succeed later. */
-async function readBody(response: Response): Promise<string> {
+export async function readBody(response: Response): Promise<string> {
   try {
     return await response.text();
   } catch (error) {
@@ -126,7 +177,7 @@ async function readBody(response: Response): Promise<string> {
   }
 }
 
-function parseJson(text: string): unknown {
+export function parseJson(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {

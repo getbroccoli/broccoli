@@ -1,17 +1,17 @@
 import { type Decisions, DecisionsError } from "../../../../integrations/ai";
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
-import type { Orm, Transact, Tx } from "../../../../core/db";
+import type { Orm, Transact } from "../../../../core/db";
 import { deleteFiles, readFile, storeFile } from "../../../../core/files";
-import { readSetupStep } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
-import { importRepository, type ImportRepository } from "../../db";
+import { importRepository } from "../../db";
 import {
   type ColumnMapping,
   columnQuestions,
   type FileSource,
   hasPeople,
   headerQuestion,
+  type ImportSourceFailure,
   type IncomingRecord,
   type MappingOutcome,
   readColumnMapping,
@@ -22,6 +22,8 @@ import {
   type Sheet,
   sheetQuestions,
 } from "../../domain";
+import { lockOpenImport } from "./lockOpenImport";
+import { requireImportAccess } from "./requireImportAccess";
 import { readStaffFile, staffFileMimeType } from "./staffFile";
 
 /**
@@ -29,8 +31,6 @@ import { readStaffFile, staffFileMimeType } from "./staffFile";
  * retry and removal. Every function checks `ctx`.
  */
 export interface FileSourceService {
-  /** Whether files can be added: the instance has a model key. */
-  canReadFiles(ctx: SecurityContext): boolean;
   /**
    * Adds a CSV, Excel or PDF file as a source and queues its mapping, in one transaction; returns the
    * source's id. A file that cannot be read is refused and nothing is stored.
@@ -76,29 +76,21 @@ export function createFileSourceService({
 }: {
   orm: Orm;
   transact: Transact;
-  /** The model that maps files; null where the instance has no model key. */
-  decisions: Decisions | null;
+  /** The model that maps files. */
+  decisions: Decisions;
   jobs: JobQueue;
 }): FileSourceService {
   const uploads = { reading: false };
 
   return {
-    canReadFiles: (ctx) => {
-      ctx.requireOwnerOrSystem();
-      return decisions !== null;
-    },
-
     uploadFile: async (ctx, { name, bytes }) => {
-      ctx.requireOwnerOrSystem();
-      if (decisions === null) {
-        throw new ApplicationError("UNAVAILABLE", "Reading files needs a model key.");
-      }
+      requireImportAccess(ctx);
       const sheets = await readUpload(uploads, bytes);
       if (typeof sheets === "string") {
         throw invalidInput([{ field: "file", code: sheets }]);
       }
       return transact(async (tx) => {
-        const imports = await lockSourcesForMapping(tx);
+        const imports = await lockOpenImport(tx);
         const fileId = await storeFile(tx, {
           content: Buffer.from(bytes),
           mimeType: staffFileMimeType(bytes),
@@ -110,9 +102,9 @@ export function createFileSourceService({
     },
 
     mapFile: async (ctx, { sourceId, attempt }) => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       const source = await importRepository(orm).findFileSource(sourceId);
-      if (!isCurrentRun(source, attempt) || decisions === null) {
+      if (!isCurrentRun(source, attempt)) {
         return;
       }
       const file = await readFile(orm, source.fileId);
@@ -131,7 +123,7 @@ export function createFileSourceService({
     },
 
     markFileFailed: async (ctx, { sourceId, attempt }) => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       await transact((tx) =>
         importRepository(tx).finishMapping(sourceId, attempt, {
           status: "failed",
@@ -141,9 +133,9 @@ export function createFileSourceService({
     },
 
     retryFile: async (ctx, sourceId) => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       await transact(async (tx) => {
-        const imports = await lockSourcesForMapping(tx);
+        const imports = await lockOpenImport(tx);
         const attempt = await imports.restartMapping(sourceId);
         if (attempt !== null) {
           await jobs.send(tx, "imports.mapFile", { sourceId, attempt });
@@ -152,9 +144,10 @@ export function createFileSourceService({
     },
 
     removeFile: async (ctx, sourceId) => {
-      ctx.requireOwnerOrSystem();
+      requireImportAccess(ctx);
       await transact(async (tx) => {
-        const fileId = await importRepository(tx).deleteFileSource(sourceId);
+        const imports = await lockOpenImport(tx);
+        const fileId = await imports.deleteFileSource(sourceId);
         if (fileId !== null) {
           await deleteFiles(tx, [fileId]);
         }
@@ -164,19 +157,6 @@ export function createFileSourceService({
 }
 
 type MappingResult = { outcome: MappingOutcome; records: IncomingRecord[] };
-
-/**
- * Takes the sources lock that Approve takes too, so a new mapping run never slips past
- * it, and refuses one once setup is done: Approve runs only once.
- */
-async function lockSourcesForMapping(tx: Tx): Promise<ImportRepository> {
-  const imports = importRepository(tx);
-  await imports.lockSources();
-  if ((await readSetupStep(tx)) === "done") {
-    throw new ApplicationError("CONFLICT", "Setup is complete.");
-  }
-  return imports;
-}
 
 function isCurrentRun(source: FileSource | null, attempt: number): source is FileSource {
   return source?.status === "mapping" && source.mappingAttempt === attempt;
@@ -201,6 +181,13 @@ async function readUpload(
   }
 }
 
+/** Broccoli AI's refusals that only the owner's own key can get past. */
+const AI_REFUSAL_FAILURES = new Map<string, ImportSourceFailure>([
+  ["free_period_used", "ai_free_period_used"],
+  ["free_period_over", "ai_free_period_over"],
+  ["limit_reached", "ai_limit_reached"],
+]);
+
 /** A model failure that retrying cannot fix fails the file; any other error is thrown. */
 async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {
   try {
@@ -209,7 +196,13 @@ async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise
     if (!(error instanceof DecisionsError) || error.retryable) {
       throw error;
     }
-    return { outcome: { status: "failed", failure: "unavailable" }, records: [] };
+    const aiRefusal = AI_REFUSAL_FAILURES.get(error.reason ?? "");
+    return {
+      outcome: aiRefusal
+        ? { status: "failed", failure: aiRefusal }
+        : { status: "failed", failure: "unavailable", failureMessage: error.providerMessage },
+      records: [],
+    };
   }
 }
 

@@ -20,15 +20,29 @@ const calls = {
     imports.files.markFileFailed(ctx, { sourceId: "missing", attempt: 0 }),
   "files.retryFile": (imports, ctx) => imports.files.retryFile(ctx, "missing"),
   "files.removeFile": (imports, ctx) => imports.files.removeFile(ctx, "missing"),
-  "files.canReadFiles": (imports, ctx) => imports.files.canReadFiles(ctx),
   readSlack: (imports, ctx) => imports.readSlack(ctx),
   "reads.listSources": (imports, ctx) => imports.reads.listSources(ctx),
   "reads.readSources": (imports, ctx) => imports.reads.readSources(ctx, []),
   "reads.countEmployees": (imports, ctx) => imports.reads.countEmployees(ctx, []),
+  "reads.employeeCount": (imports, ctx) => imports.reads.employeeCount(ctx),
   "reads.readyEmployeeCount": (imports, ctx) => imports.reads.readyEmployeeCount(ctx),
   "reads.listEmployees": (imports, ctx) => imports.reads.listEmployees(ctx, {}),
-  skipImport: (imports, ctx) => imports.skipImport(ctx),
+  "reads.listEmployeeRecords": (imports, ctx) =>
+    imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),
+  "reads.listChecks": (imports, ctx) => imports.reads.listChecks(ctx),
+  "reads.isImportPhotoFile": (imports, ctx) =>
+    imports.reads.isImportPhotoFile(ctx, "0199f6c4-0000-7000-8000-000000000000"),
+  "choices.chooseEmployeeValue": (imports, ctx) =>
+    imports.choices.chooseEmployeeValue(ctx, { key: "missing", field: "jobTitle", choice: null }),
+  "choices.chooseSourceForAll": (imports, ctx) =>
+    imports.choices.chooseSourceForAll(ctx, { field: "jobTitle", sourceId: "missing" }),
+  "choices.setLeftOut": (imports, ctx) =>
+    imports.choices.setLeftOut(ctx, { key: "missing", leftOut: true }),
+  "choices.leaveOutIncomplete": (imports, ctx) =>
+    imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
+  startDemo: (imports, ctx) => imports.startDemo(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx),
+  finishImport: (imports, ctx) => imports.finishImport(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;
 
 test.for(Object.entries(calls))(

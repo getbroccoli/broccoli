@@ -11,7 +11,7 @@ export async function saveLogo(
   ctx: SecurityContext,
   bytes: Buffer,
 ): Promise<Company> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   const logo = parseRasterImage(bytes, { maxBytes: MAX_LOGO_BYTES });
   if (!logo) {
     throw invalidInput([{ field: "logo", code: "invalid" }]);

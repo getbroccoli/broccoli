@@ -12,6 +12,8 @@ const calls = {
   readSlackMembers: (slack, ctx) => slack.readSlackMembers(ctx),
   isCurrentSlackConnection: (slack, ctx, tx) =>
     slack.isCurrentSlackConnection(ctx, tx, "test-snapshot"),
+  readSlackPhoto: (slack, ctx) =>
+    slack.readSlackPhoto(ctx, new URL("https://avatars.slack-edge.com/photo.jpg")),
 } satisfies Record<
   Exclude<keyof SlackUseCases, "finishSlackConnection">,
   (slack: SlackUseCases, ctx: SecurityContext, tx: Tx) => unknown

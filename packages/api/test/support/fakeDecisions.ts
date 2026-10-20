@@ -1,3 +1,6 @@
+import { randomBytes } from "node:crypto";
+import type { IncomingHttpHeaders } from "node:http";
+
 import express from "express";
 
 import { createDecisions, type Answer } from "../../src/integrations/ai";
@@ -7,13 +10,64 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 export async function startFakeDecisions() {
   let answers: Record<string, string | Answer>[] = [{}];
   const requests: unknown[] = [];
+  const httpRequests: { path: string; headers: IncomingHttpHeaders; body: unknown }[] = [];
+  const issuedTokens: string[] = [];
+  const validTokens = new Set<string>();
+  const acceptedKeys = new Set<string>();
+  let tokenRefusal: { status: number; reason: string } | undefined;
   let status = 200;
+  let failureMessage: string | undefined;
+  let failureReason = "scripted_failure";
   let nextAnswer: { received: () => void; released: Promise<void> } | undefined;
   const app = express().use(express.json());
-  app.post("/alpha/decisions", async (request, response) => {
+  app.use((request, _response, next) => {
+    httpRequests.push({ path: request.path, headers: request.headers, body: request.body });
+    next();
+  });
+  app.post("/v1/tokens", (_request, response) => {
+    if (tokenRefusal) {
+      const { status, reason } = tokenRefusal;
+      tokenRefusal = undefined;
+      response.status(status).json({
+        error: { code: status, message: "Token refused.", metadata: { reason } },
+      });
+      return;
+    }
+    const token = randomBytes(32).toString("hex");
+    issuedTokens.push(token);
+    validTokens.add(token);
+    response.status(201).json({ token, expires_at: "2099-01-01T00:00:00.000Z" });
+  });
+  app.get("/v1/key", (request, response) => {
+    const key = request.headers.authorization?.match(/^Bearer (.+)$/)?.[1] ?? "";
+    if (acceptedKeys.has(key)) {
+      response.json({ data: {} });
+      return;
+    }
+    response.status(401).json({ error: { code: 401, message: "User not found." } });
+  });
+  app.post(["/alpha/decisions", "/v1/decisions"], async (request, response) => {
     requests.push(request.body);
+    if (
+      request.path === "/v1/decisions" &&
+      !validTokens.has(request.headers.authorization?.match(/^Bearer (.+)$/)?.[1] ?? "")
+    ) {
+      response.status(401).json({
+        error: { code: 401, message: "Unknown token.", metadata: { reason: "unknown_token" } },
+      });
+      return;
+    }
     if (status !== 200) {
-      response.status(status).json({ error: "Decisions unavailable" });
+      response.status(status).json({
+        error:
+          failureMessage === undefined
+            ? "Decisions unavailable"
+            : {
+                code: status,
+                message: failureMessage,
+                metadata: { reason: failureReason },
+              },
+      });
       return;
     }
     const { questions } = request.body as { questions: Record<string, unknown> };
@@ -43,20 +97,31 @@ export async function startFakeDecisions() {
   return {
     ...server,
     decisions: createDecisions({
-      url: server.url,
-      apiKey: "test-model-key",
+      endpoint: `${server.url}/alpha/decisions`,
+      credential: "test-model-key",
     }),
     get requestCount() {
       return requests.length;
     },
     requests: (): unknown[] => requests,
+    httpRequests: () => httpRequests,
+    issuedTokens: () => [...issuedTokens],
+    forgetTokens: () => validTokens.clear(),
+    acceptKey: (key: string) => {
+      acceptedKeys.add(key);
+    },
+    refuseTokens(nextStatus: number, reason: string) {
+      tokenRefusal = { status: nextStatus, reason };
+    },
     /** Answers each request in order, repeating the last script for later requests. */
     answer(next: Record<string, string | Answer>, ...following: Record<string, string | Answer>[]) {
       answers = [next, ...following];
       status = 200;
     },
-    fail(nextStatus: number) {
+    fail(nextStatus: number, message?: string, reason = "scripted_failure") {
       status = nextStatus;
+      failureMessage = message;
+      failureReason = reason;
     },
     holdNextAnswer() {
       const received = Promise.withResolvers<void>();

@@ -1,15 +1,18 @@
-import { demoUseCases, expect, NON_OWNER, OWNER, storedFileIds, SYSTEM, test } from "#test/support";
+import { demoUseCases, expect, NON_OWNER, OWNER, storedFileIds, test } from "#test/support";
 
+import { prepareDemoFill } from "./prepareDemoFill";
 import { createEmployeeUseCases } from "../../../employees";
 import { parseCalendarDate } from "../../../../utils";
 
 test("removes demo employees and their avatars while keeping a real employee", async ({
   orm,
   seed,
+  transact,
 }) => {
   const demo = demoUseCases(orm);
   const { listEmployees } = createEmployeeUseCases({ orm });
-  await demo.seedDemoData(SYSTEM, parseCalendarDate("2026-10-13")!);
+  const today = parseCalendarDate("2026-10-13")!;
+  await transact(await prepareDemoFill(today));
   const employee = await seed.employee();
 
   const cleared = await demo.clearDemoData(OWNER);
@@ -25,6 +28,20 @@ test("succeeds when there is no demo data to clear", async ({ orm }) => {
   const demo = demoUseCases(orm);
 
   expect(await demo.clearDemoData(OWNER)).toEqual({ isPresent: false });
+});
+
+test("refuses to clear demo data while the owner is provisional and keeps the demo records", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.demoOwner({ expiresAt: new Date("2026-10-20T12:00:00Z") });
+  await transact(await prepareDemoFill(parseCalendarDate("2026-10-13")));
+  const demo = demoUseCases(orm);
+
+  await expect(demo.clearDemoData(owner)).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+  expect(await demo.getDemoData(owner)).toEqual({ isPresent: true });
 });
 
 test("refuses to clear demo data for a non-owner", async ({ orm }) => {

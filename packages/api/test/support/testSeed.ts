@@ -1,11 +1,17 @@
 import { randomUUID } from "node:crypto";
 
-import { user } from "../../src/core/auth";
+import { hashPassword } from "better-auth/crypto";
+
+import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
-import { instanceRepository } from "../../src/core/instance";
+import { hashSetupToken, instanceRepository } from "../../src/core/instance";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
-import { importRepository, type ImportEmployeeValues } from "../../src/modules/imports";
+import {
+  importPhotoRepository,
+  importRepository,
+  type ImportEmployeeValues,
+} from "../../src/modules/imports";
 import { slackConnectionRepository } from "../../src/modules/slack";
 import { parseCalendarDate } from "../../src/utils";
 import { TEST_SECRET_BOX } from "./testSecretBox";
@@ -25,12 +31,45 @@ export class TestSeed {
 
   constructor(private readonly orm: Orm) {}
 
-  async owner({ email = "owner@example.com" } = {}): Promise<TestSecurityContext> {
+  async owner({
+    email = "owner@example.com",
+    password,
+  }: { email?: string; password?: string } = {}): Promise<TestSecurityContext> {
     const userId = randomUUID();
     const normalisedEmail = email.toLowerCase();
     await this.orm.insert(user).values({ id: userId, name: "Owner", email: normalisedEmail });
+    if (password !== undefined) {
+      await this.orm.insert(account).values({
+        id: randomUUID(),
+        accountId: userId,
+        providerId: "credential",
+        userId,
+        password: await hashPassword(password),
+      });
+    }
     await instanceRepository(this.orm).setOwner(userId, "company");
     return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
+  }
+
+  async demoOwner({ expiresAt }: { expiresAt: Date }): Promise<TestSecurityContext> {
+    const owner = await this.owner();
+    const instance = instanceRepository(this.orm);
+    await instance.setOwner(owner.user!.userId, "done");
+    await instance.saveDemoExpiresAt(expiresAt);
+    return owner;
+  }
+
+  async setupSession({
+    token = "setup-token",
+    expiresAt,
+  }: {
+    token?: string;
+    expiresAt: Date;
+  }): Promise<void> {
+    await instanceRepository(this.orm).saveSetupSession({
+      tokenHash: hashSetupToken(token),
+      expiresAt,
+    });
   }
 
   async file({ content, mimeType }: { content: Buffer; mimeType: string }): Promise<string> {
@@ -71,12 +110,14 @@ export class TestSeed {
     status = "mapping",
     attempt = 0,
     failure = null,
+    failureMessage = null,
   }: {
     name?: string;
     content: string | Uint8Array;
     status?: "mapping" | "mapped" | "failed";
     attempt?: number;
     failure?: "no_people_columns" | "unavailable" | null;
+    failureMessage?: string | null;
   }) {
     const fileId = await this.file({
       content: Buffer.from(content),
@@ -92,7 +133,11 @@ export class TestSeed {
       await repository.restartMapping(id);
     }
     if (status === "failed") {
-      await repository.finishMapping(id, attempt, { status, failure: failure ?? "unavailable" });
+      await repository.finishMapping(id, attempt, {
+        status,
+        failure: failure ?? "unavailable",
+        failureMessage,
+      });
     } else if (status === "mapped") {
       await repository.finishMapping(id, attempt, { status });
     }
@@ -102,15 +147,19 @@ export class TestSeed {
 
   async importEmployees(
     sourceId: string,
-    employees: (Partial<ImportEmployeeValues> & { externalId?: string })[],
+    employees: (Partial<ImportEmployeeValues> & {
+      externalId?: string;
+      photoUrl?: string | null;
+    })[],
   ) {
     const repository = importRepository(this.orm);
     await repository.syncEmployeeRecords(
       sourceId,
-      employees.map(({ externalId, ...values }) => {
+      employees.map(({ externalId, photoUrl, ...values }) => {
         const number = ++this.#count;
         return {
           externalId: externalId ?? `U${number}`,
+          photoUrl,
           raw: {},
           values: {
             firstName: "Employee",
@@ -123,14 +172,8 @@ export class TestSeed {
         };
       }),
     );
-    const records = await repository.findEmployeePage({
-      first: employees.length,
-      after: null,
-      order: { field: "NAME", direction: "ASC" },
-      search: null,
-      sourceId,
-    });
-    return records.map(({ node }) => node);
+    const records = await repository.listEmployeeRecords();
+    return records.filter((record) => record.sourceId === sourceId);
   }
 
   slackConnection(accessToken = "test-slack-token") {
@@ -139,6 +182,16 @@ export class TestSeed {
       teamName: "Acme Workspace",
       encryptedToken: TEST_SECRET_BOX.encrypt(accessToken),
     });
+  }
+
+  async importPhoto(
+    recordId: string,
+    { photoUrl, content, mimeType }: { photoUrl: string; content: Buffer; mimeType: string },
+  ): Promise<string> {
+    const fileId = await this.file({ content, mimeType });
+    const attached = await importPhotoRepository(this.orm).attachPhoto(recordId, photoUrl, fileId);
+    if (!attached) throw new Error(`Could not seed the photo of import record ${recordId}`);
+    return fileId;
   }
 }
 

@@ -1,6 +1,7 @@
 export {
   EmailTakenError,
   employeeFieldErrors,
+  parseEmployeeField,
   parseNewEmployee,
   tryParseNewEmployee,
   type Employee,

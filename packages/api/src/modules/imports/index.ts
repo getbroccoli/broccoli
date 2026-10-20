@@ -1,14 +1,16 @@
+import express from "express";
+
 import type { Decisions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import { createImportUseCases, type SlackReader } from "./app";
+import { createImportUseCases, type DemoFill, prepareDemoStart, type SlackReader } from "./app";
 import { createResolvers } from "./graphql";
-import { filesRouter } from "./http";
+import { filesRouter, photoRouter } from "./http";
 
 export { createImportUseCases, type ImportUseCases } from "./app";
 /** For test seeding only; other modules go through the use cases. */
-export { importRepository } from "./db";
+export { importPhotoRepository, importRepository } from "./db";
 export type { ImportEmployeeValues } from "./domain";
 
 /**
@@ -18,8 +20,10 @@ export type { ImportEmployeeValues } from "./domain";
 export function importsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs"> & {
     slack: SlackReader;
-    /** The model that maps files; null where the instance has no model key. */
-    decisions: Decisions | null;
+    /** The model that maps files. */
+    decisions: Decisions;
+    /** The demo company that skipping the import fills in. */
+    prepareDemoFill: () => Promise<DemoFill>;
   },
 ): ModuleManifest {
   const useCases = createImportUseCases(dependencies);
@@ -27,7 +31,15 @@ export function importsModule(
     name: "imports",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
-    router: (resolveSecurity) => filesRouter(useCases, resolveSecurity),
+    router: (resolveSecurity) =>
+      express
+        .Router()
+        .use(filesRouter(useCases, resolveSecurity))
+        .use(photoRouter(useCases, resolveSecurity, dependencies.orm)),
+    prepareDemoStart: () => prepareDemoStart(dependencies),
+    events: {
+      "instance.setup_completed": () => useCases.finishImport(PrincipalSecurityContext.system()),
+    },
     jobs: {
       "imports.mapFile": {
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),

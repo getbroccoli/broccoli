@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
-import { requireSetupStep } from "@/features/setup";
+import { requireFinishedSetup } from "@/features/setup";
 import { AppShell } from "@/shell";
 
 /**
@@ -8,7 +8,7 @@ import { AppShell } from "@/shell";
  * the app shell.
  */
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: (gate) => ({ me: requireSetupStep("DONE", gate) }),
+  beforeLoad: (gate) => ({ me: requireFinishedSetup(gate) }),
   component: () => (
     <AppShell>
       <Outlet />

@@ -1,8 +1,14 @@
-import { createDecisions } from "../integrations/ai";
+import {
+  checkOpenRouterKey,
+  createResolvedDecisions,
+  DecisionsError,
+  type DecisionsSource,
+} from "../integrations/ai";
+import { readAiConfig, readBroccoliAiToken, saveBroccoliAiToken } from "../core/instance";
 import type { Mode } from "../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
-import { demoModule } from "./demo";
+import { demoModule, prepareDemoFill } from "./demo";
 import { employeesModule } from "./employees";
 import { importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
@@ -15,19 +21,34 @@ export interface ModuleSettings {
   publicUrl?: string;
   brandLookupUrl: string | null;
   slack: SlackUrls;
-  /** The model that maps files: the provider's address and key; null without a key. */
-  model: { url: string; apiKey: string } | null;
+  /** Where AI decisions go: OpenRouter with a key, else Broccoli AI (self-hosted only). */
+  ai: { openRouterUrl: string; openRouterKey: string | null; broccoliAiUrl: string | null };
 }
 
 /** Every module of the API, each given only the dependencies it uses. */
 export function createModules(
   core: ModuleDependencies,
-  { mode, publicUrl, brandLookupUrl, slack, model }: ModuleSettings,
+  { mode, publicUrl, brandLookupUrl, slack, ai }: ModuleSettings,
 ): ModuleManifest[] {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
+  const decisions = createResolvedDecisions({
+    readSource: () => decisionsSource(core, mode, ai),
+    tokens: {
+      read: () => readBroccoliAiToken(core.orm, core.secretBox),
+      save: (token) => saveBroccoliAiToken(core.orm, core.secretBox, token),
+    },
+  });
   return [
-    systemModule({ orm: core.orm, mode }),
+    systemModule({
+      ...core,
+      mode,
+      ai: {
+        environmentKey: ai.openRouterKey,
+        checkOpenRouterKey: (key) => checkOpenRouterKey({ url: ai.openRouterUrl, key }),
+        prepareBroccoliAi: () => decisions.prepareBroccoliAi(broccoliAiUrlOf(ai)),
+      },
+    }),
     employeesModule({ orm: core.orm }),
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, transact: core.transact }),
@@ -35,7 +56,31 @@ export function createModules(
     importsModule({
       ...core,
       slack: slackConnection,
-      decisions: model && createDecisions(model),
+      decisions,
+      prepareDemoFill: () => prepareDemoFill(),
     }),
   ];
+}
+
+/** Where this request's decisions go, for the AI `readAiConfig` picks. */
+async function decisionsSource(
+  { orm, secretBox }: ModuleDependencies,
+  mode: Mode,
+  settings: ModuleSettings["ai"],
+): Promise<DecisionsSource> {
+  const ai = await readAiConfig(orm, secretBox, { mode, environmentKey: settings.openRouterKey });
+  if (ai.source === "broccoli_ai") {
+    return { kind: "broccoli_ai", url: broccoliAiUrlOf(settings) };
+  }
+  if (ai.openRouterKey === null) {
+    throw new DecisionsError("OpenRouter has no key", false);
+  }
+  return { kind: "openrouter", url: settings.openRouterUrl, key: ai.openRouterKey.key };
+}
+
+function broccoliAiUrlOf({ broccoliAiUrl }: ModuleSettings["ai"]): string {
+  if (broccoliAiUrl === null) {
+    throw new Error("Only a self-hosted instance uses Broccoli AI");
+  }
+  return broccoliAiUrl;
 }

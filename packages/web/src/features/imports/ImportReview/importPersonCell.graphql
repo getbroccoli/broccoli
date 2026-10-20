@@ -1,6 +1,14 @@
 fragment ImportPersonCell_importEmployee on ImportEmployee {
   id
-  firstName
-  lastName
+  leftOut
   incompleteReason
+  avatarUrl
+  firstName {
+    value
+    ...EmployeeValueCell_value @unmask
+  }
+  lastName {
+    value
+    ...EmployeeValueCell_value @unmask
+  }
 }

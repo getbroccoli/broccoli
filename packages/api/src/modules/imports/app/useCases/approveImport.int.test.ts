@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
 
-import { expect, importUseCases, NON_OWNER, OWNER, test } from "#test/support";
+import { expect, importUseCases, NON_OWNER, OWNER, SETUP_HOLDER, test } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
 import { instanceRepository, readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
-test("approving creates an employee per complete record and completes setup", async ({
+test("approving creates an employee per ready import employee and completes setup", async ({
   orm,
   seed,
 }) => {
@@ -22,6 +22,7 @@ test("approving creates an employee per complete record and completes setup", as
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
   await seed.importEmployees(source.id, [avery, robin]);
   const imports = importUseCases(orm);
+  const review = await imports.reads.listEmployees(owner, {});
 
   await imports.approveImport(owner);
 
@@ -31,9 +32,11 @@ test("approving creates an employee per complete record and completes setup", as
     expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
   );
   expect(employees.edges).toHaveLength(2);
+  expect(await imports.reads.listSources(owner)).toEqual([source]);
+  expect(await imports.reads.listEmployees(owner, {})).toEqual(review);
 });
 
-test("approving leaves a record without a last name in the import without creating it", async ({
+test("approving keeps a record without a last name without creating an employee", async ({
   orm,
   seed,
 }) => {
@@ -50,9 +53,12 @@ test("approving leaves a record without a last name in the import without creati
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
   ).toEqual([]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    records,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(records);
+  expect(await imports.reads.listSources(owner)).toEqual([source]);
 });
 
 test("approving twice creates the employees once", async ({ orm, seed }) => {
@@ -96,14 +102,14 @@ test.for(["skipped", "company"] as const)(
     const source = await seed.importSource();
     await seed.importEmployees(source.id, [{}]);
     const imports = importUseCases(orm);
-    if (step === "skipped") await imports.skipImport(owner);
+    if (step === "skipped") await imports.startDemo(owner);
+    const employees = createEmployeeUseCases({ orm });
+    const before = await employees.listEmployees(OWNER, { first: 100 });
 
     await imports.approveImport(owner);
 
     expect(await readSetupStep(orm)).toBe(step === "skipped" ? "done" : "company");
-    expect(
-      (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
-    ).toEqual([]);
+    expect(await employees.listEmployees(OWNER, { first: 100 })).toEqual(before);
   },
 );
 
@@ -139,9 +145,11 @@ test("refuses approval while a file is mapping without advancing setup", async (
 
   expect(await readSetupStep(orm)).toBe("import");
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    records,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(records);
 });
 
 test("approves available records when a failed file is present", async ({ orm, seed }) => {
@@ -217,4 +225,60 @@ test("waits for an uncommitted upload before refusing approval", async ({
   expect(await approval).toMatchObject([{ status: "rejected", reason: { code: "CONFLICT" } }]);
   expect(await readSetupStep(orm)).toBe("import");
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+});
+
+test("approves one employee per group with picked and typed values, excluding left-out and incomplete groups", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner();
+  await instanceRepository(orm).setOwner(owner.user!.userId, "import");
+  const slack = await seed.importSource();
+  const file = await seed.fileSource({ content: "x", status: "mapped" });
+  const [member] = await seed.importEmployees(slack.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com", jobTitle: "Engineer" },
+  ]);
+  await seed.importEmployees(file.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com", jobTitle: "Designer" },
+    { email: "leftout@example.com" },
+    { lastName: null },
+  ]);
+  const imports = importUseCases(orm);
+  await imports.choices.chooseEmployeeValue(owner, {
+    key: "avery@example.com",
+    field: "jobTitle",
+    choice: { recordId: member!.id },
+  });
+  await imports.choices.chooseEmployeeValue(owner, {
+    key: "avery@example.com",
+    field: "firstName",
+    choice: { value: "Robin" },
+  });
+  await imports.choices.setLeftOut(owner, { key: "leftout@example.com", leftOut: true });
+  const review = await imports.reads.listEmployees(owner, {});
+
+  await imports.approveImport(owner);
+
+  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  expect(employees.edges.map(({ node }) => node)).toMatchObject([
+    { firstName: "Robin", lastName: "Stone", email: "avery@example.com", jobTitle: "Engineer" },
+  ]);
+  expect(await imports.reads.listEmployees(owner, {})).toEqual(review);
+});
+
+test("the setup holder approves employees without an owner and moves setup to owner", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.importSource();
+  const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
+  await seed.importEmployees(source.id, [avery]);
+  const imports = importUseCases(orm);
+
+  await imports.approveImport(SETUP_HOLDER);
+
+  expect(await readSetupStep(orm)).toBe("owner");
+  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  expect(employees.edges.map(({ node }) => node)).toMatchObject([avery]);
 });

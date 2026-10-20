@@ -3,5 +3,6 @@ fragment FileSourceCard_source on ImportSource {
   name
   status
   failure
+  failureMessage
   employeeCount
 }

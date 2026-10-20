@@ -1,15 +1,12 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { OwnerSetupForm, SetupLayout } from "@/features/setup";
+import { OwnerSetupForm, requireSetupStep, SetupLayout, setUpOwner } from "@/features/setup";
 import { t } from "@/i18n";
 
-/** Creates the owner of a new instance; once one exists, sign-in takes over. */
+/** The last step of self-hosted setup: the browser holding it creates the owner account. */
 export const Route = createFileRoute("/setup/")({
-  beforeLoad: ({ context: { setupStep, signIn } }) => {
-    // Managed instances get their owner from the accounts service, never from this page.
-    if (setupStep !== "OWNER" || signIn === "MANAGED") {
-      throw redirect({ to: "/login", search: { redirect: "/" }, replace: true });
-    }
+  beforeLoad: (gate) => {
+    requireSetupStep("OWNER", gate);
   },
   component: () => (
     <SetupLayout
@@ -17,7 +14,7 @@ export const Route = createFileRoute("/setup/")({
       title={t("setup.owner.title")}
       description={t("setup.owner.description")}
     >
-      <OwnerSetupForm />
+      <OwnerSetupForm createAccount={setUpOwner} />
     </SetupLayout>
   ),
 });

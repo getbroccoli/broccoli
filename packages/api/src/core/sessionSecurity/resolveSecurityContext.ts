@@ -3,11 +3,13 @@ import type { IncomingHttpHeaders } from "node:http";
 
 import type { AuthSource } from "../auth";
 import type { Orm } from "../db";
-import { readOwnerUserId } from "../instance";
-import { PrincipalSecurityContext, type RequestSecurity } from "../security";
+import { readDemoDeadlineOf, readOwnerUserId, readSetupHolder, readSetupToken } from "../instance";
+import { isCrossOrigin } from "../sameOrigin";
+import { PrincipalSecurityContext, type RequestSecurity, type SecurityContext } from "../security";
 
 /**
- * The signed-in user of a request. Reading the session also extends one that is due
+ * The signed-in user of a request, or the browser holding setup; the demo's provisional
+ * owner only until the demo ends. Reading the session also extends one that is due
  * for renewal; the GraphQL adapter sends `renewedCookies` back, or the browser's
  * cookie would expire before the session does.
  */
@@ -17,8 +19,9 @@ export async function resolveSecurityContext(
   requestHeaders: IncomingHttpHeaders,
 ): Promise<RequestSecurity> {
   const auth = await authSource.current();
-  // A managed instance waiting for init has no auth, so nobody is signed in.
-  if (!auth) {
+  // A managed instance waiting for init has no auth, so nobody is signed in. A page on
+  // another origin gets no authority from the browser's cookies.
+  if (!auth || isCrossOrigin(requestHeaders, auth.options.baseURL)) {
     return { security: null, renewedCookies: [] };
   }
   // Better Auth answers a request without a session cookie without a query.
@@ -28,9 +31,30 @@ export async function resolveSecurityContext(
   });
   const renewedCookies = headers.getSetCookie();
   if (!session) {
-    return { security: null, renewedCookies };
+    return { security: await resolveSetupHolder(orm, requestHeaders), renewedCookies };
   }
   const { id: userId, email } = session.user;
   const isOwner = userId === (await readOwnerUserId(orm));
+  if (await hasDemoEnded(orm, userId)) {
+    return { security: null, renewedCookies: [] };
+  }
   return { security: PrincipalSecurityContext.user({ userId, email, isOwner }), renewedCookies };
+}
+
+/** Whether the user is the demo's provisional owner after its deadline, which nothing extends. */
+async function hasDemoEnded(orm: Orm, userId: string): Promise<boolean> {
+  const deadline = await readDemoDeadlineOf(orm, userId);
+  return deadline !== null && deadline <= new Date();
+}
+
+/** The setup holder, for a request carrying the live setup token; otherwise null. */
+async function resolveSetupHolder(
+  orm: Orm,
+  requestHeaders: IncomingHttpHeaders,
+): Promise<SecurityContext | null> {
+  const token = readSetupToken(requestHeaders.cookie);
+  if (!token || (await readSetupHolder(orm, { token, now: new Date() })) !== "you") {
+    return null;
+  }
+  return PrincipalSecurityContext.setupHolder();
 }

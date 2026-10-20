@@ -94,6 +94,17 @@ export function employeeFieldErrors(input: NewEmployeeInput): FieldError[] {
   return result.success ? [] : fieldErrorsOf(result.error);
 }
 
+/** One field of a new employee as the employee rules normalise it, or why the rules refuse it. */
+export function parseEmployeeField(
+  field: keyof NewEmployeeInput,
+  value: string,
+): { value: string | null } | { code: string } {
+  const result = newEmployeeSchema.shape[field].safeParse(value);
+  return result.success
+    ? { value: result.data ?? null }
+    : { code: fieldErrorCode(result.error.issues[0]!) };
+}
+
 /** One error per field: the first problem found is the one worth fixing. */
 function fieldErrorsOf(error: z.ZodError): FieldError[] {
   const byField = new Map<string, string>();

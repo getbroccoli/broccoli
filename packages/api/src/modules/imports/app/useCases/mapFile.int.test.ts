@@ -15,9 +15,8 @@ test("maps a file in one request when every answer is confident", async ({
 
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
-  ).toMatchObject([
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -47,9 +46,8 @@ test("uses the fallback header and columns when a field answer is unsure", async
 
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
-  ).toMatchObject([
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -79,9 +77,8 @@ test("maps a semicolon file with a title above the header", async ({
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "mapped", failure: null },
   ]);
-  expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
-  ).toMatchObject([
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -113,9 +110,8 @@ test("maps a file without a header from its cells", async ({ orm, seed, fakeDeci
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "mapped", failure: null },
   ]);
-  expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
-  ).toMatchObject([
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -149,7 +145,9 @@ test("fails the file when no name or email column is found", async ({
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "failed", failure: "no_people_columns" },
   ]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
 });
 
 test("maps each sheet's own columns and keeps both records under sheet-qualified ids", async ({
@@ -189,9 +187,8 @@ test("maps each sheet's own columns and keeps both records under sheet-qualified
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "mapped", failure: null },
   ]);
-  expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
-  ).toMatchObject([
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
     {
       sourceId: source.id,
       firstName: "Avery",
@@ -252,9 +249,8 @@ test("uses fallback answers for an unsure sheet before mapping the next sheet", 
 
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
-  ).toMatchObject([
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
     { firstName: "Avery", lastName: "Stone", email: null },
     { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
   ]);
@@ -283,9 +279,10 @@ test("skips sheets without people and maps the remaining sheet", async ({
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "mapped", failure: null },
   ]);
-  expect(
-    (await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node),
-  ).toMatchObject([{ sourceId: source.id, firstName: "Avery", lastName: "Stone" }]);
+  const page = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
+  expect(page.edges.map(({ node }) => node)).toMatchObject([
+    { sourceId: source.id, firstName: "Avery", lastName: "Stone" },
+  ]);
 });
 
 test("fails a workbook with no people columns on any sheet", async ({
@@ -310,5 +307,7 @@ test("fails a workbook with no people columns on any sheet", async ({
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
     { id: source.id, status: "failed", failure: "no_people_columns" },
   ]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
 });

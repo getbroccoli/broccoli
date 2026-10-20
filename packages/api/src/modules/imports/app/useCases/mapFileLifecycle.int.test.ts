@@ -19,9 +19,11 @@ test("a stale attempt leaves the source and its records unchanged", async ({
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges.map(({ node }) => node)).toEqual(
-    records,
-  );
+  expect(
+    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
+      ({ node }) => node,
+    ),
+  ).toEqual(records);
 });
 
 test("a removed source writes nothing and does not throw", async ({ orm, fakeDecisions: fake }) => {
@@ -62,9 +64,69 @@ test("an unauthorized model request fails the file as unavailable", async ({
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
   expect(await imports.reads.listSources(OWNER)).toMatchObject([
-    { id: source.id, status: "failed", failure: "unavailable" },
+    { id: source.id, status: "failed", failure: "unavailable", failureMessage: null },
   ]);
   expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+});
+
+test("a provider refusal fails the file with the provider's message", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
+  fake.fail(403, "The free period of Broccoli AI is over.");
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    {
+      id: source.id,
+      status: "failed",
+      failure: "unavailable",
+      failureMessage: "The free period of Broccoli AI is over.",
+    },
+  ]);
+  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+});
+
+test("retrying a failed file clears its failure message", async ({ orm, seed }) => {
+  const source = await seed.fileSource({
+    content: "Name\nAvery Stone",
+    status: "failed",
+    failure: "unavailable",
+    failureMessage: "The free period of Broccoli AI is over.",
+  });
+  const imports = importUseCases(orm);
+  expect(source).toMatchObject({ failureMessage: "The free period of Broccoli AI is over." });
+
+  await imports.files.retryFile(OWNER, source.id);
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, status: "mapping", failure: null, failureMessage: null },
+  ]);
+});
+
+test("an expired Broccoli AI free period fails the file without the provider's message", async ({
+  orm,
+  seed,
+}) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone" });
+  const imports = importUseCases(orm, {
+    decisions: {
+      decide: () =>
+        Promise.reject(
+          new DecisionsError("Forbidden", false, "The free period is over.", "free_period_over"),
+        ),
+    },
+  });
+
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, status: "failed", failure: "ai_free_period_over", failureMessage: null },
+  ]);
 });
 
 test("an in-flight answer leaves a retried source mapping without records", async ({

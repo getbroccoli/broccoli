@@ -1,0 +1,85 @@
+import { ApplicationError, invalidInput } from "../../../../core/applicationError";
+import {
+  readAiConfig,
+  storeAiSource,
+  type AiConfig,
+  type AiSource,
+} from "../../../../core/instance";
+import type { SecurityContext } from "../../../../core/security";
+import { DecisionsError } from "../../../../integrations/ai";
+import type { SystemContext } from "./systemContext";
+
+export interface AiSourceInput {
+  source: AiSource;
+  /** Replaces the saved key; blank counts as none. */
+  openRouterKey?: string | null;
+}
+
+/** Checks that the chosen source works, then saves it, so files are read with it from now on. */
+export async function saveAiSource(
+  context: SystemContext,
+  ctx: SecurityContext,
+  { source, openRouterKey }: AiSourceInput,
+): Promise<AiConfig> {
+  ctx.requireSetupAccess();
+  if (context.mode === "managed") {
+    throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
+  }
+  const givenKey = openRouterKey?.trim() || undefined;
+  if (source === "openrouter") {
+    await checkOpenRouter(context, givenKey);
+  } else {
+    await checkBroccoliAi(context);
+  }
+  await context.transact((tx) =>
+    storeAiSource(tx, context.secretBox, { source, openRouterKey: givenKey }),
+  );
+  return readAiConfig(context.orm, context.secretBox, {
+    mode: context.mode,
+    environmentKey: context.ai.environmentKey,
+  });
+}
+
+/** Checks the given key, else the one files would be read with now. */
+async function checkOpenRouter(
+  { orm, secretBox, mode, ai }: SystemContext,
+  givenKey: string | undefined,
+): Promise<void> {
+  const key =
+    givenKey ??
+    (await readAiConfig(orm, secretBox, { mode, environmentKey: ai.environmentKey })).openRouterKey
+      ?.key ??
+    null;
+  if (key === null) {
+    throw invalidInput([{ field: "openRouterKey", code: "required" }]);
+  }
+  try {
+    await ai.checkOpenRouterKey(key);
+  } catch (error) {
+    throw refusalOf(error, () => invalidInput([{ field: "openRouterKey", code: "rejected" }]));
+  }
+}
+
+async function checkBroccoliAi({ ai }: SystemContext): Promise<void> {
+  try {
+    await ai.prepareBroccoliAi();
+  } catch (error) {
+    throw refusalOf(error, (refusal) =>
+      refusal.reason === "free_period_used"
+        ? invalidInput([{ field: "source", code: "free_period_used" }])
+        : unavailable(),
+    );
+  }
+}
+
+/** The payload error for a source's refusal; a retryable one says "try later". */
+function refusalOf(error: unknown, final: (refusal: DecisionsError) => ApplicationError): unknown {
+  if (!(error instanceof DecisionsError)) {
+    return error;
+  }
+  return error.retryable ? unavailable() : final(error);
+}
+
+function unavailable(): ApplicationError {
+  return new ApplicationError("UNAVAILABLE", "The AI service could not be reached. Try again.");
+}

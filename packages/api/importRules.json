@@ -3,6 +3,7 @@
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
     "src/modules": [
       "src/core/env",
+      "src/core/instance",
       "src/core/moduleManifest",
       "src/integrations/ai",
       "src/modules/*"
@@ -24,7 +25,7 @@
       "src/utils"
     ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
-    "src/modules/system": ["src/core/*", "!src/core/server"],
+    "src/modules/system": ["src/core/*", "!src/core/server", "src/integrations/ai"],
     "src/integrations/ai": ["src/utils"],
     "src/integrations/brandLookup": ["src/utils"],
     "src/integrations/slack": ["src/utils"],
@@ -34,6 +35,7 @@
       "src/core/db",
       "src/core/events",
       "src/core/graphql",
+      "src/core/instance",
       "src/core/jobs",
       "src/core/logger",
       "src/core/secrets"
@@ -49,13 +51,18 @@
       "src/core/auth",
       "src/core/db",
       "src/core/instance",
+      "src/core/sameOrigin",
       "src/core/security"
     ],
     "src/core/instance": [
+      "src/core/applicationError",
+      "src/core/env",
+      "src/core/sameOrigin",
       "src/core/auth",
       "src/core/db",
       "src/core/events",
       "src/core/logger",
+      "src/core/secrets",
       "src/core/security"
     ],
     "src/core/managedSignIn": [
@@ -81,6 +88,7 @@
     "src/core/applicationError": [],
     "src/core/env": ["src/utils"],
     "src/core/readiness": [],
+    "src/core/sameOrigin": [],
     "src/core/secrets": [],
     "test/support": [
       "src/core/*",

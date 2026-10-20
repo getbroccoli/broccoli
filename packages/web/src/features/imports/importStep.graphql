@@ -5,7 +5,6 @@ query ImportStep {
   }
   import {
     id
-    canReadFiles
     sources {
       id
       kind
@@ -79,9 +78,9 @@ mutation RemoveFile($sourceId: ID!) {
   }
 }
 
-mutation SkipImport {
+mutation StartDemo {
   import {
-    skip {
+    startDemo {
       import {
         id
       }

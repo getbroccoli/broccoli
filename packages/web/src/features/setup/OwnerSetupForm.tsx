@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 
 import { NewPasswordField } from "./NewPasswordField";
-import { setUpOwner, type SetupResult } from "./setupApi";
+import type { SetupResult } from "./setupApi";
 import { SetupStepForm } from "./SetupStepForm";
 
 // The API's password policy.
@@ -26,18 +26,23 @@ const ownerSetupSchema = z.object({
     .max(PASSWORD_LENGTH.max, t("setup.owner.passwordTooLong")),
 });
 
-const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "ownerExists">, MessageKey> = {
+const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "conflict">, MessageKey> = {
   invalidInput: "setup.owner.invalidInput",
   tooManyAttempts: "setup.owner.tooManyAttempts",
   failed: "setup.owner.failed",
 };
 
+type Props = {
+  /** Sends the credentials: the owner at the end of setup, or the demo's owner. */
+  createAccount: (email: string, password: string) => Promise<SetupResult>;
+};
+
 /**
- * Creates the owner account. On success the cache is cleared and the router reloads,
- * so routing sends the now signed-in owner on to the company step. When someone else
- * created the owner first, the reload sends the visitor to sign-in.
+ * Creates the owner's account. On success the cache is cleared and the router reloads,
+ * so routing sends the now signed-in owner to the directory. On a conflict, such as an
+ * owner created first, the reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm() {
+export function OwnerSetupForm({ createAccount }: Props) {
   const apolloClient = useApolloClient();
   const router = useRouter();
   const emailInput = useRef<HTMLInputElement>(null);
@@ -49,13 +54,13 @@ export function OwnerSetupForm() {
     validators: { onSubmit: ownerSetupSchema },
     onSubmit: async ({ value }) => {
       setFailure(null);
-      const result = await setUpOwner(value.email, value.password);
+      const result = await createAccount(value.email, value.password);
       if (result === "ok") {
         await apolloClient.clearStore();
         await router.invalidate();
         return;
       }
-      if (result === "ownerExists") {
+      if (result === "conflict") {
         await router.invalidate();
         return;
       }

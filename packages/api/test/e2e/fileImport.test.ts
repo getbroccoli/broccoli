@@ -12,9 +12,8 @@ import {
 const CSV = Buffer.from("Name,Email\nAvery Stone,avery@example.com\nRobin Reed,robin@example.com");
 const IMPORT = `query {
   import {
-    canReadFiles
     sources { id kind name status failure }
-    employees { edges { node { firstName lastName email } } }
+    employees { edges { node { firstName { value } lastName { value } email { value } } } }
   }
 }`;
 
@@ -33,14 +32,13 @@ test("the managed owner uploads a CSV and its people become mapped import employ
     .toEqual({
       data: {
         import: {
-          canReadFiles: true,
           sources: [
             { id: sourceId, kind: "FILE", name: "staff.csv", status: "MAPPED", failure: null },
           ],
           employees: {
             edges: [
-              { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
-              { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+              employee("Avery", "Stone", "avery@example.com"),
+              employee("Robin", "Reed", "robin@example.com"),
             ],
           },
         },
@@ -151,8 +149,8 @@ test("a failed file becomes mapped after retrying with working decisions", async
           sources: [{ id: sourceId, status: "MAPPED", failure: null }],
           employees: {
             edges: [
-              { node: { email: "avery@example.com" } },
-              { node: { email: "robin@example.com" } },
+              { node: { email: { value: "avery@example.com" } } },
+              { node: { email: { value: "robin@example.com" } } },
             ],
           },
         },
@@ -192,7 +190,7 @@ test("removeFile removes the uploaded source", async ({ fakeDecisions }) => {
 });
 
 test("returns an approval conflict in the payload while a file is mapping", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
+  const browser = await env.startSetupAtImport();
   await env.seed.fileSource({ content: CSV.toString(), status: "mapping" });
 
   const response = await browser.graphql(`
@@ -216,16 +214,6 @@ test("returns an approval conflict in the payload while a file is mapping", asyn
       },
     },
   });
-});
-
-test("self-hosted instances cannot read files and refuse uploads", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-
-  const available = await browser.graphql("query { import { canReadFiles } }");
-  const uploaded = await browser.post("/api/imports/files?name=staff.csv", CSV);
-
-  expect(await available.json()).toEqual({ data: { import: { canReadFiles: false } } });
-  expect(uploaded.status).toBe(503);
 });
 
 test("the upload route refuses a request without a session", async ({ fakeDecisions }) => {
@@ -315,12 +303,11 @@ test.for(["staff.xlsx", "staff.XLSX"])(
       .toEqual({
         data: {
           import: {
-            canReadFiles: true,
             sources: [{ id: sourceId, kind: "FILE", name, status: "MAPPED", failure: null }],
             employees: {
               edges: [
-                { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
-                { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
+                employee("Avery", "Stone", "avery@example.com"),
+                employee("Robin", "Reed", "robin@example.com"),
               ],
             },
           },
@@ -328,6 +315,29 @@ test.for(["staff.xlsx", "staff.XLSX"])(
       });
   },
 );
+
+test("refuses a file upload from another origin with a valid setup cookie and adds no source", async ({
+  env,
+}) => {
+  const browser = env.browser();
+  const started = await browser.post("/api/auth/setup/start", undefined);
+  expect(started.status).toBe(200);
+  const cookie = started.headers
+    .getSetCookie()
+    .find((value) => value.startsWith("broccoli_setup="))!
+    .split(";", 1)[0]!;
+
+  const response = await fetch(`${env.url}/api/imports/files?name=staff.csv`, {
+    method: "POST",
+    headers: { origin: "https://other.example.com", cookie, "content-type": "text/plain" },
+    body: CSV,
+  });
+
+  expect(response.status).toBe(401);
+  expect(await response.text()).toBe("Unauthorized");
+  const sources = await browser.graphql("query { import { id sources { id } } }");
+  expect(await sources.json()).toEqual({ data: { import: { id: "import", sources: [] } } });
+});
 
 async function managedImport(fake: FakeDecisions) {
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
@@ -338,4 +348,15 @@ async function managedImport(fake: FakeDecisions) {
 
 async function readImport(browser: Browser): Promise<unknown> {
   return (await browser.graphql(IMPORT)).json();
+}
+
+/** An import employee's edge as `IMPORT` selects it. */
+function employee(firstName: string, lastName: string, email: string) {
+  return {
+    node: {
+      firstName: { value: firstName },
+      lastName: { value: lastName },
+      email: { value: email },
+    },
+  };
 }
