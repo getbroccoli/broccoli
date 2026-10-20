@@ -37,6 +37,7 @@ export {
   isReady,
   toNewEmployeeInput,
 } from "./importEmployeeMapping";
+export { type ImportProgress, importProgress, isReading } from "./importProgress";
 export {
   IMPORT_SOURCE_FAILURES,
   type FileSource,

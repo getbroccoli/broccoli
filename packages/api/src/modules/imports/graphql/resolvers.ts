@@ -19,6 +19,9 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
     Import: {
       id: () => "import",
       sources: (_parent, _args, context) => useCases.reads.listSources(context.getActor()),
+      reading: async (_parent, _args, context) => (await loaders(context).progress()).reading,
+      demoAvailable: async (_parent, _args, context) =>
+        (await loaders(context).progress()).demoAvailable,
       employees: async (_parent, { first, after, orderBy, filter }, context) =>
         (await loaders(context).review()).listEmployees({
           first: first ?? undefined,

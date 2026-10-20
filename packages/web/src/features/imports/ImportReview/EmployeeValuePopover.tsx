@@ -5,6 +5,7 @@ import {
   ChooseEmployeeValueDocument,
   type EmployeeValueCell_ValueFragment,
   type ImportChooseEmployeeValueInput,
+  ImportReviewDocument,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,6 @@ import { formatCalendarDate } from "@/lib/formatDate";
 
 import { type EmployeeFieldKey, FIELD_ENUMS, fieldLabel, valuesLabel } from "./employeeFields";
 import { SourceIcon } from "./SourceIcon";
-import { useRefreshReview } from "./useRefreshReview";
 
 type Choice = Pick<ImportChooseEmployeeValueInput, "recordId" | "value">;
 
@@ -37,9 +37,9 @@ export function EmployeeValuePopover({
   value: EmployeeValueCell_ValueFragment;
   onDone: () => void;
 }) {
-  const refreshReview = useRefreshReview();
   const [chooseValue, { loading, payloadError, error }] = usePayloadMutation(
     ChooseEmployeeValueDocument,
+    { refetch: [ImportReviewDocument] },
   );
   const disagree = value.options.length > 1;
   const [typing, setTyping] = useState(!disagree);
@@ -48,28 +48,29 @@ export function EmployeeValuePopover({
     value.choice === "TYPED" || !disagree ? (value.value ?? "") : "",
   );
 
-  const choose = async (choice: Choice, shownValue: string) => {
+  const choose = (choice: Choice) =>
+    chooseValue({ variables: { input: { employeeId, field: FIELD_ENUMS[field], ...choice } } });
+
+  const chooseAndOfferUndo = (choice: Choice, shownValue: string) => {
     const previous = previousChoice(value);
-    try {
-      await chooseValue({
-        variables: { input: { employeeId, field: FIELD_ENUMS[field], ...choice } },
-      });
-    } catch {
-      return; // `payloadError` or `error` shows it
-    }
-    onDone();
-    await refreshReview();
-    toast(
-      t("setup.review.valueSet", { field: fieldLabel(field), value: display(field, shownValue) }),
-      {
-        action: {
-          label: t("setup.review.undo"),
-          onClick: () =>
-            void chooseValue({
-              variables: { input: { employeeId, field: FIELD_ENUMS[field], ...previous } },
-            }).then(refreshReview, () => toast.error(t("setup.review.saveFailed"))),
-        },
+    void choose(choice).then(
+      () => {
+        onDone();
+        toast(
+          t("setup.review.valueSet", {
+            field: fieldLabel(field),
+            value: display(field, shownValue),
+          }),
+          {
+            action: {
+              label: t("setup.review.undo"),
+              onClick: () =>
+                void choose(previous).catch(() => toast.error(t("setup.review.saveFailed"))),
+            },
+          },
+        );
       },
+      () => undefined, // `payloadError` or `error` shows it
     );
   };
 
@@ -103,7 +104,7 @@ export function EmployeeValuePopover({
               className="h-12 justify-start gap-3 px-3 text-sm"
               disabled={loading}
               aria-pressed={value.choice !== "TYPED" && value.value === option.value}
-              onClick={() => void choose({ recordId: option.records[0]!.id }, option.value)}
+              onClick={() => chooseAndOfferUndo({ recordId: option.records[0]!.id }, option.value)}
             >
               <SourceIcon kind={option.records[0]!.source.kind} />
               <span className="truncate font-medium">{display(field, option.value)}</span>
@@ -128,7 +129,7 @@ export function EmployeeValuePopover({
           className="flex flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
-            void choose({ value: typed }, typed);
+            chooseAndOfferUndo({ value: typed }, typed);
           }}
         >
           <div className="flex gap-2">

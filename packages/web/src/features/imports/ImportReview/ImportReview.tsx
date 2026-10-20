@@ -63,11 +63,11 @@ export function ImportReview() {
   });
   const rows = useImportReviewRows(list.rows);
   const sources = (data ?? previousData)?.import.sources ?? [];
-  const reading = sources.some(({ status }) => status === "MAPPING");
   const [approveImport, { error: approveError, payloadError: approveConflict }] =
     usePayloadMutation(ApproveImportDocument);
   const [run, approving] = useRouteAction();
   const current = (data ?? previousData)?.import;
+  const reading = current?.reading ?? false;
   const readyCount = current?.readyEmployeeCount ?? 0;
   const totalCount = current?.employeeCount ?? 0;
   const checks = current?.checks ?? [];

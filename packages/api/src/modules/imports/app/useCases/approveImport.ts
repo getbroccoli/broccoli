@@ -4,7 +4,7 @@ import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
 import { importPhotoRepository, importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
-import { toNewEmployeeInput } from "../../domain";
+import { isReading, toNewEmployeeInput } from "../../domain";
 import { readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
 
@@ -27,7 +27,7 @@ export async function approveImport(
     }
     const imports = importRepository(tx);
     await imports.lockSources();
-    if (await imports.hasMappingSource()) {
+    if (isReading(await imports.listSources())) {
       throw new ApplicationError("CONFLICT", "Files are still being read.");
     }
     const { readyEmployees } = await readImportReview(ctx, tx);

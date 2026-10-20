@@ -37,8 +37,6 @@ export interface ImportRepository {
   restartMapping(id: string): Promise<number | null>;
   /** Deletes a file source, its records and its stored file. */
   deleteFileSource(id: string): Promise<void>;
-  /** Whether any source is still being mapped. */
-  hasMappingSource(): Promise<boolean>;
   /**
    * Waits for and holds, until the transaction ends, the lock that Approve and the
    * operations starting a mapping run take first, so Approve never misses a run.
@@ -165,15 +163,6 @@ export function importRepository(db: Orm | Tx): ImportRepository {
         .where(and(eq(importSources.id, id), eq(importSources.kind, "file")))
         .returning({ fileId: importSources.fileId });
       await deleteFiles(db, presentIds(uploads));
-    },
-
-    hasMappingSource: async (): Promise<boolean> => {
-      const [row] = await orm()
-        .select({ id: importSources.id })
-        .from(importSources)
-        .where(eq(importSources.status, "mapping"))
-        .limit(1);
-      return row !== undefined;
     },
 
     lockSources: async (): Promise<void> => {
