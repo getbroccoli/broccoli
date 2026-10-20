@@ -87,7 +87,7 @@ export const setupEn = {
   "setup.ai.keyRejected": "OpenRouter didn’t accept this key. Check it and try again.",
   "setup.ai.openRouterUnavailable": "Couldn’t reach OpenRouter. Try again in a moment.",
   "setup.ai.freePeriodUsed":
-    "This server already used its free Broccoli AI period. Add your own OpenRouter key to continue.",
+    "A free Broccoli AI trial was already issued for this network, but this installation can’t access it. Use your own OpenRouter key to continue.",
   "setup.ai.broccoliAiBusy":
     "Broccoli AI is busy right now. Try again in a few minutes, or use your own OpenRouter key.",
   "setup.ai.failed": "Couldn’t continue. Try again.",

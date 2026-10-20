@@ -62,6 +62,7 @@ export async function startServer(
   let graphql: GraphqlApi;
   try {
     modules = createModules({
+      dataDir: env.dataDir,
       orm: database.orm,
       transact,
       logger,

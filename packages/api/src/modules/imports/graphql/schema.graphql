@@ -40,7 +40,7 @@ enum ImportSourceFailure {
   NO_PEOPLE_COLUMNS
   "The model could not be reached or refused."
   UNAVAILABLE
-  "This server already used its free Broccoli AI period; an own OpenRouter key reads the file."
+  "A free trial was already issued for this network, but this installation cannot access it."
   AI_FREE_PERIOD_USED
   "The free Broccoli AI period is over; an own OpenRouter key reads the file."
   AI_FREE_PERIOD_OVER

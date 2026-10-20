@@ -13,6 +13,7 @@ import type { SecretBox } from "./secrets";
  * uses (`Pick<ModuleDependencies, "orm">`) plus its own settings.
  */
 export interface ModuleDependencies {
+  dataDir: string;
   orm: Orm;
   transact: Transact;
   logger: Logger;

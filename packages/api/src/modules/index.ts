@@ -35,8 +35,8 @@ export function createModules(
   const decisions = createResolvedDecisions({
     readSource: () => decisionsSource(core, mode, ai),
     tokens: {
-      read: () => readBroccoliAiToken(core.orm, core.secretBox),
-      save: (token) => saveBroccoliAiToken(core.orm, core.secretBox, token),
+      read: () => readBroccoliAiToken(core.orm, core.secretBox, core.dataDir),
+      save: (token) => saveBroccoliAiToken(core.secretBox, core.dataDir, token),
     },
   });
   return [

@@ -45,7 +45,7 @@ export const importsEn = {
   "imports.files.noPeopleColumns": "Couldn’t find a name or email column.",
   "imports.files.unavailable": "Couldn’t reach the AI provider.",
   "imports.files.aiFreePeriodUsed":
-    "This server already used its free Broccoli AI period. Add your own OpenRouter key to continue.",
+    "A free Broccoli AI trial was already issued for this network, but this installation can’t access it. Use your own OpenRouter key to continue.",
   "imports.files.aiFreePeriodOver":
     "Your free Broccoli AI period is over. Add your own OpenRouter key to keep reading files.",
   "imports.files.aiLimitReached":

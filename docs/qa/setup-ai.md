@@ -26,6 +26,9 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 - [ ] Upload a staff CSV: it is read ("N people").
 - [ ] With the relay unreachable (`SELF_HOSTED_BROCCOLI_AI_URL` pointing at a closed local port), "Continue" stays on the page with "Broccoli AI is busy right now. Try again in a few minutes, or use your own OpenRouter key."
 
+- [ ] When the relay refuses a token with `free_period_used`, setup says a trial was already issued for this network and this installation cannot access it; it does not claim the trial expired. The same reason on a file gives the same explanation.
+- [ ] After a successful Broccoli AI connection, reset only a throwaway development database with `pnpm dev --drop-db`, keeping `.data`. Set up the company again: Broccoli AI reuses the same trial token. The trial’s expiry and allowance do not reset.
+
 ## OpenRouter
 
 - [ ] Selecting "OpenRouter" shows "API key" (a password field, placeholder `sk-or-v1-...`) and "No key yet? Create a key", which opens OpenRouter's keys page in a new tab. "Continue" is disabled while the field is empty.
