@@ -38,6 +38,8 @@ type Props = {
   createAccount: (email: string, password: string) => Promise<SetupResult>;
   /** Shown above the fields. */
   intro?: ReactNode;
+  /** Shown on the left of the footer, such as a way back out of setup's last step. */
+  secondaryAction?: ReactNode;
   width?: SetupWidth;
 };
 
@@ -46,7 +48,7 @@ type Props = {
  * so routing sends the now signed-in owner to the directory. On a conflict, such as an
  * owner created first, the reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm({ createAccount, intro, width }: Props) {
+export function OwnerSetupForm({ createAccount, intro, secondaryAction, width }: Props) {
   const apolloClient = useApolloClient();
   const router = useRouter();
   const emailInput = useRef<HTMLInputElement>(null);
@@ -89,15 +91,18 @@ export function OwnerSetupForm({ createAccount, intro, width }: Props) {
       width={width}
       onSubmit={() => void form.handleSubmit()}
       footer={
-        <Button
-          type="submit"
-          size="lg"
-          className="h-10 gap-2 px-4"
-          disabled={isSubmitting || !isFilledIn}
-        >
-          {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
-          <ArrowRight weight="bold" aria-hidden />
-        </Button>
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          {secondaryAction}
+          <Button
+            type="submit"
+            size="lg"
+            className="ml-auto h-10 gap-2 px-4"
+            disabled={isSubmitting || !isFilledIn}
+          >
+            {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
+            <ArrowRight weight="bold" aria-hidden />
+          </Button>
+        </div>
       }
     >
       {intro}

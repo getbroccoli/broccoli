@@ -10,6 +10,7 @@ import type { DemoFill, SlackReader } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { finishImport } from "./finishImport";
 import { readSlack } from "./readSlack";
+import { resetSetup } from "./resetSetup";
 import { startDemo } from "./startDemo";
 
 export type { DemoFill, SlackReader } from "./importContext";
@@ -22,6 +23,8 @@ export interface ImportUseCases {
   approveImport: (ctx: SecurityContext) => Promise<void>;
   /** Deletes the approved import once setup is complete; its photos stay with the employees. */
   finishImport: (ctx: SecurityContext) => Promise<void>;
+  /** Takes setup from the owner step back to the company step, deleting the approved employees. */
+  resetSetup: (ctx: SecurityContext) => Promise<void>;
   reads: ImportReadService;
   choices: EmployeeChoiceService;
   files: FileSourceService;
@@ -50,6 +53,7 @@ export function createImportUseCases({
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     approveImport: (ctx: SecurityContext) => approveImport(context, ctx),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
+    resetSetup: (ctx: SecurityContext) => resetSetup(context, ctx),
     reads: createImportReadService(imports, importPhotoRepository(orm)),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs }),

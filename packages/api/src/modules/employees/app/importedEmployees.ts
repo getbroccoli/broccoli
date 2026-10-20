@@ -36,3 +36,13 @@ export async function createImportedEmployees(
     avatarFileIds: created.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : [])),
   };
 }
+
+/**
+ * Deletes the employees an import created, joining `tx`, when setup goes back before the
+ * owner exists: then they are every employee. Their avatars are the import's photos, so the
+ * files stay with the import.
+ */
+export async function deleteImportedEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
+  ctx.requireSetupAccess();
+  await employeeRepository(tx).deleteAll();
+}
