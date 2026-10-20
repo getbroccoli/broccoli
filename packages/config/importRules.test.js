@@ -111,6 +111,19 @@ test("allows test support to import an element whose tests use it", () => {
   expect(() => importRulesConfig(packageDir)).not.toThrow();
 });
 
+test("keeps a layer element's own imports instead of inheriting its owner's", () => {
+  const packageDir = packageWith(["src/billing/domain", "src/billing/report"], {
+    elements: {
+      "src/billing": ["src/billing/report"],
+      "src/billing/report": ["src/billing/domain"],
+      "src/billing/domain": [],
+    },
+    layers: { domain: [] },
+  });
+
+  expect(() => importRulesConfig(packageDir)).not.toThrow();
+});
+
 function packageWith(folders, rules) {
   const packageDir = mkdtempSync(join(tmpdir(), "import-rules-"));
   onTestFinished(() => rmSync(packageDir, { recursive: true, force: true }));

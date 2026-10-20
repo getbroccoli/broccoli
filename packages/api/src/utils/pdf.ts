@@ -25,13 +25,13 @@ export interface PdfPage {
 /**
  * Every page's text and images, read in a contained process; "encrypted" when the PDF needs a
  * password to open; null when it cannot be read within its memory, time, page and text limits. It
- * waits for any other heavy read to finish.
+ * waits for any other heavy read to finish, and an aborted `signal` ends it.
  */
 export function parsePdf(
   bytes: Uint8Array,
-  timeoutMs = 30_000,
+  { timeoutMs = 30_000, signal }: { timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<PdfPage[] | "encrypted" | null> {
-  return oneReadAtATime(() => readInProcess(bytes, timeoutMs));
+  return oneReadAtATime(() => readInProcess(bytes, timeoutMs, signal));
 }
 
 /**
@@ -43,8 +43,10 @@ export function parsePdf(
 function readInProcess(
   bytes: Uint8Array,
   timeoutMs: number,
+  signal: AbortSignal | undefined,
 ): Promise<PdfPage[] | "encrypted" | null> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
     let pages: PdfPage[] | "encrypted" | null = null;
     // `--jitless`: compiled code reserves memory that counts against the limit, gigabytes of it.
     const reader = spawn(
@@ -60,12 +62,22 @@ function readInProcess(
       ],
       { stdio: ["ignore", "ignore", "ignore", "ipc"], serialization: "advanced" },
     );
-    const finish = () => {
+    const end = () => {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
       reader.kill("SIGKILL");
+    };
+    const finish = () => {
+      end();
       resolve(pages);
     };
+    const abort = () => {
+      end();
+      // An abort reason is a DOMException unless the caller passed its own error.
+      reject(signal!.reason as Error);
+    };
     const timer = setTimeout(finish, timeoutMs);
+    signal?.addEventListener("abort", abort, { once: true });
     reader.once("message", (json: string) => (pages = JSON.parse(json) as PdfPage[] | "encrypted"));
     reader.once("exit", finish);
     // The reader could not start, or ended before it took the bytes.

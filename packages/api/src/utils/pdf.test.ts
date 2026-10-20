@@ -157,7 +157,7 @@ it("returns null when the text read exceeds 4 MB", async () => {
 it("returns null when reading takes longer than the timeout", async () => {
   const bytes = samplePdfFile({ pages: [{ texts: [{ text: "Avery", x: 40, y: 700 }] }] });
 
-  expect(await parsePdf(bytes, 1)).toBeNull();
+  expect(await parsePdf(bytes, { timeoutMs: 1 })).toBeNull();
 });
 
 it("reads text from a PDF with a script, an attachment and an external link", async () => {

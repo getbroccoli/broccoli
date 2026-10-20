@@ -6,11 +6,12 @@ export {
   type CalendarDate,
 } from "./calendarDate";
 export { AnswerTooLargeError, fetchBytes } from "./fetchBytes";
-export { fetchJson, readText } from "./fetchJson";
+export { fetchJson, FetchStatusError, readText } from "./fetchJson";
 export { parseRasterImage, type RasterImage } from "./rasterImage";
 export { parseCsv } from "./csv";
 export { parseXlsx } from "./xlsx";
 export { parsePdf, type PdfPage, type PdfTextItem } from "./pdf";
+export { type PdfWord, type PdfWordPage, PdfWordsUnavailableError, readPdfWords } from "./pdfWords";
 export { parseOrigin } from "./origin";
 export { readCookie } from "./readCookie";
 export { urlUnder } from "./urlUnder";

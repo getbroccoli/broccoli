@@ -10,4 +10,22 @@ export {
 } from "./decisions";
 export { checkOpenRouterKey } from "./openRouterKey";
 export { createResolvedDecisions, type DecisionsSource } from "./resolvedDecisions";
-export { keptByPlaceholders } from "./sanitize";
+export {
+  type CompletionInput,
+  type DraftRecord,
+  type MaskedPage,
+  type MaskedRowsPage,
+  type MaskedWord,
+  parseCompletionInput,
+} from "./maskedEvidence";
+export {
+  COMPLETION_MODEL,
+  CompletionError,
+  type CompletionFailure,
+  type CompletionResult,
+  type CompletionTask,
+  type CompletionTaskId,
+  createReferenceCompletions,
+  type ReferenceCompletions,
+} from "./referenceCompletions";
+export { keptByPlaceholders, vocabularyCategory } from "./sanitize";
