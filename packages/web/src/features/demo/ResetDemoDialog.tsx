@@ -1,5 +1,4 @@
 import { useApolloClient } from "@apollo/client/react";
-import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { t } from "@/i18n";
 import { postJson } from "@/lib/postJson";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 type Props = {
   open: boolean;
@@ -25,9 +25,8 @@ type Props = {
  * holds setup again, and the routing sends it there. Opened from the workspace menu.
  */
 export function ResetDemoDialog({ open, onOpenChange }: Props) {
-  const router = useRouter();
   const apolloClient = useApolloClient();
-  const [resetting, setResetting] = useState(false);
+  const [run, resetting] = useRouteAction();
   const [failed, setFailed] = useState(false);
 
   const changeOpen = (nextOpen: boolean) => {
@@ -36,20 +35,19 @@ export function ResetDemoDialog({ open, onOpenChange }: Props) {
     onOpenChange(nextOpen);
   };
 
-  const confirm = async () => {
+  const confirm = () => {
     setFailed(false);
-    setResetting(true);
-    const reset = await postJson("/api/auth/setup/demo/reset", {}).then(
-      (response) => response.ok,
-      () => false,
-    );
-    setResetting(false);
-    if (!reset) {
-      setFailed(true);
-      return;
-    }
-    await apolloClient.clearStore();
-    await router.invalidate();
+    run(async () => {
+      const reset = await postJson("/api/auth/setup/demo/reset", {}).then(
+        (response) => response.ok,
+        () => false,
+      );
+      if (!reset) {
+        setFailed(true);
+        return false;
+      }
+      await apolloClient.clearStore();
+    });
   };
 
   return (
@@ -71,7 +69,7 @@ export function ResetDemoDialog({ open, onOpenChange }: Props) {
             disabled={resetting}
             // Keeps focus in the dialog while it resets, so a failed reset can be retried with Enter.
             focusableWhenDisabled
-            onClick={() => void confirm()}
+            onClick={confirm}
           >
             {resetting ? t("demo.reset.pending") : t("demo.reset.confirm")}
           </AlertDialogAction>

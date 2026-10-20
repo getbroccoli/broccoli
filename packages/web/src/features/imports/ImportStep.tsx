@@ -74,7 +74,7 @@ export function ImportStep() {
               // Until the import loads, it may already hold people.
               disabled={starting || gathering || !data}
               title={gathering ? t("setup.import.demoUnavailable") : undefined}
-              onClick={() => void startDemo()}
+              onClick={startDemo}
             >
               {t(starting ? "setup.import.demoStarting" : "setup.import.demo")}
             </Button>

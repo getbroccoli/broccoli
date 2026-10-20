@@ -7,6 +7,7 @@ import { usePayloadMutation } from "@/apollo";
 import { useStartDemo } from "@/features/imports";
 import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 import { AgentOption } from "./AgentOption";
 import { AiFooter } from "./AiFooter";
@@ -28,10 +29,10 @@ export function AiForm({ ai, peopleGathered }: Props) {
   const [source, setSource] = useState<AiSource>(ai.source);
   // The key being typed; null while the known key is used, and Replace starts one.
   const [newKey, setNewKey] = useState<string | null>(null);
-  const [saveAiSource, { loading: checking, error, payloadError }] =
-    usePayloadMutation(SaveAiSourceDocument);
+  const [saveAiSource, { error, payloadError }] = usePayloadMutation(SaveAiSourceDocument);
+  const [run, isContinuing] = useRouteAction();
   const demo = useStartDemo();
-  const busy = checking || demo.starting;
+  const busy = isContinuing || demo.starting;
   const knownKey = newKey === null ? ai.openRouterKey : null;
   const key = newKey ?? "";
   const asksForKey = source === "OPENROUTER" && knownKey === null;
@@ -39,23 +40,20 @@ export function AiForm({ ai, peopleGathered }: Props) {
   // A refused key shows under the key field; a known key has no field, so it shows below.
   const keyFieldError = failure?.onKey && asksForKey ? t(failure.message) : undefined;
 
-  const save = async () => {
-    try {
-      await saveAiSource({
-        variables: { input: { source, openRouterKey: asksForKey ? key : null } },
-      });
-    } catch {
-      return; // The hook keeps the error for display.
-    }
-    await navigate({ to: "/setup/import" });
-  };
+  // `usePayloadMutation` keeps a failure for display.
+  const save = () =>
+    run(
+      () =>
+        saveAiSource({ variables: { input: { source, openRouterKey: asksForKey ? key : null } } }),
+      () => navigate({ to: "/setup/import" }),
+    );
 
   return (
     <SetupStepForm
-      onSubmit={() => void save()}
+      onSubmit={save}
       footer={
         <AiFooter
-          checking={checking ? source : null}
+          checking={isContinuing ? source : null}
           disabled={busy || (asksForKey && key.trim() === "")}
           busy={busy}
         />
@@ -100,7 +98,7 @@ export function AiForm({ ai, peopleGathered }: Props) {
         disabled={busy}
         unavailable={peopleGathered}
         starting={demo.starting}
-        onUse={() => void demo.start()}
+        onUse={demo.start}
       />
       {failure && keyFieldError === undefined && (
         <p role="alert" className="text-sm text-destructive">

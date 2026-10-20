@@ -6,7 +6,7 @@ import {
   UserCircle,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import {
@@ -27,6 +27,7 @@ import { SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 import { IMPORT_REVIEW_COLUMNS, useImportReviewRows } from "./importReviewColumns";
 import { type ImportReviewSearch, toImportReviewVariables } from "./importReviewSearch";
@@ -41,7 +42,6 @@ import { ThingsToCheck } from "./ThingsToCheck";
  * the ready ones; the router then reloads and routing sends the owner on.
  */
 export function ImportReview() {
-  const router = useRouter();
   const search = useSearch({ from: "/setup/import_/review" });
   const navigate = useNavigate({ from: "/setup/import/review" });
   const writeSearch = useCallback(
@@ -64,10 +64,9 @@ export function ImportReview() {
   const rows = useImportReviewRows(list.rows);
   const sources = (data ?? previousData)?.import.sources ?? [];
   const reading = sources.some(({ status }) => status === "MAPPING");
-  const [
-    approveImport,
-    { loading: approving, error: approveError, payloadError: approveConflict },
-  ] = usePayloadMutation(ApproveImportDocument);
+  const [approveImport, { error: approveError, payloadError: approveConflict }] =
+    usePayloadMutation(ApproveImportDocument);
+  const [run, approving] = useRouteAction();
   const current = (data ?? previousData)?.import;
   const readyCount = current?.readyEmployeeCount ?? 0;
   const totalCount = current?.employeeCount ?? 0;
@@ -77,14 +76,8 @@ export function ImportReview() {
   const uncheckedCount = countOf(checks, "CONFLICT");
   const leftOutCount = totalCount - readyCount - incompleteCount;
 
-  const approve = async () => {
-    try {
-      await approveImport();
-    } catch {
-      return; // `approveError` or `approveConflict` shows it
-    }
-    await router.invalidate();
-  };
+  // `approveError` or `approveConflict` shows a failure.
+  const approve = () => run(() => approveImport());
 
   return (
     <SetupStepForm
@@ -117,7 +110,7 @@ export function ImportReview() {
                 className="h-10 gap-2 px-4"
                 // Only what the owner sees now: not while the review refreshes or failed to.
                 disabled={approving || reading || loading || Boolean(error)}
-                onClick={() => void approve()}
+                onClick={approve}
               >
                 {approveLabel({ approving, reading, readyCount })}
                 <ArrowRight weight="bold" aria-hidden />

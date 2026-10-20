@@ -1,10 +1,11 @@
 import { useApolloClient } from "@apollo/client/react";
-import { useRouteContext, useRouter } from "@tanstack/react-router";
+import { useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { StartDemoDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { startDemoSetup } from "@/features/setup";
+import { useRouteAction } from "@/lib/useRouteAction";
 
 /**
  * Leaves the import step with the demo company in place of the owner's people; the router
@@ -12,34 +13,28 @@ import { startDemoSetup } from "@/features/setup";
  * signed in as the demo's owner, so the cache is cleared as on any sign-in.
  */
 export function useStartDemo() {
-  const router = useRouter();
   const apolloClient = useApolloClient();
   const { holdsSetup } = useRouteContext({ from: "__root__" });
-  const [startDemoMutation, { loading: mutating }] = usePayloadMutation(StartDemoDocument);
-  const [signingIn, setSigningIn] = useState(false);
+  const [startDemoMutation] = usePayloadMutation(StartDemoDocument);
+  const [run, starting] = useRouteAction();
   const [failed, setFailed] = useState(false);
 
-  const start = async () => {
+  const start = () => {
     setFailed(false);
-    if (holdsSetup) {
-      setSigningIn(true);
-      const started = await startDemoSetup();
-      setSigningIn(false);
+    run(async () => {
+      const started = holdsSetup
+        ? await startDemoSetup()
+        : await startDemoMutation().then(
+            () => true,
+            () => false,
+          );
       if (!started) {
         setFailed(true);
-        return;
+        return false;
       }
-      await apolloClient.clearStore();
-    } else {
-      try {
-        await startDemoMutation();
-      } catch {
-        setFailed(true);
-        return;
-      }
-    }
-    await router.invalidate();
+      if (holdsSetup) await apolloClient.clearStore();
+    });
   };
 
-  return { start, starting: mutating || signingIn, failed };
+  return { start, starting, failed };
 }
