@@ -8,6 +8,7 @@ import {
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { PopoverDescription, PopoverHeader, PopoverTitle } from "@/components/ui/popover";
 import { t } from "@/i18n";
@@ -131,16 +132,26 @@ export function EmployeeValuePopover({
           }}
         >
           <div className="flex gap-2">
-            <Input
-              autoFocus
-              aria-label={fieldLabel(field)}
-              aria-invalid={Boolean(fieldError)}
-              // Not `type="email"`: the browser's own check would hide the employee rule's message.
-              type={field === "startDate" ? "date" : "text"}
-              inputMode={field === "email" ? "email" : undefined}
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-            />
+            {field === "startDate" ? (
+              <DatePicker
+                autoFocus
+                aria-label={fieldLabel(field)}
+                aria-invalid={Boolean(fieldError)}
+                placeholder={t("setup.review.pickDate")}
+                value={typed}
+                onChange={setTyped}
+              />
+            ) : (
+              <Input
+                autoFocus
+                aria-label={fieldLabel(field)}
+                aria-invalid={Boolean(fieldError)}
+                // Not `type="email"`: the browser's own check would hide the employee rule's message.
+                inputMode={field === "email" ? "email" : undefined}
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+              />
+            )}
             <Button type="submit" disabled={loading}>
               {t("setup.review.save")}
             </Button>
