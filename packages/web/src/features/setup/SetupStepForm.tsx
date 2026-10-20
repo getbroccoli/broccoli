@@ -31,10 +31,7 @@ export function SetupStepForm({
     >
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div
-          className={cn(
-            "mx-auto flex w-full flex-col gap-8 p-6 sm:p-10",
-            width === "wide" ? "max-w-[1180px]" : "max-w-2xl",
-          )}
+          className={cn("mx-auto flex w-full flex-col gap-8 p-6 sm:p-10", CONTENT_WIDTHS[width])}
         >
           {children}
         </div>
@@ -45,3 +42,10 @@ export function SetupStepForm({
     </form>
   );
 }
+
+// Each holds the matching header width of `SetupLayout` plus the side padding.
+const CONTENT_WIDTHS: Record<SetupWidth, string> = {
+  narrow: "max-w-[500px]",
+  default: "max-w-2xl",
+  wide: "max-w-[1180px]",
+};

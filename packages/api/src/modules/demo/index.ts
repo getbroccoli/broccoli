@@ -1,6 +1,6 @@
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
-import { createDemoUseCases } from "./app";
+import { createDemoUseCases, resetDemoPeople } from "./app";
 import { createResolvers } from "./graphql";
 
 export { createDemoUseCases, type DemoUseCases, prepareDemoFill } from "./app";
@@ -14,5 +14,6 @@ export function demoModule(
     name: "demo",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
+    clearDemoPeople: resetDemoPeople,
   };
 }

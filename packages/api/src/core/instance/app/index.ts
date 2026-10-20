@@ -4,7 +4,9 @@ export {
   finishDemo,
   readDemoDeadlineOf,
   readDemoExpiresAt,
+  resetDemo,
   startDemoAtSetup,
+  type DemoReset,
   type DemoStart,
 } from "./demo";
 export { assignInstance, readAssignment } from "./managed";

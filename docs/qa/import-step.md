@@ -43,13 +43,14 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 - [ ] A CSV without a name or email column ends as "Couldn’t find a name or email column." with "Retry".
 - [ ] When Broccoli AI refuses (its free period is over), the card shows the refusal's own words with "Retry".
 - [ ] "Remove" in a card's menu removes the card and its people.
-- [ ] While a card reads "Reading columns…", the footer's button reads "Reading your files…" and is disabled; afterwards it reads "Next: review your people" again.
+- [ ] While a card reads "Reading columns…", the footer's button reads "Reading your files…" and is disabled; afterwards it reads "Review your people" again.
 
 ## Leaving the step
 
-- [ ] Before Slack is imported, the footer shows only "Skip and use demo data".
-- [ ] With members imported, the footer shows "Skip and use demo data" and "Next: review your people", which opens the [review](import-review.md).
-- [ ] On a fresh instance, "Skip and use demo data" shows "Filling demo data…" and moves on (managed: `/people`; self-hosted: "Create your account"), and the people page then shows the demo people.
+- [ ] Before Slack is imported, the footer shows only "Explore the demo"; self-hosted also shows "Back" on the left, which opens `/setup/ai`. Managed shows no "Back".
+- [ ] Pressing Enter on the page never starts the demo.
+- [ ] With members imported, "Explore the demo" is disabled with "Not available once you’ve gathered people." beside it, and "Review your people" opens the [review](import-review.md).
+- [ ] On a fresh instance, "Explore the demo" shows "Opening the demo…" and opens `/people` with the demo people (self-hosted: signed in as the demo's owner, without an account).
 
 ## Layout
 

@@ -268,6 +268,16 @@ test("refuses the eleventh setup start even when each request changes X-Forwarde
   expect(response.status).toBe(429);
 });
 
+test("refuses the eleventh demo reset within a minute", async ({ env }) => {
+  const reset = () =>
+    fetch(`${env.url}/api/auth/setup/demo/reset`, { method: "POST", headers: { origin: env.url } });
+  for (let request = 0; request < 10; request++) {
+    expect((await reset()).status).toBe(401);
+  }
+
+  expect((await reset()).status).toBe(429);
+});
+
 function setupCookieOf(response: Response): string | undefined {
   return response.headers.getSetCookie().find((cookie) => cookie.startsWith("broccoli_setup="));
 }

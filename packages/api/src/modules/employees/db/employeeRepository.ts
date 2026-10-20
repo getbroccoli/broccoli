@@ -28,6 +28,8 @@ export interface EmployeeRepository {
   ): Promise<{ avatarFileId: string | null }[]>;
   /** Deletes every demo employee; returns the ids of the avatar files they owned. */
   deleteDemo(): Promise<string[]>;
+  /** Deletes every employee; their avatar files stay. */
+  deleteAll(): Promise<void>;
   hasAny(): Promise<boolean>;
   hasDemo(): Promise<boolean>;
   /** Whether an employee's avatar is this file. */
@@ -102,6 +104,10 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         .where(eq(employees.isDemo, true))
         .returning({ avatarFileId: employees.avatarFileId });
       return rows.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : []));
+    },
+
+    deleteAll: async (): Promise<void> => {
+      await orm().delete(employees);
     },
 
     hasAny: () => exists(orm(), sql`true`),

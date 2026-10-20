@@ -62,6 +62,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE53.** A component with props declares them as `type Props = { … }` right above the component, not inline in its parameters and not below it; this is the one type that comes before the code using it (RULE9).
 - **RULE38.** Route files stay thin; feature components live in `features/<module>/`.
 - **RULE39.** App code uses Phosphor icons; Lucide appears only inside shadcn components.
+- **RULE50.** Styles of one component, such as its keyframes, sit in a CSS file next to it that it imports; `styles.css` holds only the theme and app-wide base styles.
 - **RULE51.** Web code runs a mutation with `usePayloadMutation` from `@/apollo`, never Apollo's `useMutation`, so a payload error never passes as success. `lint: no-restricted-imports`
 
 ## Tests

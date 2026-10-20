@@ -2,7 +2,7 @@ import { useApolloClient } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useRouter } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 
 import { FieldError } from "@/components/form";
@@ -13,6 +13,7 @@ import { t, type MessageKey } from "@/i18n";
 
 import { NewPasswordField } from "./NewPasswordField";
 import type { SetupResult } from "./setupApi";
+import type { SetupWidth } from "./SetupLayout";
 import { SetupStepForm } from "./SetupStepForm";
 
 // The API's password policy.
@@ -35,6 +36,11 @@ const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "conflict">, MessageK
 type Props = {
   /** Sends the credentials: the owner at the end of setup, or the demo's owner. */
   createAccount: (email: string, password: string) => Promise<SetupResult>;
+  /** Shown above the fields. */
+  intro?: ReactNode;
+  /** Shown on the left of the footer, such as a way back out of setup's last step. */
+  secondaryAction?: ReactNode;
+  width?: SetupWidth;
 };
 
 /**
@@ -42,7 +48,7 @@ type Props = {
  * so routing sends the now signed-in owner to the directory. On a conflict, such as an
  * owner created first, the reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm({ createAccount }: Props) {
+export function OwnerSetupForm({ createAccount, intro, secondaryAction, width }: Props) {
   const apolloClient = useApolloClient();
   const router = useRouter();
   const emailInput = useRef<HTMLInputElement>(null);
@@ -82,19 +88,24 @@ export function OwnerSetupForm({ createAccount }: Props) {
 
   return (
     <SetupStepForm
+      width={width}
       onSubmit={() => void form.handleSubmit()}
       footer={
-        <Button
-          type="submit"
-          size="lg"
-          className="h-10 gap-2 px-4"
-          disabled={isSubmitting || !isFilledIn}
-        >
-          {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
-          <ArrowRight weight="bold" aria-hidden />
-        </Button>
+        <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          {secondaryAction}
+          <Button
+            type="submit"
+            size="lg"
+            className="ml-auto h-10 gap-2 px-4"
+            disabled={isSubmitting || !isFilledIn}
+          >
+            {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
+            <ArrowRight weight="bold" aria-hidden />
+          </Button>
+        </div>
       }
     >
+      {intro}
       <form.Field name="email">
         {(field) => {
           const error = field.state.meta.errors[0]?.message;

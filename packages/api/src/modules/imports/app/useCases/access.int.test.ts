@@ -43,6 +43,7 @@ const calls = {
   startDemo: (imports, ctx) => imports.startDemo(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
+  resetSetup: (imports, ctx) => imports.resetSetup(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;
 
 test.for(Object.entries(calls))(

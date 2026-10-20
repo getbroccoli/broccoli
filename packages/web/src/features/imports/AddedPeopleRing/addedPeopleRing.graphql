@@ -1,0 +1,27 @@
+query AddedPeopleRing {
+  company {
+    id
+    name
+    logoUrl
+  }
+  import {
+    id
+    readyEmployeeCount
+    employees(first: 100) {
+      edges {
+        node {
+          id
+          firstName {
+            value
+          }
+          lastName {
+            value
+          }
+          avatarUrl
+          leftOut
+          incompleteReason
+        }
+      }
+    }
+  }
+}

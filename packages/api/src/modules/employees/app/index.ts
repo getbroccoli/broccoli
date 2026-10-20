@@ -5,5 +5,5 @@ export {
   hasEmployees,
   type DemoEmployee,
 } from "./demoEmployees";
-export { createImportedEmployees } from "./importedEmployees";
+export { createImportedEmployees, deleteAllEmployees } from "./importedEmployees";
 export { createEmployeeUseCases, type EmployeeUseCases } from "./useCases";

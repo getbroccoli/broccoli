@@ -20,7 +20,7 @@ export const instance = pgTable(
     managedCompanyId: text("managed_company_id"),
     managedPublicOrigin: text("managed_public_origin"),
     managedWebsiteOrigin: text("managed_website_origin"),
-    /** Self-hosted only, after its first AI decision without a key: the encrypted relay token. */
+    /** Legacy relay token, moved to the data folder on first use. */
     encryptedBroccoliAiToken: text("encrypted_broccoli_ai_token"),
     /** Self-hosted only: where the owner chose to send AI decisions; null until they choose. */
     aiSource: text("ai_source", { enum: AI_SOURCES }),

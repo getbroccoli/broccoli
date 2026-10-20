@@ -4,13 +4,15 @@ import type { Mode, SetupStep } from "@/__generated__/graphql";
 
 /**
  * A route gate for a setup page: sends a visitor who is neither signed in nor holding
- * setup to login, and anyone whose setup is at another step to that step's page.
+ * setup to login. The self-hosted holder can revisit company details before approving import.
  */
 export function requireSetupStep<Me>(step: SetupStep, { context, location }: Gate<Me>): void {
   if (!context.me && !context.holdsSetup) {
     throw loginRedirect(location.href);
   }
-  if (context.setupStep !== step) {
+  const editingCompany =
+    step === "COMPANY" && context.setupStep === "IMPORT" && context.mode === "SELF_HOSTED";
+  if (context.setupStep !== step && !editingCompany) {
     throw redirect({ to: setupStepPage(context.setupStep, context.mode), replace: true });
   }
 }

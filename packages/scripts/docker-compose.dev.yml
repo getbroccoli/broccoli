@@ -46,6 +46,9 @@ services:
     command: [node_modules/.bin/vite]
     environment:
       API_PROXY_TARGET: http://api:3000
+      # Host edits do not always produce file events through Docker's bind mount.
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "300"
     ports:
       # An empty HOST_WEB_PORT picks a free port, so worktrees never collide. Localhost only:
       # the dev server has no authentication.

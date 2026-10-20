@@ -1,5 +1,11 @@
 import { useQuery } from "@apollo/client/react";
-import { ArrowLeft, MagnifyingGlass, UserCircle, WarningCircle } from "@phosphor-icons/react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  MagnifyingGlass,
+  UserCircle,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
@@ -93,7 +99,7 @@ export function ImportReview() {
             disabled={approving}
           >
             <ArrowLeft aria-hidden />
-            {t("setup.review.back")}
+            {t("setup.back")}
           </Link>
           <div className="flex flex-wrap items-center justify-end gap-3">
             {data && (
@@ -108,12 +114,13 @@ export function ImportReview() {
               <Button
                 type="button"
                 size="lg"
-                className="h-10 px-4"
+                className="h-10 gap-2 px-4"
                 // Only what the owner sees now: not while the review refreshes or failed to.
                 disabled={approving || reading || loading || Boolean(error)}
                 onClick={() => void approve()}
               >
                 {approveLabel({ approving, reading, readyCount })}
+                <ArrowRight weight="bold" aria-hidden />
               </Button>
             )}
           </div>

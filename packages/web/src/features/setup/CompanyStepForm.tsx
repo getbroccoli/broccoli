@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { ArrowRight } from "@phosphor-icons/react";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useRouter } from "@tanstack/react-router";
+import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
 
@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 
 import { LogoField } from "./LogoField";
+import { setupStepPage } from "./requireSetupStep";
 import { SetupStepForm } from "./SetupStepForm";
 
 // The API's rule, so a name it refuses is caught here with the field's own message.
@@ -61,12 +62,10 @@ interface CompanyFormProps {
   onLogoUploaded: () => Promise<unknown>;
 }
 
-/**
- * Saving the name completes the company step; the router then reloads and routing
- * sends the owner on into the app.
- */
+/** Saving company details continues setup, including when returning from the AI step. */
 function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
-  const router = useRouter();
+  const navigate = useNavigate();
+  const { mode } = useRouteContext({ from: "__root__" });
   const [updateCompany] = usePayloadMutation(UpdateCompanyDocument);
   const [logoBusy, setLogoBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -84,7 +83,7 @@ function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
         setFailed(true);
         return;
       }
-      await router.invalidate();
+      await navigate({ to: setupStepPage("IMPORT", mode) });
     },
   });
   // The name stays as sent while it is saved.
