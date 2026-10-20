@@ -4,6 +4,24 @@ import { expect, importUseCases, OWNER, SYSTEM, test } from "#test/support";
 
 import { DecisionsError } from "../../../../integrations/ai";
 
+test("a mapping run that finishes after setup moved on writes nothing", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", attempt: 0 });
+  await seed.setupStep("owner");
+  fake.answer({ headerRow: "1", fullName: "A" });
+  const imports = importUseCases(orm, { decisions: fake.decisions });
+
+  await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
+});
+
 test("a stale attempt leaves the source and its records unchanged", async ({
   orm,
   seed,

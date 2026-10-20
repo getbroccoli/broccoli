@@ -3,7 +3,7 @@ import {
   importUseCases,
   OWNER,
   SETUP_HOLDER,
-  slackPhotoReader,
+  fakeSlackApi,
   storedFileIds,
   test,
 } from "#test/support";
@@ -99,7 +99,8 @@ test("starting the demo after a Slack read discards the import and its files", a
   seed,
 }) => {
   await seed.setupStep("import");
-  const imports = importUseCases(orm, { slack: slackPhotoReader() });
+  await seed.slackConnection();
+  const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
   await imports.readSlack(SETUP_HOLDER);
   await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   const importFiles = await storedFileIds(orm);

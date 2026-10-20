@@ -6,7 +6,7 @@ import {
   OWNER,
   PNG,
   SETUP_HOLDER,
-  slackPhotoReader,
+  fakeSlackApi,
   SLACK_PHOTO_URL,
   storedFileIds,
   test,
@@ -17,7 +17,8 @@ import { createEmployeeUseCases } from "../../../employees";
 
 test("approving gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
   await seed.setupStep("import");
-  const imports = importUseCases(orm, { slack: slackPhotoReader() });
+  await seed.slackConnection();
+  const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
   await imports.readSlack(SETUP_HOLDER);
   const imported = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileId = imported.edges[0]!.node.photoFileId;

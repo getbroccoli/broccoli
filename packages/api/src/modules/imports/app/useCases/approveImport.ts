@@ -2,7 +2,7 @@ import { ApplicationError } from "../../../../core/applicationError";
 import { approveImportStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
-import { importPhotoRepository, importRepository } from "../../db";
+import { importPhotoRepository, lockImport } from "../../db";
 import type { ImportContext } from "./importContext";
 import { isReading, toNewEmployeeInput } from "../../domain";
 import { readImportReview } from "./importReview";
@@ -21,12 +21,11 @@ export async function approveImport(
   requireImportAccess(ctx);
   const result = await transact(async (tx) => {
     // The step move locks the instance row, so a concurrent Approve waits and then finds
-    // the step moved. Every setup step change takes that lock before the sources lock.
+    // the step moved.
     if (!(await approveImportStep(ctx, tx))) {
       return null;
     }
-    const imports = importRepository(tx);
-    await imports.lockSources();
+    const imports = await lockImport(tx);
     if (isReading(await imports.listSources())) {
       throw new ApplicationError("CONFLICT", "Files are still being read.");
     }

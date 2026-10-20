@@ -77,13 +77,13 @@ export function aiSettings(
 export function importUseCases(
   orm: Parameters<typeof createImportUseCases>[0]["orm"],
   {
-    slack = {},
+    slackApi = {},
     decisions = NO_DECISIONS,
     jobs,
     clock = () => new Date(),
     prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
   }: {
-    slack?: Partial<Parameters<typeof createImportUseCases>[0]["slack"]>;
+    slackApi?: Partial<SlackApi>;
     decisions?: Decisions;
     jobs?: JobQueue;
     clock?: () => Date;
@@ -96,7 +96,6 @@ export function importUseCases(
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     decisions,
-    clock,
     prepareDemoFill: prepareFill,
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
@@ -104,18 +103,7 @@ export function importUseCases(
         return Promise.resolve();
       },
     },
-    slack: {
-      readSlackMembers: () => {
-        throw new Error("Unexpected Slack read");
-      },
-      isCurrentSlackConnection: () => {
-        throw new Error("Unexpected Slack connection check");
-      },
-      readSlackPhoto: () => {
-        throw new Error("Unexpected Slack photo download");
-      },
-      ...slack,
-    },
+    slack: slackUseCases(orm, { slackApi, clock }),
   });
   return { ...useCases, sentJobs };
 }
@@ -126,10 +114,12 @@ export function slackUseCases(
     secretBox = TEST_SECRET_BOX,
     slackAuthorization = {},
     slackApi = {},
+    clock = () => new Date(),
   }: {
     slackAuthorization?: Partial<SlackAuthorization>;
     slackApi?: Partial<SlackApi>;
     secretBox?: SecretBox;
+    clock?: () => Date;
   } = {},
 ) {
   const logger = createLogger("silent");
@@ -138,6 +128,7 @@ export function slackUseCases(
     transact: testTransactor(orm),
     logger,
     secretBox,
+    clock,
     slackAuthorization: {
       authorizeUrl: ({ returnTo, state, codeChallenge }) => {
         const url = new URL("https://example.com/slack/authorize");

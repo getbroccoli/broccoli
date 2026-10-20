@@ -13,7 +13,7 @@ import {
   type ValueChoice,
 } from "../../domain";
 import { readImportEmployees } from "./readImportEmployees";
-import { lockOpenImport } from "./lockOpenImport";
+import { lockOpenImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
 
 /** What the owner settles in review: picked and typed values, and who is left out. Every function checks `ctx`. */
