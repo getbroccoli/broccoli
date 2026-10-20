@@ -70,7 +70,7 @@ Each case reports exact/expected records, model calls, cost and elapsed time for
 - `embedded-file`: staff table as a text PDF with an embedded CSV of two other people, and its CSV twin, sharing one expected file: only the two visible people; the attachment's people and file name never reach the model.
 - `external-uri`: workforce export as a text PDF with a web link and a remote go-to action, and its CSV twin, sharing one expected file: two people; nothing is fetched and the title stays out.
 
-These 20 frozen PDF regressions use generated demo data:
+These 20 PDF regression cases use generated demo data:
 
 - `blank-second-surname`: an empty second surname cell stays empty.
 - `continued-roster`: a roster continued across pages.
