@@ -6,7 +6,7 @@ import {
 } from "../integrations/ai";
 import { type AiSettings, createAiSettings, createBroccoliAiTokens } from "../core/instance";
 import type { Mode } from "../core/env";
-import { PrincipalSecurityContext } from "../core/security";
+import { PrincipalSecurityContext, type SecurityContext } from "../core/security";
 import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
@@ -34,9 +34,12 @@ export function createModules(
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
   const aiSettings = createAiSettings({ ...core, mode, environmentKey: ai.openRouterKey });
+  const tokens = createBroccoliAiTokens(core);
+  // Broccoli reads its AI source and token for decisions it makes on its own.
+  const system = PrincipalSecurityContext.system();
   const decisions = createResolvedDecisions({
-    readSource: () => decisionsSource(aiSettings, ai),
-    tokens: createBroccoliAiTokens(core),
+    readSource: () => decisionsSource(system, aiSettings, ai),
+    tokens: { read: () => tokens.read(system), save: (token) => tokens.save(system, token) },
   });
   return [
     systemModule({
@@ -63,11 +66,11 @@ export function createModules(
 
 /** Where this request's decisions go, for the AI the settings pick. */
 async function decisionsSource(
+  ctx: SecurityContext,
   aiSettings: AiSettings,
   settings: ModuleSettings["ai"],
 ): Promise<DecisionsSource> {
-  // Broccoli reads the source for a decision it makes on its own.
-  const ai = await aiSettings.read(PrincipalSecurityContext.system());
+  const ai = await aiSettings.read(ctx);
   if (ai.source === "broccoli_ai") {
     return { kind: "broccoli_ai", url: broccoliAiUrlOf(settings) };
   }
