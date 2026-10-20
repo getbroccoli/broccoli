@@ -12,6 +12,8 @@ export type JobName = keyof Jobs;
 
 /** What a module does with its job. */
 export interface JobHandler<Name extends JobName> {
+  /** How long one attempt may run before it counts as failed; two minutes unless set. */
+  expireInSeconds?: number;
   run(payload: Jobs[Name]): Promise<void>;
   /** After the last attempt failed, expired or died with the process. */
   onFailed(payload: Jobs[Name]): Promise<void>;
@@ -106,13 +108,16 @@ async function workQueue(
 ): Promise<void> {
   const failedName = `${name}.failed`;
   await boss.createQueue(failedName);
-  await boss.createQueue(name, {
+  const options = {
     retryLimit: RETRY_LIMIT,
     retryDelay: retryDelaySeconds,
     retryBackoff: true,
-    expireInSeconds: EXPIRE_IN_SECONDS,
+    expireInSeconds: handler.expireInSeconds ?? EXPIRE_IN_SECONDS,
     deadLetter: failedName,
-  });
+  };
+  // Creating leaves a queue from an earlier start as it was; updating applies today's options.
+  await boss.createQueue(name, options);
+  await boss.updateQueue(name, options);
   await boss.work<Jobs[JobName]>(name, { localConcurrency: CONCURRENCY }, async ([job]) => {
     await handler.run(job!.data);
   });

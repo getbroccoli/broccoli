@@ -1,5 +1,6 @@
 import {
   checkOpenRouterKey,
+  createReferenceCompletions,
   createResolvedDecisions,
   DecisionsError,
   type DecisionsSource,
@@ -10,7 +11,7 @@ import type { ModuleDependencies, ModuleManifest } from "../core/moduleManifest"
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { employeesModule } from "./employees";
-import { importsModule } from "./imports";
+import { importsModule, PDF_COMPLETION_TASKS } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
@@ -32,8 +33,9 @@ export function createModules(
 ): ModuleManifest[] {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
+  const readSource = () => decisionsSource(core, mode, ai);
   const decisions = createResolvedDecisions({
-    readSource: () => decisionsSource(core, mode, ai),
+    readSource,
     tokens: {
       read: () => readBroccoliAiToken(core.orm, core.secretBox),
       save: (token) => saveBroccoliAiToken(core.orm, core.secretBox, token),
@@ -57,12 +59,13 @@ export function createModules(
       ...core,
       slack: slackConnection,
       decisions,
+      completions: createReferenceCompletions({ readSource, tasks: PDF_COMPLETION_TASKS }),
       prepareDemoFill: () => prepareDemoFill(),
     }),
   ];
 }
 
-/** Where this request's decisions go, for the AI `readAiConfig` picks. */
+/** Where this request's decisions or completions go, for the AI `readAiConfig` picks. */
 async function decisionsSource(
   { orm, secretBox }: ModuleDependencies,
   mode: Mode,

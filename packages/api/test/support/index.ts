@@ -2,7 +2,7 @@ export { expect } from "vitest";
 export { NON_OWNER, OWNER, SETUP_HOLDER, SYSTEM, TestSecurityContext } from "./testSecurityContext";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
-export { test, slackTest } from "./fixture";
+export { test, slackTest, pdfImportTest } from "./fixture";
 export { startFakeBrandServer } from "./fakeBrandServer";
 export {
   startFakeAccounts,
@@ -44,9 +44,15 @@ export {
   type Readiness,
   type TestBroccoliServerOptions,
 } from "./testBroccoliServer";
-export { startFakeDecisions, type FakeDecisions } from "./fakeDecisions";
+export {
+  startFakeDecisions,
+  type FakeDecisions,
+  type FakeCompletionRequest,
+} from "./fakeDecisions";
+export { pdfCompletionInput, selectPdfRows } from "./pdfCompletionInput";
+export { sampleStaffPdf } from "./sampleStaffPdf";
 export { EXAMPLE_JOB } from "./exampleJob";
 export { startLiveDecisions, type LiveDecisions } from "./liveDecisions";
 export { sampleXlsxFile, xlsxFileWithDistantCell } from "./sampleXlsxFile";
 export { samplePdfFile, pdfWithContentBomb } from "./samplePdfFile";
-export { line, page } from "./pdfPages";
+export { line, page, readPdfPages } from "./pdfPages";

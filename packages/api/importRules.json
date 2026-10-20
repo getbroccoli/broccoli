@@ -104,6 +104,7 @@
       "src/integrations/*",
       "src/modules",
       "src/modules/*",
+      "src/modules/imports/pdfExtraction",
       "src/utils"
     ],
     "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]

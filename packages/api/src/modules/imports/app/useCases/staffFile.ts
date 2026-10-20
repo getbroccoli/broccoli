@@ -1,15 +1,18 @@
-import { parseCsv, parsePdf, parseXlsx } from "../../../../utils";
+import { parseCsv, parseXlsx } from "../../../../utils";
 import { checkSheets, type FileSheet, type SheetRefusal } from "../../domain";
-import { hasScannedPage, pdfSheets } from "../../pdfExtraction";
 
 /**
- * A staff file's sheets, within the limits: a CSV file's one, an Excel workbook's visible ones, or
- * a PDF's table. The content decides, not the name.
+ * A spreadsheet's sheets, within the limits: a CSV file's one or an Excel workbook's visible ones.
+ * The content decides, not the name; a PDF is read by the PDF extraction instead.
  */
 export async function readStaffFile(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
-  const sheets = await readSheets(bytes);
-  if (sheets === null) return "unsupported_file";
-  return typeof sheets === "string" ? sheets : checkSheets(sheets);
+  const sheets = isZipArchive(bytes) ? await parseXlsx(bytes) : csvSheet(bytes);
+  return sheets === null ? "unsupported_file" : checkSheets(sheets);
+}
+
+/** Whether the content is a PDF, as `staffFileMimeType` decides it. */
+export function isPdfFile(bytes: Uint8Array): boolean {
+  return staffFileKind(bytes) === "pdf";
 }
 
 /** The media type of a staff file, decided by its content like `readStaffFile`. */
@@ -35,33 +38,6 @@ function isZipArchive(bytes: Uint8Array): boolean {
 /** PDF readers find the header within the first 1024 bytes, so it may follow some junk. */
 function isPdf(bytes: Uint8Array): boolean {
   return Buffer.from(bytes.subarray(0, 1024)).includes("%PDF-");
-}
-
-function readSheets(
-  bytes: Uint8Array,
-): Promise<FileSheet[] | PdfRefusal | null> | FileSheet[] | null {
-  switch (staffFileKind(bytes)) {
-    case "excel":
-      return parseXlsx(bytes);
-    case "pdf":
-      return pdfTable(bytes);
-    case "csv":
-      return csvSheet(bytes);
-  }
-}
-
-type PdfRefusal = "scanned_pdf" | "encrypted_pdf" | "no_table";
-
-/**
- * The PDF's tables as sheets, or why it is refused: a password, a scanned page, or no table or
- * staff content that cannot be read in full. Null when it cannot be read.
- */
-async function pdfTable(bytes: Uint8Array): Promise<FileSheet[] | PdfRefusal | null> {
-  const pages = await parsePdf(bytes);
-  if (pages === "encrypted") return "encrypted_pdf";
-  if (pages && hasScannedPage(pages)) return "scanned_pdf";
-  if (pages === null) return null;
-  return pdfSheets(pages) ?? "no_table";
 }
 
 /** A CSV file as one sheet without a name; null when it is not text. */

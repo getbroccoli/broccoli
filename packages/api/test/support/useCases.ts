@@ -1,4 +1,4 @@
-import type { Decisions } from "../../src/integrations/ai";
+import type { Decisions, ReferenceCompletions } from "../../src/integrations/ai";
 import type { Mode } from "../../src/core/env";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
@@ -64,12 +64,16 @@ export function importUseCases(
   {
     slack = {},
     decisions = NO_DECISIONS,
+    completions = NO_COMPLETIONS,
+    pdfRunDeadlineMs,
     jobs,
     clock = () => new Date(),
     prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
   }: {
     slack?: Partial<Parameters<typeof createImportUseCases>[0]["slack"]>;
     decisions?: Decisions;
+    completions?: ReferenceCompletions;
+    pdfRunDeadlineMs?: number;
     jobs?: JobQueue;
     clock?: () => Date;
     prepareDemoFill?: Parameters<typeof createImportUseCases>[0]["prepareDemoFill"];
@@ -81,6 +85,8 @@ export function importUseCases(
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     decisions,
+    completions,
+    pdfRunDeadlineMs,
     clock,
     prepareDemoFill: prepareFill,
     jobs: jobs ?? {
@@ -153,6 +159,10 @@ export function slackUseCases(
 /** The default model of use-case tests: one that is never asked. */
 const NO_DECISIONS: Decisions = {
   decide: () => Promise.reject(new Error("Unexpected model request")),
+};
+
+const NO_COMPLETIONS: ReferenceCompletions = {
+  complete: () => Promise.reject(new Error("Unexpected completion request")),
 };
 
 const DEMO_TODAY = parseCalendarDate("2026-10-13")!;

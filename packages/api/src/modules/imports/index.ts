@@ -1,6 +1,6 @@
 import express from "express";
 
-import type { Decisions } from "../../integrations/ai";
+import type { Decisions, ReferenceCompletions } from "../../integrations/ai";
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
@@ -12,6 +12,7 @@ export { createImportUseCases, type ImportUseCases } from "./app";
 /** For test seeding only; other modules go through the use cases. */
 export { importPhotoRepository, importRepository } from "./db";
 export type { ImportEmployeeValues } from "./domain";
+export { PDF_COMPLETION_TASKS } from "./pdfExtraction";
 
 /**
  * Bringing people in before they become employees: sources such as the Slack
@@ -20,8 +21,10 @@ export type { ImportEmployeeValues } from "./domain";
 export function importsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs"> & {
     slack: SlackReader;
-    /** The model that maps files. */
+    /** The model that maps spreadsheets. */
     decisions: Decisions;
+    /** The model that reads PDFs, through masked evidence only. */
+    completions: ReferenceCompletions;
     /** The demo company that skipping the import fills in. */
     prepareDemoFill: () => Promise<DemoFill>;
   },
@@ -42,6 +45,8 @@ export function importsModule(
     },
     jobs: {
       "imports.mapFile": {
+        // A PDF's run may take five minutes, reading and the model included.
+        expireInSeconds: 360,
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
         onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },

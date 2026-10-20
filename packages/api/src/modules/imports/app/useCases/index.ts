@@ -1,8 +1,9 @@
-import type { Decisions } from "../../../../integrations/ai";
+import type { Decisions, ReferenceCompletions } from "../../../../integrations/ai";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
 import { importPhotoRepository, importRepository } from "../../db";
+import { createPdfExtractor } from "../../pdfExtraction";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
@@ -33,12 +34,18 @@ export function createImportUseCases({
   logger,
   slack,
   decisions,
+  completions,
+  pdfRunDeadlineMs,
   jobs,
   clock = () => new Date(),
   prepareDemoFill,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: SlackReader;
   decisions: Decisions;
+  /** The model that reads PDFs, through masked evidence only. */
+  completions: ReferenceCompletions;
+  /** How long one PDF extraction may take; tests shorten it. */
+  pdfRunDeadlineMs?: number;
   jobs: JobQueue;
   clock?: () => Date;
   prepareDemoFill: () => Promise<DemoFill>;
@@ -52,6 +59,13 @@ export function createImportUseCases({
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
     reads: createImportReadService(imports, importPhotoRepository(orm)),
     choices: createEmployeeChoiceService(transact),
-    files: createFileSourceService({ orm, transact, decisions, jobs }),
+    files: createFileSourceService({
+      orm,
+      transact,
+      logger,
+      decisions,
+      pdfExtractor: createPdfExtractor({ completions, runDeadlineMs: pdfRunDeadlineMs }),
+      jobs,
+    }),
   };
 }

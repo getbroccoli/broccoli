@@ -3,6 +3,7 @@ import { ApplicationError, invalidInput } from "../../../../core/applicationErro
 import type { Orm, Transact } from "../../../../core/db";
 import { deleteFiles, readFile, storeFile } from "../../../../core/files";
 import type { JobQueue } from "../../../../core/jobs";
+import type { Logger } from "../../../../core/logger";
 import type { SecurityContext } from "../../../../core/security";
 import { importRepository } from "../../db";
 import {
@@ -22,9 +23,10 @@ import {
   type Sheet,
   sheetQuestions,
 } from "../../domain";
+import { PdfExtractionError, type PdfExtractor } from "../../pdfExtraction";
 import { lockOpenImport } from "./lockOpenImport";
 import { requireImportAccess } from "./requireImportAccess";
-import { readStaffFile, staffFileMimeType } from "./staffFile";
+import { isPdfFile, readStaffFile, staffFileMimeType } from "./staffFile";
 
 /**
  * Staff files as import sources, through their life: upload, mapping in the background,
@@ -37,9 +39,9 @@ export interface FileSourceService {
    */
   uploadFile(ctx: SecurityContext, file: UploadedFile): Promise<string>;
   /**
-   * The job: for each sheet, the model finds the header row and the columns, code copies
-   * the cells into records. A run that is no longer current writes nothing; a retryable model failure
-   * rejects, so the job runs again.
+   * The job: for each sheet of a spreadsheet, the model finds the header row and the columns, code
+   * copies the cells into records; a PDF goes to the PDF extraction. A run that is no longer
+   * current writes nothing; a retryable failure rejects, so the job runs again.
    */
   mapFile(ctx: SecurityContext, job: MapFileJob): Promise<void>;
   /** After the job's last attempt: the file is marked failed, unless a newer run has started. */
@@ -71,13 +73,17 @@ declare module "../../../../core/jobs" {
 export function createFileSourceService({
   orm,
   transact,
+  logger,
   decisions,
+  pdfExtractor,
   jobs,
 }: {
   orm: Orm;
   transact: Transact;
-  /** The model that maps files. */
+  logger: Logger;
+  /** The model that maps spreadsheets. */
   decisions: Decisions;
+  pdfExtractor: PdfExtractor;
   jobs: JobQueue;
 }): FileSourceService {
   const uploads = { reading: false };
@@ -85,9 +91,13 @@ export function createFileSourceService({
   return {
     uploadFile: async (ctx, { name, bytes }) => {
       requireImportAccess(ctx);
-      const sheets = await readUpload(uploads, bytes);
-      if (typeof sheets === "string") {
-        throw invalidInput([{ field: "file", code: sheets }]);
+      const refusal = await oneUploadAtATime(uploads, async () => {
+        if (isPdfFile(bytes)) return pdfExtractor.inspect(ctx, bytes);
+        const sheets = await readStaffFile(bytes);
+        return typeof sheets === "string" ? sheets : null;
+      });
+      if (refusal !== null) {
+        throw invalidInput([{ field: "file", code: refusal }]);
       }
       return transact(async (tx) => {
         const imports = await lockOpenImport(tx);
@@ -108,12 +118,17 @@ export function createFileSourceService({
         return;
       }
       const file = await readFile(orm, source.fileId);
-      const sheets = file && (await readStaffFile(file.content));
-      if (!sheets || typeof sheets === "string") {
-        // Upload read the same bytes, so only a changed file gets here.
-        throw new Error(`File source ${sourceId} cannot be read`);
+      if (!file) {
+        throw new Error(`File source ${sourceId} has no file`);
       }
-      const { outcome, records } = await mapFileOrFail(decisions, sheets);
+      const { outcome, records } = isPdfFile(file.content)
+        ? await extractPdfOrFail(
+            pdfExtractor,
+            ctx,
+            file.content,
+            logger.child({ sourceId, attempt }),
+          )
+        : await mapFileOrFail(decisions, await readSheets(sourceId, file.content));
       await transact(async (tx) => {
         const imports = importRepository(tx);
         if (await imports.finishMapping(sourceId, attempt, outcome)) {
@@ -164,20 +179,47 @@ function isCurrentRun(source: FileSource | null, attempt: number): source is Fil
 
 /**
  * One upload is read at a time and another is refused meanwhile, so uploads can't fill the
- * workbook reader's line; the web uploads one file after another. Jobs always wait their turn.
+ * readers' line; the web uploads one file after another. Jobs always wait their turn.
  */
-async function readUpload(
+async function oneUploadAtATime(
   uploads: { reading: boolean },
-  bytes: Uint8Array,
-): Promise<FileSheet[] | SheetRefusal> {
+  read: () => Promise<SheetRefusal | null>,
+): Promise<SheetRefusal | null> {
   if (uploads.reading) {
     throw new ApplicationError("UNAVAILABLE", "Another file is being read. Try again in a moment.");
   }
   uploads.reading = true;
   try {
-    return await readStaffFile(bytes);
+    return await read();
   } finally {
     uploads.reading = false;
+  }
+}
+
+async function readSheets(sourceId: string, bytes: Uint8Array): Promise<FileSheet[]> {
+  const sheets = await readStaffFile(bytes);
+  if (typeof sheets === "string") {
+    // Upload read the same bytes, so only a changed file gets here.
+    throw new Error(`File source ${sourceId} cannot be read`);
+  }
+  return sheets;
+}
+
+/** The PDF's people; a failure that retrying cannot fix fails the file, any other is thrown. */
+async function extractPdfOrFail(
+  pdfExtractor: PdfExtractor,
+  ctx: SecurityContext,
+  bytes: Uint8Array,
+  logger: Logger,
+): Promise<MappingResult> {
+  try {
+    const records = await pdfExtractor.extract(ctx, bytes, logger);
+    return records.length > 0 ? { outcome: { status: "mapped" }, records } : NO_PEOPLE;
+  } catch (error) {
+    if (!(error instanceof PdfExtractionError) || error.retryable) {
+      throw error;
+    }
+    return { outcome: { status: "failed", failure: "unavailable" }, records: [] };
   }
 }
 
@@ -226,10 +268,13 @@ async function mapSheets(decisions: Decisions, sheets: FileSheet[]): Promise<Map
       ),
     );
   }
-  return mapped
-    ? { outcome: { status: "mapped" }, records }
-    : { outcome: { status: "failed", failure: "no_people_columns" }, records: [] };
+  return mapped ? { outcome: { status: "mapped" }, records } : NO_PEOPLE;
 }
+
+const NO_PEOPLE: MappingResult = {
+  outcome: { status: "failed", failure: "no_people_columns" },
+  records: [],
+};
 
 /**
  * The sheet's records, or null when it has no people columns or no people in them. Asks the model outside any

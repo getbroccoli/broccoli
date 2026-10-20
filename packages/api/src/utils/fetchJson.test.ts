@@ -1,9 +1,9 @@
 import { expect, it, onTestFinished } from "vitest";
 import { z } from "zod";
 
-import { startFakeHttpServer } from "#test/support";
+import { startFakeHttpServer, startSimpleHttpServer } from "#test/support";
 
-import { fetchJson } from ".";
+import { fetchJson, FetchStatusError } from ".";
 
 const schema = z.object({ name: z.string() });
 const options = { timeoutMs: 1_000, maxBytes: 1024 };
@@ -24,11 +24,41 @@ it("returns null for a 404 response", async () => {
   await expect(fetchJson(new URL(server.url), schema, options)).resolves.toBeNull();
 });
 
-it("rejects a 500 response", async () => {
-  const server = await startFakeHttpServer(() => ({ status: 500 }));
+it.each([401, 429, 500])("reports the unsuccessful HTTP status %s", async (status) => {
+  const server = await startFakeHttpServer(() => ({ status }));
   onTestFinished(() => server.stop());
 
-  await expect(fetchJson(new URL(server.url), schema, options)).rejects.toThrow();
+  const request = fetchJson(new URL(server.url), schema, options);
+
+  await expect(request).rejects.toBeInstanceOf(FetchStatusError);
+  await expect(request).rejects.toMatchObject({ status });
+});
+
+it("ends an in-flight HTTP request when its caller aborts", async () => {
+  const received = Promise.withResolvers<void>();
+  const closed = Promise.withResolvers<void>();
+  const server = await startSimpleHttpServer((_request, response) => {
+    response.once("close", closed.resolve);
+    received.resolve();
+  });
+  const controller = new AbortController();
+  onTestFinished(async () => {
+    controller.abort();
+    await server.stop();
+  });
+  const request = fetchJson(new URL(server.url), schema, {
+    ...options,
+    timeoutMs: 30_000,
+    signal: controller.signal,
+  });
+  await received.promise;
+  const reason = new Error("Request cancelled");
+  const rejected = expect(request).rejects.toBe(reason);
+
+  controller.abort(reason);
+
+  await rejected;
+  await closed.promise;
 });
 
 it("rejects when the answer exceeds the timeout", async () => {

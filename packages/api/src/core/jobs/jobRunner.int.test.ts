@@ -1,9 +1,11 @@
+import { PgBoss } from "pg-boss";
+
 import { EXAMPLE_JOB, expect, test as baseTest } from "#test/support";
 
 import { createLogger } from "../logger";
 import { createJobRunner, type JobRunner } from ".";
 
-const test = baseTest.extend<{ runner: JobRunner }>({
+const test = baseTest.extend<{ runner: JobRunner; queues: PgBoss }>({
   runner: async ({ databaseUrl }, use) => {
     const runner = createJobRunner(databaseUrl, createLogger("silent"), { retryDelaySeconds: 0 });
     try {
@@ -12,6 +14,37 @@ const test = baseTest.extend<{ runner: JobRunner }>({
       await runner.stop();
     }
   },
+  queues: async ({ databaseUrl }, use) => {
+    const queues = new PgBoss({ connectionString: databaseUrl, schedule: false });
+    await queues.start();
+    try {
+      await use(queues);
+    } finally {
+      await queues.stop();
+    }
+  },
+});
+
+test.for([
+  { state: "new", existing: false },
+  { state: "existing", existing: true },
+])("applies the handler's expiry to a $state queue", async ({ existing }, { runner, queues }) => {
+  if (existing) {
+    await queues.createQueue("example.ran", { expireInSeconds: 120 });
+    expect(await queues.getQueue("example.ran")).toMatchObject({ expireInSeconds: 120 });
+  }
+
+  await runner.start([
+    {
+      "example.ran": {
+        expireInSeconds: 360,
+        run: () => Promise.resolve(),
+        onFailed: () => Promise.resolve(),
+      },
+    },
+  ]);
+
+  expect(await queues.getQueue("example.ran")).toMatchObject({ expireInSeconds: 360 });
 });
 
 test("runs a job sent in a committed transaction once", async ({ runner, transact }) => {

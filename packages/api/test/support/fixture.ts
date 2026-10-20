@@ -8,6 +8,10 @@ import { TestEnv } from "./testEnv";
 import { startFakeSlack } from "./fakeSlack";
 import { TestSeed } from "./testSeed";
 import { testTransactor } from "./testTransactor";
+import { importUseCases } from "./useCases";
+import { selectPdfRows } from "./pdfCompletionInput";
+import { sampleStaffPdf } from "./sampleStaffPdf";
+import { OWNER } from "./testSecurityContext";
 
 /**
  * Vitest's `test` with fixtures, each created only for the tests that use it:
@@ -61,6 +65,22 @@ export const test = baseTest.extend<{
     } finally {
       await fake.stop();
     }
+  },
+});
+
+/** PDF import use cases backed by both readers and a local completion provider. */
+export const pdfImportTest = test.extend<{
+  imports: ReturnType<typeof importUseCases>;
+  sourceId: string;
+}>({
+  imports: async ({ orm, fakeDecisions: fake }, use) => {
+    fake.answerCompletion("rows", selectPdfRows);
+    await use(importUseCases(orm, { completions: fake.completions }));
+  },
+  sourceId: async ({ imports }, use) => {
+    await use(
+      await imports.files.uploadFile(OWNER, { name: "staff.pdf", bytes: sampleStaffPdf() }),
+    );
   },
 });
 

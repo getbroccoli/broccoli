@@ -3,8 +3,36 @@ import type { IncomingHttpHeaders } from "node:http";
 
 import express from "express";
 
-import { createDecisions, type Answer } from "../../src/integrations/ai";
+import {
+  createDecisions,
+  createReferenceCompletions,
+  type Answer,
+} from "../../src/integrations/ai";
+import { PDF_COMPLETION_TASKS } from "../../src/modules/imports/pdfExtraction";
 import { startSimpleHttpServer } from "./simpleHttpServer";
+
+export interface FakeCompletionRequest {
+  model: string;
+  temperature: number;
+  provider: {
+    data_collection: string;
+    zdr: boolean;
+    require_parameters: boolean;
+    order: string[];
+    allow_fallbacks: boolean;
+  };
+  reasoning: { effort?: string; enabled?: boolean };
+  max_tokens: number;
+  response_format: {
+    type: string;
+    json_schema: { name: string; strict: boolean; schema: { required: string[] } };
+  };
+  messages: { role: string; content: string | { type: string; text?: string }[] }[];
+}
+
+type CompletionTask = "rows" | "hasEmployees" | "records" | "assignments";
+type CompletionReply = { status?: number; content?: unknown; finishReason?: string };
+type CompletionScript = CompletionReply | ((request: FakeCompletionRequest) => unknown);
 
 /** A local decisions provider with scripted choices; unspecified questions answer none. */
 export async function startFakeDecisions() {
@@ -19,7 +47,10 @@ export async function startFakeDecisions() {
   let failureMessage: string | undefined;
   let failureReason = "scripted_failure";
   let nextAnswer: { received: () => void; released: Promise<void> } | undefined;
-  const app = express().use(express.json());
+  const completionRequests: FakeCompletionRequest[] = [];
+  const completionScripts = new Map<CompletionTask, CompletionScript[]>();
+  let nextCompletion: { received: () => void; released: Promise<void> } | undefined;
+  const app = express().use(express.json({ limit: "2mb" }));
   app.use((request, _response, next) => {
     httpRequests.push({ path: request.path, headers: request.headers, body: request.body });
     next();
@@ -93,6 +124,39 @@ export async function startFakeDecisions() {
     }
     response.json(body);
   });
+  app.post("/v1/chat/completions", async (request, response) => {
+    const body = request.body as FakeCompletionRequest;
+    completionRequests.push(body);
+    const task = body.response_format.json_schema.schema.required[0] as CompletionTask;
+    const scripts = completionScripts.get(task);
+    const script = scripts && (scripts.length > 1 ? scripts.shift()! : scripts[0]!);
+    const reply = typeof script === "function" ? { content: script(body) } : script;
+    const held = nextCompletion;
+    nextCompletion = undefined;
+    if (held) {
+      held.received();
+      await held.released;
+    }
+    if (!reply || (reply.status !== undefined && reply.status !== 200)) {
+      response.status(reply?.status ?? 500).json({ error: "Scripted completion failure" });
+      return;
+    }
+    response.json({
+      choices: [
+        {
+          message: {
+            role: "assistant",
+            content:
+              typeof reply.content === "string" || reply.content === null
+                ? reply.content
+                : JSON.stringify(reply.content),
+          },
+          finish_reason: reply.finishReason ?? "stop",
+        },
+      ],
+      usage: { cost: 0.001 },
+    });
+  });
   const server = await startSimpleHttpServer(app);
   return {
     ...server,
@@ -100,6 +164,26 @@ export async function startFakeDecisions() {
       endpoint: `${server.url}/alpha/decisions`,
       credential: "test-model-key",
     }),
+    completions: createReferenceCompletions({
+      readSource: () =>
+        Promise.resolve({ kind: "openrouter", url: server.url, key: "test-model-key" }),
+      tasks: PDF_COMPLETION_TASKS,
+    }),
+    completionRequests: () => completionRequests,
+    /** Scripts one completion task, repeating its last reply for later requests. */
+    answerCompletion(
+      task: CompletionTask,
+      first: CompletionScript,
+      ...following: CompletionScript[]
+    ) {
+      completionScripts.set(task, [first, ...following]);
+    },
+    holdNextCompletion() {
+      const received = Promise.withResolvers<void>();
+      const released = Promise.withResolvers<void>();
+      nextCompletion = { received: received.resolve, released: released.promise };
+      return { received: received.promise, release: released.resolve };
+    },
     get requestCount() {
       return requests.length;
     },
