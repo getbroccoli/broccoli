@@ -1,6 +1,6 @@
 import { useApolloClient } from "@apollo/client/react";
 import { useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import {
   AlertDialog,
@@ -27,7 +27,7 @@ type Props = {
 export function ResetDemoDialog({ open, onOpenChange }: Props) {
   const router = useRouter();
   const apolloClient = useApolloClient();
-  const [resetting, setResetting] = useState(false);
+  const [resetting, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
 
   const changeOpen = (nextOpen: boolean) => {
@@ -36,20 +36,20 @@ export function ResetDemoDialog({ open, onOpenChange }: Props) {
     onOpenChange(nextOpen);
   };
 
-  const confirm = async () => {
+  const confirm = () => {
     setFailed(false);
-    setResetting(true);
-    const reset = await postJson("/api/auth/setup/demo/reset", {}).then(
-      (response) => response.ok,
-      () => false,
-    );
-    setResetting(false);
-    if (!reset) {
-      setFailed(true);
-      return;
-    }
-    await apolloClient.clearStore();
-    await router.invalidate();
+    startTransition(async () => {
+      const reset = await postJson("/api/auth/setup/demo/reset", {}).then(
+        (response) => response.ok,
+        () => false,
+      );
+      if (!reset) {
+        setFailed(true);
+        return;
+      }
+      await apolloClient.clearStore();
+      await router.invalidate();
+    });
   };
 
   return (
@@ -71,7 +71,7 @@ export function ResetDemoDialog({ open, onOpenChange }: Props) {
             disabled={resetting}
             // Keeps focus in the dialog while it resets, so a failed reset can be retried with Enter.
             focusableWhenDisabled
-            onClick={() => void confirm()}
+            onClick={confirm}
           >
             {resetting ? t("demo.reset.pending") : t("demo.reset.confirm")}
           </AlertDialogAction>
