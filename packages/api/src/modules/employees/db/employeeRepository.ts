@@ -1,4 +1,4 @@
-import { eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { eq, ilike, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -116,7 +116,8 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       const rows = await orm()
         .select({ email: employees.email })
         .from(employees)
-        .where(inArray(employees.email, [...emails]));
+        // One array parameter: `inArray` binds one per email, and Postgres takes at most 65,535.
+        .where(sql`${employees.email} = any(${sql.param([...emails])}::text[])`);
       return rows.map(({ email }) => email);
     },
 
