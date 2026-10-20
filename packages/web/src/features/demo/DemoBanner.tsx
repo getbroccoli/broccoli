@@ -3,7 +3,7 @@ import { Info } from "@phosphor-icons/react";
 import { Link, useRouteContext } from "@tanstack/react-router";
 
 import { DemoDataDocument } from "@/__generated__/graphql";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 import { ClearDemoDataDialog } from "./ClearDemoDataDialog";
@@ -28,9 +28,9 @@ export function DemoBanner() {
             ? t("demo.banner.accountWithin", { days: String(daysLeft) })
             : t("demo.banner.accountToday")}
         </p>
-        <Button size="sm" render={<Link to="/account" />}>
+        <Link to="/account" className={buttonVariants({ size: "sm" })}>
           {t("demo.banner.createAccount")}
-        </Button>
+        </Link>
       </div>
     );
   }
