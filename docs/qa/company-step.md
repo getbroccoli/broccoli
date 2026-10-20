@@ -21,7 +21,9 @@ A manual check of naming the company and adding its logo in the browser, on a de
 
 ## Saving
 
-- [ ] "Continue" lands on `/setup/import`, with "Setup Company" done and "Add your people" current. `/setup/company` now goes to `/setup/import`.
+- [ ] After saving, the sidebar shows the company's name and logo instead of "Your workspace" and the plant; removing the logo brings the plant back.
+- [ ] A 100-character name, and one long word without spaces, end in "…" in the sidebar on desktop and narrow windows; hovering shows the whole name.
+- [ ] "Continue" lands on `/setup/ai`, with "Setup Company" done and "Setup AI" current. `/setup/company` now goes to `/setup/ai`.
 - [ ] Before saving, a second browser profile lands on `/setup/in-progress`.
 
 ## Layout
