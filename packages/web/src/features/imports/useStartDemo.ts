@@ -1,6 +1,6 @@
 import { useApolloClient } from "@apollo/client/react";
 import { useRouteContext, useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { StartDemoDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
@@ -15,31 +15,30 @@ export function useStartDemo() {
   const router = useRouter();
   const apolloClient = useApolloClient();
   const { holdsSetup } = useRouteContext({ from: "__root__" });
-  const [startDemoMutation, { loading: mutating }] = usePayloadMutation(StartDemoDocument);
-  const [signingIn, setSigningIn] = useState(false);
+  const [startDemoMutation] = usePayloadMutation(StartDemoDocument);
+  const [starting, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
 
-  const start = async () => {
-    setFailed(false);
-    if (holdsSetup) {
-      setSigningIn(true);
-      const started = await startDemoSetup();
-      setSigningIn(false);
-      if (!started) {
-        setFailed(true);
-        return;
+  const start = () =>
+    startTransition(async () => {
+      setFailed(false);
+      if (holdsSetup) {
+        const started = await startDemoSetup();
+        if (!started) {
+          setFailed(true);
+          return;
+        }
+        await apolloClient.clearStore();
+      } else {
+        try {
+          await startDemoMutation();
+        } catch {
+          setFailed(true);
+          return;
+        }
       }
-      await apolloClient.clearStore();
-    } else {
-      try {
-        await startDemoMutation();
-      } catch {
-        setFailed(true);
-        return;
-      }
-    }
-    await router.invalidate();
-  };
+      await router.invalidate();
+    });
 
-  return { start, starting: mutating || signingIn, failed };
+  return { start, starting, failed };
 }

@@ -7,7 +7,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useTransition } from "react";
 
 import {
   ApproveImportDocument,
@@ -64,10 +64,9 @@ export function ImportReview() {
   const rows = useImportReviewRows(list.rows);
   const sources = (data ?? previousData)?.import.sources ?? [];
   const reading = sources.some(({ status }) => status === "MAPPING");
-  const [
-    approveImport,
-    { loading: approving, error: approveError, payloadError: approveConflict },
-  ] = usePayloadMutation(ApproveImportDocument);
+  const [approveImport, { error: approveError, payloadError: approveConflict }] =
+    usePayloadMutation(ApproveImportDocument);
+  const [approving, startTransition] = useTransition();
   const current = (data ?? previousData)?.import;
   const readyCount = current?.readyEmployeeCount ?? 0;
   const totalCount = current?.employeeCount ?? 0;
@@ -77,14 +76,15 @@ export function ImportReview() {
   const uncheckedCount = countOf(checks, "CONFLICT");
   const leftOutCount = totalCount - readyCount - incompleteCount;
 
-  const approve = async () => {
-    try {
-      await approveImport();
-    } catch {
-      return; // `approveError` or `approveConflict` shows it
-    }
-    await router.invalidate();
-  };
+  const approve = () =>
+    startTransition(async () => {
+      try {
+        await approveImport();
+      } catch {
+        return; // `approveError` or `approveConflict` shows it
+      }
+      await router.invalidate();
+    });
 
   return (
     <SetupStepForm
@@ -117,7 +117,7 @@ export function ImportReview() {
                 className="h-10 gap-2 px-4"
                 // Only what the owner sees now: not while the review refreshes or failed to.
                 disabled={approving || reading || loading || Boolean(error)}
-                onClick={() => void approve()}
+                onClick={approve}
               >
                 {approveLabel({ approving, reading, readyCount })}
                 <ArrowRight weight="bold" aria-hidden />

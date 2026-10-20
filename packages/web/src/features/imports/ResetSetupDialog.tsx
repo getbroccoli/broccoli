@@ -1,6 +1,6 @@
 import { ArrowCounterClockwise } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { ResetSetupDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
@@ -25,22 +25,24 @@ import { t } from "@/i18n";
 export function ResetSetupDialog() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [resetSetup, { loading, error, reset }] = usePayloadMutation(ResetSetupDocument);
+  const [resetSetup, { error, reset }] = usePayloadMutation(ResetSetupDocument);
+  const [isResetting, startTransition] = useTransition();
 
   const changeOpen = (nextOpen: boolean) => {
-    if (loading) return;
+    if (isResetting) return;
     reset();
     setOpen(nextOpen);
   };
 
-  const confirm = async () => {
-    try {
-      await resetSetup();
-    } catch {
-      return; // The dialog stays open and shows `error`.
-    }
-    await router.invalidate();
-  };
+  const confirm = () =>
+    startTransition(async () => {
+      try {
+        await resetSetup();
+      } catch {
+        return; // The dialog stays open and shows `error`.
+      }
+      await router.invalidate();
+    });
 
   return (
     <AlertDialog open={open} onOpenChange={changeOpen}>
@@ -68,15 +70,15 @@ export function ResetSetupDialog() {
           </p>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={loading}>{t("setup.reset.cancel")}</AlertDialogCancel>
+          <AlertDialogCancel disabled={isResetting}>{t("setup.reset.cancel")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            disabled={loading}
+            disabled={isResetting}
             // Keeps focus in the dialog while it resets, so a failed reset can be retried with Enter.
             focusableWhenDisabled
-            onClick={() => void confirm()}
+            onClick={confirm}
           >
-            {loading ? t("setup.reset.pending") : t("setup.reset.confirm")}
+            {isResetting ? t("setup.reset.pending") : t("setup.reset.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
