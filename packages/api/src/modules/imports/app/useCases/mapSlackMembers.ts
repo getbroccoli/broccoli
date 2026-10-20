@@ -1,4 +1,4 @@
-import type { SlackMember } from "../../../slack";
+import type { SlackPerson } from "../../../slack";
 import {
   type ImportEmployeeValues,
   type IncomingRecord,
@@ -8,14 +8,14 @@ import {
 } from "../../domain";
 
 /**
- * The workspace's people as employee records. Deleted members, bots, apps, guests and
- * members without a valid email are left out; a member listed twice counts once.
+ * The workspace's people as employee records. People without a valid email are left out;
+ * a member listed twice counts once.
  */
-export function mapSlackMembers(members: SlackMember[]): IncomingRecord[] {
+export function mapSlackMembers(members: readonly SlackPerson[]): IncomingRecord[] {
   const records = new Map<string, IncomingRecord>();
   for (const member of members) {
     const email = parseEmail(member.profile?.email);
-    if (records.has(member.id) || !isPerson(member) || email === null) {
+    if (records.has(member.id) || email === null) {
       continue;
     }
     records.set(member.id, {
@@ -27,24 +27,14 @@ export function mapSlackMembers(members: SlackMember[]): IncomingRecord[] {
         jobTitle: nonBlank(member.profile?.title),
         startDate: null,
       },
-      photoUrl: photoUrlOf(member),
+      photoUrl: member.photo?.url ?? null,
     });
   }
   return [...records.values()];
 }
 
-function isPerson(member: SlackMember): boolean {
-  return !(
-    member.deleted ||
-    member.is_bot ||
-    member.is_app_user ||
-    member.is_restricted ||
-    member.is_ultra_restricted
-  );
-}
-
 /** Slack's own name fields; else the full name split at its last space. */
-function nameOf(member: SlackMember): Pick<ImportEmployeeValues, "firstName" | "lastName"> {
+function nameOf(member: SlackPerson): Pick<ImportEmployeeValues, "firstName" | "lastName"> {
   const firstName = nonBlank(member.profile?.first_name);
   const lastName = nonBlank(member.profile?.last_name);
   if (firstName && lastName) {
@@ -58,25 +48,8 @@ function nameOf(member: SlackMember): Pick<ImportEmployeeValues, "firstName" | "
   return splitFullName(fullName);
 }
 
-/**
- * The link of the member's own photo: Slack generates a placeholder for members without
- * one, which shows as initials instead, and only Slack's photo hosts are ever asked.
- */
-function photoUrlOf(member: SlackMember): string | null {
-  const link = member.profile?.image_192;
-  if (!member.profile?.is_custom_image || !link || !URL.canParse(link)) {
-    return null;
-  }
-  const url = new URL(link);
-  const onSlack = url.protocol === "https:" && url.hostname.endsWith(SLACK_PHOTO_HOST);
-  return onSlack && !url.username && !url.password ? link : null;
-}
-
-/** Slack serves profile photos from its subdomains, such as `avatars.slack-edge.com`. */
-const SLACK_PHOTO_HOST = ".slack-edge.com";
-
 /** Only the fields the mapping reads: no phones or time zones are kept. */
-function rawOf({ id, name, real_name, profile }: SlackMember) {
+function rawOf({ id, name, real_name, profile }: SlackPerson) {
   return {
     id,
     name,

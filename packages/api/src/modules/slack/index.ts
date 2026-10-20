@@ -9,8 +9,8 @@ export {
   createSlackConnectionService,
   type SlackMembersRead,
   type SlackConnectionService,
+  type SlackPerson,
 } from "./app";
-export type { SlackMember } from "../../integrations/slack";
 /** For test seeding only; other modules go through the use cases. */
 export { slackConnectionRepository } from "./db";
 

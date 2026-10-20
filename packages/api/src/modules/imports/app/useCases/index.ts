@@ -3,7 +3,6 @@ import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { StoredFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
-import { importReader } from "../../db";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
@@ -42,17 +41,14 @@ export function createImportUseCases({
   slack,
   decisions,
   jobs,
-  clock = () => new Date(),
   prepareDemoFill,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: SlackReader;
   decisions: Decisions;
   jobs: JobQueue;
-  clock?: () => Date;
   prepareDemoFill: () => Promise<DemoFill>;
 }): ImportUseCases {
-  const imports = importReader(orm);
-  const context = { orm, transact, logger, slack, imports, clock, prepareDemoFill };
+  const context = { orm, transact, logger, slack, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),

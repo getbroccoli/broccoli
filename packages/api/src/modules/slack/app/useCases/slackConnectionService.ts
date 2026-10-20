@@ -12,11 +12,12 @@ import type {
   SlackMember,
 } from "../../../../integrations/slack";
 import { slackConnectionRepository } from "../../db";
+import { readSlackPeople, type SlackPerson } from "./readSlackPeople";
 
 /**
  * The whole life of the Slack connection in one place: starting it, finishing it when
- * the browser returns, and reading the connected workspace for the owner and for
- * other modules. Every function checks `ctx` itself.
+ * the browser returns, and reading the connected workspace for the owner and, with its
+ * people's photos, for other modules. Every function checks `ctx` itself.
  */
 export interface SlackConnectionService {
   /** Starts connecting Slack: the browser goes to Slack and comes back to `returnTo`. */
@@ -32,15 +33,14 @@ export interface SlackConnectionService {
   ): Promise<SlackConnectionFailure | null>;
   /** The connected workspace, or null. */
   getSlackConnection(ctx: SecurityContext): Promise<{ teamId: string; teamName: string } | null>;
-  /** Every member of the connected workspace; refuses when Slack is not connected or does not answer. */
-  readSlackMembers(ctx: SecurityContext): Promise<SlackMembersRead>;
   /**
-   * Locks the connection until `tx` ends and tells whether it is still the one
-   * `snapshot` came from, so a caller never stores members read before a newer connect.
+   * The people of the connected workspace with their photos, downloading only those whose
+   * link `knownPhotos` does not hold; refuses when Slack is not connected or does not answer.
    */
-  isCurrentSlackConnection(ctx: SecurityContext, tx: Tx, snapshot: string): Promise<boolean>;
-  /** The bytes at a member's photo link; rejects when the download fails. */
-  readSlackPhoto(ctx: SecurityContext, url: URL): Promise<Buffer>;
+  readSlackMembers(
+    ctx: SecurityContext,
+    options: { knownPhotos: ReadonlyMap<string, string> },
+  ): Promise<SlackMembersRead>;
 }
 
 /** Where to send the browser to connect Slack, and what the browser keeps until it returns. */
@@ -62,12 +62,15 @@ export interface SlackConnectionReturn {
 /** Why connecting Slack failed, for the import page to explain. */
 export type SlackConnectionFailure = "cancelled" | "state" | "failed";
 
-/** The members of the connected workspace, read for another module. */
+/** The people of the connected workspace, read for another module. */
 export interface SlackMembersRead {
   workspace: { id: string; name: string };
-  members: SlackMember[];
-  /** Identifies the connection they were read with; see `isCurrentSlackConnection`. */
-  snapshot: string;
+  members: SlackPerson[];
+  /**
+   * Locks the connection until `tx` ends and tells whether it is still the one the members
+   * were read with, so a caller never stores members read before a newer connect.
+   */
+  isStillCurrent: (tx: Tx) => Promise<boolean>;
 }
 
 export function createSlackConnectionService({
@@ -77,6 +80,7 @@ export function createSlackConnectionService({
   secretBox,
   slackAuthorization,
   slackApi,
+  clock = () => new Date(),
 }: {
   orm: Orm;
   transact: Transact;
@@ -84,6 +88,8 @@ export function createSlackConnectionService({
   secretBox: SecretBox;
   slackAuthorization: SlackAuthorization;
   slackApi: SlackApi;
+  /** Now; tests pass their own. */
+  clock?: () => Date;
 }): SlackConnectionService {
   const connections = slackConnectionRepository(orm);
 
@@ -143,41 +149,46 @@ export function createSlackConnectionService({
       return connection && { teamId: connection.teamId, teamName: connection.teamName };
     },
 
-    readSlackMembers: async (ctx: SecurityContext): Promise<SlackMembersRead> => {
+    readSlackMembers: async (
+      ctx: SecurityContext,
+      { knownPhotos }: { knownPhotos: ReadonlyMap<string, string> },
+    ): Promise<SlackMembersRead> => {
       ctx.requireSetupAccess();
+      const startedAt = clock();
       const connection = await connections.read();
       if (!connection) {
         throw new ApplicationError("UNAVAILABLE", "Slack is not connected.");
       }
-      try {
-        const members = await slackApi.listMembers(secretBox.decrypt(connection.encryptedToken));
-        return {
-          workspace: { id: connection.teamId, name: connection.teamName },
-          members,
-          // Encrypted anew on every connect, so a reconnect to the same workspace differs too.
-          snapshot: connection.encryptedToken,
-        };
-      } catch (error) {
-        logger.warn({ err: error }, "Reading Slack failed");
-        throw new ApplicationError("UNAVAILABLE", "Could not read Slack.");
-      }
-    },
-
-    isCurrentSlackConnection: async (
-      ctx: SecurityContext,
-      tx: Tx,
-      snapshot: string,
-    ): Promise<boolean> => {
-      ctx.requireSetupAccess();
-      const connection = await slackConnectionRepository(tx).lock();
-      return connection?.encryptedToken === snapshot;
-    },
-
-    readSlackPhoto: (ctx: SecurityContext, url: URL): Promise<Buffer> => {
-      ctx.requireSetupAccess();
-      return slackApi.readPhoto(url);
+      const members = await listMembers({ slackApi, secretBox, logger }, connection.encryptedToken);
+      return {
+        workspace: { id: connection.teamId, name: connection.teamName },
+        members: await readSlackPeople(members, {
+          slackApi,
+          logger,
+          clock,
+          startedAt,
+          knownPhotos,
+        }),
+        // Encrypted anew on every connect, so a reconnect to the same workspace differs too.
+        isStillCurrent: async (tx: Tx): Promise<boolean> =>
+          (await slackConnectionRepository(tx).lock())?.encryptedToken ===
+          connection.encryptedToken,
+      };
     },
   };
+}
+
+/** Every member of the workspace; refused as unavailable when Slack does not answer. */
+async function listMembers(
+  { slackApi, secretBox, logger }: { slackApi: SlackApi; secretBox: SecretBox; logger: Logger },
+  encryptedToken: string,
+): Promise<SlackMember[]> {
+  try {
+    return await slackApi.listMembers(secretBox.decrypt(encryptedToken));
+  } catch (error) {
+    logger.warn({ err: error }, "Reading Slack failed");
+    throw new ApplicationError("UNAVAILABLE", "Could not read Slack.");
+  }
 }
 
 /** Exchanges the code and checks the scopes; null when Slack refused. */

@@ -8,6 +8,7 @@ it("maps profile names, normalises the email and leaves the start date unknown",
   const records = mapSlackMembers([
     {
       id: "U1",
+      photo: null,
       profile: {
         first_name: "Avery",
         last_name: "Stone",
@@ -32,21 +33,12 @@ it("maps profile names, normalises the email and leaves the start date unknown",
   ]);
 });
 
-it.each(["deleted", "is_bot", "is_app_user", "is_restricted", "is_ultra_restricted"])(
-  "skips members marked %s",
-  (flag) => {
-    expect(
-      mapSlackMembers([{ id: "U1", [flag]: true, profile: { email: "avery@example.com" } }]),
-    ).toEqual([]);
-  },
-);
-
 it.each([undefined, "", "   ", "not-an-email"])("skips the invalid email %s", (email) => {
-  expect(mapSlackMembers([{ id: "U1", profile: { email } }])).toEqual([]);
+  expect(mapSlackMembers([{ id: "U1", photo: null, profile: { email } }])).toEqual([]);
 });
 
 it("keeps each Slack user id once", () => {
-  const member = { id: "U1", profile: { email: "avery@example.com" } };
+  const member = { id: "U1", photo: null, profile: { email: "avery@example.com" } };
 
   const records = mapSlackMembers([member, member]);
 
@@ -60,6 +52,7 @@ it.each([
   const [record] = mapSlackMembers([
     {
       id: "U1",
+      photo: null,
       name: "Ignored Username",
       real_name: "Ignored Name",
       profile: { ...names, real_name: "Avery Robin Stone", email: "avery@example.com" },
@@ -73,6 +66,7 @@ it("falls back to the member real name when the profile real name is blank", () 
   const [record] = mapSlackMembers([
     {
       id: "U1",
+      photo: null,
       name: "Ignored Username",
       real_name: "Avery Stone",
       profile: { real_name: " ", email: "avery@example.com" },
@@ -86,6 +80,7 @@ it("falls back to the username when both real names are blank", () => {
   const [record] = mapSlackMembers([
     {
       id: "U1",
+      photo: null,
       name: "Avery Stone",
       real_name: " ",
       profile: { real_name: " ", email: "avery@example.com" },
@@ -97,20 +92,24 @@ it("falls back to the username when both real names are blank", () => {
 
 it("uses a single word fallback as the first name only", () => {
   const [record] = mapSlackMembers([
-    { id: "U1", name: "Avery", profile: { email: "avery@example.com" } },
+    { id: "U1", photo: null, name: "Avery", profile: { email: "avery@example.com" } },
   ]);
 
   expect(record?.values).toMatchObject({ firstName: "Avery", lastName: null });
 });
 
 it("keeps a member without any name", () => {
-  const [record] = mapSlackMembers([{ id: "U1", profile: { email: "avery@example.com" } }]);
+  const [record] = mapSlackMembers([
+    { id: "U1", photo: null, profile: { email: "avery@example.com" } },
+  ]);
 
   expect(record?.values).toMatchObject({ firstName: null, lastName: null });
 });
 
 it.each([undefined, "", "   "])("turns the blank job title %s into null", (title) => {
-  const [record] = mapSlackMembers([{ id: "U1", profile: { email: "avery@example.com", title } }]);
+  const [record] = mapSlackMembers([
+    { id: "U1", photo: null, profile: { email: "avery@example.com", title } },
+  ]);
 
   expect(record?.values.jobTitle).toBeNull();
 });
@@ -133,6 +132,7 @@ it("retains only the specified Slack fields in the raw record", () => {
   };
   const member = {
     ...raw,
+    photo: null,
     tz: "Europe/Berlin",
     is_admin: true,
     profile: { ...raw.profile, phone: "private", image_512: "https://example.com/avatar.png" },
@@ -143,61 +143,13 @@ it("retains only the specified Slack fields in the raw record", () => {
   expect(record?.raw).toEqual(raw);
 });
 
-it("keeps the photo link for a custom Slack photo", () => {
-  const [record] = mapSlackMembers([SLACK_MEMBER_WITH_PHOTO]);
-
-  expect(record?.photoUrl).toBe(SLACK_PHOTO_URL);
-});
-
-it("leaves Slack's generated placeholder without a photo", () => {
-  const member = {
-    ...SLACK_MEMBER_WITH_PHOTO,
-    profile: { ...SLACK_MEMBER_WITH_PHOTO.profile, is_custom_image: false },
-  };
-
-  const [record] = mapSlackMembers([member]);
-
-  expect(record?.photoUrl).toBeNull();
-});
-
-it("leaves a photo link on another host without a photo", () => {
-  const member = {
-    ...SLACK_MEMBER_WITH_PHOTO,
-    profile: {
-      ...SLACK_MEMBER_WITH_PHOTO.profile,
-      image_192: "https://avatars.slack-edge.com.example.com/photo.jpg",
+it("takes the photo link from the member's photo", () => {
+  const [record] = mapSlackMembers([
+    {
+      ...SLACK_MEMBER_WITH_PHOTO,
+      photo: { url: "https://avatars.slack-edge.com/current.jpg", image: null },
     },
-  };
+  ]);
 
-  const [record] = mapSlackMembers([member]);
-
-  expect(record?.photoUrl).toBeNull();
-});
-
-it("leaves a photo link containing user info without a photo", () => {
-  const member = {
-    ...SLACK_MEMBER_WITH_PHOTO,
-    profile: {
-      ...SLACK_MEMBER_WITH_PHOTO.profile,
-      image_192: "https://user:secret@avatars.slack-edge.com/p.jpg",
-    },
-  };
-
-  const [record] = mapSlackMembers([member]);
-
-  expect(record?.photoUrl).toBeNull();
-});
-
-it("leaves an HTTP photo link without a photo", () => {
-  const member = {
-    ...SLACK_MEMBER_WITH_PHOTO,
-    profile: {
-      ...SLACK_MEMBER_WITH_PHOTO.profile,
-      image_192: SLACK_PHOTO_URL.replace("https:", "http:"),
-    },
-  };
-
-  const [record] = mapSlackMembers([member]);
-
-  expect(record?.photoUrl).toBeNull();
+  expect(record?.photoUrl).toBe("https://avatars.slack-edge.com/current.jpg");
 });
