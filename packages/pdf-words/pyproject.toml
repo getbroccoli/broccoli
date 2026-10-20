@@ -1,0 +1,15 @@
+[project]
+name = "pdf-words"
+version = "0.0.0"
+description = "Reads the words of a PDF and their boxes with PyMuPDF, for the Broccoli API."
+requires-python = "==3.12.*"
+dependencies = ["pymupdf==2.0"]
+
+[dependency-groups]
+dev = ["pytest==8.4.2", "ruff==0.14.0"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100

@@ -1,0 +1,9 @@
+{
+  "name": "@broccoli/pdf-words",
+  "private": true,
+  "scripts": {
+    "postinstall": "uv sync --frozen",
+    "lint": "uv run --frozen ruff check && uv run --frozen ruff format --check",
+    "test": "uv run --frozen pytest"
+  }
+}
