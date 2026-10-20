@@ -4,10 +4,10 @@ import { deleteFiles, storeFile } from "../../../../core/files";
 import type { Logger } from "../../../../core/logger";
 import type { SecurityContext } from "../../../../core/security";
 import type { BrandLookup } from "../../../../integrations/brandLookup";
-import { parseRasterImage, type RasterImage } from "../../../../utils";
+import { normalizeImage, type RasterImage } from "../../../../utils";
 import { companyRepository } from "../../db";
 import { companyDomain } from "../../domain";
-import { MAX_LOGO_BYTES } from "./company";
+import { LOGO_MAX_SIDE, MAX_LOGO_BYTES } from "./company";
 
 /**
  * Looks up the brand of the new owner's email domain once and keeps it for the
@@ -32,7 +32,9 @@ export async function detectCompanyNameAndLogo(
   try {
     // The HTTP call runs before the transaction, so no connection or lock waits on it.
     const brand = await brandLookup(domain);
-    const logo = brand?.logo ? parseRasterImage(brand.logo, { maxBytes: MAX_LOGO_BYTES }) : null;
+    const logo = brand?.logo
+      ? await normalizeImage(brand.logo, { maxBytes: MAX_LOGO_BYTES, maxSide: LOGO_MAX_SIDE })
+      : null;
     await transact((tx) => saveBrandOnce(tx, brand?.name ?? null, logo));
   } catch (error) {
     logger.warn(

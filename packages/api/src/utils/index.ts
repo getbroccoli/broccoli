@@ -7,7 +7,7 @@ export {
 } from "./calendarDate";
 export { AnswerTooLargeError, fetchBytes } from "./fetchBytes";
 export { fetchJson, readText } from "./fetchJson";
-export { parseRasterImage, type RasterImage } from "./rasterImage";
+export { normalizeImage, parseRasterImage, type RasterImage } from "./rasterImage";
 export { parseCsv } from "./csv";
 export { parseXlsx } from "./xlsx";
 export { parseOrigin } from "./origin";

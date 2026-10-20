@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { vi } from "vitest";
 
 import {
@@ -23,7 +24,7 @@ test.for([
   { content: PNG, mimeType: "image/png" },
   { content: JPEG, mimeType: "image/jpeg" },
   { content: WEBP, mimeType: "image/webp" },
-])("stores a member's $mimeType photo", async (photo, { orm }) => {
+])("stores a member's $mimeType photo as WebP", async (photo, { orm }) => {
   await instanceRepository(orm).advanceStep("company", "import");
   const readSlackPhoto = vi.fn(() => Promise.resolve(photo.content));
   const imports = importUseCases(orm, { slack: { ...slackPhotoReader(), readSlackPhoto } });
@@ -34,7 +35,9 @@ test.for([
   const [fileId] = await storedFileIds(orm);
   expect(fileId).toEqual(expect.any(String));
   expect(employees.edges.map(({ node }) => node.photoFileId)).toEqual([fileId]);
-  expect(await readFile(orm, fileId!)).toEqual(photo);
+  const stored = await readFile(orm, fileId!);
+  expect(stored?.mimeType).toBe("image/webp");
+  expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
   expect(readSlackPhoto).toHaveBeenCalledWith(OWNER, new URL(SLACK_PHOTO_URL));
 });
 
@@ -139,7 +142,9 @@ test("replaces a changed Slack photo and deletes its old file", async ({ orm, se
   expect(fileId).toEqual(expect.any(String));
   expect(fileId).not.toBe(oldFileId);
   expect(await storedFileIds(orm)).toEqual([fileId]);
-  expect(await readFile(orm, fileId!)).toEqual({ content: JPEG, mimeType: "image/jpeg" });
+  const stored = await readFile(orm, fileId!);
+  expect(stored?.mimeType).toBe("image/webp");
+  expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
   expect(readSlackPhoto).toHaveBeenCalledExactlyOnceWith(OWNER, new URL(photoUrl));
 });
 
