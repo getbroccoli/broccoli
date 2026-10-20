@@ -126,15 +126,14 @@ export class TestSeed {
     failure?: "no_people_columns" | "unavailable" | null;
     failureMessage?: string | null;
   }) {
-    const fileId = await this.file({
+    const repository = importRepository(this.orm);
+    const id = await repository.insertFileSource(name, {
       content: Buffer.from(content),
       mimeType:
         typeof content === "string"
           ? "text/csv"
           : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    const repository = importRepository(this.orm);
-    const id = await repository.insertFileSource(name, fileId);
     for (let previous = 0; previous < attempt; previous++) {
       await repository.finishMapping(id, previous, { status: "failed", failure: "unavailable" });
       await repository.restartMapping(id);
@@ -195,10 +194,12 @@ export class TestSeed {
     recordId: string,
     { photoUrl, content, mimeType }: { photoUrl: string; content: Buffer; mimeType: string },
   ): Promise<string> {
-    const fileId = await this.file({ content, mimeType });
-    const attached = await importPhotoRepository(this.orm).attachPhoto(recordId, photoUrl, fileId);
-    if (!attached) throw new Error(`Could not seed the photo of import record ${recordId}`);
-    return fileId;
+    const photos = importPhotoRepository(this.orm);
+    if (!(await photos.attachPhoto(recordId, photoUrl, { content, mimeType }))) {
+      throw new Error(`Could not seed the photo of import record ${recordId}`);
+    }
+    const records = await importRepository(this.orm).listEmployeeRecords();
+    return records.find(({ id }) => id === recordId)!.photoFileId!;
   }
 }
 

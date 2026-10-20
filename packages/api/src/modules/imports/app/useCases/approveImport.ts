@@ -2,7 +2,6 @@ import { ApplicationError } from "../../../../core/applicationError";
 import { approveImportStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
-import { deleteFiles } from "../../../../core/files";
 import { importPhotoRepository, importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { toNewEmployeeInput } from "../../domain";
@@ -41,7 +40,7 @@ export async function approveImport(
       })),
     );
     // The import stays for the account step until setup completes (`finishImport`).
-    await deleteFiles(tx, await importPhotoRepository(tx).detachPhotosExcept(avatarFileIds));
+    await importPhotoRepository(tx).deletePhotosExcept(avatarFileIds);
     return counts;
   });
   if (result) {

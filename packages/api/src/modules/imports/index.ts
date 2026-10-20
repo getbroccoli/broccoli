@@ -35,7 +35,7 @@ export function importsModule(
       express
         .Router()
         .use(filesRouter(useCases, resolveSecurity))
-        .use(photoRouter(useCases, resolveSecurity, dependencies.orm)),
+        .use(photoRouter(useCases, resolveSecurity)),
     prepareDemoStart: () => prepareDemoStart(dependencies),
     events: {
       "instance.setup_completed": () => useCases.finishImport(PrincipalSecurityContext.system()),

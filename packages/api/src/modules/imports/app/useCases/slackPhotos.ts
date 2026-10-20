@@ -1,5 +1,4 @@
 import type { Tx } from "../../../../core/db";
-import { deleteFiles, storeFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
 import { normalizeImage, type RasterImage } from "../../../../utils";
 import { importPhotoRepository } from "../../db";
@@ -70,10 +69,10 @@ export async function attachSlackPhotos(
     if (record?.photoUrl !== photoUrl) {
       continue;
     }
-    const fileId = await storeFile(tx, { content: image.bytes, mimeType: image.mimeType });
-    if (!(await records.attachPhoto(record.recordId, photoUrl, fileId))) {
-      await deleteFiles(tx, [fileId]);
-    }
+    await records.attachPhoto(record.recordId, photoUrl, {
+      content: image.bytes,
+      mimeType: image.mimeType,
+    });
   }
 }
 

@@ -1,6 +1,16 @@
-import { expect, importUseCases, OWNER, test } from "#test/support";
+import {
+  expect,
+  importUseCases,
+  OWNER,
+  PNG,
+  slackPhotoReader,
+  SLACK_PHOTO_URL,
+  storedFileIds,
+  test,
+} from "#test/support";
 
 import { ApplicationError } from "../../../../core/applicationError";
+import { instanceRepository } from "../../../../core/instance";
 
 test("the first Slack read creates a source and imports its members", async ({ orm }) => {
   const imports = importUseCases(orm, {
@@ -191,4 +201,28 @@ test("passes through the error when Slack is not connected", async ({ orm }) => 
   });
 
   await expect(imports.readSlack(OWNER)).rejects.toBe(error);
+});
+
+test("deletes a departed Slack member's record and stored photo on the next read", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.importSource();
+  const [record] = await seed.importEmployees(source.id, [
+    { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
+  ]);
+  await seed.importPhoto(record!.id, {
+    photoUrl: SLACK_PHOTO_URL,
+    content: PNG,
+    mimeType: "image/png",
+  });
+  const imports = importUseCases(orm, { slack: slackPhotoReader([]) });
+
+  await imports.readSlack(OWNER);
+
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
+  expect(await storedFileIds(orm)).toEqual([]);
 });

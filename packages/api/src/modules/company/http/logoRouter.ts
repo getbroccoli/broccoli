@@ -2,7 +2,6 @@ import express from "express";
 
 import { requireSignedIn } from "../../../core/security";
 import { sendApplicationError } from "../../../core/applicationError";
-import type { Orm } from "../../../core/db";
 import { sendFile } from "../../../core/files";
 import type { SecurityResolver } from "../../../core/graphql";
 import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
@@ -20,7 +19,6 @@ export function logoUrl(fileId: string): string {
 export function logoRouter(
   useCases: CompanyUseCases,
   resolveSecurity: SecurityResolver,
-  orm: Orm,
 ): express.Router {
   // The session cookie is renewed by GraphQL, which every page calls.
   const signedIn = async (request: express.Request) =>
@@ -45,12 +43,7 @@ export function logoRouter(
     )
     .get("/company/logo/:fileId", async (request, response) => {
       try {
-        const { fileId } = request.params;
-        if (!(await useCases.isCurrentLogo(await signedIn(request), fileId))) {
-          response.sendStatus(404);
-          return;
-        }
-        await sendFile(orm, fileId, response);
+        sendFile(await useCases.readLogo(await signedIn(request), request.params.fileId), response);
       } catch (error) {
         sendApplicationError(error, response);
       }

@@ -13,6 +13,8 @@ import {
   orderByKeyset,
   type Tx,
 } from "../../../core/db";
+import { deleteFiles, storeFile } from "../../../core/files";
+import type { RasterImage } from "../../../utils";
 import { EmailTakenError, type Employee, type EmployeeOrder, type NewEmployee } from "../domain";
 import { employees } from "./employeesTable";
 
@@ -20,15 +22,15 @@ import { employees } from "./employeesTable";
 export interface EmployeeRepository {
   /** Throws `EmailTakenError` when another employee has the email. */
   insert(newEmployee: EmployeeRow): Promise<Employee>;
-  /** Inserts employees in one statement; throws `EmailTakenError` like `insert`. */
-  insertMany(newEmployees: readonly EmployeeRow[]): Promise<void>;
+  /** Inserts demo employees with their avatars in one statement; throws `EmailTakenError` like `insert`. */
+  insertDemo(demoEmployees: readonly NewDemoEmployee[]): Promise<void>;
   /** Inserts employees, skipping emails another employee has; returns the avatar of each one inserted. */
   insertSkippingTakenEmails(
     newEmployees: readonly EmployeeRow[],
   ): Promise<{ avatarFileId: string | null }[]>;
-  /** Deletes every demo employee; returns the ids of the avatar files they owned. */
-  deleteDemo(): Promise<string[]>;
-  /** Deletes every employee; their avatar files stay. */
+  /** Deletes every demo employee and their avatars. */
+  deleteDemo(): Promise<void>;
+  /** Deletes every employee and the demo avatars; an imported avatar stays with the import that stored it. */
   deleteAll(): Promise<void>;
   /** The emails among these that an employee has. */
   findTakenEmails(emails: readonly string[]): Promise<string[]>;
@@ -77,11 +79,17 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       }
     },
 
-    insertMany: async (newEmployees: readonly EmployeeRow[]): Promise<void> => {
+    insertDemo: async (demoEmployees: readonly NewDemoEmployee[]): Promise<void> => {
+      const rows: EmployeeRow[] = [];
+      for (const { employee, avatar } of demoEmployees) {
+        const avatarFileId = await storeFile(db, {
+          content: avatar.bytes,
+          mimeType: avatar.mimeType,
+        });
+        rows.push({ ...employee, avatarFileId, isDemo: true });
+      }
       try {
-        await orm()
-          .insert(employees)
-          .values([...newEmployees]);
+        await orm().insert(employees).values(rows);
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
@@ -100,16 +108,15 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       return inserted;
     },
 
-    deleteDemo: async (): Promise<string[]> => {
-      const rows = await orm()
-        .delete(employees)
-        .where(eq(employees.isDemo, true))
-        .returning({ avatarFileId: employees.avatarFileId });
-      return rows.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : []));
+    deleteDemo: async (): Promise<void> => {
+      await deleteDemoAvatars(
+        db,
+        await orm().delete(employees).where(eq(employees.isDemo, true)).returning(avatarColumns),
+      );
     },
 
     deleteAll: async (): Promise<void> => {
-      await orm().delete(employees);
+      await deleteDemoAvatars(db, await orm().delete(employees).returning(avatarColumns));
     },
 
     findTakenEmails: async (emails: readonly string[]): Promise<string[]> => {
@@ -160,6 +167,25 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
+
+/** A demo employee to insert, with the avatar to store for them. */
+export interface NewDemoEmployee {
+  employee: NewEmployee;
+  avatar: RasterImage;
+}
+
+const avatarColumns = { avatarFileId: employees.avatarFileId, isDemo: employees.isDemo };
+
+/** Deletes the avatars of the deleted demo employees, whose rows no longer reference them. */
+async function deleteDemoAvatars(
+  db: Orm | Tx,
+  deleted: { avatarFileId: string | null; isDemo: boolean }[],
+): Promise<void> {
+  await deleteFiles(
+    db,
+    deleted.flatMap(({ avatarFileId, isDemo }) => (isDemo && avatarFileId ? [avatarFileId] : [])),
+  );
+}
 
 /** A new employee as stored, with the columns only the module itself sets. */
 type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };

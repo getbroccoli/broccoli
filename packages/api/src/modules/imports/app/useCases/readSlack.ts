@@ -1,7 +1,6 @@
-import { deleteFiles } from "../../../../core/files";
 import { isImportOpen } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import { importPhotoRepository, importRepository } from "../../db";
+import { importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { mapSlackMembers } from "./mapSlackMembers";
 import { requireImportAccess } from "./requireImportAccess";
@@ -31,7 +30,6 @@ export async function readSlack(context: ImportContext, ctx: SecurityContext): P
       return;
     }
     const sourceId = await imports.saveSlackSource(workspace.name);
-    await deleteFiles(tx, await importPhotoRepository(tx).detachReplacedPhotos(sourceId, records));
     await imports.syncEmployeeRecords(sourceId, records);
     await attachSlackPhotos(tx, sourceId, photos);
   });

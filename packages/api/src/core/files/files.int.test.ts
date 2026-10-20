@@ -4,7 +4,7 @@ import { onTestFinished } from "vitest";
 import { expect, startSimpleHttpServer, storedFileIds, test } from "#test/support";
 
 import type { Orm } from "../db";
-import { deleteFiles, sendFile, storeFile } from ".";
+import { deleteFiles, readFile, sendFile, storeFile } from ".";
 
 test("serves stored bytes with their MIME type, immutable private caching and nosniff", async ({
   orm,
@@ -25,23 +25,12 @@ test("serves stored bytes with their MIME type, immutable private caching and no
   expect(response.headers.get("x-content-type-options")).toBe("nosniff");
 });
 
-test("returns 404 for an unknown file", async ({ orm }) => {
+test("returns 404 for a null file", async ({ orm }) => {
   const url = await startFileServer(orm);
 
   const response = await fetch(`${url}/00000000-0000-4000-8000-000000000001`);
 
   expect(response.status).toBe(404);
-});
-
-test("returns 404 for a deleted file", async ({ orm, transact }) => {
-  const fileId = await transact((tx) =>
-    storeFile(tx, { content: Buffer.from("file"), mimeType: "application/octet-stream" }),
-  );
-  const url = await startFileServer(orm);
-
-  await transact((tx) => deleteFiles(tx, [fileId]));
-
-  expect((await fetch(`${url}/${fileId}`)).status).toBe(404);
 });
 
 test("keeps stored files when deleting an empty list", async ({ orm, transact }) => {
@@ -79,9 +68,10 @@ test("does not keep a file when its transaction rolls back", async ({ orm, trans
 });
 
 async function startFileServer(orm: Orm): Promise<string> {
-  const app = express().get("/:fileId", (request, response) =>
-    sendFile(orm, request.params.fileId, response),
-  );
+  const app = express().get("/:fileId", async (request, response) => {
+    const file = await readFile(orm, request.params.fileId);
+    sendFile(file, response);
+  });
   const server = await startSimpleHttpServer(app);
   onTestFinished(server.stop);
   return server.url;

@@ -2,33 +2,39 @@ import { expect, NON_OWNER, OWNER, test, WEBP } from "#test/support";
 
 import { createEmployeeUseCases } from ".";
 
-test("recognises a file referenced by an employee's avatar", async ({ orm, seed }) => {
+test("returns an employee's avatar bytes and MIME type", async ({ orm, seed }) => {
   const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
   await seed.employee({ avatarFileId });
-  const { isEmployeeAvatarFile } = createEmployeeUseCases({ orm });
+  const { readAvatar } = createEmployeeUseCases({ orm });
 
-  expect(await isEmployeeAvatarFile(OWNER, avatarFileId)).toBe(true);
+  const avatar = await readAvatar(OWNER, avatarFileId);
+
+  expect(avatar).toEqual({ content: WEBP, mimeType: "image/webp" });
 });
 
-test("refuses a stored file that no employee references", async ({ orm, seed }) => {
+test("returns null for a stored file that no employee references", async ({ orm, seed }) => {
   const fileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
-  const { isEmployeeAvatarFile } = createEmployeeUseCases({ orm });
+  const { readAvatar } = createEmployeeUseCases({ orm });
 
-  expect(await isEmployeeAvatarFile(OWNER, fileId)).toBe(false);
+  const avatar = await readAvatar(OWNER, fileId);
+
+  expect(avatar).toBeNull();
 });
 
-test("refuses an avatar id that is not a uuid", async ({ orm }) => {
-  const { isEmployeeAvatarFile } = createEmployeeUseCases({ orm });
+test("returns null for an avatar id that is not a uuid", async ({ orm }) => {
+  const { readAvatar } = createEmployeeUseCases({ orm });
 
-  expect(await isEmployeeAvatarFile(OWNER, "not-a-uuid")).toBe(false);
+  const avatar = await readAvatar(OWNER, "not-a-uuid");
+
+  expect(avatar).toBeNull();
 });
 
-test("refuses to check an employee avatar for a non-owner", async ({ orm, seed }) => {
+test("refuses to read an employee avatar for a non-owner", async ({ orm, seed }) => {
   const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
   await seed.employee({ avatarFileId });
-  const { isEmployeeAvatarFile } = createEmployeeUseCases({ orm });
+  const { readAvatar } = createEmployeeUseCases({ orm });
 
-  await expect(isEmployeeAvatarFile(NON_OWNER, avatarFileId)).rejects.toMatchObject({
+  await expect(readAvatar(NON_OWNER, avatarFileId)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 });
