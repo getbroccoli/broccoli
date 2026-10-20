@@ -31,7 +31,7 @@ afterAll(() => {
 test.for(caseNames())("%s", { timeout: 360_000 }, async (file, { orm, onTestFinished }) => {
   const { name } = parse(file);
   const model = await startLiveDecisions();
-  const actual: ImportResult = { failure: undefined, records: [], latencyMs: 0 };
+  const actual: ImportResult = { refused: false, failure: undefined, records: [], latencyMs: 0 };
   onTestFinished(async () => {
     try {
       reportCase(name, model, readExpected(name), actual);
@@ -44,19 +44,41 @@ test.for(caseNames())("%s", { timeout: 360_000 }, async (file, { orm, onTestFini
     completions: model.completions,
   });
   const bytes = readFileSync(join(CASES, file));
-  let sourceId: string;
+  let upload: { sourceId: string } | { error: unknown };
 
   const started = performance.now();
   try {
-    sourceId = await imports.files.uploadFile(OWNER, { name: file, bytes });
-    await imports.files.mapFile(SYSTEM, { sourceId, attempt: 0 });
+    upload = await imports.files.uploadFile(OWNER, { name: file, bytes }).then(
+      (sourceId) => ({ sourceId }),
+      (error: unknown) => ({ error }),
+    );
+    if ("sourceId" in upload) {
+      await imports.files.mapFile(SYSTEM, { sourceId: upload.sourceId, attempt: 0 });
+    }
   } finally {
     actual.latencyMs = performance.now() - started;
   }
 
   const expected = readExpected(name);
+  if (expected.refusal !== undefined) {
+    expect(upload).toMatchObject({
+      error: {
+        code: "INVALID_INPUT",
+        fieldErrors: [{ field: "file", code: expected.refusal }],
+      },
+    });
+    expect(await imports.reads.listSources(OWNER)).toEqual([]);
+    expect(await imports.reads.employeeCount(OWNER)).toBe(0);
+    expect(imports.sentJobs).toEqual([]);
+    actual.refused = true;
+    return;
+  }
+  if ("error" in upload) throw upload.error;
   const [source] = await imports.reads.listSources(OWNER);
-  const { edges } = await imports.reads.listEmployeeRecords(OWNER, { sourceId, first: 10_000 });
+  const { edges } = await imports.reads.listEmployeeRecords(OWNER, {
+    sourceId: upload.sourceId,
+    first: 10_000,
+  });
   actual.failure = source?.failure;
   actual.records = edges.map(({ node }) => valuesOf(node));
   expect({ failure: actual.failure, records: sorted(actual.records) }).toEqual({
@@ -73,7 +95,17 @@ function caseNames(): string[] {
 }
 
 function readExpected(name: string): ExpectedImport {
-  return JSON.parse(readFileSync(join(CASES, `${name}.expected.json`), "utf8")) as ExpectedImport;
+  const expected = JSON.parse(
+    readFileSync(join(CASES, `${name}.expected.json`), "utf8"),
+  ) as ExpectedImport;
+  if (
+    expected.refusal === undefined &&
+    expected.failure === undefined &&
+    (expected.records ?? []).length === 0
+  ) {
+    expected.failure = "no_people_columns";
+  }
+  return expected;
 }
 
 function reportCase(
@@ -89,9 +121,11 @@ function reportCase(
   const calls = decisions.length + completions.length;
   totals.files += 1;
   totals.exactFiles += Number(
-    actual.failure === (expected.failure ?? null) &&
-      exact === wanted.length &&
-      actual.records.length === wanted.length,
+    expected.refusal !== undefined
+      ? actual.refused
+      : actual.failure === (expected.failure ?? null) &&
+          exact === wanted.length &&
+          actual.records.length === wanted.length,
   );
   totals.records += wanted.length;
   totals.exactRecords += exact;
@@ -159,6 +193,8 @@ function sortKey(record: ImportEmployeeValues): string {
 }
 
 interface ImportResult {
+  /** True only after the expected upload refusal and absence of stored work have been checked. */
+  refused: boolean;
   records: ImportEmployeeValues[];
   failure: ImportSource["failure"] | undefined;
   latencyMs: number;
@@ -166,6 +202,8 @@ interface ImportResult {
 
 /** What a case's file must become: its records, or the reason it fails. */
 interface ExpectedImport {
+  /** The INVALID_INPUT field code that must refuse the upload before mapping. */
+  refusal?: string;
   records?: ImportEmployeeValues[];
   failure?: NonNullable<ImportSource["failure"]>;
   /** Personal values in the file that must never reach the model. */

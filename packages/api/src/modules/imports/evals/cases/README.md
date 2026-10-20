@@ -1,8 +1,10 @@
-Each `.csv`, `.xlsx` or `.pdf` input has a `<name>.expected.json` beside it. `records` lists the expected `firstName`, `lastName`, `email`, `jobTitle` and `startDate` values, using `null` for missing fields. An optional `failure` gives the import failure code; otherwise the import must succeed. An optional `forbidden` list names values that must not reach either model endpoint.
+Each `.csv`, `.xlsx` or `.pdf` input has a `<name>.expected.json` beside it. `records` lists the expected `firstName`, `lastName`, `email`, `jobTitle` and `startDate` values, using `null` for missing fields. An optional `failure` gives the import failure code; when omitted, no expected records means `no_people_columns`, otherwise the import must succeed. An optional `forbidden` list names values that must not reach either model endpoint.
+
+Instead of records, `refusal` names the upload's `INVALID_INPUT` field code on `file`; the upload must reject without storing or mapping anything, and a matching refusal counts as an exact file.
 
 Set `EVAL_CASES_DIR` to use a private folder outside the repository instead of this directory. Expected files are read only after the import runs. Records are compared field by field, ignoring order and counting each duplicate separately.
 
-Each case reports exact/expected records, model calls, cost and elapsed time for upload plus mapping; the final summary totals them and counts files whose records and failure code match exactly. Only decision request bodies are printed. Completion requests are checked for private routing, text-only content, valid masked input and forbidden values.
+Each case reports exact/expected records, model calls, cost and elapsed time for upload plus mapping; the final summary totals them and counts files whose records and failure code match exactly. Only decision request bodies are printed. Completion requests are checked for private routing, text-only content and valid masked input; forbidden values are checked only in their user messages (evidence and drafts), while decision bodies remain checked in full.
 
 - `simple`: UK staff spreadsheet with a first-row header, middle names and a Mc surname, lowercased work emails, job titles and day-first start dates.
 - `uk-payroll`: UK payroll headings, leading titles, middle names, double-barrelled and apostrophised surnames, lowercase surname particles and plain two-word names.

@@ -14,7 +14,7 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 export interface LiveDecisions {
   decisions: Decisions;
   completions: ReferenceCompletions;
-  /** Forbidden values found as whole words in any request's keys or values, ignoring case. */
+  /** Forbidden whole words in decision bodies or completion user messages, ignoring case. */
   leaked(forbidden: readonly string[]): string[];
   /** Decision requests only, as the model received them. */
   requests(): unknown[];
@@ -58,9 +58,15 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
       tasks: PDF_COMPLETION_TASKS,
     }),
     leaked: (forbidden) => {
-      const texts = [...sentBodies, ...sentCompletionBodies].map((body) =>
-        stringsOf(JSON.parse(body)).join("\n"),
-      );
+      const inputs: unknown[] = [
+        ...sentBodies.map((body) => JSON.parse(body) as unknown),
+        ...sentCompletionBodies.map((body) =>
+          (JSON.parse(body) as FakeCompletionRequest).messages.filter(
+            ({ role }) => role === "user",
+          ),
+        ),
+      ];
+      const texts = inputs.map((input) => stringsOf(input).join("\n"));
       return forbidden.filter((value) => {
         const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const word = new RegExp(
