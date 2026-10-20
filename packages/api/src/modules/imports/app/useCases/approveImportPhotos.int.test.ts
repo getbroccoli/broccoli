@@ -1,3 +1,5 @@
+import sharp from "sharp";
+
 import {
   expect,
   importUseCases,
@@ -29,7 +31,9 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
     employees.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
   ).toEqual([{ email: "avery@example.com", avatarFileId: fileId }]);
   expect(await storedFileIds(orm)).toEqual([fileId]);
-  expect(await readFile(orm, fileId!)).toEqual({ content: PNG, mimeType: "image/png" });
+  const stored = await readFile(orm, fileId!);
+  expect(stored?.mimeType).toBe("image/webp");
+  expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
   expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(imported);
 });
 

@@ -14,7 +14,7 @@ export function slackPhotoReader(members: SlackMember[] = [SLACK_MEMBER_WITH_PHO
   };
 }
 
-export const SLACK_PHOTO_URL = "https://avatars.slack-edge.com/2026-01-01/123_abc_512.jpg";
+export const SLACK_PHOTO_URL = "https://avatars.slack-edge.com/2026-01-01/123_abc_192.jpg";
 
 export const SLACK_MEMBER_WITH_PHOTO = {
   id: "U1",
@@ -22,7 +22,7 @@ export const SLACK_MEMBER_WITH_PHOTO = {
     first_name: "Avery",
     last_name: "Stone",
     email: "avery@example.com",
-    image_512: SLACK_PHOTO_URL,
+    image_192: SLACK_PHOTO_URL,
     is_custom_image: true,
   },
 };

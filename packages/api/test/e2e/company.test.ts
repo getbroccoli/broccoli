@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { onTestFinished } from "vitest";
 
 import {
@@ -106,8 +107,10 @@ test("serves the looked-up logo to the owner with private caching", async () => 
   expect(brands.requests).toEqual(["example.com"]);
   const image = await browser.get(body.data.company.logoUrl);
   expect(image.status).toBe(200);
-  expect(Buffer.from(await image.arrayBuffer())).toEqual(logo);
-  expect(image.headers.get("content-type")).toBe("image/png");
+  expect(await sharp(Buffer.from(await image.arrayBuffer())).metadata()).toMatchObject({
+    format: "webp",
+  });
+  expect(image.headers.get("content-type")).toBe("image/webp");
   expect(image.headers.get("cache-control")).toBe("private, max-age=31536000, immutable");
   expect(image.headers.get("x-content-type-options")).toBe("nosniff");
 
@@ -125,22 +128,31 @@ test("serves the logo uploaded by the owner", async ({ env }) => {
   expect(body.logoUrl).toMatch(/^\/api\/company\/logo\/[0-9a-f-]+$/);
   const image = await browser.get(body.logoUrl);
   expect(image.status).toBe(200);
-  expect(Buffer.from(await image.arrayBuffer())).toEqual(logo);
+  expect(image.headers.get("content-type")).toBe("image/webp");
+  expect(await sharp(Buffer.from(await image.arrayBuffer())).metadata()).toMatchObject({
+    format: "webp",
+  });
 });
 
 test("accepts and serves a logo larger than 512 KB", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
-  const jpeg = Buffer.alloc(512 * 1024 + 1);
-  jpeg.set([0xff, 0xd8, 0xff]);
-  jpeg.set([0xff, 0xd9], jpeg.length - 2);
+  const png = await sharp({
+    create: { width: 512, height: 512, channels: 3, background: "white" },
+  })
+    .png({ compressionLevel: 0 })
+    .toBuffer();
+  expect(png.length).toBeGreaterThan(512 * 1024);
 
-  const response = await browser.put("/api/company/logo", jpeg);
+  const response = await browser.put("/api/company/logo", png);
 
   expect(response.status).toBe(200);
   const body = (await response.json()) as { logoUrl: string };
   const image = await browser.get(body.logoUrl);
   expect(image.status).toBe(200);
-  expect(Buffer.from(await image.arrayBuffer())).toEqual(jpeg);
+  expect(image.headers.get("content-type")).toBe("image/webp");
+  expect(await sharp(Buffer.from(await image.arrayBuffer())).metadata()).toMatchObject({
+    format: "webp",
+  });
 });
 
 test("refuses invalid, oversized and anonymous logo uploads", async ({ env }) => {

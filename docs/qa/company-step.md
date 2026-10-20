@@ -18,6 +18,7 @@ A manual check of naming the company and adding its logo in the browser, on a de
 - [ ] Choosing a PNG shows it in the preview; choosing a JPEG replaces it; the remove button brings back the placeholder.
 - [ ] A file over 5 MB, and an SVG renamed to `.png`, show "Choose a PNG, JPG or WebP image up to 5 MB."; the previous logo stays.
 - [ ] After a reload the uploaded logo is still there.
+- [ ] A logo photo of several MB (just under 5 MB) uploads, shows at once and stays sharp in the preview, the sidebar and the ring around the added people; the network tab shows the logo as a WebP of a few KB.
 
 ## Saving
 

@@ -127,7 +127,7 @@ it("retains only the specified Slack fields in the raw record", () => {
       display_name: "Avery",
       email: "avery@example.com",
       title: "Designer",
-      image_512: SLACK_PHOTO_URL,
+      image_192: SLACK_PHOTO_URL,
       is_custom_image: true,
     },
   };
@@ -135,7 +135,7 @@ it("retains only the specified Slack fields in the raw record", () => {
     ...raw,
     tz: "Europe/Berlin",
     is_admin: true,
-    profile: { ...raw.profile, phone: "private", image_192: "https://example.com/avatar.png" },
+    profile: { ...raw.profile, phone: "private", image_512: "https://example.com/avatar.png" },
   };
 
   const [record] = mapSlackMembers([member]);
@@ -165,7 +165,7 @@ it("leaves a photo link on another host without a photo", () => {
     ...SLACK_MEMBER_WITH_PHOTO,
     profile: {
       ...SLACK_MEMBER_WITH_PHOTO.profile,
-      image_512: "https://avatars.slack-edge.com.example.com/photo.jpg",
+      image_192: "https://avatars.slack-edge.com.example.com/photo.jpg",
     },
   };
 
@@ -179,7 +179,7 @@ it("leaves a photo link containing user info without a photo", () => {
     ...SLACK_MEMBER_WITH_PHOTO,
     profile: {
       ...SLACK_MEMBER_WITH_PHOTO.profile,
-      image_512: "https://user:secret@avatars.slack-edge.com/p.jpg",
+      image_192: "https://user:secret@avatars.slack-edge.com/p.jpg",
     },
   };
 
@@ -193,7 +193,7 @@ it("leaves an HTTP photo link without a photo", () => {
     ...SLACK_MEMBER_WITH_PHOTO,
     profile: {
       ...SLACK_MEMBER_WITH_PHOTO.profile,
-      image_512: SLACK_PHOTO_URL.replace("https:", "http:"),
+      image_192: SLACK_PHOTO_URL.replace("https:", "http:"),
     },
   };
 

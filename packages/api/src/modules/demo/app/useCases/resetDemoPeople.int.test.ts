@@ -19,14 +19,12 @@ test("resetting demo people deletes every employee and demo avatar but keeps the
   const employees = createEmployeeUseCases({ orm });
   expect((await employees.listEmployees(owner, { first: 100 })).edges).toHaveLength(41);
   expect(await storedFileIds(orm)).toHaveLength(41);
+  const logo = await readFile(orm, savedCompany.logoFileId!);
 
   await transact((tx) => resetDemoPeople(owner, tx));
 
   expect((await employees.listEmployees(owner, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([savedCompany.logoFileId]);
   expect(await company.getCompany(owner)).toEqual(savedCompany);
-  expect(await readFile(orm, savedCompany.logoFileId!)).toEqual({
-    content: PNG,
-    mimeType: "image/png",
-  });
+  expect(await readFile(orm, savedCompany.logoFileId!)).toEqual(logo);
 });
