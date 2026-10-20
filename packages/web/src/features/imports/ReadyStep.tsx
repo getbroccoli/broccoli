@@ -1,7 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { ArrowRight, Stack, Users } from "@phosphor-icons/react";
 import { useRouter } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 
 import {
   CompleteSetupDocument,
@@ -58,8 +57,14 @@ export function ReadyStep() {
         <AddedPeopleRing />
         {data && (
           <ul className="flex flex-wrap justify-center gap-2">
-            <Chip icon={<Users size={15} aria-hidden />}>{peopleLabel(data.import)}</Chip>
-            <Chip icon={<Stack size={15} aria-hidden />}>{sourcesLabel(data.import.sources)}</Chip>
+            <li className={CHIP}>
+              <Users size={15} aria-hidden />
+              {peopleLabel(data.import)}
+            </li>
+            <li className={CHIP}>
+              <Stack size={15} aria-hidden />
+              {sourcesLabel(data.import.sources)}
+            </li>
           </ul>
         )}
         {error && (
@@ -72,14 +77,8 @@ export function ReadyStep() {
   );
 }
 
-function Chip({ icon, children }: { icon: ReactNode; children: ReactNode }) {
-  return (
-    <li className="inline-flex h-8 items-center gap-2 rounded-full bg-brand-soft/70 px-3 text-sm font-medium text-brand-deep tabular-nums">
-      {icon}
-      {children}
-    </li>
-  );
-}
+const CHIP =
+  "inline-flex h-8 items-center gap-2 rounded-full bg-brand-soft/70 px-3 text-sm font-medium text-brand-deep tabular-nums";
 
 function peopleLabel({ readyEmployeeCount }: ReadyStepQuery["import"]): string {
   return readyEmployeeCount === 1
