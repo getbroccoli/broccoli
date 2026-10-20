@@ -1,4 +1,4 @@
-import express from "express";
+import express, { type Request, type Response } from "express";
 
 import {
   createDecisions,
@@ -37,19 +37,22 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   // The client's timeout ends only its call to the proxy; stopping ends the calls to OpenRouter too.
   const upstreamCalls = new AbortController();
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
-  app.post(["/alpha/decisions", "/v1/chat/completions"], async (request, response) => {
-    const body = request.body as string;
-    (request.path === "/alpha/decisions" ? sentBodies : sentCompletionBodies).push(body);
-    const upstream = await fetch(`${OPENROUTER_URL}${request.path}`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-      body,
-      signal: upstreamCalls.signal,
-    });
-    const answer = await upstream.text();
-    cost += readCost(answer);
-    response.status(upstream.status).type("application/json").send(answer);
-  });
+  const forward =
+    (path: string, sent: string[]) => async (request: Request, response: Response) => {
+      const body = request.body as string;
+      sent.push(body);
+      const upstream = await fetch(`${OPENROUTER_URL}${path}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        body,
+        signal: upstreamCalls.signal,
+      });
+      const answer = await upstream.text();
+      cost += readCost(answer);
+      response.status(upstream.status).type("application/json").send(answer);
+    };
+  app.post("/alpha/decisions", forward("/alpha/decisions", sentBodies));
+  app.post("/v1/chat/completions", forward("/v1/chat/completions", sentCompletionBodies));
   const server = await startSimpleHttpServer(app);
   return {
     decisions: createDecisions({ endpoint: `${server.url}/alpha/decisions`, credential: apiKey }),
