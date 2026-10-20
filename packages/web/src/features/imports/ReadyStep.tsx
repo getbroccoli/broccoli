@@ -21,7 +21,8 @@ import { ResetSetupDialog } from "./ResetSetupDialog";
  */
 export function ReadyStep() {
   const router = useRouter();
-  const { data } = useQuery(ReadyStepDocument);
+  // Approve and reset don't return the import's sources, so a cached answer may be stale.
+  const { data } = useQuery(ReadyStepDocument, { fetchPolicy: "network-only" });
   const [completeSetup, { loading, error }] = usePayloadMutation(CompleteSetupDocument);
   const company = data?.company.name;
 
