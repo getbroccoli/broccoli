@@ -1,7 +1,9 @@
+import { useQuery } from "@apollo/client/react";
 import { Plant } from "@phosphor-icons/react";
 import { useRouteContext } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { SetupWorkspaceDocument } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
@@ -34,6 +36,8 @@ export function SetupLayout({
   const heading = useRef<HTMLHeadingElement>(null);
   const { mode } = useRouteContext({ from: "__root__" });
   const steps = stepViews(step, mode);
+  // Shares the company's cache entry, so a saved name or logo shows here at once.
+  const company = useQuery(SetupWorkspaceDocument).data?.company;
 
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
@@ -44,11 +48,22 @@ export function SetupLayout({
       <title>{`${title} · ${t("app.name")}`}</title>
       <aside className="flex shrink-0 flex-col gap-3 px-3 pt-3 pb-2 md:w-[252px] md:gap-6 md:py-4">
         <div className="flex h-9 min-w-0 items-center gap-2.5 px-2">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
-            <Plant size={15} weight="fill" aria-hidden />
-          </span>
-          <span className="truncate text-[15px] font-semibold tracking-tight">
-            {t("setup.workspaceName")}
+          {company?.logoUrl ? (
+            <img
+              src={company.logoUrl}
+              alt=""
+              className="size-7 shrink-0 rounded-md bg-card object-contain"
+            />
+          ) : (
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
+              <Plant size={15} weight="fill" aria-hidden />
+            </span>
+          )}
+          <span
+            title={company?.name ?? undefined}
+            className="truncate text-[15px] font-semibold tracking-tight"
+          >
+            {company?.name ?? t("setup.workspaceName")}
           </span>
         </div>
         <nav aria-label={t("setup.progress")} className="px-2 md:px-0">
