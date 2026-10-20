@@ -34,7 +34,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files through Broccoli AI; run the list once each way. Broccoli AI reads no PDFs: there a PDF's card ends as "Couldn’t reach the AI provider." with "Retry".
 
-- [ ] Under the Slack row, "Add your files" shows a dashed area "Drop your files here", the hint "CSV, Excel (.xlsx) or PDF, up to 5 MB per file." and the line saying the AI provider sees the first rows of a spreadsheet, or the layout of a PDF, with personal details replaced by placeholders and keeps nothing.
+- [ ] Under the Slack row, "Add your files" shows a dashed area "Drop your files here", the hint "CSV, Excel (.xlsx) or PDF (experimental), up to 5 MB per file." and the line saying the AI provider sees the first rows of a spreadsheet, or the layout of a PDF, with personal details replaced by placeholders and keeps nothing.
 - [ ] Dropping a CSV with a title row above the table, semicolons and day-first start dates shows "Uploading staff.csv…", then a card "staff.csv · Reading columns…", then "N people"; `query { import { employees { edges { node { firstName lastName email jobTitle startDate } } } } }` lists them with the right names, emails, titles and dates.
 - [ ] Choosing two files at once adds two cards; "Add more files" adds another.
 - [ ] An Excel workbook saved by Excel or LibreOffice, with start dates as date cells and the work email as a formula, shows an Excel icon and reads the same people, emails and dates as the same sheet saved as CSV.

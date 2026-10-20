@@ -27,7 +27,7 @@ export const importsEn = {
   "imports.files.choose": "Choose staff files",
   "imports.files.drop": "Drop your files here",
   "imports.files.dropHint": "Staff lists or exports. Or click to choose.",
-  "imports.files.limits": "CSV, Excel (.xlsx) or PDF, up to 5 MB per file.",
+  "imports.files.limits": "CSV, Excel (.xlsx) or PDF (experimental), up to 5 MB per file.",
   "imports.files.disclosure":
     "To read your files, our AI provider sees the first rows of a spreadsheet, or the layout of a PDF, with names, emails and other personal details replaced by placeholders. It keeps nothing.",
   "imports.files.addMore": "Add more files",
