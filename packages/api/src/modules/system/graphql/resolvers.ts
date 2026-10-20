@@ -45,7 +45,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       },
     },
     Setup: {
-      ai: async (_parent, _args, context) => toGraphql(await useCases.readAi(context.getActor())),
+      ai: async (_parent, _args, context) => toGraphql(await useCases.ai.read(context.getActor())),
     },
     Mutation: {
       setup: () => ({}),
@@ -61,7 +61,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
           "setup",
           async () => {
             const actor = context.getActor();
-            await useCases.saveAiSource(actor, {
+            await useCases.ai.save(actor, {
               source: AI_SOURCE_INPUTS[input.source],
               openRouterKey: input.openRouterKey,
             });

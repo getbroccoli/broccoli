@@ -71,9 +71,9 @@ export async function startTestBroccoliServer(
         deployment,
         brandLookupUrl,
         slack,
-        ai: {
-          openRouterUrl: decisionsUrl,
-          openRouterKey: managed ? "test-model-key" : (openRouterKey ?? null),
+        openRouter: {
+          url: decisionsUrl,
+          key: managed ? "test-model-key" : (openRouterKey ?? null),
         },
       }),
   );

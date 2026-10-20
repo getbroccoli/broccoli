@@ -9,7 +9,6 @@ export {
   completeReadyStep,
   readDemoDeadlineOf,
   readDemoExpiresAt,
-  type DemoReset,
   type DemoStart,
   type SetupDemo,
   hasOwner,
@@ -21,7 +20,6 @@ export {
   readOwnerUserId,
   createAiSettings,
   type AiSettings,
-  createBroccoliAiTokens,
 } from "./app";
 export { readSetupToken } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
