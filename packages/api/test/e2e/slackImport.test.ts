@@ -245,7 +245,7 @@ test("a callback after signing out redirects with state and clears the OAuth coo
   expect(slack.requests).toEqual([]);
 });
 
-test("approving creates the Slack members as employees once and completes setup", async ({
+test("approving creates the Slack members as employees once and moves setup to ready", async ({
   env,
   slack,
 }) => {
@@ -273,7 +273,7 @@ test("approving creates the Slack members as employees once and completes setup"
           { node: { firstName: "Robin", lastName: "Reed", email: "robin@example.com" } },
         ],
       },
-      setup: { step: "DONE" },
+      setup: { step: "READY" },
     },
   });
   expect(await (await browser.graphql(people)).json()).toEqual(approved);

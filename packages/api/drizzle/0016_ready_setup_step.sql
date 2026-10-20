@@ -1,0 +1,2 @@
+ALTER TABLE "instance" DROP CONSTRAINT "instance_setup_step";--> statement-breakpoint
+ALTER TABLE "instance" ADD CONSTRAINT "instance_setup_step" CHECK ("instance"."setup_step" in ('company', 'import', 'owner', 'ready', 'done'));

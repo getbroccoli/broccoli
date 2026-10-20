@@ -16,7 +16,7 @@ type User {
   isOwner: Boolean!
 }
 
-"Where a new instance is in its first-run flow: company, import, then on self-hosted instances owner."
+"Where a new instance is in its first-run flow: company, import, then owner on self-hosted instances or ready on managed ones."
 enum SetupStep {
   "The company has no name yet."
   COMPANY
@@ -24,6 +24,8 @@ enum SetupStep {
   IMPORT
   "Self-hosted only: the people are in; the owner account is created last."
   OWNER
+  "Managed only: the people are in; the owner sees what setup added before using Broccoli."
+  READY
   "Setup is finished."
   DONE
 }
@@ -93,6 +95,13 @@ input AiSourceInput {
 type SetupMutations {
   "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
   saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
+  "Completes setup from the ready step; does nothing at any other step. Owner only."
+  complete: SetupMutationPayload!
+}
+
+"Setup after a change."
+type SetupMutationPayload {
+  setup: Setup
 }
 
 "Setup after choosing how files are read."

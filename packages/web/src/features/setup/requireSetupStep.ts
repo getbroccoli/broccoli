@@ -42,6 +42,7 @@ const STEP_PAGES = {
   COMPANY: "/setup/company",
   IMPORT: "/setup/import",
   OWNER: "/setup",
+  READY: "/setup/ready",
   DONE: "/people",
 } as const satisfies Record<SetupStep, string>;
 

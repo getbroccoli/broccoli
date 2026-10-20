@@ -67,6 +67,35 @@ test("the first ticket creates the owner and signs them in", async () => {
   });
 });
 
+test("a managed owner completes setup from the ready step over GraphQL", async () => {
+  const { env, accounts } = await startManagedEnv();
+  const browser = await signInAsManagedOwner(env, accounts);
+  await browser.graphql(`mutation {
+    company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } }
+  }`);
+  const approval = await browser.graphql(`mutation {
+    import { approve { import { id } error { __typename ... on Error { message } } } }
+  }`);
+  expect(await approval.json()).toEqual({
+    data: { import: { approve: { import: { id: "import" }, error: null } } },
+  });
+  const ready = await browser.graphql("query { setup { id step } }");
+  expect(await ready.json()).toEqual({
+    data: { setup: { id: "instance", step: "READY" } },
+  });
+
+  const response = await browser.graphql("mutation { setup { complete { setup { id step } } } }");
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    data: { setup: { complete: { setup: { id: "instance", step: "DONE" } } } },
+  });
+  const setup = await browser.graphql("query { setup { id step } }");
+  expect(await setup.json()).toEqual({
+    data: { setup: { id: "instance", step: "DONE" } },
+  });
+});
+
 test("refuses a replayed ticket", async () => {
   const { env, accounts } = await assignedEnv();
   const { state } = await start(env);

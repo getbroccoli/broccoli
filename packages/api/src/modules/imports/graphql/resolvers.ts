@@ -29,6 +29,8 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       employeeCount: (_parent, _args, context) => useCases.reads.employeeCount(context.getActor()),
       readyEmployeeCount: (_parent, _args, context) =>
         useCases.reads.readyEmployeeCount(context.getActor()),
+      readyEmployeeSources: (_parent, _args, context) =>
+        useCases.reads.listReadyEmployeeSources(context.getActor()),
       checks: (_parent, _args, context) => useCases.reads.listChecks(context.getActor()),
     },
     ImportSource: {

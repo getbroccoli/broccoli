@@ -20,18 +20,19 @@ const PEOPLE = {
     { id: "review", title: "setup.review.title" },
   ],
 } as const satisfies StepDefinition;
+const READY = { id: "ready", title: "setup.ready.title" } as const satisfies StepDefinition;
 
 /**
  * The setup steps in order, each with the copy key of its title. A self-hosted owner
  * picks how files are read with AI and creates their account last; a managed one keeps
- * its provided key and signed up before setup.
+ * its provided key, signed up before setup and sees what it added last.
  */
 const SETUP_STEPS = {
   SELF_HOSTED: [COMPANY, AI, PEOPLE, OWNER],
-  MANAGED: [OWNER, COMPANY, PEOPLE],
+  MANAGED: [COMPANY, PEOPLE, READY],
 } as const satisfies Record<Mode, readonly StepDefinition[]>;
 
-type Step = typeof OWNER | typeof COMPANY | typeof AI | typeof PEOPLE;
+type Step = typeof OWNER | typeof COMPANY | typeof AI | typeof PEOPLE | typeof READY;
 
 /** A setup page: a step's own page, or one of its pages. */
 export type SetupStepId =
