@@ -13,7 +13,7 @@ import {
 } from "#test/support";
 
 import { files } from "../../../../core/files";
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -96,7 +96,7 @@ test("refuses an upload after setup is complete without storing anything or send
   fakeDecisions: fake,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "done");
+  await seed.setupStep("done");
   const imports = importUseCases(orm, { decisions: fake.decisions });
 
   await expect(
@@ -108,8 +108,11 @@ test("refuses an upload after setup is complete without storing anything or send
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("refuses an upload after Approve while setup still awaits the owner", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("refuses an upload after Approve while setup still awaits the owner", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER);
   expect(await readSetupStep(orm)).toBe("owner");
@@ -197,7 +200,7 @@ test("refuses a retry after setup is complete without changing the source or sen
   seed,
 }) => {
   const owner = await seed.owner();
-  await instanceRepository(orm).setOwner(owner.user!.userId, "done");
+  await seed.setupStep("done");
   const source = await seed.fileSource({
     content: "Name\nAvery Stone",
     status: "failed",
@@ -231,7 +234,7 @@ test("refuses file removal after Approve and keeps the import and stored file un
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);

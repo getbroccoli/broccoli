@@ -1,11 +1,12 @@
 import "./events";
 export {
-  advanceStep,
   assignInstance,
   readAssignment,
   claimOwner,
   approveImportStep,
+  completeCompanyStep,
   completeImportStep,
+  completeReadyStep,
   readDemoDeadlineOf,
   readDemoExpiresAt,
   type DemoReset,
@@ -23,8 +24,6 @@ export {
 } from "./app";
 export { readSetupToken, selfHostedAuth } from "./betterAuth";
 export { setupRouter } from "./http";
-/** For test seeding only; other code goes through the operations above. */
-export { instanceRepository } from "./db";
 export {
   AssignmentConflictError,
   type AiSource,

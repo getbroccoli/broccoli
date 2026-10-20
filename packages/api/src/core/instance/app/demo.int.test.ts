@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { expect, NON_OWNER, SYSTEM, test, type TestSeed } from "#test/support";
 
 import { user } from "../../auth";
-import { type Orm, ormOf, transactor, type Tx } from "../../db";
+import { ormOf, transactor, type Tx } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
 import type { SecurityContext } from "../../security";
@@ -20,7 +20,7 @@ test("starts a seven-day demo for the setup holder, claims the owner and complet
   orm,
   seed,
 }) => {
-  await prepareDemoSetup(orm, seed);
+  await prepareDemoSetup(seed);
   const eventBus = createEventBus(createLogger("silent"));
   const transact = transactor(orm, eventBus);
   const claimed: unknown[] = [];
@@ -50,7 +50,7 @@ test("starts a seven-day demo for the setup holder, claims the owner and complet
 });
 
 test("refuses a non-owner starting a demo", async ({ orm, seed, transact }) => {
-  await prepareDemoSetup(orm, seed);
+  await prepareDemoSetup(seed);
 
   await expect(
     transact((tx) =>
@@ -63,7 +63,7 @@ test("refuses a non-owner starting a demo", async ({ orm, seed, transact }) => {
 
 test("refuses to start a demo when an owner already exists", async ({ orm, seed, transact }) => {
   const owner = await seed.owner();
-  await prepareDemoSetup(orm, seed);
+  await prepareDemoSetup(seed);
 
   await expect(
     transact((tx) => startDemoAtSetup(SYSTEM, tx, credential, () => insertOwner(tx), finishImport)),
@@ -76,7 +76,7 @@ test("refuses to start a demo when an owner already exists", async ({ orm, seed,
 test.for([null, "another-token"])(
   "refuses to start a demo with setup token %s",
   async (token, { orm, seed, transact }) => {
-    await prepareDemoSetup(orm, seed);
+    await prepareDemoSetup(seed);
 
     await expect(
       transact((tx) =>
@@ -90,7 +90,7 @@ test.for([null, "another-token"])(
 );
 
 test("refuses to start a demo at the setup session's deadline", async ({ orm, seed, transact }) => {
-  await prepareDemoSetup(orm, seed);
+  await prepareDemoSetup(seed);
   await seed.setupSession({ expiresAt: now });
 
   await expect(
@@ -104,7 +104,7 @@ test.for(["company", "owner", "done"] as const)(
   "refuses to start a demo at the %s step",
   async (step, { orm, seed, transact }) => {
     await seed.setupSession({ expiresAt });
-    await instanceRepository(orm).advanceStep("company", step);
+    await seed.setupStep(step);
 
     await expect(
       transact((tx) =>
@@ -122,7 +122,7 @@ test("rolls back the owner and setup completion when starting the demo fails", a
   seed,
   transact,
 }) => {
-  await prepareDemoSetup(orm, seed);
+  await prepareDemoSetup(seed);
   const setupSession = await instanceRepository(orm).readSetupSession();
 
   await expect(
@@ -152,7 +152,7 @@ test("creates only one owner when two demo starts arrive together", async ({
   seed,
   transact,
 }) => {
-  await prepareDemoSetup(orm, seed);
+  await prepareDemoSetup(seed);
 
   const results = await Promise.allSettled([
     transact((tx) =>
@@ -280,8 +280,8 @@ const now = new Date("2026-01-02T12:00:00Z");
 const expiresAt = new Date("2026-01-04T12:00:00Z");
 const credential = { token: "setup-token", now };
 
-async function prepareDemoSetup(orm: Orm, seed: TestSeed) {
-  await instanceRepository(orm).advanceStep("company", "import");
+async function prepareDemoSetup(seed: TestSeed) {
+  await seed.setupStep("import");
   await seed.setupSession({ expiresAt });
 }
 

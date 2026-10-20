@@ -13,11 +13,10 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { instanceRepository } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
-test("approving gives the employee the Slack photo as their avatar", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("approving gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm, { slack: slackPhotoReader() });
   await imports.readSlack(SETUP_HOLDER);
   const imported = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
@@ -41,7 +40,7 @@ test("approving deletes unused photos while keeping import rows and staff files"
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const staff = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   const [staffFileId] = await storedFileIds(orm);
   const existingAvatar = await seed.file({ content: PNG, mimeType: "image/png" });

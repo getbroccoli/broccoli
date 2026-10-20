@@ -5,7 +5,8 @@ import { hashPassword } from "better-auth/crypto";
 import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
-import { type AiSource, hashSetupToken, instanceRepository } from "../../src/core/instance";
+import { type AiSource, hashSetupToken, type SetupStep } from "../../src/core/instance";
+import { instanceRepository } from "../../src/core/instance/db";
 import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
 import {
   importPhotoRepository,
@@ -47,16 +48,27 @@ export class TestSeed {
         password: await hashPassword(password),
       });
     }
-    await instanceRepository(this.orm).setOwner(userId, "company");
+    const instance = instanceRepository(this.orm);
+    await instance.setOwner(userId, await instance.readStep());
     return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
+  }
+
+  /** Moves setup straight to `step`, whatever step it is at. */
+  async setupStep(step: SetupStep): Promise<void> {
+    const instance = instanceRepository(this.orm);
+    await instance.advanceStep(await instance.readStep(), step);
   }
 
   async demoOwner({ expiresAt }: { expiresAt: Date }): Promise<TestSecurityContext> {
     const owner = await this.owner();
-    const instance = instanceRepository(this.orm);
-    await instance.setOwner(owner.user!.userId, "done");
-    await instance.saveDemoExpiresAt(expiresAt);
+    await this.setupStep("done");
+    await this.demoDeadline(expiresAt);
     return owner;
+  }
+
+  /** Sets when the provisional owner's demo ends. */
+  async demoDeadline(expiresAt: Date): Promise<void> {
+    await instanceRepository(this.orm).saveDemoExpiresAt(expiresAt);
   }
 
   async setupSession({

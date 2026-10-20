@@ -17,15 +17,15 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { instanceRepository, readSetupStep } from "../../../../core/instance";
+import { readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test.for([
   { content: PNG, mimeType: "image/png" },
   { content: JPEG, mimeType: "image/jpeg" },
   { content: WEBP, mimeType: "image/webp" },
-])("stores a member's $mimeType photo as WebP", async (photo, { orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+])("stores a member's $mimeType photo as WebP", async (photo, { orm, seed }) => {
+  await seed.setupStep("import");
   const readSlackPhoto = vi.fn(() => Promise.resolve(photo.content));
   const imports = importUseCases(orm, { slack: { ...slackPhotoReader(), readSlackPhoto } });
 
@@ -41,8 +41,8 @@ test.for([
   expect(readSlackPhoto).toHaveBeenCalledWith(OWNER, new URL(SLACK_PHOTO_URL));
 });
 
-test("does not download a generated Slack placeholder", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("does not download a generated Slack placeholder", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const member = {
     ...SLACK_MEMBER_WITH_PHOTO,
     profile: { ...SLACK_MEMBER_WITH_PHOTO.profile, is_custom_image: false },
@@ -61,8 +61,11 @@ test("does not download a generated Slack placeholder", async ({ orm }) => {
   expect(await storedFileIds(orm)).toEqual([]);
 });
 
-test("a failed photo download leaves initials and the Slack read succeeds", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("a failed photo download leaves initials and the Slack read succeeds", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm, {
     slack: {
       ...slackPhotoReader(),
@@ -80,8 +83,8 @@ test("a failed photo download leaves initials and the Slack read succeeds", asyn
   expect(await storedFileIds(orm)).toEqual([]);
 });
 
-test("a non-image download leaves initials", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("a non-image download leaves initials", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm, {
     slack: {
       ...slackPhotoReader(),
@@ -100,7 +103,7 @@ test("a non-image download leaves initials", async ({ orm }) => {
 });
 
 test("keeps a stored photo when Slack's photo link is unchanged", async ({ orm, seed }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
@@ -125,7 +128,7 @@ test("keeps a stored photo when Slack's photo link is unchanged", async ({ orm, 
 });
 
 test("replaces a changed Slack photo and deletes its old file", async ({ orm, seed }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
@@ -160,7 +163,7 @@ test("Approve keeps the stored photo while Refresh downloads its replacement", a
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
@@ -203,8 +206,8 @@ test("Approve keeps the stored photo while Refresh downloads its replacement", a
   expect(await storedFileIds(orm)).toEqual([oldFileId]);
 });
 
-test("downloads every new photo during the read", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("downloads every new photo during the read", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
   const imports = importUseCases(orm, {
     slack: { ...slackPhotoReader(photoMembers(60)), readSlackPhoto },
@@ -223,8 +226,9 @@ test("downloads every new photo during the read", async ({ orm }) => {
 
 test("stops starting downloads after 20 seconds and leaves the rest with initials", async ({
   orm,
+  seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
   const startedAt = new Date("2026-10-20T12:00:00Z");
   const imports = importUseCases(orm, {
@@ -246,8 +250,9 @@ test("stops starting downloads after 20 seconds and leaves the rest with initial
 
 test("imports members without photos when reading Slack members uses the time budget", async ({
   orm,
+  seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   let now = new Date("2026-10-20T12:00:00Z");
   const slack = slackPhotoReader();
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
@@ -274,8 +279,8 @@ test("imports members without photos when reading Slack members uses the time bu
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("a later Refresh downloads the photos still missing", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("a later Refresh downloads the photos still missing", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
   const slack = { ...slackPhotoReader(photoMembers(40)), readSlackPhoto };
   const startedAt = new Date("2026-10-20T12:00:00Z");
@@ -306,8 +311,8 @@ test("a later Refresh downloads the photos still missing", async ({ orm }) => {
   expect(refresh.sentJobs).toEqual([]);
 });
 
-test("a Slack read after Approve writes nothing", async ({ orm }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+test("a Slack read after Approve writes nothing", async ({ orm, seed }) => {
+  await seed.setupStep("import");
   const imports = importUseCases(orm, { slack: slackPhotoReader() });
   await imports.approveImport(SETUP_HOLDER);
   expect(await readSetupStep(orm)).toBe("owner");

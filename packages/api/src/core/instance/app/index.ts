@@ -1,7 +1,8 @@
 export {
-  advanceStep,
   approveImportStep,
+  completeCompanyStep,
   completeImportStep,
+  completeReadyStep,
   isImportOpen,
   readSetupStep,
   returnToCompanyStep,

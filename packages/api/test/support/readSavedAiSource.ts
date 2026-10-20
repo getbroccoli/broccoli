@@ -1,5 +1,5 @@
 import type { Orm } from "../../src/core/db";
-import { instanceRepository } from "../../src/core/instance";
+import { instanceRepository } from "../../src/core/instance/db";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 
 /** The AI source the owner saved, with the key decrypted, read past the use cases. */

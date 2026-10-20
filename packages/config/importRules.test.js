@@ -31,6 +31,15 @@ test("rejects an existing target that is not an element", () => {
   );
 });
 
+test("accepts a target that is a layer folder of an element", () => {
+  const packageDir = packageWith(["src/billing/db", "test/support"], {
+    elements: { "src/billing": [], "test/support": ["src/billing/db"] },
+    layers: { db: [] },
+  });
+
+  expect(() => importRulesConfig(packageDir)).not.toThrow();
+});
+
 test("rejects a pattern that matches no element", () => {
   const packageDir = packageWith(["src/billing"], {
     elements: { "src/billing": ["src/core/*"] },

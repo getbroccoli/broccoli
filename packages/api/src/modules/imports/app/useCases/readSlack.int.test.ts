@@ -10,7 +10,6 @@ import {
 } from "#test/support";
 
 import { ApplicationError } from "../../../../core/applicationError";
-import { instanceRepository } from "../../../../core/instance";
 
 test("the first Slack read creates a source and imports its members", async ({ orm }) => {
   const imports = importUseCases(orm, {
@@ -207,7 +206,7 @@ test("deletes a departed Slack member's record and stored photo on the next read
   orm,
   seed,
 }) => {
-  await instanceRepository(orm).advanceStep("company", "import");
+  await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
     { externalId: "U1", photoUrl: SLACK_PHOTO_URL },

@@ -93,6 +93,7 @@
     "src/core/secrets": [],
     "test/support": [
       "src/core/*",
+      "src/core/instance/db",
       "src/integrations/*",
       "src/modules",
       "src/modules/*",
