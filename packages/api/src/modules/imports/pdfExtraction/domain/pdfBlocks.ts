@@ -1,6 +1,6 @@
 import { type Cell, isDirectlyBelow, joinWrapped, pageLines, texts } from "./pdfLines";
-import type { PdfPage } from "../../../utils";
-import type { FileSheet } from "./sheet";
+import type { PdfPage } from "../../../../utils";
+import type { FileSheet } from "../../domain";
 
 /**
  * A list of one block per person as one sheet: the labels, in first-seen order, are the header

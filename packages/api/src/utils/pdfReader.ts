@@ -7,7 +7,7 @@ import type { PdfPage } from "./pdf";
 // The reader passes pdf.js no URL, so nothing should be fetched; a future default must not either.
 installFetchGuard();
 
-const { AnnotationMode, getDocument, OPS } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+const { AnnotationMode, getDocument, OPS, Util } = await import("pdfjs-dist/legacy/build/pdf.mjs");
 
 type Matrix = [number, number, number, number, number, number];
 type PdfDocument = Awaited<ReturnType<typeof getDocument>["promise"]>;
@@ -63,8 +63,15 @@ async function openDocument(bytes: Uint8Array): Promise<PdfDocument | "encrypted
 async function readPage(page: PdfPageProxy): Promise<PdfPage> {
   // pdf.js always gives the four edges of the page box.
   const [left = 0, bottom = 0, right = 0, top = 0] = page.view;
-  const width = right - left;
-  const height = top - bottom;
+  // A rotated page is read as it is shown: its text in the viewport's frame, y still upwards.
+  const viewport = page.rotate % 360 === 0 ? null : page.getViewport({ scale: 1 });
+  const width = viewport?.width ?? right - left;
+  const height = viewport?.height ?? top - bottom;
+  const position = (transform: number[]) => {
+    if (viewport === null) return { x: transform[4]! - left, y: transform[5]! - bottom };
+    const [, , , , x, y] = Util.transform(viewport.transform, transform) as number[];
+    return { x: x!, y: height - y! };
+  };
   const { fnArray, argsArray } = await page.getOperatorList({
     annotationMode: AnnotationMode.DISABLE,
   });
@@ -80,8 +87,7 @@ async function readPage(page: PdfPageProxy): Promise<PdfPage> {
         : [
             {
               text: item.str,
-              x: item.transform[4] - left,
-              y: item.transform[5] - bottom,
+              ...position(item.transform as number[]),
               width: item.width,
               height: item.height,
             },

@@ -103,12 +103,14 @@ function validateRules({ elements, layers, deepImports, testsMayImport }, packag
 
 /**
  * Returns every element with what it may import. A layer folder inside an element becomes an
- * element of its own (`src/modules/company/app`), owned by that element.
+ * element of its own (`src/modules/company/app`), owned by that element, with the element's list
+ * unless importRules.json gives the layer a list of its own.
  * @returns {Map<string, { owner: string, isFile: boolean, allowed: string[] }>}
  */
 function expandElements({ elements, layers }, packageDir) {
   const expanded = new Map();
   for (const [path, targets] of Object.entries(elements)) {
+    if (isLayerOf(elements, layers, path)) continue;
     const isFile = !isFolderOnDisk(join(packageDir, path));
     const ownLayers = isFile
       ? []
@@ -123,11 +125,22 @@ function expandElements({ elements, layers }, packageDir) {
       expanded.set(`${path}/${layer}`, {
         owner: path,
         isFile: false,
-        allowed: [...siblings.map((sibling) => `${path}/${sibling}`), ...targets],
+        allowed: [
+          ...siblings.map((sibling) => `${path}/${sibling}`),
+          ...(elements[`${path}/${layer}`] ?? targets),
+        ],
       });
     }
   }
   return expanded;
+}
+
+/** Whether `path` is a layer folder of another element, which expands it. */
+function isLayerOf(elements, layers, path) {
+  const slash = path.lastIndexOf("/");
+  return (
+    Object.hasOwn(elements, path.slice(0, slash)) && Object.hasOwn(layers, path.slice(slash + 1))
+  );
 }
 
 /**

@@ -1,11 +1,6 @@
 import { parseCsv, parsePdf, parseXlsx } from "../../../../utils";
-import {
-  checkSheets,
-  type FileSheet,
-  hasScannedPage,
-  pdfSheets,
-  type SheetRefusal,
-} from "../../domain";
+import { checkSheets, type FileSheet, type SheetRefusal } from "../../domain";
+import { hasScannedPage, pdfSheets } from "../../pdfExtraction";
 
 /**
  * A staff file's sheets, within the limits: a CSV file's one, an Excel workbook's visible ones, or

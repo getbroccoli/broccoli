@@ -45,6 +45,5 @@ export {
   type ImportSourceFailure,
   type MappingOutcome,
 } from "./importSource";
-export { hasScannedPage, pdfSheets } from "./pdfSheets";
 export { nonBlank, parseEmail, splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";

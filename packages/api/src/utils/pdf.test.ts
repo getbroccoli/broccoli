@@ -4,7 +4,7 @@ import { expect, it, vi } from "vitest";
 
 import { pdfWithContentBomb, samplePdfFile } from "#test/support";
 
-import { parsePdf } from ".";
+import { parsePdf, type PdfPage } from ".";
 
 // The real PDF reader takes seconds per read while the whole suite runs at once.
 vi.setConfig({ testTimeout: 30_000 });
@@ -59,6 +59,26 @@ it("reads each page's text with its position and the page's size", async () => {
       ],
     },
   ]);
+});
+
+it("reads a rotated page's text as it is shown", async () => {
+  const bytes = samplePdfFile({
+    pages: [
+      {
+        rotated: true,
+        texts: [
+          { text: "Avery", x: 100, y: 100 },
+          { text: "Stone", x: 100, y: 200 },
+        ],
+      },
+    ],
+  });
+
+  const [page] = (await parsePdf(bytes)) as PdfPage[];
+  const [avery, stone] = page!.items;
+  expect([page!.width, page!.height]).toEqual([792, 612]);
+  expect(stone!.y).toBeCloseTo(avery!.y);
+  expect(stone!.x - avery!.x).toBeCloseTo(100);
 });
 
 it("returns null when a page's content decodes past the memory bound", async () => {

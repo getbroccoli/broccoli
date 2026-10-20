@@ -1,4 +1,4 @@
-import type { PdfPage, PdfTextItem } from "../../../utils";
+import type { PdfPage, PdfTextItem } from "../../../../utils";
 
 /** Every page's lines in reading order, with where each sits on its page. */
 export function pageLines(
@@ -37,7 +37,7 @@ export function withWrapped(
     const line = lines[end]!;
     const above = lines[end - 1]!;
     const targets = line.cells.map((cell) =>
-      cells.find(({ x }) => Math.abs(x - cell.x) <= cell.tolerance),
+      cells.find((target) => alignsWith(cell, target, cells)),
     );
     if (
       line.page !== above.page ||
@@ -55,6 +55,29 @@ export function withWrapped(
     });
   }
   return { cells, end };
+}
+
+/**
+ * Whether a cell sits in the column of `column`, one of `columns`: their starts line up, or their
+ * ends or centres do within half a text height, as right aligned and centred columns print them, or the cell spans a header of three or more characters centred above it; and then the cell
+ * crosses no other column's start, as prose does.
+ */
+export function alignsWith(
+  cell: Cell,
+  column: { text: string; x: number; end: number },
+  columns: { x: number; end: number }[],
+): boolean {
+  const near = (a: number, b: number, tolerance = cell.tolerance) => Math.abs(a - b) <= tolerance;
+  if (near(cell.x, column.x)) return true;
+  const crossesAnother = columns.some(
+    (other) => other !== column && other.x > cell.x && other.x < cell.end,
+  );
+  return (
+    !crossesAnother &&
+    (near(cell.end, column.end, cell.tolerance / 2) ||
+      near((cell.x + cell.end) / 2, (column.x + column.end) / 2, cell.tolerance / 2) ||
+      (column.text.length >= 3 && cell.x <= column.x && cell.end >= column.end))
+  );
 }
 
 /** Joins two pieces of one wrapped text: a word broken after its hyphen joins without a space. */

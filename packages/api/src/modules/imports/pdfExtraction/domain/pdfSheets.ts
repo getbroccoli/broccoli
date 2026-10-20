@@ -1,7 +1,7 @@
-import type { PdfPage } from "../../../utils";
+import type { PdfPage } from "../../../../utils";
 import { fieldOf, readBlocks, repeatedLabel } from "./pdfBlocks";
-import { type Cell, isEmail, pageLines, texts, withWrapped } from "./pdfLines";
-import type { FileSheet } from "./sheet";
+import { alignsWith, type Cell, isEmail, pageLines, texts, withWrapped } from "./pdfLines";
+import type { FileSheet } from "../../domain";
 
 /**
  * A PDF's staff tables as sheets, or, in a PDF without a table, its person blocks as one sheet;
@@ -30,11 +30,16 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const sheets = new Map<string, string[][]>();
   for (const { header, lines } of read.tables) {
     const headerRow = header.map(({ text }) => text);
-    const key = JSON.stringify(headerRow);
-    const rows = sheets.get(key) ?? [headerRow];
-    const columns = header.map(({ x }) => x);
-    rows.push(...lines.map((line) => rowOf(line, columns)));
-    sheets.set(key, rows);
+    const width = sideBySideWidth(headerRow);
+    for (let start = 0; start < headerRow.length; start += width) {
+      const part = (row: string[]) => row.slice(start, start + width);
+      const key = JSON.stringify(part(headerRow));
+      const rows = sheets.get(key) ?? [part(headerRow)];
+      rows.push(
+        ...lines.map((line) => part(rowOf(line, header))).filter((row) => row.some(Boolean)),
+      );
+      sheets.set(key, rows);
+    }
   }
   if ([...sheets.values()].some(hasMixedEmailColumn)) {
     return null;
@@ -42,7 +47,7 @@ export function pdfSheets(pages: PdfPage[]): FileSheet[] | null {
   const named = sheets.size > 1;
   return [...sheets.values()].map((rows, index) => ({
     name: named ? `Table ${index + 1}` : null,
-    rows,
+    rows: withRowNumbersApart(rows),
   }));
 }
 
@@ -74,6 +79,53 @@ function hasMixedEmailColumn([header, ...rows]: string[][]): boolean {
   });
 }
 
+/**
+ * The width of each of the tables printed side by side under one header line, such as "Name, Room,
+ * Name, Room": the header repeats its columns after the first, which may name each table, as
+ * "Faculty" and "Staff" do. The whole header when it repeats nothing.
+ */
+function sideBySideWidth(header: string[]): number {
+  for (let width = 2; width <= header.length / 2; width += 1) {
+    const repeats =
+      header.length % width === 0 &&
+      header.every((text, index) => index % width === 0 || text === header[index % width]);
+    if (repeats) return width;
+  }
+  return header.length;
+}
+
+/**
+ * The rows with numbers printed in front of a column's values in their own column before it: each
+ * value starts with a number, and the numbers ascend, as row and personnel numbers do. "1 Porsch,
+ * Oliver" is the row number 1 and the name "Porsch, Oliver".
+ */
+function withRowNumbersApart([header, ...rows]: string[][]): string[][] {
+  const numbered = header!.findIndex((_label, column) => {
+    const numbers = rows.map((row) => /^(\d+)\s+\D/u.exec(row[column]!)?.[1]);
+    return (
+      rows.length > 1 &&
+      numbers.every(
+        (number, index) =>
+          number !== undefined && (index === 0 || Number(number) > Number(numbers[index - 1])),
+      )
+    );
+  });
+  if (numbered < 0) return [header!, ...rows];
+  const apart = (row: string[], number: string, value: string) => [
+    ...row.slice(0, numbered),
+    number,
+    value,
+    ...row.slice(numbered + 1),
+  ];
+  return [
+    apart(header!, "No.", header![numbered]!),
+    ...rows.map((row) => {
+      const [, number, value] = /^(\d+)\s+(.*)$/su.exec(row[numbered]!)!;
+      return apart(row, number!, value!);
+    }),
+  ];
+}
+
 /** Less than a scan of a list: a logo, a signature, a stamp. */
 const SCAN_COVERAGE = 0.15;
 
@@ -100,13 +152,16 @@ function isTotal(line: Cell[]): boolean {
  * person with only a name. Elsewhere it is text away from the value it might belong to.
  */
 function isRow(line: Cell[], header: Cell[]): boolean {
-  const isFilled = (x: number) => line.some((cell) => Math.abs(cell.x - x) <= cell.tolerance);
+  const isFilled = (column: Cell) => line.some((cell) => alignsWith(cell, column, header));
   return (
     linesUp(line, header) &&
-    (line.length > 1 || isFilled(header[0]!.x)) &&
+    (line.length > 1 || isFilled(header[0]!)) &&
     !line.some((cell) =>
       header.some(
-        ({ x }) => x > cell.x + cell.tolerance && x < cell.end - cell.tolerance && !isFilled(x),
+        (column) =>
+          column.x > cell.x + cell.tolerance &&
+          column.x < cell.end - cell.tolerance &&
+          !isFilled(column),
       ),
     )
   );
@@ -257,12 +312,13 @@ function repeatedOnPages(lines: { cells: Cell[]; page: number }[]): Set<string> 
 }
 
 /**
- * Two or more cells that the next line's two or more cells line up with, unless both are a label
- * and its value: a person block's lines in label and value columns.
+ * Two or more cells without a digit that the next line's two or more cells line up with, unless
+ * both are a label and its value: a person block's lines in label and value columns.
  */
 function isHeader(line: Cell[], next: Cell[] | undefined): boolean {
   return (
     line.length >= 2 &&
+    !line.some(({ text }) => /\d/u.test(text)) &&
     next !== undefined &&
     next.length >= 2 &&
     linesUp(next, line) &&
@@ -271,26 +327,32 @@ function isHeader(line: Cell[], next: Cell[] | undefined): boolean {
 }
 
 function isRepeatedHeader(line: Cell[], header: Cell[]): boolean {
-  const columns = header.map(({ x }) => x);
   return sameRow(
-    rowOf(line, columns),
+    rowOf(line, header),
     header.map(({ text }) => text),
   );
 }
 
 /** Each cell starts where one of the header's cells starts. */
 function linesUp(line: Cell[], header: Cell[]): boolean {
-  return line.every((cell) => header.some(({ x }) => Math.abs(x - cell.x) <= cell.tolerance));
+  return line.every((cell) => header.some((column) => alignsWith(cell, column, header)));
 }
 
-/** The line's values by column: a cell belongs to the last column starting at or left of it. */
-function rowOf(line: Cell[], columns: number[]): string[] {
-  const row = columns.map(() => "");
+/**
+ * The line's values by column: a cell belongs to the header column it lines up with, or else to
+ * the last column starting at or left of it.
+ */
+function rowOf(line: Cell[], header: Cell[]): string[] {
+  const row = header.map(() => "");
   for (const cell of line) {
-    const column = Math.max(
-      0,
-      columns.findLastIndex((x) => x <= cell.x + cell.tolerance),
-    );
+    const aligned = header.findIndex((column) => alignsWith(cell, column, header));
+    const column =
+      aligned >= 0
+        ? aligned
+        : Math.max(
+            0,
+            header.findLastIndex(({ x }) => x <= cell.x + cell.tolerance),
+          );
     row[column] = row[column] ? `${row[column]} ${cell.text}` : cell.text;
   }
   return row;

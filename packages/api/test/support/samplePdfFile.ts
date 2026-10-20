@@ -8,6 +8,8 @@ type Page = {
   images?: { x: number; y: number; width: number; height: number }[];
   formImage?: boolean;
   image?: { width: number; height: number };
+  /** Shown turned clockwise, as a landscape report is: its text runs up the page to read across. */
+  rotated?: boolean;
 };
 
 /** A minimal PDF with positioned Helvetica text and compressed page contents. */
@@ -33,7 +35,7 @@ export function samplePdfFile({
             : []),
           ...(page.texts ?? []).map(
             ({ text, x, y, invisible }) =>
-              `BT ${invisible ? 3 : 0} Tr /F1 10 Tf 1 0 0 1 ${x} ${y} Tm (${text.replace(/[\\()]/g, "\\$&")}) Tj ET`,
+              `BT ${invisible ? 3 : 0} Tr /F1 10 Tf ${page.rotated ? "0 1 -1 0" : "1 0 0 1"} ${x} ${y} Tm (${text.replace(/[\\()]/g, "\\$&")}) Tj ET`,
           ),
         ].join("\n"),
       ),
@@ -104,7 +106,7 @@ function pdfDocument(pages: (Page & { content: Buffer })[], extras?: "script-att
     }
     return objects.push(
       Buffer.from(
-        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${page.width ?? 612} ${page.height ?? 792}] /Resources << /Font << /F1 ${font} 0 R >> /XObject << ${imageResources.join(" ")} >> >> /Contents ${content} 0 R ${annotation && index === 0 ? `/Annots [${annotation} 0 R]` : ""} >>`,
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${page.width ?? 612} ${page.height ?? 792}] /Resources << /Font << /F1 ${font} 0 R >> /XObject << ${imageResources.join(" ")} >> >> /Contents ${content} 0 R ${page.rotated ? "/Rotate 90" : ""} ${annotation && index === 0 ? `/Annots [${annotation} 0 R]` : ""} >>`,
       ),
     );
   });
