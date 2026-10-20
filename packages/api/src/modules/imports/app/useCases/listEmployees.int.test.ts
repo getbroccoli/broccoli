@@ -12,7 +12,7 @@ test("groups a Slack member and a file row with one email into one import employ
   const rows = await seed.importEmployees(file.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
 
-  const page = await imports.reads.listEmployees(OWNER, {});
+  const page = (await imports.reads.readReview(OWNER)).listEmployees({});
 
   expect(page.edges.map(({ node }) => node)).toMatchObject([
     { key: "avery@example.com", records: [...rows, ...members] },
@@ -49,8 +49,9 @@ test("finds part of a shown first name, last name or email, ignoring case", asyn
     choice: { value: "AlphaBeta" },
   });
 
-  const page = await imports.reads.listEmployees(OWNER, { filter: { search: " aLpHa " } });
-  const original = await imports.reads.listEmployees(OWNER, { filter: { search: "Original" } });
+  const review = await imports.reads.readReview(OWNER);
+  const page = review.listEmployees({ filter: { search: " aLpHa " } });
+  const original = review.listEmployees({ filter: { search: "Original" } });
 
   expect(page.edges.map(({ node }) => node.values.firstName.value)).toEqual([
     "AlphaBeta",
@@ -69,8 +70,9 @@ test("treats percent and underscore in a search literally", async ({ orm, seed }
   ]);
   const imports = importUseCases(orm);
 
-  const percent = await imports.reads.listEmployees(OWNER, { filter: { search: "%" } });
-  const underscore = await imports.reads.listEmployees(OWNER, { filter: { search: "_" } });
+  const review = await imports.reads.readReview(OWNER);
+  const percent = review.listEmployees({ filter: { search: "%" } });
+  const underscore = review.listEmployees({ filter: { search: "_" } });
 
   expect(percent.edges.map(({ node }) => node.values.firstName.value)).toEqual(["Percent%Name"]);
   expect(underscore.edges.map(({ node }) => node.values.firstName.value)).toEqual([
@@ -80,13 +82,14 @@ test("treats percent and underscore in a search literally", async ({ orm, seed }
 
 test("refuses a search longer than 100 characters", async ({ orm }) => {
   const imports = importUseCases(orm);
+  const review = await imports.reads.readReview(OWNER);
 
-  await expect(
-    imports.reads.listEmployees(OWNER, { filter: { search: "a".repeat(101) } }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "search", code: "too_long" }],
-  });
+  expect(() => review.listEmployees({ filter: { search: "a".repeat(101) } })).toThrowError(
+    expect.objectContaining({
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "search", code: "too_long" }],
+    }),
+  );
 });
 
 test.for([
@@ -127,9 +130,10 @@ test.for([
     ]);
     const imports = importUseCases(orm);
     const orderBy = { field, direction };
-    const first = await imports.reads.listEmployees(OWNER, { first: 2, orderBy });
+    const review = await imports.reads.readReview(OWNER);
+    const first = review.listEmployees({ first: 2, orderBy });
 
-    const second = await imports.reads.listEmployees(OWNER, {
+    const second = review.listEmployees({
       first: 2,
       after: first.pageInfo.endCursor,
       orderBy,
@@ -147,21 +151,24 @@ test("refuses a cursor from another order", async ({ orm, seed }) => {
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{}, {}]);
   const imports = importUseCases(orm);
-  const first = await imports.reads.listEmployees(OWNER, {
+  const review = await imports.reads.readReview(OWNER);
+  const first = review.listEmployees({
     first: 1,
     orderBy: { field: "NAME", direction: "ASC" },
   });
 
-  await expect(
-    imports.reads.listEmployees(OWNER, {
+  expect(() =>
+    review.listEmployees({
       first: 1,
       after: first.edges[0]!.cursor,
       orderBy: { field: "EMAIL", direction: "ASC" },
     }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "after", code: "invalid" }],
-  });
+  ).toThrowError(
+    expect.objectContaining({
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "after", code: "invalid" }],
+    }),
+  );
 });
 
 test.for([
@@ -178,7 +185,7 @@ test.for([
   await seed.importEmployees(file.id, [{ email: "avery@example.com", jobTitle: "Designer" }]);
   const imports = importUseCases(orm);
 
-  const page = await imports.reads.listEmployees(OWNER, { filter: { check } });
+  const page = (await imports.reads.readReview(OWNER)).listEmployees({ filter: { check } });
 
   expect(page.edges.map(({ node }) => node.key)).toEqual([email]);
 });

@@ -34,7 +34,7 @@ export {
 export {
   incompleteReason,
   type IncompleteReason,
-  toNewEmployee,
+  isReady,
   toNewEmployeeInput,
 } from "./importEmployeeMapping";
 export {

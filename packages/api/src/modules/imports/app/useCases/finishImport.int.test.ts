@@ -43,7 +43,7 @@ test("finishing the import deletes its rows and staff files but keeps employee a
   await imports.finishImport(SYSTEM);
 
   expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect((await imports.reads.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
   expect(await importRepository(orm).listChoices("employee")).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([avatarFileId]);
   expect(await readFile(orm, avatarFileId)).toEqual({ content: PNG, mimeType: "image/png" });

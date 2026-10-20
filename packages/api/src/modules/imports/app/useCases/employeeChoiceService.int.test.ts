@@ -17,7 +17,7 @@ test("stores a record pick for a later read", async ({ orm, seed }) => {
     choice: { recordId: member!.id },
   });
 
-  const { edges } = await importUseCases(orm).reads.listEmployees(OWNER, {});
+  const { edges } = (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({});
   expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "picked" });
 });
 
@@ -37,7 +37,7 @@ test("clears a choice back to the source default", async ({ orm, seed }) => {
     choice: null,
   });
 
-  const { edges } = await imports.reads.listEmployees(OWNER, {});
+  const { edges } = (await imports.reads.readReview(OWNER)).listEmployees({});
   expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "default" });
 });
 
@@ -52,10 +52,10 @@ test("stores a typed value that fixes an incomplete import employee", async ({ o
     choice: { value: "Stone" },
   });
 
-  const reads = importUseCases(orm).reads;
-  const page = await reads.listEmployees(OWNER, {});
+  const review = await importUseCases(orm).reads.readReview(OWNER);
+  const page = review.listEmployees({});
   expect(page.edges[0]!.node.values.lastName).toMatchObject({ value: "Stone", choice: "typed" });
-  expect(await reads.readyEmployeeCount(OWNER)).toBe(1);
+  expect(review.readyEmployees).toHaveLength(1);
 });
 
 test("refuses a choice for an unknown import employee", async ({ orm }) => {
@@ -104,7 +104,7 @@ test.for([
     const source = await seed.importSource();
     await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
     const imports = importUseCases(orm);
-    const before = await imports.reads.listEmployees(OWNER, {});
+    const before = (await imports.reads.readReview(OWNER)).listEmployees({});
 
     await expect(
       imports.choices.chooseEmployeeValue(OWNER, {
@@ -116,7 +116,7 @@ test.for([
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "value", code }],
     });
-    expect(await imports.reads.listEmployees(OWNER, {})).toEqual(before);
+    expect((await imports.reads.readReview(OWNER)).listEmployees({})).toEqual(before);
   },
 );
 
@@ -151,7 +151,7 @@ test("chooses a source for open conflicts while keeping settled values and group
 
   await imports.choices.chooseSourceForAll(OWNER, { field: "jobTitle", sourceId: slack.id });
 
-  const page = await imports.reads.listEmployees(OWNER, {
+  const page = (await imports.reads.readReview(OWNER)).listEmployees({
     orderBy: { field: "EMAIL", direction: "ASC" },
   });
   expect(
@@ -171,13 +171,13 @@ test("stores leaving an import employee out and adding it back", async ({ orm, s
 
   await imports.choices.setLeftOut(OWNER, { key: "avery@example.com", leftOut: true });
 
-  expect((await importUseCases(orm).reads.listEmployees(OWNER, {})).edges[0]!.node.leftOut).toBe(
-    true,
-  );
+  expect(
+    (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({}).edges[0]!.node.leftOut,
+  ).toBe(true);
   await imports.choices.setLeftOut(OWNER, { key: "avery@example.com", leftOut: false });
-  expect((await importUseCases(orm).reads.listEmployees(OWNER, {})).edges[0]!.node.leftOut).toBe(
-    false,
-  );
+  expect(
+    (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({}).edges[0]!.node.leftOut,
+  ).toBe(false);
 });
 
 test("refuses a leave-out change after Approve and keeps the import unchanged", async ({
@@ -190,14 +190,14 @@ test("refuses a leave-out change after Approve and keeps the import unchanged", 
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER);
   expect(await readSetupStep(orm)).toBe("owner");
-  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   expect(before.edges).toHaveLength(1);
 
   await expect(
     imports.choices.setLeftOut(SETUP_HOLDER, { key: "avery@example.com", leftOut: true }),
   ).rejects.toMatchObject({ code: "CONFLICT" });
 
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
 });
 
@@ -213,7 +213,7 @@ test("leaves out employees with the requested incomplete reason", async ({ orm, 
 
   await imports.choices.leaveOutIncomplete(OWNER, { reason: "lastName" });
 
-  const page = await importUseCases(orm).reads.listEmployees(OWNER, {
+  const page = (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({
     orderBy: { field: "EMAIL", direction: "ASC" },
   });
   expect(page.edges.map(({ node }) => ({ key: node.key, leftOut: node.leftOut }))).toEqual([
@@ -242,7 +242,7 @@ test("keeps the Slack pick through leave-out changes and refresh", async ({ orm,
     { externalId: "U1", email: "avery@example.com", jobTitle: "Lead engineer" },
   ]);
 
-  const page = await importUseCases(orm).reads.listEmployees(OWNER, {});
+  const page = (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({});
   expect(page.edges[0]!.node.values.jobTitle).toMatchObject({
     value: "Lead engineer",
     choice: "picked",
@@ -266,7 +266,7 @@ test("uses the default after removing the picked record’s file", async ({ orm,
 
   await imports.files.removeFile(OWNER, file.id);
 
-  const { edges } = await importUseCases(orm).reads.listEmployees(OWNER, {});
+  const { edges } = (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({});
   expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "default" });
 });
 
@@ -276,7 +276,7 @@ test.for(["b@example.com", "B@EXAMPLE.COM", " B@EXAMPLE.COM "])(
     const source = await seed.importSource();
     await seed.importEmployees(source.id, [{ email: "a@example.com" }, { email: "b@example.com" }]);
     const imports = importUseCases(orm);
-    const before = await imports.reads.listEmployees(OWNER, {});
+    const before = (await imports.reads.readReview(OWNER)).listEmployees({});
 
     await expect(
       imports.choices.chooseEmployeeValue(OWNER, {
@@ -288,7 +288,7 @@ test.for(["b@example.com", "B@EXAMPLE.COM", " B@EXAMPLE.COM "])(
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "value", code: "taken" }],
     });
-    expect(await imports.reads.listEmployees(OWNER, {})).toEqual(before);
+    expect((await imports.reads.readReview(OWNER)).listEmployees({})).toEqual(before);
   },
 );
 
@@ -303,7 +303,7 @@ test("allows typing the import employee’s current email", async ({ orm, seed }
     choice: { value: " AVERY@EXAMPLE.COM " },
   });
 
-  const page = await imports.reads.listEmployees(OWNER, {});
+  const page = (await imports.reads.readReview(OWNER)).listEmployees({});
   expect(page.edges.map(({ node }) => node.values.email)).toMatchObject([
     { value: "avery@example.com", choice: "typed" },
   ]);
@@ -320,7 +320,7 @@ test("keeps a merge from a re-read left out after an email edit", async ({ orm, 
   });
   const slack = await seed.importSource();
   await seed.importEmployees(slack.id, [{ email: "b@example.com" }]);
-  const merged = await imports.reads.listEmployees(OWNER, {});
+  const merged = (await imports.reads.readReview(OWNER)).listEmployees({});
   expect(merged.edges).toHaveLength(1);
   expect(merged.edges[0]!.node.records).toHaveLength(2);
   await imports.choices.setLeftOut(OWNER, { key: "b@example.com", leftOut: true });
@@ -331,7 +331,7 @@ test("keeps a merge from a re-read left out after an email edit", async ({ orm, 
     choice: { value: "c@example.com" },
   });
 
-  const page = await imports.reads.listEmployees(OWNER, {});
+  const page = (await imports.reads.readReview(OWNER)).listEmployees({});
   expect(page.edges.map(({ node }) => node)).toMatchObject([
     { leftOut: true, values: { email: { value: "c@example.com", choice: "typed" } } },
   ]);

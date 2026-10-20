@@ -20,7 +20,7 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
   await instanceRepository(orm).advanceStep("company", "import");
   const imports = importUseCases(orm, { slack: slackPhotoReader() });
   await imports.readSlack(SETUP_HOLDER);
-  const imported = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const imported = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileId = imported.edges[0]!.node.photoFileId;
   expect(fileId).toEqual(expect.any(String));
 
@@ -34,7 +34,7 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
   const stored = await readFile(orm, fileId!);
   expect(stored?.mimeType).toBe("image/webp");
   expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
-  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(imported);
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
 });
 
 test("approving deletes unused photos while keeping import rows and staff files", async ({
@@ -81,7 +81,7 @@ test("approving deletes unused photos while keeping import rows and staff files"
   ]);
   expect(await storedFileIds(orm)).toEqual([keptPhoto, existingAvatar, staffFileId!].sort());
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([staff, source]);
-  const reviewed = await imports.reads.listEmployees(SETUP_HOLDER, {
+  const reviewed = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({
     orderBy: { field: "EMAIL" },
   });
   expect(

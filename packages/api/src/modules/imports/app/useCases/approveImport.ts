@@ -6,13 +6,13 @@ import { deleteFiles } from "../../../../core/files";
 import { importPhotoRepository, importRepository } from "../../db";
 import type { ImportContext } from "./importContext";
 import { toNewEmployeeInput } from "../../domain";
-import { readImportEmployees } from "./readImportEmployees";
+import { readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
- * Turns the import employees that are not left out into employees, with the values and
+ * Turns the ready import employees that are not left out into employees, with the values and
  * photo review shows, and completes the import step, in one transaction; at any step but
- * `import` it does nothing, so approving twice creates them once. Incomplete ones are not
+ * `import` it does nothing, so approving twice creates them once. The others are not
  * created and lose their photos; refused while a file is being mapped.
  */
 export async function approveImport(
@@ -31,16 +31,14 @@ export async function approveImport(
     if (await imports.hasMappingSource()) {
       throw new ApplicationError("CONFLICT", "Files are still being read.");
     }
-    const employees = await readImportEmployees(imports);
+    const { readyEmployees } = await readImportReview(ctx, tx);
     const { avatarFileIds, ...counts } = await createImportedEmployees(
       ctx,
       tx,
-      employees
-        .filter(({ leftOut }) => !leftOut)
-        .map((employee) => ({
-          ...toNewEmployeeInput(employee),
-          avatarFileId: employee.photoFileId ?? undefined,
-        })),
+      readyEmployees.map((employee) => ({
+        ...toNewEmployeeInput(employee),
+        avatarFileId: employee.photoFileId ?? undefined,
+      })),
     );
     // The import stays for the account step until setup completes (`finishImport`).
     await deleteFiles(tx, await importPhotoRepository(tx).detachPhotosExcept(avatarFileIds));
