@@ -1,4 +1,6 @@
-import { expect, importUseCases, OWNER, test } from "#test/support";
+import { expect, importUseCases, OWNER, SETUP_HOLDER, test } from "#test/support";
+
+import { instanceRepository, readSetupStep } from "../../../../core/instance";
 
 test("stores a record pick for a later read", async ({ orm, seed }) => {
   const slack = await seed.importSource();
@@ -176,6 +178,27 @@ test("stores leaving an import employee out and adding it back", async ({ orm, s
   expect((await importUseCases(orm).reads.listEmployees(OWNER, {})).edges[0]!.node.leftOut).toBe(
     false,
   );
+});
+
+test("refuses a leave-out change after Approve and keeps the import unchanged", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
+  const imports = importUseCases(orm);
+  await imports.approveImport(SETUP_HOLDER);
+  expect(await readSetupStep(orm)).toBe("owner");
+  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  expect(before.edges).toHaveLength(1);
+
+  await expect(
+    imports.choices.setLeftOut(SETUP_HOLDER, { key: "avery@example.com", leftOut: true }),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+
+  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
 });
 
 test("leaves out employees with the requested incomplete reason", async ({ orm, seed }) => {

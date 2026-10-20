@@ -227,6 +227,30 @@ test("removes the source, its records and its stored file", async ({ orm, seed }
   expect(await storedFileIds(orm)).toEqual([otherFile]);
 });
 
+test("refuses file removal after Approve and keeps the import and stored file unchanged", async ({
+  orm,
+  seed,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
+  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
+  const imports = importUseCases(orm);
+  await imports.approveImport(SETUP_HOLDER);
+  expect(await readSetupStep(orm)).toBe("owner");
+  const before = await imports.reads.listEmployees(SETUP_HOLDER, {});
+  const fileIds = await storedFileIds(orm);
+  expect(before.edges).toHaveLength(1);
+  expect(fileIds).toHaveLength(1);
+
+  await expect(imports.files.removeFile(SETUP_HOLDER, source.id)).rejects.toMatchObject({
+    code: "CONFLICT",
+  });
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect(await imports.reads.listEmployees(SETUP_HOLDER, {})).toEqual(before);
+  expect(await storedFileIds(orm)).toEqual(fileIds);
+});
+
 test("leaves the Slack source and its records unchanged", async ({ orm, seed }) => {
   const source = await seed.importSource();
   const records = await seed.importEmployees(source.id, [{ firstName: "Avery" }]);

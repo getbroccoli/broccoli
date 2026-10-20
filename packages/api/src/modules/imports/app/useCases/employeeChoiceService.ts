@@ -2,7 +2,6 @@ import { invalidInput } from "../../../../core/applicationError";
 import type { Transact } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 import { parseEmployeeField } from "../../../employees";
-import { importRepository, type ImportRepository } from "../../db";
 import {
   hasOpenConflict,
   IMPORT_EMPLOYEE_FIELDS,
@@ -14,6 +13,7 @@ import {
   type ValueChoice,
 } from "../../domain";
 import { readImportEmployees } from "./readImportEmployees";
+import { lockOpenImport } from "./lockOpenImport";
 import { requireImportAccess } from "./requireImportAccess";
 
 /** What the owner settles in review: picked and typed values, and who is left out. Every function checks `ctx`. */
@@ -87,9 +87,8 @@ async function changeChoices(
 ): Promise<void> {
   requireImportAccess(ctx);
   await transact(async (tx) => {
-    const imports: ImportRepository = importRepository(tx);
     // Waits for a mapping run or Approve to finish, so the choices meet the records they read.
-    await imports.lockSources();
+    const imports = await lockOpenImport(tx);
     await imports.saveChoices("employee", change(await readImportEmployees(imports)));
   });
 }

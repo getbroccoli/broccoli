@@ -16,13 +16,14 @@ export interface SlackPhoto {
 
 /**
  * Downloads, before any transaction, the photos of the members whose photo is new,
- * changed or not stored yet; it starts no new round after the time budget, so the rest
- * keep initials until the next read.
+ * changed or not stored yet; it starts no new round once the read that began at
+ * `startedAt` has used its time budget, so the rest keep initials until the next read.
  */
 export async function readSlackPhotos(
   context: ImportContext,
   ctx: SecurityContext,
   records: readonly IncomingRecord[],
+  startedAt: Date,
 ): Promise<SlackPhoto[]> {
   requireImportAccess(ctx);
   const source = (await context.imports.listSources()).find(({ kind }) => kind === "slack");
@@ -32,10 +33,9 @@ export async function readSlackPhotos(
   const downloads = records.flatMap(({ externalId, photoUrl }) =>
     photoUrl && links.get(externalId) !== photoUrl ? [{ externalId, photoUrl }] : [],
   );
-  const startedAt = context.clock().getTime();
   const photos: SlackPhoto[] = [];
   for (let start = 0; start < downloads.length; start += PARALLEL_DOWNLOADS) {
-    if (context.clock().getTime() - startedAt >= DOWNLOAD_BUDGET_MS) {
+    if (context.clock().getTime() - startedAt.getTime() >= DOWNLOAD_BUDGET_MS) {
       break;
     }
     const round = downloads.slice(start, start + PARALLEL_DOWNLOADS);

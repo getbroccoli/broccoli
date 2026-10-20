@@ -231,6 +231,36 @@ test("stops starting downloads after 20 seconds and leaves the rest with initial
   expect(imports.sentJobs).toEqual([]);
 });
 
+test("imports members without photos when reading Slack members uses the time budget", async ({
+  orm,
+}) => {
+  await instanceRepository(orm).advanceStep("company", "import");
+  let now = new Date("2026-10-20T12:00:00Z");
+  const slack = slackPhotoReader();
+  const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));
+  const imports = importUseCases(orm, {
+    clock: () => now,
+    slack: {
+      ...slack,
+      readSlackMembers: () => {
+        now = new Date(now.getTime() + 21_000);
+        return slack.readSlackMembers();
+      },
+      readSlackPhoto,
+    },
+  });
+
+  await imports.readSlack(OWNER);
+
+  const employees = await imports.reads.listEmployees(OWNER, {});
+  expect(employees.edges.map(({ node }) => node)).toMatchObject([
+    { values: { email: { value: SLACK_MEMBER_WITH_PHOTO.profile.email } }, photoFileId: null },
+  ]);
+  expect(readSlackPhoto).not.toHaveBeenCalled();
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
 test("a later Refresh downloads the photos still missing", async ({ orm }) => {
   await instanceRepository(orm).advanceStep("company", "import");
   const readSlackPhoto = vi.fn(() => Promise.resolve(PNG));

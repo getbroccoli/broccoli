@@ -14,10 +14,11 @@ import { attachSlackPhotos, readSlackPhotos } from "./slackPhotos";
  */
 export async function readSlack(context: ImportContext, ctx: SecurityContext): Promise<void> {
   requireImportAccess(ctx);
+  const startedAt = context.clock();
   // Slack is read before the transaction, which never waits on another service.
   const { workspace, members, snapshot } = await context.slack.readSlackMembers(ctx);
   const records = mapSlackMembers(members);
-  const photos = await readSlackPhotos(context, ctx, records);
+  const photos = await readSlackPhotos(context, ctx, records, startedAt);
   await context.transact(async (tx) => {
     // A connect since the read stored another connection; its members are read next time.
     if (!(await context.slack.isCurrentSlackConnection(ctx, tx, snapshot))) {
