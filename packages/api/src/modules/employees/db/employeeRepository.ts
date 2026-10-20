@@ -66,6 +66,12 @@ export interface EmployeePageQuery {
   search: string | null;
 }
 
+/** A demo employee to insert, with the avatar to store for them. */
+export interface NewDemoEmployee {
+  employee: NewEmployee;
+  avatar: RasterImage;
+}
+
 export function employeeRepository(db: Orm | Tx): EmployeeRepository {
   const orm = () => ormOf(db);
 
@@ -167,12 +173,6 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
-
-/** A demo employee to insert, with the avatar to store for them. */
-export interface NewDemoEmployee {
-  employee: NewEmployee;
-  avatar: RasterImage;
-}
 
 const avatarColumns = { avatarFileId: employees.avatarFileId, isDemo: employees.isDemo };
 
