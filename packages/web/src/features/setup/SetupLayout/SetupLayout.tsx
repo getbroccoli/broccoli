@@ -3,7 +3,7 @@ import { Plant } from "@phosphor-icons/react";
 import { useRouteContext } from "@tanstack/react-router";
 import { useEffect, useRef, type ReactNode } from "react";
 
-import { SetupWorkspaceDocument } from "@/__generated__/graphql";
+import { CompanyStepDocument } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
@@ -36,8 +36,8 @@ export function SetupLayout({
   const heading = useRef<HTMLHeadingElement>(null);
   const { mode } = useRouteContext({ from: "__root__" });
   const steps = stepViews(step, mode);
-  // Shares the company's cache entry, so a saved name or logo shows here at once.
-  const company = useQuery(SetupWorkspaceDocument).data?.company;
+  // The company step's own query: one request, and a saved name or logo shows here at once.
+  const company = useQuery(CompanyStepDocument).data?.company;
 
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });

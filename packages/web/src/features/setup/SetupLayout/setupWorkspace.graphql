@@ -1,7 +1,0 @@
-query SetupWorkspace {
-  company {
-    id
-    name
-    logoUrl
-  }
-}
