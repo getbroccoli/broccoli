@@ -6,10 +6,9 @@ query ReadyStep {
   import {
     id
     readyEmployeeCount
-    sources {
+    readyEmployeeSources {
       id
       kind
-      employeeCount
     }
   }
 }

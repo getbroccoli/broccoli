@@ -16,6 +16,8 @@ type Import {
   employeeCount: Int!
   "How many employees Approve would add: the import employees that are ready and not left out."
   readyEmployeeCount: Int!
+  "The sources of the employees Approve would add, oldest first."
+  readyEmployeeSources: [ImportSource!]!
   "What the owner may want to settle, by kind. Nothing here blocks Approve."
   checks: [ImportCheck!]!
 }

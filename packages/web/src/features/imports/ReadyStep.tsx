@@ -61,10 +61,12 @@ export function ReadyStep() {
               <Users size={15} aria-hidden />
               {peopleLabel(data.import)}
             </li>
-            <li className={CHIP}>
-              <Stack size={15} aria-hidden />
-              {sourcesLabel(data.import.sources)}
-            </li>
+            {data.import.readyEmployeeSources.length > 0 && (
+              <li className={CHIP}>
+                <Stack size={15} aria-hidden />
+                {sourcesLabel(data.import.readyEmployeeSources)}
+              </li>
+            )}
           </ul>
         )}
         {error && (
@@ -87,10 +89,9 @@ function peopleLabel({ readyEmployeeCount }: ReadyStepQuery["import"]): string {
 }
 
 /** Where the added people came from, such as "From Slack and 2 files". */
-function sourcesLabel(sources: ReadyStepQuery["import"]["sources"]): string {
-  const used = sources.filter(({ employeeCount }) => employeeCount > 0);
-  const fromSlack = used.some(({ kind }) => kind === "SLACK");
-  const files = used.filter(({ kind }) => kind === "FILE").length;
+function sourcesLabel(sources: ReadyStepQuery["import"]["readyEmployeeSources"]): string {
+  const fromSlack = sources.some(({ kind }) => kind === "SLACK");
+  const files = sources.filter(({ kind }) => kind === "FILE").length;
   if (files === 0) {
     return t("setup.ready.fromSlack");
   }
