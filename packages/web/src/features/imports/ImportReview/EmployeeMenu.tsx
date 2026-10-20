@@ -1,7 +1,7 @@
 import { DotsThree } from "@phosphor-icons/react";
 import { toast } from "sonner";
 
-import { SetEmployeeLeftOutDocument } from "@/__generated__/graphql";
+import { ImportReviewDocument, SetEmployeeLeftOutDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,8 +11,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
-
-import { useRefreshReview } from "./useRefreshReview";
 
 /** A row's options: leave the import employee out of Approve, or add it back. */
 export function EmployeeMenu({
@@ -24,18 +22,14 @@ export function EmployeeMenu({
   employeeName: string;
   leftOut: boolean;
 }) {
-  const refreshReview = useRefreshReview();
-  const [setLeftOut, { loading }] = usePayloadMutation(SetEmployeeLeftOutDocument);
+  const [setLeftOut, { loading }] = usePayloadMutation(SetEmployeeLeftOutDocument, {
+    refetch: [ImportReviewDocument],
+  });
 
-  const toggle = async () => {
-    try {
-      await setLeftOut({ variables: { employeeId, leftOut: !leftOut } });
-    } catch {
-      toast.error(t("setup.review.saveFailed"));
-      return;
-    }
-    await refreshReview();
-  };
+  const toggle = () =>
+    setLeftOut({ variables: { employeeId, leftOut: !leftOut } }).catch(() =>
+      toast.error(t("setup.review.saveFailed")),
+    );
 
   return (
     <DropdownMenu>

@@ -1,10 +1,11 @@
 import type {
   ApolloCache,
+  DocumentNode,
   MutationUpdaterFunction,
   OperationVariables,
   TypedDocumentNode,
 } from "@apollo/client";
-import { useMutation } from "@apollo/client/react";
+import { useApolloClient, useMutation } from "@apollo/client/react";
 import { useCallback, useRef, useState } from "react";
 
 import { payloadOf } from "./payloadOf";
@@ -24,13 +25,20 @@ export class PayloadFailure<PayloadError> extends Error {
  */
 export function usePayloadMutation<Data, Variables extends OperationVariables>(
   document: TypedDocumentNode<Data, Variables>,
-  options?: { update?: MutationUpdaterFunction<Data, Variables, ApolloCache> },
+  options?: {
+    update?: MutationUpdaterFunction<Data, Variables, ApolloCache>;
+    /** Active queries to refetch after a success; the run and `loading` end once they are back. */
+    refetch?: DocumentNode[];
+  },
 ) {
+  const client = useApolloClient();
+  const refetch = options?.refetch;
   // Only `update` reaches Apollo: its other options could treat a payload error as success.
   const [mutate, { reset: resetMutation, ...state }] = useMutation(document, {
     update: options?.update,
   });
   const [payloadError, setPayloadError] = useState<PayloadErrorOf<Data> | null>(null);
+  const [refetching, setRefetching] = useState(false);
   // Only the latest run, and none after `reset`, may show its payload error.
   const latestRun = useRef(0);
 
@@ -51,9 +59,15 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
         }
         throw new PayloadFailure(failure);
       }
+      if (refetch) {
+        setRefetching(true);
+        // The mutation succeeded; a failed refetch shows as its own query's error.
+        await client.refetchQueries({ include: refetch }).catch(() => undefined);
+        setRefetching(false);
+      }
       return payload as PayloadOf<Data>;
     },
-    [mutate],
+    [mutate, client, refetch],
   );
 
   const reset = useCallback(() => {
@@ -62,7 +76,7 @@ export function usePayloadMutation<Data, Variables extends OperationVariables>(
     resetMutation();
   }, [resetMutation]);
 
-  return [run, { ...state, payloadError, reset }] as const;
+  return [run, { ...state, loading: state.loading || refetching, payloadError, reset }] as const;
 }
 
 /** The variables; required when the mutation has a required one, which `Record<string, never>` lacks. */

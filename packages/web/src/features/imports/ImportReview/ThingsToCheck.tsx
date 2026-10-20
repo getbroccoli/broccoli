@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import {
   ChooseSourceForAllDocument,
+  ImportReviewDocument,
   LeaveOutIncompleteDocument,
   ThingsToCheck_CheckFragmentDoc,
   type ThingsToCheck_CheckFragment,
@@ -22,7 +23,6 @@ import { t } from "@/i18n";
 
 import { fieldKeyOf, pluralLabel } from "./employeeFields";
 import { FlagPill } from "./FlagPill";
-import { useRefreshReview } from "./useRefreshReview";
 
 const INCOMPLETE = {
   FIRST_NAME: "setup.review.checks.incomplete.firstName",
@@ -44,9 +44,12 @@ export function ThingsToCheck({
   onShow: (checkId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const refreshReview = useRefreshReview();
-  const [chooseSourceForAll, chosen] = usePayloadMutation(ChooseSourceForAllDocument);
-  const [leaveOutIncomplete, leftOut] = usePayloadMutation(LeaveOutIncompleteDocument);
+  const [chooseSourceForAll, chosen] = usePayloadMutation(ChooseSourceForAllDocument, {
+    refetch: [ImportReviewDocument],
+  });
+  const [leaveOutIncomplete, leftOut] = usePayloadMutation(LeaveOutIncompleteDocument, {
+    refetch: [ImportReviewDocument],
+  });
   const { data: checks, complete } = useFragment({
     fragment: ThingsToCheck_CheckFragmentDoc,
     from,
@@ -60,14 +63,8 @@ export function ThingsToCheck({
   const busy = chosen.loading || leftOut.loading;
   const failed = chosen.error || leftOut.error;
 
-  const settle = async (work: () => Promise<unknown>) => {
-    try {
-      await work();
-    } catch {
-      return; // the line below the kinds says so
-    }
-    await refreshReview();
-  };
+  // A failure shows in the line below the kinds.
+  const settle = (work: Promise<unknown>) => void work.catch(() => undefined);
   const show = (checkId: string) => {
     setOpen(false);
     onShow(checkId);
@@ -102,7 +99,7 @@ export function ThingsToCheck({
                       variant={index === 0 ? "default" : "outline"}
                       disabled={busy}
                       onClick={() =>
-                        void settle(() =>
+                        settle(
                           chooseSourceForAll({
                             variables: { field: check.field!, sourceId: source.id },
                           }),
@@ -117,9 +114,7 @@ export function ThingsToCheck({
                     size="sm"
                     disabled={busy}
                     onClick={() =>
-                      void settle(() =>
-                        leaveOutIncomplete({ variables: { reason: check.reason! } }),
-                      )
+                      settle(leaveOutIncomplete({ variables: { reason: check.reason! } }))
                     }
                   >
                     {t("setup.review.checks.leaveThemOut")}
