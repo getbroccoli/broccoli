@@ -5,8 +5,6 @@ import { suggestName } from "../../domain";
 
 /** The largest company logo Broccoli stores. */
 export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
-/** Three times the largest logo on a page, so it stays sharp on high-density screens. */
-export const LOGO_MAX_SIDE = 256;
 
 /** The company as the owner sees it in the company step and later. */
 export interface Company {

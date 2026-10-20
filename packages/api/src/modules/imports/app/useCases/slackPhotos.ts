@@ -81,8 +81,6 @@ const PARALLEL_DOWNLOADS = 16;
 const DOWNLOAD_BUDGET_MS = 20_000;
 /** Far above a 192-pixel profile photo. */
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
-/** Over twice the largest avatar on a page, so it stays sharp on high-density screens. */
-const PHOTO_MAX_SIDE = 256;
 
 /** The photo's image, or null; the log never carries the link, which may hold a token. */
 async function readPhoto(
@@ -93,7 +91,6 @@ async function readPhoto(
   try {
     const image = await normalizeImage(await slack.readSlackPhoto(ctx, new URL(photoUrl)), {
       maxBytes: MAX_PHOTO_BYTES,
-      maxSide: PHOTO_MAX_SIDE,
     });
     if (!image) {
       logger.warn("A Slack photo is not an image");
