@@ -49,7 +49,7 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 
 - [ ] Before Slack is imported, the footer shows only "Explore the demo"; self-hosted also shows "Back" on the left, which opens `/setup/ai`. Managed shows no "Back".
 - [ ] Pressing Enter on the page never starts the demo.
-- [ ] With members imported, "Explore the demo" is disabled with "Not available once you’ve gathered people." beside it, and "Review your people" opens the [review](import-review.md).
+- [ ] With members imported, "Explore the demo" is disabled and hovering it shows "Not available once you’ve gathered people.", and "Review your people" opens the [review](import-review.md).
 - [ ] On a fresh instance, "Explore the demo" shows "Opening the demo…" and opens `/people` with the demo people (self-hosted: signed in as the demo's owner, without an account).
 
 ## Layout
