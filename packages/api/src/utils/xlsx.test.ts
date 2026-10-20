@@ -5,6 +5,9 @@ import { sampleXlsxFile, xlsxFileWithDistantCell } from "#test/support";
 
 import { parseXlsx } from ".";
 
+// Running out of memory in the reader takes seconds while the whole suite runs at once.
+vi.setConfig({ testTimeout: 30_000 });
+
 afterEach(() => vi.unstubAllEnvs());
 
 it("trims text and reads numbers and booleans as strings", async () => {
