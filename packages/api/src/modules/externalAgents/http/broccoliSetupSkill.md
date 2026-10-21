@@ -62,7 +62,7 @@ owner's computer.
 List the files waiting for your answers (by id only; you never get their names):
 
 ```sh
-printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- "<address>/api/external-agent/unanswered-files"
+printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- "<address>/api/external-agent/unmapped-files"
 ```
 
 → `[{ "id": "…" }]`. If none waits, tell the owner once to drop their staff files on the page,
@@ -71,7 +71,7 @@ then wait for them (section 3).
 For each file, read its questions:
 
 ```sh
-printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- "<address>/api/external-agent/unanswered-files/<id>/questions"
+printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- "<address>/api/external-agent/unmapped-files/<id>/questions"
 ```
 
 → `{ "sheets": [{ "sheet": 1, "rows": { "1": ["…"], … }, "questions": { "headerRow": { "instructions": "…", "options": { "1": "Row 1", …, "none": "…" } }, "fullName": { … }, … } }] }`
@@ -88,7 +88,7 @@ owner fixes values in review, but a wrong column fills a field with the wrong da
 
 ```sh
 printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- -X POST \
-  -H "Content-Type: application/json" "<address>/api/external-agent/unanswered-files/<id>/answers" \
+  -H "Content-Type: application/json" "<address>/api/external-agent/unmapped-files/<id>/answers" \
   -d '{"sheets":[{"sheet":1,"answers":{"headerRow":"1","fullName":"A","firstName":"none","lastName":"none","email":"B","jobTitle":"C","startDate":"D"}}]}'
 ```
 
@@ -101,7 +101,7 @@ After answering every waiting file, tell the owner how many people each file gav
 waiting for files they drop, without asking them anything:
 
 ```sh
-printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -m 120 -H @- "<address>/api/external-agent/poll-unanswered-files?wait=110"
+printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -m 120 -H @- "<address>/api/external-agent/poll-unmapped-files?wait=110"
 ```
 
 It answers as soon as the owner drops a file, or with `[]` after 110 seconds. Answer every file it

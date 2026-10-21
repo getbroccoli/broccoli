@@ -164,7 +164,7 @@ test("never exposes dropped file names or workbook sheet names", async ({
   const imports = importUseCases(orm);
 
   const responses = await transact(async (tx) => [
-    await imports.answeredMapping.readUnansweredSources(SETUP_EXTERNAL_AGENT, tx),
+    await imports.answeredMapping.readUnmappedSources(SETUP_EXTERNAL_AGENT, tx),
     await imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, csv.id),
     await imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, workbook.id),
   ]);

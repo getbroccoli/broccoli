@@ -33,7 +33,7 @@ export interface AnsweredMappingService {
   /** Stores the file as a source waiting for answers, with no mapping job; returns its id. */
   addAnsweredSource(ctx: SecurityContext, tx: Tx, file: AnsweredFile): Promise<string>;
   /** The sources still waiting for answers, without their names, which may name a person. */
-  readUnansweredSources(ctx: SecurityContext, tx: Tx): Promise<{ id: string }[]>;
+  readUnmappedSources(ctx: SecurityContext, tx: Tx): Promise<{ id: string }[]>;
   /**
    * Per sheet, its first rows as placeholders and the questions Broccoli's model gets; records
    * that the external agent picked the file up.
@@ -71,7 +71,7 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
       });
     },
 
-    readUnansweredSources: async (ctx, tx) => {
+    readUnmappedSources: async (ctx, tx) => {
       ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
       return (await imports.listSources())

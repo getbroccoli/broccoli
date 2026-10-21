@@ -15,12 +15,12 @@ export interface ExternalAgentFileService {
     file: { name: string; bytes: Uint8Array },
   ): Promise<string>;
   /** The files waiting for the agent's answers. */
-  listUnansweredFiles(ctx: SecurityContext): Promise<{ id: string }[]>;
+  listUnmappedFiles(ctx: SecurityContext): Promise<{ id: string }[]>;
   /**
-   * Long polling: as `listUnansweredFiles`, but with none waiting, waits up to `seconds` for the
+   * Long polling: as `listUnmappedFiles`, but with none waiting, waits up to `seconds` for the
    * owner's next drop; `signal` ends the wait early with none.
    */
-  pollUnansweredFiles(
+  pollUnmappedFiles(
     ctx: SecurityContext,
     request: { seconds: number; signal?: AbortSignal },
   ): Promise<{ id: string }[]>;
@@ -38,9 +38,9 @@ export function createExternalAgentFileService(
   context: ExternalAgentContext,
 ): ExternalAgentFileService {
   const { transact, clock, imports, activity } = context;
-  const listUnansweredFiles = (ctx: SecurityContext) =>
+  const listUnmappedFiles = (ctx: SecurityContext) =>
     asLiveExternalAgent(context, ctx, (tx) =>
-      imports.answeredMapping.readUnansweredSources(ctx, tx),
+      imports.answeredMapping.readUnmappedSources(ctx, tx),
     );
   return {
     uploadForExternalAgent: async (ctx, { name, bytes }) => {
@@ -56,9 +56,9 @@ export function createExternalAgentFileService(
       return id;
     },
 
-    listUnansweredFiles,
+    listUnmappedFiles,
 
-    pollUnansweredFiles: async (ctx, { seconds, signal }) => {
+    pollUnmappedFiles: async (ctx, { seconds, signal }) => {
       // Listening before the first look, so a drop in between still wakes the wait.
       const wait = activity.waitForDrop(seconds * 1000);
       signal?.addEventListener("abort", wait.stop);
@@ -66,12 +66,12 @@ export function createExternalAgentFileService(
         wait.stop();
       }
       try {
-        const files = await listUnansweredFiles(ctx);
+        const files = await listUnmappedFiles(ctx);
         if (files.length > 0) {
           return files;
         }
         await wait.dropped;
-        return signal?.aborted ? [] : await listUnansweredFiles(ctx);
+        return signal?.aborted ? [] : await listUnmappedFiles(ctx);
       } finally {
         wait.stop();
         signal?.removeEventListener("abort", wait.stop);

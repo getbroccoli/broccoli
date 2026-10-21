@@ -159,7 +159,7 @@ test("shows the external agent as listening while a wait stays open past 30 seco
   const ctx = (await sessions.readExternalAgentSession({ token }))!;
   const controller = new AbortController();
 
-  const waiting = files.pollUnansweredFiles(ctx, { seconds: 60, signal: controller.signal });
+  const waiting = files.pollUnmappedFiles(ctx, { seconds: 60, signal: controller.signal });
   now = new Date("2026-10-20T12:00:45Z");
 
   try {
@@ -190,7 +190,7 @@ test("shows the external agent as listening again after a list call following a 
     listening: false,
   });
 
-  await files.listUnansweredFiles(ctx);
+  await files.listUnmappedFiles(ctx);
 
   expect(await sessions.readExternalAgentConnection(SETUP_HOLDER)).toMatchObject({
     listening: true,

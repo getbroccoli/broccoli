@@ -78,15 +78,15 @@ export function externalAgentRouter(
       },
     )
     .get(
-      "/external-agent/unanswered-files",
+      "/external-agent/unmapped-files",
       asExternalAgent,
       perSession,
       async (_request, response) => {
-        response.json(await useCases.files.listUnansweredFiles(externalAgentOf(response)));
+        response.json(await useCases.files.listUnmappedFiles(externalAgentOf(response)));
       },
     )
     .get(
-      "/external-agent/poll-unanswered-files",
+      "/external-agent/poll-unmapped-files",
       asExternalAgent,
       perSession,
       async (request, response) => {
@@ -98,7 +98,7 @@ export function externalAgentRouter(
         if (response.destroyed) {
           abandoned.abort();
         }
-        const files = await useCases.files.pollUnansweredFiles(externalAgentOf(response), {
+        const files = await useCases.files.pollUnmappedFiles(externalAgentOf(response), {
           seconds,
           signal: abandoned.signal,
         });
@@ -108,7 +108,7 @@ export function externalAgentRouter(
       },
     )
     .get(
-      "/external-agent/unanswered-files/:id/questions",
+      "/external-agent/unmapped-files/:id/questions",
       asExternalAgent,
       perSession,
       async (request, response) => {
@@ -118,7 +118,7 @@ export function externalAgentRouter(
       },
     )
     .post(
-      "/external-agent/unanswered-files/:id/answers",
+      "/external-agent/unmapped-files/:id/answers",
       asExternalAgent,
       perSession,
       json,
