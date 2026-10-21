@@ -9,5 +9,5 @@ export {
   type KeysetColumn,
   type KeysetOrder,
 } from "./keyset";
-export { ormOf, readSnapshot, transactor, type Transact, type Tx } from "./transaction";
+export { ormOf, transactor, type Transact, type Tx } from "./transaction";
 export { isUniqueViolation } from "./uniqueViolation";

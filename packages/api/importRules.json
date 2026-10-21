@@ -103,10 +103,11 @@
   },
   "layers": {
     "domain": [],
-    "db": ["domain"],
-    "app": ["db", "domain"],
-    "graphql": ["app", "domain", "http"],
-    "http": ["app", "domain", "jwt"],
+    "helpers": [],
+    "db": ["domain", "helpers"],
+    "app": ["db", "domain", "helpers"],
+    "graphql": ["app", "domain", "helpers", "http"],
+    "http": ["app", "domain", "helpers", "jwt"],
     "mcp": ["app", "domain"],
     "betterAuth": ["app", "domain", "jwt"],
     "jwt": ["domain"]

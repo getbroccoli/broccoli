@@ -30,8 +30,8 @@ export function asLiveExternalAgent<T>(
   const sessionId = ctx.requireSetupExternalAgent();
   return transact(async (tx) => {
     const now = await lockSetupOpenToExternalAgent(tx, clock);
-    const session = now && (await externalAgentRepository(tx).lockLiveSession(sessionId, now));
-    if (!session) {
+    const live = now && (await externalAgentRepository(tx).lockLiveSession(sessionId, now));
+    if (!live) {
       throw new ApplicationError("UNAUTHENTICATED", "Your agent's session ended.");
     }
     return work(tx);

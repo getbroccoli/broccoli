@@ -12,12 +12,9 @@ import {
   EXTERNAL_AGENT_CODE_HOURS,
   EXTERNAL_AGENT_SESSION_HOURS,
   type ExternalAgentConnection,
-  hashExternalAgentSecret,
-  hoursAfter,
-  isExternalAgentSafeOrigin,
-  newExternalAgentSecret,
   parseExternalAgentClientName,
 } from "../domain";
+import { hoursAfter, isExternalAgentSafeOrigin, newExternalAgentSecret } from "../helpers";
 import type { ExternalAgentContext } from "./externalAgentContext";
 
 /**
@@ -92,13 +89,9 @@ export function createExternalAgentSessionService(
         if (!now) {
           throw new ApplicationError("CONFLICT", "Choose your agent first.");
         }
-        await endExternalAgents(tx, now);
         const code = newExternalAgentSecret();
         const expiresAt = hoursAfter(now, EXTERNAL_AGENT_CODE_HOURS);
-        await externalAgentRepository(tx).insertCode({
-          secretHash: hashExternalAgentSecret(code),
-          expiresAt,
-        });
+        await externalAgentRepository(tx).replaceCode({ secret: code, expiresAt }, now);
         return { code, expiresAt };
       });
     },
@@ -107,34 +100,25 @@ export function createExternalAgentSessionService(
       ctx.requireOwnerOrSystem();
       return transact(async (tx) => {
         const now = await lockSetupOpenToExternalAgent(tx, clock);
-        if (
-          !now ||
-          !(await externalAgentRepository(tx).useCode(hashExternalAgentSecret(code), now))
-        ) {
+        const session = now && {
+          token: newExternalAgentSecret(),
+          client: parseExternalAgentClientName(client),
+          expiresAt: hoursAfter(now, EXTERNAL_AGENT_SESSION_HOURS),
+        };
+        if (!session || !(await externalAgentRepository(tx).exchangeCode(code, session, now))) {
           throw new ApplicationError("UNAUTHENTICATED", "The code is not valid.");
         }
-        const token = newExternalAgentSecret();
-        const expiresAt = hoursAfter(now, EXTERNAL_AGENT_SESSION_HOURS);
-        await externalAgentRepository(tx).insertSession({
-          tokenHash: hashExternalAgentSecret(token),
-          client: parseExternalAgentClientName(client),
-          expiresAt,
-        });
-        return { token, expiresAt };
+        return { token: session.token, expiresAt: session.expiresAt };
       });
     },
 
     readExternalAgentSession: async ({ token }) => {
       const now = clock();
-      const session = await externalAgentRepository(orm).findLiveSession(
-        hashExternalAgentSecret(token),
-        now,
-      );
-      if (!session || !(await readSetupOpenToExternalAgent(orm, now))) {
+      const sessionId = await externalAgentRepository(orm).findLiveSession(token, now);
+      if (!sessionId || !(await readSetupOpenToExternalAgent(orm, now))) {
         return null;
       }
-      await externalAgentRepository(orm).recordCall(session.id, now);
-      return PrincipalSecurityContext.setupExternalAgent(session.id);
+      return PrincipalSecurityContext.setupExternalAgent(sessionId);
     },
 
     disconnectExternalAgent: async (ctx) => {
@@ -155,8 +139,6 @@ export function createExternalAgentSessionService(
 }
 
 /** Ends every agent session and cancels every unused code: one agent at a time. */
-async function endExternalAgents(tx: Tx, now: Date): Promise<void> {
-  const agents = externalAgentRepository(tx);
-  await agents.cancelUnusedCodes(now);
-  await agents.endSessions(now);
+function endExternalAgents(tx: Tx, now: Date): Promise<void> {
+  return externalAgentRepository(tx).endAll(now);
 }

@@ -3,7 +3,6 @@ export interface ExternalAgentConnection {
   /** The name the agent gave itself; not proof of what it is. */
   client: string;
   connectedAt: Date;
-  lastCallAt: Date | null;
   expiresAt: Date;
 }
 

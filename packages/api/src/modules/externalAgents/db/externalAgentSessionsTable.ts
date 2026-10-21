@@ -10,6 +10,5 @@ export const externalAgentSessions = pgTable("external_agent_sessions", {
   client: text("client").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  lastCallAt: timestamp("last_call_at", { withTimezone: true }),
   endedAt: timestamp("ended_at", { withTimezone: true }),
 });

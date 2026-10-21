@@ -1,5 +1,5 @@
 {
-  "id": "b834ee39-d5c2-4285-8e18-cf5e9552706e",
+  "id": "dbaa1a1f-d86d-4503-a8ec-07b3fcc12875",
   "prevId": "9617d2dc-fb73-4783-afaf-4f7a8a163d20",
   "version": "7",
   "dialect": "postgresql",
@@ -810,12 +810,6 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
-        },
-        "last_call_at": {
-          "name": "last_call_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
         },
         "ended_at": {
           "name": "ended_at",

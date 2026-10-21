@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { readSnapshot, type Orm } from "../../../../core/db";
+import type { Orm } from "../../../../core/db";
 import {
   type Connection,
   type ListOrder,
@@ -71,8 +71,7 @@ export function createImportReadService(orm: Orm): ImportReadService {
 
     readReview: (ctx: SecurityContext): Promise<ImportReview> => {
       requireImportAccess(ctx);
-      // One snapshot, so the list review shows and the version Approve takes back agree.
-      return readSnapshot(orm, (tx) => readImportReview(ctx, tx));
+      return readImportReview(ctx, orm);
     },
 
     listEmployeeRecords: async (

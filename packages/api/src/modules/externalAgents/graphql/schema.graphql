@@ -10,7 +10,6 @@ type ExternalAgentConnection {
   "The name the agent gave itself; not proof of what it is."
   client: String!
   connectedAt: DateTime!
-  lastCallAt: DateTime
   "When its session ends, two hours after it connected."
   expiresAt: DateTime!
 }

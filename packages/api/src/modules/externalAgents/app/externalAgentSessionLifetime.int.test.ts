@@ -217,27 +217,6 @@ test("refuses a session after approval", async ({ orm, seed }) => {
   await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
-test("does not update the last call of an ended session", async ({ orm, seed }) => {
-  await seed.externalAgentSetup();
-  let now = new Date("2026-10-20T12:00:00Z");
-  const { sessions } = externalAgentUseCases(orm, { clock: () => now });
-  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
-  const { token } = await sessions.startExternalAgentSession(SYSTEM, {
-    code,
-    client: "Test agent",
-  });
-  await sessions.readExternalAgentSession({ token });
-  await sessions.disconnectExternalAgent(SETUP_HOLDER);
-  const before = await orm.execute(sql`select last_call_at from external_agent_sessions`);
-  now = new Date("2026-10-20T12:02:00Z");
-
-  expect(await sessions.readExternalAgentSession({ token })).toBeNull();
-
-  expect((await orm.execute(sql`select last_call_at from external_agent_sessions`)).rows).toEqual(
-    before.rows,
-  );
-});
-
 test("refuses a live token after the demo starts", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);

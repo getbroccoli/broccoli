@@ -14,7 +14,6 @@ CREATE TABLE "external_agent_sessions" (
 	"client" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
-	"last_call_at" timestamp with time zone,
 	"ended_at" timestamp with time zone,
 	CONSTRAINT "external_agent_sessions_token_hash_unique" UNIQUE("token_hash")
 );
