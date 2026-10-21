@@ -17,7 +17,7 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { readSetupStep } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test.for([
@@ -208,7 +208,7 @@ test("a Slack read after Approve writes nothing", async ({ orm, seed }) => {
   await seed.setupStep("import");
   const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
 
   await imports.readSlack(SETUP_HOLDER);
 

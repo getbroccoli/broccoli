@@ -7,7 +7,7 @@ import { expect, SYSTEM, test } from "#test/support";
 import { account, user } from "../../auth";
 import { ormOf, type Orm, transactor } from "../../db";
 import { createEventBus } from "../../events";
-import { readOwnerUserId, readSetupStep } from "../../instance";
+import { readInstance } from "../../instance";
 import { createLogger } from "../../logger";
 import type { ManagedTicket } from "../domain";
 import { managedTicket, managedTicketRepository } from "../db";
@@ -20,8 +20,7 @@ test("creates the owner from the first ticket", async ({ orm }) => {
 
   const { userId } = await result;
 
-  expect(await readOwnerUserId(orm)).toBe(userId);
-  expect(await readSetupStep(orm)).toBe("company");
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: userId, setupStep: "company" });
   expect(events).toEqual(["owner_claimed"]);
 });
 

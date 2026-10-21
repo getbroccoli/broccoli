@@ -4,21 +4,19 @@ export {
   completeImportStep,
   completeReadyStep,
   isImportOpen,
-  readSetupStep,
   returnToCompanyStep,
 } from "./setup";
-export { claimOwner, createOwnerAtSetup, hasOwner, readOwner, readOwnerUserId } from "./owner";
+export { claimOwner, createOwnerAtSetup, readOwner } from "./owner";
+export { readInstance } from "./instance";
 export {
   finishDemo,
-  readDemoDeadlineOf,
-  readDemoExpiresAt,
   resetDemo,
   startDemoAtSetup,
   type DemoReset,
   type DemoStart,
   type SetupDemo,
 } from "./demo";
-export { assignInstance, readAssignment } from "./managed";
+export { assignInstance } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
 export { createAiSettings, type AiSettings } from "./aiSettings";
 export {

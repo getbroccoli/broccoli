@@ -97,9 +97,9 @@ export function createAiSettings({
 }
 
 async function readSavedAiSource(orm: Orm, secretBox: SecretBox): Promise<SavedAiSource> {
-  const { source, encryptedOpenRouterKey } = await instanceRepository(orm).readAiSource();
+  const { aiSource, encryptedOpenRouterKey } = await instanceRepository(orm).read();
   return {
-    source,
+    source: aiSource,
     openRouterKey:
       encryptedOpenRouterKey === null ? null : secretBox.decrypt(encryptedOpenRouterKey),
   };

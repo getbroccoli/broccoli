@@ -51,7 +51,7 @@ export class TestSeed {
       });
     }
     const instance = instanceRepository(this.orm);
-    await instance.setOwner(userId, await instance.readStep());
+    await instance.setOwner(userId, (await instance.read()).setupStep);
     return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
   }
 
@@ -67,7 +67,7 @@ export class TestSeed {
   /** Moves setup straight to `step`, whatever step it is at. */
   async setupStep(step: SetupStep): Promise<void> {
     const instance = instanceRepository(this.orm);
-    await instance.advanceStep(await instance.readStep(), step);
+    await instance.advanceStep((await instance.read()).setupStep, step);
   }
 
   async demoOwner({ expiresAt }: { expiresAt: Date }): Promise<TestSecurityContext> {

@@ -9,6 +9,7 @@ import { expect, NON_OWNER, SYSTEM, test, TEST_SECRET_BOX } from "#test/support"
 import { instance, instanceRepository } from "../db";
 import type { Orm } from "../../db";
 import { createBroccoliAiTokens } from "./broccoliAiTokens";
+import { readInstance } from "./instance";
 
 test("keeps an existing trial token after the instance database is cleared", async ({ orm }) => {
   const { tokens } = await tokensInFreshFolder(orm);
@@ -18,7 +19,6 @@ test("keeps an existing trial token after the instance database is cleared", asy
   await orm.delete(instance);
 
   expect(await tokens.read(SYSTEM)).toBe("existing-trial");
-  expect(await instanceRepository(orm).readBroccoliAiToken()).toBeNull();
 });
 
 test("keeps a newly issued token outside the instance database", async ({ orm }) => {
@@ -51,7 +51,7 @@ test("keeps the database token when moving it to the data folder fails", async (
 
   await expect(tokens.read(SYSTEM)).rejects.toThrow();
 
-  expect(await instanceRepository(orm).readBroccoliAiToken()).toBe(encrypted);
+  expect((await readInstance(orm)).encryptedBroccoliAiToken).toBe(encrypted);
 });
 
 test("a fresh data folder and database have no trial token", async ({ orm }) => {
