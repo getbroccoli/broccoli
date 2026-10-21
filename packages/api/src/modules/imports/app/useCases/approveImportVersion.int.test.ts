@@ -1,4 +1,4 @@
-import { expect, importUseCases, OWNER, SETUP_AGENT, SETUP_HOLDER, test } from "#test/support";
+import { expect, importUseCases, OWNER, SETUP_HOLDER, type TestSeed, test } from "#test/support";
 
 import { readSetupStep } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
@@ -6,7 +6,6 @@ import { createEmployeeUseCases } from "../../../employees";
 test("keeps review pages and their version tied to the snapshot when another source arrives", async ({
   orm,
   seed,
-  transact,
 }) => {
   await seed.setupStep("import");
   const source = await seed.importSource();
@@ -17,12 +16,7 @@ test("keeps review pages and their version tied to the snapshot when another sou
   const imports = importUseCases(orm);
   const review = await imports.reads.readReview(SETUP_HOLDER);
 
-  await transact((tx) =>
-    imports.parsedSources.addParsedSource(SETUP_AGENT, tx, {
-      name: "more-staff.pdf",
-      people: [{ fullName: "Avery Stone", email: "avery@example.com" }],
-    }),
-  );
+  await addFileSource(seed);
   const first = review.listEmployees({ first: 1 });
   const next = review.listEmployees({ first: 1, after: first.pageInfo.endCursor });
 
@@ -86,18 +80,53 @@ test("approves the current version", async ({ orm, seed }) => {
   expect(await readSetupStep(orm)).toBe("owner");
 });
 
-test("changes the version when another source adds a person", async ({ orm, transact }) => {
+test("changes the version when another source adds a person", async ({ orm, seed }) => {
   const imports = importUseCases(orm);
   const before = (await imports.reads.readReview(SETUP_HOLDER)).version;
 
-  await transact((tx) =>
-    imports.parsedSources.addParsedSource(SETUP_AGENT, tx, {
-      name: "staff.pdf",
-      people: [{ fullName: "Avery Stone", email: "avery@example.com" }],
-    }),
-  );
+  await addFileSource(seed);
 
   expect((await imports.reads.readReview(SETUP_HOLDER)).version).not.toBe(before);
+});
+
+test("changes the version when a ready person's email becomes taken", async ({ orm, seed }) => {
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
+  const imports = importUseCases(orm);
+  const before = await imports.reads.readReview(SETUP_HOLDER);
+  expect(before.readyEmployees).toHaveLength(1);
+
+  await seed.employee({ email: "avery@example.com" });
+
+  const after = await imports.reads.readReview(SETUP_HOLDER);
+  expect(after.readyEmployees).toEqual([]);
+  expect(after.version).not.toBe(before.version);
+});
+
+test("refuses an old version after an email becomes taken without adding anyone", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner();
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com" },
+    { email: "robin@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  const review = await imports.reads.readReview(owner);
+  expect(review.readyEmployees).toHaveLength(2);
+  await seed.employee({ email: "avery@example.com" });
+  const employees = createEmployeeUseCases({ orm });
+  const before = await employees.listEmployees(owner, {});
+
+  await expect(imports.approveImport(owner, review.version)).rejects.toMatchObject({
+    code: "CONFLICT",
+  });
+
+  expect(await employees.listEmployees(owner, {})).toEqual(before);
+  expect(await readSetupStep(orm)).toBe("import");
 });
 
 test("changes the version when a review choice changes a value", async ({ orm, seed }) => {
@@ -149,3 +178,10 @@ test("keeps the version stable while the review is unchanged", async ({ orm, see
 
   expect((await imports.reads.readReview(SETUP_HOLDER)).version).toBe(version);
 });
+
+async function addFileSource(seed: TestSeed): Promise<void> {
+  const file = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
+  await seed.importEmployees(file.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  ]);
+}

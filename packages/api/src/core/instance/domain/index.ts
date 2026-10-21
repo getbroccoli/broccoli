@@ -9,4 +9,8 @@ export {
   SetupInProgressError,
   type SetupSession,
 } from "./setupSession";
-export { type AgentSetupFacts, canChooseAgent, isSetupOpenToAgent } from "./externalAgent";
+export {
+  type ExternalAgentSetupFacts,
+  canChooseExternalAgent,
+  isSetupOpenToExternalAgent,
+} from "./externalAgent";

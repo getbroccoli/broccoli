@@ -2,7 +2,7 @@ import {
   expect,
   importUseCases,
   sampleXlsxFile,
-  SETUP_AGENT,
+  SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   storedFileIds,
   SYSTEM,
@@ -59,7 +59,7 @@ test("returns the model's questions with masked rows", async ({ orm, seed, trans
   const { state, questions } = sheetQuestions(rows);
 
   const result = await transact((tx) =>
-    imports.answeredMapping.readMappingQuestions(SETUP_AGENT, tx, source.id),
+    imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, source.id),
   );
 
   expect(result).toEqual({ sheets: [{ sheet: 1, rows: withPlaceholders(state).rows, questions }] });
@@ -92,7 +92,7 @@ test("exposes no personal values or injected instructions in masked questions", 
   const imports = importUseCases(orm);
 
   const questions = await transact((tx) =>
-    imports.answeredMapping.readMappingQuestions(SETUP_AGENT, tx, source.id),
+    imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, source.id),
   );
 
   const response = JSON.stringify(questions);
@@ -139,9 +139,9 @@ test("never exposes dropped file names or workbook sheet names", async ({
   const imports = importUseCases(orm);
 
   const responses = await transact(async (tx) => [
-    await imports.answeredMapping.readWaitingSources(SETUP_AGENT, tx),
-    await imports.answeredMapping.readMappingQuestions(SETUP_AGENT, tx, csv.id),
-    await imports.answeredMapping.readMappingQuestions(SETUP_AGENT, tx, workbook.id),
+    await imports.answeredMapping.readUnansweredSources(SETUP_EXTERNAL_AGENT, tx),
+    await imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, csv.id),
+    await imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, workbook.id),
   ]);
 
   const response = JSON.stringify(responses);
@@ -166,7 +166,7 @@ test("produces the same import employees as the model for the same choices", asy
   const answered = await seed.fileSource({ content: CSV, readBy: "answered_by_external_agent" });
 
   const result = await transact((tx) =>
-    imports.answeredMapping.answerMapping(SETUP_AGENT, tx, answered.id, {
+    imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, answered.id, {
       sheets: [{ sheet: 1, answers: ANSWERS }],
     }),
   );
@@ -182,7 +182,7 @@ test("refuses a second answer without changing the people", async ({ orm, seed, 
   const source = await seed.fileSource({ content: CSV, readBy: "answered_by_external_agent" });
   const imports = importUseCases(orm);
   await transact((tx) =>
-    imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, {
+    imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, {
       sheets: [{ sheet: 1, answers: ANSWERS }],
     }),
   );
@@ -190,7 +190,7 @@ test("refuses a second answer without changing the people", async ({ orm, seed, 
 
   await expect(
     transact((tx) =>
-      imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, {
+      imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, {
         sheets: [{ sheet: 1, answers: ANSWERS }],
       }),
     ),
@@ -207,7 +207,7 @@ test("marks a file failed when no people column is selected", async ({ orm, seed
   const imports = importUseCases(orm);
 
   const result = await transact((tx) =>
-    imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, {
+    imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, {
       sheets: [
         { sheet: 1, answers: { ...ANSWERS, fullName: "none", email: "none", jobTitle: "A" } },
       ],
@@ -227,7 +227,9 @@ test.for(["mapping", "mapped", "failed"] as const)(
     const imports = importUseCases(orm);
 
     await expect(
-      transact((tx) => imports.answeredMapping.readMappingQuestions(SETUP_AGENT, tx, source.id)),
+      transact((tx) =>
+        imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, source.id),
+      ),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   },
 );
@@ -238,7 +240,7 @@ test("refuses an answer for an unknown source", async ({ orm, transact }) => {
   await expect(
     transact((tx) =>
       imports.answeredMapping.answerMapping(
-        SETUP_AGENT,
+        SETUP_EXTERNAL_AGENT,
         tx,
         "0199f6c4-0000-7000-8000-000000000000",
         { sheets: [{ sheet: 1, answers: ANSWERS }] },
@@ -258,7 +260,9 @@ test.for(["mapped", "failed"] as const)(
     const imports = importUseCases(orm);
 
     await expect(
-      transact((tx) => imports.answeredMapping.readMappingQuestions(SETUP_AGENT, tx, source.id)),
+      transact((tx) =>
+        imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, source.id),
+      ),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   },
 );

@@ -2,14 +2,10 @@
 export type ImportSourceKind = "slack" | "file";
 
 /**
- * Who read a file source's people: Broccoli's model, the owner's external agent answering
- * Broccoli's masked questions, or the external agent parsing the file itself.
+ * Who read a file source's people: Broccoli's model, or the owner's external agent answering
+ * Broccoli's masked questions.
  */
-export const IMPORT_SOURCE_READERS = [
-  "parsed_by_broccoli",
-  "answered_by_external_agent",
-  "parsed_by_external_agent",
-] as const;
+export const IMPORT_SOURCE_READERS = ["parsed_by_broccoli", "answered_by_external_agent"] as const;
 
 export type ImportSourceReader = (typeof IMPORT_SOURCE_READERS)[number];
 
@@ -47,8 +43,7 @@ export interface ImportSource {
 
 /** A file source with what its mapping runs need. */
 export interface FileSource extends ImportSource {
-  /** Null for people the external agent parsed: their records are the only copy. */
-  fileId: string | null;
+  fileId: string;
   /** The current run; a job of an earlier run writes nothing. */
   mappingAttempt: number;
 }

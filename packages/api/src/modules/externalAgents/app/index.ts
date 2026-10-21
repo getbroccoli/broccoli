@@ -1,16 +1,20 @@
 import type { Orm, Transact } from "../../../core/db";
 import type { ImportUseCases } from "../../imports";
-import { type AgentSessionService, createAgentSessionService } from "./agentSessionService";
-import { createMaskedWayService, type MaskedWayService } from "./maskedWayService";
-import { createParsedWayService, type ParsedWayService } from "./parsedWayService";
+import {
+  type ExternalAgentSessionService,
+  createExternalAgentSessionService,
+} from "./externalAgentSessionService";
+import {
+  type ExternalAgentFileService,
+  createExternalAgentFileService,
+} from "./externalAgentFileService";
 
-export type { AgentCode, AgentSession } from "./agentSessionService";
+export type { ExternalAgentCode, ExternalAgentSession } from "./externalAgentSessionService";
 
 /** Everything the owner's external agent and the setup holder do with it; adapters call nothing else. */
 export interface ExternalAgentUseCases {
-  sessions: AgentSessionService;
-  maskedWay: MaskedWayService;
-  parsedWay: ParsedWayService;
+  sessions: ExternalAgentSessionService;
+  files: ExternalAgentFileService;
 }
 
 export function createExternalAgentUseCases({
@@ -21,13 +25,12 @@ export function createExternalAgentUseCases({
 }: {
   orm: Orm;
   transact: Transact;
-  imports: Pick<ImportUseCases, "answeredMapping" | "parsedSources">;
+  imports: Pick<ImportUseCases, "answeredMapping">;
   clock?: () => Date;
 }): ExternalAgentUseCases {
   const context = { orm, transact, imports, clock };
   return {
-    sessions: createAgentSessionService(context),
-    maskedWay: createMaskedWayService(context),
-    parsedWay: createParsedWayService(context),
+    sessions: createExternalAgentSessionService(context),
+    files: createExternalAgentFileService(context),
   };
 }

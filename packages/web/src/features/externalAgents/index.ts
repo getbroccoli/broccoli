@@ -1,2 +1,2 @@
-export { AgentSetup } from "./AgentSetup";
-export { AgentStatus } from "./AgentStatus";
+export { ExternalAgentPill } from "./ExternalAgentPill";
+export { ExternalAgentPrompt } from "./ExternalAgentPrompt";

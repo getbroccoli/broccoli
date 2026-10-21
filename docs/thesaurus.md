@@ -14,9 +14,8 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Provisional owner**: the owner a self-hosted demo starts with: a user without credentials, signed in in the browser that held setup, until they create their account or the demo ends seven days later.
 - **Setup holder**: the browser holding the setup session, and the security context it acts as. It may do the setup steps and nothing else.
 - **External agent**: a coding agent operating outside Broccoli, such as Claude Code or Codex, acting through its API on the setup holder's or owner's behalf. "External" means outside the application, not necessarily on another machine.
-- **Agent one-time code**: the secret in the prompt Setup AI shows for the owner's external agent; valid once, for two hours, and carrying the way the owner chose.
-- **Agent session**: what the external agent gets for an agent one-time code: a secret token, the way it may work, and the security context it acts as. It lasts two hours at most, works only while setup is at the import step with the agent chosen, and ends on Disconnect or a new code.
-- **Agent way**: how the external agent may work, chosen per code: it _answers masked questions_ about the files the owner drops, or _parses original files_ itself and sends their people.
+- **External agent one-time code**: the secret in the prompt "Add your files" shows for the owner's external agent; valid once, for two hours.
+- **External agent session**: what the external agent gets for an external agent one-time code: a secret token and the security context it acts as. It lasts two hours at most, works only while setup is at the import step with the external agent chosen, and ends on Disconnect or a new code.
 - **Setup review step**: the setup page after the import step, "Review your people", where the owner sees every import employee, settles what its records disagree on, fixes values, leaves some out, and approves. Only the web app knows it: the instance stays at the `import` setup step until setup approve.
 - **Data folder**: `DATA_DIR`, the folder for files that must survive restarts, such as `secrets/`.
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
@@ -31,7 +30,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Demo data**: the sample company a new instance starts with, marked so that clearing it removes nothing else. People added while it is present stay.
 - **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
 - **Import source**: one place people come from, such as the connected Slack workspace or an uploaded file. It owns its import records.
-- **File source**: a staff file the owner uploaded as an import source, or whose people the owner's external agent parsed. Its records come from the file's rows once the file is mapped: by Broccoli's model, by the external agent's answers to Broccoli's masked questions (_answered mapping_), or already parsed by the agent (_parsed source_, kept without the file).
+- **File source**: a staff file the owner uploaded as an import source. Its records come from the file's rows once the file is mapped: by Broccoli's model, or by the external agent's answers to Broccoli's masked questions (_answered mapping_).
 - **Import record**: one record as one source proposes it, such as one row of a staff file, with the source's values as they came; not yet a record of its module.
 - **Import employee**: the employee an import will create: the import records that share a work email, or one without an email. Each value is the owner's pick or typed value, else the first source's: files oldest first, then Slack.
 - **Ready import employee**: an import employee complete enough to become an employee under the employee rules, with an email no employee has yet. The others are incomplete import employees, or have a taken email.

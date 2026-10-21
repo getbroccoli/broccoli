@@ -59,4 +59,4 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 
 ## Your own agent
 
-With "Your agent" chosen on Setup AI, the page shows the agent's status above the Slack row; [agent setup](agent-setup.md) checks it.
+With "Your agent" chosen on Setup AI, "Add your files" shows "Connect your agent" until the agent connects, then its pill and the drop zone; [external agent setup](external-agent-setup.md) checks them.

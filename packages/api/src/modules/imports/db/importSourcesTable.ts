@@ -22,7 +22,7 @@ export const importSources = pgTable(
     failureMessage: text("failure_message"),
     /** The current mapping run of a file: a job of an earlier run writes nothing. */
     mappingAttempt: integer("mapping_attempt").notNull().default(0),
-    /** The uploaded file; set for every file source but one the external agent parsed. */
+    /** The uploaded file; set exactly for file sources. */
     fileId: uuid("file_id").references(() => files.id),
     readBy: text("read_by", { enum: IMPORT_SOURCE_READERS })
       .notNull()
@@ -36,13 +36,10 @@ export const importSources = pgTable(
       "import_sources_failure",
       sql`(${table.status} = 'failed') = (${table.failure} is not null)`,
     ),
-    check(
-      "import_sources_file",
-      sql`(${table.kind} = 'file' and ${table.readBy} <> 'parsed_by_external_agent') = (${table.fileId} is not null)`,
-    ),
+    check("import_sources_file", sql`(${table.kind} = 'file') = (${table.fileId} is not null)`),
     check(
       "import_sources_read_by",
-      sql`${table.readBy} in ('parsed_by_broccoli', 'answered_by_external_agent', 'parsed_by_external_agent')`,
+      sql`${table.readBy} in ('parsed_by_broccoli', 'answered_by_external_agent')`,
     ),
     // One Slack workspace at a time; connecting another one renames this source.
     uniqueIndex("import_sources_one_slack")

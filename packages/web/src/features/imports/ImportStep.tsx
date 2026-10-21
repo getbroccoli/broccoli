@@ -7,12 +7,12 @@ import { ImportStepDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStartDemo } from "@/features/demo";
-import { AgentStatus } from "@/features/externalAgents";
+import { ExternalAgentPill, ExternalAgentPrompt } from "@/features/externalAgents";
 import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { uploadFile, uploadFileForAgent } from "./fileApi";
+import { uploadFile, uploadFileForExternalAgent } from "./fileApi";
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
 
@@ -35,18 +35,17 @@ export function ImportStep() {
   const sources = data?.import.sources ?? [];
   const readingFiles = data?.import.reading ?? false;
   const ai = data?.setup.ai;
-  const agentChosen = ai?.source === "AGENT";
-  // The way of the connected agent, else of the prompt waiting for one; set on Setup AI.
-  const agentWay = ai?.agent?.way ?? ai?.agentCode?.way;
-  // Files are read in the background, and the owner's agent connects and sends them from
+  const externalAgentChosen = ai?.source === "EXTERNAL_AGENT";
+  const externalAgent = ai?.externalAgent;
+  // Files are read in the background, and the owner's external agent connects and maps them from
   // outside the page: poll while either may happen.
   useEffect(() => {
-    if (!readingFiles && !agentChosen) {
+    if (!readingFiles && !externalAgentChosen) {
       return;
     }
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
-  }, [readingFiles, agentChosen, startPolling, stopPolling]);
+  }, [readingFiles, externalAgentChosen, startPolling, stopPolling]);
   const { start: startDemo, starting, failed: startFailed } = useStartDemo();
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
@@ -109,15 +108,17 @@ export function ImportStep() {
       )}
       {data ? (
         <>
-          {ai && agentChosen && <AgentStatus ai={ai} />}
           <SlackSourceRow connection={data.slackConnection} source={slackSource} />
           <FileSources
             sources={fileSources}
             onUploaded={() => refetch()}
             onUploadingChange={setUploading}
-            uploadFile={agentChosen ? uploadFileForAgent : uploadFile}
-            canDrop={agentWay !== "PARSES_ORIGINAL_FILES"}
-            agentChosen={agentChosen}
+            uploadFile={externalAgentChosen ? uploadFileForExternalAgent : uploadFile}
+            externalAgentChosen={externalAgentChosen}
+            externalAgentPill={externalAgent && <ExternalAgentPill externalAgent={externalAgent} />}
+            externalAgentPrompt={
+              externalAgentChosen && !externalAgent ? <ExternalAgentPrompt /> : undefined
+            }
           />
         </>
       ) : error ? (

@@ -19,7 +19,7 @@ export interface SecurityContext {
   readonly isSetupHolder: boolean;
 
   /** The session of the owner's own coding agent that calls, during setup; null for anyone else. */
-  readonly agentSessionId: string | null;
+  readonly externalAgentSessionId: string | null;
 
   /** Until permissions exist: the owner or Broccoli itself; refuses others with FORBIDDEN. */
   requireOwnerOrSystem(): void;
@@ -28,7 +28,7 @@ export interface SecurityContext {
   requireSetupAccess(): void;
 
   /** The external agent's own work: its session id; refuses everyone else with FORBIDDEN. */
-  requireSetupAgent(): string;
+  requireSetupExternalAgent(): string;
 
   // Planned with the permission system and uncommented with their first caller,
   // together with their types: use cases will ask record scopes and field access
@@ -71,7 +71,7 @@ export class PrincipalSecurityContext implements SecurityContext {
   private constructor(
     readonly user: Readonly<SignedInUser> | null,
     readonly isSetupHolder: boolean,
-    readonly agentSessionId: string | null = null,
+    readonly externalAgentSessionId: string | null = null,
   ) {}
 
   /** A signed-in user; built by `resolveSecurityContext`. */
@@ -85,7 +85,7 @@ export class PrincipalSecurityContext implements SecurityContext {
   }
 
   /** The owner's external agent during setup, by its session; built by the agent routes. */
-  static setupAgent(sessionId: string): SecurityContext {
+  static setupExternalAgent(sessionId: string): SecurityContext {
     return new PrincipalSecurityContext(null, false, sessionId);
   }
 
@@ -95,7 +95,7 @@ export class PrincipalSecurityContext implements SecurityContext {
   }
 
   get isSystem(): boolean {
-    return this.user === null && !this.isSetupHolder && this.agentSessionId === null;
+    return this.user === null && !this.isSetupHolder && this.externalAgentSessionId === null;
   }
 
   requireOwnerOrSystem(): void {
@@ -110,11 +110,11 @@ export class PrincipalSecurityContext implements SecurityContext {
     }
   }
 
-  requireSetupAgent(): string {
-    if (this.agentSessionId === null) {
+  requireSetupExternalAgent(): string {
+    if (this.externalAgentSessionId === null) {
       throw new ApplicationError("FORBIDDEN", "Only your agent can do this.");
     }
-    return this.agentSessionId;
+    return this.externalAgentSessionId;
   }
 }
 

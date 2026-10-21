@@ -8,7 +8,7 @@ import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
 export {
-  type AnsweredSourceSummary,
+  type AnsweredMapping,
   createImportUseCases,
   type ImportUseCases,
   type MappingQuestions,

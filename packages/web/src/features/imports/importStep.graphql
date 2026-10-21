@@ -4,15 +4,10 @@ query ImportStep {
     ai {
       id
       source
-      # The page shows the drop zone for the way of the connected agent or of its waiting code.
-      agent {
+      externalAgent {
         id
-        way
+        ...ExternalAgentPill_externalAgent
       }
-      agentCode {
-        way
-      }
-      ...AgentStatus_ai
     }
   }
   slackConnection {

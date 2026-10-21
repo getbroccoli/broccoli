@@ -40,8 +40,7 @@ export {
 } from "./importEmployeeMapping";
 export { importVersion } from "./importVersion";
 export { type MappingAnswersInput, parseMappingAnswers } from "./mappingAnswers";
-export { parseParsedFileName, parseStaffFileName } from "./fileName";
-export { parseParsedPeople } from "./parsedPeople";
+export { parseStaffFileName } from "./fileName";
 export { type ImportProgress, importProgress, isReading } from "./importProgress";
 export {
   IMPORT_SOURCE_FAILURES,

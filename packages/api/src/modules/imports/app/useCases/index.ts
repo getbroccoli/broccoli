@@ -18,10 +18,9 @@ import {
   type AnsweredMappingService,
   createAnsweredMappingService,
 } from "./answeredMappingService";
-import { createParsedSourceService, type ParsedSourceService } from "./parsedSourceService";
 
 export type { DemoFill, SlackReader } from "./importContext";
-export type { AnsweredSourceSummary, MappingQuestions } from "./answeredMappingService";
+export type { AnsweredMapping, MappingQuestions } from "./answeredMappingService";
 export type { ImportReview } from "./importReview";
 export { prepareDemoStart } from "./startDemo";
 
@@ -42,8 +41,6 @@ export interface ImportUseCases {
   files: FileSourceService;
   /** Staff files mapped by the external agent's answers to Broccoli's masked questions. */
   answeredMapping: AnsweredMappingService;
-  /** Staff files whose people the external agent parsed itself. */
-  parsedSources: ParsedSourceService;
 }
 
 export function createImportUseCases({
@@ -74,6 +71,5 @@ export function createImportUseCases({
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs, readUpload }),
     answeredMapping: createAnsweredMappingService(readUpload),
-    parsedSources: createParsedSourceService(),
   };
 }

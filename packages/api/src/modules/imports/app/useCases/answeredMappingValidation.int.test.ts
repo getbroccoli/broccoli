@@ -1,4 +1,4 @@
-import { expect, importUseCases, SETUP_AGENT, SETUP_HOLDER, test } from "#test/support";
+import { expect, importUseCases, SETUP_EXTERNAL_AGENT, SETUP_HOLDER, test } from "#test/support";
 
 test("requires an entry for every sheet", async ({ orm, seed, transact }) => {
   const source = await seed.fileSource({ content: CSV, readBy: "answered_by_external_agent" });
@@ -6,7 +6,7 @@ test("requires an entry for every sheet", async ({ orm, seed, transact }) => {
 
   await expect(
     transact((tx) =>
-      imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, { sheets: [] }),
+      imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, { sheets: [] }),
     ),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
@@ -22,7 +22,7 @@ test("refuses an unknown sheet", async ({ orm, seed, transact }) => {
 
   await expect(
     transact((tx) =>
-      imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, {
+      imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, {
         sheets: [
           { sheet: 1, answers: ANSWERS },
           { sheet: 2, answers: ANSWERS },
@@ -45,7 +45,7 @@ test("requires an answer for every question", async ({ orm, seed, transact }) =>
 
   await expect(
     transact((tx) =>
-      imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, {
+      imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, {
         sheets: [{ sheet: 1, answers }],
       }),
     ),
@@ -63,7 +63,7 @@ test("refuses an unknown choice", async ({ orm, seed, transact }) => {
 
   await expect(
     transact((tx) =>
-      imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, {
+      imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, {
         sheets: [{ sheet: 1, answers: { ...ANSWERS, email: "private@example.com" } }],
       }),
     ),
@@ -81,7 +81,7 @@ test("refuses the second field assigned to the same column", async ({ orm, seed,
 
   await expect(
     transact((tx) =>
-      imports.answeredMapping.answerMapping(SETUP_AGENT, tx, source.id, {
+      imports.answeredMapping.answerMapping(SETUP_EXTERNAL_AGENT, tx, source.id, {
         sheets: [{ sheet: 1, answers: { ...ANSWERS, firstName: "A" } }],
       }),
     ),

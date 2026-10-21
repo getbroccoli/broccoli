@@ -1,1 +1,1 @@
-export { agentRepository } from "./agentRepository";
+export { externalAgentRepository } from "./externalAgentRepository";

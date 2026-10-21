@@ -1,5 +1,4 @@
 import { type Decisions, DecisionsError } from "../../../../integrations/ai";
-import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact } from "../../../../core/db";
 import { readFile } from "../../../../core/files";
 import type { JobQueue } from "../../../../core/jobs";
@@ -46,7 +45,7 @@ export interface FileSourceService {
   markFileFailed(ctx: SecurityContext, job: MapFileJob): Promise<void>;
   /**
    * Maps a failed file again, in a new run, or has Broccoli's model map a file still waiting for
-   * the external agent's answers; refuses people the agent parsed, and leaves any other source.
+   * the external agent's answers; any other source is left as it is.
    */
   retryFile(ctx: SecurityContext, sourceId: string): Promise<void>;
   /** Removes a file source, its records and the stored file; other sources stay. */
@@ -107,8 +106,7 @@ export function createFileSourceService({
       if (!isCurrentRun(source, attempt)) {
         return;
       }
-      // Only Broccoli's runs get here, and every file it reads was stored.
-      const file = source.fileId && (await readFile(orm, source.fileId));
+      const file = await readFile(orm, source.fileId);
       const sheets = file && (await readStaffFile(file.content));
       if (!sheets || typeof sheets === "string") {
         // Upload read the same bytes, so only a changed file gets here.
@@ -139,10 +137,6 @@ export function createFileSourceService({
       requireImportAccess(ctx);
       await transact(async (tx) => {
         const imports = await lockOpenImport(tx);
-        const source = await imports.findFileSource(sourceId);
-        if (source?.readBy === "parsed_by_external_agent") {
-          throw new ApplicationError("CONFLICT", "Your agent's people have no file to read again.");
-        }
         // A file still waiting for the external agent's answers goes to Broccoli's model instead.
         const attempt = await imports.restartMapping(sourceId);
         if (attempt !== null) {

@@ -1,2 +1,2 @@
-export { agentFilesRouter } from "./agentFilesRouter";
-export { agentRouter } from "./agentRouter";
+export { externalAgentFilesRouter } from "./externalAgentFilesRouter";
+export { externalAgentRouter } from "./externalAgentRouter";

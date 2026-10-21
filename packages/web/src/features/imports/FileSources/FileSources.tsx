@@ -1,5 +1,5 @@
-import { Plus, Terminal, UploadSimple } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
+import { Plus, UploadSimple } from "@phosphor-icons/react";
+import { type ReactNode, useRef, useState } from "react";
 
 import {
   type ImportStepQuery,
@@ -32,24 +32,28 @@ interface FileSourcesProps {
   onUploadingChange: (uploading: boolean) => void;
   /** Where a dropped file goes: the import, or the owner's agent's masked questions. */
   uploadFile: FileUploader;
-  /** False while the owner's agent reads the original files itself: nothing is dropped here. */
-  canDrop: boolean;
-  /** Whether the owner's agent reads the files, so a file waiting for it shows no Broccoli action. */
-  agentChosen: boolean;
+  /** Whether the owner's external agent maps the files, so a file waiting for it shows no Broccoli action. */
+  externalAgentChosen: boolean;
+  /** The connected external agent, beside the heading. */
+  externalAgentPill?: ReactNode;
+  /** Connecting the chosen external agent, in place of the drop zone until it connects. */
+  externalAgentPrompt?: ReactNode;
 }
 
 /**
  * Staff files as sources of people: drop or choose CSV or Excel files, retry or remove them; while
- * the owner's agent reads the files itself, a pointer to the agent instead of the drop zone.
+ * the chosen external agent is not connected, its prompt instead of the drop zone.
  */
 export function FileSources({
   sources,
   onUploaded,
   onUploadingChange,
   uploadFile,
-  canDrop,
-  agentChosen,
+  externalAgentChosen,
+  externalAgentPill,
+  externalAgentPrompt,
 }: FileSourcesProps) {
+  const canDrop = !externalAgentPrompt;
   const input = useRef<HTMLInputElement>(null);
   /** The file being uploaded, if any. */
   const [uploading, setUploading] = useState<string | null>(null);
@@ -104,11 +108,14 @@ export function FileSources({
       }}
     >
       <div className="mb-2">
-        <h2 id="import-files-title" className="text-[19px] font-semibold tracking-[-0.01em]">
-          {t("imports.files.title")}
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="import-files-title" className="text-[19px] font-semibold tracking-[-0.01em]">
+            {t("imports.files.title")}
+          </h2>
+          {externalAgentPill}
+        </div>
         <p className="mt-1.5 max-w-[62ch] text-[15px] leading-[1.55] text-pretty text-muted-foreground">
-          {t("imports.files.line")}
+          {t(canDrop ? "imports.files.line" : "externalAgents.filesLine")}
         </p>
       </div>
       <input
@@ -121,15 +128,7 @@ export function FileSources({
         aria-label={t("imports.files.choose")}
         onChange={(event) => void upload(event.target.files)}
       />
-      {!canDrop && (
-        <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-app-backdrop px-8 py-10 text-center">
-          <Terminal size={22} aria-hidden />
-          <span className="text-base font-semibold">{t("externalAgents.goToAgent")}</span>
-          <span className="max-w-[52ch] text-sm text-muted-foreground">
-            {t("externalAgents.goToAgentHint")}
-          </span>
-        </div>
-      )}
+      {externalAgentPrompt}
       {sources.length === 0 ? (
         canDrop && (
           <button
@@ -155,7 +154,7 @@ export function FileSources({
               key={source.id}
               source={source}
               busy={busy}
-              agentChosen={agentChosen}
+              externalAgentChosen={externalAgentChosen}
               // A failure shows through the mutation's `error` or `payloadError`.
               onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
               onRemove={() =>
@@ -168,7 +167,7 @@ export function FileSources({
       {canDrop && (
         <p id="import-files-hint" className="text-[13px] text-muted-foreground">
           {t("imports.files.limits")}{" "}
-          {t(agentChosen ? "externalAgents.disclosure" : "imports.files.disclosure")}
+          {t(externalAgentChosen ? "externalAgents.disclosure" : "imports.files.disclosure")}
         </p>
       )}
       {sources.length > 0 && canDrop && (
@@ -183,7 +182,7 @@ export function FileSources({
           {t("imports.files.addMore")}
         </Button>
       )}
-      {agentChosen && canDrop && (
+      {externalAgentChosen && canDrop && (
         <p className="text-[13px] text-muted-foreground">{t("externalAgents.askToContinue")}</p>
       )}
       <p role="status" className="text-[13px] text-muted-foreground">

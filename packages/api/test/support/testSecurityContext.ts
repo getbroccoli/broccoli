@@ -8,24 +8,24 @@ import type { SecurityContext, SignedInUser } from "../../src/core/security";
 export class TestSecurityContext implements SecurityContext {
   readonly user: Readonly<SignedInUser> | null;
   readonly isSetupHolder: boolean;
-  readonly agentSessionId: string | null;
+  readonly externalAgentSessionId: string | null;
 
   constructor({
     user,
     isSetupHolder = false,
-    agentSessionId = null,
+    externalAgentSessionId = null,
   }: {
     user: SignedInUser | null;
     isSetupHolder?: boolean;
-    agentSessionId?: string | null;
+    externalAgentSessionId?: string | null;
   }) {
     this.user = user;
     this.isSetupHolder = isSetupHolder;
-    this.agentSessionId = agentSessionId;
+    this.externalAgentSessionId = externalAgentSessionId;
   }
 
   get isSystem(): boolean {
-    return this.user === null && !this.isSetupHolder && this.agentSessionId === null;
+    return this.user === null && !this.isSetupHolder && this.externalAgentSessionId === null;
   }
 
   requireSetupAccess(): void {
@@ -38,11 +38,11 @@ export class TestSecurityContext implements SecurityContext {
     }
   }
 
-  requireSetupAgent(): string {
-    if (this.agentSessionId === null) {
+  requireSetupExternalAgent(): string {
+    if (this.externalAgentSessionId === null) {
       throw new ApplicationError("FORBIDDEN", "Only your agent can do this.");
     }
-    return this.agentSessionId;
+    return this.externalAgentSessionId;
   }
 }
 
@@ -62,7 +62,7 @@ export const SYSTEM = new TestSecurityContext({ user: null });
 /** The browser holding setup before the owner exists. */
 export const SETUP_HOLDER = new TestSecurityContext({ user: null, isSetupHolder: true });
 
-export const SETUP_AGENT = new TestSecurityContext({
+export const SETUP_EXTERNAL_AGENT = new TestSecurityContext({
   user: null,
-  agentSessionId: "test-agent-session",
+  externalAgentSessionId: "test-agent-session",
 });

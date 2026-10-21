@@ -1,70 +1,35 @@
-import { createAgentCode, exchangeAgentCode, expect, test } from "#test/support";
-
-test("shows the pending agent code's way and expiry without exposing its secret", async ({
-  env,
-}) => {
-  const browser = await env.startSetupAtImport();
-  await createAgentCode(browser, "PARSES_ORIGINAL_FILES");
-
-  const response = await browser.graphql(
-    "query { setup { id ai { id agentCode { way expiresAt } } } }",
-  );
-
-  expect(response.status).toBe(200);
-  expect(await response.json()).toEqual({
-    data: {
-      setup: {
-        id: "instance",
-        ai: {
-          id: "ai",
-          agentCode: {
-            way: "PARSES_ORIGINAL_FILES",
-            expiresAt: expect.any(String) as unknown,
-          },
-        },
-      },
-    },
-  });
-  const secret = await browser.graphql("query { setup { id ai { id agentCode { code } } } }");
-  expect(secret.status).toBe(400);
-  expect(await secret.json()).toMatchObject({
-    errors: [
-      {
-        message: 'Cannot query field "code" on type "PendingAgentCode".',
-        extensions: { code: "GRAPHQL_VALIDATION_FAILED" },
-      },
-    ],
-  });
-});
+import { createExternalAgentCode, exchangeExternalAgentCode, expect, test } from "#test/support";
 
 test("maps a dropped file through masked questions and shows its people to the holder", async ({
   env,
 }) => {
   const browser = await env.startSetupAtImport();
-  const code = await createAgentCode(browser, "ANSWERS_MASKED_QUESTIONS");
+  const code = await createExternalAgentCode(browser);
   expect(await (await browser.graphql(PEOPLE)).json()).toMatchObject({
     data: { import: { employees: { edges: [] } } },
   });
   const uploaded = await browser.post(
-    "/api/setup/agent-files?name=staff.csv",
+    "/api/setup/external-agent-files?name=staff.csv",
     Buffer.from("Name,Email\nAvery Stone,avery@example.com"),
   );
   expect(uploaded.status).toBe(200);
   const { id } = (await uploaded.json()) as { id: string };
-  const token = await exchangeAgentCode(env.url, code, "answers_masked_questions");
+  const token = await exchangeExternalAgentCode(env.url, code);
   const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
 
-  const listed = await fetch(`${env.url}/api/agent/files`, { headers });
+  const listed = await fetch(`${env.url}/api/external-agent/unanswered-files`, { headers });
   expect(listed.status).toBe(200);
   expect(listed.headers.get("cache-control")).toBe("no-store");
-  expect(await listed.json()).toEqual([{ id, status: "mapping", failure: null, people: 0 }]);
-  const questions = await fetch(`${env.url}/api/agent/files/${id}/questions`, { headers });
+  expect(await listed.json()).toEqual([{ id }]);
+  const questions = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/questions`, {
+    headers,
+  });
   expect(questions.status).toBe(200);
   expect(questions.headers.get("cache-control")).toBe("no-store");
   expect(await questions.json()).toMatchObject({
     sheets: [{ sheet: 1, questions: { headerRow: { options: { "1": "Row 1" } } } }],
   });
-  const answered = await fetch(`${env.url}/api/agent/files/${id}/answers`, {
+  const answered = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/answers`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -108,7 +73,7 @@ test("maps a dropped file through masked questions and shows its people to the h
   });
   expect(
     await (
-      await browser.graphql("query { setup { id ai { id source agent { id client way } } } }")
+      await browser.graphql("query { setup { id ai { id source externalAgent { id client } } } }")
     ).json(),
   ).toEqual({
     data: {
@@ -116,50 +81,8 @@ test("maps a dropped file through masked questions and shows its people to the h
         id: "instance",
         ai: {
           id: "ai",
-          source: "AGENT",
-          agent: { id: "agent", client: "Test agent", way: "ANSWERS_MASKED_QUESTIONS" },
-        },
-      },
-    },
-  });
-});
-
-test("imports parsed people and shows them to the holder", async ({ env }) => {
-  const browser = await env.startSetupAtImport();
-  const code = await createAgentCode(browser, "PARSES_ORIGINAL_FILES");
-  expect(await (await browser.graphql(PEOPLE)).json()).toMatchObject({
-    data: { import: { employees: { edges: [] } } },
-  });
-  const token = await exchangeAgentCode(env.url, code, "parses_original_files");
-
-  const response = await fetch(`${env.url}/api/agent/people`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      name: "staff.pdf",
-      people: [{ fullName: "Avery Stone", email: "avery@example.com" }],
-    }),
-  });
-
-  expect(response.status).toBe(200);
-  expect(response.headers.get("cache-control")).toBe("no-store");
-  const result = (await response.json()) as { id: string; people: number; skipped: number };
-  expect(result.id).toBeTypeOf("string");
-  expect(result).toMatchObject({ people: 1, skipped: 0 });
-  expect(await (await browser.graphql(PEOPLE)).json()).toMatchObject({
-    data: {
-      import: {
-        sources: [{ id: result.id, readBy: "PARSED_BY_EXTERNAL_AGENT" }],
-        employees: {
-          edges: [
-            {
-              node: {
-                firstName: { value: "Avery" },
-                lastName: { value: "Stone" },
-                email: { value: "avery@example.com" },
-              },
-            },
-          ],
+          source: "EXTERNAL_AGENT",
+          externalAgent: { id: "external-agent", client: "Test agent" },
         },
       },
     },
@@ -183,8 +106,8 @@ test.for([
       .map((value) => value.split(";", 1)[0])
       .join("; ");
     expect(setupCookie).toContain("broccoli_setup=");
-    const code = await createAgentCode(browser, "ANSWERS_MASKED_QUESTIONS");
-    const token = await exchangeAgentCode(env.url, code, "answers_masked_questions");
+    const code = await createExternalAgentCode(browser);
+    const token = await exchangeExternalAgentCode(env.url, code);
     const authorization =
       bearer === "valid"
         ? `Bearer ${token}`
@@ -213,7 +136,7 @@ test.for([
       expect(body).toMatchObject({ errors: [{ extensions: { code: "UNAUTHENTICATED" } }] });
       expect(body.data).toBeFalsy();
     }
-    for (const path of ["/api/imports/files", "/api/setup/agent-files"]) {
+    for (const path of ["/api/imports/files", "/api/setup/external-agent-files"]) {
       const response = await fetch(`${env.url}${path}?name=staff.csv`, {
         method: "POST",
         headers: { ...headers, "content-type": "application/octet-stream" },
@@ -226,16 +149,16 @@ test.for([
 
 test("refuses the agent after the holder disconnects it", async ({ env }) => {
   const browser = await env.startSetupAtImport();
-  const code = await createAgentCode(browser, "ANSWERS_MASKED_QUESTIONS");
-  const token = await exchangeAgentCode(env.url, code, "answers_masked_questions");
+  const code = await createExternalAgentCode(browser);
+  const token = await exchangeExternalAgentCode(env.url, code);
   const disconnected = await browser.graphql(
-    "mutation { setup { disconnectAgent { setup { id } } } }",
+    "mutation { setup { disconnectExternalAgent { setup { id } } } }",
   );
   expect(await disconnected.json()).toEqual({
-    data: { setup: { disconnectAgent: { setup: { id: "instance" } } } },
+    data: { setup: { disconnectExternalAgent: { setup: { id: "instance" } } } },
   });
 
-  const response = await fetch(`${env.url}/api/agent/files`, {
+  const response = await fetch(`${env.url}/api/external-agent/unanswered-files`, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -253,8 +176,8 @@ test("refuses a bearer on the demo auth endpoint even with the holder's valid co
     .getSetCookie()
     .find((value) => value.startsWith("broccoli_setup="))!
     .split(";", 1)[0]!;
-  const code = await createAgentCode(browser, "ANSWERS_MASKED_QUESTIONS");
-  const token = await exchangeAgentCode(env.url, code, "answers_masked_questions");
+  const code = await createExternalAgentCode(browser);
+  const token = await exchangeExternalAgentCode(env.url, code);
 
   const response = await fetch(`${env.url}/api/auth/setup/demo`, {
     method: "POST",
@@ -269,33 +192,12 @@ test("refuses a bearer on the demo auth endpoint even with the holder's valid co
 });
 
 test("serves the skill as uncached Markdown", async ({ env }) => {
-  const response = await fetch(`${env.url}/api/agent/skill`);
+  const response = await fetch(`${env.url}/api/external-agent/skill`);
 
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toContain("text/markdown");
   expect(response.headers.get("cache-control")).toBe("no-store");
   expect((await response.text()).trim().length).toBeGreaterThan(0);
-});
-
-test("returns parsed-people field errors without echoing private input", async ({ env }) => {
-  const browser = await env.startSetupAtImport();
-  const code = await createAgentCode(browser, "PARSES_ORIGINAL_FILES");
-  const token = await exchangeAgentCode(env.url, code, "parses_original_files");
-
-  const response = await fetch(`${env.url}/api/agent/people`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      name: "staff.pdf",
-      people: [{ "private-key-sentinel": "private-value-sentinel" }],
-    }),
-  });
-
-  expect(response.status).toBe(400);
-  expect(response.headers.get("cache-control")).toBe("no-store");
-  expect(await response.json()).toEqual({
-    error: { code: "INVALID_INPUT", fields: [{ field: "people[0]", code: "unknown_field" }] },
-  });
 });
 
 const PEOPLE = `query {

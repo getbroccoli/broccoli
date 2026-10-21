@@ -6,7 +6,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import type { ImportUseCases } from "../imports";
 import { createExternalAgentUseCases } from "./app";
 import { createResolvers } from "./graphql";
-import { agentFilesRouter, agentRouter } from "./http";
+import { externalAgentFilesRouter, externalAgentRouter } from "./http";
 
 export { createExternalAgentUseCases, type ExternalAgentUseCases } from "./app";
 
@@ -17,7 +17,7 @@ export { createExternalAgentUseCases, type ExternalAgentUseCases } from "./app";
 export function externalAgentsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
     mode: Mode;
-    imports: Pick<ImportUseCases, "answeredMapping" | "parsedSources">;
+    imports: Pick<ImportUseCases, "answeredMapping">;
   },
 ): ModuleManifest {
   const useCases = createExternalAgentUseCases(dependencies);
@@ -28,7 +28,7 @@ export function externalAgentsModule(
     router: (resolveSecurity) =>
       express
         .Router()
-        .use(agentRouter(useCases, dependencies.logger))
-        .use(agentFilesRouter(useCases, resolveSecurity)),
+        .use(externalAgentRouter(useCases, dependencies.logger))
+        .use(externalAgentFilesRouter(useCases, resolveSecurity)),
   };
 }

@@ -1,10 +1,10 @@
 import "./events";
 export {
   assignInstance,
-  chooseAgentSource,
-  lockAgentChoice,
-  lockSetupOpenToAgent,
-  readSetupOpenToAgent,
+  chooseExternalAgentSource,
+  lockExternalAgentChoice,
+  lockSetupOpenToExternalAgent,
+  readSetupOpenToExternalAgent,
   readAssignment,
   claimOwner,
   approveImportStep,

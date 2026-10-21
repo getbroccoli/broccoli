@@ -39,7 +39,7 @@ interface FileSourceCardProps {
   /** While another change to the files runs. */
   busy: boolean;
   /** Whether the owner's agent reads the files; else a file still waiting for it can go to Broccoli. */
-  agentChosen: boolean;
+  externalAgentChosen: boolean;
   onRetry: () => void;
   onRemove: () => void;
 }
@@ -48,7 +48,7 @@ interface FileSourceCardProps {
 export function FileSourceCard({
   source: sourceRef,
   busy,
-  agentChosen,
+  externalAgentChosen,
   onRetry,
   onRemove,
 }: FileSourceCardProps) {
@@ -65,7 +65,7 @@ export function FileSourceCard({
       ? failed
       : source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
         source.status === "MAPPING" &&
-        !agentChosen;
+        !externalAgentChosen;
   const FileIcon = source.name.toLowerCase().endsWith(".xlsx") ? FileXls : FileCsv;
   return (
     <li className="flex min-h-[68px] items-center gap-3.5 rounded-xl border border-border bg-card px-4 py-3">
@@ -143,7 +143,7 @@ function statusLine({
   if (status === "MAPPING") {
     return t(
       readBy === "ANSWERED_BY_EXTERNAL_AGENT"
-        ? "imports.files.waitingForAgent"
+        ? "imports.files.waitingForExternalAgent"
         : "imports.files.mapping",
     );
   }
@@ -154,12 +154,13 @@ function statusLine({
     employeeCount === 1
       ? t("imports.files.onePerson")
       : t("imports.files.people", { count: String(employeeCount) });
-  return READ_BY_AGENT[readBy] ? `${people} · ${t(READ_BY_AGENT[readBy])}` : people;
+  return READ_BY_EXTERNAL_AGENT[readBy]
+    ? `${people} · ${t(READ_BY_EXTERNAL_AGENT[readBy])}`
+    : people;
 }
 
-/** How a mapped file names the agent that read it. */
-const READ_BY_AGENT = {
+/** How a mapped file names the external agent that mapped it. */
+const READ_BY_EXTERNAL_AGENT = {
   PARSED_BY_BROCCOLI: null,
-  ANSWERED_BY_EXTERNAL_AGENT: "imports.files.mappedByAgent",
-  PARSED_BY_EXTERNAL_AGENT: "imports.files.parsedByAgent",
+  ANSWERED_BY_EXTERNAL_AGENT: "imports.files.mappedByExternalAgent",
 } as const satisfies Record<ImportSourceReader, MessageKey | null>;

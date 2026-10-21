@@ -5,10 +5,6 @@ query AiStep {
       id
       source
       openRouterKey
-      agent {
-        id
-        client
-      }
     }
   }
   import {
@@ -17,9 +13,9 @@ query AiStep {
   }
 }
 
-mutation ChooseAgent {
+mutation ChooseExternalAgent {
   setup {
-    chooseAgent {
+    chooseExternalAgent {
       setup {
         id
         ai {

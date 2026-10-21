@@ -71,7 +71,7 @@ export function createAiSettings({
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
       }
-      if (source === "agent") {
+      if (source === "external_agent") {
         // Choosing the external agent also ends its earlier sessions, which only its module does.
         throw invalidInput([{ field: "source", code: "invalid" }]);
       }
@@ -110,7 +110,7 @@ function sourceOf(
   { broccoliAiUrl }: SelfHostedDeployment,
   openRouterUrl: string,
 ): DecisionsSource {
-  if (config.source === "agent") {
+  if (config.source === "external_agent") {
     // The owner's external agent answers its files itself; an older file's job has no model.
     throw new DecisionsError("The external agent reads the files", false);
   }

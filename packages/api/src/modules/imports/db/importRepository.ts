@@ -44,11 +44,10 @@ export interface ImportRepository extends ImportReader {
   /** Creates the Slack source or renames it, marks it read now and returns its id. */
   saveSlackSource(name: string): Promise<string>;
   /**
-   * Adds a file as a source and returns its id: an uploaded one, stored, waits to be mapped, by
-   * Broccoli's first mapping run or by the external agent's answers; one the agent parsed, without
-   * a stored file, is mapped at once.
+   * Stores an uploaded file as a source waiting to be mapped, by Broccoli's first mapping run or
+   * by the external agent's answers; returns its id.
    */
-  insertFileSource(name: string, readBy: ImportSourceReader, file?: StoredFile): Promise<string>;
+  insertFileSource(name: string, readBy: ImportSourceReader, file: StoredFile): Promise<string>;
   /**
    * Ends a mapping run, only while the source is still `mapping` at `attempt`; returns
    * whether it did. A late run, or one of a removed source, changes nothing.
@@ -104,7 +103,7 @@ export function importReader(db: Orm | Tx): ImportReader {
         })
         .from(importSources)
         .where(and(eq(importSources.id, id), eq(importSources.kind, "file")));
-      return row ?? null;
+      return row ? { ...row, fileId: row.fileId! } : null;
     },
 
     listEmployeeRecords: async (): Promise<ImportEmployeeRecord[]> => {
@@ -181,11 +180,10 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
     },
 
     insertFileSource: async (name, readBy, file): Promise<string> => {
-      const fileId = file ? await storeFile(tx, file) : null;
-      const status = readBy === "parsed_by_external_agent" ? "mapped" : "mapping";
+      const fileId = await storeFile(tx, file);
       const [row] = await orm()
         .insert(importSources)
-        .values({ kind: "file", name, readBy, fileId, status })
+        .values({ kind: "file", name, readBy, fileId, status: "mapping" })
         .returning({ id: importSources.id });
       return row!.id;
     },

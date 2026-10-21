@@ -22,13 +22,13 @@ const MODES = { self_hosted: "SELF_HOSTED", managed: "MANAGED" } as const;
 const AI_SOURCES = {
   broccoli_ai: "BROCCOLI_AI",
   openrouter: "OPENROUTER",
-  agent: "AGENT",
+  external_agent: "EXTERNAL_AGENT",
 } as const;
 const KEY_ORIGINS = { environment: "ENVIRONMENT", saved: "SAVED" } as const;
 const AI_SOURCE_INPUTS = {
   BROCCOLI_AI: "broccoli_ai",
   OPENROUTER: "openrouter",
-  AGENT: "agent",
+  EXTERNAL_AGENT: "external_agent",
 } as const;
 
 export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases): Resolvers {

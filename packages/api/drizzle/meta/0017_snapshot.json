@@ -1,5 +1,5 @@
 {
-  "id": "efe25235-cd6b-47fc-9ac2-9932b3a60bea",
+  "id": "068095e8-aa69-4eeb-a06a-29b0236d99db",
   "prevId": "9617d2dc-fb73-4783-afaf-4f7a8a163d20",
   "version": "7",
   "dialect": "postgresql",
@@ -495,7 +495,7 @@
         },
         "instance_ai_source": {
           "name": "instance_ai_source",
-          "value": "\"instance\".\"ai_source\" in ('broccoli_ai', 'openrouter', 'agent')"
+          "value": "\"instance\".\"ai_source\" in ('broccoli_ai', 'openrouter', 'external_agent')"
         },
         "instance_managed_assignment": {
           "name": "instance_managed_assignment",
@@ -718,8 +718,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agent_codes": {
-      "name": "agent_codes",
+    "public.external_agent_codes": {
+      "name": "external_agent_codes",
       "schema": "",
       "columns": {
         "id": {
@@ -731,12 +731,6 @@
         },
         "secret_hash": {
           "name": "secret_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "way": {
-          "name": "way",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -771,23 +765,18 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "agent_codes_secret_hash_unique": {
-          "name": "agent_codes_secret_hash_unique",
+        "external_agent_codes_secret_hash_unique": {
+          "name": "external_agent_codes_secret_hash_unique",
           "nullsNotDistinct": false,
           "columns": ["secret_hash"]
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "agent_codes_way": {
-          "name": "agent_codes_way",
-          "value": "\"agent_codes\".\"way\" in ('answers_masked_questions', 'parses_original_files')"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agent_sessions": {
-      "name": "agent_sessions",
+    "public.external_agent_sessions": {
+      "name": "external_agent_sessions",
       "schema": "",
       "columns": {
         "id": {
@@ -799,12 +788,6 @@
         },
         "token_hash": {
           "name": "token_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "way": {
-          "name": "way",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -845,19 +828,14 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "agent_sessions_token_hash_unique": {
-          "name": "agent_sessions_token_hash_unique",
+        "external_agent_sessions_token_hash_unique": {
+          "name": "external_agent_sessions_token_hash_unique",
           "nullsNotDistinct": false,
           "columns": ["token_hash"]
         }
       },
       "policies": {},
-      "checkConstraints": {
-        "agent_sessions_way": {
-          "name": "agent_sessions_way",
-          "value": "\"agent_sessions\".\"way\" in ('answers_masked_questions', 'parses_original_files')"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.import_choices": {
@@ -1163,11 +1141,11 @@
         },
         "import_sources_file": {
           "name": "import_sources_file",
-          "value": "(\"import_sources\".\"kind\" = 'file' and \"import_sources\".\"read_by\" <> 'parsed_by_external_agent') = (\"import_sources\".\"file_id\" is not null)"
+          "value": "(\"import_sources\".\"kind\" = 'file') = (\"import_sources\".\"file_id\" is not null)"
         },
         "import_sources_read_by": {
           "name": "import_sources_read_by",
-          "value": "\"import_sources\".\"read_by\" in ('parsed_by_broccoli', 'answered_by_external_agent', 'parsed_by_external_agent')"
+          "value": "\"import_sources\".\"read_by\" in ('parsed_by_broccoli', 'answered_by_external_agent')"
         }
       },
       "isRLSEnabled": false

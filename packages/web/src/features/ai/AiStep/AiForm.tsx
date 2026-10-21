@@ -3,14 +3,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
-  ChooseAgentDocument,
+  ChooseExternalAgentDocument,
   SaveAiSourceDocument,
   type AiSource,
   type AiStepQuery,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { useStartDemo } from "@/features/demo";
-import { AgentSetup } from "@/features/externalAgents";
 import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { useRouteAction } from "@/lib/useRouteAction";
@@ -39,11 +38,11 @@ export function AiForm({ ai, demoAvailable }: Props) {
   // The key being typed; null while the known key is used, and Replace starts one.
   const [newKey, setNewKey] = useState<string | null>(null);
   const [saveAiSource, saving] = usePayloadMutation(SaveAiSourceDocument);
-  const [chooseAgent, choosing] = usePayloadMutation(ChooseAgentDocument);
+  const [chooseExternalAgent, choosing] = usePayloadMutation(ChooseExternalAgentDocument);
   const [run, isContinuing] = useRouteAction();
   // Choosing the agent checks nothing, so it fails only in ways `failureOf` words as a retry.
   const failed =
-    source === "AGENT"
+    source === "EXTERNAL_AGENT"
       ? choosing.error || choosing.payloadError
       : saving.error || saving.payloadError;
   const demo = useStartDemo();
@@ -52,7 +51,7 @@ export function AiForm({ ai, demoAvailable }: Props) {
   const key = newKey ?? "";
   const asksForKey = source === "OPENROUTER" && knownKey === null;
   const failure = failed
-    ? failureOf(source === "AGENT" ? null : (saving.payloadError ?? null), source)
+    ? failureOf(source === "EXTERNAL_AGENT" ? null : (saving.payloadError ?? null), source)
     : null;
   // A refused key shows under the key field; a known key has no field, so it shows below.
   const keyFieldError = failure?.onKey && asksForKey ? t(failure.message) : undefined;
@@ -61,13 +60,13 @@ export function AiForm({ ai, demoAvailable }: Props) {
   const save = () =>
     run(
       async () => {
-        if (source !== "AGENT") {
+        if (source !== "EXTERNAL_AGENT") {
           await saveAiSource({
             variables: { input: { source, openRouterKey: asksForKey ? key : null } },
           });
-        } else if (ai.source !== "AGENT") {
-          // Showing a prompt already chose the agent; choosing again would end its session.
-          await chooseAgent();
+        } else if (ai.source !== "EXTERNAL_AGENT") {
+          // Choosing it again would end the connected external agent's session.
+          await chooseExternalAgent();
         }
       },
       () => navigate({ to: next }),
@@ -78,7 +77,7 @@ export function AiForm({ ai, demoAvailable }: Props) {
       onSubmit={save}
       footer={
         <AiFooter
-          checking={isContinuing && source !== "AGENT" ? source : null}
+          checking={isContinuing && source !== "EXTERNAL_AGENT" ? source : null}
           disabled={busy || (asksForKey && key.trim() === "")}
           busy={busy}
         />
@@ -116,17 +115,15 @@ export function AiForm({ ai, demoAvailable }: Props) {
             )}
           </SourceOption>
           <SourceOption
-            value="AGENT"
+            value="EXTERNAL_AGENT"
             selected={source}
             onSelect={setSource}
             title={t("setup.ai.agent")}
-            hint={t("setup.ai.agentHint")}
-          >
-            <AgentSetup chosen={ai.source === "AGENT"} connectedClient={ai.agent?.client ?? null} />
-          </SourceOption>
+            hint={t("setup.ai.externalAgentHint")}
+          />
         </fieldset>
-        {/* It describes Broccoli's own model; the agent's way is chosen on the next page. */}
-        {source !== "AGENT" && (
+        {/* It describes Broccoli's own model, which the external agent replaces. */}
+        {source !== "EXTERNAL_AGENT" && (
           <p className="text-sm leading-relaxed text-muted-foreground">{t("setup.ai.privacy")}</p>
         )}
       </div>

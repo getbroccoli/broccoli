@@ -1,5 +1,5 @@
 export {
-  type AnsweredSourceSummary,
+  type AnsweredMapping,
   createImportUseCases,
   type MappingQuestions,
   type DemoFill,

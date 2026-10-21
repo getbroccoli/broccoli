@@ -2,7 +2,7 @@ import {
   companyUseCases,
   expect,
   importUseCases,
-  SETUP_AGENT,
+  SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   storedFileIds,
   systemUseCases,
@@ -31,40 +31,41 @@ test.for([
 ] as const)("%s refuses a setup agent", async (operation, { orm }) => {
   const imports = importUseCases(orm);
   const calls = {
-    approveImport: () => imports.approveImport(SETUP_AGENT, "reviewed-version"),
-    resetSetup: () => imports.resetSetup(SETUP_AGENT),
-    startDemo: () => imports.startDemo(SETUP_AGENT),
+    approveImport: () => imports.approveImport(SETUP_EXTERNAL_AGENT, "reviewed-version"),
+    resetSetup: () => imports.resetSetup(SETUP_EXTERNAL_AGENT),
+    startDemo: () => imports.startDemo(SETUP_EXTERNAL_AGENT),
     "files.uploadFile": () =>
-      imports.files.uploadFile(SETUP_AGENT, {
+      imports.files.uploadFile(SETUP_EXTERNAL_AGENT, {
         name: "staff.csv",
         bytes: Buffer.from("Name\nAvery Stone"),
       }),
-    "reads.listSources": () => imports.reads.listSources(SETUP_AGENT),
-    "reads.readSources": () => imports.reads.readSources(SETUP_AGENT, []),
-    "reads.countEmployees": () => imports.reads.countEmployees(SETUP_AGENT, []),
-    "reads.readProgress": () => imports.reads.readProgress(SETUP_AGENT),
-    "reads.readReview": () => imports.reads.readReview(SETUP_AGENT),
+    "reads.listSources": () => imports.reads.listSources(SETUP_EXTERNAL_AGENT),
+    "reads.readSources": () => imports.reads.readSources(SETUP_EXTERNAL_AGENT, []),
+    "reads.countEmployees": () => imports.reads.countEmployees(SETUP_EXTERNAL_AGENT, []),
+    "reads.readProgress": () => imports.reads.readProgress(SETUP_EXTERNAL_AGENT),
+    "reads.readReview": () => imports.reads.readReview(SETUP_EXTERNAL_AGENT),
     "reads.listEmployeeRecords": () =>
-      imports.reads.listEmployeeRecords(SETUP_AGENT, { sourceId: "missing" }),
-    readImportPhoto: () => imports.readImportPhoto(SETUP_AGENT, "missing"),
+      imports.reads.listEmployeeRecords(SETUP_EXTERNAL_AGENT, { sourceId: "missing" }),
+    readImportPhoto: () => imports.readImportPhoto(SETUP_EXTERNAL_AGENT, "missing"),
     "choices.chooseEmployeeValue": () =>
-      imports.choices.chooseEmployeeValue(SETUP_AGENT, {
+      imports.choices.chooseEmployeeValue(SETUP_EXTERNAL_AGENT, {
         key: "missing",
         field: "jobTitle",
         choice: null,
       }),
     "choices.chooseSourceForAll": () =>
-      imports.choices.chooseSourceForAll(SETUP_AGENT, {
+      imports.choices.chooseSourceForAll(SETUP_EXTERNAL_AGENT, {
         field: "jobTitle",
         sourceId: "missing",
       }),
     "choices.setLeftOut": () =>
-      imports.choices.setLeftOut(SETUP_AGENT, { key: "missing", leftOut: true }),
+      imports.choices.setLeftOut(SETUP_EXTERNAL_AGENT, { key: "missing", leftOut: true }),
     "choices.leaveOutIncomplete": () =>
-      imports.choices.leaveOutIncomplete(SETUP_AGENT, { reason: "email" }),
-    "company.update": () => companyUseCases(orm).update(SETUP_AGENT, { name: "Changed company" }),
-    readSlack: () => imports.readSlack(SETUP_AGENT),
-    "ai.save": () => systemUseCases(orm).ai.save(SETUP_AGENT, { source: "broccoli_ai" }),
+      imports.choices.leaveOutIncomplete(SETUP_EXTERNAL_AGENT, { reason: "email" }),
+    "company.update": () =>
+      companyUseCases(orm).update(SETUP_EXTERNAL_AGENT, { name: "Changed company" }),
+    readSlack: () => imports.readSlack(SETUP_EXTERNAL_AGENT),
+    "ai.save": () => systemUseCases(orm).ai.save(SETUP_EXTERNAL_AGENT, { source: "broccoli_ai" }),
   };
 
   await expect(

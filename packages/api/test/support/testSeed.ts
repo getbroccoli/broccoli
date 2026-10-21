@@ -110,11 +110,11 @@ export class TestSeed {
     return file!.id;
   }
 
-  async agentSetup(): Promise<void> {
+  async externalAgentSetup(): Promise<void> {
     const instance = instanceRepository(this.orm);
     await instance.advanceStep("company", "import");
     await this.setupSession({ expiresAt: new Date("2026-10-23T12:00:00Z") });
-    await instance.storeAiSource("agent");
+    await instance.storeAiSource("external_agent");
   }
 
   employee({

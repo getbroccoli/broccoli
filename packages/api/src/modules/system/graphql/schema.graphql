@@ -76,8 +76,8 @@ enum AiSource {
   BROCCOLI_AI
   "OpenRouter with the instance's own key."
   OPENROUTER
-  "The owner's own coding agent answers instead of a model; chosen with `chooseAgent`, never `saveAiSource`."
-  AGENT
+  "The owner's own coding agent answers instead of a model; chosen with `chooseExternalAgent`, never `saveAiSource`."
+  EXTERNAL_AGENT
 }
 
 "Where the instance's OpenRouter key comes from."

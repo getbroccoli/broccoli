@@ -3,10 +3,7 @@ import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 import type { SecurityContext } from "../../../../core/security";
 
 // The external agent's operations admit their own callers; their tests check them.
-type ImportUseCases = Omit<
-  ReturnType<typeof importUseCases>,
-  "sentJobs" | "answeredMapping" | "parsedSources"
->;
+type ImportUseCases = Omit<ReturnType<typeof importUseCases>, "sentJobs" | "answeredMapping">;
 
 /** Every use case by name; a service's as `service.name`, so none can be left out below. */
 type UseCaseName = {

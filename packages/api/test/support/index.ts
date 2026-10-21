@@ -2,13 +2,13 @@ export { expect } from "vitest";
 export {
   NON_OWNER,
   OWNER,
-  SETUP_AGENT,
+  SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   SYSTEM,
   TestSecurityContext,
 } from "./testSecurityContext";
 export { approveReviewedImport } from "./approveReviewedImport";
-export { createAgentCode, exchangeAgentCode } from "./createAgentCode";
+export { createExternalAgentCode, exchangeExternalAgentCode } from "./createExternalAgentCode";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test, slackTest } from "./fixture";
@@ -58,5 +58,8 @@ export {
 export { startFakeDecisions, type FakeDecisions } from "./fakeDecisions";
 export { EXAMPLE_JOB } from "./exampleJob";
 export { startLiveDecisions, type LiveDecisions } from "./liveDecisions";
-export { startLiveAgentAnswers, type LiveAgentAnswers } from "./liveAgentAnswers";
+export {
+  startLiveExternalAgentAnswers,
+  type LiveExternalAgentAnswers,
+} from "./liveExternalAgentAnswers";
 export { sampleXlsxFile, xlsxFileWithDistantCell } from "./sampleXlsxFile";

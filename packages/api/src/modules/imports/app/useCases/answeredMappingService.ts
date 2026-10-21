@@ -32,7 +32,7 @@ export interface AnsweredMappingService {
   /** Stores the file as a source waiting for answers, with no mapping job; returns its id. */
   addAnsweredSource(ctx: SecurityContext, tx: Tx, file: AnsweredFile): Promise<string>;
   /** The sources still waiting for answers, without their names, which may name a person. */
-  readWaitingSources(ctx: SecurityContext, tx: Tx): Promise<AnsweredSourceSummary[]>;
+  readUnansweredSources(ctx: SecurityContext, tx: Tx): Promise<{ id: string }[]>;
   /** Per sheet, its first rows as placeholders and the questions Broccoli's model gets. */
   readMappingQuestions(ctx: SecurityContext, tx: Tx, sourceId: string): Promise<MappingQuestions>;
   /** Maps the waiting source with these answers, as Broccoli's model's answers would. */
@@ -41,7 +41,7 @@ export interface AnsweredMappingService {
     tx: Tx,
     sourceId: string,
     answers: MappingAnswersInput,
-  ): Promise<Omit<AnsweredSourceSummary, "id">>;
+  ): Promise<AnsweredMapping>;
 }
 
 /** A staff file the upload reader has read. */
@@ -51,10 +51,9 @@ export interface AnsweredFile {
   sheets: FileSheet[];
 }
 
-/** A source's state as the external agent sees it: never its name. */
-export interface AnsweredSourceSummary {
-  id: string;
-  status: "mapping" | "mapped" | "failed";
+/** A source's state after the external agent's answers: never its name. */
+export interface AnsweredMapping {
+  status: "mapped" | "failed";
   failure: ImportSourceFailure | null;
   people: number;
 }
@@ -84,18 +83,18 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
       });
     },
 
-    readWaitingSources: async (ctx, tx) => {
-      ctx.requireSetupAgent();
+    readUnansweredSources: async (ctx, tx) => {
+      ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
-      const waiting = (await imports.listSources()).filter(
-        ({ readBy, status }) => readBy === "answered_by_external_agent" && status === "mapping",
-      );
-      const counts = await imports.countEmployees(waiting.map(({ id }) => id));
-      return waiting.map((source) => summaryOf(source, counts.get(source.id) ?? 0));
+      return (await imports.listSources())
+        .filter(
+          ({ readBy, status }) => readBy === "answered_by_external_agent" && status === "mapping",
+        )
+        .map(({ id }) => ({ id }));
     },
 
     readMappingQuestions: async (ctx, tx, sourceId) => {
-      ctx.requireSetupAgent();
+      ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
       const { source, sheets } = await readAnsweredFile(tx, imports, sourceId);
       if (source.status !== "mapping") {
@@ -110,7 +109,7 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
     },
 
     answerMapping: async (ctx, tx, sourceId, input) => {
-      ctx.requireSetupAgent();
+      ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
       const { source, sheets } = await readAnsweredFile(tx, imports, sourceId);
       if (source.status !== "mapping") {
@@ -156,7 +155,7 @@ async function readAnsweredFile(
   sourceId: string,
 ): Promise<{ source: FileSource; sheets: FileSheet[] }> {
   const source = await imports.findFileSource(sourceId);
-  if (source?.readBy !== "answered_by_external_agent" || source.fileId === null) {
+  if (source?.readBy !== "answered_by_external_agent") {
     throw notWaiting();
   }
   const file = await readFile(tx, source.fileId);
@@ -170,11 +169,4 @@ async function readAnsweredFile(
 
 function notWaiting(): ApplicationError {
   return new ApplicationError("NOT_FOUND", "No file waits for your answers with this id.");
-}
-
-function summaryOf(
-  { id, status, failure }: Pick<FileSource, "id" | "status" | "failure">,
-  people: number,
-): AnsweredSourceSummary {
-  return { id, status, failure, people };
 }

@@ -68,7 +68,7 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
     readyEmployeeSources: sources.filter(({ id }) => readySourceIds.has(id)),
     checks: listChecks(sources, employees),
     listEmployees: (args) => listEmployees(employees, args),
-    version: importVersion(employees),
+    version: importVersion(employees, readyEmployees),
   };
 }
 

@@ -1,10 +1,9 @@
-export { type AgentConnection, parseClientName } from "./agentConnection";
-export { isAgentSafeOrigin } from "./agentOrigin";
+export { type ExternalAgentConnection, parseClientName } from "./externalAgentConnection";
+export { isExternalAgentSafeOrigin } from "./externalAgentOrigin";
 export {
-  AGENT_CODE_HOURS,
-  AGENT_SESSION_HOURS,
-  hashAgentSecret,
+  EXTERNAL_AGENT_CODE_HOURS,
+  EXTERNAL_AGENT_SESSION_HOURS,
+  hashExternalAgentSecret,
   hoursAfter,
-  newAgentSecret,
-} from "./agentSecrets";
-export { AGENT_WAYS, type AgentWay } from "./agentWay";
+  newExternalAgentSecret,
+} from "./externalAgentSecrets";

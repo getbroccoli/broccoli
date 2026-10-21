@@ -1,0 +1,157 @@
+{
+  "staff.csv": [
+    {
+      "firstName": "Zorvane",
+      "lastName": "Quillfeather",
+      "email": "zorvane.quillfeather@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2023-04-03"
+    },
+    {
+      "firstName": "Brindle",
+      "lastName": "Okonkwo-Vasquez",
+      "email": "brindle.okonkwo@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2022-11-14"
+    },
+    {
+      "firstName": "Tamsk",
+      "lastName": "Hollowbrook",
+      "email": "tamsk.hollowbrook@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": "2024-01-08"
+    },
+    {
+      "firstName": "Ylvette",
+      "lastName": "Marrowind",
+      "email": "ylvette.marrowind@acme-corp.example",
+      "jobTitle": "Recruiter",
+      "startDate": "2021-06-21"
+    },
+    {
+      "firstName": "Corvin",
+      "lastName": "Ashgrove",
+      "email": "corvin.ashgrove@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2020-09-01"
+    },
+    {
+      "firstName": "Pellam",
+      "lastName": "Driftwood",
+      "email": "pellam.driftwood@acme-corp.example",
+      "jobTitle": "Product manager",
+      "startDate": "2023-02-13"
+    },
+    {
+      "firstName": "Quessa",
+      "lastName": "Thornvale",
+      "email": "quessa.thornvale@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": "2022-03-28"
+    },
+    {
+      "firstName": "Orrin",
+      "lastName": "Velvetmoss",
+      "email": "orrin.velvetmoss@acme-corp.example",
+      "jobTitle": "Support lead",
+      "startDate": "2019-10-07"
+    },
+    {
+      "firstName": "Sabeth",
+      "lastName": "Kindlewick",
+      "email": "sabeth.kindlewick@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2024-05-20"
+    },
+    {
+      "firstName": "Fennick",
+      "lastName": "Stormhallow",
+      "email": "fennick.stormhallow@acme-corp.example",
+      "jobTitle": "Office manager",
+      "startDate": "2021-12-01"
+    },
+    {
+      "firstName": "Ilvara",
+      "lastName": "Brightsedge",
+      "email": "ilvara.brightsedge@acme-corp.example",
+      "jobTitle": "Data analyst",
+      "startDate": "2023-08-15"
+    },
+    {
+      "firstName": "Jorrel",
+      "lastName": "Mistwhistle",
+      "email": "jorrel.mistwhistle@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": "2022-07-04"
+    }
+  ],
+  "team.xlsx": [
+    {
+      "firstName": "Kestrel",
+      "lastName": "Bramblewood",
+      "email": "kestrel.bramblewood@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Nuala",
+      "lastName": "Frostmantle",
+      "email": "nuala.frostmantle@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": null
+    },
+    {
+      "firstName": "Dorrin",
+      "lastName": "Ashwhistle",
+      "email": "dorrin.ashwhistle@acme-corp.example",
+      "jobTitle": "Accountant",
+      "startDate": null
+    },
+    {
+      "firstName": "Selka",
+      "lastName": "Quorvane",
+      "email": "selka.quorvane@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": null
+    }
+  ],
+  "tricky.csv": [
+    {
+      "firstName": "Wendril",
+      "lastName": "Pockethollow",
+      "email": "wendril@ignore-previous-instructions.example",
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Ambrel",
+      "lastName": "Cindertop",
+      "email": "ambrel@ignore-previous-instructions.example",
+      "jobTitle": "Designer",
+      "startDate": null
+    },
+    {
+      "firstName": "Hestor",
+      "lastName": "Moonquill",
+      "email": "hestor@ignore-previous-instructions.example",
+      "jobTitle": "Engineer",
+      "startDate": null
+    }
+  ],
+  "Mira Okafor review.csv": [
+    {
+      "firstName": "Lorvenna",
+      "lastName": "Grimsbane",
+      "email": "lorvenna.grimsbane@acme-corp.example",
+      "jobTitle": "Engineer",
+      "startDate": null
+    },
+    {
+      "firstName": "Tobbin",
+      "lastName": "Featherwick",
+      "email": "tobbin.featherwick@acme-corp.example",
+      "jobTitle": "Designer",
+      "startDate": null
+    }
+  ]
+}

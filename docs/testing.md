@@ -53,8 +53,8 @@ EVAL_OPEN_ROUTER_KEY=… pnpm --filter @broccoli/api eval -t simple   # one case
 
 They call OpenRouter with your key, which costs money: a full run of the import cases costs well under one cent. Each case is one test: it fails when the saved result differs from the expected one, lists the personal values of the file that reached the model and prints what its model calls cost; the run ends with its total cost. Evals never run in `pnpm check` or CI.
 
-The owner's external agent maps files by answering the same questions, so its quality gets an eval of its own: `evals/<decision>.agent-eval.test.ts` sends each case's masked questions, with the skill Broccoli serves the agent, to a model playing the agent (`deepseek/deepseek-v4.1-flash-1017` unless `EVAL_AGENT_MODEL` names another) and checks the records its answers produce against the same expected results. It costs more than `pnpm eval`, so it has its own command; run it when the questions, the skill or the placeholders change:
+The owner's external agent maps files by answering the same questions, so its quality gets an eval of its own: `evals/<decision>.external-agent-eval.test.ts` sends each case's masked questions, with the skill Broccoli serves the agent, to a model playing the agent (`deepseek/deepseek-v4.1-flash-1017` unless `EVAL_EXTERNAL_AGENT_MODEL` names another) and checks the records its answers produce against the same expected results. It costs more than `pnpm eval`, so it has its own command; run it when the questions, the skill or the placeholders change:
 
 ```sh
-EVAL_OPEN_ROUTER_KEY=… pnpm --filter @broccoli/api eval:agent
+EVAL_OPEN_ROUTER_KEY=… pnpm --filter @broccoli/api eval:external-agent
 ```

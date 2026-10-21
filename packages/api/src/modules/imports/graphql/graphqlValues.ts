@@ -7,7 +7,6 @@ export const STATUSES = { mapping: "MAPPING", mapped: "MAPPED", failed: "FAILED"
 export const READERS = {
   parsed_by_broccoli: "PARSED_BY_BROCCOLI",
   answered_by_external_agent: "ANSWERED_BY_EXTERNAL_AGENT",
-  parsed_by_external_agent: "PARSED_BY_EXTERNAL_AGENT",
 } as const;
 export const FAILURES = {
   no_people_columns: "NO_PEOPLE_COLUMNS",

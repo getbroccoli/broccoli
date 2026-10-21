@@ -1,0 +1,20 @@
+fragment ExternalAgentPill_externalAgent on ExternalAgentConnection {
+  id
+  client
+}
+
+mutation DisconnectExternalAgent {
+  setup {
+    disconnectExternalAgent {
+      setup {
+        id
+        ai {
+          id
+          externalAgent {
+            id
+          }
+        }
+      }
+    }
+  }
+}

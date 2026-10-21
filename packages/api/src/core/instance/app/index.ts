@@ -22,8 +22,8 @@ export { assignInstance, readAssignment } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
 export { createAiSettings, type AiSettings } from "./aiSettings";
 export {
-  chooseAgentSource,
-  lockAgentChoice,
-  lockSetupOpenToAgent,
-  readSetupOpenToAgent,
+  chooseExternalAgentSource,
+  lockExternalAgentChoice,
+  lockSetupOpenToExternalAgent,
+  readSetupOpenToExternalAgent,
 } from "./externalAgent";

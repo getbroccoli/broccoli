@@ -23,8 +23,8 @@ export function uploadFile(file: File): Promise<UploadFileResult> {
 }
 
 /** Adds `file` to the import for the owner's agent, which maps it by answering masked questions. */
-export function uploadFileForAgent(file: File): Promise<UploadFileResult> {
-  return upload("/api/setup/agent-files", file);
+export function uploadFileForExternalAgent(file: File): Promise<UploadFileResult> {
+  return upload("/api/setup/external-agent-files", file);
 }
 
 /** Uploads one staff file: to the import, or for the owner's agent. */

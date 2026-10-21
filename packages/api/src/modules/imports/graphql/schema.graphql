@@ -40,8 +40,6 @@ enum ImportSourceReader {
   PARSED_BY_BROCCOLI
   "The owner's external agent answered Broccoli's masked questions about the file."
   ANSWERED_BY_EXTERNAL_AGENT
-  "The owner's external agent read the file itself and sent its people."
-  PARSED_BY_EXTERNAL_AGENT
 }
 
 "Whether a source's records are ready. A Slack source always is."
