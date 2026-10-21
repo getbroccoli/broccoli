@@ -56,6 +56,8 @@ const calls = {
     imports.choices.setLeftOut(ctx, { key: "missing", leftOut: true }),
   "choices.leaveOutIncomplete": (imports, ctx) =>
     imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
+  "choices.undoReviewChange": (imports, ctx) =>
+    imports.choices.undoReviewChange(ctx, { id: "missing" }),
   startDemo: (imports, ctx) => imports.startDemo(ctx),
   approveImport: (imports, ctx) => imports.approveImport(ctx, "any-version"),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
