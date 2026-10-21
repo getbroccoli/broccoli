@@ -53,7 +53,7 @@ export interface ExternalAgentSession {
 }
 
 export function createExternalAgentSessionService(
-  context: ExternalAgentContext,
+  context: Omit<ExternalAgentContext, "imports">,
 ): ExternalAgentSessionService {
   const { orm, transact, clock, activity } = context;
   return {

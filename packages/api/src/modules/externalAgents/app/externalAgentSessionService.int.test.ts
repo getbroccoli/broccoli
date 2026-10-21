@@ -62,6 +62,50 @@ test("refuses a used code", async ({ orm, seed }) => {
   ).rejects.toMatchObject(INVALID_CODE);
 });
 
+test("exchanges a system-created code for a session only once", async ({ orm, seed }) => {
+  await seed.externalAgentSetup();
+  const { sessions } = externalAgentUseCases(orm);
+  const { code } = await sessions.createExternalAgentCode(SYSTEM);
+
+  const { token } = await sessions.startExternalAgentSession(SYSTEM, {
+    code,
+    client: "Test agent",
+  });
+
+  expect(await sessions.readExternalAgentSession({ token })).not.toBeNull();
+  await expect(
+    sessions.startExternalAgentSession(SYSTEM, { code, client: "Test agent" }),
+  ).rejects.toMatchObject(INVALID_CODE);
+});
+
+test("a system-created code ends the session from the setup holder's code", async ({
+  orm,
+  seed,
+}) => {
+  await seed.externalAgentSetup();
+  const { sessions } = externalAgentUseCases(orm);
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
+  const { token } = await sessions.startExternalAgentSession(SYSTEM, {
+    code,
+    client: "Test agent",
+  });
+  expect(await sessions.readExternalAgentSession({ token })).not.toBeNull();
+
+  await sessions.createExternalAgentCode(SYSTEM);
+
+  expect(await sessions.readExternalAgentSession({ token })).toBeNull();
+});
+
+test("refuses a code to the system before the external agent is chosen", async ({ orm, seed }) => {
+  await seed.externalAgentSetup();
+  await seed.aiSource("broccoli_ai");
+  const { sessions } = externalAgentUseCases(orm);
+
+  await expect(sessions.createExternalAgentCode(SYSTEM)).rejects.toMatchObject({
+    code: "CONFLICT",
+  });
+});
+
 test("refuses a code at its two-hour deadline", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
