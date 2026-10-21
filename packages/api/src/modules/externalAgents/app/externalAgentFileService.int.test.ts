@@ -36,7 +36,7 @@ test("queues no model job for a dropped file", async ({ orm, seed }) => {
 test("answers a waiting file at once", { timeout: 5_000 }, async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -52,7 +52,7 @@ test("answers a waiting file at once", { timeout: 5_000 }, async ({ orm, seed })
 test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -68,7 +68,7 @@ test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm,
 test("answers no files when the wait runs out", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -88,7 +88,7 @@ test(
   async ({ orm, seed }) => {
     await seed.externalAgentSetup();
     const agents = externalAgentUseCases(orm);
-    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
     const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
       code,
       client: "Test agent",
@@ -112,7 +112,7 @@ test(
   async ({ orm, seed }) => {
     await seed.externalAgentSetup();
     const agents = externalAgentUseCases(orm);
-    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
     const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
       code,
       client: "Test agent",
@@ -131,14 +131,14 @@ test(
 test("lets a later session answer a file dropped before it connected", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const first = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const first = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   await agents.sessions.startExternalAgentSession(SYSTEM, {
     code: first.code,
     client: "First agent",
   });
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
   await agents.sessions.disconnectExternalAgent(SETUP_HOLDER);
-  const next = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const next = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code: next.code,
     client: "Next agent",
@@ -155,7 +155,7 @@ test("lets a later session answer a file dropped before it connected", async ({ 
 test("writes an answer only before a concurrent Disconnect completes", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -201,7 +201,7 @@ test("refuses stale approval racing an answer and prevents answers after refresh
 }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -235,7 +235,6 @@ test("refuses stale approval racing an answer and prevents answers after refresh
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: id })).toEqual(records);
 });
 
-const CODE = { origin: "http://localhost:8080" };
 const CSV = { name: "staff.csv", bytes: Buffer.from("Name,Email\nAvery Stone,avery@example.com") };
 const ANSWERS = {
   sheets: [

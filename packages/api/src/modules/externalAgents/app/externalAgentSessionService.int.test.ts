@@ -29,7 +29,7 @@ test("refuses choosing the agent through AI settings, which would keep its sessi
 test("allows exactly one of two parallel exchanges of a code", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const { sessions } = externalAgentUseCases(orm);
-  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
 
   const exchanges = await Promise.allSettled([
     sessions.startExternalAgentSession(SYSTEM, { code, client: "First agent" }),
@@ -54,7 +54,7 @@ test("refuses a wrong code", async ({ orm, seed }) => {
 test("refuses a used code", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const { sessions } = externalAgentUseCases(orm);
-  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   await sessions.startExternalAgentSession(SYSTEM, { code, client: "Test agent" });
 
   await expect(
@@ -66,7 +66,7 @@ test("refuses a code at its two-hour deadline", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
   const { sessions } = externalAgentUseCases(orm, { clock: () => now });
-  const { code, expiresAt } = await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code, expiresAt } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   expect(expiresAt).toEqual(new Date("2026-10-20T14:00:00Z"));
   now = expiresAt;
 
@@ -80,10 +80,10 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
   async (operation, { orm, seed }) => {
     await seed.externalAgentSetup();
     const { sessions } = externalAgentUseCases(orm);
-    const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+    const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
 
     if (operation === "createExternalAgentCode")
-      await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+      await sessions.createExternalAgentCode(SETUP_HOLDER);
     else await sessions[operation](SETUP_HOLDER);
 
     await expect(
@@ -95,7 +95,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
 test("exchanges a code for a session", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const { sessions } = externalAgentUseCases(orm);
-  const issued = await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const issued = await sessions.createExternalAgentCode(SETUP_HOLDER);
 
   const session = await sessions.startExternalAgentSession(SYSTEM, {
     code: issued.code,
@@ -121,7 +121,7 @@ test.for([NON_OWNER, SETUP_EXTERNAL_AGENT])(
     await seed.externalAgentSetup();
     const { sessions } = externalAgentUseCases(orm);
 
-    await expect(sessions.createExternalAgentCode(ctx, CODE)).rejects.toMatchObject({
+    await expect(sessions.createExternalAgentCode(ctx)).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
   },
@@ -136,7 +136,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
 
     await expect(
       operation === "createExternalAgentCode"
-        ? sessions.createExternalAgentCode(SETUP_HOLDER, CODE)
+        ? sessions.createExternalAgentCode(SETUP_HOLDER)
         : sessions[operation](SETUP_HOLDER),
     ).rejects.toMatchObject({ code: "CONFLICT" });
   },
@@ -149,7 +149,7 @@ test.for(["company", "owner", "ready", "done"] as const)(
     await seed.setupStep(step);
     const { sessions } = externalAgentUseCases(orm);
 
-    await expect(sessions.createExternalAgentCode(SETUP_HOLDER, CODE)).rejects.toMatchObject({
+    await expect(sessions.createExternalAgentCode(SETUP_HOLDER)).rejects.toMatchObject({
       code: "CONFLICT",
     });
   },
@@ -158,7 +158,7 @@ test.for(["company", "owner", "ready", "done"] as const)(
 test("stores only hashes of the code and token", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const { sessions } = externalAgentUseCases(orm);
-  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -178,5 +178,4 @@ test("stores only hashes of the code and token", async ({ orm, seed }) => {
   expect(stored).not.toContain(token);
 });
 
-const CODE = { origin: "http://localhost:8080" };
 const INVALID_CODE = { code: "UNAUTHENTICATED", message: "The code is not valid." };

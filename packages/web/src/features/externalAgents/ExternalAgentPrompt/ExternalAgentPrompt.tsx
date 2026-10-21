@@ -5,6 +5,7 @@ import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
+import { isExternalAgentSafeOrigin } from "../externalAgentOrigin";
 import { ExternalAgentPromptBlock } from "../ExternalAgentPromptBlock";
 
 /**
@@ -13,7 +14,8 @@ import { ExternalAgentPromptBlock } from "../ExternalAgentPromptBlock";
  * connected, since a new code ends that agent's session.
  */
 export function ExternalAgentPrompt() {
-  const { code, failure, retry } = useExternalAgentCode();
+  const onSafeAddress = isExternalAgentSafeOrigin(window.location.origin);
+  const { code, failed, retry } = useExternalAgentCode(onSafeAddress);
 
   return (
     <div className="flex flex-col gap-3.5 rounded-xl border border-border p-[18px]">
@@ -23,16 +25,22 @@ export function ExternalAgentPrompt() {
           {t("externalAgents.connectHint")}
         </p>
       </div>
-      <ExternalAgentPromptBlock
-        prompt={
-          code && !failure
-            ? t("externalAgents.sentence", { origin: window.location.origin, code: code.code })
-            : null
-        }
-      />
-      {failure ? (
+      {onSafeAddress && (
+        <ExternalAgentPromptBlock
+          prompt={
+            code && !failed
+              ? t("externalAgents.sentence", { origin: window.location.origin, code: code.code })
+              : null
+          }
+        />
+      )}
+      {!onSafeAddress ? (
+        <p role="alert" className="text-sm text-destructive">
+          {t("externalAgents.unsafeOrigin")}
+        </p>
+      ) : failed ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
-          {t(failure)}
+          {t("externalAgents.failed")}
           <Button type="button" variant="outline" size="sm" onClick={retry}>
             {t("externalAgents.retry")}
           </Button>
@@ -54,10 +62,10 @@ export function ExternalAgentPrompt() {
 let codeRequests: Promise<unknown> = Promise.resolve();
 
 /**
- * Keeps a valid one-time code while the prompt shows: one now, a new one when it expires.
- * `retry` starts over after a failure.
+ * Keeps a valid one-time code while the prompt shows and `enabled`: one now, a new one when it
+ * expires. `retry` starts over after a failure.
  */
-function useExternalAgentCode() {
+function useExternalAgentCode(enabled: boolean) {
   const [createExternalAgentCode, creating] = usePayloadMutation(CreateExternalAgentCodeDocument);
   const [code, setCode] = useState<{ code: string; expiresAt: string } | null>(null);
   const stopRenewing = useRef(() => {});
@@ -91,15 +99,12 @@ function useExternalAgentCode() {
   }, [createExternalAgentCode]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     start();
     return () => stopRenewing.current();
-  }, [start]);
+  }, [enabled, start]);
 
-  // The one refusal a page at this step meets: an address the code must not travel to.
-  const failure = creating.payloadError
-    ? ("externalAgents.unsafeOrigin" as const)
-    : creating.error
-      ? ("externalAgents.failed" as const)
-      : null;
-  return { code, failure, retry: start };
+  return { code, failed: Boolean(creating.error || creating.payloadError), retry: start };
 }

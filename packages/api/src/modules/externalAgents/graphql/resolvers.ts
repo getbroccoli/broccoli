@@ -26,10 +26,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentUse
       createExternalAgentCode: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupCreateExternalAgentCodePayload"]>(
           "externalAgentCode",
-          () =>
-            useCases.sessions.createExternalAgentCode(context.getActor(), {
-              origin: context.origin,
-            }),
+          () => useCases.sessions.createExternalAgentCode(context.getActor()),
           ["CONFLICT"],
         ),
       disconnectExternalAgent: async (_parent, _args, context) => {

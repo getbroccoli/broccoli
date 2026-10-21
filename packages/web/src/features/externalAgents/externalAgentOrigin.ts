@@ -1,6 +1,6 @@
 /**
- * Whether Broccoli may hand out an agent one-time code to a browser on this origin: one on
- * https, or on this computer, since the code and the agent's token travel to that address.
+ * Whether the page may show an agent one-time code at this origin: one on https, or on this
+ * computer, since the code and the agent's token travel to that address.
  */
 export function isExternalAgentSafeOrigin(origin: string | null): boolean {
   if (origin === null || !URL.canParse(origin)) {

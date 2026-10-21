@@ -29,12 +29,8 @@ export const MAX_TOKENS = 2000;
  * prototype: Apollo Server copies the context's own properties for each operation.
  */
 export class GraphqlContext {
-  constructor(
-    /** The signed-in user's security context, or null without a session. */
-    readonly security: SecurityContext | null,
-    /** The request's `Origin`, the browser's own address; null without one. */
-    readonly origin: string | null = null,
-  ) {}
+  /** The signed-in user's security context, or null without a session. */
+  constructor(readonly security: SecurityContext | null) {}
 
   /**
    * The security context to pass to a use case; throws `UNAUTHENTICATED` without a
@@ -120,8 +116,7 @@ export function createContext(resolveSecurity: SecurityResolver) {
       if (renewedCookies.length > 0) {
         res.appendHeader("Set-Cookie", renewedCookies);
       }
-      const { origin } = req.headers;
-      return new GraphqlContext(security, typeof origin === "string" ? origin : null);
+      return new GraphqlContext(security);
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass
       // through as a request error; the code marks this one as internal.

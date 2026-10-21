@@ -8,12 +8,7 @@ import {
 } from "../../../core/instance";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type ExternalAgentConnection, externalAgentRepository } from "../db";
-import {
-  hoursAfter,
-  isExternalAgentSafeOrigin,
-  newExternalAgentSecret,
-  parseExternalAgentClientName,
-} from "../helpers";
+import { hoursAfter, newExternalAgentSecret, parseExternalAgentClientName } from "../helpers";
 import type { ExternalAgentContext } from "./externalAgentContext";
 
 /**
@@ -24,11 +19,8 @@ import type { ExternalAgentContext } from "./externalAgentContext";
 export interface ExternalAgentSessionService {
   /** Makes the external agent the AI source, ending any agent session. */
   chooseExternalAgent(ctx: SecurityContext): Promise<void>;
-  /** A new one-time code, shown once; refused with CONFLICT on an unsafe origin. */
-  createExternalAgentCode(
-    ctx: SecurityContext,
-    request: ExternalAgentCodeRequest,
-  ): Promise<ExternalAgentCode>;
+  /** A new one-time code, shown once; refused with CONFLICT unless the agent is chosen. */
+  createExternalAgentCode(ctx: SecurityContext): Promise<ExternalAgentCode>;
   /** The session for a live code, used up by this call; UNAUTHENTICATED for any other code. */
   startExternalAgentSession(
     ctx: SecurityContext,
@@ -40,11 +32,6 @@ export interface ExternalAgentSessionService {
   disconnectExternalAgent(ctx: SecurityContext): Promise<void>;
   /** The connected agent, or null when none is. */
   readExternalAgentConnection(ctx: SecurityContext): Promise<ExternalAgentConnection | null>;
-}
-
-export interface ExternalAgentCodeRequest {
-  /** The setup holder's browser origin, which the agent will be told to call. */
-  origin: string | null;
 }
 
 export interface ExternalAgentCode {
@@ -75,14 +62,8 @@ export function createExternalAgentSessionService(
       });
     },
 
-    createExternalAgentCode: async (ctx, { origin }) => {
+    createExternalAgentCode: async (ctx) => {
       ctx.requireSetupAccess();
-      if (!isExternalAgentSafeOrigin(origin)) {
-        throw new ApplicationError(
-          "CONFLICT",
-          "Your agent needs Broccoli on https or on this computer.",
-        );
-      }
       return transact(async (tx) => {
         const now = await lockSetupOpenToExternalAgent(tx, clock);
         if (!now) {

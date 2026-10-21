@@ -19,7 +19,7 @@ test("refuses a code that expires while the exchange waits for the instance lock
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
   const agents = externalAgentUseCases(orm, { clock: () => now });
-  const { code, expiresAt } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code, expiresAt } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
 
   const result = await expireWhileWaiting(
     orm,
@@ -40,7 +40,7 @@ test("refuses a call when the agent session expires while waiting for the instan
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
   const agents = externalAgentUseCases(orm, { clock: () => now });
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token, expiresAt } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -63,7 +63,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
   async (operation, { orm, seed }) => {
     await seed.externalAgentSetup();
     const agents = externalAgentUseCases(orm);
-    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
     const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
       code,
       client: "Test agent",
@@ -71,7 +71,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
     const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
 
     if (operation === "createExternalAgentCode")
-      await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+      await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
     else await agents.sessions[operation](SETUP_HOLDER);
 
     expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
@@ -87,7 +87,7 @@ test("expires a session two hours after exchange despite recent calls", async ({
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
   const agents = externalAgentUseCases(orm, { clock: () => now });
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   now = new Date("2026-10-20T13:00:00Z");
   const { token, expiresAt } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -107,7 +107,7 @@ test("expires a session two hours after exchange despite recent calls", async ({
 test("refuses a session once an owner exists even at the import step", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -123,7 +123,7 @@ test("refuses a session once an owner exists even at the import step", async ({ 
 test("refuses a session after setup leaves import", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -141,7 +141,7 @@ test("refuses a session when the setup session expires", async ({ orm, seed }) =
   let now = new Date("2026-10-20T12:00:00Z");
   await seed.setupSession({ expiresAt: new Date("2026-10-20T13:00:00Z") });
   const agents = externalAgentUseCases(orm, { clock: () => now });
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -157,7 +157,7 @@ test("refuses a session when the setup session expires", async ({ orm, seed }) =
 test("refuses a session after OpenRouter is saved", async ({ orm, seed, fakeDecisions }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -181,7 +181,7 @@ test("choosing the agent again never revives a session idled by OpenRouter", asy
 }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -202,7 +202,7 @@ test("choosing the agent again never revives a session idled by OpenRouter", asy
 test("refuses a session after approval", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -220,7 +220,7 @@ test("refuses a session after approval", async ({ orm, seed }) => {
 test("refuses a live token after the demo starts", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);
-  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
@@ -234,7 +234,6 @@ test("refuses a live token after the demo starts", async ({ orm, seed }) => {
   await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
-const CODE = { origin: "http://localhost:8080" };
 const SESSION_ENDED = { code: "UNAUTHENTICATED", message: "Your agent's session ended." };
 
 /** Advances the clock only once Postgres confirms the operation is waiting on the held row. */

@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { isExternalAgentSafeOrigin } from ".";
+import { isExternalAgentSafeOrigin } from "./externalAgentOrigin";
 
 it.each([
   "https://example.com",
