@@ -22,7 +22,8 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] Clicking any other value, such as an email or a start date, opens "{Field} for {name}" with a field and Save. A bad email shows "Enter a valid email"; a 101-character name "Use 100 characters or fewer". A good value shows in the cell.
 - [ ] A start date is picked from a calendar: "Pick a date" opens it with month and weekday names and the first day of the week in the browser's language (Monday first in `de-DE`, Sunday in `en-US`); the picked day shows in the field and, after Save, in the cell.
 - [ ] Typing a last name for the one-word member removes its "No last name" pill and raises the Approve count by one.
-- [ ] Typing, for the row without an email, the email of another person shows "Another person has this email. Leave one of them out instead." and changes nothing.
+- [ ] Typing, for the row without an email, the email of another person shows "Another person already uses this email. Enter a different email." and changes nothing.
+- [ ] Change one person's email, give their previous email to another person, then Undo the first change. The toast shows "Another person already uses this email. Enter a different email."; both people and their current emails remain.
 - [ ] "Leave out" in a row's menu dims the row and shows "Left out"; "Add back" undoes it. The Approve count follows.
 
 ## Things to check

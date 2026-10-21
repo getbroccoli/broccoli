@@ -1,3 +1,3 @@
 export { applicationErrorOf } from "./applicationError";
 export { createApolloClient } from "./client";
-export { usePayloadMutation } from "./usePayloadMutation";
+export { PayloadFailure, usePayloadMutation } from "./usePayloadMutation";
