@@ -162,13 +162,18 @@ export class TestSeed {
   }) {
     const id = await testTransactor(this.orm)(async (tx) => {
       const imports = await lockImport(tx);
-      const id = await imports.insertFileSource(name, readBy, {
-        content: Buffer.from(content),
-        mimeType:
-          typeof content === "string"
-            ? "text/csv"
-            : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
+      const id = await imports.insertFileSource(
+        name,
+        readBy,
+        {
+          content: Buffer.from(content),
+          mimeType:
+            typeof content === "string"
+              ? "text/csv"
+              : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+        "mapping",
+      );
       for (let previous = 0; previous < attempt; previous++) {
         await imports.finishMapping(id, previous, { status: "failed", failure: "unavailable" });
         await imports.restartMapping(id);

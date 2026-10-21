@@ -9,6 +9,7 @@ import {
   type Decisions,
   DecisionsError,
   type DecisionsSource,
+  type OriginalFileReader,
 } from "../../../integrations/ai";
 import { instanceRepository } from "../db";
 import { aiConfig, type AiConfig, type AiSource, type SavedAiSource } from "../domain";
@@ -25,6 +26,8 @@ export interface AiSettings {
   save(ctx: SecurityContext, choice: AiChoice): Promise<AiConfig>;
   /** The model Broccoli asks on its own, sent where the settings point at each request. */
   decisions: Decisions;
+  /** The same model reading a file in full, once the owner allowed it, sent the same way. */
+  originalFileReader: OriginalFileReader;
 }
 
 /** The owner's choice of AI at setup. */
@@ -93,6 +96,7 @@ export function createAiSettings({
       return readConfig();
     },
     decisions,
+    originalFileReader: decisions,
   };
 }
 

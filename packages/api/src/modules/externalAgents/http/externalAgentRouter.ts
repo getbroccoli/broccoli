@@ -7,7 +7,7 @@ import { z } from "zod";
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Logger } from "../../../core/logger";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
-import type { MappingAnswersInput } from "../../imports";
+import { type MappingAnswersInput, READ_PEOPLE_JSON_SCHEMA } from "../../imports";
 import type { ExternalAgentUseCases } from "../app";
 import { externalAgentErrorHandler, tooManyRequests } from "./externalAgentErrors";
 
@@ -48,6 +48,9 @@ export function externalAgentRouter(
     })
     .get("/external-agent/skill", (_request, response) => {
       response.type("text/markdown").send(SKILL);
+    })
+    .get("/external-agent/people-schema", (_request, response) => {
+      response.json(READ_PEOPLE_JSON_SCHEMA);
     })
     .post(
       "/external-agent/session",
@@ -128,6 +131,34 @@ export function externalAgentRouter(
             externalAgentOf(response),
             sourceIdOf(request),
             parseAnswers(request.body),
+          ),
+        );
+      },
+    )
+    .get(
+      "/external-agent/unmapped-files/:id/original",
+      asExternalAgent,
+      perSession,
+      async (request, response) => {
+        const file = await useCases.files.readOriginalFile(
+          externalAgentOf(response),
+          sourceIdOf(request),
+        );
+        // No file name: it may name a person, and the agent never needs it.
+        response.type(file.mimeType).attachment().send(file.content);
+      },
+    )
+    .post(
+      "/external-agent/unmapped-files/:id/people",
+      asExternalAgent,
+      perSession,
+      json,
+      async (request, response) => {
+        response.json(
+          await useCases.files.sendReadPeople(
+            externalAgentOf(response),
+            sourceIdOf(request),
+            request.body,
           ),
         );
       },

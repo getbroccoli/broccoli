@@ -9,12 +9,23 @@ export const IMPORT_SOURCE_READERS = ["parsed_by_broccoli", "answered_by_externa
 
 export type ImportSourceReader = (typeof IMPORT_SOURCE_READERS)[number];
 
-/** Whether a source's records are ready; a Slack source always is. */
-export type ImportSourceStatus = "mapping" | "mapped" | "failed";
+/**
+ * Whether a source's records are ready; a Slack source always is. A PDF waits for the owner's
+ * consent before any AI reads it, since Broccoli cannot mask its rows.
+ */
+export const IMPORT_SOURCE_STATUSES = [
+  "mapping",
+  "mapped",
+  "failed",
+  "waiting_for_original_read_consent",
+] as const;
+
+export type ImportSourceStatus = (typeof IMPORT_SOURCE_STATUSES)[number];
 
 /**
- * Why a file could not be mapped: no people in it, the model failed, or Broccoli AI's free use
- * is used up (`ai_*`), which the owner's own key gets past.
+ * Why a file could not be mapped: no people in it, the model failed, Broccoli AI's free use
+ * is used up (`ai_*`), which the owner's own key gets past, or the file was too long for the
+ * model to read in full.
  */
 export const IMPORT_SOURCE_FAILURES = [
   "no_people_columns",
@@ -22,6 +33,7 @@ export const IMPORT_SOURCE_FAILURES = [
   "ai_free_period_used",
   "ai_free_period_over",
   "ai_limit_reached",
+  "original_read_incomplete",
 ] as const;
 
 export type ImportSourceFailure = (typeof IMPORT_SOURCE_FAILURES)[number];
@@ -39,9 +51,22 @@ export interface ImportSource {
   /** The AI provider's own words, when it refused the file for good. */
   failureMessage: string | null;
   readBy: ImportSourceReader;
-  /** When the external agent first read the file's questions; null until it does. */
+  /** When the external agent first read the file's questions or fetched it; null until it does. */
   pickedUpByExternalAgentAt: Date | null;
+  /** When the owner let AI read the original file in full; null without that consent. */
+  originalReadAllowedAt: Date | null;
 }
+
+/**
+ * How the external agent handles a file waiting for it: answer Broccoli's masked questions, or,
+ * once the owner allowed it, read the original file and send its people.
+ */
+export const EXTERNAL_AGENT_PARSE_FILE_WAYS = [
+  "answer_masked_questions",
+  "read_original_file",
+] as const;
+
+export type ExternalAgentParseFileWay = (typeof EXTERNAL_AGENT_PARSE_FILE_WAYS)[number];
 
 /** A file source with what its mapping runs need. */
 export interface FileSource extends ImportSource {

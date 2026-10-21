@@ -7,11 +7,19 @@ import type { ImportUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
-export { createImportUseCases, type ImportUseCases, prepareDemoStart } from "./app";
+export {
+  createImportUseCases,
+  type ImportUseCases,
+  prepareDemoStart,
+  READ_PEOPLE_JSON_SCHEMA,
+  type ReadPeopleOutcome,
+} from "./app";
 export {
   type AnsweredMapping,
+  type ExternalAgentParseFileWay,
   type MappingAnswersInput,
   type MappingQuestions,
+  parseReadPeople,
   parseStaffFileName,
 } from "./domain";
 /** For test seeding only; other modules go through the use cases. */
@@ -42,6 +50,15 @@ export function importsModule(
       "imports.mapFile": {
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
         onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
+      },
+      "imports.readOriginalFile": {
+        run: (job) =>
+          useCases.originalFileReads.readOriginalFile(PrincipalSecurityContext.system(), job),
+        onFailed: (job) =>
+          useCases.originalFileReads.markOriginalFileReadFailed(
+            PrincipalSecurityContext.system(),
+            job,
+          ),
       },
     },
   };

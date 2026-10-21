@@ -20,7 +20,7 @@ test("maps a dropped file through masked questions and shows its people to the h
   const listed = await fetch(`${env.url}/api/external-agent/unmapped-files`, { headers });
   expect(listed.status).toBe(200);
   expect(listed.headers.get("cache-control")).toBe("no-store");
-  expect(await listed.json()).toEqual([{ id }]);
+  expect(await listed.json()).toEqual([{ id, way: "answer_masked_questions" }]);
   const questions = await fetch(`${env.url}/api/external-agent/unmapped-files/${id}/questions`, {
     headers,
   });
@@ -131,12 +131,9 @@ test.for(["0", "601", "1.5", "soon", ""])(
     const code = await createExternalAgentCode(browser);
     const token = await exchangeExternalAgentCode(env.url, code);
 
-    const response = await fetch(
-      `${env.url}/api/external-agent/poll-unmapped-files?wait=${wait}`,
-      {
-        headers: { authorization: `Bearer ${token}` },
-      },
-    );
+    const response = await fetch(`${env.url}/api/external-agent/poll-unmapped-files?wait=${wait}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({

@@ -3,7 +3,15 @@ import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 import type { SecurityContext } from "../../../../core/security";
 
 // The external agent's operations admit their own callers; their tests check them.
-type ImportUseCases = Omit<ReturnType<typeof importUseCases>, "sentJobs" | "answeredMapping">;
+type ImportUseCases = Omit<
+  ReturnType<typeof importUseCases>,
+  "sentJobs" | "answeredMapping" | "originalFileReads"
+> & {
+  originalFileReads: Omit<
+    ReturnType<typeof importUseCases>["originalFileReads"],
+    "readOriginalBytes" | "addReadPeople"
+  >;
+};
 
 /** Every use case by name; a service's as `service.name`, so none can be left out below. */
 type UseCaseName = {
@@ -13,6 +21,12 @@ type UseCaseName = {
 }[keyof ImportUseCases];
 
 const calls = {
+  "originalFileReads.allowOriginalFileRead": (imports, ctx) =>
+    imports.originalFileReads.allowOriginalFileRead(ctx, "missing"),
+  "originalFileReads.readOriginalFile": (imports, ctx) =>
+    imports.originalFileReads.readOriginalFile(ctx, { sourceId: "missing", attempt: 0 }),
+  "originalFileReads.markOriginalFileReadFailed": (imports, ctx) =>
+    imports.originalFileReads.markOriginalFileReadFailed(ctx, { sourceId: "missing", attempt: 0 }),
   "files.uploadFile": (imports, ctx) =>
     imports.files.uploadFile(ctx, { name: "staff.csv", bytes: Buffer.from("Name\nAvery Stone") }),
   "files.mapFile": (imports, ctx) =>

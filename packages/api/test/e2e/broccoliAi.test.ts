@@ -9,6 +9,7 @@ import {
   TestEnv,
   type TestEnvOptions,
   TEST_OWNER,
+  STAFF_PDF,
 } from "#test/support";
 
 test("a self-hosted CSV uses Broccoli AI with an install token and placeholders", async ({
@@ -156,6 +157,91 @@ test("an expired Broccoli AI free period is reported on the file without the pro
         },
       },
     });
+});
+
+test("Broccoli AI reads a consented PDF through the relay without sending its name", async ({
+  fakeDecisions: relay,
+}) => {
+  relay.answerReadPeople({
+    people: [
+      { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+      { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+    ],
+  });
+  const { browser } = await selfHostedImport(relay);
+  const pdf = STAFF_PDF;
+  const uploaded = await browser.post("/api/imports/files?name=private-contractors.pdf", pdf);
+  expect(uploaded.status).toBe(200);
+  const { sourceId } = (await uploaded.json()) as { sourceId: string };
+  const query = "query { import { id sources { id status originalReadAllowed employeeCount } } }";
+  expect(await (await browser.graphql(query)).json()).toEqual({
+    data: {
+      import: {
+        id: "import",
+        sources: [
+          {
+            id: sourceId,
+            status: "WAITING_FOR_ORIGINAL_READ_CONSENT",
+            originalReadAllowed: false,
+            employeeCount: 0,
+          },
+        ],
+      },
+    },
+  });
+  expect(relay.httpRequests().filter(({ path }) => path === "/v1/chat/completions")).toEqual([]);
+
+  const allowed = await browser.graphql(
+    `mutation AllowOriginalFileRead($sourceId: ID!) {
+    import { allowOriginalFileRead(sourceId: $sourceId) {
+      import { id } error { __typename ... on Error { message } }
+    } }
+  }`,
+    { sourceId },
+  );
+
+  expect(await allowed.json()).toEqual({
+    data: { import: { allowOriginalFileRead: { import: { id: "import" }, error: null } } },
+  });
+  await expect
+    .poll(async () => (await browser.graphql(query)).json(), { timeout: 15_000 })
+    .toEqual({
+      data: {
+        import: {
+          id: "import",
+          sources: [
+            { id: sourceId, status: "MAPPED", originalReadAllowed: true, employeeCount: 2 },
+          ],
+        },
+      },
+    });
+  const tokens = relay.issuedTokens();
+  expect(tokens).toHaveLength(1);
+  const requests = relay.httpRequests().filter(({ path }) => path === "/v1/chat/completions");
+  expect(requests).toHaveLength(1);
+  expect(requests[0]!.headers.authorization).toBe(`Bearer ${tokens[0]}`);
+  expect(requests[0]!.headers["x-broccoli-client"]).toMatch(/^broccoli\/\S+$/);
+  expect(requests[0]!.body).toMatchObject({
+    model: "deepseek/deepseek-v4.1-flash-1017",
+    provider: { data_collection: "deny", zdr: true },
+    response_format: { type: "json_schema" },
+    plugins: [{ id: "file-parser", pdf: { engine: "pdf-text" } }],
+    messages: expect.arrayContaining([
+      expect.objectContaining({
+        role: "user",
+        content: expect.arrayContaining([
+          {
+            type: "file",
+            file: {
+              filename: "file.pdf",
+              file_data: `data:application/pdf;base64,${pdf.toString("base64")}`,
+            },
+          },
+        ]) as unknown,
+      }),
+    ]) as unknown,
+  });
+  expect(JSON.stringify(requests[0]!.body)).not.toContain("private-contractors.pdf");
 });
 
 const CSV = Buffer.from("Name,Email\nAvery Stone,avery@example.com");

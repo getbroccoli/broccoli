@@ -46,7 +46,7 @@ test("answers a waiting file at once", { timeout: 5_000 }, async ({ orm, seed })
 
   const files = await agents.files.pollUnmappedFiles(ctx, { seconds: 30 });
 
-  expect(files).toEqual([{ id }]);
+  expect(files).toEqual([{ id, way: "answer_masked_questions" }]);
 });
 
 test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm, seed }) => {
@@ -62,7 +62,7 @@ test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm,
   const waiting = agents.files.pollUnmappedFiles(ctx, { seconds: 30 });
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
 
-  expect(await waiting).toEqual([{ id }]);
+  expect(await waiting).toEqual([{ id, way: "answer_masked_questions" }]);
 });
 
 test("answers no files when the wait runs out", async ({ orm, seed }) => {
@@ -144,7 +144,9 @@ test("lets a later session answer a file dropped before it connected", async ({ 
     client: "Next agent",
   });
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
-  expect(await agents.files.listUnmappedFiles(ctx)).toEqual([{ id }]);
+  expect(await agents.files.listUnmappedFiles(ctx)).toEqual([
+    { id, way: "answer_masked_questions" },
+  ]);
 
   const result = await agents.files.answerMappingQuestions(ctx, id, ANSWERS);
 

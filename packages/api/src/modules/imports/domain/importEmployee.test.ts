@@ -226,6 +226,7 @@ const mapped = {
   failureMessage: null,
   readBy: "parsed_by_broccoli",
   pickedUpByExternalAgentAt: null,
+  originalReadAllowedAt: null,
 } as const;
 
 const row: ImportEmployeeRecord = {

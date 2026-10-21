@@ -5,6 +5,7 @@ import { readFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
 import { answeredSourceRepository, type ImportRepository } from "../../db";
 import {
+  type ExternalAgentParseFileWay,
   type FileSheet,
   type FileSource,
   type IncomingRecord,
@@ -20,7 +21,7 @@ import {
 } from "../../domain";
 import { lockOpenImport } from "./openImport";
 import { readStaffFile } from "./staffFile";
-import { mimeTypeOf, type UploadReader } from "./uploadReader";
+import type { StaffUpload, UploadReader } from "./uploadReader";
 
 /**
  * Staff files mapped by answers to Broccoli's masked questions instead of by its model: the
@@ -29,11 +30,23 @@ import { mimeTypeOf, type UploadReader } from "./uploadReader";
  */
 export interface AnsweredMappingService {
   /** Reads a staff file the setup holder uploads; refuses one that cannot be read, storing nothing. */
-  readStaffUpload(ctx: SecurityContext, bytes: Uint8Array): Promise<FileSheet[]>;
-  /** Stores the file as a source waiting for answers, with no mapping job; returns its id. */
+  readStaffUpload(
+    ctx: SecurityContext,
+    file: { name: string; bytes: Uint8Array },
+  ): Promise<StaffUpload>;
+  /**
+   * Stores the file as a source waiting for answers, with no mapping job, or a PDF waiting for the
+   * owner's consent; returns its id.
+   */
   addAnsweredSource(ctx: SecurityContext, tx: Tx, file: AnsweredFile): Promise<string>;
-  /** The sources still waiting for answers, without their names, which may name a person. */
-  readUnmappedSources(ctx: SecurityContext, tx: Tx): Promise<{ id: string }[]>;
+  /**
+   * The sources waiting for the external agent, and how it maps each, without their names, which
+   * may name a person.
+   */
+  readUnmappedSources(
+    ctx: SecurityContext,
+    tx: Tx,
+  ): Promise<{ id: string; way: ExternalAgentParseFileWay }[]>;
   /**
    * Per sheet, its first rows as placeholders and the questions Broccoli's model gets; records
    * that the external agent picked the file up.
@@ -52,23 +65,25 @@ export interface AnsweredMappingService {
 export interface AnsweredFile {
   name: string;
   bytes: Uint8Array;
-  sheets: FileSheet[];
+  upload: StaffUpload;
 }
 
 export function createAnsweredMappingService(readUpload: UploadReader): AnsweredMappingService {
   return {
-    readStaffUpload: async (ctx, bytes) => {
+    readStaffUpload: async (ctx, file) => {
       ctx.requireSetupAccess();
-      return readUpload(bytes);
+      return readUpload(file);
     },
 
-    addAnsweredSource: async (ctx, tx, { name, bytes, sheets }) => {
+    addAnsweredSource: async (ctx, tx, { name, bytes, upload }) => {
       ctx.requireSetupAccess();
       const imports = await lockOpenImport(tx);
-      return imports.insertFileSource(name, "answered_by_external_agent", {
-        content: Buffer.from(bytes),
-        mimeType: mimeTypeOf(sheets),
-      });
+      return imports.insertFileSource(
+        name,
+        "answered_by_external_agent",
+        { content: Buffer.from(bytes), mimeType: upload.mimeType },
+        upload.sheets ? "mapping" : "waiting_for_original_read_consent",
+      );
     },
 
     readUnmappedSources: async (ctx, tx) => {
@@ -78,7 +93,10 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
         .filter(
           ({ readBy, status }) => readBy === "answered_by_external_agent" && status === "mapping",
         )
-        .map(({ id }) => ({ id }));
+        .map(({ id, originalReadAllowedAt }) => ({
+          id,
+          way: originalReadAllowedAt ? "read_original_file" : "answer_masked_questions",
+        }));
     },
 
     readMappingQuestions: async (ctx, tx, sourceId) => {
@@ -137,15 +155,24 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
   };
 }
 
-/** A source mapped by answers and its sheets; NOT_FOUND for any other source. */
+/**
+ * A source mapped by answers and its sheets; NOT_FOUND for any other source, and CONFLICT for one
+ * the owner let the agent read in full.
+ */
 async function readAnsweredFile(
   tx: Tx,
   imports: ImportRepository,
   sourceId: string,
 ): Promise<{ source: FileSource; sheets: FileSheet[] }> {
   const source = await imports.findFileSource(sourceId);
-  if (source?.readBy !== "answered_by_external_agent") {
+  if (
+    source?.readBy !== "answered_by_external_agent" ||
+    source.status === "waiting_for_original_read_consent"
+  ) {
     throw notWaiting();
+  }
+  if (source.originalReadAllowedAt) {
+    throw new ApplicationError("CONFLICT", "Read this file in full and send its people.");
   }
   const file = await readFile(tx, source.fileId);
   const sheets = file && (await readStaffFile(file.content));
