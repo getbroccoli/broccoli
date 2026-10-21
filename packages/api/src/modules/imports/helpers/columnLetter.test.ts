@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { columnIndex, columnLetter } from "./columns";
+import { columnIndex, columnLetter } from "./columnLetter";
 
 it("converts zero-based indexes to spreadsheet letters across Z", () => {
   expect(columnLetter(0)).toBe("A");

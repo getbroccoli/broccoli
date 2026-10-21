@@ -1,3 +1,4 @@
-export { columnIndex, columnLetter } from "./columns";
+export { columnIndex, columnLetter } from "./columnLetter";
 export { fingerprint } from "./fingerprint";
-export { nonBlank, parseEmail } from "./text";
+export { nonBlank } from "./nonBlank";
+export { parseEmail } from "./parseEmail";

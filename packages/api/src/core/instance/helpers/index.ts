@@ -1,2 +1,2 @@
 export { provisionalOwnerEmail } from "./provisionalOwnerEmail";
-export { hashSetupToken } from "./setupToken";
+export { hashSetupToken } from "./hashSetupToken";
