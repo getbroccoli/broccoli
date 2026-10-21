@@ -1,4 +1,5 @@
-import type { Decisions, OriginalFileReader } from "../../../../integrations/ai";
+import type { Decisions } from "../../../../integrations/ai";
+import type { OriginalFileReader } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { StoredFile } from "../../../../core/files";

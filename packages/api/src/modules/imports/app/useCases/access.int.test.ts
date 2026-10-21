@@ -24,7 +24,11 @@ const calls = {
   "originalFileReads.allowOriginalFileRead": (imports, ctx) =>
     imports.originalFileReads.allowOriginalFileRead(ctx, "missing"),
   "originalFileReads.readOriginalFile": (imports, ctx) =>
-    imports.originalFileReads.readOriginalFile(ctx, { sourceId: "missing", attempt: 0 }),
+    imports.originalFileReads.readOriginalFile(ctx, {
+      sourceId: "missing",
+      attempt: 0,
+      aiSource: null,
+    }),
   "files.uploadFile": (imports, ctx) =>
     imports.files.uploadFile(ctx, { name: "staff.csv", bytes: Buffer.from("Name\nAvery Stone") }),
   "files.mapFile": (imports, ctx) =>

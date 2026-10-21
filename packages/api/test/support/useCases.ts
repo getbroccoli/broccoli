@@ -5,10 +5,14 @@ import { join } from "node:path";
 
 import { onTestFinished } from "vitest";
 
-import type { Decisions, OriginalFileReader } from "../../src/integrations/ai";
+import type { Decisions } from "../../src/integrations/ai";
 import type { Orm } from "../../src/core/db";
 import type { Mode } from "../../src/core/env";
-import { type AiSettings, createAiSettings } from "../../src/core/instance";
+import {
+  type AiSettings,
+  createAiSettings,
+  type OriginalFileReader,
+} from "../../src/core/instance";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";

@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import type { OriginalFileRead, OriginalFileReader } from "../../../../integrations/ai";
+import type { OriginalFileRead } from "../../../../integrations/ai";
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import { readFile, type StoredFile } from "../../../../core/files";
-import { readInstance } from "../../../../core/instance";
+import { type AiSource, type OriginalFileReader, readInstance } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
 import {
@@ -57,6 +57,8 @@ export interface OriginalFileReadService {
 export interface ReadOriginalFileJob {
   sourceId: string;
   attempt: number;
+  /** The AI the owner chose when allowing the read; it reads the file even if they switch later. */
+  aiSource: AiSource | null;
 }
 
 /** How the external agent's people for a file ended. */
@@ -103,7 +105,8 @@ export function createOriginalFileReadService({
       await transact(async (tx) => {
         const imports = await lockOpenImport(tx);
         requireAllowable(await imports.findFileSource(sourceId));
-        const byExternalAgent = (await readInstance(tx)).aiSource === "external_agent";
+        const { aiSource } = await readInstance(tx);
+        const byExternalAgent = aiSource === "external_agent";
         const attempt = await originalReadRepository(tx).allowOriginalRead(
           sourceId,
           byExternalAgent ? "answered_by_external_agent" : "parsed_by_broccoli",
@@ -111,12 +114,12 @@ export function createOriginalFileReadService({
         if (byExternalAgent) {
           tx.publish("imports.original_file_read_allowed", { sourceId });
         } else {
-          await jobs.send(tx, "imports.readOriginalFile", { sourceId, attempt });
+          await jobs.send(tx, "imports.readOriginalFile", { sourceId, attempt, aiSource });
         }
       });
     },
 
-    readOriginalFile: async (ctx, { sourceId, attempt }) => {
+    readOriginalFile: async (ctx, { sourceId, attempt, aiSource }) => {
       requireImportAccess(ctx);
       const source = await importReader(orm).findFileSource(sourceId);
       if (!isCurrentRun(source, attempt)) {
@@ -126,7 +129,7 @@ export function createOriginalFileReadService({
       if (!file) {
         throw new Error(`File source ${sourceId} has no file`);
       }
-      const { outcome, people } = await readWithModel(originalFileReader, file);
+      const { outcome, people } = await readWithModel(originalFileReader, aiSource, file);
       await transact(async (tx) => {
         // Only the current run of an open import writes.
         const imports = await openImport(tx);
@@ -207,10 +210,14 @@ async function readableByExternalAgent(
 type ReadResult = { outcome: MappingOutcome; people: ReadPeople | null };
 
 /** The model's people of the file; a failure retrying cannot fix fails the file, any other rejects. */
-async function readWithModel(reader: OriginalFileReader, file: StoredFile): Promise<ReadResult> {
+async function readWithModel(
+  reader: OriginalFileReader,
+  aiSource: AiSource | null,
+  file: StoredFile,
+): Promise<ReadResult> {
   let answer: unknown;
   try {
-    answer = await reader.readOriginalFile({
+    answer = await reader.readOriginalFile(aiSource, {
       instructions: INSTRUCTIONS,
       file: await originalOf(file),
       schema: READ_PEOPLE_JSON_SCHEMA,

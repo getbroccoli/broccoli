@@ -1,3 +1,5 @@
+import assert from "node:assert/strict";
+
 import {
   expect,
   importUseCases,
@@ -10,7 +12,35 @@ import {
   STAFF_PDF as PDF,
 } from "#test/support";
 
-import { DecisionsError, type OriginalFileReader } from "../../../../integrations/ai";
+import type { OriginalFileReader } from "../../../../core/instance";
+import { DecisionsError } from "../../../../integrations/ai";
+
+test("the job reads with the AI source chosen at consent after the owner switches", async ({
+  orm,
+  seed,
+}) => {
+  await seed.aiSource("openrouter");
+  const source = await seed.fileSource({ content: CSV, status: "mapped" });
+  const sources: Parameters<OriginalFileReader["readOriginalFile"]>[0][] = [];
+  const imports = importUseCases(orm, {
+    originalFileReader: {
+      readOriginalFile: (aiSource) => {
+        sources.push(aiSource);
+        return Promise.resolve(PEOPLE);
+      },
+    },
+  });
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await seed.aiSource("broccoli_ai");
+  expect(imports.sentJobs).toHaveLength(1);
+  const [job] = imports.sentJobs;
+  assert(job && "aiSource" in job.payload);
+  expect(job.name).toBe("imports.readOriginalFile");
+
+  await imports.originalFileReads.readOriginalFile(SYSTEM, job.payload);
+
+  expect(sources).toEqual(["openrouter"]);
+});
 
 test.for(["csv", "xlsx"] as const)(
   "the job sends real %s values without the file name and replaces the masked records",
@@ -37,10 +67,10 @@ test.for(["csv", "xlsx"] as const)(
     await seed.importEmployees(source.id, [
       { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
     ]);
-    const requests: Parameters<OriginalFileReader["readOriginalFile"]>[0][] = [];
+    const requests: Parameters<OriginalFileReader["readOriginalFile"]>[1][] = [];
     const imports = importUseCases(orm, {
       originalFileReader: {
-        readOriginalFile: (request) => {
+        readOriginalFile: (_source, request) => {
           requests.push(request);
           return Promise.resolve(PEOPLE);
         },
@@ -48,7 +78,11 @@ test.for(["csv", "xlsx"] as const)(
     });
     await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
 
-    await imports.originalFileReads.readOriginalFile(SYSTEM, { sourceId: source.id, attempt: 1 });
+    await imports.originalFileReads.readOriginalFile(SYSTEM, {
+      sourceId: source.id,
+      attempt: 1,
+      aiSource: null,
+    });
 
     expect(requests).toHaveLength(1);
     expect(requests[0]!.file).toMatchObject({
@@ -72,10 +106,10 @@ test.for(["csv", "xlsx"] as const)(
 );
 
 test("the job sends a PDF as its stored bytes", async ({ orm }) => {
-  const requests: Parameters<OriginalFileReader["readOriginalFile"]>[0][] = [];
+  const requests: Parameters<OriginalFileReader["readOriginalFile"]>[1][] = [];
   const imports = importUseCases(orm, {
     originalFileReader: {
-      readOriginalFile: (request) => {
+      readOriginalFile: (_source, request) => {
         requests.push(request);
         return Promise.resolve(PEOPLE);
       },
@@ -87,7 +121,11 @@ test("the job sends a PDF as its stored bytes", async ({ orm }) => {
   });
   await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, id);
 
-  await imports.originalFileReads.readOriginalFile(SYSTEM, { sourceId: id, attempt: 1 });
+  await imports.originalFileReads.readOriginalFile(SYSTEM, {
+    sourceId: id,
+    attempt: 1,
+    aiSource: null,
+  });
 
   expect(requests).toHaveLength(1);
   expect(requests[0]!.file).toEqual({ mimeType: "application/pdf", bytes: PDF });
@@ -105,7 +143,11 @@ test("a cut-off answer fails the file as an incomplete original read", async ({ 
   });
   await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
 
-  await imports.originalFileReads.readOriginalFile(SYSTEM, { sourceId: source.id, attempt: 1 });
+  await imports.originalFileReads.readOriginalFile(SYSTEM, {
+    sourceId: source.id,
+    attempt: 1,
+    aiSource: null,
+  });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
     { id: source.id, status: "failed", failure: "original_read_incomplete" },
@@ -119,7 +161,11 @@ test("an invalid model answer fails the file as unavailable", async ({ orm, seed
   });
   await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
 
-  await imports.originalFileReads.readOriginalFile(SYSTEM, { sourceId: source.id, attempt: 1 });
+  await imports.originalFileReads.readOriginalFile(SYSTEM, {
+    sourceId: source.id,
+    attempt: 1,
+    aiSource: null,
+  });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
     { id: source.id, status: "failed", failure: "unavailable" },
@@ -138,7 +184,11 @@ test("a job with no people left fails the file as having no people columns", asy
   });
   await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
 
-  await imports.originalFileReads.readOriginalFile(SYSTEM, { sourceId: source.id, attempt: 1 });
+  await imports.originalFileReads.readOriginalFile(SYSTEM, {
+    sourceId: source.id,
+    attempt: 1,
+    aiSource: null,
+  });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
     { id: source.id, status: "failed", failure: "no_people_columns" },
@@ -156,7 +206,11 @@ test("a job from an earlier attempt leaves the source and its records unchanged"
   const before = await imports.reads.listSources(SETUP_HOLDER);
   const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
 
-  await imports.originalFileReads.readOriginalFile(SYSTEM, { sourceId: source.id, attempt: 0 });
+  await imports.originalFileReads.readOriginalFile(SYSTEM, {
+    sourceId: source.id,
+    attempt: 0,
+    aiSource: null,
+  });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(

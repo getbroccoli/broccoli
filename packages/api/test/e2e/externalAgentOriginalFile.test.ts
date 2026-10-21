@@ -98,9 +98,20 @@ test("consent wakes an agent waiting for unmapped files", async ({ env }) => {
   const code = await createExternalAgentCode(browser);
   const id = await dropPdf(browser);
   const token = await exchangeExternalAgentCode(env.url, code);
+  await env.restart();
+  const readListening = async () =>
+    (
+      await browser.graphql("query { setup { id ai { id externalAgent { id listening } } } }")
+    ).json();
+  expect(await readListening()).toMatchObject({
+    data: { setup: { ai: { externalAgent: { listening: false } } } },
+  });
   const waiting = fetch(`${env.url}/api/external-agent/poll-unmapped-files?wait=30`, {
     headers: { authorization: `Bearer ${token}` },
     signal: AbortSignal.timeout(10_000),
+  });
+  await expect.poll(readListening).toMatchObject({
+    data: { setup: { ai: { externalAgent: { listening: true } } } },
   });
 
   await allowOriginalFileRead(browser, id);

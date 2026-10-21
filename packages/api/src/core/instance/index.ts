@@ -19,6 +19,7 @@ export {
   readInstance,
   createAiSettings,
   type AiSettings,
+  type OriginalFileReader,
 } from "./app";
 export { refuseBearerAuth, resolveSecurityContext } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";

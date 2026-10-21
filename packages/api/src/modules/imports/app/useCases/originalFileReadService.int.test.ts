@@ -108,7 +108,10 @@ test("consent with Broccoli queues a new read and keeps the existing records", a
     },
   ]);
   expect(imports.sentJobs).toEqual([
-    { name: "imports.readOriginalFile", payload: { sourceId: source.id, attempt: 1 } },
+    {
+      name: "imports.readOriginalFile",
+      payload: { sourceId: source.id, attempt: 1, aiSource: "broccoli_ai" },
+    },
   ]);
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(
     records,
@@ -166,7 +169,11 @@ test("refuses a second consent", async ({ orm, seed }) => {
     originalFileReader: { readOriginalFile: () => Promise.resolve(PEOPLE) },
   });
   await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
-  await imports.originalFileReads.readOriginalFile(SYSTEM, { sourceId: source.id, attempt: 1 });
+  await imports.originalFileReads.readOriginalFile(SYSTEM, {
+    sourceId: source.id,
+    attempt: 1,
+    aiSource: null,
+  });
   const before = await imports.reads.listSources(SETUP_HOLDER);
 
   await expect(

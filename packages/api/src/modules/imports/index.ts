@@ -54,6 +54,8 @@ export function importsModule(
       "imports.readOriginalFile": {
         run: (job) =>
           useCases.originalFileReads.readOriginalFile(PrincipalSecurityContext.system(), job),
+        // A model may take minutes to read a whole file, twice with a new Broccoli AI token.
+        expireInSeconds: 15 * 60,
         // Both jobs end alike: the file fails, unless a newer run has started.
         onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },

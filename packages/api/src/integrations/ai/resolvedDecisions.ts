@@ -12,7 +12,7 @@ import {
   refusal,
   UnauthorizedDecisionsError,
 } from "./decisions";
-import { createOriginalFileReader, type OriginalFileReader } from "./originalFileRead";
+import { createOriginalFileReader, type OriginalFileRead } from "./originalFileRead";
 
 /** Where the install keeps its Broccoli AI token; null until the first one is issued. */
 export interface BroccoliAiTokenStore {
@@ -24,11 +24,10 @@ export interface BroccoliAiTokenStore {
 export type DecisionsSource =
   { kind: "openrouter"; url: string; key: string } | { kind: "broccoli_ai"; url: string };
 
-/**
- * Decisions and original file reads whose source is picked per request, and the Broccoli AI token
- * they use.
- */
-export interface ResolvedDecisions extends Decisions, OriginalFileReader {
+/** Decisions whose source is picked per request, and the Broccoli AI token they use. */
+export interface ResolvedDecisions extends Decisions {
+  /** Reads a whole file through `source`, the one chosen when the owner allowed it. */
+  readOriginalFile(source: DecisionsSource, request: OriginalFileRead): Promise<unknown>;
   /** Makes sure the install holds a Broccoli AI token, issuing one when it has none. */
   prepareBroccoliAi(url: string): Promise<void>;
 }
@@ -47,8 +46,10 @@ export function createResolvedDecisions({
 }): ResolvedDecisions {
   const broccoliAi = broccoliAiTokens(tokens);
   /** Sends one request to the source of the moment, with a new Broccoli AI token once if needed. */
-  const askSource = async <T>(ask: (connection: SourceConnection) => Promise<T>): Promise<T> => {
-    const source = await readSource();
+  const askSource = async <T>(
+    source: DecisionsSource,
+    ask: (connection: SourceConnection) => Promise<T>,
+  ): Promise<T> => {
     if (source.kind === "openrouter") {
       return ask({ ...OPENROUTER_PATHS, url: source.url, credential: source.key, headers: {} });
     }
@@ -65,16 +66,16 @@ export function createResolvedDecisions({
     }
   };
   return {
-    decide: (state, questions, minConfidence) =>
-      askSource(({ url, decisionsPath, credential, headers }) =>
+    decide: async (state, questions, minConfidence) =>
+      askSource(await readSource(), ({ url, decisionsPath, credential, headers }) =>
         createDecisions({
           endpoint: urlUnder(url, decisionsPath).href,
           credential,
           headers,
         }).decide(state, questions, minConfidence),
       ),
-    readOriginalFile: (request) =>
-      askSource(({ url, chatCompletionsPath, credential, headers }) =>
+    readOriginalFile: (source, request) =>
+      askSource(source, ({ url, chatCompletionsPath, credential, headers }) =>
         createOriginalFileReader({
           endpoint: urlUnder(url, chatCompletionsPath).href,
           credential,

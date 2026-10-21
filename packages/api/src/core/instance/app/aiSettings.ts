@@ -9,7 +9,7 @@ import {
   type Decisions,
   DecisionsError,
   type DecisionsSource,
-  type OriginalFileReader,
+  type OriginalFileRead,
 } from "../../../integrations/ai";
 import { instanceRepository } from "../db";
 import { aiConfig, type AiConfig, type AiSource, type SavedAiSource } from "../domain";
@@ -26,8 +26,14 @@ export interface AiSettings {
   save(ctx: SecurityContext, choice: AiChoice): Promise<AiConfig>;
   /** The model Broccoli asks on its own, sent where the settings point at each request. */
   decisions: Decisions;
-  /** The same model reading a file in full, once the owner allowed it, sent the same way. */
+  /** A model reading a file in full, once the owner allowed it. */
   originalFileReader: OriginalFileReader;
+}
+
+/** Reads a whole file with the AI the owner chose when allowing it, not the one chosen now. */
+export interface OriginalFileReader {
+  /** `source` is the instance's AI source at the owner's consent; null on a managed instance. */
+  readOriginalFile(source: AiSource | null, request: OriginalFileRead): Promise<unknown>;
 }
 
 /** The owner's choice of AI at setup. */
@@ -96,7 +102,17 @@ export function createAiSettings({
       return readConfig();
     },
     decisions,
-    originalFileReader: decisions,
+    originalFileReader: {
+      readOriginalFile: async (source, request) => {
+        const config = await readConfig();
+        return decisions.readOriginalFile(
+          deployment.mode === "managed"
+            ? openRouterSource(openRouter.url, openRouter.key)
+            : sourceOf(source ? { ...config, source } : config, deployment, openRouter.url),
+          request,
+        );
+      },
+    },
   };
 }
 

@@ -15,6 +15,11 @@ export interface JobHandler<Name extends JobName> {
   run(payload: Jobs[Name]): Promise<void>;
   /** After the last attempt failed, expired or died with the process. */
   onFailed(payload: Jobs[Name]): Promise<void>;
+  /**
+   * How long one attempt may run before it counts as expired and runs again; longer than its
+   * slowest call, so a slow call is never sent twice. Two minutes by default.
+   */
+  expireInSeconds?: number;
 }
 
 export type JobHandlers = { [Name in JobName]?: JobHandler<Name> };
@@ -110,7 +115,7 @@ async function workQueue(
     retryLimit: RETRY_LIMIT,
     retryDelay: retryDelaySeconds,
     retryBackoff: true,
-    expireInSeconds: EXPIRE_IN_SECONDS,
+    expireInSeconds: handler.expireInSeconds ?? EXPIRE_IN_SECONDS,
     deadLetter: failedName,
   });
   await boss.work<Jobs[JobName]>(name, { localConcurrency: CONCURRENCY }, async ([job]) => {
