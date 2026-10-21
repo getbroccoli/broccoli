@@ -12,15 +12,10 @@ export {
   deleteAllEmployees,
   findTakenEmails,
   hasDemoEmployees,
-  type DemoEmployee,
-  type EmployeeUseCases,
 } from "./app";
-/** For test seeding only; other modules go through the use cases. */
-export { employeeRepository } from "./db";
 export {
   employeeFieldErrors,
   parseEmployeeField,
-  tryParseNewEmployee,
   type Employee,
   type EmployeeOrder,
   type EmployeeOrderField,

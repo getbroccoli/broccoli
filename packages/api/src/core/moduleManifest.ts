@@ -4,7 +4,8 @@ import type { Orm, Transact } from "./db";
 import type { SetupDemo } from "./instance";
 import type { EventHandlers } from "./events";
 import type { JobHandlers, JobQueue } from "./jobs";
-import type { Resolvers, SecurityResolver } from "./graphql";
+import type { Resolvers } from "./graphql";
+import type { SecurityResolver } from "./security";
 import type { Logger } from "./logger";
 import type { SecretBox } from "./secrets";
 

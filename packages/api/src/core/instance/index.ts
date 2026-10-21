@@ -25,12 +25,8 @@ export { refuseBearerAuth, resolveSecurityContext } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
 export {
   AssignmentConflictError,
-  type AiSource,
   type AiConfig,
-  type Instance,
+  type AiSource,
   OwnerExistsError,
-  SETUP_STEPS,
   type ManagedAssignment,
-  type SetupStep,
 } from "./domain";
-export { hashSetupToken } from "./helpers";

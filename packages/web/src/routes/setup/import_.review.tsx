@@ -1,14 +1,13 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 
-import { DEFAULT_EMPLOYEE_LIST_SEARCH } from "@/features/employees";
-import { ImportReview, importReviewSearch } from "@/features/imports";
+import { DEFAULT_IMPORT_REVIEW_SEARCH, ImportReview, importReviewSearch } from "@/features/imports";
 import { requireSetupPage, SetupLayout } from "@/features/setup";
 import { t } from "@/i18n";
 
 /** The owner reviews everyone the import found, then approves; still the server's import step. */
 export const Route = createFileRoute("/setup/import_/review")({
   validateSearch: importReviewSearch,
-  search: { middlewares: [stripSearchParams(DEFAULT_EMPLOYEE_LIST_SEARCH)] },
+  search: { middlewares: [stripSearchParams(DEFAULT_IMPORT_REVIEW_SEARCH)] },
   beforeLoad: (gate) => {
     requireSetupPage("review", gate);
   },

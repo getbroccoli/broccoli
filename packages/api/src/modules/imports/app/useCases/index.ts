@@ -3,6 +3,7 @@ import type { OriginalFileReader } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { StoredFile } from "../../../../core/files";
+import type { DemoStart } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
@@ -13,7 +14,7 @@ import { finishImport } from "./deleteImport";
 import { readImportPhoto } from "./readImportPhoto";
 import { readSlack } from "./readSlack";
 import { resetSetup } from "./resetSetup";
-import { startDemo } from "./startDemo";
+import { prepareDemoStart, startDemo } from "./startDemo";
 import { createUploadReader } from "./uploadReader";
 import {
   type AnsweredMappingService,
@@ -26,7 +27,6 @@ import {
 
 export type { DemoFill, SlackReader } from "./importContext";
 export type { ImportReview } from "./importReview";
-export { prepareDemoStart } from "./startDemo";
 export type { StaffUpload } from "./uploadReader";
 export { READ_PEOPLE_JSON_SCHEMA, type ReadPeopleOutcome } from "./originalFileReadService";
 
@@ -34,6 +34,8 @@ export { READ_PEOPLE_JSON_SCHEMA, type ReadPeopleOutcome } from "./originalFileR
 export interface ImportUseCases {
   readSlack: (ctx: SecurityContext) => Promise<void>;
   startDemo: (ctx: SecurityContext) => Promise<void>;
+  /** The demo start for setup's demo: prepared outside any transaction, run in the caller's. */
+  prepareDemoStart: () => Promise<DemoStart>;
   /** Approve of the import the owner reviewed, at the `version` of `reads.readReview`. */
   approveImport: (ctx: SecurityContext, version: string) => Promise<void>;
   /** Deletes the approved import once setup is complete; its photos stay with the employees. */
@@ -72,6 +74,7 @@ export function createImportUseCases({
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
+    prepareDemoStart: () => prepareDemoStart(context),
     approveImport: (ctx: SecurityContext, version: string) => approveImport(context, ctx, version),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
     resetSetup: (ctx: SecurityContext) => resetSetup(context, ctx),

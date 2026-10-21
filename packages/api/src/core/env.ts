@@ -2,11 +2,11 @@ import { z } from "zod";
 
 import { parseOrigin } from "../utils";
 
-export const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
+const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
 
 export type LogLevel = (typeof LOG_LEVELS)[number];
 
-export const MODES = ["self_hosted", "managed"] as const;
+const MODES = ["self_hosted", "managed"] as const;
 
 /** Self-hosted installs create their owner on first visit; managed ones through the sign-in service. */
 export type Mode = (typeof MODES)[number];
