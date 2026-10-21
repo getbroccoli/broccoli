@@ -1,10 +1,5 @@
-import { z } from "zod";
-
-import { type CalendarDate, parseCalendarDate } from "../../../utils";
+import type { CalendarDate } from "../../../utils";
 import type { ImportSource } from "./importSource";
-
-/** The version of the employee `values` schema that new records are written with. */
-export const IMPORT_EMPLOYEE_VERSION = 1;
 
 /** An employee as one source proposes it; any field may be missing until review. */
 export interface ImportEmployeeValues {
@@ -33,9 +28,6 @@ export interface IncomingRecord {
   /** Where the person's own photo can be downloaded; only Slack members have one. */
   photoUrl?: string | null;
 }
-
-/** The version of the employee choices schema that new choices are written with. */
-export const IMPORT_EMPLOYEE_CHOICES_VERSION = 1;
 
 /** The fields of an import employee the owner can choose, in the order review shows them. */
 export const IMPORT_EMPLOYEE_FIELDS = [
@@ -135,31 +127,9 @@ export function groupEmployeeRecords(
   });
 }
 
-/** Stored `values` of an employee record, read with the schema of their version. */
-export function parseImportEmployeeValues(
-  typeVersion: number,
-  json: unknown,
-): ImportEmployeeValues {
-  if (typeVersion !== IMPORT_EMPLOYEE_VERSION) {
-    throw new Error(`Unknown version ${typeVersion} of import employee values`);
-  }
-  return employeeValuesV1.parse(json);
-}
-
 /** A conflict the owner has not settled: two values or more and the default still shown. */
 export function hasOpenConflict({ options, choice }: ImportEmployeeValue): boolean {
   return options.length > 1 && choice === "default";
-}
-
-/** Stored employee choices, read with the schema of their version. */
-export function parseImportEmployeeChoices(
-  typeVersion: number,
-  json: unknown,
-): ImportEmployeeChoices["values"] {
-  if (typeVersion !== IMPORT_EMPLOYEE_CHOICES_VERSION) {
-    throw new Error(`Unknown version ${typeVersion} of import employee choices`);
-  }
-  return employeeChoicesV1.parse(json);
 }
 
 /** The sources in the order their values win: files oldest first, then Slack. */
@@ -221,39 +191,3 @@ function employeeValue(
   }
   return { value: options[0]?.value ?? null, choice: "default", pickedRecordId: null, options };
 }
-
-const valueChoice = z.union([
-  z.object({ recordId: z.string() }).strict(),
-  z.object({ value: z.string() }).strict(),
-]);
-
-const employeeChoicesV1 = z.object({
-  firstName: valueChoice.optional(),
-  lastName: valueChoice.optional(),
-  email: valueChoice.optional(),
-  jobTitle: valueChoice.optional(),
-  startDate: valueChoice.optional(),
-});
-
-const text = z.string().nullable();
-
-const employeeValuesV1 = z.object({
-  firstName: text,
-  lastName: text,
-  email: text,
-  jobTitle: text,
-  startDate: z
-    .string()
-    .nullable()
-    .transform((value, context) => {
-      if (value === null) {
-        return null;
-      }
-      const date = parseCalendarDate(value);
-      if (!date) {
-        context.addIssue({ code: "custom", message: "Not a calendar date" });
-        return z.NEVER;
-      }
-      return date;
-    }),
-});

@@ -1,5 +1,3 @@
-import { randomBytes } from "node:crypto";
-
 import type { Instance } from "./instance";
 
 /** How long the demo's provisional owner may use the app before creating their account. */
@@ -13,14 +11,6 @@ export function demoExpiry(now: Date): Date {
 /** When `userId` loses access as the demo's provisional owner; null for anyone else. */
 export function demoDeadlineOf(instance: Instance, userId: string): Date | null {
   return instance.ownerUserId === userId ? instance.demoExpiresAt : null;
-}
-
-/**
- * A unique sign-in email for the provisional owner, in the reserved `.invalid` domain, so
- * it never reaches a real mailbox; never read to tell a demo apart.
- */
-export function provisionalOwnerEmail(): string {
-  return `demo-${randomBytes(8).toString("hex")}@demo.invalid`;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

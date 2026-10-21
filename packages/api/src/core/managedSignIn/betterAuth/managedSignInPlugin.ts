@@ -12,7 +12,8 @@ import { ormOf, type Transact } from "../../db";
 import type { ManagedAssignment } from "../../instance";
 import { PrincipalSecurityContext } from "../../security";
 import { SignInRefusedError, signInWithTicket } from "../app";
-import { InvalidTokenError, parseTicketClaims, type ManagedTicket } from "../domain";
+import { InvalidTokenError, type ManagedTicket } from "../domain";
+import { parseTicketClaims } from "../jwt";
 import { verifyToken, type TokenCheck } from "../jwt";
 
 const STATE_COOKIE = "__Host-managed_state";

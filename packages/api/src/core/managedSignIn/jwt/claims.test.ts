@@ -1,11 +1,7 @@
 import { expect, it } from "vitest";
 
-import {
-  InvalidAssignmentError,
-  InvalidTokenError,
-  parseInitClaims,
-  parseTicketClaims,
-} from "./claims";
+import { InvalidAssignmentError, InvalidTokenError } from "../domain";
+import { parseInitClaims, parseTicketClaims } from "./claims";
 
 const CONFIG = {
   companyId: "c-acme",

@@ -1,7 +1,8 @@
 import type { Answers, JsonObject, Question } from "../../../integrations/ai";
 import { parseDateColumn } from "../../../utils";
+import { columnIndex, columnLetter, nonBlank, parseEmail } from "../helpers";
 import type { ImportEmployeeValues, IncomingRecord } from "./importEmployee";
-import { nonBlank, parseEmail, splitFullNames } from "./personValues";
+import { splitFullNames } from "./personValues";
 import type { Sheet } from "./sheet";
 
 export const FILE_FIELDS = [
@@ -277,17 +278,4 @@ function cut(row: readonly string[]): string[] {
 
 function cutCell(cell: string): string {
   return cell.slice(0, MAX_CELL_LENGTH);
-}
-
-/** A, B, …, Z, AA, AB, … like a spreadsheet. */
-function columnLetter(index: number): string {
-  let letter = "";
-  for (let rest = index + 1; rest > 0; rest = Math.floor((rest - 1) / 26)) {
-    letter = String.fromCharCode(65 + ((rest - 1) % 26)) + letter;
-  }
-  return letter;
-}
-
-function columnIndex(letter: string): number {
-  return [...letter].reduce((index, char) => index * 26 + char.charCodeAt(0) - 64, 0) - 1;
 }

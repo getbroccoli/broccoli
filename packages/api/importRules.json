@@ -108,9 +108,9 @@
     "app": ["db", "domain", "helpers"],
     "graphql": ["app", "domain", "helpers", "http"],
     "http": ["app", "domain", "helpers", "jwt"],
-    "mcp": ["app", "domain"],
-    "betterAuth": ["app", "domain", "jwt"],
-    "jwt": ["domain"]
+    "mcp": ["app", "domain", "helpers"],
+    "betterAuth": ["app", "domain", "helpers", "jwt"],
+    "jwt": ["domain", "helpers"]
   },
   "testsMayImport": {
     "*": ["test/support"],

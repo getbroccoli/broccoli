@@ -4,8 +4,6 @@ import { type Orm, ormOf, type Tx } from "../../../core/db";
 import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
 import type { KeysetRow } from "../../../core/pagination";
 import {
-  IMPORT_EMPLOYEE_CHOICES_VERSION,
-  IMPORT_EMPLOYEE_VERSION,
   type ImportEmployeeChoices,
   type ImportEmployeeRecord,
   type FileSource,
@@ -13,9 +11,13 @@ import {
   type ImportSourceReader,
   type IncomingRecord,
   type MappingOutcome,
-  parseImportEmployeeChoices,
-  parseImportEmployeeValues,
 } from "../domain";
+import {
+  IMPORT_EMPLOYEE_CHOICES_VERSION,
+  IMPORT_EMPLOYEE_VERSION,
+  parseImportEmployeeChoices,
+  toImportEmployee,
+} from "./importEmployeeJson";
 import { importChoices } from "./importChoicesTable";
 import { deleteReplacedPhotos } from "./importPhotoRepository";
 import { importRecords } from "./importRecordsTable";
@@ -349,15 +351,6 @@ const sourceColumns = {
   readBy: importSources.readBy,
   pickedUpByExternalAgentAt: importSources.pickedUpByExternalAgentAt,
 };
-
-function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployeeRecord {
-  return {
-    id: record.id,
-    sourceId: record.sourceId,
-    ...parseImportEmployeeValues(record.typeVersion, record.values),
-    photoFileId: record.photoFileId,
-  };
-}
 
 function presentIds(rows: { fileId: string | null }[]): string[] {
   return rows.flatMap(({ fileId }) => (fileId ? [fileId] : []));

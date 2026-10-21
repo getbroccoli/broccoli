@@ -1,18 +1,5 @@
-import { z } from "zod";
-
+import { nonBlank } from "../helpers";
 import type { ImportEmployeeValues } from "./importEmployee";
-
-/** The trimmed text, or null when it is missing or blank. */
-export function nonBlank(value: string | undefined): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
-
-/** The trimmed, lowercased email, or null when it is not a valid email. */
-export function parseEmail(raw: string | undefined): string | null {
-  const normalised = raw?.trim().toLowerCase() ?? "";
-  return email.safeParse(normalised).success ? normalised : null;
-}
 
 type PersonName = Pick<ImportEmployeeValues, "firstName" | "lastName">;
 
@@ -103,5 +90,3 @@ const LATIN_WORD = /^[\p{Script=Latin}'’-]+$/u;
 const CYRILLIC_WORD = /^[\p{Script=Cyrillic}-]+$/u;
 /** Russian, Ukrainian and Belarusian patronymic endings, such as Ильич or Іванівна. */
 const PATRONYMIC = /(ич|ична|овна|евна|івна|ївна|віч|ўна)$/iu;
-
-const email = z.email();

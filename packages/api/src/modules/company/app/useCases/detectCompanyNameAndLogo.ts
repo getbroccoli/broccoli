@@ -5,7 +5,7 @@ import type { SecurityContext } from "../../../../core/security";
 import type { BrandLookup } from "../../../../integrations/brandLookup";
 import { normalizeImage } from "../../../../utils";
 import { companyRepository } from "../../db";
-import { companyDomain } from "../../domain";
+import { companyDomain } from "../../helpers";
 import { MAX_LOGO_BYTES } from "./company";
 
 /**
