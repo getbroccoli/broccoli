@@ -27,6 +27,11 @@ export function externalAgentErrorHandler(logger: Logger): express.ErrorRequestH
   };
 }
 
+/** The answer to a request over its rate limit, in the same shape. */
+export const tooManyRequests: express.RequestHandler = (_request, response) => {
+  response.status(429).json({ error: { code: "TOO_MANY_REQUESTS" } });
+};
+
 /** Answers an expected failure or a body the parser would not read; whether it did. */
 function sendExpectedError(error: unknown, response: express.Response): boolean {
   if (error instanceof ApplicationError) {
@@ -50,11 +55,6 @@ function sendExpectedError(error: unknown, response: express.Response): boolean 
   }
   return false;
 }
-
-/** The answer to a request over its rate limit, in the same shape. */
-export const tooManyRequests: express.RequestHandler = (_request, response) => {
-  response.status(429).json({ error: { code: "TOO_MANY_REQUESTS" } });
-};
 
 const HTTP_STATUS_OF = {
   UNAUTHENTICATED: 401,

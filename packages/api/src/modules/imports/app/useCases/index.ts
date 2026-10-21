@@ -20,7 +20,6 @@ import {
 } from "./answeredMappingService";
 
 export type { DemoFill, SlackReader } from "./importContext";
-export type { AnsweredMapping, MappingQuestions } from "./answeredMappingService";
 export type { ImportReview } from "./importReview";
 export { prepareDemoStart } from "./startDemo";
 

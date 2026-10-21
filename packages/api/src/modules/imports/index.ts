@@ -7,14 +7,13 @@ import type { ImportUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
+export { createImportUseCases, type ImportUseCases, prepareDemoStart } from "./app";
 export {
   type AnsweredMapping,
-  createImportUseCases,
-  type ImportUseCases,
+  type MappingAnswersInput,
   type MappingQuestions,
-  prepareDemoStart,
-} from "./app";
-export { type MappingAnswersInput, parseStaffFileName } from "./domain";
+  parseStaffFileName,
+} from "./domain";
 /** For test seeding only; other modules go through the use cases. */
 export { importPhotoRepository, importReader, lockImport } from "./db";
 export type { ImportEmployeeValues } from "./domain";

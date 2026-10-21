@@ -7,10 +7,11 @@ import type { ImportRepository } from "../../db";
 import {
   type FileSheet,
   type FileSource,
-  type ImportSourceFailure,
   type IncomingRecord,
   inSheet,
+  type AnsweredMapping,
   type MappingAnswersInput,
+  type MappingQuestions,
   parseMappingAnswers,
   readColumnMapping,
   readFileRecords,
@@ -49,22 +50,6 @@ export interface AnsweredFile {
   name: string;
   bytes: Uint8Array;
   sheets: FileSheet[];
-}
-
-/** A source's state after the external agent's answers: never its name. */
-export interface AnsweredMapping {
-  status: "mapped" | "failed";
-  failure: ImportSourceFailure | null;
-  people: number;
-}
-
-/** The masked questions of a file, per sheet in file order; sheets are numbered, never named. */
-export interface MappingQuestions {
-  sheets: {
-    sheet: number;
-    rows: unknown;
-    questions: Record<string, { instructions: string; options: Record<string, string> }>;
-  }[];
 }
 
 export function createAnsweredMappingService(readUpload: UploadReader): AnsweredMappingService {

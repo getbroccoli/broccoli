@@ -29,16 +29,7 @@ export function externalAgentRouter(
   useCases: ExternalAgentUseCases,
   logger: Logger,
 ): express.Router {
-  // Express 5 passes a rejected handler on to the router's error handler.
-  const asExternalAgent: express.RequestHandler = async (request, response, next) => {
-    const token = BEARER.exec(request.headers.authorization ?? "")?.[1];
-    const ctx = token && (await useCases.sessions.readExternalAgentSession({ token }));
-    if (!ctx) {
-      throw new ApplicationError("UNAUTHENTICATED", "Your agent's session ended.");
-    }
-    response.locals.ctx = ctx;
-    next();
-  };
+  const asExternalAgent = externalAgentSession(useCases);
   const perSession = rateLimit({
     windowMs: 60_000,
     limit: FILE_REQUESTS_PER_MINUTE,
@@ -98,7 +89,7 @@ export function externalAgentRouter(
       perSession,
       async (request, response) => {
         response.json(
-          await useCases.files.readQuestions(externalAgentOf(response), sourceIdOf(request)),
+          await useCases.files.readMappingQuestions(externalAgentOf(response), sourceIdOf(request)),
         );
       },
     )
@@ -109,7 +100,7 @@ export function externalAgentRouter(
       json,
       async (request, response) => {
         response.json(
-          await useCases.files.answer(
+          await useCases.files.answerMappingQuestions(
             externalAgentOf(response),
             sourceIdOf(request),
             parseAnswers(request.body),
@@ -122,6 +113,20 @@ export function externalAgentRouter(
 
 const BEARER = /^Bearer (\S{1,200})$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Admits a request by its bearer token alone, as the external agent's security context. */
+function externalAgentSession(useCases: ExternalAgentUseCases): express.RequestHandler {
+  // Express 5 passes a rejected handler on to the router's error handler.
+  return async (request, response, next) => {
+    const token = BEARER.exec(request.headers.authorization ?? "")?.[1];
+    const ctx = token && (await useCases.sessions.readExternalAgentSession({ token }));
+    if (!ctx) {
+      throw new ApplicationError("UNAUTHENTICATED", "Your agent's session ended.");
+    }
+    response.locals.ctx = ctx;
+    next();
+  };
+}
 
 function externalAgentOf(response: express.Response): SecurityContext {
   return response.locals.ctx as SecurityContext;

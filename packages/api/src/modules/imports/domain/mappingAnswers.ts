@@ -1,6 +1,7 @@
-import type { Answers, Question } from "../../../integrations/ai";
+import type { Answers, Json, Question } from "../../../integrations/ai";
 import { type FieldError, invalidInput } from "../../../core/applicationError";
 import { FILE_FIELDS, type FileField, NONE } from "./fileMapping";
+import type { ImportSourceFailure } from "./importSource";
 
 /** One sheet's questions, as `sheetQuestions` asks them. */
 export type SheetQuestions = { headerRow: Question } & Record<FileField, Question>;
@@ -8,6 +9,18 @@ export type SheetQuestions = { headerRow: Question } & Record<FileField, Questio
 /** The answers the external agent sends per sheet, by 1-based sheet number and question id. */
 export interface MappingAnswersInput {
   sheets: { sheet: number; answers: Record<string, string> }[];
+}
+
+/** The masked questions of a file, per sheet in file order; sheets are numbered, never named. */
+export interface MappingQuestions {
+  sheets: { sheet: number; rows: Json | undefined; questions: SheetQuestions }[];
+}
+
+/** A source's state after the external agent's answers: never its name. */
+export interface AnsweredMapping {
+  status: "mapped" | "failed";
+  failure: ImportSourceFailure | null;
+  people: number;
 }
 
 /**

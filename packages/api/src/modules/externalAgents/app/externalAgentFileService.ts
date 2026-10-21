@@ -17,9 +17,9 @@ export interface ExternalAgentFileService {
   /** The files waiting for the agent's answers. */
   listUnansweredFiles(ctx: SecurityContext): Promise<{ id: string }[]>;
   /** A waiting file's masked questions. */
-  readQuestions(ctx: SecurityContext, sourceId: string): Promise<MappingQuestions>;
+  readMappingQuestions(ctx: SecurityContext, sourceId: string): Promise<MappingQuestions>;
   /** Maps a waiting file with the agent's answers. */
-  answer(
+  answerMappingQuestions(
     ctx: SecurityContext,
     sourceId: string,
     answers: MappingAnswersInput,
@@ -47,12 +47,12 @@ export function createExternalAgentFileService(
         imports.answeredMapping.readUnansweredSources(ctx, tx),
       ),
 
-    readQuestions: (ctx, sourceId) =>
+    readMappingQuestions: (ctx, sourceId) =>
       asLiveExternalAgent(context, ctx, (tx) =>
         imports.answeredMapping.readMappingQuestions(ctx, tx, sourceId),
       ),
 
-    answer: (ctx, sourceId, answers) =>
+    answerMappingQuestions: (ctx, sourceId, answers) =>
       asLiveExternalAgent(context, ctx, (tx) =>
         imports.answeredMapping.answerMapping(ctx, tx, sourceId, answers),
       ),

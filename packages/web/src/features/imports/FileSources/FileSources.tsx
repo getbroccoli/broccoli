@@ -23,7 +23,7 @@ const REFUSALS = {
   failed: "imports.files.uploadFailed",
 } as const satisfies Record<Exclude<UploadFileResult, "ok">, string>;
 
-interface FileSourcesProps {
+type Props = {
   /** The import's file sources, oldest first. */
   sources: ImportStepQuery["import"]["sources"];
   /** Reloads the import after a file was added. */
@@ -38,7 +38,7 @@ interface FileSourcesProps {
   externalAgentPill?: ReactNode;
   /** Connecting the chosen external agent, in place of the drop zone until it connects. */
   externalAgentPrompt?: ReactNode;
-}
+};
 
 /**
  * Staff files as sources of people: drop or choose CSV or Excel files, retry or remove them; while
@@ -52,7 +52,7 @@ export function FileSources({
   externalAgentChosen,
   externalAgentPill,
   externalAgentPrompt,
-}: FileSourcesProps) {
+}: Props) {
   const canDrop = !externalAgentPrompt;
   const input = useRef<HTMLInputElement>(null);
   /** The file being uploaded, if any. */

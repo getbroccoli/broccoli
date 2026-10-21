@@ -35,8 +35,6 @@ export interface LiveExternalAgentSession {
 
 export function externalAgentRepository(db: Orm | Tx): ExternalAgentRepository {
   const orm = () => ormOf(db);
-  const live = (now: Date) =>
-    and(isNull(externalAgentSessions.endedAt), gt(externalAgentSessions.expiresAt, now));
 
   return {
     insertCode: async (code) => {
@@ -74,7 +72,7 @@ export function externalAgentRepository(db: Orm | Tx): ExternalAgentRepository {
       const [row] = await orm()
         .select({ id: externalAgentSessions.id })
         .from(externalAgentSessions)
-        .where(and(eq(externalAgentSessions.tokenHash, tokenHash), live(now)));
+        .where(and(eq(externalAgentSessions.tokenHash, tokenHash), isLiveSession(now)));
       return row ?? null;
     },
 
@@ -82,7 +80,7 @@ export function externalAgentRepository(db: Orm | Tx): ExternalAgentRepository {
       const [row] = await orm()
         .select({ id: externalAgentSessions.id })
         .from(externalAgentSessions)
-        .where(and(eq(externalAgentSessions.id, id), live(now)))
+        .where(and(eq(externalAgentSessions.id, id), isLiveSession(now)))
         .for("update");
       return row ?? null;
     },
@@ -119,7 +117,7 @@ export function externalAgentRepository(db: Orm | Tx): ExternalAgentRepository {
           expiresAt: externalAgentSessions.expiresAt,
         })
         .from(externalAgentSessions)
-        .where(live(now))
+        .where(isLiveSession(now))
         .orderBy(desc(externalAgentSessions.createdAt))
         .limit(1);
       return row ?? null;
@@ -129,3 +127,8 @@ export function externalAgentRepository(db: Orm | Tx): ExternalAgentRepository {
 
 /** How often a session's last call is recorded at most, so calls rarely write. */
 const CALL_RECORD_MS = 60_000;
+
+/** The sessions that have not ended and not expired at `now`. */
+function isLiveSession(now: Date) {
+  return and(isNull(externalAgentSessions.endedAt), gt(externalAgentSessions.expiresAt, now));
+}

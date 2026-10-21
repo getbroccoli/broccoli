@@ -16,7 +16,7 @@ import {
   hoursAfter,
   isExternalAgentSafeOrigin,
   newExternalAgentSecret,
-  parseClientName,
+  parseExternalAgentClientName,
 } from "../domain";
 import type { ExternalAgentContext } from "./externalAgentContext";
 
@@ -117,7 +117,7 @@ export function createExternalAgentSessionService(
         const expiresAt = hoursAfter(now, EXTERNAL_AGENT_SESSION_HOURS);
         await externalAgentRepository(tx).insertSession({
           tokenHash: hashExternalAgentSecret(token),
-          client: parseClientName(client),
+          client: parseExternalAgentClientName(client),
           expiresAt,
         });
         return { token, expiresAt };

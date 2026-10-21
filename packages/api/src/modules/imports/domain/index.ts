@@ -39,7 +39,12 @@ export {
   toNewEmployeeInput,
 } from "./importEmployeeMapping";
 export { importVersion } from "./importVersion";
-export { type MappingAnswersInput, parseMappingAnswers } from "./mappingAnswers";
+export {
+  type AnsweredMapping,
+  type MappingAnswersInput,
+  type MappingQuestions,
+  parseMappingAnswers,
+} from "./mappingAnswers";
 export { parseStaffFileName } from "./fileName";
 export { type ImportProgress, importProgress, isReading } from "./importProgress";
 export {

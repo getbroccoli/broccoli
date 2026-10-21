@@ -51,7 +51,7 @@ test("lets a later session answer a file dropped before it connected", async ({ 
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
   expect(await agents.files.listUnansweredFiles(ctx)).toEqual([{ id }]);
 
-  const result = await agents.files.answer(ctx, id, ANSWERS);
+  const result = await agents.files.answerMappingQuestions(ctx, id, ANSWERS);
 
   expect(result).toEqual({ status: "mapped", failure: null, people: 1 });
   expect(await agents.files.listUnansweredFiles(ctx)).toEqual([]);
@@ -71,7 +71,7 @@ test("writes an answer only before a concurrent Disconnect completes", async ({ 
   let disconnected = false;
 
   const [answer, disconnect] = await Promise.allSettled([
-    agents.files.answer(ctx, id, ANSWERS).then((result) => {
+    agents.files.answerMappingQuestions(ctx, id, ANSWERS).then((result) => {
       expect(disconnected).toBe(false);
       return result;
     }),
@@ -94,7 +94,7 @@ test("writes an answer only before a concurrent Disconnect completes", async ({ 
     ]);
   }
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.answer(ctx, id, ANSWERS)).rejects.toMatchObject({
+  await expect(agents.files.answerMappingQuestions(ctx, id, ANSWERS)).rejects.toMatchObject({
     code: "UNAUTHENTICATED",
   });
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: id })).toEqual(records);
@@ -117,7 +117,7 @@ test("refuses stale approval racing an answer and prevents answers after refresh
   const review = await imports.reads.readReview(SETUP_HOLDER);
 
   const [answer, approval] = await Promise.allSettled([
-    agents.files.answer(ctx, id, ANSWERS),
+    agents.files.answerMappingQuestions(ctx, id, ANSWERS),
     imports.approveImport(SETUP_HOLDER, review.version),
   ]);
 
@@ -134,7 +134,7 @@ test("refuses stale approval racing an answer and prevents answers after refresh
   const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: id });
   expect(await readSetupStep(orm)).toBe("owner");
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.answer(ctx, id, ANSWERS)).rejects.toMatchObject({
+  await expect(agents.files.answerMappingQuestions(ctx, id, ANSWERS)).rejects.toMatchObject({
     code: "UNAUTHENTICATED",
   });
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: id })).toEqual(records);

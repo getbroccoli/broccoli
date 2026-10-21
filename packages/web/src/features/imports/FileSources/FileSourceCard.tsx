@@ -34,15 +34,15 @@ const NEEDS_OWN_KEY: ReadonlySet<ImportSourceFailure> = new Set([
   "AI_LIMIT_REACHED",
 ]);
 
-interface FileSourceCardProps {
+type Props = {
   source: FragmentType<FileSourceCard_SourceFragment>;
   /** While another change to the files runs. */
   busy: boolean;
-  /** Whether the owner's agent reads the files; else a file still waiting for it can go to Broccoli. */
+  /** Whether the owner's external agent maps the files; else a file still waiting for it can go to Broccoli. */
   externalAgentChosen: boolean;
   onRetry: () => void;
   onRemove: () => void;
-}
+};
 
 /** One uploaded file: its name and how reading it went; owns the `FileSourceCard_source` fragment. */
 export function FileSourceCard({
@@ -51,7 +51,7 @@ export function FileSourceCard({
   externalAgentChosen,
   onRetry,
   onRemove,
-}: FileSourceCardProps) {
+}: Props) {
   const { data: source, complete } = useFragment({
     fragment: FileSourceCard_SourceFragmentDoc,
     from: sourceRef,

@@ -223,7 +223,7 @@ type ImportMutations {
   approve(version: String!): ImportApprovePayload!
   "Takes setup from the owner or ready step back to the company step and deletes the employees `approve` created; the company, the AI source and the import stay. Does nothing at any other step."
   resetSetup: ImportMutationPayload!
-  "Maps a failed file again, or has Broccoli's model map a file still waiting for the external agent's answers. Refused with a ConflictError for people the external agent parsed."
+  "Maps a failed file again, or has Broccoli's model map a file still waiting for the external agent's answers."
   retryFile(sourceId: ID!): ImportRetryFilePayload!
   "Removes a file, its records and the stored file."
   removeFile(sourceId: ID!): ImportMutationPayload!

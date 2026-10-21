@@ -28,7 +28,7 @@ test.for([
   "company.update",
   "readSlack",
   "ai.save",
-] as const)("%s refuses a setup agent", async (operation, { orm }) => {
+] as const)("%s refuses the external agent", async (operation, { orm }) => {
   const imports = importUseCases(orm);
   const calls = {
     approveImport: () => imports.approveImport(SETUP_EXTERNAL_AGENT, "reviewed-version"),

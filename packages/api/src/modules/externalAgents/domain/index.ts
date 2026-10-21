@@ -1,4 +1,7 @@
-export { type ExternalAgentConnection, parseClientName } from "./externalAgentConnection";
+export {
+  type ExternalAgentConnection,
+  parseExternalAgentClientName,
+} from "./externalAgentConnection";
 export { isExternalAgentSafeOrigin } from "./externalAgentOrigin";
 export {
   EXTERNAL_AGENT_CODE_HOURS,

@@ -10,10 +10,3 @@ export function formatCalendarDate(value: string | null): string | null {
   const [year, month, day] = value.split("-").map(Number);
   return calendarDateFormat.format(Date.UTC(year!, month! - 1, day));
 }
-
-const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
-
-/** Formats a `DateTime` as a time of day in the browser's locale and time zone. */
-export function formatTime(dateTime: string): string {
-  return timeFormat.format(new Date(dateTime));
-}
