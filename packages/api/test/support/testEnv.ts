@@ -9,7 +9,7 @@ import { inject } from "vitest";
 
 import { session, user } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
-import { readDemoExpiresAt } from "../../src/core/instance";
+import { readInstance } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
 import { createTestDatabase, type TestDatabase } from "./testDatabases";
@@ -115,7 +115,7 @@ export class TestEnv {
       .from(session)
       .where(eq(session.userId, userId));
     assert(savedSession);
-    const demoExpiresAt = await readDemoExpiresAt(this.database.orm);
+    const { demoExpiresAt } = await readInstance(this.database.orm);
     return { ...savedSession, demoExpiresAt };
   }
 

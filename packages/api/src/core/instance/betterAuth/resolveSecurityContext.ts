@@ -9,7 +9,8 @@ import {
   type RequestSecurity,
   type SecurityContext,
 } from "../../security";
-import { readDemoDeadlineOf, readOwnerUserId, readSetupHolder } from "../app";
+import { readInstance, readSetupHolder } from "../app";
+import { demoDeadlineOf, type Instance } from "../domain";
 import { readSetupToken } from "./setupCookie";
 
 /**
@@ -39,16 +40,17 @@ export async function resolveSecurityContext(
     return { security: await resolveSetupHolder(orm, requestHeaders), renewedCookies };
   }
   const { id: userId, email } = session.user;
-  const isOwner = userId === (await readOwnerUserId(orm));
-  if (await hasDemoEnded(orm, userId)) {
+  const instance = await readInstance(orm);
+  const isOwner = userId === instance.ownerUserId;
+  if (hasDemoEnded(instance, userId)) {
     return { security: null, renewedCookies: [] };
   }
   return { security: PrincipalSecurityContext.user({ userId, email, isOwner }), renewedCookies };
 }
 
 /** Whether the user is the demo's provisional owner after its deadline, which nothing extends. */
-async function hasDemoEnded(orm: Orm, userId: string): Promise<boolean> {
-  const deadline = await readDemoDeadlineOf(orm, userId);
+function hasDemoEnded(instance: Instance, userId: string): boolean {
+  const deadline = demoDeadlineOf(instance, userId);
   return deadline !== null && deadline <= new Date();
 }
 

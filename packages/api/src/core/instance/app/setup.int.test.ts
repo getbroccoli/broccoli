@@ -8,7 +8,7 @@ import {
   completeCompanyStep,
   completeImportStep,
   completeReadyStep,
-  readSetupStep,
+  readInstance,
 } from ".";
 
 test("refuses a non-owner completing the company step and keeps the current step", async ({
@@ -22,7 +22,7 @@ test("refuses a non-owner completing the company step and keeps the current step
     code: "FORBIDDEN",
   });
 
-  expect(await readSetupStep(orm)).toBe("company");
+  expect((await readInstance(orm)).setupStep).toBe("company");
 });
 
 test("completing the company step moves setup to import without publishing completion", async ({
@@ -41,7 +41,7 @@ test("completing the company step moves setup to import without publishing compl
   const moved = await transact((tx) => completeCompanyStep(SYSTEM, tx));
 
   expect(moved).toBe(true);
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
   expect(received).toEqual([]);
 });
 
@@ -53,7 +53,7 @@ test.for(["import", "owner", "ready", "done"] as const)(
     const moved = await transact((tx) => completeCompanyStep(SYSTEM, tx));
 
     expect(moved).toBe(false);
-    expect(await readSetupStep(orm)).toBe(step);
+    expect((await readInstance(orm)).setupStep).toBe(step);
   },
 );
 
@@ -76,7 +76,7 @@ test("completing the ready step moves setup to done and publishes completion onc
   const moved = await transact((tx) => completeReadyStep(SYSTEM, tx));
 
   expect(moved).toBe(true);
-  expect(await readSetupStep(orm)).toBe("done");
+  expect((await readInstance(orm)).setupStep).toBe("done");
   expect(received).toEqual([null]);
 });
 
@@ -96,12 +96,12 @@ test("completing the ready step again publishes nothing", async ({ orm, seed }) 
   const moved = await transact((tx) => completeReadyStep(SYSTEM, tx));
 
   expect(moved).toBe(false);
-  expect(await readSetupStep(orm)).toBe("done");
+  expect((await readInstance(orm)).setupStep).toBe("done");
   expect(received).toEqual([]);
 });
 
 test("a fresh instance starts at company", async ({ orm }) => {
-  expect(await readSetupStep(orm)).toBe("company");
+  expect((await readInstance(orm)).setupStep).toBe("company");
 });
 
 test("completing import moves to owner when no owner exists", async ({ orm, seed, transact }) => {
@@ -110,7 +110,7 @@ test("completing import moves to owner when no owner exists", async ({ orm, seed
   const moved = await transact((tx) => completeImportStep(SETUP_HOLDER, tx));
 
   expect(moved).toBe(true);
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
 });
 
 test("completing import moves to done when an owner exists", async ({ orm, seed, transact }) => {
@@ -120,7 +120,7 @@ test("completing import moves to done when an owner exists", async ({ orm, seed,
   const moved = await transact((tx) => completeImportStep(owner, tx));
 
   expect(moved).toBe(true);
-  expect(await readSetupStep(orm)).toBe("done");
+  expect((await readInstance(orm)).setupStep).toBe("done");
 });
 
 test.for(["company", "owner", "done"] as const)(
@@ -129,7 +129,7 @@ test.for(["company", "owner", "done"] as const)(
     await seed.setupStep(step);
 
     expect(await transact((tx) => completeImportStep(SETUP_HOLDER, tx))).toBe(false);
-    expect(await readSetupStep(orm)).toBe(step);
+    expect((await readInstance(orm)).setupStep).toBe(step);
   },
 );
 
@@ -140,7 +140,7 @@ test("approving import moves to ready when an owner exists", async ({ orm, seed,
   const moved = await transact((tx) => approveImportStep(owner, tx));
 
   expect(moved).toBe(true);
-  expect(await readSetupStep(orm)).toBe("ready");
+  expect((await readInstance(orm)).setupStep).toBe("ready");
 });
 
 test("approving import moves to owner when no owner exists", async ({ orm, seed, transact }) => {
@@ -149,5 +149,5 @@ test("approving import moves to owner when no owner exists", async ({ orm, seed,
   const moved = await transact((tx) => approveImportStep(SETUP_HOLDER, tx));
 
   expect(moved).toBe(true);
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
 });

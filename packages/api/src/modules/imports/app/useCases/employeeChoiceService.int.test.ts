@@ -1,6 +1,6 @@
 import { expect, importUseCases, OWNER, SETUP_HOLDER, test } from "#test/support";
 
-import { readSetupStep } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 
 test("stores a record pick for a later read", async ({ orm, seed }) => {
   const slack = await seed.importSource();
@@ -189,7 +189,7 @@ test("refuses a leave-out change after Approve and keeps the import unchanged", 
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER);
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
   const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   expect(before.edges).toHaveLength(1);
 

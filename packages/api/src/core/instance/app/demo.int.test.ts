@@ -7,14 +7,7 @@ import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import {
-  completeImportStep,
-  finishDemo,
-  readDemoExpiresAt,
-  readOwnerUserId,
-  readSetupStep,
-  startDemoAtSetup,
-} from ".";
+import { completeImportStep, finishDemo, readInstance, startDemoAtSetup } from ".";
 
 test("starts a seven-day demo for the setup holder, claims the owner and completes setup", async ({
   orm,
@@ -41,10 +34,12 @@ test("starts a seven-day demo for the setup holder, claims the owner and complet
   );
 
   expect(owner).toEqual({ user: { id: "owner-1", email: "owner-1@example.com", name: "Owner" } });
-  expect(await readOwnerUserId(orm)).toBe(owner.user.id);
-  expect(await readSetupStep(orm)).toBe("done");
-  expect(await readDemoExpiresAt(orm)).toEqual(new Date("2026-01-09T12:00:00Z"));
-  expect(await instanceRepository(orm).readSetupSession()).toBeNull();
+  expect(await readInstance(orm)).toMatchObject({
+    ownerUserId: owner.user.id,
+    setupStep: "done",
+    demoExpiresAt: new Date("2026-01-09T12:00:00Z"),
+    setupSession: null,
+  });
   expect(claimed).toEqual([{ userId: owner.user.id, email: owner.user.email }]);
   expect(completed).toEqual([null]);
 });
@@ -69,8 +64,10 @@ test("refuses to start a demo when an owner already exists", async ({ orm, seed,
     transact((tx) => startDemoAtSetup(SYSTEM, tx, credential, () => insertOwner(tx), finishImport)),
   ).rejects.toMatchObject({ name: "OwnerExistsError" });
 
-  expect(await readOwnerUserId(orm)).toBe(owner.user!.userId);
-  expect(await readDemoExpiresAt(orm)).toBeNull();
+  expect(await readInstance(orm)).toMatchObject({
+    ownerUserId: owner.user!.userId,
+    demoExpiresAt: null,
+  });
 });
 
 test.for([null, "another-token"])(
@@ -85,7 +82,7 @@ test.for([null, "another-token"])(
     ).rejects.toMatchObject({ name: "SetupInProgressError" });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect(await readSetupStep(orm)).toBe("import");
+    expect((await readInstance(orm)).setupStep).toBe("import");
   },
 );
 
@@ -113,7 +110,7 @@ test.for(["company", "owner", "done"] as const)(
     ).rejects.toMatchObject({ code: "CONFLICT" });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect(await readSetupStep(orm)).toBe(step);
+    expect((await readInstance(orm)).setupStep).toBe(step);
   },
 );
 
@@ -123,7 +120,7 @@ test("rolls back the owner and setup completion when starting the demo fails", a
   transact,
 }) => {
   await prepareDemoSetup(seed);
-  const setupSession = await instanceRepository(orm).readSetupSession();
+  const setupSession = (await readInstance(orm)).setupSession;
 
   await expect(
     transact((tx) =>
@@ -141,10 +138,12 @@ test("rolls back the owner and setup completion when starting the demo fails", a
   ).rejects.toThrow("Demo fill failed");
 
   expect(await orm.select().from(user)).toEqual([]);
-  expect(await readOwnerUserId(orm)).toBeNull();
-  expect(await readSetupStep(orm)).toBe("import");
-  expect(await readDemoExpiresAt(orm)).toBeNull();
-  expect(await instanceRepository(orm).readSetupSession()).toEqual(setupSession);
+  expect(await readInstance(orm)).toMatchObject({
+    ownerUserId: null,
+    setupStep: "import",
+    demoExpiresAt: null,
+    setupSession,
+  });
 });
 
 test("creates only one owner when two demo starts arrive together", async ({
@@ -169,7 +168,7 @@ test("creates only one owner when two demo starts arrive together", async ({
   ]);
   const owners = await orm.select().from(user);
   expect(owners).toHaveLength(1);
-  expect(await readOwnerUserId(orm)).toBe(owners[0]!.id);
+  expect((await readInstance(orm)).ownerUserId).toBe(owners[0]!.id);
 });
 
 test("upgrades the same owner and clears the demo deadline without claiming ownership again", async ({
@@ -200,8 +199,7 @@ test("upgrades the same owner and clears the demo deadline without claiming owne
   );
 
   expect(upgraded).toMatchObject({ id: userId, email: "upgraded@example.com" });
-  expect(await readOwnerUserId(orm)).toBe(userId);
-  expect(await readDemoExpiresAt(orm)).toBeNull();
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: userId, demoExpiresAt: null });
   expect(claimed).toEqual([]);
 });
 
@@ -239,7 +237,7 @@ test.for([
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
     expect(upgraded).toBe(false);
-    expect(await readDemoExpiresAt(orm)).toEqual(deadline);
+    expect((await readInstance(orm)).demoExpiresAt).toEqual(deadline);
   },
 );
 
@@ -273,7 +271,7 @@ test("keeps the demo deadline when upgrading the owner fails", async ({ orm, see
     ),
   ).rejects.toThrow("Upgrade failed");
 
-  expect(await readDemoExpiresAt(orm)).toEqual(expiresAt);
+  expect((await readInstance(orm)).demoExpiresAt).toEqual(expiresAt);
 });
 
 const now = new Date("2026-01-02T12:00:00Z");

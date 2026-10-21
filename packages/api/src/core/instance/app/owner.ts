@@ -5,15 +5,6 @@ import { instanceRepository } from "../db";
 import { holdsSetup, OwnerExistsError, SetupInProgressError, type SetupStep } from "../domain";
 import { completeOwnerStep } from "./setup";
 
-/** The owner's user id, or null before setup. */
-export function readOwnerUserId(db: Orm | Tx): Promise<string | null> {
-  return instanceRepository(db).readOwnerUserId();
-}
-
-export async function hasOwner(orm: Orm): Promise<boolean> {
-  return (await readOwnerUserId(orm)) !== null;
-}
-
 /** The owner's id and sign-in email, or null before an owner exists. */
 export function readOwner(orm: Orm): Promise<{ userId: string; email: string } | null> {
   return instanceRepository(orm).readOwner();
@@ -31,11 +22,11 @@ export async function claimOwner<Owner extends OwnerUser>(
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, step } = await instance.lockSetup();
+  const { ownerUserId, setupStep } = await instance.lock();
   if (ownerUserId) {
     throw new OwnerExistsError();
   }
-  return saveOwner(tx, await createOwner(), step);
+  return saveOwner(tx, await createOwner(), setupStep);
 }
 
 /**
@@ -70,14 +61,14 @@ export async function lockHeldSetup(
   tx: Tx,
   { token, now }: { token: string | null; now: Date },
 ): Promise<SetupStep> {
-  const { ownerUserId, step, setupSession } = await instanceRepository(tx).lockSetup();
+  const { ownerUserId, setupStep, setupSession } = await instanceRepository(tx).lock();
   if (ownerUserId) {
     throw new OwnerExistsError();
   }
   if (!setupSession || !holdsSetup(setupSession, token, now)) {
     throw new SetupInProgressError();
   }
-  return step;
+  return setupStep;
 }
 
 export interface OwnerUser {

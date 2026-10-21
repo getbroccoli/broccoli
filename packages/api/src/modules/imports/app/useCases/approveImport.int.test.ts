@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { expect, importUseCases, NON_OWNER, OWNER, SETUP_HOLDER, test } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
-import { readSetupStep } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test("approving creates an employee per ready import employee and moves setup to ready", async ({
@@ -26,7 +26,7 @@ test("approving creates an employee per ready import employee and moves setup to
 
   await imports.approveImport(owner);
 
-  expect(await readSetupStep(orm)).toBe("ready");
+  expect((await readInstance(orm)).setupStep).toBe("ready");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual(
     expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
@@ -131,7 +131,7 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
 
   await Promise.all([imports.approveImport(owner), imports.approveImport(owner)]);
 
-  expect(await readSetupStep(orm)).toBe("ready");
+  expect((await readInstance(orm)).setupStep).toBe("ready");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).toEqual([record!.email]);
 });
@@ -150,7 +150,7 @@ test.for(["skipped", "company"] as const)(
 
     await imports.approveImport(owner);
 
-    expect(await readSetupStep(orm)).toBe(step === "skipped" ? "done" : "company");
+    expect((await readInstance(orm)).setupStep).toBe(step === "skipped" ? "done" : "company");
     expect(await employees.listEmployees(OWNER, { first: 100 })).toEqual(before);
   },
 );
@@ -164,7 +164,7 @@ test("refuses a non-owner approving the import", async ({ orm, seed }) => {
 
   await expect(imports.approveImport(NON_OWNER)).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
   ).toEqual([]);
@@ -185,7 +185,7 @@ test("refuses approval while a file is mapping without advancing setup", async (
     message: "Files are still being read.",
   });
 
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
@@ -206,7 +206,7 @@ test("approves available records when a failed file is present", async ({ orm, s
 
   await imports.approveImport(owner);
 
-  expect(await readSetupStep(orm)).toBe("ready");
+  expect((await readInstance(orm)).setupStep).toBe("ready");
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges.map(({ node }) => node),
   ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);
@@ -265,7 +265,7 @@ test("waits for an uncommitted upload before refusing approval", async ({
   }
 
   expect(await approval).toMatchObject([{ status: "rejected", reason: { code: "CONFLICT" } }]);
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
@@ -320,7 +320,7 @@ test("the setup holder approves employees without an owner and moves setup to ow
 
   await imports.approveImport(SETUP_HOLDER);
 
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(employees.edges.map(({ node }) => node)).toMatchObject([avery]);
 });

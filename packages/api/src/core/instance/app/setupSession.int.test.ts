@@ -2,9 +2,8 @@ import { createHash } from "node:crypto";
 
 import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
 
-import { instanceRepository } from "../db";
 import { hashSetupToken } from "../domain";
-import { readSetupHolder, startSetup } from ".";
+import { readInstance, readSetupHolder, startSetup } from ".";
 
 test("starts a setup session on a fresh instance and stores only its hash", async ({
   orm,
@@ -17,7 +16,7 @@ test("starts a setup session on a fresh instance and stores only its hash", asyn
   expect(session.token).toEqual(expect.any(String));
   expect(session.token.length).toBeGreaterThan(0);
   expect(session.expiresAt).toEqual(new Date("2026-01-04T12:00:00Z"));
-  expect(await instanceRepository(orm).readSetupSession()).toEqual({
+  expect((await readInstance(orm)).setupSession).toEqual({
     tokenHash: createHash("sha256").update(session.token).digest("hex"),
     expiresAt: session.expiresAt,
   });
@@ -30,7 +29,7 @@ test("extends the session when its holder starts again", async ({ orm, seed, tra
   const session = await transact((tx) => startSetup(SYSTEM, tx, { token: "setup-token", now }));
 
   expect(session).toEqual({ token: "setup-token", expiresAt: new Date("2026-01-05T12:00:00Z") });
-  expect(await instanceRepository(orm).readSetupSession()).toEqual({
+  expect((await readInstance(orm)).setupSession).toEqual({
     tokenHash: hashSetupToken("setup-token"),
     expiresAt: session.expiresAt,
   });
@@ -54,7 +53,7 @@ test.for([null, "another-token"])(
       message: "Setup is in progress on another device",
     });
 
-    expect(await instanceRepository(orm).readSetupSession()).toEqual({
+    expect((await readInstance(orm)).setupSession).toEqual({
       tokenHash: hashSetupToken("setup-token"),
       expiresAt,
     });
@@ -112,7 +111,7 @@ test("refuses a non-owner starting setup", async ({ orm, transact }) => {
     ),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(await instanceRepository(orm).readSetupSession()).toBeNull();
+  expect((await readInstance(orm)).setupSession).toBeNull();
 });
 
 test("reports you for the valid setup holder", async ({ orm, seed }) => {

@@ -2,7 +2,8 @@ import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
 
 import type { Transact } from "../../db";
 import { AssignmentConflictError, type ManagedAssignment } from "../domain";
-import { assignInstance, readAssignment } from "./managed";
+import { assignInstance } from "./managed";
+import { readInstance } from "./instance";
 
 const ACME: ManagedAssignment = {
   companyId: "c-acme",
@@ -18,20 +19,20 @@ test("refuses a non-owner assigning an instance and leaves it unassigned", async
     code: "FORBIDDEN",
   });
 
-  expect(await readAssignment(orm)).toBeNull();
+  expect((await readInstance(orm)).assignment).toBeNull();
 });
 
 test("stores the first assignment", async ({ orm, transact }) => {
   await assign(transact, ACME);
 
-  expect(await readAssignment(orm)).toEqual(ACME);
+  expect((await readInstance(orm)).assignment).toEqual(ACME);
 });
 
 test("accepts the same assignment again", async ({ orm, transact }) => {
   await assign(transact, ACME);
 
   await expect(assign(transact, { ...ACME })).resolves.toBeUndefined();
-  expect(await readAssignment(orm)).toEqual(ACME);
+  expect((await readInstance(orm)).assignment).toEqual(ACME);
 });
 
 test.for([
@@ -44,7 +45,7 @@ test.for([
   await expect(assign(transact, { ...ACME, ...change })).rejects.toBeInstanceOf(
     AssignmentConflictError,
   );
-  expect(await readAssignment(orm)).toEqual(ACME);
+  expect((await readInstance(orm)).assignment).toEqual(ACME);
 });
 
 test("refuses an instance whose owner was claimed without an assignment", async ({
@@ -65,7 +66,7 @@ test("keeps one assignment when two arrive together", async ({ orm, transact }) 
   expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
   const rejected = results.find((result) => result.status === "rejected");
   expect(rejected?.reason).toBeInstanceOf(AssignmentConflictError);
-  expect(["c-acme", "c-other"]).toContain((await readAssignment(orm))?.companyId);
+  expect(["c-acme", "c-other"]).toContain((await readInstance(orm)).assignment?.companyId);
 });
 
 function assign(transact: Transact, assignment: ManagedAssignment) {
