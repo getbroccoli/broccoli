@@ -5,6 +5,8 @@ export const externalAgentsEn = {
   "externalAgents.connectTitle": "Connect your agent",
   "externalAgents.connectHint":
     "Paste this into Claude Code, Codex or another agent. Then drop your files here. Your agent sees names, emails and other personal details only as placeholders.",
+  "externalAgents.connectHintOnServer":
+    "Ask Claude Code, Codex or another agent with a shell on Broccoli's server to set it up with you. Then drop your files here. Your agent sees names, emails and other personal details only as placeholders.",
   "externalAgents.creating": "Making a code…",
   "externalAgents.sentence":
     "Help me set up Broccoli. Read {origin}/api/external-agent/skill and connect with code {code}.",

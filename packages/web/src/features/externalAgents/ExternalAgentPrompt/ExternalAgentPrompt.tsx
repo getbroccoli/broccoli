@@ -23,7 +23,7 @@ export function ExternalAgentPrompt() {
       <div className="flex flex-col gap-1">
         <h3 className="text-[15px] font-medium">{t("externalAgents.connectTitle")}</h3>
         <p className="text-[13px] leading-relaxed text-muted-foreground">
-          {t("externalAgents.connectHint")}
+          {t(onSafeAddress ? "externalAgents.connectHint" : "externalAgents.connectHintOnServer")}
         </p>
       </div>
       {onSafeAddress && (
