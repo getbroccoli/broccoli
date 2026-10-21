@@ -7,6 +7,9 @@ query ImportReview(
   import {
     id
     version
+    latestReviewChange {
+      id
+    }
     employeeCount
     readyEmployeeCount
     reading

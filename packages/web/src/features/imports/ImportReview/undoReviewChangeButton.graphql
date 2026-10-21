@@ -1,0 +1,17 @@
+mutation UndoReviewChange($id: ID!) {
+  import {
+    undoReviewChange(id: $id) {
+      import {
+        id
+        # Review's own changes move the version Approve sends.
+        version
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}

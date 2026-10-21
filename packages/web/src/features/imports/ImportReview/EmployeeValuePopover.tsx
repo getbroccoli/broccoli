@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { toast } from "sonner";
 
 import {
   ChooseEmployeeValueDocument,
@@ -20,10 +19,7 @@ import { SourceIcon } from "./SourceIcon";
 
 type Choice = Pick<ImportChooseEmployeeValueInput, "recordId" | "value">;
 
-/**
- * Picks one source's value with one click, as the setup design does, or takes a typed one.
- * A pick shows a toast whose Undo puts the previous choice back.
- */
+/** Picks one source's value with one click, as the setup design does, or takes a typed one. */
 export function EmployeeValuePopover({
   employeeId,
   employeeName,
@@ -49,30 +45,12 @@ export function EmployeeValuePopover({
   );
 
   const choose = (choice: Choice) =>
-    chooseValue({ variables: { input: { employeeId, field: FIELD_ENUMS[field], ...choice } } });
-
-  const chooseAndOfferUndo = (choice: Choice, shownValue: string) => {
-    const previous = previousChoice(value);
-    void choose(choice).then(
-      () => {
-        onDone();
-        toast(
-          t("setup.review.valueSet", {
-            field: fieldLabel(field),
-            value: display(field, shownValue),
-          }),
-          {
-            action: {
-              label: t("setup.review.undo"),
-              onClick: () =>
-                void choose(previous).catch(() => toast.error(t("setup.review.saveFailed"))),
-            },
-          },
-        );
-      },
+    void chooseValue({
+      variables: { input: { employeeId, field: FIELD_ENUMS[field], ...choice } },
+    }).then(
+      onDone,
       () => undefined, // `payloadError` or `error` shows it
     );
-  };
 
   const fieldError =
     payloadError?.__typename === "InvalidInputError" ? payloadError.fields[0] : undefined;
@@ -104,7 +82,7 @@ export function EmployeeValuePopover({
               className="h-12 justify-start gap-3 px-3 text-sm"
               disabled={loading}
               aria-pressed={value.choice !== "TYPED" && value.value === option.value}
-              onClick={() => chooseAndOfferUndo({ recordId: option.records[0]!.id }, option.value)}
+              onClick={() => choose({ recordId: option.records[0]!.id })}
             >
               <SourceIcon kind={option.records[0]!.source.kind} />
               <span className="truncate font-medium">{display(field, option.value)}</span>
@@ -129,7 +107,7 @@ export function EmployeeValuePopover({
           className="flex flex-col gap-2"
           onSubmit={(event) => {
             event.preventDefault();
-            chooseAndOfferUndo({ value: typed }, typed);
+            choose({ value: typed });
           }}
         >
           <div className="flex gap-2">
@@ -169,14 +147,6 @@ export function EmployeeValuePopover({
       )}
     </>
   );
-}
-
-/** What Undo sends: the choice shown before this one; neither field puts the default back. */
-function previousChoice({ choice, value, pickedRecord }: EmployeeValueCell_ValueFragment): Choice {
-  if (choice === "TYPED") {
-    return { value };
-  }
-  return pickedRecord ? { recordId: pickedRecord.id } : {};
 }
 
 /** "staff.csv and Slack disagree…", or a general line for three sources or more. */

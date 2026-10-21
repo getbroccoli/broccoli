@@ -87,6 +87,12 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Im
           }),
         ),
       ),
+    undoReviewChange: (_parent, { id }, context) =>
+      mutationPayload<ResolversTypes["ImportUndoReviewChangePayload"]>(
+        "import",
+        () => thenImport(useCases.choices.undoReviewChange(context.getActor(), { id })),
+        ["CONFLICT"],
+      ),
   };
 }
 

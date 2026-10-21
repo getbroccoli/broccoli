@@ -1,4 +1,4 @@
-import { invalidInput } from "../../../../core/applicationError";
+import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import type { Transact } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 import { parseEmployeeField } from "../../../employees";
@@ -35,6 +35,11 @@ export interface EmployeeChoiceService {
   setLeftOut(ctx: SecurityContext, args: { key: string; leftOut: boolean }): Promise<void>;
   /** Leaves out every incomplete import employee with this reason. */
   leaveOutIncomplete(ctx: SecurityContext, args: { reason: IncompleteReason }): Promise<void>;
+  /**
+   * Puts back the choices the review change `id` replaced; refused unless it is the latest one,
+   * so a repeated or stale Undo never reverses another change.
+   */
+  undoReviewChange(ctx: SecurityContext, args: { id: string }): Promise<void>;
 }
 
 export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceService {
@@ -76,6 +81,16 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
           .filter((employee) => isInCheck(employee, { kind: "incomplete", reason }))
           .flatMap((employee) => withLeftOut(employee, true)),
       ),
+
+    undoReviewChange: async (ctx, { id }) => {
+      requireImportAccess(ctx);
+      await transact(async (tx) => {
+        const imports = await lockOpenImport(tx);
+        if (!(await imports.undoReviewChange(id))) {
+          throw new ApplicationError("CONFLICT", "Review changed since; nothing was undone.");
+        }
+      });
+    },
   };
 }
 

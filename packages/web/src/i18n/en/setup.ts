@@ -155,8 +155,10 @@ export const setupEn = {
   "setup.review.save": "Save",
   "setup.review.pickDate": "Pick a date",
   "setup.review.saveFailed": "Couldn’t save. Try again.",
-  "setup.review.valueSet": "{field} set to {value}",
   "setup.review.undo": "Undo",
+  "setup.review.undoHelp":
+    "Undo your latest change, one at a time. Reading or removing a source starts a new history.",
+  "setup.review.undoFailed": "Couldn’t undo. Review now shows the latest changes.",
   "setup.review.error.required": "Enter a value",
   "setup.review.error.too_long": "Use 100 characters or fewer",
   "setup.review.error.taken": "Another person has this email. Leave one of them out instead.",

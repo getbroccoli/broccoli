@@ -35,6 +35,8 @@ export interface ImportReview {
   listEmployees(args: ImportEmployeeListArgs): Connection<ImportEmployee>;
   /** The fingerprint of what Approve would create, which Approve takes back (`importVersion`). */
   version: string;
+  /** The review change Undo reverses next, or null when there is none. */
+  latestReviewChange: { id: string } | null;
 }
 
 export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
@@ -52,10 +54,11 @@ export async function readImportReview(
   { importOpen }: { importOpen?: boolean } = {},
 ): Promise<ImportReview> {
   const imports = importReader(db);
-  const [sources, records, choices] = await Promise.all([
+  const [sources, records, choices, latestReviewChange] = await Promise.all([
     imports.listSources(),
     imports.listEmployeeRecords(),
     imports.listChoices("employee"),
+    imports.findLatestReviewChange(),
   ]);
   const employees = groupEmployeeRecords(sources, records, choices);
   // Once approved, the added employees own these emails and must stay in the setup summary.
@@ -80,6 +83,7 @@ export async function readImportReview(
     checks: listChecks(sources, employees),
     listEmployees: (args) => listEmployees(employees, args),
     version: importVersion(employees, readyEmployees),
+    latestReviewChange,
   };
 }
 

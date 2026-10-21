@@ -35,6 +35,7 @@ import { ApproveNote } from "./ApproveNote";
 import { CheckFilterLine } from "./CheckFilterLine";
 import { SourceChips } from "./SourceChips";
 import { ThingsToCheck } from "./ThingsToCheck";
+import { UndoReviewChangeButton } from "./UndoReviewChangeButton";
 
 /**
  * The setup review step: one row per import employee, where the owner settles what the
@@ -145,13 +146,18 @@ export function ImportReview() {
             onShow={(check) => writeSearch({ check, after: undefined }, false)}
           />
         </div>
-        <TableSearchField
-          query={search.q}
-          onQueryChange={list.changeQuery}
-          label={t("setup.review.search.label")}
-          placeholder={t("setup.review.search.placeholder")}
-          maxLength={SEARCH_MAX_LENGTH}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          {current?.latestReviewChange && (
+            <UndoReviewChangeButton changeId={current.latestReviewChange.id} />
+          )}
+          <TableSearchField
+            query={search.q}
+            onQueryChange={list.changeQuery}
+            label={t("setup.review.search.label")}
+            placeholder={t("setup.review.search.placeholder")}
+            maxLength={SEARCH_MAX_LENGTH}
+          />
+        </div>
       </div>
       {search.check && (
         <CheckFilterLine

@@ -1,4 +1,4 @@
-import { and, count, eq, gt, inArray } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { KeysetRow } from "../../../core/pagination";
@@ -11,6 +11,7 @@ import {
 import { parseImportEmployeeChoices, toImportEmployee } from "./importEmployeeJson";
 import { importChoices } from "./importChoicesTable";
 import { importRecords } from "./importRecordsTable";
+import { importReviewChanges } from "./importReviewChangesTable";
 import { importSources } from "./importSourcesTable";
 
 /** Reads the import's sources, records and choices, through the pool or joining a transaction. */
@@ -29,6 +30,8 @@ export interface ImportReader {
   ): Promise<KeysetRow<ImportEmployeeRecord, [id: string]>[]>;
   /** What the owner settled for each group of records of `type`. */
   listChoices(type: "employee"): Promise<ImportEmployeeChoices[]>;
+  /** The review change Undo reverses next, or null when there is none. */
+  findLatestReviewChange(): Promise<{ id: string } | null>;
 }
 
 export interface ImportRecordPageQuery {
@@ -106,6 +109,15 @@ export function importReader(db: Orm | Tx): ImportReader {
         leftOut,
         values: parseImportEmployeeChoices(typeVersion, values),
       }));
+    },
+
+    findLatestReviewChange: async (): Promise<{ id: string } | null> => {
+      const [latest] = await orm()
+        .select({ id: importReviewChanges.id })
+        .from(importReviewChanges)
+        .orderBy(desc(importReviewChanges.id))
+        .limit(1);
+      return latest ?? null;
     },
   };
 }

@@ -37,6 +37,8 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
         (await loaders(context).review()).readyEmployeeSources,
       checks: async (_parent, _args, context) => (await loaders(context).review()).checks,
       version: async (_parent, _args, context) => (await loaders(context).review()).version,
+      latestReviewChange: async (_parent, _args, context) =>
+        (await loaders(context).review()).latestReviewChange,
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],

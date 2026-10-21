@@ -26,6 +26,13 @@ type Import {
   checks: [ImportCheck!]!
   "A fingerprint of what Approve would create now; Approve takes it back, so nobody is added unseen."
   version: String!
+  "The owner's latest review change, which Undo reverses next; null when there is none. Reading or removing a source starts the history anew."
+  latestReviewChange: ImportReviewChange
+}
+
+"One change the owner made in review, such as a picked value or everyone incomplete left out."
+type ImportReviewChange {
+  id: ID!
 }
 
 "Where people came from."
@@ -245,6 +252,8 @@ type ImportMutations {
   setEmployeeLeftOut(employeeId: ID!, leftOut: Boolean!): ImportSetEmployeeLeftOutPayload!
   "Leaves out every incomplete import employee with this reason."
   leaveOutIncomplete(reason: ImportEmployeeIncompleteReason!): ImportMutationPayload!
+  "Puts back what the review change did, latest first. Refused with a ConflictError unless it is `Import.latestReviewChange`, so a repeated or stale Undo changes nothing."
+  undoReviewChange(id: ID!): ImportUndoReviewChangePayload!
 }
 
 input ImportChooseEmployeeValueInput {
@@ -308,6 +317,14 @@ type ImportSetEmployeeLeftOutPayload {
 }
 
 union ImportSetEmployeeLeftOutError = InvalidInputError
+
+"The import after `undoReviewChange`, or why nothing was undone."
+type ImportUndoReviewChangePayload {
+  import: Import
+  error: ImportUndoReviewChangeError
+}
+
+union ImportUndoReviewChangeError = ConflictError
 
 type Mutation {
   import: ImportMutations!
