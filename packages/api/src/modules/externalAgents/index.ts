@@ -8,7 +8,11 @@ import { createExternalAgentUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { externalAgentFilesRouter, externalAgentRouter } from "./http";
 
-export { createExternalAgentUseCases, type ExternalAgentUseCases } from "./app";
+export {
+  createExternalAgentCodeOnServer,
+  createExternalAgentUseCases,
+  type ExternalAgentUseCases,
+} from "./app";
 
 /**
  * The owner's own coding agent, such as Claude Code or Codex, working on setup through a limited

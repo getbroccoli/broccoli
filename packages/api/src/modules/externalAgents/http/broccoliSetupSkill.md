@@ -1,7 +1,7 @@
 ---
 name: broccoli-setup
-version: 1
-description: Help the owner set up Broccoli, an HR app they run themselves, by putting their staff files into its import. Use when the owner pastes "Help me set up Broccoli. Read <address>/api/external-agent/skill and connect with code <code>."
+version: 2
+description: Help the owner set up Broccoli, an HR app they run themselves, by putting their staff files into its import. Use when you just installed Broccoli for the owner, or when the owner pastes "Help me set up Broccoli. Read <address>/api/external-agent/skill and connect with code <code>."
 ---
 
 # Set up Broccoli
@@ -20,11 +20,32 @@ approves.
 - Never write the token to a file, never show it to the owner, and print it only in the exchange's
   answer. Send it in each request's header from standard input, as in the commands below; if your
   shell keeps no variables between commands, set `TOKEN` again in each command. Start no helper process that keeps running after you finish.
-- `<address>` and `<code>` are the address and the code in the prompt the owner gave you.
-- The owner already has Broccoli open in their browser and follows your work there: send them no
-  links, and ask them nothing but to drop files on that page.
+- `<address>` and `<code>` are the address and the code in the prompt the owner gave you, or the
+  ones you got on the server (section 1).
+- The owner follows your work in Broccoli in their browser: send them no links except the address
+  in section 1, and ask them nothing but what section 1 says and to drop files on that page.
 
 ## 1. Check and connect
+
+If you installed Broccoli, or have a shell on the computer running it (also over SSH), get the
+code there and never ask the owner for one:
+
+- `<address>` is `http://localhost:<port>` on that computer (8080 unless the installer said
+  otherwise). Run every command of this skill there, through the same shell.
+- Tell the owner once: "Open <the address their browser reaches: localhost on that computer, else its
+  name or IP and the port>, name your company, choose Your agent, then drop your staff files."
+- Run the command the installer printed, which is, from Broccoli's install directory:
+
+  ```sh
+  docker compose exec -T broccoli node dist/externalAgentCode.js
+  ```
+
+  It prints `<code>`. Exit status 2 means the owner has not chosen Your agent yet: run it again
+  every 5 seconds, for up to 15 minutes, then tell the owner and stop. Any other failure: tell the
+  owner and stop. Run it as you ran the installer (with `sudo` if you did), and only until it prints
+  a code: each run ends the earlier code and session.
+
+Otherwise use the address and code from the owner's prompt.
 
 ```sh
 curl -sS "<address>/healthz"
@@ -118,7 +139,8 @@ Errors answer `{ "error": { "code": "…", "fields": [{ "field": "…", "code": 
 - `INVALID_INPUT` (400): fix what `fields` names once; if it fails again, skip that file for the
   rest of this run and tell the owner.
 - `UNAUTHENTICATED` (401): the session ended (two hours passed, the owner disconnected you, or
-  setup moved on). Tell the owner that "Add your files" in Broccoli shows a new prompt, and stop.
+  setup moved on). Tell the owner, and stop. If they ask you to connect again, start section 1
+  over; without a shell on Broccoli's computer, "Add your files" in Broccoli shows a new prompt.
 - `CONFLICT` (409): the file is already answered; go on with the next one.
 - `NOT_FOUND` (404): no waiting file has that id; list the files again.
 - `TOO_MANY_REQUESTS` (429) or `UNAVAILABLE` (503): wait a few seconds, then try again.

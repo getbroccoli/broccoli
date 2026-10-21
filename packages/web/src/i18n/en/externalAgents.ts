@@ -13,7 +13,7 @@ export const externalAgentsEn = {
   "externalAgents.waiting":
     "Waiting for your agent. Paste the prompt in any folder; the code works once, for 2 hours.",
   "externalAgents.failed": "Couldn’t reach Broccoli. Try again.",
-  "externalAgents.unsafeOrigin": "Your agent needs Broccoli on https or on this computer.",
+  "externalAgents.waitingOnServer": "Waiting for your agent to connect from the server.",
   "externalAgents.retry": "Try again",
   "externalAgents.connected": "{client} connected",
   "externalAgents.disconnect": "Disconnect",

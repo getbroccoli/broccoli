@@ -11,7 +11,8 @@ import { ExternalAgentPromptBlock } from "../ExternalAgentPromptBlock";
 /**
  * Connecting the owner's agent on the import step: the prompt with a one-time code, made as the
  * page opens and again once it expires, and the wait for the agent. Shown only while no agent is
- * connected, since a new code ends that agent's session.
+ * connected, since a new code ends that agent's session. Off https and this computer it shows no
+ * code and waits for the agent to connect from the server.
  */
 export function ExternalAgentPrompt() {
   const onSafeAddress = isExternalAgentSafeOrigin(window.location.origin);
@@ -34,11 +35,7 @@ export function ExternalAgentPrompt() {
           }
         />
       )}
-      {!onSafeAddress ? (
-        <p role="alert" className="text-sm text-destructive">
-          {t("externalAgents.unsafeOrigin")}
-        </p>
-      ) : failed ? (
+      {failed ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
           {t("externalAgents.failed")}
           <Button type="button" variant="outline" size="sm" onClick={retry}>
@@ -51,7 +48,7 @@ export function ExternalAgentPrompt() {
             aria-hidden
             className="size-3 shrink-0 animate-spin rounded-full border-2 border-border border-t-foreground"
           />
-          {t("externalAgents.waiting")}
+          {t(onSafeAddress ? "externalAgents.waiting" : "externalAgents.waitingOnServer")}
         </p>
       )}
     </div>

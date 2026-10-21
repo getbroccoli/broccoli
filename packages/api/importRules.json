@@ -1,6 +1,14 @@
 {
   "elements": {
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
+    "src/externalAgentCode": [
+      "src/core/applicationError",
+      "src/core/db",
+      "src/core/env",
+      "src/core/events",
+      "src/core/logger",
+      "src/modules/externalAgents"
+    ],
     "src/modules": [
       "src/core/env",
       "src/core/instance",

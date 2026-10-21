@@ -28,9 +28,17 @@ jobs:
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Each commit gets its own tag, the short SHA that deployments pin.
+      # Emulates arm64, for main's images.
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        if: github.event_name == 'push'
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      # Each commit gets its own tag, the short SHA that deployments pin. Main also moves `latest`, which
+      # the installer runs, for amd64 and arm64; pull requests build amd64 only, to stay fast.
       - name: Build and push
         run: |
-          image="ghcr.io/getbroccoli/broccoli:${COMMIT::7}"
-          docker build --file packages/api/Dockerfile --tag "$image" .
-          docker push "$image"
+          image=ghcr.io/getbroccoli/broccoli
+          options=(--platform linux/amd64 --tag "$image:${COMMIT::7}")
+          if [[ $GITHUB_EVENT_NAME == push ]]; then
+            options=(--platform linux/amd64,linux/arm64 --tag "$image:${COMMIT::7}" --tag "$image:latest")
+          fi
+          docker buildx build --file packages/api/Dockerfile "${options[@]}" --push .

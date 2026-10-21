@@ -1,6 +1,8 @@
 import type { Orm, Transact } from "../../../core/db";
+import { PrincipalSecurityContext } from "../../../core/security";
 import type { ImportUseCases } from "../../imports";
 import {
+  type ExternalAgentCode,
   type ExternalAgentSessionService,
   createExternalAgentSessionService,
 } from "./externalAgentSessionService";
@@ -34,4 +36,24 @@ export function createExternalAgentUseCases({
     sessions: createExternalAgentSessionService(context),
     files: createExternalAgentFileService(context),
   };
+}
+
+/**
+ * A one-time code for the command run inside the server's container, as the system: whoever can run
+ * it already controls the server. Refused with CONFLICT, like the setup holder, until the agent is chosen.
+ */
+export function createExternalAgentCodeOnServer({
+  orm,
+  transact,
+}: {
+  orm: Orm;
+  transact: Transact;
+}): Promise<ExternalAgentCode> {
+  const sessions = createExternalAgentSessionService({
+    orm,
+    transact,
+    clock: () => new Date(),
+    activity: createExternalAgentActivity(),
+  });
+  return sessions.createExternalAgentCode(PrincipalSecurityContext.system());
 }
