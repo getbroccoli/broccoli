@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
 
-import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
 import type { AiSource, Instance, ManagedAssignment, SetupSession, SetupStep } from "../domain";
 import { instance } from "./instanceTable";
@@ -11,8 +10,6 @@ export interface InstanceRepository {
   readInstance(): Promise<Instance>;
   /** As `readInstance`, locking the row until the transaction ends. */
   lockInstance(): Promise<Instance>;
-  /** The owner's id and sign-in email, or null before an owner exists. */
-  readOwner(): Promise<{ userId: string; email: string } | null>;
   saveSetupSession(session: SetupSession): Promise<void>;
   clearSetupSession(): Promise<void>;
   saveDemoExpiresAt(expiresAt: Date | null): Promise<void>;
@@ -49,14 +46,6 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
     readInstance: async () => toInstance(await selectInstance()),
 
     lockInstance: async () => toInstance(await selectInstance().for("update")),
-
-    readOwner: async (): Promise<{ userId: string; email: string } | null> => {
-      const [row] = await orm()
-        .select({ userId: user.id, email: user.email })
-        .from(instance)
-        .innerJoin(user, eq(user.id, instance.ownerUserId));
-      return row ?? null;
-    },
 
     saveSetupSession: async ({ tokenHash, expiresAt }: SetupSession): Promise<void> => {
       await orm().update(instance).set({ setupTokenHash: tokenHash, setupExpiresAt: expiresAt });

@@ -1,4 +1,5 @@
 import { ApplicationError } from "../../applicationError";
+import { authUserRepository } from "../../auth";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
@@ -6,8 +7,10 @@ import { holdsSetup, OwnerExistsError, SetupInProgressError, type SetupStep } fr
 import { completeOwnerStep } from "./setup";
 
 /** The owner's id and sign-in email, or null before an owner exists. */
-export function readOwner(orm: Orm): Promise<{ userId: string; email: string } | null> {
-  return instanceRepository(orm).readOwner();
+export async function readOwner(orm: Orm): Promise<{ userId: string; email: string } | null> {
+  const { ownerUserId } = await instanceRepository(orm).readInstance();
+  const email = ownerUserId && (await authUserRepository(orm).readEmail(ownerUserId));
+  return ownerUserId && email ? { userId: ownerUserId, email } : null;
 }
 
 /**

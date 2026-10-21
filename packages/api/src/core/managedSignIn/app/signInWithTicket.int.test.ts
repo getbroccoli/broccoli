@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { expect, SYSTEM, test } from "#test/support";
 
-import { account, user } from "../../auth";
+import { account, user } from "../../auth/db";
 import { ormOf, type Orm, transactor } from "../../db";
 import { createEventBus } from "../../events";
 import { readInstance } from "../../instance";

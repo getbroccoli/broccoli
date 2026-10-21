@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { inject } from "vitest";
 
-import { session, user } from "../../src/core/auth";
+import { session, user } from "../../src/core/auth/db";
 import { connectDatabase, type Database } from "../../src/core/db";
 import { readInstance } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";

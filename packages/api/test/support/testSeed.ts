@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { hashPassword } from "better-auth/crypto";
 
-import { account, user } from "../../src/core/auth";
+import { account, user } from "../../src/core/auth/db";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance/db";

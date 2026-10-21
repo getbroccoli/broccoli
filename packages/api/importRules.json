@@ -83,6 +83,7 @@
     "src/core/secrets": [],
     "test/support": [
       "src/core/*",
+      "src/core/auth/db",
       "src/core/instance/db",
       "src/core/instance/domain",
       "src/core/instance/helpers",
@@ -111,6 +112,6 @@
   "testsMayImport": {
     "*": ["test/support"],
     "src/core/db": ["src/core/instance"],
-    "src/core/managedSignIn": ["src/core/events"]
+    "src/core/managedSignIn": ["src/core/auth/db", "src/core/events"]
   }
 }

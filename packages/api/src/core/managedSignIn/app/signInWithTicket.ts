@@ -1,7 +1,8 @@
+import { authUserRepository } from "../../auth";
 import type { Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { claimOwner, OwnerExistsError, readInstance } from "../../instance";
-import { managedAccountRepository, managedTicketRepository } from "../db";
+import { managedTicketRepository } from "../db";
 import type { ManagedTicket } from "../domain";
 
 /** A valid ticket that may not sign in here: used before, expired, or for someone else. */
@@ -42,7 +43,7 @@ async function findOrClaimOwner(
   tx: Tx,
   ticket: ManagedTicket,
 ): Promise<string> {
-  const userId = await managedAccountRepository(tx).findUserId(ticket.subject);
+  const userId = await authUserRepository(tx).findUserIdByAccount(managedAccountOf(ticket));
   if (!userId) {
     return claimOwnerFor(ctx, tx, ticket);
   }
@@ -54,10 +55,13 @@ async function findOrClaimOwner(
 }
 
 async function claimOwnerFor(ctx: SecurityContext, tx: Tx, ticket: ManagedTicket): Promise<string> {
-  const accounts = managedAccountRepository(tx);
   try {
     const owner = await claimOwner(ctx, tx, async () => ({
-      user: await accounts.createUser(ticket),
+      user: await authUserRepository(tx).createLinkedUser({
+        email: ticket.email,
+        name: ticket.name,
+        ...managedAccountOf(ticket),
+      }),
     }));
     return owner.user.id;
   } catch (error) {
@@ -67,3 +71,10 @@ async function claimOwnerFor(ctx: SecurityContext, tx: Tx, ticket: ManagedTicket
     throw error;
   }
 }
+
+/** The ticket's account at the accounts service: one per subject, never matched by email. */
+function managedAccountOf({ subject }: ManagedTicket): { providerId: string; accountId: string } {
+  return { providerId: MANAGED_PROVIDER_ID, accountId: subject };
+}
+
+const MANAGED_PROVIDER_ID = "broccoli-accounts";

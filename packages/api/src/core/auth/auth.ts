@@ -3,7 +3,7 @@ import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "bette
 
 import type { Orm, OrmTransaction } from "../db";
 import type { Logger } from "../logger";
-import { account, session, user, verification } from "./schema";
+import { account, session, user, verification } from "./db";
 
 export const PASSWORD_LENGTH = { min: 8, max: 128 } as const;
 
