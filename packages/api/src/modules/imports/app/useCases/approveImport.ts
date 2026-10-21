@@ -31,7 +31,8 @@ export async function approveImport(
     if (isReading(await imports.listSources())) {
       throw new ApplicationError("CONFLICT", "Files are still being read.");
     }
-    const review = await readImportReview(ctx, tx);
+    // The step has just moved, but the review must count emails employees have, as the owner saw it.
+    const review = await readImportReview(ctx, tx, { importOpen: true });
     if (review.version !== version) {
       throw new ApplicationError("CONFLICT", "Your people changed while you were reviewing.");
     }

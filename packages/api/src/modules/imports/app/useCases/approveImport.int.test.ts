@@ -74,7 +74,7 @@ test("the review keeps the approved employees ready and their sources after appr
   const imports = importUseCases(orm);
   const before = await imports.reads.readReview(owner);
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, before.version);
 
   const after = await imports.reads.readReview(owner);
   expect(after.readyEmployees).toEqual(before.readyEmployees);
