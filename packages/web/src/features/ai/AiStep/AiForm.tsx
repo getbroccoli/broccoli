@@ -91,18 +91,18 @@ export function AiForm({ ai, demoAvailable }: Props) {
         <fieldset className="flex flex-col gap-3" disabled={busy}>
           <legend className="sr-only">{t("setup.ai.options")}</legend>
           <SourceOption
-            value="EXTERNAL_AGENT"
-            selected={source}
-            onSelect={setSource}
-            title={t("setup.ai.agent")}
-            hint={t("setup.ai.externalAgentHint")}
-          />
-          <SourceOption
             value="BROCCOLI_AI"
             selected={source}
             onSelect={setSource}
             title={t("setup.ai.broccoliAi")}
             hint={t("setup.ai.broccoliAiHint")}
+          />
+          <SourceOption
+            value="EXTERNAL_AGENT"
+            selected={source}
+            onSelect={setSource}
+            title={t("setup.ai.agent")}
+            hint={t("setup.ai.externalAgentHint")}
           />
           <SourceOption
             value="OPENROUTER"
