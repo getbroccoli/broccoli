@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Tamsin",
+      "lastName": "Okafor",
+      "email": null,
+      "jobTitle": "Buyer",
+      "startDate": null
+    },
+    {
+      "firstName": "Ilse",
+      "lastName": "Brandvold",
+      "email": null,
+      "jobTitle": "Controller",
+      "startDate": null
+    }
+  ],
+  "forbidden": ["Tamsin", "Okafor", "Ilse", "Brandvold"]
+}

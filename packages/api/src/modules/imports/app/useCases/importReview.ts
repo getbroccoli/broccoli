@@ -1,4 +1,5 @@
 import type { Orm, Tx } from "../../../../core/db";
+import { isImportOpen } from "../../../../core/instance";
 import { type Connection, type ListArgs, paginate } from "../../../../core/pagination";
 import { parseSearch } from "../../../../core/search";
 import type { SecurityContext } from "../../../../core/security";
@@ -51,11 +52,14 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
     imports.listChoices("employee"),
   ]);
   const employees = groupEmployeeRecords(sources, records, choices);
-  const takenEmails = await findTakenEmails(
-    ctx,
-    db,
-    employees.flatMap(({ values }) => values.email.value ?? []),
-  );
+  // Once approved, the added employees own these emails and must stay in the setup summary.
+  const takenEmails = (await isImportOpen(db))
+    ? await findTakenEmails(
+        ctx,
+        db,
+        employees.flatMap(({ values }) => values.email.value ?? []),
+      )
+    : new Set<string>();
   const readyEmployees = employees.filter(
     (employee) => !employee.leftOut && isReady(employee, takenEmails),
   );

@@ -221,11 +221,12 @@ it("splits a full name into given and middle names and a surname", () => {
   expect(record?.values).toMatchObject({ firstName: "Avery Robin", lastName: "Stone" });
 });
 
-it("uses separate name columns ahead of the full name", () => {
-  const [record] = readFileRecords(
+it("uses separate name columns instead of the full name, even where they are blank", () => {
+  const records = readFileRecords(
     [
       ["Name", "First", "Last"],
       ["Ignored Name", "Avery", "Stone"],
+      ["Vacant", "", ""],
     ],
     0,
     {
@@ -235,7 +236,9 @@ it("uses separate name columns ahead of the full name", () => {
       lastName: 2,
     },
   );
-  expect(record?.values).toMatchObject({ firstName: "Avery", lastName: "Stone" });
+  expect(records.map(({ values }) => values)).toMatchObject([
+    { firstName: "Avery", lastName: "Stone" },
+  ]);
 });
 
 it("leaves an invalid email empty", () => {
