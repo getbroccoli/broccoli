@@ -26,6 +26,7 @@ export { selfHostedServer } from "./selfHostedServer";
 export {
   AssignmentConflictError,
   type AiConfig,
+  type AiSource,
   OwnerExistsError,
   type ManagedAssignment,
 } from "./domain";
