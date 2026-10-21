@@ -16,6 +16,13 @@ it("returns the body bytes", async () => {
   expect(bytes).toEqual(PNG);
 });
 
+it("returns null for a 404 response", async () => {
+  const server = await startFakeHttpServer(() => ({ status: 404 }));
+  onTestFinished(() => server.stop());
+
+  await expect(fetchBytes(new URL(server.url), options)).resolves.toBeNull();
+});
+
 it("rejects a 500 response", async () => {
   const server = await startFakeHttpServer(() => ({ status: 500 }));
   onTestFinished(() => server.stop());

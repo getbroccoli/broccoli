@@ -39,12 +39,17 @@ export function createSlackApi(apiUrl: string): SlackApi {
     },
 
     // A redirect could lead off Slack's photo hosts, so none is followed.
-    readPhoto: (url) =>
-      fetchBytes(url, {
+    readPhoto: async (url) => {
+      const photo = await fetchBytes(url, {
         timeoutMs: PHOTO_TIMEOUT_MS,
         maxBytes: MAX_PHOTO_BYTES,
         init: { redirect: "error" },
-      }),
+      });
+      if (!photo) {
+        throw new Error(`GET ${url.origin} answered 404`);
+      }
+      return photo;
+    },
   };
 }
 

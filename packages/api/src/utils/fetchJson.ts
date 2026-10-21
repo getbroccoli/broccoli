@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { readBytes } from "./fetchBytes";
+import { fetchBytes, readBytes } from "./fetchBytes";
 
 /**
  * Requests a JSON answer, a GET unless `init` says otherwise, and parses it with
@@ -11,16 +11,10 @@ import { readBytes } from "./fetchBytes";
 export async function fetchJson<T>(
   url: URL,
   schema: z.ZodType<T>,
-  { timeoutMs, maxBytes, init }: { timeoutMs: number; maxBytes: number; init?: RequestInit },
+  options: { timeoutMs: number; maxBytes: number; init?: RequestInit },
 ): Promise<T | null> {
-  const response = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
-  if (response.status === 404) {
-    return null;
-  }
-  if (!response.ok) {
-    throw new Error(`${init?.method ?? "GET"} ${url.origin} answered ${response.status}`);
-  }
-  return schema.parse(JSON.parse(await readText(response, maxBytes)));
+  const body = await fetchBytes(url, options);
+  return body && schema.parse(JSON.parse(body.toString("utf8")));
 }
 
 /** The body as text; stops reading and fails beyond `maxBytes`. */
