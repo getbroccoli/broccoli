@@ -12,6 +12,7 @@
       "src/shell"
     ],
     "src/shell": [
+      "src/__generated__",
       "src/components/ui",
       "src/features/auth",
       "src/features/demo",

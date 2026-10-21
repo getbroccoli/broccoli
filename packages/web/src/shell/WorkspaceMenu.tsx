@@ -1,3 +1,4 @@
+import { useQuery } from "@apollo/client/react";
 import {
   ArrowCounterClockwise,
   Buildings,
@@ -9,6 +10,7 @@ import {
 import { Link, useRouteContext, useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
+import { WorkspaceMenuDocument } from "@/__generated__/graphql";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +28,7 @@ import { useSessionChange } from "@/lib/useSessionChange";
 export function WorkspaceMenu() {
   const router = useRouter();
   const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
+  const company = useQuery(WorkspaceMenuDocument).data?.company;
   const openedOnPath = useRef<string | null>(null);
   // Outside the menu, which closes when an item is chosen.
   const [resettingDemo, setResettingDemo] = useState(false);
@@ -50,11 +53,22 @@ export function WorkspaceMenu() {
               type="button"
               className="group/workspace flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/5"
             >
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
-                <Plant size={16} weight="fill" />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight">
-                {t("workspace.name")}
+              {company?.logoUrl ? (
+                <img
+                  src={company.logoUrl}
+                  alt=""
+                  className="size-7 shrink-0 rounded-md bg-card object-contain"
+                />
+              ) : (
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
+                  <Plant size={16} weight="fill" aria-hidden />
+                </span>
+              )}
+              <span
+                title={company?.name ?? undefined}
+                className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight"
+              >
+                {company?.name ?? t("workspace.name")}
               </span>
               <CaretDown
                 size={11}
