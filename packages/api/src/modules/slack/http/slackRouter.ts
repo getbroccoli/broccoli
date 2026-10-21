@@ -1,7 +1,7 @@
 import express from "express";
 
 import { sendApplicationError } from "../../../core/applicationError";
-import type { SecurityResolver } from "../../../core/graphql";
+import type { SecurityResolver } from "../../../core/security";
 import { requireSignedIn } from "../../../core/security";
 import { readCookie } from "../../../utils";
 import type { SlackConnectionService } from "../app";

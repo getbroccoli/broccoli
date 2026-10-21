@@ -2,7 +2,7 @@ import express from "express";
 import { rateLimit } from "express-rate-limit";
 
 import { sendApplicationError } from "../../../core/applicationError";
-import type { SecurityResolver } from "../../../core/graphql";
+import type { SecurityResolver } from "../../../core/security";
 import { requireSignedIn, type SecurityContext } from "../../../core/security";
 import { parseStaffFileName } from "../../imports";
 import type { ExternalAgentUseCases } from "../app";

@@ -10,7 +10,6 @@ import { filesRouter, photoRouter } from "./http";
 export {
   createImportUseCases,
   type ImportUseCases,
-  prepareDemoStart,
   READ_PEOPLE_JSON_SCHEMA,
   type ReadPeopleOutcome,
 } from "./app";
@@ -22,9 +21,6 @@ export {
   parseReadPeople,
   parseStaffFileName,
 } from "./domain";
-/** For test seeding only; other modules go through the use cases. */
-export { importPhotoRepository, importReader, lockImport } from "./db";
-export type { ImportEmployeeValues } from "./domain";
 
 /**
  * Bringing people in before they become employees: sources such as the Slack

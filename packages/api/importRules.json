@@ -13,8 +13,6 @@
       "src/core/env",
       "src/core/instance",
       "src/core/moduleManifest",
-      "src/core/security",
-      "src/integrations/ai",
       "src/modules/*"
     ],
     "src/modules/company": [
@@ -40,7 +38,7 @@
       "src/modules/system"
     ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
-    "src/modules/system": ["src/core/*", "!src/core/server", "src/integrations/ai"],
+    "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/integrations/ai": ["src/utils"],
     "src/integrations/brandLookup": ["src/utils"],
     "src/integrations/slack": ["src/utils"],
@@ -53,7 +51,8 @@
       "src/core/instance",
       "src/core/jobs",
       "src/core/logger",
-      "src/core/secrets"
+      "src/core/secrets",
+      "src/core/security"
     ],
     "src/core/graphql": [
       "src/core/applicationError",
@@ -66,7 +65,6 @@
       "src/integrations/ai",
       "src/core/applicationError",
       "src/core/env",
-      "src/core/sameOrigin",
       "src/core/auth",
       "src/core/db",
       "src/core/events",
@@ -78,7 +76,6 @@
       "src/core/auth",
       "src/core/db",
       "src/core/env",
-      "src/core/events",
       "src/core/instance",
       "src/core/logger",
       "src/core/readiness",
@@ -91,20 +88,24 @@
     "src/core/db": ["src/core/events", "src/core/logger"],
     "src/core/events": ["src/core/logger"],
     "src/core/pagination": ["src/core/applicationError"],
-    "src/core/search": ["src/core/applicationError"],
     "src/core/health": ["src/core/readiness"],
     "src/core/logger": ["src/core/env"],
     "src/core/applicationError": [],
     "src/core/env": ["src/utils"],
     "src/core/readiness": [],
-    "src/core/sameOrigin": [],
     "src/core/secrets": [],
     "test/support": [
       "src/core/*",
       "src/core/instance/db",
+      "src/core/instance/domain",
+      "src/core/instance/helpers",
       "src/integrations/*",
       "src/modules",
       "src/modules/*",
+      "src/modules/employees/db",
+      "src/modules/imports/db",
+      "src/modules/imports/domain",
+      "src/modules/slack/db",
       "src/utils"
     ],
     "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]
@@ -123,6 +124,6 @@
   "testsMayImport": {
     "*": ["test/support"],
     "src/core/db": ["src/core/instance"],
-    "src/core/files": ["src/core/events", "src/core/logger"]
+    "src/core/managedSignIn": ["src/core/events"]
   }
 }

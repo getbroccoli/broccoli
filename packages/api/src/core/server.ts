@@ -10,7 +10,7 @@ import { authHandler, type DeploymentServer } from "./auth";
 import { connectDatabase, type Database, transactor } from "./db";
 import type { Env } from "./env";
 import { createEventBus } from "./events";
-import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
+import { type GraphqlApi, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
 import { refuseBearerAuth, resolveSecurityContext, selfHostedServer } from "./instance";
@@ -19,6 +19,7 @@ import { managedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest, Modules } from "./moduleManifest";
 import { Readiness } from "./readiness";
 import { createSecretBox, ensureSecret } from "./secrets";
+import type { SecurityResolver } from "./security";
 
 /** How long to wait before retrying failed migrations, e.g. while Postgres boots. */
 const MIGRATION_RETRY_MS = 1_000;

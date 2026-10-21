@@ -2,10 +2,11 @@ import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 
 import type { SecurityContext } from "../../../../core/security";
 
-// The external agent's operations admit their own callers; their tests check them.
+// The external agent's operations admit their own callers; their tests check them. The demo
+// start takes no caller: the start it returns checks the caller setup runs it with.
 type ImportUseCases = Omit<
   ReturnType<typeof importUseCases>,
-  "sentJobs" | "answeredMapping" | "originalFileReads"
+  "sentJobs" | "answeredMapping" | "originalFileReads" | "prepareDemoStart"
 > & {
   originalFileReads: Omit<
     ReturnType<typeof importUseCases>["originalFileReads"],

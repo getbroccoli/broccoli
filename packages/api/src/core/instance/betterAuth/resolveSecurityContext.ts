@@ -3,7 +3,7 @@ import type { IncomingHttpHeaders } from "node:http";
 
 import type { AuthSource } from "../../auth";
 import type { Orm } from "../../db";
-import { isCrossOrigin } from "../../sameOrigin";
+import { isCrossOrigin } from "../helpers";
 import {
   PrincipalSecurityContext,
   type RequestSecurity,
