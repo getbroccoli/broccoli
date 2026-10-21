@@ -1,6 +1,6 @@
 import type { Tx } from "../../db";
 import type { SecurityContext } from "../../security";
-import { claimOwner, OwnerExistsError, readOwnerUserId } from "../../instance";
+import { claimOwner, OwnerExistsError, readInstance } from "../../instance";
 import { managedAccountRepository, managedTicketRepository } from "../db";
 import type { ManagedTicket } from "../domain";
 
@@ -47,7 +47,7 @@ async function findOrClaimOwner(
     return claimOwnerFor(ctx, tx, ticket);
   }
   // Only the owner exists until invitations do.
-  if (userId !== (await readOwnerUserId(tx))) {
+  if (userId !== (await readInstance(tx)).ownerUserId) {
     throw new SignInRefusedError();
   }
   return userId;

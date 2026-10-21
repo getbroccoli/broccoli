@@ -4,7 +4,7 @@ import { createRemoteJWKSet } from "jose";
 import { createAuth, type DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { ManagedDeployment } from "../env";
-import { readAssignment } from "../instance";
+import { readInstance } from "../instance";
 import type { Logger } from "../logger";
 import type { Readiness } from "../readiness";
 import { managedAuth } from "./app";
@@ -57,6 +57,6 @@ export function managedServer({
       .use(waitingGate(auth)),
     initStatus: async () => ((await auth.current()) ? "ready" : "waiting"),
     // The waiting gate answers until init stored the assignment, so it exists here.
-    publicOrigin: async () => (await readAssignment(orm))!.publicOrigin,
+    publicOrigin: async () => (await readInstance(orm)).assignment!.publicOrigin,
   };
 }

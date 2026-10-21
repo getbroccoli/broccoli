@@ -34,6 +34,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE52.** One decision has one owner: a rule over several inputs (such as the mode, settings and stored state) is one `domain` function, and reading those inputs and applying it is one `app` function next to the data. Callers call that function; they never repeat its branches, its reads or a condition it already decides (`mode === "managed"`) in another file.
 - **RULE19.** Every business function in `app` takes the caller's `SecurityContext` first, as `ctx`, and checks it. Work Broccoli does on its own runs as the system, never without a context.
 - **RULE20.** A use case opens the transaction with `transact`; an operation meant to compose takes a required `tx`. Code never awaits work that needs another connection while holding locks, such as an HTTP call.
+- **RULE60.** A repository reads a whole item: one query returns the row as a domain object (`instanceRepository(db).read()`, `lock()` when it locks the row), never one read method per field or group of fields. A module's public read returns that item too (`readInstance`), and callers take the fields they need from it.
 - **RULE21.** A module never reads another module's tables: it calls the other module's public functions or handles its events.
 - **RULE22.** An integration reaches the network through `fetchJson`, or `fetchBytes` for a binary answer, in `utils`, with no HTTP library, and nothing retries by default.
 

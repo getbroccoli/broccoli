@@ -1,12 +1,7 @@
-import type { Orm, Tx } from "../../db";
+import type { Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import { AssignmentConflictError, type ManagedAssignment } from "../domain";
-
-/** The company this managed instance serves, or null before its init. */
-export function readAssignment(orm: Orm): Promise<ManagedAssignment | null> {
-  return instanceRepository(orm).readAssignment();
-}
 
 /**
  * Stores the assignment once. The same assignment again is accepted, so orchestration
@@ -20,7 +15,7 @@ export async function assignInstance(
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const current = await instance.lockAssignment();
+  const current = await instance.lock();
   if (current.assignment) {
     if (!isSameAssignment(current.assignment, assignment)) {
       throw new AssignmentConflictError();

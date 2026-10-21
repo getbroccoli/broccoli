@@ -1,5 +1,5 @@
 import type { Orm, Transact } from "../../../../core/db";
-import { readSetupStep } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 import type { Logger } from "../../../../core/logger";
 import type { SecurityContext } from "../../../../core/security";
 import type { BrandLookup } from "../../../../integrations/brandLookup";
@@ -25,7 +25,7 @@ export async function detectCompanyNameAndLogo(
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const domain = companyDomain(email);
-  if (!domain || (await readSetupStep(orm)) !== "company") {
+  if (!domain || (await readInstance(orm)).setupStep !== "company") {
     return;
   }
   try {

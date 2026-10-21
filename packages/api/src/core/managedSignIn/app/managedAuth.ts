@@ -1,6 +1,6 @@
 import type { Auth, AuthSource } from "../../auth";
 import type { Orm } from "../../db";
-import { readAssignment, type ManagedAssignment } from "../../instance";
+import { type ManagedAssignment, readInstance } from "../../instance";
 
 /**
  * Builds Better Auth from the stored assignment the first time one exists. Until then
@@ -14,7 +14,7 @@ export function managedAuth(orm: Orm, build: (assignment: ManagedAssignment) => 
       if (auth) {
         return auth;
       }
-      const assignment = await readAssignment(orm);
+      const { assignment } = await readInstance(orm);
       // Two concurrent first calls may both read the assignment; the first build wins.
       auth ??= assignment ? build(assignment) : undefined;
       return auth ?? null;

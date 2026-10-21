@@ -1,6 +1,6 @@
 import { expect, NON_OWNER, systemUseCases, test } from "#test/support";
 
-import { readSetupStep } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 
 test("completes setup from the ready step", async ({ orm, seed }) => {
   const owner = await seed.owner();
@@ -9,7 +9,7 @@ test("completes setup from the ready step", async ({ orm, seed }) => {
 
   await system.completeSetup(owner);
 
-  expect(await readSetupStep(orm)).toBe("done");
+  expect((await readInstance(orm)).setupStep).toBe("done");
 });
 
 test("does nothing at the import step", async ({ orm, seed }) => {
@@ -19,7 +19,7 @@ test("does nothing at the import step", async ({ orm, seed }) => {
 
   await system.completeSetup(owner);
 
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
 });
 
 test("refuses a non-owner completing setup and keeps the ready step", async ({ orm, seed }) => {
@@ -29,5 +29,5 @@ test("refuses a non-owner completing setup and keeps the ready step", async ({ o
 
   await expect(system.completeSetup(NON_OWNER)).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(await readSetupStep(orm)).toBe("ready");
+  expect((await readInstance(orm)).setupStep).toBe("ready");
 });

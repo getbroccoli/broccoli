@@ -13,7 +13,7 @@ import {
 } from "#test/support";
 
 import { files } from "../../../../core/files";
-import { readSetupStep } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -115,7 +115,7 @@ test("refuses an upload after Approve while setup still awaits the owner", async
   await seed.setupStep("import");
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER);
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
 
   await expect(
     imports.files.uploadFile(SETUP_HOLDER, {
@@ -252,7 +252,7 @@ test("refuses file removal after Approve and keeps the import and stored file un
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER);
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
   const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileIds = await storedFileIds(orm);
   expect(before.edges).toHaveLength(1);

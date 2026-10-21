@@ -3,11 +3,6 @@ import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import type { SetupStep } from "../domain";
 
-/** Where the instance is in its first-run flow, through the pool or joining `tx`. */
-export function readSetupStep(db: Orm | Tx): Promise<SetupStep> {
-  return instanceRepository(db).readStep();
-}
-
 /** Leaves the company step for the import step, joining `tx`; does nothing at any other step. Returns whether it moved. */
 export function completeCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
   return advanceStep(ctx, tx, "company", "import");
@@ -38,8 +33,8 @@ export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise
 
 /** Whether the import still takes changes: setup has not moved past the import step. */
 export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
-  const step = await readSetupStep(db);
-  return step === "company" || step === "import";
+  const { setupStep } = await instanceRepository(db).read();
+  return setupStep === "company" || setupStep === "import";
 }
 
 /**
@@ -65,7 +60,8 @@ async function leaveImportStep(
   tx: Tx,
   withOwner: SetupStep,
 ): Promise<boolean> {
-  const next = (await instanceRepository(tx).readOwnerUserId()) ? withOwner : "owner";
+  const { ownerUserId } = await instanceRepository(tx).read();
+  const next = ownerUserId ? withOwner : "owner";
   return advanceStep(ctx, tx, "import", next);
 }
 

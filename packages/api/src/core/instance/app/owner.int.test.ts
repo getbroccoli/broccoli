@@ -4,8 +4,7 @@ import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
-import { instanceRepository } from "../db";
-import { claimOwner, createOwnerAtSetup, readOwnerUserId, readSetupStep } from ".";
+import { claimOwner, createOwnerAtSetup, readInstance } from ".";
 
 test("refuses a non-owner claiming ownership without creating a user or advancing setup", async ({
   orm,
@@ -21,8 +20,7 @@ test("refuses a non-owner claiming ownership without creating a user or advancin
     ),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(await readOwnerUserId(orm)).toBeNull();
-  expect(await readSetupStep(orm)).toBe("company");
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: null, setupStep: "company" });
   expect(await orm.select().from(user)).toEqual([]);
 });
 
@@ -33,8 +31,7 @@ test.for(["company", "import"] as const)(
 
     const owner = await transact((tx) => claimOwner(SYSTEM, tx, () => insertOwner(tx)));
 
-    expect(await readOwnerUserId(orm)).toBe(owner.user.id);
-    expect(await readSetupStep(orm)).toBe(step);
+    expect(await readInstance(orm)).toMatchObject({ ownerUserId: owner.user.id, setupStep: step });
   },
 );
 
@@ -71,9 +68,8 @@ test("creates the owner for the holder, completes setup and ends the session", a
     ),
   );
 
-  expect(await readOwnerUserId(orm)).toBe(owner.user.id);
-  expect(await readSetupStep(orm)).toBe("done");
-  expect(await instanceRepository(orm).readSetupSession()).toBeNull();
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: owner.user.id, setupStep: "done" });
+  expect((await readInstance(orm)).setupSession).toBeNull();
   expect(completed).toEqual([null]);
   expect(claimed).toEqual([{ userId: owner.user.id, email: owner.user.email }]);
 });
@@ -99,8 +95,7 @@ test.for([null, "another-token"])(
     ).rejects.toMatchObject({ name: "SetupInProgressError" });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect(await readOwnerUserId(orm)).toBeNull();
-    expect(await readSetupStep(orm)).toBe("owner");
+    expect(await readInstance(orm)).toMatchObject({ ownerUserId: null, setupStep: "owner" });
   },
 );
 
@@ -150,7 +145,7 @@ test.for(["company", "import"] as const)(
     });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect(await readSetupStep(orm)).toBe(step);
+    expect((await readInstance(orm)).setupStep).toBe(step);
   },
 );
 
@@ -170,8 +165,7 @@ test("keeps one owner when two creations arrive together", async ({ orm, seed, t
   ]);
   const users = await orm.select().from(user);
   expect(users).toHaveLength(1);
-  expect(await readOwnerUserId(orm)).toBe(users[0]!.id);
-  expect(await readSetupStep(orm)).toBe("done");
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: users[0]!.id, setupStep: "done" });
 });
 
 async function insertOwner(tx: Tx, id = "owner-1") {

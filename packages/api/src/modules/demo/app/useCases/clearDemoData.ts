@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../../../core/applicationError";
-import { readDemoExpiresAt } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { clearDemoEmployees } from "../../../employees";
 import type { DemoContext } from "./demoContext";
@@ -11,7 +11,7 @@ import type { DemoContext } from "./demoContext";
 export async function clearDemoData({ transact }: DemoContext, ctx: SecurityContext) {
   ctx.requireOwnerOrSystem();
   await transact(async (tx) => {
-    if (await readDemoExpiresAt(tx)) {
+    if ((await readInstance(tx)).demoExpiresAt) {
       throw new ApplicationError("FORBIDDEN", "Create your account before clearing demo data.");
     }
     await clearDemoEmployees(ctx, tx);

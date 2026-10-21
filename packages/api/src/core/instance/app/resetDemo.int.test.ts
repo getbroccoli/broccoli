@@ -5,7 +5,7 @@ import { user } from "../../auth";
 import { ormOf, type Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import { readDemoExpiresAt, readOwnerUserId, readSetupHolder, readSetupStep, resetDemo } from ".";
+import { readInstance, readSetupHolder, resetDemo } from ".";
 
 test("resetting a demo deletes its owner and gives the browser setup at the company step", async ({
   orm,
@@ -37,14 +37,16 @@ test("resetting a demo deletes its owner and gives the browser setup at the comp
 
   expect(cleared).toBe(true);
   expect(await orm.select().from(user)).toEqual([]);
-  expect(await readOwnerUserId(orm)).toBeNull();
-  expect(await readDemoExpiresAt(orm)).toBeNull();
-  expect(await readSetupStep(orm)).toBe("company");
+  expect(await readInstance(orm)).toMatchObject({
+    ownerUserId: null,
+    demoExpiresAt: null,
+    setupStep: "company",
+  });
   expect(setup.token).toEqual(expect.any(String));
   expect(setup.expiresAt).toEqual(new Date("2026-01-05T12:00:00Z"));
   expect(await readSetupHolder(orm, { token: setup.token, now })).toBe("you");
-  expect(await instance.readAiSource()).toEqual({
-    source: "broccoli_ai",
+  expect(await readInstance(orm)).toMatchObject({
+    aiSource: "broccoli_ai",
     encryptedOpenRouterKey: null,
   });
 });
@@ -99,10 +101,12 @@ test.for([
     expect(cleared).toBe(false);
     expect(deleted).toBe(false);
     expect(await orm.select().from(user)).toEqual(users);
-    expect(await readOwnerUserId(orm)).toBe(owner.user!.userId);
-    expect(await readSetupStep(orm)).toBe("done");
-    expect(await readDemoExpiresAt(orm)).toEqual(deadline);
-    expect(await instance.readSetupSession()).toBeNull();
+    expect(await readInstance(orm)).toMatchObject({
+      ownerUserId: owner.user!.userId,
+      setupStep: "done",
+      demoExpiresAt: deadline,
+      setupSession: null,
+    });
   },
 );
 
@@ -158,10 +162,12 @@ test("rolls back a demo reset when clearing people fails", async ({ orm, seed, t
 
   expect(deleted).toBe(false);
   expect(await orm.select().from(user)).toEqual(users);
-  expect(await readOwnerUserId(orm)).toBe(userId);
-  expect(await readDemoExpiresAt(orm)).toEqual(expiresAt);
-  expect(await readSetupStep(orm)).toBe("done");
-  expect(await instanceRepository(orm).readSetupSession()).toBeNull();
+  expect(await readInstance(orm)).toMatchObject({
+    ownerUserId: userId,
+    demoExpiresAt: expiresAt,
+    setupStep: "done",
+    setupSession: null,
+  });
 });
 
 const now = new Date("2026-01-02T12:00:00Z");
