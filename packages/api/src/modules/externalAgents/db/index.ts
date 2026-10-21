@@ -1,1 +1,1 @@
-export { externalAgentRepository } from "./externalAgentRepository";
+export { type ExternalAgentConnection, externalAgentRepository } from "./externalAgentRepository";

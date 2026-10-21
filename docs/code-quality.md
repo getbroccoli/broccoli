@@ -64,6 +64,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE35.** GraphQL types come from codegen; none is written by hand.
 - **RULE36.** Every user-facing string goes through `t()`.
 - **RULE37.** Server data lives in the Apollo cache, navigation state in validated search params, and React state only for UI; component state stays minimal.
+- **RULE59.** An effect only keeps a component in step with something outside React, such as a timer, a subscription or a request its display needs. A value computed from props or state is computed while rendering, and what a user action causes runs in that action's event handler, never through state an effect watches ([You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)).
 - **RULE53.** A component with props declares them as `type Props = { … }` right above the component, not inline in its parameters and not below it; this is the one type that comes before the code using it (RULE9).
 - **RULE38.** Route files stay thin; feature components live in `features/<module>/`.
 - **RULE39.** App code uses Phosphor icons; Lucide appears only inside shadcn components.

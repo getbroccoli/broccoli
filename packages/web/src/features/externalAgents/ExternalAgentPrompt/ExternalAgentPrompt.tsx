@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CreateExternalAgentCodeDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
@@ -13,42 +13,7 @@ import { ExternalAgentPromptBlock } from "../ExternalAgentPromptBlock";
  * connected, since a new code ends that agent's session.
  */
 export function ExternalAgentPrompt() {
-  // Counts the codes made, so an expired one asks for the next.
-  const [round, setRound] = useState(0);
-  const [code, setCode] = useState<{ round: number; value: string; expiresAt: string } | null>(
-    null,
-  );
-  const [createExternalAgentCode, creating] = usePayloadMutation(CreateExternalAgentCodeDocument);
-  const shown = code?.round === round ? code : null;
-  const failed = Boolean(creating.error || creating.payloadError);
-
-  useEffect(() => {
-    let current = true;
-    // A new code cancels every earlier one, so requests wait for each other: the last one asked
-    // for, the one shown, also commits last. React's strict mode asks twice on mount.
-    const request = codeRequests.then(() => createExternalAgentCode());
-    codeRequests = request.catch(() => {});
-    request
-      .then(({ externalAgentCode }) => {
-        if (current && externalAgentCode) {
-          setCode({ round, value: externalAgentCode.code, expiresAt: externalAgentCode.expiresAt });
-        }
-      })
-      .catch(() => {}); // The hook keeps the error for display.
-    return () => {
-      current = false;
-    };
-  }, [round, createExternalAgentCode]);
-  useEffect(() => {
-    if (!shown) {
-      return;
-    }
-    const expiry = setTimeout(
-      () => setRound((made) => made + 1),
-      Date.parse(shown.expiresAt) - Date.now(),
-    );
-    return () => clearTimeout(expiry);
-  }, [shown]);
+  const { code, failure, retry } = useExternalAgentCode();
 
   return (
     <div className="flex flex-col gap-3.5 rounded-xl border border-border p-[18px]">
@@ -60,16 +25,15 @@ export function ExternalAgentPrompt() {
       </div>
       <ExternalAgentPromptBlock
         prompt={
-          shown && !failed
-            ? t("externalAgents.sentence", { origin: window.location.origin, code: shown.value })
+          code && !failure
+            ? t("externalAgents.sentence", { origin: window.location.origin, code: code.code })
             : null
         }
       />
-      {failed ? (
+      {failure ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
-          {/* The one refusal a page at this step meets: an address the code must not travel to. */}
-          {t(creating.payloadError ? "externalAgents.unsafeOrigin" : "externalAgents.failed")}
-          <Button type="button" variant="outline" size="sm" onClick={() => setRound((n) => n + 1)}>
+          {t(failure)}
+          <Button type="button" variant="outline" size="sm" onClick={retry}>
             {t("externalAgents.retry")}
           </Button>
         </div>
@@ -88,3 +52,54 @@ export function ExternalAgentPrompt() {
 
 /** The code requests of every mounted prompt, in the order they were asked for. */
 let codeRequests: Promise<unknown> = Promise.resolve();
+
+/**
+ * Keeps a valid one-time code while the prompt shows: one now, a new one when it expires.
+ * `retry` starts over after a failure.
+ */
+function useExternalAgentCode() {
+  const [createExternalAgentCode, creating] = usePayloadMutation(CreateExternalAgentCodeDocument);
+  const [code, setCode] = useState<{ code: string; expiresAt: string } | null>(null);
+  const stopRenewing = useRef(() => {});
+
+  const start = useCallback(() => {
+    stopRenewing.current();
+    let stopped = false;
+    let renewal: ReturnType<typeof setTimeout> | undefined;
+    const renew = () => {
+      setCode(null);
+      // A new code cancels every earlier one, so requests wait for each other: the last one asked
+      // for, the one shown, also commits last. React's strict mode mounts twice.
+      const request = codeRequests.then(() => createExternalAgentCode());
+      codeRequests = request.catch(() => {});
+      request.then(
+        ({ externalAgentCode }) => {
+          if (stopped || !externalAgentCode) {
+            return;
+          }
+          setCode(externalAgentCode);
+          renewal = setTimeout(renew, Date.parse(externalAgentCode.expiresAt) - Date.now());
+        },
+        () => {}, // The hook keeps the error for display.
+      );
+    };
+    renew();
+    stopRenewing.current = () => {
+      stopped = true;
+      clearTimeout(renewal);
+    };
+  }, [createExternalAgentCode]);
+
+  useEffect(() => {
+    start();
+    return () => stopRenewing.current();
+  }, [start]);
+
+  // The one refusal a page at this step meets: an address the code must not travel to.
+  const failure = creating.payloadError
+    ? ("externalAgents.unsafeOrigin" as const)
+    : creating.error
+      ? ("externalAgents.failed" as const)
+      : null;
+  return { code, failure, retry: start };
+}

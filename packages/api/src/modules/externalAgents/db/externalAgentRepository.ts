@@ -1,7 +1,6 @@
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
-import type { ExternalAgentConnection } from "../domain";
 import { hashExternalAgentSecret } from "../helpers";
 import { externalAgentCodes } from "./externalAgentCodesTable";
 import { externalAgentSessions } from "./externalAgentSessionsTable";
@@ -30,6 +29,14 @@ export interface ExternalAgentRepository {
   lockLiveSession(id: string, now: Date): Promise<boolean>;
   /** The newest live session, as the setup holder sees it. */
   findConnection(now: Date): Promise<ExternalAgentConnection | null>;
+}
+
+/** The connected external agent, as the setup holder sees it. */
+export interface ExternalAgentConnection {
+  /** The name the agent gave itself; not proof of what it is. */
+  client: string;
+  connectedAt: Date;
+  expiresAt: Date;
 }
 
 export function externalAgentRepository(db: Orm | Tx): ExternalAgentRepository {

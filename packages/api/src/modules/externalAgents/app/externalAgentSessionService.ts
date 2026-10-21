@@ -7,14 +7,13 @@ import {
   readSetupOpenToExternalAgent,
 } from "../../../core/instance";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
-import { externalAgentRepository } from "../db";
+import { type ExternalAgentConnection, externalAgentRepository } from "../db";
 import {
-  EXTERNAL_AGENT_CODE_HOURS,
-  EXTERNAL_AGENT_SESSION_HOURS,
-  type ExternalAgentConnection,
+  hoursAfter,
+  isExternalAgentSafeOrigin,
+  newExternalAgentSecret,
   parseExternalAgentClientName,
-} from "../domain";
-import { hoursAfter, isExternalAgentSafeOrigin, newExternalAgentSecret } from "../helpers";
+} from "../helpers";
 import type { ExternalAgentContext } from "./externalAgentContext";
 
 /**
@@ -142,3 +141,7 @@ export function createExternalAgentSessionService(
 function endExternalAgents(tx: Tx, now: Date): Promise<void> {
   return externalAgentRepository(tx).endAll(now);
 }
+
+/** How long an agent one-time code may be exchanged, and how long the session it gives lasts. */
+const EXTERNAL_AGENT_CODE_HOURS = 2;
+const EXTERNAL_AGENT_SESSION_HOURS = 2;

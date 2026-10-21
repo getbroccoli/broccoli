@@ -58,8 +58,4 @@ export {
 export { startFakeDecisions, type FakeDecisions } from "./fakeDecisions";
 export { EXAMPLE_JOB } from "./exampleJob";
 export { startLiveDecisions, type LiveDecisions } from "./liveDecisions";
-export {
-  startLiveExternalAgentAnswers,
-  type LiveExternalAgentAnswers,
-} from "./liveExternalAgentAnswers";
 export { sampleXlsxFile, xlsxFileWithDistantCell } from "./sampleXlsxFile";

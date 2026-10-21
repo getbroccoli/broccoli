@@ -1,11 +1,3 @@
-/** The connected external agent, as the setup holder sees it. */
-export interface ExternalAgentConnection {
-  /** The name the agent gave itself; not proof of what it is. */
-  client: string;
-  connectedAt: Date;
-  expiresAt: Date;
-}
-
 /** The name an agent gives itself: printable characters, at most 60, else "Your agent". */
 export function parseExternalAgentClientName(client: unknown): string {
   const printable =
