@@ -17,10 +17,10 @@ export interface ExternalAgentFileService {
   /** The files waiting for the agent's answers. */
   listUnansweredFiles(ctx: SecurityContext): Promise<{ id: string }[]>;
   /**
-   * As `listUnansweredFiles`, but with none waiting, waits up to `seconds` for the owner's next
-   * drop; `signal` ends the wait early with none.
+   * Long polling: as `listUnansweredFiles`, but with none waiting, waits up to `seconds` for the
+   * owner's next drop; `signal` ends the wait early with none.
    */
-  waitForUnansweredFiles(
+  pollUnansweredFiles(
     ctx: SecurityContext,
     request: { seconds: number; signal?: AbortSignal },
   ): Promise<{ id: string }[]>;
@@ -58,7 +58,7 @@ export function createExternalAgentFileService(
 
     listUnansweredFiles,
 
-    waitForUnansweredFiles: async (ctx, { seconds, signal }) => {
+    pollUnansweredFiles: async (ctx, { seconds, signal }) => {
       // Listening before the first look, so a drop in between still wakes the wait.
       const wait = activity.waitForDrop(seconds * 1000);
       signal?.addEventListener("abort", wait.stop);

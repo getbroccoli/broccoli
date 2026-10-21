@@ -44,7 +44,7 @@ test("answers a waiting file at once", { timeout: 5_000 }, async ({ orm, seed })
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
 
-  const files = await agents.files.waitForUnansweredFiles(ctx, { seconds: 30 });
+  const files = await agents.files.pollUnansweredFiles(ctx, { seconds: 30 });
 
   expect(files).toEqual([{ id }]);
 });
@@ -59,7 +59,7 @@ test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm,
   });
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
 
-  const waiting = agents.files.waitForUnansweredFiles(ctx, { seconds: 30 });
+  const waiting = agents.files.pollUnansweredFiles(ctx, { seconds: 30 });
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
 
   expect(await waiting).toEqual([{ id }]);
@@ -76,7 +76,7 @@ test("answers no files when the wait runs out", async ({ orm, seed }) => {
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
   const started = performance.now();
 
-  const files = await agents.files.waitForUnansweredFiles(ctx, { seconds: 1 });
+  const files = await agents.files.pollUnansweredFiles(ctx, { seconds: 1 });
 
   expect(files).toEqual([]);
   expect(performance.now() - started).toBeGreaterThanOrEqual(1_000);
@@ -96,7 +96,7 @@ test(
     const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
     const controller = new AbortController();
 
-    const waiting = agents.files.waitForUnansweredFiles(ctx, {
+    const waiting = agents.files.pollUnansweredFiles(ctx, {
       seconds: 30,
       signal: controller.signal,
     });
@@ -119,7 +119,7 @@ test(
     });
     const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
 
-    const files = await agents.files.waitForUnansweredFiles(ctx, {
+    const files = await agents.files.pollUnansweredFiles(ctx, {
       seconds: 30,
       signal: AbortSignal.abort(),
     });

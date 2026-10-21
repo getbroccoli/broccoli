@@ -77,7 +77,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
     expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
     expect(await agents.sessions.readExternalAgentConnection(SETUP_HOLDER)).toBeNull();
     await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
-    await expect(agents.files.waitForUnansweredFiles(ctx, { seconds: 1 })).rejects.toMatchObject(
+    await expect(agents.files.pollUnansweredFiles(ctx, { seconds: 1 })).rejects.toMatchObject(
       SESSION_ENDED,
     );
   },

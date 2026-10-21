@@ -111,12 +111,12 @@ test("shows the holder that the external agent is listening right after the exch
   });
 });
 
-test("answers an empty list when the unanswered-files wait runs out", async ({ env }) => {
+test("answers an empty list when the unanswered-files poll runs out", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   const code = await createExternalAgentCode(browser);
   const token = await exchangeExternalAgentCode(env.url, code);
 
-  const response = await fetch(`${env.url}/api/external-agent/unanswered-files?wait=1`, {
+  const response = await fetch(`${env.url}/api/external-agent/poll-unanswered-files?wait=1`, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -124,16 +124,19 @@ test("answers an empty list when the unanswered-files wait runs out", async ({ e
   expect(await response.json()).toEqual([]);
 });
 
-test.for(["0", "601", "1.5", "soon"])(
-  "refuses an invalid unanswered-files wait of %s",
+test.for(["0", "601", "1.5", "soon", ""])(
+  "refuses an invalid unanswered-files poll wait of %s",
   async (wait, { env }) => {
     const browser = await env.startSetupAtImport();
     const code = await createExternalAgentCode(browser);
     const token = await exchangeExternalAgentCode(env.url, code);
 
-    const response = await fetch(`${env.url}/api/external-agent/unanswered-files?wait=${wait}`, {
-      headers: { authorization: `Bearer ${token}` },
-    });
+    const response = await fetch(
+      `${env.url}/api/external-agent/poll-unanswered-files?wait=${wait}`,
+      {
+        headers: { authorization: `Bearer ${token}` },
+      },
+    );
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({

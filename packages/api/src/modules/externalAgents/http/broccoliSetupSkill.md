@@ -101,7 +101,7 @@ After answering every waiting file, tell the owner how many people each file gav
 waiting for files they drop, without asking them anything:
 
 ```sh
-printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -m 120 -H @- "<address>/api/external-agent/unanswered-files?wait=110"
+printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -m 120 -H @- "<address>/api/external-agent/poll-unanswered-files?wait=110"
 ```
 
 It answers as soon as the owner drops a file, or with `[]` after 110 seconds. Answer every file it

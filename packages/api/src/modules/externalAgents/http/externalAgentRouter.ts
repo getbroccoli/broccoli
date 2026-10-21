@@ -81,13 +81,16 @@ export function externalAgentRouter(
       "/external-agent/unanswered-files",
       asExternalAgent,
       perSession,
+      async (_request, response) => {
+        response.json(await useCases.files.listUnansweredFiles(externalAgentOf(response)));
+      },
+    )
+    .get(
+      "/external-agent/poll-unanswered-files",
+      asExternalAgent,
+      perSession,
       async (request, response) => {
-        const ctx = externalAgentOf(response);
         const seconds = waitSecondsOf(request);
-        if (seconds === null) {
-          response.json(await useCases.files.listUnansweredFiles(ctx));
-          return;
-        }
         // An agent that gives up stops the wait, so nothing waits for a closed connection, even
         // one closed while its session was being checked.
         const abandoned = new AbortController();
@@ -95,7 +98,7 @@ export function externalAgentRouter(
         if (response.destroyed) {
           abandoned.abort();
         }
-        const files = await useCases.files.waitForUnansweredFiles(ctx, {
+        const files = await useCases.files.pollUnansweredFiles(externalAgentOf(response), {
           seconds,
           signal: abandoned.signal,
         });
@@ -162,12 +165,9 @@ function sourceIdOf(request: express.Request): string {
   return id;
 }
 
-/** The `wait` query parameter: whole seconds, 1 to 600; null without one. */
-function waitSecondsOf(request: express.Request): number | null {
+/** The required `wait` query parameter: whole seconds, 1 to 600. */
+function waitSecondsOf(request: express.Request): number {
   const { wait } = request.query;
-  if (wait === undefined) {
-    return null;
-  }
   const seconds = typeof wait === "string" && /^\d{1,3}$/.test(wait) ? Number(wait) : 0;
   if (seconds < 1 || seconds > MAX_WAIT_SECONDS) {
     throw invalidInput([{ field: "wait", code: "invalid" }]);
