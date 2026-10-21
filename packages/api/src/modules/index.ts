@@ -1,6 +1,6 @@
-import { createAiSettings } from "../core/instance";
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
+import { aiModule, createAiSettings } from "./ai";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { deleteAllEmployees, employeesModule } from "./employees";
@@ -35,7 +35,8 @@ export function createModules(
   });
   return {
     manifests: [
-      systemModule({ ...core, mode: deployment.mode, aiSettings }),
+      systemModule({ ...core, mode: deployment.mode }),
+      aiModule({ orm: core.orm, aiSettings }),
       employeesModule({ orm: core.orm }),
       companyModule({ ...core, brandLookupUrl }),
       demoModule({ orm: core.orm, transact: core.transact }),

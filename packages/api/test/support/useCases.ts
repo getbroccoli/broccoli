@@ -8,12 +8,12 @@ import { onTestFinished } from "vitest";
 import type { Decisions } from "../../src/integrations/ai";
 import type { Orm } from "../../src/core/db";
 import type { Mode } from "../../src/core/env";
-import { type AiSettings, createAiSettings } from "../../src/core/instance";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
+import { type AiSettings, createAiSettings } from "../../src/modules/ai";
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
 import { createImportUseCases } from "../../src/modules/imports";
@@ -47,7 +47,6 @@ export function systemUseCases(orm: Orm) {
     orm,
     transact: testTransactor(orm),
     mode: "self_hosted",
-    aiSettings: aiSettings(orm),
   });
 }
 

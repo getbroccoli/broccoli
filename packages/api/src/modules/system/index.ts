@@ -5,7 +5,7 @@ import { createResolvers } from "./graphql";
 
 export { createSystemUseCases } from "./app";
 
-/** Platform-level API fields that belong to no business module: setup, the user, AI sources. */
+/** Platform-level API fields that belong to no business module: setup and the user. */
 export function systemModule(context: SystemContext): ModuleManifest {
   return {
     name: "system",

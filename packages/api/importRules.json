@@ -7,6 +7,7 @@
       "src/core/moduleManifest",
       "src/modules/*"
     ],
+    "src/modules/ai": ["src/core/*", "!src/core/server", "src/integrations/ai"],
     "src/modules/company": [
       "src/core/*",
       "!src/core/server",
@@ -49,7 +50,6 @@
     ],
     "src/core/security": ["src/core/applicationError"],
     "src/core/instance": [
-      "src/integrations/ai",
       "src/core/applicationError",
       "src/core/env",
       "src/core/auth",
@@ -112,6 +112,7 @@
   "testsMayImport": {
     "*": ["test/support"],
     "src/core/db": ["src/core/instance"],
-    "src/core/managedSignIn": ["src/core/auth/db", "src/core/events"]
+    "src/core/managedSignIn": ["src/core/auth/db", "src/core/events"],
+    "src/modules/ai": ["src/core/instance/db"]
   }
 }

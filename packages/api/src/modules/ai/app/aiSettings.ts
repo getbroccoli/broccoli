@@ -1,8 +1,9 @@
-import { ApplicationError, invalidInput } from "../../applicationError";
-import type { Orm, Transact } from "../../db";
-import type { Deployment, SelfHostedDeployment } from "../../env";
-import type { SecretBox } from "../../secrets";
-import { PrincipalSecurityContext, type SecurityContext } from "../../security";
+import { ApplicationError, invalidInput } from "../../../core/applicationError";
+import type { Orm, Transact } from "../../../core/db";
+import type { Deployment, SelfHostedDeployment } from "../../../core/env";
+import { readAiSource, saveAiSource } from "../../../core/instance";
+import type { SecretBox } from "../../../core/secrets";
+import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import {
   checkOpenRouterKey,
   createResolvedDecisions,
@@ -10,8 +11,7 @@ import {
   DecisionsError,
   type DecisionsSource,
 } from "../../../integrations/ai";
-import { instanceRepository } from "../db";
-import { aiConfig, type AiConfig, type AiSource, type SavedAiSource } from "../domain";
+import { aiConfig, type AiConfig, type SavedAiSource } from "../domain";
 import { createBroccoliAiTokens } from "./broccoliAiTokens";
 
 /**
@@ -27,9 +27,9 @@ export interface AiSettings {
   decisions: Decisions;
 }
 
-/** The owner's choice of AI at setup. */
+/** The owner's choice of a model at setup; the external agent is chosen through its own module. */
 export interface AiChoice {
-  source: AiSource;
+  source: "broccoli_ai" | "openrouter";
   /** Replaces the saved key; blank counts as none. */
   openRouterKey?: string | null;
 }
@@ -53,51 +53,54 @@ export function createAiSettings({
   const tokens = createBroccoliAiTokens({ orm, secretBox, dataDir });
   // Broccoli reads its AI source and token for decisions it makes on its own.
   const system = PrincipalSecurityContext.system();
-  const readConfig = async () => aiConfig(await readSavedAiSource(orm, secretBox), openRouter.key);
+  const readConfig = async (ctx: SecurityContext) =>
+    aiConfig(await readSavedAiSource(ctx, orm, secretBox), openRouter.key);
   const decisions = createResolvedDecisions({
     readSource: async () =>
       deployment.mode === "managed"
         ? openRouterSource(openRouter.url, openRouter.key)
-        : sourceOf(await readConfig(), deployment, openRouter.url),
+        : sourceOf(await readConfig(system), deployment, openRouter.url),
     tokens: { read: () => tokens.read(system), save: (token) => tokens.save(system, token) },
   });
   return {
     read: async (ctx) => {
       ctx.requireSetupAccess();
-      return deployment.mode === "managed" ? null : readConfig();
+      return deployment.mode === "managed" ? null : readConfig(ctx);
     },
     save: async (ctx, { source, openRouterKey }) => {
       ctx.requireSetupAccess();
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
       }
-      if (source === "external_agent") {
-        // Choosing the external agent also ends its earlier sessions, which only its module does.
-        throw invalidInput([{ field: "source", code: "invalid" }]);
-      }
       const givenKey = openRouterKey?.trim() || undefined;
       if (source === "openrouter") {
         await checkOpenRouter(
           openRouter.url,
-          givenKey ?? (await readConfig()).openRouterKey?.key ?? null,
+          givenKey ?? (await readConfig(ctx)).openRouterKey?.key ?? null,
         );
       } else {
         await checkBroccoliAi(() => decisions.prepareBroccoliAi(deployment.broccoliAiUrl));
       }
       await transact((tx) =>
-        instanceRepository(tx).storeAiSource(
+        saveAiSource(
+          ctx,
+          tx,
           source,
           givenKey === undefined ? undefined : secretBox.encrypt(givenKey),
         ),
       );
-      return readConfig();
+      return readConfig(ctx);
     },
     decisions,
   };
 }
 
-async function readSavedAiSource(orm: Orm, secretBox: SecretBox): Promise<SavedAiSource> {
-  const { source, encryptedOpenRouterKey } = await instanceRepository(orm).readAiSource();
+async function readSavedAiSource(
+  ctx: SecurityContext,
+  orm: Orm,
+  secretBox: SecretBox,
+): Promise<SavedAiSource> {
+  const { source, encryptedOpenRouterKey } = await readAiSource(ctx, orm);
   return {
     source,
     openRouterKey:

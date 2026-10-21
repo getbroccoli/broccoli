@@ -3,28 +3,14 @@ import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 
 import {
-  aiSettings,
   expect,
   externalAgentUseCases,
   NON_OWNER,
-  OWNER,
   SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   SYSTEM,
   test,
 } from "#test/support";
-
-test("refuses choosing the agent through AI settings, which would keep its sessions", async ({
-  orm,
-}) => {
-  const settings = aiSettings(orm);
-
-  await expect(settings.save(SETUP_HOLDER, { source: "external_agent" })).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "source", code: "invalid" }],
-  });
-  expect(await settings.read(OWNER)).toEqual({ source: "broccoli_ai", openRouterKey: null });
-});
 
 test("allows exactly one of two parallel exchanges of a code", async ({ orm, seed }) => {
   await seed.externalAgentSetup();

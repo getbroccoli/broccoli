@@ -6,8 +6,8 @@ import { onTestFinished } from "vitest";
 
 import { expect, NON_OWNER, SYSTEM, test, TEST_SECRET_BOX } from "#test/support";
 
-import { instance, instanceRepository } from "../db";
-import type { Orm } from "../../db";
+import type { Orm } from "../../../core/db";
+import { instance, instanceRepository } from "../../../core/instance/db";
 import { createBroccoliAiTokens } from "./broccoliAiTokens";
 
 test("keeps an existing trial token after the instance database is cleared", async ({ orm }) => {
