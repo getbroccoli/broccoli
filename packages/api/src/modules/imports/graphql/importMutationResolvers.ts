@@ -33,6 +33,15 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Im
         () => thenImport(useCases.files.retryFile(context.getActor(), sourceId)),
         ["CONFLICT"],
       ),
+    allowOriginalFileRead: (_parent, { sourceId }, context) =>
+      mutationPayload<ResolversTypes["ImportAllowOriginalFileReadPayload"]>(
+        "import",
+        () =>
+          thenImport(
+            useCases.originalFileReads.allowOriginalFileRead(context.getActor(), sourceId),
+          ),
+        ["CONFLICT"],
+      ),
     removeFile: (_parent, { sourceId }, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
         thenImport(useCases.files.removeFile(context.getActor(), sourceId)),

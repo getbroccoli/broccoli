@@ -28,7 +28,7 @@ export function createExternalAgentUseCases({
 }: {
   orm: Orm;
   transact: Transact;
-  imports: Pick<ImportUseCases, "answeredMapping">;
+  imports: Pick<ImportUseCases, "answeredMapping" | "originalFileReads">;
   clock?: () => Date;
 }): ExternalAgentUseCases {
   const context = { orm, transact, imports, clock, activity: createExternalAgentActivity() };

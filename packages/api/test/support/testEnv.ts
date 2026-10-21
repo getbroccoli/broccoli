@@ -59,9 +59,9 @@ export class TestEnv {
     return this.server.url;
   }
 
-  /** A new browser with its own cookies. */
+  /** A new browser with its own cookies, following this server across restarts. */
   browser(): Browser {
-    return createBrowser(this.url);
+    return createBrowser(() => this.url);
   }
 
   /** Sets up the owner and returns a browser signed in as them. */

@@ -135,7 +135,7 @@ export function ImportStep() {
             onUploaded={() => refetch()}
             onUploadingChange={setUploading}
             uploadFile={externalAgentChosen ? uploadFileForExternalAgent : uploadFile}
-            externalAgentChosen={externalAgentChosen}
+            aiSource={ai?.source ?? null}
             externalAgentListening={externalAgent?.listening ?? false}
             externalAgentPill={externalAgent && <ExternalAgentPill externalAgent={externalAgent} />}
             externalAgentNewFiles={

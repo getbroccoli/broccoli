@@ -13,9 +13,10 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const UPLOADS_PER_MINUTE = 30;
 
 /**
- * `POST /api/setup/external-agent-files?name=<file name>` takes a CSV or Excel staff file the setup holder
- * drops for their external agent, as the raw body, and answers the new source's id. Nothing maps
- * it until the agent answers its masked questions.
+ * `POST /api/setup/external-agent-files?name=<file name>` takes a CSV, Excel or PDF staff file the
+ * setup holder drops for their external agent, as the raw body, and answers the new source's id.
+ * Nothing maps it until the agent answers its masked questions, or, for a PDF, reads it in full
+ * once the owner allows it.
  */
 export function externalAgentFilesRouter(
   useCases: ExternalAgentUseCases,

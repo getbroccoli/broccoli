@@ -8,7 +8,11 @@ import { onTestFinished } from "vitest";
 import type { Decisions } from "../../src/integrations/ai";
 import type { Orm } from "../../src/core/db";
 import type { Mode } from "../../src/core/env";
-import { type AiSettings, createAiSettings } from "../../src/core/instance";
+import {
+  type AiSettings,
+  createAiSettings,
+  type OriginalFileReader,
+} from "../../src/core/instance";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
 import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
@@ -80,12 +84,14 @@ export function importUseCases(
   {
     slackApi = {},
     decisions = NO_DECISIONS,
+    originalFileReader = NO_ORIGINAL_FILE_READER,
     jobs,
     clock = () => new Date(),
     prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
   }: {
     slackApi?: Partial<SlackApi>;
     decisions?: Decisions;
+    originalFileReader?: OriginalFileReader;
     jobs?: JobQueue;
     clock?: () => Date;
     prepareDemoFill?: Parameters<typeof createImportUseCases>[0]["prepareDemoFill"];
@@ -97,6 +103,7 @@ export function importUseCases(
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     decisions,
+    originalFileReader,
     prepareDemoFill: prepareFill,
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
@@ -177,3 +184,7 @@ const NO_DECISIONS: Decisions = {
 };
 
 const DEMO_TODAY = parseCalendarDate("2026-10-13")!;
+
+const NO_ORIGINAL_FILE_READER: OriginalFileReader = {
+  readOriginalFile: () => Promise.reject(new Error("Unexpected model request")),
+};

@@ -11,7 +11,7 @@ export interface ExternalAgentContext {
   orm: Orm;
   transact: Transact;
   /** The import, which the agent's files go into. */
-  imports: Pick<ImportUseCases, "answeredMapping">;
+  imports: Pick<ImportUseCases, "answeredMapping" | "originalFileReads">;
   /** Now; tests pass their own. */
   clock: () => Date;
   activity: ExternalAgentActivity;

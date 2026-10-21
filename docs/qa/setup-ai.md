@@ -11,6 +11,7 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 
 - [ ] Saving the company opens `/setup/ai`, titled "Setup AI". The sidebar shows "Setup Company" done, "Setup AI" current, then "Add your people" and "Create your account".
 - [ ] The green line reads "AI sees names, emails and other personal details only as placeholders, unless you let it read a file."
+- [ ] The options read, top to bottom, "Broccoli AI", "Your agent", "OpenRouter".
 - [ ] Without `OPENROUTER_API_KEY`, "Broccoli AI" is selected. "Your agent" ("Let Claude Code, Codex or another agent do the setup. You connect it on the next step.") can be selected by mouse and keyboard.
 - [ ] The privacy line sits under the options, and the "Demo data" card under it with "Explore the demo".
 - [ ] The footer holds "Back" on the left and "Continue" on the right, on desktop and narrow windows.

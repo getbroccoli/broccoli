@@ -44,6 +44,7 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       readBy: ({ readBy }) => READERS[readBy],
       pickedUpByExternalAgent: ({ pickedUpByExternalAgentAt }) =>
         pickedUpByExternalAgentAt !== null,
+      originalReadAllowed: ({ originalReadAllowedAt }) => originalReadAllowedAt !== null,
       failure: ({ failure }) => (failure ? FAILURES[failure] : null),
       employeeCount: ({ id }, _args, context) => loaders(context).employeeCount.load(id),
       records: ({ id }, { first, after }, context) =>

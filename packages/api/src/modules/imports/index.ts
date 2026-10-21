@@ -7,11 +7,19 @@ import type { ImportUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
-export { createImportUseCases, type ImportUseCases, prepareDemoStart } from "./app";
+export {
+  createImportUseCases,
+  type ImportUseCases,
+  prepareDemoStart,
+  READ_PEOPLE_JSON_SCHEMA,
+  type ReadPeopleOutcome,
+} from "./app";
 export {
   type AnsweredMapping,
+  type ExternalAgentParseFileWay,
   type MappingAnswersInput,
   type MappingQuestions,
+  parseReadPeople,
   parseStaffFileName,
 } from "./domain";
 /** For test seeding only; other modules go through the use cases. */
@@ -41,6 +49,14 @@ export function importsModule(
     jobs: {
       "imports.mapFile": {
         run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
+        onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
+      },
+      "imports.readOriginalFile": {
+        run: (job) =>
+          useCases.originalFileReads.readOriginalFile(PrincipalSecurityContext.system(), job),
+        // A model may take minutes to read a whole file, twice with a new Broccoli AI token.
+        expireInSeconds: 15 * 60,
+        // Both jobs end alike: the file fails, unless a newer run has started.
         onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },
     },

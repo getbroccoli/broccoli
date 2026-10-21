@@ -44,13 +44,17 @@ export {
 export { parseStaffFileName } from "./fileName";
 export { type ImportProgress, importProgress, isReading } from "./importProgress";
 export {
+  type ExternalAgentParseFileWay,
   IMPORT_SOURCE_FAILURES,
   IMPORT_SOURCE_READERS,
+  IMPORT_SOURCE_STATUSES,
   type FileSource,
   type ImportSource,
   type ImportSourceFailure,
   type ImportSourceReader,
+  type ImportSourceStatus,
   type MappingOutcome,
 } from "./importSource";
+export { parseReadPeople, type ReadPeople, readPeopleSchema } from "./readPeople";
 export { splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";

@@ -59,3 +59,5 @@ export { startFakeDecisions, type FakeDecisions } from "./fakeDecisions";
 export { EXAMPLE_JOB } from "./exampleJob";
 export { startLiveDecisions, type LiveDecisions } from "./liveDecisions";
 export { sampleXlsxFile, xlsxFileWithDistantCell } from "./sampleXlsxFile";
+
+export { STAFF_CSV, STAFF_PDF, READ_PEOPLE, STAFF_MAPPING_ANSWERS } from "./staffFiles";

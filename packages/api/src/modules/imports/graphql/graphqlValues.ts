@@ -3,7 +3,12 @@ export const IMPORT = {};
 
 /** GraphQL enum values by their domain names. */
 export const KINDS = { slack: "SLACK", file: "FILE" } as const;
-export const STATUSES = { mapping: "MAPPING", mapped: "MAPPED", failed: "FAILED" } as const;
+export const STATUSES = {
+  mapping: "MAPPING",
+  mapped: "MAPPED",
+  failed: "FAILED",
+  waiting_for_original_read_consent: "WAITING_FOR_ORIGINAL_READ_CONSENT",
+} as const;
 export const READERS = {
   parsed_by_broccoli: "PARSED_BY_BROCCOLI",
   answered_by_external_agent: "ANSWERED_BY_EXTERNAL_AGENT",
@@ -14,6 +19,7 @@ export const FAILURES = {
   ai_free_period_used: "AI_FREE_PERIOD_USED",
   ai_free_period_over: "AI_FREE_PERIOD_OVER",
   ai_limit_reached: "AI_LIMIT_REACHED",
+  original_read_incomplete: "ORIGINAL_READ_INCOMPLETE",
 } as const;
 export const INCOMPLETE_REASONS = {
   firstName: "FIRST_NAME",
