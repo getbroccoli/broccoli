@@ -46,8 +46,8 @@ code there and never ask the owner for one:
   a code: each run ends the earlier code and session.
 
 - The browser may make its own code as the owner reaches "Add your files", which ends yours. If the
-  exchange below, or your first call after it, answers `UNAUTHENTICATED` within two minutes of
-  getting the code, run the command again and connect again, at most three times.
+  exchange below or any call answers `UNAUTHENTICATED` within two minutes of getting the code, run
+  the command again and connect again, at most three times; after that, Errors below applies.
 
 Otherwise use the address and code from the owner's prompt.
 
