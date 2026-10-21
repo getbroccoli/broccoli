@@ -7,7 +7,11 @@ import { ImportStepDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStartDemo } from "@/features/demo";
-import { ExternalAgentPill, ExternalAgentPrompt } from "@/features/externalAgents";
+import {
+  ExternalAgentNewFiles,
+  ExternalAgentPill,
+  ExternalAgentPrompt,
+} from "@/features/externalAgents";
 import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
@@ -51,6 +55,15 @@ export function ImportStep() {
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
   const [uploading, setUploading] = useState(false);
   const reading = readingFiles || uploading;
+  // Files the connected external agent has not picked up: shown at once, in case it stopped waiting.
+  const notPickedUp = externalAgent
+    ? fileSources.filter(
+        (source) =>
+          source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+          source.status === "MAPPING" &&
+          !source.pickedUpByExternalAgent,
+      )
+    : [];
   const gathering = data?.import.demoAvailable === false || uploading;
 
   return (
@@ -93,7 +106,13 @@ export function ImportStep() {
                   "h-10 gap-2 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                 )}
               >
-                {t(reading ? "setup.import.reading" : "setup.import.next")}
+                {t(
+                  notPickedUp.length > 0
+                    ? "externalAgents.waitingFooter"
+                    : reading
+                      ? "setup.import.reading"
+                      : "setup.import.next",
+                )}
                 <ArrowRight weight="bold" aria-hidden />
               </Link>
             )}
@@ -116,6 +135,11 @@ export function ImportStep() {
             uploadFile={externalAgentChosen ? uploadFileForExternalAgent : uploadFile}
             externalAgentChosen={externalAgentChosen}
             externalAgentPill={externalAgent && <ExternalAgentPill externalAgent={externalAgent} />}
+            externalAgentNewFiles={
+              notPickedUp.length > 0 && (
+                <ExternalAgentNewFiles fileNames={notPickedUp.map(({ name }) => name)} />
+              )
+            }
             externalAgentPrompt={
               externalAgentChosen && !externalAgent ? <ExternalAgentPrompt /> : undefined
             }

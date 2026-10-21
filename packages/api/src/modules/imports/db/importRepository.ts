@@ -347,6 +347,7 @@ const sourceColumns = {
   failure: importSources.failure,
   failureMessage: importSources.failureMessage,
   readBy: importSources.readBy,
+  pickedUpByExternalAgentAt: importSources.pickedUpByExternalAgentAt,
 };
 
 function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployeeRecord {

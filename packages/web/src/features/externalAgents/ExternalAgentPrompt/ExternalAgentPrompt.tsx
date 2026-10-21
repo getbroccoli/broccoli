@@ -5,7 +5,7 @@ import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
-import { ExternalAgentSentence } from "./ExternalAgentSentence";
+import { ExternalAgentPromptBlock } from "../ExternalAgentPromptBlock";
 
 /**
  * Connecting the owner's agent on the import step: the prompt with a one-time code, made as the
@@ -58,7 +58,13 @@ export function ExternalAgentPrompt() {
           {t("externalAgents.connectHint")}
         </p>
       </div>
-      <ExternalAgentSentence code={failed ? null : (shown?.value ?? null)} />
+      <ExternalAgentPromptBlock
+        prompt={
+          shown && !failed
+            ? t("externalAgents.sentence", { origin: window.location.origin, code: shown.value })
+            : null
+        }
+      />
       {failed ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
           {/* The one refusal a page at this step meets: an address the code must not travel to. */}

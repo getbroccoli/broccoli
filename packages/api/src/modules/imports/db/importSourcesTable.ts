@@ -27,6 +27,8 @@ export const importSources = pgTable(
     readBy: text("read_by", { enum: IMPORT_SOURCE_READERS })
       .notNull()
       .default("parsed_by_broccoli"),
+    /** When the external agent first read the file's questions. */
+    pickedUpByExternalAgentAt: timestamp("picked_up_by_external_agent_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

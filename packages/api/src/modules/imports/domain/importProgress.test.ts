@@ -12,6 +12,7 @@ it("reports a file being read and leaves the demo unavailable", () => {
     failure: null,
     failureMessage: null,
     readBy: "parsed_by_broccoli",
+    pickedUpByExternalAgentAt: null,
   };
 
   const progress = importProgress([source], 0);
@@ -29,6 +30,7 @@ it("leaves the demo unavailable when records have been gathered", () => {
     failure: null,
     failureMessage: null,
     readBy: "parsed_by_broccoli",
+    pickedUpByExternalAgentAt: null,
   };
 
   const progress = importProgress([source], 1);
@@ -46,6 +48,7 @@ it("leaves the demo available after a failed file without records", () => {
     failure: "unavailable",
     failureMessage: null,
     readBy: "parsed_by_broccoli",
+    pickedUpByExternalAgentAt: null,
   };
 
   const progress = importProgress([source], 0);

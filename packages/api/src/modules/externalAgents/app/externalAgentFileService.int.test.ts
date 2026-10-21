@@ -33,6 +33,55 @@ test("queues no model job for a dropped file", async ({ orm, seed }) => {
   expect(agents.sentJobs).toEqual([]);
 });
 
+test("answers a waiting file at once", { timeout: 5_000 }, async ({ orm, seed }) => {
+  await seed.externalAgentSetup();
+  const agents = externalAgentUseCases(orm);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
+    code,
+    client: "Test agent",
+  });
+  const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
+  const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
+
+  const files = await agents.files.waitForUnansweredFiles(ctx, { seconds: 30 });
+
+  expect(files).toEqual([{ id }]);
+});
+
+test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm, seed }) => {
+  await seed.externalAgentSetup();
+  const agents = externalAgentUseCases(orm);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
+    code,
+    client: "Test agent",
+  });
+  const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
+
+  const waiting = agents.files.waitForUnansweredFiles(ctx, { seconds: 30 });
+  const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
+
+  expect(await waiting).toEqual([{ id }]);
+});
+
+test("answers no files when the wait runs out", async ({ orm, seed }) => {
+  await seed.externalAgentSetup();
+  const agents = externalAgentUseCases(orm);
+  const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+  const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
+    code,
+    client: "Test agent",
+  });
+  const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
+  const started = performance.now();
+
+  const files = await agents.files.waitForUnansweredFiles(ctx, { seconds: 1 });
+
+  expect(files).toEqual([]);
+  expect(performance.now() - started).toBeGreaterThanOrEqual(1_000);
+});
+
 test("lets a later session answer a file dropped before it connected", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);

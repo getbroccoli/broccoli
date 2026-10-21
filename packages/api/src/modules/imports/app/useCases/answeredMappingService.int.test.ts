@@ -74,6 +74,31 @@ test("returns the model's questions with masked rows", async ({ orm, seed, trans
   ]);
 });
 
+test("records the external agent's first pickup when it reads a file's questions", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const source = await seed.fileSource({ content: CSV, readBy: "answered_by_external_agent" });
+  const imports = importUseCases(orm);
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
+    { id: source.id, pickedUpByExternalAgentAt: null },
+  ]);
+
+  await transact((tx) =>
+    imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, source.id),
+  );
+
+  const [pickedUp] = await imports.reads.listSources(SETUP_HOLDER);
+  expect(pickedUp!.pickedUpByExternalAgentAt).toBeInstanceOf(Date);
+  await transact((tx) =>
+    imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, source.id),
+  );
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
+    { id: source.id, pickedUpByExternalAgentAt: pickedUp!.pickedUpByExternalAgentAt },
+  ]);
+});
+
 test("exposes no personal values or injected instructions in masked questions", async ({
   orm,
   seed,

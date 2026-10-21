@@ -5,22 +5,21 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 type Props = {
-  /** The one-time code; null while it is being made. */
-  code: string | null;
+  /** What the owner pastes into their agent; null while it is being made. */
+  prompt: string | null;
 };
 
-/** The sentence the owner pastes into their agent, with its one-time code, and Copy. */
-export function ExternalAgentSentence({ code }: Props) {
+/** A prompt for the owner to paste into their external agent, on a dark block, with Copy. */
+export function ExternalAgentPromptBlock({ prompt }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
-  const sentence = code && t("externalAgents.sentence", { origin: window.location.origin, code });
-  const isCopied = sentence !== null && copied === sentence;
+  const isCopied = prompt !== null && copied === prompt;
   return (
     <div className="flex items-center gap-4 rounded-2xl bg-foreground py-3 pr-3 pl-5 text-background">
       <code
-        aria-busy={sentence === null}
+        aria-busy={prompt === null}
         className="min-h-6 flex-1 py-2 font-mono text-[13px] leading-relaxed break-all"
       >
-        {sentence ?? t("externalAgents.creating")}
+        {prompt ?? t("externalAgents.creating")}
       </code>
       <Button
         type="button"
@@ -28,12 +27,12 @@ export function ExternalAgentSentence({ code }: Props) {
         size="icon-lg"
         // Light on the dark block in either theme, unlike outline's translucent dark background.
         className="shrink-0 rounded-xl border-background bg-background text-foreground hover:bg-muted dark:border-background dark:bg-background dark:hover:bg-muted"
-        disabled={sentence === null}
+        disabled={prompt === null}
         aria-label={t(isCopied ? "externalAgents.copied" : "externalAgents.copy")}
         onClick={() =>
-          sentence &&
-          void navigator.clipboard.writeText(sentence).then(
-            () => setCopied(sentence),
+          prompt &&
+          void navigator.clipboard.writeText(prompt).then(
+            () => setCopied(prompt),
             () => setCopied(null),
           )
         }

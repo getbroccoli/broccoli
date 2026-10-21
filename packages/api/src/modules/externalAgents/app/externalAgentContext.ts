@@ -4,6 +4,7 @@ import { lockSetupOpenToExternalAgent } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import type { ImportUseCases } from "../../imports";
 import { externalAgentRepository } from "../db";
+import type { FileDropSignal } from "./fileDropSignal";
 
 /** What the external agent's use cases share. */
 export interface ExternalAgentContext {
@@ -13,6 +14,7 @@ export interface ExternalAgentContext {
   imports: Pick<ImportUseCases, "answeredMapping">;
   /** Now; tests pass their own. */
   clock: () => Date;
+  fileDrops: FileDropSignal;
 }
 
 /**

@@ -1,5 +1,5 @@
 {
-  "id": "068095e8-aa69-4eeb-a06a-29b0236d99db",
+  "id": "b834ee39-d5c2-4285-8e18-cf5e9552706e",
   "prevId": "9617d2dc-fb73-4783-afaf-4f7a8a163d20",
   "version": "7",
   "dialect": "postgresql",
@@ -1085,6 +1085,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'parsed_by_broccoli'"
+        },
+        "picked_up_by_external_agent_at": {
+          "name": "picked_up_by_external_agent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

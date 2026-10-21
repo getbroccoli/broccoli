@@ -3,7 +3,7 @@ import { ApplicationError } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
 import { readFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
-import type { ImportRepository } from "../../db";
+import { answeredSourceRepository, type ImportRepository } from "../../db";
 import {
   type FileSheet,
   type FileSource,
@@ -34,7 +34,10 @@ export interface AnsweredMappingService {
   addAnsweredSource(ctx: SecurityContext, tx: Tx, file: AnsweredFile): Promise<string>;
   /** The sources still waiting for answers, without their names, which may name a person. */
   readUnansweredSources(ctx: SecurityContext, tx: Tx): Promise<{ id: string }[]>;
-  /** Per sheet, its first rows as placeholders and the questions Broccoli's model gets. */
+  /**
+   * Per sheet, its first rows as placeholders and the questions Broccoli's model gets; records
+   * that the external agent picked the file up.
+   */
   readMappingQuestions(ctx: SecurityContext, tx: Tx, sourceId: string): Promise<MappingQuestions>;
   /** Maps the waiting source with these answers, as Broccoli's model's answers would. */
   answerMapping(
@@ -85,6 +88,7 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
       if (source.status !== "mapping") {
         throw notWaiting();
       }
+      await answeredSourceRepository(tx).recordPickup(sourceId);
       return {
         sheets: sheets.map(({ rows }, index) => {
           const { state, questions } = sheetQuestions(rows);

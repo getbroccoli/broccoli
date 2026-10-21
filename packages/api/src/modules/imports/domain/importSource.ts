@@ -39,6 +39,8 @@ export interface ImportSource {
   /** The AI provider's own words, when it refused the file for good. */
   failureMessage: string | null;
   readBy: ImportSourceReader;
+  /** When the external agent first read the file's questions; null until it does. */
+  pickedUpByExternalAgentAt: Date | null;
 }
 
 /** A file source with what its mapping runs need. */

@@ -39,7 +39,13 @@ checks what they cannot: the page, and how a real agent follows the skill.
 
 - [ ] The agent connects within a few seconds and the pill shows it.
 - [ ] It lists and answers each file; the cards turn "N people · Mapped by your agent". Its reply
-      counts the people per file, sends no link and asks nothing.
+      counts the people per file, sends no link and asks nothing, and it keeps waiting.
+- [ ] Drop another file while it waits: the card shows "Your agent hasn't picked up …" with
+      "Broccoli has new files. Map them and send their people back." and the footer "Waiting for
+      your agent…", until within seconds the row reads "Your agent is picking it up…" with a
+      spinner, the card goes, and the file is mapped, without you doing anything.
+- [ ] Stop the agent, then drop a file: the card stays. Paste its prompt into the agent: it maps
+      the file and the card goes.
 - [ ] **Privacy:** search the run's transcript (Claude Code `~/.claude/projects/<folder>/*.jsonl`,
       Codex `~/.codex/sessions/…`) for every line of `sentinels.txt`, decoded as the model saw it:
       none appears, and no tool call opened a file. This is evidence for this run, not proof for every

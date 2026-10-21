@@ -21,5 +21,6 @@ CREATE TABLE "external_agent_sessions" (
 --> statement-breakpoint
 ALTER TABLE "instance" DROP CONSTRAINT "instance_ai_source";--> statement-breakpoint
 ALTER TABLE "import_sources" ADD COLUMN "read_by" text DEFAULT 'parsed_by_broccoli' NOT NULL;--> statement-breakpoint
+ALTER TABLE "import_sources" ADD COLUMN "picked_up_by_external_agent_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "instance" ADD CONSTRAINT "instance_ai_source" CHECK ("instance"."ai_source" in ('broccoli_ai', 'openrouter', 'external_agent'));--> statement-breakpoint
 ALTER TABLE "import_sources" ADD CONSTRAINT "import_sources_read_by" CHECK ("import_sources"."read_by" in ('parsed_by_broccoli', 'answered_by_external_agent'));

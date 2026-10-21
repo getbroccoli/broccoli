@@ -21,6 +21,10 @@ query ImportStep {
     sources {
       id
       kind
+      name
+      status
+      readBy
+      pickedUpByExternalAgent
       employeeCount
       ...FileSourceCard_source
     }

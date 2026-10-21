@@ -74,6 +74,8 @@ type ImportSource {
   readAt: DateTime!
   "Who read the file's people: Broccoli's model or the owner's external agent. Broccoli for Slack."
   readBy: ImportSourceReader!
+  "Whether the owner's external agent has read the file's questions; false for any other source."
+  pickedUpByExternalAgent: Boolean!
   status: ImportSourceStatus!
   "Set when FAILED."
   failure: ImportSourceFailure

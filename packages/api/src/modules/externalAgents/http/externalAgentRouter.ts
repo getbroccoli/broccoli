@@ -15,6 +15,8 @@ import { externalAgentErrorHandler, tooManyRequests } from "./externalAgentError
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 /** Far more than an agent mapping a few files needs. */
 const FILE_REQUESTS_PER_MINUTE = 30;
+/** Long enough to cover a quiet stretch, short enough for proxies and agents' shells. */
+const MAX_WAIT_SECONDS = 600;
 /** Exchanges per address and minute, and for the whole instance: enough for a person, little for guessing. */
 const EXCHANGES_PER_ADDRESS_PER_MINUTE = 10;
 const EXCHANGES_PER_MINUTE = 30;
@@ -79,8 +81,14 @@ export function externalAgentRouter(
       "/external-agent/unanswered-files",
       asExternalAgent,
       perSession,
-      async (_request, response) => {
-        response.json(await useCases.files.listUnansweredFiles(externalAgentOf(response)));
+      async (request, response) => {
+        const ctx = externalAgentOf(response);
+        const seconds = waitSecondsOf(request);
+        response.json(
+          seconds === null
+            ? await useCases.files.listUnansweredFiles(ctx)
+            : await useCases.files.waitForUnansweredFiles(ctx, { seconds }),
+        );
       },
     )
     .get(
@@ -139,6 +147,19 @@ function sourceIdOf(request: express.Request): string {
     throw new ApplicationError("NOT_FOUND", "No file waits for your answers with this id.");
   }
   return id;
+}
+
+/** The `wait` query parameter: whole seconds, 1 to 600; null without one. */
+function waitSecondsOf(request: express.Request): number | null {
+  const { wait } = request.query;
+  if (wait === undefined) {
+    return null;
+  }
+  const seconds = typeof wait === "string" && /^\d{1,3}$/.test(wait) ? Number(wait) : 0;
+  if (seconds < 1 || seconds > MAX_WAIT_SECONDS) {
+    throw invalidInput([{ field: "wait", code: "invalid" }]);
+  }
+  return seconds;
 }
 
 /** The answers' shape: a list of sheets, each with its number and string answers. */

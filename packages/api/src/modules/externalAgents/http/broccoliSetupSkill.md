@@ -65,8 +65,8 @@ List the files waiting for your answers (by id only; you never get their names):
 printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- "<address>/api/external-agent/unanswered-files"
 ```
 
-→ `[{ "id": "…" }]`. If none waits, tell the
-owner to drop their staff files on the page, then to ask you to continue.
+→ `[{ "id": "…" }]`. If none waits, tell the owner once to drop their staff files on the page,
+then wait for them (section 3).
 
 For each file, read its questions:
 
@@ -95,10 +95,20 @@ printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -H @- -X POST \
 → `{ "status": "mapped", "failure": null, "people": 12 }`, or `"status": "failed"`
 with `"failure": "no_people_columns"`: tell the owner that file holds no names or emails.
 
-## 3. Finish
+## 3. Wait for more files
 
-Tell the owner how many people each file gave, and: "Your files are in. Review and add your
-people in Broccoli." If they drop more files later and ask you to continue, list and answer again.
+After answering every waiting file, tell the owner how many people each file gave, then keep
+waiting for files they drop, without asking them anything:
+
+```sh
+printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -m 120 -H @- "<address>/api/external-agent/unanswered-files?wait=110"
+```
+
+It answers as soon as the owner drops a file, or with `[]` after 110 seconds. Answer every file it
+lists, as in section 2, then wait again. If your shell stops commands before two minutes, give
+this one a longer timeout. After 15 minutes with no new file, tell the owner: "Your files are in.
+Review and add your people in Broccoli. If you drop more files, tell me: Broccoli has new files."
+and stop. When the owner says Broccoli has new files, list and answer them, then wait again.
 
 ## Errors
 

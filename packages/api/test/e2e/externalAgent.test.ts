@@ -89,6 +89,62 @@ test("maps a dropped file through masked questions and shows its people to the h
   });
 });
 
+test("answers an empty list when the unanswered-files wait runs out", async ({ env }) => {
+  const browser = await env.startSetupAtImport();
+  const code = await createExternalAgentCode(browser);
+  const token = await exchangeExternalAgentCode(env.url, code);
+
+  const response = await fetch(`${env.url}/api/external-agent/unanswered-files?wait=1`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual([]);
+});
+
+test.for(["0", "601", "1.5", "soon"])(
+  "refuses an invalid unanswered-files wait of %s",
+  async (wait, { env }) => {
+    const browser = await env.startSetupAtImport();
+    const code = await createExternalAgentCode(browser);
+    const token = await exchangeExternalAgentCode(env.url, code);
+
+    const response = await fetch(`${env.url}/api/external-agent/unanswered-files?wait=${wait}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: { code: "INVALID_INPUT", fields: [{ field: "wait", code: "invalid" }] },
+    });
+  },
+);
+
+test("shows the holder that the external agent picked up a dropped file", async ({ env }) => {
+  const browser = await env.startSetupAtImport();
+  const code = await createExternalAgentCode(browser);
+  const token = await exchangeExternalAgentCode(env.url, code);
+  const uploaded = await browser.post(
+    "/api/setup/external-agent-files?name=staff.csv",
+    Buffer.from("Name,Email\nAvery Stone,avery@example.com"),
+  );
+  expect(uploaded.status).toBe(200);
+  const { id } = (await uploaded.json()) as { id: string };
+  const query = "query { import { id sources { id pickedUpByExternalAgent } } }";
+  expect(await (await browser.graphql(query)).json()).toEqual({
+    data: { import: { id: "import", sources: [{ id, pickedUpByExternalAgent: false }] } },
+  });
+
+  const questions = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/questions`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  expect(questions.status).toBe(200);
+  expect(await (await browser.graphql(query)).json()).toEqual({
+    data: { import: { id: "import", sources: [{ id, pickedUpByExternalAgent: true }] } },
+  });
+});
+
 test.for([
   { bearer: "valid", cookie: false },
   { bearer: "valid", cookie: true },

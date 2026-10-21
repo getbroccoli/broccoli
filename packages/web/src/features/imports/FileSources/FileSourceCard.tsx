@@ -89,6 +89,12 @@ export function FileSourceCard({
           role={source.status === "MAPPING" ? "status" : undefined}
           className={`text-[13px] ${failed ? "text-destructive" : "text-muted-foreground"}`}
         >
+          {isPickingUp(source) && (
+            <span
+              aria-hidden
+              className="mr-2 inline-block size-3 animate-spin rounded-full border-2 border-border border-t-foreground align-[-1px]"
+            />
+          )}
           {statusLine(source)}
         </span>
         {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
@@ -133,18 +139,27 @@ export function FileSourceCard({
   );
 }
 
+/** Whether the external agent has picked the file up and is mapping it. */
+function isPickingUp({ status, readBy, pickedUpByExternalAgent }: FileSourceCard_SourceFragment) {
+  return status === "MAPPING" && readBy === "ANSWERED_BY_EXTERNAL_AGENT" && pickedUpByExternalAgent;
+}
+
 function statusLine({
   status,
   failure,
   failureMessage,
   employeeCount,
   readBy,
+  pickedUpByExternalAgent,
 }: FileSourceCard_SourceFragment): string {
   if (status === "MAPPING") {
+    if (readBy === "PARSED_BY_BROCCOLI") {
+      return t("imports.files.mapping");
+    }
     return t(
-      readBy === "ANSWERED_BY_EXTERNAL_AGENT"
-        ? "imports.files.waitingForExternalAgent"
-        : "imports.files.mapping",
+      pickedUpByExternalAgent
+        ? "imports.files.pickingUpByExternalAgent"
+        : "imports.files.waitingForExternalAgent",
     );
   }
   if (status === "FAILED") {

@@ -38,6 +38,8 @@ type Props = {
   externalAgentPill?: ReactNode;
   /** Connecting the chosen external agent, in place of the drop zone until it connects. */
   externalAgentPrompt?: ReactNode;
+  /** Asking the owner to tell the connected agent about files it has not picked up, below them. */
+  externalAgentNewFiles?: ReactNode;
 };
 
 /**
@@ -52,6 +54,7 @@ export function FileSources({
   externalAgentChosen,
   externalAgentPill,
   externalAgentPrompt,
+  externalAgentNewFiles,
 }: Props) {
   const canDrop = !externalAgentPrompt;
   const input = useRef<HTMLInputElement>(null);
@@ -164,6 +167,7 @@ export function FileSources({
           ))}
         </ul>
       )}
+      {externalAgentNewFiles}
       {canDrop && (
         <p id="import-files-hint" className="text-[13px] text-muted-foreground">
           {t("imports.files.limits")}{" "}
@@ -181,9 +185,6 @@ export function FileSources({
           <Plus aria-hidden />
           {t("imports.files.addMore")}
         </Button>
-      )}
-      {externalAgentChosen && canDrop && (
-        <p className="text-[13px] text-muted-foreground">{t("externalAgents.askToContinue")}</p>
       )}
       <p role="status" className="text-[13px] text-muted-foreground">
         {uploading ? t("imports.files.uploading", { name: uploading }) : ""}

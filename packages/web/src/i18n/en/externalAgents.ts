@@ -20,5 +20,10 @@ export const externalAgentsEn = {
   "externalAgents.disconnectFailed": "Couldn’t disconnect your agent. Try again.",
   "externalAgents.disclosure":
     "To read the columns, your agent sees the first rows of each file with names, emails and other personal details replaced by placeholders.",
-  "externalAgents.askToContinue": "Dropped files after your agent finished? Ask it to continue.",
+  "externalAgents.notPickedUpOne":
+    "Your agent hasn’t picked up {name}. Paste this into it to continue.",
+  "externalAgents.notPickedUpMany":
+    "Your agent hasn’t picked up {count} files. Paste this into it to continue.",
+  "externalAgents.newFilesPrompt": "Broccoli has new files. Map them and send their people back.",
+  "externalAgents.waitingFooter": "Waiting for your agent…",
 } as const;
