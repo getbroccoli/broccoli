@@ -89,6 +89,28 @@ test("maps a dropped file through masked questions and shows its people to the h
   });
 });
 
+test("shows the holder that the external agent is listening right after the exchange", async ({
+  env,
+}) => {
+  const browser = await env.startSetupAtImport();
+  const code = await createExternalAgentCode(browser);
+
+  await exchangeExternalAgentCode(env.url, code);
+
+  expect(
+    await (
+      await browser.graphql("query { setup { id ai { id externalAgent { id listening } } } }")
+    ).json(),
+  ).toEqual({
+    data: {
+      setup: {
+        id: "instance",
+        ai: { id: "ai", externalAgent: { id: "external-agent", listening: true } },
+      },
+    },
+  });
+});
+
 test("answers an empty list when the unanswered-files wait runs out", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   const code = await createExternalAgentCode(browser);

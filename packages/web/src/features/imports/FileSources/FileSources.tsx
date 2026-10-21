@@ -34,6 +34,8 @@ type Props = {
   uploadFile: FileUploader;
   /** Whether the owner's external agent maps the files, so a file waiting for it shows no Broccoli action. */
   externalAgentChosen: boolean;
+  /** Whether the connected external agent listens for files. */
+  externalAgentListening: boolean;
   /** The connected external agent, beside the heading. */
   externalAgentPill?: ReactNode;
   /** Connecting the chosen external agent, in place of the drop zone until it connects. */
@@ -52,6 +54,7 @@ export function FileSources({
   onUploadingChange,
   uploadFile,
   externalAgentChosen,
+  externalAgentListening,
   externalAgentPill,
   externalAgentPrompt,
   externalAgentNewFiles,
@@ -158,6 +161,7 @@ export function FileSources({
               source={source}
               busy={busy}
               externalAgentChosen={externalAgentChosen}
+              externalAgentListening={externalAgentListening}
               // A failure shows through the mutation's `error` or `payloadError`.
               onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
               onRemove={() =>

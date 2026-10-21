@@ -63,4 +63,5 @@ With "Your agent" chosen on Setup AI:
 
 - [ ] "Add your files" shows "Connect your agent" with the prompt on a dark block and a copy button, and no drop zone.
 - [ ] Once an agent connects with that prompt, a pill beside "Add your files" names it, with Disconnect in its menu, and the drop zone shows.
-- [ ] A dropped file shows "Waiting for your agent" and a card with "Broccoli has new files. Map them and send their people back."; once the agent picks it up, the row reads "Your agent is picking it up…" and the card goes.
+- [ ] While the agent waits for files, a dropped file reads "Your agent is picking it up…" at once, with no card, and gets mapped.
+- [ ] With the agent stopped for over 30 seconds, a dropped file shows "Waiting for your agent" and a card with "Broccoli has new files. Map them and send their people back."; once the agent picks it up, the card goes.

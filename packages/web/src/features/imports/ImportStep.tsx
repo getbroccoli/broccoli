@@ -55,15 +55,17 @@ export function ImportStep() {
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
   const [uploading, setUploading] = useState(false);
   const reading = readingFiles || uploading;
-  // Files the connected external agent has not picked up: shown at once, in case it stopped waiting.
-  const notPickedUp = externalAgent
-    ? fileSources.filter(
-        (source) =>
-          source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
-          source.status === "MAPPING" &&
-          !source.pickedUpByExternalAgent,
-      )
-    : [];
+  // Files the connected external agent has not picked up while it does not listen: it stopped
+  // waiting, so the owner nudges it.
+  const notPickedUp =
+    externalAgent && !externalAgent.listening
+      ? fileSources.filter(
+          (source) =>
+            source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+            source.status === "MAPPING" &&
+            !source.pickedUpByExternalAgent,
+        )
+      : [];
   const gathering = data?.import.demoAvailable === false || uploading;
 
   return (
@@ -134,6 +136,7 @@ export function ImportStep() {
             onUploadingChange={setUploading}
             uploadFile={externalAgentChosen ? uploadFileForExternalAgent : uploadFile}
             externalAgentChosen={externalAgentChosen}
+            externalAgentListening={externalAgent?.listening ?? false}
             externalAgentPill={externalAgent && <ExternalAgentPill externalAgent={externalAgent} />}
             externalAgentNewFiles={
               notPickedUp.length > 0 && (

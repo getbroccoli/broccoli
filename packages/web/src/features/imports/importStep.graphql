@@ -6,6 +6,7 @@ query ImportStep {
       source
       externalAgent {
         id
+        listening
         ...ExternalAgentPill_externalAgent
       }
     }

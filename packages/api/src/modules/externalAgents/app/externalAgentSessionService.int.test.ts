@@ -115,6 +115,88 @@ test("exchanges a code for a session", async ({ orm, seed }) => {
   });
 });
 
+test("shows the external agent as listening right after it connects", async ({ orm, seed }) => {
+  await seed.externalAgentSetup();
+  const { sessions } = externalAgentUseCases(orm);
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
+
+  await sessions.startExternalAgentSession(SYSTEM, { code, client: "Test agent" });
+
+  expect(await sessions.readExternalAgentConnection(SETUP_HOLDER)).toMatchObject({
+    listening: true,
+  });
+});
+
+test("shows the external agent as not listening 30 seconds after its last call", async ({
+  orm,
+  seed,
+}) => {
+  await seed.externalAgentSetup();
+  let now = new Date("2026-10-20T12:00:00Z");
+  const { sessions } = externalAgentUseCases(orm, { clock: () => now });
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
+  await sessions.startExternalAgentSession(SYSTEM, { code, client: "Test agent" });
+
+  now = new Date("2026-10-20T12:00:30Z");
+
+  expect(await sessions.readExternalAgentConnection(SETUP_HOLDER)).toMatchObject({
+    listening: false,
+  });
+});
+
+test("shows the external agent as listening while a wait stays open past 30 seconds", async ({
+  orm,
+  seed,
+}) => {
+  await seed.externalAgentSetup();
+  let now = new Date("2026-10-20T12:00:00Z");
+  const { sessions, files } = externalAgentUseCases(orm, { clock: () => now });
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
+  const { token } = await sessions.startExternalAgentSession(SYSTEM, {
+    code,
+    client: "Test agent",
+  });
+  const ctx = (await sessions.readExternalAgentSession({ token }))!;
+  const controller = new AbortController();
+
+  const waiting = files.waitForUnansweredFiles(ctx, { seconds: 60, signal: controller.signal });
+  now = new Date("2026-10-20T12:00:45Z");
+
+  try {
+    expect(await sessions.readExternalAgentConnection(SETUP_HOLDER)).toMatchObject({
+      listening: true,
+    });
+  } finally {
+    controller.abort();
+    await waiting;
+  }
+});
+
+test("shows the external agent as listening again after a list call following a quiet stretch", async ({
+  orm,
+  seed,
+}) => {
+  await seed.externalAgentSetup();
+  let now = new Date("2026-10-20T12:00:00Z");
+  const { sessions, files } = externalAgentUseCases(orm, { clock: () => now });
+  const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
+  const { token } = await sessions.startExternalAgentSession(SYSTEM, {
+    code,
+    client: "Test agent",
+  });
+  const ctx = (await sessions.readExternalAgentSession({ token }))!;
+  now = new Date("2026-10-20T12:01:00Z");
+  expect(await sessions.readExternalAgentConnection(SETUP_HOLDER)).toMatchObject({
+    listening: false,
+  });
+
+  await files.listUnansweredFiles(ctx);
+
+  expect(await sessions.readExternalAgentConnection(SETUP_HOLDER)).toMatchObject({
+    listening: true,
+  });
+});
+
 test.for([NON_OWNER, SETUP_EXTERNAL_AGENT])(
   "refuses a code to a caller without setup access",
   async (ctx, { orm, seed }) => {

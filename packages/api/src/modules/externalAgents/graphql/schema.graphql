@@ -10,6 +10,8 @@ type ExternalAgentConnection {
   "The name the agent gave itself; not proof of what it is."
   client: String!
   connectedAt: DateTime!
+  "Whether the agent waits for the owner's files or worked on them in the last 30 seconds; else the page asks the owner to nudge it."
+  listening: Boolean!
   "When its session ends, two hours after it connected."
   expiresAt: DateTime!
 }

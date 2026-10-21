@@ -40,6 +40,8 @@ type Props = {
   busy: boolean;
   /** Whether the owner's external agent maps the files; else a file still waiting for it can go to Broccoli. */
   externalAgentChosen: boolean;
+  /** Whether the connected external agent listens for files, so a new one counts as picked up. */
+  externalAgentListening: boolean;
   onRetry: () => void;
   onRemove: () => void;
 };
@@ -49,6 +51,7 @@ export function FileSourceCard({
   source: sourceRef,
   busy,
   externalAgentChosen,
+  externalAgentListening,
   onRetry,
   onRemove,
 }: Props) {
@@ -89,13 +92,13 @@ export function FileSourceCard({
           role={source.status === "MAPPING" ? "status" : undefined}
           className={`text-[13px] ${failed ? "text-destructive" : "text-muted-foreground"}`}
         >
-          {isPickingUp(source) && (
+          {isPickingUp(source, externalAgentListening) && (
             <span
               aria-hidden
               className="mr-2 inline-block size-3 animate-spin rounded-full border-2 border-border border-t-foreground align-[-1px]"
             />
           )}
-          {statusLine(source)}
+          {statusLine(source, isPickingUp(source, externalAgentListening))}
         </span>
         {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
           <Link
@@ -139,25 +142,28 @@ export function FileSourceCard({
   );
 }
 
-/** Whether the external agent has picked the file up and is mapping it. */
-function isPickingUp({ status, readBy, pickedUpByExternalAgent }: FileSourceCard_SourceFragment) {
-  return status === "MAPPING" && readBy === "ANSWERED_BY_EXTERNAL_AGENT" && pickedUpByExternalAgent;
+/** Whether the external agent picked the file up, or listens and so picks it up in a moment. */
+function isPickingUp(
+  { status, readBy, pickedUpByExternalAgent }: FileSourceCard_SourceFragment,
+  externalAgentListening: boolean,
+) {
+  return (
+    status === "MAPPING" &&
+    readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+    (pickedUpByExternalAgent || externalAgentListening)
+  );
 }
 
-function statusLine({
-  status,
-  failure,
-  failureMessage,
-  employeeCount,
-  readBy,
-  pickedUpByExternalAgent,
-}: FileSourceCard_SourceFragment): string {
+function statusLine(
+  { status, failure, failureMessage, employeeCount, readBy }: FileSourceCard_SourceFragment,
+  pickingUp: boolean,
+): string {
   if (status === "MAPPING") {
     if (readBy === "PARSED_BY_BROCCOLI") {
       return t("imports.files.mapping");
     }
     return t(
-      pickedUpByExternalAgent
+      pickingUp
         ? "imports.files.pickingUpByExternalAgent"
         : "imports.files.waitingForExternalAgent",
     );

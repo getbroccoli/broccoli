@@ -30,8 +30,10 @@ export interface ExternalAgentSessionService {
   readExternalAgentSession(request: { token: string }): Promise<SecurityContext | null>;
   /** Ends the agent's session; its next call is refused. */
   disconnectExternalAgent(ctx: SecurityContext): Promise<void>;
-  /** The connected agent, or null when none is. */
-  readExternalAgentConnection(ctx: SecurityContext): Promise<ExternalAgentConnection | null>;
+  /** The connected agent and whether it listens for files now, or null when none is connected. */
+  readExternalAgentConnection(
+    ctx: SecurityContext,
+  ): Promise<(ExternalAgentConnection & { listening: boolean }) | null>;
 }
 
 export interface ExternalAgentCode {
@@ -53,7 +55,7 @@ export interface ExternalAgentSession {
 export function createExternalAgentSessionService(
   context: ExternalAgentContext,
 ): ExternalAgentSessionService {
-  const { orm, transact, clock } = context;
+  const { orm, transact, clock, activity } = context;
   return {
     chooseExternalAgent: async (ctx) => {
       await transact(async (tx) => {
@@ -88,6 +90,7 @@ export function createExternalAgentSessionService(
         if (!session || !(await externalAgentRepository(tx).exchangeCode(code, session, now))) {
           throw new ApplicationError("UNAUTHENTICATED", "The code is not valid.");
         }
+        activity.recordCall(now);
         return { token: session.token, expiresAt: session.expiresAt };
       });
     },
@@ -111,9 +114,10 @@ export function createExternalAgentSessionService(
     readExternalAgentConnection: async (ctx) => {
       ctx.requireSetupAccess();
       const now = clock();
-      return (await readSetupOpenToExternalAgent(orm, now))
-        ? externalAgentRepository(orm).findConnection(now)
-        : null;
+      const connection =
+        (await readSetupOpenToExternalAgent(orm, now)) &&
+        (await externalAgentRepository(orm).findConnection(now));
+      return connection ? { ...connection, listening: activity.isListening(now) } : null;
     },
   };
 }

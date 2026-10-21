@@ -8,7 +8,7 @@ import {
   type ExternalAgentFileService,
   createExternalAgentFileService,
 } from "./externalAgentFileService";
-import { createFileDropSignal } from "./fileDropSignal";
+import { createExternalAgentActivity } from "./externalAgentActivity";
 
 export type { ExternalAgentCode, ExternalAgentSession } from "./externalAgentSessionService";
 
@@ -29,7 +29,7 @@ export function createExternalAgentUseCases({
   imports: Pick<ImportUseCases, "answeredMapping">;
   clock?: () => Date;
 }): ExternalAgentUseCases {
-  const context = { orm, transact, imports, clock, fileDrops: createFileDropSignal() };
+  const context = { orm, transact, imports, clock, activity: createExternalAgentActivity() };
   return {
     sessions: createExternalAgentSessionService(context),
     files: createExternalAgentFileService(context),

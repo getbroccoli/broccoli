@@ -37,7 +37,7 @@ export interface ExternalAgentFileService {
 export function createExternalAgentFileService(
   context: ExternalAgentContext,
 ): ExternalAgentFileService {
-  const { transact, clock, imports, fileDrops } = context;
+  const { transact, clock, imports, activity } = context;
   const listUnansweredFiles = (ctx: SecurityContext) =>
     asLiveExternalAgent(context, ctx, (tx) =>
       imports.answeredMapping.readUnansweredSources(ctx, tx),
@@ -52,7 +52,7 @@ export function createExternalAgentFileService(
         }
         return imports.answeredMapping.addAnsweredSource(ctx, tx, { name, bytes, sheets });
       });
-      fileDrops.notify();
+      activity.notifyDrop();
       return id;
     },
 
@@ -60,7 +60,7 @@ export function createExternalAgentFileService(
 
     waitForUnansweredFiles: async (ctx, { seconds, signal }) => {
       // Listening before the first look, so a drop in between still wakes the wait.
-      const wait = fileDrops.listen(seconds * 1000);
+      const wait = activity.waitForDrop(seconds * 1000);
       signal?.addEventListener("abort", wait.stop);
       if (signal?.aborted) {
         wait.stop();
