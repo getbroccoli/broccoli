@@ -21,6 +21,9 @@ mutation ChooseExternalAgent {
         ai {
           id
           source
+          externalAgent {
+            id
+          }
         }
       }
       error {
@@ -42,6 +45,9 @@ mutation SaveAiSource($input: AiSourceInput!) {
           id
           source
           openRouterKey
+          externalAgent {
+            id
+          }
         }
       }
       error {
