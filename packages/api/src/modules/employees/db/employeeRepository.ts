@@ -216,8 +216,7 @@ function keysetColumns({ field, direction }: EmployeeOrder): KeysetOrder {
 function matches(search: string): SQL {
   const pattern = containsPattern(search);
   return or(
-    ilike(employees.firstName, pattern),
-    ilike(employees.lastName, pattern),
+    ilike(sql`${employees.firstName} || ' ' || ${employees.lastName}`, pattern),
     ilike(employees.email, pattern),
   )!;
 }

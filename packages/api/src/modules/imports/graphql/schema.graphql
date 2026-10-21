@@ -94,7 +94,7 @@ type ImportSource {
 
 "Which import employees to list."
 input ImportEmployeeFilter {
-  "Part of a shown first name, last name or email, any case."
+  "Part of a shown full name or email, any case."
   search: String
   "Only the import employees of this check."
   check: ID

@@ -57,7 +57,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 ## Search, sort and paging
 
 - [ ] Clicking Person, Email or Start date sorts ascending, then descending; people without a start date stay last both ways. Job title and Source are not sortable.
-- [ ] Searching part of a first name, last name or email filters the list and the footer reads "Showing M of N people"; a search without matches shows "No people match “…”" and "Clear search".
+- [ ] Searching part of a first name, last name, full name or email, ignoring case, filters the list and the footer reads "Showing M of N people"; a search without matches shows "No people match “…”" and "Clear search".
 - [ ] With over 50 people, "Next page" shows the rest; reload and Back keep the page.
 - [ ] `/setup/import/review?sort=bogus&dir=sideways&after=junk` opens the normal list.
 
