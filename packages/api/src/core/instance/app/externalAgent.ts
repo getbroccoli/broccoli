@@ -2,11 +2,7 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import {
-  type ExternalAgentSetupFacts,
-  canChooseExternalAgent,
-  isSetupOpenToExternalAgent,
-} from "../domain";
+import { canChooseExternalAgent, isSetupOpenToExternalAgent } from "../domain";
 
 /**
  * Makes the owner's external agent the AI source, in the caller's `tx` and holding the instance
@@ -23,7 +19,7 @@ export async function chooseExternalAgentSource(ctx: SecurityContext, tx: Tx): P
  */
 export async function lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
-  if (!canChooseExternalAgent(await lockExternalAgentFacts(tx))) {
+  if (!canChooseExternalAgent(await instanceRepository(tx).lockInstance())) {
     throw new ApplicationError(
       "CONFLICT",
       "Your agent can connect only while you gather your people.",
@@ -33,18 +29,7 @@ export async function lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Pro
 
 /** Whether the external agent may work now (`isSetupOpenToExternalAgent`). */
 export async function readSetupOpenToExternalAgent(db: Orm | Tx, now: Date): Promise<boolean> {
-  const instance = instanceRepository(db);
-  const [ownerUserId, step, setupSession, { source }, assignment] = await Promise.all([
-    instance.readOwnerUserId(),
-    instance.readStep(),
-    instance.readSetupSession(),
-    instance.readAiSource(),
-    instance.readAssignment(),
-  ]);
-  return isSetupOpenToExternalAgent(
-    { isManaged: assignment !== null, ownerUserId, step, setupSession, aiSource: source },
-    now,
-  );
+  return isSetupOpenToExternalAgent(await instanceRepository(db).readInstance(), now);
 }
 
 /**
@@ -56,15 +41,7 @@ export async function lockSetupOpenToExternalAgent(
   tx: Tx,
   clock: () => Date,
 ): Promise<Date | null> {
-  const facts = await lockExternalAgentFacts(tx);
+  const instance = await instanceRepository(tx).lockInstance();
   const now = clock();
-  return isSetupOpenToExternalAgent(facts, now) ? now : null;
-}
-
-async function lockExternalAgentFacts(tx: Tx): Promise<ExternalAgentSetupFacts> {
-  const instance = instanceRepository(tx);
-  const { ownerUserId, step, setupSession } = await instance.lockSetup();
-  const { source } = await instance.readAiSource();
-  const isManaged = (await instance.readAssignment()) !== null;
-  return { isManaged, ownerUserId, step, setupSession, aiSource: source };
+  return isSetupOpenToExternalAgent(instance, now) ? now : null;
 }

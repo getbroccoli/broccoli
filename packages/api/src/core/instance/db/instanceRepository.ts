@@ -2,11 +2,15 @@ import { eq } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { AiSource, ManagedAssignment, SetupSession, SetupStep } from "../domain";
+import type { AiSource, Instance, ManagedAssignment, SetupSession, SetupStep } from "../domain";
 import { instance } from "./instanceTable";
 
 /** The instance row in Postgres, through the pool or inside a transaction. */
 export interface InstanceRepository {
+  /** The whole instance row in one read. */
+  readInstance(): Promise<Instance>;
+  /** As `readInstance`, locking the row until the transaction ends. */
+  lockInstance(): Promise<Instance>;
   readStep(): Promise<SetupStep>;
   /** Null before setup. */
   readOwnerUserId(): Promise<string | null>;
@@ -50,7 +54,23 @@ export interface InstanceRepository {
 export function instanceRepository(db: Orm | Tx): InstanceRepository {
   const orm = () => ormOf(db);
 
+  const selectInstance = () =>
+    orm()
+      .select({
+        step: instance.setupStep,
+        demoExpiresAt: instance.demoExpiresAt,
+        aiSource: instance.aiSource,
+        ...sessionColumns,
+        // With the owner's id.
+        ...assignmentColumns,
+      })
+      .from(instance);
+
   return {
+    readInstance: async () => toInstance(await selectInstance()),
+
+    lockInstance: async () => toInstance(await selectInstance().for("update")),
+
     readStep: async (): Promise<SetupStep> => {
       const [row] = await orm().select({ step: instance.setupStep }).from(instance);
       if (!row) {
@@ -220,4 +240,28 @@ function toAssignment({
   return companyId && publicOrigin && websiteOrigin
     ? { companyId, publicOrigin, websiteOrigin }
     : null;
+}
+
+function toInstance([row]: {
+  ownerUserId: string | null;
+  step: SetupStep;
+  demoExpiresAt: Date | null;
+  aiSource: AiSource | null;
+  tokenHash: string | null;
+  expiresAt: Date | null;
+  companyId: string | null;
+  publicOrigin: string | null;
+  websiteOrigin: string | null;
+}[]): Instance {
+  if (!row) {
+    throw new Error("The instance row is missing; migrations insert it");
+  }
+  return {
+    ownerUserId: row.ownerUserId,
+    step: row.step,
+    setupSession: toSetupSession(row),
+    demoExpiresAt: row.demoExpiresAt,
+    aiSource: row.aiSource,
+    assignment: toAssignment(row),
+  };
 }

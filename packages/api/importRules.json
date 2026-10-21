@@ -102,7 +102,7 @@
     "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]
   },
   "layers": {
-    "domain": [],
+    "domain": ["helpers"],
     "helpers": [],
     "db": ["domain", "helpers"],
     "app": ["db", "domain", "helpers"],
