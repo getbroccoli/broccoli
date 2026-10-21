@@ -25,7 +25,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE13.** Reuse existing hooks, helpers and test support. Code that appears twice becomes one shared piece. `lint: jscpd` (outside tests)
 - **RULE14.** A name says what the thing does (`detectCompanyNameAndLogo`, `eventBus`), not where it is used, in the words of [`thesaurus.md`](thesaurus.md).
 - **RULE54.** An enum value says its whole meaning on its own, so a reader understands it without the enum's name or a comment: who or what it is about and what it states (`PARSED_BY_BROCCOLI`, `ANSWERED_BY_EXTERNAL_AGENT`, not `PARSED`, `ANSWERS`). Its stored and TypeScript forms say the same (`answered_by_external_agent`).
-- **RULE57.** A contract's name says what it does or holds without its context: routes, GraphQL types and fields, exported interfaces, functions and types (`GET /api/external-agent/unanswered-files`, `listUnansweredFiles`, `AnsweredMapping`, not `/files`, `listWaiting`, `Summary`). A generic name (`ConflictError`, `fetchJson`) is only for code that is generic.
+- **RULE57.** A contract's name says what it does or holds without its context: routes, GraphQL types and fields, exported interfaces, functions and types (`GET /api/external-agent/unmapped-files`, `listUnmappedFiles`, `AnsweredMapping`, not `/files`, `listWaiting`, `Summary`). A generic name (`ConflictError`, `fetchJson`) is only for code that is generic.
 - **RULE15.** Prefer zero-config solutions and modules: they work without setup, and every setting has a safe default.
 
 ## Layers and place

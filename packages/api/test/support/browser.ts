@@ -9,7 +9,7 @@ export interface Browser {
   graphql(query: string, variables?: Record<string, unknown>): Promise<Response>;
 }
 
-export function createBrowser(baseUrl: string, origin = baseUrl): Browser {
+export function createBrowser(baseUrl: string | (() => string), origin?: string): Browser {
   const cookies = new Map<string, string>();
 
   async function request(
@@ -19,7 +19,8 @@ export function createBrowser(baseUrl: string, origin = baseUrl): Browser {
     redirect: "follow" | "manual" = "follow",
     requestOrigin = origin,
   ): Promise<Response> {
-    const response = await fetch(new URL(path, baseUrl), {
+    const url = typeof baseUrl === "function" ? baseUrl() : baseUrl;
+    const response = await fetch(new URL(path, url), {
       method,
       redirect,
       headers: {
@@ -29,7 +30,7 @@ export function createBrowser(baseUrl: string, origin = baseUrl): Browser {
             : Buffer.isBuffer(body)
               ? "application/octet-stream"
               : "application/json",
-        origin: requestOrigin,
+        origin: requestOrigin ?? url,
         cookie: [...cookies].map(([name, value]) => `${name}=${value}`).join("; "),
       },
       body:

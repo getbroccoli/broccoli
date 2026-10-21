@@ -49,7 +49,7 @@ test("refuses a call when the agent session expires while waiting for the instan
 
   const result = await expireWhileWaiting(
     orm,
-    () => agents.files.listUnansweredFiles(ctx),
+    () => agents.files.listUnmappedFiles(ctx),
     () => {
       now = new Date(expiresAt.getTime() + 1);
     },
@@ -76,8 +76,8 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
 
     expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
     expect(await agents.sessions.readExternalAgentConnection(SETUP_HOLDER)).toBeNull();
-    await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
-    await expect(agents.files.pollUnansweredFiles(ctx, { seconds: 1 })).rejects.toMatchObject(
+    await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+    await expect(agents.files.pollUnmappedFiles(ctx, { seconds: 1 })).rejects.toMatchObject(
       SESSION_ENDED,
     );
   },
@@ -101,7 +101,7 @@ test("expires a session two hours after exchange despite recent calls", async ({
   now = expiresAt;
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 test("refuses a session once an owner exists even at the import step", async ({ orm, seed }) => {
@@ -117,7 +117,7 @@ test("refuses a session once an owner exists even at the import step", async ({ 
   await seed.owner();
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 test("refuses a session after setup leaves import", async ({ orm, seed }) => {
@@ -133,7 +133,7 @@ test("refuses a session after setup leaves import", async ({ orm, seed }) => {
   await seed.setupStep("owner");
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 test("refuses a session when the setup session expires", async ({ orm, seed }) => {
@@ -151,7 +151,7 @@ test("refuses a session when the setup session expires", async ({ orm, seed }) =
   now = new Date("2026-10-20T13:00:00Z");
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 test("refuses a session after OpenRouter is saved", async ({ orm, seed, fakeDecisions }) => {
@@ -171,7 +171,7 @@ test("refuses a session after OpenRouter is saved", async ({ orm, seed, fakeDeci
   });
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 test("choosing the agent again never revives a session idled by OpenRouter", async ({
@@ -196,7 +196,7 @@ test("choosing the agent again never revives a session idled by OpenRouter", asy
   await agents.sessions.chooseExternalAgent(SETUP_HOLDER);
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 test("refuses a session after approval", async ({ orm, seed }) => {
@@ -214,7 +214,7 @@ test("refuses a session after approval", async ({ orm, seed }) => {
   await imports.approveImport(SETUP_HOLDER, version);
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 test("refuses a live token after the demo starts", async ({ orm, seed }) => {
@@ -226,12 +226,12 @@ test("refuses a live token after the demo starts", async ({ orm, seed }) => {
     client: "Test agent",
   });
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
-  expect(await agents.files.listUnansweredFiles(ctx)).toEqual([]);
+  expect(await agents.files.listUnmappedFiles(ctx)).toEqual([]);
 
   await importUseCases(orm).startDemo(SETUP_HOLDER);
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
-  await expect(agents.files.listUnansweredFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
+  await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);
 });
 
 const SESSION_ENDED = { code: "UNAUTHENTICATED", message: "Your agent's session ended." };

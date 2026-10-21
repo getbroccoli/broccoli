@@ -19,7 +19,7 @@ export const externalAgentsEn = {
   "externalAgents.disconnect": "Disconnect",
   "externalAgents.disconnectFailed": "Couldn’t disconnect your agent. Try again.",
   "externalAgents.disclosure":
-    "To read the columns, your agent sees the first rows of each file with names, emails and other personal details replaced by placeholders.",
+    "To read the columns, your agent sees the first rows of each file with names, emails and other personal details replaced by placeholders, unless you let it read a file.",
   "externalAgents.notPickedUpOne":
     "Your agent hasn’t picked up {name}. Paste this into it to continue.",
   "externalAgents.notPickedUpMany":

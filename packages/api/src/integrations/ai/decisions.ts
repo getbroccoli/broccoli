@@ -40,7 +40,7 @@ export interface Decisions {
 export const DECISIONS_MODEL = "typesafe/jev-1.13";
 
 /** Only providers that neither keep nor train on requests; a request no such provider serves fails. */
-const NO_RETENTION = { data_collection: "deny", zdr: true };
+export const NO_RETENTION = { data_collection: "deny", zdr: true };
 
 /** Under this, an answer is a guess and counts as no answer. */
 const DEFAULT_MIN_CONFIDENCE = 0.8;

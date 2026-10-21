@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { files } from "../../../core/files";
-import { IMPORT_SOURCE_FAILURES, IMPORT_SOURCE_READERS } from "../domain";
+import { IMPORT_SOURCE_FAILURES, IMPORT_SOURCE_READERS, IMPORT_SOURCE_STATUSES } from "../domain";
 
 /** Where the import's records come from: the Slack workspace and uploaded files. */
 export const importSources = pgTable(
@@ -14,9 +14,7 @@ export const importSources = pgTable(
     kind: text("kind", { enum: ["slack", "file"] }).notNull(),
     name: text("name").notNull(),
     readAt: timestamp("read_at", { withTimezone: true }).notNull().defaultNow(),
-    status: text("status", { enum: ["mapping", "mapped", "failed"] })
-      .notNull()
-      .default("mapped"),
+    status: text("status", { enum: IMPORT_SOURCE_STATUSES }).notNull().default("mapped"),
     failure: text("failure", { enum: IMPORT_SOURCE_FAILURES }),
     /** The AI provider's own words when it refused a file for good. */
     failureMessage: text("failure_message"),
@@ -27,13 +25,18 @@ export const importSources = pgTable(
     readBy: text("read_by", { enum: IMPORT_SOURCE_READERS })
       .notNull()
       .default("parsed_by_broccoli"),
-    /** When the external agent first read the file's questions. */
+    /** When the external agent first read the file's questions or fetched it. */
     pickedUpByExternalAgentAt: timestamp("picked_up_by_external_agent_at", { withTimezone: true }),
+    /** When the owner let AI read the original file in full; Reset setup clears it. */
+    originalReadAllowedAt: timestamp("original_read_allowed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     check("import_sources_kind", sql`${table.kind} in ('slack', 'file')`),
-    check("import_sources_status", sql`${table.status} in ('mapping', 'mapped', 'failed')`),
+    check(
+      "import_sources_status",
+      sql`${table.status} in ('mapping', 'mapped', 'failed', 'waiting_for_original_read_consent')`,
+    ),
     check(
       "import_sources_failure",
       sql`(${table.status} = 'failed') = (${table.failure} is not null)`,

@@ -7,4 +7,5 @@ fragment FileSourceCard_source on ImportSource {
   employeeCount
   readBy
   pickedUpByExternalAgent
+  originalReadAllowed
 }

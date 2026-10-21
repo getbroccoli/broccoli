@@ -1,4 +1,5 @@
 import type { Decisions } from "../../../../integrations/ai";
+import type { OriginalFileReader } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { StoredFile } from "../../../../core/files";
@@ -18,10 +19,16 @@ import {
   type AnsweredMappingService,
   createAnsweredMappingService,
 } from "./answeredMappingService";
+import {
+  createOriginalFileReadService,
+  type OriginalFileReadService,
+} from "./originalFileReadService";
 
 export type { DemoFill, SlackReader } from "./importContext";
 export type { ImportReview } from "./importReview";
 export { prepareDemoStart } from "./startDemo";
+export type { StaffUpload } from "./uploadReader";
+export { READ_PEOPLE_JSON_SCHEMA, type ReadPeopleOutcome } from "./originalFileReadService";
 
 /** Everything that can be done with the import; the adapters call nothing else. */
 export interface ImportUseCases {
@@ -40,6 +47,8 @@ export interface ImportUseCases {
   files: FileSourceService;
   /** Staff files mapped by the external agent's answers to Broccoli's masked questions. */
   answeredMapping: AnsweredMappingService;
+  /** Staff files AI reads in full, personal data included, once the owner allowed it. */
+  originalFileReads: OriginalFileReadService;
 }
 
 export function createImportUseCases({
@@ -48,11 +57,13 @@ export function createImportUseCases({
   logger,
   slack,
   decisions,
+  originalFileReader,
   jobs,
   prepareDemoFill,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: SlackReader;
   decisions: Decisions;
+  originalFileReader: OriginalFileReader;
   jobs: JobQueue;
   prepareDemoFill: () => Promise<DemoFill>;
 }): ImportUseCases {
@@ -70,5 +81,6 @@ export function createImportUseCases({
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs, readUpload }),
     answeredMapping: createAnsweredMappingService(readUpload),
+    originalFileReads: createOriginalFileReadService({ orm, transact, jobs, originalFileReader }),
   };
 }

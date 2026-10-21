@@ -3,6 +3,7 @@ import express from "express";
 import { readSdl } from "../../core/graphql";
 import type { Mode } from "../../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import { PrincipalSecurityContext } from "../../core/security";
 import type { ImportUseCases } from "../imports";
 import { createExternalAgentUseCases } from "./app";
 import { createResolvers } from "./graphql";
@@ -17,7 +18,7 @@ export { createExternalAgentUseCases, type ExternalAgentUseCases } from "./app";
 export function externalAgentsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
     mode: Mode;
-    imports: Pick<ImportUseCases, "answeredMapping">;
+    imports: Pick<ImportUseCases, "answeredMapping" | "originalFileReads">;
   },
 ): ModuleManifest {
   const useCases = createExternalAgentUseCases(dependencies);
@@ -30,5 +31,11 @@ export function externalAgentsModule(
         .Router()
         .use(externalAgentRouter(useCases, dependencies.logger))
         .use(externalAgentFilesRouter(useCases, resolveSecurity)),
+    events: {
+      "imports.original_file_read_allowed": () => {
+        useCases.files.notifyFileWaiting(PrincipalSecurityContext.system());
+        return Promise.resolve();
+      },
+    },
   };
 }

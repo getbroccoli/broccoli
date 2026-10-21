@@ -1,4 +1,4 @@
-import { type Decisions, DecisionsError } from "../../../../integrations/ai";
+import type { Decisions } from "../../../../integrations/ai";
 import type { Orm, Transact } from "../../../../core/db";
 import { readFile } from "../../../../core/files";
 import type { JobQueue } from "../../../../core/jobs";
@@ -10,7 +10,6 @@ import {
   type FileSource,
   headerQuestion,
   inSheet,
-  type ImportSourceFailure,
   type IncomingRecord,
   type MappingOutcome,
   readColumnMapping,
@@ -20,7 +19,8 @@ import {
   type Sheet,
   sheetQuestions,
 } from "../../domain";
-import { mimeTypeOf, type UploadReader } from "./uploadReader";
+import { failedModelOutcome } from "./modelFailure";
+import type { UploadReader } from "./uploadReader";
 import { readStaffFile } from "./staffFile";
 import { lockOpenImport, openImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
@@ -31,8 +31,9 @@ import { requireImportAccess } from "./requireImportAccess";
  */
 export interface FileSourceService {
   /**
-   * Adds a CSV or Excel file as a source and queues its mapping, in one transaction; returns the
-   * source's id. A file that cannot be read is refused and nothing is stored.
+   * Adds a CSV or Excel file as a source and queues its mapping, in one transaction, or a PDF
+   * waiting for the owner's consent; returns the source's id. A file that cannot be read is
+   * refused and nothing is stored.
    */
   uploadFile(ctx: SecurityContext, file: UploadedFile): Promise<string>;
   /**
@@ -88,14 +89,18 @@ export function createFileSourceService({
   return {
     uploadFile: async (ctx, { name, bytes }) => {
       requireImportAccess(ctx);
-      const sheets = await readUpload(bytes);
+      const { mimeType, sheets } = await readUpload({ name, bytes });
       return transact(async (tx) => {
         const imports = await lockOpenImport(tx);
-        const sourceId = await imports.insertFileSource(name, "parsed_by_broccoli", {
-          content: Buffer.from(bytes),
-          mimeType: mimeTypeOf(sheets),
-        });
-        await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
+        const sourceId = await imports.insertFileSource(
+          name,
+          "parsed_by_broccoli",
+          { content: Buffer.from(bytes), mimeType },
+          sheets ? "mapping" : "waiting_for_original_read_consent",
+        );
+        if (sheets) {
+          await jobs.send(tx, "imports.mapFile", { sourceId, attempt: 0 });
+        }
         return sourceId;
       });
     },
@@ -161,28 +166,12 @@ function isCurrentRun(source: FileSource | null, attempt: number): source is Fil
   return source?.status === "mapping" && source.mappingAttempt === attempt;
 }
 
-/** Broccoli AI's refusals that only the owner's own key can get past. */
-const AI_REFUSAL_FAILURES = new Map<string, ImportSourceFailure>([
-  ["free_period_used", "ai_free_period_used"],
-  ["free_period_over", "ai_free_period_over"],
-  ["limit_reached", "ai_limit_reached"],
-]);
-
 /** A model failure that retrying cannot fix fails the file; any other error is thrown. */
 async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {
   try {
     return await mapSheets(decisions, sheets);
   } catch (error) {
-    if (!(error instanceof DecisionsError) || error.retryable) {
-      throw error;
-    }
-    const aiRefusal = AI_REFUSAL_FAILURES.get(error.reason ?? "");
-    return {
-      outcome: aiRefusal
-        ? { status: "failed", failure: aiRefusal }
-        : { status: "failed", failure: "unavailable", failureMessage: error.providerMessage },
-      records: [],
-    };
+    return { outcome: failedModelOutcome(error), records: [] };
   }
 }
 

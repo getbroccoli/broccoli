@@ -24,7 +24,7 @@ test("refuses a malformed external agent path without logging its contents", asy
   const token = await exchangeExternalAgentCode(env.url, code);
 
   const response = await fetch(
-    `${env.url}/api/external-agent/unanswered-files/private@example.com%E0%A4%A/questions`,
+    `${env.url}/api/external-agent/unmapped-files/private@example.com%E0%A4%A/questions`,
     { headers: { authorization: `Bearer ${token}` } },
   );
 
@@ -52,7 +52,7 @@ test("refuses malformed answer JSON without returning or logging its contents", 
   const token = await exchangeExternalAgentCode(env.url, code);
   const sentinel = "private-answer-sentinel@example.com";
 
-  const response = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/answers`, {
+  const response = await fetch(`${env.url}/api/external-agent/unmapped-files/${id}/answers`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: `{"sheets":"${sentinel}",`,
@@ -91,7 +91,7 @@ test("answers an unexpected database failure with INTERNAL and logs no personal 
     await database.close();
   }
 
-  const response = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/answers`, {
+  const response = await fetch(`${env.url}/api/external-agent/unmapped-files/${id}/answers`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({

@@ -9,6 +9,7 @@ import { startSimpleHttpServer } from "./simpleHttpServer";
 /** A local decisions provider with scripted choices; unspecified questions answer none. */
 export async function startFakeDecisions() {
   let answers: Record<string, string | Answer>[] = [{}];
+  let readPeople: unknown = { people: [] };
   const requests: unknown[] = [];
   const httpRequests: { path: string; headers: IncomingHttpHeaders; body: unknown }[] = [];
   const issuedTokens: string[] = [];
@@ -93,6 +94,19 @@ export async function startFakeDecisions() {
     }
     response.json(body);
   });
+  app.post("/v1/chat/completions", (request, response) => {
+    const credential = request.headers.authorization?.match(/^Bearer (.+)$/)?.[1] ?? "";
+    if (!validTokens.has(credential) && !acceptedKeys.has(credential)) {
+      response.status(401).json({
+        error: { code: 401, message: "Unknown token.", metadata: { reason: "unknown_token" } },
+      });
+      return;
+    }
+    response.json({
+      choices: [{ message: { content: JSON.stringify(readPeople) }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 100 },
+    });
+  });
   const server = await startSimpleHttpServer(app);
   return {
     ...server,
@@ -117,6 +131,9 @@ export async function startFakeDecisions() {
     answer(next: Record<string, string | Answer>, ...following: Record<string, string | Answer>[]) {
       answers = [next, ...following];
       status = 200;
+    },
+    answerReadPeople(body: unknown) {
+      readPeople = body;
     },
     fail(nextStatus: number, message?: string, reason = "scripted_failure") {
       status = nextStatus;

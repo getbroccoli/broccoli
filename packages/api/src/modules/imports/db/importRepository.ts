@@ -1,45 +1,20 @@
-import { and, count, eq, gt, inArray, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, isNull, notInArray, or, sql } from "drizzle-orm";
 
-import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { ormOf, type Tx } from "../../../core/db";
 import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
-import type { KeysetRow } from "../../../core/pagination";
 import {
   type ImportEmployeeChoices,
-  type ImportEmployeeRecord,
-  type FileSource,
-  type ImportSource,
   type ImportSourceReader,
+  type ImportSourceStatus,
   type IncomingRecord,
   type MappingOutcome,
 } from "../domain";
-import {
-  IMPORT_EMPLOYEE_CHOICES_VERSION,
-  IMPORT_EMPLOYEE_VERSION,
-  parseImportEmployeeChoices,
-  toImportEmployee,
-} from "./importEmployeeJson";
+import { IMPORT_EMPLOYEE_CHOICES_VERSION, IMPORT_EMPLOYEE_VERSION } from "./importEmployeeJson";
 import { importChoices } from "./importChoicesTable";
 import { deleteReplacedPhotos } from "./importPhotoRepository";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
-
-/** Reads the import's sources, records and choices, through the pool or joining a transaction. */
-export interface ImportReader {
-  listSources(): Promise<ImportSource[]>;
-  findSources(ids: readonly string[]): Promise<ImportSource[]>;
-  /** The file source with this id, or null when there is none. */
-  findFileSource(id: string): Promise<FileSource | null>;
-  /** Every employee record of every source, oldest first. */
-  listEmployeeRecords(): Promise<ImportEmployeeRecord[]>;
-  /** The number of employee records of each source that has any; the others are absent. */
-  countEmployees(sourceIds: readonly string[]): Promise<Map<string, number>>;
-  /** Up to `limit` of one source's employee records after the one with id `after`, oldest first. */
-  findRecordPage(
-    query: ImportRecordPageQuery,
-  ): Promise<KeysetRow<ImportEmployeeRecord, [id: string]>[]>;
-  /** What the owner settled for each group of records of `type`. */
-  listChoices(type: "employee"): Promise<ImportEmployeeChoices[]>;
-}
+import { importReader, type ImportReader } from "./importReader";
 
 /** Reads and changes the import in a transaction that holds its lock (`lockImport`). */
 export interface ImportRepository extends ImportReader {
@@ -47,9 +22,14 @@ export interface ImportRepository extends ImportReader {
   saveSlackSource(name: string): Promise<string>;
   /**
    * Stores an uploaded file as a source waiting to be mapped, by Broccoli's first mapping run or
-   * by the external agent's answers; returns its id.
+   * by the external agent's answers, or, for a PDF, waiting for the owner's consent; returns its id.
    */
-  insertFileSource(name: string, readBy: ImportSourceReader, file: StoredFile): Promise<string>;
+  insertFileSource(
+    name: string,
+    readBy: ImportSourceReader,
+    file: StoredFile,
+    status: Extract<ImportSourceStatus, "mapping" | "waiting_for_original_read_consent">,
+  ): Promise<string>;
   /**
    * Ends a mapping run, only while the source is still `mapping` at `attempt`; returns
    * whether it did. A late run, or one of a removed source, changes nothing.
@@ -57,7 +37,8 @@ export interface ImportRepository extends ImportReader {
   finishMapping(id: string, attempt: number, outcome: MappingOutcome): Promise<boolean>;
   /**
    * Starts Broccoli's next mapping run of a file it failed to map, or of a file still waiting for
-   * the external agent's answers; returns its attempt, or null for any other source.
+   * the external agent's answers; returns its attempt, or null for any other source, such as one
+   * the owner let AI read in full.
    */
   restartMapping(id: string): Promise<number | null>;
   /** Deletes a file source, its records and its stored file. */
@@ -75,85 +56,6 @@ export interface ImportRepository extends ImportReader {
   deleteAll(options: { keepPhotos: boolean }): Promise<void>;
   /** Stores these choices, replacing any of the same keys. */
   saveChoices(type: "employee", choices: ImportEmployeeChoices[]): Promise<void>;
-}
-
-export interface ImportRecordPageQuery {
-  sourceId: string;
-  after: [id: string] | null;
-  limit: number;
-}
-
-export function importReader(db: Orm | Tx): ImportReader {
-  const orm = () => ormOf(db);
-
-  return {
-    listSources: (): Promise<ImportSource[]> =>
-      orm().select(sourceColumns).from(importSources).orderBy(importSources.createdAt),
-
-    findSources: (ids: readonly string[]): Promise<ImportSource[]> =>
-      orm()
-        .select(sourceColumns)
-        .from(importSources)
-        .where(inArray(importSources.id, [...ids])),
-
-    findFileSource: async (id: string): Promise<FileSource | null> => {
-      const [row] = await orm()
-        .select({
-          ...sourceColumns,
-          fileId: importSources.fileId,
-          mappingAttempt: importSources.mappingAttempt,
-        })
-        .from(importSources)
-        .where(and(eq(importSources.id, id), eq(importSources.kind, "file")));
-      return row ? { ...row, fileId: row.fileId! } : null;
-    },
-
-    listEmployeeRecords: async (): Promise<ImportEmployeeRecord[]> => {
-      const records = await orm()
-        .select()
-        .from(importRecords)
-        .where(eq(importRecords.type, "employee"))
-        .orderBy(importRecords.createdAt, importRecords.id);
-      return records.map(toImportEmployee);
-    },
-
-    countEmployees: async (sourceIds: readonly string[]): Promise<Map<string, number>> => {
-      const rows = await orm()
-        .select({ sourceId: importRecords.sourceId, count: count() })
-        .from(importRecords)
-        .where(
-          and(eq(importRecords.type, "employee"), inArray(importRecords.sourceId, [...sourceIds])),
-        )
-        .groupBy(importRecords.sourceId);
-      return new Map(rows.map(({ sourceId, count }) => [sourceId, count]));
-    },
-
-    findRecordPage: async ({ sourceId, after, limit }: ImportRecordPageQuery) => {
-      const records = await orm()
-        .select()
-        .from(importRecords)
-        .where(
-          and(
-            eq(importRecords.type, "employee"),
-            eq(importRecords.sourceId, sourceId),
-            after === null ? undefined : gt(importRecords.id, after[0]),
-          ),
-        )
-        // uuidv7 ids follow the order the records were added in.
-        .orderBy(importRecords.id)
-        .limit(limit);
-      return records.map((record) => ({ node: toImportEmployee(record), values: [record.id] }));
-    },
-
-    listChoices: async (type: "employee"): Promise<ImportEmployeeChoices[]> => {
-      const rows = await orm().select().from(importChoices).where(eq(importChoices.type, type));
-      return rows.map(({ key, leftOut, typeVersion, values }) => ({
-        key,
-        leftOut,
-        values: parseImportEmployeeChoices(typeVersion, values),
-      }));
-    },
-  };
 }
 
 /**
@@ -181,11 +83,11 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
       return row!.id;
     },
 
-    insertFileSource: async (name, readBy, file): Promise<string> => {
+    insertFileSource: async (name, readBy, file, status): Promise<string> => {
       const fileId = await storeFile(tx, file);
       const [row] = await orm()
         .insert(importSources)
-        .values({ kind: "file", name, readBy, fileId, status: "mapping" })
+        .values({ kind: "file", name, readBy, fileId, status })
         .returning({ id: importSources.id });
       return row!.id;
     },
@@ -227,6 +129,7 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
         .where(
           and(
             eq(importSources.id, id),
+            isNull(importSources.originalReadAllowedAt),
             or(
               and(
                 eq(importSources.readBy, "parsed_by_broccoli"),
@@ -339,18 +242,6 @@ const IMPORT_LOCK_KEY = "broccoli.import_sources";
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
-
-const sourceColumns = {
-  id: importSources.id,
-  kind: importSources.kind,
-  name: importSources.name,
-  readAt: importSources.readAt,
-  status: importSources.status,
-  failure: importSources.failure,
-  failureMessage: importSources.failureMessage,
-  readBy: importSources.readBy,
-  pickedUpByExternalAgentAt: importSources.pickedUpByExternalAgentAt,
-};
 
 function presentIds(rows: { fileId: string | null }[]): string[] {
   return rows.flatMap(({ fileId }) => (fileId ? [fileId] : []));

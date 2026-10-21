@@ -12,6 +12,7 @@ import {
   refusal,
   UnauthorizedDecisionsError,
 } from "./decisions";
+import { createOriginalFileReader, type OriginalFileRead } from "./originalFileRead";
 
 /** Where the install keeps its Broccoli AI token; null until the first one is issued. */
 export interface BroccoliAiTokenStore {
@@ -25,13 +26,15 @@ export type DecisionsSource =
 
 /** Decisions whose source is picked per request, and the Broccoli AI token they use. */
 export interface ResolvedDecisions extends Decisions {
+  /** Reads a whole file through `source`, the one chosen when the owner allowed it. */
+  readOriginalFile(source: DecisionsSource, request: OriginalFileRead): Promise<unknown>;
   /** Makes sure the install holds a Broccoli AI token, issuing one when it has none. */
   prepareBroccoliAi(url: string): Promise<void>;
 }
 
 /**
- * Decisions that pick their source on every request through `readSource`, so a source the
- * owner chooses later applies at once. Broccoli AI gets a token on first use and a new one
+ * Decisions and reads that pick their source on every request through `readSource`, so a source
+ * the owner chooses later applies at once. Broccoli AI gets a token on first use and a new one
  * once when the relay no longer knows it.
  */
 export function createResolvedDecisions({
@@ -42,36 +45,64 @@ export function createResolvedDecisions({
   tokens: BroccoliAiTokenStore;
 }): ResolvedDecisions {
   const broccoliAi = broccoliAiTokens(tokens);
+  /** Sends one request to the source of the moment, with a new Broccoli AI token once if needed. */
+  const askSource = async <T>(
+    source: DecisionsSource,
+    ask: (connection: SourceConnection) => Promise<T>,
+  ): Promise<T> => {
+    if (source.kind === "openrouter") {
+      return ask({ ...OPENROUTER_PATHS, url: source.url, credential: source.key, headers: {} });
+    }
+    const askWith = (token: string) =>
+      ask({ ...RELAY_PATHS, url: source.url, credential: token, headers: CLIENT_HEADERS });
+    const token = await broccoliAi.current(source.url);
+    try {
+      return await askWith(token);
+    } catch (error) {
+      if (!(error instanceof UnauthorizedDecisionsError)) {
+        throw error;
+      }
+      return askWith(await broccoliAi.replace(source.url, token));
+    }
+  };
   return {
-    decide: async (state, questions, minConfidence) => {
-      const source = await readSource();
-      if (source.kind === "openrouter") {
-        return createDecisions({
-          endpoint: urlUnder(source.url, "alpha/decisions").href,
-          credential: source.key,
-        }).decide(state, questions, minConfidence);
-      }
-      const decideWith = (token: string) =>
+    decide: async (state, questions, minConfidence) =>
+      askSource(await readSource(), ({ url, decisionsPath, credential, headers }) =>
         createDecisions({
-          endpoint: urlUnder(source.url, "v1/decisions").href,
-          credential: token,
-          headers: CLIENT_HEADERS,
-        }).decide(state, questions, minConfidence);
-      const token = await broccoliAi.current(source.url);
-      try {
-        return await decideWith(token);
-      } catch (error) {
-        if (!(error instanceof UnauthorizedDecisionsError)) {
-          throw error;
-        }
-        return decideWith(await broccoliAi.replace(source.url, token));
-      }
-    },
+          endpoint: urlUnder(url, decisionsPath).href,
+          credential,
+          headers,
+        }).decide(state, questions, minConfidence),
+      ),
+    readOriginalFile: (source, request) =>
+      askSource(source, ({ url, chatCompletionsPath, credential, headers }) =>
+        createOriginalFileReader({
+          endpoint: urlUnder(url, chatCompletionsPath).href,
+          credential,
+          headers,
+        }).readOriginalFile(request),
+      ),
     prepareBroccoliAi: async (url) => {
       await broccoliAi.current(url);
     },
   };
 }
+
+/** Where one request goes, as whom. */
+interface SourceConnection {
+  url: string;
+  decisionsPath: string;
+  chatCompletionsPath: string;
+  credential: string;
+  headers: Record<string, string>;
+}
+
+/** The relay speaks OpenRouter's contracts, with decisions under its own path. */
+const OPENROUTER_PATHS = {
+  decisionsPath: "alpha/decisions",
+  chatCompletionsPath: "v1/chat/completions",
+};
+const RELAY_PATHS = { decisionsPath: "v1/decisions", chatCompletionsPath: "v1/chat/completions" };
 
 /** Lets the relay tell Broccoli from scanners; not a secret. */
 // shortcut: Broccoli has no release version yet; send it here once releases carry one.

@@ -17,11 +17,11 @@ test("maps a dropped file through masked questions and shows its people to the h
   const token = await exchangeExternalAgentCode(env.url, code);
   const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
 
-  const listed = await fetch(`${env.url}/api/external-agent/unanswered-files`, { headers });
+  const listed = await fetch(`${env.url}/api/external-agent/unmapped-files`, { headers });
   expect(listed.status).toBe(200);
   expect(listed.headers.get("cache-control")).toBe("no-store");
-  expect(await listed.json()).toEqual([{ id }]);
-  const questions = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/questions`, {
+  expect(await listed.json()).toEqual([{ id, way: "answer_masked_questions" }]);
+  const questions = await fetch(`${env.url}/api/external-agent/unmapped-files/${id}/questions`, {
     headers,
   });
   expect(questions.status).toBe(200);
@@ -29,7 +29,7 @@ test("maps a dropped file through masked questions and shows its people to the h
   expect(await questions.json()).toMatchObject({
     sheets: [{ sheet: 1, questions: { headerRow: { options: { "1": "Row 1" } } } }],
   });
-  const answered = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/answers`, {
+  const answered = await fetch(`${env.url}/api/external-agent/unmapped-files/${id}/answers`, {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -111,12 +111,12 @@ test("shows the holder that the external agent is listening right after the exch
   });
 });
 
-test("answers an empty list when the unanswered-files poll runs out", async ({ env }) => {
+test("answers an empty list when the unmapped-files poll runs out", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   const code = await createExternalAgentCode(browser);
   const token = await exchangeExternalAgentCode(env.url, code);
 
-  const response = await fetch(`${env.url}/api/external-agent/poll-unanswered-files?wait=1`, {
+  const response = await fetch(`${env.url}/api/external-agent/poll-unmapped-files?wait=1`, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -125,18 +125,15 @@ test("answers an empty list when the unanswered-files poll runs out", async ({ e
 });
 
 test.for(["0", "601", "1.5", "soon", ""])(
-  "refuses an invalid unanswered-files poll wait of %s",
+  "refuses an invalid unmapped-files poll wait of %s",
   async (wait, { env }) => {
     const browser = await env.startSetupAtImport();
     const code = await createExternalAgentCode(browser);
     const token = await exchangeExternalAgentCode(env.url, code);
 
-    const response = await fetch(
-      `${env.url}/api/external-agent/poll-unanswered-files?wait=${wait}`,
-      {
-        headers: { authorization: `Bearer ${token}` },
-      },
-    );
+    const response = await fetch(`${env.url}/api/external-agent/poll-unmapped-files?wait=${wait}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
@@ -160,7 +157,7 @@ test("shows the holder that the external agent picked up a dropped file", async 
     data: { import: { id: "import", sources: [{ id, pickedUpByExternalAgent: false }] } },
   });
 
-  const questions = await fetch(`${env.url}/api/external-agent/unanswered-files/${id}/questions`, {
+  const questions = await fetch(`${env.url}/api/external-agent/unmapped-files/${id}/questions`, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -239,7 +236,7 @@ test("refuses the agent after the holder disconnects it", async ({ env }) => {
     data: { setup: { disconnectExternalAgent: { setup: { id: "instance" } } } },
   });
 
-  const response = await fetch(`${env.url}/api/external-agent/unanswered-files`, {
+  const response = await fetch(`${env.url}/api/external-agent/unmapped-files`, {
     headers: { authorization: `Bearer ${token}` },
   });
 

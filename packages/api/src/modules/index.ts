@@ -31,6 +31,7 @@ export function createModules(
     ...core,
     slack: slackConnection,
     decisions: aiSettings.decisions,
+    originalFileReader: aiSettings.originalFileReader,
     prepareDemoFill: () => prepareDemoFill(),
   });
   return {

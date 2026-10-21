@@ -15,13 +15,16 @@ import { sheetQuestions, type ImportEmployee } from "../../domain";
 test("stores a dropped file waiting for answers without a model job", async ({ orm, transact }) => {
   const imports = importUseCases(orm);
   const bytes = Buffer.from("Name,Email\nAvery Stone,avery@example.com");
-  const sheets = await imports.answeredMapping.readStaffUpload(SETUP_HOLDER, bytes);
+  const upload = await imports.answeredMapping.readStaffUpload(SETUP_HOLDER, {
+    name: "staff.csv",
+    bytes,
+  });
 
   const id = await transact((tx) =>
     imports.answeredMapping.addAnsweredSource(SETUP_HOLDER, tx, {
       name: "staff.csv",
       bytes,
-      sheets,
+      upload,
     }),
   );
 
@@ -36,7 +39,10 @@ test("refuses an unreadable upload without storing it", async ({ orm }) => {
   const imports = importUseCases(orm);
 
   await expect(
-    imports.answeredMapping.readStaffUpload(SETUP_HOLDER, Buffer.from("Name\nAvery\0")),
+    imports.answeredMapping.readStaffUpload(SETUP_HOLDER, {
+      name: "staff.csv",
+      bytes: Buffer.from("Name\nAvery\0"),
+    }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "file", code: "unsupported_file" }],
@@ -164,7 +170,7 @@ test("never exposes dropped file names or workbook sheet names", async ({
   const imports = importUseCases(orm);
 
   const responses = await transact(async (tx) => [
-    await imports.answeredMapping.readUnansweredSources(SETUP_EXTERNAL_AGENT, tx),
+    await imports.answeredMapping.readUnmappedSources(SETUP_EXTERNAL_AGENT, tx),
     await imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, csv.id),
     await imports.answeredMapping.readMappingQuestions(SETUP_EXTERNAL_AGENT, tx, workbook.id),
   ]);
