@@ -62,6 +62,9 @@ export function createExternalAgentFileService(
       // Listening before the first look, so a drop in between still wakes the wait.
       const wait = fileDrops.listen(seconds * 1000);
       signal?.addEventListener("abort", wait.stop);
+      if (signal?.aborted) {
+        wait.stop();
+      }
       try {
         const files = await listUnansweredFiles(ctx);
         if (files.length > 0) {

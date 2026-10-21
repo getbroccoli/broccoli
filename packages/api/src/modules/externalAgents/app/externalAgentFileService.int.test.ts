@@ -106,6 +106,28 @@ test(
   },
 );
 
+test(
+  "answers no files at once when the signal is already aborted",
+  { timeout: 5_000 },
+  async ({ orm, seed }) => {
+    await seed.externalAgentSetup();
+    const agents = externalAgentUseCases(orm);
+    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+    const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
+      code,
+      client: "Test agent",
+    });
+    const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
+
+    const files = await agents.files.waitForUnansweredFiles(ctx, {
+      seconds: 30,
+      signal: AbortSignal.abort(),
+    });
+
+    expect(files).toEqual([]);
+  },
+);
+
 test("lets a later session answer a file dropped before it connected", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);

@@ -88,9 +88,13 @@ export function externalAgentRouter(
           response.json(await useCases.files.listUnansweredFiles(ctx));
           return;
         }
-        // An agent that gives up stops the wait, so nothing waits for a closed connection.
+        // An agent that gives up stops the wait, so nothing waits for a closed connection, even
+        // one closed while its session was being checked.
         const abandoned = new AbortController();
         response.on("close", () => abandoned.abort());
+        if (response.destroyed) {
+          abandoned.abort();
+        }
         const files = await useCases.files.waitForUnansweredFiles(ctx, {
           seconds,
           signal: abandoned.signal,
