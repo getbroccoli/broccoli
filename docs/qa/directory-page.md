@@ -19,7 +19,7 @@ A manual check of the People page against a development stack.
 
 - [ ] Clicking Name, Email or Start date sorts ascending, clicking again sorts descending; the caret shows the direction and the URL holds `sort` and `dir`. Job title is not sortable.
 - [ ] Sorting works from the keyboard (Tab to the header, Enter).
-- [ ] Typing in the search filters by first name, last name or email after a short pause; the URL holds `q` and the list goes back to the first page.
+- [ ] Typing in the search filters by first name, last name, full name or email, ignoring case, after a short pause; the URL holds `q` and the list goes back to the first page.
 - [ ] A search without matches shows "No people match “…”"; "Clear search" empties the field and the URL.
 
 ## Robustness

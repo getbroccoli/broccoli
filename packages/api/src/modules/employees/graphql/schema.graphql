@@ -37,7 +37,7 @@ input EmployeeOrder {
 }
 
 input EmployeeFilter {
-  "Matches first name, last name or email containing it, ignoring case; at most 100 characters."
+  "Matches full name or email containing it, ignoring case; at most 100 characters."
   search: String
 }
 

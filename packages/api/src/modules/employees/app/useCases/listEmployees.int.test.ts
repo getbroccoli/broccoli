@@ -168,6 +168,20 @@ test("finds employees whose first name, last name or email contains the search, 
   ]);
 });
 
+test.for(["Avery Stone", " aVeRy sToNe ", "ery Sto"])(
+  "finds employees by full name with search %j",
+  async (search, { orm, seed }) => {
+    const { listEmployees } = createEmployeeUseCases({ orm });
+    const match = await seed.employee({ firstName: "Avery", lastName: "Stone" });
+    await seed.employee({ firstName: "Avery", lastName: "Reed" });
+    await seed.employee({ firstName: "Robin", lastName: "Stone" });
+
+    const page = await listEmployees(OWNER, { filter: { search } });
+
+    expect(page.edges.map((edge) => edge.node.id)).toEqual([match.id]);
+  },
+);
+
 test("treats percent and underscore in a search literally", async ({ orm, seed }) => {
   const { listEmployees } = createEmployeeUseCases({ orm });
   const percent = await seed.employee({ firstName: "Percent%Name" });

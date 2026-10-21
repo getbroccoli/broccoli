@@ -13,12 +13,11 @@ export const IMPORT_EMPLOYEE_SORT_VALUES: Record<EmployeeOrderField, z.ZodType<S
   START_DATE: z.tuple([z.boolean(), z.string(), z.string()]),
 };
 
-/** Import employees whose shown first name, last name or email contains `search`, ignoring case. */
+/** Import employees whose shown full name or email contains `search`, ignoring case. */
 export function matchesSearch({ values }: ImportEmployee, search: string): boolean {
   const needle = search.toLowerCase();
-  return [values.firstName, values.lastName, values.email].some(({ value }) =>
-    value?.toLowerCase().includes(needle),
-  );
+  const fullName = `${values.firstName.value ?? ""} ${values.lastName.value ?? ""}`;
+  return [fullName, values.email.value].some((value) => value?.toLowerCase().includes(needle));
 }
 
 /** Up to `limit` import employees after `after`, in `order`, with their sort values. */

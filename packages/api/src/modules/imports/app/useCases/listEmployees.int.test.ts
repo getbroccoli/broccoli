@@ -85,6 +85,42 @@ test("finds part of a shown first name, last name or email, ignoring case", asyn
   expect(original.edges).toEqual([]);
 });
 
+test.for(["Avery Stone", " aVeRy sToNe ", "ery Sto"])(
+  "finds import employees by their shown full name with search %j",
+  async (search, { orm, seed }) => {
+    const source = await seed.importSource();
+    await seed.importEmployees(source.id, [
+      { firstName: "Original", lastName: "Stone", email: "avery@example.com" },
+      { firstName: "Avery", lastName: "Reed" },
+      { firstName: "Robin", lastName: "Stone" },
+    ]);
+    const imports = importUseCases(orm);
+    await imports.choices.chooseEmployeeValue(OWNER, {
+      key: "avery@example.com",
+      field: "firstName",
+      choice: { value: "Avery" },
+    });
+
+    const review = await imports.reads.readReview(OWNER);
+    const page = review.listEmployees({ filter: { search } });
+
+    expect(page.edges.map(({ node }) => node.key)).toEqual(["avery@example.com"]);
+  },
+);
+
+test.for([
+  { firstName: "Avery", lastName: null },
+  { firstName: null, lastName: "Avery" },
+])("finds an incomplete import employee by the remaining name %j", async (names, { orm, seed }) => {
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [{ ...names, email: "person@example.com" }]);
+
+  const review = await importUseCases(orm).reads.readReview(OWNER);
+  const page = review.listEmployees({ filter: { search: "avery" } });
+
+  expect(page.edges.map(({ node }) => node.key)).toEqual(["person@example.com"]);
+});
+
 test("treats percent and underscore in a search literally", async ({ orm, seed }) => {
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [
