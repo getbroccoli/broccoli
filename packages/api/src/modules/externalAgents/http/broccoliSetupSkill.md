@@ -20,7 +20,9 @@ approves.
 - Never write the token to a file and never print it. Send it in each request's header from
   standard input, as in the commands below; if your shell keeps no variables between commands,
   put the token there in each command. Start no helper process that keeps running after you finish.
-- `<address>` and `<code>` are the address and the code in the sentence the owner gave you.
+- `<address>` and `<code>` are the address and the code in the prompt the owner gave you.
+- The owner already has Broccoli open in their browser and follows your work there: send them no
+  links, and ask them nothing but to drop files on that page.
 
 ## 1. Check and connect
 
@@ -111,9 +113,8 @@ the file does not say. At most 10,000 people per file. → `{ "id": "…", "peop
 
 ## 3. Finish
 
-Tell the owner how many people each file gave, and: "Your files are in. Open
-<address>/setup/import to review and add your people." If they drop more files later and ask you
-to continue, list and answer again.
+Tell the owner how many people each file gave, and: "Your files are in. Review and add your
+people in Broccoli." If they drop more files later and ask you to continue, list and answer again.
 
 ## Errors
 
@@ -122,7 +123,7 @@ Errors answer `{ "error": { "code": "…", "fields": [{ "field": "…", "code": 
 - `INVALID_INPUT` (400): fix what `fields` names once; if it fails again, skip that file and tell
   the owner.
 - `UNAUTHENTICATED` (401): the session ended (two hours passed, the owner disconnected you, or
-  setup moved on). Tell the owner they can get a new sentence on Broccoli's page, and stop.
+  setup moved on). Tell the owner they can get a new prompt on Broccoli's Setup AI page, and stop.
 - `CONFLICT` (409): the file is already answered, or your session works the other way; stop that
   step.
 - `NOT_FOUND` (404): no waiting file has that id; list the files again.
