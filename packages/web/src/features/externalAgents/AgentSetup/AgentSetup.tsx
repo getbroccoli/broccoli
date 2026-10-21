@@ -20,38 +20,59 @@ type Props = {
 };
 
 /**
- * Your agent on Setup AI: how it gets the files, and the prompt with its one-time code. The code is
- * shown once; a reload, another way or its expiry needs a new prompt.
+ * Your agent on Setup AI: how it gets the files, and the prompt with its one-time code. The prompt
+ * shows by itself, with a new code for another way or after its expiry; a reload makes a new one.
+ * With an agent connected it waits for "Show the prompt", since a new code ends that agent's session.
  */
 export function AgentSetup({ chosen, connectedClient }: Props) {
   const [way, setWay] = useState<AgentWay>("ANSWERS_MASKED_QUESTIONS");
-  const [code, setCode] = useState<{ value: string; expiresAt: string } | null>(null);
+  // Off while a connected agent keeps its session, and after a failure until the owner retries.
+  const [asked, setAsked] = useState(connectedClient === null);
+  // Counts the codes that expired, so the latest one asks for a new code.
+  const [round, setRound] = useState(0);
+  const [code, setCode] = useState<{
+    way: AgentWay;
+    round: number;
+    value: string;
+    expiresAt: string;
+  } | null>(null);
   const [chooseAgent, choosing] = usePayloadMutation(ChooseAgentDocument);
   const [createAgentCode, creating] = usePayloadMutation(CreateAgentCodeDocument);
   const busy = choosing.loading || creating.loading;
+  const shown = code?.way === way && code.round === round ? code : null;
+
   useEffect(() => {
-    if (!code) {
+    if (!asked) {
       return;
     }
-    const expiry = setTimeout(() => setCode(null), Date.parse(code.expiresAt) - Date.now());
-    return () => clearTimeout(expiry);
-  }, [code]);
-
-  const choose = (next: AgentWay) => {
-    setCode(null);
-    setWay(next);
-  };
-  const showPrompt = async () => {
-    try {
-      if (!chosen) {
-        await chooseAgent();
+    let current = true;
+    // The code needs the agent chosen; choosing it changes `chosen`, which runs this again.
+    const making = chosen
+      ? createAgentCode({ variables: { way } }).then(({ agentCode }) => {
+          if (current && agentCode) {
+            setCode({ way, round, value: agentCode.code, expiresAt: agentCode.expiresAt });
+          }
+        })
+      : chooseAgent();
+    making.catch(() => {
+      if (current) {
+        setAsked(false); // The hooks keep the error for display.
       }
-      const { agentCode } = await createAgentCode({ variables: { way } });
-      setCode(agentCode && { value: agentCode.code, expiresAt: agentCode.expiresAt });
-    } catch {
-      setCode(null); // The hooks keep the error for display.
+    });
+    return () => {
+      current = false;
+    };
+  }, [asked, chosen, way, round, chooseAgent, createAgentCode]);
+  useEffect(() => {
+    if (!shown) {
+      return;
     }
-  };
+    const expiry = setTimeout(
+      () => setRound((expired) => expired + 1),
+      Date.parse(shown.expiresAt) - Date.now(),
+    );
+    return () => clearTimeout(expiry);
+  }, [shown]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -60,7 +81,7 @@ export function AgentSetup({ chosen, connectedClient }: Props) {
         <WayOption
           value="ANSWERS_MASKED_QUESTIONS"
           selected={way}
-          onSelect={choose}
+          onSelect={setWay}
           title={t("externalAgents.masked")}
           badge={t("externalAgents.recommended")}
           hint={t("externalAgents.maskedHint")}
@@ -68,14 +89,14 @@ export function AgentSetup({ chosen, connectedClient }: Props) {
         <WayOption
           value="PARSES_ORIGINAL_FILES"
           selected={way}
-          onSelect={choose}
+          onSelect={setWay}
           title={t("externalAgents.parsed")}
           hint={t("externalAgents.parsedHint")}
         />
       </fieldset>
-      {code ? (
+      {asked ? (
         <>
-          <AgentSentence code={code.value} />
+          <AgentSentence code={shown?.value ?? null} />
           <p role="status" className="text-[13px] text-muted-foreground">
             {t(
               way === "ANSWERS_MASKED_QUESTIONS"
@@ -87,8 +108,8 @@ export function AgentSetup({ chosen, connectedClient }: Props) {
         </>
       ) : (
         <div className="flex flex-col items-start gap-1.5">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => void showPrompt()}>
-            {t(busy ? "externalAgents.creating" : "externalAgents.showPrompt")}
+          <Button type="button" variant="outline" onClick={() => setAsked(true)}>
+            {t("externalAgents.showPrompt")}
           </Button>
           {connectedClient && (
             <p className="text-[13px] text-muted-foreground">

@@ -15,12 +15,13 @@ checks what they cannot: the page, and how a real agent follows the skill.
 ## Setup AI and the import step
 
 - [ ] Under "Your agent", Setup AI offers "Masked rows" (Recommended) and "Your agent reads them"
-      with their hints, and "Show the prompt". It shows "Help me set up Broccoli. Read
-      http://localhost:…/api/agent/skill and connect with code …" with a 43-character code, "Copy" (then
-      "Copied") and "The code works once, for 2 hours." Changing the way hides the prompt; showing it
-      again makes a new code. With an agent connected, it warns that a new prompt ends its session.
+      with their hints, and the prompt without a click: "Help me set up Broccoli. Read
+      http://localhost:…/api/agent/skill and connect with code …" with a 43-character code on a dark
+      block, a copy button (its check after copying) and "The code works once, for 2 hours." Changing
+      the way shows a new code. With an agent connected, it shows "Show the prompt" instead and warns
+      that a new prompt ends its session.
 - [ ] Opened at a plain-http address other than localhost (such as the machine's LAN address),
-      "Show the prompt" says "Your agent needs Broccoli on https or on this computer."
+      selecting "Your agent" says "Your agent needs Broccoli on https or on this computer."
 - [ ] After "Continue", the import step shows "Waiting for your agent… Its code works until …" and
       "Get a new prompt on Setup AI"; the drop zone shows for "Masked rows" and "To import files, go to
       your agent" for the other way.
@@ -31,7 +32,7 @@ checks what they cannot: the page, and how a real agent follows the skill.
 
 ## Masked run (Claude Code, then Codex)
 
-1. On Setup AI choose "Masked rows", "Show the prompt", copy it and "Continue". Drop the CSV and
+1. On Setup AI choose "Masked rows", copy the prompt and "Continue". Drop the CSV and
    Excel files of `fixtures/agent-setup/folder/` and the file in `fixtures/agent-setup/drop/`, then
    paste the prompt into the agent in an empty folder.
 
@@ -51,7 +52,7 @@ checks what they cannot: the page, and how a real agent follows the skill.
 
 ## Parsed run (Claude Code, then Codex)
 
-1. "Get a new prompt on Setup AI", choose "Your agent reads them", "Show the prompt", "Continue",
+1. "Get a new prompt on Setup AI", choose "Your agent reads them", copy the prompt, "Continue",
    and paste it into the agent in a fresh copy of `fixtures/agent-setup/folder/`.
 
 - [ ] The agent reads every file, `contractors.pdf` included, and the cards show "N people · Parsed

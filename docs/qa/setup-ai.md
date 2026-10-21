@@ -54,6 +54,6 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 
 ## Your agent
 
-- [ ] Selecting "Your agent" keeps the green line, hides the privacy line under the options and shows the two ways and "Show the prompt"; [agent setup](agent-setup.md) checks them.
+- [ ] Selecting "Your agent" keeps the green line, hides the privacy line under the options and shows the two ways and the prompt; [agent setup](agent-setup.md) checks them.
 - [ ] "Continue" opens `/setup/import` with the agent's status line; nothing is checked. Going back to `/setup/ai` shows "Your agent" selected.
 - [ ] Choosing "Broccoli AI" or "OpenRouter" again and "Continue" ends a connected agent: its next call answers 401, and the import page no longer shows its status.
