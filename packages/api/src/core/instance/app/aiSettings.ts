@@ -71,6 +71,10 @@ export function createAiSettings({
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
       }
+      if (source === "external_agent") {
+        // Choosing the external agent also ends its earlier sessions, which only its module does.
+        throw invalidInput([{ field: "source", code: "invalid" }]);
+      }
       const givenKey = openRouterKey?.trim() || undefined;
       if (source === "openrouter") {
         await checkOpenRouter(
@@ -106,6 +110,10 @@ function sourceOf(
   { broccoliAiUrl }: SelfHostedDeployment,
   openRouterUrl: string,
 ): DecisionsSource {
+  if (config.source === "external_agent") {
+    // The owner's external agent answers its files itself; an older file's job has no model.
+    throw new DecisionsError("The external agent reads the files", false);
+  }
   return config.source === "broccoli_ai"
     ? { kind: "broccoli_ai", url: broccoliAiUrl }
     : openRouterSource(openRouterUrl, config.openRouterKey?.key ?? null);

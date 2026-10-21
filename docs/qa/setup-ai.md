@@ -10,8 +10,8 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 ## The page
 
 - [ ] Saving the company opens `/setup/ai`, titled "Setup AI". The sidebar shows "Setup Company" done, "Setup AI" current, then "Add your people" and "Create your account".
-- [ ] The green line reads "We don’t send private data from your documents to any model."
-- [ ] Without `OPENROUTER_API_KEY`, "Broccoli AI" is selected. "Your agent" is greyed out with "Coming soon" and cannot be selected, by mouse or keyboard.
+- [ ] The green line reads "AI sees names, emails and other personal details only as placeholders, unless you let it read a file."
+- [ ] Without `OPENROUTER_API_KEY`, "Broccoli AI" is selected. "Your agent" ("Let Claude Code, Codex or another agent do the setup. You connect it on the next step.") can be selected by mouse and keyboard.
 - [ ] The privacy line sits under the options, and the "Demo data" card under it with "Explore the demo".
 - [ ] The footer holds "Back" on the left and "Continue" on the right, on desktop and narrow windows.
 - [ ] "Back" opens `/setup/company` with the saved name and logo. Edit the name and choose "Continue": setup returns to AI with the new company name in the sidebar. Saved AI settings and gathered people stay.
@@ -51,3 +51,9 @@ A manual check of how a self-hosted owner picks the way Broccoli reads their fil
 ## Managed
 
 - [ ] A managed instance goes from "Setup Company" to `/setup/import`; its sidebar has no "Setup AI", and `/setup/ai` redirects to `/setup/import`.
+
+## Your agent
+
+- [ ] Selecting "Your agent" keeps the green line and hides the privacy line under the options; it shows no prompt.
+- [ ] "Continue" opens `/setup/import` with "Connect your agent"; nothing is checked. Going back to `/setup/ai` shows "Your agent" selected.
+- [ ] Choosing "Broccoli AI" or "OpenRouter" again and "Continue" ends a connected agent: its next call answers 401, and the import page no longer shows its pill.

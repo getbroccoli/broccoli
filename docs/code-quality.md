@@ -24,11 +24,15 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE55.** Prefer deep modules to wide ones: a module, service or function hides much work behind a small interface. Callers make one call that does the whole job (`storeFile`), never a series of small steps they must know to run in order; a new need adds work behind the existing interface before it adds another export or parameter.
 - **RULE13.** Reuse existing hooks, helpers and test support. Code that appears twice becomes one shared piece. `lint: jscpd` (outside tests)
 - **RULE14.** A name says what the thing does (`detectCompanyNameAndLogo`, `eventBus`), not where it is used, in the words of [`thesaurus.md`](thesaurus.md).
+- **RULE54.** An enum value says its whole meaning on its own, so a reader understands it without the enum's name or a comment: who or what it is about and what it states (`PARSED_BY_BROCCOLI`, `ANSWERED_BY_EXTERNAL_AGENT`, not `PARSED`, `ANSWERS`). Its stored and TypeScript forms say the same (`answered_by_external_agent`).
+- **RULE57.** A contract's name says what it does or holds without its context: routes, GraphQL types and fields, exported interfaces, functions and types (`GET /api/external-agent/unanswered-files`, `listUnansweredFiles`, `AnsweredMapping`, not `/files`, `listWaiting`, `Summary`). A generic name (`ConflictError`, `fetchJson`) is only for code that is generic.
 - **RULE15.** Prefer zero-config solutions and modules: they work without setup, and every setting has a safe default.
 
 ## Layers and place
 
+- **RULE56.** The architecture screams what Broccoli does, not its frameworks: a feature's code lives in a folder named after its domain (`modules/imports`, `features/externalAgents`), with layers and tools (`db`, `graphql`, `http`) inside it, never the reverse. Shared technical folders (`core`, `utils`, `components`, `apollo`) hold only what no feature owns.
 - **RULE16.** Dependencies point one way, `domain ← db ← app ← graphql | mcp | http`, each through the folder's `index.ts` ([architecture §1](architecture.md#1-shape-of-the-system)). `lint: boundaries`
+- **RULE58.** A module's `domain` holds Broccoli's business rules and facts only. Technical code the module needs that is no business rule, such as parsing an origin or hashing a secret, goes to the module's `helpers` folder, which every layer, `domain` included, may import; it gets unit tests like domain code. `lint: boundaries` (the imports)
 - **RULE17.** Each piece lives in the module and layer that owns it, not where it was first used: the logo upload belongs to the company feature, not the setup page. A type that names a domain fact lives in `domain`; `db` keeps only its tables and storage details. `utils` is the one folder for code that knows nothing about Broccoli; there is no other catch-all.
 - **RULE18.** Related operations on one subject live in one service file, which keeps their formats and rules. Adapters (`graphql`, `mcp`, `http`) translate a request into one use-case call and keep only transport, such as cookies and redirects.
 - **RULE52.** One decision has one owner: a rule over several inputs (such as the mode, settings and stored state) is one `domain` function, and reading those inputs and applying it is one `app` function next to the data. Callers call that function; they never repeat its branches, its reads or a condition it already decides (`mode === "managed"`) in another file.
@@ -61,6 +65,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE35.** GraphQL types come from codegen; none is written by hand.
 - **RULE36.** Every user-facing string goes through `t()`.
 - **RULE37.** Server data lives in the Apollo cache, navigation state in validated search params, and React state only for UI; component state stays minimal.
+- **RULE59.** An effect only keeps a component in step with something outside React, such as a timer, a subscription or a request its display needs. A value computed from props or state is computed while rendering, and what a user action causes runs in that action's event handler, never through state an effect watches ([You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)).
 - **RULE53.** A component with props declares them as `type Props = { … }` right above the component, not inline in its parameters and not below it; this is the one type that comes before the code using it (RULE9).
 - **RULE38.** Route files stay thin; feature components live in `features/<module>/`.
 - **RULE39.** App code uses Phosphor icons; Lucide appears only inside shadcn components.

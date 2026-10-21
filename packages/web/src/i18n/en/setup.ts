@@ -65,7 +65,8 @@ export const setupEn = {
   "setup.company.failed": "Couldn’t save. Try again.",
   "setup.ai.title": "Setup AI",
   "setup.ai.description": "Broccoli uses AI to read your files and match people. Pick one way.",
-  "setup.ai.promise": "We don’t send private data from your documents to any model.",
+  "setup.ai.promise":
+    "AI sees names, emails and other personal details only as placeholders, unless you let it read a file.",
   "setup.ai.options": "How Broccoli reads your files",
   "setup.ai.broccoliAi": "Broccoli AI",
   "setup.ai.broccoliAiHint": "Free for your setup and trial purpose.",
@@ -80,8 +81,8 @@ export const setupEn = {
   "setup.ai.keySaved": "Key saved",
   "setup.ai.replace": "Replace",
   "setup.ai.agent": "Your agent",
-  "setup.ai.agentHint": "Let Claude Code, Codex or another agent do the setup.",
-  "setup.ai.comingSoon": "Coming soon",
+  "setup.ai.externalAgentHint":
+    "Let Claude Code, Codex or another agent do the setup. You connect it on the next step.",
   "setup.ai.privacy":
     "To read the columns, the AI sees the first rows of each file with names, emails and other personal details replaced by placeholders. It keeps nothing.",
   "setup.ai.demo": "Demo data",
@@ -207,6 +208,8 @@ export const setupEn = {
   "setup.review.approving": "Adding people…",
   "setup.review.reading": "Reading your files…",
   "setup.review.approveFailed": "Couldn’t add your people. Try again.",
+  "setup.review.peopleChanged":
+    "Your people changed while you were reviewing. Check them, then add them again.",
   "setup.review.leftOutCount": "{count} left out.",
   "setup.review.incomplete":
     "{count} people won’t be added: they are missing a name or work email.",

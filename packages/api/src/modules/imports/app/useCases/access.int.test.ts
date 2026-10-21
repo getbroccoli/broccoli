@@ -2,7 +2,8 @@ import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 
 import type { SecurityContext } from "../../../../core/security";
 
-type ImportUseCases = Omit<ReturnType<typeof importUseCases>, "sentJobs">;
+// The external agent's operations admit their own callers; their tests check them.
+type ImportUseCases = Omit<ReturnType<typeof importUseCases>, "sentJobs" | "answeredMapping">;
 
 /** Every use case by name; a service's as `service.name`, so none can be left out below. */
 type UseCaseName = {
@@ -39,7 +40,7 @@ const calls = {
   "choices.leaveOutIncomplete": (imports, ctx) =>
     imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
   startDemo: (imports, ctx) => imports.startDemo(ctx),
-  approveImport: (imports, ctx) => imports.approveImport(ctx),
+  approveImport: (imports, ctx) => imports.approveImport(ctx, "any-version"),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
   resetSetup: (imports, ctx) => imports.resetSetup(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;

@@ -17,6 +17,7 @@ import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack"
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
 import { createImportUseCases } from "../../src/modules/imports";
+import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
 import { createSystemUseCases } from "../../src/modules/system";
 import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
@@ -154,6 +155,20 @@ export function slackUseCases(
       ...slackApi,
     },
   });
+}
+
+export function externalAgentUseCases(
+  orm: Parameters<typeof createExternalAgentUseCases>[0]["orm"],
+  { clock = () => new Date("2026-10-20T12:00:00Z") }: { clock?: () => Date } = {},
+) {
+  const imports = importUseCases(orm);
+  const useCases = createExternalAgentUseCases({
+    orm,
+    transact: testTransactor(orm),
+    imports,
+    clock,
+  });
+  return { ...useCases, sentJobs: imports.sentJobs };
 }
 
 /** The default model of use-case tests: one that is never asked. */

@@ -14,25 +14,20 @@ const STEPS = {
 } as const;
 const HOLDERS = { you: "YOU", another_device: "ANOTHER_DEVICE", nobody: "NOBODY" } as const;
 const MODES = { self_hosted: "SELF_HOSTED", managed: "MANAGED" } as const;
-const AI_SOURCES = { broccoli_ai: "BROCCOLI_AI", openrouter: "OPENROUTER" } as const;
+const AI_SOURCES = {
+  broccoli_ai: "BROCCOLI_AI",
+  openrouter: "OPENROUTER",
+  external_agent: "EXTERNAL_AGENT",
+} as const;
 const KEY_ORIGINS = { environment: "ENVIRONMENT", saved: "SAVED" } as const;
-const AI_SOURCE_INPUTS = { BROCCOLI_AI: "broccoli_ai", OPENROUTER: "openrouter" } as const;
+const AI_SOURCE_INPUTS = {
+  BROCCOLI_AI: "broccoli_ai",
+  OPENROUTER: "openrouter",
+  EXTERNAL_AGENT: "external_agent",
+} as const;
 
 export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases): Resolvers {
-  const readSetup = async (security: SecurityContext | null) => {
-    const { step, demoExpiresAt } = await readInstance(orm);
-    return {
-      id: "instance",
-      step: STEPS[step],
-      mode: MODES[mode],
-      // A live setup cookie made the request the setup holder; any other carries no live token.
-      holder: security?.isSetupHolder
-        ? ("YOU" as const)
-        : HOLDERS[await readSetupHolder(orm, { token: null, now: new Date() })],
-      // Only the owner learns when their demo ends.
-      demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
-    };
-  };
+  const readSetup = (security: SecurityContext | null) => readSetupView(orm, mode, security);
   return {
     Query: {
       ping: () => "pong",
@@ -68,6 +63,22 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
           ["INVALID_INPUT", "UNAVAILABLE", "CONFLICT"],
         ),
     },
+  };
+}
+
+/** The `Setup` object for `security`, as `Query.setup` and every setup payload return it. */
+export async function readSetupView(orm: Orm, mode: Mode, security: SecurityContext | null) {
+  const { step, demoExpiresAt } = await readInstance(orm);
+  return {
+    id: "instance",
+    step: STEPS[step],
+    mode: MODES[mode],
+    // A live setup cookie made the request the setup holder; any other carries no live token.
+    holder: security?.isSetupHolder
+      ? ("YOU" as const)
+      : HOLDERS[await readSetupHolder(orm, { token: null, now: new Date() })],
+    // Only the owner learns when their demo ends.
+    demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
   };
 }
 

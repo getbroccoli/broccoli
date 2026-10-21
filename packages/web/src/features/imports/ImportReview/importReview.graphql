@@ -6,6 +6,7 @@ query ImportReview(
 ) {
   import {
     id
+    version
     employeeCount
     readyEmployeeCount
     reading
@@ -35,9 +36,9 @@ query ImportReview(
   }
 }
 
-mutation ApproveImport {
+mutation ApproveImport($version: String!) {
   import {
-    approve {
+    approve(version: $version) {
       import {
         id
       }

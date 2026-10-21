@@ -13,7 +13,7 @@ import { createEventBus } from "./events";
 import { type GraphqlApi, type SecurityResolver, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { resolveSecurityContext, selfHostedServer } from "./instance";
+import { refuseBearerAuth, resolveSecurityContext, selfHostedServer } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest, Modules } from "./moduleManifest";
@@ -83,6 +83,7 @@ export async function startServer(
   }
   try {
     app.use(healthRouter(readiness, deployment.initStatus));
+    app.use("/api/auth", refuseBearerAuth);
     app.use(deployment.router);
     app.all("/api/auth/{*path}", authHandler(deployment.auth));
     app.use(graphql.router);

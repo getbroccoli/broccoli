@@ -24,7 +24,7 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
   const fileId = imported.edges[0]!.node.photoFileId;
   expect(fileId).toEqual(expect.any(String));
 
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(
@@ -67,7 +67,7 @@ test("approving deletes unused photos while keeping import rows and staff files"
   const imports = importUseCases(orm);
   await imports.choices.setLeftOut(SETUP_HOLDER, { key: "leftout@example.com", leftOut: true });
 
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   const keptPhoto = photoIds.get("kept@example.com")!;
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {

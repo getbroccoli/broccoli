@@ -39,7 +39,7 @@ test("resetting setup deletes approved employees but keeps the import and its ph
     field: "jobTitle",
     choice: { value: "Designer" },
   });
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   const employees = createEmployeeUseCases({ orm });
   expect((await employees.listEmployees(OWNER, {})).edges).toHaveLength(2);
   expect((await readInstance(orm)).step).toBe("owner");
@@ -74,12 +74,12 @@ test("approving again after reset recreates the employees with their import phot
     mimeType: "image/png",
   });
   const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   await imports.resetSetup(SETUP_HOLDER);
   expect((await readInstance(orm)).step).toBe("company");
   await seed.setupStep("import");
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   expect((await readInstance(orm)).step).toBe("owner");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
@@ -99,7 +99,7 @@ test("resetting the ready step returns to company and deletes approved employees
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   const employees = createEmployeeUseCases({ orm });
   expect((await readInstance(orm)).step).toBe("ready");
   expect((await employees.listEmployees(owner, {})).edges).toHaveLength(1);
@@ -116,7 +116,7 @@ test("resetting completed setup keeps the step and employees unchanged", async (
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await seed.setupStep("done");
   expect((await readInstance(orm)).step).toBe("done");
   const employees = createEmployeeUseCases({ orm });

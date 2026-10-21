@@ -3,6 +3,8 @@ mutation ChooseEmployeeValue($input: ImportChooseEmployeeValueInput!) {
     chooseEmployeeValue(input: $input) {
       import {
         id
+        # Review's own changes move the version Approve sends.
+        version
       }
       error {
         __typename

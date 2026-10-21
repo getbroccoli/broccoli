@@ -56,3 +56,12 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 
 - [ ] At 320px wide the Slack row fits without scrolling sideways, and its text never runs under the buttons, which move to their own line when connected, importing or failed.
 - [ ] Screenshots of `/setup/import` (not connected, connected, with an error, with files; desktop and narrow) go in the pull request description.
+
+## Your own agent
+
+With "Your agent" chosen on Setup AI:
+
+- [ ] "Add your files" shows "Connect your agent" with the prompt on a dark block and a copy button, and no drop zone.
+- [ ] Once an agent connects with that prompt, a pill beside "Add your files" names it, with Disconnect in its menu, and the drop zone shows.
+- [ ] While the agent waits for files, a dropped file reads "Your agent is picking it up…" at once, with no card, and gets mapped.
+- [ ] With the agent stopped for over 30 seconds, a dropped file shows "Waiting for your agent" and a card with "Broccoli has new files. Map them and send their people back."; once the agent picks it up, the card goes.

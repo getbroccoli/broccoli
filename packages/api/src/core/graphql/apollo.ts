@@ -105,6 +105,12 @@ export function createContext(resolveSecurity: SecurityResolver) {
     req: { headers: IncomingHttpHeaders };
     res: ServerResponse;
   }): Promise<GraphqlContext> => {
+    // A bearer token belongs to the external agent, which GraphQL never serves, not even its public fields.
+    if (req.headers.authorization !== undefined) {
+      throw new GraphQLError("Sign in to continue.", {
+        extensions: { code: "UNAUTHENTICATED", http: { status: 401 } },
+      });
+    }
     try {
       const { security, renewedCookies } = await resolveSecurity(req.headers);
       if (renewedCookies.length > 0) {

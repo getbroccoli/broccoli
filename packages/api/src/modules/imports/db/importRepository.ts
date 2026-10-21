@@ -1,4 +1,4 @@
-import { and, count, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, notInArray, or, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
@@ -10,6 +10,7 @@ import {
   type ImportEmployeeRecord,
   type FileSource,
   type ImportSource,
+  type ImportSourceReader,
   type IncomingRecord,
   type MappingOutcome,
   parseImportEmployeeChoices,
@@ -42,14 +43,20 @@ export interface ImportReader {
 export interface ImportRepository extends ImportReader {
   /** Creates the Slack source or renames it, marks it read now and returns its id. */
   saveSlackSource(name: string): Promise<string>;
-  /** Stores an uploaded file as a source waiting for its first mapping run; returns its id. */
-  insertFileSource(name: string, file: StoredFile): Promise<string>;
+  /**
+   * Stores an uploaded file as a source waiting to be mapped, by Broccoli's first mapping run or
+   * by the external agent's answers; returns its id.
+   */
+  insertFileSource(name: string, readBy: ImportSourceReader, file: StoredFile): Promise<string>;
   /**
    * Ends a mapping run, only while the source is still `mapping` at `attempt`; returns
    * whether it did. A late run, or one of a removed source, changes nothing.
    */
   finishMapping(id: string, attempt: number, outcome: MappingOutcome): Promise<boolean>;
-  /** Starts the next mapping run of a failed file source; returns its attempt, or null. */
+  /**
+   * Starts Broccoli's next mapping run of a file it failed to map, or of a file still waiting for
+   * the external agent's answers; returns its attempt, or null for any other source.
+   */
   restartMapping(id: string): Promise<number | null>;
   /** Deletes a file source, its records and its stored file. */
   deleteFileSource(id: string): Promise<void>;
@@ -172,11 +179,11 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
       return row!.id;
     },
 
-    insertFileSource: async (name: string, file: StoredFile): Promise<string> => {
+    insertFileSource: async (name, readBy, file): Promise<string> => {
       const fileId = await storeFile(tx, file);
       const [row] = await orm()
         .insert(importSources)
-        .values({ kind: "file", name, fileId, status: "mapping" })
+        .values({ kind: "file", name, readBy, fileId, status: "mapping" })
         .returning({ id: importSources.id });
       return row!.id;
     },
@@ -212,13 +219,22 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
           status: "mapping",
           failure: null,
           failureMessage: null,
+          readBy: "parsed_by_broccoli",
           mappingAttempt: sql`${importSources.mappingAttempt} + 1`,
         })
         .where(
           and(
             eq(importSources.id, id),
-            eq(importSources.kind, "file"),
-            eq(importSources.status, "failed"),
+            or(
+              and(
+                eq(importSources.readBy, "parsed_by_broccoli"),
+                eq(importSources.status, "failed"),
+              ),
+              and(
+                eq(importSources.readBy, "answered_by_external_agent"),
+                eq(importSources.status, "mapping"),
+              ),
+            ),
           ),
         )
         .returning({ mappingAttempt: importSources.mappingAttempt });
@@ -330,6 +346,8 @@ const sourceColumns = {
   status: importSources.status,
   failure: importSources.failure,
   failureMessage: importSources.failureMessage,
+  readBy: importSources.readBy,
+  pickedUpByExternalAgentAt: importSources.pickedUpByExternalAgentAt,
 };
 
 function toImportEmployee(record: typeof importRecords.$inferSelect): ImportEmployeeRecord {

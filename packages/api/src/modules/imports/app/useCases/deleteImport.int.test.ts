@@ -35,7 +35,7 @@ test("finishing the import deletes its rows and staff files but keeps employee a
     field: "jobTitle",
     choice: { value: "Designer" },
   });
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   const employees = createEmployeeUseCases({ orm });
   const approved = await employees.listEmployees(OWNER, {});
 

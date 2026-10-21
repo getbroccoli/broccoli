@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
 import type { Deployment } from "../../src/core/env";
-import { createLogger } from "../../src/core/logger";
+import { createLogger, type Logger } from "../../src/core/logger";
 import { startServer, type RunningServer } from "../../src/core/server";
 import { createModules } from "../../src/modules";
 
@@ -17,6 +17,8 @@ const STARTUP_TIMEOUT_MS = 10_000;
 const POLL_INTERVAL_MS = 25;
 
 export interface TestBroccoliServerOptions {
+  /** Captures application logs when a test checks what a failure exposes. */
+  logger?: Logger;
   webDir?: string;
   /** Defaults to a new temporary folder, removed when the server stops. */
   dataDir?: string;
@@ -37,6 +39,7 @@ export interface TestBroccoliServerOptions {
 export async function startTestBroccoliServer(
   databaseUrl: string,
   {
+    logger = createLogger("silent"),
     webDir,
     dataDir,
     managed,
@@ -65,7 +68,7 @@ export async function startTestBroccoliServer(
       deployment,
       dataDir: folder,
     },
-    createLogger("silent"),
+    logger,
     (core) =>
       createModules(core, {
         deployment,

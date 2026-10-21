@@ -188,7 +188,7 @@ test("refuses a leave-out change after Approve and keeps the import unchanged", 
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   expect((await readInstance(orm)).step).toBe("owner");
   const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   expect(before.edges).toHaveLength(1);

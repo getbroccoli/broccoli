@@ -12,11 +12,13 @@ import { requireImportAccess } from "./requireImportAccess";
  * Turns the ready import employees that are not left out into employees, with the values and
  * photo review shows, and completes the import step, in one transaction; at any step but
  * `import` it does nothing, so approving twice creates them once. The others are not
- * created and lose their photos; refused while a file is being mapped.
+ * created and lose their photos; refused while a file is being mapped, and when the import
+ * no longer matches `version`, the one the owner reviewed, so nobody is added unseen.
  */
 export async function approveImport(
   { transact, logger }: ImportContext,
   ctx: SecurityContext,
+  version: string,
 ): Promise<void> {
   requireImportAccess(ctx);
   const result = await transact(async (tx) => {
@@ -29,7 +31,12 @@ export async function approveImport(
     if (isReading(await imports.listSources())) {
       throw new ApplicationError("CONFLICT", "Files are still being read.");
     }
-    const { readyEmployees } = await readImportReview(ctx, tx);
+    // The step has just moved, but the review must count emails employees have, as the owner saw it.
+    const review = await readImportReview(ctx, tx, { importOpen: true });
+    if (review.version !== version) {
+      throw new ApplicationError("CONFLICT", "Your people changed while you were reviewing.");
+    }
+    const { readyEmployees } = review;
     const { avatarFileIds, ...counts } = await createImportedEmployees(
       ctx,
       tx,

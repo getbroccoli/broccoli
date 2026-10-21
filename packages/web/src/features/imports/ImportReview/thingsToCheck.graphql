@@ -15,6 +15,8 @@ mutation ChooseSourceForAll($field: ImportEmployeeField!, $sourceId: ID!) {
     chooseSourceForAll(field: $field, sourceId: $sourceId) {
       import {
         id
+        # Review's own changes move the version Approve sends.
+        version
       }
     }
   }
@@ -25,6 +27,8 @@ mutation LeaveOutIncomplete($reason: ImportEmployeeIncompleteReason!) {
     leaveOutIncomplete(reason: $reason) {
       import {
         id
+        # Review's own changes move the version Approve sends.
+        version
       }
     }
   }

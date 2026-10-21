@@ -18,9 +18,21 @@ const RESULT_BY_FIELD_CODE: Partial<Record<string, UploadFileResult>> = {
 };
 
 /** Adds `file` to the import; the API reads it and maps its columns in the background. */
-export async function uploadFile(file: File): Promise<UploadFileResult> {
+export function uploadFile(file: File): Promise<UploadFileResult> {
+  return upload("/api/imports/files", file);
+}
+
+/** Adds `file` to the import for the owner's agent, which maps it by answering masked questions. */
+export function uploadFileForExternalAgent(file: File): Promise<UploadFileResult> {
+  return upload("/api/setup/external-agent-files", file);
+}
+
+/** Uploads one staff file: to the import, or for the owner's agent. */
+export type FileUploader = (file: File) => Promise<UploadFileResult>;
+
+async function upload(path: string, file: File): Promise<UploadFileResult> {
   try {
-    const response = await fetch(`/api/imports/files?${new URLSearchParams({ name: file.name })}`, {
+    const response = await fetch(`${path}?${new URLSearchParams({ name: file.name })}`, {
       method: "POST",
       body: file,
     });

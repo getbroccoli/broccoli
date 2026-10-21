@@ -1,4 +1,11 @@
-import { expect, PNG, SLACK_PHOTO_URL, test, TEST_OWNER } from "#test/support";
+import {
+  approveReviewedImport,
+  expect,
+  PNG,
+  SLACK_PHOTO_URL,
+  test,
+  TEST_OWNER,
+} from "#test/support";
 
 test("the setup holder sees and downloads an import employee's photo", async ({ env }) => {
   const browser = env.browser();
@@ -53,9 +60,7 @@ test("keeps the approved import photo until owner setup finishes, then serves it
     mimeType: "image/png",
   });
 
-  const approval = await browser.graphql(`mutation {
-    import { approve { import { id } error { __typename ... on Error { message } } } }
-  }`);
+  const approval = await approveReviewedImport(browser);
 
   expect(approval.status).toBe(200);
   expect(await approval.json()).toEqual({

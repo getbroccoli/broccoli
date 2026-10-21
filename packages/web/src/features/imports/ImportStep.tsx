@@ -7,10 +7,16 @@ import { ImportStepDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStartDemo } from "@/features/demo";
+import {
+  ExternalAgentNewFiles,
+  ExternalAgentPill,
+  ExternalAgentPrompt,
+} from "@/features/externalAgents";
 import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
+import { uploadFile, uploadFileForExternalAgent } from "./fileApi";
 import { FileSources } from "./FileSources";
 import { SlackSourceRow } from "./SlackSourceRow";
 
@@ -32,19 +38,34 @@ export function ImportStep() {
   const { data, error, refetch, startPolling, stopPolling } = useQuery(ImportStepDocument);
   const sources = data?.import.sources ?? [];
   const readingFiles = data?.import.reading ?? false;
-  // Files are read in the background: poll while one is.
+  const ai = data?.setup.ai;
+  const externalAgentChosen = ai?.source === "EXTERNAL_AGENT";
+  const externalAgent = ai?.externalAgent;
+  // Files are read in the background, and the owner's external agent connects and maps them from
+  // outside the page: poll while either may happen.
   useEffect(() => {
-    if (!readingFiles) {
+    if (!readingFiles && !externalAgentChosen) {
       return;
     }
     startPolling(POLL_INTERVAL_MS);
     return stopPolling;
-  }, [readingFiles, startPolling, stopPolling]);
+  }, [readingFiles, externalAgentChosen, startPolling, stopPolling]);
   const { start: startDemo, starting, failed: startFailed } = useStartDemo();
   const slackSource = sources.find(({ kind }) => kind === "SLACK");
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
   const [uploading, setUploading] = useState(false);
   const reading = readingFiles || uploading;
+  // Files the connected external agent has not picked up while it does not listen: it stopped
+  // waiting, so the owner nudges it.
+  const notPickedUp =
+    externalAgent && !externalAgent.listening
+      ? fileSources.filter(
+          (source) =>
+            source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+            source.status === "MAPPING" &&
+            !source.pickedUpByExternalAgent,
+        )
+      : [];
   const gathering = data?.import.demoAvailable === false || uploading;
 
   return (
@@ -87,7 +108,13 @@ export function ImportStep() {
                   "h-10 gap-2 px-4 aria-disabled:pointer-events-none aria-disabled:opacity-50",
                 )}
               >
-                {t(reading ? "setup.import.reading" : "setup.import.next")}
+                {t(
+                  notPickedUp.length > 0
+                    ? "externalAgents.waitingFooter"
+                    : reading
+                      ? "setup.import.reading"
+                      : "setup.import.next",
+                )}
                 <ArrowRight weight="bold" aria-hidden />
               </Link>
             )}
@@ -107,6 +134,18 @@ export function ImportStep() {
             sources={fileSources}
             onUploaded={() => refetch()}
             onUploadingChange={setUploading}
+            uploadFile={externalAgentChosen ? uploadFileForExternalAgent : uploadFile}
+            externalAgentChosen={externalAgentChosen}
+            externalAgentListening={externalAgent?.listening ?? false}
+            externalAgentPill={externalAgent && <ExternalAgentPill externalAgent={externalAgent} />}
+            externalAgentNewFiles={
+              notPickedUp.length > 0 && (
+                <ExternalAgentNewFiles fileNames={notPickedUp.map(({ name }) => name)} />
+              )
+            }
+            externalAgentPrompt={
+              externalAgentChosen && !externalAgent ? <ExternalAgentPrompt /> : undefined
+            }
           />
         </>
       ) : error ? (

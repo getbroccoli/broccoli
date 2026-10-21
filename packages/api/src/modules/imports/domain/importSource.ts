@@ -1,6 +1,14 @@
 /** Where the records of the import come from: the Slack workspace or an uploaded file. */
 export type ImportSourceKind = "slack" | "file";
 
+/**
+ * Who read a file source's people: Broccoli's model, or the owner's external agent answering
+ * Broccoli's masked questions.
+ */
+export const IMPORT_SOURCE_READERS = ["parsed_by_broccoli", "answered_by_external_agent"] as const;
+
+export type ImportSourceReader = (typeof IMPORT_SOURCE_READERS)[number];
+
 /** Whether a source's records are ready; a Slack source always is. */
 export type ImportSourceStatus = "mapping" | "mapped" | "failed";
 
@@ -30,6 +38,9 @@ export interface ImportSource {
   failure: ImportSourceFailure | null;
   /** The AI provider's own words, when it refused the file for good. */
   failureMessage: string | null;
+  readBy: ImportSourceReader;
+  /** When the external agent first read the file's questions; null until it does. */
+  pickedUpByExternalAgentAt: Date | null;
 }
 
 /** A file source with what its mapping runs need. */

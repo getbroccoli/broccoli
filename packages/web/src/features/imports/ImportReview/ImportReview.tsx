@@ -77,8 +77,21 @@ export function ImportReview() {
   const uncheckedCount = countOf(checks, "CONFLICT");
   const leftOutCount = totalCount - readyCount - incompleteCount;
 
-  // `approveError` or `approveConflict` shows a failure.
-  const approve = () => run(() => approveImport());
+  // `approveError` or `approveConflict` shows a failure; a conflict means the people changed.
+  const approve = () =>
+    run(async () => {
+      if (!current) {
+        return false;
+      }
+      try {
+        // The version of what this page shows: people added meanwhile, such as by the owner's
+        // agent, refuse Approve until the page shows them.
+        await approveImport({ variables: { version: current.version } });
+      } catch (failure) {
+        void refetch();
+        throw failure;
+      }
+    });
 
   return (
     <SetupStepForm
@@ -162,7 +175,7 @@ export function ImportReview() {
       />
       {(approveError || approveConflict) && (
         <p role="alert" className="text-sm text-destructive">
-          {t("setup.review.approveFailed")}
+          {t(approveConflict ? "setup.review.peopleChanged" : "setup.review.approveFailed")}
         </p>
       )}
     </SetupStepForm>

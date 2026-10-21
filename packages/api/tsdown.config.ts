@@ -9,11 +9,12 @@ export default defineConfig({
   unbundle: true,
   fixedExtension: false,
   sourcemap: true,
-  // Modules read their SDL and shipped images, such as demo avatars, from next to their
+  // Modules read their SDL, shipped images such as demo avatars, and the agent skill from next to their
   // code; the avatars' NOTICE travels with them.
   copy: [
     { from: "src/**/*.graphql", flatten: false },
     { from: "src/**/*.webp", flatten: false },
     { from: "src/modules/demo/avatars/NOTICE", flatten: false },
+    { from: "src/modules/externalAgents/http/broccoliSetupSkill.md", flatten: false },
   ],
 });

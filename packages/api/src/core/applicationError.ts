@@ -7,7 +7,9 @@ export type ApplicationErrorCode =
   /** An external service, such as Slack, refused or failed. */
   | "UNAVAILABLE"
   /** The data is not in a state that allows this yet, such as a file still being read. */
-  | "CONFLICT";
+  | "CONFLICT"
+  /** Nothing the caller may see has this id. */
+  | "NOT_FOUND";
 
 /** Why one input field was refused, such as `{ field: "email", code: "taken" }`. */
 export interface FieldError {
@@ -42,6 +44,7 @@ const HTTP_STATUS_OF = {
   INVALID_INPUT: 400,
   UNAVAILABLE: 503,
   CONFLICT: 409,
+  NOT_FOUND: 404,
 } as const;
 
 /**

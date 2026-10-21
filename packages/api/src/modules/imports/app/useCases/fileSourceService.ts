@@ -1,5 +1,4 @@
 import { type Decisions, DecisionsError } from "../../../../integrations/ai";
-import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import type { Orm, Transact } from "../../../../core/db";
 import { readFile } from "../../../../core/files";
 import type { JobQueue } from "../../../../core/jobs";
@@ -10,6 +9,7 @@ import {
   columnQuestions,
   type FileSource,
   headerQuestion,
+  inSheet,
   type ImportSourceFailure,
   type IncomingRecord,
   type MappingOutcome,
@@ -17,10 +17,10 @@ import {
   readFileRecords,
   readHeaderRow,
   type FileSheet,
-  type SheetRefusal,
   type Sheet,
   sheetQuestions,
 } from "../../domain";
+import { mimeTypeOf, type UploadReader } from "./uploadReader";
 import { readStaffFile } from "./staffFile";
 import { lockOpenImport, openImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
@@ -43,7 +43,10 @@ export interface FileSourceService {
   mapFile(ctx: SecurityContext, job: MapFileJob): Promise<void>;
   /** After the job's last attempt: the file is marked failed, unless a newer run has started. */
   markFileFailed(ctx: SecurityContext, job: MapFileJob): Promise<void>;
-  /** Maps a failed file again, in a new run; any other source is left as it is. */
+  /**
+   * Maps a failed file again, in a new run, or has Broccoli's model map a file still waiting for
+   * the external agent's answers; any other source is left as it is.
+   */
   retryFile(ctx: SecurityContext, sourceId: string): Promise<void>;
   /** Removes a file source, its records and the stored file; other sources stay. */
   removeFile(ctx: SecurityContext, sourceId: string): Promise<void>;
@@ -72,25 +75,23 @@ export function createFileSourceService({
   transact,
   decisions,
   jobs,
+  readUpload,
 }: {
   orm: Orm;
   transact: Transact;
   /** The model that maps files. */
   decisions: Decisions;
   jobs: JobQueue;
+  /** Shared with every other way of uploading a staff file. */
+  readUpload: UploadReader;
 }): FileSourceService {
-  const uploads = { reading: false };
-
   return {
     uploadFile: async (ctx, { name, bytes }) => {
       requireImportAccess(ctx);
-      const sheets = await readUpload(uploads, bytes);
-      if (typeof sheets === "string") {
-        throw invalidInput([{ field: "file", code: sheets }]);
-      }
+      const sheets = await readUpload(bytes);
       return transact(async (tx) => {
         const imports = await lockOpenImport(tx);
-        const sourceId = await imports.insertFileSource(name, {
+        const sourceId = await imports.insertFileSource(name, "parsed_by_broccoli", {
           content: Buffer.from(bytes),
           mimeType: mimeTypeOf(sheets),
         });
@@ -136,6 +137,7 @@ export function createFileSourceService({
       requireImportAccess(ctx);
       await transact(async (tx) => {
         const imports = await lockOpenImport(tx);
+        // A file still waiting for the external agent's answers goes to Broccoli's model instead.
         const attempt = await imports.restartMapping(sourceId);
         if (attempt !== null) {
           await jobs.send(tx, "imports.mapFile", { sourceId, attempt });
@@ -157,32 +159,6 @@ type MappingResult = { outcome: MappingOutcome; records: IncomingRecord[] };
 
 function isCurrentRun(source: FileSource | null, attempt: number): source is FileSource {
   return source?.status === "mapping" && source.mappingAttempt === attempt;
-}
-
-/**
- * One upload is read at a time and another is refused meanwhile, so uploads can't fill the
- * workbook reader's line; the web uploads one file after another. Jobs always wait their turn.
- */
-async function readUpload(
-  uploads: { reading: boolean },
-  bytes: Uint8Array,
-): Promise<FileSheet[] | SheetRefusal> {
-  if (uploads.reading) {
-    throw new ApplicationError("UNAVAILABLE", "Another file is being read. Try again in a moment.");
-  }
-  uploads.reading = true;
-  try {
-    return await readStaffFile(bytes);
-  } finally {
-    uploads.reading = false;
-  }
-}
-
-/** A CSV has one unnamed sheet; only a workbook names its sheets. */
-function mimeTypeOf(sheets: FileSheet[]): string {
-  return sheets.some(({ name }) => name !== null)
-    ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    : "text/csv";
 }
 
 /** Broccoli AI's refusals that only the owner's own key can get past. */
@@ -223,12 +199,7 @@ async function mapSheets(decisions: Decisions, sheets: FileSheet[]): Promise<Map
       continue;
     }
     mapped = true;
-    // Two sheets share row numbers, so a named sheet's records carry its name.
-    records.push(
-      ...sheetRecords.map((record) =>
-        name === null ? record : { ...record, externalId: `${name}!${record.externalId}` },
-      ),
-    );
+    records.push(...inSheet(name, sheetRecords));
   }
   return mapped
     ? { outcome: { status: "mapped" }, records }

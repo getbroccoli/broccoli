@@ -1,4 +1,16 @@
 query ImportStep {
+  setup {
+    id
+    ai {
+      id
+      source
+      externalAgent {
+        id
+        listening
+        ...ExternalAgentPill_externalAgent
+      }
+    }
+  }
   slackConnection {
     id
     workspaceName
@@ -10,6 +22,10 @@ query ImportStep {
     sources {
       id
       kind
+      name
+      status
+      readBy
+      pickedUpByExternalAgent
       employeeCount
       ...FileSourceCard_source
     }

@@ -1,5 +1,14 @@
 export { expect } from "vitest";
-export { NON_OWNER, OWNER, SETUP_HOLDER, SYSTEM, TestSecurityContext } from "./testSecurityContext";
+export {
+  NON_OWNER,
+  OWNER,
+  SETUP_EXTERNAL_AGENT,
+  SETUP_HOLDER,
+  SYSTEM,
+  TestSecurityContext,
+} from "./testSecurityContext";
+export { approveReviewedImport } from "./approveReviewedImport";
+export { createExternalAgentCode, exchangeExternalAgentCode } from "./createExternalAgentCode";
 export { createBrowser, type Browser } from "./browser";
 export { startDisconnectingProxy, type DisconnectingProxy } from "./disconnectingProxy";
 export { test, slackTest } from "./fixture";
@@ -32,6 +41,7 @@ export { storedFileIds } from "./storedFileIds";
 export {
   companyUseCases,
   demoUseCases,
+  externalAgentUseCases,
   importUseCases,
   slackUseCases,
   systemUseCases,

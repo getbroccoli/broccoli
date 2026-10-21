@@ -169,6 +169,8 @@ const file: ImportSource = {
   status: "mapped",
   failure: null,
   failureMessage: null,
+  readBy: "parsed_by_broccoli",
+  pickedUpByExternalAgentAt: null,
 };
 const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
 const row: ImportEmployeeRecord = {

@@ -17,7 +17,10 @@ export function deleteFiles(db: Orm | Tx, ids: readonly string[]): Promise<void>
   return fileRepository(db).deleteMany(ids);
 }
 
-/** The file with this id, or null; the caller has checked that the id is one of its own. */
-export function readFile(orm: Orm, id: string): Promise<StoredFile | null> {
-  return fileRepository(orm).read(id);
+/**
+ * The file with this id, or null, joining `db`'s transaction; the caller has checked that the id
+ * is one of its own.
+ */
+export function readFile(db: Orm | Tx, id: string): Promise<StoredFile | null> {
+  return fileRepository(db).read(id);
 }

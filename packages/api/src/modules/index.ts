@@ -4,7 +4,8 @@ import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { deleteAllEmployees, employeesModule } from "./employees";
-import { importsModule, prepareDemoStart } from "./imports";
+import { externalAgentsModule } from "./externalAgents";
+import { createImportUseCases, importsModule, prepareDemoStart } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
@@ -25,6 +26,13 @@ export function createModules(
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
   const aiSettings = createAiSettings({ ...core, deployment, openRouter });
+  // Built once: the import serves them and the external agent puts its files through them.
+  const importUseCases = createImportUseCases({
+    ...core,
+    slack: slackConnection,
+    decisions: aiSettings.decisions,
+    prepareDemoFill: () => prepareDemoFill(),
+  });
   return {
     manifests: [
       systemModule({ ...core, mode: deployment.mode, aiSettings }),
@@ -32,12 +40,8 @@ export function createModules(
       companyModule({ ...core, brandLookupUrl }),
       demoModule({ orm: core.orm, transact: core.transact }),
       slackModule(slackConnection),
-      importsModule({
-        ...core,
-        slack: slackConnection,
-        decisions: aiSettings.decisions,
-        prepareDemoFill: () => prepareDemoFill(),
-      }),
+      importsModule(importUseCases),
+      externalAgentsModule({ ...core, mode: deployment.mode, imports: importUseCases }),
     ],
     setupDemo: {
       prepareStart: () => prepareDemoStart({ prepareDemoFill: () => prepareDemoFill() }),

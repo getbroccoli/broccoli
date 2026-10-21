@@ -1,0 +1,49 @@
+type Ai {
+  "The owner's connected external agent; null when none is."
+  externalAgent: ExternalAgentConnection
+}
+
+"The owner's external agent connected to setup. One at a time."
+type ExternalAgentConnection {
+  "Always `external-agent`: one at a time."
+  id: ID!
+  "The name the agent gave itself; not proof of what it is."
+  client: String!
+  connectedAt: DateTime!
+  "Whether the agent waits for the owner's files or worked on them in the last 30 seconds; else the page asks the owner to nudge it."
+  listening: Boolean!
+  "When its session ends, two hours after it connected."
+  expiresAt: DateTime!
+}
+
+"An agent one-time code: the secret in the sentence the owner pastes into their agent."
+type ExternalAgentCode {
+  "Shown once; only its hash is stored."
+  code: String!
+  expiresAt: DateTime!
+}
+
+type SetupMutations {
+  "Reads files with the owner's own external agent from now on, ending any agent session. Self-hosted, at the import step, before the owner exists; owner or setup holder."
+  chooseExternalAgent: SetupChooseExternalAgentPayload!
+  "A new agent one-time code, valid once for two hours, ending any agent session and earlier code. Refused with a ConflictError unless the agent is chosen."
+  createExternalAgentCode: SetupCreateExternalAgentCodePayload!
+  "Ends the agent's session and any unused code; its next call is refused."
+  disconnectExternalAgent: SetupMutationPayload!
+}
+
+"Setup after choosing the external agent, or why it was refused."
+type SetupChooseExternalAgentPayload {
+  setup: Setup
+  error: SetupChooseExternalAgentError
+}
+
+union SetupChooseExternalAgentError = ConflictError
+
+"The new agent one-time code, or why none was made."
+type SetupCreateExternalAgentCodePayload {
+  externalAgentCode: ExternalAgentCode
+  error: SetupCreateExternalAgentCodeError
+}
+
+union SetupCreateExternalAgentCodeError = ConflictError

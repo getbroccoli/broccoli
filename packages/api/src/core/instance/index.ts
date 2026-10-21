@@ -1,6 +1,10 @@
 import "./events";
 export {
   assignInstance,
+  chooseExternalAgentSource,
+  lockExternalAgentChoice,
+  lockSetupOpenToExternalAgent,
+  readSetupOpenToExternalAgent,
   claimOwner,
   approveImportStep,
   completeCompanyStep,
@@ -16,7 +20,7 @@ export {
   createAiSettings,
   type AiSettings,
 } from "./app";
-export { resolveSecurityContext } from "./betterAuth";
+export { refuseBearerAuth, resolveSecurityContext } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
 export {
   AssignmentConflictError,

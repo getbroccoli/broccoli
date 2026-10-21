@@ -24,12 +24,22 @@ type Import {
   readyEmployeeSources: [ImportSource!]!
   "What the owner may want to settle, by kind. Nothing here blocks Approve."
   checks: [ImportCheck!]!
+  "A fingerprint of what Approve would create now; Approve takes it back, so nobody is added unseen."
+  version: String!
 }
 
 "Where people came from."
 enum ImportSourceKind {
   SLACK
   FILE
+}
+
+"Who read a file source's people."
+enum ImportSourceReader {
+  "Broccoli's model mapped the file."
+  PARSED_BY_BROCCOLI
+  "The owner's external agent answered Broccoli's masked questions about the file."
+  ANSWERED_BY_EXTERNAL_AGENT
 }
 
 "Whether a source's records are ready. A Slack source always is."
@@ -62,6 +72,10 @@ type ImportSource {
   name: String!
   "When the source was last read."
   readAt: DateTime!
+  "Who read the file's people: Broccoli's model or the owner's external agent. Broccoli for Slack."
+  readBy: ImportSourceReader!
+  "Whether the owner's external agent has read the file's questions; false for any other source."
+  pickedUpByExternalAgent: Boolean!
   status: ImportSourceStatus!
   "Set when FAILED."
   failure: ImportSourceFailure
@@ -207,11 +221,11 @@ type ImportMutations {
   readSlack: ImportReadSlackPayload!
   "Leaves the import step of setup with the demo company instead of the import, which fills only an instance without employees; the import is deleted."
   startDemo: ImportMutationPayload!
-  "Turns the import employees that are not left out into employees, with the values and photos review shows, and completes the import step; the import is deleted once setup completes. Incomplete ones are not added. Approving again does nothing. Refused with a ConflictError while a file is being mapped."
-  approve: ImportApprovePayload!
+  "Turns the import employees that are not left out into employees, with the values and photos review shows, and completes the import step; the import is deleted once setup completes. Incomplete ones are not added. Approving again does nothing. Refused with a ConflictError while a file is being mapped, and when the import no longer has `version`, the `Import.version` the owner reviewed."
+  approve(version: String!): ImportApprovePayload!
   "Takes setup from the owner or ready step back to the company step and deletes the employees `approve` created; the company, the AI source and the import stay. Does nothing at any other step."
   resetSetup: ImportMutationPayload!
-  "Maps a failed file again; any other source is left as it is."
+  "Maps a failed file again, or has Broccoli's model map a file still waiting for the external agent's answers."
   retryFile(sourceId: ID!): ImportRetryFilePayload!
   "Removes a file, its records and the stored file."
   removeFile(sourceId: ID!): ImportMutationPayload!

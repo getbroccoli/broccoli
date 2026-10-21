@@ -5,4 +5,6 @@ fragment FileSourceCard_source on ImportSource {
   failure
   failureMessage
   employeeCount
+  readBy
+  pickedUpByExternalAgent
 }

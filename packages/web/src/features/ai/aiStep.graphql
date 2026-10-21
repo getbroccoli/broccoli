@@ -13,6 +13,26 @@ query AiStep {
   }
 }
 
+mutation ChooseExternalAgent {
+  setup {
+    chooseExternalAgent {
+      setup {
+        id
+        ai {
+          id
+          source
+        }
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
 mutation SaveAiSource($input: AiSourceInput!) {
   setup {
     saveAiSource(input: $input) {

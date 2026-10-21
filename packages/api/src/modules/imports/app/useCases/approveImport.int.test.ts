@@ -24,7 +24,7 @@ test("approving creates an employee per ready import employee and moves setup to
   const imports = importUseCases(orm);
   const review = (await imports.reads.readReview(owner)).listEmployees({});
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   expect((await readInstance(orm)).step).toBe("ready");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
@@ -52,7 +52,7 @@ test("approving adds exactly the ready import employees the review counts", asyn
   const review = await imports.reads.readReview(owner);
   expect(review.readyEmployees).toHaveLength(1);
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   const approved = await employees.listEmployees(owner, {});
   expect(approved.edges.map(({ node }) => node)).toEqual([
@@ -74,7 +74,7 @@ test("the review keeps the approved employees ready and their sources after appr
   const imports = importUseCases(orm);
   const before = await imports.reads.readReview(owner);
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, before.version);
 
   const after = await imports.reads.readReview(owner);
   expect(after.readyEmployees).toEqual(before.readyEmployees);
@@ -93,7 +93,7 @@ test("approving keeps a record without a last name without creating an employee"
   ]);
   const imports = importUseCases(orm);
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
@@ -113,11 +113,11 @@ test("approving twice creates the employees once", async ({ orm, seed }) => {
   await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
   const employees = createEmployeeUseCases({ orm });
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   const first = await employees.listEmployees(OWNER, { first: 100 });
   expect(first.edges).toHaveLength(1);
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   expect(await employees.listEmployees(OWNER, { first: 100 })).toEqual(first);
 });
@@ -129,7 +129,10 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
   const [record] = await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
 
-  await Promise.all([imports.approveImport(owner), imports.approveImport(owner)]);
+  await Promise.all([
+    imports.approveImport(owner, (await imports.reads.readReview(owner)).version),
+    imports.approveImport(owner, (await imports.reads.readReview(owner)).version),
+  ]);
 
   expect((await readInstance(orm)).step).toBe("ready");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
@@ -148,7 +151,7 @@ test.for(["skipped", "company"] as const)(
     const employees = createEmployeeUseCases({ orm });
     const before = await employees.listEmployees(OWNER, { first: 100 });
 
-    await imports.approveImport(owner);
+    await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
     expect((await readInstance(orm)).step).toBe(step === "skipped" ? "done" : "company");
     expect(await employees.listEmployees(OWNER, { first: 100 })).toEqual(before);
@@ -162,7 +165,9 @@ test("refuses a non-owner approving the import", async ({ orm, seed }) => {
   await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
 
-  await expect(imports.approveImport(NON_OWNER)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  await expect(imports.approveImport(NON_OWNER, "any-version")).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
 
   expect((await readInstance(orm)).step).toBe("import");
   expect(
@@ -180,7 +185,9 @@ test("refuses approval while a file is mapping without advancing setup", async (
   await seed.fileSource({ content: "Name\nRobin Reed" });
   const imports = importUseCases(orm);
 
-  await expect(imports.approveImport(owner)).rejects.toMatchObject({
+  await expect(
+    imports.approveImport(owner, (await imports.reads.readReview(owner)).version),
+  ).rejects.toMatchObject({
     code: "CONFLICT",
     message: "Files are still being read.",
   });
@@ -204,7 +211,7 @@ test("approves available records when a failed file is present", async ({ orm, s
   await seed.fileSource({ content: "Name\nRobin Reed", status: "failed", failure: "unavailable" });
   const imports = importUseCases(orm);
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   expect((await readInstance(orm)).step).toBe("ready");
   expect(
@@ -239,7 +246,9 @@ test("waits for an uncommitted upload before refusing approval", async ({
   });
   const blockingPid = await inserted.promise;
   let approvalSettled = false;
-  const approval = Promise.allSettled([imports.approveImport(owner)]).then((results) => {
+  const approval = Promise.allSettled([
+    imports.approveImport(owner, (await imports.reads.readReview(owner)).version),
+  ]).then((results) => {
     approvalSettled = true;
     return results;
   });
@@ -299,7 +308,7 @@ test("approves one employee per group with picked and typed values, excluding le
   await imports.choices.setLeftOut(owner, { key: "leftout@example.com", leftOut: true });
   const review = (await imports.reads.readReview(owner)).listEmployees({});
 
-  await imports.approveImport(owner);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
@@ -318,7 +327,7 @@ test("the setup holder approves employees without an owner and moves setup to ow
   await seed.importEmployees(source.id, [avery]);
   const imports = importUseCases(orm);
 
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   expect((await readInstance(orm)).step).toBe("owner");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});

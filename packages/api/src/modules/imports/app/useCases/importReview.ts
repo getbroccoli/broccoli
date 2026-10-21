@@ -10,6 +10,7 @@ import {
   type ImportCheck,
   type ImportEmployee,
   type ImportSource,
+  importVersion,
   isInCheck,
   isReady,
   listChecks,
@@ -33,6 +34,8 @@ export interface ImportReview {
   checks: ImportCheck[];
   /** The import employees, one page at a time; by name unless ordered otherwise. */
   listEmployees(args: ImportEmployeeListArgs): Connection<ImportEmployee>;
+  /** The fingerprint of what Approve would create, which Approve takes back (`importVersion`). */
+  version: string;
 }
 
 export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
@@ -40,8 +43,15 @@ export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
   filter?: { search?: string | null; check?: string | null } | null;
 }
 
-/** Reads the import's sources, records and choices, and the emails employees already have, joining `db`. */
-export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Promise<ImportReview> {
+/**
+ * Reads the import's sources, records and choices, and the emails employees already have, joining
+ * `db`. `importOpen` overrides the setup step for Approve, which reads right after moving it.
+ */
+export async function readImportReview(
+  ctx: SecurityContext,
+  db: Orm | Tx,
+  { importOpen }: { importOpen?: boolean } = {},
+): Promise<ImportReview> {
   const imports = importReader(db);
   const [sources, records, choices] = await Promise.all([
     imports.listSources(),
@@ -50,13 +60,14 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
   ]);
   const employees = groupEmployeeRecords(sources, records, choices);
   // Once approved, the added employees own these emails and must stay in the setup summary.
-  const takenEmails = (await isImportOpen(db))
-    ? await findTakenEmails(
-        ctx,
-        db,
-        employees.flatMap(({ values }) => values.email.value ?? []),
-      )
-    : new Set<string>();
+  const takenEmails =
+    (importOpen ?? (await isImportOpen(db)))
+      ? await findTakenEmails(
+          ctx,
+          db,
+          employees.flatMap(({ values }) => values.email.value ?? []),
+        )
+      : new Set<string>();
   const readyEmployees = employees.filter(
     (employee) => !employee.leftOut && isReady(employee, takenEmails),
   );
@@ -69,6 +80,7 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
     readyEmployeeSources: sources.filter(({ id }) => readySourceIds.has(id)),
     checks: listChecks(sources, employees),
     listEmployees: (args) => listEmployees(employees, args),
+    version: importVersion(employees, readyEmployees),
   };
 }
 

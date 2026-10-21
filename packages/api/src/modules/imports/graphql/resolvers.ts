@@ -1,6 +1,6 @@
 import type { Resolvers } from "../../../core/graphql";
 import type { ImportUseCases } from "../app";
-import { FAILURES, IMPORT, KINDS, STATUSES } from "./graphqlValues";
+import { FAILURES, IMPORT, KINDS, READERS, STATUSES } from "./graphqlValues";
 import { importCheckResolvers } from "./importCheckResolvers";
 import { importEmployeeResolvers } from "./importEmployeeResolvers";
 import { importMutationResolvers } from "./importMutationResolvers";
@@ -36,10 +36,14 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       readyEmployeeSources: async (_parent, _args, context) =>
         (await loaders(context).review()).readyEmployeeSources,
       checks: async (_parent, _args, context) => (await loaders(context).review()).checks,
+      version: async (_parent, _args, context) => (await loaders(context).review()).version,
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],
       status: ({ status }) => STATUSES[status],
+      readBy: ({ readBy }) => READERS[readBy],
+      pickedUpByExternalAgent: ({ pickedUpByExternalAgentAt }) =>
+        pickedUpByExternalAgentAt !== null,
       failure: ({ failure }) => (failure ? FAILURES[failure] : null),
       employeeCount: ({ id }, _args, context) => loaders(context).employeeCount.load(id),
       records: ({ id }, { first, after }, context) =>

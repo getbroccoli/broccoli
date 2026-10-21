@@ -7,6 +7,7 @@ import {
   FileSourceCard_SourceFragmentDoc,
   type FileSourceCard_SourceFragment,
   type ImportSourceFailure,
+  type ImportSourceReader,
 } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { t } from "@/i18n";
+import { type MessageKey, t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 const FAILURE_MESSAGES = {
@@ -33,21 +34,27 @@ const NEEDS_OWN_KEY: ReadonlySet<ImportSourceFailure> = new Set([
   "AI_LIMIT_REACHED",
 ]);
 
-interface FileSourceCardProps {
+type Props = {
   source: FragmentType<FileSourceCard_SourceFragment>;
   /** While another change to the files runs. */
   busy: boolean;
+  /** Whether the owner's external agent maps the files; else a file still waiting for it can go to Broccoli. */
+  externalAgentChosen: boolean;
+  /** Whether the connected external agent listens for files, so a new one counts as picked up. */
+  externalAgentListening: boolean;
   onRetry: () => void;
   onRemove: () => void;
-}
+};
 
 /** One uploaded file: its name and how reading it went; owns the `FileSourceCard_source` fragment. */
 export function FileSourceCard({
   source: sourceRef,
   busy,
+  externalAgentChosen,
+  externalAgentListening,
   onRetry,
   onRemove,
-}: FileSourceCardProps) {
+}: Props) {
   const { data: source, complete } = useFragment({
     fragment: FileSourceCard_SourceFragmentDoc,
     from: sourceRef,
@@ -55,6 +62,13 @@ export function FileSourceCard({
   // The query that listed this file has just written the fragment, so it is complete.
   if (!complete) return null;
   const failed = source.status === "FAILED";
+  // Retry asks Broccoli's model: again for its own file, instead of the agent for a waiting one.
+  const canRetry =
+    source.readBy === "PARSED_BY_BROCCOLI"
+      ? failed
+      : source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+        source.status === "MAPPING" &&
+        !externalAgentChosen;
   const FileIcon = source.name.toLowerCase().endsWith(".xlsx") ? FileXls : FileCsv;
   return (
     <li className="flex min-h-[68px] items-center gap-3.5 rounded-xl border border-border bg-card px-4 py-3">
@@ -78,7 +92,13 @@ export function FileSourceCard({
           role={source.status === "MAPPING" ? "status" : undefined}
           className={`text-[13px] ${failed ? "text-destructive" : "text-muted-foreground"}`}
         >
-          {statusLine(source)}
+          {isPickingUp(source, externalAgentListening) && (
+            <span
+              aria-hidden
+              className="mr-2 inline-block size-3 animate-spin rounded-full border-2 border-border border-t-foreground align-[-1px]"
+            />
+          )}
+          {statusLine(source, isPickingUp(source, externalAgentListening))}
         </span>
         {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
           <Link
@@ -89,9 +109,9 @@ export function FileSourceCard({
           </Link>
         )}
       </div>
-      {failed && (
+      {canRetry && (
         <Button type="button" variant="outline" disabled={busy} onClick={onRetry}>
-          {t("imports.files.retry")}
+          {t(failed ? "imports.files.retry" : "imports.files.readWithBroccoli")}
         </Button>
       )}
       {source.status === "MAPPED" && (
@@ -122,19 +142,46 @@ export function FileSourceCard({
   );
 }
 
-function statusLine({
-  status,
-  failure,
-  failureMessage,
-  employeeCount,
-}: FileSourceCard_SourceFragment): string {
+/** Whether the external agent picked the file up, or listens and so picks it up in a moment. */
+function isPickingUp(
+  { status, readBy, pickedUpByExternalAgent }: FileSourceCard_SourceFragment,
+  externalAgentListening: boolean,
+) {
+  return (
+    status === "MAPPING" &&
+    readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+    (pickedUpByExternalAgent || externalAgentListening)
+  );
+}
+
+function statusLine(
+  { status, failure, failureMessage, employeeCount, readBy }: FileSourceCard_SourceFragment,
+  pickingUp: boolean,
+): string {
   if (status === "MAPPING") {
-    return t("imports.files.mapping");
+    if (readBy === "PARSED_BY_BROCCOLI") {
+      return t("imports.files.mapping");
+    }
+    return t(
+      pickingUp
+        ? "imports.files.pickingUpByExternalAgent"
+        : "imports.files.waitingForExternalAgent",
+    );
   }
   if (status === "FAILED") {
     return failureMessage ?? t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
   }
-  return employeeCount === 1
-    ? t("imports.files.onePerson")
-    : t("imports.files.people", { count: String(employeeCount) });
+  const people =
+    employeeCount === 1
+      ? t("imports.files.onePerson")
+      : t("imports.files.people", { count: String(employeeCount) });
+  return READ_BY_EXTERNAL_AGENT[readBy]
+    ? `${people} · ${t(READ_BY_EXTERNAL_AGENT[readBy])}`
+    : people;
 }
+
+/** How a mapped file names the external agent that mapped it. */
+const READ_BY_EXTERNAL_AGENT = {
+  PARSED_BY_BROCCOLI: null,
+  ANSWERED_BY_EXTERNAL_AGENT: "imports.files.mappedByExternalAgent",
+} as const satisfies Record<ImportSourceReader, MessageKey | null>;

@@ -83,3 +83,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 
 - [ ] At 375 px wide the table scrolls sideways inside its frame with the Person column pinned; the footer's buttons wrap without scrolling the page.
 - [ ] Screenshots of the review (desktop and narrow, with incomplete people) go in the pull request description.
+
+## Changes during review
+
+- [ ] Open review in two tabs. In one, leave someone out; in the other, choose "Add N people": it says "Your people changed while you were reviewing. Check them, then add them again." and reloads, and the next try adds the people shown.

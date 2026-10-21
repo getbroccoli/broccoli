@@ -55,6 +55,15 @@ export class TestSeed {
     return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
   }
 
+  /** Makes the instance managed, as the accounts service assigns it. */
+  async assignment(): Promise<void> {
+    await instanceRepository(this.orm).setAssignment({
+      companyId: "company-1",
+      publicOrigin: "https://broccoli.example.com",
+      websiteOrigin: "https://example.com",
+    });
+  }
+
   /** Moves setup straight to `step`, whatever step it is at. */
   async setupStep(step: SetupStep): Promise<void> {
     const instance = instanceRepository(this.orm);
@@ -101,6 +110,13 @@ export class TestSeed {
     return file!.id;
   }
 
+  async externalAgentSetup(): Promise<void> {
+    const instance = instanceRepository(this.orm);
+    await instance.advanceStep("company", "import");
+    await this.setupSession({ expiresAt: new Date("2026-10-23T12:00:00Z") });
+    await instance.storeAiSource("external_agent");
+  }
+
   employee({
     startDate = null,
     avatarFileId = null,
@@ -134,6 +150,7 @@ export class TestSeed {
     attempt = 0,
     failure = null,
     failureMessage = null,
+    readBy = "parsed_by_broccoli",
   }: {
     name?: string;
     content: string | Uint8Array;
@@ -141,10 +158,11 @@ export class TestSeed {
     attempt?: number;
     failure?: "no_people_columns" | "unavailable" | null;
     failureMessage?: string | null;
+    readBy?: "parsed_by_broccoli" | "answered_by_external_agent";
   }) {
     const id = await testTransactor(this.orm)(async (tx) => {
       const imports = await lockImport(tx);
-      const id = await imports.insertFileSource(name, {
+      const id = await imports.insertFileSource(name, readBy, {
         content: Buffer.from(content),
         mimeType:
           typeof content === "string"

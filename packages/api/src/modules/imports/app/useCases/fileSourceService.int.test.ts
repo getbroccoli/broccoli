@@ -114,7 +114,7 @@ test("refuses an upload after Approve while setup still awaits the owner", async
 }) => {
   await seed.setupStep("import");
   const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   expect((await readInstance(orm)).step).toBe("owner");
 
   await expect(
@@ -251,7 +251,7 @@ test("refuses file removal after Approve and keeps the import and stored file un
   const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   expect((await readInstance(orm)).step).toBe("owner");
   const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileIds = await storedFileIds(orm);

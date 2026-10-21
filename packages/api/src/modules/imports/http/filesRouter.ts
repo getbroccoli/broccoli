@@ -1,14 +1,14 @@
 import express from "express";
 import { rateLimit } from "express-rate-limit";
 
-import { invalidInput, sendApplicationError } from "../../../core/applicationError";
+import { sendApplicationError } from "../../../core/applicationError";
 import type { SecurityResolver } from "../../../core/graphql";
 import { requireSignedIn, type SecurityContext } from "../../../core/security";
 import type { ImportUseCases } from "../app";
+import { parseStaffFileName } from "../domain";
 
 /** Large enough for a staff list of thousands of people. */
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_NAME_LENGTH = 255;
 /** Far more than an owner adding files by hand needs. */
 const UPLOADS_PER_MINUTE = 30;
 
@@ -41,7 +41,7 @@ export function filesRouter(
     async (request, response) => {
       try {
         const ctx = signedInContext(response);
-        const name = parseFileName(request.query.name);
+        const name = parseStaffFileName(request.query.name);
         // Without a body Express leaves `body` unset; an empty file is refused like any other.
         const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
         response.json({ sourceId: await useCases.files.uploadFile(ctx, { name, bytes }) });
@@ -54,12 +54,4 @@ export function filesRouter(
 
 function signedInContext(response: express.Response): SecurityContext {
   return response.locals.ctx as SecurityContext;
-}
-
-/** The file's name as the browser sent it; only `.csv` and `.xlsx` files are read. */
-function parseFileName(name: unknown): string {
-  if (typeof name !== "string" || !/\.(csv|xlsx)$/i.test(name)) {
-    throw invalidInput([{ field: "file", code: "unsupported_file" }]);
-  }
-  return name.slice(-MAX_NAME_LENGTH);
 }
