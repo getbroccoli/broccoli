@@ -82,6 +82,30 @@ test("answers no files when the wait runs out", async ({ orm, seed }) => {
   expect(performance.now() - started).toBeGreaterThanOrEqual(1_000);
 });
 
+test(
+  "answers no files at once when the wait is cancelled",
+  { timeout: 5_000 },
+  async ({ orm, seed }) => {
+    await seed.externalAgentSetup();
+    const agents = externalAgentUseCases(orm);
+    const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER, CODE);
+    const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
+      code,
+      client: "Test agent",
+    });
+    const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
+    const controller = new AbortController();
+
+    const waiting = agents.files.waitForUnansweredFiles(ctx, {
+      seconds: 30,
+      signal: controller.signal,
+    });
+    controller.abort();
+
+    expect(await waiting).toEqual([]);
+  },
+);
+
 test("lets a later session answer a file dropped before it connected", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   const agents = externalAgentUseCases(orm);

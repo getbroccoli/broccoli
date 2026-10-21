@@ -16,10 +16,13 @@ export interface ExternalAgentFileService {
   ): Promise<string>;
   /** The files waiting for the agent's answers. */
   listUnansweredFiles(ctx: SecurityContext): Promise<{ id: string }[]>;
-  /** As `listUnansweredFiles`, but with none waiting, waits up to `seconds` for the owner's next drop. */
+  /**
+   * As `listUnansweredFiles`, but with none waiting, waits up to `seconds` for the owner's next
+   * drop; `signal` ends the wait early with none.
+   */
   waitForUnansweredFiles(
     ctx: SecurityContext,
-    request: { seconds: number },
+    request: { seconds: number; signal?: AbortSignal },
   ): Promise<{ id: string }[]>;
   /** A waiting file's masked questions. */
   readMappingQuestions(ctx: SecurityContext, sourceId: string): Promise<MappingQuestions>;
@@ -55,15 +58,21 @@ export function createExternalAgentFileService(
 
     listUnansweredFiles,
 
-    waitForUnansweredFiles: async (ctx, { seconds }) => {
+    waitForUnansweredFiles: async (ctx, { seconds, signal }) => {
       // Listening before the first look, so a drop in between still wakes the wait.
-      const drop = fileDrops.next(seconds * 1000);
-      const files = await listUnansweredFiles(ctx);
-      if (files.length > 0) {
-        return files;
+      const wait = fileDrops.listen(seconds * 1000);
+      signal?.addEventListener("abort", wait.stop);
+      try {
+        const files = await listUnansweredFiles(ctx);
+        if (files.length > 0) {
+          return files;
+        }
+        await wait.dropped;
+        return signal?.aborted ? [] : await listUnansweredFiles(ctx);
+      } finally {
+        wait.stop();
+        signal?.removeEventListener("abort", wait.stop);
       }
-      await drop;
-      return listUnansweredFiles(ctx);
     },
 
     readMappingQuestions: (ctx, sourceId) =>

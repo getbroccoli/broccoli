@@ -5,8 +5,8 @@
 export interface FileDropSignal {
   /** Wakes every wait now. */
   notify(): void;
-  /** Resolves on the next drop, or after `ms`. */
-  next(ms: number): Promise<void>;
+  /** Starts waiting for the next drop, for at most `ms`; `stop` ends the wait early. */
+  listen(ms: number): { dropped: Promise<void>; stop: () => void };
 }
 
 export function createFileDropSignal(): FileDropSignal {
@@ -17,15 +17,18 @@ export function createFileDropSignal(): FileDropSignal {
         wake();
       }
     },
-    next: (ms) =>
-      new Promise((resolve) => {
-        const wake = () => {
+    listen: (ms) => {
+      let stop = () => {};
+      const dropped = new Promise<void>((resolve) => {
+        stop = () => {
           clearTimeout(timeout);
-          waiters.delete(wake);
+          waiters.delete(stop);
           resolve();
         };
-        const timeout = setTimeout(wake, ms);
-        waiters.add(wake);
-      }),
+        const timeout = setTimeout(stop, ms);
+        waiters.add(stop);
+      });
+      return { dropped, stop };
+    },
   };
 }

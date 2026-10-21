@@ -105,7 +105,8 @@ printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -m 120 -H @- "<address>/
 ```
 
 It answers as soon as the owner drops a file, or with `[]` after 110 seconds. Answer every file it
-lists, as in section 2, then wait again. If your shell stops commands before two minutes, give
+lists that you have not skipped, as in section 2, then wait again. A skipped file stays in the list,
+so if only skipped files remain, tell the owner which ones you skipped and why, and stop. If your shell stops commands before two minutes, give
 this one a longer timeout. After 15 minutes with no new file, tell the owner: "Your files are in.
 Review and add your people in Broccoli. If you drop more files, tell me: Broccoli has new files."
 and stop. When the owner says Broccoli has new files, list and answer them, then wait again.
@@ -114,8 +115,8 @@ and stop. When the owner says Broccoli has new files, list and answer them, then
 
 Errors answer `{ "error": { "code": "…", "fields": [{ "field": "…", "code": "…" }] } }`.
 
-- `INVALID_INPUT` (400): fix what `fields` names once; if it fails again, skip that file and tell
-  the owner.
+- `INVALID_INPUT` (400): fix what `fields` names once; if it fails again, skip that file for the
+  rest of this run and tell the owner.
 - `UNAUTHENTICATED` (401): the session ended (two hours passed, the owner disconnected you, or
   setup moved on). Tell the owner that "Add your files" in Broccoli shows a new prompt, and stop.
 - `CONFLICT` (409): the file is already answered; go on with the next one.
