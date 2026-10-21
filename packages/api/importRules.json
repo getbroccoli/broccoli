@@ -69,7 +69,7 @@
       "src/core/security",
       "src/utils"
     ],
-    "src/core/auth": ["src/core/db", "src/core/logger"],
+    "src/core/auth": ["src/core/db", "src/core/logger", "src/core/security"],
     "src/core/files": ["src/core/db"],
     "src/core/jobs": ["src/core/db", "src/core/logger"],
     "src/core/db": ["src/core/events", "src/core/logger"],

@@ -1,15 +1,15 @@
 import type { Request, Router } from "express";
 
-import type { AuthSource } from "./authSource";
+import type { SecurityResolver } from "../security";
 
 /**
- * What the deployment mode adds to the server, self-hosted or managed: its auth, its routes and
- * the address browsers use.
+ * What the deployment mode adds to the server, self-hosted or managed: its routes, who a request
+ * is, and the address browsers use.
  */
 export interface DeploymentServer {
-  auth: AuthSource;
-  /** Routes that run before the auth handler and the modules, such as setup guards or init. */
+  /** Runs before GraphQL and the modules: the setup guard or init, then Better Auth; see `deploymentRouter`. */
   router: Router;
+  resolveSecurity: SecurityResolver;
   /** Managed only: `waiting` until the signed init, then `ready`. */
   initStatus?: () => Promise<"waiting" | "ready">;
   /** The origin browsers reach this instance at, for links that leave Broccoli and come back. */

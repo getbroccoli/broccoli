@@ -1,8 +1,8 @@
-import type { DeploymentServer } from "../auth";
+import { deploymentRouter, type DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { Logger } from "../logger";
 import type { SetupDemo } from "./app";
-import { selfHostedAuth } from "./betterAuth";
+import { resolveSecurityContext, selfHostedAuth } from "./betterAuth";
 import { setupRouter } from "./http";
 
 export interface SelfHostedServerOptions {
@@ -25,9 +25,10 @@ export function selfHostedServer({
   ...options
 }: SelfHostedServerOptions): DeploymentServer {
   const publicOrigin = publicUrl && new URL(publicUrl).origin;
+  const auth = selfHostedAuth({ ...options, publicUrl });
   return {
-    auth: selfHostedAuth({ ...options, publicUrl }),
-    router: setupRouter(publicUrl),
+    router: deploymentRouter(auth, setupRouter(publicUrl)),
+    resolveSecurity: (headers) => resolveSecurityContext(auth, options.orm, headers),
     publicOrigin: (request) =>
       Promise.resolve(publicOrigin || `${request.protocol}://${request.host}`),
   };

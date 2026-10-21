@@ -6,14 +6,14 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import express from "express";
 
-import { authHandler, type DeploymentServer } from "./auth";
+import type { DeploymentServer } from "./auth";
 import { connectDatabase, type Database, transactor } from "./db";
 import type { Env } from "./env";
 import { createEventBus } from "./events";
 import { type GraphqlApi, startGraphqlApi } from "./graphql";
 import { healthRouter } from "./health";
 import { createJobRunner } from "./jobs";
-import { refuseBearerAuth, resolveSecurityContext, selfHostedServer } from "./instance";
+import { selfHostedServer } from "./instance";
 import type { Logger } from "./logger";
 import { managedServer } from "./managedSignIn";
 import type { ModuleDependencies, ModuleManifest, Modules } from "./moduleManifest";
@@ -75,8 +75,7 @@ export async function startServer(
       env.deployment.mode === "managed"
         ? managedServer({ ...services, deployment: env.deployment, readiness })
         : selfHostedServer({ ...services, publicUrl: env.deployment.publicUrl, demo: setupDemo });
-    const auth = deployment.auth;
-    resolveSecurity = (headers) => resolveSecurityContext(auth, database.orm, headers);
+    resolveSecurity = deployment.resolveSecurity;
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
   } catch (error) {
     await database.close();
@@ -84,9 +83,7 @@ export async function startServer(
   }
   try {
     app.use(healthRouter(readiness, deployment.initStatus));
-    app.use("/api/auth", refuseBearerAuth);
     app.use(deployment.router);
-    app.all("/api/auth/{*path}", authHandler(deployment.auth));
     app.use(graphql.router);
     for (const module of modules) {
       if (module.events) {

@@ -1,10 +1,10 @@
 import express from "express";
 import { createRemoteJWKSet } from "jose";
 
-import { createAuth, type DeploymentServer } from "../auth";
+import { createAuth, deploymentRouter, type DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { ManagedDeployment } from "../env";
-import { readInstance } from "../instance";
+import { readInstance, resolveSecurityContext } from "../instance";
 import type { Logger } from "../logger";
 import type { Readiness } from "../readiness";
 import { managedAuth } from "./app";
@@ -50,11 +50,14 @@ export function managedServer({
   );
   const tokenCheck = { ...signer, audience: `instance:${instanceId}` };
   return {
-    auth,
-    router: express
-      .Router()
-      .use(initRouter({ transact, tokenCheck, readiness, auth }))
-      .use(waitingGate(auth)),
+    router: deploymentRouter(
+      auth,
+      express
+        .Router()
+        .use(initRouter({ transact, tokenCheck, readiness, auth }))
+        .use(waitingGate(auth)),
+    ),
+    resolveSecurity: (headers) => resolveSecurityContext(auth, orm, headers),
     initStatus: async () => ((await auth.current()) ? "ready" : "waiting"),
     // The waiting gate answers until init stored the assignment, so it exists here.
     publicOrigin: async () => (await readInstance(orm)).assignment!.publicOrigin,

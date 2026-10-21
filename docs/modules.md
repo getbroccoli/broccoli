@@ -10,7 +10,6 @@ flowchart TD
   modulesIndex --> system & employees & company & demo & slackModule[slack] & imports & externalAgents
   modulesIndex --> instance
   externalAgents --> imports
-  externalAgents --> system
   imports --> employees
   imports --> slackModule
   demo --> employees
@@ -38,28 +37,28 @@ Each exports one factory that returns its manifest (SDL, resolvers, routes, even
 | `slack`          | The Slack connection and its encrypted token; `readSlackMembers` is the one way other modules read the workspace.                             |
 | `externalAgents` | The owner's external agent: one-time codes, sessions, waiting for dropped files and answering mapping questions, under `/api/external-agent`. |
 | `demo`           | The sample company (`prepareDemoFill`) and clearing it; owns no table.                                                                        |
-| `system`         | The GraphQL face of `core/instance`: `setup`, `me`, completing setup and the AI settings.                                                     |
+| `system`         | The GraphQL face of `core/instance`: `setup` (read with `readSetup`), `me`, completing setup and the AI settings.                             |
 
 ### Core (`src/core/`)
 
-| Module                          | Offers                                                                                                                                                                     |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `server`                        | `startServer`: Express, Apollo, health probes, deployment auth and the module manifests.                                                                                   |
-| `moduleManifest`                | The contract between the core and a module: `ModuleManifest`, `ModuleDependencies`.                                                                                        |
-| `instance`                      | The `instance` row: setup steps, the setup session, owner, demo deadline, AI settings, the self-hosted `DeploymentServer` and who a request is (`resolveSecurityContext`). |
-| `managedSignIn`                 | The managed `DeploymentServer`: init by signed token and sign-in through the accounts service.                                                                             |
-| `auth`                          | Better Auth built from the deployment's settings, and its tables.                                                                                                          |
-| `security`                      | `SecurityContext` and its checks (`requireOwnerOrSystem`, `requireSetupAccess`, …).                                                                                        |
-| `db`                            | The connection, migrations, `transact`/`Tx`, keyset conditions and unique-violation checks.                                                                                |
-| `events`                        | The in-process domain event bus; publishers declare events by merging into `DomainEvents`.                                                                                 |
-| `jobs`                          | pg-boss jobs queued inside a transaction; modules declare them by merging into `Jobs`.                                                                                     |
-| `files`                         | Stored files in Postgres: `storeFile`, `readFile`, `deleteFiles`, `sendFile`.                                                                                              |
-| `graphql`                       | Apollo set-up, schema merging, `mutationPayload`, `perRequest`, scalars, generated resolver types.                                                                         |
-| `pagination`                    | `paginate`: Relay connections over keyset queries; `parseSearch` for list search input.                                                                                    |
-| `secrets`                       | The encryption key and cookie secret on disk, and `createSecretBox` for encrypted columns.                                                                                 |
-| `env`                           | `loadEnv`: the validated environment and the `Deployment`.                                                                                                                 |
-| `applicationError`              | `ApplicationError`: the error codes use cases report.                                                                                                                      |
-| `logger`, `readiness`, `health` | Logging; `/readyz` state; the probe routes.                                                                                                                                |
+| Module                          | Offers                                                                                                                                                                             |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server`                        | `startServer`: Express, Apollo, health probes, deployment auth and the module manifests.                                                                                           |
+| `moduleManifest`                | The contract between the core and a module: `ModuleManifest`, `ModuleDependencies`.                                                                                                |
+| `instance`                      | The `instance` row: setup steps, the setup session, owner, demo deadline, AI settings, the self-hosted `DeploymentServer` and who a request is (`resolveSecurityContext`).         |
+| `managedSignIn`                 | The managed `DeploymentServer`: init by signed token and sign-in through the accounts service.                                                                                     |
+| `auth`                          | Better Auth built from the deployment's settings, the deployment router, and its tables: `user` for foreign keys, and `authUserRepository` for the few writes outside Better Auth. |
+| `security`                      | `SecurityContext` and its checks (`requireOwnerOrSystem`, `requireSetupAccess`, …).                                                                                                |
+| `db`                            | The connection, migrations, `transact`/`Tx`, keyset conditions and unique-violation checks.                                                                                        |
+| `events`                        | The in-process domain event bus; publishers declare events by merging into `DomainEvents`.                                                                                         |
+| `jobs`                          | pg-boss jobs queued inside a transaction; modules declare them by merging into `Jobs`.                                                                                             |
+| `files`                         | Stored files in Postgres: `storeFile`, `readFile`, `deleteFiles`, `sendFile`.                                                                                                      |
+| `graphql`                       | Apollo set-up, schema merging, `mutationPayload`, `perRequest`, scalars, generated resolver types.                                                                                 |
+| `pagination`                    | `paginate`: Relay connections over keyset queries; `parseSearch` for list search input.                                                                                            |
+| `secrets`                       | The encryption key and cookie secret on disk, and `createSecretBox` for encrypted columns.                                                                                         |
+| `env`                           | `loadEnv`: the validated environment and the `Deployment`.                                                                                                                         |
+| `applicationError`              | `ApplicationError`: the error codes use cases report.                                                                                                                              |
+| `logger`, `readiness`, `health` | Logging; `/readyz` state; the probe routes.                                                                                                                                        |
 
 ### Integrations (`src/integrations/`) and utils
 

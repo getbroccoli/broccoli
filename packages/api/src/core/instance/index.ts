@@ -21,7 +21,7 @@ export {
   createAiSettings,
   type AiSettings,
 } from "./app";
-export { refuseBearerAuth, resolveSecurityContext } from "./betterAuth";
+export { resolveSecurityContext } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
 export {
   AssignmentConflictError,
