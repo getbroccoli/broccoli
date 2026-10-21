@@ -2,6 +2,8 @@ import { Plus, UploadSimple } from "@phosphor-icons/react";
 import { type ReactNode, useRef, useState } from "react";
 
 import {
+  type AiSource,
+  AllowOriginalFileReadDocument,
   type ImportStepQuery,
   RemoveFileDocument,
   RetryFileDocument,
@@ -32,8 +34,8 @@ type Props = {
   onUploadingChange: (uploading: boolean) => void;
   /** Where a dropped file goes: the import, or the owner's agent's masked questions. */
   uploadFile: FileUploader;
-  /** Whether the owner's external agent maps the files, so a file waiting for it shows no Broccoli action. */
-  externalAgentChosen: boolean;
+  /** The AI files are read with now; null on a managed instance. */
+  aiSource: AiSource | null;
   /** Whether the connected external agent listens for files. */
   externalAgentListening: boolean;
   /** The connected external agent, beside the heading. */
@@ -45,15 +47,16 @@ type Props = {
 };
 
 /**
- * Staff files as sources of people: drop or choose CSV or Excel files, retry or remove them; while
- * the chosen external agent is not connected, its prompt instead of the drop zone.
+ * Staff files as sources of people: drop or choose CSV, Excel or PDF files, retry them, let AI read
+ * one in full or remove it; while the chosen external agent is not connected, its prompt instead of
+ * the drop zone.
  */
 export function FileSources({
   sources,
   onUploaded,
   onUploadingChange,
   uploadFile,
-  externalAgentChosen,
+  aiSource,
   externalAgentListening,
   externalAgentPill,
   externalAgentPrompt,
@@ -68,8 +71,10 @@ export function FileSources({
   const [dragging, setDragging] = useState(false);
   const [retryFile, retry] = usePayloadMutation(RetryFileDocument);
   const [removeFile, remove] = usePayloadMutation(RemoveFileDocument);
-  const busy = uploading !== null || retry.loading || remove.loading;
-  const changeFailed = retry.error || retry.payloadError || remove.error;
+  const [allowOriginalFileRead, allowRead] = usePayloadMutation(AllowOriginalFileReadDocument);
+  const busy = uploading !== null || retry.loading || remove.loading || allowRead.loading;
+  const changeFailed =
+    retry.error || retry.payloadError || remove.error || allowRead.error || allowRead.payloadError;
   const alerts = changeFailed ? [...problems, t("imports.files.changeFailed")] : problems;
 
   const upload = async (files: FileList | null) => {
@@ -127,7 +132,7 @@ export function FileSources({
       <input
         ref={input}
         type="file"
-        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept=".csv,.xlsx,.pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf"
         multiple
         className="sr-only"
         tabIndex={-1}
@@ -160,10 +165,13 @@ export function FileSources({
               key={source.id}
               source={source}
               busy={busy}
-              externalAgentChosen={externalAgentChosen}
+              aiSource={aiSource}
               externalAgentListening={externalAgentListening}
               // A failure shows through the mutation's `error` or `payloadError`.
               onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
+              onAllowOriginalRead={() =>
+                void allowOriginalFileRead({ variables: { sourceId: source.id } }).catch(() => {})
+              }
               onRemove={() =>
                 void removeFile({ variables: { sourceId: source.id } }).catch(() => {})
               }
@@ -175,7 +183,11 @@ export function FileSources({
       {canDrop && (
         <p id="import-files-hint" className="text-[13px] text-muted-foreground">
           {t("imports.files.limits")}{" "}
-          {t(externalAgentChosen ? "externalAgents.disclosure" : "imports.files.disclosure")}
+          {t(
+            aiSource === "EXTERNAL_AGENT"
+              ? "externalAgents.disclosure"
+              : "imports.files.disclosure",
+          )}
         </p>
       )}
       {sources.length > 0 && canDrop && (

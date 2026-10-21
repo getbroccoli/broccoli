@@ -1,19 +1,20 @@
 import type { FragmentType } from "@apollo/client";
 import { useFragment } from "@apollo/client/react";
-import { CheckCircle, DotsThree, FileCsv, FileXls } from "@phosphor-icons/react";
+import { CheckCircle, DotsThree, Eye, FileCsv, FilePdf, FileXls } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 
 import {
+  type AiSource,
   FileSourceCard_SourceFragmentDoc,
   type FileSourceCard_SourceFragment,
   type ImportSourceFailure,
-  type ImportSourceReader,
 } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type MessageKey, t } from "@/i18n";
@@ -25,6 +26,7 @@ const FAILURE_MESSAGES = {
   AI_FREE_PERIOD_USED: "imports.files.aiFreePeriodUsed",
   AI_FREE_PERIOD_OVER: "imports.files.aiFreePeriodOver",
   AI_LIMIT_REACHED: "imports.files.aiLimitReached",
+  ORIGINAL_READ_INCOMPLETE: "imports.files.originalReadIncomplete",
 } as const satisfies Record<ImportSourceFailure, string>;
 
 /** Broccoli AI's free use is used up: only the owner's own key reads the file. */
@@ -34,15 +36,24 @@ const NEEDS_OWN_KEY: ReadonlySet<ImportSourceFailure> = new Set([
   "AI_LIMIT_REACHED",
 ]);
 
+/** Where a file's personal data goes when the owner lets AI read it in full; null is managed. */
+const PROVIDERS = {
+  EXTERNAL_AGENT: "imports.files.providerExternalAgent",
+  BROCCOLI_AI: "imports.files.providerBroccoliAi",
+  OPENROUTER: "imports.files.providerOpenRouter",
+} as const satisfies Record<AiSource, MessageKey>;
+
 type Props = {
   source: FragmentType<FileSourceCard_SourceFragment>;
   /** While another change to the files runs. */
   busy: boolean;
-  /** Whether the owner's external agent maps the files; else a file still waiting for it can go to Broccoli. */
-  externalAgentChosen: boolean;
+  /** The AI files are read with now; null on a managed instance. */
+  aiSource: AiSource | null;
   /** Whether the connected external agent listens for files, so a new one counts as picked up. */
   externalAgentListening: boolean;
   onRetry: () => void;
+  /** Lets AI read this one file in full. */
+  onAllowOriginalRead: () => void;
   onRemove: () => void;
 };
 
@@ -50,9 +61,10 @@ type Props = {
 export function FileSourceCard({
   source: sourceRef,
   busy,
-  externalAgentChosen,
+  aiSource,
   externalAgentListening,
   onRetry,
+  onAllowOriginalRead,
   onRemove,
 }: Props) {
   const { data: source, complete } = useFragment({
@@ -62,83 +74,152 @@ export function FileSourceCard({
   // The query that listed this file has just written the fragment, so it is complete.
   if (!complete) return null;
   const failed = source.status === "FAILED";
+  const externalAgentChosen = aiSource === "EXTERNAL_AGENT";
   // Retry asks Broccoli's model: again for its own file, instead of the agent for a waiting one.
   const canRetry =
-    source.readBy === "PARSED_BY_BROCCOLI"
+    !source.originalReadAllowed &&
+    (source.readBy === "PARSED_BY_BROCCOLI"
       ? failed
-      : source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
-        source.status === "MAPPING" &&
-        !externalAgentChosen;
-  const FileIcon = source.name.toLowerCase().endsWith(".xlsx") ? FileXls : FileCsv;
+      : source.status === "MAPPING" && !externalAgentChosen);
+  const asksForOriginalRead = !source.originalReadAllowed && couldNotMapMasked(source);
+  const offersOriginalRead =
+    !source.originalReadAllowed && (source.status === "MAPPED" || failed) && !asksForOriginalRead;
+  const provider = t(aiSource ? PROVIDERS[aiSource] : "imports.files.providerManaged");
+  const pickingUp = isPickingUp(source, externalAgentListening);
   return (
-    <li className="flex min-h-[68px] items-center gap-3.5 rounded-xl border border-border bg-card px-4 py-3">
-      <span
-        className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
-          source.status === "MAPPED"
-            ? "bg-brand-soft/70 text-brand-deep"
-            : failed
-              ? "bg-destructive/10 text-destructive"
-              : "bg-muted text-muted-foreground",
-        )}
-      >
-        <FileIcon size={22} weight="duotone" aria-hidden />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-[15px] font-semibold" title={source.name}>
-          {source.name}
-        </span>
+    <li
+      className={cn(
+        "flex flex-col gap-2.5 rounded-xl border px-4 py-3",
+        asksForOriginalRead && failed ? "border-amber-200 bg-amber-50/60" : "border-border bg-card",
+      )}
+    >
+      <div className="flex min-h-[44px] items-center gap-3.5">
         <span
-          role={source.status === "MAPPING" ? "status" : undefined}
-          className={`text-[13px] ${failed ? "text-destructive" : "text-muted-foreground"}`}
-        >
-          {isPickingUp(source, externalAgentListening) && (
-            <span
-              aria-hidden
-              className="mr-2 inline-block size-3 animate-spin rounded-full border-2 border-border border-t-foreground align-[-1px]"
-            />
+          className={cn(
+            "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
+            source.status === "MAPPED"
+              ? "bg-brand-soft/70 text-brand-deep"
+              : asksForOriginalRead && failed
+                ? "bg-amber-100 text-amber-800"
+                : failed
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-muted text-muted-foreground",
           )}
-          {statusLine(source, isPickingUp(source, externalAgentListening))}
-        </span>
-        {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
-          <Link
-            to="/setup/ai"
-            className="w-fit text-[13px] font-medium text-foreground underline underline-offset-2"
-          >
-            {t("imports.files.useOwnKey")}
-          </Link>
-        )}
-      </div>
-      {canRetry && (
-        <Button type="button" variant="outline" disabled={busy} onClick={onRetry}>
-          {t(failed ? "imports.files.retry" : "imports.files.readWithBroccoli")}
-        </Button>
-      )}
-      {source.status === "MAPPED" && (
-        <CheckCircle size={20} weight="fill" aria-hidden className="shrink-0 text-brand" />
-      )}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="-mr-2 shrink-0 rounded-full"
-              disabled={busy}
-              aria-label={t("imports.files.options", { name: source.name })}
-            />
-          }
         >
-          <DotsThree weight="bold" aria-hidden />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48 p-1.5">
-          <DropdownMenuItem className="h-9 px-2.5" variant="destructive" onClick={onRemove}>
-            {t("imports.files.remove")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          {fileIcon(source.name)}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-[15px] font-semibold" title={source.name}>
+            {source.name}
+          </span>
+          <span
+            role={source.status === "MAPPING" ? "status" : undefined}
+            className={cn(
+              "text-[13px]",
+              asksForOriginalRead && failed
+                ? "text-amber-800"
+                : failed
+                  ? "text-destructive"
+                  : "text-muted-foreground",
+            )}
+          >
+            {pickingUp && (
+              <span
+                aria-hidden
+                className="mr-2 inline-block size-3 animate-spin rounded-full border-2 border-border border-t-foreground align-[-1px]"
+              />
+            )}
+            {statusLine(source, pickingUp, aiSource)}
+          </span>
+          {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
+            <Link
+              to="/setup/ai"
+              className="w-fit text-[13px] font-medium text-foreground underline underline-offset-2"
+            >
+              {t("imports.files.useOwnKey")}
+            </Link>
+          )}
+        </div>
+        {canRetry && (
+          <Button type="button" variant="outline" disabled={busy} onClick={onRetry}>
+            {t(failed ? "imports.files.retry" : "imports.files.readWithBroccoli")}
+          </Button>
+        )}
+        {source.status === "MAPPED" && (
+          <CheckCircle size={20} weight="fill" aria-hidden className="shrink-0 text-brand" />
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="-mr-2 shrink-0 rounded-full"
+                disabled={busy}
+                aria-label={t("imports.files.options", { name: source.name })}
+              />
+            }
+          >
+            <DotsThree weight="bold" aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className={cn("p-1.5", offersOriginalRead ? "w-72" : "w-48")}
+          >
+            {offersOriginalRead && (
+              <>
+                <DropdownMenuItem
+                  className="items-start gap-2.5 px-2.5 py-2"
+                  onClick={onAllowOriginalRead}
+                >
+                  <Eye aria-hidden className="mt-0.5 shrink-0" />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-medium">{t("imports.files.readOriginal")}</span>
+                    <span className="text-xs leading-normal text-muted-foreground">
+                      {t("imports.files.readOriginalHint", { provider })}
+                    </span>
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            <DropdownMenuItem className="h-9 px-2.5" variant="destructive" onClick={onRemove}>
+              {t("imports.files.remove")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {asksForOriginalRead && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:ml-[54px]">
+          <p className="min-w-0 flex-1 basis-60 text-[13px] leading-normal text-muted-foreground">
+            {t("imports.files.readOriginalConsent", { provider })}
+          </p>
+          <Button type="button" disabled={busy} onClick={onAllowOriginalRead}>
+            {t("imports.files.readOriginal")}
+          </Button>
+        </div>
+      )}
     </li>
+  );
+}
+
+function fileIcon(name: string) {
+  const lowerName = name.toLowerCase();
+  if (lowerName.endsWith(".pdf")) {
+    return <FilePdf size={22} weight="duotone" aria-hidden />;
+  }
+  if (lowerName.endsWith(".xlsx")) {
+    return <FileXls size={22} weight="duotone" aria-hidden />;
+  }
+  return <FileCsv size={22} weight="duotone" aria-hidden />;
+}
+
+/** A PDF waiting for consent, or a file whose masked rows gave no people. */
+function couldNotMapMasked({ status, failure }: FileSourceCard_SourceFragment) {
+  return (
+    status === "WAITING_FOR_ORIGINAL_READ_CONSENT" ||
+    (status === "FAILED" && failure === "NO_PEOPLE_COLUMNS")
   );
 }
 
@@ -155,33 +236,54 @@ function isPickingUp(
 }
 
 function statusLine(
-  { status, failure, failureMessage, employeeCount, readBy }: FileSourceCard_SourceFragment,
+  source: FileSourceCard_SourceFragment,
   pickingUp: boolean,
+  aiSource: AiSource | null,
 ): string {
+  const { status, failure, failureMessage, employeeCount, readBy, originalReadAllowed } = source;
+  if (status === "WAITING_FOR_ORIGINAL_READ_CONSENT") {
+    return t("imports.files.pdfNotMasked");
+  }
   if (status === "MAPPING") {
     if (readBy === "PARSED_BY_BROCCOLI") {
-      return t("imports.files.mapping");
+      return t(originalReadAllowed ? "imports.files.readingOriginal" : "imports.files.mapping");
+    }
+    if (!pickingUp) {
+      return t("imports.files.waitingForExternalAgent");
     }
     return t(
-      pickingUp
-        ? "imports.files.pickingUpByExternalAgent"
-        : "imports.files.waitingForExternalAgent",
+      originalReadAllowed
+        ? "imports.files.readingByExternalAgent"
+        : "imports.files.pickingUpByExternalAgent",
     );
   }
   if (status === "FAILED") {
+    if (!originalReadAllowed && failure === "NO_PEOPLE_COLUMNS") {
+      return t("imports.files.couldNotMapMasked");
+    }
     return failureMessage ?? t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
   }
   const people =
     employeeCount === 1
       ? t("imports.files.onePerson")
       : t("imports.files.people", { count: String(employeeCount) });
-  return READ_BY_EXTERNAL_AGENT[readBy]
-    ? `${people} · ${t(READ_BY_EXTERNAL_AGENT[readBy])}`
-    : people;
+  const reader = readerLabel(source, aiSource);
+  return reader ? `${people} · ${t(reader)}` : people;
 }
 
-/** How a mapped file names the external agent that mapped it. */
-const READ_BY_EXTERNAL_AGENT = {
-  PARSED_BY_BROCCOLI: null,
-  ANSWERED_BY_EXTERNAL_AGENT: "imports.files.mappedByExternalAgent",
-} as const satisfies Record<ImportSourceReader, MessageKey | null>;
+/** How a mapped file names who read it, when it was not Broccoli's masked mapping. */
+function readerLabel(
+  { readBy, originalReadAllowed }: FileSourceCard_SourceFragment,
+  aiSource: AiSource | null,
+): MessageKey | null {
+  const byExternalAgent = readBy === "ANSWERED_BY_EXTERNAL_AGENT";
+  if (!originalReadAllowed) {
+    return byExternalAgent ? "imports.files.mappedByExternalAgent" : null;
+  }
+  if (byExternalAgent) {
+    return "imports.files.readByExternalAgent";
+  }
+  return aiSource === "BROCCOLI_AI"
+    ? "imports.files.readByBroccoliAi"
+    : "imports.files.readByOpenRouter";
+}
