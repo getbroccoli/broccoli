@@ -54,11 +54,8 @@ export function importsModule(
       "imports.readOriginalFile": {
         run: (job) =>
           useCases.originalFileReads.readOriginalFile(PrincipalSecurityContext.system(), job),
-        onFailed: (job) =>
-          useCases.originalFileReads.markOriginalFileReadFailed(
-            PrincipalSecurityContext.system(),
-            job,
-          ),
+        // Both jobs end alike: the file fails, unless a newer run has started.
+        onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },
     },
   };

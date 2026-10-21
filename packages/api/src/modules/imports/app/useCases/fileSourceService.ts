@@ -1,4 +1,4 @@
-import { type Decisions, DecisionsError } from "../../../../integrations/ai";
+import type { Decisions } from "../../../../integrations/ai";
 import type { Orm, Transact } from "../../../../core/db";
 import { readFile } from "../../../../core/files";
 import type { JobQueue } from "../../../../core/jobs";
@@ -10,7 +10,6 @@ import {
   type FileSource,
   headerQuestion,
   inSheet,
-  type ImportSourceFailure,
   type IncomingRecord,
   type MappingOutcome,
   readColumnMapping,
@@ -20,6 +19,7 @@ import {
   type Sheet,
   sheetQuestions,
 } from "../../domain";
+import { failedModelOutcome } from "./modelFailure";
 import type { UploadReader } from "./uploadReader";
 import { readStaffFile } from "./staffFile";
 import { lockOpenImport, openImport } from "./openImport";
@@ -166,28 +166,12 @@ function isCurrentRun(source: FileSource | null, attempt: number): source is Fil
   return source?.status === "mapping" && source.mappingAttempt === attempt;
 }
 
-/** Broccoli AI's refusals that only the owner's own key can get past. */
-const AI_REFUSAL_FAILURES = new Map<string, ImportSourceFailure>([
-  ["free_period_used", "ai_free_period_used"],
-  ["free_period_over", "ai_free_period_over"],
-  ["limit_reached", "ai_limit_reached"],
-]);
-
 /** A model failure that retrying cannot fix fails the file; any other error is thrown. */
 async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {
   try {
     return await mapSheets(decisions, sheets);
   } catch (error) {
-    if (!(error instanceof DecisionsError) || error.retryable) {
-      throw error;
-    }
-    const aiRefusal = AI_REFUSAL_FAILURES.get(error.reason ?? "");
-    return {
-      outcome: aiRefusal
-        ? { status: "failed", failure: aiRefusal }
-        : { status: "failed", failure: "unavailable", failureMessage: error.providerMessage },
-      records: [],
-    };
+    return { outcome: failedModelOutcome(error), records: [] };
   }
 }
 

@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-import {
-  ANSWER_CUT_OFF,
-  DecisionsError,
-  type OriginalFileRead,
-  type OriginalFileReader,
-} from "../../../../integrations/ai";
+import type { OriginalFileRead, OriginalFileReader } from "../../../../integrations/ai";
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import { readFile, type StoredFile } from "../../../../core/files";
@@ -25,6 +20,7 @@ import {
   type ReadPeople,
   readPeopleSchema,
 } from "../../domain";
+import { failedModelOutcome } from "./modelFailure";
 import { lockOpenImport, openImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
 import { readStaffFile } from "./staffFile";
@@ -46,8 +42,6 @@ export interface OriginalFileReadService {
    * longer current, or of a closed import, writes nothing; a retryable failure rejects.
    */
   readOriginalFile(ctx: SecurityContext, job: ReadOriginalFileJob): Promise<void>;
-  /** After the job's last attempt: the file fails, unless a newer run has started. */
-  markOriginalFileReadFailed(ctx: SecurityContext, job: ReadOriginalFileJob): Promise<void>;
   /** The original of a file the external agent may read in full; records that it picked it up. */
   readOriginalBytes(ctx: SecurityContext, tx: Tx, sourceId: string): Promise<StoredFile>;
   /** The external agent's people for a file it may read in full replace the file's records, each time. */
@@ -142,17 +136,6 @@ export function createOriginalFileReadService({
       });
     },
 
-    markOriginalFileReadFailed: async (ctx, { sourceId, attempt }) => {
-      requireImportAccess(ctx);
-      await transact(async (tx) => {
-        const imports = await openImport(tx);
-        await imports?.finishMapping(sourceId, attempt, {
-          status: "failed",
-          failure: "unavailable",
-        });
-      });
-    },
-
     readOriginalBytes: async (ctx, tx, sourceId) => {
       ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
@@ -233,10 +216,7 @@ async function readWithModel(reader: OriginalFileReader, file: StoredFile): Prom
       schema: READ_PEOPLE_JSON_SCHEMA,
     });
   } catch (error) {
-    if (!(error instanceof DecisionsError) || error.retryable) {
-      throw error;
-    }
-    return { outcome: failedRead(error), people: null };
+    return { outcome: failedModelOutcome(error), people: null };
   }
   let people: ReadPeople;
   try {
@@ -247,24 +227,6 @@ async function readWithModel(reader: OriginalFileReader, file: StoredFile): Prom
   return people.records.length === 0
     ? { outcome: { status: "failed", failure: "no_people_columns" }, people }
     : { outcome: { status: "mapped" }, people };
-}
-
-/** Broccoli AI's refusals that only the owner's own key can get past, and a cut-off answer. */
-const READ_FAILURES = new Map<string, MappingOutcome & { status: "failed" }>([
-  ["free_period_used", { status: "failed", failure: "ai_free_period_used" }],
-  ["free_period_over", { status: "failed", failure: "ai_free_period_over" }],
-  ["limit_reached", { status: "failed", failure: "ai_limit_reached" }],
-  [ANSWER_CUT_OFF, { status: "failed", failure: "original_read_incomplete" }],
-]);
-
-function failedRead(error: DecisionsError): MappingOutcome {
-  return (
-    READ_FAILURES.get(error.reason ?? "") ?? {
-      status: "failed",
-      failure: "unavailable",
-      failureMessage: error.providerMessage,
-    }
-  );
 }
 
 /** A PDF goes as itself; a CSV or Excel file as its sheets' cells, as CSV text. */

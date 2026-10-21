@@ -61,12 +61,7 @@ export interface ImportSource {
  * How the external agent handles a file waiting for it: answer Broccoli's masked questions, or,
  * once the owner allowed it, read the original file and send its people.
  */
-export const EXTERNAL_AGENT_PARSE_FILE_WAYS = [
-  "answer_masked_questions",
-  "read_original_file",
-] as const;
-
-export type ExternalAgentParseFileWay = (typeof EXTERNAL_AGENT_PARSE_FILE_WAYS)[number];
+export type ExternalAgentParseFileWay = "answer_masked_questions" | "read_original_file";
 
 /** A file source with what its mapping runs need. */
 export interface FileSource extends ImportSource {

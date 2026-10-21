@@ -163,32 +163,3 @@ test("a job from an earlier attempt leaves the source and its records unchanged"
     records,
   );
 });
-
-test("the last failed attempt marks the original read unavailable", async ({ orm, seed }) => {
-  const source = await seed.fileSource({ content: CSV, status: "mapped" });
-  const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
-
-  await imports.originalFileReads.markOriginalFileReadFailed(SYSTEM, {
-    sourceId: source.id,
-    attempt: 1,
-  });
-
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
-    { id: source.id, status: "failed", failure: "unavailable" },
-  ]);
-});
-
-test("failure of an earlier attempt leaves the current read alone", async ({ orm, seed }) => {
-  const source = await seed.fileSource({ content: CSV, status: "mapped" });
-  const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
-  const before = await imports.reads.listSources(SETUP_HOLDER);
-
-  await imports.originalFileReads.markOriginalFileReadFailed(SYSTEM, {
-    sourceId: source.id,
-    attempt: 0,
-  });
-
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
-});
