@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { hashSetupToken } from "../helpers";
 
 /** How long a setup session lasts after its holder last started setup. */
 export const SETUP_SESSION_DAYS = 3;
@@ -15,11 +15,6 @@ export class SetupInProgressError extends Error {
     super("Setup is in progress on another device");
     this.name = "SetupInProgressError";
   }
-}
-
-/** The stored form of a setup token. */
-export function hashSetupToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
 }
 
 /** Whether `token` is the live token of `session`. */

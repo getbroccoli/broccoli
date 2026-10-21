@@ -26,10 +26,10 @@ export {
   AssignmentConflictError,
   type AiSource,
   type AiConfig,
-  hashSetupToken,
   type Instance,
   OwnerExistsError,
   SETUP_STEPS,
   type ManagedAssignment,
   type SetupStep,
 } from "./domain";
+export { hashSetupToken } from "./helpers";

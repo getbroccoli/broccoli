@@ -1,11 +1,6 @@
 import type { SlackPerson } from "../../../slack";
-import {
-  type ImportEmployeeValues,
-  type IncomingRecord,
-  nonBlank,
-  parseEmail,
-  splitFullName,
-} from "../../domain";
+import { type ImportEmployeeValues, type IncomingRecord, splitFullName } from "../../domain";
+import { nonBlank, parseEmail } from "../../helpers";
 
 /**
  * The workspace's people as employee records. People without a valid email are left out;

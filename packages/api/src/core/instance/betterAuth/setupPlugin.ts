@@ -15,13 +15,8 @@ import {
   startDemoAtSetup,
   startSetup,
 } from "../app";
-import {
-  demoExpiry,
-  OwnerExistsError,
-  provisionalOwnerEmail,
-  SETUP_SESSION_DAYS,
-  SetupInProgressError,
-} from "../domain";
+import { demoExpiry, OwnerExistsError, SETUP_SESSION_DAYS, SetupInProgressError } from "../domain";
+import { provisionalOwnerEmail } from "../helpers";
 import { inAuthTransaction } from "./authTransaction";
 import { assertValidCredentials, credentialsBody, linkPassword } from "./credentials";
 import { readSetupToken, setSetupCookie } from "./setupCookie";

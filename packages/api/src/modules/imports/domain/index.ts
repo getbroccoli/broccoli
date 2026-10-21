@@ -11,12 +11,8 @@ export {
 export {
   groupEmployeeRecords,
   hasOpenConflict,
-  IMPORT_EMPLOYEE_CHOICES_VERSION,
   IMPORT_EMPLOYEE_FIELDS,
-  IMPORT_EMPLOYEE_VERSION,
   inSourceOrder,
-  parseImportEmployeeChoices,
-  parseImportEmployeeValues,
   type ImportEmployee,
   type ImportEmployeeChoices,
   type ImportEmployeeField,
@@ -56,5 +52,5 @@ export {
   type ImportSourceReader,
   type MappingOutcome,
 } from "./importSource";
-export { nonBlank, parseEmail, splitFullName } from "./personValues";
+export { splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
 
-import { hashSetupToken } from "../domain";
+import { hashSetupToken } from "../helpers";
 import { readInstance, readSetupHolder, startSetup } from ".";
 
 test("starts a setup session on a fresh instance and stores only its hash", async ({

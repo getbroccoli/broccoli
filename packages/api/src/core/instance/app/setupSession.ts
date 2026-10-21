@@ -3,13 +3,8 @@ import { randomBytes } from "node:crypto";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import {
-  hashSetupToken,
-  holdsSetup,
-  OwnerExistsError,
-  SETUP_SESSION_DAYS,
-  SetupInProgressError,
-} from "../domain";
+import { holdsSetup, OwnerExistsError, SETUP_SESSION_DAYS, SetupInProgressError } from "../domain";
+import { hashSetupToken } from "../helpers";
 
 /** Who holds setup, as seen by the browser that sent `token`. */
 export type SetupHolder = "you" | "another_device" | "nobody";

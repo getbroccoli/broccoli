@@ -1,5 +1,4 @@
-import { createHash } from "node:crypto";
-
+import { fingerprint } from "../helpers";
 import type { ImportEmployee } from "./importEmployee";
 
 /**
@@ -12,5 +11,5 @@ export function importVersion(
   readyEmployees: readonly ImportEmployee[],
 ): string {
   const ready = employees.map((employee) => readyEmployees.includes(employee));
-  return createHash("sha256").update(JSON.stringify({ employees, ready })).digest("base64url");
+  return fingerprint({ employees, ready });
 }

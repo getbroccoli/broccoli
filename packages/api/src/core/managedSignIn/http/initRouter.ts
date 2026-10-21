@@ -6,7 +6,8 @@ import { AssignmentConflictError, assignInstance } from "../../instance";
 import type { Readiness } from "../../readiness";
 import type { AuthSource } from "../../auth";
 import { PrincipalSecurityContext } from "../../security";
-import { InvalidAssignmentError, InvalidTokenError, parseInitClaims } from "../domain";
+import { InvalidAssignmentError, InvalidTokenError } from "../domain";
+import { parseInitClaims } from "../jwt";
 import { verifyToken, type TokenCheck } from "../jwt";
 
 const MAX_TOKEN_LENGTH = 8192;
