@@ -1,10 +1,9 @@
 import type { Orm } from "../../../core/db";
-import type { Mode } from "../../../core/env";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import { readSetupView } from "../../system";
+import { readSetup } from "../../../core/instance";
 import type { ExternalAgentUseCases } from "../app";
 
-export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentUseCases): Resolvers {
+export function createResolvers(orm: Orm, useCases: ExternalAgentUseCases): Resolvers {
   return {
     Ai: {
       externalAgent: async (_parent, _args, context) => {
@@ -19,7 +18,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentUse
           async () => {
             const actor = context.getActor();
             await useCases.sessions.chooseExternalAgent(actor);
-            return readSetupView(orm, mode, actor);
+            return readSetup(orm, actor);
           },
           ["CONFLICT"],
         ),
@@ -32,7 +31,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentUse
       disconnectExternalAgent: async (_parent, _args, context) => {
         const actor = context.getActor();
         await useCases.sessions.disconnectExternalAgent(actor);
-        return { setup: await readSetupView(orm, mode, actor) };
+        return { setup: await readSetup(orm, actor) };
       },
     },
   };

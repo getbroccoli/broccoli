@@ -1,7 +1,6 @@
 import express from "express";
 
 import { readSdl } from "../../core/graphql";
-import type { Mode } from "../../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import type { ImportUseCases } from "../imports";
 import { createExternalAgentUseCases } from "./app";
@@ -16,7 +15,6 @@ export { createExternalAgentUseCases } from "./app";
  */
 export function externalAgentsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
-    mode: Mode;
     imports: Pick<ImportUseCases, "answeredMapping">;
   },
 ): ModuleManifest {
@@ -24,7 +22,7 @@ export function externalAgentsModule(
   return {
     name: "externalAgents",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(dependencies.orm, dependencies.mode, useCases),
+    resolvers: createResolvers(dependencies.orm, useCases),
     router: (resolveSecurity) =>
       express
         .Router()

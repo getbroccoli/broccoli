@@ -1,8 +1,7 @@
 import type { Orm } from "../../../core/db";
 import type { Mode } from "../../../core/env";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import { readInstance, readSetupHolder, type AiConfig } from "../../../core/instance";
-import type { SecurityContext } from "../../../core/security";
+import { readSetup, type AiConfig } from "../../../core/instance";
 import type { SystemUseCases } from "../app";
 
 const STEPS = {
@@ -27,17 +26,20 @@ const AI_SOURCE_INPUTS = {
 } as const;
 
 export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases): Resolvers {
-  const readSetup = (security: SecurityContext | null) => readSetupView(orm, mode, security);
   return {
     Query: {
       ping: () => "pong",
-      setup: (_parent, _args, { security }) => readSetup(security),
+      setup: (_parent, _args, { security }) => readSetup(orm, security),
       me: (_parent, _args, { security }) => {
         const user = security?.user;
         return user ? { id: user.userId, email: user.email, isOwner: user.isOwner } : null;
       },
     },
     Setup: {
+      id: () => "instance",
+      step: ({ step }) => STEPS[step],
+      mode: () => MODES[mode],
+      holder: ({ holder }) => HOLDERS[holder],
       ai: async (_parent, _args, context) => toGraphql(await useCases.ai.read(context.getActor())),
     },
     Mutation: {
@@ -47,7 +49,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       complete: async (_parent, _args, context) => {
         const actor = context.getActor();
         await useCases.completeSetup(actor);
-        return { setup: await readSetup(actor) };
+        return { setup: await readSetup(orm, actor) };
       },
       saveAiSource: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["SetupSaveAiSourcePayload"]>(
@@ -58,27 +60,11 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
               source: AI_SOURCE_INPUTS[input.source],
               openRouterKey: input.openRouterKey,
             });
-            return readSetup(actor);
+            return readSetup(orm, actor);
           },
           ["INVALID_INPUT", "UNAVAILABLE", "CONFLICT"],
         ),
     },
-  };
-}
-
-/** The `Setup` object for `security`, as `Query.setup` and every setup payload return it. */
-export async function readSetupView(orm: Orm, mode: Mode, security: SecurityContext | null) {
-  const { step, demoExpiresAt } = await readInstance(orm);
-  return {
-    id: "instance",
-    step: STEPS[step],
-    mode: MODES[mode],
-    // A live setup cookie made the request the setup holder; any other carries no live token.
-    holder: security?.isSetupHolder
-      ? ("YOU" as const)
-      : HOLDERS[await readSetupHolder(orm, { token: null, now: new Date() })],
-    // Only the owner learns when their demo ends.
-    demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
   };
 }
 

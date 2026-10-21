@@ -41,7 +41,7 @@ export function createModules(
       demoModule({ orm: core.orm, transact: core.transact }),
       slackModule(slackConnection),
       importsModule(importUseCases),
-      externalAgentsModule({ ...core, mode: deployment.mode, imports: importUseCases }),
+      externalAgentsModule({ ...core, imports: importUseCases }),
     ],
     setupDemo: {
       prepareStart: importUseCases.prepareDemoStart,

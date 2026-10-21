@@ -2,4 +2,5 @@
 export const codegenMappers = {
   // A mutation namespace holds no data; its field resolves to an empty object.
   SetupMutations: "Record<PropertyKey, never>",
+  Setup: "../instance#SetupView as SetupViewModel",
 };

@@ -7,6 +7,8 @@ export {
   holdsSetup,
   SETUP_SESSION_DAYS,
   SetupInProgressError,
+  setupHolderOf,
+  type SetupHolder,
   type SetupSession,
 } from "./setupSession";
 export { canChooseExternalAgent, isSetupOpenToExternalAgent } from "./externalAgent";

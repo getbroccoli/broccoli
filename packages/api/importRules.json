@@ -23,12 +23,7 @@
       "src/modules/slack",
       "src/utils"
     ],
-    "src/modules/externalAgents": [
-      "src/core/*",
-      "!src/core/server",
-      "src/modules/imports",
-      "src/modules/system"
-    ],
+    "src/modules/externalAgents": ["src/core/*", "!src/core/server", "src/modules/imports"],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
     "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/integrations/ai": ["src/utils"],

@@ -1,1 +1,1 @@
-export { createResolvers, readSetupView } from "./resolvers";
+export { createResolvers } from "./resolvers";

@@ -17,7 +17,8 @@ export {
   type SetupDemo,
 } from "./demo";
 export { assignInstance } from "./managed";
-export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
+export { readSetup, type SetupView } from "./readSetup";
+export { readSetupHolder, startSetup } from "./setupSession";
 export { createAiSettings, type AiSettings } from "./aiSettings";
 export {
   chooseExternalAgentSource,
