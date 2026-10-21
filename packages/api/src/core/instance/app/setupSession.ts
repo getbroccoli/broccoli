@@ -21,7 +21,7 @@ export async function startSetup(
 ): Promise<{ token: string; expiresAt: Date }> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, setupSession } = await instance.lock();
+  const { ownerUserId, setupSession } = await instance.lockInstance();
   if (ownerUserId) {
     throw new OwnerExistsError();
   }
@@ -52,7 +52,7 @@ export async function readSetupHolder(
   orm: Orm,
   { token, now }: { token: string | null; now: Date },
 ): Promise<SetupHolder> {
-  const { ownerUserId, setupSession } = await instanceRepository(orm).read();
+  const { ownerUserId, setupSession } = await instanceRepository(orm).readInstance();
   if (!setupSession || ownerUserId) {
     return "nobody";
   }

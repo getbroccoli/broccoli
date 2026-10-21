@@ -9,7 +9,7 @@ test("completes setup from the ready step", async ({ orm, seed }) => {
 
   await system.completeSetup(owner);
 
-  expect((await readInstance(orm)).setupStep).toBe("done");
+  expect((await readInstance(orm)).step).toBe("done");
 });
 
 test("does nothing at the import step", async ({ orm, seed }) => {
@@ -19,7 +19,7 @@ test("does nothing at the import step", async ({ orm, seed }) => {
 
   await system.completeSetup(owner);
 
-  expect((await readInstance(orm)).setupStep).toBe("import");
+  expect((await readInstance(orm)).step).toBe("import");
 });
 
 test("refuses a non-owner completing setup and keeps the ready step", async ({ orm, seed }) => {
@@ -29,5 +29,5 @@ test("refuses a non-owner completing setup and keeps the ready step", async ({ o
 
   await expect(system.completeSetup(NON_OWNER)).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect((await readInstance(orm)).setupStep).toBe("ready");
+  expect((await readInstance(orm)).step).toBe("ready");
 });

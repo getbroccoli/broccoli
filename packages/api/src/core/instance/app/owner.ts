@@ -22,11 +22,11 @@ export async function claimOwner<Owner extends OwnerUser>(
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, setupStep } = await instance.lock();
+  const { ownerUserId, step } = await instance.lockInstance();
   if (ownerUserId) {
     throw new OwnerExistsError();
   }
-  return saveOwner(tx, await createOwner(), setupStep);
+  return saveOwner(tx, await createOwner(), step);
 }
 
 /**
@@ -61,14 +61,14 @@ export async function lockHeldSetup(
   tx: Tx,
   { token, now }: { token: string | null; now: Date },
 ): Promise<SetupStep> {
-  const { ownerUserId, setupStep, setupSession } = await instanceRepository(tx).lock();
+  const { ownerUserId, step, setupSession } = await instanceRepository(tx).lockInstance();
   if (ownerUserId) {
     throw new OwnerExistsError();
   }
   if (!setupSession || !holdsSetup(setupSession, token, now)) {
     throw new SetupInProgressError();
   }
-  return setupStep;
+  return step;
 }
 
 export interface OwnerUser {

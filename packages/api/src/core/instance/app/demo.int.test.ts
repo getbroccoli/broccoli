@@ -36,7 +36,7 @@ test("starts a seven-day demo for the setup holder, claims the owner and complet
   expect(owner).toEqual({ user: { id: "owner-1", email: "owner-1@example.com", name: "Owner" } });
   expect(await readInstance(orm)).toMatchObject({
     ownerUserId: owner.user.id,
-    setupStep: "done",
+    step: "done",
     demoExpiresAt: new Date("2026-01-09T12:00:00Z"),
     setupSession: null,
   });
@@ -82,7 +82,7 @@ test.for([null, "another-token"])(
     ).rejects.toMatchObject({ name: "SetupInProgressError" });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect((await readInstance(orm)).setupStep).toBe("import");
+    expect((await readInstance(orm)).step).toBe("import");
   },
 );
 
@@ -110,7 +110,7 @@ test.for(["company", "owner", "done"] as const)(
     ).rejects.toMatchObject({ code: "CONFLICT" });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect((await readInstance(orm)).setupStep).toBe(step);
+    expect((await readInstance(orm)).step).toBe(step);
   },
 );
 
@@ -140,7 +140,7 @@ test("rolls back the owner and setup completion when starting the demo fails", a
   expect(await orm.select().from(user)).toEqual([]);
   expect(await readInstance(orm)).toMatchObject({
     ownerUserId: null,
-    setupStep: "import",
+    step: "import",
     demoExpiresAt: null,
     setupSession,
   });

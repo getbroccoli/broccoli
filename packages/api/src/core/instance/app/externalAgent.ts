@@ -19,7 +19,7 @@ export async function chooseExternalAgentSource(ctx: SecurityContext, tx: Tx): P
  */
 export async function lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
-  if (!canChooseExternalAgent(await instanceRepository(tx).lock())) {
+  if (!canChooseExternalAgent(await instanceRepository(tx).lockInstance())) {
     throw new ApplicationError(
       "CONFLICT",
       "Your agent can connect only while you gather your people.",
@@ -29,7 +29,7 @@ export async function lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Pro
 
 /** Whether the external agent may work now (`isSetupOpenToExternalAgent`). */
 export async function readSetupOpenToExternalAgent(db: Orm | Tx, now: Date): Promise<boolean> {
-  return isSetupOpenToExternalAgent(await instanceRepository(db).read(), now);
+  return isSetupOpenToExternalAgent(await instanceRepository(db).readInstance(), now);
 }
 
 /**
@@ -41,7 +41,7 @@ export async function lockSetupOpenToExternalAgent(
   tx: Tx,
   clock: () => Date,
 ): Promise<Date | null> {
-  const instance = await instanceRepository(tx).lock();
+  const instance = await instanceRepository(tx).lockInstance();
   const now = clock();
   return isSetupOpenToExternalAgent(instance, now) ? now : null;
 }
