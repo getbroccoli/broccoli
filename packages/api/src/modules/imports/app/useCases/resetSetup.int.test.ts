@@ -42,14 +42,14 @@ test("resetting setup deletes approved employees but keeps the import and its ph
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   const employees = createEmployeeUseCases({ orm });
   expect((await employees.listEmployees(OWNER, {})).edges).toHaveLength(2);
-  expect((await readInstance(orm)).setupStep).toBe("owner");
+  expect((await readInstance(orm)).step).toBe("owner");
   const imported = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const sources = await imports.reads.listSources(SETUP_HOLDER);
   const fileIds = await storedFileIds(orm);
 
   await imports.resetSetup(SETUP_HOLDER);
 
-  expect((await readInstance(orm)).setupStep).toBe("company");
+  expect((await readInstance(orm)).step).toBe("company");
   expect((await employees.listEmployees(OWNER, {})).edges).toEqual([]);
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(sources);
@@ -77,11 +77,11 @@ test("approving again after reset recreates the employees with their import phot
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   await imports.resetSetup(SETUP_HOLDER);
-  expect((await readInstance(orm)).setupStep).toBe("company");
+  expect((await readInstance(orm)).step).toBe("company");
   await seed.setupStep("import");
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
-  expect((await readInstance(orm)).setupStep).toBe("owner");
+  expect((await readInstance(orm)).step).toBe("owner");
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(
     employees.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
@@ -101,12 +101,12 @@ test("resetting the ready step returns to company and deletes approved employees
   const imports = importUseCases(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   const employees = createEmployeeUseCases({ orm });
-  expect((await readInstance(orm)).setupStep).toBe("ready");
+  expect((await readInstance(orm)).step).toBe("ready");
   expect((await employees.listEmployees(owner, {})).edges).toHaveLength(1);
 
   await imports.resetSetup(owner);
 
-  expect((await readInstance(orm)).setupStep).toBe("company");
+  expect((await readInstance(orm)).step).toBe("company");
   expect((await employees.listEmployees(owner, {})).edges).toEqual([]);
 });
 
@@ -118,13 +118,13 @@ test("resetting completed setup keeps the step and employees unchanged", async (
   const imports = importUseCases(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await seed.setupStep("done");
-  expect((await readInstance(orm)).setupStep).toBe("done");
+  expect((await readInstance(orm)).step).toBe("done");
   const employees = createEmployeeUseCases({ orm });
   const approved = await employees.listEmployees(owner, {});
   expect(approved.edges).toHaveLength(1);
 
   await imports.resetSetup(owner);
 
-  expect((await readInstance(orm)).setupStep).toBe("done");
+  expect((await readInstance(orm)).step).toBe("done");
   expect(await employees.listEmployees(owner, {})).toEqual(approved);
 });

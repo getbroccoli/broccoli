@@ -68,10 +68,10 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
 
 /** The `Setup` object for `security`, as `Query.setup` and every setup payload return it. */
 export async function readSetupView(orm: Orm, mode: Mode, security: SecurityContext | null) {
-  const { setupStep, demoExpiresAt } = await readInstance(orm);
+  const { step, demoExpiresAt } = await readInstance(orm);
   return {
     id: "instance",
-    step: STEPS[setupStep],
+    step: STEPS[step],
     mode: MODES[mode],
     // A live setup cookie made the request the setup holder; any other carries no live token.
     holder: security?.isSetupHolder

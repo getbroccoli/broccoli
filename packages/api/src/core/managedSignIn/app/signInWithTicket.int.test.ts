@@ -20,7 +20,7 @@ test("creates the owner from the first ticket", async ({ orm }) => {
 
   const { userId } = await result;
 
-  expect(await readInstance(orm)).toMatchObject({ ownerUserId: userId, setupStep: "company" });
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: userId, step: "company" });
   expect(events).toEqual(["owner_claimed"]);
 });
 

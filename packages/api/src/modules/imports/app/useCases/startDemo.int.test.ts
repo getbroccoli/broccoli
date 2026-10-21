@@ -20,7 +20,7 @@ test("starting the demo completes setup", async ({ orm, seed }) => {
 
   await imports.startDemo(owner);
 
-  expect((await readInstance(orm)).setupStep).toBe("done");
+  expect((await readInstance(orm)).step).toBe("done");
 });
 
 test("the prepared demo start completes setup and fills the demo company in the caller's transaction", async ({
@@ -44,7 +44,7 @@ test("the prepared demo start completes setup and fills the demo company in the 
     expect(filledIn).toEqual([tx]);
   });
 
-  expect((await readInstance(orm)).setupStep).toBe("done");
+  expect((await readInstance(orm)).step).toBe("done");
 });
 
 test.for(["owner", "company", "done"] as const)(
@@ -56,7 +56,7 @@ test.for(["owner", "company", "done"] as const)(
 
     await imports.startDemo(owner);
 
-    expect((await readInstance(orm)).setupStep).toBe(step);
+    expect((await readInstance(orm)).step).toBe(step);
     expect(await hasEmployees(orm)).toBe(false);
   },
 );
@@ -70,7 +70,7 @@ test("the setup holder starts the demo without an owner and moves setup to owner
 
   await imports.startDemo(SETUP_HOLDER);
 
-  expect((await readInstance(orm)).setupStep).toBe("owner");
+  expect((await readInstance(orm)).step).toBe("owner");
 });
 
 test("starting the demo fills the demo company before an owner exists", async ({ orm, seed }) => {
@@ -90,7 +90,7 @@ test("keeps setup at import when the demo fill fails", async ({ orm, seed }) => 
 
   await expect(imports.startDemo(SETUP_HOLDER)).rejects.toThrow("fill failed");
 
-  expect((await readInstance(orm)).setupStep).toBe("import");
+  expect((await readInstance(orm)).step).toBe("import");
   expect(await hasEmployees(orm)).toBe(false);
 });
 

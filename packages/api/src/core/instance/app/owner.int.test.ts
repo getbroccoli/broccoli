@@ -20,7 +20,7 @@ test("refuses a non-owner claiming ownership without creating a user or advancin
     ),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(await readInstance(orm)).toMatchObject({ ownerUserId: null, setupStep: "company" });
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: null, step: "company" });
   expect(await orm.select().from(user)).toEqual([]);
 });
 
@@ -31,7 +31,7 @@ test.for(["company", "import"] as const)(
 
     const owner = await transact((tx) => claimOwner(SYSTEM, tx, () => insertOwner(tx)));
 
-    expect(await readInstance(orm)).toMatchObject({ ownerUserId: owner.user.id, setupStep: step });
+    expect(await readInstance(orm)).toMatchObject({ ownerUserId: owner.user.id, step });
   },
 );
 
@@ -68,7 +68,7 @@ test("creates the owner for the holder, completes setup and ends the session", a
     ),
   );
 
-  expect(await readInstance(orm)).toMatchObject({ ownerUserId: owner.user.id, setupStep: "done" });
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: owner.user.id, step: "done" });
   expect((await readInstance(orm)).setupSession).toBeNull();
   expect(completed).toEqual([null]);
   expect(claimed).toEqual([{ userId: owner.user.id, email: owner.user.email }]);
@@ -95,7 +95,7 @@ test.for([null, "another-token"])(
     ).rejects.toMatchObject({ name: "SetupInProgressError" });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect(await readInstance(orm)).toMatchObject({ ownerUserId: null, setupStep: "owner" });
+    expect(await readInstance(orm)).toMatchObject({ ownerUserId: null, step: "owner" });
   },
 );
 
@@ -145,7 +145,7 @@ test.for(["company", "import"] as const)(
     });
 
     expect(await orm.select().from(user)).toEqual([]);
-    expect((await readInstance(orm)).setupStep).toBe(step);
+    expect((await readInstance(orm)).step).toBe(step);
   },
 );
 
@@ -165,7 +165,7 @@ test("keeps one owner when two creations arrive together", async ({ orm, seed, t
   ]);
   const users = await orm.select().from(user);
   expect(users).toHaveLength(1);
-  expect(await readInstance(orm)).toMatchObject({ ownerUserId: users[0]!.id, setupStep: "done" });
+  expect(await readInstance(orm)).toMatchObject({ ownerUserId: users[0]!.id, step: "done" });
 });
 
 async function insertOwner(tx: Tx, id = "owner-1") {

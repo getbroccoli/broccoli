@@ -15,7 +15,7 @@ export async function assignInstance(
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const current = await instance.lock();
+  const current = await instance.lockInstance();
   if (current.assignment) {
     if (!isSameAssignment(current.assignment, assignment)) {
       throw new AssignmentConflictError();

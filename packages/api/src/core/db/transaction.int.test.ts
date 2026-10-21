@@ -14,7 +14,7 @@ test("dispatches queued events after the write commits", async ({ orm, seed }) =
   eventBus.subscribe({
     "example.happened": async (payload) => {
       received.push(payload);
-      steps.push((await readInstance(orm)).setupStep);
+      steps.push((await readInstance(orm)).step);
     },
   });
 
@@ -48,7 +48,7 @@ test("rolls back the write and drops queued events when work fails", async ({ or
     }),
   ).rejects.toThrow("Work failed");
 
-  expect((await readInstance(orm)).setupStep).toBe("company");
+  expect((await readInstance(orm)).step).toBe("company");
   expect(received).toEqual([]);
 });
 
@@ -60,7 +60,7 @@ test("refuses to use a transaction after it has ended", async ({ orm, seed, tran
     "The transaction has ended",
   );
   await expect(completeCompanyStep(SYSTEM, tx)).rejects.toThrow("The transaction has ended");
-  expect((await readInstance(orm)).setupStep).toBe("company");
+  expect((await readInstance(orm)).step).toBe("company");
 });
 
 test("refuses the publisher's transaction inside an after-commit handler", async ({
@@ -87,5 +87,5 @@ test("refuses the publisher's transaction inside an after-commit handler", async
   });
 
   expect(rejection).toEqual(new Error("The transaction has ended"));
-  expect((await readInstance(orm)).setupStep).toBe("company");
+  expect((await readInstance(orm)).step).toBe("company");
 });
