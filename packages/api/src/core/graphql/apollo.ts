@@ -9,7 +9,7 @@ import express from "express";
 import { GraphQLError } from "graphql";
 
 import type { Logger } from "../logger";
-import { requireSignedIn, type RequestSecurity, type SecurityContext } from "../security";
+import { requireSignedIn, type SecurityContext, type SecurityResolver } from "../security";
 import { depthLimit } from "./depthLimit";
 import { errorLoggingPlugin } from "./errorLogging";
 import { formatError } from "./errors";
@@ -40,9 +40,6 @@ export class GraphqlContext {
     return requireSignedIn(this.security);
   }
 }
-
-/** Reads the security context of a request from its headers; see `resolveSecurityContext`. */
-export type SecurityResolver = (headers: IncomingHttpHeaders) => Promise<RequestSecurity>;
 
 /** Scalars and types that every module may use. */
 const CORE_TYPE_DEFS = readSdl(import.meta.url, "./schema.graphql");

@@ -4,7 +4,6 @@ export {
   createDecisions,
   type Decisions,
   DecisionsError,
-  DECISIONS_MODEL,
   type Json,
   type JsonObject,
   type Question,

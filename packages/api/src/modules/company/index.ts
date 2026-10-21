@@ -6,7 +6,7 @@ import { createBrandLookup } from "../../integrations/brandLookup";
 import { createResolvers } from "./graphql";
 import { logoRouter } from "./http";
 
-export { createCompanyUseCases, type Company, type CompanyUseCases } from "./app";
+export { createCompanyUseCases } from "./app";
 
 /** The company the instance belongs to: its name, suggested during setup, and its logo. */
 export function companyModule({

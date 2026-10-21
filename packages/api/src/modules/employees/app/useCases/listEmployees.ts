@@ -1,6 +1,5 @@
 import type { SecurityContext } from "../../../../core/security";
-import { type Connection, type ListArgs, paginate } from "../../../../core/pagination";
-import { parseSearch } from "../../../../core/search";
+import { type Connection, type ListArgs, paginate, parseSearch } from "../../../../core/pagination";
 import { EMPLOYEE_SORT_VALUES, type EmployeeRepository } from "../../db";
 import type { Employee, EmployeeOrder, EmployeeOrderField } from "../../domain";
 

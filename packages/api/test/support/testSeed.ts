@@ -5,16 +5,14 @@ import { hashPassword } from "better-auth/crypto";
 import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
-import { type AiSource, hashSetupToken, type SetupStep } from "../../src/core/instance";
 import { instanceRepository } from "../../src/core/instance/db";
-import { type Employee, employeeRepository, type NewEmployee } from "../../src/modules/employees";
-import {
-  importPhotoRepository,
-  importReader,
-  lockImport,
-  type ImportEmployeeValues,
-} from "../../src/modules/imports";
-import { slackConnectionRepository } from "../../src/modules/slack";
+import type { AiSource, SetupStep } from "../../src/core/instance/domain";
+import { hashSetupToken } from "../../src/core/instance/helpers";
+import { type Employee, type NewEmployee } from "../../src/modules/employees";
+import { employeeRepository } from "../../src/modules/employees/db";
+import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
+import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
+import { slackConnectionRepository } from "../../src/modules/slack/db";
 import { parseCalendarDate } from "../../src/utils";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { TestSecurityContext } from "./testSecurityContext";
@@ -221,10 +219,14 @@ export class TestSeed {
     return records.filter((record) => record.sourceId === sourceId);
   }
 
-  slackConnection(accessToken = "test-slack-token") {
+  slackConnection({
+    accessToken = "test-slack-token",
+    teamId = "T1",
+    teamName = "Acme Workspace",
+  }: { accessToken?: string; teamId?: string; teamName?: string } = {}) {
     return slackConnectionRepository(this.orm).save({
-      teamId: "T1",
-      teamName: "Acme Workspace",
+      teamId,
+      teamName,
       encryptedToken: TEST_SECRET_BOX.encrypt(accessToken),
     });
   }

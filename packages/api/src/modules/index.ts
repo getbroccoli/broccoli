@@ -5,7 +5,7 @@ import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { deleteAllEmployees, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
-import { createImportUseCases, importsModule, prepareDemoStart } from "./imports";
+import { createImportUseCases, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
@@ -31,7 +31,7 @@ export function createModules(
     ...core,
     slack: slackConnection,
     decisions: aiSettings.decisions,
-    prepareDemoFill: () => prepareDemoFill(),
+    prepareDemoFill,
   });
   return {
     manifests: [
@@ -44,7 +44,7 @@ export function createModules(
       externalAgentsModule({ ...core, mode: deployment.mode, imports: importUseCases }),
     ],
     setupDemo: {
-      prepareStart: () => prepareDemoStart({ prepareDemoFill: () => prepareDemoFill() }),
+      prepareStart: importUseCases.prepareDemoStart,
       deleteAllEmployees,
     },
   };

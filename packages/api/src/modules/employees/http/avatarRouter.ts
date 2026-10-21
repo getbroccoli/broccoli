@@ -3,7 +3,7 @@ import express from "express";
 import { requireSignedIn } from "../../../core/security";
 import { sendApplicationError } from "../../../core/applicationError";
 import { sendFile } from "../../../core/files";
-import type { SecurityResolver } from "../../../core/graphql";
+import type { SecurityResolver } from "../../../core/security";
 import type { EmployeeUseCases } from "../app";
 
 /** Where the avatar in this file is served. */

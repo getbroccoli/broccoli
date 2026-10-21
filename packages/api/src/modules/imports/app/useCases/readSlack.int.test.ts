@@ -7,10 +7,7 @@ import {
   SLACK_PHOTO_URL,
   storedFileIds,
   test,
-  TEST_SECRET_BOX,
 } from "#test/support";
-
-import { slackConnectionRepository } from "../../../slack";
 
 test("the first Slack read creates a source and imports its members", async ({ orm, seed }) => {
   await seed.slackConnection();
@@ -85,11 +82,7 @@ test("reading another workspace renames the same source and replaces its employe
   orm,
   seed,
 }) => {
-  await slackConnectionRepository(orm).save({
-    teamId: "T2",
-    teamName: "Acme Labs",
-    encryptedToken: TEST_SECRET_BOX.encrypt("test-slack-token"),
-  });
+  await seed.slackConnection({ teamId: "T2", teamName: "Acme Labs" });
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ externalId: "U1", firstName: "Avery" }]);
   const imports = importUseCases(orm, {

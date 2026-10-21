@@ -1,7 +1,7 @@
 import { type RequestHandler, Router } from "express";
 import { rateLimit } from "express-rate-limit";
 
-import { requireSameOriginWrites } from "../../sameOrigin";
+import { requireSameOriginWrites } from "../helpers";
 
 /** Setup requests per address and minute: enough for a person, little for guessing. */
 const SETUP_ATTEMPTS_PER_MINUTE = 10;
