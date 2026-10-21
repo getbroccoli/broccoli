@@ -45,7 +45,7 @@ export interface Env {
   openRouterKey: string | null;
   /** Folder for files that must survive restarts, such as `secrets/`. */
   dataDir: string;
-  /** Service that finds the brand of an email domain; null makes no lookup. */
+  /** Favicon service that finds the logo of an email domain; null makes no lookup. */
   brandLookupUrl: string | null;
   /** The Slack OAuth relay on the accounts service. */
   slackRelayUrl: string;
