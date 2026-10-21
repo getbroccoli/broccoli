@@ -19,7 +19,11 @@ const calls = {
 test.for(Object.entries(calls))(
   "%s refuses a signed-in non-owner without changing the stored source",
   async ([, call], { orm, transact }) => {
-    await expect(Promise.resolve().then(() => call(orm, transact))).rejects.toMatchObject({
+    await expect(
+      Promise.resolve().then(async () => {
+        await call(orm, transact);
+      }),
+    ).rejects.toMatchObject({
       name: "ApplicationError",
       code: "FORBIDDEN",
       message: "Only the owner can do this.",
