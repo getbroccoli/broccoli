@@ -1,1 +1,1 @@
-export { companyDomain, nameFromDomain } from "./emailDomain";
+export { emailDomain, nameFromDomain, registeredName } from "./emailDomain";

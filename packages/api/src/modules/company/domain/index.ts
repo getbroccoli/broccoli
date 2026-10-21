@@ -1,2 +1,2 @@
 export { parseCompanyName } from "./companyName";
-export { suggestName } from "./suggestName";
+export { companyDomain, suggestName } from "./suggestName";
