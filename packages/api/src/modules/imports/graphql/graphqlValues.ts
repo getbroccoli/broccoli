@@ -2,6 +2,11 @@
 export const IMPORT = {};
 
 /** GraphQL enum values by their domain names. */
+export const AI_SOURCES = {
+  broccoli_ai: "BROCCOLI_AI",
+  openrouter: "OPENROUTER",
+  external_agent: "EXTERNAL_AGENT",
+} as const;
 export const KINDS = { slack: "SLACK", file: "FILE" } as const;
 export const STATUSES = {
   mapping: "MAPPING",

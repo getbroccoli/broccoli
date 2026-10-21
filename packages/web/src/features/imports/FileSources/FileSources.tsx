@@ -75,7 +75,12 @@ export function FileSources({
   const busy = uploading !== null || retry.loading || remove.loading || allowRead.loading;
   const changeFailed =
     retry.error || retry.payloadError || remove.error || allowRead.error || allowRead.payloadError;
-  const alerts = changeFailed ? [...problems, t("imports.files.changeFailed")] : problems;
+  const alerts = changeFailed
+    ? [
+        ...problems,
+        t(allowRead.payloadError ? "imports.files.readChanged" : "imports.files.changeFailed"),
+      ]
+    : problems;
 
   const upload = async (files: FileList | null) => {
     if (!files?.length || busy || !canDrop) {
@@ -170,7 +175,9 @@ export function FileSources({
               // A failure shows through the mutation's `error` or `payloadError`.
               onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
               onAllowOriginalRead={() =>
-                void allowOriginalFileRead({ variables: { sourceId: source.id } }).catch(() => {})
+                void allowOriginalFileRead({ variables: { sourceId: source.id, aiSource } }).catch(
+                  () => onUploaded().catch(() => {}),
+                )
               }
               onRemove={() =>
                 void removeFile({ variables: { sourceId: source.id } }).catch(() => {})

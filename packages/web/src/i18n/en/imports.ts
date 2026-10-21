@@ -44,6 +44,9 @@ export const importsEn = {
   "imports.files.pickingUpByExternalAgent": "Your agent is picking it up…",
   "imports.files.mappedByExternalAgent": "Mapped by your agent",
   "imports.files.readingByExternalAgent": "Your agent is reading it…",
+  "imports.files.readChanged":
+    "The file or AI provider changed. Check the details, then try again.",
+  "imports.files.waitingForOriginalReadConsent": "Waiting for permission to read the original file",
   "imports.files.readingOriginal": "Reading the original file…",
   "imports.files.readByExternalAgent": "Read by your agent, not masked",
   "imports.files.readByBroccoliAi": "Read by Broccoli AI, not masked",

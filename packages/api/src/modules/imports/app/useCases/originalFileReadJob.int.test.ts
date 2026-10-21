@@ -30,7 +30,7 @@ test("the job reads with the AI source chosen at consent after the owner switche
       },
     },
   });
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "openrouter");
   await seed.aiSource("broccoli_ai");
   expect(imports.sentJobs).toHaveLength(1);
   const [job] = imports.sentJobs;
@@ -76,7 +76,7 @@ test.for(["csv", "xlsx"] as const)(
         },
       },
     });
-    await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+    await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
 
     await imports.originalFileReads.readOriginalFile(SYSTEM, {
       sourceId: source.id,
@@ -119,7 +119,7 @@ test("the job sends a PDF as its stored bytes", async ({ orm }) => {
     name: "private-staff.pdf",
     bytes: PDF,
   });
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, id, "broccoli_ai");
 
   await imports.originalFileReads.readOriginalFile(SYSTEM, {
     sourceId: id,
@@ -141,7 +141,7 @@ test("a cut-off answer fails the file as an incomplete original read", async ({ 
         Promise.reject(new DecisionsError("Cut off", false, null, "answer_cut_off")),
     },
   });
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
 
   await imports.originalFileReads.readOriginalFile(SYSTEM, {
     sourceId: source.id,
@@ -159,7 +159,7 @@ test("an invalid model answer fails the file as unavailable", async ({ orm, seed
   const imports = importUseCases(orm, {
     originalFileReader: { readOriginalFile: () => Promise.resolve({ people: [{ email: 42 }] }) },
   });
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
 
   await imports.originalFileReads.readOriginalFile(SYSTEM, {
     sourceId: source.id,
@@ -182,7 +182,7 @@ test("a job with no people left fails the file as having no people columns", asy
       readOriginalFile: () => Promise.resolve({ people: [{ jobTitle: "Designer" }] }),
     },
   });
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
 
   await imports.originalFileReads.readOriginalFile(SYSTEM, {
     sourceId: source.id,
@@ -202,7 +202,7 @@ test("a job from an earlier attempt leaves the source and its records unchanged"
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
   const before = await imports.reads.listSources(SETUP_HOLDER);
   const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
 

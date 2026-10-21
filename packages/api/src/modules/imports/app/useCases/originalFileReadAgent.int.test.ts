@@ -33,7 +33,7 @@ test("fetching a consented original returns its bytes and records the first pick
   await seed.aiSource("external_agent");
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
 
   const file = await transact((tx) =>
     imports.originalFileReads.readOriginalBytes(SETUP_EXTERNAL_AGENT, tx, source.id),
@@ -58,7 +58,7 @@ test("the agent cannot fetch an original assigned to Broccoli even with consent"
   await seed.aiSource("broccoli_ai");
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
 
   await expect(
     transact((tx) =>
@@ -72,7 +72,7 @@ test("the agent's people replace the masked records", async ({ orm, seed, transa
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   await seed.importEmployees(source.id, [{ email: "robin@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
 
   const result = await transact((tx) =>
     imports.originalFileReads.addReadPeople(
@@ -92,7 +92,7 @@ test("a second send replaces the first people", async ({ orm, seed, transact }) 
   await seed.aiSource("external_agent");
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
   await transact((tx) =>
     imports.originalFileReads.addReadPeople(
       SETUP_EXTERNAL_AGENT,
@@ -125,7 +125,7 @@ test("an agent answer with nobody left clears records and fails with no people c
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
 
   const result = await transact((tx) =>
     imports.originalFileReads.addReadPeople(
@@ -153,7 +153,7 @@ test("the agent may send people again after a failed original read", async ({
   await seed.aiSource("external_agent");
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
   await transact((tx) =>
     imports.originalFileReads.addReadPeople(
       SETUP_EXTERNAL_AGENT,
@@ -199,7 +199,7 @@ test("refuses masked questions for a consented file", async ({ orm, seed, transa
   await seed.aiSource("external_agent");
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
 
   await expect(
     transact((tx) =>
@@ -215,7 +215,7 @@ test("refuses masked answers for a consented file", async ({ orm, seed, transact
   await seed.aiSource("external_agent");
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
 
   await expect(
     transact((tx) =>
@@ -231,7 +231,7 @@ test("retry leaves a consented file alone without sending another job", async ({
   await seed.aiSource("external_agent");
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
   const before = await imports.reads.listSources(SETUP_HOLDER);
 
   await imports.files.retryFile(SETUP_HOLDER, source.id);
@@ -248,7 +248,7 @@ test("reset after approval clears consent but keeps records until consent is giv
   await seed.externalAgentSetup();
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm);
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
   await transact((tx) =>
     imports.originalFileReads.addReadPeople(
       SETUP_EXTERNAL_AGENT,
@@ -274,7 +274,7 @@ test("reset after approval clears consent but keeps records until consent is giv
       imports.originalFileReads.readOriginalBytes(SETUP_EXTERNAL_AGENT, tx, source.id),
     ),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
   expect(
     await transact((tx) =>
       imports.originalFileReads.readOriginalBytes(SETUP_EXTERNAL_AGENT, tx, source.id),

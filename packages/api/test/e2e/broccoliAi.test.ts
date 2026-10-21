@@ -193,7 +193,7 @@ test("Broccoli AI reads a consented PDF through the relay without sending its na
 
   const allowed = await browser.graphql(
     `mutation AllowOriginalFileRead($sourceId: ID!) {
-    import { allowOriginalFileRead(sourceId: $sourceId) {
+    import { allowOriginalFileRead(sourceId: $sourceId, aiSource: BROCCOLI_AI) {
       import { id } error { __typename ... on Error { message } }
     } }
   }`,

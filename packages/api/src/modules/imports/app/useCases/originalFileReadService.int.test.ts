@@ -12,6 +12,8 @@ import {
   STAFF_PDF as PDF,
 } from "#test/support";
 
+import { parseReadPeople } from "../../domain";
+
 test("a PDF dropped for the agent waits for consent without a job or an unmapped listing", async ({
   orm,
   seed,
@@ -95,7 +97,7 @@ test("consent with Broccoli queues a new read and keeps the existing records", a
   const imports = importUseCases(orm);
   const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
 
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
     {
@@ -131,7 +133,7 @@ test("consent uses the agent chosen now and clears the previous failure", async 
   await seed.aiSource("external_agent");
   const imports = importUseCases(orm);
 
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
 
   expect(
     await transact((tx) => imports.answeredMapping.readUnmappedSources(SETUP_EXTERNAL_AGENT, tx)),
@@ -153,7 +155,7 @@ test("refuses consent while the file is still mapping", async ({ orm, seed }) =>
   const imports = importUseCases(orm);
 
   await expect(
-    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id),
+    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai"),
   ).rejects.toMatchObject({
     code: "CONFLICT",
     message: "Wait until the file is read.",
@@ -168,7 +170,7 @@ test("refuses a second consent", async ({ orm, seed }) => {
   const imports = importUseCases(orm, {
     originalFileReader: { readOriginalFile: () => Promise.resolve(PEOPLE) },
   });
-  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
   await imports.originalFileReads.readOriginalFile(SYSTEM, {
     sourceId: source.id,
     attempt: 1,
@@ -177,7 +179,7 @@ test("refuses a second consent", async ({ orm, seed }) => {
   const before = await imports.reads.listSources(SETUP_HOLDER);
 
   await expect(
-    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id),
+    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai"),
   ).rejects.toMatchObject({
     code: "CONFLICT",
     message: "AI may already read this file.",
@@ -192,7 +194,7 @@ test("refuses consent for a Slack source", async ({ orm, seed }) => {
   const imports = importUseCases(orm);
 
   await expect(
-    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id),
+    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai"),
   ).rejects.toMatchObject({
     code: "CONFLICT",
     message: "This file is gone.",
@@ -206,6 +208,7 @@ test("refuses consent for a missing source", async ({ orm }) => {
     imports.originalFileReads.allowOriginalFileRead(
       SETUP_HOLDER,
       "0199f6c4-0000-7000-8000-000000000000",
+      "broccoli_ai",
     ),
   ).rejects.toMatchObject({
     code: "CONFLICT",
@@ -218,9 +221,90 @@ test("refuses consent from the external agent", async ({ orm, seed }) => {
   const imports = importUseCases(orm);
 
   await expect(
-    imports.originalFileReads.allowOriginalFileRead(SETUP_EXTERNAL_AGENT, source.id),
+    imports.originalFileReads.allowOriginalFileRead(SETUP_EXTERNAL_AGENT, source.id, "broccoli_ai"),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("new consent sends a pending agent original to the chosen model without losing records", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  await seed.aiSource("external_agent");
+  const source = await seed.fileSource({ content: CSV, status: "mapped" });
+  await seed.importEmployees(source.id, [{ firstName: "Avery", email: "avery@example.com" }]);
+  const imports = importUseCases(orm);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
+  const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
+  await seed.aiSource("openrouter");
+  expect(imports.sentJobs).toEqual([]);
+
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "openrouter");
+
+  expect(imports.sentJobs).toEqual([
+    {
+      name: "imports.readOriginalFile",
+      payload: { sourceId: source.id, attempt: 2, aiSource: "openrouter" },
+    },
+  ]);
+  expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(
+    records,
+  );
+  await expect(
+    transact((tx) =>
+      imports.originalFileReads.readOriginalBytes(SETUP_EXTERNAL_AGENT, tx, source.id),
+    ),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  await expect(
+    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "openrouter"),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+  expect(imports.sentJobs).toHaveLength(1);
+  await expect(
+    transact((tx) =>
+      imports.originalFileReads.addReadPeople(
+        SETUP_EXTERNAL_AGENT,
+        tx,
+        source.id,
+        parseReadPeople(PEOPLE),
+      ),
+    ),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+test("refuses a new original read while the chosen agent is still reading", async ({
+  orm,
+  seed,
+}) => {
+  await seed.aiSource("external_agent");
+  const source = await seed.fileSource({ content: CSV, status: "mapped" });
+  const imports = importUseCases(orm);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent");
+  const before = await imports.reads.listSources(SETUP_HOLDER);
+
+  await expect(
+    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent"),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses original-file consent for a provider changed in another tab", async ({
+  orm,
+  seed,
+}) => {
+  await seed.aiSource("external_agent");
+  const imports = importUseCases(orm);
+  const id = await imports.files.uploadFile(SETUP_HOLDER, { name: "staff.pdf", bytes: PDF });
+  const before = await imports.reads.listSources(SETUP_HOLDER);
+
+  await expect(
+    imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, id, "openrouter"),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
   expect(imports.sentJobs).toEqual([]);
 });
