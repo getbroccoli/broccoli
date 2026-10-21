@@ -65,7 +65,7 @@ export async function finishDemo<Owner>(
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, demoExpiresAt } = await instance.lock();
+  const { ownerUserId, demoExpiresAt } = await instance.lockInstance();
   if (ownerUserId !== userId || !demoExpiresAt || now >= demoExpiresAt) {
     throw new ApplicationError("FORBIDDEN", "Only the demo's owner can create the account.");
   }
@@ -89,7 +89,7 @@ export async function resetDemo(
 ): Promise<{ token: string; expiresAt: Date }> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, demoExpiresAt } = await instance.lock();
+  const { ownerUserId, demoExpiresAt } = await instance.lockInstance();
   if (ownerUserId !== userId || !demoExpiresAt || now >= demoExpiresAt) {
     throw new ApplicationError("FORBIDDEN", "Only the demo's owner can reset setup.");
   }

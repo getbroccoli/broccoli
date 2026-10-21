@@ -40,13 +40,13 @@ test("resetting a demo deletes its owner and gives the browser setup at the comp
   expect(await readInstance(orm)).toMatchObject({
     ownerUserId: null,
     demoExpiresAt: null,
-    setupStep: "company",
+    step: "company",
   });
   expect(setup.token).toEqual(expect.any(String));
   expect(setup.expiresAt).toEqual(new Date("2026-01-05T12:00:00Z"));
   expect(await readSetupHolder(orm, { token: setup.token, now })).toBe("you");
-  expect(await readInstance(orm)).toMatchObject({
-    aiSource: "broccoli_ai",
+  expect(await instance.readAiSource()).toEqual({
+    source: "broccoli_ai",
     encryptedOpenRouterKey: null,
   });
 });
@@ -103,7 +103,7 @@ test.for([
     expect(await orm.select().from(user)).toEqual(users);
     expect(await readInstance(orm)).toMatchObject({
       ownerUserId: owner.user!.userId,
-      setupStep: "done",
+      step: "done",
       demoExpiresAt: deadline,
       setupSession: null,
     });
@@ -165,7 +165,7 @@ test("rolls back a demo reset when clearing people fails", async ({ orm, seed, t
   expect(await readInstance(orm)).toMatchObject({
     ownerUserId: userId,
     demoExpiresAt: expiresAt,
-    setupStep: "done",
+    step: "done",
     setupSession: null,
   });
 });

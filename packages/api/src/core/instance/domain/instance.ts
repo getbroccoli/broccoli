@@ -3,20 +3,16 @@ import type { ManagedAssignment } from "./managed";
 import type { SetupStep } from "./setup";
 import type { SetupSession } from "./setupSession";
 
-/** The one row describing this installation, as stored. */
+/** The instance row as one fact: its owner, setup, AI choice and managed assignment. */
 export interface Instance {
-  /** Null before setup. */
+  /** Null before setup creates the owner. */
   ownerUserId: string | null;
-  setupStep: SetupStep;
+  step: SetupStep;
   /** Null when nobody holds setup. */
   setupSession: SetupSession | null;
   /** When the provisional owner's demo ends; null without one. */
   demoExpiresAt: Date | null;
-  /** Null before a managed instance's init, and always on self-hosted instances. */
-  assignment: ManagedAssignment | null;
-  /** Null until the owner chooses. */
   aiSource: AiSource | null;
-  encryptedOpenRouterKey: string | null;
-  /** The legacy Broccoli AI token, moved to the data folder on first use. */
-  encryptedBroccoliAiToken: string | null;
+  /** Null on a self-hosted instance, and on a managed one before its init. */
+  assignment: ManagedAssignment | null;
 }

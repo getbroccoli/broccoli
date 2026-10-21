@@ -33,8 +33,8 @@ export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise
 
 /** Whether the import still takes changes: setup has not moved past the import step. */
 export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
-  const { setupStep } = await instanceRepository(db).read();
-  return setupStep === "company" || setupStep === "import";
+  const { step } = await instanceRepository(db).readInstance();
+  return step === "company" || step === "import";
 }
 
 /**
@@ -60,7 +60,7 @@ async function leaveImportStep(
   tx: Tx,
   withOwner: SetupStep,
 ): Promise<boolean> {
-  const { ownerUserId } = await instanceRepository(tx).read();
+  const { ownerUserId } = await instanceRepository(tx).readInstance();
   const next = ownerUserId ? withOwner : "owner";
   return advanceStep(ctx, tx, "import", next);
 }

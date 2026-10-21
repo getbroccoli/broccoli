@@ -25,7 +25,7 @@ export async function detectCompanyNameAndLogo(
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const domain = companyDomain(email);
-  if (!domain || (await readInstance(orm)).setupStep !== "company") {
+  if (!domain || (await readInstance(orm)).step !== "company") {
     return;
   }
   try {

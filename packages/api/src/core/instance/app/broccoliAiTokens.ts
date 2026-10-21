@@ -40,7 +40,7 @@ async function readToken(orm: Orm, secretBox: SecretBox, dataDir: string): Promi
     return secretBox.decrypt(saved);
   }
   const repository = instanceRepository(orm);
-  const { encryptedBroccoliAiToken: encrypted } = await repository.read();
+  const encrypted = await repository.readBroccoliAiToken();
   if (encrypted === null) {
     return null;
   }
