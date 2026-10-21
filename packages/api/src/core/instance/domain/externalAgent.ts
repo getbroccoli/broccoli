@@ -4,9 +4,9 @@ import type { Instance } from "./instance";
  * Whether setup may turn to the external agent: on a self-hosted instance, before the owner
  * exists, while people are gathered.
  */
-export function canChooseExternalAgent({ assignment, ownerUserId, step }: Instance): boolean {
+export function canChooseExternalAgent({ assignment, ownerUserId, setupStep }: Instance): boolean {
   // An assigned instance is managed, and never sees the choice.
-  return assignment === null && ownerUserId === null && step === "import";
+  return assignment === null && ownerUserId === null && setupStep === "import";
 }
 
 /**

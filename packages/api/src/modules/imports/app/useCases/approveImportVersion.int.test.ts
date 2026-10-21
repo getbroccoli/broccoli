@@ -1,6 +1,6 @@
 import { expect, importUseCases, OWNER, SETUP_HOLDER, type TestSeed, test } from "#test/support";
 
-import { readSetupStep } from "../../../../core/instance";
+import { readInstance } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
 test("keeps review pages and their version tied to the snapshot when another source arrives", async ({
@@ -36,7 +36,7 @@ test("keeps review pages and their version tied to the snapshot when another sou
     message: "Your people changed while you were reviewing.",
   });
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
 });
 
 test("refuses an old version without creating employees or advancing setup", async ({
@@ -60,7 +60,7 @@ test("refuses an old version without creating employees or advancing setup", asy
   });
 
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
 });
 
 test("approves the current version", async ({ orm, seed }) => {
@@ -77,7 +77,7 @@ test("approves the current version", async ({ orm, seed }) => {
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toMatchObject([
     { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
   ]);
-  expect(await readSetupStep(orm)).toBe("owner");
+  expect((await readInstance(orm)).setupStep).toBe("owner");
 });
 
 test("changes the version when another source adds a person", async ({ orm, seed }) => {
@@ -126,7 +126,7 @@ test("refuses an old version after an email becomes taken without adding anyone"
   });
 
   expect(await employees.listEmployees(owner, {})).toEqual(before);
-  expect(await readSetupStep(orm)).toBe("import");
+  expect((await readInstance(orm)).setupStep).toBe("import");
 });
 
 test("changes the version when a review choice changes a value", async ({ orm, seed }) => {

@@ -10,7 +10,7 @@ import { PrincipalSecurityContext } from "../../security";
 import {
   createOwnerAtSetup,
   type DemoStart,
-  hasOwner,
+  readInstance,
   readSetupHolder,
   startDemoAtSetup,
   startSetup,
@@ -106,7 +106,7 @@ export function setupPlugin(
 const DAY_SECONDS = 24 * 60 * 60;
 
 async function assertHoldsSetup(orm: Orm, token: string | null): Promise<void> {
-  if (await hasOwner(orm)) {
+  if ((await readInstance(orm)).ownerUserId) {
     throw APIError.from("CONFLICT", OWNER_EXISTS);
   }
   if ((await readSetupHolder(orm, { token, now: new Date() })) !== "you") {

@@ -8,8 +8,8 @@ import { deleteSessionCookie, setSessionCookie } from "better-auth/cookies";
 import { ApplicationError } from "../../applicationError";
 import { isUniqueViolation, type Orm, type Transact } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
-import { type DemoReset, finishDemo, readDemoDeadlineOf, resetDemo } from "../app";
-import { SETUP_SESSION_DAYS } from "../domain";
+import { type DemoReset, finishDemo, readInstance, resetDemo } from "../app";
+import { demoDeadlineOf, SETUP_SESSION_DAYS } from "../domain";
 import { inAuthTransaction } from "./authTransaction";
 import { assertValidCredentials, credentialsBody, linkPassword } from "./credentials";
 import { setSetupCookie } from "./setupCookie";
@@ -41,7 +41,7 @@ export function demoPlugin(orm: Orm, transact: Transact, deleteAllEmployees: Dem
             update: {
               before: async (session, ctx) => {
                 const userId = ctx?.context.session?.user.id;
-                const deadline = userId ? await readDemoDeadlineOf(orm, userId) : null;
+                const deadline = userId ? demoDeadlineOf(await readInstance(orm), userId) : null;
                 return deadline && session.expiresAt && session.expiresAt > deadline
                   ? { data: { ...session, expiresAt: deadline } }
                   : undefined;

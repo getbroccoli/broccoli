@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../applicationError";
-import type { Orm, Tx } from "../../db";
+import type { Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import { demoExpiry } from "../domain";
@@ -65,7 +65,7 @@ export async function finishDemo<Owner>(
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, demoExpiresAt } = await instance.lockSetup();
+  const { ownerUserId, demoExpiresAt } = await instance.lock();
   if (ownerUserId !== userId || !demoExpiresAt || now >= demoExpiresAt) {
     throw new ApplicationError("FORBIDDEN", "Only the demo's owner can create the account.");
   }
@@ -89,7 +89,7 @@ export async function resetDemo(
 ): Promise<{ token: string; expiresAt: Date }> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, demoExpiresAt } = await instance.lockSetup();
+  const { ownerUserId, demoExpiresAt } = await instance.lock();
   if (ownerUserId !== userId || !demoExpiresAt || now >= demoExpiresAt) {
     throw new ApplicationError("FORBIDDEN", "Only the demo's owner can reset setup.");
   }
@@ -99,15 +99,4 @@ export async function resetDemo(
   await instance.saveDemoExpiresAt(null);
   await deleteOwner();
   return saveSetupSession(tx, newSetupToken(), now);
-}
-
-/** When `userId` loses access as the demo's provisional owner; null for anyone else. */
-export async function readDemoDeadlineOf(db: Orm | Tx, userId: string): Promise<Date | null> {
-  const instance = instanceRepository(db);
-  return (await instance.readOwnerUserId()) === userId ? instance.readDemoExpiresAt() : null;
-}
-
-/** When the provisional owner's demo ends; null when the owner has an account or none exists. */
-export function readDemoExpiresAt(db: Orm | Tx): Promise<Date | null> {
-  return instanceRepository(db).readDemoExpiresAt();
 }
