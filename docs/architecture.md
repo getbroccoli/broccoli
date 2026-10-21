@@ -12,7 +12,7 @@ packages/api/src/
 └── utils/         helpers that know nothing about Broccoli, such as fetchJson
 ```
 
-**Import rules.** Each package's `importRules.json` ([API](../packages/api/importRules.json), [web](../packages/web/importRules.json)) lists what each folder, or single file, may import; a target may be a glob (`src/core/*`) or an element's layer folder (`src/core/instance/db`, which test support seeds through without the instance exporting it), and `!` removes matches (`!src/core/server`). Anything not listed is forbidden ([RULE2, RULE3](code-quality.md#modules-and-files)). ESLint enforces it and refuses rules whose graph has a cycle. `core` never imports a module. [`modules.md`](modules.md) maps each module, what it offers and what it depends on.
+**Import rules.** Each package's `importRules.json` ([API](../packages/api/importRules.json), [web](../packages/web/importRules.json)) lists what each folder, or single file, may import; a target may be a glob (`src/core/*`) or an element's layer folder (`src/core/instance/db`, which test support seeds through without the instance exporting it), and `!` removes matches (`!src/core/server`). Anything not listed is forbidden ([RULE2, RULE3](code-quality.md#modules-and-files)). ESLint enforces it and refuses rules whose graph has a cycle. `core` never imports a module.
 
 ## 1. Shape of the system
 
