@@ -115,7 +115,7 @@ export function importReader(db: Orm | Tx): ImportReader {
       const [latest] = await orm()
         .select({ id: importReviewChanges.id })
         .from(importReviewChanges)
-        .orderBy(desc(importReviewChanges.id))
+        .orderBy(desc(importReviewChanges.position))
         .limit(1);
       return latest ?? null;
     },

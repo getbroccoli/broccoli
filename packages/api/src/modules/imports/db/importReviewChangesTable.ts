@@ -1,15 +1,16 @@
 import { sql } from "drizzle-orm";
-import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 /**
  * One review change: the `import_choices` rows of every key it wrote, as they were before it,
  * so Undo can put them back, latest change first. A source change deletes them all.
  */
 export const importReviewChanges = pgTable("import_review_changes", {
-  // uuidv7 ids follow the order the changes were made in.
   id: uuid("id")
     .primaryKey()
     .default(sql`uuidv7()`),
+  // The order the changes were made in, under the import's lock; a uuidv7 id can go back with the clock.
+  position: bigint("position", { mode: "number" }).generatedAlwaysAsIdentity(),
   type: text("type", { enum: ["employee"] }).notNull(),
   previousChoices: jsonb("previous_choices").$type<PreviousChoice[]>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

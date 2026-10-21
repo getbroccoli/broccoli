@@ -80,7 +80,7 @@ export function createImportUseCases({
     resetSetup: (ctx: SecurityContext) => resetSetup(context, ctx),
     readImportPhoto: (ctx: SecurityContext, fileId: string) =>
       readImportPhoto(context, ctx, fileId),
-    reads: createImportReadService(orm),
+    reads: createImportReadService(orm, transact),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs, readUpload }),
     answeredMapping: createAnsweredMappingService(readUpload),

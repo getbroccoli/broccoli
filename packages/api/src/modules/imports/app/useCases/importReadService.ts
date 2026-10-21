@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { Orm } from "../../../../core/db";
+import type { Orm, Transact } from "../../../../core/db";
 import {
   type Connection,
   type ListOrder,
@@ -8,7 +8,7 @@ import {
   paginate,
 } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
-import { importReader } from "../../db";
+import { importReader, lockImport } from "../../db";
 import {
   type ImportEmployeeRecord,
   type ImportProgress,
@@ -28,7 +28,10 @@ export interface ImportReadService {
   countEmployees(ctx: SecurityContext, sourceIds: readonly string[]): Promise<Map<string, number>>;
   /** Whether a file is still being read, and whether the demo company may still replace the import. */
   readProgress(ctx: SecurityContext): Promise<ImportProgress>;
-  /** The import as the setup review step shows it: its import employees, counts and checks. */
+  /**
+   * The import as the setup review step shows it: its import employees, counts and checks, read
+   * under the import's lock, so its latest review change is the one behind what it shows.
+   */
   readReview(ctx: SecurityContext): Promise<ImportReview>;
   /** One source's employee records, oldest first, one page at a time. */
   listEmployeeRecords(
@@ -37,7 +40,7 @@ export interface ImportReadService {
   ): Promise<Connection<ImportEmployeeRecord>>;
 }
 
-export function createImportReadService(orm: Orm): ImportReadService {
+export function createImportReadService(orm: Orm, transact: Transact): ImportReadService {
   const imports = importReader(orm);
   return {
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
@@ -71,7 +74,10 @@ export function createImportReadService(orm: Orm): ImportReadService {
 
     readReview: (ctx: SecurityContext): Promise<ImportReview> => {
       requireImportAccess(ctx);
-      return readImportReview(ctx, orm);
+      return transact(async (tx) => {
+        await lockImport(tx);
+        return readImportReview(ctx, tx);
+      });
     },
 
     listEmployeeRecords: async (

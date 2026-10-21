@@ -265,7 +265,7 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
       const [latest] = await orm()
         .select()
         .from(importReviewChanges)
-        .orderBy(desc(importReviewChanges.id))
+        .orderBy(desc(importReviewChanges.position))
         .limit(1);
       if (latest?.id !== id) {
         return false;

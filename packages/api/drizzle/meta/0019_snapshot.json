@@ -1,5 +1,5 @@
 {
-  "id": "7da03e55-1756-439d-85e6-0817869d9677",
+  "id": "f471a155-b1df-4d45-afbe-857faa9d6c85",
   "prevId": "d32fd289-e48f-4d94-81b5-3238fc91a746",
   "version": "7",
   "dialect": "postgresql",
@@ -1021,6 +1021,23 @@
           "primaryKey": true,
           "notNull": true,
           "default": "uuidv7()"
+        },
+        "position": {
+          "name": "position",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "import_review_changes_position_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
         },
         "type": {
           "name": "type",
