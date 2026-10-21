@@ -149,7 +149,7 @@ export function readFileRecords(
   const cellsOf = (field: FileField) =>
     rows.map((row) => (mapping[field] === null ? "" : (row[mapping[field]] ?? "")));
   const startDates = parseDateColumn(cellsOf("startDate"));
-  const fullNames = splitFullNames(cellsOf("fullName"));
+  const names = namesOf(cellsOf, mapping);
   const records: IncomingRecord[] = [];
   rows.forEach((row, index) => {
     const cell = (field: FileField) => {
@@ -157,7 +157,7 @@ export function readFileRecords(
       return column === null ? undefined : row[column];
     };
     const values: ImportEmployeeValues = {
-      ...nameOf(cell, fullNames[index]!),
+      ...names[index]!,
       email: parseEmail(cell("email")),
       jobTitle: nonBlank(cell("jobTitle")),
       startDate: startDates[index]!,
@@ -228,14 +228,22 @@ function fieldQuestions(
   ) as Record<FileField, Question>;
 }
 
-/** Separate first and last name columns win over a full name column. */
-function nameOf(
-  cell: (field: FileField) => string | undefined,
-  fullName: Pick<ImportEmployeeValues, "firstName" | "lastName">,
-): Pick<ImportEmployeeValues, "firstName" | "lastName"> {
-  const firstName = nonBlank(cell("firstName"));
-  const lastName = nonBlank(cell("lastName"));
-  return firstName || lastName ? { firstName, lastName } : fullName;
+/**
+ * Each row's name. Separate first and last name columns, when mapped, win over a full name
+ * column on every row: a row where they are blank, such as a vacancy, names no one.
+ */
+function namesOf(
+  cellsOf: (field: FileField) => string[],
+  mapping: ColumnMapping,
+): Pick<ImportEmployeeValues, "firstName" | "lastName">[] {
+  if (mapping.firstName === null && mapping.lastName === null) {
+    return splitFullNames(cellsOf("fullName"));
+  }
+  const lastNames = cellsOf("lastName");
+  return cellsOf("firstName").map((firstName, index) => ({
+    firstName: nonBlank(firstName),
+    lastName: nonBlank(lastNames[index]),
+  }));
 }
 
 /**
