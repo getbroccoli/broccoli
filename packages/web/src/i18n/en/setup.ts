@@ -158,7 +158,7 @@ export const setupEn = {
   "setup.review.undo": "Undo",
   "setup.review.undoHelp":
     "Undo your latest change, one at a time. Reading or removing a source starts a new history.",
-  "setup.review.undoFailed": "Couldn’t undo. Review now shows the latest changes.",
+  "setup.review.undoFailed": "Couldn’t confirm Undo. Check the review before trying again.",
   "setup.review.error.required": "Enter a value",
   "setup.review.error.too_long": "Use 100 characters or fewer",
   "setup.review.error.taken": "Another person has this email. Leave one of them out instead.",

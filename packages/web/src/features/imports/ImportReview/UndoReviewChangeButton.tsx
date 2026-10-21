@@ -21,9 +21,10 @@ export function UndoReviewChangeButton({ changeId }: Props) {
 
   const undoLatest = () =>
     void undo({ variables: { id: changeId } }).catch(() => {
-      // Review changed elsewhere, or the answer was lost: show review as it is now.
+      // Review changed elsewhere, or the answer was lost after Undo may have run: reload review.
       toast.error(t("setup.review.undoFailed"));
-      void client.refetchQueries({ include: [ImportReviewDocument] });
+      // A failed reload shows as the review's own load error.
+      void client.refetchQueries({ include: [ImportReviewDocument] }).catch(() => undefined);
     });
 
   return (

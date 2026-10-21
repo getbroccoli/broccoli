@@ -18,7 +18,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 ## Settling values
 
 - [ ] The person whose job title differs shows an amber "2 job titles" pill instead of the title. Clicking it opens "{name} has 2 job titles", "staff.csv and {workspace} disagree. Pick the one to keep." and one button per value with its source.
-- [ ] Clicking a value closes the popover, shows it in the cell and a toast "Job title set to …" with Undo; Undo brings the pill back.
+- [ ] Clicking a value closes the popover and shows it in the cell; "Undo" beside the search brings the pill back.
 - [ ] Clicking any other value, such as an email or a start date, opens "{Field} for {name}" with a field and Save. A bad email shows "Enter a valid email"; a 101-character name "Use 100 characters or fewer". A good value shows in the cell.
 - [ ] A start date is picked from a calendar: "Pick a date" opens it with month and weekday names and the first day of the week in the browser's language (Monday first in `de-DE`, Sunday in `en-US`); the picked day shows in the field and, after Save, in the cell.
 - [ ] Typing a last name for the one-word member removes its "No last name" pill and raises the Approve count by one.
@@ -42,9 +42,11 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] A blank typed value, job title and start date included, shows "Enter a value"; typing a person's own current email again is accepted.
 - [ ] After a Slack pick, refreshing Slack with a changed value for that member shows the new value, still picked.
 - [ ] A left-out person with an email stays left out after their file is removed and uploaded again.
-- [ ] Once the toast has closed there is no Undo; clicking the cell again changes the value back. With the network off, Undo shows "Couldn’t save. Try again.", and so does "Leave out".
+- [ ] Undo reverses one change per press, latest first, until it disappears with the sources as read: Avery's email changed to another address, then Robin's to Avery's old one, undoes Robin first, then Avery, and never merges them. "Use {workspace} for all" and "Leave them out" each undo in one press. Hovering Undo says that reading or removing a source starts a new history; refreshing Slack or removing a file hides Undo and keeps every choice.
+- [ ] Undo stays after a reload. With review open in two tabs, Undo in one, then Undo in the other shows "Couldn’t confirm Undo. Check the review before trying again." and undoes nothing more; the review then shows the latest changes.
+- [ ] With the network off, Undo shows "Couldn’t confirm Undo. Check the review before trying again." and the table's load error; back online, review shows whether it ran. "Leave out" shows "Couldn’t save. Try again."
 - [ ] `/setup/import/review?check=bogus` shows an empty table with "All checked" and "Show everyone".
-- [ ] At 375 px the value popover and "N things to check" fit the screen.
+- [ ] At 375 px the value popover, "N things to check" and Undo fit the screen.
 - [ ] A screen reader reads each value with its field and person, such as "Last name for Madonna: Not set".
 
 ## Photos
