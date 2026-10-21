@@ -20,10 +20,10 @@ const AI_SOURCE_INPUTS = { BROCCOLI_AI: "broccoli_ai", OPENROUTER: "openrouter" 
 
 export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases): Resolvers {
   const readSetup = async (security: SecurityContext | null) => {
-    const { setupStep, demoExpiresAt } = await readInstance(orm);
+    const { step, demoExpiresAt } = await readInstance(orm);
     return {
       id: "instance",
-      step: STEPS[setupStep],
+      step: STEPS[step],
       mode: MODES[mode],
       // A live setup cookie made the request the setup holder; any other carries no live token.
       holder: security?.isSetupHolder
