@@ -40,7 +40,7 @@ export function ImportStep() {
   const readingFiles = data?.import.reading ?? false;
   const ai = data?.setup.ai;
   const externalAgentChosen = ai?.source === "EXTERNAL_AGENT";
-  const externalAgent = ai?.externalAgent;
+  const externalAgent = externalAgentChosen ? ai.externalAgent : null;
   // Files are read in the background, and the owner's external agent connects and maps them from
   // outside the page: poll while either may happen.
   useEffect(() => {

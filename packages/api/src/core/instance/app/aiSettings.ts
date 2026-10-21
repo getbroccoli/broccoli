@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../applicationError";
-import type { Orm, Transact } from "../../db";
+import type { Orm, Transact, Tx } from "../../db";
 import type { Deployment, SelfHostedDeployment } from "../../env";
 import type { SecretBox } from "../../secrets";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
@@ -32,6 +32,8 @@ export interface AiSettings {
 
 /** Reads a whole file with the AI the owner chose when allowing it, not the one chosen now. */
 export interface OriginalFileReader {
+  /** The provider the consent must name, resolved in the caller's transaction; null is managed. */
+  readSource(ctx: SecurityContext, tx: Tx): Promise<AiSource | null>;
   /** `source` is the instance's AI source at the owner's consent; null on a managed instance. */
   readOriginalFile(source: AiSource | null, request: OriginalFileRead): Promise<unknown>;
 }
@@ -62,18 +64,19 @@ export function createAiSettings({
   const tokens = createBroccoliAiTokens({ orm, secretBox, dataDir });
   // Broccoli reads its AI source and token for decisions it makes on its own.
   const system = PrincipalSecurityContext.system();
-  const readConfig = async () => aiConfig(await readSavedAiSource(orm, secretBox), openRouter.key);
+  const readConfig = async (db: Orm | Tx) =>
+    aiConfig(await readSavedAiSource(db, secretBox), openRouter.key);
   const decisions = createResolvedDecisions({
     readSource: async () =>
       deployment.mode === "managed"
         ? openRouterSource(openRouter.url, openRouter.key)
-        : sourceOf(await readConfig(), deployment, openRouter.url),
+        : sourceOf(await readConfig(orm), deployment, openRouter.url),
     tokens: { read: () => tokens.read(system), save: (token) => tokens.save(system, token) },
   });
   return {
     read: async (ctx) => {
       ctx.requireSetupAccess();
-      return deployment.mode === "managed" ? null : readConfig();
+      return deployment.mode === "managed" ? null : readConfig(orm);
     },
     save: async (ctx, { source, openRouterKey }) => {
       ctx.requireSetupAccess();
@@ -88,7 +91,7 @@ export function createAiSettings({
       if (source === "openrouter") {
         await checkOpenRouter(
           openRouter.url,
-          givenKey ?? (await readConfig()).openRouterKey?.key ?? null,
+          givenKey ?? (await readConfig(orm)).openRouterKey?.key ?? null,
         );
       } else {
         await checkBroccoliAi(() => decisions.prepareBroccoliAi(deployment.broccoliAiUrl));
@@ -99,12 +102,16 @@ export function createAiSettings({
           givenKey === undefined ? undefined : secretBox.encrypt(givenKey),
         ),
       );
-      return readConfig();
+      return readConfig(orm);
     },
     decisions,
     originalFileReader: {
+      readSource: async (ctx, tx) => {
+        ctx.requireSetupAccess();
+        return deployment.mode === "managed" ? null : (await readConfig(tx)).source;
+      },
       readOriginalFile: async (source, request) => {
-        const config = await readConfig();
+        const config = await readConfig(orm);
         return decisions.readOriginalFile(
           deployment.mode === "managed"
             ? openRouterSource(openRouter.url, openRouter.key)
@@ -116,7 +123,7 @@ export function createAiSettings({
   };
 }
 
-async function readSavedAiSource(orm: Orm, secretBox: SecretBox): Promise<SavedAiSource> {
+async function readSavedAiSource(orm: Orm | Tx, secretBox: SecretBox): Promise<SavedAiSource> {
   const { source, encryptedOpenRouterKey } = await instanceRepository(orm).readAiSource();
   return {
     source,

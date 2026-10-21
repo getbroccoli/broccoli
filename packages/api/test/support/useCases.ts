@@ -91,7 +91,7 @@ export function importUseCases(
   }: {
     slackApi?: Partial<SlackApi>;
     decisions?: Decisions;
-    originalFileReader?: OriginalFileReader;
+    originalFileReader?: Pick<OriginalFileReader, "readOriginalFile">;
     jobs?: JobQueue;
     clock?: () => Date;
     prepareDemoFill?: Parameters<typeof createImportUseCases>[0]["prepareDemoFill"];
@@ -103,7 +103,7 @@ export function importUseCases(
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     decisions,
-    originalFileReader,
+    originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
@@ -185,6 +185,6 @@ const NO_DECISIONS: Decisions = {
 
 const DEMO_TODAY = parseCalendarDate("2026-10-13")!;
 
-const NO_ORIGINAL_FILE_READER: OriginalFileReader = {
+const NO_ORIGINAL_FILE_READER: Pick<OriginalFileReader, "readOriginalFile"> = {
   readOriginalFile: () => Promise.reject(new Error("Unexpected model request")),
 };

@@ -81,11 +81,17 @@ export function FileSourceCard({
     (source.readBy === "PARSED_BY_BROCCOLI"
       ? failed
       : source.status === "MAPPING" && !externalAgentChosen);
-  const asksForOriginalRead = !source.originalReadAllowed && couldNotMapMasked(source);
+  const needsNewConsent =
+    source.status === "MAPPING" &&
+    source.originalReadAllowed &&
+    source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
+    !externalAgentChosen;
+  const asksForOriginalRead =
+    needsNewConsent || (!source.originalReadAllowed && couldNotMapMasked(source));
   const offersOriginalRead =
     !source.originalReadAllowed && (source.status === "MAPPED" || failed) && !asksForOriginalRead;
   const provider = t(aiSource ? PROVIDERS[aiSource] : "imports.files.providerManaged");
-  const pickingUp = isPickingUp(source, externalAgentListening);
+  const pickingUp = !needsNewConsent && isPickingUp(source, externalAgentListening);
   return (
     <li
       className={cn(
@@ -129,7 +135,9 @@ export function FileSourceCard({
                 className="mr-2 inline-block size-3 animate-spin rounded-full border-2 border-border border-t-foreground align-[-1px]"
               />
             )}
-            {statusLine(source, pickingUp, aiSource)}
+            {needsNewConsent
+              ? t("imports.files.waitingForOriginalReadConsent")
+              : statusLine(source, pickingUp, aiSource)}
           </span>
           {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
             <Link

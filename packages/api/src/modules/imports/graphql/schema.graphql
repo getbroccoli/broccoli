@@ -233,8 +233,8 @@ type ImportMutations {
   resetSetup: ImportMutationPayload!
   "Maps a failed file again, or has Broccoli's model map a file still waiting for the external agent's answers."
   retryFile(sourceId: ID!): ImportRetryFilePayload!
-  "Lets AI read this one file in full, personal data included: Broccoli's model in the background, or the owner's external agent when it is chosen. Its people then replace the file's records. Refused with a ConflictError while the file is being read, once allowed, and for a source that is no file."
-  allowOriginalFileRead(sourceId: ID!): ImportAllowOriginalFileReadPayload!
+  "Lets the AI provider shown to the owner read this one file in full, personal data included (`aiSource` is null only on managed instances): Broccoli's model in the background, or the owner's external agent when it is chosen. Its people then replace the file's records. A pending original read by an external agent can move to the chosen model with fresh consent. Otherwise refused with a ConflictError while the file is being read, once allowed, and for a source that is no file."
+  allowOriginalFileRead(sourceId: ID!, aiSource: AiSource): ImportAllowOriginalFileReadPayload!
   "Removes a file, its records and the stored file."
   removeFile(sourceId: ID!): ImportMutationPayload!
   "Shows a record's value or a typed one for one field of an import employee; with neither, the first source's value again. A typed value must pass the employee rules for that field; a typed email another import employee shows is refused as taken."

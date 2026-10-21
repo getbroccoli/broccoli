@@ -121,6 +121,31 @@ test("consent wakes an agent waiting for unmapped files", async ({ env }) => {
   expect(await response.json()).toEqual([{ id, way: "read_original_file" }]);
 });
 
+test("refuses consent naming a different provider without giving the agent the file", async ({
+  env,
+}) => {
+  const browser = await env.startSetupAtImport();
+  const code = await createExternalAgentCode(browser);
+  const id = await dropPdf(browser);
+  const token = await exchangeExternalAgentCode(env.url, code);
+
+  const response = await browser.graphql(`mutation {
+    import { allowOriginalFileRead(sourceId: "${id}", aiSource: OPENROUTER) {
+      import { id } error { __typename ... on Error { message } }
+    } }
+  }`);
+
+  expect(await response.json()).toMatchObject({
+    data: {
+      import: { allowOriginalFileRead: { import: null, error: { __typename: "ConflictError" } } },
+    },
+  });
+  const original = await fetch(`${env.url}/api/external-agent/unmapped-files/${id}/original`, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+  expect(original.status).toBe(404);
+});
+
 async function dropPdf(browser: Browser): Promise<string> {
   const uploaded = await browser.post("/api/setup/external-agent-files?name=contractors.pdf", PDF);
   expect(uploaded.status).toBe(200);
@@ -132,7 +157,7 @@ async function dropPdf(browser: Browser): Promise<string> {
 async function allowOriginalFileRead(browser: Browser, sourceId: string): Promise<void> {
   const response = await browser.graphql(
     `mutation AllowOriginalFileRead($sourceId: ID!) {
-    import { allowOriginalFileRead(sourceId: $sourceId) {
+    import { allowOriginalFileRead(sourceId: $sourceId, aiSource: EXTERNAL_AGENT) {
       import { id } error { __typename ... on Error { message } }
     } }
   }`,

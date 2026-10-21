@@ -23,7 +23,7 @@ type UseCaseName = {
 
 const calls = {
   "originalFileReads.allowOriginalFileRead": (imports, ctx) =>
-    imports.originalFileReads.allowOriginalFileRead(ctx, "missing"),
+    imports.originalFileReads.allowOriginalFileRead(ctx, "missing", "broccoli_ai"),
   "originalFileReads.readOriginalFile": (imports, ctx) =>
     imports.originalFileReads.readOriginalFile(ctx, {
       sourceId: "missing",
