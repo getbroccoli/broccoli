@@ -240,15 +240,15 @@ test("waits for an uncommitted upload before refusing approval", async ({
       },
     },
   });
+  // Read before the upload holds the import's lock, which reading the review waits for too.
+  const { version } = await imports.reads.readReview(owner);
   const upload = imports.files.uploadFile(owner, {
     name: "staff.csv",
     bytes: Buffer.from("Name\nAvery Stone"),
   });
   const blockingPid = await inserted.promise;
   let approvalSettled = false;
-  const approval = Promise.allSettled([
-    imports.approveImport(owner, (await imports.reads.readReview(owner)).version),
-  ]).then((results) => {
+  const approval = Promise.allSettled([imports.approveImport(owner, version)]).then((results) => {
     approvalSettled = true;
     return results;
   });

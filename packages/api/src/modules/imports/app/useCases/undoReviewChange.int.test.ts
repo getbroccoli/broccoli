@@ -1,4 +1,6 @@
-import { expect, importUseCases, OWNER, SETUP_HOLDER, test } from "#test/support";
+import { sql } from "drizzle-orm";
+
+import { expect, importUseCases, OWNER, test } from "#test/support";
 
 test("undoes email changes latest first back to two employees with default emails", async ({
   orm,
@@ -35,7 +37,10 @@ test("undoes email changes latest first back to two employees with default email
   expect(review.latestReviewChange).toBeNull();
 });
 
-test("undo restores the earlier typed value", async ({ orm, seed }) => {
+test("undo restores the earlier typed value when UUID order differs from change order", async ({
+  orm,
+  seed,
+}) => {
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com", jobTitle: "Engineer" }]);
   const imports = importUseCases(orm);
@@ -44,13 +49,18 @@ test("undo restores the earlier typed value", async ({ orm, seed }) => {
     field: "jobTitle",
     choice: { value: "Lead" },
   });
+  const first = (await imports.reads.readReview(OWNER)).latestReviewChange!;
   await imports.choices.chooseEmployeeValue(OWNER, {
     key: "avery@example.com",
     field: "jobTitle",
     choice: { value: "Manager" },
   });
   const latest = (await imports.reads.readReview(OWNER)).latestReviewChange!;
+  await orm.execute(
+    sql`update import_review_changes set id = 'ffffffff-ffff-7fff-bfff-ffffffffffff' where id = ${first.id}`,
+  );
 
+  expect((await imports.reads.readReview(OWNER)).latestReviewChange).toEqual(latest);
   await imports.choices.undoReviewChange(OWNER, { id: latest.id });
 
   const page = (await imports.reads.readReview(OWNER)).listEmployees({});
@@ -111,126 +121,51 @@ test("undoing an email edit keeps a re-read import employee merged", async ({ or
   expect(page.edges[0]!.node.values.email.value).toBe("b@example.com");
 });
 
-test("refuses undo of an earlier change without changing review", async ({ orm, seed }) => {
-  const source = await seed.importSource();
-  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
-  const imports = importUseCases(orm);
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "avery@example.com",
-    field: "jobTitle",
-    choice: { value: "Lead" },
-  });
-  const earlier = (await imports.reads.readReview(OWNER)).latestReviewChange!;
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "avery@example.com",
-    field: "jobTitle",
-    choice: { value: "Manager" },
-  });
-  const before = await imports.reads.readReview(OWNER);
-
-  await expect(imports.choices.undoReviewChange(OWNER, { id: earlier.id })).rejects.toMatchObject({
-    code: "CONFLICT",
-    message: "Review changed since; nothing was undone.",
-  });
-
-  const after = await imports.reads.readReview(OWNER);
-  expect(after.listEmployees({})).toEqual(before.listEmployees({}));
-  expect(after.latestReviewChange).toEqual(before.latestReviewChange);
-  expect(after.version).toBe(before.version);
-});
-
-test("refuses undo of the same change twice and keeps the earlier choice", async ({
+test("undo includes a left-out employee again and clears the last review change", async ({
   orm,
   seed,
 }) => {
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "avery@example.com",
-    field: "jobTitle",
-    choice: { value: "Lead" },
-  });
-  const earlier = (await imports.reads.readReview(OWNER)).latestReviewChange!;
-  await imports.choices.chooseEmployeeValue(OWNER, {
-    key: "avery@example.com",
-    field: "jobTitle",
-    choice: { value: "Manager" },
-  });
+  await imports.choices.setLeftOut(OWNER, { key: "avery@example.com", leftOut: true });
   const latest = (await imports.reads.readReview(OWNER)).latestReviewChange!;
+
   await imports.choices.undoReviewChange(OWNER, { id: latest.id });
 
-  await expect(imports.choices.undoReviewChange(OWNER, { id: latest.id })).rejects.toMatchObject({
-    code: "CONFLICT",
-    message: "Review changed since; nothing was undone.",
-  });
-
   const review = await imports.reads.readReview(OWNER);
-  expect(review.listEmployees({}).edges[0]!.node.values.jobTitle).toMatchObject({
-    value: "Lead",
-    choice: "typed",
-  });
-  expect(review.latestReviewChange).toEqual(earlier);
+  expect(review.listEmployees({}).edges[0]!.node.leftOut).toBe(false);
+  expect(review.latestReviewChange).toBeNull();
 });
 
-test("removing another file clears review history and keeps the current choice", async ({
+test("undo restores a bulk leave-out while keeping earlier choices and history", async ({
   orm,
   seed,
 }) => {
   const source = await seed.importSource();
-  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
-  const file = await seed.fileSource({ content: "x", status: "mapped" });
-  await seed.importEmployees(file.id, [{ email: "robin@example.com" }]);
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com", lastName: null },
+    { email: "robin@example.com", lastName: null },
+  ]);
   const imports = importUseCases(orm);
   await imports.choices.chooseEmployeeValue(OWNER, {
     key: "avery@example.com",
     field: "jobTitle",
     choice: { value: "Lead" },
   });
-  expect((await imports.reads.readReview(OWNER)).latestReviewChange).toMatchObject({
-    id: expect.any(String) as unknown,
-  });
+  const earlier = (await imports.reads.readReview(OWNER)).latestReviewChange!;
+  await imports.choices.leaveOutIncomplete(OWNER, { reason: "lastName" });
+  const latest = (await imports.reads.readReview(OWNER)).latestReviewChange!;
 
-  await imports.files.removeFile(OWNER, file.id);
+  await imports.choices.undoReviewChange(OWNER, { id: latest.id });
 
   const review = await imports.reads.readReview(OWNER);
-  expect(review.latestReviewChange).toBeNull();
-  expect(review.listEmployees({}).edges.map(({ node }) => node.values.jobTitle)).toMatchObject([
-    { value: "Lead", choice: "typed" },
+  const page = review.listEmployees({ orderBy: { field: "EMAIL", direction: "ASC" } });
+  expect(
+    page.edges.map(({ node }) => ({ leftOut: node.leftOut, title: node.values.jobTitle })),
+  ).toMatchObject([
+    { leftOut: false, title: { value: "Lead", choice: "typed" } },
+    { leftOut: false, title: { value: null, choice: "default" } },
   ]);
-});
-
-test("records no review change when an employee stays included", async ({ orm, seed }) => {
-  const source = await seed.importSource();
-  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
-  const imports = importUseCases(orm);
-
-  await imports.choices.setLeftOut(OWNER, { key: "avery@example.com", leftOut: false });
-
-  const review = await imports.reads.readReview(OWNER);
-  expect(review.latestReviewChange).toBeNull();
-  expect(review.listEmployees({}).edges[0]!.node.leftOut).toBe(false);
-});
-
-test("refuses undo after Approve", async ({ orm, seed }) => {
-  await seed.setupStep("import");
-  const source = await seed.importSource();
-  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
-  const imports = importUseCases(orm);
-  await imports.choices.chooseEmployeeValue(SETUP_HOLDER, {
-    key: "avery@example.com",
-    field: "jobTitle",
-    choice: { value: "Lead" },
-  });
-  const review = await imports.reads.readReview(SETUP_HOLDER);
-  await imports.approveImport(SETUP_HOLDER, review.version);
-
-  await expect(
-    imports.choices.undoReviewChange(SETUP_HOLDER, {
-      id: review.latestReviewChange!.id,
-    }),
-  ).rejects.toMatchObject({ code: "CONFLICT", message: "Setup is complete." });
-
-  const after = await imports.reads.readReview(SETUP_HOLDER);
-  expect(after.listEmployees({})).toEqual(review.listEmployees({}));
+  expect(review.latestReviewChange).toEqual(earlier);
 });

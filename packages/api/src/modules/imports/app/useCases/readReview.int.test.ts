@@ -1,6 +1,10 @@
+import { sql } from "drizzle-orm";
+
 import { expect, importUseCases, OWNER, test } from "#test/support";
 
+import { ormOf } from "../../../../core/db";
 import { createEmployeeUseCases } from "../../../employees";
+import { lockImport } from "../../db";
 
 test("counts ready import employees across Slack and file sources, leaving incomplete records out", async ({
   orm,
@@ -93,4 +97,70 @@ test("lists a source once when it holds several added people", async ({ orm, see
   const sources = (await imports.reads.readReview(OWNER)).readyEmployeeSources;
 
   expect(sources).toEqual([source]);
+});
+
+test("review waits for a pending change and returns its values with its Undo id", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [{ email: "avery@example.com", jobTitle: "Engineer" }]);
+  const locked = Promise.withResolvers<number>();
+  const release = Promise.withResolvers<void>();
+  const writing = transact(async (tx) => {
+    const imports = await lockImport(tx);
+    await imports.saveChoices("employee", [
+      {
+        key: "avery@example.com",
+        leftOut: false,
+        values: { jobTitle: { value: "Lead" } },
+      },
+    ]);
+    const latest = await imports.findLatestReviewChange();
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    locked.resolve(rows[0]!.pid);
+    await release.promise;
+    return latest;
+  });
+  const blockingPid = await locked.promise;
+  const imports = importUseCases(orm);
+
+  const reading = imports.reads.readReview(OWNER);
+  let readingSettled = false;
+  const readResult = Promise.allSettled([reading]).then(() => {
+    readingSettled = true;
+  });
+  try {
+    // Wait for database-confirmed blocking, so a fast or slow connection cannot decide the test.
+    while (!readingSettled) {
+      const { rows } = await orm.execute<{ waiting: boolean }>(sql`
+        select exists (
+          select from pg_stat_activity
+          where datname = current_database()
+            and ${blockingPid} = any(pg_blocking_pids(pid))
+        ) as waiting
+      `);
+      if (rows[0]!.waiting) break;
+    }
+    expect(readingSettled).toBe(false);
+  } finally {
+    release.resolve();
+    await Promise.all([writing, readResult]);
+  }
+
+  const review = await reading;
+  expect(review.listEmployees({}).edges[0]!.node.values.jobTitle).toMatchObject({
+    value: "Lead",
+    choice: "typed",
+  });
+  expect(review.latestReviewChange).toEqual(await writing);
+  expect(review.latestReviewChange).not.toBeNull();
+  await imports.choices.undoReviewChange(OWNER, { id: review.latestReviewChange!.id });
+  const restored = await imports.reads.readReview(OWNER);
+  expect(restored.listEmployees({}).edges[0]!.node.values.jobTitle).toMatchObject({
+    value: "Engineer",
+    choice: "default",
+  });
+  expect(restored.latestReviewChange).toBeNull();
 });
