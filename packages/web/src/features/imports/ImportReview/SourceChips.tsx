@@ -30,7 +30,7 @@ export function SourceChips({
             className="inline-flex h-8 items-center gap-2 rounded-full bg-card pr-3 pl-1 text-[13px] font-medium text-foreground ring-1 ring-border"
           >
             <span className="flex size-6 items-center justify-center rounded-full bg-muted">
-              <SourceIcon kind={source.kind} />
+              <SourceIcon source={source} />
             </span>
             {source.name}
           </li>

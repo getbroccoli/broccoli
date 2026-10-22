@@ -118,7 +118,7 @@ export function EmployeeValuePopover({
               aria-pressed={value.choice !== "TYPED" && value.value === option.value}
               onClick={() => chooseAndOfferUndo({ recordId: option.records[0]!.id }, option.value)}
             >
-              <SourceIcon kind={option.records[0]!.source.kind} />
+              <SourceIcon source={option.records[0]!.source} />
               <span className="truncate font-medium">{display(field, option.value)}</span>
               <span className="ml-auto truncate font-normal text-muted-foreground">
                 {sourceNames(option)}
