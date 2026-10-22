@@ -224,7 +224,7 @@ test("Broccoli AI reads a consented PDF through the relay without sending its na
   expect(requests[0]!.body).toMatchObject({
     model: "deepseek/deepseek-v4.1-flash-1017",
     provider: { data_collection: "deny", zdr: true },
-    response_format: { type: "json_schema" },
+    response_format: { type: "json_object" },
     plugins: [{ id: "file-parser", pdf: { engine: "pdf-text" } }],
     messages: expect.arrayContaining([
       expect.objectContaining({

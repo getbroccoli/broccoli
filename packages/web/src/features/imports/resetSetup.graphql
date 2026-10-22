@@ -3,6 +3,10 @@ mutation ResetSetup {
     resetSetup {
       import {
         id
+        sources {
+          id
+          ...FileSourceCard_source
+        }
       }
     }
   }
