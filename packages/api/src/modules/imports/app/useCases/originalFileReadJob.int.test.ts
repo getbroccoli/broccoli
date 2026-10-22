@@ -40,6 +40,9 @@ test("the job reads with the AI source chosen at consent after the owner switche
   await imports.originalFileReads.readOriginalFile(SYSTEM, job.payload);
 
   expect(sources).toEqual(["openrouter"]);
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
+    { id: source.id, originalReadAiSource: "openrouter" },
+  ]);
 });
 
 test.for(["csv", "xlsx"] as const)(

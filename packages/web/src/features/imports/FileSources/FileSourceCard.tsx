@@ -89,7 +89,7 @@ export function FileSourceCard({
     source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
     !externalAgentChosen;
   const asksForOriginalRead =
-    needsNewConsent || (!source.originalReadAllowed && couldNotMapMasked(source));
+    needsNewConsent || (source.originalReadAllowed ? failed : couldNotMapMasked(source));
   const offersOriginalRead =
     !source.originalReadAllowed && (source.status === "MAPPED" || failed) && !asksForOriginalRead;
   const provider = t(aiSource ? PROVIDERS[aiSource] : "imports.files.providerManaged");
@@ -139,7 +139,7 @@ export function FileSourceCard({
             )}
             {needsNewConsent
               ? t("imports.files.waitingForOriginalReadConsent")
-              : statusLine(source, pickingUp, aiSource)}
+              : statusLine(source, pickingUp)}
           </span>
           {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
             <Link
@@ -206,7 +206,11 @@ export function FileSourceCard({
             {t("imports.files.readOriginalConsent", { provider })}
           </p>
           <Button type="button" disabled={busy} onClick={onAllowOriginalRead}>
-            {t("imports.files.readOriginal")}
+            {t(
+              source.originalReadAllowed && failed
+                ? "imports.files.retry"
+                : "imports.files.readOriginal",
+            )}
           </Button>
         </div>
       )}
@@ -234,11 +238,7 @@ function isPickingUp(
   );
 }
 
-function statusLine(
-  source: FileSourceCard_SourceFragment,
-  pickingUp: boolean,
-  aiSource: AiSource | null,
-): string {
+function statusLine(source: FileSourceCard_SourceFragment, pickingUp: boolean): string {
   const { status, failure, failureMessage, employeeCount, readBy, originalReadAllowed } = source;
   if (status === "WAITING_FOR_ORIGINAL_READ_CONSENT") {
     return t("imports.files.pdfNotMasked");
@@ -266,15 +266,16 @@ function statusLine(
     employeeCount === 1
       ? t("imports.files.onePerson")
       : t("imports.files.people", { count: String(employeeCount) });
-  const reader = readerLabel(source, aiSource);
+  const reader = readerLabel(source);
   return reader ? `${people} · ${t(reader)}` : people;
 }
 
 /** How a mapped file names who read it, when it was not Broccoli's masked mapping. */
-function readerLabel(
-  { readBy, originalReadAllowed }: FileSourceCard_SourceFragment,
-  aiSource: AiSource | null,
-): MessageKey | null {
+function readerLabel({
+  readBy,
+  originalReadAllowed,
+  originalReadAiSource,
+}: FileSourceCard_SourceFragment): MessageKey | null {
   const byExternalAgent = readBy === "ANSWERED_BY_EXTERNAL_AGENT";
   if (!originalReadAllowed) {
     return byExternalAgent ? "imports.files.mappedByExternalAgent" : null;
@@ -282,10 +283,10 @@ function readerLabel(
   if (byExternalAgent) {
     return "imports.files.readByExternalAgent";
   }
-  if (aiSource === null) {
+  if (originalReadAiSource === null) {
     return "imports.files.readByAi";
   }
-  return aiSource === "BROCCOLI_AI"
+  return originalReadAiSource === "BROCCOLI_AI"
     ? "imports.files.readByBroccoliAi"
     : "imports.files.readByOpenRouter";
 }

@@ -144,6 +144,9 @@ export function createOriginalFileReadService({
         // Only the current run of an open import writes.
         const imports = await openImport(tx);
         if (imports && (await imports.finishMapping(sourceId, attempt, outcome))) {
+          if (outcome.status === "mapped") {
+            await originalReadRepository(tx).recordOriginalReadAiSource(sourceId, aiSource);
+          }
           await imports.syncEmployeeRecords(sourceId, people?.records ?? []);
         }
       });
@@ -203,7 +206,7 @@ function requireAllowable(
   if (source.status === "mapping") {
     throw new ApplicationError("CONFLICT", "Wait until the file is read.");
   }
-  if (source.originalReadAllowedAt) {
+  if (source.originalReadAllowedAt && source.status !== "failed") {
     throw new ApplicationError("CONFLICT", "AI may already read this file.");
   }
 }

@@ -172,6 +172,7 @@ const file: ImportSource = {
   readBy: "parsed_by_broccoli",
   pickedUpByExternalAgentAt: null,
   originalReadAllowedAt: null,
+  originalReadAiSource: null,
 };
 const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
 const row: ImportEmployeeRecord = {

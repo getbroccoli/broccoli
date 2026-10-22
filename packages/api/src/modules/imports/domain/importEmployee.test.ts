@@ -227,6 +227,7 @@ const mapped = {
   readBy: "parsed_by_broccoli",
   pickedUpByExternalAgentAt: null,
   originalReadAllowedAt: null,
+  originalReadAiSource: null,
 } as const;
 
 const row: ImportEmployeeRecord = {

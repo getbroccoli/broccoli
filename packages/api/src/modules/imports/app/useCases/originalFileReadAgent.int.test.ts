@@ -86,6 +86,9 @@ test("the agent's people replace the masked records", async ({ orm, seed, transa
   expect(result).toEqual({ status: "mapped", failure: null, people: 1, skipped: 0 });
   const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
   expect(records.edges.map(({ node }) => node.email)).toEqual(["avery@example.com"]);
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
+    { id: source.id, originalReadAiSource: "external_agent" },
+  ]);
 });
 
 test("a second send replaces the first people", async ({ orm, seed, transact }) => {

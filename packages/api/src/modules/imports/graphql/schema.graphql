@@ -82,6 +82,8 @@ type ImportSource {
   pickedUpByExternalAgent: Boolean!
   "Whether the owner let AI read the original file in full, personal data included; Reset setup ends it."
   originalReadAllowed: Boolean!
+  "The provider that last read the original successfully; null for managed or older reads."
+  originalReadAiSource: AiSource
   status: ImportSourceStatus!
   "Set when FAILED."
   failure: ImportSourceFailure

@@ -1,3 +1,5 @@
+import type { AiSource } from "../../../core/instance";
+
 /** Where the records of the import come from: the Slack workspace or an uploaded file. */
 export type ImportSourceKind = "slack" | "file";
 
@@ -55,6 +57,8 @@ export interface ImportSource {
   pickedUpByExternalAgentAt: Date | null;
   /** When the owner let AI read the original file in full; null without that consent. */
   originalReadAllowedAt: Date | null;
+  /** The provider that last read the original successfully; null for managed or older reads. */
+  originalReadAiSource: AiSource | null;
 }
 
 /**

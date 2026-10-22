@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { files } from "../../../core/files";
+import type { AiSource } from "../../../core/instance";
 import { IMPORT_SOURCE_FAILURES, IMPORT_SOURCE_READERS, IMPORT_SOURCE_STATUSES } from "../domain";
 
 /** Where the import's records come from: the Slack workspace and uploaded files. */
@@ -29,6 +30,7 @@ export const importSources = pgTable(
     pickedUpByExternalAgentAt: timestamp("picked_up_by_external_agent_at", { withTimezone: true }),
     /** When the owner let AI read the original file in full; Reset setup clears it. */
     originalReadAllowedAt: timestamp("original_read_allowed_at", { withTimezone: true }),
+    originalReadAiSource: text("original_read_ai_source").$type<AiSource>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -42,6 +44,10 @@ export const importSources = pgTable(
       sql`(${table.status} = 'failed') = (${table.failure} is not null)`,
     ),
     check("import_sources_file", sql`(${table.kind} = 'file') = (${table.fileId} is not null)`),
+    check(
+      "import_sources_original_read_ai_source",
+      sql`${table.originalReadAiSource} in ('broccoli_ai', 'openrouter', 'external_agent')`,
+    ),
     check(
       "import_sources_read_by",
       sql`${table.readBy} in ('parsed_by_broccoli', 'answered_by_external_agent')`,
