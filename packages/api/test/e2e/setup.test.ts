@@ -1,4 +1,4 @@
-import { expect, TEST_OWNER, test } from "#test/support";
+import { expect, test } from "#test/support";
 
 test("starting the demo signs in its owner for seven days and completes setup", async ({ env }) => {
   const browser = await env.startSetupAtImport();
@@ -94,97 +94,6 @@ test("Better Auth refuses the demo owner's session after the deadline", async ({
   expect(session.status).toBe(200);
   expect(await session.json()).toBeNull();
   expect(update.status).toBe(401);
-});
-
-test("creating an account keeps the demo owner's user id and clears its deadline", async ({
-  env,
-}) => {
-  const { browser, user, response: started } = await env.startDemo();
-
-  const response = await browser.post("/api/auth/setup/account", {
-    ...TEST_OWNER,
-    email: "OWNER@EXAMPLE.COM",
-  });
-
-  expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({ user: { id: user.id, email: TEST_OWNER.email } });
-  expect(sessionCookieOf(response)).toBeDefined();
-  expect(sessionCookieOf(response)).not.toBe(sessionCookieOf(started));
-  const signedIn = await browser.graphql("query { me { id } setup { id demoExpiresAt } }");
-  expect(await signedIn.json()).toEqual({
-    data: { me: { id: user.id }, setup: { id: "instance", demoExpiresAt: null } },
-  });
-});
-
-test("creating an account with a taken email is refused and keeps the demo", async ({ env }) => {
-  await env.createUser(TEST_OWNER.email);
-  const { browser, user } = await env.startDemo();
-  const { demoExpiresAt } = await env.readDemoSession(user.id);
-
-  const response = await browser.post("/api/auth/setup/account", TEST_OWNER);
-
-  expect(response.status).toBe(422);
-  expect(await response.json()).toMatchObject({ code: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" });
-  const signedIn = await browser.graphql("query { me { id } setup { id demoExpiresAt } }");
-  expect(await signedIn.json()).toEqual({
-    data: {
-      me: { id: user.id },
-      setup: { id: "instance", demoExpiresAt: demoExpiresAt!.toISOString() },
-    },
-  });
-});
-
-test("creating an account revokes the old demo session", async ({ env }) => {
-  const { browser, response: started } = await env.startDemo();
-  const cookie = sessionCookieOf(started)!;
-  expect((await browser.post("/api/auth/setup/account", TEST_OWNER)).status).toBe(200);
-
-  const response = await fetch(`${env.url}/api/graphql`, {
-    method: "POST",
-    headers: { "content-type": "application/json", origin: env.url, cookie },
-    body: JSON.stringify({ query: "query { company { id } }" }),
-  });
-
-  expect(await response.json()).toMatchObject({
-    errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
-  });
-});
-
-test("the upgraded demo owner can sign in from a fresh browser", async ({ env }) => {
-  const { browser, user } = await env.startDemo();
-  expect((await browser.post("/api/auth/setup/account", TEST_OWNER)).status).toBe(200);
-
-  const response = await env.browser().post("/api/auth/sign-in/email", TEST_OWNER);
-
-  expect(response.status).toBe(200);
-  expect(await response.json()).toMatchObject({ user: { id: user.id, email: TEST_OWNER.email } });
-});
-
-test("creating an account without a session is refused", async ({ env }) => {
-  const response = await env.browser().post("/api/auth/setup/account", TEST_OWNER);
-
-  expect(response.status).toBe(401);
-});
-
-test("a normal owner has no demo deadline and cannot create a demo account", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-
-  const response = await browser.post("/api/auth/setup/account", TEST_OWNER);
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toMatchObject({ code: "NOT_IN_DEMO" });
-  const setup = await browser.graphql("query { setup { id demoExpiresAt } }");
-  expect(await setup.json()).toEqual({ data: { setup: { id: "instance", demoExpiresAt: null } } });
-});
-
-test("creating an account after the demo deadline is refused", async ({ env }) => {
-  const { browser } = await env.startDemo();
-  await env.expireDemo();
-
-  const response = await browser.post("/api/auth/setup/account", TEST_OWNER);
-
-  expect(response.status).toBe(403);
-  expect(await response.json()).toMatchObject({ code: "NOT_IN_DEMO" });
 });
 
 test("the demo owner's session loses access after the deadline", async ({ env }) => {

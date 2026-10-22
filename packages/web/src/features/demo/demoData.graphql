@@ -5,9 +5,9 @@ query DemoData {
   }
 }
 
-mutation ClearDemoData {
+mutation ExitDemo {
   demo {
-    clear {
+    exit {
       demoData {
         id
         isPresent

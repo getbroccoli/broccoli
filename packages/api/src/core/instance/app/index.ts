@@ -5,11 +5,11 @@ export {
   completeReadyStep,
   isImportOpen,
   returnToCompanyStep,
+  returnToCompanyStepFromDemo,
 } from "./setup";
 export { claimOwner, createOwnerAtSetup, readOwner } from "./owner";
 export { readInstance } from "./instance";
 export {
-  finishDemo,
   resetDemo,
   startDemoAtSetup,
   type DemoReset,

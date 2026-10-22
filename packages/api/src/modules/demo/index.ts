@@ -5,7 +5,7 @@ import { createResolvers } from "./graphql";
 
 export { createDemoUseCases, prepareDemoFill } from "./app";
 
-/** The sample company an owner can start with instead of importing their people; and clearing it. */
+/** The sample company an owner can start with instead of importing their people; and exiting it. */
 export function demoModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact">,
 ): ModuleManifest {

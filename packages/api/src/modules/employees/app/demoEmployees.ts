@@ -28,13 +28,8 @@ export async function createDemoEmployees(
   );
 }
 
-/** Deletes the demo employees and their avatars, joining `tx`; real employees stay. */
-export async function clearDemoEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
+/** Whether the instance holds demo employees; joins `db`. */
+export function hasDemoEmployees(ctx: SecurityContext, db: Orm | Tx): Promise<boolean> {
   ctx.requireOwnerOrSystem();
-  await employeeRepository(tx).deleteDemo();
-}
-
-export function hasDemoEmployees(ctx: SecurityContext, orm: Orm): Promise<boolean> {
-  ctx.requireOwnerOrSystem();
-  return employeeRepository(orm).hasDemo();
+  return employeeRepository(db).hasDemo();
 }

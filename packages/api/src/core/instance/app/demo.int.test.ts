@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { expect, NON_OWNER, SYSTEM, test, type TestSeed } from "#test/support";
 
 import { user } from "../../auth";
@@ -6,8 +5,7 @@ import { ormOf, transactor, type Tx } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
 import type { SecurityContext } from "../../security";
-import { instanceRepository } from "../db";
-import { completeImportStep, finishDemo, readInstance, startDemoAtSetup } from ".";
+import { completeImportStep, readInstance, startDemoAtSetup } from ".";
 
 test("starts a seven-day demo for the setup holder, claims the owner and completes setup", async ({
   orm,
@@ -169,109 +167,6 @@ test("creates only one owner when two demo starts arrive together", async ({
   const owners = await orm.select().from(user);
   expect(owners).toHaveLength(1);
   expect((await readInstance(orm)).ownerUserId).toBe(owners[0]!.id);
-});
-
-test("upgrades the same owner and clears the demo deadline without claiming ownership again", async ({
-  orm,
-  seed,
-}) => {
-  const owner = await seed.demoOwner({ expiresAt });
-  const userId = owner.user!.userId;
-  const eventBus = createEventBus(createLogger("silent"));
-  const transact = transactor(orm, eventBus);
-  const claimed: unknown[] = [];
-  eventBus.subscribe({
-    "instance.owner_claimed": (payload) => {
-      claimed.push(payload);
-      return Promise.resolve();
-    },
-  });
-
-  const upgraded = await transact((tx) =>
-    finishDemo(owner, tx, { userId, now }, async () => {
-      const [updated] = await ormOf(tx)
-        .update(user)
-        .set({ email: "upgraded@example.com" })
-        .where(eq(user.id, userId))
-        .returning();
-      return updated!;
-    }),
-  );
-
-  expect(upgraded).toMatchObject({ id: userId, email: "upgraded@example.com" });
-  expect(await readInstance(orm)).toMatchObject({ ownerUserId: userId, demoExpiresAt: null });
-  expect(claimed).toEqual([]);
-});
-
-test.for([
-  { reason: "no demo is running", deadline: null, userId: undefined },
-  {
-    reason: "the caller is not the instance owner",
-    deadline: new Date("2026-01-04T12:00:00Z"),
-    userId: "another-user",
-  },
-  {
-    reason: "the deadline has arrived",
-    deadline: new Date("2026-01-02T12:00:00Z"),
-    userId: undefined,
-  },
-  {
-    reason: "the deadline has passed",
-    deadline: new Date("2026-01-01T12:00:00Z"),
-    userId: undefined,
-  },
-])(
-  "refuses the upgrade without running it when $reason",
-  async ({ deadline, userId }, { orm, seed, transact }) => {
-    const owner = await seed.demoOwner({ expiresAt });
-    await instanceRepository(orm).saveDemoExpiresAt(deadline);
-    let upgraded = false;
-
-    await expect(
-      transact((tx) =>
-        finishDemo(owner, tx, { userId: userId ?? owner.user!.userId, now }, () => {
-          upgraded = true;
-          return Promise.resolve(owner);
-        }),
-      ),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
-
-    expect(upgraded).toBe(false);
-    expect((await readInstance(orm)).demoExpiresAt).toEqual(deadline);
-  },
-);
-
-test("refuses a non-owner finishing a demo even with the owner's user id", async ({
-  seed,
-  transact,
-}) => {
-  const owner = await seed.demoOwner({ expiresAt });
-  let upgraded = false;
-
-  await expect(
-    transact((tx) =>
-      finishDemo(NON_OWNER, tx, { userId: owner.user!.userId, now }, () => {
-        upgraded = true;
-        return Promise.resolve(owner);
-      }),
-    ),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
-
-  expect(upgraded).toBe(false);
-});
-
-test("keeps the demo deadline when upgrading the owner fails", async ({ orm, seed, transact }) => {
-  const owner = await seed.demoOwner({ expiresAt });
-
-  await expect(
-    transact((tx) =>
-      finishDemo(owner, tx, { userId: owner.user!.userId, now }, () =>
-        Promise.reject(new Error("Upgrade failed")),
-      ),
-    ),
-  ).rejects.toThrow("Upgrade failed");
-
-  expect((await readInstance(orm)).demoExpiresAt).toEqual(expiresAt);
 });
 
 const now = new Date("2026-01-02T12:00:00Z");

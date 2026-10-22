@@ -1,12 +1,5 @@
 import { useQuery } from "@apollo/client/react";
-import {
-  ArrowCounterClockwise,
-  Buildings,
-  CaretDown,
-  Plant,
-  SignOut,
-  UserPlus,
-} from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Buildings, CaretDown, Plant, SignOut } from "@phosphor-icons/react";
 import { Link, useRouteContext, useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
@@ -21,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/features/auth";
-import { ResetDemoDialog } from "@/features/demo";
+import { ExitDemoDialog } from "@/features/demo";
 import { t } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
 
@@ -31,7 +24,7 @@ export function WorkspaceMenu() {
   const company = useQuery(WorkspaceMenuDocument).data?.company;
   const openedOnPath = useRef<string | null>(null);
   // Outside the menu, which closes when an item is chosen.
-  const [resettingDemo, setResettingDemo] = useState(false);
+  const [exitingDemo, setExitingDemo] = useState(false);
   // The gate then sends the signed-out user to the login page.
   const [signOutAndReload, signingOut] = useSessionChange(signOut);
   // Return focus to the trigger unless the page changed, in which case the new page's
@@ -88,13 +81,9 @@ export function WorkspaceMenu() {
             // The demo's owner has no password, so signing out would lock them out.
             <DropdownMenuGroup>
               <DropdownMenuLabel>{t("demo.menu.label")}</DropdownMenuLabel>
-              <DropdownMenuItem render={<Link to="/account" />}>
-                <UserPlus size={14} />
-                {t("demo.banner.createAccount")}
-              </DropdownMenuItem>
-              <DropdownMenuItem variant="destructive" onClick={() => setResettingDemo(true)}>
+              <DropdownMenuItem variant="destructive" onClick={() => setExitingDemo(true)}>
                 <ArrowCounterClockwise size={14} />
-                {t("demo.menu.reset")}
+                {t("demo.exit.open")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
           ) : (
@@ -110,7 +99,7 @@ export function WorkspaceMenu() {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <ResetDemoDialog open={resettingDemo} onOpenChange={setResettingDemo} />
+      <ExitDemoDialog open={exitingDemo} onOpenChange={setExitingDemo} />
     </>
   );
 }

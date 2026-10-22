@@ -1,3 +1,3 @@
 export { DemoBanner } from "./DemoBanner";
-export { ResetDemoDialog } from "./ResetDemoDialog";
+export { ExitDemoDialog } from "./ExitDemoDialog";
 export { useStartDemo } from "./useStartDemo";

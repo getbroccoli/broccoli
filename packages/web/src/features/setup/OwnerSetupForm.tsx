@@ -11,7 +11,7 @@ import { t, type MessageKey } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
 
 import { NewPasswordField } from "./NewPasswordField";
-import type { SetupResult } from "./setupApi";
+import { type SetupResult, setUpOwner } from "./setupApi";
 import type { SetupWidth } from "./SetupLayout";
 import { SetupStepForm } from "./SetupStepForm";
 
@@ -33,8 +33,6 @@ const FAILURE_MESSAGES: Record<Exclude<SetupResult, "ok" | "conflict">, MessageK
 };
 
 type Props = {
-  /** Sends the credentials: the owner at the end of setup, or the demo's owner. */
-  createAccount: (email: string, password: string) => Promise<SetupResult>;
   /** Shown above the fields. */
   intro?: ReactNode;
   /** Shown on the left of the footer, such as a way back out of setup's last step. */
@@ -47,13 +45,13 @@ type Props = {
  * signed-in owner to the directory. On a conflict, such as an owner created first, the
  * reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm({ createAccount, intro, secondaryAction, width }: Props) {
+export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
   const emailInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
   const [createAndReload, creating] = useSessionChange(async (email: string, password: string) => {
     setFailure(null);
-    const result = await createAccount(email, password);
+    const result = await setUpOwner(email, password);
     // On a conflict, setup moved on in another browser: reloading shows where.
     if (result === "ok" || result === "conflict") {
       return true;

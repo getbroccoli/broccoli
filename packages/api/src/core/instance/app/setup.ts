@@ -31,6 +31,14 @@ export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise
   );
 }
 
+/**
+ * Takes setup from `done` back to the company step when an owner with an account exits the
+ * demo, joining `tx`; does nothing at any other step. Returns whether it moved.
+ */
+export function returnToCompanyStepFromDemo(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return advanceStep(ctx, tx, "done", "company");
+}
+
 /** Whether the import still takes changes: setup has not moved past the import step. */
 export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
   const { step } = await instanceRepository(db).readInstance();
