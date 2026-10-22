@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
 
-import { ClaudeMark, CodexMark } from "./ExternalAgentMarks";
+import { ClaudeMark } from "./ClaudeMark";
+import { CodexMark } from "./CodexMark";
 
 type Props = { externalAgent: FragmentType<ExternalAgentPill_ExternalAgentFragment> };
 

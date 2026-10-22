@@ -13,9 +13,6 @@ import { t } from "@/i18n";
 import { RemoveSourceDialog } from "../RemoveSourceDialog";
 import { SourceIcon } from "./SourceIcon";
 
-/** Review's query, loaded again so the removed source's people leave the list. */
-const REFETCH_AFTER_REMOVE = [ImportReviewDocument];
-
 /**
  * "Details came from" and a chip per source, each removable after a confirmation; owns the
  * `SourceChips_source` fragment.
@@ -63,3 +60,6 @@ export function SourceChips({
     </div>
   );
 }
+
+/** Review's query, loaded again so the removed source's people leave the list. */
+const REFETCH_AFTER_REMOVE = [ImportReviewDocument];

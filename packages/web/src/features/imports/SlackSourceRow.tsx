@@ -31,9 +31,6 @@ interface SlackSourceRowProps {
   source: ImportStepQuery["import"]["sources"][number] | undefined;
 }
 
-/** The import step's query, loaded again so the row shows Slack disconnected. */
-const REFETCH_AFTER_REMOVE = [ImportStepDocument];
-
 /**
  * Slack as a source of people: connect it, read it again, and remove it. A connected workspace
  * without imported members is imported as soon as the row shows it.
@@ -177,3 +174,6 @@ function readLabel(reading: boolean, imported: boolean) {
   }
   return imported ? "imports.slack.refresh" : "imports.slack.import";
 }
+
+/** The import step's query, loaded again so the row shows Slack disconnected. */
+const REFETCH_AFTER_REMOVE = [ImportStepDocument];

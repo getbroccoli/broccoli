@@ -1,15 +1,9 @@
 import { FileCsv, FilePdf, FileXls } from "@phosphor-icons/react";
 
+type Props = { name: string; size: number; className?: string };
+
 /** The mark of a staff file by its extension: PDF, Excel or, otherwise, CSV. */
-export function FileIcon({
-  name,
-  size,
-  className,
-}: {
-  name: string;
-  size: number;
-  className?: string;
-}) {
+export function FileIcon({ name, size, className }: Props) {
   const lowerName = name.toLowerCase();
   const Icon = lowerName.endsWith(".pdf")
     ? FilePdf
