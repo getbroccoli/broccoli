@@ -145,6 +145,11 @@ export function FileSources({
         onChange={(event) => void upload(event.target.files)}
       />
       {externalAgentPrompt}
+      {alerts.length > 0 && (
+        <p role="alert" className="text-sm wrap-anywhere whitespace-pre-line text-destructive">
+          {alerts.join("\n")}
+        </p>
+      )}
       {sources.length === 0 ? (
         canDrop && (
           <button
@@ -212,11 +217,6 @@ export function FileSources({
       <p role="status" className="text-[13px] text-muted-foreground">
         {uploading ? t("imports.files.uploading", { name: uploading }) : ""}
       </p>
-      {alerts.length > 0 && (
-        <p role="alert" className="text-sm whitespace-pre-line text-destructive">
-          {alerts.join("\n")}
-        </p>
-      )}
     </section>
   );
 }
