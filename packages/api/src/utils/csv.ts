@@ -10,19 +10,20 @@ export function parseCsv(bytes: Uint8Array): string[][] | null {
   if (text.startsWith("%PDF-") || CONTROL_CHARACTER.test(text)) {
     return null;
   }
-  let best: { rows: string[][]; regularRows: number; regularColumns: number } | null = null;
+  let best: { rows: string[][]; regularRows: number; outerLength: number } | null = null;
   for (const delimiter of DELIMITERS) {
     const rows = parseWith(text, delimiter);
     if (rows === null) {
       continue;
     }
-    const { regularRows, regularColumns } = tableRegularity(rows);
+    const { regularRows, outerLength } = tableRegularity(rows);
+    // shortcut: ambiguous CSVs use structural inference; add delimiter choice if real inputs remain indistinguishable.
     if (
       best === null ||
       regularRows > best.regularRows ||
-      (regularRows === best.regularRows && regularColumns > best.regularColumns)
+      (regularRows === best.regularRows && outerLength < best.outerLength)
     ) {
-      best = { rows, regularRows, regularColumns };
+      best = { rows, regularRows, outerLength };
     }
   }
   return best?.rows ?? null;
@@ -56,20 +57,27 @@ function parseWith(text: string, delimiter: string): string[][] | null {
     .filter((row) => row.some((cell) => cell !== ""));
 }
 
-/** Prefer the most regular table, then the wider one when punctuation makes another regular split. */
-function tableRegularity(rows: string[][]): { regularRows: number; regularColumns: number } {
-  const rowsByWidth = new Map<number, number>();
-  for (const { length } of rows) {
-    rowsByWidth.set(length, (rowsByWidth.get(length) ?? 0) + 1);
+/** Shorter outer cells favour separators surrounding punctuation inside the table. */
+function tableRegularity(rows: string[][]): { regularRows: number; outerLength: number } {
+  const rowsByWidth = new Map<number, { count: number; outerLength: number }>();
+  for (const row of rows) {
+    const group = rowsByWidth.get(row.length) ?? { count: 0, outerLength: 0 };
+    group.count += 1;
+    group.outerLength += row[0]!.length + row.at(-1)!.length;
+    rowsByWidth.set(row.length, group);
   }
   let regularRows = 0;
-  let regularColumns = 0;
-  for (const [width, count] of rowsByWidth) {
+  let outerLength = Infinity;
+  for (const [width, group] of rowsByWidth) {
     // A one-column parse is regular too, so it only wins when no delimiter splits the rows.
-    if (width > 1 && (count > regularRows || (count === regularRows && width > regularColumns))) {
-      regularRows = count;
-      regularColumns = width;
+    if (
+      width > 1 &&
+      (group.count > regularRows ||
+        (group.count === regularRows && group.outerLength < outerLength))
+    ) {
+      regularRows = group.count;
+      outerLength = group.outerLength;
     }
   }
-  return { regularRows, regularColumns };
+  return { regularRows, outerLength };
 }
