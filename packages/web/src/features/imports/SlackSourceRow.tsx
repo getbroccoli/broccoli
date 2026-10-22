@@ -1,11 +1,7 @@
 import { DotsThree, LockSimple } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  ImportStepDocument,
-  ReadSlackDocument,
-  type ImportStepQuery,
-} from "@/__generated__/graphql";
+import { ReadSlackDocument, type ImportStepQuery } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -148,7 +144,6 @@ export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
       <RemoveSourceDialog
         source={removing && source ? source : null}
         onClose={() => setRemoving(false)}
-        refetch={REFETCH_AFTER_REMOVE}
       />
       {readFailed && (
         <p role="alert" className="border-t border-border px-5 py-3 text-sm text-destructive">
@@ -174,6 +169,3 @@ function readLabel(reading: boolean, imported: boolean) {
   }
   return imported ? "imports.slack.refresh" : "imports.slack.import";
 }
-
-/** The import step's query, loaded again so the row shows Slack disconnected. */
-const REFETCH_AFTER_REMOVE = [ImportStepDocument];

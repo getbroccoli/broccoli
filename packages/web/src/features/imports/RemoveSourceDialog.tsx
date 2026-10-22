@@ -1,3 +1,4 @@
+import type { ApolloCache } from "@apollo/client";
 import type { DocumentNode } from "graphql";
 
 import { type ImportSourceKind, RemoveSourceDocument } from "@/__generated__/graphql";
@@ -19,14 +20,15 @@ type Props = {
   source: { id: string; kind: ImportSourceKind; name: string } | null;
   onClose: () => void;
   /** The page's queries to load again once the source is gone. */
-  refetch: DocumentNode[];
+  refetch?: DocumentNode[];
 };
 
 /** Asks before removing a source and its people; removing Slack also disconnects it. */
 export function RemoveSourceDialog({ source, onClose, refetch }: Props) {
   const [removeSource, { loading, error, payloadError, reset }] = usePayloadMutation(
     RemoveSourceDocument,
-    { refetch },
+    // With the source, so the import page never shows Slack's row connected without its people.
+    { refetch, update: source?.kind === "SLACK" ? forgetSlackConnection : undefined },
   );
 
   const changeOpen = (open: boolean) => {
@@ -83,4 +85,9 @@ export function RemoveSourceDialog({ source, onClose, refetch }: Props) {
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+/** Removing Slack disconnected it: the cached connection goes with the source. */
+function forgetSlackConnection(cache: ApolloCache) {
+  cache.modify({ fields: { slackConnection: () => null } });
 }
