@@ -31,19 +31,21 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   // The client's timeout ends only its call to the proxy; stopping ends the calls to OpenRouter too.
   const upstreamCalls = new AbortController();
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
-  app.post(["/alpha/decisions", "/v1/chat/completions"], async (request, response) => {
-    const body = request.body as string;
-    sentBodies.push(body);
-    const upstream = await fetch(`${OPENROUTER_URL}${request.path}`, {
-      method: "POST",
-      headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
-      body,
-      signal: upstreamCalls.signal,
+  for (const path of ["/alpha/decisions", "/v1/chat/completions"]) {
+    app.post(path, async (request, response) => {
+      const body = request.body as string;
+      sentBodies.push(body);
+      const upstream = await fetch(`${OPENROUTER_URL}${path}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        body,
+        signal: upstreamCalls.signal,
+      });
+      const answer = await upstream.text();
+      cost += readCost(answer);
+      response.status(upstream.status).type("application/json").send(answer);
     });
-    const answer = await upstream.text();
-    cost += readCost(answer);
-    response.status(upstream.status).type("application/json").send(answer);
-  });
+  }
   const server = await startSimpleHttpServer(app);
   const source = { kind: "openrouter" as const, url: server.url, key: apiKey };
   const model = createResolvedDecisions({
