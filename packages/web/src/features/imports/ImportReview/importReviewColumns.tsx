@@ -24,7 +24,7 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     id: "person",
     header: t("setup.review.column.person"),
     sortKey: "name",
-    className: "w-[28%] min-w-48 max-w-0",
+    className: "w-[28%] min-w-44 max-w-0",
     cell: (employee) => (
       <LeftOutCell leftOut={employee.leftOut}>
         <ImportPersonCell employee={employee} />
@@ -35,7 +35,7 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     id: "email",
     header: t("setup.review.column.email"),
     sortKey: "email",
-    className: "w-[24%] min-w-48 max-w-0",
+    className: "w-[24%] min-w-44 max-w-0",
     cell: (employee) => (
       <LeftOutCell leftOut={employee.leftOut}>
         <EmployeeValueCell
