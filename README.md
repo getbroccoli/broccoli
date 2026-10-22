@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-5E9072" alt="License: AGPL-3.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0-5E9072" alt="Licence: AGPL-3.0"></a>
   <a href="https://github.com/getbroccoli/broccoli/actions/workflows/secret-scan.yml"><img src="https://github.com/getbroccoli/broccoli/actions/workflows/secret-scan.yml/badge.svg" alt="CI"></a>
 </p>
 
@@ -34,7 +34,7 @@ Open http://localhost:8080.
 
 [Self-hosted setup guide](docs/guides/setup-guide.md)
 
-## License
+## Licence
 
 Copyright (C) 2026 Minari Limited.
 
