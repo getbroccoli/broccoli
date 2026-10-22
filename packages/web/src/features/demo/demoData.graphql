@@ -12,6 +12,9 @@ mutation ExitDemo {
         id
         isPresent
       }
+      error {
+        __typename
+      }
     }
   }
 }

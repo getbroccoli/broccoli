@@ -40,11 +40,18 @@ curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
 
 ## Skip the import
 
-After the company step, a self-hosted setup opens `/setup/ai`: choose "Explore the demo" there, or "Continue" and then "Explore the demo" on `/setup/import`. Either fills the demo company and signs you in as the demo's owner, without an account; `POST /api/auth/setup/demo` does the same. Then choose "Create account" in the green banner, which opens the same form as the owner step below.
+After the company step, a self-hosted setup opens `/setup/ai`: choose "Explore the demo" there, or "Continue" and then "Explore the demo" on `/setup/import`. Either fills the demo company and signs you in as the demo's owner, without an account; `POST /api/auth/setup/demo` does the same. "Exit demo" in the green banner deletes the demo and takes setup back to the company step.
+
+For an owner with an account and the demo company, start the demo from a terminal with the cookie jar instead, then create the owner below:
+
+```sh
+curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
+  -d '{"query":"mutation { import { startDemo { import { id } } } }"}'
+```
 
 ## Create the owner
 
-After an import, the last step opens `/setup`. Enter `owner@example.com` and a password of at least 8 characters, then choose "Create account". This signs you in and ends on `/people`, which then shows the demo company.
+After an import or the terminal demo start, the last step opens `/setup`. Enter `owner@example.com` and a password of at least 8 characters, then choose "Create account". This signs you in and ends on `/people`.
 
 From a terminal:
 
