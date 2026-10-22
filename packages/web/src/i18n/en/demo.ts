@@ -6,8 +6,7 @@ export const demoEn = {
   "demo.menu.label": "Demo",
   "demo.exit.open": "Exit demo",
   "demo.exit.title": "Exit demo?",
-  "demo.exit.detail":
-    "The demo people and anyone you added are deleted, and setup starts again. Your company and AI choice stay.",
+  "demo.exit.detail": "The demo people and anyone you added are deleted, and setup starts again.",
   "demo.exit.cancel": "Cancel",
   "demo.exit.confirm": "Exit demo",
   "demo.exit.pending": "Exiting…",

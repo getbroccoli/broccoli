@@ -26,7 +26,7 @@ A manual check that skipping the import fills the demo company and that Exit dem
 2. Choose "Exit demo" on the banner, then "Cancel": nothing changes. Do the same from the workspace menu.
 3. Choose "Exit demo" again and confirm.
 
-- [ ] The dialog reads "Exit demo?" and says the demo people and anyone you added are deleted, and the company and AI choice stay.
+- [ ] The dialog reads "Exit demo?" and says the demo people and anyone you added are deleted, and setup starts again.
 - [ ] While exiting, the button reads "Exiting…" and the dialog cannot be closed.
 - [ ] You land on `/setup/company` with the company name filled in; Setup AI keeps its choice and "Explore the demo" is offered again.
 - [ ] `/people` no longer opens, and a demo avatar URL copied before exiting answers 403 (`curl` with this browser's cookies, not the browser cache).
