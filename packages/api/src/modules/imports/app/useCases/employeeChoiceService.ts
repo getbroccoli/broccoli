@@ -46,8 +46,18 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
           throw invalidInput([{ field: "recordId", code: "not_found" }]);
         }
         const normalised = choice && "value" in choice ? typedValue(field, choice.value) : choice;
-        if (field === "email" && normalised && "value" in normalised) {
-          refuseTakenEmail(employees, employee, normalised.value);
+        if (field === "email") {
+          // Undo restores every original email when a previously merged person splits apart.
+          const emails = normalised
+            ? [
+                "value" in normalised
+                  ? normalised.value
+                  : emailOfRecord(employee, normalised.recordId),
+              ]
+            : employee.values.email.options.map(({ value }) => value);
+          for (const email of emails) {
+            if (email !== null) refuseTakenEmail(employees, employee, email);
+          }
         }
         return withValue(employee, field, normalised);
       }),
@@ -156,7 +166,7 @@ function mergedChoices(key: string, email: string | null, leftOut: boolean): Imp
   return { key, leftOut, values: email === null ? {} : { email: { value: email } } };
 }
 
-/** Two import employees never share an email by typing: the owner leaves one out instead. */
+/** An email choice must not merge distinct people: the owner leaves one out instead. */
 function refuseTakenEmail(employees: ImportEmployee[], employee: ImportEmployee, email: string) {
   if (employees.some((other) => other !== employee && other.values.email.value === email)) {
     throw invalidInput([{ field: "value", code: "taken" }]);

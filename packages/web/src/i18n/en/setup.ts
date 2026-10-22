@@ -159,7 +159,7 @@ export const setupEn = {
   "setup.review.undo": "Undo",
   "setup.review.error.required": "Enter a value",
   "setup.review.error.too_long": "Use 100 characters or fewer",
-  "setup.review.error.taken": "Another person has this email. Leave one of them out instead.",
+  "setup.review.error.taken": "Another person already uses this email. Enter a different email.",
   "setup.review.error.invalid": "Enter a valid value",
   "setup.review.error.invalidEmail": "Enter a valid email",
   "setup.review.error.invalidDate": "Enter a date",

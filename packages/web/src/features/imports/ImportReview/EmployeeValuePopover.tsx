@@ -7,7 +7,7 @@ import {
   type ImportChooseEmployeeValueInput,
   ImportReviewDocument,
 } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -65,7 +65,19 @@ export function EmployeeValuePopover({
             action: {
               label: t("setup.review.undo"),
               onClick: () =>
-                void choose(previous).catch(() => toast.error(t("setup.review.saveFailed"))),
+                void choose(previous).catch((failure: unknown) => {
+                  const refused =
+                    failure instanceof PayloadFailure
+                      ? (failure.payloadError as typeof payloadError)
+                      : null;
+                  const fieldError =
+                    refused?.__typename === "InvalidInputError" ? refused.fields[0] : undefined;
+                  toast.error(
+                    fieldError
+                      ? errorMessage(field, fieldError.code)
+                      : t("setup.review.saveFailed"),
+                  );
+                }),
             },
           },
         );
