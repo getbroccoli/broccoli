@@ -14,6 +14,9 @@ mutation ExitDemo {
       }
       error {
         __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
