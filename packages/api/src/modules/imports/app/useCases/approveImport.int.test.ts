@@ -6,35 +6,39 @@ import { ormOf } from "../../../../core/db";
 import { readInstance } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
 
-test("approving creates an employee per ready import employee and moves setup to ready", async ({
-  orm,
-  seed,
-}) => {
-  const owner = await seed.owner();
-  await seed.setupStep("import");
-  const source = await seed.importSource();
-  const avery = {
-    firstName: "Avery",
-    lastName: "Stone",
-    email: "avery@example.com",
-    jobTitle: "Designer",
-  };
-  const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
-  await seed.importEmployees(source.id, [avery, robin]);
-  const imports = importUseCases(orm);
-  const review = (await imports.reads.readReview(owner)).listEmployees({});
+test.for([
+  { mode: "managed", step: "ready" },
+  { mode: "self-hosted", step: "done" },
+] as const)(
+  "approving on a $mode instance with an owner creates employees and moves setup to $step",
+  async ({ mode, step }, { orm, seed }) => {
+    if (mode === "managed") await seed.assignment();
+    const owner = await seed.owner();
+    await seed.setupStep("import");
+    const source = await seed.importSource();
+    const avery = {
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+      jobTitle: "Designer",
+    };
+    const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
+    await seed.importEmployees(source.id, [avery, robin]);
+    const imports = importUseCases(orm);
+    const review = (await imports.reads.readReview(owner)).listEmployees({});
 
-  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+    await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
-  expect((await readInstance(orm)).step).toBe("ready");
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
-  expect(employees.edges.map(({ node }) => node)).toEqual(
-    expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
-  );
-  expect(employees.edges).toHaveLength(2);
-  expect(await imports.reads.listSources(owner)).toEqual([source]);
-  expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(review);
-});
+    expect((await readInstance(orm)).step).toBe(step);
+    const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+    expect(employees.edges.map(({ node }) => node)).toEqual(
+      expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
+    );
+    expect(employees.edges).toHaveLength(2);
+    expect(await imports.reads.listSources(owner)).toEqual([source]);
+    expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(review);
+  },
+);
 
 test("approving adds exactly the ready import employees the review counts", async ({
   orm,
@@ -123,6 +127,7 @@ test("approving twice creates the employees once", async ({ orm, seed }) => {
 });
 
 test("two concurrent approves create the employees once", async ({ orm, seed }) => {
+  await seed.assignment();
   const owner = await seed.owner();
   await seed.setupStep("import");
   const source = await seed.importSource();
@@ -202,6 +207,7 @@ test("refuses approval while a file is mapping without advancing setup", async (
 });
 
 test("approves available records when a failed file is present", async ({ orm, seed }) => {
+  await seed.assignment();
   const owner = await seed.owner();
   await seed.setupStep("import");
   const source = await seed.importSource();

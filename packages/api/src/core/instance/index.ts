@@ -15,6 +15,7 @@ export {
   isImportOpen,
   readSetupHolder,
   returnToCompanyStep,
+  returnToCompanyStepFromDemo,
   readOwner,
   readInstance,
   createAiSettings,

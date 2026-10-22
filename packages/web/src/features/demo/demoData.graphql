@@ -5,12 +5,18 @@ query DemoData {
   }
 }
 
-mutation ClearDemoData {
+mutation ExitDemo {
   demo {
-    clear {
+    exit {
       demoData {
         id
         isPresent
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }

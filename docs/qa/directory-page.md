@@ -5,7 +5,7 @@ A manual check of the People page against a development stack.
 ## Setup
 
 1. Start the stack and create the owner as in [QA setup](setup.md).
-2. Choosing "Explore the demo" on the import step fills the instance with demo data; clear it from the banner ("Clear demo data"). `/people` then shows the empty state "No people yet".
+2. Setup always leaves people behind. For the empty state "No people yet", delete them with `docker compose exec postgres psql -U broccoli -c 'DELETE FROM employees'`.
 3. Add about 60 employees, leaving some without a job title or start date.
 
 ## List and paging

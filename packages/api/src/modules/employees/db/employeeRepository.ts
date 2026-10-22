@@ -35,8 +35,6 @@ export interface EmployeeRepository {
   insertSkippingTakenEmails(
     newEmployees: readonly EmployeeRow[],
   ): Promise<{ avatarFileId: string | null }[]>;
-  /** Deletes every demo employee and their avatars. */
-  deleteDemo(): Promise<void>;
   /** Deletes every employee and the demo avatars; an imported avatar stays with the import that stored it. */
   deleteAll(): Promise<void>;
   /** The emails among these that an employee has. */
@@ -109,13 +107,6 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         inserted.push(...rows);
       }
       return inserted;
-    },
-
-    deleteDemo: async (): Promise<void> => {
-      await deleteDemoAvatars(
-        db,
-        await orm().delete(employees).where(eq(employees.isDemo, true)).returning(avatarColumns),
-      );
     },
 
     deleteAll: async (): Promise<void> => {

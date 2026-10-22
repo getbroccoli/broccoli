@@ -13,8 +13,8 @@ export async function startDemoSetup(): Promise<boolean> {
 }
 
 /**
- * Ends the demo and takes setup back to the company step; the API makes this browser the
- * holder of setup again. Returns whether it did.
+ * Ends the self-hosted demo and takes setup back to the company step; the API makes this
+ * browser the holder of setup again. Returns whether it did.
  */
 export async function resetDemo(): Promise<boolean> {
   try {

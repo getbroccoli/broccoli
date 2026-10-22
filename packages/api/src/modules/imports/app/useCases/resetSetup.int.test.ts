@@ -94,6 +94,7 @@ test("resetting the ready step returns to company and deletes approved employees
   orm,
   seed,
 }) => {
+  await seed.assignment();
   const owner = await seed.owner();
   await seed.setupStep("import");
   const source = await seed.importSource();

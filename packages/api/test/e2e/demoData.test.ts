@@ -1,4 +1,12 @@
-import { approveReviewedImport, expect, test, TEST_OWNER, WEBP } from "#test/support";
+import {
+  approveReviewedImport,
+  expect,
+  signInAsManagedOwner,
+  startManagedEnv,
+  test,
+  TEST_OWNER,
+  WEBP,
+} from "#test/support";
 
 test("skipping import fills the directory and serves demo avatars", async ({ env }) => {
   const browser = env.browser();
@@ -28,29 +36,40 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   expect(bytes.toString("ascii", 8, 12)).toBe("WEBP");
 });
 
-test("clears demo data through the API and stops serving its avatars", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
+test("a managed owner exits the demo through the API and returns to company setup", async () => {
+  const { env, accounts } = await startManagedEnv();
+  const browser = await signInAsManagedOwner(env, accounts);
   await browser.graphql(saveCompany);
   await browser.graphql("mutation { import { startDemo { import { id } } } }");
+  await env.seed.employee();
+  const setup = await browser.graphql("query { me { id } setup { id step } }");
+  const signedIn = (await setup.json()) as { data: { me: { id: string } } };
+  expect(signedIn).not.toHaveProperty("errors");
+  expect(signedIn).toMatchObject({ data: { setup: { id: "instance", step: "DONE" } } });
   const before = await browser.graphql(demoQuery);
   const body = (await before.json()) as DemoDataResponse;
   expect(body).not.toHaveProperty("errors");
-  const avatarUrl = body.data.employees.edges[0]!.node.avatarUrl!;
+  const avatarUrl = body.data.employees.edges.find(({ node }) => node.avatarUrl)!.node.avatarUrl!;
   expect((await browser.get(avatarUrl)).status).toBe(200);
 
-  const cleared = await browser.graphql(
-    "mutation { demo { clear { demoData { id isPresent } } } }",
-  );
+  const exited = await browser.graphql("mutation { demo { exit { demoData { id isPresent } } } }");
 
-  expect(cleared.status).toBe(200);
-  expect(await cleared.json()).toEqual({
-    data: { demo: { clear: { demoData: { id: "demoData", isPresent: false } } } },
+  expect(exited.status).toBe(200);
+  expect(await exited.json()).toEqual({
+    data: { demo: { exit: { demoData: { id: "demoData", isPresent: false } } } },
   });
   const after = await browser.graphql(demoQuery);
   expect(await after.json()).toEqual({
     data: { employees: { edges: [] }, demo: { id: "demoData", isPresent: false } },
   });
   expect((await browser.get(avatarUrl)).status).toBe(404);
+  const returned = await browser.graphql("query { me { id isOwner } setup { id step } }");
+  expect(await returned.json()).toEqual({
+    data: {
+      me: { id: signedIn.data.me.id, isOwner: true },
+      setup: { id: "instance", step: "COMPANY" },
+    },
+  });
 });
 
 test("refuses demo data and employee avatars without a session", async ({ env }) => {
@@ -59,27 +78,23 @@ test("refuses demo data and employee avatars without a session", async ({ env })
   const browser = env.browser();
 
   const response = await browser.graphql("query { demo { isPresent } }");
-  const cleared = await browser.graphql(
-    "mutation { demo { clear { demoData { id isPresent } } } }",
-  );
+  const exited = await browser.graphql("mutation { demo { exit { demoData { id isPresent } } } }");
   const image = await browser.get(`/api/employees/avatar/${avatarFileId}`);
 
   expect(await response.json()).toMatchObject({
     errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
   });
-  expect(await cleared.json()).toMatchObject({
+  expect(await exited.json()).toMatchObject({
     errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
   });
   expect(image.status).toBe(401);
 });
 
-test("the provisional owner cannot clear demo data and the demo records remain", async ({
-  env,
-}) => {
+test("the provisional owner cannot exit through GraphQL", async ({ env }) => {
   const { browser } = await env.startDemo();
 
   const response = await browser.graphql(
-    "mutation { demo { clear { demoData { id isPresent } } } }",
+    "mutation { demo { exit { demoData { id isPresent } } } }",
   );
 
   expect(await response.json()).toMatchObject({ errors: [{ extensions: { code: "FORBIDDEN" } }] });

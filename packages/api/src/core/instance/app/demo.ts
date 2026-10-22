@@ -53,28 +53,6 @@ export async function startDemoAtSetup<Owner extends OwnerUser>(
 }
 
 /**
- * Ends the demo for its provisional owner before the deadline: runs `upgradeOwner`, which
- * gives the same user real credentials, and clears the deadline. Refuses with FORBIDDEN
- * anyone else, after the deadline, or without a demo.
- */
-export async function finishDemo<Owner>(
-  ctx: SecurityContext,
-  tx: Tx,
-  { userId, now }: { userId: string; now: Date },
-  upgradeOwner: () => Promise<Owner>,
-): Promise<Owner> {
-  ctx.requireOwnerOrSystem();
-  const instance = instanceRepository(tx);
-  const { ownerUserId, demoExpiresAt } = await instance.lockInstance();
-  if (ownerUserId !== userId || !demoExpiresAt || now >= demoExpiresAt) {
-    throw new ApplicationError("FORBIDDEN", "Only the demo's owner can create the account.");
-  }
-  const owner = await upgradeOwner();
-  await instance.saveDemoExpiresAt(null);
-  return owner;
-}
-
-/**
  * Ends the demo for its provisional owner before the deadline and takes setup back to the
  * company step: runs `clearPeople`, removes the owner and its deadline, runs `deleteOwner`,
  * which deletes the provisional user, and gives this browser a new setup session, returned

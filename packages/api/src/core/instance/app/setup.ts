@@ -31,6 +31,14 @@ export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise
   );
 }
 
+/**
+ * Takes setup from `done` back to the company step when an owner with an account exits the
+ * demo, joining `tx`; does nothing at any other step. Returns whether it moved.
+ */
+export function returnToCompanyStepFromDemo(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return advanceStep(ctx, tx, "done", "company");
+}
+
 /** Whether the import still takes changes: setup has not moved past the import step. */
 export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
   const { step } = await instanceRepository(db).readInstance();
@@ -48,8 +56,8 @@ export async function completeImportStep(ctx: SecurityContext, tx: Tx): Promise<
 
 /**
  * Leaves the import step on setup approve, joining `tx`: to `owner` while the instance has
- * no owner, else to `ready`, where a managed owner sees what setup added. Returns whether
- * it moved.
+ * no owner, else to `ready`, where a managed owner sees what setup added, or to `done` on a
+ * self-hosted instance. Returns whether it moved.
  */
 export async function approveImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
   return leaveImportStep(ctx, tx, "ready");
@@ -60,8 +68,9 @@ async function leaveImportStep(
   tx: Tx,
   withOwner: SetupStep,
 ): Promise<boolean> {
-  const { ownerUserId } = await instanceRepository(tx).readInstance();
-  const next = ownerUserId ? withOwner : "owner";
+  const { ownerUserId, assignment } = await instanceRepository(tx).readInstance();
+  // A self-hosted owner who exited the demo with an account has no account left to create.
+  const next = !ownerUserId ? "owner" : assignment ? withOwner : "done";
   return advanceStep(ctx, tx, "import", next);
 }
 

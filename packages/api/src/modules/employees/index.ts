@@ -5,7 +5,6 @@ import { createResolvers } from "./graphql";
 import { avatarRouter } from "./http";
 
 export {
-  clearDemoEmployees,
   createDemoEmployees,
   createEmployeeUseCases,
   createImportedEmployees,

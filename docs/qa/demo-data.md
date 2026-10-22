@@ -1,6 +1,6 @@
 # QA: Demo data
 
-A manual check that skipping the import fills the demo company and that clearing it keeps real people.
+A manual check that skipping the import fills the demo company and that Exit demo takes setup back to its start.
 
 ## Setup
 
@@ -9,12 +9,9 @@ A manual check that skipping the import fills the demo company and that clearing
 
 ## Demo mode
 
-- [ ] `/people` opens without asking for an account and shows 40 people, each with a photo avatar, and the green banner "Demo mode · Create your account within 7 days to keep access." with "Create account".
-- [ ] The workspace menu shows "Demo" with "Create account" and "Reset setup", and no "Sign out".
-- [ ] "Reset setup" opens "Reset setup?"; "Cancel" changes nothing. In a second run, "Reset setup" lands on `/setup/company` with the company name filled in; Setup AI keeps its choice, "Explore the demo" is offered again, and the people page no longer opens.
+- [ ] `/people` opens without asking for an account and shows 40 people, each with a photo avatar, and the green banner "Demo mode · 7 days left" with "Exit demo".
+- [ ] The workspace menu shows "Demo" with "Exit demo", and no "Sign out".
 - [ ] A reload, a new tab and a restart of the stack keep you in the app; none opens setup.
-- [ ] "Create account" opens "Create your account", without the ring of people; `owner@example.com` and a password sign you in again on `/people`, and the banner becomes "You’re looking at demo data." with "Clear demo data".
-- [ ] Sign out, then sign in with that email and password: the same people are there.
 - [ ] Reading Slack or uploading a file first, then going back and choosing "Use demo data", shows only the 40 demo people.
 
 ## Seeded
@@ -23,19 +20,24 @@ A manual check that skipping the import fills the demo company and that clearing
 - [ ] The company keeps the name saved in the setup step.
 - [ ] The banner shows on every page of the shell, such as `/company`.
 
-## Clear
+## Exit
 
-1. Add a real person with the `employee { create }` mutation (see [QA setup](setup.md) for calling GraphQL).
-2. Choose "Clear demo data", then "Cancel": nothing changes.
-3. Choose "Clear demo data" again and confirm.
+1. Add a real person with the `employee { create }` mutation (see [QA setup](setup.md)).
+2. Choose "Exit demo" on the banner, then "Cancel": nothing changes. Do the same from the workspace menu.
+3. Choose "Exit demo" again and confirm.
 
-- [ ] While clearing, the button reads "Clearing…" and the dialog cannot be closed.
-- [ ] Only the person added in step 1 remains; the banner is gone, also after a reload.
-- [ ] A demo avatar URL copied before clearing now answers 404.
+- [ ] The dialog reads "Exit demo?" and says the demo people and anyone you added are deleted, and setup starts again.
+- [ ] While exiting, the button reads "Exiting…" and the dialog cannot be closed.
+- [ ] You land on `/setup/company` with the company name filled in; Setup AI keeps its choice and "Explore the demo" is offered again.
+- [ ] `/people` no longer opens, and a demo avatar URL copied before exiting answers 403 (`curl` with this browser's cookies, not the browser cache).
+- [ ] Finishing setup with an import and `owner@example.com` ends on `/people` with only the imported people; the person from step 1 is gone.
 
 ## Managed
 
-- [ ] Sign in to a managed instance through the managed flow, save the company step and choose "Explore the demo" on the import step: the same 40 people and the banner appear.
+1. Sign in to a managed instance through the managed flow, save the company step and choose "Explore the demo" on the import step.
+
+- [ ] The same 40 people appear, with the banner "You’re looking at demo data." and "Exit demo".
+- [ ] "Exit demo" and confirming lands on `/setup/company`, still signed in, with the company name filled in; a demo avatar URL copied before exiting answers 404.
 
 ## Image
 
@@ -43,5 +45,5 @@ A manual check that skipping the import fills the demo company and that clearing
 
 ## Look
 
-- [ ] One batched screenshot round at desktop and narrow width: the list with avatars and the banner, the clear dialog, the list after clearing.
+- [ ] One batched screenshot round at desktop and narrow width: the list with avatars and the banner, the exit dialog, the company step after exiting.
 - [ ] The Impeccable detector over the changed web files.

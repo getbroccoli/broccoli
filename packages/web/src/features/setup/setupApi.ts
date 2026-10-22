@@ -10,8 +10,6 @@ const SETUP_RESULT_BY_STATUS: Partial<Record<number, SetupResult>> = {
   422: "invalidInput",
   // The owner exists, another browser holds setup, or setup is at another step.
   409: "conflict",
-  // The demo ended or already has its account.
-  403: "conflict",
   429: "tooManyAttempts",
 };
 
@@ -30,11 +28,6 @@ export async function startSetup(): Promise<boolean> {
 /** Creates the instance's owner and signs them in; the API sets the session cookie. */
 export function setUpOwner(email: string, password: string): Promise<SetupResult> {
   return postCredentials("/api/auth/setup", email, password);
-}
-
-/** Gives the demo's owner an email and password; the API replaces the session cookie. */
-export function createDemoAccount(email: string, password: string): Promise<SetupResult> {
-  return postCredentials("/api/auth/setup/account", email, password);
 }
 
 async function postCredentials(
