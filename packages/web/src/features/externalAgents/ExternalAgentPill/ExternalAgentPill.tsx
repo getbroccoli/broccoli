@@ -1,6 +1,7 @@
 import type { FragmentType } from "@apollo/client";
 import { useFragment } from "@apollo/client/react";
 import { CaretDown, TerminalWindow } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 
 import {
   ExternalAgentPill_ExternalAgentFragmentDoc,
@@ -15,6 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
+
+import { ClaudeMark, CodexMark } from "./ExternalAgentMarks";
 
 type Props = { externalAgent: FragmentType<ExternalAgentPill_ExternalAgentFragment> };
 
@@ -52,7 +55,7 @@ export function ExternalAgentPill({ externalAgent: externalAgentRef }: Props) {
         >
           <span
             aria-hidden
-            className="relative flex size-[18px] items-center justify-center rounded-[5px] border border-brand/25 bg-card text-[9px] font-bold"
+            className="relative flex size-[18px] items-center justify-center rounded-[5px] border border-brand/25 bg-card"
           >
             {known ? known.mark : <TerminalWindow size={11} />}
             <span className="absolute -right-[3px] -bottom-[3px] size-[7px] rounded-full border-[1.5px] border-card bg-brand" />
@@ -77,8 +80,8 @@ export function ExternalAgentPill({ externalAgent: externalAgentRef }: Props) {
 }
 
 /** Agents shown by their product name and a mark, by the name they report when connecting. */
-const KNOWN_EXTERNAL_AGENTS: Record<string, { name: string; mark: string }> = {
-  "claude-code": { name: "Claude Code", mark: "C" },
-  "claude code": { name: "Claude Code", mark: "C" },
-  codex: { name: "Codex", mark: "Cx" },
+const KNOWN_EXTERNAL_AGENTS: Record<string, { name: string; mark: ReactNode }> = {
+  "claude-code": { name: "Claude Code", mark: <ClaudeMark size={12} /> },
+  "claude code": { name: "Claude Code", mark: <ClaudeMark size={12} /> },
+  codex: { name: "Codex", mark: <CodexMark size={12} /> },
 };
