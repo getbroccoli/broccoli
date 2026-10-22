@@ -19,6 +19,10 @@ const AI_SOURCES = {
   openrouter: "OPENROUTER",
   external_agent: "EXTERNAL_AGENT",
 } as const;
+const OWNER_SIGN_IN_METHODS = {
+  sign_in_with_google: "SIGN_IN_WITH_GOOGLE",
+  sign_in_with_email: "SIGN_IN_WITH_EMAIL",
+} as const;
 const KEY_ORIGINS = { environment: "ENVIRONMENT", saved: "SAVED" } as const;
 const AI_SOURCE_INPUTS = {
   BROCCOLI_AI: "broccoli_ai",
@@ -68,7 +72,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
 
 /** The `Setup` object for `security`, as `Query.setup` and every setup payload return it. */
 export async function readSetupView(orm: Orm, mode: Mode, security: SecurityContext | null) {
-  const { step, demoExpiresAt } = await readInstance(orm);
+  const { step, demoExpiresAt, ownerSignInMethod } = await readInstance(orm);
   return {
     id: "instance",
     step: STEPS[step],
@@ -79,6 +83,7 @@ export async function readSetupView(orm: Orm, mode: Mode, security: SecurityCont
       : HOLDERS[await readSetupHolder(orm, { token: null, now: new Date() })],
     // Only the owner learns when their demo ends.
     demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
+    ownerSignInMethod: ownerSignInMethod && OWNER_SIGN_IN_METHODS[ownerSignInMethod],
   };
 }
 

@@ -68,6 +68,23 @@ test("the first ticket creates the owner and signs them in", async () => {
   });
 });
 
+test("exposes the email owner's sign-in method without a session", async () => {
+  const { env, accounts } = await assignedEnv();
+  const { state } = await start(env);
+  const response = await postTicket(
+    env,
+    await accounts.signTicket(ticketClaims(state, { method: "email" })),
+    state,
+  );
+  expect(sessionCookie(response)).toBeDefined();
+
+  const setup = await env.browser().graphql("{ setup { ownerSignInMethod } }");
+
+  expect(await setup.json()).toEqual({
+    data: { setup: { ownerSignInMethod: "SIGN_IN_WITH_EMAIL" } },
+  });
+});
+
 test("a managed owner completes setup from the ready step over GraphQL", async () => {
   const { env, accounts } = await startManagedEnv();
   const browser = await signInAsManagedOwner(env, accounts);

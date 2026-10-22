@@ -1,5 +1,6 @@
 import type { AiSource } from "./aiSource";
 import type { ManagedAssignment } from "./managed";
+import type { OwnerSignInMethod } from "./ownerSignInMethod";
 import type { SetupStep } from "./setup";
 import type { SetupSession } from "./setupSession";
 
@@ -15,4 +16,6 @@ export interface Instance {
   aiSource: AiSource | null;
   /** Null on a self-hosted instance, and on a managed one before its init. */
   assignment: ManagedAssignment | null;
+  /** Managed only: null on a self-hosted instance and until a ticket names the method. */
+  ownerSignInMethod: OwnerSignInMethod | null;
 }

@@ -27,6 +27,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       setupStep: setup.step,
       mode: setup.mode,
       demoExpiresAt: setup.demoExpiresAt ?? null,
+      ownerSignInMethod: setup.ownerSignInMethod ?? null,
     };
   },
   component: Outlet,

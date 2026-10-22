@@ -46,6 +46,7 @@ it("parses a ticket and lowercases the email", () => {
     state: "a".repeat(64),
     jti: TICKET.jti,
     expiresAt: new Date(1_800_000_060_000),
+    method: null,
   });
 });
 
@@ -70,4 +71,16 @@ it.each([
   ["a purpose claim", { purpose: "init" }],
 ])("refuses a ticket with %s", (_kind, override) => {
   expect(() => parseTicketClaims({ ...TICKET, ...override })).toThrow(InvalidTokenError);
+});
+
+it.each(["google", "email"])("reads the %s sign-in method", (method) => {
+  expect(parseTicketClaims({ ...TICKET, method }).method).toBe(method);
+});
+
+it("accepts a ticket without a sign-in method as unknown", () => {
+  expect(parseTicketClaims(TICKET).method).toBeNull();
+});
+
+it("accepts an unrecognised sign-in method as unknown", () => {
+  expect(parseTicketClaims({ ...TICKET, method: "microsoft" }).method).toBeNull();
 });

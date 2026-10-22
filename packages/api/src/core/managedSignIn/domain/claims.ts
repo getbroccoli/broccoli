@@ -25,4 +25,6 @@ export interface ManagedTicket {
   state: string;
   jti: string;
   expiresAt: Date;
+  /** How the accounts service proved the identity this time; null when it did not say. */
+  method: "google" | "email" | null;
 }

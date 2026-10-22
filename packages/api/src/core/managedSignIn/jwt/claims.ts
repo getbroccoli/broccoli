@@ -51,6 +51,7 @@ const ticketClaims = z.object({
   state: z.string().regex(/^[a-f0-9]{64}$/),
   jti: z.uuid(),
   exp: z.number().int(),
+  method: z.unknown().optional(),
   // An init token must never pass as a ticket.
   purpose: z.never().optional(),
 });
@@ -61,7 +62,7 @@ export function parseTicketClaims(payload: JWTPayload): ManagedTicket {
   if (!claims.success) {
     throw new InvalidTokenError();
   }
-  const { sub, email, name, company, state, jti, exp } = claims.data;
+  const { sub, email, name, company, state, jti, exp, method } = claims.data;
   return {
     subject: sub,
     email: email.toLowerCase(),
@@ -70,5 +71,7 @@ export function parseTicketClaims(payload: JWTPayload): ManagedTicket {
     state,
     jti,
     expiresAt: new Date(exp * 1000),
+    // A method this app does not know is unknown, never a reason to refuse the ticket.
+    method: method === "google" || method === "email" ? method : null,
   };
 }
