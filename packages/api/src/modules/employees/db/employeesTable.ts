@@ -18,7 +18,7 @@ export const employees = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /** The employee owns this file and deletes it with the employee. */
     avatarFileId: uuid("avatar_file_id").references(() => files.id),
-    /** Part of the sample company; clearing demo data deletes it. */
+    /** Part of the sample company, which tells whether the instance holds demo data. */
     isDemo: boolean("is_demo").notNull().default(false),
   },
   (table) => [

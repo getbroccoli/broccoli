@@ -11,7 +11,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Setup**: the first-run flow of a new instance, step by step: the company name, then the import of its people, then on self-hosted instances the owner account, created last by the setup holder through `POST /api/auth/setup`. A managed owner signs in before setup and ends it on the ready step.
 - **Setup step**: where a new instance is in setup: `company`, `import`, `owner` (self-hosted only), `ready` (managed only: the owner sees what setup added before using Broccoli), `done`. Not to be confused with employee onboarding, an HR process. The web app's step list shows one more, the setup review step, inside `import`.
 - **Setup session**: on a self-hosted instance before the owner exists, the server-side record that one browser holds setup: the hash of a token in the `broccoli_setup` cookie, valid three days after the holder last opened setup. Setup stays locked to it, even after it expires, until the database is dropped.
-- **Provisional owner**: the owner a self-hosted demo starts with: a user without credentials, signed in in the browser that held setup, until they create their account or the demo ends seven days later.
+- **Provisional owner**: the owner a self-hosted demo starts with: a user without credentials, signed in in the browser that held setup, until they exit the demo or it ends seven days later.
 - **Setup holder**: the browser holding the setup session, and the security context it acts as. It may do the setup steps and nothing else.
 - **External agent**: a coding agent operating outside Broccoli, such as Claude Code or Codex, acting through its API on the setup holder's or owner's behalf. "External" means outside the application, not necessarily on another machine.
 - **External agent one-time code**: the secret in the prompt "Add your files" shows for the owner's external agent; valid once, for two hours.
@@ -27,7 +27,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Company**: the business the instance belongs to; its name and logo. One per instance.
 - **Brand lookup**: finding a company's logo from the owner's email domain, through the favicon service at `BRAND_LOOKUP_URL`.
 - **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.
-- **Demo data**: the sample company a new instance starts with, marked so that clearing it removes nothing else. People added while it is present stay.
+- **Demo data**: the sample company a new instance starts with. Exit demo deletes it with everyone added while it is present, and setup starts again.
 - **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
 - **Import source**: one place people come from, such as the connected Slack workspace or an uploaded file. It owns its import records.
 - **File source**: a staff file the owner uploaded as an import source. Its records come from the file's rows once the file is mapped: by Broccoli's model, or by the external agent's answers to Broccoli's masked questions (_answered mapping_); after an _original file read_, from the people AI read in the whole file.
