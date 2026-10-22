@@ -27,7 +27,7 @@ import { requireImportAccess } from "./requireImportAccess";
 
 /**
  * Staff files as import sources, through their life: upload, mapping in the background,
- * retry and removal. Every function checks `ctx`.
+ * and retry; `removeSource` removes them. Every function checks `ctx`.
  */
 export interface FileSourceService {
   /**
@@ -49,8 +49,6 @@ export interface FileSourceService {
    * the external agent's answers; any other source is left as it is.
    */
   retryFile(ctx: SecurityContext, sourceId: string): Promise<void>;
-  /** Removes a file source, its records and the stored file; other sources stay. */
-  removeFile(ctx: SecurityContext, sourceId: string): Promise<void>;
 }
 
 /** A staff file as the owner uploads it. */
@@ -147,14 +145,6 @@ export function createFileSourceService({
         if (attempt !== null) {
           await jobs.send(tx, "imports.mapFile", { sourceId, attempt });
         }
-      });
-    },
-
-    removeFile: async (ctx, sourceId) => {
-      requireImportAccess(ctx);
-      await transact(async (tx) => {
-        const imports = await lockOpenImport(tx);
-        await imports.deleteFileSource(sourceId);
       });
     },
   };

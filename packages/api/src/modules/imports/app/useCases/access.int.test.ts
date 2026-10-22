@@ -37,7 +37,7 @@ const calls = {
   "files.markFileFailed": (imports, ctx) =>
     imports.files.markFileFailed(ctx, { sourceId: "missing", attempt: 0 }),
   "files.retryFile": (imports, ctx) => imports.files.retryFile(ctx, "missing"),
-  "files.removeFile": (imports, ctx) => imports.files.removeFile(ctx, "missing"),
+  removeSource: (imports, ctx) => imports.removeSource(ctx, "missing"),
   readSlack: (imports, ctx) => imports.readSlack(ctx),
   "reads.listSources": (imports, ctx) => imports.reads.listSources(ctx),
   "reads.readSources": (imports, ctx) => imports.reads.readSources(ctx, []),

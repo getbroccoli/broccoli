@@ -193,7 +193,7 @@ test("produces the same import employees as the model for the same choices", asy
   const imports = importUseCases(orm, { decisions: fake.decisions });
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
   const modeled = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
-  await imports.files.removeFile(SETUP_HOLDER, source.id);
+  await imports.removeSource(SETUP_HOLDER, source.id);
   const answered = await seed.fileSource({ content: CSV, readBy: "answered_by_external_agent" });
 
   const result = await transact((tx) =>

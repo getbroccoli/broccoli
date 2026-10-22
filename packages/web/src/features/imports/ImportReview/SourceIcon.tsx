@@ -1,14 +1,15 @@
-import { FileCsv } from "@phosphor-icons/react";
-
 import type { ImportSourceKind } from "@/__generated__/graphql";
 
+import { FileIcon } from "../FileIcon";
 import { SlackMark } from "../SlackMark";
 
-/** The mark of a source's kind: Slack's logo or a CSV file. */
-export function SourceIcon({ kind }: { kind: ImportSourceKind }) {
-  return kind === "SLACK" ? (
+type Props = { source: { kind: ImportSourceKind; name: string } };
+
+/** The mark of a source: Slack's logo or its file's type. */
+export function SourceIcon({ source }: Props) {
+  return source.kind === "SLACK" ? (
     <SlackMark size={12} />
   ) : (
-    <FileCsv size={12} weight="duotone" aria-hidden className="shrink-0 text-brand-deep" />
+    <FileIcon name={source.name} size={12} className="shrink-0 text-brand-deep" />
   );
 }

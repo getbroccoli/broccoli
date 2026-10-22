@@ -264,7 +264,7 @@ test("uses the default after removing the picked record’s file", async ({ orm,
     choice: { recordId: row!.id },
   });
 
-  await imports.files.removeFile(OWNER, file.id);
+  await imports.removeSource(OWNER, file.id);
 
   const { edges } = (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({});
   expect(edges[0]!.node.values.jobTitle).toMatchObject({ value: "Engineer", choice: "default" });

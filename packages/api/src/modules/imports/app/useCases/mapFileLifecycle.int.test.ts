@@ -192,7 +192,7 @@ test("an in-flight answer does not restore a removed source or its records", asy
 
   try {
     await held.received;
-    await imports.files.removeFile(OWNER, source.id);
+    await imports.removeSource(OWNER, source.id);
     held.release();
     await mapping;
 

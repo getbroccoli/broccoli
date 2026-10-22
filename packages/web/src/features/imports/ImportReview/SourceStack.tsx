@@ -17,7 +17,7 @@ export function SourceStack({
           className="-ml-1.5 flex size-7 items-center justify-center rounded-full bg-muted ring-2 ring-card first:ml-0"
           style={{ zIndex: sources.length - index }}
         >
-          <SourceIcon kind={source.kind} />
+          <SourceIcon source={source} />
         </span>
       ))}
     </span>

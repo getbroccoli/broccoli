@@ -41,8 +41,8 @@ export interface ImportRepository extends ImportReader {
    * the owner let AI read in full.
    */
   restartMapping(id: string): Promise<number | null>;
-  /** Deletes a file source, its records and its stored file. */
-  deleteFileSource(id: string): Promise<void>;
+  /** Deletes a source, its records with their photos, and its stored file. */
+  deleteSource(id: string): Promise<void>;
   /**
    * Makes the source's employee records match `records` by external id: updates the
    * ones still there, so their ids stay, adds new ones and deletes the rest. Deletes the
@@ -146,12 +146,16 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
       return row?.mappingAttempt ?? null;
     },
 
-    deleteFileSource: async (id: string): Promise<void> => {
+    deleteSource: async (id: string): Promise<void> => {
+      const photos = await orm()
+        .delete(importRecords)
+        .where(eq(importRecords.sourceId, id))
+        .returning({ fileId: importRecords.photoFileId });
       const uploads = await orm()
         .delete(importSources)
-        .where(and(eq(importSources.id, id), eq(importSources.kind, "file")))
+        .where(eq(importSources.id, id))
         .returning({ fileId: importSources.fileId });
-      await deleteFiles(tx, presentIds(uploads));
+      await deleteFiles(tx, [...presentIds(photos), ...presentIds(uploads)]);
     },
 
     syncEmployeeRecords: async (sourceId: string, records: IncomingRecord[]): Promise<void> => {
