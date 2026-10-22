@@ -80,9 +80,9 @@ mutation RetryFile($sourceId: ID!) {
   }
 }
 
-mutation RemoveFile($sourceId: ID!) {
+mutation RemoveSource($sourceId: ID!) {
   import {
-    removeFile(sourceId: $sourceId) {
+    removeSource(sourceId: $sourceId) {
       import {
         id
         reading

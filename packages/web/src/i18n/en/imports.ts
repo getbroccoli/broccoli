@@ -79,7 +79,16 @@ export const importsEn = {
   "imports.files.useOwnKey": "Use your own key",
   "imports.files.retry": "Retry",
   "imports.files.options": "Options for {name}",
-  "imports.files.remove": "Remove",
+  "imports.removeSource.open": "Remove",
+  "imports.removeSource.openNamed": "Remove {name}",
+  "imports.removeSource.title": "Remove {name}?",
+  "imports.removeSource.fileDetail": "Its people leave the import. You can upload the file again.",
+  "imports.removeSource.slackDetail":
+    "Its people leave the import and Slack is disconnected. You can connect it again.",
+  "imports.removeSource.cancel": "Cancel",
+  "imports.removeSource.confirm": "Remove",
+  "imports.removeSource.pending": "Removing…",
+  "imports.removeSource.error": "Couldn’t remove it. Try again.",
   "imports.files.changeFailed": "Couldn’t change the file. Try again.",
   "imports.files.reloadFailed":
     "Your files were added, but the list couldn’t load. Reload the page.",

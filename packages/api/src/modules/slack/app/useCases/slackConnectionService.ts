@@ -16,8 +16,8 @@ import { readSlackPeople, type SlackPerson } from "./readSlackPeople";
 
 /**
  * The whole life of the Slack connection in one place: starting it, finishing it when
- * the browser returns, and reading the connected workspace for the owner and, with its
- * people's photos, for other modules. Every function checks `ctx` itself.
+ * the browser returns, reading the connected workspace for the owner and, with its
+ * people's photos, for other modules, and forgetting it. Every function checks `ctx` itself.
  */
 export interface SlackConnectionService {
   /** Starts connecting Slack: the browser goes to Slack and comes back to `returnTo`. */
@@ -41,6 +41,8 @@ export interface SlackConnectionService {
     ctx: SecurityContext,
     options: { knownPhotos: ReadonlyMap<string, string> },
   ): Promise<SlackMembersRead>;
+  /** Forgets the connected workspace and its token inside the caller's transaction. */
+  disconnectSlack(ctx: SecurityContext, tx: Tx): Promise<void>;
 }
 
 /** Where to send the browser to connect Slack, and what the browser keeps until it returns. */
@@ -174,6 +176,11 @@ export function createSlackConnectionService({
           (await slackConnectionRepository(tx).lock())?.encryptedToken ===
           connection.encryptedToken,
       };
+    },
+
+    disconnectSlack: async (ctx: SecurityContext, tx: Tx): Promise<void> => {
+      ctx.requireSetupAccess();
+      await slackConnectionRepository(tx).delete();
     },
   };
 }

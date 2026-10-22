@@ -8,11 +8,12 @@ import type { SecurityContext } from "../../../../core/security";
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
-import type { DemoFill, SlackReader } from "./importContext";
+import type { DemoFill, ImportSlack } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { finishImport } from "./deleteImport";
 import { readImportPhoto } from "./readImportPhoto";
 import { readSlack } from "./readSlack";
+import { removeSource } from "./removeSource";
 import { resetSetup } from "./resetSetup";
 import { prepareDemoStart, startDemo } from "./startDemo";
 import { createUploadReader } from "./uploadReader";
@@ -25,7 +26,7 @@ import {
   type OriginalFileReadService,
 } from "./originalFileReadService";
 
-export type { DemoFill, SlackReader } from "./importContext";
+export type { DemoFill, ImportSlack } from "./importContext";
 export type { ImportReview } from "./importReview";
 export type { StaffUpload } from "./uploadReader";
 export { READ_PEOPLE_JSON_SCHEMA, type ReadPeopleOutcome } from "./originalFileReadService";
@@ -33,6 +34,8 @@ export { READ_PEOPLE_JSON_SCHEMA, type ReadPeopleOutcome } from "./originalFileR
 /** Everything that can be done with the import; the adapters call nothing else. */
 export interface ImportUseCases {
   readSlack: (ctx: SecurityContext) => Promise<void>;
+  /** Removes a file or the Slack source, disconnecting Slack; refused once approved. */
+  removeSource: (ctx: SecurityContext, sourceId: string) => Promise<void>;
   startDemo: (ctx: SecurityContext) => Promise<void>;
   /** The demo start for setup's demo: prepared outside any transaction, run in the caller's. */
   prepareDemoStart: () => Promise<DemoStart>;
@@ -63,7 +66,7 @@ export function createImportUseCases({
   jobs,
   prepareDemoFill,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
-  slack: SlackReader;
+  slack: ImportSlack;
   decisions: Decisions;
   originalFileReader: OriginalFileReader;
   jobs: JobQueue;
@@ -73,6 +76,7 @@ export function createImportUseCases({
   const context = { orm, transact, logger, slack, prepareDemoFill };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
+    removeSource: (ctx: SecurityContext, sourceId: string) => removeSource(context, ctx, sourceId),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     prepareDemoStart: () => prepareDemoStart(context),
     approveImport: (ctx: SecurityContext, version: string) => approveImport(context, ctx, version),

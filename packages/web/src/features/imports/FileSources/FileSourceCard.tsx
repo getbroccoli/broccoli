@@ -195,7 +195,7 @@ export function FileSourceCard({
               </>
             )}
             <DropdownMenuItem className="h-9 px-2.5" variant="destructive" onClick={onRemove}>
-              {t("imports.files.remove")}
+              {t("imports.removeSource.open")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

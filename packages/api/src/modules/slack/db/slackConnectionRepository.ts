@@ -7,6 +7,7 @@ export interface SlackConnectionRepository {
   /** Like `read`, and locks the row until the transaction ends. */
   lock(): Promise<StoredSlackConnection | null>;
   save(connection: StoredSlackConnection): Promise<void>;
+  delete(): Promise<void>;
 }
 
 /** The connected workspace as stored; the token stays encrypted. */
@@ -38,6 +39,10 @@ export function slackConnectionRepository(db: Orm | Tx): SlackConnectionReposito
           target: slackConnection.id,
           set: { ...connection, connectedAt: new Date() },
         });
+    },
+
+    delete: async (): Promise<void> => {
+      await orm().delete(slackConnection);
     },
   };
 }

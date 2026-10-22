@@ -1,18 +1,24 @@
 import { DotsThree, LockSimple } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
-import { ReadSlackDocument, type ImportStepQuery } from "@/__generated__/graphql";
+import {
+  ImportStepDocument,
+  ReadSlackDocument,
+  type ImportStepQuery,
+} from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
+import { RemoveSourceDialog } from "./RemoveSourceDialog";
 import { SlackMark } from "./SlackMark";
 
 /** Where the browser starts connecting Slack; the API sends it on to Slack. */
@@ -25,13 +31,17 @@ interface SlackSourceRowProps {
   source: ImportStepQuery["import"]["sources"][number] | undefined;
 }
 
+/** The import step's query, loaded again so the row shows Slack disconnected. */
+const REFETCH_AFTER_REMOVE = [ImportStepDocument];
+
 /**
- * Slack as a source of people: connect it, and read it again. A connected workspace
+ * Slack as a source of people: connect it, read it again, and remove it. A connected workspace
  * without imported members is imported as soon as the row shows it.
  */
 export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
   const [readSlack, { loading: reading }] = usePayloadMutation(ReadSlackDocument);
   const [readFailed, setReadFailed] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const read = async () => {
     setReadFailed(false);
@@ -111,6 +121,18 @@ export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
                 <DropdownMenuItem className="h-9 px-2.5" render={<a href={CONNECT_SLACK_URL} />}>
                   {t("imports.slack.connectAnother")}
                 </DropdownMenuItem>
+                {source && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="h-9 px-2.5"
+                      variant="destructive"
+                      onClick={() => setRemoving(true)}
+                    >
+                      {t("imports.removeSource.open")}
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </span>
@@ -126,6 +148,11 @@ export function SlackSourceRow({ connection, source }: SlackSourceRowProps) {
           </a>
         )}
       </div>
+      <RemoveSourceDialog
+        source={removing && source ? source : null}
+        onClose={() => setRemoving(false)}
+        refetch={REFETCH_AFTER_REMOVE}
+      />
       {readFailed && (
         <p role="alert" className="border-t border-border px-5 py-3 text-sm text-destructive">
           {t("imports.slack.readFailed")}

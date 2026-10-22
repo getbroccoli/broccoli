@@ -230,58 +230,6 @@ test("refuses a retry after setup is complete without changing the source or sen
   expect(imports.sentJobs).toEqual([]);
 });
 
-test("removes the source, its records and its stored file", async ({ orm, seed }) => {
-  const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
-  await seed.importEmployees(source.id, [{ firstName: "Avery", lastName: "Stone" }]);
-  const otherFile = await seed.file({ content: Buffer.from("keep"), mimeType: "text/plain" });
-  const imports = importUseCases(orm);
-
-  await imports.files.removeFile(OWNER, source.id);
-
-  expect(await imports.reads.listSources(OWNER)).toEqual([]);
-  expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
-  expect(await storedFileIds(orm)).toEqual([otherFile]);
-});
-
-test("refuses file removal after Approve and keeps the import and stored file unchanged", async ({
-  orm,
-  seed,
-}) => {
-  await seed.setupStep("import");
-  const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
-  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
-  const imports = importUseCases(orm);
-  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  expect((await readInstance(orm)).step).toBe("owner");
-  const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
-  const fileIds = await storedFileIds(orm);
-  expect(before.edges).toHaveLength(1);
-  expect(fileIds).toHaveLength(1);
-
-  await expect(imports.files.removeFile(SETUP_HOLDER, source.id)).rejects.toMatchObject({
-    code: "CONFLICT",
-  });
-
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
-  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
-  expect(await storedFileIds(orm)).toEqual(fileIds);
-});
-
-test("leaves the Slack source and its records unchanged", async ({ orm, seed }) => {
-  const source = await seed.importSource();
-  const records = await seed.importEmployees(source.id, [{ firstName: "Avery" }]);
-  const imports = importUseCases(orm);
-
-  await imports.files.removeFile(OWNER, source.id);
-
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
-  expect(
-    (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
-      ({ node }) => node,
-    ),
-  ).toEqual(records);
-});
-
 test("refuses a ZIP without a workbook without storing it or sending a job", async ({
   orm,
   fakeDecisions: fake,

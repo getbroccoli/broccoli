@@ -5,7 +5,7 @@ import {
   type AiSource,
   AllowOriginalFileReadDocument,
   type ImportStepQuery,
-  RemoveFileDocument,
+  RemoveSourceDocument,
   RetryFileDocument,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
@@ -70,7 +70,7 @@ export function FileSources({
   const [problems, setProblems] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [retryFile, retry] = usePayloadMutation(RetryFileDocument);
-  const [removeFile, remove] = usePayloadMutation(RemoveFileDocument);
+  const [removeSource, remove] = usePayloadMutation(RemoveSourceDocument);
   const [allowOriginalFileRead, allowRead] = usePayloadMutation(AllowOriginalFileReadDocument);
   const busy = uploading !== null || retry.loading || remove.loading || allowRead.loading;
   const changeFailed =
@@ -180,7 +180,7 @@ export function FileSources({
                 )
               }
               onRemove={() =>
-                void removeFile({ variables: { sourceId: source.id } }).catch(() => {})
+                void removeSource({ variables: { sourceId: source.id } }).catch(() => {})
               }
             />
           ))}

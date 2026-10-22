@@ -23,6 +23,7 @@ Instances connect through the relay at `SLACK_RELAY_URL`; the default needs no s
 
 - [ ] After adding or deactivating a member in Slack, "Refresh" updates the count.
 - [ ] "Connect another workspace", in the Slack row's "⋯" menu, goes through Slack again; the row then shows the other workspace and its members.
+- [ ] "Remove" in the Slack row's "⋯" menu asks "Remove <workspace>?"; Cancel keeps everything. "Remove" takes the members out of the import and the row back to "Connect Slack", also after a reload.
 
 ## Failures
 
@@ -50,7 +51,7 @@ On any instance. A self-hosted one without `OPENROUTER_API_KEY` reads files thro
 With Broccoli AI, then again with OpenRouter, on a self-hosted instance:
 
 - [ ] A dropped PDF shows a plain card "Masked reading of PDFs isn’t supported yet" with the consent text naming where its personal details go and "Read the original file"; "Review your people" stays available.
-- [ ] "Read the original file" on the PDF shows "Reading the original file…", then "N people · Read by Broccoli AI, not masked" (OpenRouter: "· Read by OpenRouter, not masked"); the people show in review.
+- [ ] "Read the original file" on the PDF shows "Reading the original file…", then "N people · Read by Broccoli AI, not masked" (OpenRouter: "· Read by OpenRouter, not masked"; managed: "· Read by AI, not masked"); the people show in review.
 - [ ] A mapped CSV's menu shows "Read the original file" with "If the mapping looks wrong. Its personal data goes to …" above "Remove"; choosing it reads the file again in full and its people replace the mapped ones. The menu then shows only "Remove".
 - [ ] A PDF too long for the model ends as "This file is too long to read in full."
 - [ ] A `.csv` holding a PDF is still refused as not a CSV, Excel or PDF file.
@@ -73,7 +74,7 @@ With Broccoli AI, then again with OpenRouter, on a self-hosted instance:
 With "Your agent" chosen on Setup AI:
 
 - [ ] "Add your files" shows "Connect your agent" with the prompt on a dark block and a copy button, and no drop zone.
-- [ ] Once an agent connects with that prompt, a pill beside "Add your files" names it, with Disconnect in its menu, and the drop zone shows.
+- [ ] Once an agent connects with that prompt, a pill beside "Add your files" names it, with Disconnect in its menu, and the drop zone shows. Claude Code shows Claude's mark and Codex OpenAI's.
 - [ ] While the agent waits for files, a dropped file reads "Your agent is picking it up…" at once, with no card, and gets mapped.
 - [ ] With the agent stopped for over 30 seconds, a dropped file shows "Waiting for your agent" and a card with "Broccoli has new files. Map them and send their people back."; once the agent picks it up, the card goes.
 - [ ] A dropped PDF shows "Masked reading of PDFs isn’t supported yet" and "Read the original file", saying its personal details go to your agent's model provider; the agent does not see it.

@@ -46,9 +46,9 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Im
           ),
         ["CONFLICT"],
       ),
-    removeFile: (_parent, { sourceId }, context) =>
+    removeSource: (_parent, { sourceId }, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
-        thenImport(useCases.files.removeFile(context.getActor(), sourceId)),
+        thenImport(useCases.removeSource(context.getActor(), sourceId)),
       ),
     chooseEmployeeValue: (_parent, { input }, context) =>
       mutationPayload<ResolversTypes["ImportChooseEmployeeValuePayload"]>(

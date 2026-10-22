@@ -118,7 +118,7 @@ test("a failed file becomes mapped after retrying with working decisions", async
     });
 });
 
-test("removeFile removes the uploaded source", async ({ fakeDecisions }) => {
+test("removeSource removes the uploaded source", async ({ fakeDecisions }) => {
   const { browser } = await managedImport(fakeDecisions);
   const response = await browser.post("/api/imports/files?name=staff.csv", CSV);
   expect(response.status).toBe(200);
@@ -134,14 +134,14 @@ test("removeFile removes the uploaded source", async ({ fakeDecisions }) => {
     });
 
   const removed = await browser.graphql(
-    "mutation($id: ID!) { import { removeFile(sourceId: $id) { import { sources { id } employees { edges { node { id } } } } } } }",
+    "mutation($id: ID!) { import { removeSource(sourceId: $id) { import { sources { id } employees { edges { node { id } } } } } } }",
     { id: sourceId },
   );
 
   expect(await removed.json()).toEqual({
     data: {
       import: {
-        removeFile: {
+        removeSource: {
           import: { sources: [], employees: { edges: [] } },
         },
       },
