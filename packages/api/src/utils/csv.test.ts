@@ -26,6 +26,16 @@ it("chooses the delimiter with consistent columns despite punctuation in cells",
   ]);
 });
 
+it.each([";", "\t"])("reads %j columns when every row also contains a comma", (delimiter) => {
+  const rows = [
+    ["First name", "Last name", "Work email", "Job title, department", "Start date"],
+    ["Avery", "Acme", "avery@example.com", "Engineer, Platform", "2024-02-29"],
+    ["Blair", "Acme", "blair@example.com", "Designer, Product", "2024-03-01"],
+  ];
+
+  expect(parseCsv(Buffer.from(rows.map((row) => row.join(delimiter)).join("\n")))).toEqual(rows);
+});
+
 it("keeps delimiters and newlines inside quoted cells", () => {
   expect(parseCsv(Buffer.from('Name,Notes\n"Stone, Avery","First line\nSecond line"'))).toEqual([
     ["Name", "Notes"],

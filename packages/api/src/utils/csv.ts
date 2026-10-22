@@ -10,15 +10,19 @@ export function parseCsv(bytes: Uint8Array): string[][] | null {
   if (text.startsWith("%PDF-") || CONTROL_CHARACTER.test(text)) {
     return null;
   }
-  let best: { rows: string[][]; regularRows: number } | null = null;
+  let best: { rows: string[][]; regularRows: number; regularColumns: number } | null = null;
   for (const delimiter of DELIMITERS) {
     const rows = parseWith(text, delimiter);
     if (rows === null) {
       continue;
     }
-    const regularRows = countRegularRows(rows);
-    if (best === null || regularRows > best.regularRows) {
-      best = { rows, regularRows };
+    const { regularRows, regularColumns } = tableRegularity(rows);
+    if (
+      best === null ||
+      regularRows > best.regularRows ||
+      (regularRows === best.regularRows && regularColumns > best.regularColumns)
+    ) {
+      best = { rows, regularRows, regularColumns };
     }
   }
   return best?.rows ?? null;
@@ -52,18 +56,20 @@ function parseWith(text: string, delimiter: string): string[][] | null {
     .filter((row) => row.some((cell) => cell !== ""));
 }
 
-/** How many rows share the most common column count: the right delimiter makes a regular table. */
-function countRegularRows(rows: string[][]): number {
+/** Prefer the most regular table, then the wider one when punctuation makes another regular split. */
+function tableRegularity(rows: string[][]): { regularRows: number; regularColumns: number } {
   const rowsByWidth = new Map<number, number>();
   for (const { length } of rows) {
     rowsByWidth.set(length, (rowsByWidth.get(length) ?? 0) + 1);
   }
   let regularRows = 0;
+  let regularColumns = 0;
   for (const [width, count] of rowsByWidth) {
     // A one-column parse is regular too, so it only wins when no delimiter splits the rows.
-    if (width > 1 && count > regularRows) {
+    if (width > 1 && (count > regularRows || (count === regularRows && width > regularColumns))) {
       regularRows = count;
+      regularColumns = width;
     }
   }
-  return regularRows;
+  return { regularRows, regularColumns };
 }
