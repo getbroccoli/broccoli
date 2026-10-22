@@ -51,6 +51,7 @@ export const importsEn = {
   "imports.files.readByExternalAgent": "Read by your agent, not masked",
   "imports.files.readByBroccoliAi": "Read by Broccoli AI, not masked",
   "imports.files.readByOpenRouter": "Read by OpenRouter, not masked",
+  "imports.files.readByAi": "Read by AI, not masked",
   "imports.files.pdfNotMasked": "Masked reading of PDFs isn’t supported yet",
   "imports.files.couldNotMapMasked": "Couldn’t map it from masked rows",
   "imports.files.readOriginal": "Read the original file",

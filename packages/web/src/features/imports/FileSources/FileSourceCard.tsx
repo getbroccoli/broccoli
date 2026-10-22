@@ -1,6 +1,6 @@
 import type { FragmentType } from "@apollo/client";
 import { useFragment } from "@apollo/client/react";
-import { CheckCircle, DotsThree, Eye, FileCsv, FilePdf, FileXls } from "@phosphor-icons/react";
+import { CheckCircle, DotsThree, Eye } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 
 import {
@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { type MessageKey, t } from "@/i18n";
 import { cn } from "@/lib/class-names";
+
+import { FileIcon } from "../FileIcon";
 
 const FAILURE_MESSAGES = {
   NO_PEOPLE_COLUMNS: "imports.files.noPeopleColumns",
@@ -112,7 +114,7 @@ export function FileSourceCard({
                   : "bg-muted text-muted-foreground",
           )}
         >
-          {fileIcon(source.name)}
+          <FileIcon name={source.name} size={22} />
         </span>
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-[15px] font-semibold" title={source.name}>
@@ -212,17 +214,6 @@ export function FileSourceCard({
   );
 }
 
-function fileIcon(name: string) {
-  const lowerName = name.toLowerCase();
-  if (lowerName.endsWith(".pdf")) {
-    return <FilePdf size={22} weight="duotone" aria-hidden />;
-  }
-  if (lowerName.endsWith(".xlsx")) {
-    return <FileXls size={22} weight="duotone" aria-hidden />;
-  }
-  return <FileCsv size={22} weight="duotone" aria-hidden />;
-}
-
 /** A PDF waiting for consent, or a file whose masked rows gave no people. */
 function couldNotMapMasked({ status, failure }: FileSourceCard_SourceFragment) {
   return (
@@ -290,6 +281,9 @@ function readerLabel(
   }
   if (byExternalAgent) {
     return "imports.files.readByExternalAgent";
+  }
+  if (aiSource === null) {
+    return "imports.files.readByAi";
   }
   return aiSource === "BROCCOLI_AI"
     ? "imports.files.readByBroccoliAi"
