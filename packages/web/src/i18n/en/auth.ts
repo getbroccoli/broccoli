@@ -19,4 +19,5 @@ export const authEn = {
   "auth.managed.signInUnavailable": "Sign-in is temporarily unavailable. Try again shortly.",
   "auth.signedInAs": "Signed in as {email}",
   "auth.signOut": "Sign out",
+  "auth.signOutFailed": "Couldn’t sign out. Try again from the workspace menu.",
 } as const;
