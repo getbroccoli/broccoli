@@ -1,0 +1,7 @@
+query WorkspaceMenu {
+  company {
+    id
+    name
+    logoUrl
+  }
+}
