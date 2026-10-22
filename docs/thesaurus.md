@@ -6,6 +6,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Mode**: how the instance is run, `self_hosted` or `managed`, set by `BROCCOLI_MODE`.
 - **Owner**: the user who set up the instance. Identified by the user id, never by the email.
 - **User**: a person who can sign in (Better Auth's `user` table).
+- **Owner sign-in method**: how the managed owner proves who they are at the accounts service, Google or email; learned from the sign-in ticket. The sign-in page offers only that method.
 - **Account**: one way a user signs in, such as a password (`credential`) or managed sign-in (Better Auth's `account` table). A user can have several.
 - **Session**: a signed-in browser, carried in a cookie and stored in the `session` table.
 - **Setup**: the first-run flow of a new instance, step by step: the company name, then the import of its people, then on self-hosted instances the owner account, created last by the setup holder through `POST /api/auth/setup`. A managed owner signs in before setup and ends it on the ready step.

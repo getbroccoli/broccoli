@@ -154,8 +154,43 @@ test("links the owner to the accounts subject without a password", async ({ orm 
   ]);
 });
 
+test.for([
+  ["email", "sign_in_with_email"],
+  ["google", "sign_in_with_google"],
+] as const)(
+  "stores the owner's %s method on the first sign-in",
+  async ([method, stored], { orm }) => {
+    await signIn(orm, ticket({ method })).result;
+
+    expect((await readInstance(orm)).ownerSignInMethod).toBe(stored);
+  },
+);
+
+test("fills an existing owner's unknown sign-in method", async ({ orm }) => {
+  await signIn(orm, ticket()).result;
+
+  await signIn(orm, ticket({ method: "email" })).result;
+
+  expect((await readInstance(orm)).ownerSignInMethod).toBe("sign_in_with_email");
+});
+
+test("keeps the stored sign-in method when a ticket carries another method", async ({ orm }) => {
+  await signIn(orm, ticket({ method: "email" })).result;
+
+  await signIn(orm, ticket({ method: "google" })).result;
+
+  expect((await readInstance(orm)).ownerSignInMethod).toBe("sign_in_with_email");
+});
+
+test("leaves the owner's sign-in method unknown for a ticket without one", async ({ orm }) => {
+  await signIn(orm, ticket({ method: null })).result;
+
+  expect((await readInstance(orm)).ownerSignInMethod).toBeNull();
+});
+
 function ticket(overrides: Partial<ManagedTicket> = {}): ManagedTicket {
   return {
+    method: null,
     subject: "subject-1",
     email: "owner@example.com",
     name: "Ada Owner",

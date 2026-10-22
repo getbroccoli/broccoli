@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { boolean, check, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "../../auth";
-import { AI_SOURCES, SETUP_STEPS } from "../domain";
+import { AI_SOURCES, OWNER_SIGN_IN_METHODS, SETUP_STEPS } from "../domain";
 
 /** The one row describing this installation; the migration inserts it. */
 export const instance = pgTable(
@@ -20,6 +20,8 @@ export const instance = pgTable(
     managedCompanyId: text("managed_company_id"),
     managedPublicOrigin: text("managed_public_origin"),
     managedWebsiteOrigin: text("managed_website_origin"),
+    /** Managed only: set by the first ticket that names the method, then never changed. */
+    ownerSignInMethod: text("owner_sign_in_method", { enum: OWNER_SIGN_IN_METHODS }),
     /** Legacy relay token, moved to the data folder on first use. */
     encryptedBroccoliAiToken: text("encrypted_broccoli_ai_token"),
     /** Self-hosted only: where the owner chose to send AI decisions; null until they choose. */
@@ -40,6 +42,10 @@ export const instance = pgTable(
     check(
       "instance_ai_source",
       sql`${table.aiSource} in ('broccoli_ai', 'openrouter', 'external_agent')`,
+    ),
+    check(
+      "instance_owner_sign_in_method",
+      sql`${table.ownerSignInMethod} in ('sign_in_with_google', 'sign_in_with_email')`,
     ),
     check(
       "instance_managed_assignment",

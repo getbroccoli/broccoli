@@ -18,6 +18,7 @@ export {
   returnToCompanyStepFromDemo,
   readOwner,
   readInstance,
+  recordOwnerSignInMethod,
   createAiSettings,
   type AiSettings,
   type OriginalFileReader,
@@ -30,4 +31,5 @@ export {
   type AiSource,
   OwnerExistsError,
   type ManagedAssignment,
+  type OwnerSignInMethod,
 } from "./domain";

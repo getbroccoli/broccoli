@@ -16,7 +16,7 @@ export {
   type DemoStart,
   type SetupDemo,
 } from "./demo";
-export { assignInstance } from "./managed";
+export { assignInstance, recordOwnerSignInMethod } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
 export { createAiSettings, type AiSettings, type OriginalFileReader } from "./aiSettings";
 export {

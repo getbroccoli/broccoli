@@ -1,0 +1,2 @@
+ALTER TABLE "instance" ADD COLUMN "owner_sign_in_method" text;--> statement-breakpoint
+ALTER TABLE "instance" ADD CONSTRAINT "instance_owner_sign_in_method" CHECK ("instance"."owner_sign_in_method" in ('sign_in_with_google', 'sign_in_with_email'));

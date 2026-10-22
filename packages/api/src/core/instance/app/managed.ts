@@ -1,7 +1,7 @@
 import type { Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import { AssignmentConflictError, type ManagedAssignment } from "../domain";
+import { AssignmentConflictError, type ManagedAssignment, type OwnerSignInMethod } from "../domain";
 
 /**
  * Stores the assignment once. The same assignment again is accepted, so orchestration
@@ -34,4 +34,14 @@ function isSameAssignment(a: ManagedAssignment, b: ManagedAssignment): boolean {
     a.publicOrigin === b.publicOrigin &&
     a.websiteOrigin === b.websiteOrigin
   );
+}
+
+/** Stores how the owner signs in, joining `tx`, unless a method is stored already. */
+export async function recordOwnerSignInMethod(
+  ctx: SecurityContext,
+  tx: Tx,
+  method: OwnerSignInMethod,
+): Promise<void> {
+  ctx.requireOwnerOrSystem();
+  await instanceRepository(tx).saveOwnerSignInMethod(method);
 }

@@ -1,8 +1,15 @@
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type { AiSource, Instance, ManagedAssignment, SetupSession, SetupStep } from "../domain";
+import type {
+  AiSource,
+  Instance,
+  ManagedAssignment,
+  OwnerSignInMethod,
+  SetupSession,
+  SetupStep,
+} from "../domain";
 import { instance } from "./instanceTable";
 
 /** The instance row in Postgres, through the pool or inside a transaction. */
@@ -18,6 +25,8 @@ export interface InstanceRepository {
   saveDemoExpiresAt(expiresAt: Date | null): Promise<void>;
   setAssignment(assignment: ManagedAssignment): Promise<void>;
   setOwner(userId: string, step: SetupStep): Promise<void>;
+  /** Stores the owner's sign-in method unless one is stored already. */
+  saveOwnerSignInMethod(method: OwnerSignInMethod): Promise<void>;
   /** Removes the owner and moves setup to `step`. */
   clearOwner(step: SetupStep): Promise<void>;
   /** Moves the step from `from` to `to`; does nothing at any other step. Returns whether it moved. */
@@ -39,6 +48,7 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
         step: instance.setupStep,
         demoExpiresAt: instance.demoExpiresAt,
         aiSource: instance.aiSource,
+        ownerSignInMethod: instance.ownerSignInMethod,
         ...sessionColumns,
         // With the owner's id.
         ...assignmentColumns,
@@ -84,6 +94,13 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
 
     setOwner: async (userId: string, step: SetupStep): Promise<void> => {
       await orm().update(instance).set({ ownerUserId: userId, setupStep: step });
+    },
+
+    saveOwnerSignInMethod: async (method: OwnerSignInMethod): Promise<void> => {
+      await orm()
+        .update(instance)
+        .set({ ownerSignInMethod: method })
+        .where(isNull(instance.ownerSignInMethod));
     },
 
     clearOwner: async (step: SetupStep): Promise<void> => {
@@ -166,6 +183,7 @@ function toInstance([row]: {
   step: SetupStep;
   demoExpiresAt: Date | null;
   aiSource: AiSource | null;
+  ownerSignInMethod: OwnerSignInMethod | null;
   tokenHash: string | null;
   expiresAt: Date | null;
   companyId: string | null;
@@ -182,5 +200,6 @@ function toInstance([row]: {
     demoExpiresAt: row.demoExpiresAt,
     aiSource: row.aiSource,
     assignment: toAssignment(row),
+    ownerSignInMethod: row.ownerSignInMethod,
   };
 }

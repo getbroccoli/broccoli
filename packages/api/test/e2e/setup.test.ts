@@ -1,5 +1,13 @@
 import { expect, test } from "#test/support";
 
+test("exposes no owner sign-in method on a self-hosted instance without a session", async ({
+  env,
+}) => {
+  const response = await env.browser().graphql("{ setup { ownerSignInMethod } }");
+
+  expect(await response.json()).toEqual({ data: { setup: { ownerSignInMethod: null } } });
+});
+
 test("starting the demo signs in its owner for seven days and completes setup", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   const before = Date.now();

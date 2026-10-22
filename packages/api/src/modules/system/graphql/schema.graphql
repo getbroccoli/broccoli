@@ -48,6 +48,13 @@ enum Mode {
   MANAGED
 }
 
+enum OwnerSignInMethod {
+  "Continue with Google."
+  SIGN_IN_WITH_GOOGLE
+  "A sign-in link sent by email."
+  SIGN_IN_WITH_EMAIL
+}
+
 type Setup {
   "Always `instance`: one instance, so the client caches one object."
   id: ID!
@@ -56,6 +63,8 @@ type Setup {
   holder: SetupHolder!
   "When the demo's provisional owner loses access unless they create their account; null for anyone else and once the account exists."
   demoExpiresAt: DateTime
+  "How the managed owner signs in, so the sign-in page offers only that; null on self-hosted instances and until the owner's first sign-in names it."
+  ownerSignInMethod: OwnerSignInMethod
   "How files are read with AI. Owner or setup holder only, though the rest of `Setup` is public; null when managed, which keeps its own key."
   ai: Ai
 }

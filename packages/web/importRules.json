@@ -20,6 +20,7 @@
       "src/lib/useSessionChange"
     ],
     "src/features/auth": [
+      "src/__generated__",
       "src/components/form",
       "src/components/ui",
       "src/i18n",
