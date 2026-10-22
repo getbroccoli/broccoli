@@ -20,7 +20,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] The person whose job title differs shows an amber "2 job titles" pill instead of the title. Clicking it opens "{name} has 2 job titles", "staff.csv and {workspace} disagree. Pick the one to keep." and one button per value with its source.
 - [ ] Clicking a value closes the popover, shows it in the cell and a toast "Job title set to …" with Undo; Undo brings the pill back.
 - [ ] Clicking any other value, such as an email or a start date, opens "{Field} for {name}" with a field and Save. A bad email shows "Enter a valid email"; a 101-character name "Use 100 characters or fewer". A good value shows in the cell.
-- [ ] A start date is picked from a calendar: "Pick a date" opens it with month and weekday names and the first day of the week in the browser's language (Monday first in `de-DE`, Sunday in `en-US`); the picked day shows in the field and, after Save, in the cell.
+- [ ] A start date is picked from a calendar: "Pick a date" opens it with UK English month and weekday names and Monday first, regardless of browser language; the picked day shows as DD/MM/YYYY in the field and, after Save, in the cell.
 - [ ] Typing a last name for the one-word member removes its "No last name" pill and raises the Approve count by one.
 - [ ] Typing, for the row without an email, the email of another person shows "Another person already uses this email. Enter a different email." and changes nothing.
 - [ ] Change one person's email, give their previous email to another person, then Undo the first change. The toast shows "Another person already uses this email. Enter a different email."; both people and their current emails remain.

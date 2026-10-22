@@ -4,14 +4,10 @@ import { expect, it } from "vitest";
 
 import { formatCalendarDate } from "./formatDate";
 
-it("keeps the calendar day west of UTC", () => {
-  const expected = new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-  }).format(new Date(2024, 2, 4));
-
+it("formats the calendar day as DD/MM/YYYY west of UTC", () => {
   const formatted = formatCalendarDate("2024-03-04");
 
-  expect(formatted).toBe(expected);
+  expect(formatted).toBe("04/03/2024");
 });
 
 it("returns null without a date", () => {

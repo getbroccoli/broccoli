@@ -1,15 +1,11 @@
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
+import { enGB } from "react-day-picker/locale";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 
 import { cn } from "@/lib/class-names";
 
 type CalendarProps = React.ComponentProps<typeof DayPicker>;
-
-// The browser's locale names the month and weekdays, as the native date control does.
-const captionFormat = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" });
-const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: "short" });
-const weekStartsOn = firstDayOfWeek();
 
 /**
  * shadcn-style calendar on react-day-picker, themed to our tokens (brand-green
@@ -20,11 +16,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      weekStartsOn={weekStartsOn}
-      formatters={{
-        formatCaption: (month) => captionFormat.format(month),
-        formatWeekdayName: (weekday) => weekdayFormat.format(weekday),
-      }}
+      // UK English month and weekday names and screen-reader labels, weeks from Monday.
+      locale={enGB}
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col gap-4",
@@ -61,17 +54,6 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       {...props}
     />
   );
-}
-
-/** The locale's first day of the week, 0 for Sunday; undefined where the browser cannot tell. */
-function firstDayOfWeek(): CalendarProps["weekStartsOn"] {
-  const locale = new Intl.Locale(navigator.language) as Intl.Locale & {
-    getWeekInfo?: () => { firstDay: number };
-    weekInfo?: { firstDay: number };
-  };
-  // `weekInfo` is the older Chromium and Safari spelling; firstDay counts Monday as 1 and Sunday as 7.
-  const firstDay = (locale.getWeekInfo?.() ?? locale.weekInfo)?.firstDay;
-  return firstDay === undefined ? undefined : ((firstDay % 7) as CalendarProps["weekStartsOn"]);
 }
 
 export { Calendar };
