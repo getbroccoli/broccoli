@@ -48,13 +48,14 @@ export function createOriginalFileReader({
           model: ORIGINAL_FILE_READ_MODEL,
           provider: NO_RETENTION,
           messages: [
-            { role: "system", content: instructions },
+            {
+              role: "system",
+              content: `${instructions}\nReturn JSON matching this schema: ${JSON.stringify(schema)}`,
+            },
             { role: "user", content: [contentOf(file)] },
           ],
-          response_format: {
-            type: "json_schema",
-            json_schema: { name: "answer", strict: false, schema },
-          },
+          // Schema-constrained decoding can omit populated optional fields; the caller validates.
+          response_format: { type: "json_object" },
           ...(file.mimeType === "application/pdf" && { plugins: [PDF_TEXT] }),
         },
       );

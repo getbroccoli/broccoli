@@ -1,11 +1,16 @@
 import express from "express";
 
-import { createDecisions, type Decisions } from "../../src/integrations/ai";
+import {
+  createResolvedDecisions,
+  type Decisions,
+  type OriginalFileReader,
+} from "../../src/integrations/ai";
 import { startSimpleHttpServer } from "./simpleHttpServer";
 
 /** The real model for evals, reached through a local proxy that keeps every request. */
 export interface LiveDecisions {
   decisions: Decisions;
+  originalFileReader: OriginalFileReader;
   /** Forbidden values found as whole words in any request's keys or values, ignoring case. */
   leaked(forbidden: readonly string[]): string[];
   /** Every request sent so far, as the model received it. */
@@ -26,10 +31,10 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
   // The client's timeout ends only its call to the proxy; stopping ends the calls to OpenRouter too.
   const upstreamCalls = new AbortController();
   const app = express().use(express.text({ type: "*/*", limit: "5mb" }));
-  app.post("/alpha/decisions", async (request, response) => {
+  app.post(["/alpha/decisions", "/v1/chat/completions"], async (request, response) => {
     const body = request.body as string;
     sentBodies.push(body);
-    const upstream = await fetch(`${OPENROUTER_URL}/alpha/decisions`, {
+    const upstream = await fetch(`${OPENROUTER_URL}${request.path}`, {
       method: "POST",
       headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
       body,
@@ -40,8 +45,16 @@ export async function startLiveDecisions(): Promise<LiveDecisions> {
     response.status(upstream.status).type("application/json").send(answer);
   });
   const server = await startSimpleHttpServer(app);
+  const source = { kind: "openrouter" as const, url: server.url, key: apiKey };
+  const model = createResolvedDecisions({
+    readSource: () => Promise.resolve(source),
+    tokens: { read: () => Promise.resolve(null), save: () => Promise.resolve() },
+  });
   return {
-    decisions: createDecisions({ endpoint: `${server.url}/alpha/decisions`, credential: apiKey }),
+    decisions: model,
+    originalFileReader: {
+      readOriginalFile: (request) => model.readOriginalFile(source, request),
+    },
     leaked: (forbidden) => {
       const texts = sentBodies.map((body) => stringsOf(JSON.parse(body)).join("\n"));
       return forbidden.filter((value) => {
