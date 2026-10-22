@@ -1,12 +1,16 @@
 /**
  * Requests a binary answer, a GET unless `init` says otherwise, and returns its body.
- * Rejects on an unsuccessful status, after `timeoutMs`, or on a body over `maxBytes`.
+ * Resolves null on 404. Rejects on another unsuccessful status, after `timeoutMs`, or on a
+ * body over `maxBytes`.
  */
 export async function fetchBytes(
   url: URL,
   { timeoutMs, maxBytes, init }: { timeoutMs: number; maxBytes: number; init?: RequestInit },
-): Promise<Buffer> {
+): Promise<Buffer | null> {
   const response = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  if (response.status === 404) {
+    return null;
+  }
   if (!response.ok) {
     throw new Error(`${init?.method ?? "GET"} ${url.origin} answered ${response.status}`);
   }

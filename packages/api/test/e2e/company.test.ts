@@ -86,10 +86,7 @@ test("removes the company logo through the mutation payload", async ({ env }) =>
 test("serves the looked-up logo to the owner with private caching", async () => {
   const brands = await startFakeBrandServer(() => ({
     status: 200,
-    body: {
-      name: "Example Labs",
-      logo: { contentType: "image/png", base64: logo.toString("base64") },
-    },
+    body: logo,
   }));
   onTestFinished(() => brands.stop());
   const { env, accounts } = await startManagedEnv({ brandLookupUrl: brands.url });
@@ -102,9 +99,10 @@ test("serves the looked-up logo to the owner with private caching", async () => 
 
   expect(response.status).toBe(200);
   expect(body).not.toHaveProperty("errors");
-  expect(body.data.company).toMatchObject({ id: "company", suggestedName: "Example Labs" });
+  expect(body.data.company).toMatchObject({ id: "company", suggestedName: "Example" });
   expect(body.data.company.logoUrl).toMatch(/^\/api\/company\/logo\/[0-9a-f-]+$/);
   expect(brands.requests).toEqual(["example.com"]);
+  expect(brands.queries).toEqual(["size=256&format=png"]);
   const image = await browser.get(body.data.company.logoUrl);
   expect(image.status).toBe(200);
   expect(await sharp(Buffer.from(await image.arrayBuffer())).metadata()).toMatchObject({
@@ -116,6 +114,22 @@ test("serves the looked-up logo to the owner with private caching", async () => 
 
   const anonymous = await env.browser().get(body.data.company.logoUrl);
   expect(anonymous.status).toBe(401);
+});
+
+test("returns the domain name and no logo when the favicon service answers 404", async () => {
+  const brands = await startFakeBrandServer(() => ({ status: 404 }));
+  onTestFinished(() => brands.stop());
+  const { env, accounts } = await startManagedEnv({ brandLookupUrl: brands.url });
+  const browser = await signInAsManagedOwner(env, accounts);
+
+  const response = await browser.graphql("query { company { id suggestedName logoUrl } }");
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    data: { company: { id: "company", suggestedName: "Example", logoUrl: null } },
+  });
+  expect(brands.requests).toEqual(["example.com"]);
+  expect(brands.queries).toEqual(["size=256&format=png"]);
 });
 
 test("serves the logo uploaded by the owner", async ({ env }) => {

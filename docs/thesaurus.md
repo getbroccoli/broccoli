@@ -25,7 +25,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.
 - **Company**: the business the instance belongs to; its name and logo. One per instance.
-- **Brand lookup**: finding a company's name and logo from the owner's email domain, through the service at `BRAND_LOOKUP_URL`.
+- **Brand lookup**: finding a company's logo from the owner's email domain, through the favicon service at `BRAND_LOOKUP_URL`.
 - **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.
 - **Demo data**: the sample company a new instance starts with, marked so that clearing it removes nothing else. People added while it is present stay.
 - **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
