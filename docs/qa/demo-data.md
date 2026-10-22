@@ -29,7 +29,7 @@ A manual check that skipping the import fills the demo company and that Exit dem
 - [ ] The dialog reads "Exit demo?" and says the demo people and anyone you added are deleted, and the company and AI choice stay.
 - [ ] While exiting, the button reads "Exiting…" and the dialog cannot be closed.
 - [ ] You land on `/setup/company` with the company name filled in; Setup AI keeps its choice and "Explore the demo" is offered again.
-- [ ] `/people` no longer opens, and a demo avatar URL copied before exiting answers 404.
+- [ ] `/people` no longer opens, and a demo avatar URL copied before exiting answers 403 (`curl` with this browser's cookies, not the browser cache).
 - [ ] Finishing setup with an import and `owner@example.com` ends on `/people` with only the imported people; the person from step 1 is gone.
 
 ## Managed
@@ -37,7 +37,7 @@ A manual check that skipping the import fills the demo company and that Exit dem
 1. Sign in to a managed instance through the managed flow, save the company step and choose "Explore the demo" on the import step.
 
 - [ ] The same 40 people appear, with the banner "You’re looking at demo data." and "Exit demo".
-- [ ] "Exit demo" and confirming lands on `/setup/company`, still signed in, with the company name filled in.
+- [ ] "Exit demo" and confirming lands on `/setup/company`, still signed in, with the company name filled in; a demo avatar URL copied before exiting answers 404.
 
 ## Image
 

@@ -15,11 +15,11 @@ export async function exitDemo({ transact }: DemoContext, ctx: SecurityContext) 
     if ((await readInstance(tx)).demoExpiresAt) {
       throw new ApplicationError("FORBIDDEN", "Exit the demo through setup.");
     }
-    if (!(await hasDemoEmployees(ctx, tx))) {
+    // Moving the step first locks the instance row, so a concurrent exit waits and then refuses.
+    if (!(await returnToCompanyStepFromDemo(ctx, tx)) || !(await hasDemoEmployees(ctx, tx))) {
       throw new ApplicationError("CONFLICT", "The instance holds no demo data.");
     }
     await deleteAllEmployees(ctx, tx);
-    await returnToCompanyStepFromDemo(ctx, tx);
   });
   return { isPresent: false };
 }

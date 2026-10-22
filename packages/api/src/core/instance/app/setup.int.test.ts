@@ -133,7 +133,12 @@ test.for(["company", "owner", "done"] as const)(
   },
 );
 
-test("approving import moves to ready when an owner exists", async ({ orm, seed, transact }) => {
+test("approving import moves to ready when a managed owner exists", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  await seed.assignment();
   const owner = await seed.owner();
   await seed.setupStep("import");
 

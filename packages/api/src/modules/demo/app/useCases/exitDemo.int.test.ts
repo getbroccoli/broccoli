@@ -42,6 +42,51 @@ test("exiting the demo deletes every employee and their avatars and returns to c
   expect(await company.getCompany(owner)).toMatchObject({ name: "Acme Corp" });
 });
 
+test("refuses a concurrent second exit and keeps the first exit's outcome", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner();
+  await seed.assignment();
+  await seed.setupStep("done");
+  await transact(await prepareDemoFill(parseCalendarDate("2026-10-13")));
+  const demo = demoUseCases(orm);
+
+  const results = await Promise.allSettled([demo.exitDemo(owner), demo.exitDemo(owner)]);
+
+  expect(results.filter(({ status }) => status === "fulfilled")).toEqual([
+    { status: "fulfilled", value: { isPresent: false } },
+  ]);
+  expect(results.filter(({ status }) => status === "rejected")).toMatchObject([
+    { reason: { code: "CONFLICT", message: "The instance holds no demo data." } },
+  ]);
+  expect((await readInstance(orm)).step).toBe("company");
+  expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
+});
+
+test("refuses to exit before setup is done and keeps the employees", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner();
+  await seed.assignment();
+  await seed.setupStep("company");
+  await transact(await prepareDemoFill(parseCalendarDate("2026-10-13")));
+  const demo = demoUseCases(orm);
+  const employees = createEmployeeUseCases({ orm });
+  const before = await employees.listEmployees(owner, {});
+
+  await expect(demo.exitDemo(owner)).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "The instance holds no demo data.",
+  });
+
+  expect((await readInstance(orm)).step).toBe("company");
+  expect(await employees.listEmployees(owner, {})).toEqual(before);
+});
+
 test("refuses to exit without demo data and keeps the completed setup and employee", async ({
   orm,
   seed,
