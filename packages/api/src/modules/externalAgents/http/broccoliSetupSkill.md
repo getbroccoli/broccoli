@@ -25,9 +25,10 @@ approves.
 - The owner follows your work in Broccoli in their browser: send them no links except the address
   in section 1, and ask them nothing but what section 1 says and to drop files on that page.
 
-Prefix Broccoli status messages in chat with 🥦. Use 🥦🥦🥦 only when the instance is
-running and the owner can open it, matching the installer's ready message. Use a single 🥦
-for file progress and the ready-to-review handoff. Keep each update short.
+Use broccoli emoji for customer-visible milestones. Use 🥦🥦🥦 only when the instance is
+running and the owner can open it, matching the installer's ready message. Use 🥦 when you
+acknowledge finding their uploaded file and when its people are ready for review. Keep downloading,
+mapping, waiting and error updates plain. Keep each update short.
 
 ## 1. Check and connect
 
@@ -114,10 +115,10 @@ printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -fsS -H @- -X POST \
 A successful report returns 204 with no body. These reports update the owner's file card:
 
 1. When you take up a listed file, report `file_found` and say “🥦 I found your uploaded file.”
-2. Just before fetching its questions or original, report `file_downloading`. Say “🥦 I’m downloading
-   the masked questions about your file’s columns” for `answer_masked_questions`, or “🥦 I’m downloading
+2. Just before fetching its questions or original, report `file_downloading`. Say “I’m downloading
+   the masked questions about your file’s columns” for `answer_masked_questions`, or “I’m downloading
    the original file you allowed me to read” for `read_original_file`.
-3. Only after that fetch succeeds, report `file_mapping` and say “🥦 Downloaded. I’m mapping your file now.”
+3. Only after that fetch succeeds, report `file_mapping` and say “Downloaded. I’m mapping your file now.”
    Then read the questions or original and prepare the answer.
 
 Report actual transitions only. Do not report mapping after a failed download, invent percentages,
