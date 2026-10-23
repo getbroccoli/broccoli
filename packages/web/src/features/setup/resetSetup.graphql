@@ -1,0 +1,16 @@
+mutation ResetSetup {
+  setup {
+    reset {
+      setup {
+        id
+        step
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}

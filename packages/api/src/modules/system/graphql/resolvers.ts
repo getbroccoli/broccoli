@@ -58,6 +58,16 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
           },
           ["CONFLICT"],
         ),
+      reset: (_parent, _args, context) =>
+        mutationPayload<ResolversTypes["SetupResetPayload"]>(
+          "setup",
+          async () => {
+            const actor = context.getActor();
+            await useCases.resetSetup(actor);
+            return readSetup(actor);
+          },
+          ["CONFLICT"],
+        ),
       saveAiSource: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["SetupSaveAiSourcePayload"]>(
           "setup",

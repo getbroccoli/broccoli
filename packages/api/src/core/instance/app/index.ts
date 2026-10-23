@@ -5,7 +5,7 @@ export {
   completeReadyStep,
   isImportOpen,
   reopenImportStep,
-  returnToCompanyStepFromDemo,
+  returnToCompanyStep,
 } from "./setup";
 export { claimOwner, createOwnerAtSetup, readOwner, type AddApprovedPeople } from "./owner";
 export { readInstance } from "./instance";

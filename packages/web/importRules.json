@@ -16,6 +16,7 @@
       "src/components/ui",
       "src/features/auth",
       "src/features/demo",
+      "src/features/setup",
       "src/i18n",
       "src/lib/useSessionChange"
     ],

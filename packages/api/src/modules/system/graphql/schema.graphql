@@ -108,6 +108,8 @@ type SetupMutations {
   saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
   "Completes setup from the ready step and adds the people the owner approved; refused with a ConflictError at any other step, such as after another tab went back to the review. Owner only."
   complete: SetupCompletePayload!
+  "Starts a finished setup over: deletes every person and takes setup back to the company step; the company and the AI choice stay. Refused with a ConflictError before setup is done, and during the self-hosted demo. Owner only."
+  reset: SetupResetPayload!
 }
 
 "Setup after a change."
@@ -122,6 +124,14 @@ type SetupCompletePayload {
 }
 
 union SetupCompleteError = ConflictError
+
+"Setup after starting it over."
+type SetupResetPayload {
+  setup: Setup
+  error: SetupResetError
+}
+
+union SetupResetError = ConflictError
 
 "Setup after choosing how files are read."
 type SetupSaveAiSourcePayload {

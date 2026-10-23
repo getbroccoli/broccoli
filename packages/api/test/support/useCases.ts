@@ -20,6 +20,7 @@ import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
+import { deleteAllEmployees } from "../../src/modules/employees";
 import { createImportUseCases } from "../../src/modules/imports";
 import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
 import { createSystemUseCases } from "../../src/modules/system";
@@ -50,8 +51,11 @@ export function systemUseCases(orm: Orm) {
   return createSystemUseCases({
     orm,
     transact: testTransactor(orm),
+    logger: createLogger("silent"),
     mode: "self_hosted",
     addApprovedPeople: importUseCases(orm).addApprovedPeople,
+    deleteAllEmployees,
+    deleteFinishedImport: importUseCases(orm).deleteFinishedImport,
     aiSettings: aiSettings(orm),
   });
 }

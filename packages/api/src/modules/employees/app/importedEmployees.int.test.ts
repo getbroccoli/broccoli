@@ -133,21 +133,16 @@ test("assigns avatars only to complete employees with untaken emails, keeping th
   ).toEqual([{ email: avery.email, avatarFileId: keptPhoto }]);
 });
 
-test("deleting all employees deletes the demo avatars and keeps the import's photos", async ({
-  orm,
-  seed,
-  transact,
-}) => {
+test("deleting all employees deletes their avatars", async ({ orm, seed, transact }) => {
   await employeeRepository(orm).insert({
     ...parseNewEmployee({ firstName: "Demo", lastName: "Employee", email: "demo@example.com" }),
     avatarFileId: await seed.file({ content: PNG, mimeType: "image/png" }),
     isDemo: true,
   });
-  const importPhoto = await seed.file({ content: PNG, mimeType: "image/png" });
-  await seed.employee({ avatarFileId: importPhoto });
+  await seed.employee({ avatarFileId: await seed.file({ content: PNG, mimeType: "image/png" }) });
 
   await transact((tx) => deleteAllEmployees(OWNER, tx));
 
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
-  expect(await storedFileIds(orm)).toEqual([importPhoto]);
+  expect(await storedFileIds(orm)).toEqual([]);
 });

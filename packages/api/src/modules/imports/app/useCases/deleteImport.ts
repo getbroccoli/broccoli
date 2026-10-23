@@ -13,17 +13,23 @@ export async function deleteImport(tx: Tx): Promise<void> {
 
 /** Deletes the approved import once setup is complete; its photos stay with the employees. */
 export async function finishImport(context: ImportContext, ctx: SecurityContext): Promise<void> {
-  requireImportAccess(ctx);
-  const deletedPhotos = await context.transact(async (tx) => {
-    const imports = await lockImport(tx);
-    const employees = await findEmployeesWithAvatars(ctx, tx);
-    const deleted = await importPhotoRepository(tx).deletePhotosExcept(
-      employees.flatMap(({ avatarFileId }) => avatarFileId ?? []),
-    );
-    await imports.deleteAll({ keepPhotos: true });
-    return deleted;
-  });
+  const deletedPhotos = await context.transact((tx) => deleteFinishedImport(ctx, tx));
   for (const photo of deletedPhotos) {
     context.logger.info(photo, "Deleted an unused import photo");
   }
+}
+
+/**
+ * Deletes the approved import, joining `tx`, and its photos but the employees' avatars; returns
+ * the deleted photos. Setup's reset also runs it, in case the cleanup after completion did not.
+ */
+export async function deleteFinishedImport(ctx: SecurityContext, tx: Tx) {
+  requireImportAccess(ctx);
+  const imports = await lockImport(tx);
+  const employees = await findEmployeesWithAvatars(ctx, tx);
+  const deleted = await importPhotoRepository(tx).deletePhotosExcept(
+    employees.flatMap(({ avatarFileId }) => avatarFileId ?? []),
+  );
+  await imports.deleteAll({ keepPhotos: true });
+  return deleted;
 }

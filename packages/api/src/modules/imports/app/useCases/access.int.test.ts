@@ -61,6 +61,7 @@ const calls = {
   addApprovedPeople: (imports, ctx, tx) => imports.addApprovedPeople(ctx, tx),
   approveImport: (imports, ctx) => imports.approveImport(ctx, "any-version"),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
+  deleteFinishedImport: (imports, ctx, tx) => imports.deleteFinishedImport(ctx, tx),
   reopenReview: (imports, ctx) => imports.reopenReview(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext, tx: Tx) => unknown>;
 
