@@ -1,0 +1,52 @@
+{
+  "records": [
+    {
+      "firstName": "Ines",
+      "lastName": "Varga",
+      "email": "ines.varga@acme-corp.example",
+      "jobTitle": "Office Manager",
+      "startDate": "2022-02-14"
+    },
+    {
+      "firstName": "Tobias",
+      "lastName": "Lindqvist",
+      "email": "tobias.lindqvist@acme-corp.example",
+      "jobTitle": "Sales Executive",
+      "startDate": "2023-07-03"
+    },
+    {
+      "firstName": "Priya",
+      "lastName": "Raman",
+      "email": "priya.raman@acme-corp.example",
+      "jobTitle": "Software Engineer",
+      "startDate": "2021-11-21"
+    },
+    {
+      "firstName": "Kwame",
+      "lastName": "Asante",
+      "email": "kwame.asante@acme-corp.example",
+      "jobTitle": "Finance Analyst",
+      "startDate": "2024-05-09"
+    }
+  ],
+  "forbidden": [
+    "Ines Varga",
+    "Ines",
+    "Varga",
+    "ines.varga@acme-corp.example",
+    "Tobias Lindqvist",
+    "Tobias",
+    "Lindqvist",
+    "tobias.lindqvist@acme-corp.example",
+    "Priya Raman",
+    "Priya",
+    "Raman",
+    "priya.raman@acme-corp.example",
+    "Kwame Asante",
+    "Kwame",
+    "Asante",
+    "kwame.asante@acme-corp.example",
+    "ines-varga-office-manager-profile",
+    "acmecorp.sharepoint.example"
+  ]
+}

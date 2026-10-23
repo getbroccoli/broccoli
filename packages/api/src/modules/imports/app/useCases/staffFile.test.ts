@@ -18,6 +18,38 @@ it("reads a CSV as one unnamed sheet", async () => {
   ]);
 });
 
+it("reads formula text in CSV cells as display values without evaluating it", async () => {
+  const csv = Buffer.from(
+    `Name,Profile,Unknown,Plain
+"=HYPERLINK (""https://example.com/ines"",""Ines"")","=HYPERLINK(""https://example.com/ines"")","=A2&"" ""&B2",Avery`,
+  );
+
+  expect(await readStaffFile(csv)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Profile", "Unknown", "Plain"],
+        ["Ines", "https://example.com/ines", "", "Avery"],
+      ],
+    },
+  ]);
+});
+
+it("preserves saved Excel formula values starting with an equals sign", async () => {
+  const bytes = sampleXlsxFile({
+    sheets: [
+      {
+        name: "Staff",
+        rows: [["Job title"], [{ formula: '"="&" Operations"', value: "= Operations" }]],
+      },
+    ],
+  });
+
+  expect(await readStaffFile(bytes)).toEqual([
+    { name: "Staff", rows: [["Job title"], ["= Operations"]] },
+  ]);
+});
+
 it("reads a workbook as named sheets", async () => {
   const bytes = sampleXlsxFile({
     sheets: [
