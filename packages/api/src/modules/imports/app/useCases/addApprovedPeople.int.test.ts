@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import {
-  createEmployeeUseCases,
+  createSetupOwner,
   expect,
   finishSelfHostedSetup,
   importUseCases,
@@ -10,15 +10,15 @@ import {
   SETUP_HOLDER,
   SLACK_PHOTO_URL,
   storedFileIds,
-  SYSTEM,
   test,
 } from "#test/support";
 
-import { user } from "../../auth";
-import { ormOf, transactor, type Tx } from "../../db";
-import { createEventBus } from "../../events";
-import { createOwnerAtSetup, readInstance } from ".";
-import { createLogger } from "../../logger";
+import { user } from "../../../../core/auth";
+import { ormOf, transactor } from "../../../../core/db";
+import { createEventBus } from "../../../../core/events";
+import { readInstance } from "../../../../core/instance";
+import { createLogger } from "../../../../core/logger";
+import { createEmployeeUseCases } from "../../../employees";
 
 test("approval by the setup holder creates nobody until account creation", async ({
   orm,
@@ -77,13 +77,7 @@ test("a database failure after account creation leaves no owner or employees and
 
   await expect(
     transact(async (tx) => {
-      await createOwnerAtSetup(
-        SYSTEM,
-        tx,
-        { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") },
-        () => insertOwner(tx),
-        imports.addApprovedPeople,
-      );
+      await createSetupOwner(tx, imports.addApprovedPeople);
       await ormOf(tx).execute(sql`select 1 / 0`);
     }),
   ).rejects.toMatchObject({ cause: { code: "22012" } });
@@ -122,15 +116,7 @@ test("an existing owner refuses account creation before adding the approved peop
   const before = (await imports.reads.readReview(owner)).listEmployees({});
 
   await expect(
-    transact((tx) =>
-      createOwnerAtSetup(
-        SYSTEM,
-        tx,
-        { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") },
-        () => insertOwner(tx),
-        imports.addApprovedPeople,
-      ),
-    ),
+    transact((tx) => createSetupOwner(tx, imports.addApprovedPeople)),
   ).rejects.toMatchObject({ name: "OwnerExistsError" });
 
   expect(await orm.select().from(user)).toEqual(users);
@@ -138,9 +124,3 @@ test("an existing owner refuses account creation before adding the approved peop
   expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
   expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(before);
 });
-
-async function insertOwner(tx: Tx) {
-  const owner = { id: "setup-owner", name: "Owner", email: "owner@example.com" };
-  await ormOf(tx).insert(user).values(owner);
-  return { user: owner };
-}

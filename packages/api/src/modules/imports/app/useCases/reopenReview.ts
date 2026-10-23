@@ -6,9 +6,7 @@ import { requireImportAccess } from "./requireImportAccess";
 
 /**
  * Takes setup from the owner or ready step back to the import step, so the owner can change
- * the review and approve again; nobody is added before setup completes, so nothing is lost.
- * Leaving a demo started instead of the import deletes its people, in the same transaction.
- * At any other step it does nothing.
+ * the review; does nothing elsewhere. Leaving a demo started instead of the import deletes its people.
  */
 export async function reopenReview(
   { transact, logger }: Pick<ImportContext, "transact" | "logger">,

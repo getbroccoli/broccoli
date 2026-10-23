@@ -63,6 +63,6 @@ export { sampleXlsxFile, xlsxFileWithDistantCell } from "./sampleXlsxFile";
 export { STAFF_CSV, STAFF_PDF, READ_PEOPLE, STAFF_MAPPING_ANSWERS } from "./staffFiles";
 export { importSourceValues } from "./importSourceValues";
 
-export { finishSelfHostedSetup } from "./finishSelfHostedSetup";
+export { createSetupOwner, finishSelfHostedSetup } from "./finishSelfHostedSetup";
 
 export { createEmployeeUseCases } from "../../src/modules/employees";

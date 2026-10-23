@@ -4,12 +4,8 @@ import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { AddApprovedPeople, DemoStart } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import {
-  type AddedPeople,
-  addApprovedPeople,
-  approveImport,
-  reportAddedPeople,
-} from "./approveImport";
+import { type AddedPeople, addApprovedPeople, reportAddedPeople } from "./addApprovedPeople";
+import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
 import type { DemoFill, ImportSlack } from "./importContext";
