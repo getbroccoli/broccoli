@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { expect, importUseCases, OWNER, SYSTEM, test } from "#test/support";
+import { importSourceValues, expect, importUseCases, OWNER, SYSTEM, test } from "#test/support";
 
 import { DecisionsError } from "../../../../integrations/ai";
 
@@ -16,7 +16,9 @@ test("a mapping run that finishes after setup moved on writes nothing", async ({
 
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
     [],
   );
@@ -36,7 +38,9 @@ test("a stale attempt leaves the source and its records unchanged", async ({
 
   await imports.files.mapFile(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
       ({ node }) => node,
@@ -66,7 +70,9 @@ test("a retryable model failure leaves the source mapping", async ({
 
   await expect(result).rejects.toBeInstanceOf(DecisionsError);
   await expect(result).rejects.toMatchObject({ retryable: true });
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
 });
 
@@ -171,7 +177,9 @@ test("an in-flight answer leaves a retried source mapping without records", asyn
     held.release();
     await mapping;
 
-    expect(await imports.reads.listSources(OWNER)).toEqual(restarted);
+    expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual(
+      restarted.map(importSourceValues),
+    );
     expect((await imports.reads.readReview(OWNER)).listEmployees({}).edges).toEqual([]);
   } finally {
     held.release();

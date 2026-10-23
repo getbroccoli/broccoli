@@ -1,6 +1,6 @@
 # Code quality
 
-The rules every change is checked against. Each rule is stated here and nowhere else; `architecture.md` and `testing.md` hold the decisions and reasons behind them and link here by ID. An ID is never reused: a removed rule leaves its number retired.
+The quick reference for checking every change. Rules here state the check; [`architecture.md`](architecture.md) explains system boundaries, decisions and their reasons, and [`testing.md`](testing.md) explains testing practices. An ID is never reused: a removed rule leaves its number retired.
 
 A rule that lint enforces ends with its lint rule, and `pnpm check` fails when it breaks; the author and the reviewer check the others. A review comment cites the rule's ID. A rule is added only for a theme that keeps coming back in review, and only once the maintainer agrees; a rule that keeps coming back becomes a lint rule where a tool can judge it.
 
@@ -30,17 +30,19 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 
 ## Layers and place
 
-- **RULE56.** The architecture screams what Broccoli does, not its frameworks: a feature's code lives in a folder named after its domain (`modules/imports`, `features/externalAgents`), with layers and tools (`db`, `graphql`, `http`) inside it, never the reverse. Shared technical folders (`core`, `utils`, `components`, `apollo`) hold only what no feature owns.
-- **RULE16.** Dependencies point one way, `domain ← db ← app ← graphql | mcp | http`, each through the folder's `index.ts` ([architecture §1](architecture.md#1-shape-of-the-system)). `lint: boundaries`
-- **RULE58.** A module's `domain` holds Broccoli's business rules and facts only. Technical code the module needs that is no business rule, such as parsing an origin or hashing a secret, goes to the module's `helpers` folder, which every layer, `domain` included, may import; it gets unit tests like domain code. `lint: boundaries` (the imports)
-- **RULE17.** Each piece lives in the module and layer that owns it, not where it was first used: the logo upload belongs to the company feature, not the setup page. A type that names a domain fact lives in `domain`; `db` keeps only its tables and storage details. `utils` is the one folder for code that knows nothing about Broccoli; there is no other catch-all.
-- **RULE18.** Related operations on one subject live in one service file, which keeps their formats and rules. Adapters (`graphql`, `mcp`, `http`) translate a request into one use-case call and keep only transport, such as cookies and redirects.
-- **RULE52.** One decision has one owner: a rule over several inputs (such as the mode, settings and stored state) is one `domain` function, and reading those inputs and applying it is one `app` function next to the data. Callers call that function; they never repeat its branches, its reads or a condition it already decides (`mode === "managed"`) in another file.
-- **RULE19.** Every business function in `app` takes the caller's `SecurityContext` first, as `ctx`, and checks it. Work Broccoli does on its own runs as the system, never without a context.
-- **RULE20.** A use case opens the transaction with `transact`; an operation meant to compose takes a required `tx`. Code never awaits work that needs another connection while holding locks, such as an HTTP call.
-- **RULE60.** A repository reads a whole item: one query returns the row as a domain object (`instanceRepository(db).readInstance()`, `lockInstance()` when it locks the row), never one read method per field or group of fields. Encrypted secrets stay out of the item and have their own read (`readAiSource`). A module's public read returns that item too (`readInstance`), and callers take the fields they need from it.
-- **RULE21.** A module never reads another module's tables: it calls the other module's public functions or handles its events.
-- **RULE22.** An integration reaches the network through `fetchJson`, or `fetchBytes` for a binary answer, in `utils`, with no HTTP library, and nothing retries by default.
+Layer responsibilities, reasons and examples are in [Module layers](architecture.md#module-layers).
+
+- **RULE56.** Organize code by domain feature, with layers inside it. Shared technical folders hold only what no feature owns.
+- **RULE16.** Dependencies point inward, `domain ← db ← app ← graphql | mcp | http`, through each folder's `index.ts`. `lint: boundaries`
+- **RULE58.** Keep business rules and facts in `domain`; module-local technical code goes in `helpers`, available to every layer and covered by unit tests. `lint: boundaries` (the imports)
+- **RULE17.** Put code in its owning module and layer: domain facts in `domain`, storage details in `db`, and helpers with no Broccoli knowledge in `utils`, with no other catch-all.
+- **RULE18.** Group related operations on one subject in one service file. Adapters keep only transport and translate a request into one use-case call.
+- **RULE52.** Give each business decision one owner in `domain` and its coordination one owner in `app`; callers reuse them without repeating decisions or reads.
+- **RULE19.** Every `app` business function takes and checks `ctx: SecurityContext` as its first argument; work Broccoli does on its own uses the system context.
+- **RULE20.** Use cases open transactions with `transact`; composed operations require `tx`. Never await work needing another connection while holding locks.
+- **RULE60.** Repository reads return whole domain items in one query, also exposed by module public reads; encrypted secrets have separate reads. No read method per field or field group.
+- **RULE21.** Cross-module access uses public operations or events, never another module's tables.
+- **RULE22.** Integrations use `utils`' `fetchJson` or `fetchBytes`, no HTTP library and no retries by default.
 
 ## API
 
@@ -87,6 +89,7 @@ How to write each kind of test is in [`testing.md`](testing.md).
 ## Docs and comments
 
 - **RULE47.** A doc holds only what a reader needs: nothing obvious, generic, deferred or restated from the code. A change edits no doc outside its task.
+- **RULE61.** `architecture.md` records system boundaries, technology choices, constraints and trade-offs, with their reasons. Class and function details, algorithms, endpoint walkthroughs and tuning values belong in code or the relevant guide. A refactor that changes only implementation does not change the architecture document.
 - **RULE48.** A doc comment is one or two sentences: what it is and the non-obvious why.
 - **RULE49.** `thesaurus.md` gets a term only when it is Broccoli's own, not a well-known one such as job, model or mapping.
 - **RULE50.** A change that needs a new architecture decision changes `architecture.md` in the same pull request.

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  importSourceValues,
   expect,
   importUseCases,
   SETUP_HOLDER,
@@ -215,7 +216,9 @@ test("a job from an earlier attempt leaves the source and its records unchanged"
     aiSource: null,
   });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual(
+    before.map(importSourceValues),
+  );
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(
     records,
   );

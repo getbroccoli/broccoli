@@ -19,5 +19,5 @@ export function importProgress(
 
 /** Whether a file source is still being read. */
 export function isReading(sources: readonly ImportSource[]): boolean {
-  return sources.some(({ status }) => status === "mapping");
+  return sources.some((source) => source.isReading());
 }

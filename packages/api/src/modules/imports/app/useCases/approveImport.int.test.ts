@@ -1,6 +1,14 @@
 import { sql } from "drizzle-orm";
 
-import { expect, importUseCases, NON_OWNER, OWNER, SETUP_HOLDER, test } from "#test/support";
+import {
+  importSourceValues,
+  expect,
+  importUseCases,
+  NON_OWNER,
+  OWNER,
+  SETUP_HOLDER,
+  test,
+} from "#test/support";
 
 import { ormOf } from "../../../../core/db";
 import { readInstance } from "../../../../core/instance";
@@ -35,7 +43,9 @@ test.for([
       expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
     );
     expect(employees.edges).toHaveLength(2);
-    expect(await imports.reads.listSources(owner)).toEqual([source]);
+    expect((await imports.reads.listSources(owner)).map(importSourceValues)).toEqual([
+      importSourceValues(source),
+    ]);
     expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(review);
   },
 );
@@ -65,26 +75,6 @@ test("approving adds exactly the ready import employees the review counts", asyn
   ]);
 });
 
-test("the review keeps the approved employees ready and their sources after approval", async ({
-  orm,
-  seed,
-}) => {
-  const owner = await seed.owner();
-  await seed.setupStep("import");
-  const source = await seed.importSource();
-  await seed.importEmployees(source.id, [
-    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
-  ]);
-  const imports = importUseCases(orm);
-  const before = await imports.reads.readReview(owner);
-
-  await imports.approveImport(owner, before.version);
-
-  const after = await imports.reads.readReview(owner);
-  expect(after.readyEmployees).toEqual(before.readyEmployees);
-  expect(after.readyEmployeeSources).toEqual([source]);
-});
-
 test("approving keeps a record without a last name without creating an employee", async ({
   orm,
   seed,
@@ -107,7 +97,9 @@ test("approving keeps a record without a last name without creating an employee"
       ({ node }) => node,
     ),
   ).toEqual(records);
-  expect(await imports.reads.listSources(owner)).toEqual([source]);
+  expect((await imports.reads.listSources(owner)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
 });
 
 test("approving twice creates the employees once", async ({ orm, seed }) => {

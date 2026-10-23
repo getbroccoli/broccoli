@@ -1,4 +1,4 @@
-import { expect, importUseCases, OWNER, test } from "#test/support";
+import { importSourceValues, expect, importUseCases, OWNER, test } from "#test/support";
 
 import { createEmployeeUseCases } from "../../../employees";
 
@@ -70,7 +70,7 @@ test("leaves out a source whose only person is left out", async ({ orm, seed }) 
 
   const sources = (await imports.reads.readReview(OWNER)).readyEmployeeSources;
 
-  expect(sources).toEqual([file]);
+  expect(sources.map(importSourceValues)).toEqual([importSourceValues(file)]);
 });
 
 test("leaves out a source whose only person is incomplete", async ({ orm, seed }) => {
@@ -82,7 +82,7 @@ test("leaves out a source whose only person is incomplete", async ({ orm, seed }
 
   const sources = (await imports.reads.readReview(OWNER)).readyEmployeeSources;
 
-  expect(sources).toEqual([file]);
+  expect(sources.map(importSourceValues)).toEqual([importSourceValues(file)]);
 });
 
 test("lists a source once when it holds several added people", async ({ orm, seed }) => {
@@ -92,5 +92,25 @@ test("lists a source once when it holds several added people", async ({ orm, see
 
   const sources = (await imports.reads.readReview(OWNER)).readyEmployeeSources;
 
-  expect(sources).toEqual([source]);
+  expect(sources.map(importSourceValues)).toEqual([importSourceValues(source)]);
+});
+
+test("the review keeps the approved employees ready and their sources after approval", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner();
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  const before = await imports.reads.readReview(owner);
+
+  await imports.approveImport(owner, before.version);
+
+  const after = await imports.reads.readReview(owner);
+  expect(after.readyEmployees).toEqual(before.readyEmployees);
+  expect(after.readyEmployeeSources.map(importSourceValues)).toEqual([importSourceValues(source)]);
 });

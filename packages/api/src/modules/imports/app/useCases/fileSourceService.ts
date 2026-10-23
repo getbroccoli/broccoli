@@ -7,7 +7,6 @@ import { importReader } from "../../db";
 import {
   type ColumnMapping,
   columnQuestions,
-  type FileSource,
   headerQuestion,
   inSheet,
   type IncomingRecord,
@@ -106,7 +105,7 @@ export function createFileSourceService({
     mapFile: async (ctx, { sourceId, attempt }) => {
       requireImportAccess(ctx);
       const source = await importReader(orm).findFileSource(sourceId);
-      if (!isCurrentRun(source, attempt)) {
+      if (!source?.isCurrentMapping(attempt)) {
         return;
       }
       const file = await readFile(orm, source.fileId);
@@ -151,10 +150,6 @@ export function createFileSourceService({
 }
 
 type MappingResult = { outcome: MappingOutcome; records: IncomingRecord[] };
-
-function isCurrentRun(source: FileSource | null, attempt: number): source is FileSource {
-  return source?.status === "mapping" && source.mappingAttempt === attempt;
-}
 
 /** A model failure that retrying cannot fix fails the file; any other error is thrown. */
 async function mapFileOrFail(decisions: Decisions, sheets: FileSheet[]): Promise<MappingResult> {

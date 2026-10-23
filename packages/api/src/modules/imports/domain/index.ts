@@ -48,8 +48,8 @@ export {
   IMPORT_SOURCE_FAILURES,
   IMPORT_SOURCE_READERS,
   IMPORT_SOURCE_STATUSES,
-  type FileSource,
-  type ImportSource,
+  ImportSource,
+  type ImportSourceState,
   type ImportSourceFailure,
   type ImportSourceReader,
   type ImportSourceStatus,
@@ -58,3 +58,4 @@ export {
 export { parseReadPeople, type ReadPeople, readPeopleSchema } from "./readPeople";
 export { splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";
+export { FileSource, type FileSourceState } from "./fileSource";

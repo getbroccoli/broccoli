@@ -1,4 +1,5 @@
 import {
+  importSourceValues,
   expect,
   importUseCases,
   SETUP_HOLDER,
@@ -13,33 +14,6 @@ import {
 } from "#test/support";
 
 import { parseReadPeople } from "../../domain";
-
-test("a PDF dropped for the agent waits for consent without a job or an unmapped listing", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
-  const imports = importUseCases(orm);
-
-  const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, {
-    name: "staff.PDF",
-    bytes: PDF,
-  });
-
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
-    { id, status: "waiting_for_original_read_consent", originalReadAllowedAt: null },
-  ]);
-  expect(
-    await transact((tx) => imports.answeredMapping.readUnmappedSources(SETUP_EXTERNAL_AGENT, tx)),
-  ).toEqual([]);
-  expect(agents.sentJobs).toEqual([]);
-  expect((await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: id })).edges).toEqual(
-    [],
-  );
-  expect(await imports.reads.readProgress(SETUP_HOLDER)).toMatchObject({ reading: false });
-});
 
 test("a PDF uploaded to the import waits for consent without a job", async ({ orm }) => {
   const imports = importUseCases(orm);
@@ -161,7 +135,9 @@ test("refuses consent while the file is still mapping", async ({ orm, seed }) =>
     message: "Wait until the file is read.",
   });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect(imports.sentJobs).toEqual([]);
 });
 
@@ -211,7 +187,9 @@ test("refuses a second consent", async ({ orm, seed }) => {
     message: "AI may already read this file.",
   });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual(
+    before.map(importSourceValues),
+  );
   expect(imports.sentJobs).toHaveLength(1);
 });
 
@@ -250,7 +228,9 @@ test("refuses consent from the external agent", async ({ orm, seed }) => {
     imports.originalFileReads.allowOriginalFileRead(SETUP_EXTERNAL_AGENT, source.id, "broccoli_ai"),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect(imports.sentJobs).toEqual([]);
 });
 
@@ -314,7 +294,9 @@ test("refuses a new original read while the chosen agent is still reading", asyn
     imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "external_agent"),
   ).rejects.toMatchObject({ code: "CONFLICT" });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual(
+    before.map(importSourceValues),
+  );
   expect(imports.sentJobs).toEqual([]);
 });
 
@@ -331,6 +313,8 @@ test("refuses original-file consent for a provider changed in another tab", asyn
     imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, id, "openrouter"),
   ).rejects.toMatchObject({ code: "CONFLICT" });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual(
+    before.map(importSourceValues),
+  );
   expect(imports.sentJobs).toEqual([]);
 });

@@ -1,4 +1,5 @@
 import {
+  importSourceValues,
   expect,
   importUseCases,
   OWNER,
@@ -44,7 +45,9 @@ test("refuses file removal after Approve and keeps the import and stored file un
     code: "CONFLICT",
   });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
   expect(await storedFileIds(orm)).toEqual(fileIds);
 });
@@ -87,7 +90,9 @@ test("removing a file source keeps the Slack source, its records and its connect
 
   await imports.removeSource(OWNER, fileSource.id);
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([slackSource]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(slackSource),
+  ]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: slackSource.id })).edges.map(
       ({ node }) => node,
@@ -122,7 +127,9 @@ test("refuses Slack removal after Approve and keeps the import, photos and conne
     code: "CONFLICT",
   });
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
   expect(await storedFileIds(orm)).toEqual(fileIds);
   expect(await slack.getSlackConnection(SETUP_HOLDER)).toEqual(connection);
@@ -142,7 +149,9 @@ test("removing a missing source leaves the import and Slack connection unchanged
 
   await imports.removeSource(OWNER, "0199f6c4-0000-7000-8000-000000000000");
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect((await imports.reads.readReview(OWNER)).listEmployees({})).toEqual(before);
   expect(await slack.getSlackConnection(OWNER)).toEqual(connection);
 });

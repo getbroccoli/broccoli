@@ -1,15 +1,10 @@
 import { expect, it } from "vitest";
 
-import {
-  groupEmployeeRecords,
-  hasOpenConflict,
-  type ImportEmployeeRecord,
-  type ImportSource,
-} from ".";
+import { groupEmployeeRecords, hasOpenConflict, type ImportEmployeeRecord, ImportSource } from ".";
 
 it("groups a Slack member and a file row with one email into one import employee", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
   const employees = groupEmployeeRecords([slack, file], [member, row], []);
@@ -24,7 +19,7 @@ it("groups a Slack member and a file row with one email into one import employee
 });
 
 it("keeps each record without an email alone", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
 
   const first = { ...row, email: null };
   const second = { ...first, id: "second" };
@@ -38,7 +33,7 @@ it("keeps each record without an email alone", () => {
 });
 
 it("groups two rows of one file with one email", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
 
   const duplicate = { ...row, id: "duplicate" };
 
@@ -52,11 +47,11 @@ it("groups two rows of one file with one email", () => {
 });
 
 it("defaults to the older file before the newer file and Slack", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
-  const newer = { ...file, id: "newer", name: "newer.csv" };
+  const newer = new ImportSource({ ...mapped, kind: "file", id: "newer", name: "newer.csv" });
   const newerRow = { ...row, id: "newer-row", sourceId: newer.id, jobTitle: "Manager" };
 
   const [employee] = groupEmployeeRecords([slack, file, newer], [member, row, newerRow], []);
@@ -66,8 +61,8 @@ it("defaults to the older file before the newer file and Slack", () => {
 });
 
 it("shows a value from only one source without a conflict", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
   const [employee] = groupEmployeeRecords([file, slack], [{ ...row, jobTitle: null }, member], []);
@@ -82,8 +77,8 @@ it("shows a value from only one source without a conflict", () => {
 });
 
 it("shows the default and both record options for an open conflict", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
   const [employee] = groupEmployeeRecords([slack, file], [member, row], []);
@@ -101,8 +96,8 @@ it("shows the default and both record options for an open conflict", () => {
 });
 
 it("reports the picked record id with its value and settles the conflict", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
   const [employee] = groupEmployeeRecords(
@@ -120,8 +115,8 @@ it("reports the picked record id with its value and settles the conflict", () =>
 });
 
 it("falls back to the default when a picked record is outside the group", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
   const outsider = { ...member, id: "outsider", email: "robin@example.com" };
@@ -141,8 +136,8 @@ it("falls back to the default when a picked record is outside the group", () => 
 });
 
 it("shows a typed value and settles the conflict", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
   const [employee] = groupEmployeeRecords(
@@ -160,8 +155,8 @@ it("shows a typed value and settles the conflict", () => {
 });
 
 it("merges a typed email with the target’s key first and its choices kept", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
-  const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const member = { ...row, id: "member", sourceId: slack.id, jobTitle: "Engineer" };
 
   const other = { ...member, email: "other@example.com" };
@@ -197,7 +192,7 @@ it("merges a typed email with the target’s key first and its choices kept", ()
 });
 
 it("keeps the left-out choice on the import employee", () => {
-  const file: ImportSource = { ...mapped, id: "file", kind: "file", name: "staff.csv" };
+  const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
 
   const [employee] = groupEmployeeRecords(
     [file],
@@ -209,7 +204,7 @@ it("keeps the left-out choice on the import employee", () => {
 });
 
 it("uses the first record's photo that has one", () => {
-  const slack: ImportSource = { ...mapped, id: "slack", kind: "slack", name: "Workspace" };
+  const slack = new ImportSource({ ...mapped, id: "slack", kind: "slack", name: "Workspace" });
   const withoutPhoto = { ...row, sourceId: slack.id };
   const firstPhoto = { ...withoutPhoto, id: "first-photo", photoFileId: "first-file" };
   const laterPhoto = { ...withoutPhoto, id: "later-photo", photoFileId: "later-file" };

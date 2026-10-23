@@ -1,4 +1,4 @@
-import { and, eq, isNull, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
 import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
@@ -97,12 +97,17 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
       attempt: number,
       outcome: MappingOutcome,
     ): Promise<boolean> => {
+      const source = await importReader(tx).findFileSource(id);
+      const next = source?.finishMapping(attempt, outcome);
+      if (!next) {
+        return false;
+      }
       const rows = await orm()
         .update(importSources)
         .set({
-          status: outcome.status,
-          failure: outcome.status === "failed" ? outcome.failure : null,
-          failureMessage: outcome.status === "failed" ? (outcome.failureMessage ?? null) : null,
+          status: next.status,
+          failure: next.failure,
+          failureMessage: next.failureMessage,
           readAt: sql`now()`,
         })
         .where(
@@ -117,29 +122,25 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
     },
 
     restartMapping: async (id: string): Promise<number | null> => {
+      const source = await importReader(tx).findFileSource(id);
+      const next = source?.restartMapping();
+      if (!source || !next) {
+        return null;
+      }
       const [row] = await orm()
         .update(importSources)
         .set({
-          status: "mapping",
-          failure: null,
-          failureMessage: null,
-          readBy: "parsed_by_broccoli",
-          mappingAttempt: sql`${importSources.mappingAttempt} + 1`,
+          status: next.status,
+          failure: next.failure,
+          failureMessage: next.failureMessage,
+          readBy: next.readBy,
+          mappingAttempt: next.mappingAttempt,
         })
         .where(
           and(
             eq(importSources.id, id),
-            isNull(importSources.originalReadAllowedAt),
-            or(
-              and(
-                eq(importSources.readBy, "parsed_by_broccoli"),
-                eq(importSources.status, "failed"),
-              ),
-              and(
-                eq(importSources.readBy, "answered_by_external_agent"),
-                eq(importSources.status, "mapping"),
-              ),
-            ),
+            eq(importSources.mappingAttempt, source.mappingAttempt),
+            eq(importSources.status, source.status),
           ),
         )
         .returning({ mappingAttempt: importSources.mappingAttempt });

@@ -1,6 +1,7 @@
 import { strToU8, zipSync } from "fflate";
 
 import {
+  importSourceValues,
   expect,
   importUseCases,
   OWNER,
@@ -165,7 +166,9 @@ test("a failure reported after setup moved on leaves the source mapping", async 
 
   await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
     [],
   );
@@ -177,7 +180,9 @@ test("a stale failure leaves the source unchanged", async ({ orm, seed }) => {
 
   await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 1 });
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
 });
 
 test("restarts a failed file with the next attempt", async ({ orm, seed }) => {
@@ -204,7 +209,9 @@ test("leaves a mapped file unchanged without sending a job", async ({ orm, seed 
 
   await imports.files.retryFile(OWNER, source.id);
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect(imports.sentJobs).toEqual([]);
 });
 
@@ -226,7 +233,9 @@ test("refuses a retry after setup is complete without changing the source or sen
     message: "Setup is complete.",
   });
 
-  expect(await imports.reads.listSources(owner)).toEqual([source]);
+  expect((await imports.reads.listSources(owner)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect(imports.sentJobs).toEqual([]);
 });
 

@@ -10,7 +10,7 @@ import {
   type SecurityContext,
 } from "../../security";
 import { readInstance, readSetupHolder } from "../app";
-import { demoDeadlineOf, type Instance } from "../domain";
+import type { Instance } from "../domain";
 import { readSetupToken } from "./setupCookie";
 
 /**
@@ -55,7 +55,7 @@ export async function resolveSecurityContext(
 
 /** Whether the user is the demo's provisional owner after its deadline, which nothing extends. */
 function hasDemoEnded(instance: Instance, userId: string): boolean {
-  const deadline = demoDeadlineOf(instance, userId);
+  const deadline = instance.demoDeadlineOf(userId);
   return deadline !== null && deadline <= new Date();
 }
 
