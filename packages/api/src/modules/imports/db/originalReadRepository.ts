@@ -1,6 +1,7 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
+import type { AiSource } from "../../../core/instance";
 import type { ImportSourceReader, MappingOutcome } from "../domain";
 import { importSources } from "./importSourcesTable";
 
@@ -13,6 +14,8 @@ export interface OriginalReadRepository {
   allowOriginalRead(id: string, readBy: ImportSourceReader): Promise<number>;
   /** Ends a read of a consented file, whatever its status, as the external agent may send again. */
   finishOriginalRead(id: string, outcome: MappingOutcome): Promise<void>;
+  /** Records the actual model provider after the current original read succeeds. */
+  recordOriginalReadAiSource(id: string, aiSource: AiSource | null): Promise<void>;
   /** Clears every file's consent, keeping what the reads gave. */
   clearOriginalReadConsents(): Promise<void>;
 }
@@ -44,8 +47,18 @@ export function originalReadRepository(tx: Tx): OriginalReadRepository {
           failure: outcome.status === "failed" ? outcome.failure : null,
           failureMessage: null,
           readAt: sql`now()`,
+          ...(outcome.status === "mapped"
+            ? { originalReadAiSource: "external_agent" as const }
+            : {}),
         })
         .where(and(eq(importSources.id, id), isNotNull(importSources.originalReadAllowedAt)));
+    },
+
+    recordOriginalReadAiSource: async (id, aiSource) => {
+      await ormOf(tx)
+        .update(importSources)
+        .set({ originalReadAiSource: aiSource })
+        .where(eq(importSources.id, id));
     },
 
     clearOriginalReadConsents: async () => {

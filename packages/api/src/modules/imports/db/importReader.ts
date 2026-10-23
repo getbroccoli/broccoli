@@ -121,4 +121,5 @@ const sourceColumns = {
   readBy: importSources.readBy,
   pickedUpByExternalAgentAt: importSources.pickedUpByExternalAgentAt,
   originalReadAllowedAt: importSources.originalReadAllowedAt,
+  originalReadAiSource: importSources.originalReadAiSource,
 };

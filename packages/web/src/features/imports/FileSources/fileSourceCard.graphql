@@ -8,4 +8,5 @@ fragment FileSourceCard_source on ImportSource {
   readBy
   pickedUpByExternalAgent
   originalReadAllowed
+  originalReadAiSource
 }

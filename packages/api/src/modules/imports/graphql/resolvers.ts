@@ -1,6 +1,6 @@
 import type { Resolvers } from "../../../core/graphql";
 import type { ImportUseCases } from "../app";
-import { FAILURES, IMPORT, KINDS, READERS, STATUSES } from "./graphqlValues";
+import { AI_SOURCES, FAILURES, IMPORT, KINDS, READERS, STATUSES } from "./graphqlValues";
 import { importCheckResolvers } from "./importCheckResolvers";
 import { importEmployeeResolvers } from "./importEmployeeResolvers";
 import { importMutationResolvers } from "./importMutationResolvers";
@@ -45,6 +45,8 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       pickedUpByExternalAgent: ({ pickedUpByExternalAgentAt }) =>
         pickedUpByExternalAgentAt !== null,
       originalReadAllowed: ({ originalReadAllowedAt }) => originalReadAllowedAt !== null,
+      originalReadAiSource: ({ originalReadAiSource }) =>
+        originalReadAiSource ? AI_SOURCES[originalReadAiSource] : null,
       failure: ({ failure }) => (failure ? FAILURES[failure] : null),
       employeeCount: ({ id }, _args, context) => loaders(context).employeeCount.load(id),
       records: ({ id }, { first, after }, context) =>

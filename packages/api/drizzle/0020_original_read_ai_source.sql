@@ -1,0 +1,2 @@
+ALTER TABLE "import_sources" ADD COLUMN "original_read_ai_source" text;--> statement-breakpoint
+ALTER TABLE "import_sources" ADD CONSTRAINT "import_sources_original_read_ai_source" CHECK ("import_sources"."original_read_ai_source" in ('broccoli_ai', 'openrouter', 'external_agent'));

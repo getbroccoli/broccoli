@@ -165,6 +165,32 @@ test("refuses consent while the file is still mapping", async ({ orm, seed }) =>
   expect(imports.sentJobs).toEqual([]);
 });
 
+test("fresh consent retries a failed original read with the newly chosen provider", async ({
+  orm,
+  seed,
+}) => {
+  const source = await seed.fileSource({ content: CSV, status: "mapped" });
+  await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
+  const imports = importUseCases(orm);
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "broccoli_ai");
+  await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 1 });
+  await seed.aiSource("openrouter");
+  const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
+
+  await imports.originalFileReads.allowOriginalFileRead(SETUP_HOLDER, source.id, "openrouter");
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([
+    { id: source.id, status: "mapping", failure: null, originalReadAiSource: null },
+  ]);
+  expect(imports.sentJobs.at(-1)).toEqual({
+    name: "imports.readOriginalFile",
+    payload: { sourceId: source.id, attempt: 2, aiSource: "openrouter" },
+  });
+  expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(
+    records,
+  );
+});
+
 test("refuses a second consent", async ({ orm, seed }) => {
   const source = await seed.fileSource({ content: CSV, status: "mapped" });
   const imports = importUseCases(orm, {
