@@ -21,6 +21,7 @@ type Props = {
  */
 export function RecordHistory({ recordType, recordId, description }: Props) {
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [olderFailed, setOlderFailed] = useState(false);
   const { data, error, refetch, fetchMore } = useQuery(RecordHistoryDocument, {
     variables: { recordType, recordId, first: PAGE_SIZE },
   });
@@ -28,16 +29,23 @@ export function RecordHistory({ recordType, recordId, description }: Props) {
 
   const loadOlder = async (after: string) => {
     setLoadingOlder(true);
+    setOlderFailed(false);
     try {
       await fetchMore({
         variables: { after },
-        updateQuery: (current, { fetchMoreResult }) => ({
-          recordHistory: {
-            ...fetchMoreResult.recordHistory,
-            edges: [...current.recordHistory.edges, ...fetchMoreResult.recordHistory.edges],
-          },
-        }),
+        // A save meanwhile refreshed the first page; this older page no longer follows it.
+        updateQuery: (current, { fetchMoreResult }) =>
+          current.recordHistory.pageInfo.endCursor === after
+            ? {
+                recordHistory: {
+                  ...fetchMoreResult.recordHistory,
+                  edges: [...current.recordHistory.edges, ...fetchMoreResult.recordHistory.edges],
+                },
+              }
+            : current,
       });
+    } catch {
+      setOlderFailed(true);
     } finally {
       setLoadingOlder(false);
     }
@@ -51,10 +59,18 @@ export function RecordHistory({ recordType, recordId, description }: Props) {
       >
         {t("records.history.title")}
       </h2>
-      {error && (
+      {(error || olderFailed) && (
         <div role="alert" className="flex items-center gap-3 text-sm text-muted-foreground">
           {t("records.history.error")}
-          <Button variant="outline" size="sm" onClick={() => void refetch()}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              olderFailed && history?.pageInfo.endCursor
+                ? void loadOlder(history.pageInfo.endCursor)
+                : void refetch()
+            }
+          >
             {t("records.history.retry")}
           </Button>
         </div>
