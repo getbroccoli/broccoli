@@ -1,4 +1,4 @@
-import { eq, ilike, or, sql, type SQL } from "drizzle-orm";
+import { eq, ilike, isNotNull, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -31,14 +31,14 @@ export interface EmployeeRepository {
   insert(newEmployee: EmployeeRow): Promise<Employee>;
   /** Inserts demo employees with their avatars in one statement; throws `EmailTakenError` like `insert`. */
   insertDemo(demoEmployees: readonly NewDemoEmployee[]): Promise<void>;
-  /** Inserts employees, skipping emails another employee has; returns the avatar of each one inserted. */
-  insertSkippingTakenEmails(
-    newEmployees: readonly EmployeeRow[],
-  ): Promise<{ avatarFileId: string | null }[]>;
+  /** Inserts employees, skipping emails another employee has; returns how many were inserted. */
+  insertSkippingTakenEmails(newEmployees: readonly EmployeeRow[]): Promise<number>;
   /** Deletes every employee and the demo avatars; an imported avatar stays with the import that stored it. */
   deleteAll(): Promise<void>;
   /** The emails among these that an employee has. */
   findTakenEmails(emails: readonly string[]): Promise<string[]>;
+  /** Every employee with a stored avatar. */
+  findWithAvatars(): Promise<Employee[]>;
   hasAny(): Promise<boolean>;
   hasDemo(): Promise<boolean>;
   /** Whether an employee's avatar is this file. */
@@ -97,14 +97,14 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]) => {
-      const inserted: { avatarFileId: string | null }[] = [];
+      let inserted = 0;
       for (let start = 0; start < newEmployees.length; start += INSERT_BATCH_SIZE) {
         const rows = await orm()
           .insert(employees)
           .values(newEmployees.slice(start, start + INSERT_BATCH_SIZE))
           .onConflictDoNothing({ target: employees.email })
-          .returning({ avatarFileId: employees.avatarFileId });
-        inserted.push(...rows);
+          .returning({ id: employees.id });
+        inserted += rows.length;
       }
       return inserted;
     },
@@ -121,6 +121,8 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         .where(sql`${employees.email} = any(${sql.param([...emails])}::text[])`);
       return rows.map(({ email }) => email);
     },
+
+    findWithAvatars: () => orm().select().from(employees).where(isNotNull(employees.avatarFileId)),
 
     hasAny: () => exists(orm(), sql`true`),
 

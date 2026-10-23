@@ -21,7 +21,7 @@ test("creates complete employees and counts incomplete inputs", async ({ orm, tr
     ]),
   );
 
-  expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 0, avatarFileIds: [] });
+  expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 0 });
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual(
     expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
@@ -42,7 +42,7 @@ test("skips a taken email and leaves the existing employee unchanged", async ({
     ]),
   );
 
-  expect(result).toEqual({ created: 0, incomplete: 0, emailTaken: 1, avatarFileIds: [] });
+  expect(result).toEqual({ created: 0, incomplete: 0, emailTaken: 1 });
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([existing]);
 });
@@ -63,7 +63,7 @@ test("creates the first input when two inputs have the same email", async ({ orm
     createImportedEmployees(OWNER, tx, [first, { ...first, lastName: "Reed" }]),
   );
 
-  expect(result).toEqual({ created: 1, incomplete: 0, emailTaken: 1, avatarFileIds: [] });
+  expect(result).toEqual({ created: 1, incomplete: 0, emailTaken: 1 });
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([expect.objectContaining(first)]);
 });
@@ -77,7 +77,7 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
 
   const result = await transact((tx) => createImportedEmployees(OWNER, tx, inputs));
 
-  expect(result).toEqual({ created: 1_001, incomplete: 0, emailTaken: 0, avatarFileIds: [] });
+  expect(result).toEqual({ created: 1_001, incomplete: 0, emailTaken: 0 });
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 1_001 });
   expect(employees.edges.map(({ node }) => node.email).sort()).toEqual(
     inputs.map(({ email }) => email).sort(),
@@ -99,7 +99,11 @@ test("refuses a non-owner and creates no employees", async ({ orm, transact }) =
   ).toEqual([]);
 });
 
-test("returns the avatar files of the created employees only", async ({ orm, seed, transact }) => {
+test("assigns avatars only to complete employees with untaken emails, keeping the first duplicate", async ({
+  orm,
+  seed,
+  transact,
+}) => {
   await seed.employee({ email: "taken@example.com" });
   const keptPhoto = await seed.file({ content: PNG, mimeType: "image/png" });
   const takenPhoto = await seed.file({ content: PNG, mimeType: "image/png" });
@@ -117,7 +121,7 @@ test("returns the avatar files of the created employees only", async ({ orm, see
     ]),
   );
 
-  expect(result.avatarFileIds).toEqual([keptPhoto]);
+  expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 2 });
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(
     employees.edges

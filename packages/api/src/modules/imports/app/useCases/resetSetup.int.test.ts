@@ -93,6 +93,57 @@ test("approving again after reset recreates the employees with their import phot
   expect(await readFile(orm, photoId)).toEqual({ content: PNG, mimeType: "image/png" });
 });
 
+test("including a previously left-out employee after reset keeps both original Slack avatars", async ({
+  orm,
+  seed,
+}) => {
+  await seed.assignment();
+  const owner = await seed.owner();
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  const records = await seed.importEmployees(source.id, [
+    { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },
+    { email: "robin@example.com", photoUrl: SLACK_PHOTO_URL },
+  ]);
+  const expectedEmployees = await Promise.all(
+    records.map(async (record) => ({
+      email: record.email,
+      avatarFileId: await seed.importPhoto(record.id, {
+        photoUrl: SLACK_PHOTO_URL,
+        content: PNG,
+        mimeType: "image/png",
+      }),
+    })),
+  );
+  const imports = importUseCases(orm);
+  const employees = createEmployeeUseCases({ orm });
+  await imports.choices.setLeftOut(owner, { key: "robin@example.com", leftOut: true });
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  expect((await readInstance(orm)).step).toBe("ready");
+  expect((await employees.listEmployees(owner, {})).edges.map(({ node }) => node.email)).toEqual([
+    "avery@example.com",
+  ]);
+
+  await imports.resetSetup(owner);
+  expect((await readInstance(orm)).step).toBe("company");
+  await seed.setupStep("import");
+  await imports.choices.setLeftOut(owner, { key: "robin@example.com", leftOut: false });
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+
+  expect((await readInstance(orm)).step).toBe("ready");
+  const approved = await employees.listEmployees(owner, {});
+  expect(approved.edges).toHaveLength(2);
+  expect(
+    approved.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
+  ).toEqual(expect.arrayContaining(expectedEmployees));
+  expect(await storedFileIds(orm)).toEqual(
+    expectedEmployees.map(({ avatarFileId }) => avatarFileId).sort(),
+  );
+  for (const { avatarFileId } of expectedEmployees) {
+    expect(await readFile(orm, avatarFileId)).toEqual({ content: PNG, mimeType: "image/png" });
+  }
+});
+
 test("resetting the ready step returns to company and deletes approved employees", async ({
   orm,
   seed,

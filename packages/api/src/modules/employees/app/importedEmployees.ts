@@ -1,7 +1,7 @@
 import type { Orm, Tx } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository } from "../db";
-import { type NewEmployeeInput, tryParseNewEmployee } from "../domain";
+import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
 
 /** What adding imported employees did. */
 export interface ImportedEmployees {
@@ -10,8 +10,6 @@ export interface ImportedEmployees {
   incomplete: number;
   /** Inputs whose email an employee already has; among inputs with one email, the first wins. */
   emailTaken: number;
-  /** The avatar files the created employees took; the caller still owns the others. */
-  avatarFileIds: string[];
 }
 
 /** An employee an import proposes, with the stored photo it brings as its avatar. */
@@ -30,11 +28,16 @@ export async function createImportedEmployees(
   });
   const created = await employeeRepository(tx).insertSkippingTakenEmails(newEmployees);
   return {
-    created: created.length,
+    created,
     incomplete: inputs.length - newEmployees.length,
-    emailTaken: newEmployees.length - created.length,
-    avatarFileIds: created.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : [])),
+    emailTaken: newEmployees.length - created,
   };
+}
+
+/** Employees with stored avatars, joining `db`, so cleanup can preserve the files they use. */
+export function findEmployeesWithAvatars(ctx: SecurityContext, db: Orm | Tx): Promise<Employee[]> {
+  ctx.requireSetupAccess();
+  return employeeRepository(db).findWithAvatars();
 }
 
 /** The emails among these that an employee already has, so an import adds no one with them; joins `db`. */

@@ -10,6 +10,7 @@ export {
   createEmployeeUseCases,
   createImportedEmployees,
   deleteAllEmployees,
+  findEmployeesWithAvatars,
   findTakenEmails,
   hasDemoEmployees,
 } from "./app";

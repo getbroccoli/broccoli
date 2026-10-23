@@ -2,7 +2,7 @@ import { ApplicationError } from "../../../../core/applicationError";
 import { approveImportStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { createImportedEmployees } from "../../../employees";
-import { importPhotoRepository, lockImport } from "../../db";
+import { lockImport } from "../../db";
 import type { ImportContext } from "./importContext";
 import { isReading, toNewEmployeeInput } from "../../domain";
 import { readImportReview } from "./importReview";
@@ -11,8 +11,8 @@ import { requireImportAccess } from "./requireImportAccess";
 /**
  * Turns the ready import employees that are not left out into employees, with the values and
  * photo review shows, and completes the import step, in one transaction; at any step but
- * `import` it does nothing, so approving twice creates them once. The others are not
- * created and lose their photos; refused while a file is being mapped, and when the import
+ * `import` it does nothing, so approving twice creates them once. All photos stay with the
+ * import until setup completes; refused while a file is being mapped, and when the import
  * no longer matches `version`, the one the owner reviewed, so nobody is added unseen.
  */
 export async function approveImport(
@@ -37,7 +37,7 @@ export async function approveImport(
       throw new ApplicationError("CONFLICT", "Your people changed while you were reviewing.");
     }
     const { readyEmployees } = review;
-    const { avatarFileIds, ...counts } = await createImportedEmployees(
+    const counts = await createImportedEmployees(
       ctx,
       tx,
       readyEmployees.map((employee) => ({
@@ -45,21 +45,16 @@ export async function approveImport(
         avatarFileId: employee.photoFileId ?? undefined,
       })),
     );
-    // The import stays for the account step until setup completes (`finishImport`).
-    const deletedPhotos = await importPhotoRepository(tx).deletePhotosExcept(avatarFileIds);
     const selected = readyEmployees.map(({ records, photoFileId }) => ({
       recordIds: records.map(({ id }) => id),
       photoFileId,
     }));
-    return { counts, selected, deletedPhotos };
+    return { counts, selected };
   });
   if (result) {
     logger.info(result.counts, "Approved the import");
     for (const employee of result.selected) {
       logger.info(employee, "Selected an import employee");
-    }
-    for (const photo of result.deletedPhotos) {
-      logger.info(photo, "Deleted an unused import photo");
     }
   }
 }
