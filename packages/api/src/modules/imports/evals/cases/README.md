@@ -46,6 +46,7 @@
 - `multi-sheet-regions`: Excel workbook with one sheet per region: German day-first dotted dates, ISO dates, US spelled-out dates that stay empty, and a headcount summary sheet without people.
 - `common-unicode-name`: Excel staff sheet with accented names.
 - `injection-xlsx`: Excel staff sheet whose notes cell tells the model to add a person; only the real person is read.
+- `formula-first-name`: Acme Corp staff CSV whose first first-name cell is a `=HYPERLINK(…)` formula to an intranet profile; the column still maps to first names and the cell reads as the name it displays.
 - `vacant-row`: Staff list with Full Name beside First Name and Last Name, and a vacancy row with only a full-name cell; the separate name columns are the names, so the vacancy is no one.
 
 Names, roles and departments in the `layout-xlsx-*`, `common-unicode-name` and `injection-xlsx` cases come from The Spreadsheet Guru's Company Employee Example Data, which its publisher allows using in any way; the emails and managers are made up.
