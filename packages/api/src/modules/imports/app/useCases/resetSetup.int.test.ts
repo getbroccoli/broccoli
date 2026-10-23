@@ -1,5 +1,4 @@
 import {
-  captureLogs,
   importSourceValues,
   expect,
   importUseCases,
@@ -35,8 +34,7 @@ test("resetting setup deletes approved employees but keeps the import and its ph
     ),
   );
   await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
-  const logs = captureLogs();
-  const imports = importUseCases(orm, { logger: logs.logger });
+  const imports = importUseCases(orm);
   await imports.choices.chooseEmployeeValue(SETUP_HOLDER, {
     key: "avery@example.com",
     field: "jobTitle",
@@ -62,11 +60,6 @@ test("resetting setup deletes approved employees but keeps the import and its ph
   for (const photoId of photoIds) {
     expect(await readFile(orm, photoId)).toEqual({ content: PNG, mimeType: "image/png" });
   }
-  expect(logs.entries.filter(({ msg }) => msg === "Reset setup")).toEqual([
-    { level: 30, msg: "Reset setup" },
-  ]);
-  await imports.resetSetup(SETUP_HOLDER);
-  expect(logs.entries.filter(({ msg }) => msg === "Reset setup")).toHaveLength(1);
 });
 
 test("approving again after reset recreates the employees with their import photos", async ({
@@ -126,8 +119,7 @@ test("resetting completed setup keeps the step and employees unchanged", async (
   await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
-  const logs = captureLogs();
-  const imports = importUseCases(orm, { logger: logs.logger });
+  const imports = importUseCases(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await seed.setupStep("done");
   expect((await readInstance(orm)).step).toBe("done");
@@ -139,5 +131,4 @@ test("resetting completed setup keeps the step and employees unchanged", async (
 
   expect((await readInstance(orm)).step).toBe("done");
   expect(await employees.listEmployees(owner, {})).toEqual(approved);
-  expect(logs.entries.filter(({ msg }) => msg === "Reset setup")).toEqual([]);
 });

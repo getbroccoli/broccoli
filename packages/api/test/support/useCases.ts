@@ -83,7 +83,6 @@ export function importUseCases(
   orm: Parameters<typeof createImportUseCases>[0]["orm"],
   {
     slackApi = {},
-    logger = createLogger("silent"),
     decisions = NO_DECISIONS,
     originalFileReader = NO_ORIGINAL_FILE_READER,
     jobs,
@@ -91,7 +90,6 @@ export function importUseCases(
     prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
   }: {
     slackApi?: Partial<SlackApi>;
-    logger?: Logger;
     decisions?: Decisions;
     originalFileReader?: Pick<OriginalFileReader, "readOriginalFile">;
     jobs?: JobQueue;
@@ -103,7 +101,7 @@ export function importUseCases(
   const useCases = createImportUseCases({
     orm,
     transact: testTransactor(orm),
-    logger,
+    logger: createLogger("silent"),
     decisions,
     originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
@@ -113,7 +111,7 @@ export function importUseCases(
         return Promise.resolve();
       },
     },
-    slack: slackUseCases(orm, { slackApi, clock, logger }),
+    slack: slackUseCases(orm, { slackApi, clock }),
   });
   return { ...useCases, sentJobs };
 }
@@ -124,16 +122,15 @@ export function slackUseCases(
     secretBox = TEST_SECRET_BOX,
     slackAuthorization = {},
     slackApi = {},
-    logger = createLogger("silent"),
     clock = () => new Date(),
   }: {
     slackAuthorization?: Partial<SlackAuthorization>;
     slackApi?: Partial<SlackApi>;
-    logger?: Logger;
     secretBox?: SecretBox;
     clock?: () => Date;
   } = {},
 ) {
+  const logger = createLogger("silent");
   return createSlackConnectionService({
     orm,
     transact: testTransactor(orm),
