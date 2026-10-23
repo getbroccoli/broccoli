@@ -53,7 +53,7 @@ export function managedServer({
     auth,
     router: express
       .Router()
-      .use(initRouter({ transact, tokenCheck, readiness, auth }))
+      .use(initRouter({ transact, tokenCheck, readiness, auth, logger, instanceId }))
       .use(waitingGate(auth)),
     initStatus: async () => ((await auth.current()) ? "ready" : "waiting"),
     // The waiting gate answers until init stored the assignment, so it exists here.

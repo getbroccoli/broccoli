@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 
+import type { Logger } from "../../logger";
 import type { Transact } from "../../db";
 import { AssignmentConflictError, assignInstance } from "../../instance";
 import type { Readiness } from "../../readiness";
@@ -20,13 +21,22 @@ export interface InitRouterOptions {
   tokenCheck: TokenCheck;
   readiness: Readiness;
   auth: AuthSource;
+  logger: Logger;
+  instanceId: string;
 }
 
 /**
  * `POST /api/init`: orchestration assigns this managed instance to a company with a
  * signed request. Repeating the same assignment is harmless, so it keeps no `jti`.
  */
-export function initRouter({ transact, tokenCheck, readiness, auth }: InitRouterOptions): Router {
+export function initRouter({
+  transact,
+  tokenCheck,
+  readiness,
+  auth,
+  logger,
+  instanceId,
+}: InitRouterOptions): Router {
   const router = Router();
   const limit = rateLimit({
     windowMs: 60_000,
@@ -45,9 +55,11 @@ export function initRouter({ transact, tokenCheck, readiness, auth }: InitRouter
       response.status(401).json({ error: "invalid_token" });
       return;
     }
+    let phase = "verify_token";
     try {
       const payload = await verifyToken(token, tokenCheck);
       const assignment = parseInitClaims(payload);
+      phase = "assign_instance";
       await transact(async (tx) => {
         await assignInstance(PrincipalSecurityContext.system(), tx, assignment);
         // Strict, after the row lock: the token must still be valid when the assignment commits.
@@ -55,10 +67,22 @@ export function initRouter({ transact, tokenCheck, readiness, auth }: InitRouter
           throw new InvalidTokenError();
         }
       });
+      phase = "initialize_auth";
       await auth.current();
       response.json({ initStatus: "ready" });
     } catch (error) {
       const { status, code } = initFailure(error);
+      if (status === 503) {
+        logger.error(
+          {
+            instanceId,
+            phase,
+            outcome: code,
+            kind: (error as Error | undefined)?.constructor?.name,
+          },
+          "Managed initialization failed",
+        );
+      }
       response.status(status).json({ error: code });
     }
   });

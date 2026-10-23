@@ -48,7 +48,9 @@ export function createJobRunner(
     max: 2,
     schedule: false,
   });
-  boss.on("error", (error) => logger.error({ err: error }, "Job runner failed"));
+  boss.on("error", (error) =>
+    logger.error({ kind: (error as Error | undefined)?.constructor?.name }, "Job runner failed"),
+  );
   let starting: Promise<void> | undefined;
   let stopping: Promise<void> | undefined;
 
@@ -63,7 +65,7 @@ export function createJobRunner(
       if (stopping) {
         return Promise.resolve();
       }
-      starting = startWorking(boss, handlers, retryDelaySeconds);
+      starting = startWorking(boss, handlers, retryDelaySeconds, logger);
       return starting;
     },
 
@@ -91,6 +93,7 @@ async function startWorking(
   boss: PgBoss,
   handlers: readonly JobHandlers[],
   retryDelaySeconds: number,
+  logger: Logger,
 ): Promise<void> {
   await boss.start();
   for (const moduleHandlers of handlers) {
@@ -98,7 +101,7 @@ async function startWorking(
       JobName,
       JobHandler<JobName>,
     ][]) {
-      await workQueue(boss, name, handler, retryDelaySeconds);
+      await workQueue(boss, name, handler, retryDelaySeconds, logger);
     }
   }
 }
@@ -108,6 +111,7 @@ async function workQueue(
   name: JobName,
   handler: JobHandler<JobName>,
   retryDelaySeconds: number,
+  logger: Logger,
 ): Promise<void> {
   const failedName = `${name}.failed`;
   await boss.createQueue(failedName);
@@ -119,9 +123,32 @@ async function workQueue(
     deadLetter: failedName,
   });
   await boss.work<Jobs[JobName]>(name, { localConcurrency: CONCURRENCY }, async ([job]) => {
-    await handler.run(job!.data);
+    try {
+      await handler.run(job!.data);
+    } catch (error) {
+      logger.warn(
+        {
+          jobId: job!.id,
+          jobName: name,
+          retryCount: job!.retryCount,
+          kind: (error as Error | undefined)?.constructor?.name,
+        },
+        "Job attempt failed",
+      );
+      throw error;
+    }
   });
   await boss.work<Jobs[JobName]>(failedName, async ([job]) => {
-    await handler.onFailed(job!.data);
+    const failedLogger = logger.child({ jobId: job!.id, jobName: failedName });
+    failedLogger.warn("Handling terminal job failure");
+    try {
+      await handler.onFailed(job!.data);
+    } catch (error) {
+      failedLogger.error(
+        { kind: (error as Error | undefined)?.constructor?.name },
+        "Terminal job failure handler failed",
+      );
+      throw error;
+    }
   });
 }
