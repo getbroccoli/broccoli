@@ -31,10 +31,10 @@ export function reopenImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean>
 
 /**
  * Takes setup from `done` back to the company step when an owner with an account exits the
- * demo, joining `tx`; does nothing at any other step. Returns whether it moved.
+ * demo or resets setup, joining `tx`; does nothing at any other step. Returns whether it moved.
  */
-export function returnToCompanyStepFromDemo(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return changeStep(ctx, tx, (instance) => instance.returnToCompanyStepFromDemo());
+export function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return changeStep(ctx, tx, (instance) => instance.returnToCompanyStep());
 }
 
 /** Whether the import still takes changes: setup has not moved past the import step. */

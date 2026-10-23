@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../../../core/applicationError";
-import { readInstance, returnToCompanyStepFromDemo } from "../../../../core/instance";
+import { readInstance, returnToCompanyStep } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { deleteAllEmployees, hasDemoEmployees } from "../../../employees";
 import type { DemoContext } from "./demoContext";
@@ -16,7 +16,7 @@ export async function exitDemo({ transact }: DemoContext, ctx: SecurityContext) 
       throw new ApplicationError("FORBIDDEN", "Exit the demo through setup.");
     }
     // Moving the step first locks the instance row, so a concurrent exit waits and then refuses.
-    if (!(await returnToCompanyStepFromDemo(ctx, tx)) || !(await hasDemoEmployees(ctx, tx))) {
+    if (!(await returnToCompanyStep(ctx, tx)) || !(await hasDemoEmployees(ctx, tx))) {
       throw new ApplicationError("CONFLICT", "The instance holds no demo data.");
     }
     await deleteAllEmployees(ctx, tx);

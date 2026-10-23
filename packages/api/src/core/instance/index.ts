@@ -15,7 +15,7 @@ export {
   isImportOpen,
   readSetupHolder,
   reopenImportStep,
-  returnToCompanyStepFromDemo,
+  returnToCompanyStep,
   readOwner,
   readInstance,
   recordOwnerSignInMethod,

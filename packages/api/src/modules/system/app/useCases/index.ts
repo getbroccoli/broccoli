@@ -1,6 +1,7 @@
 import type { AiSettings } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { completeSetup } from "./completeSetup";
+import { resetSetup } from "./resetSetup";
 import type { SystemContext } from "./systemContext";
 
 export type { SystemContext } from "./systemContext";
@@ -11,11 +12,14 @@ export interface SystemUseCases {
   ai: Pick<AiSettings, "read" | "save">;
   /** Completes setup from the ready step. */
   completeSetup: (ctx: SecurityContext) => Promise<void>;
+  /** Starts a finished setup over from the company step. */
+  resetSetup: (ctx: SecurityContext) => Promise<void>;
 }
 
 export function createSystemUseCases(context: SystemContext): SystemUseCases {
   return {
     ai: context.aiSettings,
     completeSetup: (ctx: SecurityContext) => completeSetup(context, ctx),
+    resetSetup: (ctx: SecurityContext) => resetSetup(context, ctx),
   };
 }

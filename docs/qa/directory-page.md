@@ -27,3 +27,13 @@ A manual check of the People page against a development stack.
 - [ ] `/people?sort=bogus&dir=sideways&after=junk&q=` opens the normal list.
 - [ ] With the API failing, the page shows "Couldn’t load people" and "Try again" reloads the list once the API is back.
 - [ ] At a narrow canvas the table scrolls sideways inside its frame, the Name column and header row stay pinned.
+
+## Reset setup
+
+1. On a finished setup, open the workspace menu and choose "Reset setup", then "Cancel": nothing changes.
+2. Choose "Reset setup" again and confirm.
+
+- [ ] The dialog reads "Reset setup?" and says everyone in the directory is deleted and setup starts again.
+- [ ] Confirming lands on `/setup/company`, still signed in, with the company name and logo filled in.
+- [ ] Finishing setup again with a new import shows only the new people on `/people`.
+- [ ] During the self-hosted demo the workspace menu shows "Exit demo" and no "Reset setup".

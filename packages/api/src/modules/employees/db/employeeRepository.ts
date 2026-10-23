@@ -33,7 +33,7 @@ export interface EmployeeRepository {
   insertDemo(demoEmployees: readonly NewDemoEmployee[]): Promise<void>;
   /** Inserts employees, skipping emails another employee has; returns how many were inserted. */
   insertSkippingTakenEmails(newEmployees: readonly EmployeeRow[]): Promise<number>;
-  /** Deletes every employee and the demo avatars; an imported avatar stays with the import that stored it. */
+  /** Deletes every employee and their avatars; a file another row still references fails it. */
   deleteAll(): Promise<void>;
   /** The emails among these that an employee has. */
   findTakenEmails(emails: readonly string[]): Promise<string[]>;
@@ -110,7 +110,13 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     deleteAll: async (): Promise<void> => {
-      await deleteDemoAvatars(db, await orm().delete(employees).returning(avatarColumns));
+      const deleted = await orm()
+        .delete(employees)
+        .returning({ avatarFileId: employees.avatarFileId });
+      await deleteFiles(
+        db,
+        deleted.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : [])),
+      );
     },
 
     findTakenEmails: async (emails: readonly string[]): Promise<string[]> => {
@@ -160,19 +166,6 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
-
-const avatarColumns = { avatarFileId: employees.avatarFileId, isDemo: employees.isDemo };
-
-/** Deletes the avatars of the deleted demo employees, whose rows no longer reference them. */
-async function deleteDemoAvatars(
-  db: Orm | Tx,
-  deleted: { avatarFileId: string | null; isDemo: boolean }[],
-): Promise<void> {
-  await deleteFiles(
-    db,
-    deleted.flatMap(({ avatarFileId, isDemo }) => (isDemo && avatarFileId ? [avatarFileId] : [])),
-  );
-}
 
 /** A new employee as stored, with the columns only the module itself sets. */
 type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };

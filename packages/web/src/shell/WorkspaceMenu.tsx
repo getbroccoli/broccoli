@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/features/auth";
 import { ExitDemoDialog } from "@/features/demo";
+import { ResetSetupDialog } from "@/features/setup";
 import { t } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
 
@@ -25,6 +26,7 @@ export function WorkspaceMenu() {
   const openedOnPath = useRef<string | null>(null);
   // Outside the menu, which closes when an item is chosen.
   const [exitingDemo, setExitingDemo] = useState(false);
+  const [resettingSetup, setResettingSetup] = useState(false);
   const [signOutFailed, setSignOutFailed] = useState(false);
   // The gate then sends the signed-out user to the login page.
   const [signOutAndReload, signingOut] = useSessionChange(async () => {
@@ -82,6 +84,13 @@ export function WorkspaceMenu() {
             <Buildings size={14} />
             {t("workspace.company")}
           </DropdownMenuItem>
+          {/* The demo's owner exits the demo instead. */}
+          {!demoExpiresAt && (
+            <DropdownMenuItem variant="destructive" onClick={() => setResettingSetup(true)}>
+              <ArrowCounterClockwise size={14} />
+              {t("setup.reset.open")}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           {demoExpiresAt ? (
             // The demo's owner has no password, so signing out would lock them out.
@@ -111,6 +120,7 @@ export function WorkspaceMenu() {
         </p>
       )}
       <ExitDemoDialog open={exitingDemo} onOpenChange={setExitingDemo} />
+      <ResetSetupDialog open={resettingSetup} onOpenChange={setResettingSetup} />
     </>
   );
 }
