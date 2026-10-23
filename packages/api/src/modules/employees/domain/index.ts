@@ -9,7 +9,6 @@ export {
   type Employee,
   type EmployeeOrder,
   type EmployeeOrderField,
-  type EmployeeUpdate,
   type EmployeeUpdateInput,
   type NewEmployee,
   type NewEmployeeInput,
