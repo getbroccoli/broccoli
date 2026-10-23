@@ -79,7 +79,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 How to write each kind of test is in [`testing.md`](testing.md).
 
 - **RULE40.** A change has only the tests `testing.md` asks for: domain unit tests, use-case integration tests, a few end-to-end tests for the wiring, and a test that reproduces each bug.
-- **RULE41.** No tests of trivial code, private helpers or call order, of integrations on their own, of third-party APIs, or of configuration files, not even by running the tool on them: `pnpm check` runs it.
+- **RULE41.** No tests of log output, trivial code, private helpers or call order, of integrations on their own, of third-party APIs, or of configuration files, not even by running the tool on them: `pnpm check` runs it.
 - **RULE42.** A test sits in the file of the code it checks. A concern shared by many modules, such as sessions or paging, gets its own test file.
 - **RULE43.** A test covers one behaviour, is named after it, and has short setup with a visible arrange, act and assert.
 - **RULE44.** Tests come first in a test file. Setup repeated across files becomes a helper in `#test/support`; the other helpers go to the bottom of the file.

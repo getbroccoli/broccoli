@@ -15,6 +15,8 @@ Three layers, most tests in the middle one:
 
 The rules are [RULE40 and RULE41](code-quality.md#tests). Two of them are choices for now: frontend components and pages get no tests, only pure frontend functions such as search-param parsing; and integrations (`src/integrations/`) are thin clients over shared helpers such as `fetchJson`, which have their own tests, so use-case tests replace them with a fake and end-to-end tests run them against a local fake service.
 
+Do not write tests for log messages, fields or emission. Logs help diagnose problems; use useful identifiers and outcomes following [RULE31](code-quality.md#data-configuration-and-logs), and keep tests focused on application behaviour.
+
 ## Writing a test
 
 - Work test-first: a failing test, the smallest code that passes, then refactor.

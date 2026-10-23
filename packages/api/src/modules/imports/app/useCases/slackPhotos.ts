@@ -2,6 +2,13 @@ import type { Orm, Tx } from "../../../../core/db";
 import type { SlackPerson } from "../../../slack";
 import { importPhotoRepository, importReader } from "../../db";
 
+/** A downloaded photo attached to an import record. */
+export interface StoredSlackPhoto {
+  slackMemberId: string;
+  recordId: string;
+  photoFileId: string;
+}
+
 /** The link of each Slack record's stored photo, by Slack member id. */
 export async function readStoredSlackPhotos(orm: Orm): Promise<Map<string, string>> {
   const source = (await importReader(orm).listSources()).find(({ kind }) => kind === "slack");
@@ -16,19 +23,24 @@ export async function attachSlackPhotos(
   tx: Tx,
   sourceId: string,
   members: readonly SlackPerson[],
-): Promise<void> {
+): Promise<StoredSlackPhoto[]> {
   const records = importPhotoRepository(tx);
   const waiting = new Map(
     (await records.findPhotoDownloads(sourceId)).map((download) => [download.externalId, download]),
   );
+  const stored: StoredSlackPhoto[] = [];
   for (const { id, photo } of members) {
     const record = waiting.get(id);
     if (!photo?.image || record?.photoUrl !== photo.url) {
       continue;
     }
-    await records.attachPhoto(record.recordId, photo.url, {
+    const photoFileId = await records.attachPhoto(record.recordId, photo.url, {
       content: photo.image.bytes,
       mimeType: photo.image.mimeType,
     });
+    if (photoFileId) {
+      stored.push({ slackMemberId: id, recordId: record.recordId, photoFileId });
+    }
   }
+  return stored;
 }
