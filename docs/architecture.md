@@ -18,11 +18,29 @@ Each package declares its allowed dependencies, enforced by lint with no cycles 
 
 - **Modular monolith.** One API process, one web single-page app, one container image. Business modules own their rules; integrations own external transport. This keeps deployment simple without giving up module boundaries.
 - **Single-tenant.** One deployment and one Postgres database per company, for self-hosted and managed instances alike. There is no tenant column or row-level security; the managed service runs and migrates each instance separately.
-- **Layers per module.** The domain holds business rules and facts with no I/O. Database adapters persist domain objects. The application layer coordinates use cases, authorization and transactions. GraphQL, HTTP and MCP adapters translate requests into use-case calls. Module-local helpers hold technical code that is not a business rule. Dependencies point toward the domain ([RULE16, RULE58](code-quality.md#layers-and-place)); state-owning parts of core follow the same structure.
+- **Layers per module** separate business decisions, persistence, application coordination and transport, as described below. State-owning parts of core follow the same structure.
 - **Composition.** Startup supplies each module with only the dependencies it needs and collects its API, routes, event handlers and jobs. Modules communicate through public operations or events, never through another module's tables ([RULE21](code-quality.md#layers-and-place)).
 - **Domain-driven design is tiered.** A plain domain layer with unit tests is the default. Aggregates, value objects and domain events are introduced where invariants demand them, with each business decision owned in one place ([RULE52](code-quality.md#layers-and-place)).
 - **Demo data.** The demo module owns the sample company and coordinates other modules' public operations in one transaction; it owns no tables. Exiting the demo removes the sample company and people added during it, then returns to setup. A regular owner keeps their account; a provisional owner follows the separate lifecycle in §6.
 - **Four primitives.** HR features share records, tasks, calendar and processes, so each feature does not grow its own task queue, history and approval engine. A record stays a typed entity in its owning module; shared capabilities do not turn records into a generic storage engine. Tasks, calendar, processes and shared record capabilities are not built yet. Domain-specific rules, such as leave balances, stay with the feature that owns them.
+
+### Module layers
+
+Layers live inside the module that owns the feature. For example, a company logo upload belongs to the company module even when setup first uses it. Shared technical folders hold concerns with no feature owner. This organization keeps business decisions usable from every transport and testable without a database, while persistence and transport can change independently ([RULE56, RULE17](code-quality.md#layers-and-place)).
+
+- **`domain` — business decisions.** Holds business facts, invariants, calculations and valid state transitions. It works on domain values without I/O or knowledge of storage, requests or frameworks. A business decision has one owner here, so every caller applies the same rule.
+- **`db` — persistence.** Owns tables, queries, persistence constraints, locking and mapping between stored data and domain objects. Repositories hide SQL and ORM details and return whole domain items, with encrypted secrets read separately, so callers do not assemble business state from storage fragments.
+- **`app` — application coordination.** Use cases and services coordinate authorization, domain decisions, repositories, integrations, transactions and events or jobs. This layer owns the operation's workflow and transaction boundary. It gathers the facts a domain decision needs and applies its result without duplicating that decision.
+- **`graphql`, `http`, `mcp` — transport adapters.** Handle request parsing, caller identity, transport-specific responses and error translation. They delegate operations to the application layer, so permissions and business behavior remain the same for the web app and agents.
+- **`helpers` — module-local technical work.** Holds concerns such as parsing an origin or hashing a secret. Every layer may use these helpers, which cannot depend back on those layers. This keeps technical concerns out of the domain model; helpers with no Broccoli knowledge belong in `utils`.
+
+Dependencies point inward: adapters → `app` → `db` → `domain`; `app` also uses `domain` directly. Layers expose their public contracts through their folder's entry point. The allowed imports are enforced, rather than relying on convention ([RULE16, RULE17, RULE58](code-quality.md#layers-and-place)).
+
+**Use cases and services.** A use case represents an action a caller can perform. Related operations on one subject form a service, keeping that subject's lifecycle and formats together; an independent action remains its own use case. Adapters translate each operation into one use-case call and retain only transport concerns such as cookies and redirects ([RULE18](code-quality.md#layers-and-place)).
+
+**Applying the boundaries.** Authorization belongs to the use case even when an adapter already authenticated the caller. The use case owns the transaction; composed operations share it, and database adapters supply the locks and constraints that keep concurrent writes safe. External calls stay outside database locks. These choices keep an operation consistent across transports and under concurrency ([RULE19, RULE20](code-quality.md#layers-and-place)).
+
+For example, a domain rule decides whether an import source may retry. The application layer checks the caller and coordinates the retry; the repository persists the change under the required concurrency checks, and the adapter presents the result. The decision is not repeated in a resolver or SQL query ([RULE52, RULE60](code-quality.md#layers-and-place)).
 
 ## 2. API
 
