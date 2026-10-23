@@ -28,8 +28,8 @@ export async function createDemoEmployees(
   );
 }
 
-/** Whether the instance holds demo employees; joins `db`. */
+/** Whether the instance holds demo employees, such as when setup leaves the demo; joins `db`. */
 export function hasDemoEmployees(ctx: SecurityContext, db: Orm | Tx): Promise<boolean> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSetupAccess();
   return employeeRepository(db).hasDemo();
 }

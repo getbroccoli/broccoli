@@ -99,6 +99,7 @@ test("the review keeps the approved employees ready and their sources after appr
   orm,
   seed,
 }) => {
+  await seed.assignment();
   const owner = await seed.owner();
   await seed.setupStep("import");
   const source = await seed.importSource();

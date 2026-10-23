@@ -68,10 +68,11 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] The footer shows "← Back" and "Add N people →", N counting the people neither left out nor with a "Won’t be added" pill; beside it, "L left out.", "M people won’t be added: they are missing a name or work email." and "K values were not checked; the first source’s are used.", each only when it applies.
 - [ ] "Back" returns to `/setup/import` with the sources as they were.
 - [ ] "Add N people" shows "Adding people…" and lands on `/setup`, headed "Create owner account" in one centred column; `/setup/import/review` now goes there. Above the form, up to 7 of them circle the company's logo, those with a Slack photo first, the others as initials each in its own colour; with more than 7, one face flips to the next every few seconds. With reduced motion the ring stands still. Creating the account lands on `/people`, which lists exactly those N people, each once, with the values and photos review showed, and no demo people.
-- [ ] On `/setup`, "Reset setup" (bottom left) opens "Reset setup?"; "Cancel" changes nothing. "Reset setup" lands on `/setup/company` with the company name filled in; "Continue" through Setup AI shows the same sources, and the review keeps its choices. "Add N people" brings back the ring on `/setup`.
+- [ ] On `/setup`, "Back" (bottom left) lands on `/setup/import/review` with the same people, values, left-out choices and photos. Leave one more person out and "Add N people" again: the ring and, after the account, `/people` leave them out.
 - [ ] On a managed instance, "Add N people" lands on `/setup/ready`, headed "<Company> is ready", with the same ring, "N people" and where they came from, such as "From Slack and 2 files". The sidebar shows "Setup Company" and "Add your people" done and "Ready to start" current, with no "Create your account". `/people` and `/setup/import/review` now go to `/setup/ready`.
 - [ ] On `/setup/ready`, "Start using Broccoli" shows "Opening Broccoli…" and lands on `/people` with exactly those N people; `/setup/ready` then goes to `/people`.
-- [ ] On `/setup/ready`, "Reset setup" lands on `/setup/company` with the people taken out; "Add N people" brings Ready back.
+- [ ] On `/setup/ready`, "Back" lands on `/setup/import/review` with everything as approved; adding a person back and "Add N people" shows the new count on Ready, and "Start using Broccoli" adds exactly those people.
+- [ ] With `/setup/ready` open in two tabs, "Back" in one, then "Start using Broccoli" in the other shows "Couldn’t continue. Try again." and adds no one; approving again from the first tab and starting adds each person once.
 - [ ] With `/setup/import/review` open in two tabs, "Add N people" in both adds each person once.
 - [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), the button reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
 - [ ] With only incomplete people (for example a Slack workspace of one-word names), "Add N people" is hidden and the footer reads "No one is ready to add. Fix the highlighted details, or go back to add a source."
@@ -89,3 +90,15 @@ A manual check of the setup review step, between the import and Approve, on a de
 ## Changes during review
 
 - [ ] Open review in two tabs. In one, leave someone out; in the other, choose "Add N people": it says "Your people changed while you were reviewing. Check them, then add them again." and reloads, and the next try adds the people shown.
+
+## 2,000 people from a CSV
+
+On managed and on self-hosted. Generate a CSV of 2,000 rows (first name, last name, unique work email, job title, department, start date) with generated demo names on `acme-corp.example`; 10 rows have no email. A CSV brings no photos, so the ring shows initials.
+
+- [ ] Uploading it on `/setup/import` finishes reading without a timeout; the review shows 2,000 people, 10 of them "Won’t be added".
+- [ ] The list pages and scrolls smoothly, search finds a person by name and by email, and the "missing" check lists the 10.
+- [ ] Leave 3 people out and "Add 1,987 people": it returns within a few seconds; the last step shows "1,987 people" and "From 1 file".
+- [ ] "Back", add one person back, "Add 1,988 people": the last step shows 1,988.
+- [ ] "Start using Broccoli" / "Create account" finishes within a few seconds; `/people` lists exactly 1,988 people.
+- [ ] Double-clicking the finishing button adds each person once.
+- [ ] Note the time of Approve and of finishing in the pull request.

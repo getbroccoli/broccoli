@@ -14,7 +14,7 @@ export {
   completeReadyStep,
   isImportOpen,
   readSetupHolder,
-  returnToCompanyStep,
+  reopenImportStep,
   returnToCompanyStepFromDemo,
   readOwner,
   readInstance,
@@ -26,5 +26,11 @@ export { selfHostedServer } from "./selfHostedServer";
 export { AssignmentConflictError, OwnerExistsError } from "./domain";
 
 // Public types.
-export type { DemoStart, SetupDemo, AiSettings, OriginalFileReader } from "./app";
+export type {
+  AddApprovedPeople,
+  DemoStart,
+  SetupDemo,
+  AiSettings,
+  OriginalFileReader,
+} from "./app";
 export type { AiConfig, AiSource, ManagedAssignment, OwnerSignInMethod } from "./domain";

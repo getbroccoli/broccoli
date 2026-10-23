@@ -13,11 +13,12 @@ import { t } from "@/i18n";
 import { useRouteAction } from "@/lib/useRouteAction";
 
 import { AddedPeopleRing } from "./AddedPeopleRing";
-import { ResetSetupDialog } from "./ResetSetupDialog";
+import { BackToReview } from "./BackToReview";
 
 /**
  * The last step of managed setup: the people it added and where they came from. Start
- * completes setup, which routing follows into the app; Reset setup starts over.
+ * adds the approved people and completes setup, which routing follows into the app; Back
+ * reopens the review.
  */
 export function ReadyStep() {
   // Approve and reset don't return the import's sources, so a cached answer may be stale.
@@ -41,7 +42,7 @@ export function ReadyStep() {
         onSubmit={start}
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <ResetSetupDialog />
+            <BackToReview />
             <Button type="submit" size="lg" className="ml-auto h-10 gap-2 px-4" disabled={starting}>
               {t(starting ? "setup.ready.starting" : "setup.ready.start")}
               <ArrowRight weight="bold" aria-hidden />

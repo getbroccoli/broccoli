@@ -14,13 +14,14 @@ const SWAP_INTERVAL_MS = 3_200;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /**
- * The people setup approve added, their photos first, circling the company's logo while the
+ * The people setup approve will add, their photos first, circling the company's logo while the
  * owner creates their account or starts using Broccoli; nothing until they load, or when no one was added.
  */
 export function AddedPeopleRing() {
   // shortcut: faces come from the first 100 import employees only; filter added ones on the
   // server once the ring should show everyone of a larger import.
-  const { data } = useQuery(AddedPeopleRingDocument);
+  // The owner may have changed the review since: refresh on entry.
+  const { data } = useQuery(AddedPeopleRingDocument, { fetchPolicy: "network-only" });
   const people = (data?.import.employees.edges ?? [])
     .map(({ node }) => node)
     .filter(({ leftOut, incompleteReason }) => !leftOut && incompleteReason === null)

@@ -36,7 +36,12 @@ export function createModules(
   });
   return {
     manifests: [
-      systemModule({ ...core, mode: deployment.mode, aiSettings }),
+      systemModule({
+        ...core,
+        mode: deployment.mode,
+        aiSettings,
+        addApprovedPeople: importUseCases.addApprovedPeople,
+      }),
       employeesModule({ orm: core.orm }),
       companyModule({ ...core, brandLookupUrl }),
       demoModule({ orm: core.orm, transact: core.transact }),
@@ -48,5 +53,6 @@ export function createModules(
       prepareStart: importUseCases.prepareDemoStart,
       deleteAllEmployees,
     },
+    addApprovedPeople: importUseCases.addApprovedPeople,
   };
 }

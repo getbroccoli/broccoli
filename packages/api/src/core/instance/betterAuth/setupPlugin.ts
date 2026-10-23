@@ -8,6 +8,7 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
 import {
+  type AddApprovedPeople,
   createOwnerAtSetup,
   type DemoStart,
   readInstance,
@@ -41,7 +42,7 @@ const NOT_AT_IMPORT_STEP = {
  * Self-hosted setup before the owner exists. `POST /api/auth/setup/start` gives setup
  * to the first browser, or renews it for the browser holding it, through the
  * `broccoli_setup` cookie. `POST /api/auth/setup`, the last step, creates the owner
- * for that browser and signs them in; it answers after the handlers of
+ * for that browser with the approved people and signs them in; it answers after the handlers of
  * `instance.owner_claimed` and `instance.setup_completed` have run. Instead of the
  * import, `POST /api/auth/setup/demo` starts the demo for that browser, signed in as a
  * provisional owner without credentials (see `demoPlugin`). `setupRouter` limits and
@@ -50,7 +51,10 @@ const NOT_AT_IMPORT_STEP = {
 export function setupPlugin(
   orm: Orm,
   transact: Transact,
-  prepareDemoStart: () => Promise<DemoStart>,
+  {
+    prepareDemoStart,
+    addApprovedPeople,
+  }: { prepareDemoStart: () => Promise<DemoStart>; addApprovedPeople: AddApprovedPeople },
 ) {
   return {
     id: "setup",
@@ -74,7 +78,13 @@ export function setupPlugin(
           // Hashing is slow, so it happens before the transaction takes its lock.
           const passwordHash = await ctx.context.password.hash(ctx.body.password);
           const owner = await refusingSetupConflicts(
-            () => createOwner(transact, ctx, token, ctx.body.email.toLowerCase(), passwordHash),
+            () =>
+              createOwner(transact, ctx, {
+                token,
+                email: ctx.body.email.toLowerCase(),
+                passwordHash,
+                addApprovedPeople,
+              }),
             NOT_AT_OWNER_STEP,
           );
           await setSessionCookie(ctx, owner);
@@ -109,24 +119,38 @@ async function assertHoldsSetup(orm: Orm, token: string | null): Promise<void> {
   }
 }
 
-/** Creates the owner with a password and a session, in one transaction. */
+/** Creates the owner with a password and a session, and the approved people, in one transaction. */
 function createOwner(
   transact: Transact,
   ctx: GenericEndpointContext,
-  token: string | null,
-  email: string,
-  passwordHash: string,
+  {
+    token,
+    email,
+    passwordHash,
+    addApprovedPeople,
+  }: {
+    token: string | null;
+    email: string;
+    passwordHash: string;
+    addApprovedPeople: AddApprovedPeople;
+  },
 ) {
   const { internalAdapter } = ctx.context;
   return inAuthTransaction(transact, ctx, (tx) =>
-    createOwnerAtSetup(SYSTEM, tx, { token, now: new Date() }, async () => {
-      const user = await internalAdapter.createUser(
-        { email, name: "", emailVerified: false },
-        { method: "email-password" },
-      );
-      await linkPassword(ctx, user.id, passwordHash);
-      return { user, session: await internalAdapter.createSession(user.id) };
-    }),
+    createOwnerAtSetup(
+      SYSTEM,
+      tx,
+      { token, now: new Date() },
+      async () => {
+        const user = await internalAdapter.createUser(
+          { email, name: "", emailVerified: false },
+          { method: "email-password" },
+        );
+        await linkPassword(ctx, user.id, passwordHash);
+        return { user, session: await internalAdapter.createSession(user.id) };
+      },
+      addApprovedPeople,
+    ),
   );
 }
 

@@ -6,8 +6,8 @@ import {
   importUseCases,
   NON_OWNER,
   OWNER,
-  SETUP_HOLDER,
   test,
+  systemUseCases,
 } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
@@ -18,7 +18,7 @@ test.for([
   { mode: "managed", step: "ready" },
   { mode: "self-hosted", step: "done" },
 ] as const)(
-  "approving on a $mode instance with an owner creates employees and moves setup to $step",
+  "approving on a $mode instance with an owner moves setup to $step and creates employees when setup finishes",
   async ({ mode, step }, { orm, seed }) => {
     if (mode === "managed") await seed.assignment();
     const owner = await seed.owner();
@@ -38,6 +38,10 @@ test.for([
     await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
     expect((await readInstance(orm)).step).toBe(step);
+    if (mode === "managed") {
+      expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
+      await systemUseCases(orm).completeSetup(owner);
+    }
     const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
     expect(employees.edges.map(({ node }) => node)).toEqual(
       expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
@@ -132,6 +136,7 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
   ]);
 
   expect((await readInstance(orm)).step).toBe("ready");
+  await systemUseCases(orm).completeSetup(owner);
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).toEqual([record!.email]);
 });
@@ -212,6 +217,7 @@ test("approves available records when a failed file is present", async ({ orm, s
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   expect((await readInstance(orm)).step).toBe("ready");
+  await systemUseCases(orm).completeSetup(owner);
   expect(
     (await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges.map(({ node }) => node),
   ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);
@@ -313,21 +319,4 @@ test("approves one employee per group with picked and typed values, excluding le
     { firstName: "Robin", lastName: "Stone", email: "avery@example.com", jobTitle: "Engineer" },
   ]);
   expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(review);
-});
-
-test("the setup holder approves employees without an owner and moves setup to owner", async ({
-  orm,
-  seed,
-}) => {
-  await seed.setupStep("import");
-  const source = await seed.importSource();
-  const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
-  await seed.importEmployees(source.id, [avery]);
-  const imports = importUseCases(orm);
-
-  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-
-  expect((await readInstance(orm)).step).toBe("owner");
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
-  expect(employees.edges.map(({ node }) => node)).toMatchObject([avery]);
 });

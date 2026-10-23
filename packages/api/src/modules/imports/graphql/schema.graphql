@@ -229,10 +229,10 @@ type ImportMutations {
   readSlack: ImportReadSlackPayload!
   "Leaves the import step of setup with the demo company instead of the import, which fills only an instance without employees; the import is deleted."
   startDemo: ImportMutationPayload!
-  "Turns the import employees that are not left out into employees, with the values and photos review shows, and completes the import step; the import is deleted once setup completes. Incomplete ones are not added. Approving again does nothing. Refused with a ConflictError while a file is being mapped, and when the import no longer has `version`, the `Import.version` the owner reviewed."
+  "Completes the import step; the import employees that are not left out become employees, with the values and photos review shows, when setup completes, or right away when Approve completes it. The import is deleted then. Incomplete ones are not added. Approving again does nothing. Refused with a ConflictError while a file is being mapped, and when the import no longer has `version`, the `Import.version` the owner reviewed."
   approve(version: String!): ImportApprovePayload!
-  "Takes setup from the owner or ready step back to the company step and deletes the employees `approve` created; the company, the AI source and the import stay. Does nothing at any other step."
-  resetSetup: ImportMutationPayload!
+  "Takes setup from the owner or ready step back to the import step, so the owner can change the review and approve again. Leaving a demo started instead of the import deletes its people. Does nothing at any other step."
+  reopenReview: ImportMutationPayload!
   "Maps a failed file again, or has Broccoli's model map a file still waiting for the external agent's answers."
   retryFile(sourceId: ID!): ImportRetryFilePayload!
   "Lets the AI provider shown to the owner read this one file in full, personal data included (`aiSource` is null only on managed instances): Broccoli's model in the background, or the owner's external agent when it is chosen. Its people then replace the file's records. A pending original read by an external agent can move to the chosen model with fresh consent. Otherwise refused with a ConflictError while the file is being read, once allowed, and for a source that is no file."

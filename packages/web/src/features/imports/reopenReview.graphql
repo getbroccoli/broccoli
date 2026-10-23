@@ -1,0 +1,9 @@
+mutation ReopenReview {
+  import {
+    reopenReview {
+      import {
+        id
+      }
+    }
+  }
+}

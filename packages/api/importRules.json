@@ -96,6 +96,7 @@
     "src/core/secrets": [],
     "test/support": [
       "src/core/*",
+      "src/core/instance/app",
       "src/core/instance/db",
       "src/core/instance/domain",
       "src/core/instance/helpers",

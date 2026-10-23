@@ -1,6 +1,7 @@
 import sharp from "sharp";
 
 import {
+  finishSelfHostedSetup,
   importSourceValues,
   expect,
   importUseCases,
@@ -16,7 +17,7 @@ import {
 import { readFile } from "../../../../core/files";
 import { createEmployeeUseCases } from "../../../employees";
 
-test("approving gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
+test("finishing gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
   await seed.setupStep("import");
   await seed.slackConnection();
   const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
@@ -27,6 +28,8 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
 
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
+  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
+  await finishSelfHostedSetup(orm);
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(
     employees.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
@@ -35,7 +38,6 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
   const stored = await readFile(orm, fileId!);
   expect(stored?.mimeType).toBe("image/webp");
   expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
-  expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
 });
 
 test("approving keeps all import photos, record links and staff files", async ({ orm, seed }) => {
@@ -68,15 +70,6 @@ test("approving keeps all import photos, record links and staff files", async ({
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   const keptPhoto = photoIds.get("kept@example.com")!;
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {
-    orderBy: { field: "EMAIL" },
-  });
-  expect(
-    employees.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
-  ).toEqual([
-    { email: "kept@example.com", avatarFileId: keptPhoto },
-    { email: "taken@example.com", avatarFileId: existingAvatar },
-  ]);
   expect(await storedFileIds(orm)).toEqual(
     [...photoIds.values(), existingAvatar, staffFileId!].sort(),
   );
@@ -109,5 +102,15 @@ test("approving keeps all import photos, record links and staff files", async ({
       leftOut: true,
     },
     { email: "taken@example.com", photoFileId: photoIds.get("taken@example.com"), leftOut: false },
+  ]);
+  await finishSelfHostedSetup(orm);
+  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {
+    orderBy: { field: "EMAIL" },
+  });
+  expect(
+    employees.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
+  ).toEqual([
+    { email: "kept@example.com", avatarFileId: keptPhoto },
+    { email: "taken@example.com", avatarFileId: existingAvatar },
   ]);
 });

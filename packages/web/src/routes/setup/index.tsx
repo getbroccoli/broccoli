@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { AddedPeopleRing, ResetSetupDialog } from "@/features/imports";
+import { AddedPeopleRing, BackToReview } from "@/features/imports";
 import { OwnerSetupForm, requireSetupPage, SetupLayout } from "@/features/setup";
 import { t } from "@/i18n";
 
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/setup/")({
     <SetupLayout step="owner" title={t("setup.owner.heading")} width="narrow">
       <OwnerSetupForm
         intro={<AddedPeopleRing />}
-        secondaryAction={<ResetSetupDialog />}
+        secondaryAction={<BackToReview />}
         width="narrow"
       />
     </SetupLayout>

@@ -4,10 +4,10 @@ export {
   completeImportStep,
   completeReadyStep,
   isImportOpen,
-  returnToCompanyStep,
+  reopenImportStep,
   returnToCompanyStepFromDemo,
 } from "./setup";
-export { claimOwner, createOwnerAtSetup, readOwner } from "./owner";
+export { claimOwner, createOwnerAtSetup, readOwner, type AddApprovedPeople } from "./owner";
 export { readInstance } from "./instance";
 export { exitDemo, startDemoAtSetup, type DemoReset, type DemoStart, type SetupDemo } from "./demo";
 export { assignInstance, recordOwnerSignInMethod } from "./managed";

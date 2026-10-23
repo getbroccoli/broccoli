@@ -1,12 +1,13 @@
 import { expect, NON_OWNER, importUseCases, test } from "#test/support";
 
+import type { Tx } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 
 // The external agent's operations admit their own callers; their tests check them. The demo
 // start takes no caller: the start it returns checks the caller setup runs it with.
 type ImportUseCases = Omit<
   ReturnType<typeof importUseCases>,
-  "sentJobs" | "answeredMapping" | "originalFileReads" | "prepareDemoStart"
+  "reportAddedPeople" | "sentJobs" | "answeredMapping" | "originalFileReads" | "prepareDemoStart"
 > & {
   originalFileReads: Omit<
     ReturnType<typeof importUseCases>["originalFileReads"],
@@ -57,19 +58,22 @@ const calls = {
   "choices.leaveOutIncomplete": (imports, ctx) =>
     imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
   startDemo: (imports, ctx) => imports.startDemo(ctx),
+  addApprovedPeople: (imports, ctx, tx) => imports.addApprovedPeople(ctx, tx),
   approveImport: (imports, ctx) => imports.approveImport(ctx, "any-version"),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
-  resetSetup: (imports, ctx) => imports.resetSetup(ctx),
-} satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext) => unknown>;
+  reopenReview: (imports, ctx) => imports.reopenReview(ctx),
+} satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext, tx: Tx) => unknown>;
 
 test.for(Object.entries(calls))(
   "%s refuses a signed-in user who is not the owner",
-  async ([, call], { orm }) => {
+  async ([, call], { orm, transact }) => {
     const imports = importUseCases(orm);
 
     await expect(
       Promise.resolve().then(async () => {
-        await call(imports, NON_OWNER);
+        await transact(async (tx) => {
+          await call(imports, NON_OWNER, tx);
+        });
       }),
     ).rejects.toMatchObject({
       code: "FORBIDDEN",

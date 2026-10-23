@@ -2,9 +2,14 @@ import type { Decisions } from "../../../../integrations/ai";
 import type { OriginalFileReader } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
-import type { DemoStart } from "../../../../core/instance";
+import type { AddApprovedPeople, DemoStart } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import { approveImport } from "./approveImport";
+import {
+  type AddedPeople,
+  addApprovedPeople,
+  approveImport,
+  reportAddedPeople,
+} from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
 import type { DemoFill, ImportSlack } from "./importContext";
@@ -12,7 +17,7 @@ import { createImportReadService, type ImportReadService } from "./importReadSer
 import { finishImport } from "./deleteImport";
 import { readSlack } from "./readSlack";
 import { removeSource } from "./removeSource";
-import { resetSetup } from "./resetSetup";
+import { reopenReview } from "./reopenReview";
 import { prepareDemoStart, startDemo } from "./startDemo";
 import { createUploadReader } from "./uploadReader";
 import {
@@ -39,10 +44,14 @@ export interface ImportUseCases {
   prepareDemoStart: () => Promise<DemoStart>;
   /** Approve of the import the owner reviewed, at the `version` of `reads.readReview`. */
   approveImport: (ctx: SecurityContext, version: string) => Promise<void>;
+  /** Adds the approved people in the caller's transaction, which completes setup. */
+  addApprovedPeople: AddApprovedPeople;
+  /** Logs the people added once they are committed. */
+  reportAddedPeople: (added: AddedPeople) => void;
   /** Deletes the approved import once setup is complete; its photos stay with the employees. */
   finishImport: (ctx: SecurityContext) => Promise<void>;
-  /** Takes setup from the owner step back to the company step, deleting the approved employees. */
-  resetSetup: (ctx: SecurityContext) => Promise<void>;
+  /** Takes setup from its last step back to the review, so the owner can change it. */
+  reopenReview: (ctx: SecurityContext) => Promise<void>;
   reads: ImportReadService;
   choices: EmployeeChoiceService;
   files: FileSourceService;
@@ -76,8 +85,10 @@ export function createImportUseCases({
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     prepareDemoStart: () => prepareDemoStart(context),
     approveImport: (ctx: SecurityContext, version: string) => approveImport(context, ctx, version),
+    addApprovedPeople,
+    reportAddedPeople: (added: AddedPeople) => reportAddedPeople(context, added),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
-    resetSetup: (ctx: SecurityContext) => resetSetup(context, ctx),
+    reopenReview: (ctx: SecurityContext) => reopenReview(context, ctx),
     reads: createImportReadService(orm),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs, readUpload, logger }),
