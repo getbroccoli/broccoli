@@ -45,8 +45,10 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   });
   const fullName = `${employee.firstName} ${employee.lastName}`;
   const sections = Map.groupBy(EMPLOYEE_DESCRIPTION.fields, (field) => field.section);
-  const labelOf = (key: EmployeeFieldKey) =>
-    EMPLOYEE_DESCRIPTION.fields.find((field) => field.key === key)!.label;
+  // In panel order, as the person reads the fields.
+  const changedLabels = EMPLOYEE_DESCRIPTION.fields
+    .filter((field) => draft.changed.includes(field.key as EmployeeFieldKey))
+    .map((field) => field.label);
 
   return (
     <>
@@ -131,7 +133,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
       {draft.changed.length > 0 && (
         <div className="border-t border-border px-4 py-3">
           <EditBar
-            changedLabels={draft.changed.map(labelOf)}
+            changedLabels={changedLabels}
             reason={draft.reason}
             onReasonChange={draft.setReason}
             saving={draft.saving}
