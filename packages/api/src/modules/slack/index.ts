@@ -5,7 +5,11 @@ import { createSlackConnectionService, type SlackConnectionService } from "./app
 import { createResolvers } from "./graphql";
 import { slackRouter } from "./http";
 
-export { createSlackConnectionService, type SlackConnectionService, type SlackPerson } from "./app";
+// Public values.
+export { createSlackConnectionService } from "./app";
+
+// Public types.
+export type { SlackConnectionService, SlackPerson } from "./app";
 
 /** Where Slack is reached: Broccoli's OAuth relay and Slack's Web API. */
 export interface SlackUrls {

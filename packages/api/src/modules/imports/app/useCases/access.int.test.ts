@@ -46,8 +46,8 @@ const calls = {
   "reads.readReview": (imports, ctx) => imports.reads.readReview(ctx),
   "reads.listEmployeeRecords": (imports, ctx) =>
     imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),
-  readImportPhoto: (imports, ctx) =>
-    imports.readImportPhoto(ctx, "0199f6c4-0000-7000-8000-000000000000"),
+  "reads.readImportPhoto": (imports, ctx) =>
+    imports.reads.readImportPhoto(ctx, "0199f6c4-0000-7000-8000-000000000000"),
   "choices.chooseEmployeeValue": (imports, ctx) =>
     imports.choices.chooseEmployeeValue(ctx, { key: "missing", field: "jobTitle", choice: null }),
   "choices.chooseSourceForAll": (imports, ctx) =>

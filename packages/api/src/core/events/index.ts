@@ -1,8 +1,5 @@
-export {
-  createEventBus,
-  type DomainEvents,
-  type EventBus,
-  type EventHandlers,
-  type EventType,
-  type DomainEvent,
-} from "./eventBus";
+// Public values.
+export { createEventBus } from "./eventBus";
+
+// Public types.
+export type { DomainEvents, EventBus, EventHandlers, EventType, DomainEvent } from "./eventBus";

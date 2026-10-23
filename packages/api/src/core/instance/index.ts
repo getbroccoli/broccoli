@@ -1,4 +1,5 @@
 import "./events";
+// Public values.
 export {
   assignInstance,
   chooseExternalAgentSource,
@@ -11,8 +12,6 @@ export {
   completeCompanyStep,
   completeImportStep,
   completeReadyStep,
-  type DemoStart,
-  type SetupDemo,
   isImportOpen,
   readSetupHolder,
   returnToCompanyStep,
@@ -21,16 +20,11 @@ export {
   readInstance,
   recordOwnerSignInMethod,
   createAiSettings,
-  type AiSettings,
-  type OriginalFileReader,
 } from "./app";
 export { refuseBearerAuth, resolveSecurityContext } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
-export {
-  AssignmentConflictError,
-  type AiConfig,
-  type AiSource,
-  OwnerExistsError,
-  type ManagedAssignment,
-  type OwnerSignInMethod,
-} from "./domain";
+export { AssignmentConflictError, OwnerExistsError } from "./domain";
+
+// Public types.
+export type { DemoStart, SetupDemo, AiSettings, OriginalFileReader } from "./app";
+export type { AiConfig, AiSource, ManagedAssignment, OwnerSignInMethod } from "./domain";

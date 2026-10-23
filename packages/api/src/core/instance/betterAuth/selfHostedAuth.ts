@@ -1,4 +1,4 @@
-import { createAuth, fixedAuth, type AuthSource } from "../../auth";
+import { createBetterAuth, fixedAuth, type AuthSource } from "../../auth";
 import type { Orm, Transact } from "../../db";
 import type { Logger } from "../../logger";
 import type { SetupDemo } from "../app";
@@ -19,7 +19,7 @@ export interface SelfHostedAuthOptions {
 /** Better Auth of a self-hosted instance: password sign-in, and setup for the first visitor. */
 export function selfHostedAuth({ transact, demo, ...options }: SelfHostedAuthOptions): AuthSource {
   return fixedAuth(
-    createAuth({
+    createBetterAuth({
       ...options,
       plugins: [
         setupPlugin(options.orm, transact, demo.prepareStart),

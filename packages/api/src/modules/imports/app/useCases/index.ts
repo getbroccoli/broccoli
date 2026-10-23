@@ -2,7 +2,6 @@ import type { Decisions } from "../../../../integrations/ai";
 import type { OriginalFileReader } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
-import type { StoredFile } from "../../../../core/files";
 import type { DemoStart } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { approveImport } from "./approveImport";
@@ -11,7 +10,6 @@ import { createFileSourceService, type FileSourceService } from "./fileSourceSer
 import type { DemoFill, ImportSlack } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { finishImport } from "./deleteImport";
-import { readImportPhoto } from "./readImportPhoto";
 import { readSlack } from "./readSlack";
 import { removeSource } from "./removeSource";
 import { resetSetup } from "./resetSetup";
@@ -31,7 +29,7 @@ export type { ImportReview } from "./importReview";
 export type { StaffUpload } from "./uploadReader";
 export { READ_PEOPLE_JSON_SCHEMA, type ReadPeopleOutcome } from "./originalFileReadService";
 
-/** Everything that can be done with the import; the adapters call nothing else. */
+/** Import commands and services grouped by subject; the adapters call nothing else. */
 export interface ImportUseCases {
   readSlack: (ctx: SecurityContext) => Promise<void>;
   /** Removes a file or the Slack source, disconnecting Slack; refused once approved. */
@@ -45,8 +43,6 @@ export interface ImportUseCases {
   finishImport: (ctx: SecurityContext) => Promise<void>;
   /** Takes setup from the owner step back to the company step, deleting the approved employees. */
   resetSetup: (ctx: SecurityContext) => Promise<void>;
-  /** The import record's photo with this file id, or null when it is no record's photo. */
-  readImportPhoto: (ctx: SecurityContext, fileId: string) => Promise<StoredFile | null>;
   reads: ImportReadService;
   choices: EmployeeChoiceService;
   files: FileSourceService;
@@ -82,8 +78,6 @@ export function createImportUseCases({
     approveImport: (ctx: SecurityContext, version: string) => approveImport(context, ctx, version),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
     resetSetup: (ctx: SecurityContext) => resetSetup(context, ctx),
-    readImportPhoto: (ctx: SecurityContext, fileId: string) =>
-      readImportPhoto(context, ctx, fileId),
     reads: createImportReadService(orm),
     choices: createEmployeeChoiceService(transact),
     files: createFileSourceService({ orm, transact, decisions, jobs, readUpload }),

@@ -7,19 +7,17 @@ import type { ImportUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
-export {
-  createImportUseCases,
-  type ImportUseCases,
-  READ_PEOPLE_JSON_SCHEMA,
-  type ReadPeopleOutcome,
-} from "./app";
-export {
-  type AnsweredMapping,
-  type ExternalAgentParseFileWay,
-  type MappingAnswersInput,
-  type MappingQuestions,
-  parseReadPeople,
-  parseStaffFileName,
+// Public values.
+export { createImportUseCases, READ_PEOPLE_JSON_SCHEMA } from "./app";
+export { parseReadPeople, parseStaffFileName } from "./domain";
+
+// Public types.
+export type { ImportUseCases, ReadPeopleOutcome } from "./app";
+export type {
+  AnsweredMapping,
+  ExternalAgentParseFileWay,
+  MappingAnswersInput,
+  MappingQuestions,
 } from "./domain";
 
 /**

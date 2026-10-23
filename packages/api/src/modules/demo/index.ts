@@ -3,6 +3,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import { createDemoUseCases } from "./app";
 import { createResolvers } from "./graphql";
 
+// Public values.
 export { createDemoUseCases, prepareDemoFill } from "./app";
 
 /** The sample company an owner can start with instead of importing their people; and exiting it. */

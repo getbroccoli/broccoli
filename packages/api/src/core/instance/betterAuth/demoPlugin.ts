@@ -7,7 +7,7 @@ import { deleteSessionCookie } from "better-auth/cookies";
 import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
-import { type DemoReset, readInstance, resetDemo } from "../app";
+import { type DemoReset, readInstance, exitDemo } from "../app";
 import { demoDeadlineOf, SETUP_SESSION_DAYS } from "../domain";
 import { inAuthTransaction } from "./authTransaction";
 import { setSetupCookie } from "./setupCookie";
@@ -52,7 +52,7 @@ export function demoPlugin(orm: Orm, transact: Transact, deleteAllEmployees: Dem
           const { internalAdapter } = ctx.context;
           const setup = await refusingResetConflicts(() =>
             inAuthTransaction(transact, ctx, (tx) =>
-              resetDemo(
+              exitDemo(
                 PrincipalSecurityContext.system(),
                 tx,
                 { userId, now: new Date() },

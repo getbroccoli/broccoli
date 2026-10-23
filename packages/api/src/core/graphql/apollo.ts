@@ -110,6 +110,7 @@ export function createContext(resolveSecurity: SecurityResolver) {
     }
     try {
       const { security, renewedCookies } = await resolveSecurity(req.headers);
+      // The security resolver renews sessions; this HTTP boundary forwards their cookies.
       if (renewedCookies.length > 0) {
         res.appendHeader("Set-Cookie", renewedCookies);
       }

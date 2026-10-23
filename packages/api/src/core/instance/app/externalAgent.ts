@@ -12,6 +12,7 @@ import {
  * Makes the owner's external agent the AI source, in the caller's `tx` and holding the instance
  * row; refused like `lockExternalAgentChoice`.
  */
+
 export async function chooseExternalAgentSource(ctx: SecurityContext, tx: Tx): Promise<void> {
   await lockExternalAgentChoice(ctx, tx);
   await instanceRepository(tx).storeAiSource("external_agent");

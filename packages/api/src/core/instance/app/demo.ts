@@ -59,7 +59,7 @@ export async function startDemoAtSetup<Owner extends OwnerUser>(
  * for its cookie. The company and the AI source stay. Refuses with FORBIDDEN anyone else,
  * after the deadline, or without a demo.
  */
-export async function resetDemo(
+export async function exitDemo(
   ctx: SecurityContext,
   tx: Tx,
   { userId, now }: { userId: string; now: Date },

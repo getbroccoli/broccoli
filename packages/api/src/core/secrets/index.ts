@@ -1,3 +1,7 @@
+// Public values.
 export { ensureSecret } from "./ensureSecret";
-export { createSecretBox, type SecretBox } from "./secretBox";
+export { createSecretBox } from "./secretBox";
 export { readSecret, saveSecret } from "./secretFile";
+
+// Public types.
+export type { SecretBox } from "./secretBox";

@@ -4,6 +4,7 @@ import { createEmployeeUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { avatarRouter } from "./http";
 
+// Public values.
 export {
   createDemoEmployees,
   createEmployeeUseCases,
@@ -12,14 +13,15 @@ export {
   findTakenEmails,
   hasDemoEmployees,
 } from "./app";
-export {
-  employeeFieldErrors,
-  parseEmployeeField,
-  type Employee,
-  type EmployeeOrder,
-  type EmployeeOrderField,
-  type NewEmployee,
-  type NewEmployeeInput,
+export { employeeFieldErrors, parseEmployeeField } from "./domain";
+
+// Public types.
+export type {
+  Employee,
+  EmployeeOrder,
+  EmployeeOrderField,
+  NewEmployee,
+  NewEmployeeInput,
 } from "./domain";
 
 /** The people who work for the company: create and list them, and serve their avatars. */

@@ -1,7 +1,7 @@
 import express from "express";
 import { createRemoteJWKSet } from "jose";
 
-import { createAuth, type DeploymentServer } from "../auth";
+import { createBetterAuth, type DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { ManagedDeployment } from "../env";
 import { readInstance } from "../instance";
@@ -39,7 +39,7 @@ export function managedServer({
     keys: createRemoteJWKSet(new URL("/.well-known/jwks.json", accountsOrigin)),
   };
   const auth = managedAuth(orm, (assignment) =>
-    createAuth({
+    createBetterAuth({
       orm,
       secret,
       logger,

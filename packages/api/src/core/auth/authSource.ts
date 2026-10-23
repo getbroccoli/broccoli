@@ -1,7 +1,7 @@
 import { toNodeHandler } from "better-auth/node";
 import type { RequestHandler } from "express";
 
-import type { Auth } from "./auth";
+import type { Auth } from "./createBetterAuth";
 
 /** This process's Better Auth, or null while a managed instance waits for its init. */
 export interface AuthSource {
