@@ -39,6 +39,8 @@ interface DataTableProps<Row, SortKey extends string> {
   /** Shown at the left of the footer, such as how many rows there are. */
   summary?: ReactNode;
   density?: DataTableDensity;
+  /** Opens a row on a click anywhere in it; keyboard users reach the same through a link in the row. */
+  onRowClick?: (row: Row) => void;
 }
 
 /**
@@ -58,6 +60,7 @@ export function DataTable<Row, SortKey extends string>({
   pager,
   summary,
   density = "compact",
+  onRowClick,
 }: DataTableProps<Row, SortKey>) {
   const placeholder = notice ?? (rows?.length === 0 ? emptyState : undefined);
   const comfortable = density === "comfortable";
@@ -105,8 +108,10 @@ export function DataTable<Row, SortKey extends string>({
               {rows.map((row) => (
                 <TableRow
                   key={getRowId(row)}
+                  onClick={onRowClick && (() => onRowClick(row))}
                   className={cn(
                     "group/row hover:bg-row-hover",
+                    onRowClick && "cursor-pointer",
                     comfortable ? "h-[60px] border-border" : "border-border/40",
                   )}
                 >

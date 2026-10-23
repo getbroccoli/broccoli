@@ -1,0 +1,28 @@
+query RecordHistory($recordType: RecordType!, $recordId: ID!, $first: Int, $after: String) {
+  recordHistory(recordType: $recordType, recordId: $recordId, first: $first, after: $after) {
+    edges {
+      node {
+        id
+        operation
+        occurredAt
+        author {
+          kind
+          email
+        }
+        cause {
+          kind
+        }
+        reason
+        changes {
+          field
+          oldValue
+          newValue
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

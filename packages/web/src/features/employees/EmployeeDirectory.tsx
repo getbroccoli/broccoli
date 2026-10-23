@@ -39,6 +39,13 @@ export function EmployeeDirectory() {
       columns={EMPLOYEE_COLUMNS}
       rows={rows}
       getRowId={(employee) => employee.id}
+      onRowClick={(employee) =>
+        void navigate({
+          to: "/people/$employeeId",
+          params: { employeeId: employee.id },
+          search: (previous) => previous,
+        })
+      }
       sort={list.sort}
       onSortChange={list.changeSort}
       isLoading={loading}
