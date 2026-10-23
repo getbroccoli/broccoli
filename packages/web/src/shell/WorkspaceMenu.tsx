@@ -25,8 +25,14 @@ export function WorkspaceMenu() {
   const openedOnPath = useRef<string | null>(null);
   // Outside the menu, which closes when an item is chosen.
   const [exitingDemo, setExitingDemo] = useState(false);
+  const [signOutFailed, setSignOutFailed] = useState(false);
   // The gate then sends the signed-out user to the login page.
-  const [signOutAndReload, signingOut] = useSessionChange(signOut);
+  const [signOutAndReload, signingOut] = useSessionChange(async () => {
+    setSignOutFailed(false);
+    const signedOut = await signOut();
+    setSignOutFailed(!signedOut);
+    return signedOut;
+  });
   // Return focus to the trigger unless the page changed, in which case the new page's
   // heading takes it (see `useFocusHeadingOnNavigation`).
   const isStillOnOpeningPage = () => router.state.location.pathname === openedOnPath.current;
@@ -99,6 +105,11 @@ export function WorkspaceMenu() {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {signOutFailed && (
+        <p role="alert" className="px-2 text-sm text-destructive">
+          {t("auth.signOutFailed")}
+        </p>
+      )}
       <ExitDemoDialog open={exitingDemo} onOpenChange={setExitingDemo} />
     </>
   );
