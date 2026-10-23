@@ -193,15 +193,15 @@ test("Broccoli AI reads a consented PDF through the relay without sending its na
 
   const allowed = await browser.graphql(
     `mutation AllowOriginalFileRead($sourceId: ID!) {
-  allowOriginalFileRead(sourceId: $sourceId, aiSource: BROCCOLI_AI) {
-    import { id } error { __typename ... on Error { message } }
-  }
-}`,
+    import { allowOriginalFileRead(sourceId: $sourceId, aiSource: BROCCOLI_AI) {
+      import { id } error { __typename ... on Error { message } }
+    } }
+  }`,
     { sourceId },
   );
 
   expect(await allowed.json()).toEqual({
-    data: { allowOriginalFileRead: { import: { id: "import" }, error: null } },
+    data: { import: { allowOriginalFileRead: { import: { id: "import" }, error: null } } },
   });
   await expect
     .poll(async () => (await browser.graphql(query)).json(), { timeout: 15_000 })
@@ -252,13 +252,15 @@ async function selfHostedImport(relay: FakeDecisions, options: TestEnvOptions = 
   onTestFinished(() => env.stop());
   const { browser } = await env.signInAsOwner();
   const company = await browser.graphql(`mutation {
-  updateCompany(input: { name: "Acme Corp" }) {
-      company { id }
-      error { __typename ... on Error { message } }
+    company {
+      update(input: { name: "Acme Corp" }) {
+        company { id }
+        error { __typename ... on Error { message } }
+      }
     }
-}`);
+  }`);
   expect(await company.json()).toEqual({
-    data: { updateCompany: { company: { id: "company" }, error: null } },
+    data: { company: { update: { company: { id: "company" }, error: null } } },
   });
   return { env, browser };
 }

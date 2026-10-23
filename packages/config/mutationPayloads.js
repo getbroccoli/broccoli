@@ -1,5 +1,5 @@
 import graphql from "@graphql-eslint/eslint-plugin";
-import { isNonNullType, isObjectType, isUnionType } from "graphql";
+import { getNamedType, isNonNullType, isObjectType, isUnionType } from "graphql";
 
 /**
  * ESLint config for a package's GraphQL SDL: every mutation returns a payload (RULE24 and
@@ -18,18 +18,22 @@ export function mutationPayloadsConfig() {
 }
 
 /**
- * Where a schema's root mutations break the payload rules: each returns a non-null
- * `…Payload` object, and its `error`, if present, is a nullable union of `Error` types.
+ * Where a schema's mutations break the payload rules: every operation in a mutation namespace
+ * returns a non-null `…Payload` object, and a payload's `error`, if it has one, is a nullable
+ * union of `Error` types.
  * @param {import("graphql").GraphQLSchema} schema
  * @returns {{ type: string; field: string; message: string }[]}
  */
 export function mutationPayloadProblems(schema) {
-  const mutation = schema.getMutationType();
-  if (!mutation) return [];
-  return Object.values(mutation.getFields()).flatMap((operation) => {
-    const message = problemOf(mutation, operation);
-    return message ? [{ type: mutation.name, field: operation.name, message }] : [];
-  });
+  const namespaces = Object.values(schema.getMutationType()?.getFields() ?? {})
+    .map(({ type }) => getNamedType(type))
+    .filter(isObjectType);
+  return namespaces.flatMap((namespace) =>
+    Object.values(namespace.getFields()).flatMap((operation) => {
+      const message = problemOf(namespace, operation);
+      return message ? [{ type: namespace.name, field: operation.name, message }] : [];
+    }),
+  );
 }
 
 /** Reports each problem on the operation's field in the file that defines it. */
@@ -56,10 +60,10 @@ const mutationPayloadsRule = {
   },
 };
 
-function problemOf(mutation, operation) {
+function problemOf(namespace, operation) {
   const payload = isNonNullType(operation.type) ? operation.type.ofType : undefined;
   if (!isObjectType(payload) || !payload.name.endsWith("Payload")) {
-    return `${mutation.name}.${operation.name} must return a non-null object type named …Payload.`;
+    return `${namespace.name}.${operation.name} must return a non-null object type named …Payload.`;
   }
   const error = payload.getFields().error;
   if (error && !isErrorUnion(error.type)) {

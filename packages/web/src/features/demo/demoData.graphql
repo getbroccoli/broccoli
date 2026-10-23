@@ -6,24 +6,28 @@ query DemoData {
 }
 
 mutation ExitDemo {
-  exitDemo {
-    demoData {
-      id
-      isPresent
-    }
-    error {
-      __typename
-      ... on Error {
-        message
+  demo {
+    exit {
+      demoData {
+        id
+        isPresent
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
 }
 
 mutation StartDemo {
-  startDemo {
-    import {
-      id
+  import {
+    startDemo {
+      import {
+        id
+      }
     }
   }
 }

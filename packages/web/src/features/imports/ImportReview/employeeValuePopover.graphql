@@ -1,19 +1,21 @@
 mutation ChooseEmployeeValue($input: ImportChooseEmployeeValueInput!) {
-  chooseImportEmployeeValue(input: $input) {
-    import {
-      id
-      # Review's own changes move the version Approve sends.
-      version
-    }
-    error {
-      __typename
-      ... on Error {
-        message
+  import {
+    chooseEmployeeValue(input: $input) {
+      import {
+        id
+        # Review's own changes move the version Approve sends.
+        version
       }
-      ... on InvalidInputError {
-        fields {
-          field
-          code
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
         }
       }
     }

@@ -89,22 +89,22 @@ test("a managed owner completes setup from the ready step over GraphQL", async (
   const { env, accounts } = await startManagedEnv();
   const browser = await signInAsManagedOwner(env, accounts);
   await browser.graphql(`mutation {
-  updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } }
-}`);
+    company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } }
+  }`);
   const approval = await approveReviewedImport(browser);
   expect(await approval.json()).toEqual({
-    data: { approveImport: { import: { id: "import" }, error: null } },
+    data: { import: { approve: { import: { id: "import" }, error: null } } },
   });
   const ready = await browser.graphql("query { setup { id step } }");
   expect(await ready.json()).toEqual({
     data: { setup: { id: "instance", step: "READY" } },
   });
 
-  const response = await browser.graphql("mutation { completeSetup { setup { id step } } }");
+  const response = await browser.graphql("mutation { setup { complete { setup { id step } } } }");
 
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    data: { completeSetup: { setup: { id: "instance", step: "DONE" } } },
+    data: { setup: { complete: { setup: { id: "instance", step: "DONE" } } } },
   });
   const setup = await browser.graphql("query { setup { id step } }");
   expect(await setup.json()).toEqual({

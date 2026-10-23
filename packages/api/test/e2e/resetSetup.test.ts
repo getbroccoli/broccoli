@@ -6,15 +6,15 @@ test("the setup holder resets the account step through the import mutation", asy
   await env.seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const approval = await approveReviewedImport(browser);
   expect(await approval.json()).toEqual({
-    data: { approveImport: { import: { id: "import" }, error: null } },
+    data: { import: { approve: { import: { id: "import" }, error: null } } },
   });
 
   const response = await browser.graphql(`mutation {
-  resetSetup { import { id } }
-}`);
+    import { resetSetup { import { id } } }
+  }`);
 
   expect(await response.json()).toEqual({
-    data: { resetSetup: { import: { id: "import" } } },
+    data: { import: { resetSetup: { import: { id: "import" } } } },
   });
   expect(response.status).toBe(200);
   const setup = await browser.graphql("query { setup { id step } }");

@@ -15,9 +15,9 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   const saved = await browser.graphql(saveCompany);
 
   expect(await saved.json()).toEqual({
-    data: { updateCompany: { company: { id: "company" }, error: null } },
+    data: { company: { update: { company: { id: "company" }, error: null } } },
   });
-  await browser.graphql("mutation { startDemo { import { id } } }");
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
   const response = await browser.graphql(demoQuery);
   const body = (await response.json()) as DemoDataResponse;
@@ -40,7 +40,7 @@ test("a managed owner exits the demo through the API and returns to company setu
   const { env, accounts } = await startManagedEnv();
   const browser = await signInAsManagedOwner(env, accounts);
   await browser.graphql(saveCompany);
-  await browser.graphql("mutation { startDemo { import { id } } }");
+  await browser.graphql("mutation { import { startDemo { import { id } } } }");
   await env.seed.employee();
   const setup = await browser.graphql("query { me { id } setup { id step } }");
   const signedIn = (await setup.json()) as { data: { me: { id: string } } };
@@ -52,11 +52,11 @@ test("a managed owner exits the demo through the API and returns to company setu
   const avatarUrl = body.data.employees.edges.find(({ node }) => node.avatarUrl)!.node.avatarUrl!;
   expect((await browser.get(avatarUrl)).status).toBe(200);
 
-  const exited = await browser.graphql("mutation { exitDemo { demoData { id isPresent } } }");
+  const exited = await browser.graphql("mutation { demo { exit { demoData { id isPresent } } } }");
 
   expect(exited.status).toBe(200);
   expect(await exited.json()).toEqual({
-    data: { exitDemo: { demoData: { id: "demoData", isPresent: false } } },
+    data: { demo: { exit: { demoData: { id: "demoData", isPresent: false } } } },
   });
   const after = await browser.graphql(demoQuery);
   expect(await after.json()).toEqual({
@@ -78,7 +78,7 @@ test("refuses demo data and employee avatars without a session", async ({ env })
   const browser = env.browser();
 
   const response = await browser.graphql("query { demo { isPresent } }");
-  const exited = await browser.graphql("mutation { exitDemo { demoData { id isPresent } } }");
+  const exited = await browser.graphql("mutation { demo { exit { demoData { id isPresent } } } }");
   const image = await browser.get(`/api/employees/avatar/${avatarFileId}`);
 
   expect(await response.json()).toMatchObject({
@@ -93,7 +93,9 @@ test("refuses demo data and employee avatars without a session", async ({ env })
 test("the provisional owner cannot exit through GraphQL", async ({ env }) => {
   const { browser } = await env.startDemo();
 
-  const response = await browser.graphql("mutation { exitDemo { demoData { id isPresent } } }");
+  const response = await browser.graphql(
+    "mutation { demo { exit { demoData { id isPresent } } } }",
+  );
 
   expect(await response.json()).toMatchObject({ errors: [{ extensions: { code: "FORBIDDEN" } }] });
   const demo = await browser.graphql("query { demo { id isPresent } }");
@@ -109,7 +111,7 @@ test("finishing setup by approving an empty import leaves the directory without 
 
   const approved = await approveReviewedImport(browser);
   expect(await approved.json()).toEqual({
-    data: { approveImport: { import: { id: "import" }, error: null } },
+    data: { import: { approve: { import: { id: "import" }, error: null } } },
   });
   expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
 
@@ -125,7 +127,7 @@ interface DemoDataResponse {
   };
 }
 
-const saveCompany = `mutation { updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }`;
+const saveCompany = `mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }`;
 const demoQuery = `query {
   employees(first: 100) { edges { node { avatarUrl } } }
   demo { id isPresent }

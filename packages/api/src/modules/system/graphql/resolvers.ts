@@ -45,7 +45,10 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       ai: async (_parent, _args, context) => toGraphql(await useCases.ai.read(context.getActor())),
     },
     Mutation: {
-      completeSetup: async (_parent, _args, context) => {
+      setup: () => ({}),
+    },
+    SetupMutations: {
+      complete: async (_parent, _args, context) => {
         const actor = context.getActor();
         await useCases.completeSetup(actor);
         return { setup: await readSetup(actor) };

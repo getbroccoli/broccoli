@@ -28,4 +28,4 @@ export function failureOf(
   return { message: "setup.ai.failed", onKey: false };
 }
 
-type SaveAiSourceError = NonNullable<SaveAiSourceMutation["saveAiSource"]["error"]>;
+type SaveAiSourceError = NonNullable<SaveAiSourceMutation["setup"]["saveAiSource"]["error"]>;

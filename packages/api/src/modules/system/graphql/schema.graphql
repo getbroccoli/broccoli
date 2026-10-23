@@ -103,11 +103,11 @@ input AiSourceInput {
   openRouterKey: String
 }
 
-type Mutation {
+type SetupMutations {
   "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
   saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
   "Completes setup from the ready step; does nothing at any other step. Owner only."
-  completeSetup: SetupMutationPayload!
+  complete: SetupMutationPayload!
 }
 
 "Setup after a change."
@@ -122,3 +122,7 @@ type SetupSaveAiSourcePayload {
 }
 
 union SetupSaveAiSourceError = InvalidInputError | UnavailableError | ConflictError
+
+type Mutation {
+  setup: SetupMutations!
+}

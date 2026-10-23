@@ -27,12 +27,14 @@ test("choosing Broccoli AI prepares one token and maps a CSV with it despite an 
 
   expect(await chosen.json()).toEqual({
     data: {
-      saveAiSource: {
-        setup: {
-          id: "instance",
-          ai: { id: "ai", source: "BROCCOLI_AI", openRouterKey: "ENVIRONMENT" },
+      setup: {
+        saveAiSource: {
+          setup: {
+            id: "instance",
+            ai: { id: "ai", source: "BROCCOLI_AI", openRouterKey: "ENVIRONMENT" },
+          },
+          error: null,
         },
-        error: null,
       },
     },
   });
@@ -70,9 +72,11 @@ test("choosing a pasted OpenRouter key checks it and maps a CSV with it instead 
 
   expect(await chosen.json()).toEqual({
     data: {
-      saveAiSource: {
-        setup: { id: "instance", ai: { id: "ai", source: "OPENROUTER", openRouterKey: "SAVED" } },
-        error: null,
+      setup: {
+        saveAiSource: {
+          setup: { id: "instance", ai: { id: "ai", source: "OPENROUTER", openRouterKey: "SAVED" } },
+          error: null,
+        },
       },
     },
   });
@@ -127,11 +131,13 @@ test("returns a field error when OpenRouter rejects the pasted key", async ({
 
   expect(await response.json()).toMatchObject({
     data: {
-      saveAiSource: {
-        setup: null,
-        error: {
-          __typename: "InvalidInputError",
-          fields: [{ field: "openRouterKey", code: "rejected" }],
+      setup: {
+        saveAiSource: {
+          setup: null,
+          error: {
+            __typename: "InvalidInputError",
+            fields: [{ field: "openRouterKey", code: "rejected" }],
+          },
         },
       },
     },
@@ -148,11 +154,13 @@ test("returns a source error when the relay refuses an already used free period"
 
   expect(await response.json()).toMatchObject({
     data: {
-      saveAiSource: {
-        setup: null,
-        error: {
-          __typename: "InvalidInputError",
-          fields: [{ field: "source", code: "free_period_used" }],
+      setup: {
+        saveAiSource: {
+          setup: null,
+          error: {
+            __typename: "InvalidInputError",
+            fields: [{ field: "source", code: "free_period_used" }],
+          },
         },
       },
     },
@@ -173,16 +181,18 @@ test("refuses an AI choice on a managed instance without contacting either provi
   const response = await browser.graphql(SAVE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
 
   expect(await response.json()).toMatchObject({
-    data: { saveAiSource: { setup: null, error: { __typename: "ConflictError" } } },
+    data: { setup: { saveAiSource: { setup: null, error: { __typename: "ConflictError" } } } },
   });
   expect(openRouter.httpRequests()).toEqual([]);
   expect(relay.httpRequests()).toEqual([]);
 });
 
 const SAVE_AI_SOURCE = `mutation SaveAiSource($input: AiSourceInput!) {
-  saveAiSource(input: $input) {
-    setup { id ai { id source openRouterKey } }
-    error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } }
+  setup {
+    saveAiSource(input: $input) {
+      setup { id ai { id source openRouterKey } }
+      error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } }
+    }
   }
 }`;
 
@@ -192,10 +202,10 @@ async function setupHolder(options: TestEnvOptions = {}): Promise<Browser> {
   const browser = env.browser();
   expect((await browser.post("/api/auth/setup/start", undefined)).status).toBe(200);
   const named = await browser.graphql(`mutation {
-  updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } }
-}`);
+    company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } }
+  }`);
   expect(await named.json()).toEqual({
-    data: { updateCompany: { company: { id: "company" }, error: null } },
+    data: { company: { update: { company: { id: "company" }, error: null } } },
   });
   return browser;
 }

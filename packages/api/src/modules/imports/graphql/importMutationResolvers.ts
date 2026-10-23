@@ -5,9 +5,9 @@ import type { ValueChoice } from "../domain";
 import { AI_SOURCES, FIELDS, IMPORT, INCOMPLETE_REASONS, keyOf } from "./graphqlValues";
 
 /** The import's mutations; each answers with the import, or a payload error it expects. */
-export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Mutation"] {
+export function importMutationResolvers(useCases: ImportUseCases): Resolvers["ImportMutations"] {
   return {
-    readSlackIntoImport: (_parent, _args, context) =>
+    readSlack: (_parent, _args, context) =>
       mutationPayload<ResolversTypes["ImportReadSlackPayload"]>(
         "import",
         () => thenImport(useCases.readSlack(context.getActor())),
@@ -17,7 +17,7 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Mu
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
         thenImport(useCases.startDemo(context.getActor())),
       ),
-    approveImport: (_parent, { version }, context) =>
+    approve: (_parent, { version }, context) =>
       mutationPayload<ResolversTypes["ImportApprovePayload"]>(
         "import",
         () => thenImport(useCases.approveImport(context.getActor(), version)),
@@ -27,7 +27,7 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Mu
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
         thenImport(useCases.resetSetup(context.getActor())),
       ),
-    retryImportFile: (_parent, { sourceId }, context) =>
+    retryFile: (_parent, { sourceId }, context) =>
       mutationPayload<ResolversTypes["ImportRetryFilePayload"]>(
         "import",
         () => thenImport(useCases.files.retryFile(context.getActor(), sourceId)),
@@ -46,11 +46,11 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Mu
           ),
         ["CONFLICT"],
       ),
-    removeImportSource: (_parent, { sourceId }, context) =>
+    removeSource: (_parent, { sourceId }, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
         thenImport(useCases.removeSource(context.getActor(), sourceId)),
       ),
-    chooseImportEmployeeValue: (_parent, { input }, context) =>
+    chooseEmployeeValue: (_parent, { input }, context) =>
       mutationPayload<ResolversTypes["ImportChooseEmployeeValuePayload"]>(
         "import",
         () =>
@@ -63,7 +63,7 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Mu
           ),
         ["INVALID_INPUT"],
       ),
-    chooseImportSourceForAll: (_parent, { field, sourceId }, context) =>
+    chooseSourceForAll: (_parent, { field, sourceId }, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
         thenImport(
           useCases.choices.chooseSourceForAll(context.getActor(), {
@@ -72,14 +72,14 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Mu
           }),
         ),
       ),
-    setImportEmployeeLeftOut: (_parent, { employeeId, leftOut }, context) =>
+    setEmployeeLeftOut: (_parent, { employeeId, leftOut }, context) =>
       mutationPayload<ResolversTypes["ImportSetEmployeeLeftOutPayload"]>(
         "import",
         () =>
           thenImport(useCases.choices.setLeftOut(context.getActor(), { key: employeeId, leftOut })),
         ["INVALID_INPUT"],
       ),
-    leaveOutIncompleteImportEmployees: (_parent, { reason }, context) =>
+    leaveOutIncomplete: (_parent, { reason }, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
         thenImport(
           useCases.choices.leaveOutIncomplete(context.getActor(), {

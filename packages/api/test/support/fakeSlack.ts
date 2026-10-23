@@ -70,10 +70,10 @@ export async function connectAndReadSlack(browser: Browser) {
   expect(callback.status).toBe(302);
   expect(callback.headers.get("location")).toBe("/setup/import");
   const imported = await browser.graphql(
-    "mutation { readSlackIntoImport { import { id } error { __typename ... on Error { message } } } }",
+    "mutation { import { readSlack { import { id } error { __typename ... on Error { message } } } } }",
   );
   expect(await imported.json()).toEqual({
-    data: { readSlackIntoImport: { import: { id: "import" }, error: null } },
+    data: { import: { readSlack: { import: { id: "import" }, error: null } } },
   });
 }
 

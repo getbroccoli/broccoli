@@ -9,13 +9,16 @@ export function createResolvers(useCases: CompanyUseCases): Resolvers {
         toGraphql(await useCases.getCompany(context.getActor())),
     },
     Mutation: {
-      updateCompany: (_parent, { input }, context) =>
+      company: () => ({}),
+    },
+    CompanyMutations: {
+      update: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["CompanyUpdatePayload"]>(
           "company",
           async () => toGraphql(await useCases.update(context.getActor(), input)),
           ["INVALID_INPUT"],
         ),
-      removeCompanyLogo: (_parent, _args, context) =>
+      removeLogo: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["CompanyMutationPayload"]>("company", async () =>
           toGraphql(await useCases.removeLogo(context.getActor())),
         ),

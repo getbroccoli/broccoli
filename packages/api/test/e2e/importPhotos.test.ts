@@ -64,7 +64,7 @@ test("keeps the approved import photo until owner setup finishes, then serves it
 
   expect(approval.status).toBe(200);
   expect(await approval.json()).toEqual({
-    data: { approveImport: { import: { id: "import" }, error: null } },
+    data: { import: { approve: { import: { id: "import" }, error: null } } },
   });
   const review = await browser.graphql(`query {
     setup { id step }

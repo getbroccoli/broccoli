@@ -203,7 +203,7 @@ test.for([
       "{ ping }",
       "{ setup { id } }",
       "{ import { id } }",
-      'mutation { approveImport(version: "reviewed-version") { import { id } error { __typename } } }',
+      'mutation { import { approve(version: "reviewed-version") { import { id } error { __typename } } } }',
     ]) {
       const response = await fetch(`${env.url}/api/graphql`, {
         method: "POST",
@@ -230,10 +230,10 @@ test("refuses the agent after the holder disconnects it", async ({ env }) => {
   const code = await createExternalAgentCode(browser);
   const token = await exchangeExternalAgentCode(env.url, code);
   const disconnected = await browser.graphql(
-    "mutation { disconnectExternalAgent { setup { id } } }",
+    "mutation { setup { disconnectExternalAgent { setup { id } } } }",
   );
   expect(await disconnected.json()).toEqual({
-    data: { disconnectExternalAgent: { setup: { id: "instance" } } },
+    data: { setup: { disconnectExternalAgent: { setup: { id: "instance" } } } },
   });
 
   const response = await fetch(`${env.url}/api/external-agent/unmapped-files`, {

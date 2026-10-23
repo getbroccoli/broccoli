@@ -11,7 +11,8 @@ import { requireSessionOutsidePublicFields } from "./publicFields";
 const typeDefs = `
   directive @public on FIELD_DEFINITION
   type Query { open: String @public, secret: String }
-  type Mutation { doThing: String }
+  type Mutation { thing: Thing }
+  type Thing { do: String }
 `;
 
 it("refuses a private field without a session before running its resolver", async () => {
@@ -76,15 +77,15 @@ it("answers a private field with a signed-in user", async () => {
   expect(result).toEqual({ data: { secret: "secret" } });
 });
 
-it("refuses a private mutation without a session", async () => {
+it("refuses a private mutation namespace without a session", async () => {
   let resolverRan = false;
   const schema = makeExecutableSchema({
     typeDefs,
     resolvers: {
       Mutation: {
-        doThing: () => {
+        thing: () => {
           resolverRan = true;
-          return "done";
+          return { do: "done" };
         },
       },
     },
@@ -93,7 +94,7 @@ it("refuses a private mutation without a session", async () => {
 
   const result = await graphql({
     schema,
-    source: "mutation { doThing }",
+    source: "mutation { thing { do } }",
     contextValue: new GraphqlContext(null),
   });
 

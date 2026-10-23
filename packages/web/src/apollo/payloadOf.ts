@@ -5,11 +5,11 @@ export interface PayloadOutcome {
 }
 
 /**
- * Reads a mutation's payload and its error from the result data. The operation may be
- * aliased; `__typename` is skipped.
+ * Reads a mutation's payload and its error from the result data, `{ namespace: { operation:
+ * payload } }`. The namespace and the operation may be aliased; `__typename` is skipped.
  */
 export function payloadOf(data: unknown): PayloadOutcome {
-  const payload = onlyValue(data);
+  const payload = onlyValue(onlyValue(data));
   if (!isObject(payload)) {
     throw new Error("The mutation returned no payload.");
   }

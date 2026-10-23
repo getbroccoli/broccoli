@@ -18,7 +18,7 @@ curl -c cookies -b cookies -X POST -H "origin: $URL" "$URL/api/auth/setup/start"
 
 ## Name the company
 
-Until the company has a name, setup opens `/setup/company`. Call the `updateCompany(input: …)` mutation in the browser's devtools console on the app's tab, then reload:
+Until the company has a name, setup opens `/setup/company`. Call the `company { update(input: …) }` mutation in the browser's devtools console on the app's tab, then reload:
 
 ```js
 await fetch("/api/graphql", {
@@ -26,7 +26,7 @@ await fetch("/api/graphql", {
   headers: { "content-type": "application/json" },
   body: JSON.stringify({
     query:
-      'mutation { updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } }',
+      'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } } }',
   }),
 });
 ```
@@ -35,7 +35,7 @@ Or from a terminal with the cookie jar:
 
 ```sh
 curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-  -d '{"query":"mutation { updateCompany(input: { name: \"Acme Corp\" }) { company { id } error { __typename ... on Error { message } } } }"}'
+  -d '{"query":"mutation { company { update(input: { name: \"Acme Corp\" }) { company { id } error { __typename ... on Error { message } } } } }"}'
 ```
 
 ## Skip the import
@@ -46,7 +46,7 @@ For an owner with an account and the demo company, start the demo from a termina
 
 ```sh
 curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-  -d '{"query":"mutation { startDemo { import { id } } }"}'
+  -d '{"query":"mutation { import { startDemo { import { id } } } }"}'
 ```
 
 ## Create the owner
@@ -66,9 +66,9 @@ Once the owner exists, setup answers `OWNER_EXISTS`. Sign in with the same body 
 
 ## Add employees
 
-With the session, call the `createEmployee(input: …)` mutation:
+With the session, call the `employee { create(input: …) }` mutation:
 
 ```sh
 curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-  -d '{"query":"mutation { createEmployee(input: { firstName: \"Avery\", lastName: \"Abbott\", email: \"avery@example.com\", jobTitle: \"Designer\", startDate: \"2024-03-04\" }) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }"}'
+  -d '{"query":"mutation { employee { create(input: { firstName: \"Avery\", lastName: \"Abbott\", email: \"avery@example.com\", jobTitle: \"Designer\", startDate: \"2024-03-04\" }) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }"}'
 ```

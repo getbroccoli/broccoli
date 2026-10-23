@@ -1,13 +1,15 @@
 mutation CreateExternalAgentCode {
-  createExternalAgentCode {
-    externalAgentCode {
-      code
-      expiresAt
-    }
-    error {
-      __typename
-      ... on Error {
-        message
+  setup {
+    createExternalAgentCode {
+      externalAgentCode {
+        code
+        expiresAt
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }

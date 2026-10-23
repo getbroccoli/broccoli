@@ -33,85 +33,93 @@ query ImportStep {
 }
 
 mutation ReadSlack {
-  readSlackIntoImport {
-    import {
-      id
-      reading
-      demoAvailable
-      sources {
+  import {
+    readSlack {
+      import {
         id
-        kind
-        employeeCount
-        ...FileSourceCard_source
+        reading
+        demoAvailable
+        sources {
+          id
+          kind
+          employeeCount
+          ...FileSourceCard_source
+        }
       }
-    }
-    error {
-      __typename
-      ... on Error {
-        message
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
 }
 
 mutation RetryFile($sourceId: ID!) {
-  retryImportFile(sourceId: $sourceId) {
-    import {
-      id
-      reading
-      demoAvailable
-      sources {
+  import {
+    retryFile(sourceId: $sourceId) {
+      import {
         id
-        kind
-        employeeCount
-        ...FileSourceCard_source
+        reading
+        demoAvailable
+        sources {
+          id
+          kind
+          employeeCount
+          ...FileSourceCard_source
+        }
       }
-    }
-    error {
-      __typename
-      ... on Error {
-        message
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
 }
 
 mutation RemoveSource($sourceId: ID!) {
-  removeImportSource(sourceId: $sourceId) {
-    import {
-      id
-      reading
-      demoAvailable
-      sources {
+  import {
+    removeSource(sourceId: $sourceId) {
+      import {
         id
-        kind
-        employeeCount
-        ...FileSourceCard_source
+        reading
+        demoAvailable
+        sources {
+          id
+          kind
+          employeeCount
+          ...FileSourceCard_source
+        }
       }
     }
   }
 }
 
 mutation AllowOriginalFileRead($sourceId: ID!, $aiSource: AiSource) {
-  allowOriginalFileRead(sourceId: $sourceId, aiSource: $aiSource) {
-    import {
-      id
-      reading
-      demoAvailable
-      sources {
+  import {
+    allowOriginalFileRead(sourceId: $sourceId, aiSource: $aiSource) {
+      import {
         id
-        kind
-        status
-        readBy
-        pickedUpByExternalAgent
-        employeeCount
-        ...FileSourceCard_source
+        reading
+        demoAvailable
+        sources {
+          id
+          kind
+          status
+          readBy
+          pickedUpByExternalAgent
+          employeeCount
+          ...FileSourceCard_source
+        }
       }
-    }
-    error {
-      __typename
-      ... on Error {
-        message
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }

@@ -113,12 +113,12 @@ test("merges Slack and a CSV and approves one employee with the bulk-picked Slac
 
   const picked = await browser.graphql(
     `mutation($sourceId: ID!) {
-  chooseImportSourceForAll(field: JOB_TITLE, sourceId: $sourceId) { import { id } }
-}`,
+    import { chooseSourceForAll(field: JOB_TITLE, sourceId: $sourceId) { import { id } } }
+  }`,
     { sourceId: slackId },
   );
   expect(await picked.json()).toEqual({
-    data: { chooseImportSourceForAll: { import: { id: "import" } } },
+    data: { import: { chooseSourceForAll: { import: { id: "import" } } } },
   });
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
   expect(await (await browser.graphql(DIRECTORY)).json()).toEqual({
@@ -166,21 +166,21 @@ test("fixes a CSV row’s last name, leaves another row out and approves only th
   )!.node.id;
 
   const fixed = await browser.graphql(`mutation {
-  chooseImportEmployeeValue(input: { employeeId: "avery@example.com", field: LAST_NAME, value: "Stone" }) {
-    import { id } error { __typename ... on InvalidInputError { fields { field code } } }
-  }
-}`);
+    import { chooseEmployeeValue(input: { employeeId: "avery@example.com", field: LAST_NAME, value: "Stone" }) {
+      import { id } error { __typename ... on InvalidInputError { fields { field code } } }
+    } }
+  }`);
   expect(await fixed.json()).toEqual({
-    data: { chooseImportEmployeeValue: { import: { id: "import" }, error: null } },
+    data: { import: { chooseEmployeeValue: { import: { id: "import" }, error: null } } },
   });
   const leftOut = await browser.graphql(
     `mutation($employeeId: ID!) {
-  setImportEmployeeLeftOut(employeeId: $employeeId, leftOut: true) { import { id } }
-}`,
+    import { setEmployeeLeftOut(employeeId: $employeeId, leftOut: true) { import { id } } }
+  }`,
     { employeeId: missingEmail },
   );
   expect(await leftOut.json()).toEqual({
-    data: { setImportEmployeeLeftOut: { import: { id: "import" } } },
+    data: { import: { setEmployeeLeftOut: { import: { id: "import" } } } },
   });
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
 
@@ -210,24 +210,26 @@ test("returns a typed bad email as an InvalidInputError naming value", async ({ 
   await connectAndReadSlack(browser);
 
   const response = await browser.graphql(`mutation {
-  chooseImportEmployeeValue(input: { employeeId: "avery@example.com", field: EMAIL, value: "avery@" }) {
-    import { id } error { __typename ... on InvalidInputError { fields { field code } } }
-  }
-}`);
+    import { chooseEmployeeValue(input: { employeeId: "avery@example.com", field: EMAIL, value: "avery@" }) {
+      import { id } error { __typename ... on InvalidInputError { fields { field code } } }
+    } }
+  }`);
 
   expect(await response.json()).toEqual({
     data: {
-      chooseImportEmployeeValue: {
-        import: null,
-        error: { __typename: "InvalidInputError", fields: [{ field: "value", code: "invalid" }] },
+      import: {
+        chooseEmployeeValue: {
+          import: null,
+          error: { __typename: "InvalidInputError", fields: [{ field: "value", code: "invalid" }] },
+        },
       },
     },
   });
 });
 
 const SAVE_COMPANY =
-  'mutation { updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename } } }';
-const APPROVED = { data: { approveImport: { import: { id: "import" }, error: null } } };
+  'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } } }';
+const APPROVED = { data: { import: { approve: { import: { id: "import" }, error: null } } } };
 const DIRECTORY =
   "query { employees(orderBy: { field: EMAIL, direction: ASC }) { edges { node { firstName lastName email jobTitle } } } }";
 

@@ -14,48 +14,52 @@ query AiStep {
 }
 
 mutation ChooseExternalAgent {
-  chooseExternalAgent {
-    setup {
-      id
-      ai {
+  setup {
+    chooseExternalAgent {
+      setup {
         id
-        source
-        externalAgent {
+        ai {
           id
+          source
+          externalAgent {
+            id
+          }
         }
       }
-    }
-    error {
-      __typename
-      ... on Error {
-        message
+      error {
+        __typename
+        ... on Error {
+          message
+        }
       }
     }
   }
 }
 
 mutation SaveAiSource($input: AiSourceInput!) {
-  saveAiSource(input: $input) {
-    setup {
-      id
-      ai {
+  setup {
+    saveAiSource(input: $input) {
+      setup {
         id
-        source
-        openRouterKey
-        externalAgent {
+        ai {
           id
+          source
+          openRouterKey
+          externalAgent {
+            id
+          }
         }
       }
-    }
-    error {
-      __typename
-      ... on Error {
-        message
-      }
-      ... on InvalidInputError {
-        fields {
-          field
-          code
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
         }
       }
     }

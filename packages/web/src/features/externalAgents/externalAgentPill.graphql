@@ -4,13 +4,15 @@ fragment ExternalAgentPill_externalAgent on ExternalAgentConnection {
 }
 
 mutation DisconnectExternalAgent {
-  disconnectExternalAgent {
-    setup {
-      id
-      ai {
+  setup {
+    disconnectExternalAgent {
+      setup {
         id
-        externalAgent {
+        ai {
           id
+          externalAgent {
+            id
+          }
         }
       }
     }

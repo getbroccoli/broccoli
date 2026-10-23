@@ -11,7 +11,7 @@ interface EmployeeListResponse {
 
 const createMutation = `
   mutation CreateEmployee($input: EmployeeCreateInput!) {
-    createEmployee(input: $input) { employee { id firstName lastName email jobTitle startDate createdAt } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } }
+    employee { create(input: $input) { employee { id firstName lastName email jobTitle startDate createdAt } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }
   }
 `;
 
@@ -36,13 +36,13 @@ test("creates an employee through the API", async ({ env }) => {
 
   const response = await browser.graphql(createMutation, { input });
   const body = (await response.json()) as {
-    data: { createEmployee: { employee: { id: string; createdAt: string }; error: null } };
+    data: { employee: { create: { employee: { id: string; createdAt: string }; error: null } } };
   };
 
   expect(response.status).toBe(200);
   expect(body).not.toHaveProperty("errors");
-  expect(body.data.createEmployee.error).toBeNull();
-  const employee = body.data.createEmployee.employee;
+  expect(body.data.employee.create.error).toBeNull();
+  const employee = body.data.employee.create.employee;
   expect(employee).toMatchObject(input);
   expect(employee.id).toMatch(/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/);
   expect(employee.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
@@ -58,12 +58,14 @@ test("returns a taken employee email in the mutation payload", async ({ env }) =
 
   expect(await response.json()).toEqual({
     data: {
-      createEmployee: {
-        employee: null,
-        error: {
-          __typename: "InvalidInputError",
-          message: "The input is invalid.",
-          fields: [{ field: "email", code: "taken" }],
+      employee: {
+        create: {
+          employee: null,
+          error: {
+            __typename: "InvalidInputError",
+            message: "The input is invalid.",
+            fields: [{ field: "email", code: "taken" }],
+          },
         },
       },
     },

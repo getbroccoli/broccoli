@@ -12,7 +12,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentUse
         return connection && { id: "external-agent", ...connection };
       },
     },
-    Mutation: {
+    SetupMutations: {
       chooseExternalAgent: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupChooseExternalAgentPayload"]>(
           "setup",

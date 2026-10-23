@@ -53,14 +53,16 @@ test("the setup holder names the company through GraphQL", async ({ env }) => {
   await browser.post("/api/auth/setup/start", undefined);
 
   const response = await browser.graphql(`
-    mutation { updateCompany(input: { name: "Acme Corp" }) { company { id name } error { __typename ... on Error { message } } } }
+    mutation { company { update(input: { name: "Acme Corp" }) { company { id name } error { __typename ... on Error { message } } } } }
   `);
 
   expect(await response.json()).toEqual({
     data: {
-      updateCompany: {
-        company: { id: "company", name: "Acme Corp" },
-        error: null,
+      company: {
+        update: {
+          company: { id: "company", name: "Acme Corp" },
+          error: null,
+        },
       },
     },
   });
@@ -101,14 +103,14 @@ test("completes setup and replaces setup access with the owner's signed-in sessi
   expect(started.status).toBe(200);
   const oldCookie = setupCookieOf(started)!.split(";", 1)[0]!;
   const named = await browser.graphql(`
-    mutation { updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } }
+    mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } } }
   `);
   expect(await named.json()).toEqual({
-    data: { updateCompany: { company: { id: "company" }, error: null } },
+    data: { company: { update: { company: { id: "company" }, error: null } } },
   });
-  const skipped = await browser.graphql("mutation { startDemo { import { id } } }");
+  const skipped = await browser.graphql("mutation { import { startDemo { import { id } } } }");
   expect(await skipped.json()).toEqual({
-    data: { startDemo: { import: { id: "import" } } },
+    data: { import: { startDemo: { import: { id: "import" } } } },
   });
 
   const response = await browser.post("/api/auth/setup", {

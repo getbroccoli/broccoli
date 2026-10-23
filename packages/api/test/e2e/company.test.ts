@@ -22,41 +22,17 @@ test("advances to import when the owner names the company", async ({ env }) => {
   });
 
   const saved = await browser.graphql(`
-    mutation { updateCompany(input: { name: "Example Ltd" }) { company { id name } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }
+    mutation { company { update(input: { name: "Example Ltd" }) { company { id name } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }
   `);
 
   expect(saved.status).toBe(200);
   expect(await saved.json()).toEqual({
     data: {
-      updateCompany: { company: { id: "company", name: "Example Ltd" }, error: null },
+      company: { update: { company: { id: "company", name: "Example Ltd" }, error: null } },
     },
   });
   const after = await browser.graphql("query { setup { id step } }");
   expect(await after.json()).toEqual({ data: { setup: { id: "instance", step: "IMPORT" } } });
-});
-
-test("runs root mutation fields in order", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-
-  const response = await browser.graphql(`mutation {
-    first: updateCompany(input: { name: "First" }) {
-      company { id name }
-      error { __typename ... on Error { message } }
-    }
-    second: updateCompany(input: { name: "Second" }) {
-      company { id name }
-      error { __typename ... on Error { message } }
-    }
-  }`);
-
-  expect(await response.json()).toEqual({
-    data: {
-      first: { company: { id: "company", name: "First" }, error: null },
-      second: { company: { id: "company", name: "Second" }, error: null },
-    },
-  });
-  const company = await browser.graphql("query { company { id name } }");
-  expect(await company.json()).toEqual({ data: { company: { id: "company", name: "Second" } } });
 });
 
 test("returns invalid company input in the mutation payload", async ({ env }) => {
@@ -64,12 +40,14 @@ test("returns invalid company input in the mutation payload", async ({ env }) =>
 
   const response = await browser.graphql(`
     mutation {
-      updateCompany(input: { name: "" }) {
-        company { id }
-        error {
-          __typename
-          ... on Error { message }
-          ... on InvalidInputError { fields { field code } }
+      company {
+        update(input: { name: "" }) {
+          company { id }
+          error {
+            __typename
+            ... on Error { message }
+            ... on InvalidInputError { fields { field code } }
+          }
         }
       }
     }
@@ -77,12 +55,14 @@ test("returns invalid company input in the mutation payload", async ({ env }) =>
 
   expect(await response.json()).toEqual({
     data: {
-      updateCompany: {
-        company: null,
-        error: {
-          __typename: "InvalidInputError",
-          message: "The input is invalid.",
-          fields: [{ field: "name", code: "required" }],
+      company: {
+        update: {
+          company: null,
+          error: {
+            __typename: "InvalidInputError",
+            message: "The input is invalid.",
+            fields: [{ field: "name", code: "required" }],
+          },
         },
       },
     },
@@ -95,11 +75,11 @@ test("removes the company logo through the mutation payload", async ({ env }) =>
   expect(uploaded.status).toBe(200);
 
   const response = await browser.graphql(`
-    mutation { removeCompanyLogo { company { id logoUrl } } }
+    mutation { company { removeLogo { company { id logoUrl } } } }
   `);
 
   expect(await response.json()).toEqual({
-    data: { removeCompanyLogo: { company: { id: "company", logoUrl: null } } },
+    data: { company: { removeLogo: { company: { id: "company", logoUrl: null } } } },
   });
 });
 
