@@ -101,6 +101,7 @@ function exampleFileSource(state: Partial<FileSourceState> = {}): FileSource {
     failureMessage: null,
     readBy: "parsed_by_broccoli",
     pickedUpByExternalAgentAt: null,
+    externalAgentProgress: null,
     originalReadAllowedAt: null,
     originalReadAiSource: null,
     ...state,

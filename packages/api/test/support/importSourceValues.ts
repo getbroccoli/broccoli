@@ -12,6 +12,7 @@ export function importSourceValues(source: ImportSource): ImportSourceState {
     failureMessage: source.failureMessage,
     readBy: source.readBy,
     pickedUpByExternalAgentAt: source.pickedUpByExternalAgentAt,
+    externalAgentProgress: source.externalAgentProgress,
     originalReadAllowedAt: source.originalReadAllowedAt,
     originalReadAiSource: source.originalReadAiSource,
   };

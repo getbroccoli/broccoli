@@ -127,6 +127,7 @@ const sourceColumns = {
   failureMessage: importSources.failureMessage,
   readBy: importSources.readBy,
   pickedUpByExternalAgentAt: importSources.pickedUpByExternalAgentAt,
+  externalAgentProgress: importSources.externalAgentProgress,
   originalReadAllowedAt: importSources.originalReadAllowedAt,
   originalReadAiSource: importSources.originalReadAiSource,
 };

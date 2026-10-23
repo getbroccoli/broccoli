@@ -9,13 +9,14 @@ import { filesRouter, photoRouter } from "./http";
 
 // Public values.
 export { createImportUseCases, READ_PEOPLE_JSON_SCHEMA } from "./app";
-export { parseReadPeople, parseStaffFileName } from "./domain";
+export { EXTERNAL_AGENT_FILE_PROGRESS, parseReadPeople, parseStaffFileName } from "./domain";
 
 // Public types.
 export type { ImportUseCases, ReadPeopleOutcome } from "./app";
 export type {
   AnsweredMapping,
   ExternalAgentParseFileWay,
+  ExternalAgentFileProgress,
   MappingAnswersInput,
   MappingQuestions,
 } from "./domain";

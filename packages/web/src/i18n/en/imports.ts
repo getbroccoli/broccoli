@@ -41,7 +41,11 @@ export const importsEn = {
   "imports.files.uploadFailed": "{name}: couldn’t upload. Try again.",
   "imports.files.mapping": "Reading columns…",
   "imports.files.waitingForExternalAgent": "Waiting for your agent",
-  "imports.files.pickingUpByExternalAgent": "Your agent is picking it up…",
+  "imports.files.foundByExternalAgent": "Your agent found your file",
+  "imports.files.downloadingOriginalByExternalAgent": "Your agent is downloading your file…",
+  "imports.files.downloadingQuestionsByExternalAgent":
+    "Your agent is downloading masked questions…",
+  "imports.files.mappingByExternalAgent": "Your agent is mapping your file…",
   "imports.files.mappedByExternalAgent": "Mapped by your agent",
   "imports.files.readingByExternalAgent": "Your agent is reading it…",
   "imports.files.readChanged":

@@ -32,6 +32,7 @@ export function originalReadRepository(tx: Tx): OriginalReadRepository {
           failure: null,
           failureMessage: null,
           pickedUpByExternalAgentAt: null,
+          externalAgentProgress: null,
           mappingAttempt: sql`${importSources.mappingAttempt} + 1`,
         })
         .where(eq(importSources.id, id))

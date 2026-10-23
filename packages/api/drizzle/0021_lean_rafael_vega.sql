@@ -1,0 +1,2 @@
+ALTER TABLE "import_sources" ADD COLUMN "external_agent_progress" text;--> statement-breakpoint
+ALTER TABLE "import_sources" ADD CONSTRAINT "import_sources_external_agent_progress" CHECK ("import_sources"."external_agent_progress" in ('file_found', 'file_downloading', 'file_mapping'));

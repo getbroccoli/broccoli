@@ -13,6 +13,7 @@ it("reports a file being read and leaves the demo unavailable", () => {
     failureMessage: null,
     readBy: "parsed_by_broccoli",
     pickedUpByExternalAgentAt: null,
+    externalAgentProgress: null,
     originalReadAllowedAt: null,
     originalReadAiSource: null,
   });
@@ -33,6 +34,7 @@ it("leaves the demo unavailable when records have been gathered", () => {
     failureMessage: null,
     readBy: "parsed_by_broccoli",
     pickedUpByExternalAgentAt: null,
+    externalAgentProgress: null,
     originalReadAllowedAt: null,
     originalReadAiSource: null,
   });
@@ -53,6 +55,7 @@ it("leaves the demo available after a failed file without records", () => {
     failureMessage: null,
     readBy: "parsed_by_broccoli",
     pickedUpByExternalAgentAt: null,
+    externalAgentProgress: null,
     originalReadAllowedAt: null,
     originalReadAiSource: null,
   });

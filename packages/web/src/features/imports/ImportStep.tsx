@@ -136,7 +136,6 @@ export function ImportStep() {
             onUploadingChange={setUploading}
             uploadFile={externalAgentChosen ? uploadFileForExternalAgent : uploadFile}
             aiSource={ai?.source ?? null}
-            externalAgentListening={externalAgent?.listening ?? false}
             externalAgentPill={externalAgent && <ExternalAgentPill externalAgent={externalAgent} />}
             externalAgentNewFiles={
               notPickedUp.length > 0 && (

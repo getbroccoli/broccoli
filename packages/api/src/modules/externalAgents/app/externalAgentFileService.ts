@@ -5,6 +5,7 @@ import type { SecurityContext } from "../../../core/security";
 import {
   type AnsweredMapping,
   type ExternalAgentParseFileWay,
+  type ExternalAgentFileProgress,
   type MappingAnswersInput,
   type MappingQuestions,
   parseReadPeople,
@@ -33,6 +34,12 @@ export interface ExternalAgentFileService {
     ctx: SecurityContext,
     request: { seconds: number; signal?: AbortSignal },
   ): Promise<UnmappedFile[]>;
+  /** Updates the file card with the stage reported by the live agent. */
+  reportFileProgress(
+    ctx: SecurityContext,
+    sourceId: string,
+    progress: ExternalAgentFileProgress,
+  ): Promise<void>;
   /** A waiting file's masked questions. */
   readMappingQuestions(ctx: SecurityContext, sourceId: string): Promise<MappingQuestions>;
   /** Maps a waiting file with the agent's answers. */
@@ -99,6 +106,11 @@ export function createExternalAgentFileService(
         signal?.removeEventListener("abort", wait.stop);
       }
     },
+
+    reportFileProgress: (ctx, sourceId, progress) =>
+      asLiveExternalAgent(context, ctx, (tx) =>
+        imports.answeredMapping.reportFileProgress(ctx, tx, sourceId, progress),
+      ),
 
     readMappingQuestions: (ctx, sourceId) =>
       asLiveExternalAgent(context, ctx, (tx) =>

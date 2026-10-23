@@ -6,6 +6,7 @@ import type { SecurityContext } from "../../../../core/security";
 import { answeredSourceRepository, type ImportRepository } from "../../db";
 import {
   type ExternalAgentParseFileWay,
+  type ExternalAgentFileProgress,
   type FileSheet,
   type FileSource,
   type IncomingRecord,
@@ -52,6 +53,13 @@ export interface AnsweredMappingService {
    * that the external agent picked the file up.
    */
   readMappingQuestions(ctx: SecurityContext, tx: Tx, sourceId: string): Promise<MappingQuestions>;
+  /** Records the agent’s progress only for a file currently available to it. */
+  reportFileProgress(
+    ctx: SecurityContext,
+    tx: Tx,
+    sourceId: string,
+    progress: ExternalAgentFileProgress,
+  ): Promise<void>;
   /** Maps the waiting source with these answers, as Broccoli's model's answers would. */
   answerMapping(
     ctx: SecurityContext,
@@ -109,6 +117,16 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
           return { sheet: index + 1, rows: withPlaceholders(state).rows, questions };
         }),
       };
+    },
+
+    reportFileProgress: async (ctx, tx, sourceId, progress) => {
+      ctx.requireSetupExternalAgent();
+      const imports = await lockOpenImport(tx);
+      const source = await imports.findFileSource(sourceId);
+      if (!source?.externalAgentWork()) {
+        throw notWaiting();
+      }
+      await answeredSourceRepository(tx).recordProgress(sourceId, progress);
     },
 
     answerMapping: async (ctx, tx, sourceId, input) => {

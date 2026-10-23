@@ -75,10 +75,12 @@ With "Your agent" chosen on Setup AI:
 
 - [ ] "Add your files" shows "Connect your agent" with the prompt on a dark block and a copy button, and no drop zone.
 - [ ] Once an agent connects with that prompt, a pill beside "Add your files" names it, with Disconnect in its menu, and the drop zone shows. Claude Code shows Claude's mark and Codex OpenAI's.
-- [ ] While the agent waits for files, a dropped file reads "Your agent is picking it up…" at once, with no card, and gets mapped.
+- [ ] A dropped file reads "Waiting for your agent" until the agent acknowledges this file, even while the agent is listening.
+- [ ] Following the setup skill, the agent announces in chat with 🥦 that it found the file, is downloading masked questions, and has started mapping. Its reports change the file card to "Your agent found your file", "Your agent is downloading masked questions…", then "Your agent is mapping your file…". Refreshing keeps the latest reported stage. Short stages may pass between page polls; work is never delayed to show them.
+- [ ] A failed download does not announce or report that mapping started. Successful mapping replaces progress with the people count and the agent announces the ready-to-review handoff with 🥦 (🥦🥦🥦 is reserved for the running instance and its browser address); no approval happens until the owner reviews.
 - [ ] With the agent stopped for over 30 seconds, a dropped file shows "Waiting for your agent" and a card with "Broccoli has new files. Map them and send their people back."; once the agent picks it up, the card goes.
 - [ ] A dropped PDF shows "Masked reading of PDFs isn’t supported yet" and "Read the original file", saying its personal details go to your agent's model provider; the agent does not see it.
-- [ ] After "Read the original file", the listening agent fetches it ("Your agent is reading it…") and sends its people: "N people · Read by your agent, not masked".
+- [ ] After "Read the original file", progress resets to waiting. The agent reports found, downloading ("Your agent is downloading your file…") and mapping, with matching chat announcements, then sends its people: "N people · Read by your agent, not masked".
 - [ ] A CSV the agent mapped can be read again in full from its menu; the agent's new people replace the mapped ones.
 - [ ] On a fresh install, before anyone opens Broccoli, `docker compose exec -T broccoli node dist/externalAgentCode.js` prints a code, and an agent that exchanges it connects. Setup AI then opens with "Your agent" selected, and "Add your files" shows the agent's pill and no prompt.
 - [ ] With "Broccoli AI" saved on Setup AI, the same command prints "Setup no longer takes your agent: the owner chose another AI, or setup is past its import." and exits with 2; Setup AI keeps "Broccoli AI".
