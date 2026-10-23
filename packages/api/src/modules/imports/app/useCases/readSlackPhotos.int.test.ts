@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { vi } from "vitest";
 
 import {
+  captureLogs,
   expect,
   importUseCases,
   JPEG,
@@ -28,7 +29,11 @@ test.for([
   await seed.slackConnection();
   await seed.setupStep("import");
   const readPhoto = vi.fn(() => Promise.resolve(photo.content));
-  const imports = importUseCases(orm, { slackApi: { ...fakeSlackApi(), readPhoto } });
+  const logs = captureLogs();
+  const imports = importUseCases(orm, {
+    logger: logs.logger,
+    slackApi: { ...fakeSlackApi(), readPhoto },
+  });
 
   await imports.readSlack(OWNER);
 
@@ -40,6 +45,26 @@ test.for([
   expect(stored?.mimeType).toBe("image/webp");
   expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
   expect(readPhoto).toHaveBeenCalledWith(new URL(SLACK_PHOTO_URL));
+  const record = employees.edges[0]!.node.records[0]!;
+  expect(logs.entries.filter(({ msg }) => msg === "Stored a Slack photo")).toEqual([
+    {
+      level: 30,
+      msg: "Stored a Slack photo",
+      sourceId: record.sourceId,
+      recordId: record.id,
+      slackMemberId: "U1",
+      photoFileId: fileId,
+    },
+  ]);
+  for (const privateValue of [
+    SLACK_PHOTO_URL,
+    "Avery",
+    "Stone",
+    "avery@example.com",
+    "test-slack-token",
+  ]) {
+    expect(logs.output).not.toContain(privateValue);
+  }
 });
 
 test("keeps a stored photo when Slack's photo link is unchanged", async ({ orm, seed }) => {
@@ -55,7 +80,11 @@ test("keeps a stored photo when Slack's photo link is unchanged", async ({ orm, 
     mimeType: "image/png",
   });
   const readPhoto = vi.fn(() => Promise.resolve(PNG));
-  const imports = importUseCases(orm, { slackApi: { ...fakeSlackApi(), readPhoto } });
+  const logs = captureLogs();
+  const imports = importUseCases(orm, {
+    logger: logs.logger,
+    slackApi: { ...fakeSlackApi(), readPhoto },
+  });
 
   await imports.readSlack(OWNER);
 
@@ -66,6 +95,7 @@ test("keeps a stored photo when Slack's photo link is unchanged", async ({ orm, 
       .edges.map(({ node }) => node.photoFileId),
   ).toEqual([fileId]);
   expect(await storedFileIds(orm)).toEqual([fileId]);
+  expect(logs.entries.filter(({ msg }) => msg === "Stored a Slack photo")).toEqual([]);
 });
 
 test("replaces a changed Slack photo and deletes its old file", async ({ orm, seed }) => {
@@ -206,7 +236,8 @@ test("a later Refresh downloads the photos still missing", async ({ orm, seed })
 test("a Slack read after Approve writes nothing", async ({ orm, seed }) => {
   await seed.slackConnection();
   await seed.setupStep("import");
-  const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
+  const logs = captureLogs();
+  const imports = importUseCases(orm, { logger: logs.logger, slackApi: fakeSlackApi() });
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   expect((await readInstance(orm)).step).toBe("owner");
 
@@ -216,6 +247,7 @@ test("a Slack read after Approve writes nothing", async ({ orm, seed }) => {
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(imports.sentJobs).toEqual([]);
+  expect(logs.entries.filter(({ msg }) => msg === "Stored a Slack photo")).toEqual([]);
 });
 
 function photoMembers(count: number) {

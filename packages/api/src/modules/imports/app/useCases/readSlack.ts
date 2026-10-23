@@ -17,7 +17,7 @@ export async function readSlack(context: ImportContext, ctx: SecurityContext): P
     knownPhotos: await readStoredSlackPhotos(context.orm),
   });
   const records = mapSlackMembers(members);
-  await context.transact(async (tx) => {
+  const stored = await context.transact(async (tx) => {
     // A connect since the read stored another connection; its members are read next time.
     if (!(await isStillCurrent(tx))) {
       return;
@@ -29,6 +29,12 @@ export async function readSlack(context: ImportContext, ctx: SecurityContext): P
     }
     const sourceId = await imports.saveSlackSource(workspace.name);
     await imports.syncEmployeeRecords(sourceId, records);
-    await attachSlackPhotos(tx, sourceId, members);
+    const photos = await attachSlackPhotos(tx, sourceId, members);
+    return { sourceId, photos };
   });
+  if (stored) {
+    for (const photo of stored.photos) {
+      context.logger.info({ sourceId: stored.sourceId, ...photo }, "Stored a Slack photo");
+    }
+  }
 }

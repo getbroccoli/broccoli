@@ -13,13 +13,19 @@ export interface ImportPhotoRepository {
   findPhotoDownloads(sourceId: string): Promise<PhotoDownload[]>;
   /**
    * Stores the photo as the record's, only while the record still has no photo and its
-   * link is still `photoUrl`; returns whether it did.
+   * link is still `photoUrl`; returns the file id, or null when nothing was stored.
    */
-  attachPhoto(recordId: string, photoUrl: string, photo: StoredFile): Promise<boolean>;
-  /** Deletes every photo but `keptFileIds`, which Approve gave to employees. */
-  deletePhotosExcept(keptFileIds: readonly string[]): Promise<void>;
+  attachPhoto(recordId: string, photoUrl: string, photo: StoredFile): Promise<string | null>;
+  /** Deletes every photo but `keptFileIds`, returning the deleted photos' record and file ids. */
+  deletePhotosExcept(keptFileIds: readonly string[]): Promise<ImportPhoto[]>;
   /** Whether a record's photo is this file. */
   hasPhoto(fileId: string): Promise<boolean>;
+}
+
+/** The record and file of a stored import photo. */
+export interface ImportPhoto {
+  recordId: string;
+  photoFileId: string;
 }
 
 /** A record's photo still to download. */
@@ -52,7 +58,7 @@ export function importPhotoRepository(db: Orm | Tx): ImportPhotoRepository {
       recordId: string,
       photoUrl: string,
       photo: StoredFile,
-    ): Promise<boolean> => {
+    ): Promise<string | null> => {
       const [waiting] = await orm()
         .select({ id: importRecords.id })
         .from(importRecords)
@@ -65,23 +71,27 @@ export function importPhotoRepository(db: Orm | Tx): ImportPhotoRepository {
         )
         .for("update");
       if (!waiting) {
-        return false;
+        return null;
       }
       const photoFileId = await storeFile(db, photo);
       await orm().update(importRecords).set({ photoFileId }).where(eq(importRecords.id, recordId));
-      return true;
+      return photoFileId;
     },
 
-    deletePhotosExcept: async (keptFileIds: readonly string[]): Promise<void> => {
+    deletePhotosExcept: async (keptFileIds: readonly string[]): Promise<ImportPhoto[]> => {
       const kept = new Set(keptFileIds);
       const rows = await orm()
-        .select({ fileId: importRecords.photoFileId })
+        .select({ recordId: importRecords.id, photoFileId: importRecords.photoFileId })
         .from(importRecords)
         .where(isNotNull(importRecords.photoFileId));
+      const deleted = rows
+        .filter(({ photoFileId }) => !kept.has(photoFileId!))
+        .map(({ recordId, photoFileId }) => ({ recordId, photoFileId: photoFileId! }));
       await deletePhotos(
         db,
-        rows.map(({ fileId }) => fileId!).filter((id) => !kept.has(id)),
+        deleted.map(({ photoFileId }) => photoFileId),
       );
+      return deleted;
     },
 
     hasPhoto: async (fileId: string): Promise<boolean> => {

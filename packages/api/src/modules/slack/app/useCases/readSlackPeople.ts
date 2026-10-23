@@ -37,11 +37,24 @@ export async function readSlackPeople(
     .filter(isPerson)
     .map((member) => ({ member, photoUrl: photoUrlOf(member) }));
   const images = await downloadPhotos(
-    people.flatMap(({ member, photoUrl }, index) =>
-      photoUrl && downloads.knownPhotos.get(member.id) !== photoUrl
-        ? [{ index, url: photoUrl }]
-        : [],
-    ),
+    people.flatMap(({ member, photoUrl }, index) => {
+      const slackMemberId = member.id;
+      if (photoUrl === null) {
+        downloads.logger.info(
+          {
+            slackMemberId,
+            reason: member.profile?.is_custom_image ? "invalid_photo_url" : "no_custom_photo",
+          },
+          "Skipped a Slack photo",
+        );
+        return [];
+      }
+      if (downloads.knownPhotos.get(slackMemberId) === photoUrl) {
+        downloads.logger.info({ slackMemberId }, "Kept a stored Slack photo");
+        return [];
+      }
+      return [{ index, slackMemberId, url: photoUrl }];
+    }),
     downloads,
   );
   return people.map(({ member, photoUrl }, index) => ({
@@ -88,16 +101,22 @@ const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
  * member twice; starts no new round once the budget is used.
  */
 async function downloadPhotos(
-  photos: readonly { index: number; url: string }[],
+  photos: readonly { index: number; slackMemberId: string; url: string }[],
   downloads: PhotoDownloads,
 ): Promise<Map<number, RasterImage>> {
   const images = new Map<number, RasterImage>();
   for (let start = 0; start < photos.length; start += PARALLEL_DOWNLOADS) {
     if (downloads.clock().getTime() - downloads.startedAt.getTime() >= DOWNLOAD_BUDGET_MS) {
+      for (const { slackMemberId } of photos.slice(start)) {
+        downloads.logger.info(
+          { slackMemberId, reason: "download_budget_exhausted" },
+          "Deferred a Slack photo",
+        );
+      }
       break;
     }
     const round = photos.slice(start, start + PARALLEL_DOWNLOADS);
-    const roundImages = await Promise.all(round.map(({ url }) => downloadPhoto(downloads, url)));
+    const roundImages = await Promise.all(round.map((photo) => downloadPhoto(downloads, photo)));
     round.forEach(({ index }, position) => {
       const image = roundImages[position];
       if (image) {
@@ -111,18 +130,23 @@ async function downloadPhotos(
 /** The photo's image, or null; the log never carries the link, which may hold a token. */
 async function downloadPhoto(
   { slackApi, logger }: PhotoDownloads,
-  url: string,
+  { url, slackMemberId }: { url: string; slackMemberId: string },
 ): Promise<RasterImage | null> {
   try {
     const image = await normalizeImage(await slackApi.readPhoto(new URL(url)), {
       maxBytes: MAX_PHOTO_BYTES,
     });
     if (!image) {
-      logger.warn("A Slack photo is not an image");
+      logger.warn({ slackMemberId }, "A Slack photo is not an image");
+    } else {
+      logger.info({ slackMemberId }, "Downloaded a Slack photo");
     }
     return image;
   } catch (error) {
-    logger.warn({ reason: (error as Error).name }, "Downloading a Slack photo failed");
+    logger.warn(
+      { slackMemberId, reason: (error as Error).name },
+      "Downloading a Slack photo failed",
+    );
     return null;
   }
 }

@@ -1,4 +1,5 @@
 export { expect } from "vitest";
+export { captureLogs } from "./captureLogs";
 export {
   NON_OWNER,
   OWNER,

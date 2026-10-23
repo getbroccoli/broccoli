@@ -46,10 +46,20 @@ export async function approveImport(
       })),
     );
     // The import stays for the account step until setup completes (`finishImport`).
-    await importPhotoRepository(tx).deletePhotosExcept(avatarFileIds);
-    return counts;
+    const deletedPhotos = await importPhotoRepository(tx).deletePhotosExcept(avatarFileIds);
+    const selected = readyEmployees.map(({ records, photoFileId }) => ({
+      recordIds: records.map(({ id }) => id),
+      photoFileId,
+    }));
+    return { counts, selected, deletedPhotos };
   });
   if (result) {
-    logger.info(result, "Approved the import");
+    logger.info(result.counts, "Approved the import");
+    for (const employee of result.selected) {
+      logger.info(employee, "Selected an import employee");
+    }
+    for (const photo of result.deletedPhotos) {
+      logger.info(photo, "Deleted an unused import photo");
+    }
   }
 }

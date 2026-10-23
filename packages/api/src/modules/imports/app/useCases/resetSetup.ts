@@ -12,16 +12,21 @@ import { requireImportAccess } from "./requireImportAccess";
  * other step it does nothing.
  */
 export async function resetSetup(
-  { transact }: Pick<ImportContext, "transact">,
+  { transact, logger }: Pick<ImportContext, "transact" | "logger">,
   ctx: SecurityContext,
 ): Promise<void> {
   requireImportAccess(ctx);
-  await transact(async (tx) => {
+  const reset = await transact(async (tx) => {
     if (await returnToCompanyStep(ctx, tx)) {
       await deleteAllEmployees(ctx, tx);
       // After the instance row, as every change of the import takes them.
       await lockImport(tx);
       await originalReadRepository(tx).clearOriginalReadConsents();
+      return true;
     }
+    return false;
   });
+  if (reset) {
+    logger.info("Reset setup");
+  }
 }
