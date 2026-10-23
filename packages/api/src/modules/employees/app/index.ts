@@ -4,5 +4,6 @@ export {
   deleteAllEmployees,
   findEmployeesWithAvatars,
   findTakenEmails,
+  type ImportedEmployees,
 } from "./importedEmployees";
 export { createEmployeeUseCases, type EmployeeUseCases } from "./useCases";

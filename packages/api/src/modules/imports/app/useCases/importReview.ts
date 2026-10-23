@@ -1,5 +1,4 @@
 import type { Orm, Tx } from "../../../../core/db";
-import { isImportOpen } from "../../../../core/instance";
 import { type Connection, type ListArgs, paginate, parseSearch } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
 import { type EmployeeOrder, type EmployeeOrderField, findTakenEmails } from "../../../employees";
@@ -44,13 +43,9 @@ export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
 
 /**
  * Reads the import's sources, records and choices, and the emails employees already have, joining
- * `db`. `importOpen` overrides the setup step for Approve, which reads right after moving it.
+ * `db`. No import employee is an employee before setup completes, which deletes the import.
  */
-export async function readImportReview(
-  ctx: SecurityContext,
-  db: Orm | Tx,
-  { importOpen }: { importOpen?: boolean } = {},
-): Promise<ImportReview> {
+export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Promise<ImportReview> {
   const imports = importReader(db);
   const [sources, records, choices] = await Promise.all([
     imports.listSources(),
@@ -58,15 +53,11 @@ export async function readImportReview(
     imports.listChoices("employee"),
   ]);
   const employees = groupEmployeeRecords(sources, records, choices);
-  // Once approved, the added employees own these emails and must stay in the setup summary.
-  const takenEmails =
-    (importOpen ?? (await isImportOpen(db)))
-      ? await findTakenEmails(
-          ctx,
-          db,
-          employees.flatMap(({ values }) => values.email.value ?? []),
-        )
-      : new Set<string>();
+  const takenEmails = await findTakenEmails(
+    ctx,
+    db,
+    employees.flatMap(({ values }) => values.email.value ?? []),
+  );
   const readyEmployees = employees.filter(
     (employee) => !employee.leftOut && isReady(employee, takenEmails),
   );

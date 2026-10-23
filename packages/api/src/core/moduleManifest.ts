@@ -1,7 +1,7 @@
 import type express from "express";
 
 import type { Orm, Transact } from "./db";
-import type { SetupDemo } from "./instance";
+import type { AddApprovedPeople, SetupDemo } from "./instance";
 import type { EventHandlers } from "./events";
 import type { JobHandlers, JobQueue } from "./jobs";
 import type { Resolvers } from "./graphql";
@@ -47,8 +47,9 @@ export interface ModuleManifest {
   ) => express.Router;
 }
 
-/** Every module of the API, and what self-hosted setup needs from them for the demo. */
+/** Every module of the API, and what self-hosted setup needs from them. */
 export interface Modules {
   manifests: readonly ModuleManifest[];
   setupDemo: SetupDemo;
+  addApprovedPeople: AddApprovedPeople;
 }

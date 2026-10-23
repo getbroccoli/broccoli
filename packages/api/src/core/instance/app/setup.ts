@@ -22,11 +22,11 @@ export function completeOwnerStep(ctx: SecurityContext, tx: Tx): Promise<boolean
 }
 
 /**
- * Takes setup from the owner or ready step back to the company step, joining `tx`; does
- * nothing at any other step. Returns whether it moved.
+ * Takes setup from the owner or ready step back to the import step, so the owner can change
+ * the review, joining `tx`; does nothing at any other step. Returns whether it moved.
  */
-export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return changeStep(ctx, tx, (instance) => instance.returnToCompanyStep());
+export function reopenImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
+  return changeStep(ctx, tx, (instance) => instance.reopenImportStep());
 }
 
 /**

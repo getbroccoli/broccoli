@@ -41,6 +41,7 @@ const COMPANY = {
   title: "setup.company.title",
   path: "/setup/company",
   step: "COMPANY",
+  reopensAt: "IMPORT",
 } as const satisfies PageDefinition;
 const AI = {
   id: "ai",
@@ -77,13 +78,13 @@ const READY = {
 const FINISHED: SetupPath = "/people";
 
 /**
- * The setup flow: the steps in order, each with the copy key of its title. A self-hosted
- * owner picks how files are read with AI, may go back to the company until Approve, and
+ * The setup flow: the steps in order, each with the copy key of its title. The owner may go
+ * back to the company until Approve. A self-hosted owner picks how files are read with AI and
  * creates their account last; a managed one keeps its provided key, signed up before setup
- * and sees what it added last.
+ * and sees what it will add last.
  */
 const SETUP_STEPS = {
-  SELF_HOSTED: [{ ...COMPANY, reopensAt: "IMPORT" }, AI, PEOPLE, OWNER],
+  SELF_HOSTED: [COMPANY, AI, PEOPLE, OWNER],
   MANAGED: [COMPANY, PEOPLE, READY],
 } as const satisfies Record<Mode, readonly (PageDefinition | StepDefinition)[]>;
 

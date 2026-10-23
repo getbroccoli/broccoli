@@ -1,4 +1,12 @@
-import { expect, importUseCases, OWNER, SETUP_HOLDER, type TestSeed, test } from "#test/support";
+import {
+  finishSelfHostedSetup,
+  expect,
+  importUseCases,
+  OWNER,
+  SETUP_HOLDER,
+  type TestSeed,
+  test,
+} from "#test/support";
 
 import { readInstance } from "../../../../core/instance";
 import { createEmployeeUseCases } from "../../../employees";
@@ -73,11 +81,13 @@ test("approves the current version", async ({ orm, seed }) => {
   const version = (await imports.reads.readReview(SETUP_HOLDER)).version;
 
   await imports.approveImport(SETUP_HOLDER, version);
+  expect((await readInstance(orm)).step).toBe("owner");
+  await finishSelfHostedSetup(orm);
 
   expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toMatchObject([
     { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
   ]);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await readInstance(orm)).step).toBe("done");
 });
 
 test("changes the version when another source adds a person", async ({ orm, seed }) => {

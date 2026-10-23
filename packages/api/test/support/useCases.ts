@@ -51,6 +51,7 @@ export function systemUseCases(orm: Orm) {
     orm,
     transact: testTransactor(orm),
     mode: "self_hosted",
+    addApprovedPeople: importUseCases(orm).addApprovedPeople,
     aiSettings: aiSettings(orm),
   });
 }

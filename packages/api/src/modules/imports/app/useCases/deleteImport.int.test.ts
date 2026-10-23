@@ -1,4 +1,5 @@
 import {
+  finishSelfHostedSetup,
   expect,
   importUseCases,
   OWNER,
@@ -51,6 +52,7 @@ test("finishing the import deletes its rows, staff files and unused photos but k
     choice: { value: "Designer" },
   });
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  await finishSelfHostedSetup(orm);
   const employees = createEmployeeUseCases({ orm });
   const approved = await employees.listEmployees(OWNER, {});
   expect(await readFile(orm, photoIds.get("leftout@example.com")!)).toEqual({

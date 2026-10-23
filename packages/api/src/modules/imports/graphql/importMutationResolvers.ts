@@ -23,9 +23,9 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Im
         () => thenImport(useCases.approveImport(context.getActor(), version)),
         ["CONFLICT"],
       ),
-    resetSetup: (_parent, _args, context) =>
+    reopenReview: (_parent, _args, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>("import", () =>
-        thenImport(useCases.resetSetup(context.getActor())),
+        thenImport(useCases.reopenReview(context.getActor())),
       ),
     retryFile: (_parent, { sourceId }, context) =>
       mutationPayload<ResolversTypes["ImportRetryFilePayload"]>(

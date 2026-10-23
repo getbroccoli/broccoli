@@ -30,7 +30,7 @@ it.each([
   ["review", "SELF_HOSTED", "/setup/import"],
   ["owner", "SELF_HOSTED", undefined],
   ["company", "MANAGED", undefined],
-  ["import", "MANAGED", undefined],
+  ["import", "MANAGED", "/setup/company"],
   ["review", "MANAGED", "/setup/import"],
   ["ready", "MANAGED", undefined],
 ] as const)("gives %s in %s the Back destination %s", (page, mode, expected) => {
@@ -80,6 +80,7 @@ it.each([
   ["review", "IMPORT", "SELF_HOSTED", null, true],
   ["owner", "OWNER", "SELF_HOSTED", null, true],
   ["company", "COMPANY", "MANAGED", { id: "owner" }, false],
+  ["company", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["import", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["review", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["ready", "READY", "MANAGED", { id: "owner" }, false],
@@ -96,7 +97,6 @@ it.each([
 );
 
 it.each([
-  ["company", "IMPORT", "MANAGED", null, true, "/setup/import"],
   ["ai", "IMPORT", "MANAGED", { id: "owner" }, false, "/setup/import"],
   ["company", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
   ["import", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],

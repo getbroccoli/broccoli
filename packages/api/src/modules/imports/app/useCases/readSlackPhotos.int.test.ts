@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { vi } from "vitest";
 
 import {
+  finishSelfHostedSetup,
   expect,
   importUseCases,
   JPEG,
@@ -147,6 +148,7 @@ test("Approve keeps the stored photo while Refresh downloads its replacement", a
     await refresh;
   }
 
+  await finishSelfHostedSetup(orm);
   const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
   expect(employees.edges.map(({ node }) => node.avatarFileId)).toEqual([oldFileId]);
   expect(await storedFileIds(orm)).toEqual([oldFileId]);

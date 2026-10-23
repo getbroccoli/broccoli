@@ -40,6 +40,7 @@ export function importsModule(
         .use(photoRouter(useCases, resolveSecurity)),
     events: {
       "instance.setup_completed": () => useCases.finishImport(PrincipalSecurityContext.system()),
+      "imports.people_added": (added) => Promise.resolve(useCases.reportAddedPeople(added)),
     },
     jobs: {
       "imports.mapFile": {

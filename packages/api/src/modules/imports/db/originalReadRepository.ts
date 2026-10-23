@@ -16,8 +16,6 @@ export interface OriginalReadRepository {
   finishOriginalRead(id: string, outcome: MappingOutcome): Promise<void>;
   /** Records the actual model provider after the current original read succeeds. */
   recordOriginalReadAiSource(id: string, aiSource: AiSource | null): Promise<void>;
-  /** Clears every file's consent, keeping what the reads gave. */
-  clearOriginalReadConsents(): Promise<void>;
 }
 
 export function originalReadRepository(tx: Tx): OriginalReadRepository {
@@ -60,13 +58,6 @@ export function originalReadRepository(tx: Tx): OriginalReadRepository {
         .update(importSources)
         .set({ originalReadAiSource: aiSource })
         .where(eq(importSources.id, id));
-    },
-
-    clearOriginalReadConsents: async () => {
-      await ormOf(tx)
-        .update(importSources)
-        .set({ originalReadAllowedAt: null })
-        .where(isNotNull(importSources.originalReadAllowedAt));
     },
   };
 }

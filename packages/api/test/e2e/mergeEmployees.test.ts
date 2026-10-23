@@ -121,6 +121,10 @@ test("merges Slack and a CSV and approves one employee with the bulk-picked Slac
     data: { import: { chooseSourceForAll: { import: { id: "import" } } } },
   });
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
+  const finished = await browser.graphql("mutation { setup { complete { setup { step } } } }");
+  expect(await finished.json()).toEqual({
+    data: { setup: { complete: { setup: { step: "DONE" } } } },
+  });
   expect(await (await browser.graphql(DIRECTORY)).json()).toEqual({
     data: {
       employees: {
@@ -183,6 +187,10 @@ test("fixes a CSV row’s last name, leaves another row out and approves only th
     data: { import: { setEmployeeLeftOut: { import: { id: "import" } } } },
   });
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
+  const finished = await browser.graphql("mutation { setup { complete { setup { step } } } }");
+  expect(await finished.json()).toEqual({
+    data: { setup: { complete: { setup: { step: "DONE" } } } },
+  });
 
   expect(await (await browser.graphql(DIRECTORY)).json()).toEqual({
     data: {

@@ -61,7 +61,7 @@ export async function startServer(
   let resolveSecurity: SecurityResolver;
   let graphql: GraphqlApi;
   try {
-    const { manifests, setupDemo } = createModules({
+    const { manifests, setupDemo, addApprovedPeople } = createModules({
       dataDir: env.dataDir,
       orm: database.orm,
       transact,
@@ -74,7 +74,12 @@ export async function startServer(
     deployment =
       env.deployment.mode === "managed"
         ? managedServer({ ...services, deployment: env.deployment, readiness })
-        : selfHostedServer({ ...services, publicUrl: env.deployment.publicUrl, demo: setupDemo });
+        : selfHostedServer({
+            ...services,
+            publicUrl: env.deployment.publicUrl,
+            demo: setupDemo,
+            addApprovedPeople,
+          });
     const auth = deployment.auth;
     resolveSecurity = (headers) => resolveSecurityContext(auth, database.orm, headers);
     graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);

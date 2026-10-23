@@ -1,7 +1,7 @@
 import { createBetterAuth, fixedAuth, type AuthSource } from "../../auth";
 import type { Orm, Transact } from "../../db";
 import type { Logger } from "../../logger";
-import type { SetupDemo } from "../app";
+import type { AddApprovedPeople, SetupDemo } from "../app";
 import { demoPlugin } from "./demoPlugin";
 import { setupPlugin } from "./setupPlugin";
 
@@ -14,15 +14,24 @@ export interface SelfHostedAuthOptions {
   publicUrl?: string;
   logger: Logger;
   demo: SetupDemo;
+  addApprovedPeople: AddApprovedPeople;
 }
 
 /** Better Auth of a self-hosted instance: password sign-in, and setup for the first visitor. */
-export function selfHostedAuth({ transact, demo, ...options }: SelfHostedAuthOptions): AuthSource {
+export function selfHostedAuth({
+  transact,
+  demo,
+  addApprovedPeople,
+  ...options
+}: SelfHostedAuthOptions): AuthSource {
   return fixedAuth(
     createBetterAuth({
       ...options,
       plugins: [
-        setupPlugin(options.orm, transact, demo.prepareStart),
+        setupPlugin(options.orm, transact, {
+          prepareDemoStart: demo.prepareStart,
+          addApprovedPeople,
+        }),
         demoPlugin(options.orm, transact, demo.deleteAllEmployees),
       ],
     }),

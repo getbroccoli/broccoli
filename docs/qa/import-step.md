@@ -55,11 +55,11 @@ With Broccoli AI, then again with OpenRouter, on a self-hosted instance:
 - [ ] A mapped CSV's menu shows "Read the original file" with "If the mapping looks wrong. Its personal data goes to …" above "Remove"; choosing it reads the file again in full and its people replace the mapped ones. The menu then shows only "Remove".
 - [ ] A PDF too long for the model ends as "This file is too long to read in full."
 - [ ] A `.csv` holding a PDF is still refused as not a CSV, Excel or PDF file.
-- [ ] After "Add N people" and Reset setup, the file's menu offers "Read the original file" again.
+- [ ] After "Add N people" and "Back" from the last step, the file keeps its original read: its menu shows only "Remove".
 
 ## Leaving the step
 
-- [ ] Before Slack is imported, the footer shows only "Explore the demo"; self-hosted also shows "Back" on the left, which opens `/setup/ai`. Managed shows no "Back".
+- [ ] Before Slack is imported, the footer shows only "Explore the demo"; "Back" on the left opens `/setup/ai` (self-hosted) or `/setup/company` (managed), with the company name filled in.
 - [ ] Pressing Enter on the page never starts the demo.
 - [ ] With members imported, "Explore the demo" is disabled and hovering it shows "Not available once you’ve gathered people.", and "Review your people" opens the [review](import-review.md).
 - [ ] On a fresh instance, "Explore the demo" shows "Opening the demo…" and opens `/people` with the demo people (self-hosted: signed in as the demo's owner, without an account).

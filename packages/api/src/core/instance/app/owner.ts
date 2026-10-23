@@ -28,16 +28,23 @@ export async function claimOwner<Owner extends OwnerUser>(
 }
 
 /**
+ * Adds the people the owner approved in the caller's transaction, so they arrive together
+ * with the end of setup. The imports module provides it.
+ */
+export type AddApprovedPeople = (ctx: SecurityContext, tx: Tx) => Promise<void>;
+
+/**
  * The last step of self-hosted setup: makes the user that `createOwner` creates the
- * owner, for the browser holding setup only, then completes setup and ends the setup
- * session. Refuses with `OwnerExistsError`, `SetupInProgressError`, or CONFLICT before
- * the owner step.
+ * owner, for the browser holding setup only, adds the approved people, then completes
+ * setup and ends the setup session. Refuses with `OwnerExistsError`,
+ * `SetupInProgressError`, or CONFLICT before the owner step.
  */
 export async function createOwnerAtSetup<Owner extends OwnerUser>(
   ctx: SecurityContext,
   tx: Tx,
   { token, now }: { token: string | null; now: Date },
   createOwner: () => Promise<Owner>,
+  addApprovedPeople: AddApprovedPeople,
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
@@ -46,6 +53,7 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
     throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
   }
   const owner = await saveOwner(tx, await createOwner(), current);
+  await addApprovedPeople(ctx, tx);
   await completeOwnerStep(ctx, tx);
   await instance.clearSetupSession();
   return owner;

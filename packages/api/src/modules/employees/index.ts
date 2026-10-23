@@ -17,6 +17,7 @@ export {
 export { employeeFieldErrors, parseEmployeeField } from "./domain";
 
 // Public types.
+export type { ImportedEmployees } from "./app";
 export type {
   Employee,
   EmployeeOrder,

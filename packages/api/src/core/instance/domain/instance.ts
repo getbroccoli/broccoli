@@ -101,8 +101,8 @@ export class Instance {
     return this.advanceStep("owner", "done");
   }
 
-  returnToCompanyStep(): Instance | null {
-    return this.advanceStep("owner", "company") ?? this.advanceStep("ready", "company");
+  reopenImportStep(): Instance | null {
+    return this.advanceStep("owner", "import") ?? this.advanceStep("ready", "import");
   }
 
   returnToCompanyStepFromDemo(): Instance | null {

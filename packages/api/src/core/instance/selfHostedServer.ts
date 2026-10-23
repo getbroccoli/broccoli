@@ -1,7 +1,7 @@
 import type { DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { Logger } from "../logger";
-import type { SetupDemo } from "./app";
+import type { AddApprovedPeople, SetupDemo } from "./app";
 import { selfHostedAuth } from "./betterAuth";
 import { setupRouter } from "./http";
 
@@ -14,6 +14,7 @@ export interface SelfHostedServerOptions {
   /** `SELF_HOSTED_PUBLIC_URL`; unset takes the address from each request. */
   publicUrl?: string;
   demo: SetupDemo;
+  addApprovedPeople: AddApprovedPeople;
 }
 
 /**

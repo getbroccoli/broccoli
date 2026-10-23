@@ -106,14 +106,22 @@ input AiSourceInput {
 type SetupMutations {
   "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
   saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
-  "Completes setup from the ready step; does nothing at any other step. Owner only."
-  complete: SetupMutationPayload!
+  "Completes setup from the ready step and adds the people the owner approved; refused with a ConflictError at any other step, such as after another tab went back to the review. Owner only."
+  complete: SetupCompletePayload!
 }
 
 "Setup after a change."
 type SetupMutationPayload {
   setup: Setup
 }
+
+"Setup after completing it."
+type SetupCompletePayload {
+  setup: Setup
+  error: SetupCompleteError
+}
+
+union SetupCompleteError = ConflictError
 
 "Setup after choosing how files are read."
 type SetupSaveAiSourcePayload {

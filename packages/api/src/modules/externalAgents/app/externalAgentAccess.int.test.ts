@@ -11,7 +11,7 @@ import {
 
 test.for([
   "approveImport",
-  "resetSetup",
+  "reopenReview",
   "startDemo",
   "files.uploadFile",
   "reads.listSources",
@@ -32,7 +32,7 @@ test.for([
   const imports = importUseCases(orm);
   const calls = {
     approveImport: () => imports.approveImport(SETUP_EXTERNAL_AGENT, "reviewed-version"),
-    resetSetup: () => imports.resetSetup(SETUP_EXTERNAL_AGENT),
+    reopenReview: () => imports.reopenReview(SETUP_EXTERNAL_AGENT),
     startDemo: () => imports.startDemo(SETUP_EXTERNAL_AGENT),
     "files.uploadFile": () =>
       imports.files.uploadFile(SETUP_EXTERNAL_AGENT, {
