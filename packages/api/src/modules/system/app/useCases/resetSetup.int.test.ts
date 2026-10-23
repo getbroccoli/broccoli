@@ -2,8 +2,10 @@ import {
   companyUseCases,
   createEmployeeUseCases,
   expect,
+  importUseCases,
   NON_OWNER,
   PNG,
+  SLACK_PHOTO_URL,
   storedFileIds,
   systemUseCases,
   test,
@@ -39,6 +41,36 @@ test("resetting a finished setup deletes every employee and avatar and keeps the
   });
   expect(await readOwner(orm)).toEqual(originalOwner);
   expect(await company.getCompany(owner)).toMatchObject({ name: "Acme Corp" });
+});
+
+test("resets a finished setup whose import was not cleaned up yet", async ({ orm, seed }) => {
+  await seed.assignment();
+  const owner = await seed.owner();
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  const records = await seed.importEmployees(source.id, [{ photoUrl: SLACK_PHOTO_URL }]);
+  const avatarFileId = await seed.importPhoto(records[0]!.id, {
+    photoUrl: SLACK_PHOTO_URL,
+    content: PNG,
+    mimeType: "image/png",
+  });
+  const imports = importUseCases(orm);
+  const system = systemUseCases(orm);
+  const employees = createEmployeeUseCases({ orm });
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  await system.completeSetup(owner);
+  expect((await employees.listEmployees(owner, {})).edges).toMatchObject([
+    { node: { avatarFileId } },
+  ]);
+  expect(await imports.reads.listSources(owner)).toHaveLength(1);
+
+  await system.resetSetup(owner);
+
+  expect((await readInstance(orm)).step).toBe("company");
+  expect((await employees.listEmployees(owner, {})).edges).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(await imports.reads.listSources(owner)).toEqual([]);
+  expect((await imports.reads.readReview(owner)).listEmployees({}).edges).toEqual([]);
 });
 
 test("refuses a non-owner resetting setup", async ({ orm, seed }) => {

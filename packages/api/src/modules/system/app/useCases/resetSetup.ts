@@ -12,8 +12,9 @@ export async function resetSetup(
   {
     transact,
     deleteAllEmployees,
+    deleteFinishedImport,
     logger,
-  }: Pick<SystemContext, "transact" | "deleteAllEmployees" | "logger">,
+  }: Pick<SystemContext, "transact" | "deleteAllEmployees" | "deleteFinishedImport" | "logger">,
   ctx: SecurityContext,
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
@@ -25,6 +26,8 @@ export async function resetSetup(
     if (!(await returnToCompanyStep(ctx, tx))) {
       throw new ApplicationError("CONFLICT", "Setup is not done.");
     }
+    // A lost completion event can leave the import holding the employees' avatars.
+    await deleteFinishedImport(ctx, tx);
     await deleteAllEmployees(ctx, tx);
   });
   logger.info("Reset setup");

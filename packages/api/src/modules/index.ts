@@ -42,6 +42,7 @@ export function createModules(
         aiSettings,
         addApprovedPeople: importUseCases.addApprovedPeople,
         deleteAllEmployees,
+        deleteFinishedImport: importUseCases.deleteFinishedImport,
       }),
       employeesModule({ orm: core.orm }),
       companyModule({ ...core, brandLookupUrl }),

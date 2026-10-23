@@ -12,4 +12,6 @@ export interface SystemContext extends Pick<ModuleDependencies, "orm" | "transac
   addApprovedPeople: AddApprovedPeople;
   /** Deletes every employee when the owner resets setup. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /** Deletes what is left of the approved import when the owner resets setup. */
+  deleteFinishedImport: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }

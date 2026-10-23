@@ -55,6 +55,7 @@ export function systemUseCases(orm: Orm) {
     mode: "self_hosted",
     addApprovedPeople: importUseCases(orm).addApprovedPeople,
     deleteAllEmployees,
+    deleteFinishedImport: importUseCases(orm).deleteFinishedImport,
     aiSettings: aiSettings(orm),
   });
 }

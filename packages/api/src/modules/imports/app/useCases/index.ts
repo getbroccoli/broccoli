@@ -1,3 +1,4 @@
+import type { Tx } from "../../../../core/db";
 import type { Decisions } from "../../../../integrations/ai";
 import type { OriginalFileReader } from "../../../../core/instance";
 import type { JobQueue } from "../../../../core/jobs";
@@ -10,7 +11,7 @@ import { createEmployeeChoiceService, type EmployeeChoiceService } from "./emplo
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
 import type { DemoFill, ImportSlack } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
-import { finishImport } from "./deleteImport";
+import { deleteFinishedImport, finishImport } from "./deleteImport";
 import { readSlack } from "./readSlack";
 import { removeSource } from "./removeSource";
 import { reopenReview } from "./reopenReview";
@@ -46,6 +47,8 @@ export interface ImportUseCases {
   reportAddedPeople: (added: AddedPeople) => void;
   /** Deletes the approved import once setup is complete; its photos stay with the employees. */
   finishImport: (ctx: SecurityContext) => Promise<void>;
+  /** Deletes what is left of the approved import in the caller's transaction, when setup is reset. */
+  deleteFinishedImport: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /** Takes setup from its last step back to the review, so the owner can change it. */
   reopenReview: (ctx: SecurityContext) => Promise<void>;
   reads: ImportReadService;
@@ -84,6 +87,9 @@ export function createImportUseCases({
     addApprovedPeople,
     reportAddedPeople: (added: AddedPeople) => reportAddedPeople(context, added),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
+    deleteFinishedImport: async (ctx: SecurityContext, tx: Tx) => {
+      await deleteFinishedImport(ctx, tx);
+    },
     reopenReview: (ctx: SecurityContext) => reopenReview(context, ctx),
     reads: createImportReadService(orm),
     choices: createEmployeeChoiceService(transact),
