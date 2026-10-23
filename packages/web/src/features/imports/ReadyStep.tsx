@@ -23,11 +23,11 @@ import { BackToReview } from "./BackToReview";
 export function ReadyStep() {
   // Approve and reset don't return the import's sources, so a cached answer may be stale.
   const { data } = useQuery(ReadyStepDocument, { fetchPolicy: "network-only" });
-  const [completeSetup, { error }] = usePayloadMutation(CompleteSetupDocument);
+  const [completeSetup, { error, payloadError }] = usePayloadMutation(CompleteSetupDocument);
   const [run, starting] = useRouteAction();
   const company = data?.company.name;
 
-  // `error` shows a failure.
+  // `error` or `payloadError`, such as another tab having gone back to the review, shows a failure.
   const start = () => run(() => completeSetup());
 
   return (
@@ -65,7 +65,7 @@ export function ReadyStep() {
             )}
           </ul>
         )}
-        {error && (
+        {(error || payloadError) && (
           <p role="alert" className="text-center text-sm text-destructive">
             {t("setup.ready.failed")}
           </p>

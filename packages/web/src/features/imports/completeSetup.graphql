@@ -5,6 +5,9 @@ mutation CompleteSetup {
         id
         step
       }
+      error {
+        __typename
+      }
     }
   }
 }

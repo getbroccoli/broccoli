@@ -68,4 +68,37 @@ test.for(["managed", "self-hosted"] as const)(
   },
 );
 
+test("managed finish after Back returns a ConflictError and leaves the directory empty", async () => {
+  const { env, accounts } = await startManagedEnv();
+  const browser = await signInAsManagedOwner(env, accounts);
+  const company = await browser.graphql(
+    'mutation { company { update(input: { name: "Acme" }) { company { id } error { __typename } } } }',
+  );
+  expect(await company.json()).toMatchObject({ data: { company: { update: { error: null } } } });
+  const source = await env.seed.importSource();
+  await env.seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
+  expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
+  const back = await browser.graphql("mutation { import { reopenReview { import { id } } } }");
+  expect(await back.json()).toEqual({
+    data: { import: { reopenReview: { import: { id: "import" } } } },
+  });
+
+  const response = await browser.graphql(`mutation {
+    setup { complete { setup { step } error { __typename ... on Error { message } } } }
+  }`);
+
+  expect(await response.json()).toEqual({
+    data: {
+      setup: {
+        complete: {
+          setup: null,
+          error: { __typename: "ConflictError", message: "Setup is not at the ready step." },
+        },
+      },
+    },
+  });
+  const directory = await browser.graphql("{ employees { edges { node { email } } } }");
+  expect(await directory.json()).toEqual({ data: { employees: { edges: [] } } });
+});
+
 const APPROVED = { data: { import: { approve: { import: { id: "import" }, error: null } } } };
