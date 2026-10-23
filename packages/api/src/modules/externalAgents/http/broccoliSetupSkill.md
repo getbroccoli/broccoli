@@ -26,8 +26,8 @@ approves.
   in section 1, and ask them nothing but what section 1 says and to drop files on that page.
 
 Use broccoli emoji for customer-visible milestones. Use 🥦🥦🥦 only when the instance is
-running and the owner can open it, matching the installer's ready message. Use 🥦 when you
-acknowledge finding their uploaded file and when its people are ready for review. Keep downloading,
+running and the owner can open it, matching the installer's ready message. Use 🥦 when a file’s
+people are ready for review. Keep downloading,
 mapping, waiting and error updates plain. Keep each update short.
 
 ## 1. Check and connect
@@ -100,8 +100,8 @@ section 2b.
 
 ### Report progress in Broccoli and chat
 
-For each file you start, report each stage to Broccoli and announce it briefly in chat,
-without waiting for a reply. Do this for files returned by the initial list and by later polls.
+For each file you start, report each stage to Broccoli. Announce downloading, mapping and the
+review result briefly in chat, without waiting for a reply. Do this for files returned by the initial list and by later polls.
 Never invent a filename: you only know the file's id. For several files, use “file 1 of 3”, etc.
 
 Send each stage to this endpoint, replacing `<progress>` with the value below:
@@ -114,7 +114,8 @@ printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -fsS -H @- -X POST \
 
 A successful report returns 204 with no body. These reports update the owner's file card:
 
-1. When you take up a listed file, report `file_found` and say “🥦 I found your uploaded file.”
+1. When you take up a listed file, report `file_found`. This updates the file card; send no chat
+   announcement for this stage.
 2. Just before fetching its questions or original, report `file_downloading`. Say “I’m downloading
    the masked questions about your file’s columns” for `answer_masked_questions`, or “I’m downloading
    the original file you allowed me to read” for `read_original_file`.
