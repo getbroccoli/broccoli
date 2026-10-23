@@ -40,11 +40,11 @@ export async function startDemoAtSetup<Owner extends OwnerUser>(
   startDemo: DemoStart,
 ): Promise<Owner> {
   ctx.requireOwnerOrSystem();
-  const step = await lockHeldSetup(tx, { token, now });
-  if (step !== "import") {
+  const current = await lockHeldSetup(tx, { token, now });
+  if (current.step !== "import") {
     throw new ApplicationError("CONFLICT", "Name the company before starting the demo.");
   }
-  const owner = await saveOwner(tx, await createOwner(), step);
+  const owner = await saveOwner(tx, await createOwner(), current);
   await startDemo(ctx, tx);
   const instance = instanceRepository(tx);
   await instance.saveDemoExpiresAt(demoExpiry(now));
@@ -67,14 +67,11 @@ export async function exitDemo(
 ): Promise<{ token: string; expiresAt: Date }> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
-  const { ownerUserId, demoExpiresAt } = await instance.lockInstance();
-  if (ownerUserId !== userId || !demoExpiresAt || now >= demoExpiresAt) {
-    throw new ApplicationError("FORBIDDEN", "Only the demo's owner can reset setup.");
-  }
+  const exited = (await instance.lockInstance()).exitDemo(userId, now);
   await clearPeople(ctx, tx);
   // The instance row references the user, so it lets go before the user is deleted.
-  await instance.clearOwner("company");
-  await instance.saveDemoExpiresAt(null);
+  await instance.clearOwner(exited.step);
+  await instance.saveDemoExpiresAt(exited.demoExpiresAt);
   await deleteOwner();
   return saveSetupSession(tx, newSetupToken(), now);
 }

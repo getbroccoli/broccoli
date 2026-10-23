@@ -89,21 +89,17 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
     readUnmappedSources: async (ctx, tx) => {
       ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
-      return (await imports.listSources())
-        .filter(
-          ({ readBy, status }) => readBy === "answered_by_external_agent" && status === "mapping",
-        )
-        .map(({ id, originalReadAllowedAt }) => ({
-          id,
-          way: originalReadAllowedAt ? "read_original_file" : "answer_masked_questions",
-        }));
+      return (await imports.listSources()).flatMap((source) => {
+        const way = source.externalAgentWork();
+        return way ? [{ id: source.id, way }] : [];
+      });
     },
 
     readMappingQuestions: async (ctx, tx, sourceId) => {
       ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
       const { source, sheets } = await readAnsweredFile(tx, imports, sourceId);
-      if (source.status !== "mapping") {
+      if (!source.isReading()) {
         throw notWaiting();
       }
       await answeredSourceRepository(tx).recordPickup(sourceId);
@@ -119,7 +115,7 @@ export function createAnsweredMappingService(readUpload: UploadReader): Answered
       ctx.requireSetupExternalAgent();
       const imports = await lockOpenImport(tx);
       const { source, sheets } = await readAnsweredFile(tx, imports, sourceId);
-      if (source.status !== "mapping") {
+      if (!source.isReading()) {
         throw new ApplicationError("CONFLICT", "This file is already answered.");
       }
       const answers = parseMappingAnswers(

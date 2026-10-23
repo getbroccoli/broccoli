@@ -1,9 +1,9 @@
 import { expect, it } from "vitest";
 
-import { importProgress, type ImportSource } from ".";
+import { importProgress, ImportSource } from ".";
 
 it("reports a file being read and leaves the demo unavailable", () => {
-  const source: ImportSource = {
+  const source = new ImportSource({
     id: "file",
     kind: "file",
     name: "staff.csv",
@@ -15,7 +15,7 @@ it("reports a file being read and leaves the demo unavailable", () => {
     pickedUpByExternalAgentAt: null,
     originalReadAllowedAt: null,
     originalReadAiSource: null,
-  };
+  });
 
   const progress = importProgress([source], 0);
 
@@ -23,7 +23,7 @@ it("reports a file being read and leaves the demo unavailable", () => {
 });
 
 it("leaves the demo unavailable when records have been gathered", () => {
-  const source: ImportSource = {
+  const source = new ImportSource({
     id: "slack",
     kind: "slack",
     name: "Acme Workspace",
@@ -35,7 +35,7 @@ it("leaves the demo unavailable when records have been gathered", () => {
     pickedUpByExternalAgentAt: null,
     originalReadAllowedAt: null,
     originalReadAiSource: null,
-  };
+  });
 
   const progress = importProgress([source], 1);
 
@@ -43,7 +43,7 @@ it("leaves the demo unavailable when records have been gathered", () => {
 });
 
 it("leaves the demo available after a failed file without records", () => {
-  const source: ImportSource = {
+  const source = new ImportSource({
     id: "file",
     kind: "file",
     name: "staff.csv",
@@ -55,7 +55,7 @@ it("leaves the demo available after a failed file without records", () => {
     pickedUpByExternalAgentAt: null,
     originalReadAllowedAt: null,
     originalReadAiSource: null,
-  };
+  });
 
   const progress = importProgress([source], 0);
 

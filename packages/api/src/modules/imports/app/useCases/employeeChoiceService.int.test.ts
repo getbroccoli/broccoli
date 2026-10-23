@@ -1,4 +1,11 @@
-import { expect, importUseCases, OWNER, SETUP_HOLDER, test } from "#test/support";
+import {
+  importSourceValues,
+  expect,
+  importUseCases,
+  OWNER,
+  SETUP_HOLDER,
+  test,
+} from "#test/support";
 
 import { readInstance } from "../../../../core/instance";
 
@@ -198,7 +205,9 @@ test("refuses a leave-out change after Approve and keeps the import unchanged", 
   ).rejects.toMatchObject({ code: "CONFLICT" });
 
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(before);
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([source]);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
 });
 
 test("leaves out employees with the requested incomplete reason", async ({ orm, seed }) => {

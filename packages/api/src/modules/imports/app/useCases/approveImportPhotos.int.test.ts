@@ -1,6 +1,7 @@
 import sharp from "sharp";
 
 import {
+  importSourceValues,
   expect,
   importUseCases,
   OWNER,
@@ -80,7 +81,10 @@ test("approving deletes unused photos while keeping import rows and staff files"
     { email: "taken@example.com", avatarFileId: existingAvatar },
   ]);
   expect(await storedFileIds(orm)).toEqual([keptPhoto, existingAvatar, staffFileId!].sort());
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([staff, source]);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
+    importSourceValues(staff),
+    importSourceValues(source),
+  ]);
   const reviewed = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({
     orderBy: { field: "EMAIL" },
   });

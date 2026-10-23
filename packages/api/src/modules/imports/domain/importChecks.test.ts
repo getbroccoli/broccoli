@@ -4,7 +4,7 @@ import {
   type CheckFilter,
   groupEmployeeRecords,
   type ImportEmployeeRecord,
-  type ImportSource,
+  ImportSource,
   isInCheck,
   listChecks,
   parseCheckId,
@@ -80,8 +80,8 @@ it("lists conflict kinds before incomplete kinds in field order", () => {
 });
 
 it("lists only sources holding conflicting values, with files before Slack", () => {
-  const newer = { ...file, id: "newer", name: "newer.csv" };
-  const empty = { ...file, id: "empty", name: "empty.csv" };
+  const newer = new ImportSource({ ...fileState, id: "newer", name: "newer.csv" });
+  const empty = new ImportSource({ ...fileState, id: "empty", name: "empty.csv" });
   const sources = [slack, file, newer, empty];
   const employees = groupEmployeeRecords(
     sources,
@@ -161,7 +161,7 @@ it.each<CheckFilter>([
   expect(isInCheck(employee!, check)).toBe(false);
 });
 
-const file: ImportSource = {
+const fileState = {
   id: "file",
   kind: "file",
   name: "staff.csv",
@@ -173,8 +173,9 @@ const file: ImportSource = {
   pickedUpByExternalAgentAt: null,
   originalReadAllowedAt: null,
   originalReadAiSource: null,
-};
-const slack: ImportSource = { ...file, id: "slack", kind: "slack", name: "Workspace" };
+} as const;
+const file = new ImportSource(fileState);
+const slack = new ImportSource({ ...fileState, id: "slack", kind: "slack", name: "Workspace" });
 const row: ImportEmployeeRecord = {
   id: "row",
   sourceId: file.id,

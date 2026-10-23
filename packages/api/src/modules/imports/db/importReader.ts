@@ -3,10 +3,10 @@ import { and, count, eq, gt, inArray } from "drizzle-orm";
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { KeysetRow } from "../../../core/pagination";
 import {
-  type FileSource,
+  FileSource,
   type ImportEmployeeChoices,
   type ImportEmployeeRecord,
-  type ImportSource,
+  ImportSource,
 } from "../domain";
 import { parseImportEmployeeChoices, toImportEmployee } from "./importEmployeeJson";
 import { importChoices } from "./importChoicesTable";
@@ -41,14 +41,21 @@ export function importReader(db: Orm | Tx): ImportReader {
   const orm = () => ormOf(db);
 
   return {
-    listSources: (): Promise<ImportSource[]> =>
-      orm().select(sourceColumns).from(importSources).orderBy(importSources.createdAt),
-
-    findSources: (ids: readonly string[]): Promise<ImportSource[]> =>
-      orm()
+    listSources: async (): Promise<ImportSource[]> => {
+      const rows = await orm()
         .select(sourceColumns)
         .from(importSources)
-        .where(inArray(importSources.id, [...ids])),
+        .orderBy(importSources.createdAt);
+      return rows.map((row) => new ImportSource(row));
+    },
+
+    findSources: async (ids: readonly string[]): Promise<ImportSource[]> => {
+      const rows = await orm()
+        .select(sourceColumns)
+        .from(importSources)
+        .where(inArray(importSources.id, [...ids]));
+      return rows.map((row) => new ImportSource(row));
+    },
 
     findFileSource: async (id: string): Promise<FileSource | null> => {
       const [row] = await orm()
@@ -59,7 +66,7 @@ export function importReader(db: Orm | Tx): ImportReader {
         })
         .from(importSources)
         .where(and(eq(importSources.id, id), eq(importSources.kind, "file")));
-      return row ? { ...row, fileId: row.fileId! } : null;
+      return row ? new FileSource({ ...row, kind: "file", fileId: row.fileId! }) : null;
     },
 
     listEmployeeRecords: async (): Promise<ImportEmployeeRecord[]> => {

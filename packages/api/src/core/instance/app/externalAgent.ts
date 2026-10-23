@@ -2,11 +2,6 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import {
-  canChooseExternalAgent,
-  canChooseExternalAgentOnServer,
-  isSetupOpenToExternalAgent,
-} from "../domain";
 
 /**
  * Makes the owner's external agent the AI source, in the caller's `tx` and holding the instance
@@ -24,7 +19,7 @@ export async function chooseExternalAgentSource(ctx: SecurityContext, tx: Tx): P
  */
 export async function lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
-  if (!canChooseExternalAgent(await instanceRepository(tx).lockInstance())) {
+  if (!(await instanceRepository(tx).lockInstance()).canChooseExternalAgent()) {
     throw new ApplicationError(
       "CONFLICT",
       "Your agent can connect only while you gather your people.",
@@ -41,14 +36,14 @@ export async function chooseExternalAgentOnServer(ctx: SecurityContext, tx: Tx):
     throw new ApplicationError("FORBIDDEN", "Only the command on the server can do this.");
   }
   const repository = instanceRepository(tx);
-  if (canChooseExternalAgentOnServer(await repository.lockInstance())) {
+  if ((await repository.lockInstance()).canChooseExternalAgentOnServer()) {
     await repository.storeAiSource("external_agent");
   }
 }
 
 /** Whether the external agent may work now (`isSetupOpenToExternalAgent`). */
 export async function readSetupOpenToExternalAgent(db: Orm | Tx, now: Date): Promise<boolean> {
-  return isSetupOpenToExternalAgent(await instanceRepository(db).readInstance(), now);
+  return (await instanceRepository(db).readInstance()).isSetupOpenToExternalAgent(now);
 }
 
 /**
@@ -62,5 +57,5 @@ export async function lockSetupOpenToExternalAgent(
 ): Promise<Date | null> {
   const instance = await instanceRepository(tx).lockInstance();
   const now = clock();
-  return isSetupOpenToExternalAgent(instance, now) ? now : null;
+  return instance.isSetupOpenToExternalAgent(now) ? now : null;
 }

@@ -1,4 +1,5 @@
 import {
+  importSourceValues,
   expect,
   importUseCases,
   OWNER,
@@ -128,7 +129,9 @@ test("a failed Slack read passes the error through and preserves the source and 
     message: "Could not read Slack.",
   });
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
       ({ node }) => node,
@@ -156,7 +159,9 @@ test("a refresh whose connection is no longer current leaves the records", async
 
   await imports.readSlack(OWNER);
 
-  expect(await imports.reads.listSources(OWNER)).toEqual([source]);
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
       ({ node }) => node,

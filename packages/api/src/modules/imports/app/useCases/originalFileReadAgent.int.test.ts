@@ -1,4 +1,5 @@
 import {
+  importSourceValues,
   expect,
   importUseCases,
   SETUP_HOLDER,
@@ -47,7 +48,9 @@ test("fetching a consented original returns its bytes and records the first pick
   await transact((tx) =>
     imports.originalFileReads.readOriginalBytes(SETUP_EXTERNAL_AGENT, tx, source.id),
   );
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(pickedUp);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual(
+    pickedUp.map(importSourceValues),
+  );
 });
 
 test("the agent cannot fetch an original assigned to Broccoli even with consent", async ({
@@ -239,7 +242,9 @@ test("retry leaves a consented file alone without sending another job", async ({
 
   await imports.files.retryFile(SETUP_HOLDER, source.id);
 
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(before);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual(
+    before.map(importSourceValues),
+  );
   expect(imports.sentJobs).toEqual([]);
 });
 

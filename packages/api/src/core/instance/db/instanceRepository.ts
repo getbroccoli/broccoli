@@ -2,13 +2,13 @@ import { eq, isNull } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
-import type {
-  AiSource,
+import {
+  type AiSource,
   Instance,
-  ManagedAssignment,
-  OwnerSignInMethod,
-  SetupSession,
-  SetupStep,
+  type ManagedAssignment,
+  type OwnerSignInMethod,
+  type SetupSession,
+  type SetupStep,
 } from "../domain";
 import { instance } from "./instanceTable";
 
@@ -193,7 +193,7 @@ function toInstance([row]: {
   if (!row) {
     throw new Error("The instance row is missing; migrations insert it");
   }
-  return {
+  return new Instance({
     ownerUserId: row.ownerUserId,
     step: row.step,
     setupSession: toSetupSession(row),
@@ -201,5 +201,5 @@ function toInstance([row]: {
     aiSource: row.aiSource,
     assignment: toAssignment(row),
     ownerSignInMethod: row.ownerSignInMethod,
-  };
+  });
 }

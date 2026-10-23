@@ -1,11 +1,11 @@
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import type { SetupStep } from "../domain";
+import type { Instance } from "../domain";
 
 /** Leaves the company step for the import step, joining `tx`; does nothing at any other step. Returns whether it moved. */
 export function completeCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return advanceStep(ctx, tx, "company", "import");
+  return changeStep(ctx, tx, (instance) => instance.completeCompanyStep());
 }
 
 /**
@@ -13,12 +13,12 @@ export function completeCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boole
  * `tx`; does nothing at any other step. Returns whether it moved.
  */
 export function completeReadyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return advanceStep(ctx, tx, "ready", "done");
+  return changeStep(ctx, tx, (instance) => instance.completeReadyStep());
 }
 
 /** Leaves the owner step for `done` once setup created the owner, joining `tx`. */
 export function completeOwnerStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return advanceStep(ctx, tx, "owner", "done");
+  return changeStep(ctx, tx, (instance) => instance.completeOwnerStep());
 }
 
 /**
@@ -26,9 +26,7 @@ export function completeOwnerStep(ctx: SecurityContext, tx: Tx): Promise<boolean
  * nothing at any other step. Returns whether it moved.
  */
 export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return (
-    (await advanceStep(ctx, tx, "owner", "company")) || advanceStep(ctx, tx, "ready", "company")
-  );
+  return changeStep(ctx, tx, (instance) => instance.returnToCompanyStep());
 }
 
 /**
@@ -36,13 +34,12 @@ export async function returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise
  * demo, joining `tx`; does nothing at any other step. Returns whether it moved.
  */
 export function returnToCompanyStepFromDemo(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return advanceStep(ctx, tx, "done", "company");
+  return changeStep(ctx, tx, (instance) => instance.returnToCompanyStepFromDemo());
 }
 
 /** Whether the import still takes changes: setup has not moved past the import step. */
 export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
-  const { step } = await instanceRepository(db).readInstance();
-  return step === "company" || step === "import";
+  return (await instanceRepository(db).readInstance()).isImportOpen();
 }
 
 /**
@@ -51,7 +48,7 @@ export async function isImportOpen(db: Orm | Tx): Promise<boolean> {
  * `done`. Returns whether it moved.
  */
 export async function completeImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return leaveImportStep(ctx, tx, "done");
+  return changeStep(ctx, tx, (instance) => instance.completeImportStep());
 }
 
 /**
@@ -60,33 +57,24 @@ export async function completeImportStep(ctx: SecurityContext, tx: Tx): Promise<
  * self-hosted instance. Returns whether it moved.
  */
 export async function approveImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean> {
-  return leaveImportStep(ctx, tx, "ready");
+  return changeStep(ctx, tx, (instance) => instance.approveImportStep());
 }
 
-async function leaveImportStep(
+/** Locks the instance before deciding its next step; completing setup publishes its event once. */
+async function changeStep(
   ctx: SecurityContext,
   tx: Tx,
-  withOwner: SetupStep,
-): Promise<boolean> {
-  const { ownerUserId, assignment } = await instanceRepository(tx).readInstance();
-  // A self-hosted owner who exited the demo with an account has no account left to create.
-  const next = !ownerUserId ? "owner" : assignment ? withOwner : "done";
-  return advanceStep(ctx, tx, "import", next);
-}
-
-/**
- * Moves the setup step from `from` to `to`, joining `tx`; does nothing at any other
- * step. Returns whether it moved. Reaching `done` publishes `instance.setup_completed`.
- */
-async function advanceStep(
-  ctx: SecurityContext,
-  tx: Tx,
-  from: SetupStep,
-  to: SetupStep,
+  change: (instance: Instance) => Instance | null,
 ): Promise<boolean> {
   ctx.requireSetupAccess();
-  const moved = await instanceRepository(tx).advanceStep(from, to);
-  if (moved && to === "done") {
+  const repository = instanceRepository(tx);
+  const current = await repository.lockInstance();
+  const next = change(current);
+  if (!next) {
+    return false;
+  }
+  const moved = await repository.advanceStep(current.step, next.step);
+  if (moved && next.step === "done") {
     tx.publish("instance.setup_completed", null);
   }
   return moved;

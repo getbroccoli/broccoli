@@ -1,4 +1,5 @@
 import {
+  importSourceValues,
   expect,
   importUseCases,
   OWNER,
@@ -52,7 +53,9 @@ test("resetting setup deletes approved employees but keeps the import and its ph
   expect((await readInstance(orm)).step).toBe("company");
   expect((await employees.listEmployees(OWNER, {})).edges).toEqual([]);
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
-  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual(sources);
+  expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual(
+    sources.map(importSourceValues),
+  );
   expect(await storedFileIds(orm)).toEqual(fileIds);
   for (const photoId of photoIds) {
     expect(await readFile(orm, photoId)).toEqual({ content: PNG, mimeType: "image/png" });
