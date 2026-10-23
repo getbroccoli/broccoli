@@ -2,7 +2,11 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import { canChooseExternalAgent, isSetupOpenToExternalAgent } from "../domain";
+import {
+  canChooseExternalAgent,
+  canChooseExternalAgentOnServer,
+  isSetupOpenToExternalAgent,
+} from "../domain";
 
 /**
  * Makes the owner's external agent the AI source, in the caller's `tx` and holding the instance
@@ -24,6 +28,20 @@ export async function lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Pro
       "CONFLICT",
       "Your agent can connect only while you gather your people.",
     );
+  }
+}
+
+/**
+ * Chooses the external agent for the command on the server, in the caller's `tx`, while
+ * `canChooseExternalAgentOnServer`, so the owner finds Your agent selected. System only.
+ */
+export async function chooseExternalAgentOnServer(ctx: SecurityContext, tx: Tx): Promise<void> {
+  if (!ctx.isSystem) {
+    throw new ApplicationError("FORBIDDEN", "Only the command on the server can do this.");
+  }
+  const repository = instanceRepository(tx);
+  if (canChooseExternalAgentOnServer(await repository.lockInstance())) {
+    await repository.storeAiSource("external_agent");
   }
 }
 

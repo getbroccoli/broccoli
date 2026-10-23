@@ -4,6 +4,7 @@ export {
   chooseExternalAgentSource,
   lockExternalAgentChoice,
   lockSetupOpenToExternalAgent,
+  chooseExternalAgentOnServer,
   readSetupOpenToExternalAgent,
   claimOwner,
   approveImportStep,
