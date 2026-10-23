@@ -1,6 +1,6 @@
 ---
 name: broccoli-setup
-version: 4
+version: 5
 description: Help the owner set up Broccoli, an HR app they run themselves, by putting their staff files into its import. Use when you just installed Broccoli for the owner, or when the owner pastes "Help me set up Broccoli. Read <address>/api/external-agent/skill and connect with code <code>."
 ---
 
@@ -35,7 +35,7 @@ code there and never ask the owner for one:
 - Tell the owner once: "Open <the address their browser reaches: localhost on that computer, else its
   name or IP and the port>, name your company and continue with Your agent, then drop your staff
   files."
-- Run the command the installer printed, which is, from Broccoli's install directory:
+- From the install directory the installer printed (`~/broccoli` by default), run:
 
   ```sh
   docker compose exec -T broccoli node dist/externalAgentCode.js
