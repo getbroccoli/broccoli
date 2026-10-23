@@ -45,7 +45,10 @@ export interface EmployeeRepository {
   /** Deletes an employee and their avatar and returns what was deleted; null when no employee has the id. */
   delete(id: string): Promise<Employee | null>;
   findById(id: string): Promise<Employee | null>;
-  /** Deletes every employee and their avatars; a file another row still references fails it. */
+  /**
+   * Deletes every employee and their avatars, locking out other employee writes until the caller
+   * commits; a file another row still references fails it.
+   */
   deleteAll(): Promise<void>;
   /** The emails among these that an employee has. */
   findTakenEmails(emails: readonly string[]): Promise<string[]>;
@@ -160,6 +163,9 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     deleteAll: async (): Promise<void> => {
+      // Holds back concurrent inserts and updates until the caller commits, so none lands between
+      // this delete and the caller's purge of employee history.
+      await orm().execute(sql`lock table ${employees} in share row exclusive mode`);
       const deleted = await orm()
         .delete(employees)
         .returning({ avatarFileId: employees.avatarFileId });

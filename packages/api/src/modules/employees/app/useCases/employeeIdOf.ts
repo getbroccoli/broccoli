@@ -2,10 +2,13 @@ import { z } from "zod";
 
 import { ApplicationError } from "../../../../core/applicationError";
 
-/** The id as Postgres takes it, or null for a malformed one, which names no employee. */
+/**
+ * The id in the lowercase form Postgres returns, so history keeps one key per employee; null for
+ * a malformed one, which names no employee.
+ */
 export function employeeIdOf(id: string): string | null {
   const parsed = z.uuid().safeParse(id);
-  return parsed.success ? parsed.data : null;
+  return parsed.success ? parsed.data.toLowerCase() : null;
 }
 
 export function employeeNotFound(): ApplicationError {

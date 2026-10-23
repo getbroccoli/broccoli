@@ -224,3 +224,30 @@ test("parallel job title edits keep their old and new values chained", async ({ 
   expect(updates.map((line) => line.changes[0]!.newValue).sort()).toEqual(["Lead", "Principal"]);
   await expectHistoryReplaysTo(orm, employee.id);
 });
+
+test("an update addressed by uppercase id keeps its history under the canonical id", async ({
+  orm,
+}) => {
+  const employees = employeeUseCases(orm);
+  const employee = await employees.createEmployee(OWNER, {
+    firstName: "Avery",
+    lastName: "Stone",
+    email: "avery@example.com",
+    jobTitle: "Engineer",
+  });
+
+  const updated = await employees.updateEmployee(OWNER, {
+    id: employee.id.toUpperCase(),
+    jobTitle: "Lead",
+  });
+
+  expect(updated.id).toBe(employee.id);
+  const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
+  expect(edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation }))).toEqual(
+    [
+      { recordId: employee.id, operation: "UPDATED" },
+      { recordId: employee.id, operation: "CREATED" },
+    ],
+  );
+  await expectHistoryReplaysTo(orm, employee.id);
+});

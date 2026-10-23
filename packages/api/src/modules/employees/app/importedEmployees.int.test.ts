@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm";
+
 import {
   recordChangedEvents,
   employeeUseCases,
@@ -9,6 +11,8 @@ import {
   storedFileIds,
   test,
 } from "#test/support";
+
+import { ormOf } from "../../../core/db";
 
 import { employeeRepository } from "../db";
 import { parseNewEmployee } from "../domain";
@@ -245,4 +249,54 @@ test("deleting all employees purges history including already deleted employees 
   expect((await employees.readEmployeeHistory(OWNER, kept.id, {})).edges).toEqual([]);
   expect((await employees.readEmployeeHistory(OWNER, deleted.id, {})).edges).toEqual([]);
   expect(events).toEqual([]);
+});
+
+test("an employee created during a reset keeps its creation history", async ({ orm, transact }) => {
+  const employees = employeeUseCases(orm);
+  const resetReady = Promise.withResolvers<number>();
+  const releaseReset = Promise.withResolvers<void>();
+  const resetting = transact(async (tx) => {
+    await deleteAllEmployees(OWNER, tx);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    resetReady.resolve(rows[0]!.pid);
+    await releaseReset.promise;
+  });
+  const blockingPid = await resetReady.promise;
+
+  const creation = Promise.allSettled([
+    employees.createEmployee(OWNER, {
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+    }),
+  ]);
+  try {
+    let waiting = false;
+    for (let attempt = 0; attempt < 1_000 && !waiting; attempt++) {
+      const { rows } = await orm.execute<{ waiting: boolean }>(sql`
+        select exists (
+          select from pg_stat_activity
+          where datname = current_database()
+            and wait_event_type = 'Lock'
+            and ${blockingPid} = any(pg_blocking_pids(pid))
+        ) as waiting
+      `);
+      waiting = rows[0]!.waiting;
+    }
+    expect(waiting).toBe(true);
+  } finally {
+    releaseReset.resolve();
+    await resetting;
+    await creation;
+  }
+
+  expect(await creation).toMatchObject([{ status: "fulfilled" }]);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  expect(edges).toHaveLength(1);
+  const employee = edges[0]!.node;
+  const history = await employees.readEmployeeHistory(OWNER, employee.id, {});
+  expect(
+    history.edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation })),
+  ).toEqual([{ recordId: employee.id, operation: "CREATED" }]);
+  await expectHistoryReplaysTo(orm, employee.id);
 });

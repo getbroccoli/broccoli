@@ -85,3 +85,27 @@ test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
     });
   },
 );
+
+test("a deletion addressed by uppercase id keeps its history under the canonical id", async ({
+  orm,
+}) => {
+  const employees = employeeUseCases(orm);
+  const employee = await employees.createEmployee(OWNER, {
+    firstName: "Avery",
+    lastName: "Stone",
+    email: "avery@example.com",
+  });
+
+  const deletedId = await employees.deleteEmployee(OWNER, { id: employee.id.toUpperCase() });
+
+  expect(deletedId).toBe(employee.id);
+  expect(await employees.readEmployee(OWNER, employee.id)).toBeNull();
+  const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
+  expect(edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation }))).toEqual(
+    [
+      { recordId: employee.id, operation: "DELETED" },
+      { recordId: employee.id, operation: "CREATED" },
+    ],
+  );
+  await expectHistoryReplaysTo(orm, employee.id);
+});
