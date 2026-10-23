@@ -5,6 +5,7 @@ import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import { readFile, type StoredFile } from "../../../../core/files";
 import { type AiSource, type OriginalFileReader } from "../../../../core/instance";
+import type { Logger } from "../../../../core/logger";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
 import {
@@ -96,8 +97,10 @@ export function createOriginalFileReadService({
   transact,
   jobs,
   originalFileReader,
+  logger,
 }: {
   orm: Orm;
+  logger: Logger;
   transact: Transact;
   jobs: JobQueue;
   /** The model that reads a file in full. */
@@ -144,7 +147,7 @@ export function createOriginalFileReadService({
         throw new Error(`File source ${sourceId} has no file`);
       }
       const { outcome, people } = await readWithModel(originalFileReader, aiSource, file);
-      await transact(async (tx) => {
+      const finished = await transact(async (tx) => {
         // Only the current run of an open import writes.
         const imports = await openImport(tx);
         if (imports && (await imports.finishMapping(sourceId, attempt, outcome))) {
@@ -152,8 +155,16 @@ export function createOriginalFileReadService({
             await originalReadRepository(tx).recordOriginalReadAiSource(sourceId, aiSource);
           }
           await imports.syncEmployeeRecords(sourceId, people?.records ?? []);
+          return true;
         }
+        return false;
       });
+      if (finished && outcome.status === "failed") {
+        logger.warn(
+          { sourceId, attempt, aiSource, failure: outcome.failure },
+          "Original file read failed",
+        );
+      }
     },
 
     readOriginalBytes: async (ctx, tx, sourceId) => {

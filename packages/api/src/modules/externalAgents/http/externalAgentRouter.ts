@@ -116,7 +116,10 @@ export function externalAgentRouter(
       perSession,
       async (request, response) => {
         response.json(
-          await useCases.files.readMappingQuestions(externalAgentOf(response), sourceIdOf(request)),
+          await useCases.files.readMappingQuestions(
+            externalAgentOf(response),
+            sourceIdOf(request, response),
+          ),
         );
       },
     )
@@ -129,7 +132,7 @@ export function externalAgentRouter(
         response.json(
           await useCases.files.answerMappingQuestions(
             externalAgentOf(response),
-            sourceIdOf(request),
+            sourceIdOf(request, response),
             parseAnswers(request.body),
           ),
         );
@@ -142,7 +145,7 @@ export function externalAgentRouter(
       async (request, response) => {
         const file = await useCases.files.readOriginalFile(
           externalAgentOf(response),
-          sourceIdOf(request),
+          sourceIdOf(request, response),
         );
         // No file name: it may name a person, and the agent never needs it.
         response.type(file.mimeType).attachment().send(file.content);
@@ -157,7 +160,7 @@ export function externalAgentRouter(
         response.json(
           await useCases.files.sendReadPeople(
             externalAgentOf(response),
-            sourceIdOf(request),
+            sourceIdOf(request, response),
             request.body,
           ),
         );
@@ -188,11 +191,12 @@ function externalAgentOf(response: express.Response): SecurityContext {
 }
 
 /** A source id from the path; anything but a UUID names no file. */
-function sourceIdOf(request: express.Request): string {
+function sourceIdOf(request: express.Request, response: express.Response): string {
   const id = request.params.id;
   if (typeof id !== "string" || !UUID.test(id)) {
     throw new ApplicationError("NOT_FOUND", "No file waits for your answers with this id.");
   }
+  response.locals.sourceId = id;
   return id;
 }
 

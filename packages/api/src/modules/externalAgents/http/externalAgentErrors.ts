@@ -2,6 +2,7 @@ import type express from "express";
 
 import { ApplicationError } from "../../../core/applicationError";
 import type { Logger } from "../../../core/logger";
+import type { SecurityContext } from "../../../core/security";
 
 /**
  * Answers an agent route's failure as `{ error: { code, fields? } }`, with Broccoli's own codes and
@@ -19,6 +20,9 @@ export function externalAgentErrorHandler(logger: Logger): express.ErrorRequestH
     logger.error(
       {
         route: (request.route as { path?: string } | undefined)?.path,
+        externalAgentSessionId: (response.locals.ctx as SecurityContext | undefined)
+          ?.externalAgentSessionId,
+        sourceId: response.locals.sourceId as string | undefined,
         kind: (error as Error | undefined)?.constructor?.name,
       },
       "An agent request failed",

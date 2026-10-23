@@ -161,7 +161,10 @@ export function createSlackConnectionService({
       if (!connection) {
         throw new ApplicationError("UNAVAILABLE", "Slack is not connected.");
       }
-      const members = await listMembers({ slackApi, secretBox, logger }, connection.encryptedToken);
+      const members = await listMembers(
+        { slackApi, secretBox, logger: logger.child({ teamId: connection.teamId }) },
+        connection.encryptedToken,
+      );
       return {
         workspace: { id: connection.teamId, name: connection.teamName },
         members: await readSlackPeople(members, {
@@ -193,7 +196,7 @@ async function listMembers(
   try {
     return await slackApi.listMembers(secretBox.decrypt(encryptedToken));
   } catch (error) {
-    logger.warn({ err: error }, "Reading Slack failed");
+    logger.warn({ kind: (error as Error | undefined)?.constructor?.name }, "Reading Slack failed");
     throw new ApplicationError("UNAVAILABLE", "Could not read Slack.");
   }
 }
@@ -211,7 +214,10 @@ async function exchangeCode(
     }
     return grant;
   } catch (error) {
-    logger.warn({ err: error }, "Connecting Slack failed");
+    logger.warn(
+      { kind: (error as Error | undefined)?.constructor?.name },
+      "Connecting Slack failed",
+    );
     return null;
   }
 }

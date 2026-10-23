@@ -1,6 +1,7 @@
 import type { Decisions } from "../../../../integrations/ai";
 import type { Orm, Transact } from "../../../../core/db";
 import { readFile } from "../../../../core/files";
+import type { Logger } from "../../../../core/logger";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
 import { importReader } from "../../db";
@@ -74,8 +75,10 @@ export function createFileSourceService({
   decisions,
   jobs,
   readUpload,
+  logger,
 }: {
   orm: Orm;
+  logger: Logger;
   transact: Transact;
   /** The model that maps files. */
   decisions: Decisions;
@@ -115,24 +118,35 @@ export function createFileSourceService({
         throw new Error(`File source ${sourceId} cannot be read`);
       }
       const { outcome, records } = await mapFileOrFail(decisions, sheets);
-      await transact(async (tx) => {
+      const finished = await transact(async (tx) => {
         // Only the current run of an open import writes.
         const imports = await openImport(tx);
         if (imports && (await imports.finishMapping(sourceId, attempt, outcome))) {
           await imports.syncEmployeeRecords(sourceId, records);
+          return true;
         }
+        return false;
       });
+      if (finished && outcome.status === "failed") {
+        logger.warn({ sourceId, attempt, failure: outcome.failure }, "File mapping failed");
+      }
     },
 
     markFileFailed: async (ctx, { sourceId, attempt }) => {
       requireImportAccess(ctx);
-      await transact(async (tx) => {
+      const finished = await transact(async (tx) => {
         const imports = await openImport(tx);
-        await imports?.finishMapping(sourceId, attempt, {
+        return imports?.finishMapping(sourceId, attempt, {
           status: "failed",
           failure: "unavailable",
         });
       });
+      if (finished) {
+        logger.warn(
+          { sourceId, attempt, failure: "unavailable" },
+          "File mapping attempts exhausted",
+        );
+      }
     },
 
     retryFile: async (ctx, sourceId) => {
