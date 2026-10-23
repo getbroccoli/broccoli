@@ -38,10 +38,7 @@ test("approving gives the employee the Slack photo as their avatar", async ({ or
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
 });
 
-test("approving deletes unused photos while keeping import rows and staff files", async ({
-  orm,
-  seed,
-}) => {
+test("approving keeps all import photos, record links and staff files", async ({ orm, seed }) => {
   await seed.setupStep("import");
   const staff = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
   const [staffFileId] = await storedFileIds(orm);
@@ -80,7 +77,12 @@ test("approving deletes unused photos while keeping import rows and staff files"
     { email: "kept@example.com", avatarFileId: keptPhoto },
     { email: "taken@example.com", avatarFileId: existingAvatar },
   ]);
-  expect(await storedFileIds(orm)).toEqual([keptPhoto, existingAvatar, staffFileId!].sort());
+  expect(await storedFileIds(orm)).toEqual(
+    [...photoIds.values(), existingAvatar, staffFileId!].sort(),
+  );
+  for (const photoId of photoIds.values()) {
+    expect(await readFile(orm, photoId)).toEqual({ content: PNG, mimeType: "image/png" });
+  }
   expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
     importSourceValues(staff),
     importSourceValues(source),
@@ -95,9 +97,17 @@ test("approving deletes unused photos while keeping import rows and staff files"
       leftOut: node.leftOut,
     })),
   ).toEqual([
-    { email: "incomplete@example.com", photoFileId: null, leftOut: false },
+    {
+      email: "incomplete@example.com",
+      photoFileId: photoIds.get("incomplete@example.com"),
+      leftOut: false,
+    },
     { email: "kept@example.com", photoFileId: keptPhoto, leftOut: false },
-    { email: "leftout@example.com", photoFileId: null, leftOut: true },
-    { email: "taken@example.com", photoFileId: null, leftOut: false },
+    {
+      email: "leftout@example.com",
+      photoFileId: photoIds.get("leftout@example.com"),
+      leftOut: true,
+    },
+    { email: "taken@example.com", photoFileId: photoIds.get("taken@example.com"), leftOut: false },
   ]);
 });

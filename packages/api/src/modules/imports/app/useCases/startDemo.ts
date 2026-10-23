@@ -25,7 +25,7 @@ export async function prepareDemoStart({
   return async (ctx, tx) => {
     requireImportAccess(ctx);
     if (await completeImportStep(ctx, tx)) {
-      await deleteImport(tx, { keepPhotos: false });
+      await deleteImport(tx);
       await fillDemo(tx);
     }
   };
