@@ -40,7 +40,7 @@ export function createExternalAgentUseCases({
 
 /**
  * A one-time code for the command run inside the server's container, as the system: whoever can run
- * it already controls the server. Refused with CONFLICT, like the setup holder, until the agent is chosen.
+ * it already controls the server (`createExternalAgentCodeOnServer`).
  */
 export function createExternalAgentCodeOnServer({
   orm,
@@ -55,5 +55,5 @@ export function createExternalAgentCodeOnServer({
     clock: () => new Date(),
     activity: createExternalAgentActivity(),
   });
-  return sessions.createExternalAgentCode(PrincipalSecurityContext.system());
+  return sessions.createExternalAgentCodeOnServer(PrincipalSecurityContext.system());
 }

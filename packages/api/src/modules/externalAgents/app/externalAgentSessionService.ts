@@ -4,6 +4,7 @@ import {
   chooseExternalAgentSource,
   lockExternalAgentChoice,
   lockSetupOpenToExternalAgent,
+  chooseExternalAgentOnServer,
   readSetupOpenToExternalAgent,
 } from "../../../core/instance";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
@@ -21,6 +22,11 @@ export interface ExternalAgentSessionService {
   chooseExternalAgent(ctx: SecurityContext): Promise<void>;
   /** A new one-time code, shown once; refused with CONFLICT unless the agent is chosen. */
   createExternalAgentCode(ctx: SecurityContext): Promise<ExternalAgentCode>;
+  /**
+   * As `createExternalAgentCode`, for the command on the server: chooses the agent first while no
+   * AI source is saved, so it connects right after install. System only.
+   */
+  createExternalAgentCodeOnServer(ctx: SecurityContext): Promise<ExternalAgentCode>;
   /** The session for a live code, used up by this call; UNAUTHENTICATED for any other code. */
   startExternalAgentSession(
     ctx: SecurityContext,
@@ -66,17 +72,15 @@ export function createExternalAgentSessionService(
 
     createExternalAgentCode: async (ctx) => {
       ctx.requireSetupAccess();
-      return transact(async (tx) => {
-        const now = await lockSetupOpenToExternalAgent(tx, clock);
-        if (!now) {
-          throw new ApplicationError("CONFLICT", "Choose your agent first.");
-        }
-        const code = newExternalAgentSecret();
-        const expiresAt = hoursAfter(now, EXTERNAL_AGENT_CODE_HOURS);
-        await externalAgentRepository(tx).replaceCode({ secret: code, expiresAt }, now);
-        return { code, expiresAt };
-      });
+      return transact((tx) => createCode(tx, clock));
     },
+
+    createExternalAgentCodeOnServer: async (ctx) =>
+      // One transaction, so a refused code leaves no choice behind.
+      transact(async (tx) => {
+        await chooseExternalAgentOnServer(ctx, tx);
+        return createCode(tx, clock);
+      }),
 
     startExternalAgentSession: async (ctx, { code, client }) => {
       ctx.requireOwnerOrSystem();
@@ -120,6 +124,18 @@ export function createExternalAgentSessionService(
       return connection ? { ...connection, listening: activity.isListening(now) } : null;
     },
   };
+}
+
+/** A new one-time code in `tx`, ending every session and earlier code; CONFLICT unless the agent may work. */
+async function createCode(tx: Tx, clock: () => Date): Promise<ExternalAgentCode> {
+  const now = await lockSetupOpenToExternalAgent(tx, clock);
+  if (!now) {
+    throw new ApplicationError("CONFLICT", "Choose your agent first.");
+  }
+  const code = newExternalAgentSecret();
+  const expiresAt = hoursAfter(now, EXTERNAL_AGENT_CODE_HOURS);
+  await externalAgentRepository(tx).replaceCode({ secret: code, expiresAt }, now);
+  return { code, expiresAt };
 }
 
 /** Ends every agent session and cancels every unused code: one agent at a time. */

@@ -80,6 +80,7 @@ With "Your agent" chosen on Setup AI:
 - [ ] A dropped PDF shows "Masked reading of PDFs isn’t supported yet" and "Read the original file", saying its personal details go to your agent's model provider; the agent does not see it.
 - [ ] After "Read the original file", the listening agent fetches it ("Your agent is reading it…") and sends its people: "N people · Read by your agent, not masked".
 - [ ] A CSV the agent mapped can be read again in full from its menu; the agent's new people replace the mapped ones.
-- [ ] Before "Your agent" is chosen, `docker compose exec -T broccoli node dist/externalAgentCode.js` prints "Open Broccoli, name your company and choose Your agent first." and exits with 2.
-- [ ] Once it is chosen, the same command prints a code; an agent that exchanges it connects, and the pill shows without a reload. The prompt's earlier code no longer works.
+- [ ] On a fresh install, before anyone opens Broccoli, `docker compose exec -T broccoli node dist/externalAgentCode.js` prints a code, and an agent that exchanges it connects. Setup AI then opens with "Your agent" selected, and "Add your files" shows the agent's pill and no prompt.
+- [ ] With "Broccoli AI" saved on Setup AI, the same command prints "Setup no longer takes your agent: the owner chose another AI, or setup is past its import." and exits with 2; Setup AI keeps "Broccoli AI".
+- [ ] With "Your agent" chosen in the browser, the same command prints a code; an agent that exchanges it connects, and the pill shows without a reload. The prompt's earlier code no longer works.
 - [ ] Opened from another computer at `http://<server-ip>:8080`, "Connect your agent" shows "Waiting for your agent to connect from the server." and no prompt; an agent connecting with the command above shows the pill.

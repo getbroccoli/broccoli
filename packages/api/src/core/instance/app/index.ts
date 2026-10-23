@@ -23,5 +23,6 @@ export {
   chooseExternalAgentSource,
   lockExternalAgentChoice,
   lockSetupOpenToExternalAgent,
+  chooseExternalAgentOnServer,
   readSetupOpenToExternalAgent,
 } from "./externalAgent";

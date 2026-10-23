@@ -1,6 +1,6 @@
 ---
 name: broccoli-setup
-version: 3
+version: 4
 description: Help the owner set up Broccoli, an HR app they run themselves, by putting their staff files into its import. Use when you just installed Broccoli for the owner, or when the owner pastes "Help me set up Broccoli. Read <address>/api/external-agent/skill and connect with code <code>."
 ---
 
@@ -33,21 +33,18 @@ code there and never ask the owner for one:
 - `<address>` is `http://localhost:<port>` on that computer (8080 unless the installer said
   otherwise). Run every command of this skill there, through the same shell.
 - Tell the owner once: "Open <the address their browser reaches: localhost on that computer, else its
-  name or IP and the port>, name your company, choose Your agent, then drop your staff files."
+  name or IP and the port>, name your company and continue with Your agent, then drop your staff
+  files."
 - Run the command the installer printed, which is, from Broccoli's install directory:
 
   ```sh
   docker compose exec -T broccoli node dist/externalAgentCode.js
   ```
 
-  It prints `<code>`. Exit status 2 means the owner has not chosen Your agent yet: run it again
-  every 5 seconds, for up to 15 minutes, then tell the owner and stop. Any other failure: tell the
-  owner and stop. Run it as you ran the installer (with `sudo` if you did), and only until it prints
-  a code: each run ends the earlier code and session.
-
-- The browser may make its own code as the owner reaches "Add your files", which ends yours. If the
-  exchange below or any call answers `UNAUTHENTICATED` within two minutes of getting the code, run
-  the command again and connect again, at most three times; after that, Errors below applies.
+  It prints `<code>` and selects Your agent for the owner, so you connect before they open
+  Broccoli. Exit status 2 means the owner chose another way or setup is past its import: tell the
+  owner and stop. Any other failure: tell the owner and stop. Run it as you ran the installer (with
+  `sudo` if you did), and once: each run ends the earlier code and session.
 
 Otherwise use the address and code from the owner's prompt.
 
@@ -167,7 +164,8 @@ printf 'Authorization: Bearer %s\n' "$TOKEN" | curl -sS -m 120 -H @- "<address>/
 It answers as soon as the owner drops a file, or with `[]` after 110 seconds. Answer every file it
 lists that you have not skipped, as in section 2, then wait again. A skipped file stays in the list,
 so if only skipped files remain, tell the owner which ones you skipped and why, and stop. If your shell stops commands before two minutes, give
-this one a longer timeout. After 15 minutes with no new file, tell the owner: "Your files are in.
+this one a longer timeout. Until the first file arrives, wait up to an hour: the owner may still be
+naming their company. After that, after 15 minutes with no new file, tell the owner: "Your files are in.
 Review and add your people in Broccoli. If you drop more files, tell me: Broccoli has new files."
 and stop. When the owner says Broccoli has new files, list and answer them, then wait again.
 

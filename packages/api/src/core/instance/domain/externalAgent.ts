@@ -10,14 +10,37 @@ export function canChooseExternalAgent({ assignment, ownerUserId, step }: Instan
 }
 
 /**
- * Whether the external agent may work now: setup may turn to it, it is the chosen AI source, and
- * the setup session it works for is still live.
+ * Whether the command on the server may choose the external agent for the owner: on a
+ * self-hosted instance before the owner exists, before people are gathered, while no AI source is saved.
  */
-export function isSetupOpenToExternalAgent(instance: Instance, now: Date): boolean {
+export function canChooseExternalAgentOnServer({
+  assignment,
+  ownerUserId,
+  step,
+  aiSource,
+}: Instance): boolean {
   return (
-    canChooseExternalAgent(instance) &&
-    instance.aiSource === "external_agent" &&
-    instance.setupSession !== null &&
-    instance.setupSession.expiresAt > now
+    assignment === null &&
+    ownerUserId === null &&
+    (step === "company" || step === "import") &&
+    aiSource === null
+  );
+}
+
+/**
+ * Whether the external agent may work now: on a self-hosted instance before the owner exists and
+ * before people are reviewed, it is the chosen AI source, and setup is unheld or its session live.
+ * Unheld lets an agent that installed Broccoli connect before anyone opens it.
+ */
+export function isSetupOpenToExternalAgent(
+  { assignment, ownerUserId, step, aiSource, setupSession }: Instance,
+  now: Date,
+): boolean {
+  return (
+    assignment === null &&
+    ownerUserId === null &&
+    (step === "company" || step === "import") &&
+    aiSource === "external_agent" &&
+    (setupSession === null || setupSession.expiresAt > now)
   );
 }

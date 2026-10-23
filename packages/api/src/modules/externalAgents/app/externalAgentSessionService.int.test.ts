@@ -268,7 +268,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
   },
 );
 
-test.for(["company", "owner", "ready", "done"] as const)(
+test.for(["owner", "ready", "done"] as const)(
   "refuses a code at the %s step",
   async (step, { orm, seed }) => {
     await seed.externalAgentSetup();
