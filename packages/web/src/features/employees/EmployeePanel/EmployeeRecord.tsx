@@ -113,6 +113,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
                       saved={draft.saved[key]}
                       draft={draft.draft[key]}
                       error={draft.fieldErrors[key]}
+                      disabled={draft.saving}
                       onEdit={(value) => draft.edit(key, value)}
                       onRevert={() => draft.revert(key)}
                     />

@@ -1,19 +1,10 @@
-import type { RecordChangeAuthorKind, RecordOperation } from "@/__generated__/graphql";
+import type { RecordHistoryQuery } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
 
 import type { RecordDescription } from "./recordDescription";
 
-/** A history line as the `RecordHistory` query reads it. */
-export interface HistoryLine {
-  id: string;
-  operation: RecordOperation;
-  /** An ISO instant in UTC. */
-  occurredAt: string;
-  author: { kind: RecordChangeAuthorKind; email: string | null };
-  cause: { kind: string };
-  reason: string | null;
-  changes: { field: string; oldValue: string | null; newValue: string | null }[];
-}
+/** A history line as the `RecordHistory` query reads it; `occurredAt` is an ISO instant in UTC. */
+export type HistoryLine = RecordHistoryQuery["recordHistory"]["edges"][number]["node"];
 
 /** What a history line says, before it is rendered. */
 export type Summary =

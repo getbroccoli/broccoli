@@ -53,6 +53,8 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   };
 
   const save = async () => {
+    // The draft is what gets saved, so it stays still until the save ends.
+    if (saving) return;
     setFailure(null);
     setFieldErrors({});
     try {

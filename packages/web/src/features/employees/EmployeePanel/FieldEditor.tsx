@@ -27,17 +27,26 @@ export function FieldEditor({
 }: Props) {
   if (field.editor === "date") {
     return (
-      <DatePicker
-        value={value}
-        onChange={(next) => {
-          onChange(next);
-          onDone();
+      <div
+        onKeyDown={(event) => {
+          // Only on the picker's button; the calendar, in a portal, closes itself on Escape.
+          if (event.key !== "Escape" || !event.currentTarget.contains(event.target as Node)) return;
+          event.stopPropagation();
+          onRevert();
         }}
-        placeholder={t("people.panel.empty")}
-        autoFocus
-        aria-label={field.label}
-        aria-invalid={invalid}
-      />
+      >
+        <DatePicker
+          value={value}
+          onChange={(next) => {
+            onChange(next);
+            onDone();
+          }}
+          placeholder={t("people.panel.empty")}
+          autoFocus
+          aria-label={field.label}
+          aria-invalid={invalid}
+        />
+      </div>
     );
   }
   return (

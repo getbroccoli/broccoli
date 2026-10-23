@@ -38,7 +38,7 @@ export function HistoryRow({ line, description }: Props) {
             ? author.slice(0, 2).toUpperCase()
             : author.charAt(0)}
         </span>
-        <p className="min-w-0 flex-1 truncate">
+        <p className="min-w-0 flex-1 break-words">
           <span className="font-medium">{author}</span> <SummaryText summary={summary} />
           {line.reason && <span className="text-muted-foreground"> · “{line.reason}”</span>}
         </p>

@@ -20,11 +20,28 @@ type Props = {
  * itself, so a record's panel only says which record and how its fields read.
  */
 export function RecordHistory({ recordType, recordId, description }: Props) {
-  const [limit, setLimit] = useState(PAGE_SIZE);
-  const { data, previousData, error, loading, refetch } = useQuery(RecordHistoryDocument, {
-    variables: { recordType, recordId, first: limit },
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const { data, error, refetch, fetchMore } = useQuery(RecordHistoryDocument, {
+    variables: { recordType, recordId, first: PAGE_SIZE },
   });
-  const history = (data ?? previousData)?.recordHistory;
+  const history = data?.recordHistory;
+
+  const loadOlder = async (after: string) => {
+    setLoadingOlder(true);
+    try {
+      await fetchMore({
+        variables: { after },
+        updateQuery: (current, { fetchMoreResult }) => ({
+          recordHistory: {
+            ...fetchMoreResult.recordHistory,
+            edges: [...current.recordHistory.edges, ...fetchMoreResult.recordHistory.edges],
+          },
+        }),
+      });
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   return (
     <section aria-labelledby="record-history" className="flex flex-col gap-2">
@@ -34,14 +51,15 @@ export function RecordHistory({ recordType, recordId, description }: Props) {
       >
         {t("records.history.title")}
       </h2>
-      {error && !history ? (
+      {error && (
         <div role="alert" className="flex items-center gap-3 text-sm text-muted-foreground">
           {t("records.history.error")}
           <Button variant="outline" size="sm" onClick={() => void refetch()}>
             {t("records.history.retry")}
           </Button>
         </div>
-      ) : history?.edges.length === 0 ? (
+      )}
+      {history?.edges.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t("records.history.empty")}</p>
       ) : (
         history && (
@@ -64,13 +82,13 @@ export function RecordHistory({ recordType, recordId, description }: Props) {
           </div>
         )
       )}
-      {history?.pageInfo.hasNextPage && (
+      {history?.pageInfo.hasNextPage && history.pageInfo.endCursor && (
         <Button
           variant="outline"
           size="sm"
           className="self-start"
-          disabled={loading}
-          onClick={() => setLimit((current) => current + PAGE_SIZE)}
+          disabled={loadingOlder}
+          onClick={() => void loadOlder(history.pageInfo.endCursor!)}
         >
           {t("records.history.older")}
         </Button>

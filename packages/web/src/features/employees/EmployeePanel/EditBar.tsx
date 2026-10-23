@@ -58,6 +58,7 @@ export function EditBar({
         <Input
           autoFocus
           value={reason}
+          disabled={saving}
           maxLength={500}
           aria-label={t("people.panel.bar.reason")}
           placeholder={t("people.panel.bar.reason")}

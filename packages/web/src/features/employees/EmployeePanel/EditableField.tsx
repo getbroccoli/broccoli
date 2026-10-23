@@ -13,6 +13,8 @@ type Props = {
   /** The unsaved value, or undefined when the field is unchanged. */
   draft: string | null | undefined;
   error: string | undefined;
+  /** True while the panel saves: the draft being saved must not change. */
+  disabled: boolean;
   onEdit: (value: string) => void;
   onRevert: () => void;
 };
@@ -21,7 +23,7 @@ type Props = {
  * One field of a record's panel: its value, which a click or Enter turns into its editor. An
  * edited field keeps a mark and its saved value ("was …") until the panel saves or cancels.
  */
-export function EditableField({ field, saved, draft, error, onEdit, onRevert }: Props) {
+export function EditableField({ field, saved, draft, error, disabled, onEdit, onRevert }: Props) {
   const [editing, setEditing] = useState(false);
   const changed = draft !== undefined && (draft || null) !== saved;
   const value = draft ?? saved ?? "";
@@ -39,7 +41,7 @@ export function EditableField({ field, saved, draft, error, onEdit, onRevert }: 
     >
       <span className="text-muted-foreground">{field.label}</span>
       <div className="min-w-0">
-        {editing || error ? (
+        {(editing || error) && !disabled ? (
           <FieldEditor
             field={field}
             value={value}
@@ -55,6 +57,7 @@ export function EditableField({ field, saved, draft, error, onEdit, onRevert }: 
         ) : (
           <button
             type="button"
+            disabled={disabled}
             aria-label={`${t("people.panel.edit", { field: field.label })}: ${shown}`}
             onClick={() => setEditing(true)}
             className="group/field flex w-full min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"

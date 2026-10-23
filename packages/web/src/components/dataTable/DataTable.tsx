@@ -10,6 +10,7 @@ import { TableSkeleton } from "./TableStates";
 // The first column stays put while the rows scroll sideways; in a compact list the inset shadow marks its edge.
 const PINNED_COLUMN = "sticky left-0 z-10 bg-card";
 const PINNED_EDGE = "shadow-[inset_-1px_0_0_var(--color-border)]";
+const INTERACTIVE = "a, button, input, select, textarea, [role=button]";
 
 export interface DataTableColumn<Row, SortKey extends string = string> {
   id: string;
@@ -108,7 +109,21 @@ export function DataTable<Row, SortKey extends string>({
               {rows.map((row) => (
                 <TableRow
                   key={getRowId(row)}
-                  onClick={onRowClick && (() => onRowClick(row))}
+                  onClick={
+                    onRowClick &&
+                    ((event) => {
+                      // A link or control in the row does its own thing, as do modified clicks.
+                      const target = event.target as HTMLElement;
+                      if (
+                        target.closest(INTERACTIVE) ||
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey
+                      )
+                        return;
+                      onRowClick(row);
+                    })
+                  }
                   className={cn(
                     "group/row hover:bg-row-hover",
                     onRowClick && "cursor-pointer",
