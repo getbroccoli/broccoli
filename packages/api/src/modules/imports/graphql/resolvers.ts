@@ -1,6 +1,14 @@
 import type { Resolvers } from "../../../core/graphql";
 import type { ImportUseCases } from "../app";
-import { AI_SOURCES, FAILURES, IMPORT, KINDS, READERS, STATUSES } from "./graphqlValues";
+import {
+  AGENT_FILE_PROGRESS,
+  AI_SOURCES,
+  FAILURES,
+  IMPORT,
+  KINDS,
+  READERS,
+  STATUSES,
+} from "./graphqlValues";
 import { importCheckResolvers } from "./importCheckResolvers";
 import { importEmployeeResolvers } from "./importEmployeeResolvers";
 import { importMutationResolvers } from "./importMutationResolvers";
@@ -44,6 +52,8 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       readBy: ({ readBy }) => READERS[readBy],
       pickedUpByExternalAgent: ({ pickedUpByExternalAgentAt }) =>
         pickedUpByExternalAgentAt !== null,
+      externalAgentProgress: ({ externalAgentProgress }) =>
+        externalAgentProgress ? AGENT_FILE_PROGRESS[externalAgentProgress] : null,
       originalReadAllowed: ({ originalReadAllowedAt }) => originalReadAllowedAt !== null,
       originalReadAiSource: ({ originalReadAiSource }) =>
         originalReadAiSource ? AI_SOURCES[originalReadAiSource] : null,

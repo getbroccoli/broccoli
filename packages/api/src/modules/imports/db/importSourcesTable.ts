@@ -3,7 +3,12 @@ import { check, integer, pgTable, text, timestamp, uniqueIndex, uuid } from "dri
 
 import { files } from "../../../core/files";
 import type { AiSource } from "../../../core/instance";
-import { IMPORT_SOURCE_FAILURES, IMPORT_SOURCE_READERS, IMPORT_SOURCE_STATUSES } from "../domain";
+import {
+  EXTERNAL_AGENT_FILE_PROGRESS,
+  IMPORT_SOURCE_FAILURES,
+  IMPORT_SOURCE_READERS,
+  IMPORT_SOURCE_STATUSES,
+} from "../domain";
 
 /** Where the import's records come from: the Slack workspace and uploaded files. */
 export const importSources = pgTable(
@@ -26,14 +31,19 @@ export const importSources = pgTable(
     readBy: text("read_by", { enum: IMPORT_SOURCE_READERS })
       .notNull()
       .default("parsed_by_broccoli"),
-    /** When the external agent first read the file's questions or fetched it. */
+    /** When the external agent acknowledged the file or fetched its questions or original. */
     pickedUpByExternalAgentAt: timestamp("picked_up_by_external_agent_at", { withTimezone: true }),
+    externalAgentProgress: text("external_agent_progress", { enum: EXTERNAL_AGENT_FILE_PROGRESS }),
     /** When the owner let AI read the original file in full; Reset setup clears it. */
     originalReadAllowedAt: timestamp("original_read_allowed_at", { withTimezone: true }),
     originalReadAiSource: text("original_read_ai_source").$type<AiSource>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    check(
+      "import_sources_external_agent_progress",
+      sql`${table.externalAgentProgress} in ('file_found', 'file_downloading', 'file_mapping')`,
+    ),
     check("import_sources_kind", sql`${table.kind} in ('slack', 'file')`),
     check(
       "import_sources_status",

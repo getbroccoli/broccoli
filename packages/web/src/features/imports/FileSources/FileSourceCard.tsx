@@ -51,8 +51,6 @@ type Props = {
   busy: boolean;
   /** The AI files are read with now; null on a managed instance. */
   aiSource: AiSource | null;
-  /** Whether the connected external agent listens for files, so a new one counts as picked up. */
-  externalAgentListening: boolean;
   onRetry: () => void;
   /** Lets AI read this one file in full. */
   onAllowOriginalRead: () => void;
@@ -64,7 +62,6 @@ export function FileSourceCard({
   source: sourceRef,
   busy,
   aiSource,
-  externalAgentListening,
   onRetry,
   onAllowOriginalRead,
   onRemove,
@@ -93,7 +90,7 @@ export function FileSourceCard({
   const offersOriginalRead =
     !source.originalReadAllowed && (source.status === "MAPPED" || failed) && !asksForOriginalRead;
   const provider = t(aiSource ? PROVIDERS[aiSource] : "imports.files.providerManaged");
-  const pickingUp = !needsNewConsent && isPickingUp(source, externalAgentListening);
+  const pickingUp = !needsNewConsent && isPickingUp(source);
   return (
     <li
       className={cn(
@@ -226,16 +223,9 @@ function couldNotMapMasked({ status, failure }: FileSourceCard_SourceFragment) {
   );
 }
 
-/** Whether the external agent picked the file up, or listens and so picks it up in a moment. */
-function isPickingUp(
-  { status, readBy, pickedUpByExternalAgent }: FileSourceCard_SourceFragment,
-  externalAgentListening: boolean,
-) {
-  return (
-    status === "MAPPING" &&
-    readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
-    (pickedUpByExternalAgent || externalAgentListening)
-  );
+/** Whether the external agent acknowledged this file. */
+function isPickingUp({ status, readBy, pickedUpByExternalAgent }: FileSourceCard_SourceFragment) {
+  return status === "MAPPING" && readBy === "ANSWERED_BY_EXTERNAL_AGENT" && pickedUpByExternalAgent;
 }
 
 function statusLine(source: FileSourceCard_SourceFragment, pickingUp: boolean): string {
@@ -250,10 +240,23 @@ function statusLine(source: FileSourceCard_SourceFragment, pickingUp: boolean): 
     if (!pickingUp) {
       return t("imports.files.waitingForExternalAgent");
     }
+    if (source.externalAgentProgress === "FILE_FOUND") {
+      return t("imports.files.foundByExternalAgent");
+    }
+    if (source.externalAgentProgress === "FILE_DOWNLOADING") {
+      return t(
+        originalReadAllowed
+          ? "imports.files.downloadingOriginalByExternalAgent"
+          : "imports.files.downloadingQuestionsByExternalAgent",
+      );
+    }
+    if (source.externalAgentProgress === "FILE_MAPPING") {
+      return t("imports.files.mappingByExternalAgent");
+    }
     return t(
       originalReadAllowed
         ? "imports.files.readingByExternalAgent"
-        : "imports.files.pickingUpByExternalAgent",
+        : "imports.files.mappingByExternalAgent",
     );
   }
   if (status === "FAILED") {

@@ -81,6 +81,7 @@ test("consent with Broccoli queues a new read and keeps the existing records", a
       originalReadAllowedAt: expect.any(Date) as unknown,
       failure: null,
       pickedUpByExternalAgentAt: null,
+      externalAgentProgress: null,
     },
   ]);
   expect(imports.sentJobs).toEqual([

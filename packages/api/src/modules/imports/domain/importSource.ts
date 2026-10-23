@@ -39,6 +39,9 @@ export class ImportSource {
   get pickedUpByExternalAgentAt(): Date | null {
     return structuredClone(this.#state.pickedUpByExternalAgentAt);
   }
+  get externalAgentProgress(): ExternalAgentFileProgress | null {
+    return this.#state.externalAgentProgress;
+  }
   get originalReadAllowedAt(): Date | null {
     return structuredClone(this.#state.originalReadAllowedAt);
   }
@@ -139,8 +142,10 @@ export interface ImportSourceState {
   /** The AI provider's own words, when it refused the file for good. */
   failureMessage: string | null;
   readBy: ImportSourceReader;
-  /** When the external agent first read the file's questions or fetched it; null until it does. */
+  /** When the external agent acknowledged the file or fetched its questions or original. */
   pickedUpByExternalAgentAt: Date | null;
+  /** The latest stage reported by the external agent for this mapping run. */
+  externalAgentProgress: ExternalAgentFileProgress | null;
   /** When the owner let AI read the original file in full; null without that consent. */
   originalReadAllowedAt: Date | null;
   /** The provider that last read the original successfully; null for managed or older reads. */
@@ -152,6 +157,14 @@ export interface ImportSourceState {
  * once the owner allowed it, read the original file and send its people.
  */
 export type ExternalAgentParseFileWay = "answer_masked_questions" | "read_original_file";
+
+/** Stages an agent can report while preparing a file for review. */
+export const EXTERNAL_AGENT_FILE_PROGRESS = [
+  "file_found",
+  "file_downloading",
+  "file_mapping",
+] as const;
+export type ExternalAgentFileProgress = (typeof EXTERNAL_AGENT_FILE_PROGRESS)[number];
 
 /** How a mapping run ended. */
 export type MappingOutcome =

@@ -6,6 +6,7 @@ fragment FileSourceCard_source on ImportSource {
   failureMessage
   employeeCount
   readBy
+  externalAgentProgress
   pickedUpByExternalAgent
   originalReadAllowed
   originalReadAiSource

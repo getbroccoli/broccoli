@@ -36,8 +36,6 @@ type Props = {
   uploadFile: FileUploader;
   /** The AI files are read with now; null on a managed instance. */
   aiSource: AiSource | null;
-  /** Whether the connected external agent listens for files. */
-  externalAgentListening: boolean;
   /** The connected external agent, beside the heading. */
   externalAgentPill?: ReactNode;
   /** Connecting the chosen external agent, in place of the drop zone until it connects. */
@@ -57,7 +55,6 @@ export function FileSources({
   onUploadingChange,
   uploadFile,
   aiSource,
-  externalAgentListening,
   externalAgentPill,
   externalAgentPrompt,
   externalAgentNewFiles,
@@ -176,7 +173,6 @@ export function FileSources({
               source={source}
               busy={busy}
               aiSource={aiSource}
-              externalAgentListening={externalAgentListening}
               // A failure shows through the mutation's `error` or `payloadError`.
               onRetry={() => void retryFile({ variables: { sourceId: source.id } }).catch(() => {})}
               onAllowOriginalRead={() =>

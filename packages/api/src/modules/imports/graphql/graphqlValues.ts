@@ -18,6 +18,11 @@ export const READERS = {
   parsed_by_broccoli: "PARSED_BY_BROCCOLI",
   answered_by_external_agent: "ANSWERED_BY_EXTERNAL_AGENT",
 } as const;
+export const AGENT_FILE_PROGRESS = {
+  file_found: "FILE_FOUND",
+  file_downloading: "FILE_DOWNLOADING",
+  file_mapping: "FILE_MAPPING",
+} as const;
 export const FAILURES = {
   no_people_columns: "NO_PEOPLE_COLUMNS",
   unavailable: "UNAVAILABLE",

@@ -7,7 +7,12 @@ import { z } from "zod";
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Logger } from "../../../core/logger";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
-import { type MappingAnswersInput, READ_PEOPLE_JSON_SCHEMA } from "../../imports";
+import {
+  EXTERNAL_AGENT_FILE_PROGRESS,
+  type ExternalAgentFileProgress,
+  type MappingAnswersInput,
+  READ_PEOPLE_JSON_SCHEMA,
+} from "../../imports";
 import type { ExternalAgentUseCases } from "../app";
 import { externalAgentErrorHandler, tooManyRequests } from "./externalAgentErrors";
 
@@ -108,6 +113,20 @@ export function externalAgentRouter(
         if (!abandoned.signal.aborted) {
           response.json(files);
         }
+      },
+    )
+    .post(
+      "/external-agent/unmapped-files/:id/progress",
+      asExternalAgent,
+      perSession,
+      express.json({ limit: 1024 }),
+      async (request, response) => {
+        await useCases.files.reportFileProgress(
+          externalAgentOf(response),
+          sourceIdOf(request, response),
+          parseProgress(request.body),
+        );
+        response.status(204).end();
       },
     )
     .get(
@@ -217,6 +236,14 @@ function parseAnswers(body: unknown): MappingAnswersInput {
     throw invalidInput([{ field: "sheets", code: "invalid" }]);
   }
   return parsed.data;
+}
+
+function parseProgress(body: unknown): ExternalAgentFileProgress {
+  const parsed = z.object({ progress: z.enum(EXTERNAL_AGENT_FILE_PROGRESS) }).safeParse(body);
+  if (!parsed.success) {
+    throw invalidInput([{ field: "progress", code: "invalid" }]);
+  }
+  return parsed.data.progress;
 }
 
 const ANSWERS = z.object({

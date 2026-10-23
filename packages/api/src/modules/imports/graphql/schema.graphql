@@ -68,6 +68,13 @@ enum ImportSourceFailure {
   ORIGINAL_READ_INCOMPLETE
 }
 
+"The latest preparation stage reported by the external agent."
+enum ExternalAgentFileProgress {
+  FILE_FOUND
+  FILE_DOWNLOADING
+  FILE_MAPPING
+}
+
 "One place people came from, such as the Slack workspace; it owns its records."
 type ImportSource {
   id: ID!
@@ -78,8 +85,10 @@ type ImportSource {
   readAt: DateTime!
   "Who read the file's people: Broccoli's model or the owner's external agent. Broccoli for Slack."
   readBy: ImportSourceReader!
-  "Whether the owner's external agent has read the file's questions or fetched it; false for any other source."
+  "Whether the agent acknowledged the file, read its questions or fetched it; false for other sources."
   pickedUpByExternalAgent: Boolean!
+  "Null until the agent reports a stage; completed files use status instead."
+  externalAgentProgress: ExternalAgentFileProgress
   "Whether the owner let AI read the original file in full, personal data included; Reset setup ends it."
   originalReadAllowed: Boolean!
   "The provider that last read the original successfully; null for managed or older reads."

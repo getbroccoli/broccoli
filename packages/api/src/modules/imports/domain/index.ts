@@ -45,6 +45,8 @@ export { parseStaffFileName } from "./fileName";
 export { type ImportProgress, importProgress, isReading } from "./importProgress";
 export {
   type ExternalAgentParseFileWay,
+  type ExternalAgentFileProgress,
+  EXTERNAL_AGENT_FILE_PROGRESS,
   IMPORT_SOURCE_FAILURES,
   IMPORT_SOURCE_READERS,
   IMPORT_SOURCE_STATUSES,
