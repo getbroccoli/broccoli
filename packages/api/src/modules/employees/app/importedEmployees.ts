@@ -3,7 +3,7 @@ import { type HistoryAppend, purgeRecordHistory } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository } from "../db";
 import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
-import { recordCreatedEmployees } from "./employeeHistory";
+import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 /** What adding imported employees did. */
 export interface ImportedEmployees {

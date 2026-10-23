@@ -7,7 +7,7 @@ import {
   type NewEmployeeInput,
   parseNewEmployee,
 } from "../../domain";
-import { recordCreatedEmployees } from "../employeeHistory";
+import { recordCreatedEmployees } from "../recordCreatedEmployees";
 import type { EmployeeContext } from "./employeeContext";
 
 export async function createEmployee(

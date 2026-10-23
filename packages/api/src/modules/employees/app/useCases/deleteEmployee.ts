@@ -3,7 +3,7 @@ import type { SecurityContext } from "../../../../core/security";
 import { employeeRepository } from "../../db";
 import { employeeChanges } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
-import { employeeIdOf, employeeNotFound } from "./employeeId";
+import { employeeIdOf, employeeNotFound } from "./employeeIdOf";
 
 /**
  * Removes an employee and their avatar and records what they held as a deletion line, in one

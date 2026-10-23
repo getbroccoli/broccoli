@@ -11,7 +11,7 @@ import {
   parseEmployeeUpdate,
 } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
-import { employeeIdOf, employeeNotFound } from "./employeeId";
+import { employeeIdOf, employeeNotFound } from "./employeeIdOf";
 
 /**
  * Changes the fields an update sends and records the change in the employee's history, in one

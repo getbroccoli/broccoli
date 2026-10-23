@@ -4,7 +4,7 @@ import type { SecurityContext } from "../../../core/security";
 import type { RasterImage } from "../../../utils";
 import { employeeRepository } from "../db";
 import { type NewEmployeeInput, parseNewEmployee } from "../domain";
-import { recordCreatedEmployees } from "./employeeHistory";
+import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 /** A demo employee and their avatar. */
 export interface DemoEmployee {

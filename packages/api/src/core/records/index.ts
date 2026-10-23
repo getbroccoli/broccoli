@@ -10,19 +10,15 @@ export {
   purgeRecordHistory,
   readRecordHistory,
 } from "./app";
-export { recordHistory } from "./db";
 export { changeReasonSchema, parseChangeReason } from "./domain";
 
 // Public types.
-export type { RecordChanged, RecordHistoryAccess, RecordHistoryReader } from "./app";
+export type { RecordChanged, RecordHistoryAccess } from "./app";
 export type {
-  AuthorKind,
-  CauseKind,
   CauseKinds,
   FieldChange,
   HistoryAppend,
   HistoryAuthor,
-  HistoryCause,
   HistoryLine,
   RecordOperation,
   RecordType,

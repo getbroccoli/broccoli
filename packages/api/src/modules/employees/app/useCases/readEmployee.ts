@@ -4,7 +4,7 @@ import type { SecurityContext } from "../../../../core/security";
 import type { EmployeeRepository } from "../../db";
 import type { Employee } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
-import { employeeIdOf } from "./employeeId";
+import { employeeIdOf } from "./employeeIdOf";
 
 /** The employee with this id, or null when there is none. */
 export async function readEmployee(
