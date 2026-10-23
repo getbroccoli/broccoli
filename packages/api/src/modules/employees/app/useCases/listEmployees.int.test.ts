@@ -1,9 +1,7 @@
-import { expect, OWNER, test } from "#test/support";
-
-import { createEmployeeUseCases } from ".";
+import { employeeUseCases, expect, OWNER, test } from "#test/support";
 
 test("lists employees in name order across pages", async ({ orm, seed }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const zoe = await seed.employee({ firstName: "Zoe", lastName: "Adams" });
   const samZ = await seed.employee({ firstName: "Sam", lastName: "Zimmer" });
   const ada = await seed.employee({ firstName: "ada", lastName: "Stone" });
@@ -42,7 +40,7 @@ test("lists employees in name order across pages", async ({ orm, seed }) => {
 });
 
 test("pages stably through employees with the same name", async ({ orm, seed }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const firstSam = await seed.employee({ firstName: "Sam", lastName: "Lee" });
   const secondSam = await seed.employee({ firstName: "Sam", lastName: "Lee" });
   const [firstId, secondId] = [firstSam.id, secondSam.id].sort();
@@ -68,7 +66,7 @@ test("pages stably through employees with the same name", async ({ orm, seed }) 
 });
 
 test("sorts by name in descending order", async ({ orm, seed }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const samA = await seed.employee({ firstName: "sam", lastName: "adams" });
   const ada = await seed.employee({ firstName: "Ada" });
   const samZ = await seed.employee({ firstName: "Sam", lastName: "Zimmer" });
@@ -79,7 +77,7 @@ test("sorts by name in descending order", async ({ orm, seed }) => {
 });
 
 test("sorts by email", async ({ orm, seed }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const zoe = await seed.employee({ firstName: "Ada", email: "zoe@example.com" });
   const ada = await seed.employee({ firstName: "Zoe", email: "ada@example.com" });
   const ben = await seed.employee({ firstName: "Ben", email: "ben@example.com" });
@@ -90,7 +88,7 @@ test("sorts by email", async ({ orm, seed }) => {
 });
 
 test("sorts by start date with employees without one last", async ({ orm, seed }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const undated = await seed.employee({ startDate: null });
   const later = await seed.employee({ startDate: "2026-03-01" });
   const earlier = await seed.employee({ startDate: "2026-02-28" });
@@ -104,7 +102,7 @@ test("sorts by start date descending with employees without one still last", asy
   orm,
   seed,
 }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const earlier = await seed.employee({ startDate: "2026-02-28" });
   const undated = await seed.employee({ startDate: null });
   const later = await seed.employee({ startDate: "2026-03-01" });
@@ -118,7 +116,7 @@ test("pages through a start date order that includes employees without one", asy
   orm,
   seed,
 }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const firstUndated = await seed.employee({ startDate: null });
   const later = await seed.employee({ startDate: "2026-03-01" });
   const secondUndated = await seed.employee({ startDate: null });
@@ -153,7 +151,7 @@ test("finds employees whose first name, last name or email contains the search, 
   orm,
   seed,
 }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const firstNameMatch = await seed.employee({ firstName: "AlphaBeta" });
   const lastNameMatch = await seed.employee({ firstName: "Ben", lastName: "MyALPHAName" });
   const emailMatch = await seed.employee({ firstName: "Cara", email: "team.alpha@example.com" });
@@ -171,7 +169,7 @@ test("finds employees whose first name, last name or email contains the search, 
 test.for(["Avery Stone", " aVeRy sToNe ", "ery Sto"])(
   "finds employees by full name with search %j",
   async (search, { orm, seed }) => {
-    const { listEmployees } = createEmployeeUseCases({ orm });
+    const { listEmployees } = employeeUseCases(orm);
     const match = await seed.employee({ firstName: "Avery", lastName: "Stone" });
     await seed.employee({ firstName: "Avery", lastName: "Reed" });
     await seed.employee({ firstName: "Robin", lastName: "Stone" });
@@ -183,7 +181,7 @@ test.for(["Avery Stone", " aVeRy sToNe ", "ery Sto"])(
 );
 
 test("treats percent and underscore in a search literally", async ({ orm, seed }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const percent = await seed.employee({ firstName: "Percent%Name" });
   const underscore = await seed.employee({ firstName: "Underscore_Name" });
   await seed.employee({ firstName: "Ordinary" });
@@ -196,7 +194,7 @@ test("treats percent and underscore in a search literally", async ({ orm, seed }
 });
 
 test("refuses a search longer than 100 characters", async ({ orm }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
 
   await expect(listEmployees(OWNER, { filter: { search: "a".repeat(101) } })).rejects.toMatchObject(
     {
@@ -208,7 +206,7 @@ test("refuses a search longer than 100 characters", async ({ orm }) => {
 });
 
 test("refuses a cursor issued under another order", async ({ orm, seed }) => {
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   await seed.employee();
   await seed.employee();
   const firstPage = await listEmployees(OWNER, {

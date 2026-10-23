@@ -1,23 +1,18 @@
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import type { EmployeeUseCases } from "../app";
-import type { Employee } from "../domain";
 import { avatarUrl } from "../http";
 
 export function createResolvers(useCases: EmployeeUseCases): Resolvers {
   return {
     Query: {
-      employees: async (_parent, { first, after, orderBy, filter }, context) => {
-        const connection = await useCases.listEmployees(context.getActor(), {
+      employee: (_parent, { id }, context) => useCases.readEmployee(context.getActor(), id),
+      employees: (_parent, { first, after, orderBy, filter }, context) =>
+        useCases.listEmployees(context.getActor(), {
           first: first ?? undefined,
           after,
           orderBy,
           filter,
-        });
-        return {
-          ...connection,
-          edges: connection.edges.map((edge) => ({ ...edge, node: toGraphql(edge.node) })),
-        };
-      },
+        }),
     },
     Mutation: {
       employee: () => ({}),
@@ -26,13 +21,30 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
       create: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeCreatePayload"]>(
           "employee",
-          async () => toGraphql(await useCases.createEmployee(context.getActor(), input)),
+          () => useCases.createEmployee(context.getActor(), input),
           ["INVALID_INPUT"],
         ),
+      update: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
+          "employee",
+          () => useCases.updateEmployee(context.getActor(), input),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+      delete: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["EmployeeDeletePayload"]>(
+          "deletedEmployeeId",
+          () => useCases.deleteEmployee(context.getActor(), input),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+    },
+    Employee: {
+      avatarUrl: ({ avatarFileId }) => avatarFileId && avatarUrl(avatarFileId),
+      // shortcut: one query per employee; batch it when a list selects history.
+      history: (employee, { first, after }, context) =>
+        useCases.readEmployeeHistory(context.getActor(), employee.id, {
+          first: first ?? undefined,
+          after,
+        }),
     },
   };
-}
-
-function toGraphql({ avatarFileId, ...employee }: Employee) {
-  return { ...employee, avatarUrl: avatarFileId && avatarUrl(avatarFileId) };
 }

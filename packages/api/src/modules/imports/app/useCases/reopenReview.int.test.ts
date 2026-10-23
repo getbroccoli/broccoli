@@ -1,4 +1,5 @@
 import {
+  employeeUseCases,
   expect,
   finishSelfHostedSetup,
   importSourceValues,
@@ -14,7 +15,6 @@ import {
 
 import { readFile } from "../../../../core/files";
 import { readInstance } from "../../../../core/instance";
-import { createEmployeeUseCases } from "../../../employees";
 
 test.for(["ready", "owner"] as const)(
   "Back reopens the review from %s",
@@ -40,9 +40,7 @@ test.for(["company", "import", "done"] as const)(
 
     expect((await readInstance(orm)).step).toBe(step);
     expect(
-      (await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges.map(
-        ({ node }) => node,
-      ),
+      (await employeeUseCases(orm).listEmployees(owner, {})).edges.map(({ node }) => node),
     ).toEqual([employee]);
   },
 );
@@ -80,7 +78,7 @@ test("Back preserves values, left-out choices, sources and photos for the next a
   const sources = await imports.reads.listSources(owner);
   const fileIds = await storedFileIds(orm);
   await imports.approveImport(owner, review.version);
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   expect((await employees.listEmployees(owner, {})).edges).toEqual([]);
 
   await imports.reopenReview(owner);
@@ -125,7 +123,7 @@ test("Back from the terminal demo deletes demo employees and finishes with only 
   await seed.setupStep("import");
   const imports = importUseCases(orm);
   await imports.startDemo(SETUP_HOLDER);
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   expect((await employees.listEmployees(OWNER, {})).edges.length).toBeGreaterThan(0);
   expect((await readInstance(orm)).step).toBe("owner");
 

@@ -1,6 +1,7 @@
 import { createAiSettings } from "../core/instance";
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
+import { recordsManifest } from "../core/records";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { deleteAllEmployees, employeesModule } from "./employees";
@@ -34,23 +35,24 @@ export function createModules(
     originalFileReader: aiSettings.originalFileReader,
     prepareDemoFill,
   });
+  const manifests = [
+    systemModule({
+      ...core,
+      mode: deployment.mode,
+      aiSettings,
+      addApprovedPeople: importUseCases.addApprovedPeople,
+      deleteAllEmployees,
+      deleteFinishedImport: importUseCases.deleteFinishedImport,
+    }),
+    employeesModule(core),
+    companyModule({ ...core, brandLookupUrl }),
+    demoModule({ orm: core.orm, transact: core.transact }),
+    slackModule(slackConnection),
+    importsModule(importUseCases),
+    externalAgentsModule({ ...core, mode: deployment.mode, imports: importUseCases }),
+  ];
   return {
-    manifests: [
-      systemModule({
-        ...core,
-        mode: deployment.mode,
-        aiSettings,
-        addApprovedPeople: importUseCases.addApprovedPeople,
-        deleteAllEmployees,
-        deleteFinishedImport: importUseCases.deleteFinishedImport,
-      }),
-      employeesModule({ orm: core.orm }),
-      companyModule({ ...core, brandLookupUrl }),
-      demoModule({ orm: core.orm, transact: core.transact }),
-      slackModule(slackConnection),
-      importsModule(importUseCases),
-      externalAgentsModule({ ...core, mode: deployment.mode, imports: importUseCases }),
-    ],
+    manifests: [...manifests, recordsManifest(core.orm, manifests)],
     setupDemo: {
       prepareStart: importUseCases.prepareDemoStart,
       deleteAllEmployees,

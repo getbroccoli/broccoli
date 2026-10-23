@@ -26,13 +26,16 @@ export type {
   NewEmployeeInput,
 } from "./domain";
 
-/** The people who work for the company: create and list them, and serve their avatars. */
-export function employeesModule({ orm }: Pick<ModuleDependencies, "orm">): ModuleManifest {
-  const useCases = createEmployeeUseCases({ orm });
+/** The people who work for the company: create, change, remove and list them, keep their history, and serve their avatars. */
+export function employeesModule(
+  dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger">,
+): ModuleManifest {
+  const useCases = createEmployeeUseCases(dependencies);
   return {
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
+    recordHistoryAccess: { employee: (ctx) => ctx.requireOwnerOrSystem() },
     router: (resolveSecurity) => avatarRouter(useCases, resolveSecurity),
   };
 }

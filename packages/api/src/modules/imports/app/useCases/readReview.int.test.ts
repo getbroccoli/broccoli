@@ -1,6 +1,11 @@
-import { importSourceValues, expect, importUseCases, OWNER, test } from "#test/support";
-
-import { createEmployeeUseCases } from "../../../employees";
+import {
+  employeeUseCases,
+  importSourceValues,
+  expect,
+  importUseCases,
+  OWNER,
+  test,
+} from "#test/support";
 
 test("counts ready import employees across Slack and file sources, leaving incomplete records out", async ({
   orm,
@@ -52,7 +57,7 @@ test("does not count an import employee whose email an employee already has as r
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
   await seed.importEmployees(source.id, [avery, robin]);
-  await createEmployeeUseCases({ orm }).createEmployee(owner, avery);
+  await employeeUseCases(orm).createEmployee(owner, avery);
   const imports = importUseCases(orm);
 
   const review = await imports.reads.readReview(owner);

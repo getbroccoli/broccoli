@@ -13,6 +13,7 @@
       "src/core/env",
       "src/core/instance",
       "src/core/moduleManifest",
+      "src/core/records",
       "src/modules/*"
     ],
     "src/modules/company": [
@@ -51,6 +52,7 @@
       "src/core/instance",
       "src/core/jobs",
       "src/core/logger",
+      "src/core/records",
       "src/core/secrets",
       "src/core/security"
     ],
@@ -84,6 +86,15 @@
     ],
     "src/core/auth": ["src/core/db", "src/core/logger"],
     "src/core/files": ["src/core/db"],
+    "src/core/records": [
+      "src/core/applicationError",
+      "src/core/auth",
+      "src/core/db",
+      "src/core/events",
+      "src/core/graphql",
+      "src/core/pagination",
+      "src/core/security"
+    ],
     "src/core/jobs": ["src/core/db", "src/core/logger"],
     "src/core/db": ["src/core/events", "src/core/logger"],
     "src/core/events": ["src/core/logger"],

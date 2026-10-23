@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import {
+  employeeUseCases,
   importSourceValues,
   expect,
   importUseCases,
@@ -12,7 +13,6 @@ import {
 
 import { ormOf } from "../../../../core/db";
 import { readInstance } from "../../../../core/instance";
-import { createEmployeeUseCases } from "../../../employees";
 
 test.for([
   { mode: "managed", step: "ready" },
@@ -39,10 +39,10 @@ test.for([
 
     expect((await readInstance(orm)).step).toBe(step);
     if (mode === "managed") {
-      expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
+      expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
       await systemUseCases(orm).completeSetup(owner);
     }
-    const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+    const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
     expect(employees.edges.map(({ node }) => node)).toEqual(
       expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
     );
@@ -64,7 +64,7 @@ test("approving adds exactly the ready import employees the review counts", asyn
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
   await seed.importEmployees(source.id, [avery, robin]);
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   const existing = await employees.createEmployee(owner, avery);
   const imports = importUseCases(orm);
   const review = await imports.reads.readReview(owner);
@@ -93,9 +93,7 @@ test("approving keeps a record without a last name without creating an employee"
 
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
-  expect(
-    (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
-  ).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, { first: 100 })).edges).toEqual([]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
       ({ node }) => node,
@@ -112,7 +110,7 @@ test("approving twice creates the employees once", async ({ orm, seed }) => {
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   const first = await employees.listEmployees(OWNER, { first: 100 });
   expect(first.edges).toHaveLength(1);
@@ -137,7 +135,7 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
 
   expect((await readInstance(orm)).step).toBe("ready");
   await systemUseCases(orm).completeSetup(owner);
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).toEqual([record!.email]);
 });
 
@@ -150,7 +148,7 @@ test.for(["skipped", "company"] as const)(
     await seed.importEmployees(source.id, [{}]);
     const imports = importUseCases(orm);
     if (step === "skipped") await imports.startDemo(owner);
-    const employees = createEmployeeUseCases({ orm });
+    const employees = employeeUseCases(orm);
     const before = await employees.listEmployees(OWNER, { first: 100 });
 
     await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
@@ -172,9 +170,7 @@ test("refuses a non-owner approving the import", async ({ orm, seed }) => {
   });
 
   expect((await readInstance(orm)).step).toBe("import");
-  expect(
-    (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
-  ).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, { first: 100 })).edges).toEqual([]);
 });
 
 test("refuses approval while a file is mapping without advancing setup", async ({ orm, seed }) => {
@@ -195,7 +191,7 @@ test("refuses approval while a file is mapping without advancing setup", async (
   });
 
   expect((await readInstance(orm)).step).toBe("import");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
       ({ node }) => node,
@@ -219,7 +215,7 @@ test("approves available records when a failed file is present", async ({ orm, s
   expect((await readInstance(orm)).step).toBe("ready");
   await systemUseCases(orm).completeSetup(owner);
   expect(
-    (await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges.map(({ node }) => node),
+    (await employeeUseCases(orm).listEmployees(OWNER, {})).edges.map(({ node }) => node),
   ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);
 });
 
@@ -279,7 +275,7 @@ test("waits for an uncommitted upload before refusing approval", async ({
 
   expect(await approval).toMatchObject([{ status: "rejected", reason: { code: "CONFLICT" } }]);
   expect((await readInstance(orm)).step).toBe("import");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
 test("approves one employee per group with picked and typed values, excluding left-out and incomplete groups", async ({
@@ -314,7 +310,7 @@ test("approves one employee per group with picked and typed values, excluding le
 
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, {});
   expect(employees.edges.map(({ node }) => node)).toMatchObject([
     { firstName: "Robin", lastName: "Stone", email: "avery@example.com", jobTitle: "Engineer" },
   ]);

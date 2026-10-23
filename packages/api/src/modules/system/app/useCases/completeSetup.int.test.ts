@@ -1,5 +1,5 @@
 import {
-  createEmployeeUseCases,
+  employeeUseCases,
   expect,
   importUseCases,
   NON_OWNER,
@@ -43,7 +43,7 @@ test("finishing managed setup creates exactly the ready people with their avatar
   await systemUseCases(orm).completeSetup(owner);
 
   expect((await readInstance(orm)).step).toBe("done");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toMatchObject([
+  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toMatchObject([
     { node: { email: "avery@example.com", avatarFileId: avatar } },
   ]);
 });
@@ -64,7 +64,7 @@ test("refuses finishing after another tab goes Back and creates nobody", async (
   });
 
   expect((await readInstance(orm)).step).toBe("import");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
 });
 
 test("finishing preserves an employee added by hand after approval and skips their import email", async ({
@@ -81,7 +81,7 @@ test("finishing preserves an employee added by hand after approval and skips the
   ]);
   const imports = importUseCases(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   const existing = await employees.createEmployee(owner, {
     firstName: "Avery",
     lastName: "Stone",

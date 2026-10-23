@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { onTestFinished } from "vitest";
 
 import type { Decisions } from "../../src/integrations/ai";
-import type { Orm } from "../../src/core/db";
+import type { Orm, Transact } from "../../src/core/db";
 import type { Mode } from "../../src/core/env";
 import {
   type AiSettings,
@@ -20,7 +20,7 @@ import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyUseCases } from "../../src/modules/company";
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
-import { deleteAllEmployees } from "../../src/modules/employees";
+import { createEmployeeUseCases, deleteAllEmployees } from "../../src/modules/employees";
 import { createImportUseCases } from "../../src/modules/imports";
 import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
 import { createSystemUseCases } from "../../src/modules/system";
@@ -41,6 +41,13 @@ export function companyUseCases(
   }: { brandLookup?: BrandLookup; logger?: Logger } = {},
 ) {
   return createCompanyUseCases({ orm, transact: testTransactor(orm), logger, brandLookup });
+}
+
+export function employeeUseCases(
+  orm: Orm,
+  { transact = testTransactor(orm) }: { transact?: Transact } = {},
+) {
+  return createEmployeeUseCases({ orm, transact, logger: createLogger("silent") });
 }
 
 export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"]) {

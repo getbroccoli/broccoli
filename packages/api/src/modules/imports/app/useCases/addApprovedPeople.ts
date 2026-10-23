@@ -22,6 +22,7 @@ export async function addApprovedPeople(ctx: SecurityContext, tx: Tx): Promise<v
       ...toNewEmployeeInput(employee),
       avatarFileId: employee.photoFileId ?? undefined,
     })),
+    { kind: "IMPORTED_FROM_FILE" },
   );
   tx.publish("imports.people_added", {
     ...counts,
@@ -47,6 +48,13 @@ export function reportAddedPeople(
 export interface AddedPeople extends ImportedEmployees {
   /** The import employees that were selected, by their records and photo. */
   selected: { recordIds: string[]; photoFileId: string | null }[];
+}
+
+declare module "../../../../core/records" {
+  interface CauseKinds {
+    /** People the owner approved in the import became employees. */
+    IMPORTED_FROM_FILE: true;
+  }
 }
 
 declare module "../../../../core/events" {

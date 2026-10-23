@@ -323,3 +323,9 @@ union ImportSetEmployeeLeftOutError = InvalidInputError
 type Mutation {
   import: ImportMutations!
 }
+
+# Adds this module's cause of record changes to the shared enum; the server merges them.
+enum RecordChangeCauseKind {
+  "People the owner approved in the import became employees."
+  IMPORTED_FROM_FILE
+}

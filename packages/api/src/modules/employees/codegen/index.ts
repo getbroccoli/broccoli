@@ -2,4 +2,5 @@
 export const codegenMappers = {
   // A mutation namespace holds no data; its field resolves to an empty object.
   EmployeeMutations: "Record<PropertyKey, never>",
+  Employee: "../../modules/employees/domain#Employee as EmployeeModel",
 };
