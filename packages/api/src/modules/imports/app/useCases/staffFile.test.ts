@@ -18,6 +18,36 @@ it("reads a CSV as one unnamed sheet", async () => {
   ]);
 });
 
+it("reads formula text in CSV cells as display values without evaluating it", async () => {
+  const csv = Buffer.from(
+    `Name,Profile,Unknown,Plain
+"=HYPERLINK(""https://example.com/ines"",""Ines"")","=HYPERLINK(""https://example.com/ines"")","=A2&"" ""&B2",Avery`,
+  );
+
+  expect(await readStaffFile(csv)).toEqual([
+    {
+      name: null,
+      rows: [
+        ["Name", "Profile", "Unknown", "Plain"],
+        ["Ines", "https://example.com/ines", "", "Avery"],
+      ],
+    },
+  ]);
+});
+
+it("reads HYPERLINK text in Excel string cells as its label", async () => {
+  const bytes = sampleXlsxFile({
+    sheets: [
+      {
+        name: "Staff",
+        rows: [["Name"], ['=hyperlink( "https://example.com/ines" ; "Ines ""Ivy""" )']],
+      },
+    ],
+  });
+
+  expect(await readStaffFile(bytes)).toEqual([{ name: "Staff", rows: [["Name"], ['Ines "Ivy"']] }]);
+});
+
 it("reads a workbook as named sheets", async () => {
   const bytes = sampleXlsxFile({
     sheets: [

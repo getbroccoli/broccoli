@@ -4,8 +4,33 @@ import { checkSheets, type FileSheet, type SheetRefusal } from "../../domain";
 /** A staff file's sheets: a CSV file's one, or an Excel workbook's visible ones, within the limits. */
 export async function readStaffFile(bytes: Uint8Array): Promise<FileSheet[] | SheetRefusal> {
   const sheets = isExcelWorkbook(bytes) ? await excelWorkbook(bytes) : csvSheet(bytes);
-  return sheets === null ? "unsupported_file" : checkSheets(sheets);
+  return sheets === null ? "unsupported_file" : checkSheets(sheets.map(withDisplayedText));
 }
+
+/** Formula text, which a CSV or an Excel text cell can hold, as the text it shows. */
+function withDisplayedText({ name, rows }: FileSheet): FileSheet {
+  return {
+    name,
+    rows: rows
+      .map((row) => row.map(displayedText))
+      .filter((row) => row.some((cell) => cell !== "")),
+  };
+}
+
+/**
+ * Worked out from the text, never evaluated or fetched: a HYPERLINK's literal label, or its
+ * literal link without one; blank for any other formula, whose result is unknown.
+ */
+function displayedText(cell: string): string {
+  if (!cell.startsWith("=")) {
+    return cell;
+  }
+  const hyperlink = HYPERLINK.exec(cell);
+  const shown = hyperlink?.[2] ?? hyperlink?.[1] ?? "";
+  return shown.replaceAll('""', '"').trim();
+}
+
+const HYPERLINK = /^=\s*HYPERLINK\(\s*"((?:[^"]|"")*)"\s*(?:[,;]\s*"((?:[^"]|"")*)"\s*)?\)$/i;
 
 /** Every Excel workbook is a ZIP archive, which starts with this signature. */
 const ZIP_SIGNATURE = [0x50, 0x4b, 0x03, 0x04];
