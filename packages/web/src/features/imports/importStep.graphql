@@ -33,93 +33,85 @@ query ImportStep {
 }
 
 mutation ReadSlack {
-  import {
-    readSlack {
-      import {
+  readSlackIntoImport {
+    import {
+      id
+      reading
+      demoAvailable
+      sources {
         id
-        reading
-        demoAvailable
-        sources {
-          id
-          kind
-          employeeCount
-          ...FileSourceCard_source
-        }
+        kind
+        employeeCount
+        ...FileSourceCard_source
       }
-      error {
-        __typename
-        ... on Error {
-          message
-        }
+    }
+    error {
+      __typename
+      ... on Error {
+        message
       }
     }
   }
 }
 
 mutation RetryFile($sourceId: ID!) {
-  import {
-    retryFile(sourceId: $sourceId) {
-      import {
+  retryImportFile(sourceId: $sourceId) {
+    import {
+      id
+      reading
+      demoAvailable
+      sources {
         id
-        reading
-        demoAvailable
-        sources {
-          id
-          kind
-          employeeCount
-          ...FileSourceCard_source
-        }
+        kind
+        employeeCount
+        ...FileSourceCard_source
       }
-      error {
-        __typename
-        ... on Error {
-          message
-        }
+    }
+    error {
+      __typename
+      ... on Error {
+        message
       }
     }
   }
 }
 
 mutation RemoveSource($sourceId: ID!) {
-  import {
-    removeSource(sourceId: $sourceId) {
-      import {
+  removeImportSource(sourceId: $sourceId) {
+    import {
+      id
+      reading
+      demoAvailable
+      sources {
         id
-        reading
-        demoAvailable
-        sources {
-          id
-          kind
-          employeeCount
-          ...FileSourceCard_source
-        }
+        kind
+        employeeCount
+        ...FileSourceCard_source
       }
     }
   }
 }
 
 mutation AllowOriginalFileRead($sourceId: ID!, $aiSource: AiSource) {
-  import {
-    allowOriginalFileRead(sourceId: $sourceId, aiSource: $aiSource) {
-      import {
+  allowOriginalFileRead(sourceId: $sourceId, aiSource: $aiSource) {
+    import {
+      id
+      reading
+      demoAvailable
+      sources {
         id
-        reading
-        demoAvailable
-        sources {
-          id
-          kind
-          status
-          readBy
-          pickedUpByExternalAgent
-          employeeCount
-          ...FileSourceCard_source
-        }
+        kind
+        status
+        readBy
+        pickedUpByExternalAgent
+        employeeCount
+        ...FileSourceCard_source
       }
-      error {
-        __typename
-        ... on Error {
-          message
-        }
+    }
+    error {
+      __typename
+      ... on Error {
+        message
       }
     }
   }

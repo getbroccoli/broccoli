@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { readFile, type StoredFile } from "../../../../core/files";
 import type { Orm } from "../../../../core/db";
 import {
   type Connection,
@@ -8,7 +9,7 @@ import {
   paginate,
 } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
-import { importReader } from "../../db";
+import { importPhotoRepository, importReader } from "../../db";
 import {
   type ImportEmployeeRecord,
   type ImportProgress,
@@ -20,6 +21,8 @@ import { requireImportAccess } from "./requireImportAccess";
 
 /** Reading the import: its sources, their records and the review they make. Every function checks `ctx`. */
 export interface ImportReadService {
+  /** The import record's photo with this file id, or null when it is no record's photo. */
+  readImportPhoto(ctx: SecurityContext, fileId: string): Promise<StoredFile | null>;
   /** The import's sources, oldest first. */
   listSources(ctx: SecurityContext): Promise<ImportSource[]>;
   /** The sources with these ids, in any order; for loading many at once. */
@@ -40,6 +43,15 @@ export interface ImportReadService {
 export function createImportReadService(orm: Orm): ImportReadService {
   const imports = importReader(orm);
   return {
+    readImportPhoto: async (ctx: SecurityContext, fileId: string): Promise<StoredFile | null> => {
+      requireImportAccess(ctx);
+      // Postgres refuses a malformed uuid, so only a parsed one reaches the query.
+      const id = z.uuid().safeParse(fileId);
+      return id.success && (await importPhotoRepository(orm).hasPhoto(id.data))
+        ? readFile(orm, id.data)
+        : null;
+    },
+
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
       requireImportAccess(ctx);
       return imports.listSources();

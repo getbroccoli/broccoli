@@ -21,10 +21,10 @@ input CompanyInput {
   name: String!
 }
 
-type CompanyMutations {
+type Mutation {
   "Saves the company's details; completes the company step of setup."
-  update(input: CompanyInput!): CompanyUpdatePayload!
-  removeLogo: CompanyMutationPayload!
+  updateCompany(input: CompanyInput!): CompanyUpdatePayload!
+  removeCompanyLogo: CompanyMutationPayload!
 }
 
 "The company after a mutation that cannot fail in an expected way."
@@ -32,14 +32,10 @@ type CompanyMutationPayload {
   company: Company
 }
 
-"The company after `update`, or why it was refused."
+"The company after `updateCompany`, or why it was refused."
 type CompanyUpdatePayload {
   company: Company
   error: CompanyUpdateError
 }
 
 union CompanyUpdateError = InvalidInputError
-
-type Mutation {
-  company: CompanyMutations!
-}

@@ -4,7 +4,7 @@ import type { OwnerSignInMethod } from "./ownerSignInMethod";
 import type { SetupStep } from "./setup";
 import type { SetupSession } from "./setupSession";
 
-/** The instance row as one fact: its owner, setup, AI choice and managed assignment. */
+/** A stored instance snapshot; pure domain functions decide its rules and transactions apply changes. */
 export interface Instance {
   /** Null before setup creates the owner. */
   ownerUserId: string | null;

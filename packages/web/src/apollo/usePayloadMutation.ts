@@ -84,8 +84,8 @@ type RunOptions<Variables> =
   Record<string, never> extends Variables
     ? [options?: { variables?: Variables }]
     : [options: { variables: Variables }];
-/** A mutation's payload: the value of its one operation in its one namespace. */
-type PayloadOf<Data> = ValueOf<ValueOf<Data>>;
+/** A mutation's payload: the value of its root operation. */
+type PayloadOf<Data> = ValueOf<Data>;
 type ValueOf<T> = T[Exclude<keyof T, "__typename">];
 /** The payload's selected `error`, when the mutation has one. */
 type PayloadErrorOf<Data> =

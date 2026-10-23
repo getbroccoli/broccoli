@@ -12,10 +12,7 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
     Query: {
       import: () => IMPORT,
     },
-    Mutation: {
-      import: () => ({}),
-    },
-    ImportMutations: importMutationResolvers(useCases),
+    Mutation: importMutationResolvers(useCases),
     Import: {
       id: () => "import",
       sources: (_parent, _args, context) => useCases.reads.listSources(context.getActor()),

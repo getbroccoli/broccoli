@@ -1,12 +1,10 @@
 mutation ResetSetup {
-  import {
-    resetSetup {
-      import {
+  resetSetup {
+    import {
+      id
+      sources {
         id
-        sources {
-          id
-          ...FileSourceCard_source
-        }
+        ...FileSourceCard_source
       }
     }
   }

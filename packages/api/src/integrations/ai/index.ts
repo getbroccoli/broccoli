@@ -1,14 +1,11 @@
-export {
-  type Answer,
-  type Answers,
-  createDecisions,
-  type Decisions,
-  DecisionsError,
-  type Json,
-  type JsonObject,
-  type Question,
-} from "./decisions";
+// Public values.
+export { createDecisions, DecisionsError } from "./decisions";
 export { checkOpenRouterKey } from "./openRouterKey";
-export { ANSWER_CUT_OFF, type OriginalFileRead, type OriginalFileReader } from "./originalFileRead";
+export { ANSWER_CUT_OFF } from "./originalFileRead";
 export { withPlaceholders } from "./sanitize";
-export { createResolvedDecisions, type DecisionsSource } from "./resolvedDecisions";
+export { createResolvedDecisions } from "./resolvedDecisions";
+
+// Public types.
+export type { Answer, Answers, Decisions, Json, JsonObject, Question } from "./decisions";
+export type { OriginalFileRead, OriginalFileReader } from "./originalFileRead";
+export type { DecisionsSource } from "./resolvedDecisions";

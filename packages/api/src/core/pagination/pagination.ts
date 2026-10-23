@@ -36,7 +36,7 @@ export interface KeysetRow<T, Values> {
   values: Values;
 }
 
-/** How `paginate` reads one list. */
+/** How `paginate` reads one list, from Postgres or an in-memory import review. */
 export interface KeysetList<Field extends string, Values, Rows> {
   /** The order when the client sends none; the fields come from `keysetValues`. */
   order: ListOrder<NoInfer<Field>>;

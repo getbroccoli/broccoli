@@ -20,7 +20,7 @@ test.for([
   "reads.readProgress",
   "reads.readReview",
   "reads.listEmployeeRecords",
-  "readImportPhoto",
+  "reads.readImportPhoto",
   "choices.chooseEmployeeValue",
   "choices.chooseSourceForAll",
   "choices.setLeftOut",
@@ -46,7 +46,7 @@ test.for([
     "reads.readReview": () => imports.reads.readReview(SETUP_EXTERNAL_AGENT),
     "reads.listEmployeeRecords": () =>
       imports.reads.listEmployeeRecords(SETUP_EXTERNAL_AGENT, { sourceId: "missing" }),
-    readImportPhoto: () => imports.readImportPhoto(SETUP_EXTERNAL_AGENT, "missing"),
+    "reads.readImportPhoto": () => imports.reads.readImportPhoto(SETUP_EXTERNAL_AGENT, "missing"),
     "choices.chooseEmployeeValue": () =>
       imports.choices.chooseEmployeeValue(SETUP_EXTERNAL_AGENT, {
         key: "missing",

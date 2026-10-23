@@ -1,16 +1,14 @@
 mutation SetEmployeeLeftOut($employeeId: ID!, $leftOut: Boolean!) {
-  import {
-    setEmployeeLeftOut(employeeId: $employeeId, leftOut: $leftOut) {
-      import {
-        id
-        # Review's own changes move the version Approve sends.
-        version
-      }
-      error {
-        __typename
-        ... on Error {
-          message
-        }
+  setImportEmployeeLeftOut(employeeId: $employeeId, leftOut: $leftOut) {
+    import {
+      id
+      # Review's own changes move the version Approve sends.
+      version
+    }
+    error {
+      __typename
+      ... on Error {
+        message
       }
     }
   }

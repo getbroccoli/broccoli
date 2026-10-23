@@ -11,25 +11,21 @@ fragment ThingsToCheck_check on ImportCheck {
 }
 
 mutation ChooseSourceForAll($field: ImportEmployeeField!, $sourceId: ID!) {
-  import {
-    chooseSourceForAll(field: $field, sourceId: $sourceId) {
-      import {
-        id
-        # Review's own changes move the version Approve sends.
-        version
-      }
+  chooseImportSourceForAll(field: $field, sourceId: $sourceId) {
+    import {
+      id
+      # Review's own changes move the version Approve sends.
+      version
     }
   }
 }
 
 mutation LeaveOutIncomplete($reason: ImportEmployeeIncompleteReason!) {
-  import {
-    leaveOutIncomplete(reason: $reason) {
-      import {
-        id
-        # Review's own changes move the version Approve sends.
-        version
-      }
+  leaveOutIncompleteImportEmployees(reason: $reason) {
+    import {
+      id
+      # Review's own changes move the version Approve sends.
+      version
     }
   }
 }

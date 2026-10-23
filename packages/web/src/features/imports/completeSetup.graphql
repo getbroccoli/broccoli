@@ -1,10 +1,8 @@
 mutation CompleteSetup {
-  setup {
-    complete {
-      setup {
-        id
-        step
-      }
+  completeSetup {
+    setup {
+      id
+      step
     }
   }
 }

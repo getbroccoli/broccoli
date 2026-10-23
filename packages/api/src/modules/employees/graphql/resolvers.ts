@@ -20,10 +20,7 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
       },
     },
     Mutation: {
-      employee: () => ({}),
-    },
-    EmployeeMutations: {
-      create: (_parent, { input }, context) =>
+      createEmployee: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeCreatePayload"]>(
           "employee",
           async () => toGraphql(await useCases.createEmployee(context.getActor(), input)),

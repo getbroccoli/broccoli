@@ -10,23 +10,19 @@ type Query {
   demo: DemoData!
 }
 
-type DemoMutations {
+type Mutation {
   """
   Ends the demo: deletes every person, the demo people and anyone added, and takes setup back
   to the company step. Refused without demo data and during the self-hosted demo, whose owner
   exits through setup. Owner only.
   """
-  exit: DemoExitPayload!
+  exitDemo: DemoExitPayload!
 }
 
-"Demo data after `exit`, or why it was refused."
+"Demo data after `exitDemo`, or why it was refused."
 type DemoExitPayload {
   demoData: DemoData
   error: DemoExitError
 }
 
 union DemoExitError = ConflictError
-
-type Mutation {
-  demo: DemoMutations!
-}

@@ -21,6 +21,7 @@ export type Orm = NodePgDatabase;
 
 export type OrmTransaction = Parameters<Parameters<Orm["transaction"]>[0]>[0];
 
+/** Owns one shared pg.Pool for application queries; close releases its connections. */
 export interface Database {
   orm: Orm;
   /** Applies pending migrations; safe to call from several instances at once. */

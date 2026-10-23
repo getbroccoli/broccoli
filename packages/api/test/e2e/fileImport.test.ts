@@ -94,12 +94,12 @@ test("a failed file becomes mapped after retrying with working decisions", async
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
 
   const retried = await browser.graphql(
-    "mutation($id: ID!) { import { retryFile(sourceId: $id) { import { id } error { __typename ... on Error { message } } } } }",
+    "mutation($id: ID!) { retryImportFile(sourceId: $id) { import { id } error { __typename ... on Error { message } } } }",
     { id: sourceId },
   );
 
   expect(await retried.json()).toEqual({
-    data: { import: { retryFile: { import: { id: "import" }, error: null } } },
+    data: { retryImportFile: { import: { id: "import" }, error: null } },
   });
   await expect
     .poll(() => readImport(browser), { timeout: 15_000 })
@@ -134,16 +134,14 @@ test("removeSource removes the uploaded source", async ({ fakeDecisions }) => {
     });
 
   const removed = await browser.graphql(
-    "mutation($id: ID!) { import { removeSource(sourceId: $id) { import { sources { id } employees { edges { node { id } } } } } } }",
+    "mutation($id: ID!) { removeImportSource(sourceId: $id) { import { sources { id } employees { edges { node { id } } } } } }",
     { id: sourceId },
   );
 
   expect(await removed.json()).toEqual({
     data: {
-      import: {
-        removeSource: {
-          import: { sources: [], employees: { edges: [] } },
-        },
+      removeImportSource: {
+        import: { sources: [], employees: { edges: [] } },
       },
     },
   });
@@ -157,11 +155,9 @@ test("returns an approval conflict in the payload while a file is mapping", asyn
 
   expect(await response.json()).toEqual({
     data: {
-      import: {
-        approve: {
-          import: null,
-          error: { __typename: "ConflictError", message: "Files are still being read." },
-        },
+      approveImport: {
+        import: null,
+        error: { __typename: "ConflictError", message: "Files are still being read." },
       },
     },
   });

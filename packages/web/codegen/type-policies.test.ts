@@ -15,16 +15,16 @@ describe("namespaceTypePolicies", () => {
     expect(policies).toEqual({ AbsenceQuery: { merge: true } });
   });
 
-  it("merges an id-less type returned by a Mutation field", () => {
+  it("does not merge a mutation payload", () => {
     const schema = buildSchema(`
       type Query { ping: String }
-      type Mutation { absence: AbsenceMutation }
-      type AbsenceMutation { request: Boolean }
+      type Mutation { requestAbsence: AbsenceMutationPayload! }
+      type AbsenceMutationPayload { id: ID }
     `);
 
     const policies = namespaceTypePolicies(schema);
 
-    expect(policies).toEqual({ AbsenceMutation: { merge: true } });
+    expect(policies).toEqual({});
   });
 
   it("leaves out a type with an id field", () => {

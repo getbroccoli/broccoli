@@ -3,9 +3,9 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
- * Secrets live in `<dataDir>/secrets/<name>`, readable only by the app's user. The
- * database never holds them, so they survive replacing it; operators back up this folder
- * with the database.
+ * Persists secrets, including SecretBox's encryption key, in `<dataDir>/secrets/<name>`,
+ * readable only by the app's user. They survive replacing the database; operators
+ * back up this folder with it, while SecretBox handles encryption rather than storage.
  */
 export async function readSecret(dataDir: string, name: string): Promise<string | null> {
   try {

@@ -40,7 +40,7 @@ export const IMPORT_SOURCE_FAILURES = [
 
 export type ImportSourceFailure = (typeof IMPORT_SOURCE_FAILURES)[number];
 
-/** One place people came from; it owns its records. */
+/** A stored source snapshot; its records belong to it and transactional services control its transitions. */
 export interface ImportSource {
   id: string;
   kind: ImportSourceKind;

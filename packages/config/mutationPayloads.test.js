@@ -6,8 +6,7 @@ import { mutationPayloadProblems } from "./mutationPayloads.js";
 it("accepts payloads with an error union and without an error field", () => {
   const schema = buildSchema(`
     type Query { ping: String }
-    type Mutation { import: ImportMutations! }
-    type ImportMutations { approve: ImportApprovePayload!, skip: ImportMutationPayload! }
+    type Mutation { approveImport: ImportApprovePayload!, skipImport: ImportMutationPayload! }
     type Import { id: ID! }
     type ImportMutationPayload { import: Import }
     type ImportApprovePayload { import: Import, error: ImportApproveError }
@@ -22,34 +21,31 @@ it("accepts payloads with an error union and without an error field", () => {
 it("rejects a bare mutation return type", () => {
   const schema = buildSchema(`
     type Query { ping: String }
-    type Mutation { import: ImportMutations! }
-    type ImportMutations { approve: Import! }
+    type Mutation { approveImport: Import! }
     type Import { id: ID! }
   `);
 
   expect(mutationPayloadProblems(schema).map(({ message }) => message)).toEqual([
-    "ImportMutations.approve must return a non-null object type named …Payload.",
+    "Mutation.approveImport must return a non-null object type named …Payload.",
   ]);
 });
 
 it("rejects a nullable mutation payload", () => {
   const schema = buildSchema(`
     type Query { ping: String }
-    type Mutation { import: ImportMutations! }
-    type ImportMutations { approve: ImportApprovePayload }
+    type Mutation { approveImport: ImportApprovePayload }
     type ImportApprovePayload { id: ID }
   `);
 
   expect(mutationPayloadProblems(schema).map(({ message }) => message)).toEqual([
-    "ImportMutations.approve must return a non-null object type named …Payload.",
+    "Mutation.approveImport must return a non-null object type named …Payload.",
   ]);
 });
 
 it("rejects a non-null payload error", () => {
   const schema = buildSchema(`
     type Query { ping: String }
-    type Mutation { import: ImportMutations! }
-    type ImportMutations { approve: ImportApprovePayload! }
+    type Mutation { approveImport: ImportApprovePayload! }
     type ImportApprovePayload { error: ImportApproveError! }
     union ImportApproveError = ConflictError
     interface Error { message: String! }
@@ -64,8 +60,7 @@ it("rejects a non-null payload error", () => {
 it("rejects a payload error typed as an object instead of a union", () => {
   const schema = buildSchema(`
     type Query { ping: String }
-    type Mutation { import: ImportMutations! }
-    type ImportMutations { approve: ImportApprovePayload! }
+    type Mutation { approveImport: ImportApprovePayload! }
     type ImportApprovePayload { error: ConflictError }
     interface Error { message: String! }
     type ConflictError implements Error { message: String! }

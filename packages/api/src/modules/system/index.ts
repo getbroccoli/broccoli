@@ -3,6 +3,7 @@ import type { ModuleManifest } from "../../core/moduleManifest";
 import { createSystemUseCases, type SystemContext } from "./app";
 import { createResolvers } from "./graphql";
 
+// Public values.
 export { createSystemUseCases } from "./app";
 export { readSetupView } from "./graphql";
 

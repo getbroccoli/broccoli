@@ -10,8 +10,8 @@ it("passes an ApplicationError through with its code and field errors", () => {
   ]);
   const error = new GraphQLError(originalError.message, {
     originalError,
-    nodes: parse("mutation { employee { create { id } } }").definitions[0],
-    path: ["employee", "create"],
+    nodes: parse("mutation { createEmployee { id } }").definitions[0],
+    path: ["createEmployee"],
     extensions: { code: "INTERNAL_SERVER_ERROR", stacktrace: ["private details"] },
   });
   const formatted = error.toJSON();
@@ -21,7 +21,7 @@ it("passes an ApplicationError through with its code and field errors", () => {
   expect(result).toEqual({
     message: "The input is invalid.",
     locations: formatted.locations,
-    path: ["employee", "create"],
+    path: ["createEmployee"],
     extensions: {
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "email", code: "taken" }],

@@ -8,10 +8,7 @@ export function createResolvers(useCases: DemoUseCases): Resolvers {
         toGraphql(await useCases.getDemoData(context.getActor())),
     },
     Mutation: {
-      demo: () => ({}),
-    },
-    DemoMutations: {
-      exit: (_parent, _args, context) =>
+      exitDemo: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["DemoExitPayload"]>(
           "demoData",
           async () => toGraphql(await useCases.exitDemo(context.getActor())),

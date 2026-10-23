@@ -8,30 +8,26 @@ query CompanyStep {
 }
 
 mutation UpdateCompany($input: CompanyInput!) {
-  company {
-    update(input: $input) {
-      company {
-        id
-        name
-        logoUrl
-      }
-      error {
-        __typename
-        ... on Error {
-          message
-        }
+  updateCompany(input: $input) {
+    company {
+      id
+      name
+      logoUrl
+    }
+    error {
+      __typename
+      ... on Error {
+        message
       }
     }
   }
 }
 
 mutation RemoveCompanyLogo {
-  company {
-    removeLogo {
-      company {
-        id
-        logoUrl
-      }
+  removeCompanyLogo {
+    company {
+      id
+      logoUrl
     }
   }
 }

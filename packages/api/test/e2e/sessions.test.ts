@@ -13,7 +13,7 @@ import {
 
 const createMutation = `
   mutation CreateEmployee($input: EmployeeCreateInput!) {
-    employee { create(input: $input) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }
+    createEmployee(input: $input) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } }
   }
 `;
 
@@ -83,9 +83,9 @@ test("masks a database failure while reading the session", async () => {
   const browser = createBrowser(server.url);
   expect((await browser.post("/api/auth/setup/start", undefined)).status).toBe(200);
   await browser.graphql(
-    `mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } } }`,
+    `mutation { updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename } } }`,
   );
-  await browser.graphql("mutation { import { startDemo { import { id } } } }");
+  await browser.graphql("mutation { startDemo { import { id } } }");
   const setupResponse = await browser.post("/api/auth/setup", TEST_OWNER);
   expect(setupResponse.status).toBe(200);
 

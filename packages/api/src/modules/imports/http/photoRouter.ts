@@ -19,7 +19,7 @@ export function photoRouter(
   return express.Router().get("/imports/photos/:fileId", async (request, response) => {
     try {
       const ctx = requireSignedIn((await resolveSecurity(request.headers)).security);
-      sendFile(await useCases.readImportPhoto(ctx, request.params.fileId), response);
+      sendFile(await useCases.reads.readImportPhoto(ctx, request.params.fileId), response);
     } catch (error) {
       sendApplicationError(error, response);
     }

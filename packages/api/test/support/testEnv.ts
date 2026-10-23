@@ -83,10 +83,10 @@ export class TestEnv {
       throw new Error(`Setup start failed with ${started.status}: ${await started.text()}`);
     }
     const named = await browser.graphql(`
-      mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } } }
+      mutation { updateCompany(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } } } }
     `);
     assert.deepEqual(await named.json(), {
-      data: { company: { update: { company: { id: "company" }, error: null } } },
+      data: { updateCompany: { company: { id: "company" }, error: null } },
     });
     return browser;
   }

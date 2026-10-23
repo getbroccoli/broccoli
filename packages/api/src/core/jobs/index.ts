@@ -1,9 +1,5 @@
-export {
-  createJobRunner,
-  type JobHandler,
-  type JobHandlers,
-  type JobName,
-  type JobQueue,
-  type JobRunner,
-  type Jobs,
-} from "./jobRunner";
+// Public values.
+export { createJobRunner } from "./jobRunner";
+
+// Public types.
+export type { JobHandler, JobHandlers, JobName, JobQueue, JobRunner, Jobs } from "./jobRunner";

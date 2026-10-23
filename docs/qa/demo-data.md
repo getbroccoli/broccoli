@@ -22,7 +22,7 @@ A manual check that skipping the import fills the demo company and that Exit dem
 
 ## Exit
 
-1. Add a real person with the `employee { create }` mutation (see [QA setup](setup.md)).
+1. Add a real person with the `createEmployee` mutation (see [QA setup](setup.md)).
 2. Choose "Exit demo" on the banner, then "Cancel": nothing changes. Do the same from the workspace menu.
 3. Choose "Exit demo" again and confirm.
 

@@ -17,7 +17,6 @@ import { requireSessionOutsidePublicFields } from "./publicFields";
 import type { Resolvers } from "./resolvers.gen";
 import { DateScalar, DateTimeScalar } from "./scalars";
 import { readSdl } from "./sdl";
-import { singleMutationField } from "./singleMutationField";
 
 /** Deepest field nesting a request may use. */
 export const MAX_DEPTH = 10;
@@ -67,7 +66,7 @@ export async function startGraphqlApi(
       }),
     ),
     parseOptions: { maxTokens: MAX_TOKENS },
-    validationRules: [depthLimit(MAX_DEPTH), singleMutationField],
+    validationRules: [depthLimit(MAX_DEPTH)],
     introspection: false,
     includeStacktraceInErrorResponses: false,
     formatError,
@@ -110,6 +109,7 @@ export function createContext(resolveSecurity: SecurityResolver) {
     }
     try {
       const { security, renewedCookies } = await resolveSecurity(req.headers);
+      // The security resolver renews sessions; this HTTP boundary forwards their cookies.
       if (renewedCookies.length > 0) {
         res.appendHeader("Set-Cookie", renewedCookies);
       }

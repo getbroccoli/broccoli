@@ -9,6 +9,7 @@ import { createExternalAgentUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { externalAgentFilesRouter, externalAgentRouter } from "./http";
 
+// Public values.
 export { createExternalAgentCodeOnServer, createExternalAgentUseCases } from "./app";
 
 /**

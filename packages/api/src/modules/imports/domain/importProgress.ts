@@ -1,6 +1,6 @@
 import type { ImportSource } from "./importSource";
 
-/** How far gathering people is, as the import step and the setup review step wait on it. */
+/** Computed progress of gathering people; rebuilt from the sources and record count on each read. */
 export interface ImportProgress {
   /** A file is still being read; setup approve is refused until it is done. */
   reading: boolean;

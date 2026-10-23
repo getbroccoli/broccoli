@@ -5,7 +5,7 @@ import { user } from "../../auth";
 import { ormOf, type Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import { readInstance, readSetupHolder, resetDemo } from ".";
+import { readInstance, readSetupHolder, exitDemo } from ".";
 
 test("resetting a demo deletes its owner and gives the browser setup at the company step", async ({
   orm,
@@ -19,7 +19,7 @@ test("resetting a demo deletes its owner and gives the browser setup at the comp
   let cleared = false;
 
   const setup = await transact((tx) =>
-    resetDemo(
+    exitDemo(
       owner,
       tx,
       { userId, now },
@@ -80,7 +80,7 @@ test.for([
 
     await expect(
       transact((tx) =>
-        resetDemo(
+        exitDemo(
           SYSTEM,
           tx,
           { userId: userId ?? owner.user!.userId, now },
@@ -118,7 +118,7 @@ test("refuses a non-owner resetting the demo even with its owner's user id", asy
 
   await expect(
     transact((tx) =>
-      resetDemo(
+      exitDemo(
         NON_OWNER,
         tx,
         { userId: owner.user!.userId, now },
@@ -139,7 +139,7 @@ test("rolls back a demo reset when clearing people fails", async ({ orm, seed, t
 
   await expect(
     transact((tx) =>
-      resetDemo(
+      exitDemo(
         owner,
         tx,
         { userId, now },

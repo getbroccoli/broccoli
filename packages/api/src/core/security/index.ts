@@ -1,8 +1,10 @@
-export {
-  PrincipalSecurityContext,
-  requireSignedIn,
-  type RequestSecurity,
-  type SecurityContext,
-  type SecurityResolver,
-  type SignedInUser,
+// Public values.
+export { PrincipalSecurityContext, requireSignedIn } from "./securityContext";
+
+// Public types.
+export type {
+  RequestSecurity,
+  SecurityContext,
+  SecurityResolver,
+  SignedInUser,
 } from "./securityContext";

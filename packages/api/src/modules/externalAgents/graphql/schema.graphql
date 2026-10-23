@@ -23,7 +23,7 @@ type ExternalAgentCode {
   expiresAt: DateTime!
 }
 
-type SetupMutations {
+type Mutation {
   "Reads files with the owner's own external agent from now on, ending any agent session. Self-hosted, at the import step, before the owner exists; owner or setup holder."
   chooseExternalAgent: SetupChooseExternalAgentPayload!
   "A new agent one-time code, valid once for two hours, ending any agent session and earlier code. Refused with a ConflictError unless the agent is chosen."
