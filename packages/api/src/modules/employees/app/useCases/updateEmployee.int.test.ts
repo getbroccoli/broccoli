@@ -31,13 +31,13 @@ test("changes only sent fields and records their old and normalised new values",
     changeReason: "  Promoted  ",
   });
 
-  expect(updated).toEqual({
+  expect(updated.employee).toEqual({
     ...employee,
     firstName: "Robin",
     email: "robin@example.com",
     jobTitle: "Lead",
   });
-  expect(await employees.readEmployee(OWNER, employee.id)).toEqual(updated);
+  expect(await employees.readEmployee(OWNER, employee.id)).toEqual(updated.employee);
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges).toHaveLength(2);
   expect(edges[0]!.node).toMatchObject({
@@ -68,6 +68,20 @@ test("changes only sent fields and records their old and normalised new values",
   await expectHistoryReplaysTo(orm, employee.id);
 });
 
+test("an update returns the history line it appended", async ({ orm, seed }) => {
+  const employee = await seed.employee({ jobTitle: "Engineer" });
+  const employees = employeeUseCases(orm);
+
+  const { historyLine } = await employees.updateEmployee(OWNER, {
+    id: employee.id,
+    jobTitle: "Lead",
+  });
+
+  const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
+  expect(edges).toHaveLength(1);
+  expect(historyLine).toEqual(edges[0]!.node);
+});
+
 test.for(["jobTitle", "startDate"] as const)("clears %s when sent null", async (field, { orm }) => {
   const employees = employeeUseCases(orm);
   const employee = await employees.createEmployee(OWNER, {
@@ -84,7 +98,7 @@ test.for(["jobTitle", "startDate"] as const)("clears %s when sent null", async (
     changeReason: "  ",
   });
 
-  expect(updated).toEqual({ ...employee, [field]: null });
+  expect(updated.employee).toEqual({ ...employee, [field]: null });
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges[0]!.node).toMatchObject({
     reason: null,
@@ -112,7 +126,8 @@ test("a save with unchanged values records no line and publishes nothing", async
     changeReason: "No change",
   });
 
-  expect(updated).toEqual(employee);
+  expect(updated.employee).toEqual(employee);
+  expect(updated.historyLine).toBeNull();
   expect(await employees.readEmployeeHistory(OWNER, employee.id, {})).toEqual(before);
   expect(events).toEqual([]);
 });
@@ -241,7 +256,7 @@ test("an update addressed by uppercase id keeps its history under the canonical 
     jobTitle: "Lead",
   });
 
-  expect(updated.id).toBe(employee.id);
+  expect(updated.employee.id).toBe(employee.id);
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation }))).toEqual(
     [

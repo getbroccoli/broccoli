@@ -1,4 +1,9 @@
-import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
+import {
+  multiFieldMutationPayload,
+  mutationPayload,
+  type Resolvers,
+  type ResolversTypes,
+} from "../../../core/graphql";
 import type { EmployeeUseCases } from "../app";
 import { avatarUrl } from "../http";
 
@@ -25,8 +30,7 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
           ["INVALID_INPUT"],
         ),
       update: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
-          "employee",
+        multiFieldMutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
           () => useCases.updateEmployee(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),

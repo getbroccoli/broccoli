@@ -18,8 +18,19 @@ export async function mutationPayload<Payload>(
   if (!expectedErrorCodes) {
     return { [field]: await run() } as Awaited<Payload>;
   }
+  return multiFieldMutationPayload<Payload>(
+    async () => ({ [field]: await run() }) as PayloadResult<Awaited<Payload>>,
+    expectedErrorCodes,
+  );
+}
+
+/** Like `mutationPayload`, for a payload of several fields: `run` returns them all. */
+export async function multiFieldMutationPayload<Payload>(
+  run: () => Promise<PayloadResult<Awaited<Payload>>>,
+  expectedErrorCodes: readonly PayloadErrorCode[],
+): Promise<Awaited<Payload>> {
   try {
-    return { [field]: await run(), error: null } as Awaited<Payload>;
+    return { ...(await run()), error: null } as Awaited<Payload>;
   } catch (error) {
     if (error instanceof ApplicationError && isListed(error.code, expectedErrorCodes)) {
       return { error: payloadErrorOf(error, error.code) } as Awaited<Payload>;
@@ -29,6 +40,9 @@ export async function mutationPayload<Payload>(
 }
 
 export type PayloadErrorCode = keyof PayloadErrors & ApplicationErrorCode;
+
+/** A payload's fields other than its error. */
+type PayloadResult<Payload> = Omit<Payload, "error" | "__typename">;
 
 /** The payload's field that holds the changed object. */
 type ResultField<Payload> = Exclude<keyof Payload, "error" | "__typename">;
