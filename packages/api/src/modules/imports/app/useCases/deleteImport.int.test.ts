@@ -1,4 +1,5 @@
 import {
+  employeeUseCases,
   finishSelfHostedSetup,
   expect,
   importUseCases,
@@ -12,7 +13,7 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { createEmployeeUseCases } from "../../../employees";
+
 import { importReader } from "../../db";
 
 test("finishing the import deletes its rows, staff files and unused photos but keeps employee avatars", async ({
@@ -53,7 +54,7 @@ test("finishing the import deletes its rows, staff files and unused photos but k
   });
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   await finishSelfHostedSetup(orm);
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   const approved = await employees.listEmployees(OWNER, {});
   expect(await readFile(orm, photoIds.get("leftout@example.com")!)).toEqual({
     content: PNG,

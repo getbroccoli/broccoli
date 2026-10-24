@@ -1,6 +1,8 @@
 import { sql } from "drizzle-orm";
 
 import {
+  employeeUseCases,
+  expectHistoryReplaysTo,
   createSetupOwner,
   expect,
   finishSelfHostedSetup,
@@ -18,7 +20,6 @@ import { ormOf, transactor } from "../../../../core/db";
 import { createEventBus } from "../../../../core/events";
 import { readInstance } from "../../../../core/instance";
 import { createLogger } from "../../../../core/logger";
-import { createEmployeeUseCases } from "../../../employees";
 
 test("approval by the setup holder creates nobody until account creation", async ({
   orm,
@@ -33,10 +34,18 @@ test("approval by the setup holder creates nobody until account creation", async
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
   expect((await readInstance(orm)).step).toBe("owner");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   await finishSelfHostedSetup(orm);
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, {});
   expect(employees.edges.map(({ node }) => node)).toMatchObject([avery]);
+  const employeeId = employees.edges[0]!.node.id;
+  const history = await employeeUseCases(orm).readEmployeeHistory(OWNER, employeeId, {});
+  expect(history.edges).toHaveLength(1);
+  expect(history.edges[0]!.node).toMatchObject({
+    operation: "CREATED",
+    cause: { kind: "ADDED_FROM_IMPORT", ref: null },
+  });
+  await expectHistoryReplaysTo(orm, employeeId);
 });
 
 test("a database failure after account creation leaves no owner or employees and preserves the import", async ({
@@ -82,7 +91,7 @@ test("a database failure after account creation leaves no owner or employees and
     }),
   ).rejects.toMatchObject({ cause: { code: "22012" } });
 
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect(await orm.select().from(user)).toEqual([]);
   expect(await readInstance(orm)).toEqual(instance);
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(
@@ -96,7 +105,7 @@ test("a database failure after account creation leaves no owner or employees and
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   await finishSelfHostedSetup(orm);
   expect((await readInstance(orm)).step).toBe("done");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toMatchObject([
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toMatchObject([
     { node: { email: "avery@example.com", avatarFileId: photos[0] } },
   ]);
 });
@@ -121,6 +130,6 @@ test("an existing owner refuses account creation before adding the approved peop
 
   expect(await orm.select().from(user)).toEqual(users);
   expect((await readInstance(orm)).step).toBe("owner");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
   expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(before);
 });

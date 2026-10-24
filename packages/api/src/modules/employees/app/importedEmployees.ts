@@ -1,7 +1,9 @@
 import type { Orm, Tx } from "../../../core/db";
+import { type HistoryAppend, purgeRecordHistory } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository } from "../db";
 import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
+import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 /** What adding imported employees did. */
 export interface ImportedEmployees {
@@ -15,11 +17,15 @@ export interface ImportedEmployees {
 /** An employee an import proposes, with the stored photo it brings as its avatar. */
 export type ImportedEmployeeInput = NewEmployeeInput & { avatarFileId?: string };
 
-/** Adds employees proposed by an import, joining `tx`; skips the ones that do not parse or whose email is taken. */
+/**
+ * Adds employees proposed by an import, joining `tx`, with `cause` on their creation lines;
+ * skips the ones that do not parse or whose email is taken.
+ */
 export async function createImportedEmployees(
   ctx: SecurityContext,
   tx: Tx,
   inputs: readonly ImportedEmployeeInput[],
+  cause: HistoryAppend["cause"],
 ): Promise<ImportedEmployees> {
   ctx.requireSetupAccess();
   const newEmployees = inputs.flatMap(({ avatarFileId, ...input }) => {
@@ -27,10 +33,11 @@ export async function createImportedEmployees(
     return employee ? [{ ...employee, avatarFileId: avatarFileId ?? null }] : [];
   });
   const created = await employeeRepository(tx).insertSkippingTakenEmails(newEmployees);
+  await recordCreatedEmployees(ctx, tx, created, cause);
   return {
-    created,
+    created: created.length,
     incomplete: inputs.length - newEmployees.length,
-    emailTaken: newEmployees.length - created,
+    emailTaken: newEmployees.length - created.length,
   };
 }
 
@@ -50,8 +57,13 @@ export async function findTakenEmails(
   return new Set(await employeeRepository(db).findTakenEmails(emails));
 }
 
-/** Deletes every employee, joining `tx`, when setup or the demo goes back to its start. */
+/**
+ * Deletes every employee and all employee history, joining `tx`, when setup or the demo goes
+ * back to its start: what was there leaves no trace, unlike an ordinary removal.
+ */
 export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
   await employeeRepository(tx).deleteAll();
+  // After the delete, which waits for any update holding an employee row, so its line goes too.
+  await purgeRecordHistory(tx, "employee");
 }

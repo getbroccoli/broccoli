@@ -1,5 +1,5 @@
 "Someone who works for the company."
-type Employee {
+type Employee implements AnyRecord {
   id: ID!
   firstName: String!
   lastName: String!
@@ -11,6 +11,13 @@ type Employee {
   "Path of the employee's avatar, such as `/api/employees/avatar/<id>`; null without one."
   avatarUrl: String
   createdAt: DateTime!
+  "Changes to this employee, newest first. Owner only."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+}
+
+# Adds the employee to the shared list of record types that keep history; the server merges them.
+enum RecordType {
+  EMPLOYEE
 }
 
 type EmployeeEdge {
@@ -50,9 +57,32 @@ input EmployeeCreateInput {
   startDate: Date
 }
 
+"The fields to change; a field left out stays as it is, and null clears a field that may be empty."
+input EmployeeUpdateInput {
+  id: ID!
+  firstName: String
+  lastName: String
+  "Unique, compared without case."
+  email: String
+  jobTitle: String
+  startDate: Date
+  "Why the owner makes this change, kept on the history line as its reason; at most 500 characters."
+  changeReason: String
+}
+
+input EmployeeDeleteInput {
+  id: ID!
+  "Why the owner removes the employee, kept on the history line as its reason; at most 500 characters."
+  changeReason: String
+}
+
 type EmployeeMutations {
   "Adds an employee. Owner only."
   create(input: EmployeeCreateInput!): EmployeeCreatePayload!
+  "Changes an employee's fields and records the change in their history. Owner only."
+  update(input: EmployeeUpdateInput!): EmployeeUpdatePayload!
+  "Removes an employee and their avatar; their history stays. Owner only."
+  delete(input: EmployeeDeleteInput!): EmployeeDeletePayload!
 }
 
 "The new employee, or why it was refused."
@@ -63,8 +93,26 @@ type EmployeeCreatePayload {
 
 union EmployeeCreateError = InvalidInputError
 
+"The changed employee, or why the change was refused."
+type EmployeeUpdatePayload {
+  employee: Employee
+  error: EmployeeUpdateError
+}
+
+union EmployeeUpdateError = InvalidInputError | NotFoundError
+
+"The removed employee's id, or why the removal was refused."
+type EmployeeDeletePayload {
+  deletedEmployeeId: ID
+  error: EmployeeDeleteError
+}
+
+union EmployeeDeleteError = InvalidInputError | NotFoundError
+
 # Each module declares its own root fields; the server merges them into one type.
 type Query {
+  "One employee; null when there is none. Owner only."
+  employee(id: ID!): Employee
   "Employees, one page at a time. Owner only."
   employees(
     "Page size, 1 to 10000."

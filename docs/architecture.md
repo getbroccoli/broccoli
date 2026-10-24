@@ -22,7 +22,7 @@ Each package declares its allowed dependencies, enforced by lint with no cycles 
 - **Composition.** Startup supplies each module with only the dependencies it needs and collects its API, routes, event handlers and jobs. Modules communicate through public operations or events, never through another module's tables ([RULE21](code-quality.md#layers-and-place)).
 - **Domain-driven design is tiered.** A plain domain layer with unit tests is the default. Aggregates, value objects and domain events are introduced where invariants demand them, with each business decision owned in one place ([RULE52](code-quality.md#layers-and-place)).
 - **Demo data.** The demo module owns the sample company and coordinates other modules' public operations in one transaction; it owns no tables. Exiting the demo removes the sample company and people added during it, then returns to setup. A regular owner keeps their account; a provisional owner follows the separate lifecycle in §6.
-- **Four primitives.** HR features share records, tasks, calendar and processes, so each feature does not grow its own task queue, history and approval engine. A record stays a typed entity in its owning module; shared capabilities do not turn records into a generic storage engine. Tasks, calendar, processes and shared record capabilities are not built yet. Domain-specific rules, such as leave balances, stay with the feature that owns them.
+- **Four primitives.** HR features share records, tasks, calendar and processes, so each feature does not grow its own task queue, history and approval engine. A record stays a typed entity in its owning module; shared capabilities do not turn records into a generic storage engine. Shared record capabilities live in `core/records`, which modules use without core knowing them; history is the first. Tasks, calendar and processes are not built yet. Domain-specific rules, such as leave balances, stay with the feature that owns them.
 
 ### Module layers
 
@@ -75,6 +75,7 @@ For example, a domain rule decides whether an import source may retry. The appli
 
 - **Postgres is the durable work store.** pg-boss runs background jobs in the API process, using the instance's database. Enqueuing joins the business transaction, so rollback drops the work. Handlers run as the system, are idempotent and reject stale work; retries and terminal failures belong to the job lifecycle.
 - **Events currently run in process after commit.** Rollback drops them. Handlers run sequentially and are awaited; handler failures are logged without undoing the committed operation. A crash between commit and dispatch can lose an event, an accepted limitation for now.
+- **Record changes publish `records.changed`**, one event per history line with the record, the operation, the changed field keys and the cause, never values. Processes will be triggered by it; running many changes as one batch belongs to the future process runner, not the event.
 - **The durability decision is a transactional outbox**, written with the business change and audit record and drained by pg-boss. Delivery is ordered per entity and consumers remain idempotent. This avoids an external queue or a second workflow engine; the outbox is not implemented yet.
 - **Workflows** such as approvals and onboarding are domain state machines, with durable jobs executing their steps.
 
@@ -94,7 +95,8 @@ For example, a domain rule decides whether an import source may retry. The appli
 
 - **Authorization belongs to the application layer.** Adapters establish identity; every use case checks its security context. Background work has explicit system authority. GraphQL denies access by default, with narrowly designated public bootstrap fields.
 - **Current access is owner or system.** Finer permissions are designed as row scopes and field visibility. Scope filters must apply before pagination and counting, and unreadable fields must not leak through results, filtering or sorting. All adapters share these rules.
-- **Audit records are append-only.** The audit design records the real actor, effective identity during impersonation, client and trace alongside the business change. Impersonation cannot change credentials or grants. Generic field history is outside the first release.
+- **Record history is one mechanism for every record type.** A use case appends its history lines in the transaction of the change, never from an event handler: each line holds the author from the security context, the cause, an optional reason and each changed field's old and new value. Records stay typed tables in their modules; a module registers who may read its record type's history, and reads will filter hidden fields. Lines are only appended, except that an explicit purge, such as Exit demo, deletes a record type's lines. An ordinary removal keeps the history and appends a deletion line.
+- **Audit records are append-only and separate from history.** The audit design records every action, including reads and refusals, with the real actor, effective identity during impersonation, client and trace; it will point at a history line instead of copying values. Impersonation cannot change credentials or grants. Audit is not built yet.
 - **Custom fields do not use runtime DDL.** Their remaining design belongs with the feature that first needs them.
 
 ## 8. Frontend

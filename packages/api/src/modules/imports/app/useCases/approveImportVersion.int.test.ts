@@ -1,4 +1,5 @@
 import {
+  employeeUseCases,
   finishSelfHostedSetup,
   expect,
   importUseCases,
@@ -9,7 +10,6 @@ import {
 } from "#test/support";
 
 import { readInstance } from "../../../../core/instance";
-import { createEmployeeUseCases } from "../../../employees";
 
 test("keeps review pages and their version tied to the snapshot when another source arrives", async ({
   orm,
@@ -43,7 +43,7 @@ test("keeps review pages and their version tied to the snapshot when another sou
     code: "CONFLICT",
     message: "Your people changed while you were reviewing.",
   });
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect((await readInstance(orm)).step).toBe("import");
 });
 
@@ -67,7 +67,7 @@ test("refuses an old version without creating employees or advancing setup", asy
     message: "Your people changed while you were reviewing.",
   });
 
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect((await readInstance(orm)).step).toBe("import");
 });
 
@@ -84,7 +84,7 @@ test("approves the current version", async ({ orm, seed }) => {
   expect((await readInstance(orm)).step).toBe("owner");
   await finishSelfHostedSetup(orm);
 
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toMatchObject([
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toMatchObject([
     { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
   ]);
   expect((await readInstance(orm)).step).toBe("done");
@@ -128,7 +128,7 @@ test("refuses an old version after an email becomes taken without adding anyone"
   const review = await imports.reads.readReview(owner);
   expect(review.readyEmployees).toHaveLength(2);
   await seed.employee({ email: "avery@example.com" });
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   const before = await employees.listEmployees(owner, {});
 
   await expect(imports.approveImport(owner, review.version)).rejects.toMatchObject({

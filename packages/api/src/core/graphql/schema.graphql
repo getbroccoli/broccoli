@@ -46,6 +46,11 @@ type ConflictError implements Error {
   message: String!
 }
 
+"Nothing the caller may see has this id."
+type NotFoundError implements Error {
+  message: String!
+}
+
 "An external service, such as Slack, refused or failed."
 type UnavailableError implements Error {
   message: String!

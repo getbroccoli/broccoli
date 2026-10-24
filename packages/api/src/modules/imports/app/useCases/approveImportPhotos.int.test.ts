@@ -1,6 +1,7 @@
 import sharp from "sharp";
 
 import {
+  employeeUseCases,
   finishSelfHostedSetup,
   importSourceValues,
   expect,
@@ -15,7 +16,6 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { createEmployeeUseCases } from "../../../employees";
 
 test("finishing gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
   await seed.setupStep("import");
@@ -30,7 +30,7 @@ test("finishing gives the employee the Slack photo as their avatar", async ({ or
 
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({})).toEqual(imported);
   await finishSelfHostedSetup(orm);
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, {});
   expect(
     employees.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
   ).toEqual([{ email: "avery@example.com", avatarFileId: fileId }]);
@@ -104,7 +104,7 @@ test("approving keeps all import photos, record links and staff files", async ({
     { email: "taken@example.com", photoFileId: photoIds.get("taken@example.com"), leftOut: false },
   ]);
   await finishSelfHostedSetup(orm);
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, {
     orderBy: { field: "EMAIL" },
   });
   expect(

@@ -1,28 +1,38 @@
-import { expect, NON_OWNER, OWNER, PNG, storedFileIds, test } from "#test/support";
+import { sql } from "drizzle-orm";
+
+import {
+  recordChangedEvents,
+  employeeUseCases,
+  expectHistoryReplaysTo,
+  expect,
+  NON_OWNER,
+  OWNER,
+  PNG,
+  storedFileIds,
+  test,
+} from "#test/support";
+
+import { ormOf } from "../../../core/db";
 
 import { employeeRepository } from "../db";
 import { parseNewEmployee } from "../domain";
-import {
-  createEmployeeUseCases,
-  createImportedEmployees,
-  deleteAllEmployees,
-  findTakenEmails,
-} from ".";
+import { createImportedEmployees, deleteAllEmployees, findTakenEmails } from ".";
 
 test("creates complete employees and counts incomplete inputs", async ({ orm, transact }) => {
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
 
   const result = await transact((tx) =>
-    createImportedEmployees(OWNER, tx, [
-      avery,
-      { firstName: "Sam", lastName: "", email: "sam@example.com" },
-      robin,
-    ]),
+    createImportedEmployees(
+      OWNER,
+      tx,
+      [avery, { firstName: "Sam", lastName: "", email: "sam@example.com" }, robin],
+      { kind: "ADDED_FROM_IMPORT" },
+    ),
   );
 
   expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 0 });
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual(
     expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
   );
@@ -37,13 +47,16 @@ test("skips a taken email and leaves the existing employee unchanged", async ({
   const existing = await seed.employee({ email: "avery@example.com" });
 
   const result = await transact((tx) =>
-    createImportedEmployees(OWNER, tx, [
-      { firstName: "Avery", lastName: "Stone", email: existing.email },
-    ]),
+    createImportedEmployees(
+      OWNER,
+      tx,
+      [{ firstName: "Avery", lastName: "Stone", email: existing.email }],
+      { kind: "ADDED_FROM_IMPORT" },
+    ),
   );
 
   expect(result).toEqual({ created: 0, incomplete: 0, emailTaken: 1 });
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([existing]);
 });
 
@@ -60,11 +73,13 @@ test("creates the first input when two inputs have the same email", async ({ orm
   const first = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
 
   const result = await transact((tx) =>
-    createImportedEmployees(OWNER, tx, [first, { ...first, lastName: "Reed" }]),
+    createImportedEmployees(OWNER, tx, [first, { ...first, lastName: "Reed" }], {
+      kind: "ADDED_FROM_IMPORT",
+    }),
   );
 
   expect(result).toEqual({ created: 1, incomplete: 0, emailTaken: 1 });
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([expect.objectContaining(first)]);
 });
 
@@ -75,10 +90,12 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
     email: `employee${index}@example.com`,
   }));
 
-  const result = await transact((tx) => createImportedEmployees(OWNER, tx, inputs));
+  const result = await transact((tx) =>
+    createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
+  );
 
   expect(result).toEqual({ created: 1_001, incomplete: 0, emailTaken: 0 });
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 1_001 });
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 1_001 });
   expect(employees.edges.map(({ node }) => node.email).sort()).toEqual(
     inputs.map(({ email }) => email).sort(),
   );
@@ -88,15 +105,16 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
 test("refuses a non-owner and creates no employees", async ({ orm, transact }) => {
   await expect(
     transact((tx) =>
-      createImportedEmployees(NON_OWNER, tx, [
-        { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
-      ]),
+      createImportedEmployees(
+        NON_OWNER,
+        tx,
+        [{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }],
+        { kind: "ADDED_FROM_IMPORT" },
+      ),
     ),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(
-    (await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 })).edges,
-  ).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, { first: 100 })).edges).toEqual([]);
 });
 
 test("assigns avatars only to complete employees with untaken emails, keeping the first duplicate", async ({
@@ -112,17 +130,22 @@ test("assigns avatars only to complete employees with untaken emails, keeping th
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
 
   const result = await transact((tx) =>
-    createImportedEmployees(OWNER, tx, [
-      { ...avery, avatarFileId: keptPhoto },
-      { ...avery, avatarFileId: duplicatePhoto },
-      { ...avery, email: "taken@example.com", avatarFileId: takenPhoto },
-      { ...avery, email: "incomplete@example.com", lastName: "", avatarFileId: incompletePhoto },
-      { ...avery, email: "initials@example.com" },
-    ]),
+    createImportedEmployees(
+      OWNER,
+      tx,
+      [
+        { ...avery, avatarFileId: keptPhoto },
+        { ...avery, avatarFileId: duplicatePhoto },
+        { ...avery, email: "taken@example.com", avatarFileId: takenPhoto },
+        { ...avery, email: "incomplete@example.com", lastName: "", avatarFileId: incompletePhoto },
+        { ...avery, email: "initials@example.com" },
+      ],
+      { kind: "ADDED_FROM_IMPORT" },
+    ),
   );
 
   expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 2 });
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, {});
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, {});
   expect(
     employees.edges
       .filter(({ node }) => node.avatarFileId !== null)
@@ -143,6 +166,137 @@ test("deleting all employees deletes their avatars", async ({ orm, seed, transac
 
   await transact((tx) => deleteAllEmployees(OWNER, tx));
 
-  expect((await createEmployeeUseCases({ orm }).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
+});
+
+test("records one creation per inserted employee with the supplied cause and none for skipped inputs", async ({
+  orm,
+  seed,
+}) => {
+  const taken = await seed.employee({ email: "taken@example.com" });
+  const { transact, events } = recordChangedEvents(orm);
+
+  const result = await transact((tx) =>
+    createImportedEmployees(
+      OWNER,
+      tx,
+      [
+        {
+          firstName: "Avery",
+          lastName: "Stone",
+          email: "avery@example.com",
+          startDate: "2026-02-28",
+        },
+        { firstName: "Robin", lastName: "Reed", email: "robin@example.com", jobTitle: "Engineer" },
+        { firstName: "Taken", lastName: "Employee", email: taken.email },
+        { firstName: "Incomplete", lastName: "", email: "incomplete@example.com" },
+      ],
+      { kind: "ADDED_FROM_IMPORT", ref: "import-1" },
+    ),
+  );
+
+  expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 1 });
+  const employees = employeeUseCases(orm);
+  const inserted = (await employees.listEmployees(OWNER, {})).edges
+    .map(({ node }) => node)
+    .filter((employee) => employee.id !== taken.id);
+  expect(inserted).toHaveLength(2);
+  expect(events).toHaveLength(2);
+  for (const employee of inserted) {
+    const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
+    expect(edges).toHaveLength(1);
+    const line = edges[0]!.node;
+    expect(line).toMatchObject({
+      operation: "CREATED",
+      cause: { kind: "ADDED_FROM_IMPORT", ref: "import-1" },
+      author: { kind: "SIGNED_IN_USER", id: OWNER.user!.userId },
+    });
+    expect(events.find((event) => event.recordId === employee.id)).toEqual({
+      historyId: line.id,
+      recordType: "employee",
+      recordId: employee.id,
+      operation: "CREATED",
+      fields: line.changes.map(({ field }) => field),
+      causeKind: "ADDED_FROM_IMPORT",
+      causeRef: "import-1",
+    });
+    await expectHistoryReplaysTo(orm, employee.id);
+  }
+  expect((await employees.readEmployeeHistory(OWNER, taken.id, {})).edges).toEqual([]);
+});
+
+test("deleting all employees purges history including already deleted employees without publishing", async ({
+  orm,
+}) => {
+  const employees = employeeUseCases(orm);
+  const kept = await employees.createEmployee(OWNER, {
+    firstName: "Avery",
+    lastName: "Stone",
+    email: "avery@example.com",
+  });
+  const deleted = await employees.createEmployee(OWNER, {
+    firstName: "Robin",
+    lastName: "Reed",
+    email: "robin@example.com",
+  });
+  await employees.deleteEmployee(OWNER, { id: deleted.id });
+  const { transact, events } = recordChangedEvents(orm);
+
+  await transact((tx) => deleteAllEmployees(OWNER, tx));
+
+  expect((await employees.listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await employees.readEmployeeHistory(OWNER, kept.id, {})).edges).toEqual([]);
+  expect((await employees.readEmployeeHistory(OWNER, deleted.id, {})).edges).toEqual([]);
+  expect(events).toEqual([]);
+});
+
+test("an employee created during a reset keeps its creation history", async ({ orm, transact }) => {
+  const employees = employeeUseCases(orm);
+  const resetReady = Promise.withResolvers<number>();
+  const releaseReset = Promise.withResolvers<void>();
+  const resetting = transact(async (tx) => {
+    await deleteAllEmployees(OWNER, tx);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    resetReady.resolve(rows[0]!.pid);
+    await releaseReset.promise;
+  });
+  const blockingPid = await resetReady.promise;
+
+  const creation = Promise.allSettled([
+    employees.createEmployee(OWNER, {
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+    }),
+  ]);
+  try {
+    let waiting = false;
+    for (let attempt = 0; attempt < 1_000 && !waiting; attempt++) {
+      const { rows } = await orm.execute<{ waiting: boolean }>(sql`
+        select exists (
+          select from pg_stat_activity
+          where datname = current_database()
+            and wait_event_type = 'Lock'
+            and ${blockingPid} = any(pg_blocking_pids(pid))
+        ) as waiting
+      `);
+      waiting = rows[0]!.waiting;
+    }
+    expect(waiting).toBe(true);
+  } finally {
+    releaseReset.resolve();
+    await resetting;
+    await creation;
+  }
+
+  expect(await creation).toMatchObject([{ status: "fulfilled" }]);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  expect(edges).toHaveLength(1);
+  const employee = edges[0]!.node;
+  const history = await employees.readEmployeeHistory(OWNER, employee.id, {});
+  expect(
+    history.edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation })),
+  ).toEqual([{ recordId: employee.id, operation: "CREATED" }]);
+  await expectHistoryReplaysTo(orm, employee.id);
 });

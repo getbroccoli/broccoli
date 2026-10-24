@@ -22,13 +22,18 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **File**: bytes with a MIME type that a module stores in the `files` table, such as the company logo. The module that references it decides who may see it.
 - **Primitive**: one of the four building blocks every HR feature is made of: records, tasks, calendar and processes.
 - **Record**: a module's main entity, such as an employee or the company.
+- **History**: every change to a record, kept as history lines in the `record_history` table and shown on the record. The product word; "audit" stays internal and means a separate security trail.
+- **History line**: one change to one record: its change author, when, its change cause, its change reason and each changed field's old and new value. Appended in the transaction of the change; only a purge, such as Exit demo or Reset setup, deletes lines.
+- **Change author**: who made a change to a record, from the security context: a signed-in user, Broccoli itself, the setup holder or the external agent.
+- **Change cause**: why a change to a record happened or what started it, such as `EDITED_DIRECTLY` or `ADDED_FROM_IMPORT`, with the id of what caused it when there is one. The module whose action is the cause declares it.
+- **Change reason**: why, in the change author's own words: `changeReason` on an input, the reason on its history line.
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.
 - **Company**: the business the instance belongs to; its name and logo. One per instance.
 - **Brand lookup**: finding a company's logo from the owner's email domain, through the favicon service at `BRAND_LOOKUP_URL`.
 - **Domain event**: something that happened in the domain, published by one module in a transaction and handled by others after the commit, such as `instance.owner_claimed`.
-- **Demo data**: the sample company a new instance starts with. Exit demo deletes it with everyone added while it is present, and setup starts again.
+- **Demo data**: the sample company a new instance starts with. Exit demo deletes it with everyone added while it is present, and their history, and setup starts again.
 - **Import**: every import source and its records, waiting for review before they become records of their module. One per instance.
 - **Import source**: one place people come from, such as the connected Slack workspace or an uploaded file. It owns its import records.
 - **File source**: a staff file the owner uploaded as an import source. Its records come from the file's rows once the file is mapped: by Broccoli's model, or by the external agent's answers to Broccoli's masked questions (_answered mapping_); after an _original file read_, from the people AI read in the whole file.
@@ -37,5 +42,5 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Import employee**: the employee an import will create: the import records that share a work email, or one without an email. Each value is the owner's pick or typed value, else the first source's: files oldest first, then Slack.
 - **Ready import employee**: an import employee complete enough to become an employee under the employee rules, with an email no employee has yet. The others are incomplete import employees, or have a taken email.
 - **Setup approve**: the setup review step's "Add N people" button, which completes the import step, once. The ready import employees that are not left out become employees, with the values and photos review shows, when setup completes; the others are not added. Until then, "Back" on setup's last step reopens the review. The import is deleted when setup completes.
-- **Reset setup**: the workspace menu action that starts a finished setup over: every employee is deleted and setup goes back to the `company` step; the company and the AI choice stay. The demo's provisional owner exits the demo instead.
+- **Reset setup**: the workspace menu action that starts a finished setup over: every employee and their history is deleted and setup goes back to the `company` step; the company and the AI choice stay. The demo's provisional owner exits the demo instead.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.

@@ -40,6 +40,7 @@ type ResultField<Payload> = Exclude<keyof Payload, "error" | "__typename">;
 interface PayloadErrors {
   INVALID_INPUT: { __typename: "InvalidInputError"; message: string; fields: FieldError[] };
   CONFLICT: { __typename: "ConflictError"; message: string };
+  NOT_FOUND: { __typename: "NotFoundError"; message: string };
   UNAVAILABLE: { __typename: "UnavailableError"; message: string };
 }
 
@@ -59,6 +60,8 @@ function payloadErrorOf(
       return { __typename: "InvalidInputError", message, fields: fieldErrors };
     case "CONFLICT":
       return { __typename: "ConflictError", message };
+    case "NOT_FOUND":
+      return { __typename: "NotFoundError", message };
     case "UNAVAILABLE":
       return { __typename: "UnavailableError", message };
   }

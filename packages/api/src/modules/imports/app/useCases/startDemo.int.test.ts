@@ -1,4 +1,5 @@
 import {
+  employeeUseCases,
   expect,
   importUseCases,
   OWNER,
@@ -10,7 +11,7 @@ import {
 
 import { readInstance } from "../../../../core/instance";
 import type { Orm, Tx } from "../../../../core/db";
-import { createEmployeeUseCases } from "../../../employees";
+
 import { prepareDemoStart } from "./startDemo";
 
 test("starting the demo completes setup", async ({ orm, seed }) => {
@@ -110,7 +111,7 @@ test("starting the demo after a Slack read discards the import and its files", a
 
   expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
   expect((await imports.reads.readReview(SETUP_HOLDER)).listEmployees({}).edges).toEqual([]);
-  const employees = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 100 });
+  const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).not.toContain("avery@example.com");
   const remainingFiles = await storedFileIds(orm);
   expect(remainingFiles.filter((id) => importFiles.includes(id))).toEqual([]);
@@ -118,6 +119,6 @@ test("starting the demo after a Slack read discards the import and its files", a
 });
 
 async function hasEmployees(orm: Orm): Promise<boolean> {
-  const { edges } = await createEmployeeUseCases({ orm }).listEmployees(OWNER, { first: 1 });
+  const { edges } = await employeeUseCases(orm).listEmployees(OWNER, { first: 1 });
   return edges.length > 0;
 }

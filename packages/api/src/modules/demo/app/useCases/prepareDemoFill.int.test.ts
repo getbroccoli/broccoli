@@ -1,12 +1,12 @@
-import { demoUseCases, expect, OWNER, storedFileIds, test } from "#test/support";
+import { employeeUseCases, demoUseCases, expect, OWNER, storedFileIds, test } from "#test/support";
 
 import { prepareDemoFill } from "./prepareDemoFill";
-import { createEmployeeUseCases } from "../../../employees";
+
 import { parseCalendarDate } from "../../../../utils";
 
 test("fills 40 demo employees with distinct stored avatars", async ({ orm, transact }) => {
   const demo = demoUseCases(orm);
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
 
   await transact(await prepareDemoFill(today));
 
@@ -17,11 +17,19 @@ test("fills 40 demo employees with distinct stored avatars", async ({ orm, trans
   expect(avatarIds).not.toContain(null);
   expect(avatarIds.toSorted()).toEqual(await storedFileIds(orm));
   expect(await demo.getDemoData(OWNER)).toEqual({ isPresent: true });
+  for (const { node: employee } of employees.edges) {
+    const history = await employeeUseCases(orm).readEmployeeHistory(OWNER, employee.id, {});
+    expect(history.edges).toHaveLength(1);
+    expect(history.edges[0]!.node).toMatchObject({
+      operation: "CREATED",
+      cause: { kind: "ADDED_WITH_DEMO", ref: null },
+    });
+  }
 });
 
 test("adds nothing when demo data has already been filled", async ({ orm, transact }) => {
   const demo = demoUseCases(orm);
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
   const fill = await prepareDemoFill(today);
   await transact(fill);
   const before = await listEmployees(OWNER, { first: 100 });
@@ -37,7 +45,7 @@ test("adds nothing when demo data has already been filled", async ({ orm, transa
 test("does not fill demo data when a real employee exists", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
   const demo = demoUseCases(orm);
-  const { listEmployees } = createEmployeeUseCases({ orm });
+  const { listEmployees } = employeeUseCases(orm);
 
   await transact(await prepareDemoFill(today));
 

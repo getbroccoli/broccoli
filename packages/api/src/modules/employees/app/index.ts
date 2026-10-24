@@ -7,3 +7,4 @@ export {
   type ImportedEmployees,
 } from "./importedEmployees";
 export { createEmployeeUseCases, type EmployeeUseCases } from "./useCases";
+export { employeeRecordType } from "./employeeRecordType";

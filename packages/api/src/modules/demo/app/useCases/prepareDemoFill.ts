@@ -22,5 +22,13 @@ export async function prepareDemoFill(today: CalendarDate = todayInUtc()): Promi
       ctx,
       tx,
       people.map(({ employee }, index) => ({ employee, avatar: avatars[index]! })),
+      { kind: "ADDED_WITH_DEMO" },
     );
+}
+
+declare module "../../../../core/records" {
+  interface CauseKinds {
+    /** Broccoli added the sample company's people when the demo started. */
+    ADDED_WITH_DEMO: true;
+  }
 }

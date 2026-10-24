@@ -1,11 +1,9 @@
-import { expect, NON_OWNER, OWNER, test, WEBP } from "#test/support";
-
-import { createEmployeeUseCases } from ".";
+import { employeeUseCases, expect, NON_OWNER, OWNER, test, WEBP } from "#test/support";
 
 test("returns an employee's avatar bytes and MIME type", async ({ orm, seed }) => {
   const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
   await seed.employee({ avatarFileId });
-  const { readAvatar } = createEmployeeUseCases({ orm });
+  const { readAvatar } = employeeUseCases(orm);
 
   const avatar = await readAvatar(OWNER, avatarFileId);
 
@@ -14,7 +12,7 @@ test("returns an employee's avatar bytes and MIME type", async ({ orm, seed }) =
 
 test("returns null for a stored file that no employee references", async ({ orm, seed }) => {
   const fileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
-  const { readAvatar } = createEmployeeUseCases({ orm });
+  const { readAvatar } = employeeUseCases(orm);
 
   const avatar = await readAvatar(OWNER, fileId);
 
@@ -22,7 +20,7 @@ test("returns null for a stored file that no employee references", async ({ orm,
 });
 
 test("returns null for an avatar id that is not a uuid", async ({ orm }) => {
-  const { readAvatar } = createEmployeeUseCases({ orm });
+  const { readAvatar } = employeeUseCases(orm);
 
   const avatar = await readAvatar(OWNER, "not-a-uuid");
 
@@ -32,7 +30,7 @@ test("returns null for an avatar id that is not a uuid", async ({ orm }) => {
 test("refuses to read an employee avatar for a non-owner", async ({ orm, seed }) => {
   const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
   await seed.employee({ avatarFileId });
-  const { readAvatar } = createEmployeeUseCases({ orm });
+  const { readAvatar } = employeeUseCases(orm);
 
   await expect(readAvatar(NON_OWNER, avatarFileId)).rejects.toMatchObject({
     code: "FORBIDDEN",

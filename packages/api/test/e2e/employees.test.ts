@@ -124,3 +124,126 @@ test("sorts and filters employees through the API", async ({ env }) => {
   expect(page).not.toHaveProperty("errors");
   expect(page.data.employees.edges.map((edge) => edge.node.id)).toEqual([zulu.id, alpha.id]);
 });
+
+test("employee history resolves the session author, cause and UTC time", async ({ env }) => {
+  const { browser, user } = await env.signInAsOwner();
+  const employee = await env.seed.employee();
+  await browser.graphql(
+    `
+    mutation UpdateEmployee($input: EmployeeUpdateInput!) {
+      employee { update(input: $input) {
+        employee { id }
+        error { __typename ... on Error { message } }
+      } }
+    }
+  `,
+    { input: { id: employee.id, jobTitle: "Lead" } },
+  );
+
+  const response = await browser.graphql(
+    `
+    query EmployeeHistory($id: ID!) {
+      employee(id: $id) { id history(first: 10) {
+        edges { node { occurredAt author { kind userId email } cause { kind } } }
+      } }
+    }
+  `,
+    { id: employee.id },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      employee: {
+        id: employee.id,
+        history: {
+          edges: [
+            {
+              node: {
+                occurredAt: expect.stringMatching(
+                  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+                ) as unknown,
+                author: { kind: "SIGNED_IN_USER", userId: user.id, email: user.email },
+                cause: { kind: "EDITED_DIRECTLY" },
+              },
+            },
+          ],
+        },
+      },
+    },
+  });
+});
+
+test("record history links each line to its employee", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const created = await browser.graphql(createMutation, {
+    input: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  });
+  const body = (await created.json()) as {
+    data: { employee: { create: { employee: { id: string } } } };
+  };
+  const { id } = body.data.employee.create.employee;
+
+  const response = await browser.graphql(
+    `
+    query RecordHistory($id: ID!) {
+      recordHistory(recordType: EMPLOYEE, recordId: $id) {
+        edges { node { record { __typename ... on Employee { id firstName } } } }
+      }
+    }
+  `,
+    { id },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      recordHistory: {
+        edges: [{ node: { record: { __typename: "Employee", id, firstName: "Avery" } } }],
+      },
+    },
+  });
+});
+
+test("deleting an employee keeps history with no linked record", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const created = await browser.graphql(createMutation, {
+    input: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  });
+  const body = (await created.json()) as {
+    data: { employee: { create: { employee: { id: string } } } };
+  };
+  const { id } = body.data.employee.create.employee;
+  await browser.graphql(
+    `
+    mutation DeleteEmployee($input: EmployeeDeleteInput!) {
+      employee { delete(input: $input) {
+        deletedEmployeeId error { __typename ... on Error { message } }
+      } }
+    }
+  `,
+    { input: { id } },
+  );
+
+  const history = await browser.graphql(
+    `
+    query DeletedEmployeeHistory($id: ID!) {
+      employee(id: $id) { id }
+      recordHistory(recordType: EMPLOYEE, recordId: $id) {
+        edges { node { operation record { __typename ... on Employee { id firstName } } } }
+      }
+    }
+  `,
+    { id },
+  );
+
+  expect(await history.json()).toEqual({
+    data: {
+      employee: null,
+      recordHistory: {
+        edges: [
+          { node: { operation: "DELETED", record: null } },
+          { node: { operation: "CREATED", record: null } },
+        ],
+      },
+    },
+  });
+});

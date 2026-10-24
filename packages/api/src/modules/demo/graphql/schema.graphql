@@ -30,3 +30,9 @@ union DemoExitError = ConflictError
 type Mutation {
   demo: DemoMutations!
 }
+
+# Adds this module's cause of record changes to the shared enum; the server merges them.
+enum RecordChangeCauseKind {
+  "Broccoli added the sample company's people when the demo started."
+  ADDED_WITH_DEMO
+}

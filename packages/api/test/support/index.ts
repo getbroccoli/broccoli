@@ -41,6 +41,7 @@ export { storedFileIds } from "./storedFileIds";
 export {
   companyUseCases,
   demoUseCases,
+  employeeUseCases,
   externalAgentUseCases,
   importUseCases,
   slackUseCases,
@@ -65,4 +66,6 @@ export { importSourceValues } from "./importSourceValues";
 
 export { createSetupOwner, finishSelfHostedSetup } from "./finishSelfHostedSetup";
 
-export { createEmployeeUseCases } from "../../src/modules/employees";
+export { EXAMPLE_RECORD, EXAMPLE_REGISTRATION } from "./exampleRecord";
+export { expectHistoryReplaysTo } from "./employeeHistory";
+export { recordChangedEvents } from "./recordChangedEvents";

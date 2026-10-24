@@ -1,6 +1,6 @@
 import {
   companyUseCases,
-  createEmployeeUseCases,
+  employeeUseCases,
   expect,
   importUseCases,
   NON_OWNER,
@@ -32,7 +32,7 @@ test("resetting a finished setup deletes every employee and avatar and keeps the
 
   await systemUseCases(orm).resetSetup(owner);
 
-  expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(await readInstance(orm)).toMatchObject({
     step: "company",
@@ -56,7 +56,7 @@ test("resets a finished setup whose import was not cleaned up yet", async ({ orm
   });
   const imports = importUseCases(orm);
   const system = systemUseCases(orm);
-  const employees = createEmployeeUseCases({ orm });
+  const employees = employeeUseCases(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await system.completeSetup(owner);
   expect((await employees.listEmployees(owner, {})).edges).toMatchObject([
@@ -95,7 +95,7 @@ test("refuses resetting before setup is done and keeps the employees", async ({ 
   });
 
   expect((await readInstance(orm)).step).toBe("import");
-  const { edges } = await createEmployeeUseCases({ orm }).listEmployees(owner, {});
+  const { edges } = await employeeUseCases(orm).listEmployees(owner, {});
   expect(edges.map(({ node }) => node)).toEqual([employee]);
 });
 
@@ -118,7 +118,7 @@ test("refuses resetting the self-hosted demo and keeps its owner and employees",
     ownerUserId: owner.user!.userId,
     demoExpiresAt,
   });
-  const { edges } = await createEmployeeUseCases({ orm }).listEmployees(owner, {});
+  const { edges } = await employeeUseCases(orm).listEmployees(owner, {});
   expect(edges.map(({ node }) => node)).toEqual([employee]);
   expect(await storedFileIds(orm)).toEqual([avatarFileId]);
 });
@@ -139,5 +139,5 @@ test("refuses a concurrent second reset", async ({ orm, seed }) => {
     { reason: { code: "CONFLICT", message: "Setup is not done." } },
   ]);
   expect((await readInstance(orm)).step).toBe("company");
-  expect((await createEmployeeUseCases({ orm }).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
 });

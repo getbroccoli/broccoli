@@ -1,0 +1,87 @@
+"Something the company keeps that remembers its changes, such as an employee."
+interface AnyRecord {
+  id: ID!
+  "Changes to this record, newest first."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+}
+
+"One change to a record: who made it, when, why, and each field's old and new value."
+type RecordChange {
+  id: ID!
+  "The record this change is about; null once it is deleted."
+  record: AnyRecord
+  operation: RecordOperation!
+  occurredAt: DateTime!
+  author: RecordChangeAuthor!
+  cause: RecordChangeCause!
+  "Why, in the author's words."
+  reason: String
+  changes: [FieldChange!]!
+}
+
+enum RecordOperation {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+"Who made a change."
+type RecordChangeAuthor {
+  kind: RecordChangeAuthorKind!
+  "The signed-in user who made it; null for anyone else."
+  userId: ID
+  "That user's current email; null when they no longer exist or for anyone else."
+  email: String
+}
+
+enum RecordChangeAuthorKind {
+  SIGNED_IN_USER
+  BROCCOLI_ITSELF
+  "The browser holding setup before the owner exists."
+  SETUP_HOLDER
+  "The owner's own coding agent during setup."
+  EXTERNAL_AGENT
+}
+
+"Why a change happened."
+type RecordChangeCause {
+  kind: RecordChangeCauseKind!
+  "The id of what caused it, such as a scheduled change; its kind says what it is."
+  ref: ID
+}
+
+# Every module that causes changes adds its kinds by declaring this enum again; the server merges them.
+enum RecordChangeCauseKind {
+  "Someone changed the record directly, such as through the API."
+  EDITED_DIRECTLY
+}
+
+"One field's value before and after a change, as the API writes it; null when empty."
+type FieldChange {
+  field: String!
+  oldValue: String
+  newValue: String
+}
+
+type RecordChangeEdge {
+  cursor: String!
+  node: RecordChange!
+}
+
+type RecordChangeConnection {
+  edges: [RecordChangeEdge!]!
+  pageInfo: PageInfo!
+}
+
+# `RecordType` lists the record types that keep history: each module that keeps it declares
+# `enum RecordType` with its own value (`EMPLOYEE`); the server merges them.
+type Query {
+  "A record's history, newest first; still readable after the record is deleted. Readable by whoever the record's type allows."
+  recordHistory(
+    recordType: RecordType!
+    recordId: ID!
+    "Page size, 1 to 10000."
+    first: Int = 50
+    after: String
+  ): RecordChangeConnection!
+}
