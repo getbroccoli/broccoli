@@ -69,7 +69,7 @@ export function ImportPersonCell({
           </span>
         ) : (
           employee.incompleteReason && (
-            <FlagPill className="mt-0.5">
+            <FlagPill className="mt-0.5 h-auto min-h-6 max-w-full py-0.5 whitespace-normal">
               <span className="sr-only">{t("setup.review.wontBeAdded")}</span>
               {t(REASONS[employee.incompleteReason])}
             </FlagPill>
