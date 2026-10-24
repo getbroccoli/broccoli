@@ -1,4 +1,6 @@
-import { useState } from "react";
+import type { ApolloCache } from "@apollo/client";
+import { useApolloClient } from "@apollo/client/react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { DeleteEmployeeDocument, EmployeesDocument } from "@/__generated__/graphql";
@@ -20,7 +22,7 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employee: { id: string; firstName: string; lastName: string };
-  /** Runs once the employee is removed, such as closing their panel. */
+  /** Runs once the employee is removed while their panel is still open, such as closing it. */
   onRemoved: () => void;
 };
 
@@ -31,7 +33,19 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
   const [deleteEmployee, { loading }] = usePayloadMutation(DeleteEmployeeDocument, {
     refetch: [EmployeesDocument],
   });
+  const client = useApolloClient();
+  // The panel may close while a removal is pending, such as on browser Back.
+  const panelOpen = useRef(false);
+  const removed = useRef(false);
   const fullName = `${employee.firstName} ${employee.lastName}`;
+
+  useEffect(() => {
+    panelOpen.current = true;
+    return () => {
+      panelOpen.current = false;
+      if (removed.current) forgetEmployee(client.cache, employee.id);
+    };
+  }, [client, employee.id]);
 
   const remove = async () => {
     setFailed(false);
@@ -45,7 +59,9 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
       return;
     }
     toast(t("people.panel.remove.done", { name: fullName }));
-    onRemoved();
+    removed.current = true;
+    if (panelOpen.current) onRemoved();
+    else forgetEmployee(client.cache, employee.id);
   };
 
   return (
@@ -85,4 +101,13 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+/**
+ * Drops a removed employee from the cache once their panel is gone, so reopening it finds nobody;
+ * while the panel is open, evicting them would refetch it.
+ */
+function forgetEmployee(cache: ApolloCache, id: string) {
+  cache.evict({ id: cache.identify({ __typename: "Employee", id }) });
+  cache.gc();
 }

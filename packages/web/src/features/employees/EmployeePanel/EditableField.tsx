@@ -21,7 +21,7 @@ type Props = {
 
 /**
  * One field of a record's panel: its value, which a click or Enter turns into its editor. An
- * edited field keeps a mark and its saved value ("was …") until the panel saves or cancels.
+ * edited field keeps a mark until the panel saves or cancels.
  */
 export function EditableField({ field, saved, draft, error, disabled, onEdit, onRevert }: Props) {
   const [editing, setEditing] = useState(false);
@@ -47,7 +47,11 @@ export function EditableField({ field, saved, draft, error, disabled, onEdit, on
             value={value}
             invalid={Boolean(error)}
             describedBy={error ? errorId : undefined}
-            onChange={onEdit}
+            onChange={(value) => {
+              // A refused field stays open while it is corrected, though typing clears its error.
+              setEditing(true);
+              onEdit(value);
+            }}
             onDone={() => setEditing(false)}
             onRevert={() => {
               onRevert();
@@ -76,13 +80,6 @@ export function EditableField({ field, saved, draft, error, disabled, onEdit, on
               className="size-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/field:opacity-100 group-focus-visible/field:opacity-100"
             />
           </button>
-        )}
-        {changed && !error && (
-          <p className="px-1.5 text-xs text-muted-foreground">
-            {saved
-              ? t("people.panel.was", { value: field.format(saved) })
-              : t("people.panel.wasEmpty")}
-          </p>
         )}
         {error && (
           <p id={errorId} className="px-1.5 pt-1 text-xs text-destructive">

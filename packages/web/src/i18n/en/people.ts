@@ -22,8 +22,6 @@ export const peopleEn = {
   "people.panel.loadError": "Couldn’t load this person.",
   "people.panel.empty": "—",
   "people.panel.edit": "Edit {field}",
-  "people.panel.was": "was {value}",
-  "people.panel.wasEmpty": "was empty",
   "people.panel.fact.startDate": "Start date",
   "people.panel.fact.tenure": "Tenure",
   "people.panel.fact.email": "Work email",

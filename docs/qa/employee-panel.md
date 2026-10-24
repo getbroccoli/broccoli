@@ -18,12 +18,12 @@ A manual check of opening a person from People, editing them in place, their his
 ## Edit in place
 
 - [ ] Hovering a value shows a pencil; clicking it (or Enter on it) turns it into a text field, or a date picker for Start date.
-- [ ] Editing two fields marks each with a green bar and "was …"; the bar at the bottom says "2 unsaved changes · <fields in panel order> · saved as one history entry".
+- [ ] Editing two fields marks each with a green bar; the bar at the bottom says "2 unsaved changes · <fields in panel order> · saved as one history entry".
 - [ ] Changing a field back to its saved value removes its mark; Escape inside a field reverts only that field; Cancel reverts everything and hides the bar.
 - [ ] "Add reason" turns into one optional field; Save with a reason adds one history line "updated 2 fields: …" with the reason and "Edited"; expanding it shows each old → new value.
-- [ ] Save of one field reads "changed job title <old> → <new>"; clearing a job title reads "cleared job title".
+- [ ] Save of one field reads "changed job title <old> → <new>"; clearing a job title reads "cleared job title <old>" with the old value struck through.
 - [ ] The People row shows the new values after Save.
-- [ ] Clearing the first name, or entering an email another person has, keeps the field open with "Enter a value." or "Another person has this email." and saves nothing.
+- [ ] Clearing the first name, or entering an email another person has, keeps the field open with "Enter a value." or "Another person has this email." and saves nothing; typing a correction keeps the field open.
 
 ## Leaving with unsaved changes
 
@@ -39,7 +39,8 @@ A manual check of opening a person from People, editing them in place, their his
 ## Remove
 
 - [ ] ⋯ → "Remove <name>" asks "Remove <name>?" with an optional reason; Cancel keeps them.
-- [ ] Remove closes the panel, shows "<name> removed" and the person leaves People.
+- [ ] Remove closes the panel, shows "<name> removed" and the person leaves People; browser Back then shows "This person doesn’t exist."
+- [ ] Pressing Back while a removal is still pending and opening another person keeps that person's panel open when the removal ends.
 
 ## Keyboard and narrow screens
 

@@ -1,4 +1,4 @@
-import { t } from "@/i18n";
+import { type MessageKey, t } from "@/i18n";
 
 import { ChangeValues } from "./ChangeValues";
 import type { Summary } from "./historyLines";
@@ -11,14 +11,9 @@ type Props = {
 export function SummaryText({ summary }: Props) {
   switch (summary.kind) {
     case "changed":
-      if (summary.newValue === null) {
-        return <>{t("records.history.cleared", { field: lower(summary.label) })}</>;
-      }
       return (
         <>
-          {summary.oldValue === null
-            ? t("records.history.set", { field: lower(summary.label) })
-            : t("records.history.changed", { field: lower(summary.label) })}{" "}
+          {t(changeVerb(summary), { field: lower(summary.label) })}{" "}
           <ChangeValues oldValue={summary.oldValue} newValue={summary.newValue} />
         </>
       );
@@ -50,6 +45,11 @@ export function SummaryText({ summary }: Props) {
         </>
       );
   }
+}
+
+function changeVerb({ oldValue, newValue }: Extract<Summary, { kind: "changed" }>): MessageKey {
+  if (newValue === null) return "records.history.cleared";
+  return oldValue === null ? "records.history.set" : "records.history.changed";
 }
 
 /** "Job title" as "job title", inside a sentence. */
