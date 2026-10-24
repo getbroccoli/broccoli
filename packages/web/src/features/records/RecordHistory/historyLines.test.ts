@@ -168,7 +168,7 @@ it("labels a direct edit as Edited", () => {
 });
 
 it("labels a file import as Import", () => {
-  expect(causeLabel("IMPORTED_FROM_FILE")).toBe("Import");
+  expect(causeLabel("ADDED_FROM_IMPORT")).toBe("Import");
 });
 
 it("labels demo data as Demo", () => {

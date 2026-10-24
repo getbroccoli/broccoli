@@ -84,7 +84,7 @@ export function authorName(author: HistoryLine["author"]): string {
 
 const KNOWN_CAUSES: Partial<Record<string, MessageKey>> = {
   EDITED_DIRECTLY: "records.history.cause.edited",
-  IMPORTED_FROM_FILE: "records.history.cause.import",
+  ADDED_FROM_IMPORT: "records.history.cause.import",
   ADDED_WITH_DEMO: "records.history.cause.demo",
 };
 
