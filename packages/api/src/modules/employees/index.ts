@@ -1,6 +1,6 @@
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
-import { createEmployeeUseCases } from "./app";
+import { createEmployeeUseCases, employeeRecordType } from "./app";
 import { createResolvers } from "./graphql";
 import { avatarRouter } from "./http";
 
@@ -35,7 +35,7 @@ export function employeesModule(
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(useCases),
-    recordHistoryAccess: { employee: (ctx) => ctx.requireOwnerOrSystem() },
+    recordTypes: { employee: employeeRecordType(dependencies.orm) },
     router: (resolveSecurity) => avatarRouter(useCases, resolveSecurity),
   };
 }

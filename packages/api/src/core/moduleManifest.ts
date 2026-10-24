@@ -7,7 +7,7 @@ import type { JobHandlers, JobQueue } from "./jobs";
 import type { Resolvers } from "./graphql";
 import type { SecurityResolver } from "./security";
 import type { Logger } from "./logger";
-import type { RecordHistoryAccess } from "./records";
+import type { RecordTypeRegistry } from "./records";
 import type { SecretBox } from "./secrets";
 
 /**
@@ -36,8 +36,8 @@ export interface ModuleManifest {
   resolvers: Resolvers;
   /** What the module does when another module's event happens. */
   events?: EventHandlers;
-  /** Who may read the history of each record type the module owns. */
-  recordHistoryAccess?: RecordHistoryAccess;
+  /** The record types the module owns that keep history: who may read it and how to load them. */
+  recordTypes?: RecordTypeRegistry;
   /** The module's background jobs, run as the system. */
   jobs?: JobHandlers;
   /**

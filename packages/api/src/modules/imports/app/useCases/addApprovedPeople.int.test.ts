@@ -43,7 +43,7 @@ test("approval by the setup holder creates nobody until account creation", async
   expect(history.edges).toHaveLength(1);
   expect(history.edges[0]!.node).toMatchObject({
     operation: "CREATED",
-    cause: { kind: "IMPORTED_FROM_FILE", ref: null },
+    cause: { kind: "ADDED_FROM_IMPORT", ref: null },
   });
   await expectHistoryReplaysTo(orm, employeeId);
 });

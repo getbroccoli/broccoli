@@ -27,7 +27,7 @@ test("creates complete employees and counts incomplete inputs", async ({ orm, tr
       OWNER,
       tx,
       [avery, { firstName: "Sam", lastName: "", email: "sam@example.com" }, robin],
-      { kind: "IMPORTED_FROM_FILE" },
+      { kind: "ADDED_FROM_IMPORT" },
     ),
   );
 
@@ -51,7 +51,7 @@ test("skips a taken email and leaves the existing employee unchanged", async ({
       OWNER,
       tx,
       [{ firstName: "Avery", lastName: "Stone", email: existing.email }],
-      { kind: "IMPORTED_FROM_FILE" },
+      { kind: "ADDED_FROM_IMPORT" },
     ),
   );
 
@@ -74,7 +74,7 @@ test("creates the first input when two inputs have the same email", async ({ orm
 
   const result = await transact((tx) =>
     createImportedEmployees(OWNER, tx, [first, { ...first, lastName: "Reed" }], {
-      kind: "IMPORTED_FROM_FILE",
+      kind: "ADDED_FROM_IMPORT",
     }),
   );
 
@@ -91,7 +91,7 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
   }));
 
   const result = await transact((tx) =>
-    createImportedEmployees(OWNER, tx, inputs, { kind: "IMPORTED_FROM_FILE" }),
+    createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
   );
 
   expect(result).toEqual({ created: 1_001, incomplete: 0, emailTaken: 0 });
@@ -109,7 +109,7 @@ test("refuses a non-owner and creates no employees", async ({ orm, transact }) =
         NON_OWNER,
         tx,
         [{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }],
-        { kind: "IMPORTED_FROM_FILE" },
+        { kind: "ADDED_FROM_IMPORT" },
       ),
     ),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -140,7 +140,7 @@ test("assigns avatars only to complete employees with untaken emails, keeping th
         { ...avery, email: "incomplete@example.com", lastName: "", avatarFileId: incompletePhoto },
         { ...avery, email: "initials@example.com" },
       ],
-      { kind: "IMPORTED_FROM_FILE" },
+      { kind: "ADDED_FROM_IMPORT" },
     ),
   );
 
@@ -192,7 +192,7 @@ test("records one creation per inserted employee with the supplied cause and non
         { firstName: "Taken", lastName: "Employee", email: taken.email },
         { firstName: "Incomplete", lastName: "", email: "incomplete@example.com" },
       ],
-      { kind: "IMPORTED_FROM_FILE", ref: "import-1" },
+      { kind: "ADDED_FROM_IMPORT", ref: "import-1" },
     ),
   );
 
@@ -209,7 +209,7 @@ test("records one creation per inserted employee with the supplied cause and non
     const line = edges[0]!.node;
     expect(line).toMatchObject({
       operation: "CREATED",
-      cause: { kind: "IMPORTED_FROM_FILE", ref: "import-1" },
+      cause: { kind: "ADDED_FROM_IMPORT", ref: "import-1" },
       author: { kind: "SIGNED_IN_USER", id: OWNER.user!.userId },
     });
     expect(events.find((event) => event.recordId === employee.id)).toEqual({
@@ -218,7 +218,7 @@ test("records one creation per inserted employee with the supplied cause and non
       recordId: employee.id,
       operation: "CREATED",
       fields: line.changes.map(({ field }) => field),
-      causeKind: "IMPORTED_FROM_FILE",
+      causeKind: "ADDED_FROM_IMPORT",
       causeRef: "import-1",
     });
     await expectHistoryReplaysTo(orm, employee.id);

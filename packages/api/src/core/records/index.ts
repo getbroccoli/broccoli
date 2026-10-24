@@ -1,6 +1,6 @@
 import type { Orm } from "../db";
 import { readSdl, type Resolvers } from "../graphql";
-import { createRecordHistoryReader, type RecordHistoryAccess } from "./app";
+import { createRecordHistoryReader, type RecordTypeRegistry } from "./app";
 import { createResolvers } from "./graphql";
 
 // Public values.
@@ -13,7 +13,12 @@ export {
 export { changeReasonSchema, parseChangeReason } from "./domain";
 
 // Public types.
-export type { RecordChanged, RecordHistoryAccess } from "./app";
+export type {
+  LoadedRecord,
+  RecordChanged,
+  RecordTypeRegistration,
+  RecordTypeRegistry,
+} from "./app";
 export type {
   CauseKinds,
   FieldChange,
@@ -27,19 +32,19 @@ export type {
 
 /**
  * The shared record capabilities in the API: the history types and the `recordHistory` query,
- * readable for each record type as the modules' `recordHistoryAccess` allows.
+ * for each record type the modules register.
  */
 export function recordsManifest(
   orm: Orm,
-  modules: readonly { recordHistoryAccess?: RecordHistoryAccess }[],
+  modules: readonly { recordTypes?: RecordTypeRegistry }[],
 ): { name: string; typeDefs: string; resolvers: Resolvers } {
-  const access: RecordHistoryAccess = {};
-  for (const { recordHistoryAccess } of modules) {
-    Object.assign(access, recordHistoryAccess);
+  const registry: RecordTypeRegistry = {};
+  for (const { recordTypes } of modules) {
+    Object.assign(registry, recordTypes);
   }
   return {
     name: "records",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(orm, createRecordHistoryReader(orm, access)),
+    resolvers: createResolvers(orm, createRecordHistoryReader(orm, registry)),
   };
 }

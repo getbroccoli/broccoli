@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import {
   recordChangedEvents,
   EXAMPLE_RECORD,
+  EXAMPLE_REGISTRATION,
   expect,
   NON_OWNER,
   OWNER,
@@ -208,7 +209,7 @@ test("purges every line of only the selected record type without publishing", as
   expect(events).toEqual([]);
 });
 
-test("refuses history of a type without an access check", async ({ orm }) => {
+test("refuses history of an unregistered type", async ({ orm }) => {
   const reader = createRecordHistoryReader(orm, {});
 
   await expect(
@@ -221,7 +222,10 @@ test("refuses history of a type without an access check", async ({ orm }) => {
 
 test("refuses history when the type's access check refuses", async ({ orm }) => {
   const reader = createRecordHistoryReader(orm, {
-    example: (ctx) => Promise.resolve().then(() => ctx.requireOwnerOrSystem()),
+    example: {
+      ...EXAMPLE_REGISTRATION,
+      requireHistoryAccess: (ctx) => Promise.resolve().then(() => ctx.requireOwnerOrSystem()),
+    },
   });
 
   await expect(
@@ -241,9 +245,64 @@ test("reads history when the type's access check allows it", async ({ orm, trans
       records: [EXAMPLE_RECORD],
     }),
   );
-  const reader = createRecordHistoryReader(orm, { example: (ctx) => ctx.requireOwnerOrSystem() });
+  const reader = createRecordHistoryReader(orm, { example: EXAMPLE_REGISTRATION });
 
   const page = await reader.readHistory(OWNER, "example", EXAMPLE_RECORD.recordId, {});
 
   expect(page.edges.map(({ node }) => node)).toEqual(lines);
+});
+
+test("reads history through the record type's canonical id", async ({ orm, transact }) => {
+  const lines = await transact((tx) =>
+    appendRecordHistory(OWNER, tx, {
+      recordType: "example",
+      operation: "CREATED",
+      cause: { kind: "EDITED_DIRECTLY" },
+      records: [EXAMPLE_RECORD],
+    }),
+  );
+  const reader = createRecordHistoryReader(orm, { example: EXAMPLE_REGISTRATION });
+
+  const page = await reader.readHistory(
+    OWNER,
+    "example",
+    EXAMPLE_RECORD.recordId.toUpperCase(),
+    {},
+  );
+
+  expect(page.edges.map(({ node }) => node)).toEqual(lines);
+});
+
+test("returns an empty page when the record type cannot canonicalise the id", async ({
+  orm,
+  transact,
+}) => {
+  await transact((tx) =>
+    appendRecordHistory(OWNER, tx, {
+      recordType: "example",
+      operation: "CREATED",
+      cause: { kind: "EDITED_DIRECTLY" },
+      records: [EXAMPLE_RECORD],
+    }),
+  );
+  const reader = createRecordHistoryReader(orm, {
+    example: { ...EXAMPLE_REGISTRATION, canonicalId: () => null },
+  });
+
+  const page = await reader.readHistory(OWNER, "example", EXAMPLE_RECORD.recordId, {});
+
+  expect(page).toEqual({ edges: [], pageInfo: { hasNextPage: false, endCursor: null } });
+});
+
+test("refuses a history cursor id beyond the signed 64-bit range", async ({ orm }) => {
+  const after = Buffer.from(JSON.stringify(["NEWEST", "DESC", "9223372036854775808"])).toString(
+    "base64url",
+  );
+
+  await expect(
+    readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, { after }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "after", code: "invalid" }],
+  });
 });

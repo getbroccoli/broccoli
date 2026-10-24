@@ -29,7 +29,13 @@ export type NewHistoryLine = Omit<HistoryLine, "id" | "occurredAt">;
 /** A line's sort values in a cursor: its id. */
 export type HistorySortValues = [string];
 
-export const HISTORY_SORT_VALUES = z.tuple([z.string().regex(/^\d+$/)]);
+// A history id fits a signed 64-bit integer; a larger one in a cursor is no cursor this API issued.
+export const HISTORY_SORT_VALUES = z.tuple([
+  z
+    .string()
+    .regex(/^\d{1,19}$/)
+    .refine((id) => BigInt(id) <= MAX_HISTORY_ID),
+]);
 
 export interface HistoryPageQuery {
   recordType: RecordType;
@@ -79,6 +85,8 @@ export function recordHistoryRepository(db: Orm | Tx): RecordHistoryRepository {
     },
   };
 }
+
+const MAX_HISTORY_ID = 9_223_372_036_854_775_807n;
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;

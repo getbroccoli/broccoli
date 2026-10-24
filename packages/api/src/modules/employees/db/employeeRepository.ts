@@ -45,6 +45,8 @@ export interface EmployeeRepository {
   /** Deletes an employee and their avatar and returns what was deleted; null when no employee has the id. */
   delete(id: string): Promise<Employee | null>;
   findById(id: string): Promise<Employee | null>;
+  /** The employees among these ids that exist. */
+  findByIds(ids: readonly string[]): Promise<Employee[]>;
   /**
    * Deletes every employee and their avatars, locking out other employee writes until the caller
    * commits; a file another row still references fails it.
@@ -130,20 +132,8 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
           .update(employees)
           .set(changes)
           .where(eq(employees.id, id))
-          .returning({ ...getTableColumns(employees), ...OLD_VALUES });
-        if (!row) {
-          return null;
-        }
-        const { oldFirstName, oldLastName, oldEmail, oldJobTitle, oldStartDate, ...after } = row;
-        const before = {
-          ...after,
-          firstName: oldFirstName,
-          lastName: oldLastName,
-          email: oldEmail,
-          jobTitle: oldJobTitle,
-          startDate: oldStartDate,
-        };
-        return { before, after };
+          .returning({ ...EMPLOYEE_COLUMNS, ...OLD_EMPLOYEE_COLUMNS });
+        return row ? beforeAndAfter(row) : null;
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
@@ -174,6 +164,12 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         deleted.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : [])),
       );
     },
+
+    findByIds: (ids: readonly string[]) =>
+      orm()
+        .select()
+        .from(employees)
+        .where(sql`${employees.id} = any(${sql.param([...ids])}::uuid[])`),
 
     findTakenEmails: async (emails: readonly string[]): Promise<string[]> => {
       const rows = await orm()
@@ -220,14 +216,25 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
   };
 }
 
-/** The fields an update changes, as `UPDATE … RETURNING` saw them before the update (Postgres 18). */
-const OLD_VALUES = {
-  oldFirstName: sql`old.first_name`.mapWith(employees.firstName),
-  oldLastName: sql`old.last_name`.mapWith(employees.lastName),
-  oldEmail: sql`old.email`.mapWith(employees.email),
-  oldJobTitle: sql`old.job_title`.mapWith(employees.jobTitle),
-  oldStartDate: sql`old.start_date`.mapWith(employees.startDate),
-};
+const EMPLOYEE_COLUMNS = getTableColumns(employees);
+
+/** Every column as `UPDATE … RETURNING` saw it before the update (Postgres 18), as `old_<key>`. */
+const OLD_EMPLOYEE_COLUMNS = Object.fromEntries(
+  Object.entries(EMPLOYEE_COLUMNS).map(([key, column]) => [
+    `old_${key}`,
+    sql.raw(`old.${column.name}`).mapWith(column),
+  ]),
+);
+
+/** Splits a row of `EMPLOYEE_COLUMNS` and `OLD_EMPLOYEE_COLUMNS` into the employee before and after. */
+function beforeAndAfter(row: Record<string, unknown>): { before: Employee; after: Employee } {
+  const employeeWith = (prefix: string) =>
+    // The keys are the table's own columns, so the object is a stored employee.
+    Object.fromEntries(
+      Object.keys(EMPLOYEE_COLUMNS).map((key) => [key, row[`${prefix}${key}`]]),
+    ) as unknown as Employee;
+  return { before: employeeWith("old_"), after: employeeWith("") };
+}
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;

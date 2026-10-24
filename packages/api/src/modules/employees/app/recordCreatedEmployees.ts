@@ -3,12 +3,6 @@ import { appendRecordHistory, type HistoryAppend } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { type Employee, employeeChanges } from "../domain";
 
-declare module "../../../core/records" {
-  interface RecordTypes {
-    employee: true;
-  }
-}
-
 /** Appends a creation line for each of these new employees, joining `tx`. */
 export async function recordCreatedEmployees(
   ctx: SecurityContext,

@@ -65,7 +65,7 @@ export async function appendRecordHistory(
 }
 
 /** One record's history, newest first, one page at a time. The caller authorizes the read. */
-export function readRecordHistory(
+export async function readRecordHistory(
   db: Orm | Tx,
   recordType: RecordType,
   recordId: string,
@@ -95,37 +95,73 @@ export function purgeRecordHistory(tx: Tx, recordType: RecordType): Promise<numb
   return recordHistoryRepository(tx).deleteRecordType(recordType);
 }
 
-/**
- * Who may read the history of each record type, registered by the module that owns it. A check
- * gets the record's id but must not need the record to exist: a deleted record keeps its history.
- */
-export type RecordHistoryAccess = {
-  [Type in RecordType]?: (ctx: SecurityContext, recordId: string) => void | Promise<void>;
-};
+/** What core needs from the module that owns a record type. */
+export interface RecordTypeRegistration {
+  /** The GraphQL type of its records, such as "Employee"; resolves `RecordChange.record`. */
+  graphqlType: string;
+  /**
+   * Refuses with FORBIDDEN a caller who may not read this record type's history. It gets the
+   * record's id but must not need the record to exist: a deleted record keeps its history.
+   */
+  requireHistoryAccess(ctx: SecurityContext, recordId: string): void | Promise<void>;
+  /** The id as history stores it, such as an employee's lowercase uuid; null when it names no record. */
+  canonicalId(recordId: string): string | null;
+  /** The records that still exist among these canonical ids, by id, for a caller who may read them. */
+  loadRecords(ctx: SecurityContext, ids: readonly string[]): Promise<Map<string, unknown>>;
+}
 
-/** Reads the history of a record of any type, for whoever its type's check allows. */
+/** A record as `RecordChange.record` returns it, marked with its GraphQL type. */
+export type LoadedRecord = { __typename: string };
+
+/** The record types that keep history, each registered by the module that owns it. */
+export type RecordTypeRegistry = { [Type in RecordType]?: RecordTypeRegistration };
+
+/** Reads the history of a record of any type, and its records, for whoever its type allows. */
 export interface RecordHistoryReader {
-  /** Refuses with FORBIDDEN a record type without a check. */
+  /** Refuses with FORBIDDEN a record type nobody registered; an id that names no record reads as empty. */
   readHistory(
     ctx: SecurityContext,
     recordType: RecordType,
     recordId: string,
     args: PageArgs,
   ): Promise<Connection<HistoryLine>>;
+  /** The records still there among these ids, each marked with its GraphQL type, by id. */
+  readRecords(
+    ctx: SecurityContext,
+    recordType: RecordType,
+    ids: readonly string[],
+  ): Promise<Map<string, LoadedRecord>>;
 }
 
 export function createRecordHistoryReader(
   orm: Orm,
-  access: RecordHistoryAccess,
+  registry: RecordTypeRegistry,
 ): RecordHistoryReader {
+  const registrationOf = (recordType: RecordType) => {
+    const registration = registry[recordType];
+    if (!registration) {
+      throw new ApplicationError("FORBIDDEN", "You cannot read this history.");
+    }
+    return registration;
+  };
   return {
     readHistory: async (ctx, recordType, recordId, args) => {
-      const requireAccess = access[recordType];
-      if (!requireAccess) {
-        throw new ApplicationError("FORBIDDEN", "You cannot read this history.");
-      }
-      await requireAccess(ctx, recordId);
-      return readRecordHistory(orm, recordType, recordId, args);
+      const registration = registrationOf(recordType);
+      await registration.requireHistoryAccess(ctx, recordId);
+      const canonicalId = registration.canonicalId(recordId);
+      return canonicalId === null
+        ? { edges: [], pageInfo: { hasNextPage: false, endCursor: null } }
+        : readRecordHistory(orm, recordType, canonicalId, args);
+    },
+    readRecords: async (ctx, recordType, ids) => {
+      const registration = registrationOf(recordType);
+      const records = await registration.loadRecords(ctx, ids);
+      return new Map(
+        [...records].map(([id, record]) => [
+          id,
+          { ...(record as object), __typename: registration.graphqlType },
+        ]),
+      );
     },
   };
 }

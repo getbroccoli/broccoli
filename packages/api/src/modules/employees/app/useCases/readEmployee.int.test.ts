@@ -11,3 +11,15 @@ test("returns null for an unknown employee", async ({ orm }) => {
     await employeeUseCases(orm).readEmployee(OWNER, "00000000-0000-4000-8000-000000000001"),
   ).toBeNull();
 });
+
+test("returns history for an employee id written in uppercase", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const employees = employeeUseCases(orm);
+  await employees.updateEmployee(OWNER, { id: employee.id, jobTitle: "Lead" });
+  const history = await employees.readEmployeeHistory(OWNER, employee.id, {});
+
+  const page = await employees.readEmployeeHistory(OWNER, employee.id.toUpperCase(), {});
+
+  expect(history.edges).toHaveLength(1);
+  expect(page).toEqual(history);
+});

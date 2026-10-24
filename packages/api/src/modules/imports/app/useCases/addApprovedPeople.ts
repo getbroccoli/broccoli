@@ -22,7 +22,7 @@ export async function addApprovedPeople(ctx: SecurityContext, tx: Tx): Promise<v
       ...toNewEmployeeInput(employee),
       avatarFileId: employee.photoFileId ?? undefined,
     })),
-    { kind: "IMPORTED_FROM_FILE" },
+    { kind: "ADDED_FROM_IMPORT" },
   );
   tx.publish("imports.people_added", {
     ...counts,
@@ -52,8 +52,8 @@ export interface AddedPeople extends ImportedEmployees {
 
 declare module "../../../../core/records" {
   interface CauseKinds {
-    /** People the owner approved in the import became employees. */
-    IMPORTED_FROM_FILE: true;
+    /** People approved in the import, from a file or Slack, became employees. */
+    ADDED_FROM_IMPORT: true;
   }
 }
 

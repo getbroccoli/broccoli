@@ -1,8 +1,9 @@
 import type { Connection, PageArgs } from "../../../../core/pagination";
-import { type HistoryLine, readRecordHistory } from "../../../../core/records";
+import { createRecordHistoryReader, type HistoryLine } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
 import type { EmployeeRepository } from "../../db";
 import type { Employee } from "../../domain";
+import { employeeRecordType } from "../employeeRecordType";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeIdOf } from "./employeeIdOf";
 
@@ -17,13 +18,17 @@ export async function readEmployee(
   return employeeId ? employees.findById(employeeId) : null;
 }
 
-/** An employee's history, newest first, also after the employee is deleted. */
-export async function readEmployeeHistory(
+/** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */
+export function readEmployeeHistory(
   { orm }: EmployeeContext,
   ctx: SecurityContext,
   employeeId: string,
   args: PageArgs,
 ): Promise<Connection<HistoryLine>> {
-  ctx.requireOwnerOrSystem();
-  return readRecordHistory(orm, "employee", employeeId, args);
+  return createRecordHistoryReader(orm, { employee: employeeRecordType(orm) }).readHistory(
+    ctx,
+    "employee",
+    employeeId,
+    args,
+  );
 }

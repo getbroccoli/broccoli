@@ -4,7 +4,9 @@ export {
   purgeRecordHistory,
   readAuthorEmails,
   readRecordHistory,
+  type LoadedRecord,
   type RecordChanged,
-  type RecordHistoryAccess,
+  type RecordTypeRegistration,
+  type RecordTypeRegistry,
   type RecordHistoryReader,
 } from "./recordHistory";

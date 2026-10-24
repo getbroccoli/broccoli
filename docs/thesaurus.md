@@ -25,7 +25,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **History**: every change to a record, kept as history lines in the `record_history` table and shown on the record. The product word; "audit" stays internal and means a separate security trail.
 - **History line**: one change to one record: its change author, when, its change cause, its change reason and each changed field's old and new value. Appended in the transaction of the change; only a purge, such as Exit demo or Reset setup, deletes lines.
 - **Change author**: who made a change to a record, from the security context: a signed-in user, Broccoli itself, the setup holder or the external agent.
-- **Change cause**: why a change to a record happened or what started it, such as `EDITED_DIRECTLY` or `IMPORTED_FROM_FILE`, with the id of what caused it when there is one. The module whose action is the cause declares it.
+- **Change cause**: why a change to a record happened or what started it, such as `EDITED_DIRECTLY` or `ADDED_FROM_IMPORT`, with the id of what caused it when there is one. The module whose action is the cause declares it.
 - **Change reason**: why, in the change author's own words: `changeReason` on an input, the reason on its history line.
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.

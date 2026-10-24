@@ -66,6 +66,6 @@ export { importSourceValues } from "./importSourceValues";
 
 export { createSetupOwner, finishSelfHostedSetup } from "./finishSelfHostedSetup";
 
-export { EXAMPLE_RECORD } from "./exampleRecord";
+export { EXAMPLE_RECORD, EXAMPLE_REGISTRATION } from "./exampleRecord";
 export { expectHistoryReplaysTo } from "./employeeHistory";
 export { recordChangedEvents } from "./recordChangedEvents";

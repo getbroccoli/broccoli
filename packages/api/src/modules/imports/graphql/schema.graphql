@@ -326,6 +326,6 @@ type Mutation {
 
 # Adds this module's cause of record changes to the shared enum; the server merges them.
 enum RecordChangeCauseKind {
-  "People the owner approved in the import became employees."
-  IMPORTED_FROM_FILE
+  "People approved in the import, from a file or Slack, became employees."
+  ADDED_FROM_IMPORT
 }

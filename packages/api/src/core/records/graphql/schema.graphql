@@ -8,6 +8,8 @@ interface AnyRecord {
 "One change to a record: who made it, when, why, and each field's old and new value."
 type RecordChange {
   id: ID!
+  "The record this change is about; null once it is deleted."
+  record: AnyRecord
   operation: RecordOperation!
   occurredAt: DateTime!
   author: RecordChangeAuthor!

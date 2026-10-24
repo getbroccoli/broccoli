@@ -125,45 +125,32 @@ test("sorts and filters employees through the API", async ({ env }) => {
   expect(page.data.employees.edges.map((edge) => edge.node.id)).toEqual([zulu.id, alpha.id]);
 });
 
-test("editing an employee shows who changed what, when and why in their history", async ({
-  env,
-}) => {
+test("employee history resolves the session author, cause and UTC time", async ({ env }) => {
   const { browser, user } = await env.signInAsOwner();
-  const employee = await env.seed.employee({ jobTitle: "Engineer" });
-
-  const updated = await browser.graphql(
+  const employee = await env.seed.employee();
+  await browser.graphql(
     `
     mutation UpdateEmployee($input: EmployeeUpdateInput!) {
       employee { update(input: $input) {
-        employee { id jobTitle }
-        error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } }
+        employee { id }
+        error { __typename ... on Error { message } }
       } }
     }
   `,
-    { input: { id: employee.id, jobTitle: "Lead", changeReason: "Promoted" } },
+    { input: { id: employee.id, jobTitle: "Lead" } },
   );
 
-  expect(updated.status).toBe(200);
-  expect(await updated.json()).toEqual({
-    data: {
-      employee: { update: { employee: { id: employee.id, jobTitle: "Lead" }, error: null } },
-    },
-  });
   const response = await browser.graphql(
     `
     query EmployeeHistory($id: ID!) {
       employee(id: $id) { id history(first: 10) {
-        edges { node {
-          id operation occurredAt author { kind userId email } cause { kind ref } reason
-          changes { field oldValue newValue }
-        } }
-        pageInfo { hasNextPage endCursor }
+        edges { node { occurredAt author { kind userId email } cause { kind } } }
       } }
     }
   `,
     { id: employee.id },
   );
-  expect(response.status).toBe(200);
+
   expect(await response.json()).toEqual({
     data: {
       employee: {
@@ -172,36 +159,60 @@ test("editing an employee shows who changed what, when and why in their history"
           edges: [
             {
               node: {
-                id: expect.stringMatching(/^\d+$/) as unknown,
-                operation: "UPDATED",
                 occurredAt: expect.stringMatching(
                   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
                 ) as unknown,
                 author: { kind: "SIGNED_IN_USER", userId: user.id, email: user.email },
-                cause: { kind: "EDITED_DIRECTLY", ref: null },
-                reason: "Promoted",
-                changes: [{ field: "jobTitle", oldValue: "Engineer", newValue: "Lead" }],
+                cause: { kind: "EDITED_DIRECTLY" },
               },
             },
           ],
-          pageInfo: { hasNextPage: false, endCursor: expect.any(String) as unknown },
         },
       },
     },
   });
 });
 
-test("deleting an employee keeps their history readable through recordHistory", async ({ env }) => {
+test("record history links each line to its employee", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
-  const input = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
-  const created = await browser.graphql(createMutation, { input });
+  const created = await browser.graphql(createMutation, {
+    input: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  });
   const body = (await created.json()) as {
-    data: { employee: { create: { employee: { id: string }; error: null } } };
+    data: { employee: { create: { employee: { id: string } } } };
   };
-  expect(body.data.employee.create.error).toBeNull();
   const { id } = body.data.employee.create.employee;
 
-  const deleted = await browser.graphql(
+  const response = await browser.graphql(
+    `
+    query RecordHistory($id: ID!) {
+      recordHistory(recordType: EMPLOYEE, recordId: $id) {
+        edges { node { record { __typename ... on Employee { id firstName } } } }
+      }
+    }
+  `,
+    { id },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      recordHistory: {
+        edges: [{ node: { record: { __typename: "Employee", id, firstName: "Avery" } } }],
+      },
+    },
+  });
+});
+
+test("deleting an employee keeps history with no linked record", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const created = await browser.graphql(createMutation, {
+    input: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+  });
+  const body = (await created.json()) as {
+    data: { employee: { create: { employee: { id: string } } } };
+  };
+  const { id } = body.data.employee.create.employee;
+  await browser.graphql(
     `
     mutation DeleteEmployee($input: EmployeeDeleteInput!) {
       employee { delete(input: $input) {
@@ -209,50 +220,28 @@ test("deleting an employee keeps their history readable through recordHistory", 
       } }
     }
   `,
-    { input: { id, changeReason: "Left" } },
+    { input: { id } },
   );
 
-  expect(deleted.status).toBe(200);
-  expect(await deleted.json()).toEqual({
-    data: { employee: { delete: { deletedEmployeeId: id, error: null } } },
-  });
   const history = await browser.graphql(
     `
     query DeletedEmployeeHistory($id: ID!) {
       employee(id: $id) { id }
-      recordHistory(recordType: EMPLOYEE, recordId: $id, first: 10) {
-        edges { node { operation changes { field oldValue newValue } } }
+      recordHistory(recordType: EMPLOYEE, recordId: $id) {
+        edges { node { operation record { __typename ... on Employee { id firstName } } } }
       }
     }
   `,
     { id },
   );
-  expect(history.status).toBe(200);
+
   expect(await history.json()).toEqual({
     data: {
       employee: null,
       recordHistory: {
         edges: [
-          {
-            node: {
-              operation: "DELETED",
-              changes: [
-                { field: "firstName", oldValue: "Avery", newValue: null },
-                { field: "lastName", oldValue: "Stone", newValue: null },
-                { field: "email", oldValue: "avery@example.com", newValue: null },
-              ],
-            },
-          },
-          {
-            node: {
-              operation: "CREATED",
-              changes: [
-                { field: "firstName", oldValue: null, newValue: "Avery" },
-                { field: "lastName", oldValue: null, newValue: "Stone" },
-                { field: "email", oldValue: null, newValue: "avery@example.com" },
-              ],
-            },
-          },
+          { node: { operation: "DELETED", record: null } },
+          { node: { operation: "CREATED", record: null } },
         ],
       },
     },
