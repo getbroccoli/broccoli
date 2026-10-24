@@ -1,5 +1,5 @@
 import { ShieldCheck } from "@phosphor-icons/react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
@@ -33,8 +33,15 @@ type Props = {
  */
 export function AiForm({ ai, demoAvailable }: Props) {
   const navigate = useNavigate();
+  const { holdsSetup } = useRouteContext({ from: "__root__" });
   const { next } = useSetupPages("ai");
-  const [source, setSource] = useState<AiSource>(ai.source);
+  const [selectedSource, setSource] = useState<AiSource>(ai.source);
+  const source =
+    selectedSource === "EXTERNAL_AGENT" && !holdsSetup
+      ? ai.openRouterKey
+        ? "OPENROUTER"
+        : "BROCCOLI_AI"
+      : selectedSource;
   // The key being typed; null while the known key is used, and Replace starts one.
   const [newKey, setNewKey] = useState<string | null>(null);
   const [saveAiSource, saving] = usePayloadMutation(SaveAiSourceDocument);
@@ -97,13 +104,15 @@ export function AiForm({ ai, demoAvailable }: Props) {
             title={t("setup.ai.broccoliAi")}
             hint={t("setup.ai.broccoliAiHint")}
           />
-          <SourceOption
-            value="EXTERNAL_AGENT"
-            selected={source}
-            onSelect={setSource}
-            title={t("setup.ai.agent")}
-            hint={t("setup.ai.externalAgentHint")}
-          />
+          {holdsSetup && (
+            <SourceOption
+              value="EXTERNAL_AGENT"
+              selected={source}
+              onSelect={setSource}
+              title={t("setup.ai.agent")}
+              hint={t("setup.ai.externalAgentHint")}
+            />
+          )}
           <SourceOption
             value="OPENROUTER"
             selected={source}
