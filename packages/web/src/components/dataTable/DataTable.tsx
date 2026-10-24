@@ -10,6 +10,7 @@ import { TableSkeleton } from "./TableStates";
 // The first column stays put while the rows scroll sideways; in a compact list the inset shadow marks its edge.
 const PINNED_COLUMN = "sticky left-0 z-10 bg-card";
 const PINNED_EDGE = "shadow-[inset_-1px_0_0_var(--color-border)]";
+const INTERACTIVE = "a, button, input, select, textarea, [role=button]";
 
 export interface DataTableColumn<Row, SortKey extends string = string> {
   id: string;
@@ -39,6 +40,8 @@ interface DataTableProps<Row, SortKey extends string> {
   /** Shown at the left of the footer, such as how many rows there are. */
   summary?: ReactNode;
   density?: DataTableDensity;
+  /** Opens a row on a click anywhere in it; keyboard users reach the same through a link in the row. */
+  onRowClick?: (row: Row) => void;
 }
 
 /**
@@ -58,6 +61,7 @@ export function DataTable<Row, SortKey extends string>({
   pager,
   summary,
   density = "compact",
+  onRowClick,
 }: DataTableProps<Row, SortKey>) {
   const placeholder = notice ?? (rows?.length === 0 ? emptyState : undefined);
   const comfortable = density === "comfortable";
@@ -105,8 +109,24 @@ export function DataTable<Row, SortKey extends string>({
               {rows.map((row) => (
                 <TableRow
                   key={getRowId(row)}
+                  onClick={
+                    onRowClick &&
+                    ((event) => {
+                      // A link or control in the row does its own thing, as do modified clicks.
+                      const target = event.target as HTMLElement;
+                      if (
+                        target.closest(INTERACTIVE) ||
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey
+                      )
+                        return;
+                      onRowClick(row);
+                    })
+                  }
                   className={cn(
                     "group/row hover:bg-row-hover",
+                    onRowClick && "cursor-pointer",
                     comfortable ? "h-[60px] border-border" : "border-border/40",
                   )}
                 >

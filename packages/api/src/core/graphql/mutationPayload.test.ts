@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import { ApplicationError } from "../applicationError";
-import { mutationPayload } from "./mutationPayload";
+import { multiFieldMutationPayload, mutationPayload } from "./mutationPayload";
 
 it("returns the result under its field on success, with a null error when errors are expected", async () => {
   const company = { id: "company" };
@@ -61,6 +61,31 @@ it("rethrows an application error whose code is not listed", async () => {
   await expect(result).rejects.toBe(error);
 });
 
+it("returns every result field with a null error", async () => {
+  const employee = { id: "employee" };
+  const historyLine = { id: "history" };
+
+  const payload = await multiFieldMutationPayload<EmployeeUpdatePayload>(
+    () => Promise.resolve({ employee, historyLine }),
+    ["NOT_FOUND"],
+  );
+
+  expect(payload).toEqual({ employee, historyLine, error: null });
+});
+
+it("returns a listed error without the result fields", async () => {
+  const error = new ApplicationError("NOT_FOUND", "No employee has this id.");
+
+  const payload = await multiFieldMutationPayload<EmployeeUpdatePayload>(
+    () => Promise.reject(error),
+    ["NOT_FOUND"],
+  );
+
+  expect(payload).toEqual({
+    error: { __typename: "NotFoundError", message: "No employee has this id." },
+  });
+});
+
 // Payload types as codegen generates them: the changed object, and `error` where it can fail.
 interface CompanyMutationPayload {
   company?: { id: string } | null;
@@ -71,6 +96,11 @@ interface CompanyUpdatePayload {
 }
 interface EmployeePayload {
   employee?: { id: string } | null;
+  error?: unknown;
+}
+interface EmployeeUpdatePayload {
+  employee?: { id: string } | null;
+  historyLine?: { id: string } | null;
   error?: unknown;
 }
 interface ImportMutationPayload {

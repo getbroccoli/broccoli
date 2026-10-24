@@ -1,5 +1,6 @@
 import type { FragmentType } from "@apollo/client";
 import { useFragment } from "@apollo/client/react";
+import { Link } from "@tanstack/react-router";
 
 import {
   EmployeeNameCell_EmployeeFragmentDoc,
@@ -9,7 +10,7 @@ import {
 import { Avatar } from "./Avatar";
 
 /**
- * The name with the avatar, or initials without one or when it fails to load; owns the
+ * The name, a link to the person's panel, with the avatar, or initials without one or when it fails to load; owns the
  * `EmployeeNameCell_employee` fragment.
  */
 export function EmployeeNameCell({
@@ -23,12 +24,17 @@ export function EmployeeNameCell({
   });
   // The query that rendered this row has just written the fragment, so it is complete.
   if (!complete) return null;
-  const { firstName, lastName, avatarUrl } = data;
+  const { id, firstName, lastName, avatarUrl } = data;
 
   return (
     <div className="flex items-center gap-2.5">
       <Avatar url={avatarUrl ?? null} firstName={firstName} lastName={lastName} />
-      <span className="truncate font-medium text-foreground">{`${firstName} ${lastName}`}</span>
+      <Link
+        to="/people/$employeeId"
+        params={{ employeeId: id }}
+        search={(previous) => previous}
+        className="truncate font-medium text-foreground hover:underline"
+      >{`${firstName} ${lastName}`}</Link>
     </div>
   );
 }

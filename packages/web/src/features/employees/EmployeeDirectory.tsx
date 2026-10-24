@@ -22,8 +22,10 @@ export function EmployeeDirectory() {
       void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
     [navigate],
   );
+  // Opening People shows the cached page at once and the server's current one when it is back.
   const { data, previousData, error, loading, refetch } = useQuery(EmployeesDocument, {
     variables: toEmployeeListVariables(search),
+    fetchPolicy: "cache-and-network",
   });
   const list = useListPage({
     search,
@@ -39,6 +41,13 @@ export function EmployeeDirectory() {
       columns={EMPLOYEE_COLUMNS}
       rows={rows}
       getRowId={(employee) => employee.id}
+      onRowClick={(employee) =>
+        void navigate({
+          to: "/people/$employeeId",
+          params: { employeeId: employee.id },
+          search: (previous) => previous,
+        })
+      }
       sort={list.sort}
       onSortChange={list.changeSort}
       isLoading={loading}

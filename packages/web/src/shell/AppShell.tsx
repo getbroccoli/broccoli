@@ -1,5 +1,6 @@
 import { useRef, type ReactNode } from "react";
 
+import { Toaster } from "@/components/ui/sonner";
 import { DemoBanner } from "@/features/demo";
 
 import { LeftNav } from "./LeftNav";
@@ -24,6 +25,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </main>
+      <Toaster position="top-center" />
     </div>
   );
 }
