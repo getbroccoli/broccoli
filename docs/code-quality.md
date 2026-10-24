@@ -91,5 +91,5 @@ How to write each kind of test is in [`testing.md`](testing.md).
 - **RULE47.** A doc holds only what a reader needs: nothing obvious, generic, deferred or restated from the code. A change edits no doc outside its task.
 - **RULE61.** `architecture.md` records system boundaries, technology choices, constraints and trade-offs, with their reasons. Class and function details, algorithms, endpoint walkthroughs and tuning values belong in code or the relevant guide. A refactor that changes only implementation does not change the architecture document.
 - **RULE48.** A doc comment is one or two sentences: what it is and the non-obvious why.
-- **RULE49.** `thesaurus.md` gets a term only when it is Broccoli's own, not a well-known one such as job, model or mapping.
+- **RULE49.** `thesaurus.md` gets a term only when it is Broccoli's own, not a well-known one such as job, model or mapping. A term names its context, so it reads alone (`Change author`, not `Author`).
 - **RULE50.** A change that needs a new architecture decision changes `architecture.md` in the same pull request.
