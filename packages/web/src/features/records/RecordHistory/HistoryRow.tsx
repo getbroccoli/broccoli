@@ -6,7 +6,7 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { authorName, causeLabel, type HistoryLine, summaryOf } from "./historyLines";
-import type { RecordDescription } from "./recordDescription";
+import type { RecordDescription } from "../recordDescription";
 import { ChangeValues } from "./ChangeValues";
 import { SummaryText } from "./SummaryText";
 

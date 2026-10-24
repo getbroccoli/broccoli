@@ -7,7 +7,7 @@ import { t } from "@/i18n";
 
 import { groupByDay } from "./historyLines";
 import { HistoryRow } from "./HistoryRow";
-import type { RecordDescription } from "./recordDescription";
+import type { RecordDescription } from "../recordDescription";
 
 type Props = {
   recordType: RecordType;

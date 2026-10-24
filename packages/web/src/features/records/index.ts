@@ -1,1 +1,4 @@
-export { RecordHistory, type RecordDescription, type RecordField } from "./RecordHistory";
+export { EditableField } from "./EditableField";
+export { EditBar } from "./EditBar";
+export type { RecordDescription, RecordField } from "./recordDescription";
+export { RecordHistory } from "./RecordHistory";

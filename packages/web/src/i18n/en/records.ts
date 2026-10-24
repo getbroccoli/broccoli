@@ -1,5 +1,16 @@
 /** English copy under `records.*`, shared by every record type. */
 export const recordsEn = {
+  "records.field.empty": "—",
+  "records.field.edit": "Edit {field}",
+  "records.edit.unsaved": "{count} unsaved changes",
+  "records.edit.unsavedOne": "1 unsaved change",
+  "records.edit.oneEntry": "saved as one history entry",
+  "records.edit.addReason": "Add reason",
+  "records.edit.reason": "Why? (optional)",
+  "records.edit.cancel": "Cancel",
+  "records.edit.save": "Save",
+  "records.edit.saving": "Saving…",
+  "records.edit.failed": "Couldn’t save. Try again.",
   "records.history.title": "History",
   "records.history.today": "Today",
   "records.history.yesterday": "Yesterday",

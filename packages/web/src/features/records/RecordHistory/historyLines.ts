@@ -1,7 +1,9 @@
 import type { RecordHistoryQuery } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
+import { calendarDayOf, calendarDayParts } from "@/lib/calendarDay";
+import { sentenceCase } from "@/lib/sentenceCase";
 
-import type { RecordDescription } from "./recordDescription";
+import type { RecordDescription } from "../recordDescription";
 
 /** A history line as the `RecordHistory` query reads it; `occurredAt` is an ISO instant in UTC. */
 export type HistoryLine = RecordHistoryQuery["recordHistory"]["edges"][number]["node"];
@@ -19,12 +21,12 @@ export function groupByDay<Line extends Pick<HistoryLine, "occurredAt">>(
   now: Date,
   timeZone?: string,
 ): { label: string; lines: Line[] }[] {
-  const today = dayOf(now, timeZone);
-  const [year, month, date] = dayParts(today);
+  const today = calendarDayOf(now, timeZone);
+  const [year, month, date] = calendarDayParts(today);
   const yesterday = new Date(Date.UTC(year, month, date - 1)).toISOString().slice(0, 10);
   const groups: { day: string; label: string; lines: Line[] }[] = [];
   for (const line of lines) {
-    const day = dayOf(new Date(line.occurredAt), timeZone);
+    const day = calendarDayOf(new Date(line.occurredAt), timeZone);
     const last = groups.at(-1);
     if (last?.day === day) {
       last.lines.push(line);
@@ -88,33 +90,14 @@ const KNOWN_CAUSES: Partial<Record<string, MessageKey>> = {
   ADDED_WITH_DEMO: "records.history.cause.demo",
 };
 
-/** The calendar day of `date` in `timeZone`, as `YYYY-MM-DD` (the en-CA format). */
-function dayOf(date: Date, timeZone?: string): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, dateStyle: "short" }).format(date);
-}
-
-function dayParts(day: string): [number, number, number] {
-  const [year, month, date] = day.split("-").map(Number);
-  return [year!, month! - 1, date!];
-}
-
 function dayLabel(day: string, today: string, yesterday: string): string {
   if (day === today) return t("records.history.today");
   if (day === yesterday) return t("records.history.yesterday");
-  const [year, month, date] = dayParts(day);
+  const [year, month, date] = calendarDayParts(day);
   return new Intl.DateTimeFormat("en-GB", {
     day: "numeric",
     month: "short",
-    year: year === dayParts(today)[0] ? undefined : "numeric",
+    year: year === calendarDayParts(today)[0] ? undefined : "numeric",
     timeZone: "UTC",
   }).format(Date.UTC(year, month, date));
-}
-
-/** "costCenter" or "APPLIED_SCHEDULED_CHANGE" as "Cost center" or "Applied scheduled change". */
-function sentenceCase(name: string): string {
-  const words = name
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/_/g, " ")
-    .toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
 }

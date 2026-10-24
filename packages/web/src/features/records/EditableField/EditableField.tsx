@@ -1,10 +1,10 @@
 import { PencilSimple } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import type { RecordField } from "@/features/records";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
+import type { RecordField } from "../recordDescription";
 import { FieldEditor } from "./FieldEditor";
 
 type Props = {
@@ -27,7 +27,7 @@ export function EditableField({ field, saved, draft, error, disabled, onEdit, on
   const [editing, setEditing] = useState(false);
   const changed = draft !== undefined && (draft || null) !== saved;
   const value = draft ?? saved ?? "";
-  const shown = value ? field.format(value) : t("people.panel.empty");
+  const shown = value ? field.format(value) : t("records.field.empty");
   const errorId = `${field.key}-error`;
 
   return (
@@ -62,7 +62,7 @@ export function EditableField({ field, saved, draft, error, disabled, onEdit, on
           <button
             type="button"
             disabled={disabled}
-            aria-label={`${t("people.panel.edit", { field: field.label })}: ${shown}`}
+            aria-label={`${t("records.field.edit", { field: field.label })}: ${shown}`}
             onClick={() => setEditing(true)}
             className="group/field flex w-full min-w-0 items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           >

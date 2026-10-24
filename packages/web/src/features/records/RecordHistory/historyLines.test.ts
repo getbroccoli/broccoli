@@ -5,7 +5,7 @@ import { expect, it } from "vitest";
 import { formatCalendarDate } from "@/lib/formatDate";
 
 import { authorName, causeLabel, groupByDay, summaryOf } from "./historyLines";
-import type { RecordDescription } from "./recordDescription";
+import type { RecordDescription } from "../recordDescription";
 
 it("groups consecutive lines by day without changing their order", () => {
   const newest = { ...line, id: "newest", occurredAt: "2026-10-23T18:00:00Z" };

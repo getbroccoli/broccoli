@@ -4,15 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 
-import type { SaveFailure } from "./useEmployeeDraft";
-
 type Props = {
   /** The labels of the changed fields, in panel order. */
   changedLabels: string[];
   reason: string;
   onReasonChange: (reason: string) => void;
   saving: boolean;
-  failure: SaveFailure | null;
+  /** Why the last save failed, or null. */
+  failureMessage: string | null;
   onCancel: () => void;
   onSave: () => void;
 };
@@ -26,7 +25,7 @@ export function EditBar({
   reason,
   onReasonChange,
   saving,
-  failure,
+  failureMessage,
   onCancel,
   onSave,
 }: Props) {
@@ -36,21 +35,21 @@ export function EditBar({
   return (
     <div
       role="region"
-      aria-label={t("people.panel.bar.oneEntry")}
+      aria-label={t("records.edit.oneEntry")}
       className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-foreground px-4 py-2.5 text-sm text-background shadow-lg"
     >
       <div className="min-w-0 flex-1">
         <p className="font-medium">
           {count === 1
-            ? t("people.panel.bar.unsavedOne")
-            : t("people.panel.bar.unsaved", { count: String(count) })}
+            ? t("records.edit.unsavedOne")
+            : t("records.edit.unsaved", { count: String(count) })}
         </p>
         <p className="truncate text-xs text-background/70">
-          {changedLabels.join(", ")} · {t("people.panel.bar.oneEntry")}
+          {changedLabels.join(", ")} · {t("records.edit.oneEntry")}
         </p>
-        {failure && (
+        {failureMessage && (
           <p role="alert" className="pt-1 text-xs text-red-300">
-            {t(failure === "removed" ? "people.panel.bar.removed" : "people.panel.bar.failed")}
+            {failureMessage}
           </p>
         )}
       </div>
@@ -60,8 +59,8 @@ export function EditBar({
           value={reason}
           disabled={saving}
           maxLength={500}
-          aria-label={t("people.panel.bar.reason")}
-          placeholder={t("people.panel.bar.reason")}
+          aria-label={t("records.edit.reason")}
+          placeholder={t("records.edit.reason")}
           onChange={(event) => onReasonChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") onSave();
@@ -74,7 +73,7 @@ export function EditBar({
           onClick={() => setAskingReason(true)}
           className="text-xs text-background/70 underline-offset-2 hover:text-background hover:underline"
         >
-          {t("people.panel.bar.addReason")}
+          {t("records.edit.addReason")}
         </button>
       )}
       <div className="flex gap-2">
@@ -85,7 +84,7 @@ export function EditBar({
           onClick={onCancel}
           className="border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background"
         >
-          {t("people.panel.bar.cancel")}
+          {t("records.edit.cancel")}
         </Button>
         <Button
           size="sm"
@@ -94,7 +93,7 @@ export function EditBar({
           onClick={onSave}
           className="bg-background text-foreground hover:bg-background/90"
         >
-          {saving ? t("people.panel.bar.saving") : t("people.panel.bar.save")}
+          {saving ? t("records.edit.saving") : t("records.edit.save")}
         </Button>
       </div>
     </div>

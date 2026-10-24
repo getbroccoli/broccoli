@@ -11,13 +11,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
-import { RecordHistory } from "@/features/records";
+import { EditableField, EditBar, RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
 import { Avatar } from "../Avatar";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
-import { EditableField } from "./EditableField";
-import { EditBar } from "./EditBar";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import type { EmployeeFieldKey } from "./employeeDraft";
 import { KeyFacts } from "./KeyFacts";
@@ -138,7 +136,10 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             reason={draft.reason}
             onReasonChange={draft.setReason}
             saving={draft.saving}
-            failure={draft.failure}
+            failureMessage={
+              draft.failure &&
+              t(draft.failure === "removed" ? "people.panel.saveRemoved" : "records.edit.failed")
+            }
             onCancel={draft.cancel}
             onSave={() => void draft.save()}
           />

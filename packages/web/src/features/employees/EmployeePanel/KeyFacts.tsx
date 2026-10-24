@@ -2,9 +2,9 @@ import { CalendarBlank, Envelope, Hourglass } from "@phosphor-icons/react";
 import type { Icon } from "@phosphor-icons/react";
 
 import { t } from "@/i18n";
+import { calendarDayOf } from "@/lib/calendarDay";
 import { formatCalendarDate } from "@/lib/formatDate";
-
-import { tenureOf } from "./tenure";
+import { tenureOf } from "@/lib/tenure";
 
 type Props = {
   startDate: string | null;
@@ -13,7 +13,7 @@ type Props = {
 
 /** The facts at the top of a person's panel: start date, tenure and work email. */
 export function KeyFacts({ startDate, email }: Props) {
-  const tenure = tenureOf(startDate, todayInBrowser());
+  const tenure = tenureOf(startDate, calendarDayOf(new Date()));
   const facts: { icon: Icon; label: string; value: string }[] = [
     ...(startDate
       ? [
@@ -41,9 +41,4 @@ export function KeyFacts({ startDate, email }: Props) {
       ))}
     </dl>
   );
-}
-
-/** Today in the browser's time zone, as `YYYY-MM-DD` (the en-CA format). */
-function todayInBrowser(): string {
-  return new Intl.DateTimeFormat("en-CA", { dateStyle: "short" }).format(new Date());
 }

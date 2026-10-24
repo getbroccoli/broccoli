@@ -1,7 +1,8 @@
-import type { RecordField } from "@/features/records";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
+
+import type { RecordField } from "../recordDescription";
 
 type Props = {
   field: RecordField;
@@ -41,7 +42,7 @@ export function FieldEditor({
             onChange(next);
             onDone();
           }}
-          placeholder={t("people.panel.empty")}
+          placeholder={t("records.field.empty")}
           autoFocus
           aria-label={field.label}
           aria-invalid={invalid}
