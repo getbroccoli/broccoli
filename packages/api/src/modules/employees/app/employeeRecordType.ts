@@ -1,7 +1,7 @@
 import type { Orm } from "../../../core/db";
 import type { RecordTypeRegistration } from "../../../core/records";
 import { employeeRepository } from "../db";
-import { employeeIdOf } from "./useCases/employeeIdOf";
+import { parseUuid } from "../../../utils";
 
 declare module "../../../core/records" {
   interface RecordTypes {
@@ -18,7 +18,7 @@ export function employeeRecordType(orm: Orm): RecordTypeRegistration {
   return {
     graphqlType: "Employee",
     requireHistoryAccess: (ctx) => ctx.requireOwnerOrSystem(),
-    canonicalId: employeeIdOf,
+    canonicalId: parseUuid,
     loadRecords: async (ctx, ids) => {
       ctx.requireOwnerOrSystem();
       const employees = await employeeRepository(orm).findByIds(ids);

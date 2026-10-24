@@ -1,6 +1,7 @@
 import { invalidInput } from "../../../../core/applicationError";
 import { appendRecordHistory, type HistoryLine } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
+import { parseUuid } from "../../../../utils";
 import { type EmployeeRepository, employeeRepository } from "../../db";
 import {
   EmailTakenError,
@@ -11,7 +12,7 @@ import {
   parseEmployeeUpdate,
 } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
-import { employeeIdOf, employeeNotFound } from "./employeeIdOf";
+import { employeeNotFound } from "./employeeNotFound";
 
 /**
  * Changes the fields an update sends and records the change in the employee's history, in one
@@ -24,7 +25,7 @@ export async function updateEmployee(
 ): Promise<Employee> {
   ctx.requireOwnerOrSystem();
   const { changes, reason } = parseEmployeeUpdate(input);
-  const employeeId = employeeIdOf(id);
+  const employeeId = parseUuid(id);
   if (!employeeId) {
     throw employeeNotFound();
   }

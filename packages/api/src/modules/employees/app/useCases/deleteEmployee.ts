@@ -1,9 +1,10 @@
 import { appendRecordHistory, parseChangeReason } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
+import { parseUuid } from "../../../../utils";
 import { employeeRepository } from "../../db";
 import { employeeChanges } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
-import { employeeIdOf, employeeNotFound } from "./employeeIdOf";
+import { employeeNotFound } from "./employeeNotFound";
 
 /**
  * Removes an employee and their avatar and records what they held as a deletion line, in one
@@ -16,7 +17,7 @@ export async function deleteEmployee(
 ): Promise<string> {
   ctx.requireOwnerOrSystem();
   const reason = parseChangeReason(changeReason);
-  const employeeId = employeeIdOf(id);
+  const employeeId = parseUuid(id);
   if (!employeeId) {
     throw employeeNotFound();
   }

@@ -9,6 +9,7 @@ import {
   paginate,
 } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
+import { parseUuid } from "../../../../utils";
 import { importPhotoRepository, importReader } from "../../db";
 import {
   type ImportEmployeeRecord,
@@ -45,11 +46,8 @@ export function createImportReadService(orm: Orm): ImportReadService {
   return {
     readImportPhoto: async (ctx: SecurityContext, fileId: string): Promise<StoredFile | null> => {
       requireImportAccess(ctx);
-      // Postgres refuses a malformed uuid, so only a parsed one reaches the query.
-      const id = z.uuid().safeParse(fileId);
-      return id.success && (await importPhotoRepository(orm).hasPhoto(id.data))
-        ? readFile(orm, id.data)
-        : null;
+      const id = parseUuid(fileId);
+      return id && (await importPhotoRepository(orm).hasPhoto(id)) ? readFile(orm, id) : null;
     },
 
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {
