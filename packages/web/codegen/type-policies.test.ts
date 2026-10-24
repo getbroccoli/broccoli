@@ -1,7 +1,7 @@
 import { buildSchema } from "graphql";
 import { describe, expect, it } from "vitest";
 
-import { namespaceTypePolicies } from "./type-policies";
+import { connectionTypeNames, namespaceTypePolicies } from "./type-policies";
 
 describe("namespaceTypePolicies", () => {
   it("merges an id-less type returned by a Query field", () => {
@@ -57,5 +57,34 @@ describe("namespaceTypePolicies", () => {
     const policies = namespaceTypePolicies(schema);
 
     expect(policies).toEqual({});
+  });
+});
+
+describe("connectionTypeNames", () => {
+  it("lists a type whose edges items have a node", () => {
+    const schema = buildSchema(`
+      type Query { employees: EmployeeConnection }
+      type EmployeeConnection { edges: [EmployeeEdge!]! }
+      type EmployeeEdge { node: Employee! }
+      type Employee { id: ID! }
+    `);
+
+    const names = connectionTypeNames(schema);
+
+    expect(names).toEqual(["EmployeeConnection"]);
+  });
+
+  it("leaves out types without edges whose items have a node", () => {
+    const schema = buildSchema(`
+      type Query { entries: Entries employee: EmployeeEdge }
+      type Entries { edges: [Entry!]! }
+      type Entry { id: ID! }
+      type EmployeeEdge { node: Employee! }
+      type Employee { id: ID! }
+    `);
+
+    const names = connectionTypeNames(schema);
+
+    expect(names).toEqual([]);
   });
 });

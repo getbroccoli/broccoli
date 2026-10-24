@@ -10,6 +10,9 @@ mutation UpdateEmployee($input: EmployeeUpdateInput!) {
       employee {
         ...EmployeePanel_employee @unmask
       }
+      historyLine {
+        ...RecordHistory_line @unmask
+      }
       error {
         __typename
         ... on Error {

@@ -1,5 +1,12 @@
 import type { PluginFunction } from "@graphql-codegen/plugin-helpers";
-import { getNamedType, isObjectType, type GraphQLObjectType, type GraphQLSchema } from "graphql";
+import {
+  getNamedType,
+  getNullableType,
+  isListType,
+  isObjectType,
+  type GraphQLObjectType,
+  type GraphQLSchema,
+} from "graphql";
 
 /**
  * `{ merge: true }` for every object type without an `id` field that a root Query or
@@ -19,10 +26,28 @@ export function namespaceTypePolicies(schema: GraphQLSchema): Record<string, { m
   return Object.fromEntries(names.map((name) => [name, { merge: true as const }]));
 }
 
+/** The names of the object types that are connections: an `edges` list whose items have a `node`, sorted. */
+export function connectionTypeNames(schema: GraphQLSchema): string[] {
+  return Object.values(schema.getTypeMap())
+    .filter((type): type is GraphQLObjectType => isObjectType(type) && isConnection(type))
+    .map((type) => type.name)
+    .sort();
+}
+
 export const plugin: PluginFunction = (schema) =>
   [
     'import type { TypePolicies } from "@apollo/client";',
     "",
     `export const typePolicies = ${JSON.stringify(namespaceTypePolicies(schema), null, 2)} satisfies TypePolicies;`,
     "",
+    "/** Connection types, whose edges the cache reads without evicted nodes. */",
+    `export const connectionTypes = ${JSON.stringify(connectionTypeNames(schema), null, 2)};`,
+    "",
   ].join("\n");
+
+function isConnection(type: GraphQLObjectType): boolean {
+  const edges = type.getFields()["edges"];
+  if (!edges || !isListType(getNullableType(edges.type))) return false;
+  const edge = getNamedType(edges.type);
+  return isObjectType(edge) && "node" in edge.getFields();
+}

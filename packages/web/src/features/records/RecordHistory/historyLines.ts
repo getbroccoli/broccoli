@@ -8,6 +8,9 @@ import type { RecordDescription } from "../recordDescription";
 /** A history line as the `RecordHistory` query reads it; `occurredAt` is an ISO instant in UTC. */
 export type HistoryLine = RecordHistoryQuery["recordHistory"]["edges"][number]["node"];
 
+/** Lines in a page of history; the first page is the one a record's panel caches. */
+export const HISTORY_PAGE_SIZE = 50;
+
 /** What a history line says, before it is rendered. */
 export type Summary =
   | { kind: "changed"; label: string; oldValue: string | null; newValue: string | null }

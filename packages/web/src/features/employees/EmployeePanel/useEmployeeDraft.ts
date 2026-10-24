@@ -1,13 +1,12 @@
 import { useState } from "react";
 
 import {
-  EmployeesDocument,
-  RecordHistoryDocument,
   UpdateEmployeeDocument,
   type EmployeePanel_EmployeeFragment,
   type UpdateEmployeeMutation,
 } from "@/__generated__/graphql";
 import { PayloadFailure, usePayloadMutation } from "@/apollo";
+import { addHistoryLine } from "@/features/records";
 import { t, type MessageKey } from "@/i18n";
 
 import {
@@ -31,7 +30,11 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<EmployeeFieldKey, string>>>({});
   const [failure, setFailure] = useState<SaveFailure | null>(null);
   const [updateEmployee, { loading: saving }] = usePayloadMutation(UpdateEmployeeDocument, {
-    refetch: [RecordHistoryDocument, EmployeesDocument],
+    // The saved employee updates in the cache by itself; its new line joins its history.
+    update: (cache, { data }) => {
+      const line = data?.employee.update.historyLine;
+      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
+    },
   });
   const changed = changedFields(saved, draft);
 

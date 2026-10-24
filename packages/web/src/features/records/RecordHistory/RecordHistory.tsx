@@ -5,7 +5,7 @@ import { RecordHistoryDocument, type RecordType } from "@/__generated__/graphql"
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
-import { groupByDay } from "./historyLines";
+import { groupByDay, HISTORY_PAGE_SIZE } from "./historyLines";
 import { HistoryRow } from "./HistoryRow";
 import type { RecordDescription } from "../recordDescription";
 
@@ -23,7 +23,7 @@ export function RecordHistory({ recordType, recordId, description }: Props) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [olderFailed, setOlderFailed] = useState(false);
   const { data, error, refetch, fetchMore } = useQuery(RecordHistoryDocument, {
-    variables: { recordType, recordId, first: PAGE_SIZE },
+    variables: { recordType, recordId, first: HISTORY_PAGE_SIZE },
   });
   const history = data?.recordHistory;
 
@@ -112,5 +112,3 @@ export function RecordHistory({ recordType, recordId, description }: Props) {
     </section>
   );
 }
-
-const PAGE_SIZE = 50;
