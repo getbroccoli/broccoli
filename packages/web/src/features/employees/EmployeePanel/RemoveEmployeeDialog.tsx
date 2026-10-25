@@ -88,9 +88,7 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
             focusableWhenDisabled
             onClick={() => void remove()}
           >
-            {loading
-              ? t("people.panel.remove.pending")
-              : t("people.panel.remove.confirm", { name: employee.firstName })}
+            {loading ? t("people.panel.remove.pending") : t("people.panel.remove.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

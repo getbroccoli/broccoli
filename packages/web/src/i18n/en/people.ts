@@ -53,7 +53,7 @@ export const peopleEn = {
   "people.panel.remove.title": "Remove {name}?",
   "people.panel.remove.detail": "They leave People. Their history is kept.",
   "people.panel.remove.reason": "Why? (optional)",
-  "people.panel.remove.confirm": "Remove {name}",
+  "people.panel.remove.confirm": "Remove",
   "people.panel.remove.pending": "Removing…",
   "people.panel.remove.cancel": "Cancel",
   "people.panel.remove.failed": "Couldn’t remove them. Try again.",
