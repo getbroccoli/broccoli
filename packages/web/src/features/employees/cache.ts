@@ -1,12 +1,21 @@
 import type { ApolloCache } from "@apollo/client";
 
+import { EmployeePanelDocument } from "@/__generated__/graphql";
 import { evictRecord } from "@/apollo";
 
 /**
- * Drops a removed employee from the cache once their panel is gone: every cached list loses
- * their row and reopening them finds nobody. While the panel is open, evicting them would
- * refetch it.
+ * Records the employee as absent before eviction, so an active panel query stays complete
+ * without refetching. Every cached list loses their row and reopening them finds nobody.
  */
 export function forgetEmployee(cache: ApolloCache, id: string): void {
-  evictRecord(cache, "Employee", id);
+  cache.batch({
+    update(cache) {
+      cache.writeQuery({
+        query: EmployeePanelDocument,
+        variables: { id },
+        data: { employee: null },
+      });
+      evictRecord(cache, "Employee", id);
+    },
+  });
 }

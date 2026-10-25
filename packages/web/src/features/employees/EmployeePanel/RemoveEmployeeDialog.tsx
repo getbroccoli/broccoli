@@ -34,17 +34,15 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
   const [deleteEmployee, { loading }] = usePayloadMutation(DeleteEmployeeDocument);
   const client = useApolloClient();
   // The panel may close while a removal is pending, such as on browser Back.
-  const panelOpen = useRef(false);
-  const removed = useRef(false);
+  const mounted = useRef(false);
   const fullName = `${employee.firstName} ${employee.lastName}`;
 
   useEffect(() => {
-    panelOpen.current = true;
+    mounted.current = true;
     return () => {
-      panelOpen.current = false;
-      if (removed.current) forgetEmployee(client.cache, employee.id);
+      mounted.current = false;
     };
-  }, [client, employee.id]);
+  }, []);
 
   const remove = async () => {
     setFailed(false);
@@ -54,13 +52,12 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
         variables: { input: { id: employee.id, ...(changeReason && { changeReason }) } },
       });
     } catch {
-      setFailed(true);
+      if (mounted.current) setFailed(true);
       return;
     }
     toast(t("people.panel.remove.done", { name: fullName }));
-    removed.current = true;
-    if (panelOpen.current) onRemoved();
-    else forgetEmployee(client.cache, employee.id);
+    if (mounted.current) onRemoved();
+    forgetEmployee(client.cache, employee.id);
   };
 
   return (
