@@ -4,14 +4,16 @@ import { instanceRepository } from "../db";
 import { AssignmentConflictError, type ManagedAssignment, type OwnerSignInMethod } from "../domain";
 
 /**
- * Stores the assignment once. The same assignment again is accepted, so orchestration
- * can retry after a lost response; any other assignment is refused, as is one on an
- * instance whose owner was already set up.
+ * Stores the assignment once, with the instance's Broccoli AI credential. The same assignment
+ * again is accepted, so orchestration can retry after a lost response, and stores the credential
+ * it carries; any other assignment is refused, as is one on an instance whose owner was already
+ * set up.
  */
 export async function assignInstance(
   ctx: SecurityContext,
   tx: Tx,
   assignment: ManagedAssignment,
+  encryptedInstanceCredential: string,
 ): Promise<void> {
   ctx.requireOwnerOrSystem();
   const instance = instanceRepository(tx);
@@ -20,12 +22,12 @@ export async function assignInstance(
     if (!isSameAssignment(current.assignment, assignment)) {
       throw new AssignmentConflictError();
     }
-    return;
-  }
-  if (current.ownerUserId) {
+  } else if (current.ownerUserId) {
     throw new AssignmentConflictError();
+  } else {
+    await instance.setAssignment(assignment);
   }
-  await instance.setAssignment(assignment);
+  await instance.saveInstanceCredential(encryptedInstanceCredential);
 }
 
 function isSameAssignment(a: ManagedAssignment, b: ManagedAssignment): boolean {

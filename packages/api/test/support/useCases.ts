@@ -86,7 +86,8 @@ export function aiSettings(
     deployment:
       mode === "managed"
         ? { mode, instanceId: "test-instance", accountsOrigin: "https://accounts.example.com" }
-        : { mode, broccoliAiUrl: url },
+        : { mode },
+    broccoliAiUrl: url,
     openRouter: { url, key: environmentKey },
   });
 }

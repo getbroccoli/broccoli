@@ -18,6 +18,7 @@ export {
   type FakeAccounts,
   MANAGED_ASSIGNMENT,
   MANAGED_INSTANCE_ID,
+  MANAGED_INSTANCE_CREDENTIAL,
 } from "./fakeAccounts";
 export { startFakeHttpServer } from "./fakeHttpServer";
 export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";

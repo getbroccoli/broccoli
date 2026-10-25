@@ -80,6 +80,8 @@ export const importsEn = {
     "Your free Broccoli AI period is over. Add your own OpenRouter key to keep reading files.",
   "imports.files.aiLimitReached":
     "You’ve used the free Broccoli AI allowance. Add your own OpenRouter key to keep reading files.",
+  "imports.files.managedAiLimitReached":
+    "Broccoli AI has reached its usage limit for now. Try again later.",
   "imports.files.useOwnKey": "Use your own key",
   "imports.files.retry": "Retry",
   "imports.files.options": "Options for {name}",

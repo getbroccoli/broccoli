@@ -7,6 +7,7 @@ import {
   startManagedEnv,
   test,
   sampleXlsxFile,
+  MANAGED_INSTANCE_CREDENTIAL,
 } from "#test/support";
 
 const CSV = Buffer.from("Name,Email\nAvery Stone,avery@example.com\nRobin Reed,robin@example.com");
@@ -292,7 +293,8 @@ test("refuses a file upload from another origin with a valid setup cookie and ad
 
 async function managedImport(fake: FakeDecisions) {
   fake.answer({ headerRow: "1", fullName: "A", email: "B" });
-  const { env, accounts } = await startManagedEnv({ decisionsUrl: fake.url });
+  fake.acceptInstanceCredential(MANAGED_INSTANCE_CREDENTIAL);
+  const { env, accounts } = await startManagedEnv({ broccoliAiUrl: fake.url });
   const browser = await signInAsManagedOwner(env, accounts);
   return { env, browser, fake };
 }

@@ -4,6 +4,7 @@ import { onTestFinished } from "vitest";
 import {
   expect,
   MANAGED_ASSIGNMENT,
+  MANAGED_INSTANCE_CREDENTIAL,
   managedOptions,
   postInit,
   startManagedEnv,
@@ -87,13 +88,31 @@ test("opens the instance to users after init", async () => {
   expect((await env.browser().graphql("{ ping }")).status).toBe(200);
 });
 
+test("refuses init without an instance credential and stays waiting", async () => {
+  const { env, accounts } = await startManagedEnv();
+
+  const response = await postInit(env, await accounts.signInit({ config: MANAGED_ASSIGNMENT }));
+
+  expect(response.status).toBe(400);
+  expect(await (await fetch(`${env.url}/readyz`)).json()).toEqual({
+    status: "ready",
+    initStatus: "waiting",
+  });
+});
+
 test("refuses a different assignment", async () => {
   const { env, accounts } = await startManagedEnv();
   await postInit(env, await accounts.signInit());
 
   const response = await postInit(
     env,
-    await accounts.signInit({ config: { ...MANAGED_ASSIGNMENT, companyId: "c-other" } }),
+    await accounts.signInit({
+      config: {
+        ...MANAGED_ASSIGNMENT,
+        instanceCredential: MANAGED_INSTANCE_CREDENTIAL,
+        companyId: "c-other",
+      },
+    }),
   );
 
   expect(response.status).toBe(409);
@@ -114,7 +133,11 @@ test("refuses a malformed assignment", async () => {
   const { env, accounts } = await startManagedEnv();
 
   const token = await accounts.signInit({
-    config: { ...MANAGED_ASSIGNMENT, publicOrigin: "https://acme.example.com/app" },
+    config: {
+      ...MANAGED_ASSIGNMENT,
+      instanceCredential: MANAGED_INSTANCE_CREDENTIAL,
+      publicOrigin: "https://acme.example.com/app",
+    },
   });
 
   expect((await postInit(env, token)).status).toBe(400);

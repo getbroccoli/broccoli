@@ -74,6 +74,7 @@ export function FileSourceCard({
   if (!complete) return null;
   const failed = source.status === "FAILED";
   const externalAgentChosen = aiSource === "EXTERNAL_AGENT";
+  const managed = aiSource === null;
   // Retry asks Broccoli's model: again for its own file, instead of the agent for a waiting one.
   const canRetry =
     !source.originalReadAllowed &&
@@ -136,9 +137,9 @@ export function FileSourceCard({
             )}
             {needsNewConsent
               ? t("imports.files.waitingForOriginalReadConsent")
-              : statusLine(source, pickingUp)}
+              : statusLine(source, pickingUp, managed)}
           </span>
-          {source.failure && NEEDS_OWN_KEY.has(source.failure) && (
+          {!managed && source.failure && NEEDS_OWN_KEY.has(source.failure) && (
             <Link
               to="/setup/ai"
               className="w-fit text-[13px] font-medium text-foreground underline underline-offset-2"
@@ -228,7 +229,11 @@ function isPickingUp({ status, readBy, pickedUpByExternalAgent }: FileSourceCard
   return status === "MAPPING" && readBy === "ANSWERED_BY_EXTERNAL_AGENT" && pickedUpByExternalAgent;
 }
 
-function statusLine(source: FileSourceCard_SourceFragment, pickingUp: boolean): string {
+function statusLine(
+  source: FileSourceCard_SourceFragment,
+  pickingUp: boolean,
+  managed: boolean,
+): string {
   const { status, failure, failureMessage, employeeCount, readBy, originalReadAllowed } = source;
   if (status === "WAITING_FOR_ORIGINAL_READ_CONSENT") {
     return t("imports.files.pdfNotMasked");
@@ -263,6 +268,8 @@ function statusLine(source: FileSourceCard_SourceFragment, pickingUp: boolean): 
     if (!originalReadAllowed && failure === "NO_PEOPLE_COLUMNS") {
       return t("imports.files.couldNotMapMasked");
     }
+    // A managed instance has no key of its own to add; it waits for Broccoli AI's limit to reset.
+    if (managed && failure === "AI_LIMIT_REACHED") return t("imports.files.managedAiLimitReached");
     return failureMessage ?? t(failure ? FAILURE_MESSAGES[failure] : "imports.files.unavailable");
   }
   const people =

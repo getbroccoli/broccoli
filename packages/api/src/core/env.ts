@@ -18,8 +18,6 @@ export interface SelfHostedDeployment {
   mode: "self_hosted";
   /** The address browsers use; unset means it is taken from each request. */
   publicUrl?: string;
-  /** Broccoli AI, which makes the AI decisions of an install without its own OpenRouter key. */
-  broccoliAiUrl: string;
 }
 
 /** The public accounts service; dev and tests point `MANAGED_ACCOUNTS_URL` elsewhere. */
@@ -41,21 +39,26 @@ export interface Env {
   /** Folder of the built web app to serve; unset serves only the API. */
   webDir?: string;
   deployment: Deployment;
-  /** The OpenRouter key for AI decisions; required when managed, null uses Broccoli AI. */
+  /** A self-hosted install's OpenRouter key for AI decisions; null uses Broccoli AI. */
   openRouterKey: string | null;
+  /**
+   * Broccoli AI: a self-hosted install without its own key asks it with a free token, and a
+   * managed instance with the credential its init carries.
+   */
+  broccoliAiUrl: string;
   /** Folder for files that must survive restarts, such as `secrets/`. */
   dataDir: string;
   /** Favicon service that finds the logo of an email domain; null makes no lookup. */
   brandLookupUrl: string | null;
-  /** The Slack OAuth relay on the accounts service. */
+  /** The Slack OAuth relay on the integrations service. */
   slackRelayUrl: string;
 }
 
-// shortcut: the production accounts service is not live yet; switch to https://accounts.getbroccoli.com before the release.
-const DEFAULT_SLACK_RELAY_URL = "https://accounts.dev.getbroccoli.com";
+// shortcut: the production integrations service is not live yet; switch to https://integrations.getbroccoli.com before the release.
+const DEFAULT_SLACK_RELAY_URL = "https://integrations.dev.getbroccoli.com";
 
-// shortcut: the production accounts service is not live yet; switch to https://accounts.getbroccoli.com/ai before the release.
-const DEFAULT_BROCCOLI_AI_URL = "https://accounts.dev.getbroccoli.com/ai";
+// shortcut: the production integrations service is not live yet; switch to https://integrations.getbroccoli.com/ai before the release.
+const DEFAULT_BROCCOLI_AI_URL = "https://integrations.dev.getbroccoli.com/ai";
 
 /** Compose passes unset variables as empty strings, so blank means unset. */
 function blankAsUnset(value: unknown): unknown {
@@ -73,9 +76,9 @@ const envSchema = z
     BROCCOLI_MODE: z.preprocess(blankAsUnset, z.enum(MODES).default("self_hosted")),
     DATA_DIR: z.preprocess(blankAsUnset, z.string().default("/data")),
     SELF_HOSTED_PUBLIC_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
-    SELF_HOSTED_BROCCOLI_AI_URL: z.preprocess(
+    BROCCOLI_AI_URL: z.preprocess(
       blankAsUnset,
-      z.url({ protocol: /^https?$/ }).optional(),
+      z.url({ protocol: /^https?$/ }).default(DEFAULT_BROCCOLI_AI_URL),
     ),
     MANAGED_INSTANCE_ID: z.preprocess(blankAsUnset, z.string().optional()),
     MANAGED_ACCOUNTS_URL: z.preprocess(blankAsUnset, z.string().optional()),
@@ -98,15 +101,14 @@ const envSchema = z
       }
       return;
     }
-    for (const name of ["SELF_HOSTED_PUBLIC_URL", "SELF_HOSTED_BROCCOLI_AI_URL"] as const) {
+    // A managed instance asks Broccoli AI with its instance credential, never a key of its own.
+    for (const name of ["SELF_HOSTED_PUBLIC_URL", "OPENROUTER_API_KEY"] as const) {
       if (variables[name] !== undefined) {
         refuse(name, "Only for BROCCOLI_MODE=self_hosted");
       }
     }
-    for (const name of ["MANAGED_INSTANCE_ID", "OPENROUTER_API_KEY"] as const) {
-      if (variables[name] === undefined) {
-        refuse(name, "Required when BROCCOLI_MODE=managed");
-      }
+    if (variables.MANAGED_INSTANCE_ID === undefined) {
+      refuse("MANAGED_INSTANCE_ID", "Required when BROCCOLI_MODE=managed");
     }
     if (accountsOrigin(variables.MANAGED_ACCOUNTS_URL) === null) {
       refuse("MANAGED_ACCOUNTS_URL", "Must be an https origin without a path");
@@ -124,12 +126,9 @@ const envSchema = z
             instanceId: variables.MANAGED_INSTANCE_ID!,
             accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
           }
-        : {
-            mode: "self_hosted",
-            publicUrl: variables.SELF_HOSTED_PUBLIC_URL,
-            broccoliAiUrl: variables.SELF_HOSTED_BROCCOLI_AI_URL ?? DEFAULT_BROCCOLI_AI_URL,
-          },
+        : { mode: "self_hosted", publicUrl: variables.SELF_HOSTED_PUBLIC_URL },
     openRouterKey: variables.OPENROUTER_API_KEY ?? null,
+    broccoliAiUrl: variables.BROCCOLI_AI_URL,
     dataDir: variables.DATA_DIR,
     brandLookupUrl: variables.BRAND_LOOKUP_URL ?? null,
     slackRelayUrl: variables.SLACK_RELAY_URL,

@@ -24,23 +24,30 @@ const origin = z.string().transform((raw, context) => {
 
 const initClaims = z.object({ purpose: z.literal("init"), config: z.unknown() });
 
-const assignmentConfig = z.object({
+const initConfig = z.object({
   companyId: text.min(1),
   publicOrigin: origin,
   websiteOrigin: origin,
+  instanceCredential: z.string().regex(/^ib_[0-9a-f]{64}$/),
 });
 
-/** The assignment carried by a verified init token. */
-export function parseInitClaims(payload: JWTPayload): ManagedAssignment {
+/** What a verified init token carries: the assignment and the instance's Broccoli AI credential. */
+export interface ManagedInit {
+  assignment: ManagedAssignment;
+  instanceCredential: string;
+}
+
+export function parseInitClaims(payload: JWTPayload): ManagedInit {
   const claims = initClaims.safeParse(payload);
   if (!claims.success) {
     throw new InvalidTokenError();
   }
-  const assignment = assignmentConfig.safeParse(claims.data.config);
-  if (!assignment.success) {
+  const config = initConfig.safeParse(claims.data.config);
+  if (!config.success) {
     throw new InvalidAssignmentError();
   }
-  return assignment.data;
+  const { instanceCredential, ...assignment } = config.data;
+  return { assignment, instanceCredential };
 }
 
 const ticketClaims = z.object({

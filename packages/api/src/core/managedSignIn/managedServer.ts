@@ -7,6 +7,7 @@ import type { ManagedDeployment } from "../env";
 import { readInstance } from "../instance";
 import type { Logger } from "../logger";
 import type { Readiness } from "../readiness";
+import type { SecretBox } from "../secrets";
 import { managedAuth } from "./app";
 import { callbackOnlyTrust, managedSignInPlugin } from "./betterAuth";
 import { initRouter, waitingGate } from "./http";
@@ -19,6 +20,7 @@ export interface ManagedServerOptions {
   secret: string;
   readiness: Readiness;
   logger: Logger;
+  secretBox: SecretBox;
 }
 
 /**
@@ -33,6 +35,7 @@ export function managedServer({
   secret,
   readiness,
   logger,
+  secretBox,
 }: ManagedServerOptions): DeploymentServer {
   const signer = {
     issuer: accountsOrigin,
@@ -53,7 +56,7 @@ export function managedServer({
     auth,
     router: express
       .Router()
-      .use(initRouter({ transact, tokenCheck, readiness, auth, logger, instanceId }))
+      .use(initRouter({ transact, tokenCheck, readiness, auth, logger, instanceId, secretBox }))
       .use(waitingGate(auth)),
     initStatus: async () => ((await auth.current()) ? "ready" : "waiting"),
     // The waiting gate answers until init stored the assignment, so it exists here.

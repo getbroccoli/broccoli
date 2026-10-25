@@ -1,0 +1,1 @@
+ALTER TABLE "instance" ADD COLUMN "encrypted_instance_credential" text;

@@ -1,6 +1,6 @@
 import { expect, it, onTestFinished } from "vitest";
 
-import { startFakeDecisions } from "#test/support";
+import { MANAGED_INSTANCE_CREDENTIAL, startFakeDecisions } from "#test/support";
 
 import { createResolvedDecisions, DecisionsError } from ".";
 
@@ -96,6 +96,30 @@ it("an oversized refusal drops the provider message and stays non-retryable", as
 
   await expect(refusal).rejects.toBeInstanceOf(DecisionsError);
   await expect(refusal).rejects.toMatchObject({ providerMessage: null, retryable: false });
+});
+
+it("does not retry an instance credential refused with 401", async () => {
+  const relay = await startFakeDecisions();
+  onTestFinished(() => relay.stop());
+  const decisions = createResolvedDecisions({
+    readSource: () =>
+      Promise.resolve({
+        kind: "broccoli_ai_instance",
+        url: relay.url,
+        credential: MANAGED_INSTANCE_CREDENTIAL,
+      }),
+    tokens: tokenStore(),
+  });
+
+  const refusal = decisions.decide({}, QUESTIONS);
+
+  await expect(refusal).rejects.toBeInstanceOf(DecisionsError);
+  await expect(refusal).rejects.toMatchObject({ retryable: false });
+  expect(relay.httpRequests()).toMatchObject([
+    { path: "/v1/decisions", headers: { authorization: `Bearer ${MANAGED_INSTANCE_CREDENTIAL}` } },
+  ]);
+  expect(relay.httpRequests()[0]!.headers["x-broccoli-client"]).toMatch(/^broccoli\//);
+  expect(relay.issuedTokens()).toEqual([]);
 });
 
 const QUESTIONS = {

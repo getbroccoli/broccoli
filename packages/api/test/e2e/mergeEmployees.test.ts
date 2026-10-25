@@ -6,6 +6,7 @@ import {
   signInAsManagedOwner,
   slackTest as test,
   startManagedEnv,
+  MANAGED_INSTANCE_CREDENTIAL,
 } from "#test/support";
 
 test("merges Slack and a CSV and approves one employee with the bulk-picked Slack job title", async ({
@@ -24,8 +25,9 @@ test("merges Slack and a CSV and approves one employee with the bulk-picked Slac
     },
   ];
   fakeDecisions.answer({ headerRow: "1", fullName: "A", email: "B", jobTitle: "C" });
+  fakeDecisions.acceptInstanceCredential(MANAGED_INSTANCE_CREDENTIAL);
   const { env, accounts } = await startManagedEnv({
-    decisionsUrl: fakeDecisions.url,
+    broccoliAiUrl: fakeDecisions.url,
     slack: { relayUrl: slack.url, apiUrl: slack.url },
   });
   const browser = await signInAsManagedOwner(env, accounts);
@@ -147,7 +149,8 @@ test("fixes a CSV row’s last name, leaves another row out and approves only th
   fakeDecisions,
 }) => {
   fakeDecisions.answer({ headerRow: "1", firstName: "A", lastName: "B", email: "C" });
-  const { env, accounts } = await startManagedEnv({ decisionsUrl: fakeDecisions.url });
+  fakeDecisions.acceptInstanceCredential(MANAGED_INSTANCE_CREDENTIAL);
+  const { env, accounts } = await startManagedEnv({ broccoliAiUrl: fakeDecisions.url });
   const browser = await signInAsManagedOwner(env, accounts);
   await browser.graphql(SAVE_COMPANY);
   const upload = await browser.post(
