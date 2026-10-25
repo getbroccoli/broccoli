@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
 
+import { MANAGED_INSTANCE_CREDENTIAL } from "#test/support";
+
 import { InvalidAssignmentError, InvalidTokenError } from "../domain";
 import { parseInitClaims, parseTicketClaims } from "./claims";
 
@@ -7,10 +9,36 @@ const CONFIG = {
   companyId: "c-acme",
   publicOrigin: "https://acme.example.com",
   websiteOrigin: "https://www.example.com",
+  instanceCredential: MANAGED_INSTANCE_CREDENTIAL,
 };
 
 it("parses an init assignment", () => {
-  expect(parseInitClaims({ purpose: "init", config: CONFIG })).toEqual(CONFIG);
+  expect(parseInitClaims({ purpose: "init", config: CONFIG })).toEqual({
+    assignment: {
+      companyId: CONFIG.companyId,
+      publicOrigin: CONFIG.publicOrigin,
+      websiteOrigin: CONFIG.websiteOrigin,
+    },
+    instanceCredential: MANAGED_INSTANCE_CREDENTIAL,
+  });
+});
+
+it.each([
+  ["missing", undefined],
+  ["null", null],
+  ["empty", ""],
+  ["wrong prefix", `xx_${"a".repeat(64)}`],
+  ["too short", `ib_${"a".repeat(63)}`],
+  ["too long", `ib_${"a".repeat(65)}`],
+  ["uppercase", `ib_${"A".repeat(64)}`],
+  ["non-hex", `ib_${"g".repeat(64)}`],
+])("refuses a %s instance credential", (_kind, instanceCredential) => {
+  expect(() =>
+    parseInitClaims({
+      purpose: "init",
+      config: { ...CONFIG, instanceCredential },
+    }),
+  ).toThrow(InvalidAssignmentError);
 });
 
 it("refuses a token for another purpose", () => {

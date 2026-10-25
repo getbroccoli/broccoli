@@ -81,6 +81,7 @@
       "src/core/instance",
       "src/core/logger",
       "src/core/readiness",
+      "src/core/secrets",
       "src/core/security",
       "src/utils"
     ],

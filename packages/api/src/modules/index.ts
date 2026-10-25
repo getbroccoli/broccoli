@@ -17,16 +17,17 @@ export interface ModuleSettings {
   slack: SlackUrls;
   /** OpenRouter's API, and `OPENROUTER_API_KEY` or null. */
   openRouter: { url: string; key: string | null };
+  broccoliAiUrl: string;
 }
 
 /** Every module of the API, each given only the dependencies it uses. */
 export function createModules(
   core: ModuleDependencies,
-  { deployment, brandLookupUrl, slack, openRouter }: ModuleSettings,
+  { deployment, brandLookupUrl, slack, openRouter, broccoliAiUrl }: ModuleSettings,
 ): Modules {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
-  const aiSettings = createAiSettings({ ...core, deployment, openRouter });
+  const aiSettings = createAiSettings({ ...core, deployment, openRouter, broccoliAiUrl });
   // Built once: the import serves them and the external agent puts its files through them.
   const importUseCases = createImportUseCases({
     ...core,

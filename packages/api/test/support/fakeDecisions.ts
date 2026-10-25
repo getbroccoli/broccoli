@@ -121,6 +121,9 @@ export async function startFakeDecisions() {
     httpRequests: () => httpRequests,
     issuedTokens: () => [...issuedTokens],
     forgetTokens: () => validTokens.clear(),
+    acceptInstanceCredential: (credential: string) => {
+      validTokens.add(credential);
+    },
     acceptKey: (key: string) => {
       acceptedKeys.add(key);
     },

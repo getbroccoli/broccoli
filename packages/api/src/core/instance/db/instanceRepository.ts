@@ -24,6 +24,9 @@ export interface InstanceRepository {
   clearSetupSession(): Promise<void>;
   saveDemoExpiresAt(expiresAt: Date | null): Promise<void>;
   setAssignment(assignment: ManagedAssignment): Promise<void>;
+  /** The managed instance's encrypted Broccoli AI credential; null before init stored one. */
+  readInstanceCredential(): Promise<string | null>;
+  saveInstanceCredential(encryptedCredential: string): Promise<void>;
   setOwner(userId: string, step: SetupStep): Promise<void>;
   /** Stores the owner's sign-in method unless one is stored already. */
   saveOwnerSignInMethod(method: OwnerSignInMethod): Promise<void>;
@@ -90,6 +93,17 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
         managedPublicOrigin: publicOrigin,
         managedWebsiteOrigin: websiteOrigin,
       });
+    },
+
+    readInstanceCredential: async (): Promise<string | null> => {
+      const [row] = await orm()
+        .select({ credential: instance.encryptedInstanceCredential })
+        .from(instance);
+      return row?.credential ?? null;
+    },
+
+    saveInstanceCredential: async (encryptedCredential: string): Promise<void> => {
+      await orm().update(instance).set({ encryptedInstanceCredential: encryptedCredential });
     },
 
     setOwner: async (userId: string, step: SetupStep): Promise<void> => {

@@ -7,14 +7,26 @@ const MANAGED = {
   ...DATABASE,
   BROCCOLI_MODE: "managed",
   MANAGED_INSTANCE_ID: "slot-1",
-  OPENROUTER_API_KEY: "test-model-key",
 };
 
-it("needs no settings when self-hosted and defaults to Broccoli AI", () => {
-  expect(loadEnv(DATABASE).deployment).toEqual({
-    mode: "self_hosted",
-    broccoliAiUrl: "https://accounts.dev.getbroccoli.com/ai",
+it.each(["self_hosted", "managed"])("defaults the relay URLs in %s mode", (mode) => {
+  const env = loadEnv(mode === "managed" ? MANAGED : DATABASE);
+
+  expect(env.broccoliAiUrl).toBe("https://integrations.dev.getbroccoli.com/ai");
+  expect(env.slackRelayUrl).toBe("https://integrations.dev.getbroccoli.com");
+});
+
+it.each(["self_hosted", "managed"])("accepts a Broccoli AI URL in %s mode", (mode) => {
+  const env = loadEnv({
+    ...(mode === "managed" ? MANAGED : DATABASE),
+    BROCCOLI_AI_URL: "https://relay.example.com/ai",
   });
+
+  expect(env.broccoliAiUrl).toBe("https://relay.example.com/ai");
+});
+
+it("starts managed without an OpenRouter key", () => {
+  expect(loadEnv(MANAGED).openRouterKey).toBeNull();
 });
 
 it("reads the model key when self-hosted", () => {
@@ -23,11 +35,11 @@ it("reads the model key when self-hosted", () => {
   );
 });
 
-it("refuses the self-hosted Broccoli AI URL when managed", () => {
+it("refuses an OpenRouter key when managed", () => {
   expect(() =>
     loadEnv({
       ...MANAGED,
-      SELF_HOSTED_BROCCOLI_AI_URL: "https://accounts.example.com/ai",
+      OPENROUTER_API_KEY: "test-model-key",
     }),
   ).toThrow("Only for BROCCOLI_MODE=self_hosted");
 });
@@ -53,10 +65,8 @@ it("uses the configured accounts origin", () => {
   expect(env.deployment).toMatchObject({ accountsOrigin: "https://accounts.example.com" });
 });
 
-it("requires the instance id and the model key when managed", () => {
-  expect(() => loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed" })).toThrow(
-    /MANAGED_INSTANCE_ID[\s\S]*OPENROUTER_API_KEY/,
-  );
+it("requires the instance id when managed", () => {
+  expect(() => loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed" })).toThrow(/MANAGED_INSTANCE_ID/);
 });
 
 it("defaults the accounts origin when managed", () => {

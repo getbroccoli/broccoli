@@ -6,6 +6,7 @@ import type { Transact } from "../../db";
 import { AssignmentConflictError, assignInstance } from "../../instance";
 import type { Readiness } from "../../readiness";
 import type { AuthSource } from "../../auth";
+import type { SecretBox } from "../../secrets";
 import { PrincipalSecurityContext } from "../../security";
 import { InvalidAssignmentError, InvalidTokenError } from "../domain";
 import { parseInitClaims } from "../jwt";
@@ -23,6 +24,8 @@ export interface InitRouterOptions {
   auth: AuthSource;
   logger: Logger;
   instanceId: string;
+  /** Encrypts the instance credential before it is stored. */
+  secretBox: SecretBox;
 }
 
 /**
@@ -36,6 +39,7 @@ export function initRouter({
   auth,
   logger,
   instanceId,
+  secretBox,
 }: InitRouterOptions): Router {
   const router = Router();
   const limit = rateLimit({
@@ -58,10 +62,16 @@ export function initRouter({
     let phase = "verify_token";
     try {
       const payload = await verifyToken(token, tokenCheck);
-      const assignment = parseInitClaims(payload);
+      const { assignment, instanceCredential } = parseInitClaims(payload);
       phase = "assign_instance";
+      const encryptedCredential = secretBox.encrypt(instanceCredential);
       await transact(async (tx) => {
-        await assignInstance(PrincipalSecurityContext.system(), tx, assignment);
+        await assignInstance(
+          PrincipalSecurityContext.system(),
+          tx,
+          assignment,
+          encryptedCredential,
+        );
         // Strict, after the row lock: the token must still be valid when the assignment commits.
         if (payload.exp! * 1000 <= Date.now()) {
           throw new InvalidTokenError();

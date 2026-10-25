@@ -3,6 +3,7 @@ import { exportJWK, generateKeyPair, SignJWT, type JWTPayload } from "jose";
 import { startFakeHttpServer } from "./fakeHttpServer";
 
 export const MANAGED_INSTANCE_ID = "slot-1";
+export const MANAGED_INSTANCE_CREDENTIAL = `ib_${"a".repeat(64)}`;
 
 export const MANAGED_ASSIGNMENT = {
   companyId: "c-acme",
@@ -42,7 +43,13 @@ export async function startFakeAccounts() {
     url: server.url,
     signInit: (options: SignOptions & { config?: object; purpose?: string } = {}) =>
       sign(
-        { purpose: options.purpose ?? "init", config: options.config ?? MANAGED_ASSIGNMENT },
+        {
+          purpose: options.purpose ?? "init",
+          config: options.config ?? {
+            ...MANAGED_ASSIGNMENT,
+            instanceCredential: MANAGED_INSTANCE_CREDENTIAL,
+          },
+        },
         `instance:${MANAGED_INSTANCE_ID}`,
         options,
       ),

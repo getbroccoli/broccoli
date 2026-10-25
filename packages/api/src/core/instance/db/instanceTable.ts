@@ -20,6 +20,8 @@ export const instance = pgTable(
     managedCompanyId: text("managed_company_id"),
     managedPublicOrigin: text("managed_public_origin"),
     managedWebsiteOrigin: text("managed_website_origin"),
+    /** Managed only: the credential its init carries for Broccoli AI, encrypted. */
+    encryptedInstanceCredential: text("encrypted_instance_credential"),
     /** Managed only: set by the first ticket that names the method, then never changed. */
     ownerSignInMethod: text("owner_sign_in_method", { enum: OWNER_SIGN_IN_METHODS }),
     /** Legacy relay token, moved to the data folder on first use. */

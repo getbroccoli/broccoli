@@ -162,6 +162,13 @@
       "when": 1792781924642,
       "tag": "0022_record_history",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792913006844,
+      "tag": "0023_managed_instance_credential",
+      "breakpoints": true
     }
   ]
 }

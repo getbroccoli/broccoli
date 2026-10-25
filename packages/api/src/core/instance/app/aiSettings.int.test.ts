@@ -57,7 +57,7 @@ test("reads the saved source and key before the environment default", async ({
 
 test("reports no AI choice on a managed instance", async ({ orm, seed, transact }) => {
   await seed.aiSource("broccoli_ai", "saved-key");
-  const settings = aiSettings(orm, { mode: "managed", environmentKey: "managed-key" });
+  const settings = aiSettings(orm, { mode: "managed" });
 
   expect(await transact((tx) => settings.originalFileReader.readSource(OWNER, tx))).toBeNull();
   expect(await settings.read(OWNER)).toBeNull();

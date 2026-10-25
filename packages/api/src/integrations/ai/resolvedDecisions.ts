@@ -20,9 +20,14 @@ export interface BroccoliAiTokenStore {
   save(token: string): Promise<void>;
 }
 
-/** Where AI decisions go: OpenRouter with the install's key, or Broccoli AI without one. */
+/**
+ * Where AI decisions go: OpenRouter with the install's key, Broccoli AI with a free token, or
+ * Broccoli AI with the credential a managed instance's init carried.
+ */
 export type DecisionsSource =
-  { kind: "openrouter"; url: string; key: string } | { kind: "broccoli_ai"; url: string };
+  | { kind: "openrouter"; url: string; key: string }
+  | { kind: "broccoli_ai"; url: string }
+  | { kind: "broccoli_ai_instance"; url: string; credential: string };
 
 /** Decisions whose source is picked per request, and the Broccoli AI token they use. */
 export interface ResolvedDecisions extends Decisions {
@@ -52,6 +57,15 @@ export function createResolvedDecisions({
   ): Promise<T> => {
     if (source.kind === "openrouter") {
       return ask({ ...OPENROUTER_PATHS, url: source.url, credential: source.key, headers: {} });
+    }
+    if (source.kind === "broccoli_ai_instance") {
+      // Orchestration issued the credential; there is no other one to try.
+      return ask({
+        ...RELAY_PATHS,
+        url: source.url,
+        credential: source.credential,
+        headers: CLIENT_HEADERS,
+      });
     }
     const askWith = (token: string) =>
       ask({ ...RELAY_PATHS, url: source.url, credential: token, headers: CLIENT_HEADERS });

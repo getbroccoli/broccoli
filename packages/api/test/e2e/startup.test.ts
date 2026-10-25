@@ -88,7 +88,7 @@ it("rejects startup and closes the database pool when a module router throws", a
     {
       databaseUrl: database.url,
       port: 0,
-      deployment: { mode: "self_hosted", broccoliAiUrl: "http://127.0.0.1:9" },
+      deployment: { mode: "self_hosted" },
       dataDir,
     },
     createLogger("silent"),
