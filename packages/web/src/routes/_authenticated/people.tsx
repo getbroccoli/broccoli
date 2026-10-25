@@ -1,4 +1,4 @@
-import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
+import { createFileRoute, Outlet, stripSearchParams } from "@tanstack/react-router";
 
 import {
   DEFAULT_EMPLOYEE_LIST_SEARCH,
@@ -15,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/people")({
     <>
       <PageHeader title={t("people.title")} />
       <EmployeeDirectory />
+      {/* A person's panel opens over the list. */}
+      <Outlet />
     </>
   ),
 });

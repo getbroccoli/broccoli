@@ -19,7 +19,7 @@ export interface EmployeeUseCases {
   updateEmployee: (
     ctx: SecurityContext,
     input: EmployeeUpdateInput & { id: string },
-  ) => Promise<Employee>;
+  ) => Promise<{ employee: Employee; historyLine: HistoryLine | null }>;
   /** Removes an employee and returns their id; refuses an unknown id with NOT_FOUND. */
   deleteEmployee: (
     ctx: SecurityContext,

@@ -1,0 +1,33 @@
+query RecordHistory($recordType: RecordType!, $recordId: ID!, $first: Int, $after: String) {
+  recordHistory(recordType: $recordType, recordId: $recordId, first: $first, after: $after) {
+    edges {
+      node {
+        ...RecordHistory_line @unmask
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+# A history line as the panel shows it; a save's payload selects it too, to add its new line.
+fragment RecordHistory_line on RecordChange {
+  id
+  operation
+  occurredAt
+  author {
+    kind
+    email
+  }
+  cause {
+    kind
+  }
+  reason
+  changes {
+    field
+    oldValue
+    newValue
+  }
+}

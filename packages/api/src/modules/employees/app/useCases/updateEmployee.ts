@@ -16,24 +16,25 @@ import { employeeNotFound } from "./employeeNotFound";
 
 /**
  * Changes the fields an update sends and records the change in the employee's history, in one
- * transaction. A save that changes nothing records nothing; the last save of a field wins.
+ * transaction, and returns the line. A save that changes nothing records nothing; the last save
+ * of a field wins.
  */
 export async function updateEmployee(
   { transact, logger }: EmployeeContext,
   ctx: SecurityContext,
   { id, ...input }: EmployeeUpdateInput & { id: string },
-): Promise<Employee> {
+): Promise<{ employee: Employee; historyLine: HistoryLine | null }> {
   ctx.requireOwnerOrSystem();
   const { changes, reason } = parseEmployeeUpdate(input);
   const employeeId = parseUuid(id);
   if (!employeeId) {
     throw employeeNotFound();
   }
-  const { employee, line } = await transact(async (tx) => {
+  const { employee, historyLine } = await transact(async (tx) => {
     const { before, after } = await saveChanges(employeeRepository(tx), employeeId, changes);
     const changed = employeeChanges(before, after);
     if (changed.length === 0) {
-      return { employee: after, line: null };
+      return { employee: after, historyLine: null };
     }
     const [line] = await appendRecordHistory(ctx, tx, {
       recordType: "employee",
@@ -42,12 +43,15 @@ export async function updateEmployee(
       reason,
       records: [{ recordId: employeeId, changes: changed }],
     });
-    return { employee: after, line: line! };
+    return { employee: after, historyLine: line! };
   });
-  if (line) {
-    logger.info({ employeeId, historyId: line.id, fields: fieldsOf(line) }, "Updated an employee");
+  if (historyLine) {
+    logger.info(
+      { employeeId, historyId: historyLine.id, fields: fieldsOf(historyLine) },
+      "Updated an employee",
+    );
   }
-  return employee;
+  return { employee, historyLine };
 }
 
 /** The employee before and after saving `changes`; refuses an unknown employee or a taken email. */

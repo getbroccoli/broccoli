@@ -20,20 +20,19 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
     EmployeeMutations: {
       create: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeCreatePayload"]>(
-          "employee",
-          () => useCases.createEmployee(context.getActor(), input),
+          async () => ({ employee: await useCases.createEmployee(context.getActor(), input) }),
           ["INVALID_INPUT"],
         ),
       update: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
-          "employee",
           () => useCases.updateEmployee(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
       delete: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeDeletePayload"]>(
-          "deletedEmployeeId",
-          () => useCases.deleteEmployee(context.getActor(), input),
+          async () => ({
+            deletedEmployeeId: await useCases.deleteEmployee(context.getActor(), input),
+          }),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
     },

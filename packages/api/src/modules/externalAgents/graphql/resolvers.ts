@@ -14,19 +14,16 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentUse
     },
     SetupMutations: {
       chooseExternalAgent: (_parent, _args, context) =>
-        mutationPayload<ResolversTypes["SetupChooseExternalAgentPayload"]>(
-          "setup",
-          async () => {
-            const actor = context.getActor();
-            await useCases.sessions.chooseExternalAgent(actor);
-            return readSetupView(orm, mode, actor);
-          },
-          ["CONFLICT"],
-        ),
+        mutationPayload<ResolversTypes["SetupChooseExternalAgentPayload"]>(async () => {
+          const actor = context.getActor();
+          await useCases.sessions.chooseExternalAgent(actor);
+          return { setup: await readSetupView(orm, mode, actor) };
+        }, ["CONFLICT"]),
       createExternalAgentCode: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupCreateExternalAgentCodePayload"]>(
-          "externalAgentCode",
-          () => useCases.sessions.createExternalAgentCode(context.getActor()),
+          async () => ({
+            externalAgentCode: await useCases.sessions.createExternalAgentCode(context.getActor()),
+          }),
           ["CONFLICT"],
         ),
       disconnectExternalAgent: async (_parent, _args, context) => {

@@ -49,38 +49,26 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
     },
     SetupMutations: {
       complete: (_parent, _args, context) =>
-        mutationPayload<ResolversTypes["SetupCompletePayload"]>(
-          "setup",
-          async () => {
-            const actor = context.getActor();
-            await useCases.completeSetup(actor);
-            return readSetup(actor);
-          },
-          ["CONFLICT"],
-        ),
+        mutationPayload<ResolversTypes["SetupCompletePayload"]>(async () => {
+          const actor = context.getActor();
+          await useCases.completeSetup(actor);
+          return { setup: await readSetup(actor) };
+        }, ["CONFLICT"]),
       reset: (_parent, _args, context) =>
-        mutationPayload<ResolversTypes["SetupResetPayload"]>(
-          "setup",
-          async () => {
-            const actor = context.getActor();
-            await useCases.resetSetup(actor);
-            return readSetup(actor);
-          },
-          ["CONFLICT"],
-        ),
+        mutationPayload<ResolversTypes["SetupResetPayload"]>(async () => {
+          const actor = context.getActor();
+          await useCases.resetSetup(actor);
+          return { setup: await readSetup(actor) };
+        }, ["CONFLICT"]),
       saveAiSource: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["SetupSaveAiSourcePayload"]>(
-          "setup",
-          async () => {
-            const actor = context.getActor();
-            await useCases.ai.save(actor, {
-              source: AI_SOURCE_INPUTS[input.source],
-              openRouterKey: input.openRouterKey,
-            });
-            return readSetup(actor);
-          },
-          ["INVALID_INPUT", "UNAVAILABLE", "CONFLICT"],
-        ),
+        mutationPayload<ResolversTypes["SetupSaveAiSourcePayload"]>(async () => {
+          const actor = context.getActor();
+          await useCases.ai.save(actor, {
+            source: AI_SOURCE_INPUTS[input.source],
+            openRouterKey: input.openRouterKey,
+          });
+          return { setup: await readSetup(actor) };
+        }, ["INVALID_INPUT", "UNAVAILABLE", "CONFLICT"]),
     },
   };
 }

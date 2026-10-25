@@ -93,9 +93,11 @@ type EmployeeCreatePayload {
 
 union EmployeeCreateError = InvalidInputError
 
-"The changed employee, or why the change was refused."
+"The changed employee and the history line it added, or why the change was refused."
 type EmployeeUpdatePayload {
   employee: Employee
+  "The history line this update added; null when it changed nothing."
+  historyLine: RecordChange
   error: EmployeeUpdateError
 }
 

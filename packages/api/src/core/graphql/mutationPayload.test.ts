@@ -6,12 +6,11 @@ import { mutationPayload } from "./mutationPayload";
 it("returns the result under its field on success, with a null error when errors are expected", async () => {
   const company = { id: "company" };
 
-  const withoutErrors = await mutationPayload<CompanyMutationPayload>("company", () =>
-    Promise.resolve(company),
+  const withoutErrors = await mutationPayload<CompanyMutationPayload>(() =>
+    Promise.resolve({ company }),
   );
   const withErrors = await mutationPayload<CompanyUpdatePayload>(
-    "company",
-    () => Promise.resolve(company),
+    () => Promise.resolve({ company }),
     ["INVALID_INPUT"],
   );
 
@@ -24,9 +23,10 @@ it("returns a listed invalid input error with its fields", async () => {
     { field: "email", code: "taken" },
   ]);
 
-  const payload = await mutationPayload<EmployeePayload>("employee", () => Promise.reject(error), [
-    "INVALID_INPUT",
-  ]);
+  const payload = await mutationPayload<EmployeePayload>(
+    () => Promise.reject(error),
+    ["INVALID_INPUT"],
+  );
 
   expect(payload).toEqual({
     error: {
@@ -41,7 +41,6 @@ it("returns a listed conflict error", async () => {
   const error = new ApplicationError("CONFLICT", "Files are still being read.");
 
   const payload = await mutationPayload<ImportMutationPayload>(
-    "import",
     () => Promise.reject(error),
     ["CONFLICT"],
   );
@@ -54,11 +53,34 @@ it("returns a listed conflict error", async () => {
 it("rethrows an application error whose code is not listed", async () => {
   const error = new ApplicationError("FORBIDDEN", "Only the owner may do this.");
 
-  const result = mutationPayload<EmployeePayload>("employee", () => Promise.reject(error), [
-    "INVALID_INPUT",
-  ]);
+  const result = mutationPayload<EmployeePayload>(() => Promise.reject(error), ["INVALID_INPUT"]);
 
   await expect(result).rejects.toBe(error);
+});
+
+it("returns every result field with a null error", async () => {
+  const employee = { id: "employee" };
+  const historyLine = { id: "history" };
+
+  const payload = await mutationPayload<EmployeeUpdatePayload>(
+    () => Promise.resolve({ employee, historyLine }),
+    ["NOT_FOUND"],
+  );
+
+  expect(payload).toEqual({ employee, historyLine, error: null });
+});
+
+it("returns a listed error without the result fields", async () => {
+  const error = new ApplicationError("NOT_FOUND", "No employee has this id.");
+
+  const payload = await mutationPayload<EmployeeUpdatePayload>(
+    () => Promise.reject(error),
+    ["NOT_FOUND"],
+  );
+
+  expect(payload).toEqual({
+    error: { __typename: "NotFoundError", message: "No employee has this id." },
+  });
 });
 
 // Payload types as codegen generates them: the changed object, and `error` where it can fail.
@@ -71,6 +93,11 @@ interface CompanyUpdatePayload {
 }
 interface EmployeePayload {
   employee?: { id: string } | null;
+  error?: unknown;
+}
+interface EmployeeUpdatePayload {
+  employee?: { id: string } | null;
+  historyLine?: { id: string } | null;
   error?: unknown;
 }
 interface ImportMutationPayload {

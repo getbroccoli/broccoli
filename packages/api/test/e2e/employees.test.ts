@@ -127,12 +127,13 @@ test("sorts and filters employees through the API", async ({ env }) => {
 
 test("employee history resolves the session author, cause and UTC time", async ({ env }) => {
   const { browser, user } = await env.signInAsOwner();
-  const employee = await env.seed.employee();
-  await browser.graphql(
+  const employee = await env.seed.employee({ jobTitle: "Engineer" });
+  const updated = await browser.graphql(
     `
     mutation UpdateEmployee($input: EmployeeUpdateInput!) {
       employee { update(input: $input) {
         employee { id }
+        historyLine { id operation changes { field oldValue newValue } }
         error { __typename ... on Error { message } }
       } }
     }
@@ -140,11 +141,30 @@ test("employee history resolves the session author, cause and UTC time", async (
     { input: { id: employee.id, jobTitle: "Lead" } },
   );
 
+  const body = (await updated.json()) as {
+    data: { employee: { update: { historyLine: { id: string } } } };
+  };
+  expect(body).toEqual({
+    data: {
+      employee: {
+        update: {
+          employee: { id: employee.id },
+          historyLine: {
+            id: expect.any(String) as unknown,
+            operation: "UPDATED",
+            changes: [{ field: "jobTitle", oldValue: "Engineer", newValue: "Lead" }],
+          },
+          error: null,
+        },
+      },
+    },
+  });
+
   const response = await browser.graphql(
     `
     query EmployeeHistory($id: ID!) {
       employee(id: $id) { id history(first: 10) {
-        edges { node { occurredAt author { kind userId email } cause { kind } } }
+        edges { node { id occurredAt author { kind userId email } cause { kind } } }
       } }
     }
   `,
@@ -159,6 +179,7 @@ test("employee history resolves the session author, cause and UTC time", async (
           edges: [
             {
               node: {
+                id: body.data.employee.update.historyLine.id,
                 occurredAt: expect.stringMatching(
                   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
                 ) as unknown,
