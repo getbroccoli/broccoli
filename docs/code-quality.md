@@ -75,6 +75,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 - **RULE51.** Web code runs a mutation with `usePayloadMutation` from `@/apollo`, never Apollo's `useMutation`, so a payload error never passes as success. `lint: no-restricted-imports`
 - **RULE62.** After a mutation the web app updates the Apollo cache from the payload instead of refetching: the payload returns the changed objects and any new item a cached list shows; a delete evicts its record; a new item goes into a cached list only when its place is certain (one fixed order, no filter). A list sorted, searched or paged on the server is not recomputed in the browser; it reloads when next shown. `refetch` is for results only the server can compute, when the payload carrying them would cost more code than it saves ([architecture §8](architecture.md#8-frontend)).
 - **RULE63.** A feature writes the Apollo cache only in its `cache.ts`, as named functions such as `forgetEmployee`; a deleted record leaves through `evictRecord` from `@/apollo`. `lint: no-restricted-properties`
+- **RULE64.** React state holds only what nothing else holds: a value computed from props, other state, or a query's or mutation's own state (`loading`, `error`, `payloadError`) is computed during render, never copied into `useState`.
 
 ## Tests
 

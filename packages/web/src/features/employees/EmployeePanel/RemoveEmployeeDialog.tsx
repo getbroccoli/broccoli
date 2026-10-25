@@ -30,8 +30,9 @@ type Props = {
 /** Confirms removing an employee, with an optional reason; their history stays. No undo. */
 export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }: Props) {
   const [reason, setReason] = useState("");
-  const [failed, setFailed] = useState(false);
-  const [deleteEmployee, { loading }] = usePayloadMutation(DeleteEmployeeDocument);
+  const [deleteEmployee, { loading, error, payloadError }] =
+    usePayloadMutation(DeleteEmployeeDocument);
+  const failed = Boolean(error || payloadError);
   const client = useApolloClient();
   // The panel may close while a removal is pending, such as on browser Back.
   const mounted = useRef(false);
@@ -45,14 +46,12 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
   }, []);
 
   const remove = async () => {
-    setFailed(false);
     const changeReason = reason.trim();
     try {
       await deleteEmployee({
         variables: { input: { id: employee.id, ...(changeReason && { changeReason }) } },
       });
     } catch {
-      if (mounted.current) setFailed(true);
       return;
     }
     toast(t("people.panel.remove.done", { name: fullName }));

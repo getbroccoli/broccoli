@@ -66,9 +66,10 @@ interface CompanyFormProps {
 function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
   const navigate = useNavigate();
   const { next } = useSetupPages("company");
-  const [updateCompany] = usePayloadMutation(UpdateCompanyDocument);
+  const [updateCompany, { error: saveError, payloadError }] =
+    usePayloadMutation(UpdateCompanyDocument);
+  const failed = Boolean(saveError || payloadError);
   const [logoBusy, setLogoBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
 
   const form = useForm({
@@ -76,11 +77,9 @@ function CompanyForm({ company, onLogoUploaded }: CompanyFormProps) {
     validators: { onSubmit: companyStepSchema },
     onSubmitInvalid: () => nameInput.current?.focus(),
     onSubmit: async ({ value }) => {
-      setFailed(false);
       try {
         await updateCompany({ variables: { input: { name: value.name } } });
       } catch {
-        setFailed(true);
         return;
       }
       await navigate({ to: next });
