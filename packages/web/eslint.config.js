@@ -63,6 +63,28 @@ export default defineConfig(
     rules: { "no-restricted-imports": "off" },
   },
   {
+    // RULE63 in docs/code-quality.md: a feature writes the Apollo cache only in its cache.ts.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/**/cache.ts", "src/apollo/**"],
+    rules: {
+      "no-restricted-properties": [
+        "error",
+        ...[
+          "evict",
+          "gc",
+          "modify",
+          "updateQuery",
+          "updateFragment",
+          "writeQuery",
+          "writeFragment",
+        ].map((property) => ({
+          property,
+          message: "Write the Apollo cache in the feature's cache.ts.",
+        })),
+      ],
+    },
+  },
+  {
     files: ["src/**/*.graphql"],
     languageOptions: {
       parser: graphql.parser,

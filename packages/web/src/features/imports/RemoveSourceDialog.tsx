@@ -1,4 +1,3 @@
-import type { ApolloCache } from "@apollo/client";
 import type { DocumentNode } from "graphql";
 
 import { type ImportSourceKind, RemoveSourceDocument } from "@/__generated__/graphql";
@@ -14,6 +13,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { t } from "@/i18n";
+
+import { forgetSlackConnection } from "./cache";
 
 type Props = {
   /** The source to remove; null keeps the dialog closed. */
@@ -85,9 +86,4 @@ export function RemoveSourceDialog({ source, onClose, refetch }: Props) {
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-/** Removing Slack disconnected it: the cached connection goes with the source. */
-function forgetSlackConnection(cache: ApolloCache) {
-  cache.modify({ fields: { slackConnection: () => null } });
 }

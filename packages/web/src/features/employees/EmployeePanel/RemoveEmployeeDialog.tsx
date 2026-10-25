@@ -1,4 +1,3 @@
-import type { ApolloCache } from "@apollo/client";
 import { useApolloClient } from "@apollo/client/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +16,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
+
+import { forgetEmployee } from "../cache";
 
 type Props = {
   open: boolean;
@@ -99,14 +100,4 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
       </AlertDialogContent>
     </AlertDialog>
   );
-}
-
-/**
- * Drops a removed employee from the cache once their panel is gone: every cached list loses
- * their row and reopening them finds nobody. While the panel is open, evicting them would
- * refetch it.
- */
-function forgetEmployee(cache: ApolloCache, id: string) {
-  cache.evict({ id: cache.identify({ __typename: "Employee", id }) });
-  cache.gc();
 }

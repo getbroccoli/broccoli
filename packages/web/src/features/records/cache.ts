@@ -2,7 +2,7 @@ import type { ApolloCache } from "@apollo/client";
 
 import { RecordHistoryDocument, type RecordType } from "@/__generated__/graphql";
 
-import { HISTORY_PAGE_SIZE, type HistoryLine } from "./historyLines";
+import { HISTORY_PAGE_SIZE, type HistoryLine } from "./RecordHistory";
 
 /**
  * Puts a line a change just added at the top of a record's cached history, newest first, so a
