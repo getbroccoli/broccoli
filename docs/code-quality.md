@@ -73,7 +73,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 - **RULE39.** App code uses Phosphor icons; Lucide appears only inside shadcn components.
 - **RULE50.** Styles of one component, such as its keyframes, sit in a CSS file next to it that it imports; `styles.css` holds only the theme and app-wide base styles.
 - **RULE51.** Web code runs a mutation with `usePayloadMutation` from `@/apollo`, never Apollo's `useMutation`, so a payload error never passes as success. `lint: no-restricted-imports`
-- **RULE62.** After a mutation the web app updates the Apollo cache from the payload instead of refetching: the payload returns the changed objects and any new item a cached list shows; a delete evicts its record; a new item goes into a cached list only when its place is certain (one fixed order, no filter). A list sorted, searched or paged on the server is not recomputed in the browser; it reloads when next shown. `refetch` is for results only the server can compute ([architecture §8](architecture.md#8-frontend)).
+- **RULE62.** After a mutation the web app updates the Apollo cache from the payload instead of refetching: the payload returns the changed objects and any new item a cached list shows; a delete evicts its record; a new item goes into a cached list only when its place is certain (one fixed order, no filter). A list sorted, searched or paged on the server is not recomputed in the browser; it reloads when next shown. `refetch` is for results only the server can compute, when the payload carrying them would cost more code than it saves ([architecture §8](architecture.md#8-frontend)).
 
 ## Tests
 
