@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { ResetSetupDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import {
@@ -25,21 +23,18 @@ type Props = {
  * company step, where routing sends the owner, who stays signed in.
  */
 export function ResetSetupDialog({ open, onOpenChange }: Props) {
-  const [resetSetup] = usePayloadMutation(ResetSetupDocument);
-  const [failed, setFailed] = useState(false);
-  const [confirm, resetting] = useSessionChange(async () => {
-    setFailed(false);
-    const reset = await resetSetup().then(
+  const [resetSetup, { error, payloadError, reset }] = usePayloadMutation(ResetSetupDocument);
+  const failed = Boolean(error || payloadError);
+  const [confirm, resetting] = useSessionChange(() =>
+    resetSetup().then(
       () => true,
       () => false,
-    );
-    setFailed(!reset);
-    return reset;
-  });
+    ),
+  );
 
   const changeOpen = (nextOpen: boolean) => {
     if (resetting) return;
-    setFailed(false);
+    reset();
     onOpenChange(nextOpen);
   };
 

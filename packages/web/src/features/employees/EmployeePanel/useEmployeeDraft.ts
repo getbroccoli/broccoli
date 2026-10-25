@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   UpdateEmployeeDocument,
   type EmployeePanel_EmployeeFragment,
-  type UpdateEmployeeMutation,
 } from "@/__generated__/graphql";
 import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { addHistoryLine } from "@/features/records";
@@ -25,55 +24,65 @@ export type SaveFailure = "removed" | "failed";
  */
 export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const saved = valuesOf(employee);
-  const [draft, setDraft] = useState<Partial<EmployeeValues>>({});
+  const [edits, setEdits] = useState<Edits>({});
   const [reason, setReason] = useState("");
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<EmployeeFieldKey, string>>>({});
-  const [failure, setFailure] = useState<SaveFailure | null>(null);
-  const [updateEmployee, { loading: saving }] = usePayloadMutation(UpdateEmployeeDocument, {
-    // The saved employee updates in the cache by itself; its new line joins its history.
-    update: (cache, { data }) => {
-      const line = data?.employee.update.historyLine;
-      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
+  const [updateEmployee, { loading: saving, error, payloadError, reset }] = usePayloadMutation(
+    UpdateEmployeeDocument,
+    {
+      // The saved employee updates in the cache by itself; its new line joins its history.
+      update: (cache, { data }) => {
+        const line = data?.employee.update.historyLine;
+        if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
+      },
     },
-  });
+  );
+  const draft = mapEdits(edits, ({ value }) => value);
+  const fieldErrors = mapEdits(edits, ({ error }) => error);
   const changed = changedFields(saved, draft);
+  // Refused fields show beside themselves; any other failed save shows in the edit bar.
+  const failure: SaveFailure | null =
+    payloadError?.__typename === "NotFoundError"
+      ? "removed"
+      : error || (payloadError && payloadError.__typename !== "InvalidInputError")
+        ? "failed"
+        : null;
 
-  const edit = (key: EmployeeFieldKey, value: string) => {
-    setDraft((current) => ({ ...current, [key]: value }));
-    setFieldErrors((current) => without(current, key));
-  };
+  // A new value replaces the field's edit, and with it the error the last save gave it.
+  const edit = (key: EmployeeFieldKey, value: string) =>
+    setEdits((current) => ({ ...current, [key]: { value } }));
 
-  const revert = (key: EmployeeFieldKey) => {
-    setDraft((current) => without(current, key));
-    setFieldErrors((current) => without(current, key));
-  };
+  const revert = (key: EmployeeFieldKey) =>
+    setEdits((current) => {
+      const rest = { ...current };
+      delete rest[key];
+      return rest;
+    });
 
   const cancel = () => {
-    setDraft({});
+    setEdits({});
     setReason("");
-    setFieldErrors({});
-    setFailure(null);
+    reset();
   };
 
   const save = async () => {
     // The draft is what gets saved, so it stays still until the save ends.
     if (saving) return;
-    setFailure(null);
-    setFieldErrors({});
+    setEdits((current) => mapEdits(current, ({ value }) => ({ value })));
     try {
       await updateEmployee({
         variables: { input: toUpdateInput(employee.id, saved, draft, reason) },
       });
       cancel();
-    } catch (error) {
-      const refused = error instanceof PayloadFailure ? (error.payloadError as UpdateError) : null;
-      if (refused?.__typename === "InvalidInputError") {
-        setFieldErrors(
-          Object.fromEntries(refused.fields.map(({ field, code }) => [field, fieldMessage(code)])),
-        );
-      } else {
-        setFailure(refused?.__typename === "NotFoundError" ? "removed" : "failed");
-      }
+    } catch (failed) {
+      const refused =
+        failed instanceof PayloadFailure ? (failed.payloadError as typeof payloadError) : null;
+      if (refused?.__typename !== "InvalidInputError") return;
+      const messages = new Map(
+        refused.fields.map(({ field, code }) => [field, fieldMessage(code)]),
+      );
+      setEdits((current) =>
+        mapEdits(current, ({ value }, key) => ({ value, error: messages.get(key) })),
+      );
     }
   };
 
@@ -93,15 +102,16 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   };
 }
 
-type UpdateError = UpdateEmployeeMutation["employee"]["update"]["error"];
+/** The unsaved fields: each new value, and why the last save refused it until it changes. */
+type Edits = Partial<Record<EmployeeFieldKey, { value: string; error?: string }>>;
 
-function without<Value>(
-  record: Partial<Record<EmployeeFieldKey, Value>>,
-  key: EmployeeFieldKey,
-): Partial<Record<EmployeeFieldKey, Value>> {
-  const rest = { ...record };
-  delete rest[key];
-  return rest;
+function mapEdits<Result>(
+  edits: Edits,
+  map: (edit: { value: string; error?: string }, key: EmployeeFieldKey) => Result,
+): Partial<Record<EmployeeFieldKey, Result>> {
+  return Object.fromEntries(
+    Object.entries(edits).map(([key, edit]) => [key, map(edit, key as EmployeeFieldKey)]),
+  );
 }
 
 function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
