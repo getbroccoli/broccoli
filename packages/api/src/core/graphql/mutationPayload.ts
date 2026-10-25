@@ -1,34 +1,18 @@
 import { ApplicationError, type ApplicationErrorCode, type FieldError } from "../applicationError";
 
 /**
- * Runs a mutation's use case into its payload, named by its generated resolver type
- * (`ResolversTypes["CompanyUpdatePayload"]`) so `tsc` checks `field` and the result.
- * @param field The payload's field that holds the changed object.
- * @param run The use-case call; its result goes under `field`.
- * @param expectedErrorCodes The `ApplicationError` codes this mutation's payload reports as
- *   its `error`; omit them for a payload without `error`. Any other error is thrown, so
- *   refused callers and unexpected errors stay top-level.
+ * Returns the callback's payload fields, checked against the named generated resolver type.
+ * Listed application errors become the payload's `error`; omit the codes for a payload
+ * without `error`, and all other errors stay top-level.
  */
 export async function mutationPayload<Payload>(
-  // `NoInfer`: the payload type is always named, never guessed from `field`.
-  field: NoInfer<ResultField<Awaited<Payload>>>,
-  run: () => Promise<NonNullable<Awaited<NoInfer<Payload>>[ResultField<Awaited<Payload>>]>>,
+  // `NoInfer`: callers name the generated payload type rather than inferring it from `run`.
+  run: () => Promise<PayloadResult<Awaited<NoInfer<Payload>>>>,
   expectedErrorCodes?: readonly PayloadErrorCode[],
 ): Promise<Awaited<Payload>> {
   if (!expectedErrorCodes) {
-    return { [field]: await run() } as Awaited<Payload>;
+    return (await run()) as Awaited<Payload>;
   }
-  return multiFieldMutationPayload<Payload>(
-    async () => ({ [field]: await run() }) as PayloadResult<Awaited<Payload>>,
-    expectedErrorCodes,
-  );
-}
-
-/** Like `mutationPayload`, for a payload of several fields: `run` returns them all. */
-export async function multiFieldMutationPayload<Payload>(
-  run: () => Promise<PayloadResult<Awaited<Payload>>>,
-  expectedErrorCodes: readonly PayloadErrorCode[],
-): Promise<Awaited<Payload>> {
   try {
     return { ...(await run()), error: null } as Awaited<Payload>;
   } catch (error) {
@@ -43,9 +27,6 @@ export type PayloadErrorCode = keyof PayloadErrors & ApplicationErrorCode;
 
 /** A payload's fields other than its error. */
 type PayloadResult<Payload> = Omit<Payload, "error" | "__typename">;
-
-/** The payload's field that holds the changed object. */
-type ResultField<Payload> = Exclude<keyof Payload, "error" | "__typename">;
 
 /**
  * The payload error of each `ApplicationError` code a mutation can return; `__typename`
