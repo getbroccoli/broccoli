@@ -60,24 +60,7 @@ export function createMailSettings({
     deployment.mode === "self_hosted" && deployment.publicUrl
       ? new URL(deployment.publicUrl).origin
       : null;
-  const readMailer = async (): Promise<{ mailer: Mailer; linkOrigin: string } | null> => {
-    const repository = instanceRepository(orm);
-    const { source, from, linkOrigin } = await repository.readMailSettings();
-    const encryptedSecret = await repository.readMailSecret();
-    if (source === "no_email" || from === null || encryptedSecret === null) {
-      return null;
-    }
-    const secret = secretBox.decrypt(encryptedSecret);
-    const transport: MailTransport =
-      source === "smtp_server"
-        ? { kind: source, url: secret, from }
-        : { kind: source, apiUrl: resendApiUrl, key: secret, from };
-    return {
-      mailer: mail.createMailer(transport),
-      // A choice is always saved with an origin; the fallback only satisfies the type.
-      linkOrigin: publicOrigin ?? linkOrigin ?? "",
-    };
-  };
+  const readMailer = () => readSavedMailer(orm, { secretBox, mail, resendApiUrl, publicOrigin });
 
   return {
     read: async (ctx) => {
@@ -98,15 +81,18 @@ export function createMailSettings({
       }
       await transact(async (tx) => {
         const repository = instanceRepository(tx);
+        await repository.lockInstance();
+        // Another save may have changed the source since the check; a kept secret must still be its own.
+        const locked = decideMailSettings(choice, await repository.readMailSettings());
         await repository.storeMailSettings({
-          source: change.source,
-          from: change.from,
+          source: locked.source,
+          from: locked.from,
           encryptedSecret:
-            change.secret === undefined
-              ? await repository.readMailSecret()
-              : change.secret === null
+            locked.secret === undefined
+              ? (await repository.readMailSender()).encryptedSecret
+              : locked.secret === null
                 ? null
-                : secretBox.encrypt(change.secret),
+                : secretBox.encrypt(locked.secret),
           linkOrigin: publicOrigin ?? linkOrigin,
         });
       });
@@ -139,6 +125,38 @@ export function createMailSettings({
       ctx.requireOwnerOrSystem();
       return deployment.mode === "managed" ? null : readMailer();
     },
+  };
+}
+
+/** The saved choice's mailer and link origin, from one read so the secret matches its source. */
+async function readSavedMailer(
+  orm: Orm,
+  {
+    secretBox,
+    mail,
+    resendApiUrl,
+    publicOrigin,
+  }: {
+    secretBox: SecretBox;
+    mail: MailIntegration;
+    resendApiUrl: string;
+    publicOrigin: string | null;
+  },
+): Promise<{ mailer: Mailer; linkOrigin: string } | null> {
+  const { source, from, encryptedSecret, linkOrigin } =
+    await instanceRepository(orm).readMailSender();
+  if (source === "no_email" || from === null || encryptedSecret === null) {
+    return null;
+  }
+  const secret = secretBox.decrypt(encryptedSecret);
+  const transport: MailTransport =
+    source === "smtp_server"
+      ? { kind: source, url: secret, from }
+      : { kind: source, apiUrl: resendApiUrl, key: secret, from };
+  return {
+    mailer: mail.createMailer(transport),
+    // A choice is always saved with an origin; the fallback only satisfies the type.
+    linkOrigin: publicOrigin ?? linkOrigin ?? "",
   };
 }
 

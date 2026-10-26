@@ -29,6 +29,11 @@ export function EmailForm({ mail }: Props) {
   const [newSecret, setNewSecret] = useState<string | null>(null);
   const [save, { loading: saving, error, payloadError }] =
     usePayloadMutation(SaveMailSettingsDocument);
+  // A secret belongs to its provider, so another provider starts from an empty field.
+  const selectSource = (next: MailSource) => {
+    setSource(next);
+    setNewSecret(null);
+  };
   const keepsSecret = newSecret === null && source === mail.source && mail.hasSecret;
   const failure = payloadError
     ? failureOf(payloadError, source)
@@ -98,7 +103,7 @@ export function EmailForm({ mail }: Props) {
           name="mail-source"
           value="SMTP_SERVER"
           selected={source}
-          onSelect={setSource}
+          onSelect={selectSource}
           title={t("settings.email.smtp")}
           hint={t("settings.email.smtpHint")}
         >
@@ -108,7 +113,7 @@ export function EmailForm({ mail }: Props) {
           name="mail-source"
           value="RESEND_API"
           selected={source}
-          onSelect={setSource}
+          onSelect={selectSource}
           title={t("settings.email.resend")}
           hint={t("settings.email.resendHint")}
         >
@@ -118,7 +123,7 @@ export function EmailForm({ mail }: Props) {
           name="mail-source"
           value="NO_EMAIL"
           selected={source}
-          onSelect={setSource}
+          onSelect={selectSource}
           title={t("settings.email.noEmail")}
           hint={t("settings.email.noEmailHint")}
         />

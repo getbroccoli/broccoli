@@ -59,7 +59,13 @@ export function decideMailSettings(choice: MailChoice, saved: MailConfig): MailS
 function isSmtpUrl(text: string): boolean {
   try {
     const url = new URL(text);
-    return (url.protocol === "smtp:" || url.protocol === "smtps:") && url.hostname !== "";
+    // Query options could make the mail library run a local program instead of connecting.
+    return (
+      (url.protocol === "smtp:" || url.protocol === "smtps:") &&
+      url.hostname !== "" &&
+      url.search === "" &&
+      url.hash === ""
+    );
   } catch {
     return false;
   }

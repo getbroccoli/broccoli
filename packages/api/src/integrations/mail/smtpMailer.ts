@@ -7,7 +7,9 @@ import type { OutgoingMail } from "./mailer";
 export async function verifySmtpServer(url: string): Promise<void> {
   const transport = smtpTransport(url);
   try {
-    await transport.verify();
+    if (!(await transport.verify())) {
+      throw new MailRefusedError("The SMTP server could not be checked", false);
+    }
   } catch (error) {
     throw smtpRefusal(error);
   } finally {
@@ -45,9 +47,16 @@ const SOCKET_TIMEOUT_MS = 30_000;
 const RETRYABLE_CODES = new Set(["ECONNECTION", "ETIMEDOUT", "ESOCKET", "EDNS", "ETLS"]);
 
 function smtpTransport(url: string) {
-  // nodemailer reads the host, port, TLS and credentials from the URL.
+  // Only the connection is taken from the URL: nodemailer would read other options from its
+  // query, such as one that runs a local program instead.
+  const { protocol, hostname, port, username, password } = new URL(url);
   return createTransport({
-    url,
+    host: hostname,
+    port: port === "" ? undefined : Number(port),
+    secure: protocol === "smtps:",
+    auth: username
+      ? { user: decodeURIComponent(username), pass: decodeURIComponent(password) }
+      : undefined,
     connectionTimeout: CONNECTION_TIMEOUT_MS,
     greetingTimeout: GREETING_TIMEOUT_MS,
     socketTimeout: SOCKET_TIMEOUT_MS,

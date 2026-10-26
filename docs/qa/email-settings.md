@@ -15,6 +15,8 @@ A manual check of how a self-hosted instance sends email, and of resetting a for
 - [ ] A reload keeps the choice and From, and never shows the URL.
 - [ ] `smtp://nowhere.invalid:25` shows "Your mail server could not be reached…"; `https://smtp.example.com` shows "Enter a URL that starts with smtp:// or smtps://."; a From without `@` shows "Enter an email address…". Each time the earlier choice stays.
 - [ ] Switching from a saved SMTP server to Resend asks for the API key: saving without one shows "Enter your Resend API key."
+- [ ] After Replace, typing an SMTP URL and then choosing Resend shows an empty API key field; choosing SMTP again shows "Saved".
+- [ ] An SMTP URL with a query, such as `smtp://mailpit:1025?pool=true`, shows "Enter a URL that starts with smtp:// or smtps://."
 - [ ] "Send me a test email" shows "Test email sent to owner@example.com", and Mailpit receives "Broccoli can send email" from "Broccoli" <people@example.com>.
 - [ ] With Resend and a made-up key, "Send me a test email" shows "The test email was not sent:" with Resend's reason.
 - [ ] Saving "No email" hides "Send me a test email".

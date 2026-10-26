@@ -44,8 +44,13 @@ export interface InstanceRepository {
   storeAiSource(source: AiSource, encryptedOpenRouterKey?: string): Promise<void>;
   /** The mail choice, no email until the owner chooses, and the origin its links use. */
   readMailSettings(): Promise<MailConfig & { linkOrigin: string | null }>;
-  /** The encrypted SMTP URL or Resend key; null without one. */
-  readMailSecret(): Promise<string | null>;
+  /** The mail choice with its encrypted SMTP URL or Resend key, read together so they match. */
+  readMailSender(): Promise<{
+    source: MailSource;
+    from: string | null;
+    encryptedSecret: string | null;
+    linkOrigin: string | null;
+  }>;
   /** Replaces the whole mail choice. */
   storeMailSettings(settings: {
     source: MailSource;
@@ -183,9 +188,21 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
       };
     },
 
-    readMailSecret: async () => {
-      const [row] = await orm().select({ secret: instance.encryptedMailSecret }).from(instance);
-      return row?.secret ?? null;
+    readMailSender: async () => {
+      const [row] = await orm()
+        .select({
+          source: instance.mailSource,
+          from: instance.mailFrom,
+          encryptedSecret: instance.encryptedMailSecret,
+          linkOrigin: instance.mailLinkOrigin,
+        })
+        .from(instance);
+      return {
+        source: row?.source ?? "no_email",
+        from: row?.from ?? null,
+        encryptedSecret: row?.encryptedSecret ?? null,
+        linkOrigin: row?.linkOrigin ?? null,
+      };
     },
 
     storeMailSettings: async ({ source, from, encryptedSecret, linkOrigin }) => {

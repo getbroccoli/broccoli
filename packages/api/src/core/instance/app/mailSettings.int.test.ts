@@ -77,25 +77,30 @@ test("keeps the earlier choice when the SMTP server refuses the sign-in", async 
   ]);
 });
 
-test.for(["not a URL", "https://smtp.example.com", "smtp://"])(
-  "refuses a malformed SMTP URL: %s",
-  async (secret, { orm }) => {
-    await expect(
-      mailSettings(orm).save(
-        OWNER,
-        {
-          source: "smtp_server",
-          from: "broccoli@example.com",
-          secret,
-        },
-        ORIGIN,
-      ),
-    ).rejects.toMatchObject({
-      code: "INVALID_INPUT",
-      fieldErrors: [{ field: "secret", code: "invalid" }],
-    });
-  },
-);
+test.for([
+  "not a URL",
+  "https://smtp.example.com",
+  "smtp://",
+  "smtp://smtp.example.com?sendmail=true&path=/bin/echo",
+])("refuses a malformed SMTP URL: %s", async (secret, { orm }) => {
+  const mail = fakeMail();
+
+  await expect(
+    mailSettings(orm, { mail }).save(
+      OWNER,
+      {
+        source: "smtp_server",
+        from: "broccoli@example.com",
+        secret,
+      },
+      ORIGIN,
+    ),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "secret", code: "invalid" }],
+  });
+  expect(mail.verifiedUrls).toEqual([]);
+});
 
 test("refuses a From that is no email address", async ({ orm }) => {
   await expect(
