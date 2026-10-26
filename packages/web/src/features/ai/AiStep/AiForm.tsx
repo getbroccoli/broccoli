@@ -9,6 +9,7 @@ import {
   type AiStepQuery,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
+import { OptionCard } from "@/components/form";
 import { useStartDemo } from "@/features/demo";
 import { SetupStepForm, useSetupPages } from "@/features/setup";
 import { t } from "@/i18n";
@@ -19,7 +20,6 @@ import { DemoDataCard } from "./DemoDataCard";
 import { failureOf } from "./failureOf";
 import { KeyField } from "./KeyField";
 import { KnownKey } from "./KnownKey";
-import { SourceOption } from "./SourceOption";
 
 type Props = {
   ai: NonNullable<AiStepQuery["setup"]["ai"]>;
@@ -97,7 +97,8 @@ export function AiForm({ ai, demoAvailable }: Props) {
       <div className="flex flex-col gap-4">
         <fieldset className="flex flex-col gap-3" disabled={busy}>
           <legend className="sr-only">{t("setup.ai.options")}</legend>
-          <SourceOption
+          <OptionCard
+            name="ai-source"
             value="BROCCOLI_AI"
             selected={source}
             onSelect={setSource}
@@ -105,7 +106,8 @@ export function AiForm({ ai, demoAvailable }: Props) {
             hint={t("setup.ai.broccoliAiHint")}
           />
           {holdsSetup && (
-            <SourceOption
+            <OptionCard
+              name="ai-source"
               value="EXTERNAL_AGENT"
               selected={source}
               onSelect={setSource}
@@ -113,7 +115,8 @@ export function AiForm({ ai, demoAvailable }: Props) {
               hint={t("setup.ai.externalAgentHint")}
             />
           )}
-          <SourceOption
+          <OptionCard
+            name="ai-source"
             value="OPENROUTER"
             selected={source}
             onSelect={setSource}
@@ -129,7 +132,7 @@ export function AiForm({ ai, demoAvailable }: Props) {
             ) : (
               <KeyField value={key} onChange={setNewKey} error={keyFieldError} />
             )}
-          </SourceOption>
+          </OptionCard>
         </fieldset>
         {/* It describes Broccoli's own model, which the external agent replaces. */}
         {source !== "EXTERNAL_AGENT" && (
