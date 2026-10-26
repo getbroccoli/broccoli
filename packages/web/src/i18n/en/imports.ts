@@ -41,6 +41,7 @@ export const importsEn = {
   "imports.files.uploadFailed": "{name}: couldn’t upload. Try again.",
   "imports.files.mapping": "Reading columns…",
   "imports.files.waitingForExternalAgent": "Waiting for your agent",
+  "imports.files.waitingForReadChoice": "Choose how to read this file",
   "imports.files.foundByExternalAgent": "Your agent found your file",
   "imports.files.downloadingOriginalByExternalAgent": "Your agent is downloading your file…",
   "imports.files.downloadingQuestionsByExternalAgent":

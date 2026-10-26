@@ -110,6 +110,7 @@ export const setupEn = {
   "setup.import.gather": "Gather everyone’s details",
   "setup.import.next": "Review your people",
   "setup.import.reading": "Reading your files…",
+  "setup.import.needsAttention": "Your files need attention",
   "setup.ready.title": "Ready to start",
   "setup.ready.heading": "{company} is ready",
   "setup.ready.description": "Everyone is in one place. You can add and change people any time.",

@@ -55,16 +55,15 @@ export function ImportStep() {
   const fileSources = sources.filter(({ kind }) => kind === "FILE");
   const [uploading, setUploading] = useState(false);
   const reading = readingFiles || uploading;
+  const pendingAgentFiles = fileSources.filter(
+    (source) => source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" && source.status === "MAPPING",
+  );
+  const needsAttention = !externalAgentChosen && pendingAgentFiles.length > 0;
   // Files the connected external agent has not picked up while it does not listen: it stopped
   // waiting, so the owner nudges it.
   const notPickedUp =
     externalAgent && !externalAgent.listening
-      ? fileSources.filter(
-          (source) =>
-            source.readBy === "ANSWERED_BY_EXTERNAL_AGENT" &&
-            source.status === "MAPPING" &&
-            !source.pickedUpByExternalAgent,
-        )
+      ? pendingAgentFiles.filter((source) => !source.pickedUpByExternalAgent)
       : [];
   const gathering = data?.import.demoAvailable === false || uploading;
 
@@ -109,11 +108,13 @@ export function ImportStep() {
                 )}
               >
                 {t(
-                  notPickedUp.length > 0
-                    ? "externalAgents.waitingFooter"
-                    : reading
-                      ? "setup.import.reading"
-                      : "setup.import.next",
+                  needsAttention
+                    ? "setup.import.needsAttention"
+                    : notPickedUp.length > 0
+                      ? "externalAgents.waitingFooter"
+                      : reading
+                        ? "setup.import.reading"
+                        : "setup.import.next",
                 )}
                 <ArrowRight weight="bold" aria-hidden />
               </Link>
