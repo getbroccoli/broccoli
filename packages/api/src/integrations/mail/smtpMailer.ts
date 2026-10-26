@@ -1,3 +1,5 @@
+import { domainToASCII } from "node:url";
+
 import { createTransport } from "nodemailer";
 
 import { MailRefusedError } from "./mailRefusedError";
@@ -51,16 +53,34 @@ function smtpTransport(url: string) {
   // query, such as one that runs a local program instead.
   const { protocol, hostname, port, username, password } = new URL(url);
   return createTransport({
-    host: hostname,
+    host: hostOf(hostname),
     port: port === "" ? undefined : Number(port),
     secure: protocol === "smtps:",
     auth: username
-      ? { user: decodeURIComponent(username), pass: decodeURIComponent(password) }
+      ? { user: decodeLeniently(username), pass: decodeLeniently(password) }
       : undefined,
     connectionTimeout: CONNECTION_TIMEOUT_MS,
     greetingTimeout: GREETING_TIMEOUT_MS,
     socketTimeout: SOCKET_TIMEOUT_MS,
   });
+}
+
+/** An SMTP URL's host as the network expects it: IPv6 without brackets, names in their DNS form. */
+function hostOf(hostname: string): string {
+  if (hostname.startsWith("[")) {
+    return hostname.slice(1, -1);
+  }
+  // An smtp: URL keeps a name's non-ASCII letters percent-encoded.
+  return domainToASCII(decodeLeniently(hostname)) || hostname;
+}
+
+/** Percent-decoded text; a stray `%`, such as in a password, stays as typed. */
+function decodeLeniently(text: string): string {
+  try {
+    return decodeURIComponent(text);
+  } catch {
+    return text;
+  }
 }
 
 function smtpRefusal(error: unknown): MailRefusedError {
