@@ -1,6 +1,7 @@
 import { createBetterAuth, fixedAuth, type AuthSource } from "../../auth";
 import type { Orm, Transact } from "../../db";
 import type { Logger } from "../../logger";
+import { PrincipalSecurityContext } from "../../security";
 import type { AddApprovedPeople, PasswordResetEmail, SetupDemo } from "../app";
 import { demoPlugin } from "./demoPlugin";
 import { setupPlugin } from "./setupPlugin";
@@ -29,7 +30,9 @@ export function selfHostedAuth({
   return fixedAuth(
     createBetterAuth({
       ...options,
-      sendResetPassword: passwordResetEmail.queue,
+      // Better Auth asks for a reset without a signed-in user.
+      sendResetPassword: (user, token) =>
+        passwordResetEmail.queue(PrincipalSecurityContext.system(), user, token),
       plugins: [
         setupPlugin(options.orm, transact, {
           prepareDemoStart: demo.prepareStart,

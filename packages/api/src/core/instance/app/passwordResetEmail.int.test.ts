@@ -1,7 +1,9 @@
 import {
   expect,
   fakeMail,
+  NON_OWNER,
   passwordResetEmail,
+  SYSTEM,
   test,
   TEST_OWNER,
   TEST_SECRET_BOX,
@@ -13,7 +15,7 @@ test("emails a reset link at the saved origin to a user with a password", async 
   const mail = fakeMail();
   const reset = passwordResetEmail(orm, { mail });
 
-  await reset.queue({ id: owner.user!.userId }, "reset-token");
+  await reset.queue(SYSTEM, { id: owner.user!.userId }, "reset-token");
   expect(reset.sentJobs).toHaveLength(1);
   await reset.jobs["instance.sendPasswordResetEmail"]!.run(reset.sentJobs[0]!.payload);
 
@@ -33,7 +35,7 @@ test("queues no reset email for a user without a password", async ({ orm, seed }
   const mail = fakeMail();
   const reset = passwordResetEmail(orm, { mail });
 
-  await reset.queue({ id: owner.user!.userId }, "reset-token");
+  await reset.queue(SYSTEM, { id: owner.user!.userId }, "reset-token");
 
   expect(reset.sentJobs).toEqual([]);
   expect(mail.messages).toEqual([]);
@@ -44,7 +46,7 @@ test("queues no reset email while no email is chosen", async ({ orm, seed }) => 
   const mail = fakeMail();
   const reset = passwordResetEmail(orm, { mail });
 
-  await reset.queue({ id: owner.user!.userId }, "reset-token");
+  await reset.queue(SYSTEM, { id: owner.user!.userId }, "reset-token");
 
   expect(reset.sentJobs).toEqual([]);
   expect(mail.messages).toEqual([]);
@@ -55,7 +57,7 @@ test("a queued reset sends nothing once no email is chosen", async ({ orm, seed 
   await seed.mailSettings();
   const mail = fakeMail();
   const reset = passwordResetEmail(orm, { mail });
-  await reset.queue({ id: owner.user!.userId }, "reset-token");
+  await reset.queue(SYSTEM, { id: owner.user!.userId }, "reset-token");
   expect(reset.sentJobs).toHaveLength(1);
   await seed.mailSettings({ source: "no_email" });
 
@@ -69,7 +71,7 @@ test("the queued reset job never holds the token in plain text", async ({ orm, s
   await seed.mailSettings();
   const reset = passwordResetEmail(orm, { mail: fakeMail() });
 
-  await reset.queue({ id: owner.user!.userId }, "private-reset-token");
+  await reset.queue(SYSTEM, { id: owner.user!.userId }, "private-reset-token");
 
   expect(reset.sentJobs).toMatchObject([
     {
@@ -81,4 +83,16 @@ test("the queued reset job never holds the token in plain text", async ({ orm, s
   expect(TEST_SECRET_BOX.decrypt(reset.sentJobs[0]!.payload.encryptedToken)).toBe(
     "private-reset-token",
   );
+});
+
+test("refuses to queue a reset for anyone but the system or owner", async ({ orm, seed }) => {
+  const owner = await seed.owner(TEST_OWNER);
+  await seed.mailSettings();
+  const reset = passwordResetEmail(orm, { mail: fakeMail() });
+
+  await expect(
+    reset.queue(NON_OWNER, { id: owner.user!.userId }, "reset-token"),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+
+  expect(reset.sentJobs).toEqual([]);
 });

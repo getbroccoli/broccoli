@@ -4,7 +4,7 @@ import type { Orm, Transact } from "../../db";
 import type { JobHandlers, JobQueue } from "../../jobs";
 import type { Logger } from "../../logger";
 import type { SecretBox } from "../../secrets";
-import { PrincipalSecurityContext } from "../../security";
+import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { MailRefusedError } from "../../../integrations/mail";
 import { readPasswordUserEmail } from "../db";
 import type { MailSettings } from "./mailSettings";
@@ -14,8 +14,8 @@ import type { MailSettings } from "./mailSettings";
  * a failed send retries. Only a user with a password gets one, and only while email is chosen.
  */
 export interface PasswordResetEmail {
-  /** Better Auth's `sendResetPassword`: queues the email, or does nothing. */
-  queue(user: { id: string }, token: string): Promise<void>;
+  /** Better Auth's `sendResetPassword`, as the system: queues the email, or does nothing. */
+  queue(ctx: SecurityContext, user: { id: string }, token: string): Promise<void>;
   /** Sends the queued email. */
   jobs: JobHandlers;
 }
@@ -47,10 +47,11 @@ export function createPasswordResetEmail({
   mailSettings: MailSettings;
   logger: Logger;
 }): PasswordResetEmail {
-  // Better Auth asks without a signed-in user, and the job runs on its own.
+  // The job runs on its own.
   const system = PrincipalSecurityContext.system();
   return {
-    queue: async (user, token) => {
+    queue: async (ctx, user, token) => {
+      ctx.requireOwnerOrSystem();
       const mail = await mailSettings.read(system);
       if (mail === null || mail.source === "no_email") {
         return;

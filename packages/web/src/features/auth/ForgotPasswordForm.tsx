@@ -3,13 +3,11 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 
-import { FieldError } from "@/components/form";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 
 import { DEFAULT_REDIRECT } from "./loginSearch";
+import { EmailField } from "./EmailField";
 import { requestPasswordReset, type PasswordResetRequestResult } from "./authApi";
 
 const forgotSchema = z.object({ email: z.email(t("auth.login.emailInvalid")) });
@@ -49,24 +47,13 @@ export function ForgotPasswordForm() {
     >
       <form.Field name="email">
         {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="forgot-email">{t("auth.login.email")}</Label>
-            <Input
-              id="forgot-email"
-              name="username"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              onBlur={field.handleBlur}
-              aria-invalid={field.state.meta.errors.length > 0}
-              aria-describedby={
-                field.state.meta.errors.length > 0 ? "forgot-email-error" : undefined
-              }
-            />
-            <FieldError id="forgot-email-error" message={field.state.meta.errors[0]?.message} />
-          </div>
+          <EmailField
+            id="forgot-email"
+            value={field.state.value}
+            onChange={field.handleChange}
+            onBlur={field.handleBlur}
+            error={field.state.meta.errors[0]?.message}
+          />
         )}
       </form.Field>
       {result && (

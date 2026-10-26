@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
 
+import { EmailField } from "./EmailField";
 import { signIn, type SignInResult } from "./authApi";
 
 const loginSchema = z.object({
@@ -70,24 +71,13 @@ export function LoginForm({ forgotPassword, passwordChanged }: Props) {
       )}
       <form.Field name="email">
         {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="login-email">{t("auth.login.email")}</Label>
-            <Input
-              id="login-email"
-              name="username"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              onBlur={field.handleBlur}
-              aria-invalid={field.state.meta.errors.length > 0}
-              aria-describedby={
-                field.state.meta.errors.length > 0 ? "login-email-error" : undefined
-              }
-            />
-            <FieldError id="login-email-error" message={field.state.meta.errors[0]?.message} />
-          </div>
+          <EmailField
+            id="login-email"
+            value={field.state.value}
+            onChange={field.handleChange}
+            onBlur={field.handleBlur}
+            error={field.state.meta.errors[0]?.message}
+          />
         )}
       </form.Field>
       <form.Field name="password">

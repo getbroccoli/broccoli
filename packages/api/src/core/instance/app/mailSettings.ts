@@ -82,7 +82,9 @@ export function createMailSettings({
   return {
     read: async (ctx) => {
       ctx.requireOwnerOrSystem();
-      return deployment.mode === "managed" ? null : withoutOrigin(await readSaved(orm));
+      return deployment.mode === "managed"
+        ? null
+        : withoutOrigin(await instanceRepository(orm).readMailSettings());
     },
 
     save: async (ctx, choice, linkOrigin) => {
@@ -90,7 +92,7 @@ export function createMailSettings({
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance sends email through Broccoli.");
       }
-      const change = decideMailSettings(choice, await readSaved(orm));
+      const change = decideMailSettings(choice, await instanceRepository(orm).readMailSettings());
       if (change.source === "smtp_server" && typeof change.secret === "string") {
         await checkSmtpServer(mail, change.secret, logger);
       }
@@ -109,7 +111,7 @@ export function createMailSettings({
         });
       });
       logger.info({ mailSource: change.source }, "Mail choice saved");
-      return withoutOrigin(await readSaved(orm));
+      return withoutOrigin(await instanceRepository(orm).readMailSettings());
     },
 
     sendTestEmail: async (ctx) => {
@@ -142,10 +144,6 @@ export function createMailSettings({
 
 /** Longest provider reason shown to the owner. */
 const MAX_REASON_LENGTH = 300;
-
-async function readSaved(orm: Orm) {
-  return instanceRepository(orm).readMailSettings();
-}
 
 function withoutOrigin({ source, from, hasSecret }: MailConfig): MailConfig {
   return { source, from, hasSecret };

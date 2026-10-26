@@ -6,8 +6,12 @@ import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
+type Props = {
+  disabled: boolean;
+};
+
 /** Sends the owner a test email with the saved settings; a refusal shows the provider's reason. */
-export function TestEmailButton({ disabled }: { disabled: boolean }) {
+export function TestEmailButton({ disabled }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const [sendTestEmail, { loading, error, payloadError }] =
     usePayloadMutation(SendTestEmailDocument);
