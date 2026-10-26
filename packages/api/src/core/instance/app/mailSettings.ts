@@ -92,7 +92,7 @@ export function createMailSettings({
       }
       const change = decideMailSettings(choice, await readSaved(orm));
       if (change.source === "smtp_server" && typeof change.secret === "string") {
-        await checkSmtpServer(mail, change.secret);
+        await checkSmtpServer(mail, change.secret, logger);
       }
       await transact(async (tx) => {
         const repository = instanceRepository(tx);
@@ -151,13 +151,14 @@ function withoutOrigin({ source, from, hasSecret }: MailConfig): MailConfig {
   return { source, from, hasSecret };
 }
 
-async function checkSmtpServer(mail: MailIntegration, url: string): Promise<void> {
+async function checkSmtpServer(mail: MailIntegration, url: string, logger: Logger): Promise<void> {
   try {
     await mail.verifySmtpServer(url);
   } catch (error) {
     if (!(error instanceof MailRefusedError)) {
       throw error;
     }
+    logger.warn({ kind: error.message, retryable: error.retryable }, "SMTP server check refused");
     throw error.retryable
       ? new ApplicationError("UNAVAILABLE", "The mail server could not be reached. Try again.")
       : invalidInput([{ field: "secret", code: "rejected" }]);
