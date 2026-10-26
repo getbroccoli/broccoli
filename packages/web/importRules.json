@@ -25,6 +25,7 @@
       "src/__generated__",
       "src/components/form",
       "src/components/ui",
+      "src/features/setup",
       "src/i18n",
       "src/lib/postJson",
       "src/lib/useSessionChange"
