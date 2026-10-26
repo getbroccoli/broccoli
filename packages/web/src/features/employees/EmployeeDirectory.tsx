@@ -19,7 +19,12 @@ export function EmployeeDirectory() {
   const navigate = useNavigate({ from: "/people" });
   const writeSearch = useCallback(
     (patch: Partial<EmployeeListSearch>, replace: boolean) =>
-      void navigate({ search: (prev) => ({ ...prev, ...patch }), replace }),
+      void navigate({
+        // A pending search may finish after a person's panel opens.
+        unsafeRelative: "path",
+        search: (prev) => ({ ...prev, ...patch }),
+        replace,
+      }),
     [navigate],
   );
   // Opening People shows the cached page at once and the server's current one when it is back.
