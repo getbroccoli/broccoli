@@ -7,6 +7,9 @@ import { account, session, user, verification } from "./schema";
 
 export const PASSWORD_LENGTH = { min: 8, max: 128 } as const;
 
+/** How long a password reset link works. */
+const RESET_PASSWORD_SECONDS = 60 * 60;
+
 export interface AuthConfig {
   orm: Orm;
   /** Signs session cookies. */
@@ -16,6 +19,8 @@ export interface AuthConfig {
   plugins: BetterAuthPlugin[];
   /** Origins Better Auth trusts besides its own; may depend on the request. */
   trustedOrigins?: BetterAuthOptions["trustedOrigins"];
+  /** Emails a password reset token; without it nobody can reset a password. */
+  sendResetPassword?: (user: { id: string }, token: string) => Promise<void>;
   logger: Logger;
 }
 
@@ -30,6 +35,7 @@ export function createBetterAuth({
   publicUrl,
   plugins,
   trustedOrigins,
+  sendResetPassword,
   logger,
 }: AuthConfig) {
   return betterAuth({
@@ -42,6 +48,14 @@ export function createBetterAuth({
       disableSignUp: true,
       minPasswordLength: PASSWORD_LENGTH.min,
       maxPasswordLength: PASSWORD_LENGTH.max,
+      sendResetPassword: sendResetPassword && (({ user, token }) => sendResetPassword(user, token)),
+      resetPasswordTokenExpiresIn: RESET_PASSWORD_SECONDS,
+      // A reset may follow a stolen password, so it signs out every browser.
+      revokeSessionsOnPasswordReset: true,
+    },
+    // Only the hash of a reset token is stored, so a database read cannot take over an account.
+    verification: {
+      storeIdentifier: { default: "plain", overrides: { "reset-password:": "hashed" } },
     },
     plugins,
     trustedOrigins,

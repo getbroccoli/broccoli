@@ -61,7 +61,7 @@ export async function startServer(
   let resolveSecurity: SecurityResolver;
   let graphql: GraphqlApi;
   try {
-    const { manifests, setupDemo, addApprovedPeople } = createModules({
+    const { manifests, setupDemo, addApprovedPeople, passwordResetEmail } = createModules({
       dataDir: env.dataDir,
       orm: database.orm,
       transact,
@@ -79,10 +79,17 @@ export async function startServer(
             publicUrl: env.deployment.publicUrl,
             demo: setupDemo,
             addApprovedPeople,
+            passwordResetEmail,
           });
     const auth = deployment.auth;
     resolveSecurity = (headers) => resolveSecurityContext(auth, database.orm, headers);
-    graphql = await startGraphqlApi(modules, httpServer, logger, resolveSecurity);
+    graphql = await startGraphqlApi(
+      modules,
+      httpServer,
+      logger,
+      resolveSecurity,
+      deployment.publicOrigin,
+    );
   } catch (error) {
     await database.close();
     throw error;

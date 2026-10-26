@@ -11,7 +11,7 @@ it("creates the value once per request, from that request's context", () => {
     contexts.push(context);
     return {};
   });
-  const request = new GraphqlContext(OWNER);
+  const request = new GraphqlContext(OWNER, NO_ORIGIN);
 
   expect(contexts).toEqual([]);
   expect(loaders(request)).toBe(loaders(request));
@@ -21,11 +21,15 @@ it("creates the value once per request, from that request's context", () => {
 it("gives each request its own value, even for the same user", () => {
   const loaders = perRequest(() => ({}));
 
-  expect(loaders(new GraphqlContext(OWNER))).not.toBe(loaders(new GraphqlContext(OWNER)));
+  expect(loaders(new GraphqlContext(OWNER, NO_ORIGIN))).not.toBe(
+    loaders(new GraphqlContext(OWNER, NO_ORIGIN)),
+  );
 });
 
 it("keeps the values of two accessors apart", () => {
-  const request = new GraphqlContext(OWNER);
+  const request = new GraphqlContext(OWNER, NO_ORIGIN);
 
   expect(perRequest(() => ({}))(request)).not.toBe(perRequest(() => ({}))(request));
 });
+
+const NO_ORIGIN = () => Promise.resolve("http://localhost");

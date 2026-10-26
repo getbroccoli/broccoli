@@ -110,6 +110,7 @@ it("rejects startup and closes the database pool when a module router throws", a
           prepareStart: () => Promise.reject(new Error("No demo")),
           deleteAllEmployees: () => Promise.resolve(),
         },
+        passwordResetEmail: { queue: () => Promise.resolve() },
       };
     },
   );

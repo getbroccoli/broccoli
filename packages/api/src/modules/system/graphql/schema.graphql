@@ -67,6 +67,39 @@ type Setup {
   ownerSignInMethod: OwnerSignInMethod
   "How files are read with AI. Owner or setup holder only, though the rest of `Setup` is public; null when managed, which keeps its own key."
   ai: Ai
+  "How this self-hosted instance sends email. Owner only, though the rest of `Setup` is public; null when managed."
+  mail: MailSettings
+  "Whether \"Forgot password?\" can email a link: true while a self-hosted instance has email chosen."
+  passwordResetByEmail: Boolean!
+}
+
+"How a self-hosted instance sends email."
+type MailSettings {
+  "Always `mail`: one per instance."
+  id: ID!
+  source: MailSource!
+  "The address emails come from; null until the owner gives one."
+  from: String
+  "Whether an SMTP URL or Resend key is saved for `source`; never the secret itself."
+  hasSecret: Boolean!
+}
+
+"How a self-hosted instance sends email."
+enum MailSource {
+  "The owner's own mail server, through an SMTP URL."
+  SMTP_SERVER
+  "Resend, with the owner's API key."
+  RESEND_API
+  "Broccoli sends no email; the default."
+  NO_EMAIL
+}
+
+input MailSettingsInput {
+  source: MailSource!
+  "Needed for `SMTP_SERVER` and `RESEND_API`."
+  from: String
+  "The SMTP URL or Resend key; blank keeps the saved one of the same source."
+  secret: String
 }
 
 "How a self-hosted instance reads files with AI."
@@ -106,6 +139,10 @@ input AiSourceInput {
 type SetupMutations {
   "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
   saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
+  "Checks the mail choice, then sends email with it from now on. Self-hosted only; owner only. A malformed or refused SMTP URL is `secret` / `invalid` or `rejected`; a missing one `secret` / `required`; a bad From `from` / `required` or `invalid`."
+  saveMailSettings(input: MailSettingsInput!): SetupSaveMailSettingsPayload!
+  "Sends the owner a test email with the saved mail choice; refused with a ConflictError without one, and an UnavailableError carries the provider's reason. Owner only."
+  sendTestEmail: SetupSendTestEmailPayload!
   "Completes setup from the ready step and adds the people the owner approved; refused with a ConflictError at any other step, such as after another tab went back to the review. Owner only."
   complete: SetupCompletePayload!
   "Starts a finished setup over: deletes every person and takes setup back to the company step; the company and the AI choice stay. Refused with a ConflictError before setup is done, and during the self-hosted demo. Owner only."
@@ -140,6 +177,22 @@ type SetupSaveAiSourcePayload {
 }
 
 union SetupSaveAiSourceError = InvalidInputError | UnavailableError | ConflictError
+
+"Setup after choosing how email is sent."
+type SetupSaveMailSettingsPayload {
+  setup: Setup
+  error: SetupSaveMailSettingsError
+}
+
+union SetupSaveMailSettingsError = InvalidInputError | UnavailableError | ConflictError
+
+"Setup after sending the owner a test email."
+type SetupSendTestEmailPayload {
+  setup: Setup
+  error: SetupSendTestEmailError
+}
+
+union SetupSendTestEmailError = UnavailableError | ConflictError
 
 type Mutation {
   setup: SetupMutations!

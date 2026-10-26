@@ -72,6 +72,7 @@
       "src/core/auth",
       "src/core/db",
       "src/core/events",
+      "src/core/jobs",
       "src/core/logger",
       "src/core/secrets",
       "src/core/security"

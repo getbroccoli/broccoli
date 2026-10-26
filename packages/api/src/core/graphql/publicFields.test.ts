@@ -33,7 +33,7 @@ it("refuses a private field without a session before running its resolver", asyn
   const result = await graphql({
     schema,
     source: "{ secret }",
-    contextValue: new GraphqlContext(null),
+    contextValue: new GraphqlContext(null, NO_ORIGIN),
   });
 
   expect(result.errors).toHaveLength(1);
@@ -55,7 +55,7 @@ it("answers a public field without a session", async () => {
   const result = await graphql({
     schema,
     source: "{ open }",
-    contextValue: new GraphqlContext(null),
+    contextValue: new GraphqlContext(null, NO_ORIGIN),
   });
 
   expect(result).toEqual({ data: { open: "open" } });
@@ -71,7 +71,7 @@ it("answers a private field with a signed-in user", async () => {
   const result = await graphql({
     schema,
     source: "{ secret }",
-    contextValue: new GraphqlContext(NON_OWNER),
+    contextValue: new GraphqlContext(NON_OWNER, NO_ORIGIN),
   });
 
   expect(result).toEqual({ data: { secret: "secret" } });
@@ -95,7 +95,7 @@ it("refuses a private mutation namespace without a session", async () => {
   const result = await graphql({
     schema,
     source: "mutation { thing { do } }",
-    contextValue: new GraphqlContext(null),
+    contextValue: new GraphqlContext(null, NO_ORIGIN),
   });
 
   expect(result.errors).toHaveLength(1);
@@ -106,3 +106,5 @@ it("refuses a private mutation namespace without a session", async () => {
   });
   expect(resolverRan).toBe(false);
 });
+
+const NO_ORIGIN = () => Promise.resolve("http://localhost");

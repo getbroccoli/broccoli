@@ -6,7 +6,7 @@ import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance/db";
-import type { AiSource, SetupStep } from "../../src/core/instance/domain";
+import type { AiSource, MailSource, SetupStep } from "../../src/core/instance/domain";
 import { hashSetupToken } from "../../src/core/instance/helpers";
 import { type Employee, type NewEmployee } from "../../src/modules/employees";
 import { employeeRepository } from "../../src/modules/employees/db";
@@ -98,6 +98,26 @@ export class TestSeed {
       source,
       openRouterKey === undefined ? undefined : TEST_SECRET_BOX.encrypt(openRouterKey),
     );
+  }
+
+  async mailSettings({
+    source = "resend_api",
+    from = "broccoli@example.com",
+    secret = "resend-key",
+    linkOrigin = "https://broccoli.example.com",
+  }: {
+    source?: MailSource;
+    from?: string | null;
+    secret?: string | null;
+    linkOrigin?: string | null;
+  } = {}): Promise<void> {
+    await instanceRepository(this.orm).storeMailSettings({
+      source,
+      from,
+      linkOrigin,
+      encryptedSecret:
+        source === "no_email" || secret === null ? null : TEST_SECRET_BOX.encrypt(secret),
+    });
   }
 
   async file({ content, mimeType }: { content: Buffer; mimeType: string }): Promise<string> {

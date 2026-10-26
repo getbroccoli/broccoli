@@ -222,6 +222,7 @@ function exampleInstance(state: Partial<InstanceState> = {}): Instance {
     aiSource: null,
     assignment: null,
     ownerSignInMethod: null,
+    mailSource: null,
     ...state,
   });
 }
