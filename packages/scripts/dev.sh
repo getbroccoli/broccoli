@@ -58,4 +58,6 @@ if [ -t 1 ]; then
 fi
 printf '\n%b🥦🥦🥦  Broccoli is ready!%b  ➜  %bhttp://localhost:%s%b\n\n' \
   "$green" "$reset" "$cyan" "${address##*:}" "$reset"
+mailpit=$(compose port mailpit 8025)
+printf 'Email it sends (Mailpit)  ➜  http://localhost:%s\n\n' "${mailpit##*:}"
 compose logs --follow --tail 0
