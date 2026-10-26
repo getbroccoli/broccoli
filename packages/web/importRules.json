@@ -7,6 +7,7 @@
       "src/features/auth",
       "src/features/employees",
       "src/features/imports",
+      "src/features/settings",
       "src/features/setup",
       "src/i18n",
       "src/shell"
@@ -92,6 +93,13 @@
       "src/lib/class-names",
       "src/lib/formatDate",
       "src/lib/sentenceCase"
+    ],
+    "src/features/settings": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/form",
+      "src/components/ui",
+      "src/i18n"
     ],
     "src/features/setup": [
       "src/__generated__",
