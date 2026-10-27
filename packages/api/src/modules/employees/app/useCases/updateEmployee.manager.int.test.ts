@@ -1,5 +1,7 @@
 import { employeeUseCases, expect, OWNER, recordChangedEvents, test } from "#test/support";
 
+import type { EmployeeUseCases } from ".";
+
 test("sets a person's manager and records their name", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
@@ -10,7 +12,7 @@ test("sets a person's manager and records their name", async ({ orm, seed }) => 
     managerId: manager.id,
   });
 
-  expect(await employees.readManager(OWNER, employee.id)).toEqual(manager);
+  expect(await managerOf(employees, employee.id)).toEqual(manager);
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges).toHaveLength(1);
   expect(edges[0]!.node).toEqual(historyLine);
@@ -34,7 +36,7 @@ test("changes a manager and records both managers' names", async ({ orm, seed })
     managerId: next.id,
   });
 
-  expect(await employees.readManager(OWNER, employee.id)).toEqual(next);
+  expect(await managerOf(employees, employee.id)).toEqual(next);
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges).toHaveLength(2);
   expect(edges[0]!.node).toEqual(historyLine);
@@ -56,7 +58,7 @@ test("clears a manager and records their removed name", async ({ orm, seed }) =>
     managerId: null,
   });
 
-  expect(await employees.readManager(OWNER, employee.id)).toBeNull();
+  expect(await managerOf(employees, employee.id)).toBeNull();
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges).toHaveLength(2);
   expect(edges[0]!.node).toEqual(historyLine);
@@ -78,7 +80,7 @@ test("leaves the manager unchanged when managerId is absent", async ({ orm, seed
     firstName: "Taylor",
   });
 
-  expect(await employees.readManager(OWNER, employee.id)).toEqual(manager);
+  expect(await managerOf(employees, employee.id)).toEqual(manager);
   expect(historyLine?.changes).toEqual([
     { field: "firstName", oldValue: "Avery", newValue: "Taylor" },
   ]);
@@ -98,7 +100,7 @@ test("setting the same manager again records nothing", async ({ orm, seed }) => 
   });
 
   expect(historyLine).toBeNull();
-  expect(await employees.readManager(OWNER, employee.id)).toEqual(manager);
+  expect(await managerOf(employees, employee.id)).toEqual(manager);
   expect(await employees.readEmployeeHistory(OWNER, employee.id, {})).toEqual(before);
   expect(events).toEqual([]);
 });
@@ -120,7 +122,7 @@ test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
     });
 
     expect(await employees.readEmployee(OWNER, employee.id)).toEqual(employee);
-    expect(await employees.readManager(OWNER, employee.id)).toEqual(manager);
+    expect(await managerOf(employees, employee.id)).toEqual(manager);
     expect(await employees.readEmployeeHistory(OWNER, employee.id, {})).toEqual(before);
   },
 );
@@ -141,7 +143,7 @@ test("refuses making a person their own manager without changing them", async ({
   });
 
   expect(await employees.readEmployee(OWNER, employee.id)).toEqual(employee);
-  expect(await employees.readManager(OWNER, employee.id)).toBeNull();
+  expect(await managerOf(employees, employee.id)).toBeNull();
   expect((await employees.readEmployeeHistory(OWNER, employee.id, {})).edges).toEqual([]);
 });
 
@@ -168,8 +170,12 @@ test("refuses a manager who reports through two levels without changing the repo
   });
 
   expect(await employees.readEmployee(OWNER, avery.id)).toEqual(avery);
-  expect(await employees.readManager(OWNER, avery.id)).toBeNull();
-  expect(await employees.readManager(OWNER, robin.id)).toEqual(avery);
-  expect(await employees.readManager(OWNER, taylor.id)).toEqual(robin);
+  expect(await managerOf(employees, avery.id)).toBeNull();
+  expect(await managerOf(employees, robin.id)).toEqual(avery);
+  expect(await managerOf(employees, taylor.id)).toEqual(robin);
   expect((await employees.readEmployeeHistory(OWNER, avery.id, {})).edges).toEqual([]);
 });
+
+async function managerOf(employees: EmployeeUseCases, id: string) {
+  return (await employees.readManagers(OWNER, [id])).get(id) ?? null;
+}

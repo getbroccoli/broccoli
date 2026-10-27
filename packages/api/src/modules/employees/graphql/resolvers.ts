@@ -1,8 +1,10 @@
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import type { EmployeeUseCases } from "../app";
 import { avatarUrl } from "../http";
+import { employeeLoaders } from "./loaders";
 
 export function createResolvers(useCases: EmployeeUseCases): Resolvers {
+  const loaders = employeeLoaders(useCases);
   return {
     Query: {
       employee: (_parent, { id }, context) => useCases.readEmployee(context.getActor(), id),
@@ -38,10 +40,9 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
     },
     Employee: {
       avatarUrl: ({ avatarFileId }) => avatarFileId && avatarUrl(avatarFileId),
-      // shortcut: two queries per employee; batch them when a list selects the manager.
       managerId: async (employee, _args, context) =>
-        (await useCases.readManager(context.getActor(), employee.id))?.id ?? null,
-      manager: (employee, _args, context) => useCases.readManager(context.getActor(), employee.id),
+        (await loaders(context).manager.load(employee.id))?.id ?? null,
+      manager: (employee, _args, context) => loaders(context).manager.load(employee.id),
       // shortcut: one query per employee; batch it when a list selects history.
       history: (employee, { first, after }, context) =>
         useCases.readEmployeeHistory(context.getActor(), employee.id, {

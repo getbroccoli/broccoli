@@ -72,7 +72,8 @@ async function changeManager(
   const employments = employmentRepository(tx);
   const today = todayInUtc();
   await employments.lockManagers();
-  const before = await findEmployee(tx, await employments.findManagerId(employeeId, today));
+  const managerIds = await employments.findManagerIds([employeeId], today);
+  const before = await findEmployee(tx, managerIds.get(employeeId));
   const after =
     managerId === null ? null : await findAllowedManager(tx, employeeId, managerId, today);
   if (before?.id !== after?.id) {

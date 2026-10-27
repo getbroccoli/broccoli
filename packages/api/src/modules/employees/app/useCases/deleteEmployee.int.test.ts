@@ -27,7 +27,7 @@ test("removing a manager clears them from every report with a history line", asy
 
   expect(await employees.readEmployee(OWNER, manager.id)).toBeNull();
   for (const report of [avery, taylor]) {
-    expect(await employees.readManager(OWNER, report.id)).toBeNull();
+    expect((await employees.readManagers(OWNER, [report.id])).has(report.id)).toBe(false);
     const { edges } = await employees.readEmployeeHistory(OWNER, report.id, {});
     expect(edges).toHaveLength(2);
     expect(edges[0]!.node).toMatchObject({

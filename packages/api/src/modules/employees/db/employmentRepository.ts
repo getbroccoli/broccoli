@@ -8,8 +8,8 @@ import { employments } from "./employmentsTable";
 export interface EmploymentRepository {
   /** Holds back other manager changes until the caller commits, so two cannot form a loop together. */
   lockManagers(): Promise<void>;
-  /** The direct manager of the employment active on `date`; null without one. */
-  findManagerId(employeeId: string, date: CalendarDate): Promise<string | null>;
+  /** The direct manager of each employee's employment active on `date`; those without one are left out. */
+  findManagerIds(employeeIds: readonly string[], date: CalendarDate): Promise<Map<string, string>>;
   /** Everyone above `managerId` in reporting lines active on `date`: their manager, that one's, and so on. */
   findManagersAbove(managerId: string, date: CalendarDate): Promise<string[]>;
   /** Sets the manager of the employment active on `date`, starting an open one when there is none. */
@@ -26,12 +26,15 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
       await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
     },
 
-    findManagerId: async (employeeId, date) => {
-      const [row] = await orm()
-        .select({ managerId: employments.directManagerId })
+    findManagerIds: async (employeeIds, date) => {
+      const rows = await orm()
+        .select({ employeeId: employments.employeeId, managerId: employments.directManagerId })
         .from(employments)
-        .where(sql`${employments.employeeId} = ${employeeId} and ${activeOn(date)}`);
-      return row?.managerId ?? null;
+        .where(
+          sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])
+            and ${employments.directManagerId} is not null and ${activeOn(date)}`,
+        );
+      return new Map(rows.map(({ employeeId, managerId }) => [employeeId, managerId!]));
     },
 
     findManagersAbove: async (managerId, date) => {

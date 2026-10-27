@@ -24,8 +24,8 @@ test("returns history for an employee id written in uppercase", async ({ orm, se
   expect(page).toEqual(history);
 });
 
-test("returns null for a person who never had a manager", async ({ orm, seed }) => {
+test("leaves out a person who never had a manager", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
 
-  expect(await employeeUseCases(orm).readManager(OWNER, employee.id)).toBeNull();
+  expect(await employeeUseCases(orm).readManagers(OWNER, [employee.id])).toEqual(new Map());
 });

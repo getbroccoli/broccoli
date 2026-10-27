@@ -18,16 +18,29 @@ export async function readEmployee(
   return employeeId ? employees.findById(employeeId) : null;
 }
 
-/** The employee's manager today, or null without one. */
-export async function readManager(
+/** Each employee's manager today, by the id asked for; employees without one are left out. */
+export async function readManagers(
   { employees, employments }: { employees: EmployeeRepository; employments: EmploymentRepository },
   ctx: SecurityContext,
-  employeeId: string,
-): Promise<Employee | null> {
+  employeeIds: readonly string[],
+): Promise<Map<string, Employee>> {
   ctx.requireOwnerOrSystem();
-  const id = parseUuid(employeeId);
-  const managerId = id && (await employments.findManagerId(id, todayInUtc()));
-  return managerId ? employees.findById(managerId) : null;
+  const ids = new Map(
+    employeeIds.flatMap((asked) => {
+      const id = parseUuid(asked);
+      return id ? [[id, asked] as const] : [];
+    }),
+  );
+  const managerIds = await employments.findManagerIds([...ids.keys()], todayInUtc());
+  const managers = new Map(
+    (await employees.findByIds([...new Set(managerIds.values())])).map((m) => [m.id, m]),
+  );
+  return new Map(
+    [...managerIds].map(([employeeId, managerId]) => [
+      ids.get(employeeId)!,
+      managers.get(managerId)!,
+    ]),
+  );
 }
 
 /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */

@@ -9,7 +9,7 @@ import { deleteEmployee } from "./deleteEmployee";
 import type { EmployeeContext } from "./employeeContext";
 import { type EmployeeListArgs, listEmployees } from "./listEmployees";
 import { readAvatar } from "./readAvatar";
-import { readEmployee, readEmployeeHistory, readManager } from "./readEmployee";
+import { readEmployee, readEmployeeHistory, readManagers } from "./readEmployee";
 import { updateEmployee } from "./updateEmployee";
 
 /** Everything a user can do with employees; the adapters call nothing else. */
@@ -27,8 +27,11 @@ export interface EmployeeUseCases {
   ) => Promise<string>;
   /** The employee with this id, or null when there is none. */
   readEmployee: (ctx: SecurityContext, id: string) => Promise<Employee | null>;
-  /** The employee's manager today, or null without one. */
-  readManager: (ctx: SecurityContext, employeeId: string) => Promise<Employee | null>;
+  /** Each employee's manager today, by the id asked for; employees without one are left out. */
+  readManagers: (
+    ctx: SecurityContext,
+    employeeIds: readonly string[],
+  ) => Promise<Map<string, Employee>>;
   /** An employee's history, newest first, also after the employee is deleted. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -48,7 +51,7 @@ export function createEmployeeUseCases(context: EmployeeContext): EmployeeUseCas
     updateEmployee: (ctx, input) => updateEmployee(context, ctx, input),
     deleteEmployee: (ctx, input) => deleteEmployee(context, ctx, input),
     readEmployee: (ctx, id) => readEmployee(employees, ctx, id),
-    readManager: (ctx, employeeId) => readManager({ employees, employments }, ctx, employeeId),
+    readManagers: (ctx, employeeIds) => readManagers({ employees, employments }, ctx, employeeIds),
     readEmployeeHistory: (ctx, employeeId, args) =>
       readEmployeeHistory(context, ctx, employeeId, args),
     listEmployees: (ctx, args) => listEmployees(employees, ctx, args),

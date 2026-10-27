@@ -19,7 +19,7 @@ test("saves a manager with other fields in one history line", async ({ orm, seed
     managerId: manager.id,
   });
 
-  expect(await employees.readManager(OWNER, employee.id)).toEqual(manager);
+  expect((await employees.readManagers(OWNER, [employee.id])).get(employee.id)).toEqual(manager);
   expect((await employees.readEmployee(OWNER, employee.id))?.firstName).toBe("Taylor");
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges).toHaveLength(1);
