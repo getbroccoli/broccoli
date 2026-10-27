@@ -51,7 +51,7 @@ export const peopleEn = {
   "people.panel.error.managerNotFound": "This person was removed. Choose someone else.",
   "people.panel.error.managerSelf": "A person can’t be their own manager.",
   "people.panel.error.managerLoop":
-    "They already report to this person, so they can’t be their manager.",
+    "The person you chose already reports to them, so they can’t be their manager.",
   "people.panel.discard.title": "Discard {count} unsaved changes?",
   "people.panel.discard.titleOne": "Discard 1 unsaved change?",
   "people.panel.discard.detail": "Your changes to {name} won’t be saved.",

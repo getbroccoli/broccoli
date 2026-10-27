@@ -57,7 +57,8 @@ export function ManagerPicker({
         aria-activedescendant={`${listId}-${activeIndex}`}
         onChange={(event) => {
           setSearch(event.target.value);
-          setActive(0);
+          // A search puts the first match ahead of "No manager".
+          setActive(event.target.value.trim() ? 1 : 0);
         }}
         onBlur={onDone}
         onKeyDown={(event) => {
