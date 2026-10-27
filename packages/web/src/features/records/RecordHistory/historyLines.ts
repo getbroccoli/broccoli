@@ -8,6 +8,8 @@ import type { RecordDescription } from "../recordDescription";
 /** A history line as the `RecordHistory` query reads it; `occurredAt` is an ISO instant in UTC. */
 export type HistoryLine = RecordHistoryQuery["recordHistory"]["edges"][number]["node"];
 
+type FieldChange = HistoryLine["changes"][number];
+
 /** Lines in a page of history; the first page is the one a record's panel caches. */
 export const HISTORY_PAGE_SIZE = 50;
 
@@ -55,16 +57,23 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
       if (line.changes.length !== 1) {
         return { kind: "updatedMany", labels };
       }
-      const [{ field, oldValue, newValue }] = line.changes as [HistoryLine["changes"][number]];
-      const format = fieldOf(field)?.format ?? ((value: string) => value);
-      return {
-        kind: "changed",
-        label: labelOf(field),
-        oldValue: oldValue === null ? null : format(oldValue),
-        newValue: newValue === null ? null : format(newValue),
-      };
+      const [change] = line.changes as [FieldChange];
+      return { kind: "changed", label: labelOf(change.field), ...shownValues(change, description) };
     }
   }
+}
+
+/** A change's values as the record type shows them: the label stored with an id, else the value formatted. */
+export function shownValues(
+  { field, oldValue, newValue, oldLabel, newLabel }: FieldChange,
+  description: RecordDescription,
+): { oldValue: string | null; newValue: string | null } {
+  const format =
+    description.fields.find(({ key }) => key === field)?.format ?? ((value: string) => value);
+  return {
+    oldValue: oldLabel ?? (oldValue === null ? null : format(oldValue)),
+    newValue: newLabel ?? (newValue === null ? null : format(newValue)),
+  };
 }
 
 /** "Edited" for a direct edit; a cause the web app does not know reads as its words. */

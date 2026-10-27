@@ -41,7 +41,15 @@ test("removing a manager clears them from every report with a history line", asy
       operation: "UPDATED",
       cause: { kind: "MANAGER_REMOVED", ref: manager.id },
       reason: null,
-      changes: [{ field: "manager", oldValue: "Robin Reed", newValue: null }],
+      changes: [
+        {
+          field: "manager",
+          oldValue: manager.id,
+          newValue: null,
+          oldLabel: "Robin Reed",
+          newLabel: null,
+        },
+      ],
     });
   }
   const { edges } = await employees.readEmployeeHistory(OWNER, manager.id, {});
@@ -78,7 +86,13 @@ test("a removed person's deletion line keeps their manager", async ({ orm, seed 
       { field: "email", oldValue: "avery@example.com", newValue: null },
       { field: "jobTitle", oldValue: "Engineer", newValue: null },
       { field: "startDate", oldValue: "2026-02-28", newValue: null },
-      { field: "manager", oldValue: "Robin Reed", newValue: null },
+      {
+        field: "manager",
+        oldValue: manager.id,
+        newValue: null,
+        oldLabel: "Robin Reed",
+        newLabel: null,
+      },
     ],
   });
 });

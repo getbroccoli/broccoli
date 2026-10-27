@@ -30,7 +30,13 @@ test("saves a manager with other fields in one history line", async ({ orm, seed
     reason: null,
     changes: [
       { field: "firstName", oldValue: "Avery", newValue: "Taylor" },
-      { field: "manager", oldValue: null, newValue: "Robin Reed" },
+      {
+        field: "manager",
+        oldValue: null,
+        newValue: manager.id,
+        oldLabel: null,
+        newLabel: "Robin Reed",
+      },
     ],
   });
   expect(events).toEqual([

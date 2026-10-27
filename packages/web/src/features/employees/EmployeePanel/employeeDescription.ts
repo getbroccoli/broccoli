@@ -15,8 +15,8 @@ export const EMPLOYEE_DESCRIPTION = {
       label: t("people.panel.field.manager"),
       section: t("people.panel.section.job"),
       editor: ManagerPicker,
-      // History keeps the manager's name; the panel shows its id by name itself.
-      format: (name) => name,
+      // History shows the manager's name stored with the id; the panel looks the id up itself.
+      format: (id) => id,
     },
     {
       key: "startDate",

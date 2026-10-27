@@ -2,7 +2,7 @@ import { employeeUseCases, expect, OWNER, recordChangedEvents, test } from "#tes
 
 import type { EmployeeUseCases } from ".";
 
-test("sets a person's manager and records their name", async ({ orm, seed }) => {
+test("sets a person's manager and records their id and name", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   const employees = employeeUseCases(orm);
@@ -20,11 +20,19 @@ test("sets a person's manager and records their name", async ({ orm, seed }) => 
     operation: "UPDATED",
     cause: { kind: "EDITED_DIRECTLY", ref: null },
     reason: null,
-    changes: [{ field: "manager", oldValue: null, newValue: "Robin Reed" }],
+    changes: [
+      {
+        field: "manager",
+        oldValue: null,
+        newValue: manager.id,
+        oldLabel: null,
+        newLabel: "Robin Reed",
+      },
+    ],
   });
 });
 
-test("changes a manager and records both managers' names", async ({ orm, seed }) => {
+test("changes a manager and records both managers' ids and names", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const previous = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   const next = await seed.employee({ firstName: "Taylor", lastName: "Brook" });
@@ -43,11 +51,19 @@ test("changes a manager and records both managers' names", async ({ orm, seed })
   expect(historyLine).toMatchObject({
     operation: "UPDATED",
     cause: { kind: "EDITED_DIRECTLY", ref: null },
-    changes: [{ field: "manager", oldValue: "Robin Reed", newValue: "Taylor Brook" }],
+    changes: [
+      {
+        field: "manager",
+        oldValue: previous.id,
+        newValue: next.id,
+        oldLabel: "Robin Reed",
+        newLabel: "Taylor Brook",
+      },
+    ],
   });
 });
 
-test("clears a manager and records their removed name", async ({ orm, seed }) => {
+test("clears a manager and records their removed id and name", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   const employees = employeeUseCases(orm);
@@ -65,7 +81,15 @@ test("clears a manager and records their removed name", async ({ orm, seed }) =>
   expect(historyLine).toMatchObject({
     operation: "UPDATED",
     cause: { kind: "EDITED_DIRECTLY", ref: null },
-    changes: [{ field: "manager", oldValue: "Robin Reed", newValue: null }],
+    changes: [
+      {
+        field: "manager",
+        oldValue: manager.id,
+        newValue: null,
+        oldLabel: "Robin Reed",
+        newLabel: null,
+      },
+    ],
   });
 });
 

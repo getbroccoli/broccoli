@@ -29,6 +29,10 @@ export interface FieldChange {
   field: string;
   oldValue: string | null;
   newValue: string | null;
+  /** What `oldValue` showed then, for a value that is an id; absent for other fields. */
+  oldLabel?: string | null;
+  /** What `newValue` showed then, for a value that is an id; absent for other fields. */
+  newLabel?: string | null;
 }
 
 export interface HistoryAuthor {

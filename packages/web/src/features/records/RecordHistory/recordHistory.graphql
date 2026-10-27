@@ -29,5 +29,7 @@ fragment RecordHistory_line on RecordChange {
     field
     oldValue
     newValue
+    oldLabel
+    newLabel
   }
 }

@@ -168,7 +168,7 @@ test("employee history resolves the session author, cause and UTC time", async (
     mutation UpdateEmployee($input: EmployeeUpdateInput!) {
       employee { update(input: $input) {
         employee { id }
-        historyLine { id operation changes { field oldValue newValue } }
+        historyLine { id operation changes { field oldValue newValue oldLabel newLabel } }
         error { __typename ... on Error { message } }
       } }
     }
@@ -187,7 +187,15 @@ test("employee history resolves the session author, cause and UTC time", async (
           historyLine: {
             id: expect.any(String) as unknown,
             operation: "UPDATED",
-            changes: [{ field: "jobTitle", oldValue: "Engineer", newValue: "Lead" }],
+            changes: [
+              {
+                field: "jobTitle",
+                oldValue: "Engineer",
+                newValue: "Lead",
+                oldLabel: null,
+                newLabel: null,
+              },
+            ],
           },
           error: null,
         },

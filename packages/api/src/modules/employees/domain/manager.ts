@@ -20,13 +20,22 @@ export function managerChangeRefusal(
 }
 
 /**
- * The history change of a new manager, by name so the line still reads after one is removed;
- * empty when the manager stays.
+ * The history change of a new manager: their ids, with their names as labels so the line still
+ * reads after one is removed; empty when the manager stays.
  */
 export function managerChanges(before: Employee | null, after: Employee | null): FieldChange[] {
-  return before?.id === after?.id
-    ? []
-    : [{ field: "manager", oldValue: nameOf(before), newValue: nameOf(after) }];
+  if (before?.id === after?.id) {
+    return [];
+  }
+  return [
+    {
+      field: "manager",
+      oldValue: before?.id ?? null,
+      newValue: after?.id ?? null,
+      oldLabel: nameOf(before),
+      newLabel: nameOf(after),
+    },
+  ];
 }
 
 function nameOf(employee: Employee | null): string | null {
