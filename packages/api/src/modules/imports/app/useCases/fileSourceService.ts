@@ -63,12 +63,6 @@ export interface MapFileJob {
   attempt: number;
 }
 
-declare module "../../../../core/jobs" {
-  interface Jobs {
-    "imports.mapFile": MapFileJob;
-  }
-}
-
 export function createFileSourceService({
   orm,
   transact,

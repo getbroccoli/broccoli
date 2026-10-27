@@ -76,19 +76,6 @@ export interface ReadPeopleOutcome {
   skipped: number;
 }
 
-declare module "../../../../core/jobs" {
-  interface Jobs {
-    "imports.readOriginalFile": ReadOriginalFileJob;
-  }
-}
-
-declare module "../../../../core/events" {
-  interface DomainEvents {
-    /** The owner let the external agent read a file in full; it waits for the agent now. */
-    "imports.original_file_read_allowed": { sourceId: string };
-  }
-}
-
 /** The JSON Schema of the people an AI sends; the external agent fetches it too. */
 export const READ_PEOPLE_JSON_SCHEMA = z.toJSONSchema(readPeopleSchema) as Record<string, unknown>;
 
