@@ -13,4 +13,4 @@ export {
   type NewEmployee,
   type NewEmployeeInput,
 } from "./employee";
-export { managerChangeRefusal, managerChanges } from "./manager";
+export { managerChanges } from "./manager";

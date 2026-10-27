@@ -9,7 +9,6 @@ import {
   type Employee,
   employeeChanges,
   type EmployeeUpdateInput,
-  managerChangeRefusal,
   managerChanges,
   type NewEmployee,
   parseEmployeeUpdate,
@@ -96,10 +95,12 @@ async function findAllowedManager(
   if (!manager) {
     throw invalidInput([{ field: "managerId", code: "not_found" }]);
   }
+  if (manager.id === employeeId) {
+    throw invalidInput([{ field: "managerId", code: "self" }]);
+  }
   const managersAbove = await employmentRepository(tx).findManagersAbove(manager.id, today);
-  const refusal = managerChangeRefusal(employeeId, manager.id, managersAbove);
-  if (refusal) {
-    throw invalidInput([{ field: "managerId", code: refusal }]);
+  if (managersAbove.includes(employeeId)) {
+    throw invalidInput([{ field: "managerId", code: "loop" }]);
   }
   return manager;
 }
