@@ -8,11 +8,21 @@ type Employee implements AnyRecord {
   jobTitle: String
   "First working day."
   startDate: Date
+  "The id of the person's direct manager today; null without one. Owner only."
+  managerId: ID
+  "The person's direct manager today; null without one. Owner only."
+  manager: Employee
   "Path of the employee's avatar, such as `/api/employees/avatar/<id>`; null without one."
   avatarUrl: String
   createdAt: DateTime!
   "Changes to this employee, newest first. Owner only."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+}
+
+# Adds the employee's causes to the shared list; the server merges them.
+enum RecordChangeCauseKind {
+  "The person's manager was removed, so they have none; the ref is the removed employee."
+  MANAGER_REMOVED
 }
 
 # Adds the employee to the shared list of record types that keep history; the server merges them.
@@ -66,6 +76,8 @@ input EmployeeUpdateInput {
   email: String
   jobTitle: String
   startDate: Date
+  "The person's direct manager from today; null for none. Not the person themselves, nor someone who reports to them."
+  managerId: ID
   "Why the owner makes this change, kept on the history line as its reason; at most 500 characters."
   changeReason: String
 }
@@ -106,6 +118,8 @@ union EmployeeUpdateError = InvalidInputError | NotFoundError
 "The removed employee's id, or why the removal was refused."
 type EmployeeDeletePayload {
   deletedEmployeeId: ID
+  "The lines the removal added to the history of the people they managed."
+  reportHistoryLines: [RecordChange!]
   error: EmployeeDeleteError
 }
 

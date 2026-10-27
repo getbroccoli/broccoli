@@ -1,27 +1,35 @@
-import { appendRecordHistory, parseChangeReason } from "../../../../core/records";
+import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
-import { parseUuid } from "../../../../utils";
-import { employeeRepository } from "../../db";
-import { employeeChanges } from "../../domain";
+import { parseUuid, todayInUtc } from "../../../../utils";
+import type { Tx } from "../../../../core/db";
+import { employeeRepository, employmentRepository } from "../../db";
+import { type Employee, employeeChanges, managerChanges } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 
 /**
- * Removes an employee and their avatar and records what they held as a deletion line, in one
- * transaction; their history stays. Returns the deleted employee's id.
+ * Removes an employee and their avatar and records what they held, their manager too, as a
+ * deletion line, in one transaction; their history stays. Their reports are left without a
+ * manager, with a line each, which it returns with the deleted employee's id.
  */
 export async function deleteEmployee(
   { transact, logger }: EmployeeContext,
   ctx: SecurityContext,
   { id, changeReason }: { id: string; changeReason?: string | null },
-): Promise<string> {
+): Promise<{ deletedEmployeeId: string; reportHistoryLines: HistoryLine[] }> {
   ctx.requireOwnerOrSystem();
   const reason = parseChangeReason(changeReason);
   const employeeId = parseUuid(id);
   if (!employeeId) {
     throw employeeNotFound();
   }
-  const historyId = await transact(async (tx) => {
+  const { historyId, reportHistoryLines } = await transact(async (tx) => {
+    const employments = employmentRepository(tx);
+    // First, as a manager change takes it, so the manager read below is the one being removed.
+    await employments.lockManagers();
+    const manager = await findManagerOf(tx, employeeId);
+    // Before the delete: its foreign key would clear them too, but without saying whose.
+    const reportIds = await employments.clearManager(employeeId);
     const deleted = await employeeRepository(tx).delete(employeeId);
     if (!deleted) {
       throw employeeNotFound();
@@ -31,10 +39,49 @@ export async function deleteEmployee(
       operation: "DELETED",
       cause: { kind: "EDITED_DIRECTLY" },
       reason,
-      records: [{ recordId: employeeId, changes: employeeChanges(deleted, null) }],
+      records: [
+        {
+          recordId: employeeId,
+          changes: [...employeeChanges(deleted, null), ...managerChanges(manager, null)],
+        },
+      ],
     });
-    return line!.id;
+    return {
+      historyId: line!.id,
+      reportHistoryLines: await updateReportHistory(ctx, tx, deleted, reportIds),
+    };
   });
   logger.info({ employeeId, historyId }, "Deleted an employee");
-  return employeeId;
+  if (reportHistoryLines.length > 0) {
+    const reportCount = reportHistoryLines.length;
+    logger.info({ employeeId, reportCount }, "Cleared the manager of reports");
+  }
+  return { deletedEmployeeId: employeeId, reportHistoryLines };
+}
+
+async function findManagerOf(tx: Tx, employeeId: string): Promise<Employee | null> {
+  const managerIds = await employmentRepository(tx).findManagerIds([employeeId], todayInUtc());
+  const managerId = managerIds.get(employeeId);
+  return managerId ? employeeRepository(tx).findById(managerId) : null;
+}
+
+/**
+ * The removed person's reports are left without a manager. Writes a "manager removed" line on
+ * each report's own history, so the change shows there, and returns the lines for their open panels.
+ */
+async function updateReportHistory(
+  ctx: SecurityContext,
+  tx: Tx,
+  manager: Employee,
+  reportIds: readonly string[],
+): Promise<HistoryLine[]> {
+  if (reportIds.length === 0) {
+    return [];
+  }
+  return appendRecordHistory(ctx, tx, {
+    recordType: "employee",
+    operation: "UPDATED",
+    cause: { kind: "MANAGER_REMOVED", ref: manager.id },
+    records: reportIds.map((recordId) => ({ recordId, changes: managerChanges(manager, null) })),
+  });
 }

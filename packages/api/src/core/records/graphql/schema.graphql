@@ -61,6 +61,10 @@ type FieldChange {
   field: String!
   oldValue: String
   newValue: String
+  "What oldValue showed then, for a value that is an id, such as a manager's name; null for other fields."
+  oldLabel: String
+  "What newValue showed then, for a value that is an id, such as a manager's name; null for other fields."
+  newLabel: String
 }
 
 type RecordChangeEdge {

@@ -132,6 +132,23 @@ export class TestSeed {
     });
   }
 
+  /** `count` default employees in one insert. */
+  employees(count: number): Promise<Employee[]> {
+    return employeeRepository(this.orm).insertSkippingTakenEmails(
+      Array.from({ length: count }, () => {
+        const number = ++this.#count;
+        return {
+          firstName: "Employee",
+          lastName: String(number),
+          email: `employee${number}@example.com`,
+          jobTitle: null,
+          startDate: null,
+          avatarFileId: null,
+        };
+      }),
+    );
+  }
+
   async importSource(name = "Acme Workspace") {
     const id = await testTransactor(this.orm)(async (tx) => {
       const imports = await lockImport(tx);

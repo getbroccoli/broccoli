@@ -3,12 +3,21 @@ import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
 import type { EmployeeFieldKey } from "./employeeDraft";
+import { EmployeePicker } from "../EmployeePicker";
 
 /** The employee's fields, by panel section, as the panel and its history show them. */
 export const EMPLOYEE_DESCRIPTION = {
   titleField: "firstName",
   fields: [
     textField("jobTitle", "people.panel.section.job"),
+    {
+      key: "manager",
+      label: t("people.panel.field.manager"),
+      section: t("people.panel.section.job"),
+      editor: EmployeePicker,
+      // History shows the manager's name stored with the id; the panel looks the id up itself.
+      format: (id) => id,
+    },
     {
       key: "startDate",
       label: t("people.panel.field.startDate"),

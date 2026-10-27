@@ -1,3 +1,4 @@
+import { useApolloClient } from "@apollo/client/react";
 import { useBlocker } from "@tanstack/react-router";
 import { DotsThree, X } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
@@ -15,6 +16,7 @@ import { EditableField, EditBar, RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
 import { Avatar } from "../Avatar";
+import { cachedEmployeeName } from "../cache";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import type { EmployeeFieldKey } from "./employeeDraft";
@@ -41,8 +43,15 @@ export function EmployeeRecord({ employee, onClose }: Props) {
     enableBeforeUnload: () => !removed.current && draft.changed.length > 0,
     withResolver: true,
   });
+  const client = useApolloClient();
   const fullName = `${employee.firstName} ${employee.lastName}`;
-  const sections = Map.groupBy(EMPLOYEE_DESCRIPTION.fields, (field) => field.section);
+  // The draft holds the manager's id; the panel shows their name.
+  const fields = EMPLOYEE_DESCRIPTION.fields.map((field) =>
+    field.key === "manager"
+      ? { ...field, format: (id: string) => cachedEmployeeName(client.cache, id) ?? id }
+      : field,
+  );
+  const sections = Map.groupBy(fields, (field) => field.section);
   // In panel order, as the person reads the fields.
   const changedLabels = EMPLOYEE_DESCRIPTION.fields
     .filter((field) => draft.changed.includes(field.key as EmployeeFieldKey))
@@ -69,9 +78,10 @@ export function EmployeeRecord({ employee, onClose }: Props) {
           >
             <DotsThree weight="bold" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          {/* As wide as its item, not the trigger, so the name stays on one line. */}
+          <DropdownMenuContent align="end" className="w-auto max-w-80">
             <DropdownMenuItem variant="destructive" onClick={() => setRemoving(true)}>
-              {t("people.panel.remove.menu", { name: fullName })}
+              <span className="truncate">{t("people.panel.remove.menu", { name: fullName })}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -108,6 +118,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
                     <EditableField
                       key={key}
                       field={field}
+                      recordId={employee.id}
                       saved={draft.saved[key]}
                       draft={draft.draft[key]}
                       error={draft.fieldErrors[key]}

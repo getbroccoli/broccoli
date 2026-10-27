@@ -16,6 +16,7 @@
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run -c vitest.integration.config.ts",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
+    "test:pbt": "vitest run -c vitest.pbt.config.ts",
     "eval": "vitest run -c vitest.eval.config.ts",
     "db:generate": "drizzle-kit generate"
   },
@@ -29,6 +30,7 @@
     "@types/pg": "8.23.1",
     "drizzle-kit": "0.31.11",
     "eslint": "10.12.0",
+    "fast-check": "4.3.0",
     "tsdown": "0.23.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",

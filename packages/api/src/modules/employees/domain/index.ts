@@ -13,3 +13,4 @@ export {
   type NewEmployee,
   type NewEmployeeInput,
 } from "./employee";
+export { managerChanges } from "./managerChanges";

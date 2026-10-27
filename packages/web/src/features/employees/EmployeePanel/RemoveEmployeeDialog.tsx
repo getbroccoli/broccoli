@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 
-import { forgetEmployee } from "../cache";
+import { addReportHistoryLines, forgetEmployee } from "../cache";
 
 type Props = {
   open: boolean;
@@ -30,8 +30,13 @@ type Props = {
 /** Confirms removing an employee, with an optional reason; their history stays. No undo. */
 export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }: Props) {
   const [reason, setReason] = useState("");
-  const [deleteEmployee, { loading, error, payloadError }] =
-    usePayloadMutation(DeleteEmployeeDocument);
+  const [deleteEmployee, { loading, error, payloadError }] = usePayloadMutation(
+    DeleteEmployeeDocument,
+    {
+      update: (cache, { data }) =>
+        addReportHistoryLines(cache, data?.employee.delete.reportHistoryLines ?? []),
+    },
+  );
   const failed = Boolean(error || payloadError);
   const client = useApolloClient();
   // The panel may close while a removal is pending, such as on browser Back.

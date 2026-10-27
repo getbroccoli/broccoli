@@ -1,13 +1,15 @@
 import { invalidInput } from "../../../../core/applicationError";
-import { appendRecordHistory, type HistoryLine } from "../../../../core/records";
+import type { Tx } from "../../../../core/db";
+import { appendRecordHistory, type FieldChange, type HistoryLine } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
-import { parseUuid } from "../../../../utils";
-import { type EmployeeRepository, employeeRepository } from "../../db";
+import { type CalendarDate, parseUuid, todayInUtc } from "../../../../utils";
+import { type EmployeeRepository, employeeRepository, employmentRepository } from "../../db";
 import {
   EmailTakenError,
   type Employee,
   employeeChanges,
   type EmployeeUpdateInput,
+  managerChanges,
   type NewEmployee,
   parseEmployeeUpdate,
 } from "../../domain";
@@ -25,14 +27,21 @@ export async function updateEmployee(
   { id, ...input }: EmployeeUpdateInput & { id: string },
 ): Promise<{ employee: Employee; historyLine: HistoryLine | null }> {
   ctx.requireOwnerOrSystem();
-  const { changes, reason } = parseEmployeeUpdate(input);
+  const { changes, managerId, reason } = parseEmployeeUpdate(input);
   const employeeId = parseUuid(id);
   if (!employeeId) {
     throw employeeNotFound();
   }
   const { employee, historyLine } = await transact(async (tx) => {
+    if (managerId !== undefined) {
+      // Before the employee row, in the order a deletion takes them, so the two cannot deadlock.
+      await employmentRepository(tx).lockManagers();
+    }
     const { before, after } = await saveChanges(employeeRepository(tx), employeeId, changes);
-    const changed = employeeChanges(before, after);
+    const changed = [
+      ...employeeChanges(before, after),
+      ...(managerId === undefined ? [] : await changeManager(tx, employeeId, managerId)),
+    ];
     if (changed.length === 0) {
       return { employee: after, historyLine: null };
     }
@@ -52,6 +61,52 @@ export async function updateEmployee(
     );
   }
   return { employee, historyLine };
+}
+
+/**
+ * Makes `managerId` the employee's manager from today and returns the history change; refuses an
+ * unknown manager, the employee themselves, or one who already reports to them. Needs
+ * `lockManagers` held.
+ */
+async function changeManager(
+  tx: Tx,
+  employeeId: string,
+  managerId: string | null,
+): Promise<FieldChange[]> {
+  const employments = employmentRepository(tx);
+  const today = todayInUtc();
+  const managerIds = await employments.findManagerIds([employeeId], today);
+  const before = await findEmployee(tx, managerIds.get(employeeId));
+  const after =
+    managerId === null ? null : await findAllowedManager(tx, employeeId, managerId, today);
+  if (before?.id !== after?.id) {
+    await employments.setManager(employeeId, after?.id ?? null, today);
+  }
+  return managerChanges(before, after);
+}
+
+async function findAllowedManager(
+  tx: Tx,
+  employeeId: string,
+  managerId: string,
+  today: CalendarDate,
+): Promise<Employee> {
+  const manager = await findEmployee(tx, parseUuid(managerId));
+  if (!manager) {
+    throw invalidInput([{ field: "managerId", code: "not_found" }]);
+  }
+  if (manager.id === employeeId) {
+    throw invalidInput([{ field: "managerId", code: "self" }]);
+  }
+  const managersAbove = await employmentRepository(tx).findManagersAbove(manager.id, today);
+  if (managersAbove.includes(employeeId)) {
+    throw invalidInput([{ field: "managerId", code: "loop" }]);
+  }
+  return manager;
+}
+
+async function findEmployee(tx: Tx, id: string | null | undefined): Promise<Employee | null> {
+  return id ? employeeRepository(tx).findById(id) : null;
 }
 
 /** The employee before and after saving `changes`; refuses an unknown employee or a taken email. */

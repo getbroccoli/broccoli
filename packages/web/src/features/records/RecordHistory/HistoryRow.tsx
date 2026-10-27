@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { authorName, causeLabel, type HistoryLine, summaryOf } from "./historyLines";
+import { authorName, causeLabel, type HistoryLine, shownValues, summaryOf } from "./historyLines";
 import type { RecordDescription } from "../recordDescription";
 import { ChangeValues } from "./ChangeValues";
 import { SummaryText } from "./SummaryText";
@@ -69,15 +69,11 @@ export function HistoryRow({ line, description }: Props) {
         <dl className="grid grid-cols-[10rem_minmax(0,1fr)] gap-x-4 gap-y-1.5 px-12 pb-3 text-[13px]">
           {line.changes.map((change) => {
             const field = description.fields.find(({ key }) => key === change.field);
-            const show = (value: string) => field?.format(value) ?? value;
             return (
               <div key={change.field} className="contents">
                 <dt className="text-muted-foreground">{field?.label ?? change.field}</dt>
                 <dd className="min-w-0 break-words">
-                  <ChangeValues
-                    oldValue={change.oldValue && show(change.oldValue)}
-                    newValue={change.newValue && show(change.newValue)}
-                  />
+                  <ChangeValues {...shownValues(change, description)} />
                 </dd>
               </div>
             );

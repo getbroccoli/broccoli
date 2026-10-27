@@ -1,7 +1,7 @@
 import type { Orm, Tx } from "../../../core/db";
 import { type HistoryAppend, purgeRecordHistory } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
-import { employeeRepository } from "../db";
+import { employeeRepository, employmentRepository } from "../db";
 import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
@@ -63,6 +63,8 @@ export async function findTakenEmails(
  */
 export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess();
+  // Before the employees table, in the order a manager change takes them, so the two cannot deadlock.
+  await employmentRepository(tx).lockManagers();
   await employeeRepository(tx).deleteAll();
   // After the delete, which waits for any update holding an employee row, so its line goes too.
   await purgeRecordHistory(tx, "employee");

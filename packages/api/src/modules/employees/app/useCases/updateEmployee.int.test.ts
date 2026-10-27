@@ -7,6 +7,51 @@ import {
   test,
 } from "#test/support";
 
+test("saves a manager with other fields in one history line", async ({ orm, seed }) => {
+  const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
+  const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
+  const { transact, events } = recordChangedEvents(orm);
+  const employees = employeeUseCases(orm, { transact });
+
+  const updated = await employees.updateEmployee(OWNER, {
+    id: employee.id,
+    firstName: "Taylor",
+    managerId: manager.id,
+  });
+
+  expect((await employees.readManagers(OWNER, [employee.id])).get(employee.id)).toEqual(manager);
+  expect((await employees.readEmployee(OWNER, employee.id))?.firstName).toBe("Taylor");
+  const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
+  expect(edges).toHaveLength(1);
+  expect(updated.historyLine).toEqual(edges[0]!.node);
+  expect(updated.historyLine).toMatchObject({
+    operation: "UPDATED",
+    cause: { kind: "EDITED_DIRECTLY", ref: null },
+    reason: null,
+    changes: [
+      { field: "firstName", oldValue: "Avery", newValue: "Taylor" },
+      {
+        field: "manager",
+        oldValue: null,
+        newValue: manager.id,
+        oldLabel: null,
+        newLabel: "Robin Reed",
+      },
+    ],
+  });
+  expect(events).toEqual([
+    {
+      historyId: updated.historyLine!.id,
+      recordType: "employee",
+      recordId: employee.id,
+      operation: "UPDATED",
+      fields: ["firstName", "manager"],
+      causeKind: "EDITED_DIRECTLY",
+      causeRef: null,
+    },
+  ]);
+});
+
 test("changes only sent fields and records their old and normalised new values", async ({
   orm,
 }) => {

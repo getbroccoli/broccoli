@@ -37,7 +37,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 - **RULE58.** Keep business rules and facts in `domain`; module-local technical code goes in `helpers`, available to every layer and covered by unit tests. `lint: boundaries` (the imports)
 - **RULE17.** Put code in its owning module and layer: domain facts in `domain`, storage details in `db`, and helpers with no Broccoli knowledge in `utils`, with no other catch-all.
 - **RULE18.** Group related operations on one subject in one service file. Adapters keep only transport and translate a request into one use-case call.
-- **RULE52.** Give each business decision one owner in `domain` and its coordination one owner in `app`; callers reuse them without repeating decisions or reads.
+- **RULE52.** Give each business decision one owner in `domain` and its coordination one owner in `app`; callers reuse them without repeating decisions or reads. A check that only compares what a read returned, such as whether a person is among their new manager's managers, stays beside that read in `app`.
 - **RULE19.** Every `app` business function takes and checks `ctx: SecurityContext` as its first argument; work Broccoli does on its own uses the system context.
 - **RULE20.** Use cases open transactions with `transact`; composed operations require `tx`. Never await work needing another connection while holding locks.
 - **RULE60.** Repository reads return whole domain items in one query, also exposed by module public reads; encrypted secrets have separate reads. No read method per field or field group.

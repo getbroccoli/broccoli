@@ -65,8 +65,33 @@ it("summarises one changed field with its label and stored text", () => {
   });
 });
 
+it("summarises one changed field with its stored labels instead of ids", () => {
+  const change = {
+    field: "manager",
+    oldValue: "00000000-0000-4000-8000-000000000001",
+    newValue: "00000000-0000-4000-8000-000000000002",
+    oldLabel: "Robin Reed",
+    newLabel: "Taylor Brook",
+  };
+
+  const summary = summaryOf({ ...line, changes: [change] }, description);
+
+  expect(summary).toEqual({
+    kind: "changed",
+    label: "Manager",
+    oldValue: "Robin Reed",
+    newValue: "Taylor Brook",
+  });
+});
+
 it("formats both values using the changed field's formatter", () => {
-  const change = { field: "startDate", oldValue: "2025-01-06", newValue: "2025-02-07" };
+  const change = {
+    field: "startDate",
+    oldValue: "2025-01-06",
+    newValue: "2025-02-07",
+    oldLabel: null,
+    newLabel: null,
+  };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
 
@@ -79,7 +104,13 @@ it("formats both values using the changed field's formatter", () => {
 });
 
 it("keeps a missing old value null when a field is set", () => {
-  const change = { field: "startDate", oldValue: null, newValue: "2025-01-06" };
+  const change = {
+    field: "startDate",
+    oldValue: null,
+    newValue: "2025-01-06",
+    oldLabel: null,
+    newLabel: null,
+  };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
 
@@ -92,7 +123,13 @@ it("keeps a missing old value null when a field is set", () => {
 });
 
 it("keeps a missing new value null when a field is cleared", () => {
-  const change = { field: "startDate", oldValue: "2025-01-06", newValue: null };
+  const change = {
+    field: "startDate",
+    oldValue: "2025-01-06",
+    newValue: null,
+    oldLabel: null,
+    newLabel: null,
+  };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
 
@@ -105,7 +142,13 @@ it("keeps a missing new value null when a field is cleared", () => {
 });
 
 it("labels an unknown field in sentence case and leaves its values unformatted", () => {
-  const change = { field: "costCenter", oldValue: "001", newValue: "002" };
+  const change = {
+    field: "costCenter",
+    oldValue: "001",
+    newValue: "002",
+    oldLabel: null,
+    newLabel: null,
+  };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
 
@@ -119,8 +162,14 @@ it("labels an unknown field in sentence case and leaves its values unformatted",
 
 it("summarises several changed fields with their labels in change order", () => {
   const changes = [
-    { field: "jobTitle", oldValue: "Designer", newValue: "Lead designer" },
-    { field: "costCenter", oldValue: null, newValue: "002" },
+    {
+      field: "jobTitle",
+      oldValue: "Designer",
+      newValue: "Lead designer",
+      oldLabel: null,
+      newLabel: null,
+    },
+    { field: "costCenter", oldValue: null, newValue: "002", oldLabel: null, newLabel: null },
   ];
 
   const summary = summaryOf({ ...line, changes }, description);
@@ -130,8 +179,8 @@ it("summarises several changed fields with their labels in change order", () => 
 
 it("names a created record from its title field's new value", () => {
   const changes = [
-    { field: "jobTitle", oldValue: null, newValue: "Designer" },
-    { field: "firstName", oldValue: null, newValue: "Avery" },
+    { field: "jobTitle", oldValue: null, newValue: "Designer", oldLabel: null, newLabel: null },
+    { field: "firstName", oldValue: null, newValue: "Avery", oldLabel: null, newLabel: null },
   ];
 
   const summary = summaryOf({ ...line, operation: "CREATED", changes }, description);
@@ -150,7 +199,9 @@ it("leaves a created record's title null when its title field is missing", () =>
 });
 
 it("names a deleted record from its title field's old value", () => {
-  const changes = [{ field: "firstName", oldValue: "Avery", newValue: null }];
+  const changes = [
+    { field: "firstName", oldValue: "Avery", newValue: null, oldLabel: null, newLabel: null },
+  ];
 
   const summary = summaryOf({ ...line, operation: "DELETED", changes }, description);
 
@@ -208,7 +259,15 @@ const line: Parameters<typeof summaryOf>[0] = {
   author: { kind: "SIGNED_IN_USER", email: "avery@example.com" },
   cause: { kind: "EDITED_DIRECTLY" },
   reason: null,
-  changes: [{ field: "jobTitle", oldValue: "Designer", newValue: "Lead designer" }],
+  changes: [
+    {
+      field: "jobTitle",
+      oldValue: "Designer",
+      newValue: "Lead designer",
+      oldLabel: null,
+      newLabel: null,
+    },
+  ],
 };
 
 const description: RecordDescription = {
