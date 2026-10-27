@@ -1,6 +1,6 @@
-import { appendRecordHistory, parseChangeReason } from "../../../../core/records";
+import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
-import { parseUuid } from "../../../../utils";
+import { parseUuid, todayInUtc } from "../../../../utils";
 import type { Tx } from "../../../../core/db";
 import { employeeRepository, employmentRepository } from "../../db";
 import { type Employee, employeeChanges, managerChanges } from "../../domain";
@@ -8,23 +8,27 @@ import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 
 /**
- * Removes an employee and their avatar and records what they held as a deletion line, in one
- * transaction; their history stays. Their reports are left without a manager, with a line each.
- * Returns the deleted employee's id.
+ * Removes an employee and their avatar and records what they held, their manager too, as a
+ * deletion line, in one transaction; their history stays. Their reports are left without a
+ * manager, with a line each, which it returns with the deleted employee's id.
  */
 export async function deleteEmployee(
   { transact, logger }: EmployeeContext,
   ctx: SecurityContext,
   { id, changeReason }: { id: string; changeReason?: string | null },
-): Promise<string> {
+): Promise<{ deletedEmployeeId: string; reportHistoryLines: HistoryLine[] }> {
   ctx.requireOwnerOrSystem();
   const reason = parseChangeReason(changeReason);
   const employeeId = parseUuid(id);
   if (!employeeId) {
     throw employeeNotFound();
   }
-  const { historyId, reportCount } = await transact(async (tx) => {
-    const reportIds = await employmentRepository(tx).clearManager(employeeId);
+  const { historyId, reportHistoryLines } = await transact(async (tx) => {
+    const employments = employmentRepository(tx);
+    const managerIds = await employments.findManagerIds([employeeId], todayInUtc());
+    const reportIds = await employments.clearManager(employeeId);
+    const managerId = managerIds.get(employeeId);
+    const manager = managerId ? await employeeRepository(tx).findById(managerId) : null;
     const deleted = await employeeRepository(tx).delete(employeeId);
     if (!deleted) {
       throw employeeNotFound();
@@ -34,16 +38,24 @@ export async function deleteEmployee(
       operation: "DELETED",
       cause: { kind: "EDITED_DIRECTLY" },
       reason,
-      records: [{ recordId: employeeId, changes: employeeChanges(deleted, null) }],
+      records: [
+        {
+          recordId: employeeId,
+          changes: [...employeeChanges(deleted, null), ...managerChanges(manager, null)],
+        },
+      ],
     });
-    await recordManagerRemoved(ctx, tx, deleted, reportIds);
-    return { historyId: line!.id, reportCount: reportIds.length };
+    return {
+      historyId: line!.id,
+      reportHistoryLines: await recordManagerRemoved(ctx, tx, deleted, reportIds),
+    };
   });
   logger.info({ employeeId, historyId }, "Deleted an employee");
-  if (reportCount > 0) {
+  if (reportHistoryLines.length > 0) {
+    const reportCount = reportHistoryLines.length;
     logger.info({ employeeId, reportCount }, "Cleared the manager of reports");
   }
-  return employeeId;
+  return { deletedEmployeeId: employeeId, reportHistoryLines };
 }
 
 async function recordManagerRemoved(
@@ -51,11 +63,11 @@ async function recordManagerRemoved(
   tx: Tx,
   manager: Employee,
   reportIds: readonly string[],
-): Promise<void> {
+): Promise<HistoryLine[]> {
   if (reportIds.length === 0) {
-    return;
+    return [];
   }
-  await appendRecordHistory(ctx, tx, {
+  return appendRecordHistory(ctx, tx, {
     recordType: "employee",
     operation: "UPDATED",
     cause: { kind: "MANAGER_REMOVED", ref: manager.id },

@@ -1,5 +1,5 @@
 import { useQuery } from "@apollo/client/react";
-import { useDeferredValue, useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 import { ManagerOptionsDocument } from "@/__generated__/graphql";
 import { Input } from "@/components/ui/input";
@@ -7,26 +7,40 @@ import type { FieldEditorProps } from "@/features/records";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
+type Props = FieldEditorProps;
+
 /**
- * The manager field's editor: searches people by name or email and picks one, or no manager.
- * The value is the manager's id; "" is no manager.
+ * The manager field's editor: searches people by name or email and picks one, or no manager;
+ * the person themselves is left out. The value is the manager's id; "" is no manager.
  */
 export function ManagerPicker({
   field,
+  recordId,
   invalid,
   describedBy,
   onChange,
   onDone,
   onRevert,
-}: FieldEditorProps) {
+}: Props) {
   const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const listId = useId();
-  const deferredSearch = useDeferredValue(search.trim().slice(0, SEARCH_MAX_LENGTH));
-  const { data, loading } = useQuery(ManagerOptionsDocument, {
-    variables: { search: deferredSearch || null },
+  const typed = search.trim().slice(0, SEARCH_MAX_LENGTH);
+  const { data, previousData, loading } = useQuery(ManagerOptionsDocument, {
+    variables: { search: query || null },
   });
-  const people = data?.employees.edges.map(({ node }) => node) ?? [];
+  // Enter picks only from the results of what is typed, never a stale or pending list.
+  const settled = query === typed && !loading;
+  const people =
+    (data ?? previousData)?.employees.edges
+      .map(({ node }) => node)
+      .filter(({ id }) => id !== recordId) ?? [];
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(typed), DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [typed]);
   const options = [
     { id: "", label: t("people.panel.manager.none"), detail: null },
     ...people.map((person) => ({
@@ -35,7 +49,6 @@ export function ManagerPicker({
       detail: person.email,
     })),
   ];
-  const activeIndex = Math.min(active, options.length - 1);
 
   const pick = (id: string) => {
     onChange(id);
@@ -54,7 +67,7 @@ export function ManagerPicker({
         aria-describedby={describedBy}
         aria-expanded
         aria-controls={listId}
-        aria-activedescendant={`${listId}-${activeIndex}`}
+        aria-activedescendant={options[active] ? `${listId}-${active}` : undefined}
         onChange={(event) => {
           setSearch(event.target.value);
           // A search puts the first match ahead of "No manager".
@@ -65,9 +78,11 @@ export function ManagerPicker({
           if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             event.preventDefault();
             const step = event.key === "ArrowDown" ? 1 : -1;
-            setActive((activeIndex + step + options.length) % options.length);
+            const from = Math.min(active, options.length - 1);
+            setActive((from + step + options.length) % options.length);
           }
-          if (event.key === "Enter") pick(options[activeIndex]!.id);
+          const option = options[active];
+          if (event.key === "Enter" && settled && option) pick(option.id);
           if (event.key === "Escape") {
             // Escape reverts this field only; it must not also close the panel.
             event.stopPropagation();
@@ -81,13 +96,13 @@ export function ManagerPicker({
             key={option.id}
             id={`${listId}-${index}`}
             role="option"
-            aria-selected={index === activeIndex}
+            aria-selected={index === active}
             // Before the input's blur, so the pick lands.
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => pick(option.id)}
             className={cn(
               "flex cursor-pointer items-baseline gap-2 rounded-md px-1.5 py-1",
-              index === activeIndex && "bg-muted",
+              index === active && "bg-muted",
               option.id === "" && "text-muted-foreground",
             )}
           >
@@ -97,7 +112,7 @@ export function ManagerPicker({
             )}
           </li>
         ))}
-        {!loading && people.length === 0 && (
+        {settled && people.length === 0 && (
           <li className="px-1.5 py-1 text-xs text-muted-foreground">
             {t("people.panel.manager.noMatches")}
           </li>
@@ -109,3 +124,6 @@ export function ManagerPicker({
 
 /** The API's longest search. */
 const SEARCH_MAX_LENGTH = 100;
+
+/** How long typing pauses before the search runs. */
+const DEBOUNCE_MS = 200;

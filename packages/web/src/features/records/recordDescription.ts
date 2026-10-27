@@ -26,6 +26,8 @@ export interface RecordDescription {
 /** What a field's editor gets from the panel. */
 export interface FieldEditorProps {
   field: RecordField;
+  /** The record the field belongs to. */
+  recordId: string;
   value: string;
   invalid: boolean;
   describedBy: string | undefined;

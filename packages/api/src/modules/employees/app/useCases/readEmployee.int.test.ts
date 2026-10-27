@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm";
+
 import { employeeUseCases, expect, OWNER, test } from "#test/support";
 
 test("returns the employee with the requested id", async ({ orm, seed }) => {
@@ -28,4 +30,26 @@ test("leaves out a person who never had a manager", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
 
   expect(await employeeUseCases(orm).readManagers(OWNER, [employee.id])).toEqual(new Map());
+});
+
+test("returns the manager under every requested spelling of an employee id", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
+  const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
+  // Letters ensure the two spellings differ, independent of the generated id.
+  const id = "00000000-0000-4000-8000-00000000000a";
+  await orm.execute(sql`update employees set id = ${id} where id = ${employee.id}`);
+  const employees = employeeUseCases(orm);
+  await employees.updateEmployee(OWNER, { id, managerId: manager.id });
+
+  const managers = await employees.readManagers(OWNER, [id, id.toUpperCase()]);
+
+  expect(managers).toEqual(
+    new Map([
+      [id, manager],
+      [id.toUpperCase(), manager],
+    ]),
+  );
 });

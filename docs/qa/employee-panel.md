@@ -28,10 +28,10 @@ A manual check of opening a person from People, editing them in place, their his
 ## Manager
 
 - [ ] Job shows Manager under Job title: "—" without one, else the manager's name.
-- [ ] Clicking it opens a search with "No manager" and up to 8 people; typing filters by name or email; arrow keys and Enter, or a click, pick one; Escape reverts.
+- [ ] Clicking it opens a search with "No manager" and up to 8 people, never the person themselves; typing filters by name or email and Enter picks the first match once results show (a search with no match picks nothing); arrow keys and Enter, or a click, pick one; Escape reverts.
 - [ ] Save adds "set manager to <name>" with "Edited", then "changed manager <old> → <new>"; picking "No manager" and saving reads "cleared manager <old>".
-- [ ] Picking the person themselves, or someone who reports to them (directly or through others), keeps the field open with "A person can’t be their own manager." or "The person you chose already reports to them, so they can’t be their manager." and saves nothing.
-- [ ] Removing a manager clears Manager on each of their reports; each report's history shows "cleared manager <name>" with "Manager removed".
+- [ ] Picking someone who reports to them (directly or through others) keeps the field open with "The person you chose already reports to them, so they can’t be their manager." and saves nothing.
+- [ ] Removing a manager clears Manager on each of their reports; opening a report (without reloading) shows "cleared manager <name>" with "Manager removed" in their history.
 
 ## Leaving with unsaved changes
 

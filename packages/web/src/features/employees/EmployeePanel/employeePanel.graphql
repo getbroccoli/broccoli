@@ -33,6 +33,19 @@ mutation DeleteEmployee($input: EmployeeDeleteInput!) {
   employee {
     delete(input: $input) {
       deletedEmployeeId
+      reportHistoryLines {
+        ...RecordHistory_line @unmask
+        # The report, now without a manager, so their panel shows it.
+        record {
+          ... on Employee {
+            id
+            managerId
+            manager {
+              id
+            }
+          }
+        }
+      }
       error {
         __typename
         ... on Error {

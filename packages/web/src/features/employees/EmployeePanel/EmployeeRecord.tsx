@@ -124,6 +124,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
                     <EditableField
                       key={key}
                       field={field}
+                      recordId={employee.id}
                       saved={draft.saved[key]}
                       draft={draft.draft[key]}
                       error={draft.fieldErrors[key]}

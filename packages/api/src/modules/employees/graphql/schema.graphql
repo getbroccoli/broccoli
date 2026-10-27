@@ -118,6 +118,8 @@ union EmployeeUpdateError = InvalidInputError | NotFoundError
 "The removed employee's id, or why the removal was refused."
 type EmployeeDeletePayload {
   deletedEmployeeId: ID
+  "The lines the removal added to the history of the people they managed."
+  reportHistoryLines: [RecordChange!]
   error: EmployeeDeleteError
 }
 

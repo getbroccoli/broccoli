@@ -9,6 +9,7 @@ import { FieldEditor } from "./FieldEditor";
 
 type Props = {
   field: RecordField;
+  recordId: string;
   saved: string | null;
   /** The unsaved value, or undefined when the field is unchanged. */
   draft: string | null | undefined;
@@ -23,7 +24,16 @@ type Props = {
  * One field of a record's panel: its value, which a click or Enter turns into its editor. An
  * edited field keeps a mark until the panel saves or cancels.
  */
-export function EditableField({ field, saved, draft, error, disabled, onEdit, onRevert }: Props) {
+export function EditableField({
+  field,
+  recordId,
+  saved,
+  draft,
+  error,
+  disabled,
+  onEdit,
+  onRevert,
+}: Props) {
   const [editing, setEditing] = useState(false);
   const changed = draft !== undefined && (draft || null) !== saved;
   const value = draft ?? saved ?? "";
@@ -44,6 +54,7 @@ export function EditableField({ field, saved, draft, error, disabled, onEdit, on
         {(editing || error) && !disabled ? (
           <FieldEditor
             field={field}
+            recordId={recordId}
             value={value}
             invalid={Boolean(error)}
             describedBy={error ? errorId : undefined}

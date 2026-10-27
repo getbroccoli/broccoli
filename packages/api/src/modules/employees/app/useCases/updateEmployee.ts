@@ -34,6 +34,10 @@ export async function updateEmployee(
     throw employeeNotFound();
   }
   const { employee, historyLine } = await transact(async (tx) => {
+    if (managerId !== undefined) {
+      // Before the employee row, in the order a deletion takes them, so the two cannot deadlock.
+      await employmentRepository(tx).lockManagers();
+    }
     const { before, after } = await saveChanges(employeeRepository(tx), employeeId, changes);
     const changed = [
       ...employeeChanges(before, after),
@@ -62,7 +66,8 @@ export async function updateEmployee(
 
 /**
  * Makes `managerId` the employee's manager from today and returns the history change; refuses an
- * unknown manager, the employee themselves, or one who already reports to them.
+ * unknown manager, the employee themselves, or one who already reports to them. Needs
+ * `lockManagers` held.
  */
 async function changeManager(
   tx: Tx,
@@ -71,7 +76,6 @@ async function changeManager(
 ): Promise<FieldChange[]> {
   const employments = employmentRepository(tx);
   const today = todayInUtc();
-  await employments.lockManagers();
   const managerIds = await employments.findManagerIds([employeeId], today);
   const before = await findEmployee(tx, managerIds.get(employeeId));
   const after =

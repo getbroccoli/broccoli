@@ -4,8 +4,10 @@ import { t } from "@/i18n";
 
 import type { FieldEditorProps } from "../recordDescription";
 
+type Props = FieldEditorProps;
+
 /** The editor a record field uses: a text input, a date picker that closes on a pick, or its own. */
-export function FieldEditor(props: FieldEditorProps) {
+export function FieldEditor(props: Props) {
   const { field, value, invalid, describedBy, onChange, onDone, onRevert } = props;
   if (typeof field.editor === "function") {
     const OwnEditor = field.editor;

@@ -25,21 +25,22 @@ export async function readManagers(
   employeeIds: readonly string[],
 ): Promise<Map<string, Employee>> {
   ctx.requireOwnerOrSystem();
-  const ids = new Map(
-    employeeIds.flatMap((asked) => {
-      const id = parseUuid(asked);
-      return id ? [[id, asked] as const] : [];
-    }),
+  const asked = employeeIds.flatMap((askedId) => {
+    const id = parseUuid(askedId);
+    return id ? [{ askedId, id }] : [];
+  });
+  const managerIds = await employments.findManagerIds(
+    asked.map(({ id }) => id),
+    todayInUtc(),
   );
-  const managerIds = await employments.findManagerIds([...ids.keys()], todayInUtc());
   const managers = new Map(
     (await employees.findByIds([...new Set(managerIds.values())])).map((m) => [m.id, m]),
   );
   return new Map(
-    [...managerIds].map(([employeeId, managerId]) => [
-      ids.get(employeeId)!,
-      managers.get(managerId)!,
-    ]),
+    asked.flatMap(({ askedId, id }) => {
+      const manager = managers.get(managerIds.get(id) ?? "");
+      return manager ? [[askedId, manager] as const] : [];
+    }),
   );
 }
 

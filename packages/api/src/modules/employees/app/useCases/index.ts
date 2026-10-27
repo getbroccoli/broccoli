@@ -20,11 +20,14 @@ export interface EmployeeUseCases {
     ctx: SecurityContext,
     input: EmployeeUpdateInput & { id: string },
   ) => Promise<{ employee: Employee; historyLine: HistoryLine | null }>;
-  /** Removes an employee and returns their id; refuses an unknown id with NOT_FOUND. */
+  /**
+   * Removes an employee and returns their id and the lines it added to their reports' history;
+   * refuses an unknown id with NOT_FOUND.
+   */
   deleteEmployee: (
     ctx: SecurityContext,
     input: { id: string; changeReason?: string | null },
-  ) => Promise<string>;
+  ) => Promise<{ deletedEmployeeId: string; reportHistoryLines: HistoryLine[] }>;
   /** The employee with this id, or null when there is none. */
   readEmployee: (ctx: SecurityContext, id: string) => Promise<Employee | null>;
   /** Each employee's manager today, by the id asked for; employees without one are left out. */

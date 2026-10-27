@@ -32,9 +32,7 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
         ),
       delete: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeDeletePayload"]>(
-          async () => ({
-            deletedEmployeeId: await useCases.deleteEmployee(context.getActor(), input),
-          }),
+          () => useCases.deleteEmployee(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
     },
