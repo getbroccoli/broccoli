@@ -1,6 +1,10 @@
 import type { ApolloCache } from "@apollo/client";
 
-import { type DeleteEmployeeMutation, EmployeePanelDocument } from "@/__generated__/graphql";
+import {
+  type DeleteEmployeeMutation,
+  EmployeeNameFragmentDoc,
+  EmployeePanelDocument,
+} from "@/__generated__/graphql";
 import { evictRecord } from "@/apollo";
 import { addHistoryLine } from "@/features/records";
 
@@ -35,4 +39,13 @@ export function addReportHistoryLines(
       addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: line.record.id, line });
     }
   }
+}
+
+/** The name of an employee the cache holds, such as a manager the panel or the picker loaded. */
+export function cachedEmployeeName(cache: ApolloCache, id: string): string | null {
+  const employee = cache.readFragment({
+    id: cache.identify({ __typename: "Employee", id }),
+    fragment: EmployeeNameFragmentDoc,
+  });
+  return employee && `${employee.firstName} ${employee.lastName}`;
 }
