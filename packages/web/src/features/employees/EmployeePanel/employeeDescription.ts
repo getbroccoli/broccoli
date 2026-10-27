@@ -3,7 +3,7 @@ import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
 import type { EmployeeFieldKey } from "./employeeDraft";
-import { EmployeePicker } from "./EmployeePicker";
+import { EmployeePicker } from "../EmployeePicker";
 
 /** The employee's fields, by panel section, as the panel and its history show them. */
 export const EMPLOYEE_DESCRIPTION = {
