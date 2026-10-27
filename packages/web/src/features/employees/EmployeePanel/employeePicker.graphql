@@ -1,0 +1,17 @@
+query EmployeeOptions($search: String) {
+  employees(first: 8, filter: { search: $search }) {
+    edges {
+      node {
+        ...EmployeeName @unmask
+        email
+      }
+    }
+  }
+}
+
+# An employee's name, which the panel reads from the cache to show a person it holds by id.
+fragment EmployeeName on Employee {
+  id
+  firstName
+  lastName
+}

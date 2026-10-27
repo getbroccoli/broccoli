@@ -65,7 +65,7 @@ fragment EmployeePanel_employee on Employee {
   startDate
   managerId
   manager {
-    ...ManagerName @unmask
+    ...EmployeeName @unmask
   }
   avatarUrl
 }

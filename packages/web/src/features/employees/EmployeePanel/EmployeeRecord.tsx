@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 
 import {
   type EmployeePanel_EmployeeFragment,
-  ManagerNameFragmentDoc,
+  EmployeeNameFragmentDoc,
 } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +51,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   const managerName = (id: string) => {
     const manager = client.readFragment({
       id: client.cache.identify({ __typename: "Employee", id }),
-      fragment: ManagerNameFragmentDoc,
+      fragment: EmployeeNameFragmentDoc,
     });
     return manager ? `${manager.firstName} ${manager.lastName}` : id;
   };

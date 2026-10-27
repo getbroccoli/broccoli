@@ -1,19 +1,21 @@
 import { useQuery } from "@apollo/client/react";
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 
-import { ManagerOptionsDocument } from "@/__generated__/graphql";
+import { EmployeeOptionsDocument } from "@/__generated__/graphql";
 import { Input } from "@/components/ui/input";
 import type { FieldEditorProps } from "@/features/records";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 type Props = FieldEditorProps;
 
 /**
- * The manager field's editor: searches people by name or email and picks one, or no manager;
- * the person themselves is left out. The value is the manager's id; "" is no manager.
+ * An editor for a field that holds a person, such as the manager: searches people by name or
+ * email and picks one, or none; the record's own person is left out. The value is the picked
+ * person's id; "" is none.
  */
-export function ManagerPicker({
+export function EmployeePicker({
   field,
   recordId,
   invalid,
@@ -23,11 +25,11 @@ export function ManagerPicker({
   onRevert,
 }: Props) {
   const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const listId = useId();
   const typed = search.trim().slice(0, SEARCH_MAX_LENGTH);
-  const { data, previousData, loading, error } = useQuery(ManagerOptionsDocument, {
+  const query = useDebouncedValue(typed, DEBOUNCE_MS);
+  const { data, previousData, loading, error } = useQuery(EmployeeOptionsDocument, {
     variables: { search: query || null },
     // People change while the panel is open, so a repeated search asks again.
     fetchPolicy: "cache-and-network",
@@ -38,13 +40,8 @@ export function ManagerPicker({
     (data ?? previousData)?.employees.edges
       .map(({ node }) => node)
       .filter(({ id }) => id !== recordId) ?? [];
-
-  useEffect(() => {
-    const timer = setTimeout(() => setQuery(typed), DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
   const options = [
-    { id: "", label: t("people.panel.manager.none"), detail: null },
+    { id: "", label: t("people.panel.employeePicker.none"), detail: null },
     ...people.map((person) => ({
       id: person.id,
       label: `${person.firstName} ${person.lastName}`,
@@ -63,7 +60,7 @@ export function ManagerPicker({
         role="combobox"
         value={search}
         autoFocus
-        placeholder={t("people.panel.manager.search")}
+        placeholder={t("people.panel.employeePicker.search")}
         aria-label={field.label}
         aria-invalid={invalid}
         aria-describedby={describedBy}
@@ -72,7 +69,7 @@ export function ManagerPicker({
         aria-activedescendant={options[active] ? `${listId}-${active}` : undefined}
         onChange={(event) => {
           setSearch(event.target.value);
-          // A search puts the first match ahead of "No manager".
+          // A search puts the first match ahead of "None".
           setActive(event.target.value.trim() ? 1 : 0);
         }}
         onBlur={onDone}
@@ -116,12 +113,12 @@ export function ManagerPicker({
         ))}
         {error && (
           <li className="px-1.5 py-1 text-xs text-destructive">
-            {t("people.panel.manager.searchFailed")}
+            {t("people.panel.employeePicker.searchFailed")}
           </li>
         )}
         {settled && people.length === 0 && (
           <li className="px-1.5 py-1 text-xs text-muted-foreground">
-            {t("people.panel.manager.noMatches")}
+            {t("people.panel.employeePicker.noMatches")}
           </li>
         )}
       </ul>

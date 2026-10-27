@@ -10,7 +10,7 @@ import type { EmployeeUseCases } from ".";
 // such as [[1, 4], [4, 1]]: "1 now reports to 4, then 4 to 1".
 
 test(
-  "invariant: accepted manager changes never form a loop",
+  "invariant: the employees hierarchy never forms a loop",
   { timeout: 30_000 },
   async ({ orm, seed }) => {
     const employees = employeeUseCases(orm);
@@ -24,7 +24,7 @@ test(
     await fc.assert(
       fc.asyncProperty(managerChanges, async (changes) => {
         // A fresh team for every story, so no story starts from another's managers.
-        const team = await Promise.all(Array.from({ length: TEAM_SIZE }, () => seed.employee()));
+        const team = await seed.employees(TEAM_SIZE);
 
         for (const [person, manager] of changes) {
           await changeManagerOrAcceptRefusal(employees, team[person]!.id, team[manager]!.id);
