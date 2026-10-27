@@ -29,6 +29,8 @@ export function ManagerPicker({
   const typed = search.trim().slice(0, SEARCH_MAX_LENGTH);
   const { data, previousData, loading, error } = useQuery(ManagerOptionsDocument, {
     variables: { search: query || null },
+    // People change while the panel is open, so a repeated search asks again.
+    fetchPolicy: "cache-and-network",
   });
   // Enter picks only from the results of what is typed, never a stale or pending list.
   const settled = query === typed && !loading && Boolean(data);
