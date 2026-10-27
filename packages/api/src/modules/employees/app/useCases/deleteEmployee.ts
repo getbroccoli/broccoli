@@ -27,10 +27,9 @@ export async function deleteEmployee(
     const employments = employmentRepository(tx);
     // First, as a manager change takes it, so the manager read below is the one being removed.
     await employments.lockManagers();
-    const managerIds = await employments.findManagerIds([employeeId], todayInUtc());
+    const manager = await findManagerOf(tx, employeeId);
+    // Before the delete: its foreign key would clear them too, but without saying whose.
     const reportIds = await employments.clearManager(employeeId);
-    const managerId = managerIds.get(employeeId);
-    const manager = managerId ? await employeeRepository(tx).findById(managerId) : null;
     const deleted = await employeeRepository(tx).delete(employeeId);
     if (!deleted) {
       throw employeeNotFound();
@@ -49,7 +48,7 @@ export async function deleteEmployee(
     });
     return {
       historyId: line!.id,
-      reportHistoryLines: await recordManagerRemoved(ctx, tx, deleted, reportIds),
+      reportHistoryLines: await updateReportHistory(ctx, tx, deleted, reportIds),
     };
   });
   logger.info({ employeeId, historyId }, "Deleted an employee");
@@ -60,7 +59,17 @@ export async function deleteEmployee(
   return { deletedEmployeeId: employeeId, reportHistoryLines };
 }
 
-async function recordManagerRemoved(
+async function findManagerOf(tx: Tx, employeeId: string): Promise<Employee | null> {
+  const managerIds = await employmentRepository(tx).findManagerIds([employeeId], todayInUtc());
+  const managerId = managerIds.get(employeeId);
+  return managerId ? employeeRepository(tx).findById(managerId) : null;
+}
+
+/**
+ * The removed person's reports are left without a manager. Writes a "manager removed" line on
+ * each report's own history, so the change shows there, and returns the lines for their open panels.
+ */
+async function updateReportHistory(
   ctx: SecurityContext,
   tx: Tx,
   manager: Employee,
