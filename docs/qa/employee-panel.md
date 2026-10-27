@@ -25,6 +25,14 @@ A manual check of opening a person from People, editing them in place, their his
 - [ ] The People row shows the new values after Save.
 - [ ] Clearing the first name, or entering an email another person has, keeps the field open with "Enter a value." or "Another person has this email." and saves nothing; typing a correction keeps the field open.
 
+## Manager
+
+- [ ] Job shows Manager under Job title: "Empty" without one, else the manager's name.
+- [ ] Clicking it opens a search with "No manager" and up to 8 people; typing filters by name or email; arrow keys and Enter, or a click, pick one; Escape reverts.
+- [ ] Save adds "changed manager <old> → <new>"; picking "No manager" and saving reads "cleared manager <old>".
+- [ ] Picking the person themselves, or someone who reports to them (directly or through others), keeps the field open with "A person can’t be their own manager." or "They already report to this person, so they can’t be their manager." and saves nothing.
+- [ ] Removing a manager clears Manager on each of their reports; each report's history shows "cleared manager <name>" with "Manager removed".
+
 ## Leaving with unsaved changes
 
 - [ ] With unsaved changes, Close, Escape or Back asks "Discard N unsaved changes?"; Keep editing stays, Discard leaves without saving.
