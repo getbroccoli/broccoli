@@ -27,11 +27,11 @@ export function ManagerPicker({
   const [active, setActive] = useState(0);
   const listId = useId();
   const typed = search.trim().slice(0, SEARCH_MAX_LENGTH);
-  const { data, previousData, loading } = useQuery(ManagerOptionsDocument, {
+  const { data, previousData, loading, error } = useQuery(ManagerOptionsDocument, {
     variables: { search: query || null },
   });
   // Enter picks only from the results of what is typed, never a stale or pending list.
-  const settled = query === typed && !loading;
+  const settled = query === typed && !loading && Boolean(data);
   const people =
     (data ?? previousData)?.employees.edges
       .map(({ node }) => node)
@@ -112,6 +112,11 @@ export function ManagerPicker({
             )}
           </li>
         ))}
+        {error && (
+          <li className="px-1.5 py-1 text-xs text-destructive">
+            {t("people.panel.manager.searchFailed")}
+          </li>
+        )}
         {settled && people.length === 0 && (
           <li className="px-1.5 py-1 text-xs text-muted-foreground">
             {t("people.panel.manager.noMatches")}

@@ -36,6 +36,7 @@ export const peopleEn = {
   "people.panel.manager.search": "Search people",
   "people.panel.manager.none": "No manager",
   "people.panel.manager.noMatches": "No one matches.",
+  "people.panel.manager.searchFailed": "Couldn’t search people. Type again to retry.",
   "people.panel.saveRemoved": "This person was removed.",
   "people.panel.tenure.startsToday": "Starts today",
   "people.panel.tenure.startsInDay": "Starts in {count} day",

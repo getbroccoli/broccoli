@@ -25,6 +25,8 @@ export async function deleteEmployee(
   }
   const { historyId, reportHistoryLines } = await transact(async (tx) => {
     const employments = employmentRepository(tx);
+    // First, as a manager change takes it, so the manager read below is the one being removed.
+    await employments.lockManagers();
     const managerIds = await employments.findManagerIds([employeeId], todayInUtc());
     const reportIds = await employments.clearManager(employeeId);
     const managerId = managerIds.get(employeeId);
