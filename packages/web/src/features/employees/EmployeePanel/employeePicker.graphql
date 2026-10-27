@@ -3,7 +3,8 @@ query EmployeeOptions($search: String) {
     edges {
       node {
         ...EmployeeName @unmask
-        email
+        jobTitle
+        avatarUrl
       }
     }
   }
