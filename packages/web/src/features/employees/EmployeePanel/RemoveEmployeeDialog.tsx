@@ -15,10 +15,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { addHistoryLine } from "@/features/records";
 import { t } from "@/i18n";
 
-import { forgetEmployee } from "../cache";
+import { addReportHistoryLines, forgetEmployee } from "../cache";
 
 type Props = {
   open: boolean;
@@ -34,14 +33,8 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
   const [deleteEmployee, { loading, error, payloadError }] = usePayloadMutation(
     DeleteEmployeeDocument,
     {
-      // The people they managed get a line saying so in their history.
-      update: (cache, { data }) => {
-        for (const line of data?.employee.delete.reportHistoryLines ?? []) {
-          if (line.record) {
-            addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: line.record.id, line });
-          }
-        }
-      },
+      update: (cache, { data }) =>
+        addReportHistoryLines(cache, data?.employee.delete.reportHistoryLines ?? []),
     },
   );
   const failed = Boolean(error || payloadError);
