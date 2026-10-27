@@ -1,8 +1,12 @@
+import { useApolloClient } from "@apollo/client/react";
 import { useBlocker } from "@tanstack/react-router";
 import { DotsThree, X } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 
-import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
+import {
+  type EmployeePanel_EmployeeFragment,
+  ManagerNameFragmentDoc,
+} from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -41,8 +45,20 @@ export function EmployeeRecord({ employee, onClose }: Props) {
     enableBeforeUnload: () => !removed.current && draft.changed.length > 0,
     withResolver: true,
   });
+  const client = useApolloClient();
   const fullName = `${employee.firstName} ${employee.lastName}`;
-  const sections = Map.groupBy(EMPLOYEE_DESCRIPTION.fields, (field) => field.section);
+  // The draft holds the manager's id; their name is in the cache from the panel or the picker.
+  const managerName = (id: string) => {
+    const manager = client.readFragment({
+      id: client.cache.identify({ __typename: "Employee", id }),
+      fragment: ManagerNameFragmentDoc,
+    });
+    return manager ? `${manager.firstName} ${manager.lastName}` : id;
+  };
+  const fields = EMPLOYEE_DESCRIPTION.fields.map((field) =>
+    field.key === "manager" ? { ...field, format: managerName } : field,
+  );
+  const sections = Map.groupBy(fields, (field) => field.section);
   // In panel order, as the person reads the fields.
   const changedLabels = EMPLOYEE_DESCRIPTION.fields
     .filter((field) => draft.changed.includes(field.key as EmployeeFieldKey))

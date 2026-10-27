@@ -50,5 +50,9 @@ fragment EmployeePanel_employee on Employee {
   email
   jobTitle
   startDate
+  managerId
+  manager {
+    ...ManagerName @unmask
+  }
   avatarUrl
 }

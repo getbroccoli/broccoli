@@ -78,7 +78,7 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
         failed instanceof PayloadFailure ? (failed.payloadError as typeof payloadError) : null;
       if (refused?.__typename !== "InvalidInputError") return;
       const messages = new Map(
-        refused.fields.map(({ field, code }) => [field, fieldMessage(code)]),
+        refused.fields.map(({ field, code }) => [draftKey(field), fieldMessage(code)]),
       );
       setEdits((current) =>
         mapEdits(current, ({ value }, key) => ({ value, error: messages.get(key) })),
@@ -115,8 +115,20 @@ function mapEdits<Result>(
 }
 
 function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
-  const { firstName, lastName, email, jobTitle, startDate } = employee;
-  return { firstName, lastName, email, jobTitle: jobTitle ?? null, startDate: startDate ?? null };
+  const { firstName, lastName, email, jobTitle, managerId, startDate } = employee;
+  return {
+    firstName,
+    lastName,
+    email,
+    jobTitle: jobTitle ?? null,
+    manager: managerId ?? null,
+    startDate: startDate ?? null,
+  };
+}
+
+/** The draft field an input field's error belongs to. */
+function draftKey(field: string): string {
+  return field === "managerId" ? "manager" : field;
 }
 
 function fieldMessage(code: string): string {
@@ -127,4 +139,7 @@ const FIELD_MESSAGES: Partial<Record<string, MessageKey>> = {
   required: "people.panel.error.required",
   too_long: "people.panel.error.tooLong",
   taken: "people.panel.error.taken",
+  not_found: "people.panel.error.managerNotFound",
+  self: "people.panel.error.managerSelf",
+  loop: "people.panel.error.managerLoop",
 };

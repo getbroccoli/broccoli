@@ -55,6 +55,23 @@ it("sends a cleared field as null", () => {
   expect(input).toStrictEqual({ id: "employee-1", email: null });
 });
 
+it("sends a changed manager as managerId", () => {
+  const input = toUpdateInput("employee-1", saved, { manager: "employee-2" }, "");
+
+  expect(input).toStrictEqual({ id: "employee-1", managerId: "employee-2" });
+});
+
+it("sends a cleared manager as a null managerId", () => {
+  const input = toUpdateInput(
+    "employee-1",
+    { ...saved, manager: "employee-2" },
+    { manager: "" },
+    "",
+  );
+
+  expect(input).toStrictEqual({ id: "employee-1", managerId: null });
+});
+
 it("trims the change reason before sending it", () => {
   const input = toUpdateInput("employee-1", saved, { jobTitle: "Designer" }, "  New role  ");
 
@@ -72,5 +89,6 @@ const saved: EmployeeValues = {
   lastName: "Morgan",
   email: "avery@example.com",
   jobTitle: null,
+  manager: null,
   startDate: null,
 };

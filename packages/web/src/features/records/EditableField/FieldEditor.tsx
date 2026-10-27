@@ -2,30 +2,15 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 
-import type { RecordField } from "../recordDescription";
+import type { FieldEditorProps } from "../recordDescription";
 
-type Props = {
-  field: RecordField;
-  value: string;
-  invalid: boolean;
-  describedBy: string | undefined;
-  onChange: (value: string) => void;
-  /** The person finished with the field; its value stays in the draft. */
-  onDone: () => void;
-  /** Escape: the field goes back to its saved value. */
-  onRevert: () => void;
-};
-
-/** The editor a record field uses: a text input, or a date picker that closes on a pick. */
-export function FieldEditor({
-  field,
-  value,
-  invalid,
-  describedBy,
-  onChange,
-  onDone,
-  onRevert,
-}: Props) {
+/** The editor a record field uses: a text input, a date picker that closes on a pick, or its own. */
+export function FieldEditor(props: FieldEditorProps) {
+  const { field, value, invalid, describedBy, onChange, onDone, onRevert } = props;
+  if (typeof field.editor === "function") {
+    const OwnEditor = field.editor;
+    return <OwnEditor {...props} />;
+  }
   if (field.editor === "date") {
     return (
       <div
