@@ -1,7 +1,7 @@
 import { useApolloClient } from "@apollo/client/react";
 import { useBlocker } from "@tanstack/react-router";
 import { DotsThree, X } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,10 @@ export function EmployeeRecord({ employee, onClose }: Props) {
     enableBeforeUnload: () => !removed.current && draft.changed.length > 0,
     withResolver: true,
   });
+  // A save can finish while navigation is already waiting for the discard decision.
+  useEffect(() => {
+    if (blocker.status === "blocked" && draft.changed.length === 0) blocker.proceed();
+  }, [blocker, draft.changed.length]);
   const client = useApolloClient();
   const fullName = `${employee.firstName} ${employee.lastName}`;
   // The draft holds the manager's id; the panel shows their name.
