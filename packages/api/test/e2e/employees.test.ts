@@ -48,6 +48,41 @@ test("creates an employee through the API", async ({ env }) => {
   expect(employee.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
 });
 
+test("sets a person's manager through the API", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const employee = await env.seed.employee({ firstName: "Avery", lastName: "Stone" });
+  const manager = await env.seed.employee({ firstName: "Robin", lastName: "Reed" });
+
+  const updated = await browser.graphql(
+    `mutation UpdateEmployee($input: EmployeeUpdateInput!) {
+      employee { update(input: $input) {
+        employee { id }
+        error { __typename ... on Error { message } }
+      } }
+    }`,
+    { input: { id: employee.id, managerId: manager.id } },
+  );
+
+  expect(await updated.json()).toEqual({
+    data: { employee: { update: { employee: { id: employee.id }, error: null } } },
+  });
+  const response = await browser.graphql(
+    `query Employee($id: ID!) {
+      employee(id: $id) { id managerId manager { id firstName } }
+    }`,
+    { id: employee.id },
+  );
+  expect(await response.json()).toEqual({
+    data: {
+      employee: {
+        id: employee.id,
+        managerId: manager.id,
+        manager: { id: manager.id, firstName: "Robin" },
+      },
+    },
+  });
+});
+
 test("returns a taken employee email in the mutation payload", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   await env.seed.employee({ email: "avery@example.com" });

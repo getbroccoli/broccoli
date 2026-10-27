@@ -3,3 +3,4 @@ export {
   employeeRepository,
   type EmployeeRepository,
 } from "./employeeRepository";
+export { employmentRepository, type EmploymentRepository } from "./employmentRepository";

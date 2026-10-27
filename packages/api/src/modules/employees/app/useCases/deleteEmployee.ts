@@ -1,14 +1,16 @@
 import { appendRecordHistory, parseChangeReason } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
 import { parseUuid } from "../../../../utils";
-import { employeeRepository } from "../../db";
-import { employeeChanges } from "../../domain";
+import type { Tx } from "../../../../core/db";
+import { employeeRepository, employmentRepository } from "../../db";
+import { type Employee, employeeChanges, managerChanges } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 
 /**
  * Removes an employee and their avatar and records what they held as a deletion line, in one
- * transaction; their history stays. Returns the deleted employee's id.
+ * transaction; their history stays. Their reports are left without a manager, with a line each.
+ * Returns the deleted employee's id.
  */
 export async function deleteEmployee(
   { transact, logger }: EmployeeContext,
@@ -21,7 +23,8 @@ export async function deleteEmployee(
   if (!employeeId) {
     throw employeeNotFound();
   }
-  const historyId = await transact(async (tx) => {
+  const { historyId, reportCount } = await transact(async (tx) => {
+    const reportIds = await employmentRepository(tx).clearManager(employeeId);
     const deleted = await employeeRepository(tx).delete(employeeId);
     if (!deleted) {
       throw employeeNotFound();
@@ -33,8 +36,36 @@ export async function deleteEmployee(
       reason,
       records: [{ recordId: employeeId, changes: employeeChanges(deleted, null) }],
     });
-    return line!.id;
+    await recordManagerRemoved(ctx, tx, deleted, reportIds);
+    return { historyId: line!.id, reportCount: reportIds.length };
   });
   logger.info({ employeeId, historyId }, "Deleted an employee");
+  if (reportCount > 0) {
+    logger.info({ employeeId, reportCount }, "Cleared the manager of reports");
+  }
   return employeeId;
+}
+
+async function recordManagerRemoved(
+  ctx: SecurityContext,
+  tx: Tx,
+  manager: Employee,
+  reportIds: readonly string[],
+): Promise<void> {
+  if (reportIds.length === 0) {
+    return;
+  }
+  await appendRecordHistory(ctx, tx, {
+    recordType: "employee",
+    operation: "UPDATED",
+    cause: { kind: "MANAGER_REMOVED", ref: manager.id },
+    records: reportIds.map((recordId) => ({ recordId, changes: managerChanges(manager, null) })),
+  });
+}
+
+declare module "../../../../core/records" {
+  interface CauseKinds {
+    /** The person's manager was removed. */
+    MANAGER_REMOVED: true;
+  }
 }

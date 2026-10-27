@@ -38,6 +38,10 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
     },
     Employee: {
       avatarUrl: ({ avatarFileId }) => avatarFileId && avatarUrl(avatarFileId),
+      // shortcut: two queries per employee; batch them when a list selects the manager.
+      managerId: async (employee, _args, context) =>
+        (await useCases.readManager(context.getActor(), employee.id))?.id ?? null,
+      manager: (employee, _args, context) => useCases.readManager(context.getActor(), employee.id),
       // shortcut: one query per employee; batch it when a list selects history.
       history: (employee, { first, after }, context) =>
         useCases.readEmployeeHistory(context.getActor(), employee.id, {

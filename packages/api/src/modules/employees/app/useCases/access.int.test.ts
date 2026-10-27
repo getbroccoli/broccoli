@@ -13,6 +13,7 @@ const calls = {
   listEmployees: (useCases, ctx) => useCases.listEmployees(ctx, {}),
   readEmployee: (useCases, ctx) =>
     useCases.readEmployee(ctx, "00000000-0000-4000-8000-000000000001"),
+  readManager: (useCases, ctx) => useCases.readManager(ctx, "00000000-0000-4000-8000-000000000001"),
   updateEmployee: (useCases, ctx) =>
     useCases.updateEmployee(ctx, { id: "00000000-0000-4000-8000-000000000001", jobTitle: "Lead" }),
   deleteEmployee: (useCases, ctx) =>

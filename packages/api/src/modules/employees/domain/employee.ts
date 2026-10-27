@@ -48,13 +48,17 @@ export interface EmployeeUpdateInput {
   email?: string | null;
   jobTitle?: string | null;
   startDate?: string | null;
+  /** Their direct manager's employee id; null for none. */
+  managerId?: string | null;
   /** Why the change is made, kept on its history line. */
   changeReason?: string | null;
 }
 
-/** A validated update: the fields to change, normalised, and the reason for its history line. */
+/** A validated update: the fields to change, normalised, the manager, and the reason for its history line. */
 export interface EmployeeUpdate {
   changes: Partial<NewEmployee>;
+  /** Absent: unchanged; null: no manager. Not checked to be an employee yet. */
+  managerId?: string | null;
   reason: string | null;
 }
 
@@ -95,7 +99,7 @@ const newEmployeeSchema = z.object({
 // An absent field stays absent: `partial` skips its normalisation, so it does not become null.
 const employeeUpdateSchema = newEmployeeSchema
   .partial()
-  .extend({ changeReason: changeReasonSchema });
+  .extend({ managerId: z.string().nullish(), changeReason: changeReasonSchema });
 
 /** Validates and normalises a new employee; throws `INVALID_INPUT` naming each bad field. */
 export function parseNewEmployee(input: NewEmployeeInput): NewEmployee {
@@ -118,8 +122,8 @@ export function parseEmployeeUpdate(input: EmployeeUpdateInput): EmployeeUpdate 
       ),
     );
   }
-  const { changeReason: reason, ...changes } = result.data;
-  return { changes, reason };
+  const { changeReason: reason, managerId, ...changes } = result.data;
+  return { changes, reason, ...(managerId !== undefined && { managerId }) };
 }
 
 /**

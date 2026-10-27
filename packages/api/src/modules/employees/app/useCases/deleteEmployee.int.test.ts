@@ -11,6 +11,43 @@ import {
 
 import { createDemoEmployees } from "..";
 
+test("removing a manager clears them from every report with a history line", async ({
+  orm,
+  seed,
+}) => {
+  const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
+  const avery = await seed.employee({ firstName: "Avery", lastName: "Stone" });
+  const taylor = await seed.employee({ firstName: "Taylor", lastName: "Brook" });
+  const employees = employeeUseCases(orm);
+  for (const report of [avery, taylor]) {
+    await employees.updateEmployee(OWNER, { id: report.id, managerId: manager.id });
+  }
+
+  await employees.deleteEmployee(OWNER, { id: manager.id, changeReason: "Left the company" });
+
+  expect(await employees.readEmployee(OWNER, manager.id)).toBeNull();
+  for (const report of [avery, taylor]) {
+    expect(await employees.readManager(OWNER, report.id)).toBeNull();
+    const { edges } = await employees.readEmployeeHistory(OWNER, report.id, {});
+    expect(edges).toHaveLength(2);
+    expect(edges[0]!.node).toMatchObject({
+      recordType: "employee",
+      recordId: report.id,
+      operation: "UPDATED",
+      cause: { kind: "MANAGER_REMOVED", ref: manager.id },
+      reason: null,
+      changes: [{ field: "manager", oldValue: "Robin Reed", newValue: null }],
+    });
+  }
+  const { edges } = await employees.readEmployeeHistory(OWNER, manager.id, {});
+  expect(edges).toHaveLength(1);
+  expect(edges[0]!.node).toMatchObject({
+    operation: "DELETED",
+    cause: { kind: "EDITED_DIRECTLY", ref: null },
+    reason: "Left the company",
+  });
+});
+
 test("deletes the employee and avatar while keeping a history of their removed values", async ({
   orm,
   transact,
