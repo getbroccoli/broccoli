@@ -26,7 +26,7 @@ Do not write tests for log messages, fields or emission. Logs help diagnose prob
 - Core tests publish the test-only `example.happened` domain event (`EXAMPLE_PAYLOAD`), never a module's event, so they do not depend on any module.
 - Assert on outcomes a caller can see: return values, GraphQL responses, state read back through public queries, and emitted events.
 - External systems such as email, Slack and third-party HTTP get fakes. `TestSecurityContext` from `#test/support` answers whatever the test sets; `OWNER`, `NON_OWNER` and `SYSTEM` are instances of it.
-- Add property-based tests only when the module design agrees on them. They run the use cases against Postgres, never a copy of the logic inside the test, and live next to them as `<use-case>.property.int.test.ts`.
+- Add property-based tests only when the module design agrees on them. They run the use cases against Postgres, never a copy of the logic inside the test, and live next to them as `<use-case>.pbt.test.ts`.
 
 ## Running integration and end-to-end tests
 
@@ -42,7 +42,7 @@ docker compose rm --stop --force postgres-test
 Property tests run many random cases, so they run only during development, never in `pnpm check` or CI:
 
 ```sh
-pnpm --filter @broccoli/api test:property
+pnpm --filter @broccoli/api test:pbt
 ```
 
 Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; removing the container discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.
