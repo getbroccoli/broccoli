@@ -91,7 +91,7 @@ export function FileSourceCard({
   const offersOriginalRead =
     !source.originalReadAllowed && (source.status === "MAPPED" || failed) && !asksForOriginalRead;
   const provider = t(aiSource ? PROVIDERS[aiSource] : "imports.files.providerManaged");
-  const pickingUp = !needsNewConsent && isPickingUp(source);
+  const pickingUp = !canRetry && !needsNewConsent && isPickingUp(source);
   return (
     <li
       className={cn(
@@ -137,7 +137,9 @@ export function FileSourceCard({
             )}
             {needsNewConsent
               ? t("imports.files.waitingForOriginalReadConsent")
-              : statusLine(source, pickingUp, managed)}
+              : canRetry && !failed
+                ? t("imports.files.waitingForReadChoice")
+                : statusLine(source, pickingUp, managed)}
           </span>
           {!managed && source.failure && NEEDS_OWN_KEY.has(source.failure) && (
             <Link
