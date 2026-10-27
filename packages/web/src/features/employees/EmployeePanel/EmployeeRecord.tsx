@@ -85,9 +85,10 @@ export function EmployeeRecord({ employee, onClose }: Props) {
           >
             <DotsThree weight="bold" />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          {/* As wide as its item, not the trigger, so the name stays on one line. */}
+          <DropdownMenuContent align="end" className="w-auto max-w-80">
             <DropdownMenuItem variant="destructive" onClick={() => setRemoving(true)}>
-              {t("people.panel.remove.menu", { name: fullName })}
+              <span className="truncate">{t("people.panel.remove.menu", { name: fullName })}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
