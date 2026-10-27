@@ -41,6 +41,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 - **RULE19.** Every `app` business function takes and checks `ctx: SecurityContext` as its first argument; work Broccoli does on its own uses the system context.
 - **RULE20.** Use cases open transactions with `transact`; composed operations require `tx`. Never await work needing another connection while holding locks.
 - **RULE60.** Repository reads return whole domain items in one query, also exposed by module public reads; encrypted secrets have separate reads. No read method per field or field group.
+- **RULE65.** A module adds its entries to core's shared registries (`RecordTypes`, `CauseKinds`, `DomainEvents`, `Jobs`) by declaration merging in one file, `app/registrations.ts`, never beside the code that uses them.
 - **RULE21.** Cross-module access uses public operations or events, never another module's tables.
 - **RULE22.** Integrations use `utils`' `fetchJson` or `fetchBytes`, no HTTP library and no retries by default.
 

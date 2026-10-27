@@ -3,12 +3,6 @@ import type { RecordTypeRegistration } from "../../../core/records";
 import { employeeRepository } from "../db";
 import { parseUuid } from "../../../utils";
 
-declare module "../../../core/records" {
-  interface RecordTypes {
-    employee: true;
-  }
-}
-
 /**
  * The employee as a record type that keeps history: who may read its history, the id history
  * keeps, and how `RecordChange.record` loads employees. `recordHistory` and `Employee.history`

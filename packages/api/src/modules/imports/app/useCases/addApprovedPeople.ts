@@ -49,17 +49,3 @@ export interface AddedPeople extends ImportedEmployees {
   /** The import employees that were selected, by their records and photo. */
   selected: { recordIds: string[]; photoFileId: string | null }[];
 }
-
-declare module "../../../../core/records" {
-  interface CauseKinds {
-    /** People approved in the import, from a file or Slack, became employees. */
-    ADDED_FROM_IMPORT: true;
-  }
-}
-
-declare module "../../../../core/events" {
-  interface DomainEvents {
-    /** The people the owner approved became employees. */
-    "imports.people_added": AddedPeople;
-  }
-}
