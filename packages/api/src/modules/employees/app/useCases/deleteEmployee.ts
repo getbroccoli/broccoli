@@ -85,10 +85,3 @@ async function updateReportHistory(
     records: reportIds.map((recordId) => ({ recordId, changes: managerChanges(manager, null) })),
   });
 }
-
-declare module "../../../../core/records" {
-  interface CauseKinds {
-    /** The person's manager was removed. */
-    MANAGER_REMOVED: true;
-  }
-}
