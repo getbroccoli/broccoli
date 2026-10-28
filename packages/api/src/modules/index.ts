@@ -55,7 +55,7 @@ export function createModules(
       ...core,
       mode: deployment.mode,
       mailSettings,
-      readCompany: () => readStoredCompany(core.orm),
+      readCompany: (ctx) => readStoredCompany(ctx, core.orm),
     }),
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, transact: core.transact }),

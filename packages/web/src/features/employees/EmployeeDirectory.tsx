@@ -64,7 +64,8 @@ export function EmployeeDirectory() {
         selection={
           canInvite
             ? {
-                selectedIds,
+                // The people still there, so removing the last one ends the selection.
+                selectedIds: new Set(selected.map(({ id }) => id)),
                 onChange: setSelectedIds,
                 isSelectable: ({ signInStatus }) => !!signInStatus?.canBeInvited,
                 rowLabel: ({ firstName, lastName }) => `${firstName} ${lastName}`,

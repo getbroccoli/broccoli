@@ -4,6 +4,7 @@ import express from "express";
 
 import type { Mode } from "../../core/env";
 import type { MailSettings } from "../../core/instance";
+import type { SecurityContext } from "../../core/security";
 import { createEmployeeInviteService, createEmployeeUseCases, employeeRecordType } from "./app";
 import { invitePlugin } from "./betterAuth";
 import { createResolvers } from "./graphql";
@@ -45,7 +46,7 @@ export function employeesModule({
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs" | "secretBox"> & {
   mode: Mode;
   mailSettings: MailSettings;
-  readCompany: () => Promise<{ name: string | null }>;
+  readCompany: (ctx: SecurityContext) => Promise<{ name: string | null }>;
 }): ModuleManifest {
   const useCases = createEmployeeUseCases(dependencies);
   const invites = createEmployeeInviteService({ ...dependencies, mailSettings, readCompany });

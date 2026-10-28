@@ -49,7 +49,6 @@ export const invitesEn = {
   "invites.links.done": "Done",
   "invites.links.copyByHand": "Copy this text by hand",
   "invites.panel.copyLink": "Copy invite link",
-  "invites.panel.linkCopied": "Invite link copied. It works once, until {date}.",
   "invites.panel.linkFailed": "Couldn't create the invite link.",
   "invites.panel.invite": "Invite…",
   "invites.panel.cancel": "Cancel invite",
@@ -66,7 +65,8 @@ export const invitesEn = {
   "invites.page.footer": "You'll see your own profile. This link works once, until {date}.",
   "invites.page.failed": "Couldn't join. Try again in a moment.",
   "invites.page.tooManyAttempts": "Too many attempts. Wait a minute and try again.",
-  "invites.page.failedDetail": "We couldn't check your invite. Reload this page in a moment.",
+  "invites.page.failedDetail":
+    "We couldn't check your invite. Open the link from your invite again in a moment.",
   "invites.invalid.title": "This invite link no longer works",
   "invites.invalid.detail":
     "It may have been used, replaced by a newer one, or run out. Ask the person who invited you for a new link.",

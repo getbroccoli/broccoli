@@ -108,13 +108,13 @@ export function createEmployeeInviteService({
   secretBox: SecretBox;
   mailSettings: MailSettings;
   /** The company, whose name the invite and its page show. */
-  readCompany: () => Promise<{ name: string | null }>;
+  readCompany: (ctx: SecurityContext) => Promise<{ name: string | null }>;
 }): EmployeeInviteService {
   // The job and the public invite page run without a user.
   const system = PrincipalSecurityContext.system();
   const invites = inviteRepository(orm);
   const readMailer = () => mailSettings.readMailer(system);
-  const readCompanyName = async () => (await readCompany()).name ?? "";
+  const readCompanyName = async () => (await readCompany(system)).name ?? "";
 
   return {
     send: async (ctx, input, linkOrigin) => {

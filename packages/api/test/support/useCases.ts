@@ -165,7 +165,7 @@ export function employeeInviteService(
     transact: testTransactor(orm),
     secretBox: TEST_SECRET_BOX,
     mailSettings: mailSettings(orm, { mail }),
-    readCompany: () => readStoredCompany(orm),
+    readCompany: (ctx) => readStoredCompany(ctx, orm),
     logger: createLogger("silent"),
     jobs: {
       send: (_tx, name, payload) => {

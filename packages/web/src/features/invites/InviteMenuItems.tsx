@@ -7,20 +7,21 @@ import { addHistoryLine } from "@/features/records";
 import { t } from "@/i18n";
 
 import { addInviteHistoryLines } from "./cache";
-import type { Invitee } from "./InviteDialog";
-import { formatExpiryDay } from "./signInStatus";
+import type { CopiedLink, Invitee } from "./InviteDialog";
 
 type Props = {
   person: Invitee;
   /** Opens the invite dialog for this person. */
   onInvite: () => void;
+  /** Shows a new link, which only this answer holds. */
+  onLinkCreated: (link: CopiedLink) => void;
 };
 
 /**
  * A person's invite actions in their panel's menu: copy a new link, invite, and cancel an open
  * invite. Nothing for someone who cannot be invited, such as someone who joined.
  */
-export function InviteMenuItems({ person, onInvite }: Props) {
+export function InviteMenuItems({ person, onInvite, onLinkCreated }: Props) {
   const [invite] = usePayloadMutation(InviteEmployeesDocument, {
     update: (cache, { data }) => addInviteHistoryLines(cache, data?.employee.invite.invites ?? []),
   });
@@ -40,8 +41,12 @@ export function InviteMenuItems({ person, onInvite }: Props) {
       });
       const sent = invites?.[0];
       if (!sent?.link) throw new Error("No link");
-      await navigator.clipboard.writeText(sent.link);
-      toast(t("invites.panel.linkCopied", { date: formatExpiryDay(sent.expiresAt) }));
+      onLinkCreated({
+        id: person.id,
+        name: `${person.firstName} ${person.lastName}`,
+        link: sent.link,
+        expiresAt: sent.expiresAt,
+      });
     } catch {
       toast.error(t("invites.panel.linkFailed"));
     }

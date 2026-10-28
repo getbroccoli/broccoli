@@ -53,7 +53,7 @@ export function createResolvers(
           return {
             invites: sent.map((invite) => ({ ...invite, delivery: DELIVERIES[invite.delivery] })),
           };
-        }, ["INVALID_INPUT", "NOT_FOUND"]),
+        }, ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"]),
       cancelInvite: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["InviteCancelPayload"]>(
           () => invites.cancel(context.getActor(), input),

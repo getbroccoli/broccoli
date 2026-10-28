@@ -186,7 +186,7 @@ type InviteSendPayload {
   error: InviteSendError
 }
 
-union InviteSendError = InvalidInputError | NotFoundError
+union InviteSendError = InvalidInputError | NotFoundError | ConflictError
 
 input InviteCancelInput {
   employeeId: ID!
