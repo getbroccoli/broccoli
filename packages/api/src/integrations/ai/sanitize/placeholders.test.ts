@@ -123,6 +123,24 @@ it("keeps heading words", () => {
   ).toEqual({ headings: ["Work email", "Start date", "Eintrittsdatum", "Vorname"] });
 });
 
+it("keeps underscore-separated heading words", () => {
+  const headings = ["first_name", "last_name", "preferred_name", "manager_email", "START_DATE"];
+
+  expect(withPlaceholders({ headings })).toEqual({ headings });
+});
+
+it("masks personal values beside underscore-separated heading words", () => {
+  expect(withPlaceholders({ values: ["Zarela_Fenwick", "Zarela_name", "employee_701"] })).toEqual({
+    values: ["Xxxxxx_Xxxxxxx", "Xxxxxx_name", "employee_ddd"],
+  });
+});
+
+it("masks underscore-separated email addresses as whole emails", () => {
+  expect(withPlaceholders({ email: "first_last@staff_name.example" })).toEqual({
+    email: "person1@company1.example",
+  });
+});
+
 it("keeps job-title words", () => {
   expect(withPlaceholders({ roles: ["Office Administrator", "Maintenance Technician"] })).toEqual({
     roles: ["Office Administrator", "Maintenance Technician"],

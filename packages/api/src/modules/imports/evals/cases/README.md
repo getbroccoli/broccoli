@@ -5,6 +5,8 @@
 - `title-row-semicolons`: Acme Corp staff tracker title and blank line before a semicolon table, a double-barrelled surname, day-first dates and an empty work email.
 - `tabs-month-first`: Export from a US-format tool, deliberately keeping month-first dates, tab delimiters and reordered columns.
 - `split-names`: UK HR headings `Forename` and `Surname` take precedence over `Known as`, with middle names and day-first start dates.
+- `underscore-split-names`: Synthetic names under `first_name` and `last_name`, beside work emails; underscore-separated headings must keep their meaning through masking.
+- `underscore-preferred-names`: Synthetic staff export with `preferred_name` as the only given-name column, `last_name`, and employee, manager, employment and payroll fields; names, work emails, titles and start dates must survive mapping. All values are invented and emails use reserved example domains.
 - `decoy-columns`: UK payroll and HR fields place real work emails and start dates beside NI numbers, personal emails, next-of-kin names and mobiles, dates of birth, leaving dates, departments, employee mobiles, postcodes and payroll IDs.
 - `german-headers`: German headings, umlauts and day-first dates with dots.
 - `ambiguous-dates`: UK staff headings do not resolve numeric dates with both parts at most 12; every start date stays empty.

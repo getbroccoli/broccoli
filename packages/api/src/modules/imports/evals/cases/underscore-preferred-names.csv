@@ -1,0 +1,4 @@
+employee_id,preferred_name,last_name,email,department,title,manager_email,start_date,employment_type,fte,office,base_salary_gbp
+EMP-701,Zarela,Fenwick,zarela.fenwick@staff.example,Engineering,Software Engineer,orvella.drelwick@staff.example,2023-03-17,Permanent,1.0,Remote,57000
+EMP-702,Tavren,Quillmere,tavren.quillmere@staff.example,Finance,Finance Analyst,orvella.drelwick@staff.example,2024-06-21,Permanent,0.8,Remote,46000
+EMP-703,Nerali,Vosswick,nerali.vosswick@staff.example,Operations,Office Manager,orvella.drelwick@staff.example,2025-02-14,Permanent,1.0,Remote,42000
