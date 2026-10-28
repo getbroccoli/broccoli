@@ -61,7 +61,7 @@ const ADMIN: ProfileDefinition = {
 
 /**
  * The built-in profiles. `OWNER` holds Admin's grants and operations plus resetting the workspace,
- * by sharing the definition, not by a link between profiles: edits to Admin never reach the owner.
+ * by sharing the definition in code, not by a link between profiles: stored edits to the Admin profile will not reach the owner.
  */
 export const PERMISSION_PROFILES: Record<PermissionProfile, ProfileDefinition> = {
   EMPLOYEE: {
