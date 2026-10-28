@@ -8,13 +8,13 @@ import { invites } from "./invitesTable";
 
 export type NewInvite = Omit<
   Invite,
-  "id" | "createdAt" | "sentAt" | "sendFailedAt" | "acceptedAt" | "cancelledAt" | "replacedAt"
+  "id" | "createdAt" | "sendFailedAt" | "acceptedAt" | "cancelledAt" | "replacedAt"
 >;
 
 /** Invites stored in Postgres, through the pool or inside a transaction. */
 export interface InviteRepository {
-  /** Replaces the employee's open invite, if any, with a new one; says whether one was open. */
-  replace(invite: NewInvite, now: Date): Promise<{ invite: Invite; replacedOpen: boolean }>;
+  /** Replaces the employee's open invite, if any, with a new one. */
+  replace(invite: NewInvite, now: Date): Promise<Invite>;
   /** The open invites of these employees, expired ones included. */
   findOpen(employeeIds: readonly string[]): Promise<Invite[]>;
   /** The open invite whose token has this hash; null when there is none. */
@@ -25,7 +25,6 @@ export interface InviteRepository {
   /** Closes the employee's open invite as cancelled; null when none was open. */
   cancelOpen(employeeId: string, now: Date): Promise<Invite | null>;
   markAccepted(id: string, now: Date): Promise<void>;
-  markSent(id: string, now: Date): Promise<void>;
   markSendFailed(id: string, now: Date): Promise<void>;
   /** These employees, with what decides whether they can be invited; unknown ids are left out. */
   findInvitees(employeeIds: readonly string[]): Promise<Invitee[]>;
@@ -52,13 +51,12 @@ export function inviteRepository(db: Orm | Tx): InviteRepository {
 
   return {
     replace: async (newInvite, now) => {
-      const replaced = await orm()
+      await orm()
         .update(invites)
         .set({ replacedAt: now })
-        .where(and(eq(invites.employeeId, newInvite.employeeId), open))
-        .returning({ id: invites.id });
+        .where(and(eq(invites.employeeId, newInvite.employeeId), open));
       const [invite] = await orm().insert(invites).values(newInvite).returning();
-      return { invite: invite!, replacedOpen: replaced.length > 0 };
+      return invite!;
     },
 
     findOpen: (employeeIds) =>
@@ -100,13 +98,6 @@ export function inviteRepository(db: Orm | Tx): InviteRepository {
 
     markAccepted: async (id, now) => {
       await orm().update(invites).set({ acceptedAt: now }).where(eq(invites.id, id));
-    },
-
-    markSent: async (id, now) => {
-      await orm()
-        .update(invites)
-        .set({ sentAt: now, sendFailedAt: null })
-        .where(eq(invites.id, id));
     },
 
     markSendFailed: async (id, now) => {

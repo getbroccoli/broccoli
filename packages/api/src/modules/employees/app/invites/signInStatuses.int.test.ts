@@ -1,5 +1,5 @@
 import { onTestFinished, vi } from "vitest";
-import { employeeInviteService, expect, test } from "#test/support";
+import { employeeInviteService, employeeUseCases, expect, test } from "#test/support";
 
 test("reports not invited before a person has an invite", async ({ orm, seed }) => {
   const owner = await seed.owner();
@@ -86,4 +86,24 @@ test("reports that a demo employee cannot be invited", async ({ orm, seed }) => 
   const statuses = await employeeInviteService(orm).readStatuses(owner, [employee.id]);
 
   expect(statuses.get(employee.id)).toMatchObject({ state: "not_invited", canBeInvited: false });
+});
+
+test("lookup returns null after the person's email changed since the invite", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee();
+  const service = employeeInviteService(orm);
+  const [sent] = await service.send(
+    owner,
+    { employeeIds: [employee.id], delivery: "copied_by_owner" },
+    "https://copy.example.com",
+  );
+  const token = new URL(sent!.link!).hash.slice(1);
+  await employeeUseCases(orm).updateEmployee(owner, { id: employee.id, email: "new@example.com" });
+
+  const details = await service.lookUp(token);
+
+  expect(details).toBeNull();
 });

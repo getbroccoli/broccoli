@@ -70,12 +70,20 @@ it("labels a pending invite with the remaining days rounded up", () => {
   expect(label).toEqual({ state: "Pending", hint: "expires in 3 days" });
 });
 
-it("labels a pending invite expiring within a day as expires tomorrow", () => {
+it("labels a pending invite expiring within a day as expires within a day", () => {
   const status = { ...pending, expiresAt: "2026-10-29T11:00:00Z" };
 
   const label = signInLabel(status, now);
 
-  expect(label).toEqual({ state: "Pending", hint: "expires tomorrow" });
+  expect(label).toEqual({ state: "Pending", hint: "expires within a day" });
+});
+
+it("labels a pending invite expiring just under 48 hours later as expires in 2 days", () => {
+  const status = { ...pending, expiresAt: "2026-10-30T11:59:00Z" };
+
+  const label = signInLabel(status, now);
+
+  expect(label).toEqual({ state: "Pending", hint: "expires in 2 days" });
 });
 
 it("labels a pending invite as expired when its expiry arrives", () => {

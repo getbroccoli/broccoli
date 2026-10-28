@@ -13,8 +13,8 @@ import { SEARCH_MAX_LENGTH, useListPage } from "@/lib/listPage";
 import { toEmployeeListVariables, type EmployeeListSearch } from "./employeeListSearch";
 import {
   EMPLOYEE_COLUMNS,
-  type EmployeeRow,
   SIGN_IN_COLUMN,
+  useCachedEmployeeRows,
   useEmployeeRows,
 } from "./employeeColumns";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
@@ -28,7 +28,9 @@ export function EmployeeDirectory() {
   // Nobody signs in as the sample company's people.
   const canInvite = me.operations.includes("MANAGE_WORKSPACE") && !demoExpiresAt;
   // Kept across pages, so a selection can span them.
-  const [selected, setSelected] = useState<ReadonlyMap<string, EmployeeRow>>(new Map());
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
+  // As the cache holds them now, so a status changed elsewhere shows and a removed person drops out.
+  const selected = useCachedEmployeeRows(selectedIds);
   const [inviting, setInviting] = useState(false);
   const search = useSearch({ from: "/_authenticated/people" });
   const navigate = useNavigate({ from: "/people" });
@@ -55,16 +57,6 @@ export function EmployeeDirectory() {
     error,
   });
   const rows = useEmployeeRows(list.rows);
-  const select = (ids: ReadonlySet<string>) =>
-    setSelected(
-      new Map(
-        [...ids].flatMap((id) => {
-          const row = selected.get(id) ?? rows?.find((candidate) => candidate.id === id);
-          return row ? [[id, row] as const] : [];
-        }),
-      ),
-    );
-
   return (
     <>
       <DataTable
@@ -72,8 +64,8 @@ export function EmployeeDirectory() {
         selection={
           canInvite
             ? {
-                selectedIds: new Set(selected.keys()),
-                onChange: select,
+                selectedIds,
+                onChange: setSelectedIds,
                 isSelectable: ({ signInStatus }) => !!signInStatus?.canBeInvited,
                 rowLabel: ({ firstName, lastName }) => `${firstName} ${lastName}`,
               }
@@ -81,13 +73,13 @@ export function EmployeeDirectory() {
         }
         bulkBar={
           <BulkBar
-            count={selected.size}
+            count={selected.length}
             actions={
               <Button size="sm" onClick={() => setInviting(true)}>
                 {t("invites.bulk.invite")}
               </Button>
             }
-            onClear={() => setSelected(new Map())}
+            onClear={() => setSelectedIds(new Set())}
           />
         }
         rows={rows}
@@ -126,10 +118,10 @@ export function EmployeeDirectory() {
         pager={list.pager}
       />
       <InviteDialog
-        people={[...selected.values()]}
+        people={selected}
         open={inviting}
         onOpenChange={setInviting}
-        onInvited={() => setSelected(new Map())}
+        onInvited={() => setSelectedIds(new Set())}
       />
     </>
   );

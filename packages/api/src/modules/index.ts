@@ -2,7 +2,7 @@ import { createAiSettings, createMailSettings, createPasswordResetEmail } from "
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
-import { companyModule, readCompanyName } from "./company";
+import { companyModule, readStoredCompany } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { deleteAllEmployees, employeeDirectory, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
@@ -55,7 +55,7 @@ export function createModules(
       ...core,
       mode: deployment.mode,
       mailSettings,
-      readCompanyName: () => readCompanyName(core.orm),
+      readCompany: () => readStoredCompany(core.orm),
     }),
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, transact: core.transact }),

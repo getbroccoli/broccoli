@@ -60,6 +60,8 @@ export interface EmployeeRepository {
    */
   delete(id: string): Promise<Employee | null>;
   findById(id: string): Promise<Employee | null>;
+  /** Holds these employees' rows until the caller commits, so changes to one person take turns. */
+  lockByIds(ids: readonly string[]): Promise<void>;
   /** Links the user who signs in as this employee. */
   linkUser(id: string, userId: string): Promise<void>;
   /** The employee linked to this user, or null. */
@@ -174,6 +176,16 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     findById: async (id: string): Promise<Employee | null> => {
       const [employee] = await orm().select().from(employees).where(eq(employees.id, id));
       return employee ?? null;
+    },
+
+    lockByIds: async (ids) => {
+      // In id order, so two callers locking overlapping people cannot deadlock.
+      await orm()
+        .select({ id: employees.id })
+        .from(employees)
+        .where(inArray(employees.id, [...ids]))
+        .orderBy(employees.id)
+        .for("update");
     },
 
     linkUser: async (id, userId) => {

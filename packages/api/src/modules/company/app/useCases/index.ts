@@ -28,7 +28,7 @@ export interface CompanyUseCases {
   ) => Promise<void>;
 }
 
-export { readCompanyName } from "./company";
+export { readStoredCompany } from "./company";
 
 export function createCompanyUseCases({
   orm,

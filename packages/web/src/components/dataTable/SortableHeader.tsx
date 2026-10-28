@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/class-names";
 
+import { HeadContent } from "./HeadContent";
+
 export interface DataTableSort<SortKey extends string = string> {
   key: SortKey;
   direction: "asc" | "desc";
@@ -76,16 +78,5 @@ function SortIcon({ direction }: { direction: DataTableSort["direction"] | undef
       aria-hidden
       className="opacity-0 transition-opacity group-hover/head:opacity-40 group-focus-visible/head:opacity-40"
     />
-  );
-}
-
-function HeadContent({ leading, children }: { leading: ReactNode; children: ReactNode }) {
-  return leading ? (
-    <div className="flex items-center gap-3">
-      {leading}
-      {children}
-    </div>
-  ) : (
-    children
   );
 }

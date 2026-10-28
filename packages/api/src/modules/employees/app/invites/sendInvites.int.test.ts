@@ -1,4 +1,5 @@
 import { and, isNull, sql } from "drizzle-orm";
+import { onTestFinished, vi } from "vitest";
 import { employeeInviteService, employeeUseCases, expect, test } from "#test/support";
 
 test("returns a private copied link per person when no mail is chosen", async ({ orm, seed }) => {
@@ -121,6 +122,83 @@ test("creates one invite for duplicate employee ids", async ({ orm, seed }) => {
   ).toHaveLength(1);
 });
 
+test("treats the same id in upper and lower case as one person", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee();
+
+  const sent = await employeeInviteService(orm).send(
+    owner,
+    { employeeIds: [employee.id, employee.id.toUpperCase()] },
+    "https://copy.example.com",
+  );
+
+  expect(sent).toHaveLength(1);
+  expect(sent[0]!.employee.id).toBe(employee.id);
+});
+
+test("keeps the open invite's profiles when a new link names none", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee();
+  const service = employeeInviteService(orm);
+  await service.send(
+    owner,
+    { employeeIds: [employee.id], profiles: ["ADMIN"] },
+    "https://copy.example.com",
+  );
+
+  await service.send(owner, { employeeIds: [employee.id] }, "https://copy.example.com");
+
+  const rows = await orm
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
+    .from(sql`invites`)
+    .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
+  expect(rows).toHaveLength(1);
+  expect(rows[0]!.row).toMatchObject({ profiles: ["ADMIN"] });
+});
+
+test("a new link with profiles [] gives none", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee();
+  const service = employeeInviteService(orm);
+  await service.send(
+    owner,
+    { employeeIds: [employee.id], profiles: ["ADMIN"] },
+    "https://copy.example.com",
+  );
+
+  await service.send(
+    owner,
+    { employeeIds: [employee.id], profiles: [] },
+    "https://copy.example.com",
+  );
+
+  const rows = await orm
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
+    .from(sql`invites`)
+    .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
+  expect(rows).toHaveLength(1);
+  expect(rows[0]!.row).toMatchObject({ profiles: [] });
+});
+
+test("two sends for one person at once leave one open invite", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee();
+  const service = employeeInviteService(orm);
+
+  const sent = await Promise.all([
+    service.send(owner, { employeeIds: [employee.id] }, "https://copy.example.com"),
+    service.send(owner, { employeeIds: [employee.id] }, "https://copy.example.com"),
+  ]);
+
+  expect(sent.map((invites) => invites.length)).toEqual([1, 1]);
+  const rows = await orm
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
+    .from(sql`invites`)
+    .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
+  expect(rows).toHaveLength(1);
+  expect(rows[0]!.row).toMatchObject({ employee_id: employee.id });
+});
+
 test("skips a person who already joined", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const user = await seed.user({ email: "joined@example.com" });
@@ -169,6 +247,28 @@ test("skips demo employees", async ({ orm, seed }) => {
       "https://copy.example.com",
     ),
   ).toEqual([]);
+
+  expect(
+    await orm.select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` }).from(sql`invites`),
+  ).toEqual([]);
+});
+
+test("refuses invites while the demo runs", async ({ orm, seed }) => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
+  vi.setSystemTime(new Date("2026-10-28T12:00:00Z"));
+  const owner = await seed.demoOwner({ expiresAt: new Date("2026-11-04T12:00:00Z") });
+  const employee = await seed.employee({ isDemo: false });
+
+  await expect(
+    employeeInviteService(orm).send(
+      owner,
+      { employeeIds: [employee.id] },
+      "https://copy.example.com",
+    ),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
 
   expect(
     await orm.select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` }).from(sql`invites`),

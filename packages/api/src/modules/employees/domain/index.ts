@@ -15,6 +15,7 @@ export {
 } from "./employee";
 export { managerChanges } from "./managerChanges";
 export {
+  canAccept,
   canBeInvited,
   createInviteToken,
   isExpired,
@@ -26,6 +27,7 @@ export {
   inviteLink,
   MAX_INVITEES,
   NOTE_MAX_LENGTH,
+  parseInviteInput,
   type Invite,
   type InviteDelivery,
   type SignInState,

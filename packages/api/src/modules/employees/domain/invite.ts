@@ -1,5 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 
+import { ApplicationError, invalidInput } from "../../../core/applicationError";
+import { parseGivenProfiles, type PermissionProfile } from "../../../core/security";
+import { parseUuid } from "../../../utils";
+
 /** How long an invite link works. */
 export const INVITE_DAYS = 7;
 
@@ -41,10 +45,8 @@ export interface Invite {
   note: string | null;
   /** Null once the inviter's user is deleted. */
   invitedByUserId: string | null;
-  delivery: InviteDelivery;
   createdAt: Date;
   expiresAt: Date;
-  sentAt: Date | null;
   sendFailedAt: Date | null;
   acceptedAt: Date | null;
   cancelledAt: Date | null;
@@ -89,6 +91,25 @@ export function isOpen(invite: Invite): boolean {
   return !invite.acceptedAt && !invite.cancelledAt && !invite.replacedAt;
 }
 
+/**
+ * Whether the person can join with this open invite: it has not expired, they can still be
+ * invited, and their email is still the one it was sent to, which their account gets.
+ */
+export function canAccept(
+  invite: Invite,
+  invitee: {
+    employee: { userId: string | null; email: string };
+    isDemo: boolean;
+    emailHasAccount: boolean;
+  },
+): boolean {
+  return (
+    !isExpired(invite) &&
+    canBeInvited(invitee) &&
+    invitee.employee.email.toLowerCase() === invite.email
+  );
+}
+
 /** Whether the invite's link stopped working with time. */
 export function isExpired(invite: Invite): boolean {
   return invite.expiresAt.getTime() <= Date.now();
@@ -107,4 +128,37 @@ export function signInStatus(
   return open
     ? { state: "pending", expiresAt: open.expiresAt, notSent: !!open.sendFailedAt, ...known }
     : { state: "not_invited", expiresAt: null, notSent: false, ...known };
+}
+
+/** The input of a send as the service uses it: canonical ids, each once, the profiles to give and the note. */
+export function parseInviteInput({
+  employeeIds,
+  profiles,
+  note,
+}: {
+  employeeIds: readonly string[];
+  profiles?: readonly PermissionProfile[] | null;
+  note?: string | null;
+}) {
+  const parsedIds = employeeIds.map(parseUuid);
+  if (parsedIds.some((id) => id === null)) {
+    throw new ApplicationError("NOT_FOUND", "No employee has this id.");
+  }
+  // Parsed first, so one id in two cases counts once.
+  const ids = [...new Set(parsedIds as string[])];
+  if (ids.length === 0) {
+    throw invalidInput([{ field: "employeeIds", code: "required" }]);
+  }
+  if (ids.length > MAX_INVITEES) {
+    throw invalidInput([{ field: "employeeIds", code: "too_many" }]);
+  }
+  const trimmedNote = note?.trim() || null;
+  if (trimmedNote && trimmedNote.length > NOTE_MAX_LENGTH) {
+    throw invalidInput([{ field: "note", code: "too_long" }]);
+  }
+  return {
+    employeeIds: ids,
+    profiles: profiles ? parseGivenProfiles(profiles) : null,
+    note: trimmedNote,
+  };
 }

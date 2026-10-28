@@ -3,8 +3,12 @@ import { cn } from "@/lib/class-names";
 
 import { signInLabel } from "./signInStatus";
 
+type Props = {
+  status: SignInStatusFragment | null | undefined;
+};
+
 /** A person's sign-in in the People table: Not invited, Pending with its expiry, or Joined. */
-export function SignInCell({ status }: { status: SignInStatusFragment | null | undefined }) {
+export function SignInCell({ status }: Props) {
   if (!status) return null;
   const { state, hint } = signInLabel(status, new Date());
   return (

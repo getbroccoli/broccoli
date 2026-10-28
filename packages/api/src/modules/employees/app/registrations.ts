@@ -1,5 +1,13 @@
 // What this module adds to core's shared registries.
 
+import type { SendInviteJob } from "./invites/inviteEmail";
+
+declare module "../../../core/jobs" {
+  interface Jobs {
+    "employees.sendInvite": SendInviteJob;
+  }
+}
+
 declare module "../../../core/records" {
   interface RecordTypes {
     employee: true;
@@ -15,5 +23,3 @@ declare module "../../../core/records" {
     INVITE_ACCEPTED: true;
   }
 }
-
-export {};

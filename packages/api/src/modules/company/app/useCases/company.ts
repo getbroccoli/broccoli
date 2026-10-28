@@ -34,7 +34,7 @@ export async function readCompany({ orm, companies }: CompanyContext): Promise<C
   };
 }
 
-/** The company's name, for other modules' emails and pages; empty before setup names it. */
-export async function readCompanyName(orm: Orm): Promise<string> {
-  return (await companyRepository(orm).read()).name ?? "";
+/** The stored company, for other modules' emails and pages, such as an invite's. */
+export function readStoredCompany(orm: Orm) {
+  return companyRepository(orm).read();
 }

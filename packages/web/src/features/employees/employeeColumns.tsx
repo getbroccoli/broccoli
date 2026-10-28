@@ -79,3 +79,14 @@ export function useEmployeeRows(
   });
   return employees && complete ? data : undefined;
 }
+
+/** The rows the cache holds now for these ids; people it no longer holds are left out. */
+export function useCachedEmployeeRows(ids: ReadonlySet<string>): EmployeeRow[] {
+  const { data } = useFragment({
+    fragment: EmployeeColumns_EmployeeFragmentDoc,
+    fragmentName: "EmployeeColumns_employee",
+    from: [...ids].map((id) => ({ __typename: "Employee" as const, id })),
+  });
+  // A person the cache no longer holds reads as a partial object.
+  return data.filter((row) => row?.id && row.firstName) as EmployeeRow[];
+}

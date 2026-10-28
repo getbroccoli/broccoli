@@ -1,12 +1,11 @@
-import { ApplicationError, invalidInput } from "../../../../core/applicationError";
+import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
-import type { MailSettings } from "../../../../core/instance";
+import { type MailSettings, readInstance } from "../../../../core/instance";
 import type { JobHandlers, JobQueue } from "../../../../core/jobs";
 import type { Logger } from "../../../../core/logger";
 import { appendRecordHistory, type HistoryLine } from "../../../../core/records";
 import type { SecretBox } from "../../../../core/secrets";
 import {
-  parseGivenProfiles,
   permissionProfileRepository,
   type PermissionProfile,
   PrincipalSecurityContext,
@@ -17,15 +16,14 @@ import { employeeRepository, inviteRepository } from "../../db";
 import {
   canBeInvited,
   createInviteToken,
-  isExpired,
+  canAccept,
   signInStatus,
   type Employee,
   hashInviteToken,
   type InviteDelivery,
   inviteExpiry,
   inviteLink,
-  MAX_INVITEES,
-  NOTE_MAX_LENGTH,
+  parseInviteInput,
   type SignInStatus,
 } from "../../domain";
 import { employeeDirectory } from "../employeeDirectory";
@@ -63,13 +61,13 @@ export interface EmployeeInviteService {
     tx: Tx,
     token: string,
     createUser: (account: { email: string; name: string }) => Promise<Joined>,
-  ): Promise<Joined | null>;
+  ): Promise<{ joined: Joined; inviteId: string; employeeId: string } | null>;
   jobs: JobHandlers;
 }
 
 export interface InviteInput {
   employeeIds: readonly string[];
-  /** Beside `EMPLOYEE`, which everyone has; `OWNER` is refused. */
+  /** Beside `EMPLOYEE`, which everyone has; `OWNER` is refused. None keeps an open invite's. */
   profiles?: readonly PermissionProfile[] | null;
   note?: string | null;
   /** `copied_by_owner` asks for links even while mail is chosen. */
@@ -101,7 +99,7 @@ export function createEmployeeInviteService({
   jobs,
   secretBox,
   mailSettings,
-  readCompanyName,
+  readCompany,
 }: {
   orm: Orm;
   transact: Transact;
@@ -109,38 +107,50 @@ export function createEmployeeInviteService({
   jobs: JobQueue;
   secretBox: SecretBox;
   mailSettings: MailSettings;
-  /** The company's name, which the invite and its page show. */
-  readCompanyName: () => Promise<string>;
+  /** The company, whose name the invite and its page show. */
+  readCompany: () => Promise<{ name: string | null }>;
 }): EmployeeInviteService {
   // The job and the public invite page run without a user.
   const system = PrincipalSecurityContext.system();
   const invites = inviteRepository(orm);
   const readMailer = () => mailSettings.readMailer(system);
+  const readCompanyName = async () => (await readCompany()).name ?? "";
 
   return {
     send: async (ctx, input, linkOrigin) => {
       ctx.require("MANAGE_WORKSPACE");
       const { employeeIds, profiles, note } = parseInviteInput(input);
+      // A demo's owner is provisional; an account they invited would outlive the demo.
+      if ((await readInstance(orm)).demoExpiresAt) {
+        throw new ApplicationError("CONFLICT", "Invites start once the demo ends.");
+      }
       const mailer = input.delivery === "copied_by_owner" ? null : await readMailer();
       const delivery: InviteDelivery = mailer ? "sent_by_email" : "copied_by_owner";
       const now = new Date();
       const sent = await transact(async (tx) => {
-        const invitees = await inviteRepository(tx).findInvitees(employeeIds);
+        // Sends, cancels and accepts of one person take turns.
+        await employeeRepository(tx).lockByIds(employeeIds);
+        const [invitees, open] = await Promise.all([
+          inviteRepository(tx).findInvitees(employeeIds),
+          inviteRepository(tx).findOpen(employeeIds),
+        ]);
         if (invitees.length < employeeIds.length) {
           throw employeeNotFound();
         }
+        const openOf = new Map(open.map((invite) => [invite.employeeId, invite]));
         const made: SentInvite[] = [];
         for (const { employee } of invitees.filter(canBeInvited)) {
+          const replaced = openOf.get(employee.id);
           const { token, tokenHash } = createInviteToken();
-          const { invite, replacedOpen } = await inviteRepository(tx).replace(
+          const invite = await inviteRepository(tx).replace(
             {
               employeeId: employee.id,
               email: employee.email.toLowerCase(),
               tokenHash,
-              profiles,
+              // A new link without profiles keeps the ones its invite had.
+              profiles: profiles ?? replaced?.profiles ?? [],
               note,
               invitedByUserId: ctx.user?.userId ?? null,
-              delivery,
               expiresAt: inviteExpiry(now),
             },
             now,
@@ -148,7 +158,7 @@ export function createEmployeeInviteService({
           const historyLine = await appendSignInLine(ctx, tx, employee.id, {
             kind: "INVITE_SENT",
             ref: invite.id,
-            from: replacedOpen ? "INVITED" : "NOT_INVITED",
+            from: replaced ? "INVITED" : "NOT_INVITED",
             to: "INVITED",
           });
           if (delivery === "sent_by_email") {
@@ -181,6 +191,7 @@ export function createEmployeeInviteService({
         throw employeeNotFound();
       }
       const { employee, historyLine, inviteId } = await transact(async (tx) => {
+        await employeeRepository(tx).lockByIds([employeeId]);
         const cancelled = await inviteRepository(tx).cancelOpen(employeeId, new Date());
         const employee = cancelled && (await employeeRepository(tx).findById(employeeId));
         if (!cancelled || !employee) {
@@ -221,7 +232,7 @@ export function createEmployeeInviteService({
 
     lookUp: async (token) => {
       const invite = await invites.findOpenByTokenHash(hashInviteToken(token));
-      if (!invite || isExpired(invite)) {
+      if (!invite) {
         return null;
       }
       const [[invitee], inviter, companyName] = await Promise.all([
@@ -229,26 +240,29 @@ export function createEmployeeInviteService({
         invite.invitedByUserId ? invites.findInviter(invite.invitedByUserId) : null,
         readCompanyName(),
       ]);
-      if (!invitee || !canBeInvited(invitee)) {
+      if (!invitee || !canAccept(invite, invitee)) {
         return null;
       }
-      const { employee } = invitee;
       return {
         companyName,
         inviterFirstName: inviter?.name?.split(" ")[0] ?? null,
-        firstName: employee.firstName,
+        firstName: invitee.employee.firstName,
         email: invite.email,
         expiresAt: invite.expiresAt,
       };
     },
 
     accept: async (tx, token, createUser) => {
-      const invite = await inviteRepository(tx).lockOpenByTokenHash(hashInviteToken(token));
-      if (!invite || isExpired(invite)) {
+      const tokenHash = hashInviteToken(token);
+      const found = await inviteRepository(tx).findOpenByTokenHash(tokenHash);
+      if (!found) {
         return null;
       }
-      const [invitee] = await inviteRepository(tx).findInvitees([invite.employeeId]);
-      if (!invitee || !canBeInvited(invitee)) {
+      // In the order a send takes them, the person first, so the two cannot deadlock.
+      await employeeRepository(tx).lockByIds([found.employeeId]);
+      const invite = await inviteRepository(tx).lockOpenByTokenHash(tokenHash);
+      const [invitee] = await inviteRepository(tx).findInvitees([found.employeeId]);
+      if (!invite || !invitee || !canAccept(invite, invitee)) {
         return null;
       }
       const { employee } = invitee;
@@ -277,34 +291,10 @@ export function createEmployeeInviteService({
         from: "INVITED",
         to: "JOINED",
       });
-      logger.info({ inviteId: invite.id, employeeId: employee.id, userId }, "Invite accepted");
-      return joined;
+      return { joined, inviteId: invite.id, employeeId: employee.id };
     },
 
     jobs: sendInviteJob({ orm, logger, secretBox, readMailer, readCompanyName }),
-  };
-}
-
-function parseInviteInput({ employeeIds, profiles, note }: InviteInput) {
-  const ids = [...new Set(employeeIds)];
-  if (ids.length === 0) {
-    throw invalidInput([{ field: "employeeIds", code: "required" }]);
-  }
-  if (ids.length > MAX_INVITEES) {
-    throw invalidInput([{ field: "employeeIds", code: "too_many" }]);
-  }
-  const trimmedNote = note?.trim() || null;
-  if (trimmedNote && trimmedNote.length > NOTE_MAX_LENGTH) {
-    throw invalidInput([{ field: "note", code: "too_long" }]);
-  }
-  const parsedIds = ids.map(parseUuid);
-  if (parsedIds.some((id) => id === null)) {
-    throw employeeNotFound();
-  }
-  return {
-    employeeIds: parsedIds as string[],
-    profiles: parseGivenProfiles(profiles ?? []),
-    note: trimmedNote,
   };
 }
 

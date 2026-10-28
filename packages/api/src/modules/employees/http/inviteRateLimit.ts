@@ -2,6 +2,7 @@ import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
 
 import type { Mode } from "../../../core/env";
+import type { Logger } from "../../../core/logger";
 
 const INVITE_PATHS = new Set(["/api/auth/invite/lookup", "/api/auth/invite/accept"]);
 
@@ -11,12 +12,16 @@ const INVITE_PATHS = new Set(["/api/auth/invite/lookup", "/api/auth/invite/accep
  * `X-Forwarded-For` and is itself the socket, so there the instance shares one higher count.
  * Tokens carry 256 bits, so this stops load and password spraying, not guessing.
  */
-export function inviteRateLimit(mode: Mode): Router {
+export function inviteRateLimit(mode: Mode, logger: Logger): Router {
   const limit = rateLimit({
     windowMs: 60_000,
     limit: mode === "managed" ? 300 : 20,
     validate: { xForwardedForHeader: false },
     ...(mode === "managed" && { keyGenerator: () => "instance" }),
+    handler: (request, response, _next, { statusCode, message }) => {
+      logger.info({ path: request.path }, "Invite request rate limited");
+      response.status(statusCode).send(message);
+    },
   });
   return Router().post("/auth/{*path}", (request, response, next) => {
     // Better Auth resolves dot segments, so `/api/auth/./invite/accept` must not skip the limit.

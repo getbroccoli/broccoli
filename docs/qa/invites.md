@@ -29,8 +29,8 @@ A manual check of inviting people from People, by email and by copied link, and 
 ## By email (SMTP to Mailpit in Settings)
 
 - [ ] Invite shows the note field, "It goes into every invite." and "Emailed from people@example.com · Change in Settings", and the buttons "Create links to copy" and "Send invite(s)".
-- [ ] "Send" closes with "Invite sent"; Mailpit receives "You're invited to Acme Corp on Broccoli" (or "<name> invited you…" when the inviter's account has a name) with the note, a "Join Acme Corp" link to `/invite#…` and the expiry date. It comes from "Acme Corp" <people@example.com>.
-- [ ] With Resend and a made-up key, sending shows "Pending · not sent" in the Sign-in column after a moment.
+- [ ] "Send" closes with "Invite sent"; Mailpit receives "You're invited to Acme Corp on Broccoli" (or "<name> invited you…" when the inviter's account has a name) with the note, a "Join Acme Corp" link to `/invite#…`, the expiry date and, when the inviter has a name, "Questions? Ask <name> directly." It comes from "Acme Corp" <people@example.com>, with no Reply-To.
+- [ ] With Resend and a made-up key, the Sign-in column shows "Pending · not sent" after reloading People.
 - [ ] "Create links to copy" while email is chosen shows links and emails nothing.
 
 ## The person's panel

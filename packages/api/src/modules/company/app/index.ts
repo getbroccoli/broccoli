@@ -1,6 +1,6 @@
 export {
   createCompanyUseCases,
-  readCompanyName,
+  readStoredCompany,
   MAX_LOGO_BYTES,
   type Company,
   type CompanyUseCases,

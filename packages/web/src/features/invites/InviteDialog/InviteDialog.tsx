@@ -1,5 +1,4 @@
 import { useQuery } from "@apollo/client/react";
-import { Check, Copy } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -16,17 +15,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
-import { useCopyToClipboard } from "@/lib/useCopyToClipboard";
 
-import { addInviteHistoryLines } from "./cache";
-import { formatExpiryDay, groupInvitees, type SkipReason } from "./signInStatus";
+import { addInviteHistoryLines } from "../cache";
+import { groupInvitees, type SkipReason } from "../signInStatus";
+import { type CopiedLink, CopyLinks } from "./CopyLinks";
+import { PeopleList } from "./PeopleList";
 
 /** A person the dialog may invite. */
 export interface Invitee {
@@ -50,8 +49,8 @@ const SKIP_REASONS: Record<SkipReason, MessageKey> = {
   sampleData: "invites.dialog.sampleData",
 };
 
-/** The API takes this many people per call; larger selections go in several. */
-const PEOPLE_PER_CALL = 1_000;
+/** The most people the API invites in one call. */
+const MAX_PEOPLE = 1_000;
 
 /**
  * Invites the people chosen: who gets an invite and who is skipped, their permissions, a note
@@ -66,6 +65,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
     update: (cache, { data }) => addInviteHistoryLines(cache, data?.employee.invite.invites ?? []),
   });
   const { invited, skipped } = groupInvitees(people);
+  const tooMany = invited.length > MAX_PEOPLE;
   const delivery = data?.setup.inviteDelivery ?? "COPIED_BY_OWNER";
   const byEmail = delivery === "SENT_BY_EMAIL";
   const nameOf = (id: string) => {
@@ -74,25 +74,22 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
   };
 
   const send = async (chosen: InviteDelivery) => {
-    const employeeIds = invited.map(({ person }) => person.id);
-    const sent = [];
+    let payload;
     try {
-      for (let start = 0; start < employeeIds.length; start += PEOPLE_PER_CALL) {
-        const payload = await invite({
-          variables: {
-            input: {
-              employeeIds: employeeIds.slice(start, start + PEOPLE_PER_CALL),
-              profiles: admin ? ["ADMIN"] : [],
-              note: chosen === "SENT_BY_EMAIL" ? note.trim() || null : null,
-              delivery: chosen,
-            },
+      payload = await invite({
+        variables: {
+          input: {
+            employeeIds: invited.map(({ person }) => person.id),
+            profiles: admin ? ["ADMIN"] : [],
+            note: chosen === "SENT_BY_EMAIL" ? note.trim() || null : null,
+            delivery: chosen,
           },
-        });
-        sent.push(...(payload.invites ?? []));
-      }
+        },
+      });
     } catch {
       return;
     }
+    const sent = payload.invites ?? [];
     onInvited?.();
     const copied = sent.flatMap(({ employee, link, expiresAt }) =>
       link ? [{ id: employee.id, name: nameOf(employee.id), link, expiresAt }] : [],
@@ -118,7 +115,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(next) => !loading && (next ? onOpenChange(true) : close())}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg" closeLabel={t("invites.dialog.close")}>
         {links ? (
           <CopyLinks links={links} onDone={close} />
         ) : (
@@ -195,6 +192,11 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
                 </p>
               </div>
             )}
+            {tooMany && (
+              <p role="alert" className="text-sm text-destructive">
+                {t("invites.dialog.tooMany", { max: MAX_PEOPLE.toLocaleString("en-GB") })}
+              </p>
+            )}
             {(error || payloadError) && (
               <p role="alert" className="text-sm text-destructive">
                 {t("invites.dialog.failed")}
@@ -207,14 +209,14 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
               {invited.length > 0 && byEmail && (
                 <Button
                   variant="outline"
-                  disabled={loading}
+                  disabled={loading || tooMany}
                   onClick={() => void send("COPIED_BY_OWNER")}
                 >
                   {t("invites.dialog.copyInstead")}
                 </Button>
               )}
               {invited.length > 0 && (
-                <Button disabled={loading} onClick={() => void send(delivery)}>
+                <Button disabled={loading || tooMany} onClick={() => void send(delivery)}>
                   {loading ? t("invites.dialog.pending") : submitLabel(byEmail, invited.length)}
                 </Button>
               )}
@@ -223,69 +225,6 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
         )}
       </DialogContent>
     </Dialog>
-  );
-}
-
-interface CopiedLink {
-  id: string;
-  name: string;
-  link: string;
-  expiresAt: string;
-}
-
-/** The links of new invites, shown once: each person's own, or all as a list. */
-function CopyLinks({ links, onDone }: { links: CopiedLink[]; onDone: () => void }) {
-  const date = formatExpiryDay(links[0]!.expiresAt);
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>
-          {links.length === 1
-            ? t("invites.links.titleOne")
-            : t("invites.links.title", { count: String(links.length) })}
-        </DialogTitle>
-        <DialogDescription>{t("invites.links.detail", { date })}</DialogDescription>
-      </DialogHeader>
-      <p className="rounded-lg bg-muted px-3 py-2 text-sm">{t("invites.links.warning")}</p>
-      <ul className="subtle-scrollbar flex max-h-[40vh] flex-col gap-1 overflow-y-auto">
-        {links.map(({ id, name, link }) => (
-          <li key={id} className="flex items-center gap-3 py-1 text-sm">
-            <span className="min-w-0 flex-1 truncate">{name}</span>
-            <CopyButton text={link} label={t("invites.links.copy")} />
-          </li>
-        ))}
-      </ul>
-      <DialogFooter>
-        {links.length > 1 && (
-          <CopyButton
-            text={links.map(({ name, link }) => `${name}: ${link}`).join("\n")}
-            label={t("invites.links.copyAll")}
-          />
-        )}
-        <Button onClick={onDone}>{t("invites.links.done")}</Button>
-      </DialogFooter>
-    </>
-  );
-}
-
-function CopyButton({ text, label }: { text: string; label: string }) {
-  const { copied, copy } = useCopyToClipboard();
-  return (
-    <Button size="sm" variant="outline" onClick={() => void copy(text)}>
-      {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
-      {copied ? t("invites.links.copied") : label}
-    </Button>
-  );
-}
-
-function PeopleList({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="flex flex-col gap-1">
-      <h3 className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-        {title}
-      </h3>
-      <ul className="flex flex-col gap-0.5 text-sm">{children}</ul>
-    </section>
   );
 }
 

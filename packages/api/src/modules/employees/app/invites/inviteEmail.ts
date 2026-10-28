@@ -17,12 +17,6 @@ export interface SendInviteJob {
   encryptedToken: string;
 }
 
-declare module "../../../../core/jobs" {
-  interface Jobs {
-    "employees.sendInvite": SendInviteJob;
-  }
-}
-
 /**
  * Emails one invite with the mail choice saved when the job runs. A refusal, no email chosen, or
  * the last failed retry marks the invite not sent; a closed invite or removed person sends nothing.
@@ -77,11 +71,9 @@ export function sendInviteJob({
               expiresAt: invite.expiresAt,
             },
             to: invite.email,
-            replyTo: inviter?.email,
             fromName: inviter?.name ? `${inviter.name} via ${companyName}` : companyName,
             idempotencyKey: inviteId,
           });
-          await invites.markSent(inviteId, new Date());
           logger.info({ inviteId, messageId }, "Invite email sent");
         } catch (error) {
           if (!(error instanceof MailRefusedError) || error.retryable) {
@@ -119,9 +111,10 @@ export const INVITE_TEMPLATE: EmailTemplate<InviteEmailValues> = {
     const greeting = `Hi ${firstName}, ${inviterName ? `${inviterName} invited you` : "you're invited"} to ${companyName} on Broccoli.`;
     const join = `Join ${companyName}`;
     const expiry = `The link works once, until ${formatDay(expiresAt)}.`;
+    const questions = inviterName && `Questions? Ask ${inviterName} directly.`;
     return {
       subject,
-      text: [greeting, note && `"${note}"`, `${join}: ${link}`, expiry]
+      text: [greeting, note && `"${note}"`, `${join}: ${link}`, expiry, questions]
         .filter((part) => part)
         .join("\n\n"),
       html: [
@@ -129,6 +122,7 @@ export const INVITE_TEMPLATE: EmailTemplate<InviteEmailValues> = {
         note && `<blockquote>${escapeHtml(note)}</blockquote>`,
         `<p><a href="${escapeHtml(link)}">${escapeHtml(join)}</a></p>`,
         `<p>${escapeHtml(expiry)}</p>`,
+        questions && `<p>${escapeHtml(questions)}</p>`,
       ]
         .filter((part) => part)
         .join("\n"),

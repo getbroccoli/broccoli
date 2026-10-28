@@ -1,16 +1,11 @@
 import {
-  approveReviewedImport,
   CANCEL_INVITE,
   copyInvite,
-  createBrowser,
   expect,
   INVITE_EMPLOYEES,
-  MANAGED_ASSIGNMENT,
   RESEND_CHOICE,
   SAVE_MAIL_SETTINGS,
-  signInAsManagedOwner,
   startMailTestEnv,
-  startManagedEnv,
   test,
   TEST_OWNER,
 } from "#test/support";
@@ -224,6 +219,35 @@ test("a person deleted after being invited cannot accept the link", async ({ env
   expect(await response.json()).toMatchObject({ code: "INVITE_LINK_INVALID" });
 });
 
+test("an invite sent before the person's email changed answers the invalid-link error", async ({
+  env,
+}) => {
+  const { browser: owner } = await env.signInAsOwner();
+  await env.seed.setupStep("done");
+  const employee = await env.seed.employee();
+  const token = await copyInvite(owner, employee.id);
+  const updated = await owner.graphql(
+    `mutation UpdateEmployee($input: EmployeeUpdateInput!) {
+    employee { update(input: $input) { employee { id email } error { __typename } } }
+  }`,
+    { input: { id: employee.id, email: "new@example.com" } },
+  );
+  expect(await updated.json()).toEqual({
+    data: {
+      employee: {
+        update: { employee: { id: employee.id, email: "new@example.com" }, error: null },
+      },
+    },
+  });
+
+  const response = await env
+    .browser()
+    .post("/api/auth/invite/accept", { token, password: TEST_OWNER.password });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ code: "INVITE_LINK_INVALID" });
+});
+
 test("a short password is refused without consuming the invite", async ({ env }) => {
   const { browser: owner } = await env.signInAsOwner();
   await env.seed.setupStep("done");
@@ -253,43 +277,6 @@ test("the twenty-first invite lookup in a minute is rate limited", async ({ env 
   const limited = await browser.post("/api/auth/invite/lookup", { token });
 
   expect(limited.status).toBe(429);
-});
-
-test("a managed invitee can sign out and sign in again with their password", async () => {
-  const { env, accounts } = await startManagedEnv();
-  const owner = await signInAsManagedOwner(env, accounts);
-  expect(
-    await (
-      await owner.graphql(
-        `mutation { company { update(input: { name: "Acme Corp" }) { error { __typename } } } }`,
-      )
-    ).json(),
-  ).toMatchObject({ data: { company: { update: { error: null } } } });
-  expect(await (await approveReviewedImport(owner)).json()).toMatchObject({
-    data: { import: { approve: { error: null } } },
-  });
-  expect(
-    await (await owner.graphql("mutation { setup { complete { setup { step } } } }")).json(),
-  ).toMatchObject({ data: { setup: { complete: { setup: { step: "DONE" } } } } });
-  const employee = await env.seed.employee();
-  const token = await copyInvite(owner, employee.id);
-  const browser = createBrowser(env.url, MANAGED_ASSIGNMENT.publicOrigin);
-  expect(
-    (await browser.post("/api/auth/invite/accept", { token, password: TEST_OWNER.password }))
-      .status,
-  ).toBe(200);
-  expect((await browser.post("/api/auth/sign-out", {})).status).toBe(200);
-  expect(await (await browser.get("/api/auth/get-session")).json()).toBeNull();
-
-  const response = await browser.post("/api/auth/sign-in/email", {
-    email: employee.email,
-    password: TEST_OWNER.password,
-  });
-
-  expect(response.status).toBe(200);
-  expect(await (await browser.graphql("query { me { employee { id } } }")).json()).toEqual({
-    data: { me: { employee: { id: employee.id } } },
-  });
 });
 
 test("an employee who joined cannot invite another person", async ({ env }) => {

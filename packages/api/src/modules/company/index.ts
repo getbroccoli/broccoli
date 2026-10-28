@@ -7,7 +7,7 @@ import { createResolvers } from "./graphql";
 import { logoRouter } from "./http";
 
 // Public values.
-export { createCompanyUseCases, readCompanyName } from "./app";
+export { createCompanyUseCases, readStoredCompany } from "./app";
 
 /** The company the instance belongs to: its name, suggested during setup, and its logo. */
 export function companyModule({

@@ -54,7 +54,7 @@ export function invitePlugin(
           }
           const passwordHash = await ctx.context.password.hash(password);
           const { internalAdapter } = ctx.context;
-          const joined = await inAuthTransaction(transact, ctx, (tx) =>
+          const accepted = await inAuthTransaction(transact, ctx, (tx) =>
             invites.accept(tx, token, async ({ email, name }) => {
               // The link reached this address, which proves it.
               const user = await internalAdapter.createUser(
@@ -65,10 +65,12 @@ export function invitePlugin(
               return { user, session: await internalAdapter.createSession(user.id) };
             }),
           );
-          if (!joined) {
+          if (!accepted) {
             logger.info({ reason: "link_used_meanwhile" }, "Invite accept refused");
             throw APIError.from("BAD_REQUEST", INVITE_LINK_INVALID);
           }
+          const { joined, inviteId, employeeId } = accepted;
+          logger.info({ inviteId, employeeId, userId: joined.user.id }, "Invite accepted");
           await setSessionCookie(ctx, joined);
           return ctx.json({ ok: true });
         },

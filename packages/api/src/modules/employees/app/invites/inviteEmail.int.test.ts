@@ -67,6 +67,9 @@ test("emails the invite with the saved origin, names, note and expiry", async ({
       expiresAt: sent!.expiresAt,
     },
   });
+  const message = mail.messages[0]!;
+  expect(message.replyTo).toBeUndefined();
+  expect(message.template.render(message.values).text).toContain("Questions? Ask User directly.");
 });
 
 test("marks an invite not sent when the mail provider refuses it permanently", async ({

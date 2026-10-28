@@ -1,5 +1,5 @@
 {
-  "id": "e4ce569c-2cfa-4a09-a8d3-1309d021cf85",
+  "id": "d9c943f1-f9e5-42d1-be22-c9c193ee7613",
   "prevId": "794f59f4-8827-4fe5-8d56-8cc032296108",
   "version": "7",
   "dialect": "postgresql",
@@ -1089,12 +1089,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "delivery": {
-          "name": "delivery",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1107,12 +1101,6 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
-        },
-        "sent_at": {
-          "name": "sent_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
         },
         "send_failed_at": {
           "name": "send_failed_at",
@@ -1140,6 +1128,21 @@
         }
       },
       "indexes": {
+        "invites_employee_idx": {
+          "name": "invites_employee_idx",
+          "columns": [
+            {
+              "expression": "employee_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "invites_one_open_per_employee": {
           "name": "invites_one_open_per_employee",
           "columns": [

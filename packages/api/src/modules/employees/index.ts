@@ -40,15 +40,15 @@ export type {
 export function employeesModule({
   mode,
   mailSettings,
-  readCompanyName,
+  readCompany,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs" | "secretBox"> & {
   mode: Mode;
   mailSettings: MailSettings;
-  readCompanyName: () => Promise<string>;
+  readCompany: () => Promise<{ name: string | null }>;
 }): ModuleManifest {
   const useCases = createEmployeeUseCases(dependencies);
-  const invites = createEmployeeInviteService({ ...dependencies, mailSettings, readCompanyName });
+  const invites = createEmployeeInviteService({ ...dependencies, mailSettings, readCompany });
   return {
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
@@ -57,6 +57,9 @@ export function employeesModule({
     jobs: invites.jobs,
     authPlugin: invitePlugin(invites, dependencies),
     router: (resolveSecurity) =>
-      express.Router().use(inviteRateLimit(mode)).use(avatarRouter(useCases, resolveSecurity)),
+      express
+        .Router()
+        .use(inviteRateLimit(mode, dependencies.logger))
+        .use(avatarRouter(useCases, resolveSecurity)),
   };
 }

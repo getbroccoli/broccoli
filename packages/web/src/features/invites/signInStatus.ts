@@ -48,7 +48,7 @@ function pendingHint({ expiresAt, notSent }: SignInStatusFragment, now: Date): s
   if (!expiresAt) return null;
   const days = Math.ceil((new Date(expiresAt).getTime() - now.getTime()) / DAY_MS);
   if (days <= 0) return t("invites.state.expired");
-  if (days === 1) return t("invites.state.expiresTomorrow");
+  if (days === 1) return t("invites.state.expiresWithinDay");
   return t("invites.state.expiresIn", { days: String(days) });
 }
 

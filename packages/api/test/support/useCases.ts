@@ -22,7 +22,7 @@ import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
-import { createCompanyUseCases, readCompanyName } from "../../src/modules/company";
+import { createCompanyUseCases, readStoredCompany } from "../../src/modules/company";
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
 import {
   createEmployeeInviteService,
@@ -165,7 +165,7 @@ export function employeeInviteService(
     transact: testTransactor(orm),
     secretBox: TEST_SECRET_BOX,
     mailSettings: mailSettings(orm, { mail }),
-    readCompanyName: () => readCompanyName(orm),
+    readCompany: () => readStoredCompany(orm),
     logger: createLogger("silent"),
     jobs: {
       send: (_tx, name, payload) => {
