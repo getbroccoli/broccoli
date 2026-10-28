@@ -10,7 +10,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE2.** Code outside a folder imports the folder itself (`./db`), never its other files, and relative imports carry no file extension. The exceptions are imported by path: `packages/web/src/components/ui/*` and `packages/web/src/lib/class-names`, which the shadcn CLI generates, and generated code in `packages/web/src/__generated__`. Tests import the shared test support as `#test/support`. `lint: boundaries`
 - **RULE3.** A folder imports only what its package's `importRules.json` lists; a new module, or a new import between modules, is added there ([architecture](architecture.md#layout-of-the-api)). `lint: boundaries`
 - **RULE4.** Files and folders are camelCase (`useCases/getCompany.ts`); React components and the folders named after them are PascalCase (`OwnerSetupForm.tsx`, `SetupLayout/`). Suffixes keep their dots (`getCompany.int.test.ts`). Tools name their own files: route files (their names are URLs), the shadcn CLI's kebab-case files, generated code and migrations. Make a case-only rename through a temporary name, because case-insensitive file systems miss it. `lint: check-file`
-- **RULE5.** A file is named after the main thing it exports (`TestSecurityContext` in `testSecurityContext.ts`), not after a group.
+- **RULE5.** A file is named after the main thing it exports (`employeeDirectory` in `employeeDirectory.ts`), not after a group.
 - **RULE6.** One React component per file. A component built from smaller components of its own is a folder named after it (`features/setup/SetupLayout/`), each component in its own file and `index.ts` exporting only what the rest of the code uses.
 - **RULE7.** A file has at most 300 lines, not counting blank lines and comments. `lint: max-lines`
 - **RULE8.** The repository root holds only files a tool requires there, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/` ([architecture §10](architecture.md#10-tooling-and-layout)).
@@ -87,7 +87,7 @@ How to write each kind of test is in [`testing.md`](testing.md).
 - **RULE42.** A test sits in the file of the code it checks. A concern shared by many modules, such as sessions or paging, gets its own test file.
 - **RULE43.** A test covers one behaviour, is named after it, and has short setup with a visible arrange, act and assert.
 - **RULE44.** Tests come first in a test file. Setup repeated across files becomes a helper in `#test/support`; the other helpers go to the bottom of the file.
-- **RULE45.** Tests mock only external systems. They never mock Postgres or our own code; the one stand-in is `TestSecurityContext`.
+- **RULE45.** Tests mock only external systems. They never mock Postgres or our own code; the one stand-in is the empty employee directory behind the `OWNER`, `ADMIN` and `EMPLOYEE` test contexts.
 - **RULE46.** Tests are deterministic: the clock and ID generators are injected, with no sleeps, no network and no dependence on test order.
 
 ## Docs and comments

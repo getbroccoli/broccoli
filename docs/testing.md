@@ -7,7 +7,7 @@ How we write tests in Broccoli. The decisions behind them are in [§9 of the arc
 Three layers, most tests in the middle one:
 
 - **Domain rules** with unit tests next to the code, named `<subject>.test.ts`. Domain code is pure, so these tests need no mocks.
-- **Use cases** with integration tests next to them, named `<use-case>.int.test.ts`. They call the module's use-case factory directly against a real, migrated Postgres, with any security context built in the test (`OWNER`, `NON_OWNER` or `SYSTEM`); application code never sees an anonymous caller. Permissions, validation, uniqueness, paging, transactions, audit and events are verified here. The `test` fixtures in `packages/api/test/support`, shared by all layers that need Postgres, give each test its own database (`orm`), a `seed`, and `transact` for transactions whose events nobody receives.
+- **Use cases** with integration tests next to them, named `<use-case>.int.test.ts`. They call the module's use-case factory directly against a real, migrated Postgres, with any security context built in the test (`OWNER`, `ADMIN`, `EMPLOYEE` or `SYSTEM`, or `signedIn(orm, …)` for a caller linked to an employee); application code never sees an anonymous caller. Permissions, validation, uniqueness, paging, transactions, audit and events are verified here. The `test` fixtures in `packages/api/test/support`, shared by all layers that need Postgres, give each test its own database (`orm`), a `seed`, and `transact` for transactions whose events nobody receives.
 - **API wiring** with a few end-to-end tests under `packages/api/test/e2e`. They start the real server and call GraphQL over HTTP: the session becomes the security context and a request without one is refused, each operation reaches its use case once on the happy path, errors keep their format. Rules already covered by integration tests are not repeated here.
 - **Bugs** with a test that reproduces the bug, written before the fix, at the lowest layer that shows it.
 
@@ -25,7 +25,7 @@ Do not write tests for log messages, fields or emission. Logs help diagnose prob
 - Build the use cases under test with the module's helper in `#test/support`, such as `companyUseCases(orm, { brandLookup })`. It fills every dependency with a test default (a new event bus, a silent logger, no external calls), so a test passes only the one it is about and the factory call is not repeated in every test. A module whose factory needs more than `{ orm }` adds such a helper.
 - Core tests publish the test-only `example.happened` domain event (`EXAMPLE_PAYLOAD`), never a module's event, so they do not depend on any module.
 - Assert on outcomes a caller can see: return values, GraphQL responses, state read back through public queries, and emitted events.
-- External systems such as email, Slack and third-party HTTP get fakes. `TestSecurityContext` from `#test/support` answers whatever the test sets; `OWNER`, `NON_OWNER` and `SYSTEM` are instances of it.
+- External systems such as email, Slack and third-party HTTP get fakes. The security contexts in `#test/support` are the real ones; `OWNER`, `ADMIN` and `EMPLOYEE` know no employees, so only grants on `all` reach anyone, and `signedIn(orm, { profile, employeeId })` resolves the reporting line from the database.
 - Add property-based tests only when the module design agrees on them. They run the use cases against Postgres, never a copy of the logic inside the test, and live next to them as `<use-case>.pbt.test.ts`.
 
 ## Running integration and end-to-end tests
