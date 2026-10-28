@@ -65,18 +65,14 @@ export function InviteForm({ token, details, onInvalid }: Props) {
       </div>
       <form.Field name="password">
         {(field) => (
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <NewPasswordField
-                id="invite-password"
-                value={field.state.value}
-                onChange={field.handleChange}
-                onBlur={field.handleBlur}
-                error={field.state.meta.errors[0]?.message}
-                readOnly={isSubmitting || joining}
-              />
-            )}
-          </form.Subscribe>
+          <NewPasswordField
+            id="invite-password"
+            value={field.state.value}
+            onChange={field.handleChange}
+            onBlur={field.handleBlur}
+            error={field.state.meta.errors[0]?.message}
+            readOnly={joining}
+          />
         )}
       </form.Field>
       {failure && (
@@ -84,15 +80,12 @@ export function InviteForm({ token, details, onInvalid }: Props) {
           {t(failure)}
         </p>
       )}
-      <form.Subscribe selector={(state) => state.isSubmitting}>
-        {(isSubmitting) => (
-          <Button type="submit" size="lg" className="w-full" disabled={isSubmitting || joining}>
-            {isSubmitting || joining
-              ? t("invites.page.joining")
-              : t("invites.page.join", { company: details.companyName })}
-          </Button>
-        )}
-      </form.Subscribe>
+      {/* `joining` lasts from the submit until the profile page renders. */}
+      <Button type="submit" size="lg" className="w-full" disabled={joining}>
+        {joining
+          ? t("invites.page.joining")
+          : t("invites.page.join", { company: details.companyName })}
+      </Button>
       <p className="text-sm text-muted-foreground">
         {t("invites.page.footer", { date: formatExpiryDay(details.expiresAt) })}
       </p>
