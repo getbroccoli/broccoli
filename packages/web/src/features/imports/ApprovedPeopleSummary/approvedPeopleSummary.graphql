@@ -1,4 +1,4 @@
-query AddedPeopleRing {
+query ApprovedPeopleSummary {
   company {
     id
     name
@@ -7,6 +7,10 @@ query AddedPeopleRing {
   import {
     id
     readyEmployeeCount
+    readyEmployeeSources {
+      id
+      kind
+    }
     employees(first: 100) {
       edges {
         node {
