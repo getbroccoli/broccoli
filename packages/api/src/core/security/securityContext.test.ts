@@ -97,6 +97,12 @@ it("allows an employee to read every employee", () => {
   expect(() => EMPLOYEE.requireEveryRecord("employee", "read")).not.toThrow();
 });
 
+it("combines the operations and grants of EMPLOYEE and ADMIN", () => {
+  expect(ADMIN.user?.permissionProfiles).toEqual(["EMPLOYEE", "ADMIN"]);
+  expect(ADMIN.can("MANAGE_WORKSPACE")).toBe(true);
+  expect(() => ADMIN.requireEveryRecord("employee", "create")).not.toThrow();
+});
+
 it("refuses an employee creating employees", () => {
   expect(() => EMPLOYEE.requireEveryRecord("employee", "create")).toThrowError(
     expect.objectContaining({ code: "FORBIDDEN", message: "You are not allowed to do this." }),
@@ -106,7 +112,7 @@ it("refuses an employee creating employees", () => {
 it("distinguishes the system from a signed-in user", () => {
   expect(SYSTEM.user).toBeNull();
   expect(SYSTEM.isSystem).toBe(true);
-  expect(EMPLOYEE.user).toMatchObject({ permissionProfile: "EMPLOYEE", employeeId: null });
+  expect(EMPLOYEE.user).toMatchObject({ permissionProfiles: ["EMPLOYEE"], employeeId: null });
   expect(EMPLOYEE.isSystem).toBe(false);
 });
 

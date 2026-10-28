@@ -14,7 +14,8 @@ type User {
   email: String!
   "True for the instance owner."
   isOwner: Boolean!
-  permissionProfile: PermissionProfile!
+  "EMPLOYEE first, then the user's other profiles."
+  permissionProfiles: [PermissionProfile!]!
   "The operations the user may do, so the app shows only what they can use."
   operations: [Operation!]!
 }

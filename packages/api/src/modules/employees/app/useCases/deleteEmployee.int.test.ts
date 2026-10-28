@@ -202,7 +202,7 @@ test("refuses an admin deleting the employee linked to the owner", async ({ orm,
   const owner = await seed.owner();
   const employee = await seed.employee({ userId: owner.user!.userId });
   const employees = employeeUseCases(orm);
-  const admin = signedIn(orm, { profile: "ADMIN", employeeId: null });
+  const admin = signedIn(orm, { profiles: ["EMPLOYEE", "ADMIN"], employeeId: null });
 
   await expect(employees.deleteEmployee(admin, { id: employee.id })).rejects.toMatchObject({
     code: "FORBIDDEN",

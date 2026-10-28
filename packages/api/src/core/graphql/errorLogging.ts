@@ -25,7 +25,7 @@ export function errorLoggingPlugin(logger: Logger): ApolloServerPlugin<GraphqlCo
                 {
                   path: error.path,
                   reason: error.message,
-                  permissionProfile: contextValue.security?.user?.permissionProfile ?? null,
+                  permissionProfiles: contextValue.security?.user?.permissionProfiles ?? null,
                 },
                 "GraphQL request refused",
               );

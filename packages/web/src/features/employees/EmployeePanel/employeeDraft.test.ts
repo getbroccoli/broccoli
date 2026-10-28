@@ -72,13 +72,13 @@ it("sends a cleared manager as a null managerId", () => {
   expect(input).toStrictEqual({ id: "employee-1", managerId: null });
 });
 
-it("tracks a changed permission profile without sending it in the employee update", () => {
-  const draft = { permissionProfile: "ADMIN" };
+it("tracks changed permission profiles without sending them in the employee update", () => {
+  const draft = { permissionProfiles: "EMPLOYEE,ADMIN" };
 
   const fields = changedFields(saved, draft);
   const input = toUpdateInput("employee-1", saved, draft, "");
 
-  expect(fields).toEqual(["permissionProfile"]);
+  expect(fields).toEqual(["permissionProfiles"]);
   expect(input).toStrictEqual({ id: "employee-1" });
 });
 
@@ -101,5 +101,5 @@ const saved: EmployeeValues = {
   jobTitle: null,
   manager: null,
   startDate: null,
-  permissionProfile: null,
+  permissionProfiles: null,
 };

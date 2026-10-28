@@ -52,7 +52,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   // The draft holds the manager's id; the panel shows their name.
   // Permissions show only for someone who signs in.
   const fields = EMPLOYEE_DESCRIPTION.fields
-    .filter((field) => field.key !== "permissionProfile" || employee.permissionProfile)
+    .filter((field) => field.key !== "permissionProfiles" || employee.permissionProfiles)
     .map((field) =>
       field.key === "manager"
         ? { ...field, format: (id: string) => cachedEmployeeName(cache, id) ?? id }
@@ -61,8 +61,8 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   const { operations } = useRouteContext({ from: "/_authenticated" }).me;
   const editable = new Set(employee.access.editableFields);
   const canEdit = (key: EmployeeFieldKey) =>
-    key === "permissionProfile"
-      ? operations.includes("MANAGE_WORKSPACE") && employee.permissionProfile !== "OWNER"
+    key === "permissionProfiles"
+      ? operations.includes("MANAGE_WORKSPACE") && !employee.permissionProfiles?.includes("OWNER")
       : editable.has(key === "manager" ? "managerId" : key);
   const sections = Map.groupBy(fields, (field) => field.section);
   // In panel order, as the person reads the fields.

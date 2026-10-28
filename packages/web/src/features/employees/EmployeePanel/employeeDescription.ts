@@ -36,11 +36,16 @@ export const EMPLOYEE_DESCRIPTION = {
     textField("firstName", "people.panel.section.personal"),
     textField("lastName", "people.panel.section.personal"),
     {
-      key: "permissionProfile",
-      label: t("people.panel.field.permissionProfile"),
+      key: "permissionProfiles",
+      label: t("people.panel.field.permissionProfiles"),
       section: t("people.panel.section.access"),
       editor: PermissionProfilePicker,
-      format: (value) => PROFILE_LABELS[value] ?? value,
+      // The panel holds "EMPLOYEE,ADMIN"; history holds "EMPLOYEE, ADMIN".
+      format: (value) =>
+        value
+          .split(",")
+          .map((name) => PROFILE_LABELS[name.trim()] ?? name.trim())
+          .join(", "),
     },
   ],
 } satisfies RecordDescription;

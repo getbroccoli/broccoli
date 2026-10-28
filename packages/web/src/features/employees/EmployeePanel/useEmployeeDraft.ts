@@ -3,7 +3,7 @@ import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
-  SetPermissionProfileDocument,
+  SetPermissionProfilesDocument,
   UpdateEmployeeDocument,
   type EmployeePanel_EmployeeFragment,
   type PermissionProfile,
@@ -39,9 +39,9 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
       if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
     },
   });
-  const [setPermissionProfile, profileChange] = usePayloadMutation(SetPermissionProfileDocument, {
+  const [setPermissionProfiles, profileChange] = usePayloadMutation(SetPermissionProfilesDocument, {
     update: (cache, { data }) => {
-      const line = data?.employee.setPermissionProfile.historyLine;
+      const line = data?.employee.setPermissionProfiles.historyLine;
       if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
     },
   });
@@ -83,16 +83,16 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
     setEdits((current) => mapEdits(current, ({ value }) => ({ value })));
     try {
       // The profile saves second, so a refused field leaves it unsaved with the rest.
-      if (changed.some((key) => key !== "permissionProfile")) {
+      if (changed.some((key) => key !== "permissionProfiles")) {
         await updateEmployee({
           variables: { input: toUpdateInput(employee.id, saved, draft, reason) },
         });
       }
-      if (changed.includes("permissionProfile")) {
+      if (changed.includes("permissionProfiles")) {
         const changeReason = reason.trim() || null;
-        const profile = draft.permissionProfile as PermissionProfile;
-        await setPermissionProfile({
-          variables: { input: { id: employee.id, profile, changeReason } },
+        const profiles = (draft.permissionProfiles ?? "").split(",") as PermissionProfile[];
+        await setPermissionProfiles({
+          variables: { input: { id: employee.id, profiles, changeReason } },
         });
         // The change may be the caller's own, so what they may do is read again, the route
         // first: a query they may no longer run is refused while the cache refetches.
@@ -142,7 +142,7 @@ function mapEdits<Result>(
 }
 
 function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
-  const { firstName, lastName, email, jobTitle, managerId, startDate, permissionProfile } =
+  const { firstName, lastName, email, jobTitle, managerId, startDate, permissionProfiles } =
     employee;
   return {
     firstName,
@@ -151,7 +151,7 @@ function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
     jobTitle: jobTitle ?? null,
     manager: managerId ?? null,
     startDate: startDate ?? null,
-    permissionProfile: permissionProfile ?? null,
+    permissionProfiles: permissionProfiles?.join(",") ?? null,
   };
 }
 

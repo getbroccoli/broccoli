@@ -6,7 +6,9 @@ import type { Orm } from "../../db";
 import { isCrossOrigin } from "../helpers";
 import {
   type EmployeeDirectory,
+  permissionProfileRepository,
   PrincipalSecurityContext,
+  profilesOf,
   type RequestSecurity,
   type SecurityContext,
 } from "../../security";
@@ -46,7 +48,7 @@ export async function resolveSecurityContext(
   if (!session) {
     return { security: await resolveSetupHolder(orm, requestHeaders), renewedCookies };
   }
-  const { id: userId, email, permissionProfile } = session.user;
+  const { id: userId, email } = session.user;
   const instance = await readInstance(orm);
   const isOwner = userId === instance.ownerUserId;
   if (hasDemoEnded(instance, userId)) {
@@ -56,9 +58,12 @@ export async function resolveSecurityContext(
     userId,
     email,
     isOwner,
-    permissionProfile: isOwner ? "OWNER" : permissionProfile === "ADMIN" ? "ADMIN" : "EMPLOYEE",
+    permissionProfiles: profilesOf(
+      (await permissionProfileRepository(orm).findExtras([userId])).get(userId) ?? [],
+      isOwner,
+    ),
     employeeId: await directory.employeeIdOfUser(userId),
-  } as const;
+  };
   return { security: PrincipalSecurityContext.user(user, directory), renewedCookies };
 }
 

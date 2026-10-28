@@ -62,7 +62,7 @@
       "src/core/security",
       "src/utils"
     ],
-    "src/core/security": ["src/core/applicationError"],
+    "src/core/security": ["src/core/applicationError", "src/core/auth", "src/core/db"],
     "src/core/instance": [
       "src/integrations/ai",
       "src/core/applicationError",

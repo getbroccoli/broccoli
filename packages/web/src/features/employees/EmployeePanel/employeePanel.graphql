@@ -29,9 +29,9 @@ mutation UpdateEmployee($input: EmployeeUpdateInput!) {
   }
 }
 
-mutation SetPermissionProfile($input: EmployeeSetPermissionProfileInput!) {
+mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
   employee {
-    setPermissionProfile(input: $input) {
+    setPermissionProfiles(input: $input) {
       employee {
         ...EmployeePanel_employee @unmask
       }
@@ -93,7 +93,7 @@ fragment EmployeePanel_employee on Employee {
     ...EmployeeName @unmask
   }
   avatarUrl
-  permissionProfile
+  permissionProfiles
   access {
     canDelete
     editableFields

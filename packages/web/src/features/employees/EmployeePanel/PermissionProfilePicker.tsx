@@ -3,19 +3,25 @@ import { CaretDown } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { FieldEditorProps } from "@/features/records";
-
-/** The profiles an admin may give; the owner's comes from owning the instance. */
-const ASSIGNABLE = ["EMPLOYEE", "ADMIN"] as const;
+import { t } from "@/i18n";
 
 type Props = FieldEditorProps;
 
-/** An editor for a person's permissions: a menu of the profiles an admin may give. */
+/** Everyone has it; it shows checked and cannot be removed. */
+const BASE_PROFILE = "EMPLOYEE";
+
+/** The profiles an admin may give beside the base one; the owner's comes from owning the instance. */
+const EXTRAS = ["ADMIN"] as const;
+
+/**
+ * An editor for a person's permissions: a menu with the base profile always on and a checkbox
+ * per profile an admin may give. The value is the whole set, comma-separated.
+ */
 export function PermissionProfilePicker({
   field,
   value,
@@ -25,6 +31,14 @@ export function PermissionProfilePicker({
   onDone,
   onRevert,
 }: Props) {
+  const held = new Set(value.split(","));
+  const toggle = (profile: string, checked: boolean) => {
+    const next = [BASE_PROFILE, ...EXTRAS].filter((name) =>
+      name === profile ? checked : held.has(name) || name === BASE_PROFILE,
+    );
+    onChange(next.join(","));
+  };
+
   return (
     <DropdownMenu
       defaultOpen={!invalid}
@@ -50,13 +64,18 @@ export function PermissionProfilePicker({
         }
       />
       <DropdownMenuContent align="start">
-        <DropdownMenuRadioGroup value={value} onValueChange={(next: string) => onChange(next)}>
-          {ASSIGNABLE.map((profile) => (
-            <DropdownMenuRadioItem key={profile} value={profile} closeOnClick>
-              {field.format(profile)}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+        <DropdownMenuCheckboxItem checked disabled title={t("people.panel.permissionProfile.base")}>
+          {field.format(BASE_PROFILE)}
+        </DropdownMenuCheckboxItem>
+        {EXTRAS.map((profile) => (
+          <DropdownMenuCheckboxItem
+            key={profile}
+            checked={held.has(profile)}
+            onCheckedChange={(checked: boolean) => toggle(profile, checked)}
+          >
+            {field.format(profile)}
+          </DropdownMenuCheckboxItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

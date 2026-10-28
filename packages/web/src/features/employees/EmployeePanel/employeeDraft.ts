@@ -8,13 +8,13 @@ export const EMPLOYEE_FIELD_KEYS = [
   "jobTitle",
   "manager",
   "startDate",
-  "permissionProfile",
+  "permissionProfiles",
 ] as const;
 
 export type EmployeeFieldKey = (typeof EMPLOYEE_FIELD_KEYS)[number];
 
 /** The fields `employee.update` changes; the permission profile has its own mutation. */
-type UpdatedFieldKey = Exclude<EmployeeFieldKey, "permissionProfile">;
+type UpdatedFieldKey = Exclude<EmployeeFieldKey, "permissionProfiles">;
 
 /** An employee's saved values, the manager as their id; null is empty. */
 export type EmployeeValues = Record<EmployeeFieldKey, string | null>;
@@ -28,7 +28,7 @@ export function changedFields(
 }
 
 /**
- * One `employee.update` for every changed field but the permission profile, which saves on its
+ * One `employee.update` for every changed field but the permission profiles, which save on their
  * own, an emptied one as null and the manager as `managerId`, with the trimmed reason.
  */
 export function toUpdateInput(
@@ -39,7 +39,7 @@ export function toUpdateInput(
 ): EmployeeUpdateInput {
   const changes = Object.fromEntries(
     changedFields(saved, draft)
-      .filter((key): key is UpdatedFieldKey => key !== "permissionProfile")
+      .filter((key): key is UpdatedFieldKey => key !== "permissionProfiles")
       .map((key) => [inputKey(key), draft[key] || null]),
   );
   const changeReason = reason.trim();

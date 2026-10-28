@@ -43,7 +43,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
               id: user.userId,
               email: user.email,
               isOwner: user.isOwner,
-              permissionProfile: user.permissionProfile,
+              permissionProfiles: [...user.permissionProfiles],
               operations: OPERATIONS.filter((operation) => security.can(operation)),
             }
           : null;

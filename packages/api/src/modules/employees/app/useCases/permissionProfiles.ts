@@ -2,7 +2,14 @@ import { ApplicationError, invalidInput } from "../../../../core/applicationErro
 import { type Orm, ormOf } from "../../../../core/db";
 import { readOwner } from "../../../../core/instance";
 import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
-import type { PermissionProfile, SecurityContext } from "../../../../core/security";
+import {
+  BASE_PROFILE,
+  type ExtraProfile,
+  permissionProfileRepository,
+  type PermissionProfile,
+  profilesOf,
+  type SecurityContext,
+} from "../../../../core/security";
 import { parseUuid } from "../../../../utils";
 import { employeeRepository } from "../../db";
 import type { Employee } from "../../domain";
@@ -10,45 +17,41 @@ import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 
 /**
- * Sets the profile of the user an employee signs in as and records the change in the employee's
- * history, in one transaction; returns the line, or null when the profile was already set.
+ * Replaces the extra profiles of the user an employee signs in as and records the change in the
+ * employee's history, in one transaction; returns the line, or null when the set was unchanged.
  */
-export async function setPermissionProfile(
+export async function setPermissionProfiles(
   { transact, logger }: EmployeeContext,
   ctx: SecurityContext,
   {
     id,
-    profile,
+    profiles,
     changeReason,
-  }: { id: string; profile: PermissionProfile; changeReason?: string | null },
+  }: { id: string; profiles: readonly PermissionProfile[]; changeReason?: string | null },
 ): Promise<{ employee: Employee; historyLine: HistoryLine | null }> {
   ctx.require("MANAGE_WORKSPACE");
-  if (profile === "OWNER") {
-    throw invalidInput([{ field: "profile", code: "not_assignable" }]);
-  }
+  const extras = parseExtras(profiles);
   const reason = parseChangeReason(changeReason);
   const employeeId = parseUuid(id);
   if (!employeeId) {
     throw employeeNotFound();
   }
   const { employee, historyLine } = await transact(async (tx) => {
-    const employees = employeeRepository(tx);
-    const employee = await employees.findById(employeeId);
+    const employee = await employeeRepository(tx).findById(employeeId);
     if (!employee) {
       throw employeeNotFound();
     }
-    const [linked] = await employees.findUserProfiles([employeeId]);
-    if (!linked) {
+    if (!employee.userId) {
       throw invalidInput([{ field: "id", code: "not_joined" }]);
     }
-    if (linked.userId === (await readOwner(ormOf(tx)))?.userId) {
+    if (employee.userId === (await readOwner(ormOf(tx)))?.userId) {
       throw new ApplicationError("FORBIDDEN", "The owner's permissions cannot change.");
     }
-    // The profile it replaces, not the one read above, so two saves at once record one change.
-    const before =
-      (await employees.setUserProfile(linked.userId, profile === "ADMIN" ? "ADMIN" : null)) ??
-      "EMPLOYEE";
-    if (before === profile) {
+    // The set it replaces, not one read before, so two saves at once record one change.
+    const replaced = await permissionProfileRepository(tx).replaceExtras(employee.userId, extras);
+    const before = profilesOf(replaced, false).join(", ");
+    const after = profilesOf(extras, false).join(", ");
+    if (before === after) {
       return { employee, historyLine: null };
     }
     const [line] = await appendRecordHistory(ctx, tx, {
@@ -59,7 +62,7 @@ export async function setPermissionProfile(
       records: [
         {
           recordId: employeeId,
-          changes: [{ field: "permissionProfile", oldValue: before, newValue: profile }],
+          changes: [{ field: "permissionProfiles", oldValue: before, newValue: after }],
         },
       ],
     });
@@ -67,30 +70,44 @@ export async function setPermissionProfile(
   });
   if (historyLine) {
     logger.info(
-      { employeeId, historyId: historyLine.id, permissionProfile: profile },
-      "Changed an employee's permission profile",
+      { employeeId, historyId: historyLine.id, permissionProfiles: extras },
+      "Changed an employee's permission profiles",
     );
   }
   return { employee, historyLine };
 }
 
 /**
- * The profile of the user each employee signs in as: `OWNER` for the owner's, `EMPLOYEE` when none
- * is stored. Employees without a user are left out.
+ * The profiles of the user each employee signs in as, `EMPLOYEE` first and `OWNER` for the
+ * owner's. Employees without a user are left out.
  */
 export async function readPermissionProfiles(
   orm: Orm,
   ctx: SecurityContext,
   employeeIds: readonly string[],
-): Promise<Map<string, PermissionProfile>> {
+): Promise<Map<string, PermissionProfile[]>> {
   ctx.requireEveryRecord("employee", "read");
   const ids = employeeIds.flatMap((id) => parseUuid(id) ?? []);
-  const linked = ids.length === 0 ? [] : await employeeRepository(orm).findUserProfiles(ids);
-  const ownerUserId = linked.length === 0 ? null : (await readOwner(orm))?.userId;
+  const linked = (ids.length === 0 ? [] : await employeeRepository(orm).findByIds(ids)).flatMap(
+    ({ id, userId }) => (userId ? [{ id, userId }] : []),
+  );
+  if (linked.length === 0) return new Map();
+  const extras = await permissionProfileRepository(orm).findExtras(
+    linked.map(({ userId }) => userId),
+  );
+  const ownerUserId = (await readOwner(orm))?.userId;
   return new Map(
-    linked.map(({ employeeId, userId, permissionProfile }) => [
-      employeeId,
-      userId === ownerUserId ? "OWNER" : (permissionProfile ?? "EMPLOYEE"),
+    linked.map(({ id, userId }) => [
+      id,
+      profilesOf(extras.get(userId) ?? [], userId === ownerUserId),
     ]),
   );
+}
+
+/** The assignable profiles among `profiles`, each once; `EMPLOYEE` is always on and left out. */
+function parseExtras(profiles: readonly PermissionProfile[]): ExtraProfile[] {
+  if (profiles.includes("OWNER")) {
+    throw invalidInput([{ field: "profiles", code: "not_assignable" }]);
+  }
+  return [...new Set(profiles.filter((profile) => profile !== BASE_PROFILE))] as ExtraProfile[];
 }

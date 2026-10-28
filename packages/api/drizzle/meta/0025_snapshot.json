@@ -1,5 +1,5 @@
 {
-  "id": "929c981e-ffa7-4b19-a317-577540c5d653",
+  "id": "44f17382-9e2c-4877-bf18-af8c0f68fd7a",
   "prevId": "5c70b82c-b32e-4331-ba5e-0d05c612daa5",
   "version": "7",
   "dialect": "postgresql",
@@ -247,12 +247,6 @@
         },
         "image": {
           "name": "image",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "permission_profile": {
-          "name": "permission_profile",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -684,6 +678,51 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.user_permission_profiles": {
+      "name": "user_permission_profiles",
+      "schema": "",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "profile": {
+          "name": "profile",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "user_permission_profiles_user_id_user_id_fk": {
+          "name": "user_permission_profiles_user_id_user_id_fk",
+          "tableFrom": "user_permission_profiles",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "user_permission_profiles_user_id_profile_pk": {
+          "name": "user_permission_profiles_user_id_profile_pk",
+          "columns": ["user_id", "profile"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "user_permission_profiles_assignable": {
+          "name": "user_permission_profiles_assignable",
+          "value": "\"user_permission_profiles\".\"profile\" in ('ADMIN')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.company": {

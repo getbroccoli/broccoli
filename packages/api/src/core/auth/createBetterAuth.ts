@@ -43,12 +43,6 @@ export function createBetterAuth({
       minPasswordLength: PASSWORD_LENGTH.min,
       maxPasswordLength: PASSWORD_LENGTH.max,
     },
-    user: {
-      // Read with the session; only Broccoli's own use case sets it.
-      additionalFields: {
-        permissionProfile: { type: "string", required: false, input: false },
-      },
-    },
     plugins,
     trustedOrigins,
     telemetry: { enabled: false },

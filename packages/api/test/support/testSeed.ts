@@ -8,7 +8,11 @@ import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance/db";
 import type { AiSource, SetupStep } from "../../src/core/instance/domain";
 import { hashSetupToken } from "../../src/core/instance/helpers";
-import { PrincipalSecurityContext, type SecurityContext } from "../../src/core/security";
+import {
+  PrincipalSecurityContext,
+  type SecurityContext,
+  userPermissionProfiles,
+} from "../../src/core/security";
 import { employeeDirectory, type Employee, type NewEmployee } from "../../src/modules/employees";
 import { employeeRepository, employmentRepository } from "../../src/modules/employees/db";
 import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
@@ -48,7 +52,7 @@ export class TestSeed {
         userId: saved.id,
         email: saved.email,
         isOwner: true,
-        permissionProfile: "OWNER",
+        permissionProfiles: ["EMPLOYEE", "OWNER"],
         employeeId: null,
       },
       employeeDirectory(this.orm),
@@ -58,14 +62,19 @@ export class TestSeed {
   async user({
     email,
     password,
-    permissionProfile = null,
+    permissionProfiles = [],
   }: {
     email: string;
     password?: string;
-    permissionProfile?: "ADMIN" | null;
+    permissionProfiles?: "ADMIN"[];
   }): Promise<{ id: string; email: string }> {
     const saved = { id: randomUUID(), email: email.toLowerCase() };
-    await this.orm.insert(user).values({ ...saved, name: "User", permissionProfile });
+    await this.orm.insert(user).values({ ...saved, name: "User" });
+    if (permissionProfiles.length > 0) {
+      await this.orm
+        .insert(userPermissionProfiles)
+        .values(permissionProfiles.map((profile) => ({ userId: saved.id, profile })));
+    }
     if (password !== undefined) {
       await this.orm.insert(account).values({
         id: randomUUID(),

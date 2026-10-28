@@ -1,5 +1,8 @@
-/** A named list of grants and operations; every signed-in user has one. */
+/** A named list of grants and operations; a user has the base one and any number of others. */
 export type PermissionProfile = "EMPLOYEE" | "ADMIN" | "OWNER";
+
+/** The profile every user has, never stored and never removed. */
+export const BASE_PROFILE = "EMPLOYEE";
 
 /** A kind of record permissions apply to. */
 export type PermissionObject = "employee";
@@ -122,3 +125,17 @@ export function flattenProfiles<Name extends string>(
 
 /** The built-in profiles, flattened once when the code loads. */
 export const PERMISSION_PROFILES = flattenProfiles(PROFILE_DEFINITIONS);
+
+/** A user's profiles in their shown order: the base, the stored extras, then `OWNER` for the owner. */
+export function profilesOf(
+  extras: readonly PermissionProfile[],
+  isOwner: boolean,
+): PermissionProfile[] {
+  const order = Object.keys(PROFILE_DEFINITIONS) as PermissionProfile[];
+  const held = new Set<PermissionProfile>([
+    BASE_PROFILE,
+    ...extras,
+    ...(isOwner ? ["OWNER" as const] : []),
+  ]);
+  return order.filter((profile) => held.has(profile));
+}

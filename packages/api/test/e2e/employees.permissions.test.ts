@@ -1,6 +1,6 @@
 import { expect, TEST_OWNER, test } from "#test/support";
 
-test("sets a joined employee's permission profile through the API with its history line", async ({
+test("sets a joined employee's permission profiles through the API with its history line", async ({
   env,
 }) => {
   const { browser } = await env.signInAsOwner();
@@ -9,25 +9,27 @@ test("sets a joined employee's permission profile through the API with its histo
 
   const response = await browser.graphql(
     `
-    mutation SetPermissionProfile($input: EmployeeSetPermissionProfileInput!) {
-      employee { setPermissionProfile(input: $input) {
-        employee { id permissionProfile }
+    mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
+      employee { setPermissionProfiles(input: $input) {
+        employee { id permissionProfiles }
         historyLine { id changes { field oldValue newValue } }
         error { __typename ... on Error { message } }
       } }
     }
   `,
-    { input: { id: employee.id, profile: "ADMIN" } },
+    { input: { id: employee.id, profiles: ["ADMIN"] } },
   );
 
   expect(await response.json()).toEqual({
     data: {
       employee: {
-        setPermissionProfile: {
-          employee: { id: employee.id, permissionProfile: "ADMIN" },
+        setPermissionProfiles: {
+          employee: { id: employee.id, permissionProfiles: ["EMPLOYEE", "ADMIN"] },
           historyLine: {
             id: expect.any(String) as unknown,
-            changes: [{ field: "permissionProfile", oldValue: "EMPLOYEE", newValue: "ADMIN" }],
+            changes: [
+              { field: "permissionProfiles", oldValue: "EMPLOYEE", newValue: "EMPLOYEE, ADMIN" },
+            ],
           },
           error: null,
         },
@@ -36,32 +38,32 @@ test("sets a joined employee's permission profile through the API with its histo
   });
 });
 
-test("refuses assigning OWNER through the permission profile mutation", async ({ env }) => {
+test("refuses assigning OWNER through the permission profiles mutation", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   const user = await env.seed.user({ email: "anna@example.com" });
   const employee = await env.seed.employee({ userId: user.id });
 
   const response = await browser.graphql(
     `
-    mutation SetPermissionProfile($input: EmployeeSetPermissionProfileInput!) {
-      employee { setPermissionProfile(input: $input) {
+    mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
+      employee { setPermissionProfiles(input: $input) {
         employee { id }
         error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } }
       } }
     }
   `,
-    { input: { id: employee.id, profile: "OWNER" } },
+    { input: { id: employee.id, profiles: ["OWNER"] } },
   );
 
   expect(await response.json()).toEqual({
     data: {
       employee: {
-        setPermissionProfile: {
+        setPermissionProfiles: {
           employee: null,
           error: {
             __typename: "InvalidInputError",
             message: "The input is invalid.",
-            fields: [{ field: "profile", code: "not_assignable" }],
+            fields: [{ field: "profiles", code: "not_assignable" }],
           },
         },
       },
@@ -104,7 +106,7 @@ test("returns every editable field and deletion access to the owner", async ({ e
   });
 });
 
-test("returns an employee's own writable fields and permission profile", async ({ env }) => {
+test("returns an employee's own writable fields and permission profiles", async ({ env }) => {
   await env.seed.owner();
   const credentials = { email: "anna@example.com", password: TEST_OWNER.password };
   const user = await env.seed.user(credentials);
@@ -114,7 +116,7 @@ test("returns an employee's own writable fields and permission profile", async (
   const response = await browser.graphql(
     `
     query Employee($id: ID!) {
-      employee(id: $id) { id permissionProfile access { canUpdate canDelete editableFields } }
+      employee(id: $id) { id permissionProfiles access { canUpdate canDelete editableFields } }
     }
   `,
     { id: employee.id },
@@ -124,7 +126,7 @@ test("returns an employee's own writable fields and permission profile", async (
     data: {
       employee: {
         id: employee.id,
-        permissionProfile: "EMPLOYEE",
+        permissionProfiles: ["EMPLOYEE"],
         access: {
           canUpdate: true,
           canDelete: false,

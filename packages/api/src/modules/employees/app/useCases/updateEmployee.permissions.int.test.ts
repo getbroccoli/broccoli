@@ -2,7 +2,7 @@ import { ADMIN, employeeUseCases, expect, OWNER, signedIn, test } from "#test/su
 
 test("allows an employee to change their own first name", async ({ orm, seed }) => {
   const anna = await seed.employee({ firstName: "Anna" });
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
   const employees = employeeUseCases(orm);
 
   await employees.updateEmployee(ctx, {
@@ -19,7 +19,7 @@ test("refuses an employee changing their own job title without saving their name
   seed,
 }) => {
   const anna = await seed.employee({ firstName: "Anna", jobTitle: "Engineer" });
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
   const employees = employeeUseCases(orm);
 
   await expect(
@@ -38,7 +38,7 @@ test("allows a manager to change their direct report's job title", async ({ orm,
   const anna = await seed.employee({ firstName: "Anna" });
   const ben = await seed.employee({ firstName: "Ben" });
   await seed.manager(ben.id, anna.id);
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
   const employees = employeeUseCases(orm);
 
   await employees.updateEmployee(ctx, { id: ben.id, jobTitle: "Lead" });
@@ -55,7 +55,7 @@ test("allows a manager to change a report's job title through another manager", 
   const carl = await seed.employee({ firstName: "Carl" });
   await seed.manager(ben.id, anna.id);
   await seed.manager(carl.id, ben.id);
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
   const employees = employeeUseCases(orm);
 
   await employees.updateEmployee(ctx, { id: carl.id, jobTitle: "Lead" });
@@ -70,7 +70,7 @@ test.for(["email", "managerId"] as const)(
     const ben = await seed.employee({ firstName: "Ben" });
     const other = await seed.employee();
     await seed.manager(ben.id, anna.id);
-    const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+    const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
     const employees = employeeUseCases(orm);
     const changes = field === "email" ? { email: "changed@example.com" } : { managerId: other.id };
 
@@ -87,7 +87,7 @@ test.for(["email", "managerId"] as const)(
 
 test("returns refused fields in the order sent", async ({ orm, seed }) => {
   const anna = await seed.employee({ firstName: "Anna" });
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
 
   await expect(
     employeeUseCases(orm).updateEmployee(ctx, {
@@ -114,7 +114,7 @@ test("refuses a manager changing a coworker outside their reporting line", async
   const ben = await seed.employee({ firstName: "Ben" });
   const coworker = await seed.employee();
   await seed.manager(ben.id, anna.id);
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
   const employees = employeeUseCases(orm);
 
   await expect(
@@ -135,7 +135,7 @@ test("refuses a manager after their report moves outside their reporting line", 
   const ben = await seed.employee({ firstName: "Ben" });
   const other = await seed.employee();
   await seed.manager(ben.id, anna.id);
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: anna.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
   const employees = employeeUseCases(orm);
   await employees.updateEmployee(ctx, { id: ben.id, jobTitle: "Engineer" });
   await seed.manager(ben.id, other.id);
@@ -160,7 +160,7 @@ test("allows an employee to manage their first report without a profile change",
   const dan = await seed.employee({ firstName: "Dan" });
   await seed.manager(ben.id, anna.id);
   await seed.manager(carl.id, ben.id);
-  const ctx = signedIn(orm, { profile: "EMPLOYEE", employeeId: carl.id });
+  const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: carl.id });
   const employees = employeeUseCases(orm);
   await expect(
     employees.updateEmployee(ctx, { id: dan.id, jobTitle: "Lead" }),

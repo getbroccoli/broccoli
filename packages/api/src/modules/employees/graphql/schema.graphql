@@ -19,8 +19,8 @@ type Employee implements AnyRecord {
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
   "What the signed-in user may do to this employee."
   access: RecordAccess!
-  "The permission profile of the user who signs in as this person; null when nobody does."
-  permissionProfile: PermissionProfile
+  "The permission profiles of the user who signs in as this person, EMPLOYEE first; null when nobody does."
+  permissionProfiles: [PermissionProfile!]
 }
 
 # Adds the employee's causes to the shared list; the server merges them.
@@ -86,10 +86,10 @@ input EmployeeUpdateInput {
   changeReason: String
 }
 
-input EmployeeSetPermissionProfileInput {
+input EmployeeSetPermissionProfilesInput {
   id: ID!
-  "EMPLOYEE or ADMIN; the owner's profile never changes."
-  profile: PermissionProfile!
+  "The profiles the person has beside EMPLOYEE, which everyone has; the owner's never change."
+  profiles: [PermissionProfile!]!
   "Why the change is made, kept on the history line as its reason; at most 500 characters."
   changeReason: String
 }
@@ -107,8 +107,8 @@ type EmployeeMutations {
   update(input: EmployeeUpdateInput!): EmployeeUpdatePayload!
   "Removes an employee and their avatar; their history stays. Admins only; never the owner."
   delete(input: EmployeeDeleteInput!): EmployeeDeletePayload!
-  "Sets the permission profile of the user who signs in as this person, and records it in their history. Admins only."
-  setPermissionProfile(input: EmployeeSetPermissionProfileInput!): EmployeeUpdatePayload!
+  "Sets the permission profiles of the user who signs in as this person, and records the change in their history. Admins only."
+  setPermissionProfiles(input: EmployeeSetPermissionProfilesInput!): EmployeeUpdatePayload!
 }
 
 "The new employee, or why it was refused."

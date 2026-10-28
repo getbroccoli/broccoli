@@ -9,8 +9,8 @@ import type { Employee } from "../domain";
 export interface EmployeeLoaders {
   /** An employee's manager today, or null without one. */
   manager: DataLoader<string, Employee | null>;
-  /** The profile of the user who signs in as an employee, or null without one. */
-  permissionProfile: DataLoader<string, PermissionProfile | null>;
+  /** The profiles of the user who signs in as an employee, or null without one. */
+  permissionProfiles: DataLoader<string, PermissionProfile[] | null>;
 }
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
@@ -22,7 +22,7 @@ export function employeeLoaders(
       const managers = await useCases.readManagers(context.getActor(), employeeIds);
       return employeeIds.map((id) => managers.get(id) ?? null);
     }),
-    permissionProfile: new DataLoader<string, PermissionProfile | null>(async (employeeIds) => {
+    permissionProfiles: new DataLoader<string, PermissionProfile[] | null>(async (employeeIds) => {
       const profiles = await useCases.readPermissionProfiles(context.getActor(), employeeIds);
       return employeeIds.map((id) => profiles.get(id) ?? null);
     }),

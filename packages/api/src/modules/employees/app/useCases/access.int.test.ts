@@ -53,8 +53,8 @@ const writes = {
     }),
   updateEmployee: (employees, ctx, id) => employees.updateEmployee(ctx, { id, jobTitle: "Lead" }),
   deleteEmployee: (employees, ctx, id) => employees.deleteEmployee(ctx, { id }),
-  setPermissionProfile: (employees, ctx, id) =>
-    employees.setPermissionProfile(ctx, { id, profile: "ADMIN" }),
+  setPermissionProfiles: (employees, ctx, id) =>
+    employees.setPermissionProfiles(ctx, { id, profiles: ["ADMIN"] }),
 } satisfies Record<
   string,
   (employees: EmployeeUseCases, ctx: SecurityContext, id: string) => Promise<unknown>
@@ -78,7 +78,7 @@ test.for(Object.entries(writes))("EMPLOYEE is refused %s", async ([name, call], 
   await expect(call(employeeUseCases(orm), EMPLOYEE, employee.id)).rejects.toMatchObject({
     code: "FORBIDDEN",
     message:
-      name === "setPermissionProfile"
+      name === "setPermissionProfiles"
         ? "Only admins can do this."
         : "You are not allowed to do this.",
     fieldErrors: [],

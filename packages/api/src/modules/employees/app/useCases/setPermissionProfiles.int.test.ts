@@ -8,9 +8,9 @@ test("allows an admin to make a joined employee an admin and records the change"
   const employee = await seed.employee({ userId: user.id });
   const employees = employeeUseCases(orm);
 
-  const result = await employees.setPermissionProfile(ADMIN, {
+  const result = await employees.setPermissionProfiles(ADMIN, {
     id: employee.id,
-    profile: "ADMIN",
+    profiles: ["ADMIN"],
     changeReason: "Manages the workspace",
   });
 
@@ -19,52 +19,84 @@ test("allows an admin to make a joined employee an admin and records the change"
     recordId: employee.id,
     operation: "UPDATED",
     reason: "Manages the workspace",
-    changes: [{ field: "permissionProfile", oldValue: "EMPLOYEE", newValue: "ADMIN" }],
+    changes: [{ field: "permissionProfiles", oldValue: "EMPLOYEE", newValue: "EMPLOYEE, ADMIN" }],
   });
   expect(
     (await employees.readEmployeeHistory(OWNER, employee.id, {})).edges.map(({ node }) => node),
   ).toEqual([result.historyLine]);
   expect(await employees.readPermissionProfiles(OWNER, [employee.id])).toEqual(
-    new Map([[employee.id, "ADMIN"]]),
+    new Map([[employee.id, ["EMPLOYEE", "ADMIN"]]]),
   );
 });
 
-test("allows an admin to restore the employee profile", async ({ orm, seed }) => {
-  const user = await seed.user({ email: "anna@example.com", permissionProfile: "ADMIN" });
+test("allows an admin to remove ADMIN and records the change", async ({ orm, seed }) => {
+  const user = await seed.user({ email: "anna@example.com", permissionProfiles: ["ADMIN"] });
   const employee = await seed.employee({ userId: user.id });
   const employees = employeeUseCases(orm);
 
-  const { historyLine } = await employees.setPermissionProfile(ADMIN, {
+  const { historyLine } = await employees.setPermissionProfiles(ADMIN, {
     id: employee.id,
-    profile: "EMPLOYEE",
+    profiles: [],
   });
 
   expect(historyLine?.changes).toEqual([
-    { field: "permissionProfile", oldValue: "ADMIN", newValue: "EMPLOYEE" },
+    { field: "permissionProfiles", oldValue: "EMPLOYEE, ADMIN", newValue: "EMPLOYEE" },
   ]);
   expect(await employees.readPermissionProfiles(OWNER, [employee.id])).toEqual(
-    new Map([[employee.id, "EMPLOYEE"]]),
+    new Map([[employee.id, ["EMPLOYEE"]]]),
   );
 });
 
-test("records one profile change when two admins assign the same profile concurrently", async ({
+test("stores ADMIN once and never stores the base profile", async ({ orm, seed }) => {
+  const user = await seed.user({ email: "anna@example.com" });
+  const employee = await seed.employee({ userId: user.id });
+  const employees = employeeUseCases(orm);
+
+  await employees.setPermissionProfiles(ADMIN, {
+    id: employee.id,
+    profiles: ["EMPLOYEE", "ADMIN", "ADMIN"],
+  });
+
+  expect(await employees.readPermissionProfiles(OWNER, [employee.id])).toEqual(
+    new Map([[employee.id, ["EMPLOYEE", "ADMIN"]]]),
+  );
+});
+
+test("refuses assigning OWNER", async ({ orm, seed }) => {
+  const user = await seed.user({ email: "anna@example.com" });
+  const employee = await seed.employee({ userId: user.id });
+  const employees = employeeUseCases(orm);
+
+  await expect(
+    employees.setPermissionProfiles(ADMIN, { id: employee.id, profiles: ["OWNER"] }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "profiles", code: "not_assignable" }],
+  });
+
+  expect(await employees.readPermissionProfiles(OWNER, [employee.id])).toEqual(
+    new Map([[employee.id, ["EMPLOYEE"]]]),
+  );
+});
+
+test("records one profile change when two admins assign the same profiles concurrently", async ({
   orm,
   seed,
 }) => {
   const user = await seed.user({ email: "anna@example.com" });
   const employee = await seed.employee({ userId: user.id });
   const employees = employeeUseCases(orm);
-  const otherAdmin = signedIn(orm, { profile: "ADMIN", employeeId: null });
+  const otherAdmin = signedIn(orm, { profiles: ["EMPLOYEE", "ADMIN"], employeeId: null });
 
   await Promise.all([
-    employees.setPermissionProfile(ADMIN, { id: employee.id, profile: "ADMIN" }),
-    employees.setPermissionProfile(otherAdmin, { id: employee.id, profile: "ADMIN" }),
+    employees.setPermissionProfiles(ADMIN, { id: employee.id, profiles: ["ADMIN"] }),
+    employees.setPermissionProfiles(otherAdmin, { id: employee.id, profiles: ["ADMIN"] }),
   ]);
 
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges).toHaveLength(1);
   expect(edges[0]!.node.changes).toEqual([
-    { field: "permissionProfile", oldValue: "EMPLOYEE", newValue: "ADMIN" },
+    { field: "permissionProfiles", oldValue: "EMPLOYEE", newValue: "EMPLOYEE, ADMIN" },
   ]);
 });
 
@@ -73,12 +105,15 @@ test.for(["ADMIN", "EMPLOYEE"] as const)(
   async (profile, { orm, seed }) => {
     const user = await seed.user({
       email: "anna@example.com",
-      permissionProfile: profile === "ADMIN" ? "ADMIN" : null,
+      permissionProfiles: profile === "ADMIN" ? ["ADMIN"] : [],
     });
     const employee = await seed.employee({ userId: user.id });
     const employees = employeeUseCases(orm);
 
-    const result = await employees.setPermissionProfile(ADMIN, { id: employee.id, profile });
+    const result = await employees.setPermissionProfiles(ADMIN, {
+      id: employee.id,
+      profiles: [profile],
+    });
 
     expect(result).toEqual({ employee, historyLine: null });
     expect((await employees.readEmployeeHistory(OWNER, employee.id, {})).edges).toEqual([]);
@@ -89,7 +124,7 @@ test("refuses changing the profile of an employee who has not joined", async ({ 
   const employee = await seed.employee();
 
   await expect(
-    employeeUseCases(orm).setPermissionProfile(ADMIN, { id: employee.id, profile: "ADMIN" }),
+    employeeUseCases(orm).setPermissionProfiles(ADMIN, { id: employee.id, profiles: ["ADMIN"] }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "id", code: "not_joined" }],
@@ -102,14 +137,14 @@ test("refuses changing the owner's permissions", async ({ orm, seed }) => {
   const employees = employeeUseCases(orm);
 
   await expect(
-    employees.setPermissionProfile(ADMIN, { id: employee.id, profile: "EMPLOYEE" }),
+    employees.setPermissionProfiles(ADMIN, { id: employee.id, profiles: ["EMPLOYEE"] }),
   ).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "The owner's permissions cannot change.",
   });
 
   expect(await employees.readPermissionProfiles(OWNER, [employee.id])).toEqual(
-    new Map([[employee.id, "OWNER"]]),
+    new Map([[employee.id, ["EMPLOYEE", "OWNER"]]]),
   );
   expect((await employees.readEmployeeHistory(OWNER, employee.id, {})).edges).toEqual([]);
 });
@@ -120,22 +155,22 @@ test("refuses an employee assigning permission profiles", async ({ orm, seed }) 
   const employees = employeeUseCases(orm);
 
   await expect(
-    employees.setPermissionProfile(EMPLOYEE, { id: employee.id, profile: "ADMIN" }),
+    employees.setPermissionProfiles(EMPLOYEE, { id: employee.id, profiles: ["ADMIN"] }),
   ).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "Only admins can do this.",
   });
 
   expect(await employees.readPermissionProfiles(OWNER, [employee.id])).toEqual(
-    new Map([[employee.id, "EMPLOYEE"]]),
+    new Map([[employee.id, ["EMPLOYEE"]]]),
   );
 });
 
 test("refuses changing the profile of an unknown employee", async ({ orm }) => {
   await expect(
-    employeeUseCases(orm).setPermissionProfile(ADMIN, {
+    employeeUseCases(orm).setPermissionProfiles(ADMIN, {
       id: "00000000-0000-4000-8000-000000000001",
-      profile: "ADMIN",
+      profiles: ["ADMIN"],
     }),
   ).rejects.toMatchObject({
     code: "NOT_FOUND",
@@ -156,5 +191,5 @@ test("reads joined employees' profiles and leaves out employees without a user",
     notJoined.id,
   ]);
 
-  expect(profiles).toEqual(new Map([[joined.id, "EMPLOYEE"]]));
+  expect(profiles).toEqual(new Map([[joined.id, ["EMPLOYEE"]]]));
 });

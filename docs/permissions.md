@@ -6,7 +6,7 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 | Primitive              | Values today                                   | Meaning                                                                                                                                                                                                      |
 | ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Permission profile** | `EMPLOYEE`, `ADMIN`, `OWNER`                   | A named list of grants and operations, plus the profiles it extends. Every signed-in user has exactly one.                                                                                                   |
+| **Permission profile** | `EMPLOYEE`, `ADMIN`, `OWNER`                   | A named list of grants and operations, plus the profiles it extends. Every signed-in user has `EMPLOYEE` and any number of others; their rights are the union.                                               |
 | **Object**             | `employee`                                     | A kind of record permissions apply to.                                                                                                                                                                       |
 | **Action**             | `create`, `read`, `update`, `delete`           | What can be done to one record of an object.                                                                                                                                                                 |
 | **Scope**              | `self`, `direct_reports`, `all_reports`, `all` | Which records a grant reaches, relative to the caller's employee: the caller, people they manage directly, everyone below them in the reporting line, or everyone. Neither report scope includes the caller. |
@@ -21,7 +21,8 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 | `ADMIN`    | create, read, update and delete on `all`, every field                                                                           | `MANAGE_WORKSPACE`     |
 | `OWNER`    | extends `ADMIN`                                                                                                                 | adds `RESET_WORKSPACE` |
 
-- The profile is stored on the user (`user.permission_profile`): `ADMIN`, or null for `EMPLOYEE`. Employees who never sign in have none. `OWNER` is never stored: the instance's owner has it.
+- A user's extra profiles are stored in `user_permission_profiles` (`ADMIN` today). `EMPLOYEE` is never stored: everyone has it. `OWNER` is never stored either: the instance's owner has it. Employees who never sign in have none.
+- Several profiles let an admin combine roles instead of building one per combination; grants only add, so the union never conflicts.
 - A manager is not a profile. Having reports gives the report-scoped grants at once; losing them takes the rights away.
 - `extends` lists parents; a child has their grants and operations plus its own, and can never remove one. A cycle or an unknown parent fails when the definitions load.
 - All three profiles are built in: defined in code and changed by releases.

@@ -99,8 +99,8 @@ export interface SignedInUser {
   /** Sign-in email, lowercased, for display; never used for authorization. */
   email: string;
   isOwner: boolean;
-  /** `OWNER` for the owner; otherwise the stored profile, `EMPLOYEE` when none is stored. */
-  permissionProfile: PermissionProfile;
+  /** `EMPLOYEE` first, then the stored extras, and `OWNER` for the owner (`profilesOf`). */
+  permissionProfiles: readonly PermissionProfile[];
   /** The employee linked to this user; null without one. */
   employeeId: string | null;
 }
@@ -122,6 +122,7 @@ export class PrincipalSecurityContext implements SecurityContext {
   ) {}
 
   private ownersEmployeeId: Promise<string | null> | undefined;
+  private effective: EffectiveProfile | undefined;
 
   /** A signed-in user; built by `resolveSecurityContext`. */
   static user(user: SignedInUser, directory: EmployeeDirectory): SecurityContext {
@@ -224,8 +225,16 @@ export class PrincipalSecurityContext implements SecurityContext {
     };
   }
 
+  /** The union of the user's profiles; null for anyone without a user. */
   private profile(): EffectiveProfile | null {
-    return this.user && PERMISSION_PROFILES[this.user.permissionProfile];
+    if (!this.user) return null;
+    this.effective ??= {
+      grants: this.user.permissionProfiles.flatMap((name) => PERMISSION_PROFILES[name].grants),
+      operations: new Set(
+        this.user.permissionProfiles.flatMap((name) => [...PERMISSION_PROFILES[name].operations]),
+      ),
+    };
+    return this.effective;
   }
 
   private grants(object: PermissionObject, action: RecordAction): readonly Grant[] {

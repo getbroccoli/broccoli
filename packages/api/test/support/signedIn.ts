@@ -5,19 +5,19 @@ import { employeeDirectory } from "../../src/modules/employees";
 export function signedIn(
   orm: Orm,
   {
-    profile,
+    profiles,
     employeeId,
   }: {
-    profile: PermissionProfile;
+    profiles: readonly PermissionProfile[];
     employeeId: string | null;
   },
 ) {
   return PrincipalSecurityContext.user(
     {
-      userId: `test-${employeeId ?? profile}`,
+      userId: `test-${employeeId ?? profiles.join("-")}`,
       email: "user@example.com",
-      isOwner: profile === "OWNER",
-      permissionProfile: profile,
+      isOwner: profiles.includes("OWNER"),
+      permissionProfiles: profiles,
       employeeId,
     },
     employeeDirectory(orm),

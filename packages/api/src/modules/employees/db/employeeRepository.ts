@@ -1,4 +1,4 @@
-import { eq, getTableColumns, ilike, inArray, isNotNull, or, sql, type SQL } from "drizzle-orm";
+import { eq, getTableColumns, ilike, isNotNull, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -13,7 +13,6 @@ import {
   orderByKeyset,
   type Tx,
 } from "../../../core/db";
-import { user } from "../../../core/auth";
 import { deleteFiles, storeFile } from "../../../core/files";
 import type { KeysetQuery, KeysetRow } from "../../../core/pagination";
 import type { RasterImage } from "../../../utils";
@@ -48,10 +47,6 @@ export interface EmployeeRepository {
   findById(id: string): Promise<Employee | null>;
   /** The employee linked to this user, or null. */
   findByUserId(userId: string): Promise<Employee | null>;
-  /** The linked user and their stored profile of each of these employees that has a user. */
-  findUserProfiles(employeeIds: readonly string[]): Promise<EmployeeUserProfile[]>;
-  /** Stores a user's profile, null for the default, and returns the one it replaced, read under the row's lock. */
-  setUserProfile(userId: string, permissionProfile: "ADMIN" | null): Promise<"ADMIN" | null>;
   /** The employees among these ids that exist. */
   findByIds(ids: readonly string[]): Promise<Employee[]>;
   /**
@@ -164,26 +159,6 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       return employee ?? null;
     },
 
-    findUserProfiles: (employeeIds) =>
-      orm()
-        .select({
-          employeeId: employees.id,
-          userId: user.id,
-          permissionProfile: user.permissionProfile,
-        })
-        .from(employees)
-        .innerJoin(user, eq(user.id, employees.userId))
-        .where(inArray(employees.id, [...employeeIds])),
-
-    setUserProfile: async (userId, permissionProfile) => {
-      const [row] = await orm()
-        .update(user)
-        .set({ permissionProfile })
-        .where(eq(user.id, userId))
-        .returning({ before: sql<"ADMIN" | null>`old.permission_profile` });
-      return row!.before;
-    },
-
     deleteAll: async (): Promise<void> => {
       // Holds back concurrent inserts and updates until the caller commits, so none lands between
       // this delete and the caller's purge of employee history.
@@ -266,14 +241,6 @@ function beforeAndAfter(row: Record<string, unknown>): { before: Employee; after
       Object.keys(EMPLOYEE_COLUMNS).map((key) => [key, row[`${prefix}${key}`]]),
     ) as unknown as Employee;
   return { before: employeeWith("old_"), after: employeeWith("") };
-}
-
-/** An employee's linked user and the profile stored on them. */
-export interface EmployeeUserProfile {
-  employeeId: string;
-  userId: string;
-  /** Null for the default profile. */
-  permissionProfile: "ADMIN" | null;
 }
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
