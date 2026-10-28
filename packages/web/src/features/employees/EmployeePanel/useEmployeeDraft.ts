@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- A permission change needs resetStore(), not just the cache.
 import { useApolloClient } from "@apollo/client/react";
 import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
