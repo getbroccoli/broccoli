@@ -71,7 +71,7 @@ export function createExternalAgentSessionService(
     },
 
     createExternalAgentCode: async (ctx) => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       return transact((tx) => createCode(tx, clock));
     },
 
@@ -83,7 +83,7 @@ export function createExternalAgentSessionService(
       }),
 
     startExternalAgentSession: async (ctx, { code, client }) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       return transact(async (tx) => {
         const now = await lockSetupOpenToExternalAgent(tx, clock);
         const session = now && {
@@ -116,7 +116,7 @@ export function createExternalAgentSessionService(
     },
 
     readExternalAgentConnection: async (ctx) => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const now = clock();
       const connection =
         (await readSetupOpenToExternalAgent(orm, now)) &&

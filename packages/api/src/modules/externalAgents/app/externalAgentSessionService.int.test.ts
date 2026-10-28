@@ -6,7 +6,7 @@ import {
   aiSettings,
   expect,
   externalAgentUseCases,
-  NON_OWNER,
+  EMPLOYEE,
   OWNER,
   SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
@@ -241,7 +241,7 @@ test("shows the external agent as listening again after a list call following a 
   });
 });
 
-test.for([NON_OWNER, SETUP_EXTERNAL_AGENT])(
+test.for([EMPLOYEE, SETUP_EXTERNAL_AGENT])(
   "refuses a code to a caller without setup access",
   async (ctx, { orm, seed }) => {
     await seed.externalAgentSetup();

@@ -15,7 +15,7 @@ export async function listEmployees(
   ctx: SecurityContext,
   { filter, ...listArgs }: EmployeeListArgs,
 ): Promise<Connection<Employee>> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireEveryRecord("employee", "read");
   const search = parseSearch(filter?.search);
   return paginate(listArgs, {
     order: DEFAULT_ORDER,

@@ -4,7 +4,7 @@ import {
   companyUseCases,
   expect,
   JPEG,
-  NON_OWNER,
+  EMPLOYEE,
   PNG as logo,
   storedFileIds,
   SYSTEM,
@@ -66,14 +66,14 @@ test("refuses a truncated PNG and keeps the previous logo", async ({ orm, seed }
   expect(await company.readLogo(actor, before.logoFileId!)).not.toBeNull();
 });
 
-test("refuses a non-owner without changing the logo", async ({ orm, seed }) => {
+test("refuses an employee without changing the logo", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const company = companyUseCases(orm);
   const before = await company.getCompany(owner);
 
-  await expect(company.saveLogo(NON_OWNER, logo)).rejects.toMatchObject({
+  await expect(company.saveLogo(EMPLOYEE, logo)).rejects.toMatchObject({
     code: "FORBIDDEN",
-    message: "Only the owner can do this.",
+    message: "Only admins can do this.",
   });
 
   expect(await company.getCompany(owner)).toEqual(before);

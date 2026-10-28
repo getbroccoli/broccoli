@@ -22,7 +22,7 @@ export async function createDemoEmployees(
   demoEmployees: readonly DemoEmployee[],
   cause: HistoryAppend["cause"],
 ) {
-  ctx.requireOwnerOrSystem();
+  ctx.require("MANAGE_WORKSPACE");
   if (await employeeRepository(tx).hasAny()) {
     return;
   }
@@ -34,6 +34,6 @@ export async function createDemoEmployees(
 
 /** Whether the instance holds demo employees, such as when setup leaves the demo; joins `db`. */
 export function hasDemoEmployees(ctx: SecurityContext, db: Orm | Tx): Promise<boolean> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   return employeeRepository(db).hasDemo();
 }

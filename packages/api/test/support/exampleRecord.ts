@@ -14,7 +14,8 @@ export const EXAMPLE_RECORD = {
 };
 export const EXAMPLE_REGISTRATION: RecordTypeRegistration = {
   graphqlType: "Example",
-  requireHistoryAccess: (ctx) => ctx.requireOwnerOrSystem(),
+  permissions: { object: "employee", editableFields: ["title"] },
+  requireHistoryAccess: (ctx) => ctx.require("MANAGE_WORKSPACE"),
   canonicalId: (recordId) => recordId.toLowerCase(),
   loadRecords: () => Promise.resolve(new Map()),
 };

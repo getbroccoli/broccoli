@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
+import { expect, EMPLOYEE, SYSTEM, test } from "#test/support";
 
 import { hashSetupToken } from "../helpers";
 import { readInstance, readSetupHolder, startSetup } from ".";
@@ -101,10 +101,10 @@ test("refuses a start once an owner exists", async ({ seed, transact }) => {
   ).rejects.toMatchObject({ name: "OwnerExistsError" });
 });
 
-test("refuses a non-owner starting setup", async ({ orm, transact }) => {
+test("refuses an employee starting setup", async ({ orm, transact }) => {
   await expect(
     transact((tx) =>
-      startSetup(NON_OWNER, tx, {
+      startSetup(EMPLOYEE, tx, {
         token: null,
         now: new Date("2026-01-01T12:00:00Z"),
       }),

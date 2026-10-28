@@ -3,6 +3,7 @@ export {
   createRecordHistoryReader,
   purgeRecordHistory,
   readAuthorEmails,
+  readRecordAccess,
   readRecordHistory,
   type LoadedRecord,
   type RecordChanged,

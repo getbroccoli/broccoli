@@ -1,11 +1,12 @@
 export { expect } from "vitest";
+export { employeeDirectory } from "../../src/modules/employees";
 export {
-  NON_OWNER,
+  ADMIN,
+  EMPLOYEE,
   OWNER,
   SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   SYSTEM,
-  TestSecurityContext,
 } from "./testSecurityContext";
 export { approveReviewedImport } from "./approveReviewedImport";
 export { createExternalAgentCode, exchangeExternalAgentCode } from "./createExternalAgentCode";
@@ -70,3 +71,4 @@ export { createSetupOwner, finishSelfHostedSetup } from "./finishSelfHostedSetup
 export { EXAMPLE_RECORD, EXAMPLE_REGISTRATION } from "./exampleRecord";
 export { expectHistoryReplaysTo } from "./employeeHistory";
 export { recordChangedEvents } from "./recordChangedEvents";
+export { signedIn } from "./signedIn";

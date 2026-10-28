@@ -17,7 +17,7 @@ export async function resetSetup(
   }: Pick<SystemContext, "transact" | "deleteAllEmployees" | "deleteFinishedImport" | "logger">,
   ctx: SecurityContext,
 ): Promise<void> {
-  ctx.requireOwnerOrSystem();
+  ctx.require("RESET_WORKSPACE");
   await transact(async (tx) => {
     if ((await readInstance(tx)).demoExpiresAt) {
       throw new ApplicationError("FORBIDDEN", "Exit the demo instead.");

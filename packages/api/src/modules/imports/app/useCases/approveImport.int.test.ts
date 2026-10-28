@@ -5,7 +5,7 @@ import {
   importSourceValues,
   expect,
   importUseCases,
-  NON_OWNER,
+  EMPLOYEE,
   OWNER,
   test,
   systemUseCases,
@@ -158,14 +158,14 @@ test.for(["skipped", "company"] as const)(
   },
 );
 
-test("refuses a non-owner approving the import", async ({ orm, seed }) => {
+test("refuses an employee approving the import", async ({ orm, seed }) => {
   await seed.owner();
   await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{}]);
   const imports = importUseCases(orm);
 
-  await expect(imports.approveImport(NON_OWNER, "any-version")).rejects.toMatchObject({
+  await expect(imports.approveImport(EMPLOYEE, "any-version")).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 

@@ -3,7 +3,8 @@ import {
   companyUseCases,
   demoUseCases,
   expect,
-  NON_OWNER,
+  ADMIN,
+  EMPLOYEE,
   storedFileIds,
   test,
 } from "#test/support";
@@ -131,18 +132,25 @@ test("refuses the provisional owner exiting the demo and keeps the demo records"
   expect((await readInstance(orm)).step).toBe("done");
 });
 
-test("refuses a non-owner exiting the demo", async ({ orm }) => {
+test("refuses an employee exiting the demo", async ({ orm }) => {
   const demo = demoUseCases(orm);
 
-  await expect(demo.exitDemo(NON_OWNER)).rejects.toMatchObject({
+  await expect(demo.exitDemo(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 });
 
-test("refuses to reveal demo data status to a non-owner", async ({ orm }) => {
+test("refuses to reveal demo data status to an employee", async ({ orm }) => {
   const demo = demoUseCases(orm);
 
-  await expect(demo.getDemoData(NON_OWNER)).rejects.toMatchObject({
+  await expect(demo.getDemoData(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
+  });
+});
+
+test("refuses an admin resetting the workspace", async ({ orm }) => {
+  await expect(demoUseCases(orm).exitDemo(ADMIN)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Only the owner can do this.",
   });
 });

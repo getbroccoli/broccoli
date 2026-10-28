@@ -10,7 +10,7 @@ import type { DemoContext } from "./demoContext";
  * demo's owner, who has no account, exits through setup instead.
  */
 export async function exitDemo({ transact }: DemoContext, ctx: SecurityContext) {
-  ctx.requireOwnerOrSystem();
+  ctx.require("RESET_WORKSPACE");
   await transact(async (tx) => {
     if ((await readInstance(tx)).demoExpiresAt) {
       throw new ApplicationError("FORBIDDEN", "Exit the demo through setup.");

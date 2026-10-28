@@ -39,7 +39,7 @@ export async function startDemoAtSetup<Owner extends OwnerUser>(
   createOwner: () => Promise<Owner>,
   startDemo: DemoStart,
 ): Promise<Owner> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSystem();
   const current = await lockHeldSetup(tx, { token, now });
   if (current.step !== "import") {
     throw new ApplicationError("CONFLICT", "Name the company before starting the demo.");
@@ -65,7 +65,7 @@ export async function exitDemo(
   { userId, now }: { userId: string; now: Date },
   { clearPeople, deleteOwner }: { clearPeople: DemoReset; deleteOwner: () => Promise<void> },
 ): Promise<{ token: string; expiresAt: Date }> {
-  ctx.requireOwnerOrSystem();
+  ctx.require("RESET_WORKSPACE");
   const instance = instanceRepository(tx);
   const exited = (await instance.lockInstance()).exitDemo(userId, now);
   await clearPeople(ctx, tx);

@@ -12,8 +12,11 @@ type User {
   id: ID!
   "Login email, lowercased."
   email: String!
-  "True for the instance owner, who may do everything until permission scopes exist."
+  "True for the instance owner."
   isOwner: Boolean!
+  permissionProfile: PermissionProfile!
+  "The operations the user may do, so the app shows only what they can use."
+  operations: [Operation!]!
 }
 
 "Where a new instance is in its first-run flow: company, import, then owner on self-hosted instances or ready on managed ones."
@@ -104,9 +107,9 @@ input AiSourceInput {
 }
 
 type SetupMutations {
-  "Checks that the source works, then reads files with it from now on. Self-hosted only; owner or setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
+  "Checks that the source works, then reads files with it from now on. Self-hosted only; admins or the setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
   saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
-  "Completes setup from the ready step and adds the people the owner approved; refused with a ConflictError at any other step, such as after another tab went back to the review. Owner only."
+  "Completes setup from the ready step and adds the people the owner approved; refused with a ConflictError at any other step, such as after another tab went back to the review. Admins only."
   complete: SetupCompletePayload!
   "Starts a finished setup over: deletes every person and takes setup back to the company step; the company and the AI choice stay. Refused with a ConflictError before setup is done, and during the self-hosted demo. Owner only."
   reset: SetupResetPayload!

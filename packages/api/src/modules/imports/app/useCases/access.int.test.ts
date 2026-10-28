@@ -1,4 +1,4 @@
-import { expect, NON_OWNER, importUseCases, test } from "#test/support";
+import { expect, EMPLOYEE, importUseCases, test } from "#test/support";
 
 import type { Tx } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
@@ -65,21 +65,18 @@ const calls = {
   reopenReview: (imports, ctx) => imports.reopenReview(ctx),
 } satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext, tx: Tx) => unknown>;
 
-test.for(Object.entries(calls))(
-  "%s refuses a signed-in user who is not the owner",
-  async ([, call], { orm, transact }) => {
-    const imports = importUseCases(orm);
+test.for(Object.entries(calls))("%s refuses an employee", async ([, call], { orm, transact }) => {
+  const imports = importUseCases(orm);
 
-    await expect(
-      Promise.resolve().then(async () => {
-        await transact(async (tx) => {
-          await call(imports, NON_OWNER, tx);
-        });
-      }),
-    ).rejects.toMatchObject({
-      code: "FORBIDDEN",
-      message: "Only the owner can do this.",
-      fieldErrors: [],
-    });
-  },
-);
+  await expect(
+    Promise.resolve().then(async () => {
+      await transact(async (tx) => {
+        await call(imports, EMPLOYEE, tx);
+      });
+    }),
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Only admins can do this.",
+    fieldErrors: [],
+  });
+});

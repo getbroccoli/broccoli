@@ -6,6 +6,6 @@ type SlackConnection {
 }
 
 type Query {
-  "The connected Slack workspace; null until Slack is connected. Owner only."
+  "The connected Slack workspace; null until Slack is connected. Admins only."
   slackConnection: SlackConnection
 }

@@ -1,4 +1,4 @@
-import { companyUseCases, expect, NON_OWNER, SETUP_HOLDER, test } from "#test/support";
+import { companyUseCases, expect, EMPLOYEE, SETUP_HOLDER, test } from "#test/support";
 
 import { readInstance } from "../../../../core/instance";
 
@@ -29,14 +29,14 @@ test("renames the company after setup is done", async ({ orm, seed }) => {
   expect((await readInstance(orm)).step).toBe("done");
 });
 
-test("refuses a non-owner without changing the company or setup step", async ({ orm, seed }) => {
+test("refuses an employee without changing the company or setup step", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const company = companyUseCases(orm);
   const before = await company.getCompany(owner);
 
-  await expect(company.update(NON_OWNER, { name: "Example Ltd" })).rejects.toMatchObject({
+  await expect(company.update(EMPLOYEE, { name: "Example Ltd" })).rejects.toMatchObject({
     code: "FORBIDDEN",
-    message: "Only the owner can do this.",
+    message: "Only admins can do this.",
   });
 
   expect(await company.getCompany(owner)).toEqual(before);

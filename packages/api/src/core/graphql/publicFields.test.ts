@@ -2,7 +2,7 @@ import { makeExecutableSchema } from "@graphql-tools/schema";
 import { graphql } from "graphql";
 import { expect, it } from "vitest";
 
-import { NON_OWNER } from "#test/support";
+import { EMPLOYEE } from "#test/support";
 
 import { ApplicationError } from "../applicationError";
 import { GraphqlContext } from "./apollo";
@@ -71,7 +71,7 @@ it("answers a private field with a signed-in user", async () => {
   const result = await graphql({
     schema,
     source: "{ secret }",
-    contextValue: new GraphqlContext(NON_OWNER),
+    contextValue: new GraphqlContext(EMPLOYEE),
   });
 
   expect(result).toEqual({ data: { secret: "secret" } });

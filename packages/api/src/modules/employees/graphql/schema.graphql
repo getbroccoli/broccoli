@@ -8,15 +8,19 @@ type Employee implements AnyRecord {
   jobTitle: String
   "First working day."
   startDate: Date
-  "The id of the person's direct manager today; null without one. Owner only."
+  "The id of the person's direct manager today; null without one."
   managerId: ID
-  "The person's direct manager today; null without one. Owner only."
+  "The person's direct manager today; null without one."
   manager: Employee
   "Path of the employee's avatar, such as `/api/employees/avatar/<id>`; null without one."
   avatarUrl: String
   createdAt: DateTime!
-  "Changes to this employee, newest first. Owner only."
+  "Changes to this employee, newest first."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "What the signed-in user may do to this employee."
+  access: RecordAccess!
+  "The permission profile of the user who signs in as this person; null when nobody does."
+  permissionProfile: PermissionProfile
 }
 
 # Adds the employee's causes to the shared list; the server merges them.
@@ -78,23 +82,33 @@ input EmployeeUpdateInput {
   startDate: Date
   "The person's direct manager from today; null for none. Not the person themselves, nor someone who reports to them."
   managerId: ID
-  "Why the owner makes this change, kept on the history line as its reason; at most 500 characters."
+  "Why the change is made, kept on the history line as its reason; at most 500 characters."
+  changeReason: String
+}
+
+input EmployeeSetPermissionProfileInput {
+  id: ID!
+  "EMPLOYEE or ADMIN; the owner's profile never changes."
+  profile: PermissionProfile!
+  "Why the change is made, kept on the history line as its reason; at most 500 characters."
   changeReason: String
 }
 
 input EmployeeDeleteInput {
   id: ID!
-  "Why the owner removes the employee, kept on the history line as its reason; at most 500 characters."
+  "Why the employee is removed, kept on the history line as its reason; at most 500 characters."
   changeReason: String
 }
 
 type EmployeeMutations {
-  "Adds an employee. Owner only."
+  "Adds an employee. Admins only."
   create(input: EmployeeCreateInput!): EmployeeCreatePayload!
-  "Changes an employee's fields and records the change in their history. Owner only."
+  "Changes an employee's fields and records the change in their history. Refused, naming each field, for a field the caller may not change; see `access`."
   update(input: EmployeeUpdateInput!): EmployeeUpdatePayload!
-  "Removes an employee and their avatar; their history stays. Owner only."
+  "Removes an employee and their avatar; their history stays. Admins only; never the owner."
   delete(input: EmployeeDeleteInput!): EmployeeDeletePayload!
+  "Sets the permission profile of the user who signs in as this person, and records it in their history. Admins only."
+  setPermissionProfile(input: EmployeeSetPermissionProfileInput!): EmployeeUpdatePayload!
 }
 
 "The new employee, or why it was refused."
@@ -127,9 +141,9 @@ union EmployeeDeleteError = InvalidInputError | NotFoundError
 
 # Each module declares its own root fields; the server merges them into one type.
 type Query {
-  "One employee; null when there is none. Owner only."
+  "One employee; null when there is none."
   employee(id: ID!): Employee
-  "Employees, one page at a time. Owner only."
+  "Employees, one page at a time."
   employees(
     "Page size, 1 to 10000."
     first: Int = 100

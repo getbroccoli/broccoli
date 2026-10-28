@@ -4,7 +4,7 @@ import { onTestFinished } from "vitest";
 import {
   aiSettings,
   expect,
-  NON_OWNER,
+  EMPLOYEE,
   OWNER,
   SETUP_HOLDER,
   SYSTEM,
@@ -64,11 +64,11 @@ test("reports no AI choice on a managed instance", async ({ orm, seed, transact 
 });
 
 test.for(["self_hosted", "managed"] as const)(
-  "refuses a non-owner reading the AI choice in %s mode",
+  "refuses an employee reading the AI choice in %s mode",
   async (mode, { orm, fakeDecisions }) => {
     const settings = aiSettings(orm, { mode, url: fakeDecisions.url });
 
-    await expect(settings.read(NON_OWNER)).rejects.toMatchObject({
+    await expect(settings.read(EMPLOYEE)).rejects.toMatchObject({
       name: "ApplicationError",
       code: "FORBIDDEN",
     });
@@ -77,12 +77,12 @@ test.for(["self_hosted", "managed"] as const)(
 );
 
 test.for(["broccoli_ai", "openrouter"] as const)(
-  "refuses a non-owner choosing %s before contacting providers or saving",
+  "refuses an employee choosing %s before contacting providers or saving",
   async (source, { orm, fakeDecisions }) => {
     const settings = aiSettings(orm, { url: fakeDecisions.url });
 
     await expect(
-      settings.save(NON_OWNER, { source, openRouterKey: "given-key" }),
+      settings.save(EMPLOYEE, { source, openRouterKey: "given-key" }),
     ).rejects.toMatchObject({
       name: "ApplicationError",
       code: "FORBIDDEN",

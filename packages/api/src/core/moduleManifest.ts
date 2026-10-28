@@ -5,7 +5,7 @@ import type { AddApprovedPeople, SetupDemo } from "./instance";
 import type { EventHandlers } from "./events";
 import type { JobHandlers, JobQueue } from "./jobs";
 import type { Resolvers } from "./graphql";
-import type { SecurityResolver } from "./security";
+import type { EmployeeDirectory, SecurityResolver } from "./security";
 import type { Logger } from "./logger";
 import type { RecordTypeRegistry } from "./records";
 import type { SecretBox } from "./secrets";
@@ -55,4 +55,6 @@ export interface Modules {
   manifests: readonly ModuleManifest[];
   setupDemo: SetupDemo;
   addApprovedPeople: AddApprovedPeople;
+  /** What permission checks read about people. */
+  employeeDirectory: EmployeeDirectory;
 }

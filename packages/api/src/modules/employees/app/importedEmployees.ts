@@ -27,7 +27,7 @@ export async function createImportedEmployees(
   inputs: readonly ImportedEmployeeInput[],
   cause: HistoryAppend["cause"],
 ): Promise<ImportedEmployees> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   const newEmployees = inputs.flatMap(({ avatarFileId, ...input }) => {
     const employee = tryParseNewEmployee(input);
     return employee ? [{ ...employee, avatarFileId: avatarFileId ?? null }] : [];
@@ -43,7 +43,7 @@ export async function createImportedEmployees(
 
 /** Employees with stored avatars, joining `db`, so cleanup can preserve the files they use. */
 export function findEmployeesWithAvatars(ctx: SecurityContext, db: Orm | Tx): Promise<Employee[]> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   return employeeRepository(db).findWithAvatars();
 }
 
@@ -53,7 +53,7 @@ export async function findTakenEmails(
   db: Orm | Tx,
   emails: readonly string[],
 ): Promise<Set<string>> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   return new Set(await employeeRepository(db).findTakenEmails(emails));
 }
 
@@ -62,7 +62,7 @@ export async function findTakenEmails(
  * back to its start: what was there leaves no trace, unlike an ordinary removal.
  */
 export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   // Before the employees table, in the order a manager change takes them, so the two cannot deadlock.
   await employmentRepository(tx).lockManagers();
   await employeeRepository(tx).deleteAll();

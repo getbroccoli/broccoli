@@ -6,7 +6,7 @@ type DemoData {
 }
 
 type Query {
-  "Owner only."
+  "Admins only."
   demo: DemoData!
 }
 

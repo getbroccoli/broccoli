@@ -21,11 +21,11 @@ export function createBroccoliAiTokens({
 }): BroccoliAiTokens {
   return {
     read: (ctx) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       return readToken(orm, secretBox, dataDir);
     },
     save: (ctx, token) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       return saveSecret(dataDir, TOKEN_SECRET, secretBox.encrypt(token));
     },
   };

@@ -97,7 +97,7 @@ export function createSlackConnectionService({
 
   return {
     beginSlackConnection: (ctx: SecurityContext, returnTo: string): SlackConnectionStart => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const pending = { state: randomToken(), codeVerifier: randomToken() };
       const codeChallenge = createHash("sha256").update(pending.codeVerifier).digest("base64url");
       return {
@@ -146,7 +146,7 @@ export function createSlackConnectionService({
     getSlackConnection: async (
       ctx: SecurityContext,
     ): Promise<{ teamId: string; teamName: string } | null> => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const connection = await connections.read();
       return connection && { teamId: connection.teamId, teamName: connection.teamName };
     },
@@ -155,7 +155,7 @@ export function createSlackConnectionService({
       ctx: SecurityContext,
       { knownPhotos }: { knownPhotos: ReadonlyMap<string, string> },
     ): Promise<SlackMembersRead> => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const startedAt = clock();
       const connection = await connections.read();
       if (!connection) {
@@ -182,7 +182,7 @@ export function createSlackConnectionService({
     },
 
     disconnectSlack: async (ctx: SecurityContext, tx: Tx): Promise<void> => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await slackConnectionRepository(tx).delete();
     },
   };
@@ -228,7 +228,7 @@ const REQUIRED_SCOPES = ["users:read", "users:read.email"];
 /** Whether `ctx` may connect Slack; the context decides, the flow only turns a refusal into an outcome. */
 function mayConnect(ctx: SecurityContext): boolean {
   try {
-    ctx.requireSetupAccess();
+    ctx.requireSetupAccess("MANAGE_WORKSPACE");
     return true;
   } catch (error) {
     if (error instanceof ApplicationError && error.code === "FORBIDDEN") {

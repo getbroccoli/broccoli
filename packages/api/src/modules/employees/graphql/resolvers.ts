@@ -35,12 +35,19 @@ export function createResolvers(useCases: EmployeeUseCases): Resolvers {
           () => useCases.deleteEmployee(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
+      setPermissionProfile: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
+          () => useCases.setPermissionProfile(context.getActor(), input),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
     },
     Employee: {
       avatarUrl: ({ avatarFileId }) => avatarFileId && avatarUrl(avatarFileId),
       managerId: async (employee, _args, context) =>
         (await loaders(context).manager.load(employee.id))?.id ?? null,
       manager: (employee, _args, context) => loaders(context).manager.load(employee.id),
+      permissionProfile: (employee, _args, context) =>
+        loaders(context).permissionProfile.load(employee.id),
       // shortcut: one query per employee; batch it when a list selects history.
       history: (employee, { first, after }, context) =>
         useCases.readEmployeeHistory(context.getActor(), employee.id, {

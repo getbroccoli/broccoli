@@ -8,7 +8,7 @@ export async function readLogo(
   ctx: SecurityContext,
   fileId: string,
 ): Promise<StoredFile | null> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   const { logoFileId } = await companies.read();
   return logoFileId === fileId ? readFile(orm, fileId) : null;
 }

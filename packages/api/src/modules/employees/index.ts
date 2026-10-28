@@ -10,6 +10,7 @@ export {
   createEmployeeUseCases,
   createImportedEmployees,
   deleteAllEmployees,
+  employeeDirectory,
   findEmployeesWithAvatars,
   findTakenEmails,
   hasDemoEmployees,

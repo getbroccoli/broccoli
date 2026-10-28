@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, date, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
+import { user } from "../../../core/auth";
 import { files } from "../../../core/files";
 import type { CalendarDate } from "../../../utils";
 
@@ -20,6 +21,10 @@ export const employees = pgTable(
     avatarFileId: uuid("avatar_file_id").references(() => files.id),
     /** Part of the sample company, which tells whether the instance holds demo data. */
     isDemo: boolean("is_demo").notNull().default(false),
+    /** The user who signs in as this employee, or null. */
+    userId: text("user_id")
+      .unique("employees_user_id_unique")
+      .references(() => user.id, { onDelete: "set null" }),
   },
   (table) => [
     // Serves the list order, which is also the keyset of its cursor.

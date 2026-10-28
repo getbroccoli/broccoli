@@ -12,6 +12,7 @@ import { startServer } from "../../src/core/server";
 
 import {
   createEmptyTestDatabase,
+  employeeDirectory,
   fetchReadiness,
   holdMigrationLock,
   startDisconnectingProxy,
@@ -95,6 +96,7 @@ it("rejects startup and closes the database pool when a module router throws", a
     (dependencies) => {
       orm = dependencies.orm;
       return {
+        employeeDirectory: employeeDirectory(orm),
         manifests: [
           {
             name: "broken",

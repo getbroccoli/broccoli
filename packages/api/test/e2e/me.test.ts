@@ -1,6 +1,6 @@
 import { expect, TEST_OWNER, test } from "#test/support";
 
-const query = "{ me { id email isOwner } }";
+const query = "{ me { id email isOwner permissionProfile operations } }";
 
 test("tells the web app a self-hosted instance signs in with a password", async ({ env }) => {
   const response = await env.browser().graphql("{ setup { mode } }");
@@ -20,7 +20,15 @@ test("returns the signed-in owner as the current user", async ({ env }) => {
   const response = await browser.graphql(query);
 
   expect(await response.json()).toEqual({
-    data: { me: { id: user.id, email: TEST_OWNER.email, isOwner: true } },
+    data: {
+      me: {
+        id: user.id,
+        email: TEST_OWNER.email,
+        isOwner: true,
+        permissionProfile: "OWNER",
+        operations: ["MANAGE_WORKSPACE", "RESET_WORKSPACE"],
+      },
+    },
   });
 });
 
@@ -31,7 +39,15 @@ test("returns a signed-in non-owner without owner authority", async ({ env }) =>
   const response = await browser.graphql(query);
 
   expect(await response.json()).toEqual({
-    data: { me: { id: user.id, email: TEST_OWNER.email, isOwner: false } },
+    data: {
+      me: {
+        id: user.id,
+        email: TEST_OWNER.email,
+        isOwner: false,
+        permissionProfile: "EMPLOYEE",
+        operations: [],
+      },
+    },
   });
 });
 
@@ -52,4 +68,47 @@ test("returns no current user after logout", async ({ env }) => {
   const response = await browser.graphql(query);
 
   expect(await response.json()).toEqual({ data: { me: null } });
+});
+
+test("returns an admin's profile and workspace operation", async ({ env }) => {
+  await env.seed.owner();
+  const credentials = { email: "admin@example.com", password: TEST_OWNER.password };
+  const user = await env.seed.user({ ...credentials, permissionProfile: "ADMIN" });
+  const { browser } = await env.signIn(credentials);
+
+  const response = await browser.graphql(query);
+
+  expect(await response.json()).toEqual({
+    data: {
+      me: {
+        id: user.id,
+        email: user.email,
+        isOwner: false,
+        permissionProfile: "ADMIN",
+        operations: ["MANAGE_WORKSPACE"],
+      },
+    },
+  });
+});
+
+test("returns a joined employee's profile without workspace operations", async ({ env }) => {
+  await env.seed.owner();
+  const credentials = { email: "employee@example.com", password: TEST_OWNER.password };
+  const user = await env.seed.user(credentials);
+  await env.seed.employee({ userId: user.id });
+  const { browser } = await env.signIn(credentials);
+
+  const response = await browser.graphql(query);
+
+  expect(await response.json()).toEqual({
+    data: {
+      me: {
+        id: user.id,
+        email: user.email,
+        isOwner: false,
+        permissionProfile: "EMPLOYEE",
+        operations: [],
+      },
+    },
+  });
 });

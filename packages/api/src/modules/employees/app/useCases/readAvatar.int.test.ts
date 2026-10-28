@@ -1,4 +1,4 @@
-import { employeeUseCases, expect, NON_OWNER, OWNER, test, WEBP } from "#test/support";
+import { employeeUseCases, expect, SETUP_HOLDER, OWNER, test, WEBP } from "#test/support";
 
 test("returns an employee's avatar bytes and MIME type", async ({ orm, seed }) => {
   const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
@@ -27,12 +27,12 @@ test("returns null for an avatar id that is not a uuid", async ({ orm }) => {
   expect(avatar).toBeNull();
 });
 
-test("refuses to read an employee avatar for a non-owner", async ({ orm, seed }) => {
+test("refuses the setup holder reading an employee avatar", async ({ orm, seed }) => {
   const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
   await seed.employee({ avatarFileId });
   const { readAvatar } = employeeUseCases(orm);
 
-  await expect(readAvatar(NON_OWNER, avatarFileId)).rejects.toMatchObject({
+  await expect(readAvatar(SETUP_HOLDER, avatarFileId)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 });

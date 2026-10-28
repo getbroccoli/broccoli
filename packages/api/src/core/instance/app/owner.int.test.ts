@@ -1,4 +1,4 @@
-import { importUseCases, expect, NON_OWNER, SYSTEM, test } from "#test/support";
+import { importUseCases, expect, EMPLOYEE, SYSTEM, test } from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
@@ -6,13 +6,13 @@ import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
 import { claimOwner, createOwnerAtSetup, readInstance } from ".";
 
-test("refuses a non-owner claiming ownership without creating a user or advancing setup", async ({
+test("refuses an employee claiming ownership without creating a user or advancing setup", async ({
   orm,
   transact,
 }) => {
   await expect(
     transact((tx) =>
-      claimOwner(NON_OWNER, tx, async () => {
+      claimOwner(EMPLOYEE, tx, async () => {
         const owner = { id: "owner-1", name: "Owner", email: "owner@example.com" };
         await ormOf(tx).insert(user).values(owner);
         return { user: owner };

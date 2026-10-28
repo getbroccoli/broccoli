@@ -79,12 +79,12 @@ export interface AnsweredFile {
 export function createAnsweredMappingService(readUpload: UploadReader): AnsweredMappingService {
   return {
     readStaffUpload: async (ctx, file) => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       return readUpload(file);
     },
 
     addAnsweredSource: async (ctx, tx, { name, bytes, upload }) => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const imports = await lockOpenImport(tx);
       return imports.insertFileSource(
         name,

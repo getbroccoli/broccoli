@@ -1,50 +1,93 @@
-import { employeeUseCases, expect, NON_OWNER, SETUP_HOLDER, test } from "#test/support";
+import {
+  ADMIN,
+  employeeUseCases,
+  EMPLOYEE,
+  expect,
+  OWNER,
+  SETUP_HOLDER,
+  test,
+  WEBP,
+} from "#test/support";
 
 import type { SecurityContext } from "../../../../core/security";
 import type { EmployeeUseCases } from ".";
 
-const calls = {
-  createEmployee: (useCases, ctx) =>
-    useCases.createEmployee(ctx, {
-      firstName: "Employee",
-      lastName: "One",
-      email: "employee.one@example.com",
-    }),
-  listEmployees: (useCases, ctx) => useCases.listEmployees(ctx, {}),
-  readEmployee: (useCases, ctx) =>
-    useCases.readEmployee(ctx, "00000000-0000-4000-8000-000000000001"),
-  readManagers: (useCases, ctx) =>
-    useCases.readManagers(ctx, ["00000000-0000-4000-8000-000000000001"]),
-  updateEmployee: (useCases, ctx) =>
-    useCases.updateEmployee(ctx, { id: "00000000-0000-4000-8000-000000000001", jobTitle: "Lead" }),
-  deleteEmployee: (useCases, ctx) =>
-    useCases.deleteEmployee(ctx, { id: "00000000-0000-4000-8000-000000000001" }),
-  readEmployeeHistory: (useCases, ctx) =>
-    useCases.readEmployeeHistory(ctx, "00000000-0000-4000-8000-000000000001", {}),
-  readAvatar: (useCases, ctx) => useCases.readAvatar(ctx, "00000000-0000-4000-8000-000000000001"),
+const reads = {
+  listEmployees: (employees, ctx) => employees.listEmployees(ctx, {}),
+  readEmployee: (employees, ctx, id) => employees.readEmployee(ctx, id),
+  readManagers: (employees, ctx, id) => employees.readManagers(ctx, [id]),
+  readEmployeeHistory: (employees, ctx, id) => employees.readEmployeeHistory(ctx, id, {}),
+  readPermissionProfiles: (employees, ctx, id) => employees.readPermissionProfiles(ctx, [id]),
+  readAvatar: (employees, ctx, _id, avatarFileId) => employees.readAvatar(ctx, avatarFileId),
 } satisfies Record<
-  keyof EmployeeUseCases,
-  (useCases: EmployeeUseCases, ctx: SecurityContext) => Promise<unknown>
+  string,
+  (
+    employees: EmployeeUseCases,
+    ctx: SecurityContext,
+    id: string,
+    avatarFileId: string,
+  ) => Promise<unknown>
 >;
 
-test.for(Object.entries(calls))(
-  "%s refuses a signed-in user who is not the owner",
-  async ([, call], { orm }) => {
-    const useCases = employeeUseCases(orm);
+for (const [profile, ctx] of [
+  ["EMPLOYEE", EMPLOYEE],
+  ["ADMIN", ADMIN],
+  ["OWNER", OWNER],
+] as const) {
+  test.for(Object.entries(reads))(`${profile} may call %s`, async ([, call], { orm, seed }) => {
+    const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
+    const employee = await seed.employee({ avatarFileId });
 
-    await expect(call(useCases, NON_OWNER)).rejects.toMatchObject({
-      code: "FORBIDDEN",
-      message: "Only the owner can do this.",
-      fieldErrors: [],
-    });
-  },
-);
+    await expect(
+      call(employeeUseCases(orm), ctx, employee.id, avatarFileId),
+    ).resolves.toBeDefined();
+  });
+}
+
+const writes = {
+  createEmployee: (employees, ctx) =>
+    employees.createEmployee(ctx, {
+      firstName: "Anna",
+      lastName: "Reed",
+      email: "anna@example.com",
+    }),
+  updateEmployee: (employees, ctx, id) => employees.updateEmployee(ctx, { id, jobTitle: "Lead" }),
+  deleteEmployee: (employees, ctx, id) => employees.deleteEmployee(ctx, { id }),
+  setPermissionProfile: (employees, ctx, id) =>
+    employees.setPermissionProfile(ctx, { id, profile: "ADMIN" }),
+} satisfies Record<
+  string,
+  (employees: EmployeeUseCases, ctx: SecurityContext, id: string) => Promise<unknown>
+>;
+
+for (const [profile, ctx] of [
+  ["ADMIN", ADMIN],
+  ["OWNER", OWNER],
+] as const) {
+  test.for(Object.entries(writes))(`${profile} may call %s`, async ([, call], { orm, seed }) => {
+    const user = await seed.user({ email: "joined@example.com" });
+    const employee = await seed.employee({ userId: user.id });
+
+    await expect(call(employeeUseCases(orm), ctx, employee.id)).resolves.toBeDefined();
+  });
+}
+
+test.for(Object.entries(writes))("EMPLOYEE is refused %s", async ([name, call], { orm, seed }) => {
+  const employee = await seed.employee();
+
+  await expect(call(employeeUseCases(orm), EMPLOYEE, employee.id)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message:
+      name === "setPermissionProfile"
+        ? "Only admins can do this."
+        : "You are not allowed to do this.",
+    fieldErrors: [],
+  });
+});
 
 test("refuses the setup holder listing employees", async ({ orm }) => {
-  const employees = employeeUseCases(orm);
-
-  await expect(employees.listEmployees(SETUP_HOLDER, {})).rejects.toMatchObject({
+  await expect(employeeUseCases(orm).listEmployees(SETUP_HOLDER, {})).rejects.toMatchObject({
     code: "FORBIDDEN",
-    message: "Only the owner can do this.",
+    message: "You are not allowed to do this.",
   });
 });

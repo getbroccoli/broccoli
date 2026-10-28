@@ -1,13 +1,14 @@
 import type { StoredFile } from "../../../../core/files";
 import type { Connection, PageArgs } from "../../../../core/pagination";
 import type { HistoryLine } from "../../../../core/records";
-import type { SecurityContext } from "../../../../core/security";
+import type { PermissionProfile, SecurityContext } from "../../../../core/security";
 import { employeeRepository, employmentRepository } from "../../db";
 import type { Employee, EmployeeUpdateInput, NewEmployeeInput } from "../../domain";
 import { createEmployee } from "./createEmployee";
 import { deleteEmployee } from "./deleteEmployee";
 import type { EmployeeContext } from "./employeeContext";
 import { type EmployeeListArgs, listEmployees } from "./listEmployees";
+import { readPermissionProfiles, setPermissionProfile } from "./permissionProfiles";
 import { readAvatar } from "./readAvatar";
 import { readEmployee, readEmployeeHistory, readManagers } from "./readEmployee";
 import { updateEmployee } from "./updateEmployee";
@@ -44,6 +45,19 @@ export interface EmployeeUseCases {
   listEmployees: (ctx: SecurityContext, args: EmployeeListArgs) => Promise<Connection<Employee>>;
   /** The avatar file with this id, or null when it is no employee's avatar. */
   readAvatar: (ctx: SecurityContext, fileId: string) => Promise<StoredFile | null>;
+  /**
+   * Sets the profile of the user an employee signs in as; refuses an unknown id with NOT_FOUND,
+   * an employee without a user, and the owner.
+   */
+  setPermissionProfile: (
+    ctx: SecurityContext,
+    input: { id: string; profile: PermissionProfile; changeReason?: string | null },
+  ) => Promise<{ employee: Employee; historyLine: HistoryLine | null }>;
+  /** The profile of each employee's user, by employee id; employees without a user are left out. */
+  readPermissionProfiles: (
+    ctx: SecurityContext,
+    employeeIds: readonly string[],
+  ) => Promise<Map<string, PermissionProfile>>;
 }
 
 export function createEmployeeUseCases(context: EmployeeContext): EmployeeUseCases {
@@ -59,5 +73,8 @@ export function createEmployeeUseCases(context: EmployeeContext): EmployeeUseCas
       readEmployeeHistory(context, ctx, employeeId, args),
     listEmployees: (ctx, args) => listEmployees(employees, ctx, args),
     readAvatar: (ctx, fileId) => readAvatar({ orm: context.orm, employees }, ctx, fileId),
+    setPermissionProfile: (ctx, input) => setPermissionProfile(context, ctx, input),
+    readPermissionProfiles: (ctx, employeeIds) =>
+      readPermissionProfiles(context.orm, ctx, employeeIds),
   };
 }
