@@ -1,9 +1,9 @@
-import { useApolloClient } from "@apollo/client/react";
 import { useBlocker } from "@tanstack/react-router";
 import { DotsThree, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
+import { useCache } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,12 +47,12 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   useEffect(() => {
     if (blocker.status === "blocked" && draft.changed.length === 0) blocker.proceed();
   }, [blocker, draft.changed.length]);
-  const client = useApolloClient();
+  const cache = useCache();
   const fullName = `${employee.firstName} ${employee.lastName}`;
   // The draft holds the manager's id; the panel shows their name.
   const fields = EMPLOYEE_DESCRIPTION.fields.map((field) =>
     field.key === "manager"
-      ? { ...field, format: (id: string) => cachedEmployeeName(client.cache, id) ?? id }
+      ? { ...field, format: (id: string) => cachedEmployeeName(cache, id) ?? id }
       : field,
   );
   const sections = Map.groupBy(fields, (field) => field.section);

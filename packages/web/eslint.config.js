@@ -53,6 +53,11 @@ export default defineConfig(
               importNames: ["useMutation"],
               message: 'Run mutations with usePayloadMutation from "@/apollo".',
             },
+            {
+              name: "@apollo/client/react",
+              importNames: ["useApolloClient"],
+              message: 'Access the cache with useCache from "@/apollo".',
+            },
           ],
         },
       ],

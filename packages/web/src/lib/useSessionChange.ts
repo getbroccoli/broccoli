@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-restricted-imports -- Session changes need clearStore(), not just the cache.
 import { useApolloClient } from "@apollo/client/react";
 
 import { useRouteAction } from "./useRouteAction";
