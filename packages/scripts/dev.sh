@@ -12,8 +12,11 @@ HOST_GID=$(id -g)
 BROCCOLI_CHECKOUT=$PWD
 export HOST_UID HOST_GID BROCCOLI_CHECKOUT
 
+# Worktrees share a folder name; Compose must not share their containers or database.
+project="broccoli-dev-$(node -p "require('node:crypto').createHash('sha256').update(process.cwd()).digest('hex').slice(0, 12)")"
+
 compose() {
-  docker compose -f docker-compose.yml -f packages/scripts/docker-compose.dev.yml "$@"
+  docker compose --project-name "$project" -f docker-compose.yml -f packages/scripts/docker-compose.dev.yml "$@"
 }
 
 quiet() {

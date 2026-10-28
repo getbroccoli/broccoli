@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "firstName": "Zarela",
+      "lastName": "Fenwick",
+      "email": "zarela.fenwick@staff.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Tavren",
+      "lastName": "Quillmere",
+      "email": "tavren.quillmere@staff.example",
+      "jobTitle": null,
+      "startDate": null
+    },
+    {
+      "firstName": "Nerali",
+      "lastName": "Vosswick",
+      "email": "nerali.vosswick@staff.example",
+      "jobTitle": null,
+      "startDate": null
+    }
+  ],
+  "forbidden": [
+    "Zarela",
+    "Fenwick",
+    "zarela.fenwick@staff.example",
+    "Tavren",
+    "Quillmere",
+    "tavren.quillmere@staff.example",
+    "Nerali",
+    "Vosswick",
+    "nerali.vosswick@staff.example",
+    "staff.example"
+  ]
+}
