@@ -1,3 +1,5 @@
+import type { BetterAuthPlugin } from "better-auth";
+
 import type { DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { Logger } from "../logger";
@@ -16,6 +18,8 @@ export interface SelfHostedServerOptions {
   demo: SetupDemo;
   addApprovedPeople: AddApprovedPeople;
   passwordResetEmail: Pick<PasswordResetEmail, "queue">;
+  /** The modules' sign-in endpoints. */
+  plugins: BetterAuthPlugin[];
 }
 
 /**

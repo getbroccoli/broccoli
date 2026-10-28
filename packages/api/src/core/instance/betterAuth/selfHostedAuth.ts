@@ -1,3 +1,5 @@
+import type { BetterAuthPlugin } from "better-auth";
+
 import { createBetterAuth, fixedAuth, type AuthSource } from "../../auth";
 import type { Orm, Transact } from "../../db";
 import type { Logger } from "../../logger";
@@ -17,6 +19,8 @@ export interface SelfHostedAuthOptions {
   demo: SetupDemo;
   addApprovedPeople: AddApprovedPeople;
   passwordResetEmail: Pick<PasswordResetEmail, "queue">;
+  /** The modules' sign-in endpoints. */
+  plugins: BetterAuthPlugin[];
 }
 
 /** Better Auth of a self-hosted instance: password sign-in, and setup for the first visitor. */
@@ -25,6 +29,7 @@ export function selfHostedAuth({
   demo,
   addApprovedPeople,
   passwordResetEmail,
+  plugins,
   ...options
 }: SelfHostedAuthOptions): AuthSource {
   return fixedAuth(
@@ -39,6 +44,7 @@ export function selfHostedAuth({
           addApprovedPeople,
         }),
         demoPlugin(options.orm, transact, demo.deleteAllEmployees),
+        ...plugins,
       ],
     }),
   );
