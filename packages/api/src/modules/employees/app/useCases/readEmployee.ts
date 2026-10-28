@@ -22,6 +22,15 @@ export async function readEmployee(
   return employees.findById(employeeId);
 }
 
+/** The signed-in user's own employee; null for a user without one, such as the owner. */
+export async function readMyEmployee(
+  employees: EmployeeRepository,
+  ctx: SecurityContext,
+): Promise<Employee | null> {
+  const employeeId = ctx.user?.employeeId;
+  return employeeId ? employees.findById(employeeId) : null;
+}
+
 /** Each employee's manager today, by the id asked for; employees without one are left out. */
 export async function readManagers(
   { employees, employments }: { employees: EmployeeRepository; employments: EmploymentRepository },

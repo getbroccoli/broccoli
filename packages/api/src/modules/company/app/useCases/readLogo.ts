@@ -8,7 +8,10 @@ export async function readLogo(
   ctx: SecurityContext,
   fileId: string,
 ): Promise<StoredFile | null> {
-  ctx.requireSetupAccess("MANAGE_WORKSPACE");
+  // Everyone signed in sees the company in their workspace menu.
+  if (!ctx.user) {
+    ctx.requireSetupAccess("MANAGE_WORKSPACE");
+  }
   const { logoFileId } = await companies.read();
   return logoFileId === fileId ? readFile(orm, fileId) : null;
 }

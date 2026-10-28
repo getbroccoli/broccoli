@@ -131,6 +131,18 @@ export class TestEnv {
     await this.database.orm.insert(user).values({ id: randomUUID(), name: "User", email });
   }
 
+  async changeUserName(email: string, name: string): Promise<void> {
+    await this.database.orm.update(user).set({ name }).where(eq(user.email, email));
+  }
+
+  async userIdsForEmail(email: string): Promise<string[]> {
+    const users = await this.database.orm
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, email));
+    return users.map(({ id }) => id);
+  }
+
   async changeUserEmail(userId: string, email: string): Promise<void> {
     await this.database.orm.update(user).set({ email }).where(eq(user.id, userId));
   }

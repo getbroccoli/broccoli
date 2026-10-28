@@ -6,7 +6,7 @@ import type { Instance } from "../domain";
 import { completeOwnerStep } from "./setup";
 
 /** The owner's id and sign-in email, or null before an owner exists. */
-export function readOwner(orm: Orm): Promise<{ userId: string; email: string } | null> {
+export function readOwner(orm: Orm | Tx): Promise<{ userId: string; email: string } | null> {
   return instanceRepository(orm).readOwner();
 }
 

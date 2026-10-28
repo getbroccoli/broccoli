@@ -21,12 +21,54 @@ type Employee implements AnyRecord {
   access: RecordAccess!
   "The permission profiles of the user who signs in as this person, EMPLOYEE first; null when nobody does."
   permissionProfiles: [PermissionProfile!]
+  "Whether this person can sign in, and their invite; null for callers who may not manage invites."
+  signInStatus: SignInStatus
+}
+
+"Whether a person can sign in."
+enum SignInState {
+  "No open invite, and no account."
+  NOT_INVITED
+  "An invite is open, or has expired without being accepted."
+  PENDING
+  "The person accepted an invite and signs in."
+  JOINED
+}
+
+type SignInStatus {
+  state: SignInState!
+  "When the pending invite stops working; null without one."
+  expiresAt: DateTime
+  "Whether sending the pending invite's email failed."
+  notSent: Boolean!
+  "Whether the person's email already belongs to an account, so they cannot be invited."
+  emailHasAccount: Boolean!
+}
+
+"How an invite reaches the person."
+enum InviteDelivery {
+  "Emailed with the instance's mail choice."
+  SENT_BY_EMAIL
+  "A link the admin copies and sends themselves."
+  COPIED_BY_OWNER
+}
+
+# Adds how invites reach people to the setup state; the server merges the types.
+type Setup {
+  "How invites reach people now: SENT_BY_EMAIL while mail is chosen, else COPIED_BY_OWNER. Null for callers who may not manage invites."
+  inviteDelivery: InviteDelivery
 }
 
 # Adds the employee's causes to the shared list; the server merges them.
 enum RecordChangeCauseKind {
   "The person's manager was removed, so they have none; the ref is the removed employee."
   MANAGER_REMOVED
+  "An admin invited the person to sign in, or made them a new link; the ref is the invite."
+  INVITE_SENT
+  "An admin cancelled the person's open invite; the ref is the invite."
+  INVITE_CANCELLED
+  "The person accepted their invite and signed in for the first time; the ref is the invite."
+  INVITE_ACCEPTED
 }
 
 # Adds the employee to the shared list of record types that keep history; the server merges them.
@@ -109,7 +151,50 @@ type EmployeeMutations {
   delete(input: EmployeeDeleteInput!): EmployeeDeletePayload!
   "Sets the permission profiles of the user who signs in as this person, and records the change in their history. Admins only."
   setPermissionProfiles(input: EmployeeSetPermissionProfilesInput!): EmployeeUpdatePayload!
+  "Invites people to sign in: one new invite each, replacing any open one; skips people who joined, whose email has an account, or who are demo data. Admins only."
+  invite(input: InviteSendInput!): InviteSendPayload!
+  "Cancels a person's open invite; its link stops working. Admins only."
+  cancelInvite(input: InviteCancelInput!): InviteCancelPayload!
 }
+
+input InviteSendInput {
+  "1 to 1,000 employees."
+  employeeIds: [ID!]!
+  "The profiles beside EMPLOYEE, which everyone has; never OWNER."
+  profiles: [PermissionProfile!]
+  "Goes into every emailed invite; plain text, up to 1,000 characters."
+  note: String
+  "COPIED_BY_OWNER for links even while mail is chosen; defaults to `Setup.inviteDelivery`."
+  delivery: InviteDelivery
+}
+
+type SentInvite {
+  employee: Employee!
+  expiresAt: DateTime!
+  delivery: InviteDelivery!
+  "The link to copy and send; only for COPIED_BY_OWNER, and only in this answer."
+  link: String
+}
+
+"The invites made, or why the call was refused."
+type InviteSendPayload {
+  invites: [SentInvite!]
+  error: InviteSendError
+}
+
+union InviteSendError = InvalidInputError | NotFoundError
+
+input InviteCancelInput {
+  employeeId: ID!
+}
+
+"The person whose invite was cancelled, or why it was refused."
+type InviteCancelPayload {
+  employee: Employee
+  error: InviteCancelError
+}
+
+union InviteCancelError = NotFoundError
 
 "The new employee, or why it was refused."
 type EmployeeCreatePayload {
@@ -138,6 +223,12 @@ type EmployeeDeletePayload {
 }
 
 union EmployeeDeleteError = InvalidInputError | NotFoundError
+
+# Adds the signed-in user's employee to `me`; the server merges the types.
+type User {
+  "The signed-in user's own employee record; null for a user without one, such as the owner."
+  employee: Employee
+}
 
 # Each module declares its own root fields; the server merges them into one type.
 type Query {

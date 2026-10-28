@@ -24,13 +24,12 @@ test("returns null for a replaced logo's id", async ({ orm, seed }) => {
   expect(logo).toBeNull();
 });
 
-test("refuses to read the logo for an employee", async ({ orm, seed }) => {
+test("allows an employee to read the company logo", async ({ orm, seed }) => {
   const actor = await seed.owner();
   const company = companyUseCases(orm);
   const saved = await company.saveLogo(actor, PNG);
 
-  await expect(company.readLogo(EMPLOYEE, saved.logoFileId!)).rejects.toMatchObject({
-    code: "FORBIDDEN",
-    message: "Only admins can do this.",
-  });
+  const logo = await company.readLogo(EMPLOYEE, saved.logoFileId!);
+
+  expect(logo).toEqual(await readFile(orm, saved.logoFileId!));
 });

@@ -23,7 +23,7 @@ import { TEST_SECRET_BOX } from "./testSecretBox";
 import { testTransactor } from "./testTransactor";
 
 type SeedEmployee = Partial<
-  Omit<Employee, "id" | "createdAt" | "startDate"> & { startDate: string | null }
+  Omit<Employee, "id" | "createdAt" | "startDate"> & { startDate: string | null; isDemo: boolean }
 >;
 
 /**

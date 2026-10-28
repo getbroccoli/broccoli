@@ -13,6 +13,7 @@ import {
   TEST_OWNER,
 } from "#test/support";
 
+import { user } from "../../../../core/auth";
 import { readInstance, readOwner } from "../../../../core/instance";
 
 test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({
@@ -148,4 +149,22 @@ test("refuses an admin resetting the workspace", async ({ orm }) => {
     code: "FORBIDDEN",
     message: "Only the owner can do this.",
   });
+});
+
+test("resetting setup deletes linked users while keeping the owner's user", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner({ password: TEST_OWNER.password });
+  await seed.setupStep("done");
+  await seed.employee({ userId: owner.user!.userId });
+  for (const email of ["avery@example.com", "robin@example.com"]) {
+    const joined = await seed.user({ email });
+    await seed.employee({ email, userId: joined.id });
+  }
+
+  await systemUseCases(orm).resetSetup(owner);
+
+  expect(await orm.select({ id: user.id }).from(user)).toEqual([{ id: owner.user!.userId }]);
+  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
 });

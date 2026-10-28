@@ -1,4 +1,15 @@
-import { eq, getTableColumns, ilike, isNotNull, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  isNotNull,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -13,6 +24,7 @@ import {
   orderByKeyset,
   type Tx,
 } from "../../../core/db";
+import { user } from "../../../core/auth";
 import { deleteFiles, storeFile } from "../../../core/files";
 import type { KeysetQuery, KeysetRow } from "../../../core/pagination";
 import type { RasterImage } from "../../../utils";
@@ -42,18 +54,24 @@ export interface EmployeeRepository {
     id: string,
     changes: Partial<NewEmployee>,
   ): Promise<{ before: Employee; after: Employee } | null>;
-  /** Deletes an employee and their avatar and returns what was deleted; null when no employee has the id. */
+  /**
+   * Deletes an employee, their avatar and the user who signs in as them, and returns what was
+   * deleted; null when no employee has the id.
+   */
   delete(id: string): Promise<Employee | null>;
   findById(id: string): Promise<Employee | null>;
+  /** Links the user who signs in as this employee. */
+  linkUser(id: string, userId: string): Promise<void>;
   /** The employee linked to this user, or null. */
   findByUserId(userId: string): Promise<Employee | null>;
   /** The employees among these ids that exist. */
   findByIds(ids: readonly string[]): Promise<Employee[]>;
   /**
-   * Deletes every employee and their avatars, locking out other employee writes until the caller
-   * commits; a file another row still references fails it.
+   * Deletes every employee, their avatars and the users who sign in as them, but `keptUserId`,
+   * locking out other employee writes until the caller commits; a file another row still
+   * references fails it.
    */
-  deleteAll(): Promise<void>;
+  deleteAll(keptUserId: string | null): Promise<void>;
   /** The emails among these that an employee has. */
   findTakenEmails(emails: readonly string[]): Promise<string[]>;
   /** Every employee with a stored avatar. */
@@ -146,6 +164,10 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       if (employee?.avatarFileId) {
         await deleteFiles(db, [employee.avatarFileId]);
       }
+      if (employee?.userId) {
+        // Their sessions, password and profiles go with the user.
+        await orm().delete(user).where(eq(user.id, employee.userId));
+      }
       return employee ?? null;
     },
 
@@ -154,22 +176,32 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       return employee ?? null;
     },
 
+    linkUser: async (id, userId) => {
+      await orm().update(employees).set({ userId }).where(eq(employees.id, id));
+    },
+
     findByUserId: async (userId) => {
       const [employee] = await orm().select().from(employees).where(eq(employees.userId, userId));
       return employee ?? null;
     },
 
-    deleteAll: async (): Promise<void> => {
+    deleteAll: async (keptUserId): Promise<void> => {
       // Holds back concurrent inserts and updates until the caller commits, so none lands between
       // this delete and the caller's purge of employee history.
       await orm().execute(sql`lock table ${employees} in share row exclusive mode`);
       const deleted = await orm()
         .delete(employees)
-        .returning({ avatarFileId: employees.avatarFileId });
+        .returning({ avatarFileId: employees.avatarFileId, userId: employees.userId });
       await deleteFiles(
         db,
         deleted.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : [])),
       );
+      const userIds = deleted.flatMap(({ userId }) => (userId ? [userId] : []));
+      if (userIds.length > 0) {
+        await orm()
+          .delete(user)
+          .where(and(inArray(user.id, userIds), keptUserId ? ne(user.id, keptUserId) : undefined));
+      }
     },
 
     findByIds: (ids: readonly string[]) =>

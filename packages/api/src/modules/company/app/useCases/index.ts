@@ -28,6 +28,8 @@ export interface CompanyUseCases {
   ) => Promise<void>;
 }
 
+export { readCompanyName } from "./company";
+
 export function createCompanyUseCases({
   orm,
   transact,

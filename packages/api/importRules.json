@@ -23,7 +23,12 @@
       "src/utils"
     ],
     "src/modules/demo": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
-    "src/modules/employees": ["src/core/*", "!src/core/server", "src/utils"],
+    "src/modules/employees": [
+      "src/core/*",
+      "!src/core/server",
+      "src/integrations/mail",
+      "src/utils"
+    ],
     "src/modules/imports": [
       "src/core/*",
       "!src/core/server",

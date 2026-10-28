@@ -1,3 +1,5 @@
+import { eq } from "drizzle-orm";
+
 import {
   ADMIN,
   signedIn,
@@ -11,6 +13,7 @@ import {
   test,
 } from "#test/support";
 
+import { user } from "../../../../core/auth";
 import { createDemoEmployees } from "..";
 
 test("removing a manager clears them from every report with a history line", async ({
@@ -220,4 +223,44 @@ test("allows an admin to delete another employee", async ({ orm, seed }) => {
   await employees.deleteEmployee(ADMIN, { id: employee.id });
 
   expect(await employees.readEmployee(OWNER, employee.id)).toBeNull();
+});
+
+test("deleting a joined employee deletes their user and keeps the owner", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const joined = await seed.user({
+    email: "joined@example.com",
+    password: "correct horse battery staple",
+  });
+  const employee = await seed.employee({ userId: joined.id });
+
+  await employeeUseCases(orm).deleteEmployee(owner, { id: employee.id });
+
+  expect(await orm.select({ id: user.id }).from(user)).toEqual([{ id: owner.user!.userId }]);
+  expect(await employeeUseCases(orm).readEmployee(owner, employee.id)).toBeNull();
+});
+
+test("rolls back the linked user deletion with the employee deletion", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner();
+  const joined = await seed.user({ email: "joined@example.com" });
+  const employee = await seed.employee({ userId: joined.id });
+  const employees = employeeUseCases(orm, {
+    transact: (work) =>
+      transact(async (tx) => {
+        await work(tx);
+        throw new Error("Transaction failed");
+      }),
+  });
+
+  await expect(employees.deleteEmployee(owner, { id: employee.id })).rejects.toThrow(
+    "Transaction failed",
+  );
+
+  expect(await employees.readEmployee(owner, employee.id)).toEqual(employee);
+  expect(await orm.select({ id: user.id }).from(user).where(eq(user.id, joined.id))).toEqual([
+    { id: joined.id },
+  ]);
 });

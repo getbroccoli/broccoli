@@ -1,4 +1,5 @@
 import type { Orm, Transact } from "../../../../core/db";
+import { companyRepository } from "../../db";
 import { readOwner } from "../../../../core/instance";
 import type { CompanyRepository } from "../../db";
 import { suggestName } from "../../domain";
@@ -31,4 +32,9 @@ export async function readCompany({ orm, companies }: CompanyContext): Promise<C
     suggestedName: suggestName({ brandName, ownerEmail: owner?.email ?? null }),
     logoFileId,
   };
+}
+
+/** The company's name, for other modules' emails and pages; empty before setup names it. */
+export async function readCompanyName(orm: Orm): Promise<string> {
+  return (await companyRepository(orm).read()).name ?? "";
 }
