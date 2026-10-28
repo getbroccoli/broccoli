@@ -1,4 +1,4 @@
-import { ADMIN, EMPLOYEE, employeeUseCases, expect, OWNER, test } from "#test/support";
+import { ADMIN, EMPLOYEE, employeeUseCases, expect, OWNER, signedIn, test } from "#test/support";
 
 test("allows an admin to make a joined employee an admin and records the change", async ({
   orm,
@@ -45,6 +45,27 @@ test("allows an admin to restore the employee profile", async ({ orm, seed }) =>
   expect(await employees.readPermissionProfiles(OWNER, [employee.id])).toEqual(
     new Map([[employee.id, "EMPLOYEE"]]),
   );
+});
+
+test("records one profile change when two admins assign the same profile concurrently", async ({
+  orm,
+  seed,
+}) => {
+  const user = await seed.user({ email: "anna@example.com" });
+  const employee = await seed.employee({ userId: user.id });
+  const employees = employeeUseCases(orm);
+  const otherAdmin = signedIn(orm, { profile: "ADMIN", employeeId: null });
+
+  await Promise.all([
+    employees.setPermissionProfile(ADMIN, { id: employee.id, profile: "ADMIN" }),
+    employees.setPermissionProfile(otherAdmin, { id: employee.id, profile: "ADMIN" }),
+  ]);
+
+  const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
+  expect(edges).toHaveLength(1);
+  expect(edges[0]!.node.changes).toEqual([
+    { field: "permissionProfile", oldValue: "EMPLOYEE", newValue: "ADMIN" },
+  ]);
 });
 
 test.for(["ADMIN", "EMPLOYEE"] as const)(

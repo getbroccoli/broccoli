@@ -44,11 +44,13 @@ export async function setPermissionProfile(
     if (linked.userId === (await readOwner(ormOf(tx)))?.userId) {
       throw new ApplicationError("FORBIDDEN", "The owner's permissions cannot change.");
     }
-    const before = linked.permissionProfile ?? "EMPLOYEE";
+    // The profile it replaces, not the one read above, so two saves at once record one change.
+    const before =
+      (await employees.setUserProfile(linked.userId, profile === "ADMIN" ? "ADMIN" : null)) ??
+      "EMPLOYEE";
     if (before === profile) {
       return { employee, historyLine: null };
     }
-    await employees.setUserProfile(linked.userId, profile === "ADMIN" ? "ADMIN" : null);
     const [line] = await appendRecordHistory(ctx, tx, {
       recordType: "employee",
       operation: "UPDATED",

@@ -1,3 +1,5 @@
+import { useApolloClient } from "@apollo/client/react";
+import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
@@ -25,6 +27,8 @@ export type SaveFailure = "removed" | "failed";
  * all of them. A refused or failed save keeps every edit.
  */
 export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
+  const apolloClient = useApolloClient();
+  const router = useRouter();
   const saved = valuesOf(employee);
   const [edits, setEdits] = useState<Edits>({});
   const [reason, setReason] = useState("");
@@ -90,6 +94,9 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
         await setPermissionProfile({
           variables: { input: { id: employee.id, profile, changeReason } },
         });
+        // The change may be the caller's own, so what they may do is read again.
+        await apolloClient.resetStore();
+        await router.invalidate();
       }
       cancel();
     } catch (failed) {

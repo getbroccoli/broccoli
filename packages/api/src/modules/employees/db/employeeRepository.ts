@@ -50,8 +50,8 @@ export interface EmployeeRepository {
   findByUserId(userId: string): Promise<Employee | null>;
   /** The linked user and their stored profile of each of these employees that has a user. */
   findUserProfiles(employeeIds: readonly string[]): Promise<EmployeeUserProfile[]>;
-  /** Stores a user's profile; null for the default. */
-  setUserProfile(userId: string, permissionProfile: "ADMIN" | null): Promise<void>;
+  /** Stores a user's profile, null for the default, and returns the one it replaced, read under the row's lock. */
+  setUserProfile(userId: string, permissionProfile: "ADMIN" | null): Promise<"ADMIN" | null>;
   /** The employees among these ids that exist. */
   findByIds(ids: readonly string[]): Promise<Employee[]>;
   /**
@@ -176,7 +176,12 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         .where(inArray(employees.id, [...employeeIds])),
 
     setUserProfile: async (userId, permissionProfile) => {
-      await orm().update(user).set({ permissionProfile }).where(eq(user.id, userId));
+      const [row] = await orm()
+        .update(user)
+        .set({ permissionProfile })
+        .where(eq(user.id, userId))
+        .returning({ before: sql<"ADMIN" | null>`old.permission_profile` });
+      return row!.before;
     },
 
     deleteAll: async (): Promise<void> => {

@@ -121,6 +121,8 @@ export class PrincipalSecurityContext implements SecurityContext {
     private readonly directory: EmployeeDirectory | null = null,
   ) {}
 
+  private ownersEmployeeId: Promise<string | null> | undefined;
+
   /** A signed-in user; built by `resolveSecurityContext`. */
   static user(user: SignedInUser, directory: EmployeeDirectory): SecurityContext {
     return new PrincipalSecurityContext({ ...user }, false, null, directory);
@@ -267,7 +269,9 @@ export class PrincipalSecurityContext implements SecurityContext {
   }
 
   private async isOwnersEmployee(subjectEmployeeId: string): Promise<boolean> {
-    return (await this.directory?.ownersEmployeeId()) === subjectEmployeeId;
+    // Read once per context, which lives for one request.
+    this.ownersEmployeeId ??= this.directory?.ownersEmployeeId() ?? Promise.resolve(null);
+    return (await this.ownersEmployeeId) === subjectEmployeeId;
   }
 }
 

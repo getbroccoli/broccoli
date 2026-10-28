@@ -15,7 +15,7 @@ import { ExitDemoDialog } from "./ExitDemoDialog";
  * self-hosted demo also counts down the days its owner can still sign in.
  */
 export function DemoBanner() {
-  const { demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
+  const { demoExpiresAt, me } = useRouteContext({ from: "/_authenticated" });
   // A failed query shows nothing here: the page below reports its own errors.
   const { data } = useQuery(DemoDataDocument, { skip: demoExpiresAt !== null });
   const [exiting, setExiting] = useState(false);
@@ -26,9 +26,11 @@ export function DemoBanner() {
     <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-brand/30 bg-brand-soft px-3 py-2 text-[12.5px] text-brand-deep">
       <Info aria-hidden className="size-4 shrink-0" />
       <p className="min-w-0 flex-1">{bannerText(demoExpiresAt)}</p>
-      <Button size="sm" onClick={() => setExiting(true)}>
-        {t("demo.exit.open")}
-      </Button>
+      {me.operations.includes("RESET_WORKSPACE") && (
+        <Button size="sm" onClick={() => setExiting(true)}>
+          {t("demo.exit.open")}
+        </Button>
+      )}
       <ExitDemoDialog open={exiting} onOpenChange={setExiting} />
     </div>
   );

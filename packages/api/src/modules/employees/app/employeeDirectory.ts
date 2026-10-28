@@ -12,11 +12,8 @@ export function employeeDirectory(orm: Orm): EmployeeDirectory {
     (await employees.findByUserId(userId))?.id ?? null;
   return {
     employeeIdOfUser,
-    managersAbove: async (employeeId) => {
-      const today = todayInUtc();
-      const direct = (await employments.findManagerIds([employeeId], today)).get(employeeId);
-      return direct ? [direct, ...(await employments.findManagersAbove(direct, today))] : [];
-    },
+    // One query, so the whole line is read as it was at one moment.
+    managersAbove: (employeeId) => employments.findManagersAbove(employeeId, todayInUtc()),
     ownersEmployeeId: async () => {
       const owner = await readOwner(orm);
       return owner ? employeeIdOfUser(owner.userId) : null;
