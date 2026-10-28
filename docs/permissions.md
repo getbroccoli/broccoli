@@ -4,22 +4,18 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 ## Primitives
 
-| Primitive              | Values today                                   | Meaning                                                                                                                                                                                                      |
-| ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Permission profile** | `EMPLOYEE`, `ADMIN`, `OWNER`                   | A named list of grants and operations, plus the profiles it extends. Every signed-in user has `EMPLOYEE` and any number of others; their rights are the union.                                               |
-| **Object**             | `employee`                                     | A kind of record permissions apply to.                                                                                                                                                                       |
-| **Action**             | `create`, `read`, `update`, `delete`           | What can be done to one record of an object.                                                                                                                                                                 |
-| **Scope**              | `self`, `direct_reports`, `all_reports`, `all` | Which records a grant reaches, relative to the caller's employee: the caller, people they manage directly, everyone below them in the reporting line, or everyone. Neither report scope includes the caller. |
-| **Grant**              | `{ key, object, actions, scope, fields? }`     | Actions on one object within one scope. `fields` limits the write actions; `"*"` means every ordinary editable field. `key` is stable, so later stored changes can name a built-in grant.                    |
-| **Operation**          | `MANAGE_WORKSPACE`, `RESET_WORKSPACE`          | Something done outside any record.                                                                                                                                                                           |
+- **Permission profile** (`EMPLOYEE`, `ADMIN`, `OWNER`): a named list of grants and operations, plus the profiles it extends. Every signed-in user has `EMPLOYEE` and any number of others; their rights are the union.
+- **Object** (`employee`): a kind of record permissions apply to.
+- **Action** (`create`, `read`, `update`, `delete`): what can be done to one record of an object.
+- **Scope** (`self`, `direct_reports`, `all_reports`, `all`): which records a grant reaches, relative to the caller's employee: the caller, people they manage directly, everyone below them in the reporting line, or everyone. Neither report scope includes the caller.
+- **Grant** (`{ key, object, actions, scope, fields? }`): actions on one object within one scope. `fields` limits the write actions; `"*"` means every ordinary editable field. `key` is stable, so later stored changes can name a built-in grant.
+- **Operation** (`MANAGE_WORKSPACE`, `RESET_WORKSPACE`): something done outside any record.
 
 ## Profiles
 
-| Profile    | Grants on `employee`                                                                                                            | Operations             |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `EMPLOYEE` | read on `all`; update on `self`: first name, last name, photo; update on `all_reports`: first name, last name, photo, job title | none                   |
-| `ADMIN`    | create, read, update and delete on `all`, every field                                                                           | `MANAGE_WORKSPACE`     |
-| `OWNER`    | extends `ADMIN`                                                                                                                 | adds `RESET_WORKSPACE` |
+- `EMPLOYEE`: read on `all`; update on `self` (first name, last name, photo); update on `all_reports` (first name, last name, photo, job title). No operations.
+- `ADMIN`: create, read, update and delete on `all`, every field; `MANAGE_WORKSPACE`.
+- `OWNER`: extends `ADMIN` and adds `RESET_WORKSPACE`.
 
 - A user's extra profiles are stored in `user_permission_profiles` (`ADMIN` today). `EMPLOYEE` is never stored: everyone has it. `OWNER` is never stored either: the instance's owner has it. Employees who never sign in have none.
 - Several profiles let an admin combine roles instead of building one per combination; grants only add, so the union never conflicts.
