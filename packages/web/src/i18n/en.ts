@@ -8,6 +8,7 @@ import { navEn } from "./en/nav";
 import { notFoundEn } from "./en/notFound";
 import { peopleEn } from "./en/people";
 import { recordsEn } from "./en/records";
+import { settingsEn } from "./en/settings";
 import { setupEn } from "./en/setup";
 import { tableEn } from "./en/table";
 import { workspaceEn } from "./en/workspace";
@@ -27,4 +28,5 @@ export const en = {
   ...tableEn,
   ...companyEn,
   ...notFoundEn,
+  ...settingsEn,
 } as const;

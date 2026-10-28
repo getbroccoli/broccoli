@@ -50,6 +50,8 @@ export const loginSearch = z.object({
     .transform((raw) => toLocalPath(raw, window.location.origin))
     .catch(DEFAULT_REDIRECT),
   error: z.enum(SIGN_IN_ERRORS).optional().catch(undefined),
+  /** Set after a password reset, so the page says the new password works. */
+  reset: z.literal("done").optional().catch(undefined),
 });
 
 export type LoginSearch = z.infer<typeof loginSearch>;

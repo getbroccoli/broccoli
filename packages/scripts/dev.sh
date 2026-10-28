@@ -59,6 +59,9 @@ if [ -t 1 ]; then
   cyan='\033[1;36m'
   reset='\033[0m'
 fi
-printf '\n%b🥦🥦🥦  Broccoli is ready!%b  ➜  %bhttp://localhost:%s%b\n\n' \
+mailpit=$(compose port mailpit 8025)
+printf '\n%b🥦🥦🥦  Broccoli is ready!%b    ➜  %bhttp://localhost:%s%b\n' \
   "$green" "$reset" "$cyan" "${address##*:}" "$reset"
+printf '%b📬  Email it sends (Mailpit)%b  ➜  %bhttp://localhost:%s%b\n\n' \
+  "$green" "$reset" "$cyan" "${mailpit##*:}" "$reset"
 compose logs --follow --tail 0

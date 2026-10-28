@@ -1,22 +1,31 @@
 import type { ReactNode } from "react";
 
-import type { AiSource } from "@/__generated__/graphql";
 import { cn } from "@/lib/class-names";
 
-type Props = {
-  value: AiSource;
-  selected: AiSource;
-  onSelect: (source: AiSource) => void;
+type Props<Value extends string> = {
+  /** The radio group, shared by every card of one choice. */
+  name: string;
+  value: Value;
+  selected: Value;
+  onSelect: (value: Value) => void;
   title: string;
   hint: string;
   /** Shown under the hint while this option is selected. */
   children?: ReactNode;
 };
 
-/** One way to read files, as a card holding its radio button. */
-export function SourceOption({ value, selected, onSelect, title, hint, children }: Props) {
+/** One option of a choice, as a card holding its radio button. */
+export function OptionCard<Value extends string>({
+  name,
+  value,
+  selected,
+  onSelect,
+  title,
+  hint,
+  children,
+}: Props<Value>) {
   const isSelected = value === selected;
-  const id = `ai-source-${value}`;
+  const id = `${name}-${value}`;
   return (
     <div
       className={cn(
@@ -28,7 +37,7 @@ export function SourceOption({ value, selected, onSelect, title, hint, children 
         <input
           id={id}
           type="radio"
-          name="source"
+          name={name}
           value={value}
           checked={isSelected}
           onChange={() => onSelect(value)}

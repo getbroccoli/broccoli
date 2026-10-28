@@ -64,6 +64,10 @@ curl -c cookies -b cookies -H 'content-type: application/json' -H "origin: $URL"
 
 Once the owner exists, setup answers `OWNER_EXISTS`. Sign in with the same body at `/api/auth/sign-in/email`, from the console or with `curl -c cookies`.
 
+## Send email
+
+`pnpm dev` runs Mailpit and prints its address. Settings starts with "Your mail server (SMTP)", `smtp://mailpit:1025` and `people@example.com` filled in; after "Check and save", every email Broccoli sends then arrives in Mailpit. See [Email settings and password reset](email-settings.md).
+
 ## Add employees
 
 With the session, call the `employee { create(input: …) }` mutation:

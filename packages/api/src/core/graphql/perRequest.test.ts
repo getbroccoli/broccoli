@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
 
-import { OWNER } from "#test/support";
+import { createGraphqlContext, OWNER } from "#test/support";
 
-import { GraphqlContext } from "./apollo";
+import type { GraphqlContext } from "./apollo";
 import { perRequest } from "./perRequest";
 
 it("creates the value once per request, from that request's context", () => {
@@ -11,7 +11,7 @@ it("creates the value once per request, from that request's context", () => {
     contexts.push(context);
     return {};
   });
-  const request = new GraphqlContext(OWNER);
+  const request = createGraphqlContext(OWNER);
 
   expect(contexts).toEqual([]);
   expect(loaders(request)).toBe(loaders(request));
@@ -21,11 +21,11 @@ it("creates the value once per request, from that request's context", () => {
 it("gives each request its own value, even for the same user", () => {
   const loaders = perRequest(() => ({}));
 
-  expect(loaders(new GraphqlContext(OWNER))).not.toBe(loaders(new GraphqlContext(OWNER)));
+  expect(loaders(createGraphqlContext(OWNER))).not.toBe(loaders(createGraphqlContext(OWNER)));
 });
 
 it("keeps the values of two accessors apart", () => {
-  const request = new GraphqlContext(OWNER);
+  const request = createGraphqlContext(OWNER);
 
   expect(perRequest(() => ({}))(request)).not.toBe(perRequest(() => ({}))(request));
 });

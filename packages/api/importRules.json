@@ -42,6 +42,7 @@
     "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/integrations/ai": ["src/utils"],
     "src/integrations/brandLookup": ["src/utils"],
+    "src/integrations/mail": ["src/utils"],
     "src/integrations/slack": ["src/utils"],
     "src/utils": [],
     "src/core/server": ["src/core/*"],
@@ -65,11 +66,13 @@
     "src/core/security": ["src/core/applicationError"],
     "src/core/instance": [
       "src/integrations/ai",
+      "src/integrations/mail",
       "src/core/applicationError",
       "src/core/env",
       "src/core/auth",
       "src/core/db",
       "src/core/events",
+      "src/core/jobs",
       "src/core/logger",
       "src/core/secrets",
       "src/core/security"
