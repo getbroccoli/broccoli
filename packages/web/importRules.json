@@ -115,7 +115,7 @@
       "src/lib/useSessionChange"
     ],
     "src/components/dataTable": ["src/components/ui", "src/i18n", "src/lib/class-names"],
-    "src/components/form": ["src/lib/class-names"],
+    "src/components/form": ["src/components/ui", "src/lib/class-names"],
     "src/components/ui": ["src/lib/class-names", "src/lib/formatDate"],
     "src/lib/listPage": ["src/apollo", "src/components/dataTable"],
     "src/lib/class-names": [],

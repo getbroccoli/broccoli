@@ -7,14 +7,13 @@ import {
   type MailSource,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
-import { FieldError, OptionCard } from "@/components/form";
+import { FieldError, OptionCard, SecretField } from "@/components/form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 
 import { failureOf } from "./failureOf";
-import { SecretField } from "./SecretField";
 import { TestEmailButton } from "./TestEmailButton";
 
 type Props = {
@@ -62,9 +61,12 @@ export function EmailForm({ mail }: Props) {
   const fields = (
     <div className="flex max-w-md flex-col gap-4">
       <SecretField
+        id="mail-secret"
         label={t(source === "SMTP_SERVER" ? "settings.email.smtpUrl" : "settings.email.resendKey")}
         hint={source === "SMTP_SERVER" ? t("settings.email.smtpUrlHint") : undefined}
         masked={source === "RESEND_API"}
+        savedLabel={t("settings.email.secretSaved")}
+        replaceLabel={t("settings.email.replace")}
         value={keepsSecret ? null : (newSecret ?? "")}
         onChange={setNewSecret}
         error={fieldError("secret")}
