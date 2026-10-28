@@ -12,12 +12,6 @@ import { t } from "@/i18n";
 import "./addedPeopleRing.css";
 import { RING_SEATS, ringSeats } from "./ringSeats";
 
-const RADIUS_PX = 108;
-// Faces fly in from this many radii out.
-const ENTRANCE_SCALE = 2.4;
-const SWAP_INTERVAL_MS = 3_200;
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
-
 /**
  * The approved people and their sources, with their photos circling the company logo,
  * before the owner creates their account or starts using Broccoli.
@@ -93,6 +87,12 @@ export function ApprovedPeopleSummary() {
     </>
   );
 }
+
+const RADIUS_PX = 108;
+// Faces fly in from this many radii out.
+const ENTRANCE_SCALE = 2.4;
+const SWAP_INTERVAL_MS = 3_200;
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 const CHIP =
   "inline-flex h-8 items-center gap-2 rounded-full bg-brand-soft/70 px-3 text-sm font-medium text-brand-deep tabular-nums";
