@@ -20,8 +20,9 @@ export function failureOf(
       return { message: secretMessage(secretCode, source), field: "secret" };
     }
   }
+  // Only the SMTP server check is unavailable, so the message belongs under its URL.
   if (error.__typename === "UnavailableError") {
-    return { message: "settings.email.unavailable", field: null };
+    return { message: "settings.email.unavailable", field: "secret" };
   }
   return { message: "settings.email.failed", field: null };
 }

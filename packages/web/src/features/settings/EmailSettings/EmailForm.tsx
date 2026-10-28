@@ -62,6 +62,7 @@ export function EmailForm({ mail }: Props) {
       <SecretField
         label={t(source === "SMTP_SERVER" ? "settings.email.smtpUrl" : "settings.email.resendKey")}
         hint={source === "SMTP_SERVER" ? t("settings.email.smtpUrlHint") : undefined}
+        masked={source === "RESEND_API"}
         value={keepsSecret ? null : (newSecret ?? "")}
         onChange={setNewSecret}
         error={fieldError("secret")}

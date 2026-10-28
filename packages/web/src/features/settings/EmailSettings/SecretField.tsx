@@ -9,6 +9,8 @@ import { t } from "@/i18n";
 type Props = {
   label: string;
   hint?: string;
+  /** Hides what is typed, as for an API key. */
+  masked: boolean;
   /** What is typed; null while the saved secret is kept. */
   value: string | null;
   onChange: (secret: string) => void;
@@ -16,7 +18,7 @@ type Props = {
 };
 
 /** The SMTP URL or Resend key: "Saved" with Replace while kept, since it is never shown again. */
-export function SecretField({ label, hint, value, onChange, error }: Props) {
+export function SecretField({ label, hint, masked, value, onChange, error }: Props) {
   if (value === null) {
     return (
       <div className="flex flex-col gap-2">
@@ -38,7 +40,7 @@ export function SecretField({ label, hint, value, onChange, error }: Props) {
       <Label htmlFor="mail-secret">{label}</Label>
       <Input
         id="mail-secret"
-        type="password"
+        type={masked ? "password" : "text"}
         autoComplete="off"
         spellCheck={false}
         className="h-10 rounded-lg"
