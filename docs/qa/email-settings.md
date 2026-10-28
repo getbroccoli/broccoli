@@ -11,7 +11,7 @@ A manual check of how a self-hosted instance sends email, and of resetting a for
 
 - [ ] The navigation shows "Settings" under "People"; it opens `/settings` with the "Email" section and "No email" selected.
 - [ ] "Your mail server (SMTP)" shows the SMTP URL and From address fields; "Resend" shows the API key and From address fields; "No email" shows none.
-- [ ] SMTP with `smtp://mailpit:1025` and `people@example.com`: "Check and save" shows "Checking…", then "Email settings saved"; the URL field becomes "Saved" with Replace.
+- [ ] Under `pnpm dev`, a fresh instance opens with SMTP, `smtp://mailpit:1025` and `people@example.com` filled in. "Check and save" shows "Checking…", then "Email settings saved"; the URL field becomes "Saved" with Replace.
 - [ ] A reload keeps the choice and From, and never shows the URL.
 - [ ] `smtp://nowhere.invalid:25` shows "Your mail server could not be reached…"; `https://smtp.example.com` shows "Enter a URL that starts with smtp:// or smtps://."; a From without `@` shows "Enter an email address…". Each time the earlier choice stays.
 - [ ] Switching from a saved SMTP server to Resend asks for the API key: saving without one shows "Enter your Resend API key."
