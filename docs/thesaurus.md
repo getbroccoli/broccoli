@@ -46,5 +46,10 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Ready import employee**: an import employee complete enough to become an employee under the employee rules, with an email no employee has yet. The others are incomplete import employees, or have a taken email.
 - **Setup approve**: the setup review step's "Add N people" button, which completes the import step, once. The ready import employees that are not left out become employees, with the values and photos review shows, when setup completes; the others are not added. Until then, "Back" on setup's last step reopens the review. The import is deleted when setup completes.
 - **Reset setup**: the workspace menu action that starts a finished setup over: every employee and their history is deleted and setup goes back to the `company` step; the company and the AI choice stay. The demo's provisional owner exits the demo instead.
+- **Invite**: an admin's offer to one person to sign in, by a single-use invite link valid seven days, with the permission profiles the person gets. One open invite per person; inviting again replaces it.
+- **Invite link**: `<origin>/invite#<token>`; only the token's hash is stored, so a link is shown or emailed once and never again.
+- **Invite delivery**: how an invite reaches the person: `SENT_BY_EMAIL` while email is chosen, else `COPIED_BY_OWNER`, a link the admin copies and sends themselves.
+- **Sign-in state**: whether a person can sign in: not invited, pending (an invite is open or has expired), or joined.
+- **Joined**: a person whose user is linked to their employee record (`employees.user_id`), after accepting an invite.
 - **Mail choice**: how a self-hosted instance sends email: the owner's SMTP server, their Resend key, or no email. Saved on the instance in Settings; password reset works only while email is chosen.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.
