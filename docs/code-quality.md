@@ -42,6 +42,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 - **RULE20.** Use cases open transactions with `transact`; composed operations require `tx`. Never await work needing another connection while holding locks.
 - **RULE60.** Repository reads return whole domain items in one query, also exposed by module public reads; encrypted secrets have separate reads. No read method per field or field group.
 - **RULE66.** A read or check that may run once per item, from a field resolver, a loop or a list, takes many inputs and answers for all of them in one query (`findManagersAbove(employeeIds, date)`, `recordAccess(object, subjectEmployeeIds)`); a caller with one item passes one. Never call a single-item read in a loop.
+- **RULE67.** Queries use the Drizzle query builder (`select`, `where(eq(…))`, `.for("update")`). The `sql` template is only for what the builder cannot express, such as a recursive query or a table lock, and takes values only as `${…}` parameters; `sql.raw` takes only constants from code, never input.
 - **RULE65.** A module adds its entries to core's shared registries (`RecordTypes`, `CauseKinds`, `DomainEvents`, `Jobs`) by declaration merging in one file, `app/registrations.ts`, never beside the code that uses them.
 - **RULE21.** Cross-module access uses public operations or events, never another module's tables.
 - **RULE22.** Integrations use `utils`' `fetchJson` or `fetchBytes`, no HTTP library and no retries by default.

@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
@@ -36,7 +36,7 @@ export function permissionProfileRepository(db: Orm | Tx): PermissionProfileRepo
 
     replaceProfiles: async (userId, profiles) => {
       // Two saves at once take turns, so each sees what the other saved.
-      await orm().execute(sql`select 1 from ${user} where ${user.id} = ${userId} for update`);
+      await orm().select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update");
       const before = (await findProfiles([userId])).get(userId) ?? [];
       await orm().delete(userPermissionProfiles).where(eq(userPermissionProfiles.userId, userId));
       if (profiles.length > 0) {
