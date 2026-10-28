@@ -4,7 +4,7 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 ## Primitives
 
-- **Permission profile** (`EMPLOYEE`, `ADMIN`, `OWNER`): a named list of grants and operations, plus the profiles it extends. Every signed-in user has `EMPLOYEE` and any number of others; their rights are the union.
+- **Permission profile** (`EMPLOYEE`, `ADMIN`, `OWNER`): a named list of grants and operations. Every signed-in user has `EMPLOYEE` and any number of others; their rights are the union.
 - **Object** (`employee`): a kind of record permissions apply to.
 - **Action** (`create`, `read`, `update`, `delete`): what can be done to one record of an object.
 - **Scope** (`self`, `direct_reports`, `all_reports`, `all`): which records a grant reaches, relative to the caller's employee: the caller, people they manage directly, everyone below them in the reporting line, or everyone. Neither report scope includes the caller.
@@ -15,12 +15,12 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 
 - `EMPLOYEE`: read on `all`; update on `self` (first name, last name, photo); update on `all_reports` (first name, last name, photo, job title). No operations.
 - `ADMIN`: create, read, update and delete on `all`, every field; `MANAGE_WORKSPACE`.
-- `OWNER`: extends `ADMIN` and adds `RESET_WORKSPACE`.
+- `OWNER`: Admin's grants and operations, shared in code rather than linked, plus `RESET_WORKSPACE`; later edits to Admin never reach the owner.
 
 - A user's extra profiles are stored in `user_permission_profiles` (`ADMIN` today). `EMPLOYEE` is never stored: everyone has it. `OWNER` is never stored either: the instance's owner has it. Employees who never sign in have none.
 - Several profiles let an admin combine roles instead of building one per combination; grants only add, so the union never conflicts.
 - A manager is not a profile. Having reports gives the report-scoped grants at once; losing them takes the rights away.
-- `extends` lists parents; a child has their grants and operations plus its own, and can never remove one. A cycle or an unknown parent fails when the definitions load.
+- Profiles do not extend each other: a person who needs two sets of rights holds two profiles.
 - All three profiles are built in: defined in code and changed by releases.
 
 ## How a check resolves

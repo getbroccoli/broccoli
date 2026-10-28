@@ -231,7 +231,7 @@ export class PrincipalSecurityContext implements SecurityContext {
     this.effective ??= {
       grants: this.user.permissionProfiles.flatMap((name) => PERMISSION_PROFILES[name].grants),
       operations: new Set(
-        this.user.permissionProfiles.flatMap((name) => [...PERMISSION_PROFILES[name].operations]),
+        this.user.permissionProfiles.flatMap((name) => PERMISSION_PROFILES[name].operations),
       ),
     };
     return this.effective;
