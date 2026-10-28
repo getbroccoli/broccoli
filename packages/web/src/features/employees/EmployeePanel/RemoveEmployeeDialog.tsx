@@ -1,9 +1,8 @@
-import { useApolloClient } from "@apollo/client/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { DeleteEmployeeDocument } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { useCache, usePayloadMutation } from "@/apollo";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +37,7 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
     },
   );
   const failed = Boolean(error || payloadError);
-  const client = useApolloClient();
+  const cache = useCache();
   // The panel may close while a removal is pending, such as on browser Back.
   const mounted = useRef(false);
   const fullName = `${employee.firstName} ${employee.lastName}`;
@@ -61,7 +60,7 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
     }
     toast(t("people.panel.remove.done", { name: fullName }));
     if (mounted.current) onRemoved();
-    forgetEmployee(client.cache, employee.id);
+    forgetEmployee(cache, employee.id);
   };
 
   return (
