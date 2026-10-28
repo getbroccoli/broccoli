@@ -59,7 +59,7 @@ export async function resolveSecurityContext(
     email,
     isOwner,
     permissionProfiles: profilesOf(
-      (await permissionProfileRepository(orm).findExtras([userId])).get(userId) ?? [],
+      (await permissionProfileRepository(orm).findProfiles([userId])).get(userId) ?? [],
       isOwner,
     ),
     employeeId: await directory.employeeIdOfUser(userId),

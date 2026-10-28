@@ -13,13 +13,13 @@ import { t } from "@/i18n";
 type Props = FieldEditorProps;
 
 /** Everyone has it; it shows checked and cannot be removed. */
-const BASE_PROFILE = "EMPLOYEE";
+const DEFAULT_PROFILE = "EMPLOYEE";
 
-/** The profiles an admin may give beside the base one; the owner's comes from owning the instance. */
-const EXTRAS = ["ADMIN"] as const;
+/** The profiles an admin may give beside the default one; the owner's comes from owning the instance. */
+const ASSIGNABLE = ["ADMIN"] as const;
 
 /**
- * An editor for a person's permissions: a menu with the base profile always on and a checkbox
+ * An editor for a person's permissions: a menu with the default profile always on and a checkbox
  * per profile an admin may give. The value is the whole set, comma-separated.
  */
 export function PermissionProfilePicker({
@@ -33,8 +33,8 @@ export function PermissionProfilePicker({
 }: Props) {
   const held = new Set(value.split(","));
   const toggle = (profile: string, checked: boolean) => {
-    const next = [BASE_PROFILE, ...EXTRAS].filter((name) =>
-      name === profile ? checked : held.has(name) || name === BASE_PROFILE,
+    const next = [DEFAULT_PROFILE, ...ASSIGNABLE].filter((name) =>
+      name === profile ? checked : held.has(name) || name === DEFAULT_PROFILE,
     );
     onChange(next.join(","));
   };
@@ -65,9 +65,9 @@ export function PermissionProfilePicker({
       />
       <DropdownMenuContent align="start">
         <DropdownMenuCheckboxItem checked disabled title={t("people.panel.permissionProfile.base")}>
-          {field.format(BASE_PROFILE)}
+          {field.format(DEFAULT_PROFILE)}
         </DropdownMenuCheckboxItem>
-        {EXTRAS.map((profile) => (
+        {ASSIGNABLE.map((profile) => (
           <DropdownMenuCheckboxItem
             key={profile}
             checked={held.has(profile)}

@@ -3,8 +3,7 @@ import { type Orm, ormOf } from "../../../../core/db";
 import { readOwner } from "../../../../core/instance";
 import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
 import {
-  BASE_PROFILE,
-  type ExtraProfile,
+  parseGivenProfiles,
   permissionProfileRepository,
   type PermissionProfile,
   profilesOf,
@@ -17,7 +16,7 @@ import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 
 /**
- * Replaces the extra profiles of the user an employee signs in as and records the change in the
+ * Replaces the profiles given to the user an employee signs in as and records the change in the
  * employee's history, in one transaction; returns the line, or null when the set was unchanged.
  */
 export async function setPermissionProfiles(
@@ -30,7 +29,7 @@ export async function setPermissionProfiles(
   }: { id: string; profiles: readonly PermissionProfile[]; changeReason?: string | null },
 ): Promise<{ employee: Employee; historyLine: HistoryLine | null }> {
   ctx.require("MANAGE_WORKSPACE");
-  const extras = parseExtras(profiles);
+  const given = parseGivenProfiles(profiles);
   const reason = parseChangeReason(changeReason);
   const employeeId = parseUuid(id);
   if (!employeeId) {
@@ -48,9 +47,9 @@ export async function setPermissionProfiles(
       throw new ApplicationError("FORBIDDEN", "The owner's permissions cannot change.");
     }
     // The set it replaces, not one read before, so two saves at once record one change.
-    const replaced = await permissionProfileRepository(tx).replaceExtras(employee.userId, extras);
+    const replaced = await permissionProfileRepository(tx).replaceProfiles(employee.userId, given);
     const before = profilesOf(replaced, false).join(", ");
-    const after = profilesOf(extras, false).join(", ");
+    const after = profilesOf(given, false).join(", ");
     if (before === after) {
       return { employee, historyLine: null };
     }
@@ -70,7 +69,7 @@ export async function setPermissionProfiles(
   });
   if (historyLine) {
     logger.info(
-      { employeeId, historyId: historyLine.id, permissionProfiles: extras },
+      { employeeId, historyId: historyLine.id, permissionProfiles: given },
       "Changed an employee's permission profiles",
     );
   }
@@ -92,22 +91,14 @@ export async function readPermissionProfiles(
     ({ id, userId }) => (userId ? [{ id, userId }] : []),
   );
   if (linked.length === 0) return new Map();
-  const extras = await permissionProfileRepository(orm).findExtras(
+  const stored = await permissionProfileRepository(orm).findProfiles(
     linked.map(({ userId }) => userId),
   );
   const ownerUserId = (await readOwner(orm))?.userId;
   return new Map(
     linked.map(({ id, userId }) => [
       id,
-      profilesOf(extras.get(userId) ?? [], userId === ownerUserId),
+      profilesOf(stored.get(userId) ?? [], userId === ownerUserId),
     ]),
   );
-}
-
-/** The assignable profiles among `profiles`, each once; `EMPLOYEE` is always on and left out. */
-function parseExtras(profiles: readonly PermissionProfile[]): ExtraProfile[] {
-  if (profiles.includes("OWNER")) {
-    throw invalidInput([{ field: "profiles", code: "not_assignable" }]);
-  }
-  return [...new Set(profiles.filter((profile) => profile !== BASE_PROFILE))] as ExtraProfile[];
 }

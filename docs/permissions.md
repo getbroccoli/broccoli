@@ -17,7 +17,7 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 - `ADMIN`: create, read, update and delete on `all`, every field; `MANAGE_WORKSPACE`.
 - `OWNER`: Admin's grants and operations, shared in code rather than linked, plus `RESET_WORKSPACE`. A release that changes Admin's definition changes both; an admin's stored edits to the Admin profile, once the profile editor exists, will not reach the owner.
 
-- A user's extra profiles are stored in `user_permission_profiles` (`ADMIN` today). `EMPLOYEE` is never stored: everyone has it. `OWNER` is never stored either: the instance's owner has it. Employees who never sign in have none.
+- The profiles given to a user are stored in `user_permission_profiles` (`ADMIN` today). `EMPLOYEE` is never stored: everyone has it. `OWNER` is never stored either: the instance's owner has it. Employees who never sign in have none.
 - Several profiles let an admin combine roles instead of building one per combination; grants only add, so the union never conflicts.
 - A manager is not a profile. Having reports gives the report-scoped grants at once; losing them takes the rights away.
 - Profiles do not extend each other: a person who needs two sets of rights holds two profiles.

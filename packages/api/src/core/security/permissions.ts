@@ -1,8 +1,10 @@
-/** A named list of grants and operations; a user has the base one and any number of others. */
+import { invalidInput } from "../applicationError";
+
+/** A named list of grants and operations; a user has the default one and any number of others. */
 export type PermissionProfile = "EMPLOYEE" | "ADMIN" | "OWNER";
 
-/** The profile every user has, never stored and never removed. */
-export const BASE_PROFILE = "EMPLOYEE";
+/** The default profile: every user has it; it is never stored and never removed. */
+export const DEFAULT_PROFILE = "EMPLOYEE";
 
 /** A kind of record permissions apply to. */
 export type PermissionObject = "employee";
@@ -89,16 +91,31 @@ export const PERMISSION_PROFILES: Record<PermissionProfile, ProfileDefinition> =
   OWNER: { ...ADMIN, operations: [...ADMIN.operations, "RESET_WORKSPACE"] },
 };
 
-/** A user's profiles in their shown order: the base, the stored extras, then `OWNER` for the owner. */
+/** A user's profiles in their shown order: the default, the stored ones, then `OWNER` for the owner. */
 export function profilesOf(
-  extras: readonly PermissionProfile[],
+  stored: readonly PermissionProfile[],
   isOwner: boolean,
 ): PermissionProfile[] {
   const order = Object.keys(PERMISSION_PROFILES) as PermissionProfile[];
   const held = new Set<PermissionProfile>([
-    BASE_PROFILE,
-    ...extras,
+    DEFAULT_PROFILE,
+    ...stored,
     ...(isOwner ? ["OWNER" as const] : []),
   ]);
   return order.filter((profile) => held.has(profile));
+}
+
+/** The profiles to store from the ones an admin sent: each once, without the default; refuses `OWNER`. */
+export function parseGivenProfiles(profiles: readonly PermissionProfile[]) {
+  if (profiles.includes("OWNER")) {
+    throw invalidInput([{ field: "profiles", code: "not_assignable" }]);
+  }
+  return [
+    ...new Set(
+      profiles.filter(
+        (profile): profile is Exclude<PermissionProfile, "EMPLOYEE" | "OWNER"> =>
+          profile !== DEFAULT_PROFILE,
+      ),
+    ),
+  ];
 }

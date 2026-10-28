@@ -46,7 +46,7 @@ export interface EmployeeUseCases {
   /** The avatar file with this id, or null when it is no employee's avatar. */
   readAvatar: (ctx: SecurityContext, fileId: string) => Promise<StoredFile | null>;
   /**
-   * Replaces the extra profiles of the user an employee signs in as; refuses an unknown id with
+   * Replaces the profiles given to the user an employee signs in as; refuses an unknown id with
    * NOT_FOUND, an employee without a user, and the owner.
    */
   setPermissionProfiles: (

@@ -47,7 +47,7 @@ test("allows an admin to remove ADMIN and records the change", async ({ orm, see
   );
 });
 
-test("stores ADMIN once and never stores the base profile", async ({ orm, seed }) => {
+test("stores ADMIN once and never stores the default profile", async ({ orm, seed }) => {
   const user = await seed.user({ email: "anna@example.com" });
   const employee = await seed.employee({ userId: user.id });
   const employees = employeeUseCases(orm);

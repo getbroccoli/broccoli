@@ -1,5 +1,4 @@
 export {
-  type ExtraProfile,
   permissionProfileRepository,
   type PermissionProfileRepository,
 } from "./permissionProfileRepository";

@@ -108,7 +108,7 @@ export interface SignedInUser {
   /** Sign-in email, lowercased, for display; never used for authorization. */
   email: string;
   isOwner: boolean;
-  /** `EMPLOYEE` first, then the stored extras, and `OWNER` for the owner (`profilesOf`). */
+  /** `EMPLOYEE` first, then the stored profiles, and `OWNER` for the owner (`profilesOf`). */
   permissionProfiles: readonly PermissionProfile[];
   /** The employee linked to this user; null without one. */
   employeeId: string | null;
