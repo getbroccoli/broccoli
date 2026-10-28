@@ -43,6 +43,8 @@ type SignInStatus {
   notSent: Boolean!
   "Whether the person's email already belongs to an account, so they cannot be invited."
   emailHasAccount: Boolean!
+  "Whether an invite can be sent: not joined, not demo data, and no account has the person's email."
+  canBeInvited: Boolean!
 }
 
 "How an invite reaches the person."

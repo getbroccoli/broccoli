@@ -7,6 +7,7 @@
       "src/features/auth",
       "src/features/employees",
       "src/features/imports",
+      "src/features/invites",
       "src/features/settings",
       "src/features/setup",
       "src/i18n",
@@ -55,6 +56,7 @@
       "src/apollo",
       "src/components/dataTable",
       "src/components/ui",
+      "src/features/invites",
       "src/features/records",
       "src/i18n",
       "src/lib/calendarDay",
@@ -85,6 +87,17 @@
       "src/lib/formatDate",
       "src/lib/listPage",
       "src/lib/useRouteAction"
+    ],
+    "src/features/invites": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/ui",
+      "src/features/setup",
+      "src/i18n",
+      "src/lib/class-names",
+      "src/lib/postJson",
+      "src/lib/useCopyToClipboard",
+      "src/lib/useSessionChange"
     ],
     "src/features/records": [
       "src/__generated__",

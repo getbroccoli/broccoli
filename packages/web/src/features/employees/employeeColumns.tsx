@@ -6,6 +6,7 @@ import {
   type EmployeeColumns_EmployeeFragment,
 } from "@/__generated__/graphql";
 import type { DataTableColumn } from "@/components/dataTable";
+import { SignInCell } from "@/features/invites";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
@@ -55,6 +56,13 @@ export const EMPLOYEE_COLUMNS: DataTableColumn<EmployeeRow, SortKey>[] = [
       ),
   },
 ];
+
+/** Whether each person can sign in; only admins see it. */
+export const SIGN_IN_COLUMN: DataTableColumn<EmployeeRow, SortKey> = {
+  id: "signIn",
+  header: t("people.column.signIn"),
+  cell: ({ signInStatus }) => <SignInCell status={signInStatus} />,
+};
 
 /**
  * Reads the table's fragment for the employees a query returned. Undefined while the

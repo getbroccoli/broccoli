@@ -27,6 +27,8 @@ export const authEn = {
   "auth.reset.linkInvalid": "This link is no longer valid. Ask for a new one.",
   "auth.reset.askAgain": "Get a new link",
   "auth.reset.failed": "Couldn’t change your password. Try again.",
+  "auth.managed.joinedByInvite": "Joined by invite?",
+  "auth.managed.askAdmin": "Forgot your password? Ask your admin for help.",
   "auth.managed.google": "Continue with Google",
   "auth.managed.email": "Sign in with email",
   "auth.managed.hint": "Use the account you used to create this workspace.",

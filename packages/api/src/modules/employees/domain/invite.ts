@@ -24,6 +24,8 @@ export interface SignInStatus {
   notSent: boolean;
   /** Whether the person's email already belongs to an account, so they cannot be invited. */
   emailHasAccount: boolean;
+  /** Whether an invite can be sent: not joined, not demo data, and no account has their email. */
+  canBeInvited: boolean;
 }
 
 /** An admin's offer to one person to sign in, by a single-use link. */
@@ -94,13 +96,15 @@ export function isExpired(invite: Invite): boolean {
 
 /** A person's sign-in state from whether they joined and their open invite. */
 export function signInStatus(
-  { employee, emailHasAccount }: { employee: { userId: string | null }; emailHasAccount: boolean },
+  invitee: { employee: { userId: string | null }; isDemo: boolean; emailHasAccount: boolean },
   open: Invite | undefined,
 ): SignInStatus {
-  if (employee.userId) {
-    return { state: "joined", expiresAt: null, notSent: false, emailHasAccount };
+  const { emailHasAccount } = invitee;
+  const known = { emailHasAccount, canBeInvited: canBeInvited(invitee) };
+  if (invitee.employee.userId) {
+    return { state: "joined", expiresAt: null, notSent: false, ...known };
   }
   return open
-    ? { state: "pending", expiresAt: open.expiresAt, notSent: !!open.sendFailedAt, emailHasAccount }
-    : { state: "not_invited", expiresAt: null, notSent: false, emailHasAccount };
+    ? { state: "pending", expiresAt: open.expiresAt, notSent: !!open.sendFailedAt, ...known }
+    : { state: "not_invited", expiresAt: null, notSent: false, ...known };
 }

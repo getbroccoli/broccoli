@@ -94,6 +94,9 @@ fragment EmployeePanel_employee on Employee {
   }
   avatarUrl
   permissionProfiles
+  signInStatus {
+    ...SignInStatus @unmask
+  }
   access {
     canDelete
     editableFields

@@ -12,6 +12,7 @@ test("reports not invited before a person has an invite", async ({ orm, seed }) 
     expiresAt: null,
     notSent: false,
     emailHasAccount: false,
+    canBeInvited: true,
   });
 });
 
@@ -35,6 +36,7 @@ test("reports pending with an expiry seven days after sending", async ({ orm, se
     expiresAt: sent!.expiresAt,
     notSent: false,
     emailHasAccount: false,
+    canBeInvited: true,
   });
 });
 
@@ -59,6 +61,7 @@ test("keeps an expired invite pending", async ({ orm, seed }) => {
     expiresAt: sent!.expiresAt,
     notSent: false,
     emailHasAccount: false,
+    canBeInvited: true,
   });
 });
 
@@ -74,4 +77,13 @@ test("reports joined for a person linked to a user", async ({ orm, seed }) => {
     expiresAt: null,
     notSent: false,
   });
+});
+
+test("reports that a demo employee cannot be invited", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee({ isDemo: true });
+
+  const statuses = await employeeInviteService(orm).readStatuses(owner, [employee.id]);
+
+  expect(statuses.get(employee.id)).toMatchObject({ state: "not_invited", canBeInvited: false });
 });

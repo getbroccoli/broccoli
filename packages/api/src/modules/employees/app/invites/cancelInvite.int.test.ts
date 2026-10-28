@@ -13,6 +13,7 @@ test("cancels a pending invite and records the sign-in change", async ({ orm, se
     expiresAt: null,
     notSent: false,
     emailHasAccount: false,
+    canBeInvited: true,
   });
   const { edges } = await employeeUseCases(orm).readEmployeeHistory(owner, employee.id, {});
   expect(edges).toHaveLength(2);
