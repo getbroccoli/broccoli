@@ -80,12 +80,14 @@ export function WorkspaceMenu() {
           }
         />
         <DropdownMenuContent align="start" className="w-60" finalFocus={isStillOnOpeningPage}>
-          <DropdownMenuItem render={<Link to="/company" />}>
-            <Buildings size={14} />
-            {t("workspace.company")}
-          </DropdownMenuItem>
+          {me.operations.includes("MANAGE_WORKSPACE") && (
+            <DropdownMenuItem render={<Link to="/company" />}>
+              <Buildings size={14} />
+              {t("workspace.company")}
+            </DropdownMenuItem>
+          )}
           {/* The demo's owner exits the demo instead. */}
-          {!demoExpiresAt && (
+          {!demoExpiresAt && me.operations.includes("RESET_WORKSPACE") && (
             <DropdownMenuItem variant="destructive" onClick={() => setResettingSetup(true)}>
               <ArrowCounterClockwise size={14} />
               {t("setup.reset.open")}

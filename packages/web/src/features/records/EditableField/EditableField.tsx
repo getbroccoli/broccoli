@@ -16,6 +16,8 @@ type Props = {
   error: string | undefined;
   /** True while the panel saves: the draft being saved must not change. */
   disabled: boolean;
+  /** The caller may not change this field: it shows its value only, with no pencil. */
+  readOnly?: boolean;
   onEdit: (value: string) => void;
   onRevert: () => void;
 };
@@ -31,6 +33,7 @@ export function EditableField({
   draft,
   error,
   disabled,
+  readOnly = false,
   onEdit,
   onRevert,
 }: Props) {
@@ -51,7 +54,11 @@ export function EditableField({
     >
       <span className="text-muted-foreground">{field.label}</span>
       <div className="min-w-0">
-        {(editing || error) && !disabled ? (
+        {readOnly ? (
+          <span className={cn("block px-1.5 py-1 break-words", !value && "text-muted-foreground")}>
+            {shown}
+          </span>
+        ) : (editing || error) && !disabled ? (
           <FieldEditor
             field={field}
             recordId={recordId}

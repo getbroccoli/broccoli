@@ -4,6 +4,13 @@ import { formatCalendarDate } from "@/lib/formatDate";
 
 import type { EmployeeFieldKey } from "./employeeDraft";
 import { EmployeePicker } from "../EmployeePicker";
+import { PermissionProfilePicker } from "./PermissionProfilePicker";
+
+const PROFILE_LABELS: Partial<Record<string, string>> = {
+  EMPLOYEE: t("people.panel.permissionProfile.employee"),
+  ADMIN: t("people.panel.permissionProfile.admin"),
+  OWNER: t("people.panel.permissionProfile.owner"),
+};
 
 /** The employee's fields, by panel section, as the panel and its history show them. */
 export const EMPLOYEE_DESCRIPTION = {
@@ -28,6 +35,13 @@ export const EMPLOYEE_DESCRIPTION = {
     textField("email", "people.panel.section.contact"),
     textField("firstName", "people.panel.section.personal"),
     textField("lastName", "people.panel.section.personal"),
+    {
+      key: "permissionProfile",
+      label: t("people.panel.field.permissionProfile"),
+      section: t("people.panel.section.access"),
+      editor: PermissionProfilePicker,
+      format: (value) => PROFILE_LABELS[value] ?? value,
+    },
   ],
 } satisfies RecordDescription;
 

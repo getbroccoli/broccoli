@@ -3,6 +3,8 @@ query Session {
     id
     email
     isOwner
+    permissionProfile
+    operations
   }
   setup {
     id
