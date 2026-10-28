@@ -176,6 +176,8 @@ type SentInvite {
   delivery: InviteDelivery!
   "The link to copy and send; only for COPIED_BY_OWNER, and only in this answer."
   link: String
+  "The line the invite added to the person's history."
+  historyLine: RecordChange!
 }
 
 "The invites made, or why the call was refused."
@@ -193,6 +195,8 @@ input InviteCancelInput {
 "The person whose invite was cancelled, or why it was refused."
 type InviteCancelPayload {
   employee: Employee
+  "The line the cancellation added to the person's history."
+  historyLine: RecordChange
   error: InviteCancelError
 }
 

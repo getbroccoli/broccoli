@@ -3,8 +3,10 @@ import { toast } from "sonner";
 import { CancelInviteDocument, InviteEmployeesDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { addHistoryLine } from "@/features/records";
 import { t } from "@/i18n";
 
+import { addInviteHistoryLines } from "./cache";
 import type { Invitee } from "./InviteDialog";
 import { formatExpiryDay } from "./signInStatus";
 
@@ -19,8 +21,15 @@ type Props = {
  * invite. Nothing for someone who cannot be invited, such as someone who joined.
  */
 export function InviteMenuItems({ person, onInvite }: Props) {
-  const [invite] = usePayloadMutation(InviteEmployeesDocument);
-  const [cancel] = usePayloadMutation(CancelInviteDocument);
+  const [invite] = usePayloadMutation(InviteEmployeesDocument, {
+    update: (cache, { data }) => addInviteHistoryLines(cache, data?.employee.invite.invites ?? []),
+  });
+  const [cancel] = usePayloadMutation(CancelInviteDocument, {
+    update: (cache, { data }) => {
+      const line = data?.employee.cancelInvite.historyLine;
+      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: person.id, line });
+    },
+  });
   const status = person.signInStatus;
   if (!status?.canBeInvited) return null;
 

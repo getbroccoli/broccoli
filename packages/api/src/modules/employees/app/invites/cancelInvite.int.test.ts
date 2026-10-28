@@ -6,7 +6,7 @@ test("cancels a pending invite and records the sign-in change", async ({ orm, se
   const service = employeeInviteService(orm);
   await service.send(owner, { employeeIds: [employee.id] }, "https://copy.example.com");
 
-  expect(await service.cancel(owner, { employeeId: employee.id })).toEqual(employee);
+  expect(await service.cancel(owner, { employeeId: employee.id })).toMatchObject({ employee });
 
   expect((await service.readStatuses(owner, [employee.id])).get(employee.id)).toEqual({
     state: "not_invited",

@@ -56,7 +56,7 @@ export function createResolvers(
         }, ["INVALID_INPUT", "NOT_FOUND"]),
       cancelInvite: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["InviteCancelPayload"]>(
-          async () => ({ employee: await invites.cancel(context.getActor(), input) }),
+          () => invites.cancel(context.getActor(), input),
           ["NOT_FOUND"],
         ),
     },

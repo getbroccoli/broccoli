@@ -92,6 +92,7 @@
       "src/__generated__",
       "src/apollo",
       "src/components/ui",
+      "src/features/records",
       "src/features/setup",
       "src/i18n",
       "src/lib/class-names",

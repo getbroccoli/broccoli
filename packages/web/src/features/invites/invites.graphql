@@ -22,6 +22,9 @@ mutation InviteEmployees($input: InviteSendInput!) {
         expiresAt
         delivery
         link
+        historyLine {
+          ...RecordHistory_line @unmask
+        }
       }
       error {
         __typename
@@ -41,6 +44,9 @@ mutation CancelInvite($input: InviteCancelInput!) {
         signInStatus {
           ...SignInStatus @unmask
         }
+      }
+      historyLine {
+        ...RecordHistory_line @unmask
       }
       error {
         __typename

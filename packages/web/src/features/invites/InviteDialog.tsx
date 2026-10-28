@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 import { useCopyToClipboard } from "@/lib/useCopyToClipboard";
 
+import { addInviteHistoryLines } from "./cache";
 import { formatExpiryDay, groupInvitees, type SkipReason } from "./signInStatus";
 
 /** A person the dialog may invite. */
@@ -61,7 +62,9 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
   const [admin, setAdmin] = useState(false);
   const [note, setNote] = useState("");
   const [links, setLinks] = useState<CopiedLink[] | null>(null);
-  const [invite, { loading, error, payloadError }] = usePayloadMutation(InviteEmployeesDocument);
+  const [invite, { loading, error, payloadError }] = usePayloadMutation(InviteEmployeesDocument, {
+    update: (cache, { data }) => addInviteHistoryLines(cache, data?.employee.invite.invites ?? []),
+  });
   const { invited, skipped } = groupInvitees(people);
   const delivery = data?.setup.inviteDelivery ?? "COPIED_BY_OWNER";
   const byEmail = delivery === "SENT_BY_EMAIL";

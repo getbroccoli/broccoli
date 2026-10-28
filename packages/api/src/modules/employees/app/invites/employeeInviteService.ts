@@ -3,7 +3,7 @@ import type { Orm, Transact, Tx } from "../../../../core/db";
 import type { MailSettings } from "../../../../core/instance";
 import type { JobHandlers, JobQueue } from "../../../../core/jobs";
 import type { Logger } from "../../../../core/logger";
-import { appendRecordHistory } from "../../../../core/records";
+import { appendRecordHistory, type HistoryLine } from "../../../../core/records";
 import type { SecretBox } from "../../../../core/secrets";
 import {
   parseGivenProfiles,
@@ -41,7 +41,10 @@ export interface EmployeeInviteService {
    */
   send(ctx: SecurityContext, input: InviteInput, linkOrigin: string): Promise<SentInvite[]>;
   /** Cancels the person's open invite; refuses with NOT_FOUND without one. */
-  cancel(ctx: SecurityContext, input: { employeeId: string }): Promise<Employee>;
+  cancel(
+    ctx: SecurityContext,
+    input: { employeeId: string },
+  ): Promise<{ employee: Employee; historyLine: HistoryLine }>;
   /** Each person's sign-in state, by employee id; unknown ids are left out. */
   readStatuses(
     ctx: SecurityContext,
@@ -79,6 +82,8 @@ export interface SentInvite {
   delivery: InviteDelivery;
   /** The link to copy and send; only for `copied_by_owner`, and only here. */
   link: string | null;
+  /** The line the invite added to the person's history. */
+  historyLine: HistoryLine;
 }
 
 export interface InviteDetails {
@@ -140,7 +145,7 @@ export function createEmployeeInviteService({
             },
             now,
           );
-          await appendSignInLine(ctx, tx, employee.id, {
+          const historyLine = await appendSignInLine(ctx, tx, employee.id, {
             kind: "INVITE_SENT",
             ref: invite.id,
             from: replacedOpen ? "INVITED" : "NOT_INVITED",
@@ -157,6 +162,7 @@ export function createEmployeeInviteService({
             expiresAt: invite.expiresAt,
             delivery,
             link: delivery === "copied_by_owner" ? inviteLink(linkOrigin, token) : null,
+            historyLine,
           });
         }
         return made;
@@ -174,22 +180,22 @@ export function createEmployeeInviteService({
       if (!employeeId) {
         throw employeeNotFound();
       }
-      const { employee, inviteId } = await transact(async (tx) => {
+      const { employee, historyLine, inviteId } = await transact(async (tx) => {
         const cancelled = await inviteRepository(tx).cancelOpen(employeeId, new Date());
         const employee = cancelled && (await employeeRepository(tx).findById(employeeId));
         if (!cancelled || !employee) {
           throw new ApplicationError("NOT_FOUND", "The person has no open invite.");
         }
-        await appendSignInLine(ctx, tx, employeeId, {
+        const historyLine = await appendSignInLine(ctx, tx, employeeId, {
           kind: "INVITE_CANCELLED",
           ref: cancelled.id,
           from: "INVITED",
           to: "NOT_INVITED",
         });
-        return { employee, inviteId: cancelled.id };
+        return { employee, historyLine, inviteId: cancelled.id };
       });
       logger.info({ inviteId, employeeId }, "Invite cancelled");
-      return employee;
+      return { employee, historyLine };
     },
 
     readStatuses: async (ctx, ids) => {
@@ -303,7 +309,7 @@ function parseInviteInput({ employeeIds, profiles, note }: InviteInput) {
 }
 
 /** Writes the line that changes the person's `signIn` field. */
-function appendSignInLine(
+async function appendSignInLine(
   ctx: SecurityContext,
   tx: Tx,
   employeeId: string,
@@ -319,7 +325,7 @@ function appendSignInLine(
     to: string;
   },
 ) {
-  return appendRecordHistory(ctx, tx, {
+  const [line] = await appendRecordHistory(ctx, tx, {
     recordType: "employee",
     operation: "UPDATED",
     cause: { kind, ref },
@@ -327,4 +333,5 @@ function appendSignInLine(
       { recordId: employeeId, changes: [{ field: "signIn", oldValue: from, newValue: to }] },
     ],
   });
+  return line!;
 }
