@@ -112,22 +112,27 @@ export interface RecordTypeRegistration {
   permissions: { object: PermissionObject; editableFields: readonly string[] };
 }
 
-/** What the caller may do to one record, as `AnyRecord.access` shows it. */
+/** What the caller may do to each of these records, by id, as `AnyRecord.access` shows it. */
 export async function readRecordAccess(
   ctx: SecurityContext,
   { permissions: { object, editableFields } }: RecordTypeRegistration,
-  recordId: string,
-): Promise<{ canUpdate: boolean; canDelete: boolean; editableFields: string[] }> {
+  recordIds: readonly string[],
+): Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>> {
   // shortcut: the record is its own subject while employees are the only record type; a type
   // whose records belong to an employee adds how to find that employee.
-  const { canUpdate, canDelete, writableFields } = await ctx.recordAccess(object, recordId);
-  return {
-    canUpdate,
-    canDelete,
-    editableFields: editableFields.filter(
-      (field) => writableFields === "*" || writableFields.includes(field),
-    ),
-  };
+  const access = await ctx.recordAccess(object, recordIds);
+  return new Map(
+    [...access].map(([id, { canUpdate, canDelete, writableFields }]) => [
+      id,
+      {
+        canUpdate,
+        canDelete,
+        editableFields: editableFields.filter(
+          (field) => writableFields === "*" || writableFields.includes(field),
+        ),
+      },
+    ]),
+  );
 }
 
 /** A record as `RecordChange.record` returns it, marked with its GraphQL type. */

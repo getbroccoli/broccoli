@@ -137,6 +137,58 @@ test("returns an employee's own writable fields and permission profiles", async 
   });
 });
 
+test("returns each listed employee's writable fields for the signed-in employee", async ({
+  env,
+}) => {
+  await env.seed.owner();
+  const credentials = { email: "anna@example.com", password: TEST_OWNER.password };
+  const user = await env.seed.user(credentials);
+  const anna = await env.seed.employee({ firstName: "Anna", userId: user.id });
+  const ben = await env.seed.employee({ firstName: "Ben" });
+  const coworker = await env.seed.employee({ firstName: "Carl" });
+  await env.seed.manager(ben.id, anna.id);
+  const { browser } = await env.signIn(credentials);
+
+  const response = await browser.graphql(`
+    query Employees {
+      employees { edges { node { id access { canUpdate editableFields } } } }
+    }
+  `);
+
+  expect(await response.json()).toEqual({
+    data: {
+      employees: {
+        edges: [
+          {
+            node: {
+              id: anna.id,
+              access: {
+                canUpdate: true,
+                editableFields: ["firstName", "lastName", "avatar"],
+              },
+            },
+          },
+          {
+            node: {
+              id: ben.id,
+              access: {
+                canUpdate: true,
+                editableFields: ["firstName", "lastName", "jobTitle", "avatar"],
+              },
+            },
+          },
+          {
+            node: {
+              id: coworker.id,
+              access: { canUpdate: false, editableFields: [] },
+            },
+          },
+        ],
+      },
+    },
+  });
+});
+
 test("refuses an employee updating a coworker's job title through GraphQL", async ({ env }) => {
   await env.seed.owner();
   const credentials = { email: "anna@example.com", password: TEST_OWNER.password };

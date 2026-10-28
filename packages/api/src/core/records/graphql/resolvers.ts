@@ -43,17 +43,25 @@ export function createResolvers(
         { cacheKeyFn: keyOf },
       ),
   );
-  // `AnyRecord.access` on each registered type; core cannot name the types statically.
-  // shortcut: a report-scoped caller reads the reporting line once per record; batch it when a
-  // list selects `access`.
+  // `AnyRecord.access` on each registered type, one read per type and request however many
+  // records a list holds; core cannot name the types statically.
   const accessResolvers = Object.fromEntries(
-    Object.values(registry).map((registration) => [
-      registration.graphqlType,
-      {
-        access: (record: { id: string }, _args: unknown, context: GraphqlContext) =>
-          readRecordAccess(context.getActor(), registration, record.id),
-      },
-    ]),
+    Object.values(registry).map((registration) => {
+      const access = perRequest(
+        (context) =>
+          new DataLoader(async (ids: readonly string[]) => {
+            const found = await readRecordAccess(context.getActor(), registration, ids);
+            return ids.map((id) => found.get(id)!);
+          }),
+      );
+      return [
+        registration.graphqlType,
+        {
+          access: (record: { id: string }, _args: unknown, context: GraphqlContext) =>
+            access(context).load(record.id),
+        },
+      ];
+    }),
   ) as Resolvers;
   return {
     ...accessResolvers,

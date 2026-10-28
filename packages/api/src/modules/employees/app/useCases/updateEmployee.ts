@@ -99,8 +99,8 @@ async function findAllowedManager(
   if (manager.id === employeeId) {
     throw invalidInput([{ field: "managerId", code: "self" }]);
   }
-  const managersAbove = await employmentRepository(tx).findManagersAbove(manager.id, today);
-  if (managersAbove.includes(employeeId)) {
+  const managersAbove = await employmentRepository(tx).findManagersAbove([manager.id], today);
+  if (managersAbove.get(manager.id)?.includes(employeeId)) {
     throw invalidInput([{ field: "managerId", code: "loop" }]);
   }
   return manager;
