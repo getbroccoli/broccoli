@@ -12,11 +12,15 @@ import { t } from "@/i18n";
 import "./addedPeopleRing.css";
 import { RING_SEATS, ringSeats } from "./ringSeats";
 
+type Props = {
+  showEmpty?: boolean;
+};
+
 /**
  * The approved people and their sources, with their photos circling the company logo,
  * before the owner creates their account or starts using Broccoli.
  */
-export function ApprovedPeopleSummary() {
+export function ApprovedPeopleSummary({ showEmpty = false }: Props) {
   // shortcut: faces come from the first 100 import employees only; filter added ones on the
   // server once the ring should show everyone of a larger import.
   // The owner may have changed the review since: refresh on entry.
@@ -28,7 +32,7 @@ export function ApprovedPeopleSummary() {
     .sort((a, b) => Number(b.avatarUrl !== null) - Number(a.avatarUrl !== null));
   const swaps = useSwaps(people.length > RING_SEATS);
 
-  if (!data) {
+  if (!data || (!showEmpty && data.import.readyEmployeeCount === 0)) {
     return null;
   }
   const { company } = data;
