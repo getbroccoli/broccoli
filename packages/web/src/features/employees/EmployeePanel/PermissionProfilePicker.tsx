@@ -13,6 +13,8 @@ import type { FieldEditorProps } from "@/features/records";
 /** The profiles an admin may give; the owner's comes from owning the instance. */
 const ASSIGNABLE = ["EMPLOYEE", "ADMIN"] as const;
 
+type Props = FieldEditorProps;
+
 /** An editor for a person's permissions: a menu of the profiles an admin may give. */
 export function PermissionProfilePicker({
   field,
@@ -22,7 +24,7 @@ export function PermissionProfilePicker({
   onChange,
   onDone,
   onRevert,
-}: FieldEditorProps) {
+}: Props) {
   return (
     <DropdownMenu
       defaultOpen={!invalid}

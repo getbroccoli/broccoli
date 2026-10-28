@@ -44,6 +44,8 @@ export function createResolvers(
       ),
   );
   // `AnyRecord.access` on each registered type; core cannot name the types statically.
+  // shortcut: a report-scoped caller reads the reporting line once per record; batch it when a
+  // list selects `access`.
   const accessResolvers = Object.fromEntries(
     Object.values(registry).map((registration) => [
       registration.graphqlType,

@@ -1,18 +1,9 @@
 // Public values.
-export { flattenProfiles, OPERATIONS, PERMISSION_PROFILES } from "./permissions";
+export { flattenProfiles, OPERATIONS } from "./permissions";
 export { PrincipalSecurityContext, requireSignedIn } from "./securityContext";
 
 // Public types.
-export type {
-  EffectiveProfile,
-  Grant,
-  Operation,
-  PermissionObject,
-  PermissionProfile,
-  ProfileDefinition,
-  RecordAction,
-  Scope,
-} from "./permissions";
+export type { Grant, Operation, PermissionObject, PermissionProfile } from "./permissions";
 export type {
   EmployeeDirectory,
   RecordAccess,
