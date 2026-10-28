@@ -3,12 +3,4 @@ query ReadyStep {
     id
     name
   }
-  import {
-    id
-    readyEmployeeCount
-    readyEmployeeSources {
-      id
-      kind
-    }
-  }
 }

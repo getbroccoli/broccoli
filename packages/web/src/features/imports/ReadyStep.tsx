@@ -1,18 +1,14 @@
 import { useQuery } from "@apollo/client/react";
-import { ArrowRight, Stack, Users } from "@phosphor-icons/react";
+import { ArrowRight } from "@phosphor-icons/react";
 
-import {
-  CompleteSetupDocument,
-  ReadyStepDocument,
-  type ReadyStepQuery,
-} from "@/__generated__/graphql";
+import { CompleteSetupDocument, ReadyStepDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { SetupLayout, SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 import { useRouteAction } from "@/lib/useRouteAction";
 
-import { AddedPeopleRing } from "./AddedPeopleRing";
+import { ApprovedPeopleSummary } from "./ApprovedPeopleSummary";
 import { BackToReview } from "./BackToReview";
 
 /**
@@ -21,7 +17,6 @@ import { BackToReview } from "./BackToReview";
  * reopens the review.
  */
 export function ReadyStep() {
-  // Approve and reset don't return the import's sources, so a cached answer may be stale.
   const { data } = useQuery(ReadyStepDocument, { fetchPolicy: "network-only" });
   const [completeSetup, { error, payloadError }] = usePayloadMutation(CompleteSetupDocument);
   const [run, starting] = useRouteAction();
@@ -50,21 +45,7 @@ export function ReadyStep() {
           </div>
         }
       >
-        <AddedPeopleRing />
-        {data && (
-          <ul className="flex flex-wrap justify-center gap-2">
-            <li className={CHIP}>
-              <Users size={15} aria-hidden />
-              {peopleLabel(data.import)}
-            </li>
-            {data.import.readyEmployeeSources.length > 0 && (
-              <li className={CHIP}>
-                <Stack size={15} aria-hidden />
-                {sourcesLabel(data.import.readyEmployeeSources)}
-              </li>
-            )}
-          </ul>
-        )}
+        <ApprovedPeopleSummary showEmpty />
         {(error || payloadError) && (
           <p role="alert" className="text-center text-sm text-destructive">
             {t("setup.ready.failed")}
@@ -73,29 +54,4 @@ export function ReadyStep() {
       </SetupStepForm>
     </SetupLayout>
   );
-}
-
-const CHIP =
-  "inline-flex h-8 items-center gap-2 rounded-full bg-brand-soft/70 px-3 text-sm font-medium text-brand-deep tabular-nums";
-
-function peopleLabel({ readyEmployeeCount }: ReadyStepQuery["import"]): string {
-  return readyEmployeeCount === 1
-    ? t("setup.ready.peopleOne")
-    : t("setup.ready.people", { count: String(readyEmployeeCount) });
-}
-
-/** Where the added people came from, such as "From Slack and 2 files". */
-function sourcesLabel(sources: ReadyStepQuery["import"]["readyEmployeeSources"]): string {
-  const fromSlack = sources.some(({ kind }) => kind === "SLACK");
-  const files = sources.filter(({ kind }) => kind === "FILE").length;
-  if (files === 0) {
-    return t("setup.ready.fromSlack");
-  }
-  if (files === 1) {
-    return t(fromSlack ? "setup.ready.fromSlackAndFile" : "setup.ready.fromFile");
-  }
-  const count = String(files);
-  return fromSlack
-    ? t("setup.ready.fromSlackAndFiles", { count })
-    : t("setup.ready.fromFiles", { count });
 }

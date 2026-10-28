@@ -1,4 +1,4 @@
-export { AddedPeopleRing } from "./AddedPeopleRing";
+export { ApprovedPeopleSummary } from "./ApprovedPeopleSummary";
 export { DEFAULT_IMPORT_REVIEW_SEARCH, ImportReview, importReviewSearch } from "./ImportReview";
 export { ImportStep } from "./ImportStep";
 export { BackToReview } from "./BackToReview";

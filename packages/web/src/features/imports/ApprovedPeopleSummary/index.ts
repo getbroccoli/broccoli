@@ -1,0 +1,1 @@
+export { ApprovedPeopleSummary } from "./ApprovedPeopleSummary";
