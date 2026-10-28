@@ -1,0 +1,47 @@
+{
+  "records": [
+    {
+      "firstName": "Zarela",
+      "lastName": "Fenwick",
+      "email": "zarela.fenwick@staff.example",
+      "jobTitle": "Software Engineer",
+      "startDate": "2023-03-17"
+    },
+    {
+      "firstName": "Tavren",
+      "lastName": "Quillmere",
+      "email": "tavren.quillmere@staff.example",
+      "jobTitle": "Finance Analyst",
+      "startDate": "2024-06-21"
+    },
+    {
+      "firstName": "Nerali",
+      "lastName": "Vosswick",
+      "email": "nerali.vosswick@staff.example",
+      "jobTitle": "Office Manager",
+      "startDate": "2025-02-14"
+    }
+  ],
+  "forbidden": [
+    "Zarela",
+    "Fenwick",
+    "zarela.fenwick@staff.example",
+    "Tavren",
+    "Quillmere",
+    "tavren.quillmere@staff.example",
+    "Nerali",
+    "Vosswick",
+    "nerali.vosswick@staff.example",
+    "orvella.drelwick@staff.example",
+    "staff.example",
+    "EMP-701",
+    "EMP-702",
+    "EMP-703",
+    "2023-03-17",
+    "2024-06-21",
+    "2025-02-14",
+    "57000",
+    "46000",
+    "42000"
+  ]
+}

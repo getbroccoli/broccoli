@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { boolean, check, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "../../auth";
-import { AI_SOURCES, OWNER_SIGN_IN_METHODS, SETUP_STEPS } from "../domain";
+import { AI_SOURCES, MAIL_SOURCES, OWNER_SIGN_IN_METHODS, SETUP_STEPS } from "../domain";
 
 /** The one row describing this installation; the migration inserts it. */
 export const instance = pgTable(
@@ -30,6 +30,13 @@ export const instance = pgTable(
     aiSource: text("ai_source", { enum: AI_SOURCES }),
     /** Self-hosted only: the OpenRouter key the owner pasted, encrypted. */
     encryptedOpenRouterKey: text("encrypted_openrouter_key"),
+    /** Self-hosted only: how the owner chose to send email; null until they choose. */
+    mailSource: text("mail_source", { enum: MAIL_SOURCES }),
+    mailFrom: text("mail_from"),
+    /** The SMTP URL or Resend key of `mail_source`, encrypted. */
+    encryptedMailSecret: text("encrypted_mail_secret"),
+    /** Where links in emails point, saved with the choice since jobs have no request of their own. */
+    mailLinkOrigin: text("mail_link_origin"),
   },
   (table) => [
     check("instance_singleton", sql`${table.id}`),
@@ -44,6 +51,10 @@ export const instance = pgTable(
     check(
       "instance_ai_source",
       sql`${table.aiSource} in ('broccoli_ai', 'openrouter', 'external_agent')`,
+    ),
+    check(
+      "instance_mail_source",
+      sql`${table.mailSource} in ('smtp_server', 'resend_api', 'no_email')`,
     ),
     check(
       "instance_owner_sign_in_method",

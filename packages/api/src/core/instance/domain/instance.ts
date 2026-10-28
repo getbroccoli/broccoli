@@ -1,5 +1,6 @@
 import { ApplicationError } from "../../applicationError";
 import type { AiSource } from "./aiSource";
+import type { MailSource } from "./mailSource";
 import type { ManagedAssignment } from "./managed";
 import type { OwnerSignInMethod } from "./ownerSignInMethod";
 import { OwnerExistsError, type SetupStep } from "./setup";
@@ -12,6 +13,8 @@ export interface InstanceState {
   setupSession: SetupSession | null;
   demoExpiresAt: Date | null;
   aiSource: AiSource | null;
+  /** Self-hosted only; null until the owner chooses. */
+  mailSource: MailSource | null;
   assignment: ManagedAssignment | null;
   ownerSignInMethod: OwnerSignInMethod | null;
 }
@@ -42,6 +45,10 @@ export class Instance {
 
   get aiSource(): AiSource | null {
     return this.#state.aiSource;
+  }
+
+  get mailSource(): MailSource | null {
+    return this.#state.mailSource;
   }
 
   get assignment(): ManagedAssignment | null {

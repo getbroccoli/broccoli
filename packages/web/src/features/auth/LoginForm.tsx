@@ -1,4 +1,5 @@
 import { useForm } from "@tanstack/react-form";
+import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { z } from "zod";
 
@@ -9,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { t, type MessageKey } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
 
+import { EmailField } from "./EmailField";
 import { signIn, type SignInResult } from "./authApi";
 
 const loginSchema = z.object({
@@ -22,11 +24,18 @@ const FAILURE_MESSAGES: Record<Exclude<SignInResult, "ok">, MessageKey> = {
   failed: "auth.login.failed",
 };
 
+type Props = {
+  /** Offers "Forgot password?", while the instance can email a reset link. */
+  forgotPassword: boolean;
+  /** Says the new password works, after a reset. */
+  passwordChanged: boolean;
+};
+
 /**
  * Email and password sign-in. On success the session changes, so the login route sends
  * the now signed-in user on to their destination.
  */
-export function LoginForm() {
+export function LoginForm({ forgotPassword, passwordChanged }: Props) {
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
   const [signInAndReload, signingIn] = useSessionChange(async (email: string, password: string) => {
@@ -49,37 +58,42 @@ export function LoginForm() {
     <form
       noValidate
       className="flex flex-col gap-4"
+      aria-describedby={passwordChanged ? "login-password-changed" : undefined}
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
       }}
     >
+      {passwordChanged && (
+        <p id="login-password-changed" role="status" className="text-sm text-brand-deep">
+          {t("auth.login.passwordChanged")}
+        </p>
+      )}
       <form.Field name="email">
         {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="login-email">{t("auth.login.email")}</Label>
-            <Input
-              id="login-email"
-              name="username"
-              type="email"
-              autoComplete="username"
-              autoFocus
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-              onBlur={field.handleBlur}
-              aria-invalid={field.state.meta.errors.length > 0}
-              aria-describedby={
-                field.state.meta.errors.length > 0 ? "login-email-error" : undefined
-              }
-            />
-            <FieldError id="login-email-error" message={field.state.meta.errors[0]?.message} />
-          </div>
+          <EmailField
+            id="login-email"
+            value={field.state.value}
+            onChange={field.handleChange}
+            onBlur={field.handleBlur}
+            error={field.state.meta.errors[0]?.message}
+          />
         )}
       </form.Field>
       <form.Field name="password">
         {(field) => (
           <div className="flex flex-col gap-2">
-            <Label htmlFor="login-password">{t("auth.login.password")}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="login-password">{t("auth.login.password")}</Label>
+              {forgotPassword && (
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                >
+                  {t("auth.login.forgotPassword")}
+                </Link>
+              )}
+            </div>
             <Input
               ref={passwordInput}
               id="login-password"

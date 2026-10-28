@@ -13,5 +13,6 @@ query Session {
     holder
     demoExpiresAt
     ownerSignInMethod
+    passwordResetByEmail
   }
 }

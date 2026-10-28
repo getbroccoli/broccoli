@@ -20,6 +20,8 @@ export {
   readInstance,
   recordOwnerSignInMethod,
   createAiSettings,
+  createMailSettings,
+  createPasswordResetEmail,
 } from "./app";
 export { refuseBearerAuth, resolveSecurityContext } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
@@ -32,5 +34,17 @@ export type {
   SetupDemo,
   AiSettings,
   OriginalFileReader,
+  MailIntegration,
+  MailSettings,
+  PasswordResetEmail,
 } from "./app";
-export type { AiConfig, AiSource, ManagedAssignment, OwnerSignInMethod } from "./domain";
+export { MAIL_SOURCES } from "./domain";
+export type {
+  AiConfig,
+  AiSource,
+  MailChoice,
+  MailConfig,
+  MailSource,
+  ManagedAssignment,
+  OwnerSignInMethod,
+} from "./domain";

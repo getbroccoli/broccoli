@@ -1,4 +1,4 @@
-import type { IncomingHttpHeaders, Server, ServerResponse } from "node:http";
+import type { Server, ServerResponse } from "node:http";
 
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@as-integrations/express5";
@@ -29,8 +29,12 @@ export const MAX_TOKENS = 2000;
  * prototype: Apollo Server copies the context's own properties for each operation.
  */
 export class GraphqlContext {
-  /** The signed-in user's security context, or null without a session. */
-  constructor(readonly security: SecurityContext | null) {}
+  constructor(
+    /** The signed-in user's security context, or null without a session. */
+    readonly security: SecurityContext | null,
+    /** The origin browsers reach this instance at, as the request shows it. */
+    readonly publicOrigin: () => Promise<string>,
+  ) {}
 
   /**
    * The security context to pass to a use case; throws `UNAUTHENTICATED` without a
@@ -40,6 +44,9 @@ export class GraphqlContext {
     return requireSignedIn(this.security);
   }
 }
+
+/** The origin browsers reach this instance at, for the request they sent. */
+export type PublicOrigin = (request: express.Request) => Promise<string>;
 
 /** Scalars and types that every module may use. */
 const CORE_TYPE_DEFS = readSdl(import.meta.url, "./schema.graphql");
@@ -58,6 +65,7 @@ export async function startGraphqlApi(
   httpServer: Server,
   logger: Logger,
   resolveSecurity: SecurityResolver,
+  publicOrigin: PublicOrigin,
 ): Promise<GraphqlApi> {
   const apollo = new ApolloServer<GraphqlContext>({
     schema: requireSessionOutsidePublicFields(
@@ -87,19 +95,19 @@ export async function startGraphqlApi(
       .use(
         "/api/graphql",
         express.json(),
-        expressMiddleware(apollo, { context: createContext(resolveSecurity) }),
+        expressMiddleware(apollo, { context: createContext(resolveSecurity, publicOrigin) }),
       ),
     stop: () => apollo.stop(),
   };
 }
 
 /** Builds each request's context; a failure becomes a masked internal error. */
-export function createContext(resolveSecurity: SecurityResolver) {
+export function createContext(resolveSecurity: SecurityResolver, publicOrigin: PublicOrigin) {
   return async ({
     req,
     res,
   }: {
-    req: { headers: IncomingHttpHeaders };
+    req: express.Request;
     res: ServerResponse;
   }): Promise<GraphqlContext> => {
     // A bearer token belongs to the external agent, which GraphQL never serves, not even its public fields.
@@ -114,7 +122,7 @@ export function createContext(resolveSecurity: SecurityResolver) {
       if (renewedCookies.length > 0) {
         res.appendHeader("Set-Cookie", renewedCookies);
       }
-      return new GraphqlContext(security);
+      return new GraphqlContext(security, () => publicOrigin(req));
     } catch (error) {
       // Apollo reports context failures without a path, which formatError would pass
       // through as a request error; the code marks this one as internal.

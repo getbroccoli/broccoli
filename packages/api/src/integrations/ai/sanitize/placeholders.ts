@@ -127,7 +127,11 @@ function wordPlaceholder(token: string): string {
   if (DATE.test(token) && token.split(/[./-]/).some((part) => YEAR.test(part))) {
     return token.replace(/\d+/g, (part) => (YEAR.test(part) ? part : shapeOf(part)));
   }
-  return shapeOf(token);
+  // Export headings also join words with underscores; names and identifiers still get masked.
+  return token
+    .split("_")
+    .map((word) => (isHeadingWord(word) ? word : shapeOf(word)))
+    .join("_");
 }
 
 function isHeadingWord(token: string): boolean {

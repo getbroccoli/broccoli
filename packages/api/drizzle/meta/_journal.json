@@ -180,8 +180,15 @@
     {
       "idx": 25,
       "version": "7",
-      "when": 1793165751952,
-      "tag": "0025_permission_profiles",
+      "when": 1793165843926,
+      "tag": "0025_instance_mail_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793200748508,
+      "tag": "0026_permission_profiles",
       "breakpoints": true
     }
   ]

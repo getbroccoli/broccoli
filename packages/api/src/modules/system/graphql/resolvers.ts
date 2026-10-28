@@ -1,7 +1,12 @@
 import type { Orm } from "../../../core/db";
 import type { Mode } from "../../../core/env";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import { readInstance, readSetupHolder, type AiConfig } from "../../../core/instance";
+import {
+  readInstance,
+  readSetupHolder,
+  type AiConfig,
+  type MailConfig,
+} from "../../../core/instance";
 import { OPERATIONS, type SecurityContext } from "../../../core/security";
 import type { SystemUseCases } from "../app";
 
@@ -24,6 +29,16 @@ const OWNER_SIGN_IN_METHODS = {
   sign_in_with_email: "SIGN_IN_WITH_EMAIL",
 } as const;
 const KEY_ORIGINS = { environment: "ENVIRONMENT", saved: "SAVED" } as const;
+const MAIL_SOURCES = {
+  smtp_server: "SMTP_SERVER",
+  resend_api: "RESEND_API",
+  no_email: "NO_EMAIL",
+} as const;
+const MAIL_SOURCE_INPUTS = {
+  SMTP_SERVER: "smtp_server",
+  RESEND_API: "resend_api",
+  NO_EMAIL: "no_email",
+} as const;
 const AI_SOURCE_INPUTS = {
   BROCCOLI_AI: "broccoli_ai",
   OPENROUTER: "openrouter",
@@ -51,6 +66,8 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
     },
     Setup: {
       ai: async (_parent, _args, context) => toGraphql(await useCases.ai.read(context.getActor())),
+      mail: async (_parent, _args, context) =>
+        toMailGraphql(await useCases.mail.read(context.getActor())),
     },
     Mutation: {
       setup: () => ({}),
@@ -77,13 +94,29 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
           });
           return { setup: await readSetup(actor) };
         }, ["INVALID_INPUT", "UNAVAILABLE", "CONFLICT"]),
+      saveMailSettings: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["SetupSaveMailSettingsPayload"]>(async () => {
+          const actor = context.getActor();
+          await useCases.mail.save(
+            actor,
+            { source: MAIL_SOURCE_INPUTS[input.source], from: input.from, secret: input.secret },
+            await context.publicOrigin(),
+          );
+          return { setup: await readSetup(actor) };
+        }, ["INVALID_INPUT", "UNAVAILABLE", "CONFLICT"]),
+      sendTestEmail: (_parent, _args, context) =>
+        mutationPayload<ResolversTypes["SetupSendTestEmailPayload"]>(async () => {
+          const actor = context.getActor();
+          await useCases.mail.sendTestEmail(actor);
+          return { setup: await readSetup(actor) };
+        }, ["UNAVAILABLE", "CONFLICT"]),
     },
   };
 }
 
 /** The `Setup` object for `security`, as `Query.setup` and every setup payload return it. */
 export async function readSetupView(orm: Orm, mode: Mode, security: SecurityContext | null) {
-  const { step, demoExpiresAt, ownerSignInMethod } = await readInstance(orm);
+  const { step, demoExpiresAt, ownerSignInMethod, mailSource } = await readInstance(orm);
   return {
     id: "instance",
     step: STEPS[step],
@@ -95,6 +128,8 @@ export async function readSetupView(orm: Orm, mode: Mode, security: SecurityCont
     // Only the owner learns when their demo ends.
     demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
     ownerSignInMethod: ownerSignInMethod && OWNER_SIGN_IN_METHODS[ownerSignInMethod],
+    // Managed instances store no mail choice; their email arrives with the relay.
+    passwordResetByEmail: mailSource !== null && mailSource !== "no_email",
   };
 }
 
@@ -106,4 +141,8 @@ function toGraphql(ai: AiConfig | null) {
       openRouterKey: ai.openRouterKey && KEY_ORIGINS[ai.openRouterKey.origin],
     }
   );
+}
+
+function toMailGraphql(mail: MailConfig | null) {
+  return mail && { id: "mail", ...mail, source: MAIL_SOURCES[mail.source] };
 }

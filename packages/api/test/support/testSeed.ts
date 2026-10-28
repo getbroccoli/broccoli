@@ -6,14 +6,14 @@ import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance/db";
-import type { AiSource, SetupStep } from "../../src/core/instance/domain";
+import type { AiSource, MailSource, SetupStep } from "../../src/core/instance/domain";
 import { hashSetupToken } from "../../src/core/instance/helpers";
 import {
   PrincipalSecurityContext,
   type SecurityContext,
   userPermissionProfiles,
 } from "../../src/core/security";
-import { employeeDirectory, type Employee, type NewEmployee } from "../../src/modules/employees";
+import { employeeDirectory, type Employee } from "../../src/modules/employees";
 import { employeeRepository, employmentRepository } from "../../src/modules/employees/db";
 import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
 import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
@@ -23,11 +23,7 @@ import { TEST_SECRET_BOX } from "./testSecretBox";
 import { testTransactor } from "./testTransactor";
 
 type SeedEmployee = Partial<
-  Omit<NewEmployee, "startDate"> & {
-    startDate: string | null;
-    avatarFileId: string | null;
-    userId: string | null;
-  }
+  Omit<Employee, "id" | "createdAt" | "startDate"> & { startDate: string | null }
 >;
 
 /**
@@ -136,6 +132,26 @@ export class TestSeed {
       source,
       openRouterKey === undefined ? undefined : TEST_SECRET_BOX.encrypt(openRouterKey),
     );
+  }
+
+  async mailSettings({
+    source = "resend_api",
+    from = "broccoli@example.com",
+    secret = "resend-key",
+    linkOrigin = "https://broccoli.example.com",
+  }: {
+    source?: MailSource;
+    from?: string | null;
+    secret?: string | null;
+    linkOrigin?: string | null;
+  } = {}): Promise<void> {
+    await instanceRepository(this.orm).storeMailSettings({
+      source,
+      from,
+      linkOrigin,
+      encryptedSecret:
+        source === "no_email" || secret === null ? null : TEST_SECRET_BOX.encrypt(secret),
+    });
   }
 
   async file({ content, mimeType }: { content: Buffer; mimeType: string }): Promise<string> {

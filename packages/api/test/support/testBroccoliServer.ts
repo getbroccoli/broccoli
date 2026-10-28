@@ -29,6 +29,7 @@ export interface TestBroccoliServerOptions {
   decisionsUrl?: string;
   openRouterKey?: string;
   broccoliAiUrl?: string;
+  resendApiUrl?: string;
   slack?: { relayUrl: string; apiUrl: string };
 }
 
@@ -48,6 +49,7 @@ export async function startTestBroccoliServer(
     decisionsUrl = "http://127.0.0.1:9",
     openRouterKey,
     broccoliAiUrl = "http://127.0.0.1:9",
+    resendApiUrl = "http://127.0.0.1:9",
     slack = { relayUrl: "http://127.0.0.1:9", apiUrl: "http://127.0.0.1:9" },
   }: TestBroccoliServerOptions = {},
 ): Promise<RunningServer> {
@@ -74,6 +76,7 @@ export async function startTestBroccoliServer(
         deployment,
         brandLookupUrl,
         broccoliAiUrl,
+        resendApiUrl,
         slack,
         openRouter: {
           url: decisionsUrl,

@@ -7,6 +7,7 @@
       "src/features/auth",
       "src/features/employees",
       "src/features/imports",
+      "src/features/settings",
       "src/features/setup",
       "src/i18n",
       "src/shell"
@@ -24,6 +25,7 @@
       "src/__generated__",
       "src/components/form",
       "src/components/ui",
+      "src/features/setup",
       "src/i18n",
       "src/lib/postJson",
       "src/lib/useSessionChange"
@@ -93,6 +95,13 @@
       "src/lib/formatDate",
       "src/lib/sentenceCase"
     ],
+    "src/features/settings": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/form",
+      "src/components/ui",
+      "src/i18n"
+    ],
     "src/features/setup": [
       "src/__generated__",
       "src/apollo",
@@ -106,7 +115,7 @@
       "src/lib/useSessionChange"
     ],
     "src/components/dataTable": ["src/components/ui", "src/i18n", "src/lib/class-names"],
-    "src/components/form": [],
+    "src/components/form": ["src/components/ui", "src/lib/class-names"],
     "src/components/ui": ["src/lib/class-names", "src/lib/formatDate"],
     "src/lib/listPage": ["src/apollo", "src/components/dataTable"],
     "src/lib/class-names": [],

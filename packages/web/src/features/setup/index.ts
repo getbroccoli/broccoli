@@ -1,4 +1,5 @@
 export { CompanyStepForm } from "./CompanyStepForm";
+export { NewPasswordField } from "./NewPasswordField";
 export { OwnerSetupForm } from "./OwnerSetupForm";
 export { readSession } from "./readSession";
 export { ResetSetupDialog } from "./ResetSetupDialog";

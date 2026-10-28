@@ -1,10 +1,12 @@
-import { eq, isNull } from "drizzle-orm";
+import { eq, isNull, sql } from "drizzle-orm";
 
 import { user } from "../../auth";
 import { type Orm, ormOf, type Tx } from "../../db";
 import {
   type AiSource,
   Instance,
+  type MailConfig,
+  type MailSource,
   type ManagedAssignment,
   type OwnerSignInMethod,
   type SetupSession,
@@ -40,6 +42,22 @@ export interface InstanceRepository {
   readAiSource(): Promise<{ source: AiSource | null; encryptedOpenRouterKey: string | null }>;
   /** Saves the source; a given key replaces the saved one, else it stays. */
   storeAiSource(source: AiSource, encryptedOpenRouterKey?: string): Promise<void>;
+  /** The mail choice, no email until the owner chooses, and the origin its links use. */
+  readMailSettings(): Promise<MailConfig & { linkOrigin: string | null }>;
+  /** The mail choice with its encrypted SMTP URL or Resend key, read together so they match. */
+  readMailSender(): Promise<{
+    source: MailSource;
+    from: string | null;
+    encryptedSecret: string | null;
+    linkOrigin: string | null;
+  }>;
+  /** Replaces the whole mail choice. */
+  storeMailSettings(settings: {
+    source: MailSource;
+    from: string | null;
+    encryptedSecret: string | null;
+    linkOrigin: string | null;
+  }): Promise<void>;
 }
 
 export function instanceRepository(db: Orm | Tx): InstanceRepository {
@@ -51,6 +69,7 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
         step: instance.setupStep,
         demoExpiresAt: instance.demoExpiresAt,
         aiSource: instance.aiSource,
+        mailSource: instance.mailSource,
         ownerSignInMethod: instance.ownerSignInMethod,
         ...sessionColumns,
         // With the owner's id.
@@ -151,6 +170,49 @@ export function instanceRepository(db: Orm | Tx): InstanceRepository {
     storeAiSource: async (source: AiSource, encryptedOpenRouterKey?: string): Promise<void> => {
       await orm().update(instance).set({ aiSource: source, encryptedOpenRouterKey });
     },
+
+    readMailSettings: async () => {
+      const [row] = await orm()
+        .select({
+          source: instance.mailSource,
+          from: instance.mailFrom,
+          hasSecret: sql<boolean>`${instance.encryptedMailSecret} is not null`,
+          linkOrigin: instance.mailLinkOrigin,
+        })
+        .from(instance);
+      return {
+        source: row?.source ?? "no_email",
+        from: row?.from ?? null,
+        hasSecret: row?.hasSecret ?? false,
+        linkOrigin: row?.linkOrigin ?? null,
+      };
+    },
+
+    readMailSender: async () => {
+      const [row] = await orm()
+        .select({
+          source: instance.mailSource,
+          from: instance.mailFrom,
+          encryptedSecret: instance.encryptedMailSecret,
+          linkOrigin: instance.mailLinkOrigin,
+        })
+        .from(instance);
+      return {
+        source: row?.source ?? "no_email",
+        from: row?.from ?? null,
+        encryptedSecret: row?.encryptedSecret ?? null,
+        linkOrigin: row?.linkOrigin ?? null,
+      };
+    },
+
+    storeMailSettings: async ({ source, from, encryptedSecret, linkOrigin }) => {
+      await orm().update(instance).set({
+        mailSource: source,
+        mailFrom: from,
+        encryptedMailSecret: encryptedSecret,
+        mailLinkOrigin: linkOrigin,
+      });
+    },
   };
 }
 
@@ -197,6 +259,7 @@ function toInstance([row]: {
   step: SetupStep;
   demoExpiresAt: Date | null;
   aiSource: AiSource | null;
+  mailSource: MailSource | null;
   ownerSignInMethod: OwnerSignInMethod | null;
   tokenHash: string | null;
   expiresAt: Date | null;
@@ -213,6 +276,7 @@ function toInstance([row]: {
     setupSession: toSetupSession(row),
     demoExpiresAt: row.demoExpiresAt,
     aiSource: row.aiSource,
+    mailSource: row.mailSource,
     assignment: toAssignment(row),
     ownerSignInMethod: row.ownerSignInMethod,
   });

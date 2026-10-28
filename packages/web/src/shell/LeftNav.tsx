@@ -1,5 +1,5 @@
-import { Users, type Icon } from "@phosphor-icons/react";
-import { Link, type LinkProps } from "@tanstack/react-router";
+import { GearSix, Users, type Icon } from "@phosphor-icons/react";
+import { Link, useRouteContext, type LinkProps } from "@tanstack/react-router";
 
 import { t } from "@/i18n";
 
@@ -12,15 +12,20 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [{ to: "/people", label: t("nav.people"), icon: Users }];
+const ADMIN_NAV_ITEMS: NavItem[] = [{ to: "/settings", label: t("nav.settings"), icon: GearSix }];
 
 export function LeftNav() {
+  const { me } = useRouteContext({ from: "/_authenticated" });
+  const items = me.operations.includes("MANAGE_WORKSPACE")
+    ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS]
+    : NAV_ITEMS;
   return (
     <aside className="flex shrink-0 items-center gap-3 px-3 py-2 md:h-full md:w-56 md:flex-col md:items-stretch md:gap-1 md:py-4">
       <div className="min-w-0 flex-1 md:flex-none md:pt-1 md:pb-4">
         <WorkspaceMenu />
       </div>
       <nav aria-label={t("nav.label")} className="flex flex-col gap-0.5">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <NavLink key={item.to} item={item} />
         ))}
       </nav>

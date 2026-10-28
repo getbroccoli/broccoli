@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -11,6 +12,9 @@ import type { Mode } from "../../src/core/env";
 import {
   type AiSettings,
   createAiSettings,
+  createMailSettings,
+  createPasswordResetEmail,
+  type MailSettings,
   type OriginalFileReader,
 } from "../../src/core/instance";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
@@ -26,6 +30,7 @@ import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
 import { createSystemUseCases } from "../../src/modules/system";
 import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
+import { fakeMail } from "./fakeMail";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { testTransactor } from "./testTransactor";
 
@@ -64,6 +69,8 @@ export function systemUseCases(orm: Orm) {
     deleteAllEmployees,
     deleteFinishedImport: importUseCases(orm).deleteFinishedImport,
     aiSettings: aiSettings(orm),
+    mailSettings: mailSettings(orm),
+    passwordResetEmail: passwordResetEmail(orm, { mail: fakeMail() }),
   });
 }
 
@@ -90,6 +97,58 @@ export function aiSettings(
     broccoliAiUrl: url,
     openRouter: { url, key: environmentKey },
   });
+}
+
+export function mailSettings(
+  orm: Orm,
+  {
+    mode = "self_hosted",
+    publicUrl,
+    mail = fakeMail(),
+  }: {
+    mode?: Mode;
+    publicUrl?: string;
+    mail?: Parameters<typeof createMailSettings>[0]["mail"];
+  } = {},
+): MailSettings {
+  return createMailSettings({
+    orm,
+    transact: testTransactor(orm),
+    secretBox: TEST_SECRET_BOX,
+    deployment:
+      mode === "managed"
+        ? { mode, instanceId: "test-instance", accountsOrigin: "https://accounts.example.com" }
+        : { mode, publicUrl },
+    logger: createLogger("silent"),
+    resendApiUrl: "http://127.0.0.1:9",
+    mail,
+  });
+}
+
+export function passwordResetEmail(
+  orm: Orm,
+  options: { mail: Parameters<typeof createMailSettings>[0]["mail"]; publicUrl?: string },
+) {
+  const sentJobs: {
+    name: "instance.sendPasswordResetEmail";
+    payload: Jobs["instance.sendPasswordResetEmail"];
+  }[] = [];
+  const service = createPasswordResetEmail({
+    orm,
+    transact: testTransactor(orm),
+    secretBox: TEST_SECRET_BOX,
+    mailSettings: mailSettings(orm, options),
+    logger: createLogger("silent"),
+    jobs: {
+      send: (_tx, name, payload) => {
+        assert.equal(name, "instance.sendPasswordResetEmail");
+        assert("encryptedToken" in payload);
+        sentJobs.push({ name: "instance.sendPasswordResetEmail", payload });
+        return Promise.resolve();
+      },
+    },
+  });
+  return { ...service, sentJobs };
 }
 
 export function importUseCases(

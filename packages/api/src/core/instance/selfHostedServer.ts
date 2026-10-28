@@ -1,7 +1,7 @@
 import type { DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { Logger } from "../logger";
-import type { AddApprovedPeople, SetupDemo } from "./app";
+import type { AddApprovedPeople, PasswordResetEmail, SetupDemo } from "./app";
 import { selfHostedAuth } from "./betterAuth";
 import { setupRouter } from "./http";
 
@@ -15,11 +15,12 @@ export interface SelfHostedServerOptions {
   publicUrl?: string;
   demo: SetupDemo;
   addApprovedPeople: AddApprovedPeople;
+  passwordResetEmail: Pick<PasswordResetEmail, "queue">;
 }
 
 /**
- * Wires a self-hosted instance: password sign-in and setup for the first visitor, whose
- * endpoints its router limits and origin-checks.
+ * Wires a self-hosted instance: password sign-in and reset, and setup for the first visitor,
+ * whose endpoints its router limits and origin-checks.
  */
 export function selfHostedServer({
   publicUrl,

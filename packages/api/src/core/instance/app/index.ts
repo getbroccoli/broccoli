@@ -13,6 +13,8 @@ export { exitDemo, startDemoAtSetup, type DemoReset, type DemoStart, type SetupD
 export { assignInstance, recordOwnerSignInMethod } from "./managed";
 export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
 export { createAiSettings, type AiSettings, type OriginalFileReader } from "./aiSettings";
+export { createPasswordResetEmail, type PasswordResetEmail } from "./passwordResetEmail";
+export { createMailSettings, type MailIntegration, type MailSettings } from "./mailSettings";
 export {
   chooseExternalAgentSource,
   lockExternalAgentChoice,

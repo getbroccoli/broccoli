@@ -1,5 +1,5 @@
 {
-  "id": "44f17382-9e2c-4877-bf18-af8c0f68fd7a",
+  "id": "5e07f464-cd31-47c9-885b-286c7bcead3f",
   "prevId": "5c70b82c-b32e-4331-ba5e-0d05c612daa5",
   "version": "7",
   "dialect": "postgresql",
@@ -475,6 +475,30 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "mail_source": {
+          "name": "mail_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mail_from": {
+          "name": "mail_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "encrypted_mail_secret": {
+          "name": "encrypted_mail_secret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mail_link_origin": {
+          "name": "mail_link_origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -508,6 +532,10 @@
         "instance_ai_source": {
           "name": "instance_ai_source",
           "value": "\"instance\".\"ai_source\" in ('broccoli_ai', 'openrouter', 'external_agent')"
+        },
+        "instance_mail_source": {
+          "name": "instance_mail_source",
+          "value": "\"instance\".\"mail_source\" in ('smtp_server', 'resend_api', 'no_email')"
         },
         "instance_owner_sign_in_method": {
           "name": "instance_owner_sign_in_method",
@@ -680,51 +708,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.user_permission_profiles": {
-      "name": "user_permission_profiles",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "profile": {
-          "name": "profile",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_permission_profiles_user_id_user_id_fk": {
-          "name": "user_permission_profiles_user_id_user_id_fk",
-          "tableFrom": "user_permission_profiles",
-          "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "user_permission_profiles_user_id_profile_pk": {
-          "name": "user_permission_profiles_user_id_profile_pk",
-          "columns": ["user_id", "profile"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "user_permission_profiles_assignable": {
-          "name": "user_permission_profiles_assignable",
-          "value": "\"user_permission_profiles\".\"profile\" in ('ADMIN')"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.company": {
       "name": "company",
       "schema": "",
@@ -844,12 +827,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -890,15 +867,6 @@
           "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
-        },
-        "employees_user_id_user_id_fk": {
-          "name": "employees_user_id_user_id_fk",
-          "tableFrom": "employees",
-          "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -907,11 +875,6 @@
           "name": "employees_email_unique",
           "nullsNotDistinct": false,
           "columns": ["email"]
-        },
-        "employees_user_id_unique": {
-          "name": "employees_user_id_unique",
-          "nullsNotDistinct": false,
-          "columns": ["user_id"]
         }
       },
       "policies": {},
