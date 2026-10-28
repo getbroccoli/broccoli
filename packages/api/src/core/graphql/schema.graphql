@@ -55,3 +55,22 @@ type NotFoundError implements Error {
 type UnavailableError implements Error {
   message: String!
 }
+
+# Shared by every module that shows who may do what; see docs/permissions.md.
+"A named list of what someone may do; every signed-in user has EMPLOYEE and any number of others."
+enum PermissionProfile {
+  "Everyone has it: reads everyone; changes their own name and photo, and the name, photo and job title of everyone below them in the reporting line."
+  EMPLOYEE
+  "Does what the owner does, except resetting the workspace."
+  ADMIN
+  "The instance's owner: everything. Never assigned."
+  OWNER
+}
+
+"Something done outside any record."
+enum Operation {
+  "Company, Slack, AI, imports, demo data and invites."
+  MANAGE_WORKSPACE
+  "Reset setup and Exit demo."
+  RESET_WORKSPACE
+}

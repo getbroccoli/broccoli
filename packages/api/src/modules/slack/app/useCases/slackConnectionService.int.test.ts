@@ -5,7 +5,7 @@ import { vi } from "vitest";
 
 import {
   expect,
-  NON_OWNER,
+  EMPLOYEE,
   OWNER,
   SYSTEM,
   slackUseCases,
@@ -55,12 +55,12 @@ test.for([
   },
 );
 
-test("returns state for a non-owner without exchanging or storing", async ({ orm }) => {
+test("returns state for an employee without exchanging or storing", async ({ orm }) => {
   const exchange = vi.fn<SlackAuthorization["exchange"]>();
   const slack = slackUseCases(orm, { slackAuthorization: { exchange } });
   const callback = beginConnection(slack);
 
-  expect(await slack.finishSlackConnection(NON_OWNER, callback)).toBe("state");
+  expect(await slack.finishSlackConnection(EMPLOYEE, callback)).toBe("state");
 
   expect(exchange).not.toHaveBeenCalled();
   expect(await slack.getSlackConnection(OWNER)).toBeNull();

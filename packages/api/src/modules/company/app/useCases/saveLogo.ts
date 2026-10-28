@@ -10,7 +10,7 @@ export async function saveLogo(
   ctx: SecurityContext,
   bytes: Buffer,
 ): Promise<Company> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   const logo = await normalizeImage(bytes, { maxBytes: MAX_LOGO_BYTES });
   if (!logo) {
     throw invalidInput([{ field: "logo", code: "invalid" }]);

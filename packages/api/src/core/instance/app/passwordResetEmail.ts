@@ -51,7 +51,7 @@ export function createPasswordResetEmail({
   const system = PrincipalSecurityContext.system();
   return {
     queue: async (ctx, user, token) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       const mail = await mailSettings.read(system);
       if (mail === null || mail.source === "no_email") {
         return;

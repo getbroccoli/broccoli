@@ -17,12 +17,13 @@ export async function deleteEmployee(
   ctx: SecurityContext,
   { id, changeReason }: { id: string; changeReason?: string | null },
 ): Promise<{ deletedEmployeeId: string; reportHistoryLines: HistoryLine[] }> {
-  ctx.requireOwnerOrSystem();
   const reason = parseChangeReason(changeReason);
   const employeeId = parseUuid(id);
   if (!employeeId) {
+    ctx.requireEveryRecord("employee", "delete");
     throw employeeNotFound();
   }
+  await ctx.requireInScope("employee", "delete", employeeId);
   const { historyId, reportHistoryLines } = await transact(async (tx) => {
     const employments = employmentRepository(tx);
     // First, as a manager change takes it, so the manager read below is the one being removed.

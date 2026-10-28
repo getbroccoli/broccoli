@@ -45,6 +45,8 @@ export interface EmployeeRepository {
   /** Deletes an employee and their avatar and returns what was deleted; null when no employee has the id. */
   delete(id: string): Promise<Employee | null>;
   findById(id: string): Promise<Employee | null>;
+  /** The employee linked to this user, or null. */
+  findByUserId(userId: string): Promise<Employee | null>;
   /** The employees among these ids that exist. */
   findByIds(ids: readonly string[]): Promise<Employee[]>;
   /**
@@ -152,6 +154,11 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       return employee ?? null;
     },
 
+    findByUserId: async (userId) => {
+      const [employee] = await orm().select().from(employees).where(eq(employees.userId, userId));
+      return employee ?? null;
+    },
+
     deleteAll: async (): Promise<void> => {
       // Holds back concurrent inserts and updates until the caller commits, so none lands between
       // this delete and the caller's purge of employee history.
@@ -240,7 +247,8 @@ function beforeAndAfter(row: Record<string, unknown>): { before: Employee; after
 const INSERT_BATCH_SIZE = 1_000;
 
 /** A new employee as stored, with the columns only the module itself sets. */
-type EmployeeRow = NewEmployee & Partial<Pick<Employee, "avatarFileId">> & { isDemo?: boolean };
+type EmployeeRow = NewEmployee &
+  Partial<Pick<Employee, "avatarFileId" | "userId">> & { isDemo?: boolean };
 
 async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {
   const rows = await orm.select({ id: employees.id }).from(employees).where(condition).limit(1);

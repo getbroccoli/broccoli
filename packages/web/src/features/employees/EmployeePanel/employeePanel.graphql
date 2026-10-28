@@ -29,6 +29,31 @@ mutation UpdateEmployee($input: EmployeeUpdateInput!) {
   }
 }
 
+mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
+  employee {
+    setPermissionProfiles(input: $input) {
+      employee {
+        ...EmployeePanel_employee @unmask
+      }
+      historyLine {
+        ...RecordHistory_line @unmask
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
 mutation DeleteEmployee($input: EmployeeDeleteInput!) {
   employee {
     delete(input: $input) {
@@ -68,4 +93,9 @@ fragment EmployeePanel_employee on Employee {
     ...EmployeeName @unmask
   }
   avatarUrl
+  permissionProfiles
+  access {
+    canDelete
+    editableFields
+  }
 }

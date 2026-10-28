@@ -6,6 +6,8 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Mode**: how the instance is run, `self_hosted` or `managed`, set by `BROCCOLI_MODE`.
 - **Owner**: the user who set up the instance. Identified by the user id, never by the email.
 - **User**: a person who can sign in (Better Auth's `user` table).
+- **Permission profile**: a named set of what a user may do, shown as "Permissions". Everyone has `EMPLOYEE`; a user may also have `ADMIN`, and the owner has `OWNER`. Not "role", which sounds like a job, nor "access level". See [permissions](permissions.md).
+- **Built-in**: defined in Broccoli's code and changed by its releases; admins may extend it but not remove it, such as the built-in permission profiles. Its opposite is **custom**. Not "system", which means Broccoli acting on its own.
 - **Owner sign-in method**: how the managed owner proves who they are at the accounts service, Google or email; learned from the sign-in ticket. The sign-in page offers only that method.
 - **Account**: one way a user signs in, such as a password (`credential`) or managed sign-in (Better Auth's `account` table). A user can have several.
 - **Session**: a signed-in browser, carried in a cookie and stored in the `session` table.

@@ -2,7 +2,7 @@ import {
   employeeUseCases,
   expectHistoryReplaysTo,
   expect,
-  NON_OWNER,
+  EMPLOYEE,
   OWNER,
   PNG,
   storedFileIds,
@@ -11,7 +11,7 @@ import {
 
 import { createDemoEmployees, hasDemoEmployees } from ".";
 
-test("refuses a non-owner creating demo employees without storing employees or avatars", async ({
+test("refuses an employee creating demo employees without storing employees or avatars", async ({
   orm,
   transact,
 }) => {
@@ -20,7 +20,7 @@ test("refuses a non-owner creating demo employees without storing employees or a
   await expect(
     transact((tx) =>
       createDemoEmployees(
-        NON_OWNER,
+        EMPLOYEE,
         tx,
         [
           {
@@ -37,8 +37,8 @@ test("refuses a non-owner creating demo employees without storing employees or a
   expect(await storedFileIds(orm)).toEqual([]);
 });
 
-test("refuses a non-owner checking whether demo employees exist", async ({ orm }) => {
-  await expect(async () => hasDemoEmployees(NON_OWNER, orm)).rejects.toMatchObject({
+test("refuses an employee checking whether demo employees exist", async ({ orm }) => {
+  await expect(async () => hasDemoEmployees(EMPLOYEE, orm)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 });

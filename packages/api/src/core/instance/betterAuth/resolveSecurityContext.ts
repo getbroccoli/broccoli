@@ -5,7 +5,10 @@ import type { AuthSource } from "../../auth";
 import type { Orm } from "../../db";
 import { isCrossOrigin } from "../helpers";
 import {
+  type EmployeeDirectory,
+  permissionProfileRepository,
   PrincipalSecurityContext,
+  profilesOf,
   type RequestSecurity,
   type SecurityContext,
 } from "../../security";
@@ -22,6 +25,7 @@ import { readSetupToken } from "./setupCookie";
 export async function resolveSecurityContext(
   authSource: AuthSource,
   orm: Orm,
+  directory: EmployeeDirectory,
   requestHeaders: IncomingHttpHeaders,
 ): Promise<RequestSecurity> {
   const auth = await authSource.current();
@@ -50,7 +54,17 @@ export async function resolveSecurityContext(
   if (hasDemoEnded(instance, userId)) {
     return { security: null, renewedCookies: [] };
   }
-  return { security: PrincipalSecurityContext.user({ userId, email, isOwner }), renewedCookies };
+  const user = {
+    userId,
+    email,
+    isOwner,
+    permissionProfiles: profilesOf(
+      (await permissionProfileRepository(orm).findProfiles([userId])).get(userId) ?? [],
+      isOwner,
+    ),
+    employeeId: await directory.employeeIdOfUser(userId),
+  };
+  return { security: PrincipalSecurityContext.user(user, directory), renewedCookies };
 }
 
 /** Whether the user is the demo's provisional owner after its deadline, which nothing extends. */

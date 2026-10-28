@@ -1,4 +1,4 @@
-import { expect, NON_OWNER, SYSTEM, test, type TestSeed } from "#test/support";
+import { expect, EMPLOYEE, SYSTEM, test, type TestSeed } from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
@@ -42,12 +42,12 @@ test("starts a seven-day demo for the setup holder, claims the owner and complet
   expect(completed).toEqual([null]);
 });
 
-test("refuses a non-owner starting a demo", async ({ orm, seed, transact }) => {
+test("refuses an employee starting a demo", async ({ orm, seed, transact }) => {
   await prepareDemoSetup(seed);
 
   await expect(
     transact((tx) =>
-      startDemoAtSetup(NON_OWNER, tx, credential, () => insertOwner(tx), finishImport),
+      startDemoAtSetup(EMPLOYEE, tx, credential, () => insertOwner(tx), finishImport),
     ),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 

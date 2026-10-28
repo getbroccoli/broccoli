@@ -27,7 +27,7 @@ export interface MailSettings {
   read(ctx: SecurityContext): Promise<MailConfig | null>;
   /** Checks the choice, then saves it with the origin its links use; a managed instance refuses. */
   save(ctx: SecurityContext, choice: MailChoice, linkOrigin: string): Promise<MailConfig>;
-  /** Sends the owner a test email with the saved choice. */
+  /** Sends the caller a test email with the saved choice. */
   sendTestEmail(ctx: SecurityContext): Promise<void>;
   /** The saved choice's mailer and the origin its links use; null without email or on managed. */
   readMailer(ctx: SecurityContext): Promise<{ mailer: Mailer; linkOrigin: string } | null>;
@@ -66,14 +66,14 @@ export function createMailSettings({
 
   return {
     read: async (ctx) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       return deployment.mode === "managed"
         ? null
         : withoutOrigin(await instanceRepository(orm).readMailSettings());
     },
 
     save: async (ctx, choice, linkOrigin) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance sends email through Broccoli.");
       }
@@ -103,17 +103,17 @@ export function createMailSettings({
     },
 
     sendTestEmail: async (ctx) => {
-      ctx.requireOwnerOrSystem();
-      const owner = ctx.user;
-      const saved = deployment.mode === "managed" || owner === null ? null : await readMailer();
-      if (owner === null || saved === null) {
+      ctx.require("MANAGE_WORKSPACE");
+      const caller = ctx.user;
+      const saved = deployment.mode === "managed" || caller === null ? null : await readMailer();
+      if (caller === null || saved === null) {
         throw new ApplicationError("CONFLICT", "Choose how Broccoli sends email first.");
       }
       try {
         const { messageId } = await saved.mailer.send({
           template: TEST_EMAIL_TEMPLATE,
           values: {},
-          to: owner.email,
+          to: caller.email,
           fromName: "Broccoli",
           idempotencyKey: randomUUID(),
         });
@@ -124,7 +124,7 @@ export function createMailSettings({
     },
 
     readMailer: async (ctx) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       return deployment.mode === "managed" ? null : readMailer();
     },
   };

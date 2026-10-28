@@ -23,7 +23,7 @@ export async function detectCompanyNameAndLogo(
   ctx: SecurityContext,
   { email }: { email: string },
 ): Promise<void> {
-  ctx.requireOwnerOrSystem();
+  ctx.require("MANAGE_WORKSPACE");
   const domain = companyDomain(email);
   if (!domain || (await readInstance(orm)).step !== "company") {
     return;

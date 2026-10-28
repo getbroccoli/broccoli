@@ -1,4 +1,4 @@
-import { expect, NON_OWNER, SETUP_HOLDER, SYSTEM, test } from "#test/support";
+import { expect, EMPLOYEE, SETUP_HOLDER, SYSTEM, test } from "#test/support";
 
 import { transactor } from "../../db";
 import { createEventBus } from "../../events";
@@ -11,14 +11,14 @@ import {
   readInstance,
 } from ".";
 
-test("refuses a non-owner completing the company step and keeps the current step", async ({
+test("refuses an employee completing the company step and keeps the current step", async ({
   orm,
   seed,
   transact,
 }) => {
   await seed.owner();
 
-  await expect(transact((tx) => completeCompanyStep(NON_OWNER, tx))).rejects.toMatchObject({
+  await expect(transact((tx) => completeCompanyStep(EMPLOYEE, tx))).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 

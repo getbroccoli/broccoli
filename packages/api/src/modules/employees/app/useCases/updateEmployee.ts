@@ -26,12 +26,13 @@ export async function updateEmployee(
   ctx: SecurityContext,
   { id, ...input }: EmployeeUpdateInput & { id: string },
 ): Promise<{ employee: Employee; historyLine: HistoryLine | null }> {
-  ctx.requireOwnerOrSystem();
-  const { changes, managerId, reason } = parseEmployeeUpdate(input);
   const employeeId = parseUuid(id);
   if (!employeeId) {
+    ctx.requireEveryRecord("employee", "update");
     throw employeeNotFound();
   }
+  await ctx.requireWrite("employee", employeeId, fieldsSent(input));
+  const { changes, managerId, reason } = parseEmployeeUpdate(input);
   const { employee, historyLine } = await transact(async (tx) => {
     if (managerId !== undefined) {
       // Before the employee row, in the order a deletion takes them, so the two cannot deadlock.
@@ -98,8 +99,8 @@ async function findAllowedManager(
   if (manager.id === employeeId) {
     throw invalidInput([{ field: "managerId", code: "self" }]);
   }
-  const managersAbove = await employmentRepository(tx).findManagersAbove(manager.id, today);
-  if (managersAbove.includes(employeeId)) {
+  const managersAbove = await employmentRepository(tx).findManagersAbove([manager.id], today);
+  if (managersAbove.get(manager.id)?.includes(employeeId)) {
     throw invalidInput([{ field: "managerId", code: "loop" }]);
   }
   return manager;
@@ -134,6 +135,13 @@ async function saveChanges(
     }
     throw error;
   }
+}
+
+/** The fields an update sends, by their input names; the reason is not a field. */
+function fieldsSent(input: EmployeeUpdateInput): string[] {
+  return Object.entries(input)
+    .filter(([field, value]) => field !== "changeReason" && value !== undefined)
+    .map(([field]) => field);
 }
 
 function fieldsOf(line: HistoryLine): string[] {

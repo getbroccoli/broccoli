@@ -15,7 +15,7 @@ export async function createEmployee(
   ctx: SecurityContext,
   input: NewEmployeeInput,
 ): Promise<Employee> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireEveryRecord("employee", "create");
   const newEmployee = parseNewEmployee(input);
   try {
     return await transact(async (tx) => {

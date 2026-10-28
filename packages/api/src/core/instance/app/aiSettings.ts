@@ -88,11 +88,11 @@ export function createAiSettings({
   });
   return {
     read: async (ctx) => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       return deployment.mode === "managed" ? null : readConfig(orm);
     },
     save: async (ctx, { source, openRouterKey }) => {
-      ctx.requireSetupAccess();
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       if (deployment.mode === "managed") {
         throw new ApplicationError("CONFLICT", "A managed instance reads files with its own key.");
       }
@@ -120,7 +120,7 @@ export function createAiSettings({
     decisions,
     originalFileReader: {
       readSource: async (ctx, tx) => {
-        ctx.requireSetupAccess();
+        ctx.requireSetupAccess("MANAGE_WORKSPACE");
         return deployment.mode === "managed" ? null : (await readConfig(tx)).source;
       },
       readOriginalFile: async (source, request) => {

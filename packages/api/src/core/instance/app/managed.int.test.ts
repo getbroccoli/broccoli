@@ -1,7 +1,7 @@
 import {
   expect,
   MANAGED_INSTANCE_CREDENTIAL,
-  NON_OWNER,
+  EMPLOYEE,
   SYSTEM,
   test,
   TEST_SECRET_BOX,
@@ -19,13 +19,13 @@ const ACME: ManagedAssignment = {
   websiteOrigin: "https://www.example.com",
 };
 
-test("refuses a non-owner assigning an instance and leaves it unassigned", async ({
+test("refuses an employee assigning an instance and leaves it unassigned", async ({
   orm,
   transact,
 }) => {
   await expect(
     transact((tx) =>
-      assignInstance(NON_OWNER, tx, ACME, TEST_SECRET_BOX.encrypt(MANAGED_INSTANCE_CREDENTIAL)),
+      assignInstance(EMPLOYEE, tx, ACME, TEST_SECRET_BOX.encrypt(MANAGED_INSTANCE_CREDENTIAL)),
     ),
   ).rejects.toMatchObject({
     code: "FORBIDDEN",

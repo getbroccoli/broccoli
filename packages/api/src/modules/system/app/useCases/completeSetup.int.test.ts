@@ -2,7 +2,7 @@ import {
   employeeUseCases,
   expect,
   importUseCases,
-  NON_OWNER,
+  EMPLOYEE,
   PNG,
   SLACK_PHOTO_URL,
   storedFileIds,
@@ -97,11 +97,11 @@ test("finishing preserves an employee added by hand after approval and skips the
   ).toEqual([existing, expect.objectContaining({ email: "robin@example.com" })]);
 });
 
-test("refuses a non-owner completing setup and keeps the ready step", async ({ orm, seed }) => {
+test("refuses an employee completing setup and keeps the ready step", async ({ orm, seed }) => {
   await seed.owner();
   await seed.setupStep("ready");
 
-  await expect(systemUseCases(orm).completeSetup(NON_OWNER)).rejects.toMatchObject({
+  await expect(systemUseCases(orm).completeSetup(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 

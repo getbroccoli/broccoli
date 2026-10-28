@@ -45,6 +45,6 @@ export function recordsManifest(
   return {
     name: "records",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(orm, createRecordHistoryReader(orm, registry)),
+    resolvers: createResolvers(orm, registry, createRecordHistoryReader(orm, registry)),
   };
 }

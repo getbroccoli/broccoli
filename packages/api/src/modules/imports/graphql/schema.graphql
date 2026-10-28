@@ -8,7 +8,7 @@ type Import {
   reading: Boolean!
   "Whether the demo company may still replace the import: no file is being read and no source holds people."
   demoAvailable: Boolean!
-  "The employees the import will create: records sharing an email make one. Records without an email or a start date sort last by it. Owner only."
+  "The employees the import will create: records sharing an email make one. Records without an email or a start date sort last by it. Admins only."
   employees(
     "Page size, 1 to 10000."
     first: Int = 100
@@ -229,7 +229,7 @@ type ImportEmployeeRecordConnection {
 }
 
 type Query {
-  "The import. Owner only."
+  "The import. Admins only."
   import: Import!
 }
 

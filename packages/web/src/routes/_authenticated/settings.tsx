@@ -4,10 +4,10 @@ import { EmailSettings } from "@/features/settings";
 import { t } from "@/i18n";
 import { PageHeader } from "@/shell";
 
-/** The owner's settings of the instance. */
+/** The instance settings, for admins. */
 export const Route = createFileRoute("/_authenticated/settings")({
   beforeLoad: ({ context: { me } }) => {
-    if (!me.isOwner) {
+    if (!me.operations.includes("MANAGE_WORKSPACE")) {
       throw redirect({ to: "/", replace: true });
     }
   },

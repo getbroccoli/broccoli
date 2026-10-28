@@ -18,7 +18,7 @@ export async function chooseExternalAgentSource(ctx: SecurityContext, tx: Tx): P
  * CONFLICT on a managed instance, once the owner exists or outside the import step.
  */
 export async function lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Promise<void> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   if (!(await instanceRepository(tx).lockInstance()).canChooseExternalAgent()) {
     throw new ApplicationError(
       "CONFLICT",

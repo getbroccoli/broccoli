@@ -1,6 +1,16 @@
 import type { IncomingHttpHeaders } from "node:http";
 
 import { ApplicationError } from "../applicationError";
+import {
+  type EffectiveProfile,
+  type Grant,
+  type Operation,
+  PERMISSION_PROFILES,
+  type PermissionObject,
+  type PermissionProfile,
+  type RecordAction,
+  type Scope,
+} from "./permissions";
 
 /**
  * Who is calling application code, and what they may do. Every business function
@@ -23,38 +33,73 @@ export interface SecurityContext {
   /** The session of the owner's own coding agent that calls, during setup; null for anyone else. */
   readonly externalAgentSessionId: string | null;
 
-  /** Until permissions exist: the owner or Broccoli itself; refuses others with FORBIDDEN. */
-  requireOwnerOrSystem(): void;
+  /** Whether the caller holds the operation; system always does. */
+  can(operation: Operation): boolean;
 
-  /** Setup work: the owner, Broccoli itself or the setup holder; refuses others with FORBIDDEN. */
-  requireSetupAccess(): void;
+  /** Refuses with FORBIDDEN, naming who may do it, unless the caller holds the operation. */
+  require(operation: Operation): void;
+
+  /** Broccoli's own work, which no user starts; refuses everyone else with FORBIDDEN. */
+  requireSystem(): void;
+
+  /** Setup work: the setup holder, or whoever holds the operation; refuses others with FORBIDDEN. */
+  requireSetupAccess(operation: Operation): void;
 
   /** The external agent's own work: its session id; refuses everyone else with FORBIDDEN. */
   requireSetupExternalAgent(): string;
 
-  // Planned with the permission system and uncommented with their first caller,
-  // together with their types: use cases will ask record scopes and field access
-  // here, so no caller resolves grants itself. Async, because resolving a
-  // reporting line reads the database.
-  //
-  // /** Which records of one object type the caller may touch for one action. */
-  // recordScope(object: ObjectType, action: RecordAction): Promise<RecordScope>;
-  //
-  // /** Refuses with FORBIDDEN unless the record of this subject is in scope for the action. */
-  // requireInScope(object: ObjectType, action: RecordAction, subjectEmployeeId: string): Promise<void>;
-  //
-  // /** Which fields of one object type the caller may read or write, per record. */
-  // fieldAccess(object: ObjectType): Promise<FieldAccess>;
-  //
-  // /** The records a permission can apply to; one per record type that has rows. */
-  // type ObjectType = "employee";
-  // type RecordAction = "read" | "create" | "update" | "delete";
-  // /** Resolved per object and action, so a grant's scope never spreads to another grant. */
-  // type RecordScope = { kind: "all" } | …; // own, team, reporting line, criteria
-  // interface FieldAccess {
-  //   canRead(field: string, subjectEmployeeId: string): boolean;
-  //   canWrite(field: string, subjectEmployeeId: string): boolean;
-  // }
+  /**
+   * Refuses with FORBIDDEN unless the caller's grants reach every record of the object for the
+   * action: lists while reads reach everyone, and creating a record tied to nobody yet.
+   */
+  requireEveryRecord(object: PermissionObject, action: RecordAction): void;
+
+  /** Refuses with FORBIDDEN unless the record of this subject is in scope for the action. */
+  requireInScope(
+    object: PermissionObject,
+    action: RecordAction,
+    subjectEmployeeId: string,
+  ): Promise<void>;
+
+  /**
+   * Refuses with FORBIDDEN an update of this subject's record out of scope, or one that sends a
+   * field the caller may not change, naming each such field; scope, fields and fixed rules in one call.
+   */
+  requireWrite(
+    object: PermissionObject,
+    subjectEmployeeId: string,
+    fields: readonly string[],
+  ): Promise<void>;
+
+  /**
+   * What the caller may do to the record of each subject, fixed rules applied, by subject; one
+   * reporting-line read for them all.
+   */
+  recordAccess(
+    object: PermissionObject,
+    subjectEmployeeIds: readonly string[],
+  ): Promise<Map<string, RecordAccess>>;
+}
+
+/** What the caller may do to one record. */
+export interface RecordAccess {
+  canUpdate: boolean;
+  canDelete: boolean;
+  /** "*" for every ordinary editable field; empty unless `canUpdate`. */
+  writableFields: "*" | readonly string[];
+}
+
+/** What permission checks read about people; the module that keeps employees provides it. */
+export interface EmployeeDirectory {
+  /** The employee linked to this user; null without one. */
+  employeeIdOfUser(userId: string): Promise<string | null>;
+  /**
+   * Everyone above each employee today, by employee: their direct manager first, then that one's,
+   * and so on; employees without a manager are left out.
+   */
+  managersAbove(employeeIds: readonly string[]): Promise<Map<string, string[]>>;
+  /** The employee linked to the owner's user; null without one. */
+  ownersEmployeeId(): Promise<string | null>;
 }
 
 /** A signed-in user as application code sees them. */
@@ -63,22 +108,34 @@ export interface SignedInUser {
   /** Sign-in email, lowercased, for display; never used for authorization. */
   email: string;
   isOwner: boolean;
+  /** `EMPLOYEE` first, then the stored profiles, and `OWNER` for the owner (`profilesOf`). */
+  permissionProfiles: readonly PermissionProfile[];
+  /** The employee linked to this user; null without one. */
+  employeeId: string | null;
 }
 
-/**
- * The security context of a user, the setup holder, the owner's external agent or Broccoli
- * itself, under today's owner-only rule.
- */
+const OPERATION_REFUSALS: Record<Operation, string> = {
+  MANAGE_WORKSPACE: "Only admins can do this.",
+  RESET_WORKSPACE: "Only the owner can do this.",
+};
+
+const NOT_ALLOWED = "You are not allowed to do this.";
+
+/** The security context of a user, the setup holder, the owner's external agent or Broccoli itself. */
 export class PrincipalSecurityContext implements SecurityContext {
   private constructor(
     readonly user: Readonly<SignedInUser> | null,
     readonly isSetupHolder: boolean,
     readonly externalAgentSessionId: string | null = null,
+    private readonly directory: EmployeeDirectory | null = null,
   ) {}
 
+  private ownersEmployeeId: Promise<string | null> | undefined;
+  private effective: EffectiveProfile | undefined;
+
   /** A signed-in user; built by `resolveSecurityContext`. */
-  static user(user: SignedInUser): SecurityContext {
-    return new PrincipalSecurityContext({ ...user }, false);
+  static user(user: SignedInUser, directory: EmployeeDirectory): SecurityContext {
+    return new PrincipalSecurityContext({ ...user }, false, null, directory);
   }
 
   /** The browser holding setup; built by `resolveSecurityContext`. */
@@ -100,15 +157,25 @@ export class PrincipalSecurityContext implements SecurityContext {
     return this.user === null && !this.isSetupHolder && this.externalAgentSessionId === null;
   }
 
-  requireOwnerOrSystem(): void {
-    if (!this.isSystem && !this.user?.isOwner) {
-      throw new ApplicationError("FORBIDDEN", "Only the owner can do this.");
+  can(operation: Operation): boolean {
+    return this.isSystem || this.profile()?.operations.has(operation) === true;
+  }
+
+  require(operation: Operation): void {
+    if (!this.can(operation)) {
+      throw new ApplicationError("FORBIDDEN", OPERATION_REFUSALS[operation]);
     }
   }
 
-  requireSetupAccess(): void {
+  requireSystem(): void {
+    if (!this.isSystem) {
+      throw new ApplicationError("FORBIDDEN", "Only Broccoli can do this.");
+    }
+  }
+
+  requireSetupAccess(operation: Operation): void {
     if (!this.isSetupHolder) {
-      this.requireOwnerOrSystem();
+      this.require(operation);
     }
   }
 
@@ -117,6 +184,140 @@ export class PrincipalSecurityContext implements SecurityContext {
       throw new ApplicationError("FORBIDDEN", "Only your agent can do this.");
     }
     return this.externalAgentSessionId;
+  }
+
+  requireEveryRecord(object: PermissionObject, action: RecordAction): void {
+    if (!this.isSystem && !this.grants(object, action).some(({ scope }) => scope === "all")) {
+      throw new ApplicationError("FORBIDDEN", NOT_ALLOWED);
+    }
+  }
+
+  async requireInScope(
+    object: PermissionObject,
+    action: RecordAction,
+    subjectEmployeeId: string,
+  ): Promise<void> {
+    const access = await this.actionsOn(object, subjectEmployeeId, [action]);
+    if (!access.has(action)) {
+      throw new ApplicationError("FORBIDDEN", NOT_ALLOWED);
+    }
+    if (action === "delete" && (await this.isOwnersEmployee(subjectEmployeeId))) {
+      throw new ApplicationError("FORBIDDEN", "The owner cannot be deleted.");
+    }
+  }
+
+  async requireWrite(
+    object: PermissionObject,
+    subjectEmployeeId: string,
+    fields: readonly string[],
+  ): Promise<void> {
+    const writable = (await this.actionsOn(object, subjectEmployeeId, ["update"])).get("update");
+    if (!writable) {
+      throw new ApplicationError("FORBIDDEN", NOT_ALLOWED);
+    }
+    const refused = writable === "*" ? [] : fields.filter((field) => !writable.includes(field));
+    if (refused.length > 0) {
+      throw new ApplicationError(
+        "FORBIDDEN",
+        "You cannot change some of these fields.",
+        refused.map((field) => ({ field, code: "not_allowed" })),
+      );
+    }
+  }
+
+  async recordAccess(
+    object: PermissionObject,
+    subjectEmployeeIds: readonly string[],
+  ): Promise<Map<string, RecordAccess>> {
+    const access = await this.actionsOnEach(object, subjectEmployeeIds, ["update", "delete"]);
+    const records = new Map<string, RecordAccess>();
+    for (const [subject, actions] of access) {
+      records.set(subject, {
+        canUpdate: actions.has("update"),
+        canDelete: actions.has("delete") && !(await this.isOwnersEmployee(subject)),
+        writableFields: actions.get("update") ?? [],
+      });
+    }
+    return records;
+  }
+
+  /** The union of the user's profiles; null for anyone without a user. */
+  private profile(): EffectiveProfile | null {
+    if (!this.user) return null;
+    this.effective ??= {
+      grants: this.user.permissionProfiles.flatMap((name) => PERMISSION_PROFILES[name].grants),
+      operations: new Set(
+        this.user.permissionProfiles.flatMap((name) => PERMISSION_PROFILES[name].operations),
+      ),
+    };
+    return this.effective;
+  }
+
+  private grants(object: PermissionObject, action: RecordAction): readonly Grant[] {
+    return (this.profile()?.grants ?? []).filter(
+      (grant) => grant.object === object && grant.actions.includes(action),
+    );
+  }
+
+  /** The actions among `actions` the caller holds on the subject, each with the fields it may write. */
+  private async actionsOn(
+    object: PermissionObject,
+    subjectEmployeeId: string,
+    actions: readonly RecordAction[],
+  ): Promise<Map<RecordAction, "*" | readonly string[]>> {
+    return (await this.actionsOnEach(object, [subjectEmployeeId], actions)).get(subjectEmployeeId)!;
+  }
+
+  /** `actionsOn` for each subject, by subject, reading the reporting line once for them all. */
+  private async actionsOnEach(
+    object: PermissionObject,
+    subjectEmployeeIds: readonly string[],
+    actions: readonly RecordAction[],
+  ): Promise<Map<string, Map<RecordAction, "*" | readonly string[]>>> {
+    if (this.isSystem) {
+      return new Map(
+        subjectEmployeeIds.map((subject) => [subject, new Map(actions.map((a) => [a, "*"]))]),
+      );
+    }
+    const grants = actions.map((action) => [action, this.grants(object, action)] as const);
+    const employeeId = this.user?.employeeId ?? null;
+    const needsLine = grants.some(([, held]) =>
+      held.some(({ scope }) => scope === "direct_reports" || scope === "all_reports"),
+    );
+    const managersAbove =
+      employeeId && needsLine
+        ? await this.directory!.managersAbove(subjectEmployeeIds)
+        : new Map<string, string[]>();
+    const reaches = (scope: Scope, subject: string): boolean => {
+      if (scope === "all") return true;
+      if (employeeId === null) return false;
+      if (scope === "self") return subject === employeeId;
+      const above = managersAbove.get(subject) ?? [];
+      return scope === "direct_reports" ? above[0] === employeeId : above.includes(employeeId);
+    };
+    return new Map(
+      subjectEmployeeIds.map((subject) => {
+        const access = new Map<RecordAction, "*" | readonly string[]>();
+        for (const [action, held] of grants) {
+          for (const grant of held) {
+            if (!reaches(grant.scope, subject)) continue;
+            const before = access.get(action) ?? [];
+            const fields = grant.fields ?? [];
+            access.set(
+              action,
+              before === "*" || fields === "*" ? "*" : [...new Set([...before, ...fields])],
+            );
+          }
+        }
+        return [subject, access];
+      }),
+    );
+  }
+
+  private async isOwnersEmployee(subjectEmployeeId: string): Promise<boolean> {
+    // Read once per context, which lives for one request.
+    this.ownersEmployeeId ??= this.directory?.ownersEmployeeId() ?? Promise.resolve(null);
+    return (await this.ownersEmployeeId) === subjectEmployeeId;
   }
 }
 

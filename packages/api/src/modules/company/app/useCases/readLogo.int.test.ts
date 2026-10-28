@@ -1,4 +1,4 @@
-import { companyUseCases, expect, NON_OWNER, PNG, test } from "#test/support";
+import { companyUseCases, expect, EMPLOYEE, PNG, test } from "#test/support";
 
 import { readFile } from "../../../../core/files";
 
@@ -24,13 +24,13 @@ test("returns null for a replaced logo's id", async ({ orm, seed }) => {
   expect(logo).toBeNull();
 });
 
-test("refuses to read the logo for a non-owner", async ({ orm, seed }) => {
+test("refuses to read the logo for an employee", async ({ orm, seed }) => {
   const actor = await seed.owner();
   const company = companyUseCases(orm);
   const saved = await company.saveLogo(actor, PNG);
 
-  await expect(company.readLogo(NON_OWNER, saved.logoFileId!)).rejects.toMatchObject({
+  await expect(company.readLogo(EMPLOYEE, saved.logoFileId!)).rejects.toMatchObject({
     code: "FORBIDDEN",
-    message: "Only the owner can do this.",
+    message: "Only admins can do this.",
   });
 });

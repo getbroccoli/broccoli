@@ -19,7 +19,7 @@ export async function startSetup(
   tx: Tx,
   { token, now }: { token: string | null; now: Date },
 ): Promise<{ token: string; expiresAt: Date }> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSystem();
   const instance = instanceRepository(tx);
   const { ownerUserId, setupSession } = await instance.lockInstance();
   if (ownerUserId) {

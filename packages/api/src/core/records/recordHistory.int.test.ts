@@ -5,7 +5,7 @@ import {
   EXAMPLE_RECORD,
   EXAMPLE_REGISTRATION,
   expect,
-  NON_OWNER,
+  EMPLOYEE,
   OWNER,
   SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
@@ -224,15 +224,15 @@ test("refuses history when the type's access check refuses", async ({ orm }) => 
   const reader = createRecordHistoryReader(orm, {
     example: {
       ...EXAMPLE_REGISTRATION,
-      requireHistoryAccess: (ctx) => Promise.resolve().then(() => ctx.requireOwnerOrSystem()),
+      requireHistoryAccess: (ctx) => Promise.resolve().then(() => ctx.require("MANAGE_WORKSPACE")),
     },
   });
 
   await expect(
-    reader.readHistory(NON_OWNER, "example", EXAMPLE_RECORD.recordId, {}),
+    reader.readHistory(EMPLOYEE, "example", EXAMPLE_RECORD.recordId, {}),
   ).rejects.toMatchObject({
     code: "FORBIDDEN",
-    message: "Only the owner can do this.",
+    message: "Only admins can do this.",
   });
 });
 

@@ -4,7 +4,7 @@ import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
 import { companyModule } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
-import { deleteAllEmployees, employeesModule } from "./employees";
+import { deleteAllEmployees, employeeDirectory, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportUseCases, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
@@ -65,6 +65,7 @@ export function createModules(
       deleteAllEmployees,
     },
     addApprovedPeople: importUseCases.addApprovedPeople,
+    employeeDirectory: employeeDirectory(core.orm),
     passwordResetEmail,
   };
 }

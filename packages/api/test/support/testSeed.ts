@@ -8,18 +8,22 @@ import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance/db";
 import type { AiSource, MailSource, SetupStep } from "../../src/core/instance/domain";
 import { hashSetupToken } from "../../src/core/instance/helpers";
-import { type Employee, type NewEmployee } from "../../src/modules/employees";
-import { employeeRepository } from "../../src/modules/employees/db";
+import {
+  PrincipalSecurityContext,
+  type SecurityContext,
+  userPermissionProfiles,
+} from "../../src/core/security";
+import { employeeDirectory, type Employee } from "../../src/modules/employees";
+import { employeeRepository, employmentRepository } from "../../src/modules/employees/db";
 import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
 import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
 import { slackConnectionRepository } from "../../src/modules/slack/db";
-import { parseCalendarDate } from "../../src/utils";
+import { parseCalendarDate, todayInUtc } from "../../src/utils";
 import { TEST_SECRET_BOX } from "./testSecretBox";
-import { TestSecurityContext } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
 
 type SeedEmployee = Partial<
-  Omit<NewEmployee, "startDate"> & { startDate: string | null; avatarFileId: string | null }
+  Omit<Employee, "id" | "createdAt" | "startDate"> & { startDate: string | null }
 >;
 
 /**
@@ -35,22 +39,52 @@ export class TestSeed {
   async owner({
     email = "owner@example.com",
     password,
-  }: { email?: string; password?: string } = {}): Promise<TestSecurityContext> {
-    const userId = randomUUID();
-    const normalisedEmail = email.toLowerCase();
-    await this.orm.insert(user).values({ id: userId, name: "Owner", email: normalisedEmail });
+  }: { email?: string; password?: string } = {}): Promise<SecurityContext> {
+    const saved = await this.user({ email, password });
+    const instance = instanceRepository(this.orm);
+    await instance.setOwner(saved.id, (await instance.readInstance()).step);
+    return PrincipalSecurityContext.user(
+      {
+        userId: saved.id,
+        email: saved.email,
+        isOwner: true,
+        permissionProfiles: ["EMPLOYEE", "OWNER"],
+        employeeId: null,
+      },
+      employeeDirectory(this.orm),
+    );
+  }
+
+  async user({
+    email,
+    password,
+    permissionProfiles = [],
+  }: {
+    email: string;
+    password?: string;
+    permissionProfiles?: "ADMIN"[];
+  }): Promise<{ id: string; email: string }> {
+    const saved = { id: randomUUID(), email: email.toLowerCase() };
+    await this.orm.insert(user).values({ ...saved, name: "User" });
+    if (permissionProfiles.length > 0) {
+      await this.orm
+        .insert(userPermissionProfiles)
+        .values(permissionProfiles.map((profile) => ({ userId: saved.id, profile })));
+    }
     if (password !== undefined) {
       await this.orm.insert(account).values({
         id: randomUUID(),
-        accountId: userId,
+        accountId: saved.id,
         providerId: "credential",
-        userId,
+        userId: saved.id,
         password: await hashPassword(password),
       });
     }
-    const instance = instanceRepository(this.orm);
-    await instance.setOwner(userId, (await instance.readInstance()).step);
-    return new TestSecurityContext({ user: { userId, email: normalisedEmail, isOwner: true } });
+    return saved;
+  }
+
+  async manager(employeeId: string, managerId: string | null): Promise<void> {
+    await employmentRepository(this.orm).setManager(employeeId, managerId, todayInUtc());
   }
 
   /** Makes the instance managed, as the accounts service assigns it. */
@@ -68,7 +102,7 @@ export class TestSeed {
     await instance.advanceStep((await instance.readInstance()).step, step);
   }
 
-  async demoOwner({ expiresAt }: { expiresAt: Date }): Promise<TestSecurityContext> {
+  async demoOwner({ expiresAt }: { expiresAt: Date }): Promise<SecurityContext> {
     const owner = await this.owner();
     await this.setupStep("done");
     await this.demoDeadline(expiresAt);

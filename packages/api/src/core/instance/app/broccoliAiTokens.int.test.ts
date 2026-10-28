@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { onTestFinished } from "vitest";
 
-import { expect, NON_OWNER, SYSTEM, test, TEST_SECRET_BOX } from "#test/support";
+import { expect, EMPLOYEE, SYSTEM, test, TEST_SECRET_BOX } from "#test/support";
 
 import { instance, instanceRepository } from "../db";
 import type { Orm } from "../../db";
@@ -60,11 +60,11 @@ test("a fresh data folder and database have no trial token", async ({ orm }) => 
   expect(await tokens.read(SYSTEM)).toBeNull();
 });
 
-test("refuses a non-owner reading or saving the trial token", async ({ orm }) => {
+test("refuses an employee reading or saving the trial token", async ({ orm }) => {
   const { tokens, dataDir } = await tokensInFreshFolder(orm);
 
-  expect(() => tokens.read(NON_OWNER)).toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
-  expect(() => tokens.save(NON_OWNER, "new-trial")).toThrow(
+  expect(() => tokens.read(EMPLOYEE)).toThrow(expect.objectContaining({ code: "FORBIDDEN" }));
+  expect(() => tokens.save(EMPLOYEE, "new-trial")).toThrow(
     expect.objectContaining({ code: "FORBIDDEN" }),
   );
 

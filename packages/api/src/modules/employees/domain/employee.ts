@@ -23,6 +23,8 @@ export interface Employee {
   /** The file holding their avatar, or null. */
   avatarFileId: string | null;
   createdAt: Date;
+  /** The user who signs in as this employee, or null. */
+  userId: string | null;
 }
 
 /** What a list of employees can be sorted by. */
@@ -39,7 +41,7 @@ export interface NewEmployeeInput {
   startDate?: string | null;
 }
 
-export type NewEmployee = Omit<Employee, "id" | "avatarFileId" | "createdAt">;
+export type NewEmployee = Omit<Employee, "id" | "avatarFileId" | "createdAt" | "userId">;
 
 /** The fields an update sends; an absent field stays as it is, and null clears a nullable one. */
 export interface EmployeeUpdateInput {

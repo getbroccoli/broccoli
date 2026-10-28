@@ -20,7 +20,7 @@ export async function claimOwner<Owner extends OwnerUser>(
   tx: Tx,
   createOwner: () => Promise<Owner>,
 ): Promise<Owner> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSystem();
   const instance = instanceRepository(tx);
   const current = await instance.lockInstance();
   current.requireUnclaimedOwner();
@@ -46,7 +46,7 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
   createOwner: () => Promise<Owner>,
   addApprovedPeople: AddApprovedPeople,
 ): Promise<Owner> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSystem();
   const instance = instanceRepository(tx);
   const current = await lockHeldSetup(tx, { token, now });
   if (current.step !== "owner") {

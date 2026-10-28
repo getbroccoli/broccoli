@@ -12,11 +12,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [{ to: "/people", label: t("nav.people"), icon: Users }];
-const OWNER_NAV_ITEMS: NavItem[] = [{ to: "/settings", label: t("nav.settings"), icon: GearSix }];
+const ADMIN_NAV_ITEMS: NavItem[] = [{ to: "/settings", label: t("nav.settings"), icon: GearSix }];
 
 export function LeftNav() {
   const { me } = useRouteContext({ from: "/_authenticated" });
-  const items = me.isOwner ? [...NAV_ITEMS, ...OWNER_NAV_ITEMS] : NAV_ITEMS;
+  const items = me.operations.includes("MANAGE_WORKSPACE")
+    ? [...NAV_ITEMS, ...ADMIN_NAV_ITEMS]
+    : NAV_ITEMS;
   return (
     <aside className="flex shrink-0 items-center gap-3 px-3 py-2 md:h-full md:w-56 md:flex-col md:items-stretch md:gap-1 md:py-4">
       <div className="min-w-0 flex-1 md:flex-none md:pt-1 md:pb-4">

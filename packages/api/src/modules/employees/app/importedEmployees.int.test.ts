@@ -5,7 +5,7 @@ import {
   employeeUseCases,
   expectHistoryReplaysTo,
   expect,
-  NON_OWNER,
+  EMPLOYEE,
   OWNER,
   PNG,
   storedFileIds,
@@ -102,11 +102,11 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
   expect(employees.pageInfo.hasNextPage).toBe(false);
 });
 
-test("refuses a non-owner and creates no employees", async ({ orm, transact }) => {
+test("refuses an employee and creates no employees", async ({ orm, transact }) => {
   await expect(
     transact((tx) =>
       createImportedEmployees(
-        NON_OWNER,
+        EMPLOYEE,
         tx,
         [{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }],
         { kind: "ADDED_FROM_IMPORT" },

@@ -1,4 +1,6 @@
 import {
+  ADMIN,
+  signedIn,
   recordChangedEvents,
   employeeUseCases,
   expect,
@@ -194,4 +196,28 @@ test("a deletion addressed by uppercase id keeps its history under the canonical
     ],
   );
   await expectHistoryReplaysTo(orm, employee.id);
+});
+
+test("refuses an admin deleting the employee linked to the owner", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee({ userId: owner.user!.userId });
+  const employees = employeeUseCases(orm);
+  const admin = signedIn(orm, { profiles: ["EMPLOYEE", "ADMIN"], employeeId: null });
+
+  await expect(employees.deleteEmployee(admin, { id: employee.id })).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "The owner cannot be deleted.",
+  });
+
+  expect(await employees.readEmployee(OWNER, employee.id)).toEqual(employee);
+  expect((await employees.readEmployeeHistory(OWNER, employee.id, {})).edges).toEqual([]);
+});
+
+test("allows an admin to delete another employee", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const employees = employeeUseCases(orm);
+
+  await employees.deleteEmployee(ADMIN, { id: employee.id });
+
+  expect(await employees.readEmployee(OWNER, employee.id)).toBeNull();
 });

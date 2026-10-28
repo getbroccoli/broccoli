@@ -3,7 +3,7 @@ import { companyRepository } from "../../db";
 import { type Company, type CompanyContext, readCompany } from "./company";
 
 export async function removeLogo(context: CompanyContext, ctx: SecurityContext): Promise<Company> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   await context.transact((tx) => companyRepository(tx).replaceLogo(null));
   return readCompany(context);
 }

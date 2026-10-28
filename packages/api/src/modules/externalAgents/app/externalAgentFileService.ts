@@ -136,7 +136,7 @@ export function createExternalAgentFileService(
     },
 
     notifyFileWaiting: (ctx) => {
-      ctx.requireOwnerOrSystem();
+      ctx.require("MANAGE_WORKSPACE");
       activity.notifyDrop();
     },
   };

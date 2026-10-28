@@ -1,7 +1,7 @@
 import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import { type Connection, type PageArgs, paginate } from "../../pagination";
-import type { SecurityContext } from "../../security";
+import type { PermissionObject, SecurityContext } from "../../security";
 import { findUserEmails, HISTORY_SORT_VALUES, recordHistoryRepository } from "../db";
 import {
   authorOf,
@@ -108,6 +108,31 @@ export interface RecordTypeRegistration {
   canonicalId(recordId: string): string | null;
   /** The records that still exist among these canonical ids, by id, for a caller who may read them. */
   loadRecords(ctx: SecurityContext, ids: readonly string[]): Promise<Map<string, unknown>>;
+  /** Its permission object, and the fields an update may change by their input names, for `access`. */
+  permissions: { object: PermissionObject; editableFields: readonly string[] };
+}
+
+/** What the caller may do to each of these records, by id, as `AnyRecord.access` shows it. */
+export async function readRecordAccess(
+  ctx: SecurityContext,
+  { permissions: { object, editableFields } }: RecordTypeRegistration,
+  recordIds: readonly string[],
+): Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>> {
+  // shortcut: the record is its own subject while employees are the only record type; a type
+  // whose records belong to an employee adds how to find that employee.
+  const access = await ctx.recordAccess(object, recordIds);
+  return new Map(
+    [...access].map(([id, { canUpdate, canDelete, writableFields }]) => [
+      id,
+      {
+        canUpdate,
+        canDelete,
+        editableFields: editableFields.filter(
+          (field) => writableFields === "*" || writableFields.includes(field),
+        ),
+      },
+    ]),
+  );
 }
 
 /** A record as `RecordChange.record` returns it, marked with its GraphQL type. */

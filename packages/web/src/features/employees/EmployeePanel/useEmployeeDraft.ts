@@ -1,8 +1,13 @@
+// eslint-disable-next-line no-restricted-imports -- A permission change needs resetStore(), not just the cache.
+import { useApolloClient } from "@apollo/client/react";
+import { useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
+  SetPermissionProfilesDocument,
   UpdateEmployeeDocument,
   type EmployeePanel_EmployeeFragment,
+  type PermissionProfile,
 } from "@/__generated__/graphql";
 import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { addHistoryLine } from "@/features/records";
@@ -23,19 +28,27 @@ export type SaveFailure = "removed" | "failed";
  * all of them. A refused or failed save keeps every edit.
  */
 export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
+  const apolloClient = useApolloClient();
+  const router = useRouter();
   const saved = valuesOf(employee);
   const [edits, setEdits] = useState<Edits>({});
   const [reason, setReason] = useState("");
-  const [updateEmployee, { loading: saving, error, payloadError, reset }] = usePayloadMutation(
-    UpdateEmployeeDocument,
-    {
-      // The saved employee updates in the cache by itself; its new line joins its history.
-      update: (cache, { data }) => {
-        const line = data?.employee.update.historyLine;
-        if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
-      },
+  const [updateEmployee, update] = usePayloadMutation(UpdateEmployeeDocument, {
+    // The saved employee updates in the cache by itself; its new line joins its history.
+    update: (cache, { data }) => {
+      const line = data?.employee.update.historyLine;
+      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
     },
-  );
+  });
+  const [setPermissionProfiles, profileChange] = usePayloadMutation(SetPermissionProfilesDocument, {
+    update: (cache, { data }) => {
+      const line = data?.employee.setPermissionProfiles.historyLine;
+      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
+    },
+  });
+  const saving = update.loading || profileChange.loading;
+  const error = update.error ?? profileChange.error;
+  const payloadError = update.payloadError ?? profileChange.payloadError;
   const draft = mapEdits(edits, ({ value }) => value);
   const fieldErrors = mapEdits(edits, ({ error }) => error);
   const changed = changedFields(saved, draft);
@@ -61,7 +74,8 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const cancel = () => {
     setEdits({});
     setReason("");
-    reset();
+    update.reset();
+    profileChange.reset();
   };
 
   const save = async () => {
@@ -69,9 +83,23 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
     if (saving) return;
     setEdits((current) => mapEdits(current, ({ value }) => ({ value })));
     try {
-      await updateEmployee({
-        variables: { input: toUpdateInput(employee.id, saved, draft, reason) },
-      });
+      // The profile saves second, so a refused field leaves it unsaved with the rest.
+      if (changed.some((key) => key !== "permissionProfiles")) {
+        await updateEmployee({
+          variables: { input: toUpdateInput(employee.id, saved, draft, reason) },
+        });
+      }
+      if (changed.includes("permissionProfiles")) {
+        const changeReason = reason.trim() || null;
+        const profiles = (draft.permissionProfiles ?? "").split(",") as PermissionProfile[];
+        await setPermissionProfiles({
+          variables: { input: { id: employee.id, profiles, changeReason } },
+        });
+        // The change may be the caller's own, so what they may do is read again, the route
+        // first: a query they may no longer run is refused while the cache refetches.
+        await router.invalidate();
+        await apolloClient.resetStore().catch(() => undefined);
+      }
       cancel();
     } catch (failed) {
       const refused =
@@ -115,7 +143,8 @@ function mapEdits<Result>(
 }
 
 function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
-  const { firstName, lastName, email, jobTitle, managerId, startDate } = employee;
+  const { firstName, lastName, email, jobTitle, managerId, startDate, permissionProfiles } =
+    employee;
   return {
     firstName,
     lastName,
@@ -123,6 +152,7 @@ function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
     jobTitle: jobTitle ?? null,
     manager: managerId ?? null,
     startDate: startDate ?? null,
+    permissionProfiles: permissionProfiles?.join(",") ?? null,
   };
 }
 

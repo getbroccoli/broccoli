@@ -1,7 +1,7 @@
 import {
   expect,
   fakeMail,
-  NON_OWNER,
+  EMPLOYEE,
   passwordResetEmail,
   SYSTEM,
   test,
@@ -85,13 +85,13 @@ test("the queued reset job never holds the token in plain text", async ({ orm, s
   );
 });
 
-test("refuses to queue a reset for anyone but the system or owner", async ({ orm, seed }) => {
+test("refuses to queue a reset for anyone but the system or an admin", async ({ orm, seed }) => {
   const owner = await seed.owner(TEST_OWNER);
   await seed.mailSettings();
   const reset = passwordResetEmail(orm, { mail: fakeMail() });
 
   await expect(
-    reset.queue(NON_OWNER, { id: owner.user!.userId }, "reset-token"),
+    reset.queue(EMPLOYEE, { id: owner.user!.userId }, "reset-token"),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
   expect(reset.sentJobs).toEqual([]);

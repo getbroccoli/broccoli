@@ -3,6 +3,16 @@ interface AnyRecord {
   id: ID!
   "Changes to this record, newest first."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "What the signed-in user may do to this record."
+  access: RecordAccess!
+}
+
+"What the signed-in user may do to one record."
+type RecordAccess {
+  canUpdate: Boolean!
+  canDelete: Boolean!
+  "Fields the caller may change, named as the update input names them; empty unless canUpdate."
+  editableFields: [String!]!
 }
 
 "One change to a record: who made it, when, why, and each field's old and new value."

@@ -1,12 +1,4 @@
-import {
-  expect,
-  fakeMail,
-  mailSettings,
-  NON_OWNER,
-  OWNER,
-  SETUP_HOLDER,
-  test,
-} from "#test/support";
+import { expect, fakeMail, mailSettings, EMPLOYEE, OWNER, SETUP_HOLDER, test } from "#test/support";
 
 import { MailRefusedError } from "../../../integrations/mail";
 
@@ -215,7 +207,7 @@ test("refuses mail settings on a managed instance", async ({ orm }) => {
   expect(await settings.readMailer(OWNER)).toBeNull();
 });
 
-test.for([NON_OWNER, SETUP_HOLDER])(
+test.for([EMPLOYEE, SETUP_HOLDER])(
   "refuses mail settings to anyone but the owner",
   async (ctx, { orm, seed }) => {
     await seed.mailSettings();

@@ -15,7 +15,10 @@ export async function listEmployees(
   ctx: SecurityContext,
   { filter, ...listArgs }: EmployeeListArgs,
 ): Promise<Connection<Employee>> {
-  ctx.requireOwnerOrSystem();
+  // shortcut: a caller whose reads don't reach everyone is refused the list, not shown their part;
+  // every profile reads everyone today. Filter the page by `recordScope` once a read narrows, and
+  // the history, avatar and manager reads with it.
+  ctx.requireEveryRecord("employee", "read");
   const search = parseSearch(filter?.search);
   return paginate(listArgs, {
     order: DEFAULT_ORDER,

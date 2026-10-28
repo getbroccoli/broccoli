@@ -3,7 +3,8 @@ import {
   employeeUseCases,
   expect,
   importUseCases,
-  NON_OWNER,
+  ADMIN,
+  EMPLOYEE,
   PNG,
   SLACK_PHOTO_URL,
   storedFileIds,
@@ -73,11 +74,11 @@ test("resets a finished setup whose import was not cleaned up yet", async ({ orm
   expect((await imports.reads.readReview(owner)).listEmployees({}).edges).toEqual([]);
 });
 
-test("refuses a non-owner resetting setup", async ({ orm, seed }) => {
+test("refuses an employee resetting setup", async ({ orm, seed }) => {
   await seed.owner();
   await seed.setupStep("done");
 
-  await expect(systemUseCases(orm).resetSetup(NON_OWNER)).rejects.toMatchObject({
+  await expect(systemUseCases(orm).resetSetup(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 
@@ -140,4 +141,11 @@ test("refuses a concurrent second reset", async ({ orm, seed }) => {
   ]);
   expect((await readInstance(orm)).step).toBe("company");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
+});
+
+test("refuses an admin resetting the workspace", async ({ orm }) => {
+  await expect(systemUseCases(orm).resetSetup(ADMIN)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Only the owner can do this.",
+  });
 });

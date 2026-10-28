@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { expect, NON_OWNER, SYSTEM, test } from "#test/support";
+import { expect, ADMIN, EMPLOYEE, SYSTEM, test } from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, type Tx } from "../../db";
@@ -110,26 +110,26 @@ test.for([
   },
 );
 
-test("refuses a non-owner resetting the demo even with its owner's user id", async ({
-  seed,
-  transact,
-}) => {
-  const owner = await seed.demoOwner({ expiresAt });
+test.for([EMPLOYEE, ADMIN])(
+  "refuses a caller without reset access even with the demo owner's user id",
+  async (ctx, { seed, transact }) => {
+    const owner = await seed.demoOwner({ expiresAt });
 
-  await expect(
-    transact((tx) =>
-      exitDemo(
-        NON_OWNER,
-        tx,
-        { userId: owner.user!.userId, now },
-        {
-          clearPeople: () => Promise.resolve(),
-          deleteOwner: () => Promise.resolve(),
-        },
+    await expect(
+      transact((tx) =>
+        exitDemo(
+          ctx,
+          tx,
+          { userId: owner.user!.userId, now },
+          {
+            clearPeople: () => Promise.resolve(),
+            deleteOwner: () => Promise.resolve(),
+          },
+        ),
       ),
-    ),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
-});
+    ).rejects.toMatchObject({ code: "FORBIDDEN", message: "Only the owner can do this." });
+  },
+);
 
 test("rolls back a demo reset when clearing people fails", async ({ orm, seed, transact }) => {
   const owner = await seed.demoOwner({ expiresAt });

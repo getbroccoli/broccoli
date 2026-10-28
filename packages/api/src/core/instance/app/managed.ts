@@ -15,7 +15,7 @@ export async function assignInstance(
   assignment: ManagedAssignment,
   encryptedInstanceCredential: string,
 ): Promise<void> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSystem();
   const instance = instanceRepository(tx);
   const current = await instance.lockInstance();
   if (current.assignment) {
@@ -44,6 +44,6 @@ export async function recordOwnerSignInMethod(
   tx: Tx,
   method: OwnerSignInMethod,
 ): Promise<void> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSystem();
   await instanceRepository(tx).saveOwnerSignInMethod(method);
 }

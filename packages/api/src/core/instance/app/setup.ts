@@ -66,7 +66,7 @@ async function changeStep(
   tx: Tx,
   change: (instance: Instance) => Instance | null,
 ): Promise<boolean> {
-  ctx.requireSetupAccess();
+  ctx.requireSetupAccess("MANAGE_WORKSPACE");
   const repository = instanceRepository(tx);
   const current = await repository.lockInstance();
   const next = change(current);

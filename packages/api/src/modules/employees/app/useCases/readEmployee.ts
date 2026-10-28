@@ -13,9 +13,13 @@ export async function readEmployee(
   ctx: SecurityContext,
   id: string,
 ): Promise<Employee | null> {
-  ctx.requireOwnerOrSystem();
   const employeeId = parseUuid(id);
-  return employeeId ? employees.findById(employeeId) : null;
+  if (!employeeId) {
+    ctx.requireEveryRecord("employee", "read");
+    return null;
+  }
+  await ctx.requireInScope("employee", "read", employeeId);
+  return employees.findById(employeeId);
 }
 
 /** Each employee's manager today, by the id asked for; employees without one are left out. */
@@ -24,7 +28,7 @@ export async function readManagers(
   ctx: SecurityContext,
   employeeIds: readonly string[],
 ): Promise<Map<string, Employee>> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireEveryRecord("employee", "read");
   const asked = employeeIds.flatMap((askedId) => {
     const id = parseUuid(askedId);
     return id ? [{ askedId, id }] : [];

@@ -30,7 +30,7 @@ export async function signInWithTicket(
   ticket: ManagedTicket,
   clock: () => Date,
 ): Promise<{ userId: string }> {
-  ctx.requireOwnerOrSystem();
+  ctx.requireSystem();
   const tickets = managedTicketRepository(tx);
   if (!(await tickets.consume(ticket.jti, ticket.expiresAt))) {
     throw new SignInRefusedError();

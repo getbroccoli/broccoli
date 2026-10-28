@@ -7,7 +7,7 @@ import {
   type AiConfig,
   type MailConfig,
 } from "../../../core/instance";
-import type { SecurityContext } from "../../../core/security";
+import { OPERATIONS, type SecurityContext } from "../../../core/security";
 import type { SystemUseCases } from "../app";
 
 const STEPS = {
@@ -53,7 +53,15 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       setup: (_parent, _args, { security }) => readSetup(security),
       me: (_parent, _args, { security }) => {
         const user = security?.user;
-        return user ? { id: user.userId, email: user.email, isOwner: user.isOwner } : null;
+        return user
+          ? {
+              id: user.userId,
+              email: user.email,
+              isOwner: user.isOwner,
+              permissionProfiles: [...user.permissionProfiles],
+              operations: OPERATIONS.filter((operation) => security.can(operation)),
+            }
+          : null;
       },
     },
     Setup: {
