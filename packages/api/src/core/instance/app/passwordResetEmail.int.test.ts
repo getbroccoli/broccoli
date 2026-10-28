@@ -21,7 +21,7 @@ test("emails a reset link at the saved origin to a user with a password", async 
 
   expect(mail.messages).toMatchObject([
     {
-      template: "password_reset",
+      template: { name: "password_reset" },
       values: { resetLink: "https://saved.example.com/reset-password#reset-token" },
       to: TEST_OWNER.email,
       fromName: "Broccoli",

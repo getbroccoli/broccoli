@@ -8,6 +8,8 @@ import type { SecretBox } from "../../secrets";
 import type { SecurityContext } from "../../security";
 import {
   createMailer,
+  type EmailTemplate,
+  escapeHtml,
   MailRefusedError,
   type Mailer,
   type MailTransport,
@@ -109,7 +111,7 @@ export function createMailSettings({
       }
       try {
         const { messageId } = await saved.mailer.send({
-          template: "test_email",
+          template: TEST_EMAIL_TEMPLATE,
           values: {},
           to: owner.email,
           fromName: "Broccoli",
@@ -159,6 +161,14 @@ async function readSavedMailer(
     linkOrigin: publicOrigin ?? linkOrigin ?? "",
   };
 }
+
+const TEST_EMAIL_TEMPLATE: EmailTemplate<Record<string, never>> = {
+  name: "test_email",
+  render: () => {
+    const body = "This test email shows that Broccoli can send email with your settings.";
+    return { subject: "Broccoli can send email", text: body, html: `<p>${escapeHtml(body)}</p>` };
+  },
+};
 
 /** Longest provider reason shown to the owner. */
 const MAX_REASON_LENGTH = 300;

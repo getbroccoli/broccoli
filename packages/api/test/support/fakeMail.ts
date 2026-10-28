@@ -7,7 +7,7 @@ import type {
 
 export interface FakeMail {
   transports: MailTransport[];
-  messages: MailMessage[];
+  messages: MailMessage<unknown>[];
   verifiedUrls: string[];
   verificationError: MailRefusedError | null;
   sendError: MailRefusedError | null;

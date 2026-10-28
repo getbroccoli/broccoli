@@ -242,7 +242,7 @@ test("sends the test email to the owner through the saved SMTP server", async ({
   ]);
   expect(mail.messages).toMatchObject([
     {
-      template: "test_email",
+      template: { name: "test_email" },
       values: {},
       to: OWNER.user!.email,
       fromName: "Broccoli",

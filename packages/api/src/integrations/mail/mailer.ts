@@ -1,27 +1,37 @@
-import { renderTemplate } from "./templates";
 import { createResendMailer } from "./resendMailer";
 import { createSmtpMailer } from "./smtpMailer";
 
 /** Sends one of Broccoli's emails, rendered from its template. */
 export interface Mailer {
   /** Throws `MailRefusedError` when the provider refused or could not be reached. */
-  send(message: MailMessage): Promise<{ messageId: string | null }>;
+  send<Values>(message: MailMessage<Values>): Promise<{ messageId: string | null }>;
 }
 
-/** One email: the template and its values, and who it goes to and comes from. */
-export type MailMessage = {
+/** One email: its template and values, and who it goes to and comes from. */
+export interface MailMessage<Values> {
+  template: EmailTemplate<Values>;
+  values: Values;
   to: string;
   replyTo?: string;
   /** The sender's display name, used as it is. */
   fromName: string;
   /** Makes a retried send of the same email a no-op where the provider supports it. */
   idempotencyKey: string;
-} & TemplateValues;
+}
 
-/** Each template with the values it fills in. */
-export type TemplateValues =
-  | { template: "password_reset"; values: { resetLink: string } }
-  | { template: "test_email"; values: Record<string, never> };
+/** One of Broccoli's emails; the code that sends it owns its copy. */
+export interface EmailTemplate<Values> {
+  /** Names the email, such as `password_reset`. */
+  name: string;
+  /** The subject, plain text and simple HTML; escape values in the HTML with `escapeHtml`. */
+  render(values: Values): RenderedEmail;
+}
+
+export interface RenderedEmail {
+  subject: string;
+  text: string;
+  html: string;
+}
 
 /** Where a self-hosted instance sends its email: the owner's SMTP server or their Resend key. */
 export type MailTransport =
@@ -34,22 +44,15 @@ export function createMailer(transport: MailTransport): Mailer {
     transport.kind === "smtp_server" ? createSmtpMailer(transport) : createResendMailer(transport);
   return {
     send: ({ template, values, ...envelope }) =>
-      deliver({
-        ...envelope,
-        ...renderTemplate({ template, values } as TemplateValues),
-        from: transport.from,
-      }),
+      deliver({ ...envelope, ...template.render(values), from: transport.from }),
   };
 }
 
 /** A rendered email ready for a provider. */
-export interface OutgoingMail {
+export interface OutgoingMail extends RenderedEmail {
   from: string;
   fromName: string;
   to: string;
   replyTo?: string;
   idempotencyKey: string;
-  subject: string;
-  text: string;
-  html: string;
 }

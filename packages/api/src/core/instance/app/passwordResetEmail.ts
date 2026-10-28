@@ -5,7 +5,7 @@ import type { JobHandlers, JobQueue } from "../../jobs";
 import type { Logger } from "../../logger";
 import type { SecretBox } from "../../secrets";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
-import { MailRefusedError } from "../../../integrations/mail";
+import { type EmailTemplate, escapeHtml, MailRefusedError } from "../../../integrations/mail";
 import { readPasswordUserEmail } from "../db";
 import type { MailSettings } from "./mailSettings";
 
@@ -81,7 +81,7 @@ export function createPasswordResetEmail({
           const token = secretBox.decrypt(encryptedToken);
           try {
             const { messageId } = await saved.mailer.send({
-              template: "password_reset",
+              template: PASSWORD_RESET_TEMPLATE,
               values: { resetLink: `${saved.linkOrigin}/reset-password#${token}` },
               to: email,
               fromName: "Broccoli",
@@ -103,3 +103,20 @@ export function createPasswordResetEmail({
     },
   };
 }
+
+const PASSWORD_RESET_TEMPLATE: EmailTemplate<{ resetLink: string }> = {
+  name: "password_reset",
+  render: ({ resetLink }) => {
+    const intro = "Someone asked to reset the password of your Broccoli account.";
+    const expiry = "The link works once, for one hour. If it wasn't you, ignore this email.";
+    return {
+      subject: "Reset your Broccoli password",
+      text: [intro, `Choose a new password: ${resetLink}`, expiry].join("\n\n"),
+      html: [
+        `<p>${escapeHtml(intro)}</p>`,
+        `<p><a href="${escapeHtml(resetLink)}">Choose a new password</a></p>`,
+        `<p>${escapeHtml(expiry)}</p>`,
+      ].join("\n"),
+    };
+  },
+};
