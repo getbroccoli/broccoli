@@ -94,9 +94,10 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
         await setPermissionProfile({
           variables: { input: { id: employee.id, profile, changeReason } },
         });
-        // The change may be the caller's own, so what they may do is read again.
-        await apolloClient.resetStore();
+        // The change may be the caller's own, so what they may do is read again, the route
+        // first: a query they may no longer run is refused while the cache refetches.
         await router.invalidate();
+        await apolloClient.resetStore().catch(() => undefined);
       }
       cancel();
     } catch (failed) {
