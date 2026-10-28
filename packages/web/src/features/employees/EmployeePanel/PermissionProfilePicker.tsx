@@ -50,7 +50,7 @@ export function PermissionProfilePicker({
       <DropdownMenuContent align="start">
         <DropdownMenuRadioGroup value={value} onValueChange={(next: string) => onChange(next)}>
           {ASSIGNABLE.map((profile) => (
-            <DropdownMenuRadioItem key={profile} value={profile}>
+            <DropdownMenuRadioItem key={profile} value={profile} closeOnClick>
               {field.format(profile)}
             </DropdownMenuRadioItem>
           ))}
