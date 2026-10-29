@@ -72,6 +72,8 @@ it("summarises one changed field with its stored labels instead of ids", () => {
     newValue: "00000000-0000-4000-8000-000000000002",
     oldLabel: "Robin Reed",
     newLabel: "Taylor Brook",
+    oldHidden: false,
+    newHidden: false,
   };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
@@ -84,6 +86,27 @@ it("summarises one changed field with its stored labels instead of ids", () => {
   });
 });
 
+it("shows Hidden for a hidden old reference while keeping the visible new label", () => {
+  const change = {
+    field: "manager",
+    oldValue: null,
+    oldLabel: null,
+    oldHidden: true,
+    newValue: "00000000-0000-4000-8000-000000000002",
+    newLabel: "Taylor Brook",
+    newHidden: false,
+  };
+
+  const summary = summaryOf({ ...line, changes: [change] }, description);
+
+  expect(summary).toEqual({
+    kind: "changed",
+    label: "Manager",
+    oldValue: "Hidden",
+    newValue: "Taylor Brook",
+  });
+});
+
 it("formats both values using the changed field's formatter", () => {
   const change = {
     field: "startDate",
@@ -91,6 +114,8 @@ it("formats both values using the changed field's formatter", () => {
     newValue: "2025-02-07",
     oldLabel: null,
     newLabel: null,
+    oldHidden: false,
+    newHidden: false,
   };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
@@ -110,6 +135,8 @@ it("keeps a missing old value null when a field is set", () => {
     newValue: "2025-01-06",
     oldLabel: null,
     newLabel: null,
+    oldHidden: false,
+    newHidden: false,
   };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
@@ -129,6 +156,8 @@ it("keeps a missing new value null when a field is cleared", () => {
     newValue: null,
     oldLabel: null,
     newLabel: null,
+    oldHidden: false,
+    newHidden: false,
   };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
@@ -148,6 +177,8 @@ it("labels an unknown field in sentence case and leaves its values unformatted",
     newValue: "002",
     oldLabel: null,
     newLabel: null,
+    oldHidden: false,
+    newHidden: false,
   };
 
   const summary = summaryOf({ ...line, changes: [change] }, description);
@@ -168,8 +199,18 @@ it("summarises several changed fields with their labels in change order", () => 
       newValue: "Lead designer",
       oldLabel: null,
       newLabel: null,
+      oldHidden: false,
+      newHidden: false,
     },
-    { field: "costCenter", oldValue: null, newValue: "002", oldLabel: null, newLabel: null },
+    {
+      field: "costCenter",
+      oldValue: null,
+      newValue: "002",
+      oldLabel: null,
+      newLabel: null,
+      oldHidden: false,
+      newHidden: false,
+    },
   ];
 
   const summary = summaryOf({ ...line, changes }, description);
@@ -179,8 +220,24 @@ it("summarises several changed fields with their labels in change order", () => 
 
 it("names a created record from its title field's new value", () => {
   const changes = [
-    { field: "jobTitle", oldValue: null, newValue: "Designer", oldLabel: null, newLabel: null },
-    { field: "firstName", oldValue: null, newValue: "Avery", oldLabel: null, newLabel: null },
+    {
+      field: "jobTitle",
+      oldValue: null,
+      newValue: "Designer",
+      oldLabel: null,
+      newLabel: null,
+      oldHidden: false,
+      newHidden: false,
+    },
+    {
+      field: "firstName",
+      oldValue: null,
+      newValue: "Avery",
+      oldLabel: null,
+      newLabel: null,
+      oldHidden: false,
+      newHidden: false,
+    },
   ];
 
   const summary = summaryOf({ ...line, operation: "CREATED", changes }, description);
@@ -200,7 +257,15 @@ it("leaves a created record's title null when its title field is missing", () =>
 
 it("names a deleted record from its title field's old value", () => {
   const changes = [
-    { field: "firstName", oldValue: "Avery", newValue: null, oldLabel: null, newLabel: null },
+    {
+      field: "firstName",
+      oldValue: "Avery",
+      newValue: null,
+      oldLabel: null,
+      newLabel: null,
+      oldHidden: false,
+      newHidden: false,
+    },
   ];
 
   const summary = summaryOf({ ...line, operation: "DELETED", changes }, description);
@@ -266,6 +331,8 @@ const line: Parameters<typeof summaryOf>[0] = {
       newValue: "Lead designer",
       oldLabel: null,
       newLabel: null,
+      oldHidden: false,
+      newHidden: false,
     },
   ],
 };

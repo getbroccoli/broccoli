@@ -75,6 +75,10 @@ type FieldChange {
   oldLabel: String
   "What newValue showed then, for a value that is an id, such as a manager's name; null for other fields."
   newLabel: String
+  "True when oldValue named a record the signed-in user may not read; oldValue and oldLabel are then null."
+  oldHidden: Boolean!
+  "True when newValue named a record the signed-in user may not read; newValue and newLabel are then null."
+  newHidden: Boolean!
 }
 
 type RecordChangeEdge {

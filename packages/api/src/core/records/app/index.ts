@@ -10,4 +10,6 @@ export {
   type RecordTypeRegistration,
   type RecordTypeRegistry,
   type RecordHistoryReader,
+  type VisibleFieldChange,
+  type VisibleHistoryLine,
 } from "./recordHistory";

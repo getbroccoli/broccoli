@@ -8,6 +8,7 @@ import {
   readRecordAccess,
   type RecordHistoryReader,
   type RecordTypeRegistry,
+  type VisibleFieldChange,
 } from "../app";
 import type { HistoryLine, RecordType } from "../domain";
 
@@ -43,6 +44,17 @@ export function createResolvers(
         { cacheKeyFn: keyOf },
       ),
   );
+  // Every line that leaves the API, from a history page or a mutation, hides what its reader may not see.
+  const visibleChanges = perRequest(
+    (context) =>
+      new DataLoader<HistoryLine, VisibleFieldChange[], string>(
+        async (lines) =>
+          (await reader.hideOutOfScopeReferences(context.getActor(), lines)).map(
+            ({ changes }) => changes,
+          ),
+        { cacheKeyFn: (line) => line.id },
+      ),
+  );
   // `AnyRecord.access` on each registered type, one read per type and request however many
   // records a list holds; core cannot name the types statically.
   const accessResolvers = Object.fromEntries(
@@ -74,6 +86,7 @@ export function createResolvers(
     },
     RecordChange: {
       record: (line, _args, context) => records(context).load(line),
+      changes: (line, _args, context) => visibleChanges(context).load(line),
     },
     AnyRecord: {
       // A module names its GraphQL type in its registration; core cannot list them statically.

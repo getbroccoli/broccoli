@@ -39,7 +39,7 @@ For an action on a record, the caller's grants for that object that list the act
 Every read takes one of three shapes:
 
 - **Page**: the list query adds `inRecordScope(scope, subjectColumn)` before its limit, so search, order, cursor and `hasNextPage` see only records in scope. It refuses a caller with no grant (`"none"`).
-- **Batch**: records loaded by id keep those whose subject `isInRecordScope`. A batch about related records, such as each employee's manager, checks both the records asked about and the records returned. Records inside another result are hidden, never refused.
+- **Batch**: records loaded by id keep those whose subject `isInRecordScope`. A batch about related records, such as each employee's manager, checks both the records asked about and the records returned. Records inside another result are hidden, never refused: so are a history line's values that name a record the reader may not read, which show as hidden (`oldHidden`/`newHidden`) while the line stays.
 - **Single**: `requireInScope` on the record's subject.
 
 A write checks its write grant, and its result shows the record only when the caller may also read it; otherwise the record is null and the write still happens.
@@ -51,5 +51,5 @@ A write checks its write grant, and its result shows the record only when the ca
 - **Add an operation**: add it to `OPERATIONS` in `permissions.ts` and to the `Operation` enum in `core/graphql/schema.graphql`, give it to the profiles that hold it, and add its refusal message to `OPERATION_REFUSALS`. Use cases call `ctx.require("…")`.
 - **Add an object**: add it to `PermissionObjects`, give `ADMIN` a grant over every action on `all`, give `EMPLOYEE` only what it needs, and register the record type with `permissions: { object, editableFields }` so `AnyRecord.access` works.
 - **Add an action**, such as `approve`: add it to `RecordAction` and list it in the grants that allow it. No grant gets a new action by itself.
-- **Add a record type**: register it with `subjectsOf(ids)` (each existing record's subject, or `"public"`) and `loadRecords(ids)`; core then decides its history, `RecordChange.record` and `AnyRecord.access`. Its list query adds `inRecordScope(await ctx.recordScope(object, "read"), subjectColumn)`; its write results go through the read scope. Creating a record with a subject checks `requireInScope(object, "create", subject)`.
+- **Add a record type**: register it with `subjectsOf(ids)` (each existing record's subject, or `"public"`), `loadRecords(ids)` and, when a change field holds another record's id, `references` (`{ manager: "employee" }`); core then decides its history, `RecordChange.record` and `AnyRecord.access`. Its list query adds `inRecordScope(await ctx.recordScope(object, "read"), subjectColumn)`; its write results go through the read scope. Creating a record with a subject checks `requireInScope(object, "create", subject)`.
 - **Add a scope**: add it to `Scope` and resolve it in `PrincipalSecurityContext.reachedBy`, the one place lists and single checks share, through `EmployeeDirectory`: the employees module answers who is above and below whom.

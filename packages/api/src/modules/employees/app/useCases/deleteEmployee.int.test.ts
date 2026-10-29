@@ -45,7 +45,7 @@ test("removing a manager clears them from every report with a history line", asy
       recordType: "employee",
       recordId: report.id,
       operation: "UPDATED",
-      cause: { kind: "MANAGER_REMOVED", ref: manager.id },
+      cause: { kind: "MANAGER_REMOVED", ref: null },
       reason: null,
       changes: [
         {

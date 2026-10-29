@@ -8,7 +8,9 @@ import {
   WEBP,
 } from "#test/support";
 
+import { createRecordHistoryReader } from "../../../../core/records";
 import type { Grant } from "../../../../core/security";
+import { employeeRecordType } from "..";
 
 test("lists the caller and everyone below them in the reporting line", async ({ orm, seed }) => {
   const { mia, ann, leo } = await reportingLine(seed);
@@ -186,6 +188,83 @@ test("updates an unreadable report but returns neither the employee nor the hist
   ]);
 });
 
+test("hides the caller's out-of-scope manager in their history", async ({ orm, seed }) => {
+  const { mia } = await reportingLine(seed);
+  const ctx = signedIn(orm, { employeeId: mia.id, grants: [READ_SELF, READ_REPORTS] });
+  const employees = employeeUseCases(orm);
+  await employees.updateEmployee(OWNER, { id: mia.id, managerId: null });
+  const reader = createRecordHistoryReader(orm, { employee: employeeRecordType(orm) });
+
+  const page = await employees.readEmployeeHistory(ctx, mia.id, {});
+  const visible = await reader.hideOutOfScopeReferences(
+    ctx,
+    page.edges.map(({ node }) => node),
+  );
+
+  expect(visible).toMatchObject([
+    {
+      recordId: mia.id,
+      changes: [
+        {
+          field: "manager",
+          oldValue: null,
+          oldLabel: null,
+          oldHidden: true,
+          newValue: null,
+          newLabel: null,
+          newHidden: false,
+        },
+      ],
+    },
+  ]);
+});
+
+test("hides the caller's out-of-scope manager in an update's returned history line", async ({
+  orm,
+  seed,
+}) => {
+  const { mia } = await reportingLine(seed);
+  const ctx = signedIn(orm, {
+    employeeId: mia.id,
+    grants: [
+      READ_SELF,
+      READ_REPORTS,
+      {
+        key: "employee.update.self",
+        object: "employee",
+        actions: ["update"],
+        scope: "self",
+        fields: ["managerId"],
+      },
+    ],
+  });
+  const reader = createRecordHistoryReader(orm, { employee: employeeRecordType(orm) });
+
+  const { historyLine } = await employeeUseCases(orm).updateEmployee(ctx, {
+    id: mia.id,
+    managerId: null,
+  });
+  expect(historyLine).not.toBeNull();
+  const visible = await reader.hideOutOfScopeReferences(ctx, [historyLine!]);
+
+  expect(visible).toMatchObject([
+    {
+      recordId: mia.id,
+      changes: [
+        {
+          field: "manager",
+          oldValue: null,
+          oldLabel: null,
+          oldHidden: true,
+          newValue: null,
+          newLabel: null,
+          newHidden: false,
+        },
+      ],
+    },
+  ]);
+});
+
 test("deleting a manager returns only readable report history while storing every report's line", async ({
   orm,
   seed,
@@ -216,7 +295,7 @@ test("deleting a manager returns only readable report history while storing ever
     {
       recordId: ann.id,
       operation: "UPDATED",
-      cause: { kind: "MANAGER_REMOVED", ref: boss.id },
+      cause: { kind: "MANAGER_REMOVED", ref: null },
       changes: [{ field: "manager", oldValue: boss.id, newValue: null }],
     },
   ]);

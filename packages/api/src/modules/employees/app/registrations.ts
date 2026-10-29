@@ -13,7 +13,7 @@ declare module "../../../core/records" {
     employee: true;
   }
   interface CauseKinds {
-    /** The person's manager was removed, so they have none. */
+    /** The person's manager was removed, so they have none; the line's `manager` change names them. No ref. */
     MANAGER_REMOVED: true;
     /** An admin invited the person to sign in, or made them a new link; the ref is the invite. */
     INVITE_SENT: true;
