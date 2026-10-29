@@ -49,7 +49,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 - [ ] Joining lands on the person's own panel; the navigation shows People and Your profile, no Settings, and People has no checkboxes or Sign-in column. Their own first and last name are editable, nothing else.
 - [ ] Signing out and in again at `/login` with the new password works.
 - [ ] The same link again, a cancelled one, a replaced one and `/invite#nonsense` all show "This invite link no longer works" with "Already joined? Sign in".
-- [ ] An expired link shows the same; to expire one, run `update invites set expires_at = now() - interval '1 minute' where accepted_at is null;` in the dev database.
+- [ ] An expired link shows the same; to expire one, run `update employee_invites set expires_at = now() - interval '1 minute' where accepted_at is null;` in the dev database.
 - [ ] On a managed workspace, `/login` shows "Joined by invite?" and the email and password form under the accounts button; an invited person signs in there.
 
 ## Removing

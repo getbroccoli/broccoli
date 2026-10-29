@@ -6,7 +6,7 @@ import { employees } from "./employeesTable";
 
 /** Invites to sign in, one open (not accepted, cancelled or replaced) per employee; expiry is a time, not a state. */
 export const invites = pgTable(
-  "invites",
+  "employee_invites",
   {
     id: uuid("id")
       .primaryKey()
@@ -15,7 +15,7 @@ export const invites = pgTable(
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
-    tokenHash: text("token_hash").notNull().unique("invites_token_hash_unique"),
+    tokenHash: text("token_hash").notNull().unique("employee_invites_token_hash_unique"),
     profiles: text("profiles")
       .array()
       .$type<"ADMIN"[]>()
@@ -34,8 +34,8 @@ export const invites = pgTable(
   },
   (table) => [
     // Serves the cascade when a person is deleted; the partial index skips closed invites.
-    index("invites_employee_idx").on(table.employeeId),
-    uniqueIndex("invites_one_open_per_employee")
+    index("employee_invites_employee_idx").on(table.employeeId),
+    uniqueIndex("employee_invites_one_open_per_employee")
       .on(table.employeeId)
       .where(
         sql`${table.acceptedAt} is null and ${table.cancelledAt} is null and ${table.replacedAt} is null`,

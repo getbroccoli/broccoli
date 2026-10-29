@@ -38,8 +38,8 @@ test("never stores a copied token in plain text", async ({ orm, seed }) => {
 
   const token = new URL(sent!.link!).hash.slice(1);
   const rows = await orm
-    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
-    .from(sql`invites`);
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+    .from(sql`employee_invites`);
   expect(rows).toHaveLength(1);
   expect(Object.values(rows[0]!.row)).not.toContain(token);
   expect(JSON.stringify(rows)).not.toContain(token);
@@ -87,8 +87,8 @@ test("replaces the open invite and writes one history line per send", async ({ o
 
   expect(second!.link).not.toBe(first!.link);
   const rows = await orm
-    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
-    .from(sql`invites`)
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+    .from(sql`employee_invites`)
     .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
   expect(rows).toHaveLength(1);
   expect(rows[0]!.row).toMatchObject({ employee_id: employee.id });
@@ -149,8 +149,8 @@ test("keeps the open invite's profiles when a new link names none", async ({ orm
   await service.send(owner, { employeeIds: [employee.id] }, "https://copy.example.com");
 
   const rows = await orm
-    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
-    .from(sql`invites`)
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+    .from(sql`employee_invites`)
     .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
   expect(rows).toHaveLength(1);
   expect(rows[0]!.row).toMatchObject({ profiles: ["ADMIN"] });
@@ -173,8 +173,8 @@ test("a new link with profiles [] gives none", async ({ orm, seed }) => {
   );
 
   const rows = await orm
-    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
-    .from(sql`invites`)
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+    .from(sql`employee_invites`)
     .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
   expect(rows).toHaveLength(1);
   expect(rows[0]!.row).toMatchObject({ profiles: [] });
@@ -192,8 +192,8 @@ test("two sends for one person at once leave one open invite", async ({ orm, see
 
   expect(sent.map((invites) => invites.length)).toEqual([1, 1]);
   const rows = await orm
-    .select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` })
-    .from(sql`invites`)
+    .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+    .from(sql`employee_invites`)
     .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
   expect(rows).toHaveLength(1);
   expect(rows[0]!.row).toMatchObject({ employee_id: employee.id });
@@ -213,7 +213,9 @@ test("skips a person who already joined", async ({ orm, seed }) => {
     state: "joined",
   });
   expect(
-    await orm.select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` }).from(sql`invites`),
+    await orm
+      .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+      .from(sql`employee_invites`),
   ).toEqual([]);
 });
 
@@ -232,7 +234,9 @@ test("skips a person whose email already belongs to an account", async ({ orm, s
     emailHasAccount: true,
   });
   expect(
-    await orm.select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` }).from(sql`invites`),
+    await orm
+      .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+      .from(sql`employee_invites`),
   ).toEqual([]);
 });
 
@@ -249,7 +253,9 @@ test("skips demo employees", async ({ orm, seed }) => {
   ).toEqual([]);
 
   expect(
-    await orm.select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` }).from(sql`invites`),
+    await orm
+      .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+      .from(sql`employee_invites`),
   ).toEqual([]);
 });
 
@@ -271,7 +277,9 @@ test("refuses invites while the demo runs", async ({ orm, seed }) => {
   ).rejects.toMatchObject({ code: "CONFLICT" });
 
   expect(
-    await orm.select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` }).from(sql`invites`),
+    await orm
+      .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+      .from(sql`employee_invites`),
   ).toEqual([]);
 });
 
@@ -301,7 +309,9 @@ test.for([
   ).rejects.toMatchObject({ code: "INVALID_INPUT" });
 
   expect(
-    await orm.select({ row: sql<Record<string, unknown>>`to_jsonb(invites)` }).from(sql`invites`),
+    await orm
+      .select({ row: sql<Record<string, unknown>>`to_jsonb(employee_invites)` })
+      .from(sql`employee_invites`),
   ).toEqual([]);
 });
 

@@ -1,5 +1,5 @@
 {
-  "id": "d9c943f1-f9e5-42d1-be22-c9c193ee7613",
+  "id": "c70592e5-0e3d-4044-9c24-bbaa5c8327fb",
   "prevId": "794f59f4-8827-4fe5-8d56-8cc032296108",
   "version": "7",
   "dialect": "postgresql",
@@ -1041,8 +1041,8 @@
       },
       "isRLSEnabled": false
     },
-    "public.invites": {
-      "name": "invites",
+    "public.employee_invites": {
+      "name": "employee_invites",
       "schema": "",
       "columns": {
         "id": {
@@ -1128,8 +1128,8 @@
         }
       },
       "indexes": {
-        "invites_employee_idx": {
-          "name": "invites_employee_idx",
+        "employee_invites_employee_idx": {
+          "name": "employee_invites_employee_idx",
           "columns": [
             {
               "expression": "employee_id",
@@ -1143,8 +1143,8 @@
           "method": "btree",
           "with": {}
         },
-        "invites_one_open_per_employee": {
-          "name": "invites_one_open_per_employee",
+        "employee_invites_one_open_per_employee": {
+          "name": "employee_invites_one_open_per_employee",
           "columns": [
             {
               "expression": "employee_id",
@@ -1154,25 +1154,25 @@
             }
           ],
           "isUnique": true,
-          "where": "\"invites\".\"accepted_at\" is null and \"invites\".\"cancelled_at\" is null and \"invites\".\"replaced_at\" is null",
+          "where": "\"employee_invites\".\"accepted_at\" is null and \"employee_invites\".\"cancelled_at\" is null and \"employee_invites\".\"replaced_at\" is null",
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "invites_employee_id_employees_id_fk": {
-          "name": "invites_employee_id_employees_id_fk",
-          "tableFrom": "invites",
+        "employee_invites_employee_id_employees_id_fk": {
+          "name": "employee_invites_employee_id_employees_id_fk",
+          "tableFrom": "employee_invites",
           "tableTo": "employees",
           "columnsFrom": ["employee_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "invites_invited_by_user_id_user_id_fk": {
-          "name": "invites_invited_by_user_id_user_id_fk",
-          "tableFrom": "invites",
+        "employee_invites_invited_by_user_id_user_id_fk": {
+          "name": "employee_invites_invited_by_user_id_user_id_fk",
+          "tableFrom": "employee_invites",
           "tableTo": "user",
           "columnsFrom": ["invited_by_user_id"],
           "columnsTo": ["id"],
@@ -1182,8 +1182,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "invites_token_hash_unique": {
-          "name": "invites_token_hash_unique",
+        "employee_invites_token_hash_unique": {
+          "name": "employee_invites_token_hash_unique",
           "nullsNotDistinct": false,
           "columns": ["token_hash"]
         }
