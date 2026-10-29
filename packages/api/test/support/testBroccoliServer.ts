@@ -23,7 +23,7 @@ export interface TestBroccoliServerOptions {
   /** Defaults to a new temporary folder, removed when the server stops. */
   dataDir?: string;
   /** Starts a managed instance; unset is self-hosted. */
-  managed?: { instanceId: string; accountsUrl: string };
+  managed?: { instanceId: string; accountsUrl: string; mailRelayUrl?: string };
   publicUrl?: string;
   brandLookupUrl?: string | null;
   decisionsUrl?: string;
@@ -60,6 +60,7 @@ export async function startTestBroccoliServer(
         mode: "managed",
         instanceId: managed.instanceId,
         accountsOrigin: managed.accountsUrl,
+        mailRelayUrl: managed.mailRelayUrl ?? "http://127.0.0.1:9",
       }
     : { mode: "self_hosted", publicUrl };
   const server = await startServer(

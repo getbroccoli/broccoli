@@ -39,6 +39,7 @@ export type {
   SetupDemo,
   AiSettings,
   OriginalFileReader,
+  InstanceMailer,
   MailIntegration,
   MailSettings,
   PasswordResetEmail,

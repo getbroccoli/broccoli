@@ -1,8 +1,9 @@
 import type { Orm } from "../../../../core/db";
 import type { JobHandlers } from "../../../../core/jobs";
+import type { InstanceMailer } from "../../../../core/instance";
 import type { Logger } from "../../../../core/logger";
 import type { SecretBox } from "../../../../core/secrets";
-import { MailRefusedError, type Mailer } from "../../../../integrations/mail";
+import { MailRefusedError } from "../../../../integrations/mail";
 import { employeeRepository, inviteRepository } from "../../db";
 import { inviteLink, isOpen } from "../../domain";
 import { INVITE_TEMPLATE } from "./invite.email";
@@ -27,7 +28,7 @@ export function sendInviteJob({
   orm: Orm;
   logger: Logger;
   secretBox: SecretBox;
-  readMailer: () => Promise<{ mailer: Mailer; linkOrigin: string } | null>;
+  readMailer: () => Promise<InstanceMailer | null>;
   readCompanyName: () => Promise<string>;
 }): JobHandlers {
   const invites = inviteRepository(orm);
@@ -67,7 +68,7 @@ export function sendInviteJob({
               expiresAt: invite.expiresAt,
             },
             to: invite.email,
-            fromName: inviter?.name ? `${inviter.name} via ${companyName}` : companyName,
+            fromName: senderName(inviter?.name ?? null, companyName, saved.sendsThroughBroccoli),
             idempotencyKey: inviteId,
           });
           logger.info({ inviteId, messageId }, "Invite email sent");
@@ -85,4 +86,10 @@ export function sendInviteJob({
       },
     },
   };
+}
+
+/** The invite comes from the inviter; Broccoli's relay adds "via Broccoli" itself. */
+function senderName(inviterName: string | null, companyName: string, viaBroccoli: boolean) {
+  if (!inviterName) return companyName;
+  return viaBroccoli ? inviterName : `${inviterName} via ${companyName}`;
 }

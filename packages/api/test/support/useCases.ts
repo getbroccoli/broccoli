@@ -96,7 +96,12 @@ export function aiSettings(
     dataDir,
     deployment:
       mode === "managed"
-        ? { mode, instanceId: "test-instance", accountsOrigin: "https://accounts.example.com" }
+        ? {
+            mode,
+            instanceId: "test-instance",
+            accountsOrigin: "https://accounts.example.com",
+            mailRelayUrl: "http://127.0.0.1:9",
+          }
         : { mode },
     broccoliAiUrl: url,
     openRouter: { url, key: environmentKey },
@@ -108,10 +113,12 @@ export function mailSettings(
   {
     mode = "self_hosted",
     publicUrl,
+    mailRelayUrl = "http://127.0.0.1:9",
     mail = fakeMail(),
   }: {
     mode?: Mode;
     publicUrl?: string;
+    mailRelayUrl?: string;
     mail?: Parameters<typeof createMailSettings>[0]["mail"];
   } = {},
 ): MailSettings {
@@ -121,7 +128,12 @@ export function mailSettings(
     secretBox: TEST_SECRET_BOX,
     deployment:
       mode === "managed"
-        ? { mode, instanceId: "test-instance", accountsOrigin: "https://accounts.example.com" }
+        ? {
+            mode,
+            instanceId: "test-instance",
+            accountsOrigin: "https://accounts.example.com",
+            mailRelayUrl,
+          }
         : { mode, publicUrl },
     logger: createLogger("silent"),
     resendApiUrl: "http://127.0.0.1:9",
@@ -131,7 +143,7 @@ export function mailSettings(
 
 export function passwordResetEmail(
   orm: Orm,
-  options: { mail: Parameters<typeof createMailSettings>[0]["mail"]; publicUrl?: string },
+  options: NonNullable<Parameters<typeof mailSettings>[1]>,
 ) {
   const sentJobs: {
     name: "instance.sendPasswordResetEmail";
@@ -157,14 +169,14 @@ export function passwordResetEmail(
 
 export function employeeInviteService(
   orm: Orm,
-  { mail = fakeMail() }: { mail?: Parameters<typeof createMailSettings>[0]["mail"] } = {},
+  options: NonNullable<Parameters<typeof mailSettings>[1]> = {},
 ) {
   const sentJobs: { name: "employees.sendInvite"; payload: Jobs["employees.sendInvite"] }[] = [];
   const service = createEmployeeInviteService({
     orm,
     transact: testTransactor(orm),
     secretBox: TEST_SECRET_BOX,
-    mailSettings: mailSettings(orm, { mail }),
+    mailSettings: mailSettings(orm, options),
     readCompany: (ctx) => readStoredCompany(ctx, orm),
     logger: createLogger("silent"),
     jobs: {

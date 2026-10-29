@@ -27,7 +27,6 @@ export function createSmtpMailer({ url }: { url: string }) {
       const info = await transport.sendMail({
         from: { name: mail.fromName, address: mail.from },
         to: mail.to,
-        replyTo: mail.replyTo,
         subject: mail.subject,
         text: mail.text,
         html: mail.html,

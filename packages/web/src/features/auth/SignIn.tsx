@@ -18,8 +18,7 @@ export function SignIn() {
         {t("auth.managed.joinedByInvite")}
         <span className="h-px flex-1 bg-border" />
       </div>
-      <LoginForm forgotPassword={false} passwordChanged={false} />
-      <p className="text-sm text-muted-foreground">{t("auth.managed.askAdmin")}</p>
+      <LoginForm forgotPassword={passwordResetByEmail} passwordChanged={reset === "done"} />
     </div>
   ) : (
     <LoginForm forgotPassword={passwordResetByEmail} passwordChanged={reset === "done"} />

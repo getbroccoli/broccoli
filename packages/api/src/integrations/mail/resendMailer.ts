@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { readText, urlUnder } from "../../utils";
 import { MailRefusedError } from "./mailRefusedError";
+import { parseJson } from "./parseJson";
 import type { OutgoingMail } from "./mailer";
 
 /** Sends through Resend's API at `apiUrl` with the owner's key. */
@@ -19,7 +20,6 @@ export function createResendMailer({ apiUrl, key }: { apiUrl: string; key: strin
         body: JSON.stringify({
           from: `"${mail.fromName.replaceAll('"', "")}" <${mail.from}>`,
           to: [mail.to],
-          reply_to: mail.replyTo,
           subject: mail.subject,
           text: mail.text,
           html: mail.html,
@@ -46,11 +46,3 @@ const MAX_ANSWER_BYTES = 64 * 1024;
 
 const sentSchema = z.object({ id: z.string() });
 const resendErrorSchema = z.object({ message: z.string() });
-
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}

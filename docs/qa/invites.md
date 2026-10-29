@@ -52,6 +52,17 @@ A manual check of inviting people from People, by email and by copied link, and 
 - [ ] An expired link shows the same; to expire one, run `update employee_invites set expires_at = now() - interval '1 minute' where accepted_at is null;` in the dev database.
 - [ ] On a managed workspace, `/login` shows "Joined by invite?" and the email and password form under the accounts button; an invited person signs in there.
 
+## Managed: email through Broccoli
+
+On a managed workspace created through the website, inviting a real mailbox you can read:
+
+- [ ] The modal shows the note and "Emailed by Broccoli." under it; no mail settings are needed.
+- [ ] A note with a link (`https://…` or `www.…`) shows "Links can't go in the note. Share them once the person has joined." and nobody is invited.
+- [ ] The invite arrives from "<your name> via Broccoli" at `noreply@notifications.getbroccoli.com`, with no reply-to, and the message headers show SPF, DKIM and DMARC passing.
+- [ ] Its link opens the invite page on the workspace's own address; joining works as above.
+- [ ] Signed out, `/login` offers "Forgot password?" under the email form; the invited person gets the reset email from "Broccoli" and the new password works.
+- [ ] The owner's own address gets no reset email: the owner signs in through the accounts service.
+
 ## Removing
 
 - [ ] Removing a person who joined signs them out: their next request in the second browser lands on `/login`.
