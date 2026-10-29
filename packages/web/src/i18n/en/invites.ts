@@ -37,12 +37,11 @@ export const invitesEn = {
   "invites.dialog.failed": "Couldn't create the invites. Try again.",
   "invites.dialog.sent": "{count} invites sent",
   "invites.dialog.sentOne": "Invite sent",
-  "invites.links.title": "{count} invite links ready",
-  "invites.links.titleOne": "Invite link ready",
+  "invites.links.title": "{count} invite links",
+  "invites.links.titleOne": "Invite link for {name}",
   "invites.links.detail":
-    "Send each person their own link, in Slack, Teams or your email. Each works once, until {date}.",
-  "invites.links.warning":
-    "Copy them now. We keep only a fingerprint of each link, so we can't show them again. Lost one? Make a new link.",
+    "Each works once, until {date}. Copy them now; they won't be shown again.",
+  "invites.links.detailOne": "Works once, until {date}. Copy it now; it won't be shown again.",
   "invites.links.copy": "Copy link",
   "invites.links.copied": "Copied",
   "invites.links.copyAll": "Copy all as a list",

@@ -23,7 +23,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 
 - [ ] Save "No email" in Settings before checking copied links; a fresh `pnpm dev` instance already sends through Mailpit.
 - [ ] Invite opens "Invite 2 people", lists both under "Gets an invite", and offers Permissions: Employee (checked, fixed) and Admin. There is no note.
-- [ ] "Create 2 invite links" shows "2 invite links ready", the date the links stop working, the warning that they show only now, Copy link per person, "Copy all as a list" and Done. "Copy all as a list" copies "Name: link" lines.
+- [ ] "Create 2 invite links" shows "2 invite links", one line with the date the links stop working and that they show only now, Copy link per person, "Copy all as a list" and Done. "Copy all as a list" copies "Name: link" lines.
 - [ ] The Sign-in column shows "Pending · expires in 7 days" for both.
 - [ ] Inviting a pending person again shows "gets a new link; the old one stops working"; afterwards the old link shows "This invite link no longer works".
 
@@ -38,7 +38,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 ## The person's panel
 
 - [ ] The header shows only name and job title. The Work email card shows the sign-in state beside its label on one line, with a dot (grey, amber, red when not sent or expired, green when joined); only "not sent" or "expired" is spelled out, the expiry shows on hover, and its invite action beside the address: "Send invite" when not invited, a quiet "Resend" while pending, "Resend invite" when not sent or expired, none once joined. Each opens the invite dialog for that person.
-- [ ] The ⋯ menu offers "Copy invite link" (copies a new link and says until when it works) and, while an invite is pending, "Cancel invite".
+- [ ] The ⋯ menu offers "Copy invite link" (opens "Invite link for <name>" with the date it stops working, Copy link and Done) and, while an invite is pending, "Cancel invite".
 - [ ] "Cancel invite" shows "Invite cancelled"; the state becomes "Not invited" and the link stops working.
 - [ ] History shows "Invited", "Invite cancelled" and "Joined" lines with Sign-in: Not invited → Pending → Joined.
 
