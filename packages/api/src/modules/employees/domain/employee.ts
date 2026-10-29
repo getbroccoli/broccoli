@@ -18,7 +18,7 @@ export interface Employee {
   /** Work email, lowercased; unique. */
   email: string;
   jobTitle: string | null;
-  /** First working day. */
+  /** First working day: the start of their first employment. */
   startDate: CalendarDate | null;
   /** The file holding their avatar, or null. */
   avatarFileId: string | null;

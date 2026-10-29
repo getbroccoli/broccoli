@@ -1,9 +1,8 @@
 import { sql } from "drizzle-orm";
-import { boolean, date, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { user } from "../../../core/auth";
 import { files } from "../../../core/files";
-import type { CalendarDate } from "../../../utils";
 
 export const employees = pgTable(
   "employees",
@@ -15,7 +14,6 @@ export const employees = pgTable(
     lastName: text("last_name").notNull(),
     email: text("email").notNull().unique("employees_email_unique"),
     jobTitle: text("job_title"),
-    startDate: date("start_date", { mode: "string" }).$type<CalendarDate>(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /** The employee owns this file and deletes it with the employee. */
     avatarFileId: uuid("avatar_file_id").references(() => files.id),

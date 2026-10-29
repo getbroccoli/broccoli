@@ -1,5 +1,6 @@
 import { employeeUseCases, expect, OWNER, recordChangedEvents, test } from "#test/support";
 
+import { addDays, todayInUtc } from "../../../../utils";
 import type { EmployeeUseCases } from ".";
 
 test("sets a person's manager and records their id and name", async ({ orm, seed }) => {
@@ -30,6 +31,30 @@ test("sets a person's manager and records their id and name", async ({ orm, seed
       },
     ],
   });
+});
+
+test("shows the manager of a person who starts next month", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: addDays(todayInUtc(), 30) });
+  const manager = await seed.employee();
+  const employees = employeeUseCases(orm);
+
+  await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
+
+  expect(await managerOf(employees, employee.id)).toEqual(manager);
+});
+
+test("keeps the manager when the start date moves", async ({ orm, seed }) => {
+  const today = todayInUtc();
+  const employee = await seed.employee({ startDate: addDays(today, -30) });
+  const manager = await seed.employee();
+  const employees = employeeUseCases(orm);
+  await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
+  const startDate = addDays(today, 30);
+
+  await employees.updateEmployee(OWNER, { id: employee.id, startDate });
+
+  expect(await managerOf(employees, employee.id)).toEqual(manager);
+  expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ startDate });
 });
 
 test("changes a manager and records both managers' ids and names", async ({ orm, seed }) => {
@@ -198,6 +223,22 @@ test("refuses a manager who reports through two levels without changing the repo
   expect(await managerOf(employees, robin.id)).toEqual(avery);
   expect(await managerOf(employees, taylor.id)).toEqual(robin);
   expect((await employees.readEmployeeHistory(OWNER, avery.id, {})).edges).toEqual([]);
+});
+
+test("refuses a loop through a manager who starts next month", async ({ orm, seed }) => {
+  const avery = await seed.employee();
+  const robin = await seed.employee({ startDate: addDays(todayInUtc(), 30) });
+  const taylor = await seed.employee();
+  const employees = employeeUseCases(orm);
+  await employees.updateEmployee(OWNER, { id: avery.id, managerId: robin.id });
+  await employees.updateEmployee(OWNER, { id: robin.id, managerId: taylor.id });
+
+  await expect(
+    employees.updateEmployee(OWNER, { id: taylor.id, managerId: avery.id }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "managerId", code: "loop" }],
+  });
 });
 
 async function managerOf(employees: EmployeeUseCases, id: string) {

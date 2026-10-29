@@ -1,8 +1,9 @@
-import { and, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { user } from "../../../core/auth";
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { Employee, Invite } from "../domain";
+import { EMPLOYEE_COLUMNS } from "./employeeRepository";
 import { employees } from "./employeesTable";
 import { invites } from "./invitesTable";
 
@@ -105,7 +106,7 @@ export function inviteRepository(db: Orm | Tx): InviteRepository {
     },
 
     findInvitees: async (employeeIds) => {
-      const { isDemo, ...employeeColumns } = getTableColumns(employees);
+      const { isDemo, ...employeeColumns } = EMPLOYEE_COLUMNS;
       return (
         orm()
           .select({

@@ -9,6 +9,7 @@ import {
   or,
   sql,
   type SQL,
+  type SQLWrapper,
 } from "drizzle-orm";
 import { z } from "zod";
 
@@ -28,7 +29,7 @@ import { user } from "../../../core/auth";
 import { deleteFiles, storeFile } from "../../../core/files";
 import { inRecordScope, type RecordScope } from "../../../core/security";
 import type { KeysetQuery, KeysetRow } from "../../../core/pagination";
-import type { RasterImage } from "../../../utils";
+import type { CalendarDate, RasterImage } from "../../../utils";
 import {
   EmailTakenError,
   type Employee,
@@ -37,6 +38,7 @@ import {
   type NewEmployee,
 } from "../domain";
 import { employees } from "./employeesTable";
+import { employments } from "./employmentsTable";
 
 /** Employees stored in Postgres, through the pool or inside a transaction. */
 export interface EmployeeRepository {
@@ -47,9 +49,8 @@ export interface EmployeeRepository {
   /** Inserts employees, skipping emails another employee has; returns the inserted ones. */
   insertSkippingTakenEmails(newEmployees: readonly EmployeeRow[]): Promise<Employee[]>;
   /**
-   * Changes an employee's fields in one statement and returns the employee before and after it,
-   * as Postgres replaced it under the row's lock; null when no employee has the id. Throws
-   * `EmailTakenError` like `insert`.
+   * Changes an employee's fields under the row's lock and returns the employee before and after;
+   * null when no employee has the id. Throws `EmailTakenError` like `insert`.
    */
   update(
     id: string,
@@ -115,7 +116,8 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
   return {
     insert: async (newEmployee: EmployeeRow): Promise<Employee> => {
       try {
-        const [employee] = await orm().insert(employees).values(newEmployee).returning();
+        const inserted = await orm().insert(employees).values(newEmployee).returning();
+        const [employee] = await openEmployments(orm(), inserted, [newEmployee]);
         return employee!;
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
@@ -132,7 +134,8 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         rows.push({ ...employee, avatarFileId, isDemo: true });
       }
       try {
-        return await orm().insert(employees).values(rows).returning();
+        const inserted = await orm().insert(employees).values(rows).returning();
+        return await openEmployments(orm(), inserted, rows);
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
@@ -141,31 +144,49 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]) => {
       const inserted: Employee[] = [];
       for (let start = 0; start < newEmployees.length; start += INSERT_BATCH_SIZE) {
+        const batch = newEmployees.slice(start, start + INSERT_BATCH_SIZE);
         const rows = await orm()
           .insert(employees)
-          .values(newEmployees.slice(start, start + INSERT_BATCH_SIZE))
+          .values(batch)
           .onConflictDoNothing({ target: employees.email })
           .returning();
-        inserted.push(...rows);
+        inserted.push(...(await openEmployments(orm(), rows, batch)));
       }
       return inserted;
     },
 
     update: async (id: string, changes: Partial<NewEmployee>) => {
-      try {
-        const [row] = await orm()
-          .update(employees)
-          .set(changes)
-          .where(eq(employees.id, id))
-          .returning({ ...EMPLOYEE_COLUMNS, ...OLD_EMPLOYEE_COLUMNS });
-        return row ? beforeAndAfter(row) : null;
-      } catch (error) {
-        throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
+      const { startDate, ...fields } = changes;
+      const [before] = await orm()
+        .select(EMPLOYEE_COLUMNS)
+        .from(employees)
+        .where(eq(employees.id, id))
+        .for("update", { of: employees });
+      if (!before) {
+        return null;
       }
+      if (Object.keys(fields).length > 0) {
+        try {
+          await orm().update(employees).set(fields).where(eq(employees.id, id));
+        } catch (error) {
+          throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
+        }
+      }
+      if (startDate !== undefined) {
+        await orm()
+          .update(employments)
+          .set({ startDate })
+          .where(sql`${employments.id} = (${firstEmploymentOf(id)})`);
+      }
+      // The changes are normalised as stored, so the stored employee is the old one with them.
+      return { before, after: { ...before, ...changes } };
     },
 
     delete: async (id: string): Promise<Employee | null> => {
-      const [employee] = await orm().delete(employees).where(eq(employees.id, id)).returning();
+      const [employee] = await orm()
+        .delete(employees)
+        .where(eq(employees.id, id))
+        .returning(EMPLOYEE_COLUMNS);
       if (employee?.avatarFileId) {
         await deleteFiles(db, [employee.avatarFileId]);
       }
@@ -177,7 +198,10 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     findById: async (id: string): Promise<Employee | null> => {
-      const [employee] = await orm().select().from(employees).where(eq(employees.id, id));
+      const [employee] = await orm()
+        .select(EMPLOYEE_COLUMNS)
+        .from(employees)
+        .where(eq(employees.id, id));
       return employee ?? null;
     },
 
@@ -196,7 +220,10 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     findByUserId: async (userId) => {
-      const [employee] = await orm().select().from(employees).where(eq(employees.userId, userId));
+      const [employee] = await orm()
+        .select(EMPLOYEE_COLUMNS)
+        .from(employees)
+        .where(eq(employees.userId, userId));
       return employee ?? null;
     },
 
@@ -221,7 +248,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
     findByIds: (ids: readonly string[]) =>
       orm()
-        .select()
+        .select(EMPLOYEE_COLUMNS)
         .from(employees)
         .where(sql`${employees.id} = any(${sql.param([...ids])}::uuid[])`),
 
@@ -234,7 +261,8 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       return rows.map(({ email }) => email);
     },
 
-    findWithAvatars: () => orm().select().from(employees).where(isNotNull(employees.avatarFileId)),
+    findWithAvatars: () =>
+      orm().select(EMPLOYEE_COLUMNS).from(employees).where(isNotNull(employees.avatarFileId)),
 
     hasAny: () => exists(orm(), sql`true`),
 
@@ -254,7 +282,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         columns.map(({ expression }, index) => [`key${index}`, expression]),
       );
       const rows = await orm()
-        .select({ employee: employees, ...keys })
+        .select({ employee: EMPLOYEE_COLUMNS, ...keys })
         .from(employees)
         .where(
           sql.join(
@@ -276,25 +304,16 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
   };
 }
 
-const EMPLOYEE_COLUMNS = getTableColumns(employees);
-
-/** Every column as `UPDATE … RETURNING` saw it before the update (Postgres 18), as `old_<key>`. */
-const OLD_EMPLOYEE_COLUMNS = Object.fromEntries(
-  Object.entries(EMPLOYEE_COLUMNS).map(([key, column]) => [
-    `old_${key}`,
-    sql.raw(`old.${column.name}`).mapWith(column),
-  ]),
-);
-
-/** Splits a row of `EMPLOYEE_COLUMNS` and `OLD_EMPLOYEE_COLUMNS` into the employee before and after. */
-function beforeAndAfter(row: Record<string, unknown>): { before: Employee; after: Employee } {
-  const employeeWith = (prefix: string) =>
-    // The keys are the table's own columns, so the object is a stored employee.
-    Object.fromEntries(
-      Object.keys(EMPLOYEE_COLUMNS).map((key) => [key, row[`${prefix}${key}`]]),
-    ) as unknown as Employee;
-  return { before: employeeWith("old_"), after: employeeWith("") };
-}
+/**
+ * Every column, and the start date: the start of the first employment, an unknown start counting
+ * as the earliest.
+ */
+export const EMPLOYEE_COLUMNS = {
+  ...getTableColumns(employees),
+  startDate: sql`(${firstEmploymentOf(employees.id, employments.startDate)})`.mapWith(
+    employments.startDate,
+  ),
+};
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
@@ -302,6 +321,9 @@ const INSERT_BATCH_SIZE = 1_000;
 /** A new employee as stored, with the columns only the module itself sets. */
 type EmployeeRow = NewEmployee &
   Partial<Pick<Employee, "avatarFileId" | "userId">> & { isDemo?: boolean };
+
+/** An employee row as the table holds it, without the start date its employments hold. */
+type StoredEmployee = typeof employees.$inferSelect;
 
 async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {
   const rows = await orm.select({ id: employees.id }).from(employees).where(condition).limit(1);
@@ -325,7 +347,7 @@ function keysetColumns({ field, direction }: EmployeeOrder): KeysetOrder {
       // As ISO text, whatever the DateStyle: it sorts like the date, and node-postgres
       // would turn a date into a JS Date.
       return keysetOrder(
-        nullsLast(sql`to_char(${employees.startDate}, 'YYYY-MM-DD')`, descending),
+        nullsLast(sql`to_char(${EMPLOYEE_COLUMNS.startDate}, 'YYYY-MM-DD')`, descending),
         id,
         descending,
       );
@@ -338,4 +360,39 @@ function matches(search: string): SQL {
     ilike(sql`${employees.firstName} || ' ' || ${employees.lastName}`, pattern),
     ilike(employees.email, pattern),
   )!;
+}
+
+/**
+ * Opens an open-ended employment for each inserted employee, starting on the start date of the
+ * row that inserted them, and returns them as employees.
+ */
+async function openEmployments(
+  orm: ReturnType<typeof ormOf>,
+  inserted: StoredEmployee[],
+  rows: readonly EmployeeRow[],
+): Promise<Employee[]> {
+  const startDates = new Map<string, CalendarDate | null>();
+  for (const { email, startDate } of rows) {
+    // The first row with an email is the one inserted; a later one was skipped.
+    if (!startDates.has(email)) {
+      startDates.set(email, startDate);
+    }
+  }
+  const created = inserted.map((employee) => ({
+    ...employee,
+    startDate: startDates.get(employee.email) ?? null,
+  }));
+  if (created.length > 0) {
+    await orm
+      .insert(employments)
+      .values(created.map(({ id, startDate }) => ({ employeeId: id, startDate })));
+  }
+  return created;
+}
+
+/** A query for the id, or `column`, of the employee's first employment. */
+function firstEmploymentOf(employeeId: string | SQLWrapper, column: SQLWrapper = employments.id) {
+  return sql`select ${column} from ${employments}
+    where ${employments.employeeId} = ${employeeId}
+    order by ${employments.startDate} nulls first limit 1`;
 }
