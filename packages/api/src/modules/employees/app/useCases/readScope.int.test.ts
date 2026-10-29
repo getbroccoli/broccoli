@@ -73,6 +73,23 @@ test("reads the avatar of a report in scope", async ({ orm, seed }) => {
   expect(avatar).toEqual({ content: WEBP, mimeType: "image/webp" });
 });
 
+test("reads a shared avatar when any employee using it is in scope", async ({ orm, seed }) => {
+  const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
+  await seed.employee({ firstName: "Zed", avatarFileId });
+  const mia = await seed.employee({ firstName: "Mia" });
+  const ann = await seed.employee({ firstName: "Ann", avatarFileId });
+  await seed.manager(ann.id, mia.id);
+  const ctx = signedIn(orm, {
+    profiles: ["EMPLOYEE"],
+    employeeId: mia.id,
+    grants: [READ_SELF, READ_REPORTS],
+  });
+
+  const avatar = await employeeUseCases(orm).readAvatar(ctx, avatarFileId);
+
+  expect(avatar).toEqual({ content: WEBP, mimeType: "image/webp" });
+});
+
 test("refuses the avatar of an employee out of scope", async ({ orm, seed }) => {
   const avatarFileId = await seed.file({ content: WEBP, mimeType: "image/webp" });
   const mia = await seed.employee({ firstName: "Mia" });
@@ -177,6 +194,43 @@ test("updates an unreadable report but returns neither the employee nor the hist
   const history = await employees.readEmployeeHistory(OWNER, ann.id, {});
   expect(history.edges.map(({ node }) => node.changes)).toEqual([
     [{ field: "jobTitle", oldValue: null, newValue: "Lead" }],
+  ]);
+});
+
+test("deleting a manager returns only readable report history while storing every report's line", async ({
+  orm,
+  seed,
+}) => {
+  const boss = await seed.employee({ firstName: "Boss" });
+  const ann = await seed.employee({ firstName: "Ann" });
+  const mia = await seed.employee({ firstName: "Mia" });
+  await seed.manager(ann.id, boss.id);
+  await seed.manager(mia.id, boss.id);
+  const ctx = signedIn(orm, {
+    profiles: ["EMPLOYEE"],
+    employeeId: mia.id,
+    grants: [
+      READ_SELF,
+      { key: "employee.delete.all", object: "employee", actions: ["delete"], scope: "all" },
+    ],
+  });
+  const employees = employeeUseCases(orm);
+
+  const result = await employees.deleteEmployee(ctx, { id: boss.id });
+
+  expect(result.deletedEmployeeId).toBe(boss.id);
+  expect(await employees.readEmployee(OWNER, boss.id)).toBeNull();
+  expect(result.reportHistoryLines.map(({ recordId }) => recordId)).toEqual([mia.id]);
+  const ownHistory = await employees.readEmployeeHistory(ctx, mia.id, {});
+  expect(result.reportHistoryLines).toEqual(ownHistory.edges.map(({ node }) => node));
+  const annHistory = await employees.readEmployeeHistory(OWNER, ann.id, {});
+  expect(annHistory.edges.map(({ node }) => node)).toMatchObject([
+    {
+      recordId: ann.id,
+      operation: "UPDATED",
+      cause: { kind: "MANAGER_REMOVED", ref: boss.id },
+      changes: [{ field: "manager", oldValue: boss.id, newValue: null }],
+    },
   ]);
 });
 

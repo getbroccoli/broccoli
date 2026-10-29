@@ -81,8 +81,8 @@ export interface EmployeeRepository {
   findWithAvatars(): Promise<Employee[]>;
   hasAny(): Promise<boolean>;
   hasDemo(): Promise<boolean>;
-  /** The employee whose avatar is this file; null when it is nobody's. */
-  findIdByAvatar(fileId: string): Promise<string | null>;
+  /** The employees whose avatar is this file. */
+  findIdsByAvatar(fileId: string): Promise<string[]>;
   /** Up to `limit` employees after `after`, with their sort values as Postgres computed them. */
   findPage(query: EmployeePageQuery): Promise<KeysetRow<Employee, unknown[]>[]>;
 }
@@ -240,13 +240,12 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
     hasDemo: () => exists(orm(), eq(employees.isDemo, true)),
 
-    findIdByAvatar: async (fileId: string) => {
-      const [row] = await orm()
+    findIdsByAvatar: async (fileId: string) => {
+      const rows = await orm()
         .select({ id: employees.id })
         .from(employees)
-        .where(eq(employees.avatarFileId, fileId))
-        .limit(1);
-      return row?.id ?? null;
+        .where(eq(employees.avatarFileId, fileId));
+      return rows.map(({ id }) => id);
     },
 
     findPage: async ({ order, after, limit, search, scope }: EmployeePageQuery) => {
