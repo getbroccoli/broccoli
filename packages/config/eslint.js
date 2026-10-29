@@ -12,6 +12,25 @@ const MAX_LINES_PER_FILE = 300;
 // Letters and digits only: camelCase, or PascalCase for React components and their folders.
 const CAMEL_OR_PASCAL_CASE = "+([a-zA-Z0-9])";
 
+// RULE1 and RULE10 in docs/code-quality.md.
+const RESTRICTED_SYNTAX = [
+  {
+    selector: "ExportAllDeclaration",
+    message: "List each export by name, so index.ts states the module's contract.",
+  },
+  {
+    selector:
+      "ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeReference[typeName.name='ReturnType']",
+    message: "Declare the contract as an exported interface and have the factory return it.",
+  },
+];
+
+// RULE68 in docs/code-quality.md.
+const EMAIL_TEMPLATE_OUTSIDE_EMAIL_FILE = {
+  selector: "VariableDeclarator[id.typeAnnotation.typeAnnotation.typeName.name='EmailTemplate']",
+  message: "Put an email template in its own <name>.email.ts file next to the code that sends it.",
+};
+
 /**
  * Builds the shared ESLint flat config for one package.
  * @param {string} packageDir Absolute path of the package, used to find its tsconfig.json.
@@ -31,21 +50,12 @@ export function eslintConfig(packageDir) {
           "error",
           { max: MAX_LINES_PER_FILE, skipBlankLines: true, skipComments: true },
         ],
-        // RULE1 and RULE10 in docs/code-quality.md.
-        "no-restricted-syntax": [
-          "error",
-          {
-            selector: "ExportAllDeclaration",
-            message: "List each export by name, so index.ts states the module's contract.",
-          },
-          {
-            selector:
-              "ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeReference[typeName.name='ReturnType']",
-            message:
-              "Declare the contract as an exported interface and have the factory return it.",
-          },
-        ],
+        "no-restricted-syntax": ["error", ...RESTRICTED_SYNTAX, EMAIL_TEMPLATE_OUTSIDE_EMAIL_FILE],
       },
+    },
+    {
+      files: ["**/*.email.ts"],
+      rules: { "no-restricted-syntax": ["error", ...RESTRICTED_SYNTAX] },
     },
     {
       files: ["**/*.js"],
