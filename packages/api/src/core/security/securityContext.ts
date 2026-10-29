@@ -14,6 +14,7 @@ import {
   type Scope,
   type Subject,
 } from "./permissions";
+import { isInRecordScope } from "./recordScope";
 
 /**
  * Who is calling application code, and what they may do. Every business function
@@ -141,6 +142,8 @@ export class PrincipalSecurityContext implements SecurityContext {
   private ownersEmployeeId: Promise<string | null> | undefined;
   private effective: EffectiveProfile | undefined;
   private readonly scopes = new Map<string, Promise<RecordScope>>();
+  private reports: Promise<{ id: string; depth: number }[]> | undefined;
+  private managers: Promise<Map<string, string[]>> | undefined;
 
   /** A signed-in user; built by `resolveSecurityContext`, and by tests with other profiles. */
   static user(
@@ -206,13 +209,11 @@ export class PrincipalSecurityContext implements SecurityContext {
   }
 
   recordScope(object: PermissionObject, action: RecordAction): Promise<RecordScope> {
-    const key = `${object}.${action}`;
-    let scope = this.scopes.get(key);
-    if (!scope) {
-      scope = this.resolveScope(this.isSystem ? "all" : this.grants(object, action), action);
-      this.scopes.set(key, scope);
-    }
-    return scope;
+    if (this.isSystem) return Promise.resolve("all");
+    return this.resolveScope(
+      this.grants(object, action).map(({ scope }) => scope),
+      action,
+    );
   }
 
   async requireInScope(
@@ -283,28 +284,37 @@ export class PrincipalSecurityContext implements SecurityContext {
   }
 
   /**
-   * The subjects these grants reach for the action; "all" for system or a grant on `all`. Every
-   * object has employee subjects today: an object about another kind resolves its scopes here.
+   * The subjects these scopes reach together for the action, read once per context. Every object
+   * has employee subjects today: an object about another kind resolves its scopes here.
    */
-  private async resolveScope(
-    grants: readonly Grant[] | "all",
-    action: RecordAction,
-  ): Promise<RecordScope> {
-    if (grants === "all" || grants.some(({ scope }) => scope === "all")) return "all";
-    if (grants.length === 0) return "none";
-    const scopes = new Set(grants.map(({ scope }) => scope));
+  private resolveScope(scopes: readonly Scope[], action: RecordAction): Promise<RecordScope> {
+    const held = new Set(scopes);
+    const key = `${action === "read"}:${[...held].sort().join()}`;
+    let resolved = this.scopes.get(key);
+    if (!resolved) {
+      resolved = this.reachedBy(held, action);
+      this.scopes.set(key, resolved);
+    }
+    return resolved;
+  }
+
+  private async reachedBy(scopes: ReadonlySet<Scope>, action: RecordAction): Promise<RecordScope> {
+    if (scopes.has("all")) return "all";
+    if (scopes.size === 0) return "none";
+    // Public records: every read grant reaches them, only grants on `all` write them.
     const reached = new Set<Subject>(action === "read" ? ["public"] : []);
     const employeeId = this.user?.employeeId;
     if (!employeeId) return [...reached];
     if (scopes.has("self")) reached.add(employeeId);
     if (scopes.has("direct_reports") || scopes.has("all_reports")) {
-      for (const { id, depth } of await this.directory!.reportsBelow(employeeId)) {
+      this.reports ??= this.directory!.reportsBelow(employeeId);
+      for (const { id, depth } of await this.reports) {
         if (depth === 1 || scopes.has("all_reports")) reached.add(id);
       }
     }
     if (scopes.has("managers")) {
-      const above = await this.directory!.managersAbove([employeeId]);
-      for (const id of above.get(employeeId) ?? []) reached.add(id);
+      this.managers ??= this.directory!.managersAbove([employeeId]);
+      for (const id of (await this.managers).get(employeeId) ?? []) reached.add(id);
     }
     return [...reached];
   }
@@ -318,54 +328,33 @@ export class PrincipalSecurityContext implements SecurityContext {
     return (await this.actionsOnEach(object, [subject], actions)).get(subject)!;
   }
 
-  /** `actionsOn` for each subject, by subject, reading the reporting line once for them all. */
+  /** `actionsOn` for each subject, by subject; each grant's scope is resolved once for them all. */
   private async actionsOnEach(
     object: PermissionObject,
     subjects: readonly Subject[],
     actions: readonly RecordAction[],
   ): Promise<Map<Subject, Map<RecordAction, "*" | readonly string[]>>> {
-    if (this.isSystem) {
-      return new Map(subjects.map((subject) => [subject, new Map(actions.map((a) => [a, "*"]))]));
-    }
-    const grants = actions.map((action) => [action, this.grants(object, action)] as const);
-    const employeeId = this.user?.employeeId ?? null;
-    const needsLine = grants.some(([, held]) =>
-      held.some(({ scope }) => scope !== "all" && scope !== "self"),
+    const access = new Map(
+      subjects.map((subject) => [subject, new Map<RecordAction, "*" | readonly string[]>()]),
     );
-    // The subjects' lines answer the report scopes; the caller's own line answers `managers`.
-    const managersAbove =
-      employeeId && needsLine
-        ? await this.directory!.managersAbove([
-            ...subjects.filter((subject) => subject !== "public"),
-            employeeId,
-          ])
-        : new Map<string, string[]>();
-    const reaches = (scope: Scope, action: RecordAction, subject: Subject): boolean => {
-      if (scope === "all") return true;
-      if (subject === "public") return action === "read";
-      if (employeeId === null) return false;
-      if (scope === "self") return subject === employeeId;
-      if (scope === "managers") return (managersAbove.get(employeeId) ?? []).includes(subject);
-      const above = managersAbove.get(subject) ?? [];
-      return scope === "direct_reports" ? above[0] === employeeId : above.includes(employeeId);
-    };
-    return new Map(
-      subjects.map((subject) => {
-        const access = new Map<RecordAction, "*" | readonly string[]>();
-        for (const [action, held] of grants) {
-          for (const grant of held) {
-            if (!reaches(grant.scope, action, subject)) continue;
-            const before = access.get(action) ?? [];
-            const fields = grant.fields ?? [];
-            access.set(
-              action,
-              before === "*" || fields === "*" ? "*" : [...new Set([...before, ...fields])],
-            );
-          }
+    for (const action of actions) {
+      const grants: readonly Pick<Grant, "scope" | "fields">[] = this.isSystem
+        ? [{ scope: "all", fields: "*" }]
+        : this.grants(object, action);
+      for (const grant of grants) {
+        const scope = await this.resolveScope([grant.scope], action);
+        for (const [subject, held] of access) {
+          if (!isInRecordScope(scope, subject)) continue;
+          const before = held.get(action) ?? [];
+          const fields = grant.fields ?? [];
+          held.set(
+            action,
+            before === "*" || fields === "*" ? "*" : [...new Set([...before, ...fields])],
+          );
         }
-        return [subject, access];
-      }),
-    );
+      }
+    }
+    return access;
   }
 
   /** Whether the record is the owner's employee, which nobody deletes. */
