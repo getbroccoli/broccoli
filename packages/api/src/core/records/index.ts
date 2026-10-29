@@ -18,8 +18,6 @@ export type {
   RecordChanged,
   RecordTypeRegistration,
   RecordTypeRegistry,
-  VisibleFieldChange,
-  VisibleHistoryLine,
 } from "./app";
 export type {
   CauseKinds,
