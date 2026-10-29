@@ -28,10 +28,11 @@ export function EmailForm({ mail }: Props) {
   const [from, setFrom] = useState(startsFromMailpit ? MAILPIT.from : (mail.from ?? ""));
   // What is typed for the secret; null keeps the saved one, and Replace starts typing.
   const [newSecret, setNewSecret] = useState<string | null>(startsFromMailpit ? MAILPIT.url : null);
-  const [save, { loading: saving, error, payloadError }] =
+  const [save, { loading: saving, error, payloadError, reset }] =
     usePayloadMutation(SaveMailSettingsDocument);
   // A secret belongs to its provider, so another provider starts from an empty field.
   const selectSource = (next: MailSource) => {
+    reset();
     setSource(next);
     setNewSecret(null);
   };
