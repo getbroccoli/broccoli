@@ -14,6 +14,7 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 - **RULE6.** One React component per file. A component built from smaller components of its own is a folder named after it (`features/setup/SetupLayout/`), each component in its own file and `index.ts` exporting only what the rest of the code uses.
 - **RULE7.** A file has at most 300 lines, not counting blank lines and comments. `lint: max-lines`
 - **RULE8.** The repository root holds only files a tool requires there, plus `README.md`, `LICENSE`, `AGENTS.md` and `docs/` ([architecture §10](architecture.md#10-tooling-and-layout)).
+- **RULE68.** An email's template (its `EmailTemplate`: subject, text and HTML) sits alone in a `<name>.email.ts` file next to the code that sends it (`invite.email.ts`), so `**/*.email.ts` lists every email the product sends.
 
 ## Code shape
 

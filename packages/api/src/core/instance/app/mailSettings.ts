@@ -8,8 +8,6 @@ import type { SecretBox } from "../../secrets";
 import type { SecurityContext } from "../../security";
 import {
   createMailer,
-  type EmailTemplate,
-  escapeHtml,
   MailRefusedError,
   type Mailer,
   type MailTransport,
@@ -17,6 +15,7 @@ import {
 } from "../../../integrations/mail";
 import { instanceRepository } from "../db";
 import { decideMailSettings, type MailChoice, type MailConfig } from "../domain";
+import { TEST_EMAIL_TEMPLATE } from "./mailTest.email";
 
 /**
  * How a self-hosted instance sends email: the owner's SMTP server, their Resend key, or no email.
@@ -190,14 +189,6 @@ async function readSavedMailer(
     linkOrigin: publicOrigin ?? linkOrigin ?? "",
   };
 }
-
-const TEST_EMAIL_TEMPLATE: EmailTemplate<Record<string, never>> = {
-  name: "test_email",
-  render: () => {
-    const body = "This test email shows that Broccoli can send email with your settings.";
-    return { subject: "Broccoli can send email", text: body, html: `<p>${escapeHtml(body)}</p>` };
-  },
-};
 
 /** Longest provider reason shown to the owner. */
 const MAX_REASON_LENGTH = 300;

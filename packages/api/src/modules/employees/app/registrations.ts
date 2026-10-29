@@ -1,6 +1,6 @@
 // What this module adds to core's shared registries.
 
-import type { SendInviteJob } from "./invites/inviteEmail";
+import type { SendInviteJob } from "./invites/sendInviteJob";
 
 declare module "../../../core/jobs" {
   interface Jobs {

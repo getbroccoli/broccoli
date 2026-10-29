@@ -5,9 +5,10 @@ import type { JobHandlers, JobQueue } from "../../jobs";
 import type { Logger } from "../../logger";
 import type { SecretBox } from "../../secrets";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
-import { type EmailTemplate, escapeHtml, MailRefusedError } from "../../../integrations/mail";
+import { MailRefusedError } from "../../../integrations/mail";
 import { readPasswordUserEmail } from "../db";
 import type { MailSettings } from "./mailSettings";
+import { PASSWORD_RESET_TEMPLATE } from "./passwordReset.email";
 
 /**
  * Emails the link of Better Auth's password reset, from a job so every address answers alike and
@@ -103,20 +104,3 @@ export function createPasswordResetEmail({
     },
   };
 }
-
-const PASSWORD_RESET_TEMPLATE: EmailTemplate<{ resetLink: string }> = {
-  name: "password_reset",
-  render: ({ resetLink }) => {
-    const intro = "Someone asked to reset the password of your Broccoli account.";
-    const expiry = "The link works once, for one hour. If it wasn't you, ignore this email.";
-    return {
-      subject: "Reset your Broccoli password",
-      text: [intro, `Choose a new password: ${resetLink}`, expiry].join("\n\n"),
-      html: [
-        `<p>${escapeHtml(intro)}</p>`,
-        `<p><a href="${escapeHtml(resetLink)}">Choose a new password</a></p>`,
-        `<p>${escapeHtml(expiry)}</p>`,
-      ].join("\n"),
-    };
-  },
-};

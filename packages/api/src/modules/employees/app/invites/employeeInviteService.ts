@@ -28,7 +28,7 @@ import {
 } from "../../domain";
 import { employeeDirectory } from "../employeeDirectory";
 import { employeeNotFound } from "../useCases/employeeNotFound";
-import { sendInviteJob } from "./inviteEmail";
+import { sendInviteJob } from "./sendInviteJob";
 
 /** An admin's invites to sign in, from sending them to the person joining. */
 export interface EmployeeInviteService {
