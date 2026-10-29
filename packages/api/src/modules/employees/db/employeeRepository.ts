@@ -30,7 +30,7 @@ import { employees } from "./employeesTable";
 import { employmentRepository } from "./employmentRepository";
 import { employments } from "./employmentsTable";
 
-/** Employees stored in Postgres, through the pool or inside a transaction. */
+/** Employees stored in Postgres, through the pool or inside a transaction, which inserts need. */
 export interface EmployeeRepository {
   /** Throws `EmailTakenError` when another employee has the email. */
   insert(newEmployee: EmployeeRow): Promise<Employee>;
@@ -105,6 +105,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
   return {
     insert: async (newEmployee: EmployeeRow): Promise<Employee> => {
+      await employmentRepository(db).lockForWrites();
       try {
         const inserted = await orm().insert(employees).values(newEmployee).returning();
         const [employee] = await openEmployments(db, inserted, [newEmployee]);
@@ -123,6 +124,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         });
         rows.push({ ...employee, avatarFileId, isDemo: true });
       }
+      await employmentRepository(db).lockForWrites();
       try {
         const inserted = await orm().insert(employees).values(rows).returning();
         return await openEmployments(db, inserted, rows);
@@ -132,6 +134,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]) => {
+      await employmentRepository(db).lockForWrites();
       const inserted: Employee[] = [];
       for (let start = 0; start < newEmployees.length; start += INSERT_BATCH_SIZE) {
         const batch = newEmployees.slice(start, start + INSERT_BATCH_SIZE);
@@ -147,11 +150,15 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
     update: async (id: string, changes: Partial<NewEmployee>) => {
       const { startDate, ...fields } = changes;
+      if (startDate !== undefined) {
+        await employmentRepository(db).lockForWrites();
+      }
+      // Locked before it is read, so the read sees a start date committed while it waited.
+      await lockEmployees(orm(), [id]);
       const [before] = await orm()
         .select(EMPLOYEE_COLUMNS)
         .from(employees)
-        .where(eq(employees.id, id))
-        .for("update", { of: employees });
+        .where(eq(employees.id, id));
       if (!before) {
         return null;
       }
@@ -195,15 +202,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       return employee ?? null;
     },
 
-    lockByIds: async (ids) => {
-      // In id order, so two callers locking overlapping people cannot deadlock.
-      await orm()
-        .select({ id: employees.id })
-        .from(employees)
-        .where(inArray(employees.id, [...ids]))
-        .orderBy(employees.id)
-        .for("update");
-    },
+    lockByIds: (ids) => lockEmployees(orm(), ids),
 
     linkUser: async (id, userId) => {
       await orm().update(employees).set({ userId }).where(eq(employees.id, id));
@@ -365,4 +364,14 @@ async function openEmployments(
     created.map(({ id, startDate }) => ({ employeeId: id, startDate })),
   );
   return created;
+}
+
+async function lockEmployees(orm: ReturnType<typeof ormOf>, ids: readonly string[]) {
+  // In id order, so two callers locking overlapping people cannot deadlock.
+  await orm
+    .select({ id: employees.id })
+    .from(employees)
+    .where(inArray(employees.id, [...ids]))
+    .orderBy(employees.id)
+    .for("update");
 }

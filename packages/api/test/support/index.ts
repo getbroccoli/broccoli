@@ -73,6 +73,7 @@ export { createSetupOwner, finishSelfHostedSetup } from "./finishSelfHostedSetup
 
 export { EXAMPLE_RECORD, EXAMPLE_REGISTRATION } from "./exampleRecord";
 export { expectHistoryReplaysTo } from "./employeeHistory";
+export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";
 export { signedIn } from "./signedIn";
 

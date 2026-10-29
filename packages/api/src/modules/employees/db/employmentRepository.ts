@@ -12,6 +12,11 @@ export interface EmploymentRepository {
   ): Promise<void>;
   /** Holds back other manager changes until the caller commits, so two cannot form a loop together. */
   lockManagers(): Promise<void>;
+  /**
+   * Takes the table lock an employment write needs before the caller locks employee rows, the
+   * order manager changes and resets take theirs in, so they cannot deadlock.
+   */
+  lockForWrites(): Promise<void>;
   /** The direct manager of each employee's employment held on `date`; those without one are left out. */
   findManagerIds(employeeIds: readonly string[], date: CalendarDate): Promise<Map<string, string>>;
   /**
@@ -47,6 +52,10 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
 
     lockManagers: async () => {
       await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
+    },
+
+    lockForWrites: async () => {
+      await orm().execute(sql`lock table ${employments} in row exclusive mode`);
     },
 
     findManagerIds: async (employeeIds, date) => {

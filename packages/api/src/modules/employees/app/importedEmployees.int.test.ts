@@ -4,6 +4,7 @@ import { assert } from "vitest";
 import {
   recordChangedEvents,
   employeeUseCases,
+  expectBlockedBy,
   expectHistoryReplaysTo,
   expect,
   EMPLOYEE,
@@ -15,7 +16,7 @@ import {
 
 import { ormOf } from "../../../core/db";
 
-import { employeeRepository } from "../db";
+import { employeeRepository, employmentRepository } from "../db";
 import { parseNewEmployee } from "../domain";
 import { createImportedEmployees, deleteAllEmployees, findTakenEmails } from ".";
 
@@ -158,11 +159,14 @@ test("assigns avatars only to complete employees with untaken emails, keeping th
 });
 
 test("deleting all employees deletes their avatars", async ({ orm, seed, transact }) => {
-  await employeeRepository(orm).insert({
-    ...parseNewEmployee({ firstName: "Demo", lastName: "Employee", email: "demo@example.com" }),
-    avatarFileId: await seed.file({ content: PNG, mimeType: "image/png" }),
-    isDemo: true,
-  });
+  const avatarFileId = await seed.file({ content: PNG, mimeType: "image/png" });
+  await transact((tx) =>
+    employeeRepository(tx).insert({
+      ...parseNewEmployee({ firstName: "Demo", lastName: "Employee", email: "demo@example.com" }),
+      avatarFileId,
+      isDemo: true,
+    }),
+  );
   await seed.employee({ avatarFileId: await seed.file({ content: PNG, mimeType: "image/png" }) });
 
   await transact((tx) => deleteAllEmployees(OWNER, tx));
@@ -274,19 +278,7 @@ test("an employee created during a reset keeps its creation history", async ({ o
     }),
   ]);
   try {
-    let waiting = false;
-    for (let attempt = 0; attempt < 1_000 && !waiting; attempt++) {
-      const { rows } = await orm.execute<{ waiting: boolean }>(sql`
-        select exists (
-          select from pg_stat_activity
-          where datname = current_database()
-            and wait_event_type = 'Lock'
-            and ${blockingPid} = any(pg_blocking_pids(pid))
-        ) as waiting
-      `);
-      waiting = rows[0]!.waiting;
-    }
-    expect(waiting).toBe(true);
+    await expectBlockedBy(orm, blockingPid);
   } finally {
     releaseReset.resolve();
     await resetting;
@@ -302,4 +294,37 @@ test("an employee created during a reset keeps its creation history", async ({ o
     history.edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation })),
   ).toEqual([{ recordId: employee.id, operation: "CREATED" }]);
   await expectHistoryReplaysTo(orm, employee.id);
+});
+
+test("an employee created while a reset waits for the employees table does not deadlock it", async ({
+  orm,
+  transact,
+}) => {
+  const resetReady = Promise.withResolvers<number>();
+  const releaseReset = Promise.withResolvers<void>();
+  const resetting = transact(async (tx) => {
+    await employmentRepository(tx).lockManagers();
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    resetReady.resolve(rows[0]!.pid);
+    await releaseReset.promise;
+    await deleteAllEmployees(OWNER, tx);
+  });
+  const blockingPid = await resetReady.promise;
+
+  const results = Promise.allSettled([
+    resetting,
+    employeeUseCases(orm).createEmployee(OWNER, {
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+    }),
+  ]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseReset.resolve();
+    await results;
+  }
+
+  expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
 });

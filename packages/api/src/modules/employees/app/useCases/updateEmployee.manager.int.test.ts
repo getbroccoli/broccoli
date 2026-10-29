@@ -1,6 +1,17 @@
-import { employeeUseCases, expect, OWNER, recordChangedEvents, test } from "#test/support";
+import { sql } from "drizzle-orm";
 
+import {
+  employeeUseCases,
+  expect,
+  expectBlockedBy,
+  OWNER,
+  recordChangedEvents,
+  test,
+} from "#test/support";
+
+import { ormOf } from "../../../../core/db";
 import { addDays, todayInUtc } from "../../../../utils";
+import { employeeRepository, employmentRepository } from "../../db";
 import type { EmployeeUseCases } from ".";
 
 test("sets a person's manager and records their id and name", async ({ orm, seed }) => {
@@ -239,6 +250,43 @@ test("refuses a loop through a manager who starts next month", async ({ orm, see
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "managerId", code: "loop" }],
   });
+});
+
+test("a start date edit waiting for a manager change lets it finish", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee();
+  const manager = await seed.employee();
+  const startDate = addDays(todayInUtc(), 30);
+  const employees = employeeUseCases(orm);
+  const managerReady = Promise.withResolvers<number>();
+  const releaseManager = Promise.withResolvers<void>();
+  const managing = transact(async (tx) => {
+    await employmentRepository(tx).lockManagers();
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    managerReady.resolve(rows[0]!.pid);
+    await releaseManager.promise;
+    await employeeRepository(tx).lockByIds([employee.id]);
+    await employmentRepository(tx).setManager(employee.id, manager.id, todayInUtc());
+  });
+  const blockingPid = await managerReady.promise;
+
+  const results = Promise.allSettled([
+    managing,
+    employees.updateEmployee(OWNER, { id: employee.id, startDate }),
+  ]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseManager.resolve();
+    await results;
+  }
+
+  expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
+  expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ startDate });
+  expect(await managerOf(employees, employee.id)).toEqual(manager);
 });
 
 async function managerOf(employees: EmployeeUseCases, id: string) {
