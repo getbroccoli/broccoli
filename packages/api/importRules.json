@@ -1,6 +1,15 @@
 {
   "elements": {
     "src/main": ["src/core/env", "src/core/logger", "src/core/server", "src/modules"],
+    "src/configureDevelopmentMail": [
+      "src/core/db",
+      "src/core/env",
+      "src/core/events",
+      "src/core/instance",
+      "src/core/logger",
+      "src/core/secrets",
+      "src/core/security"
+    ],
     "src/externalAgentCode": [
       "src/core/applicationError",
       "src/core/db",

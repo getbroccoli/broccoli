@@ -130,6 +130,7 @@ Test design and execution belong in [testing.md](testing.md). UI verification st
 ## 11. Development environment
 
 - **Compose mirrors self-hosting**, with development overrides for source mounts and live reload. Each checkout or worktree has its own services, network and persistent development data; dynamically assigned ports allow parallel stacks.
+- **Development email works immediately.** Before printing its ready address, the development launcher configures Mailpit through the instance's mail settings service if no mail choice was saved. It preserves explicit choices and updates Mailpit links to the current development port. Settings shows the saved choice without browser-only defaults.
 - **Shutdown preserves data.** Database reset is explicit, and cleanup targets only identified abandoned checkouts. Integration and end-to-end tests use a separate disposable Postgres instance.
 
 Installation is in the [README](../README.md), setup in the [setup guide](guides/setup-guide.md), and test procedures in [testing.md](testing.md).

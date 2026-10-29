@@ -40,8 +40,7 @@ services:
       postgres:
         condition: service_healthy
 
-  # Catches the email Broccoli sends: Settings starts from smtp://mailpit:1025 in development,
-  # so "Check and save" there, then read the email at the address `pnpm dev` prints.
+  # `pnpm dev` configures fresh instances to send here before it prints the ready address.
   mailpit:
     image: axllent/mailpit:v1.31.4
     environment:

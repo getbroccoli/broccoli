@@ -53,6 +53,7 @@ trap 'exit 0' HUP INT TERM
 
 quiet compose up --detach --wait
 address=$(compose port web 5173)
+quiet compose exec -T api node_modules/.bin/tsx src/configureDevelopmentMail.ts "http://localhost:${address##*:}"
 green='' cyan='' reset=''
 if [ -t 1 ]; then
   green='\033[1;32m'

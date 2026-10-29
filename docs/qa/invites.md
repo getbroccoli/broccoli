@@ -21,6 +21,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 
 ## Copied links ("No email" in Settings)
 
+- [ ] Save "No email" in Settings before checking copied links; a fresh `pnpm dev` instance already sends through Mailpit.
 - [ ] Invite opens "Invite 2 people", lists both under "Gets an invite", and offers Permissions: Employee (checked, fixed) and Admin. There is no note.
 - [ ] "Create 2 invite links" shows "2 invite links ready", the date the links stop working, the warning that they show only now, Copy link per person, "Copy all as a list" and Done. "Copy all as a list" copies "Name: link" lines.
 - [ ] The Sign-in column shows "Pending · expires in 7 days" for both.
@@ -28,6 +29,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 
 ## By email (SMTP to Mailpit in Settings)
 
+- [ ] On a fresh `pnpm dev` instance, Invite offers email delivery without first visiting Settings.
 - [ ] Invite shows the note field, "It goes into every invite." and "Emailed from people@example.com · Change in Settings", and the buttons "Create links to copy" and "Send invite(s)".
 - [ ] "Send" closes with "Invite sent"; Mailpit receives "You're invited to Acme Corp on Broccoli" (or "<name> invited you…" when the inviter's account has a name) with the note, a "Join Acme Corp" link to `/invite#…`, the expiry date and, when the inviter has a name, "Questions? Ask <name> directly." It comes from "Acme Corp" <people@example.com>, with no Reply-To.
 - [ ] With Resend and a made-up key, the Sign-in column shows "Pending · not sent" after reloading People.

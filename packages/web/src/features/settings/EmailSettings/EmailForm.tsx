@@ -22,12 +22,10 @@ type Props = {
 
 /** The three ways to send email; saving an SMTP server first checks that it accepts the sign-in. */
 export function EmailForm({ mail }: Props) {
-  // `pnpm dev` runs Mailpit, so an instance that never chose starts from it there.
-  const startsFromMailpit = import.meta.env.DEV && mail.source === "NO_EMAIL" && mail.from === null;
-  const [source, setSource] = useState<MailSource>(startsFromMailpit ? "SMTP_SERVER" : mail.source);
-  const [from, setFrom] = useState(startsFromMailpit ? MAILPIT.from : (mail.from ?? ""));
+  const [source, setSource] = useState<MailSource>(mail.source);
+  const [from, setFrom] = useState(mail.from ?? "");
   // What is typed for the secret; null keeps the saved one, and Replace starts typing.
-  const [newSecret, setNewSecret] = useState<string | null>(startsFromMailpit ? MAILPIT.url : null);
+  const [newSecret, setNewSecret] = useState<string | null>(null);
   const [save, { loading: saving, error, payloadError, reset }] =
     usePayloadMutation(SaveMailSettingsDocument);
   // A secret belongs to its provider, so another provider starts from an empty field.
@@ -148,9 +146,6 @@ export function EmailForm({ mail }: Props) {
     </form>
   );
 }
-
-/** Mailpit in the `pnpm dev` stack, which accepts any sender. */
-const MAILPIT = { url: "smtp://mailpit:1025", from: "people@example.com" };
 
 function saveLabel(source: MailSource, saving: boolean) {
   if (source === "SMTP_SERVER") {
