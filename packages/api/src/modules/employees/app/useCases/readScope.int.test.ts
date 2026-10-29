@@ -13,7 +13,6 @@ import type { Grant } from "../../../../core/security";
 test("lists the caller and everyone below them in the reporting line", async ({ orm, seed }) => {
   const { mia, ann, leo } = await reportingLine(seed);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
@@ -29,7 +28,6 @@ test("pages only through in-scope employees and ends without exposing another pa
 }) => {
   const { mia, ann, leo } = await reportingLine(seed);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
@@ -47,7 +45,6 @@ test("pages only through in-scope employees and ends without exposing another pa
 test("returns no search results for an employee out of scope", async ({ orm, seed }) => {
   const { mia } = await reportingLine(seed);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
@@ -63,7 +60,6 @@ test("reads the avatar of a report in scope", async ({ orm, seed }) => {
   const ann = await seed.employee({ firstName: "Ann", avatarFileId });
   await seed.manager(ann.id, mia.id);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
@@ -80,7 +76,6 @@ test("reads a shared avatar when any employee using it is in scope", async ({ or
   const ann = await seed.employee({ firstName: "Ann", avatarFileId });
   await seed.manager(ann.id, mia.id);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
@@ -95,7 +90,6 @@ test("refuses the avatar of an employee out of scope", async ({ orm, seed }) => 
   const mia = await seed.employee({ firstName: "Mia" });
   await seed.employee({ firstName: "Zed", avatarFileId });
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
@@ -112,7 +106,6 @@ test("returns a report's manager but hides the caller's out-of-scope manager", a
 }) => {
   const { mia, ann } = await reportingLine(seed);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
@@ -125,7 +118,6 @@ test("returns a report's manager but hides the caller's out-of-scope manager", a
 test("returns the caller's manager with self and managers read scopes", async ({ orm, seed }) => {
   const { boss, mia } = await reportingLine(seed);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_MANAGERS],
   });
@@ -143,7 +135,6 @@ test("hides an out-of-scope employee's manager even when that manager is in scop
   const kim = await seed.employee({ firstName: "Kim" });
   await seed.manager(kim.id, boss.id);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [READ_SELF, READ_MANAGERS],
   });
@@ -156,7 +147,6 @@ test("hides an out-of-scope employee's manager even when that manager is in scop
 test("lists only immediate reports with the direct_reports scope", async ({ orm, seed }) => {
   const { mia, ann } = await reportingLine(seed);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [{ ...READ_REPORTS, scope: "direct_reports" }],
   });
@@ -172,7 +162,6 @@ test("updates an unreadable report but returns neither the employee nor the hist
 }) => {
   const { mia, ann } = await reportingLine(seed);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [
       READ_SELF,
@@ -207,7 +196,6 @@ test("deleting a manager returns only readable report history while storing ever
   await seed.manager(ann.id, boss.id);
   await seed.manager(mia.id, boss.id);
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: mia.id,
     grants: [
       READ_SELF,

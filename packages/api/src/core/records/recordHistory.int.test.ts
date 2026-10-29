@@ -26,7 +26,6 @@ test("refuses history of an unregistered type", async ({ orm }) => {
 test("reads history when the record's subject is in scope", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [READ_SELF],
   });
@@ -54,7 +53,6 @@ test("refuses history when the record's subject is out of scope", async ({ orm, 
   const employee = await seed.employee();
   const other = await seed.employee();
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [READ_SELF],
   });
@@ -73,12 +71,10 @@ test("refuses history when the record's subject is out of scope", async ({ orm, 
 test("reads a deleted record's history only with read on all", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
   const narrow = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [READ_SELF],
   });
   const broad = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [{ ...READ_SELF, scope: "all" }],
   });
@@ -107,7 +103,6 @@ test("reads records through their subjects, including two records of the same su
   const employee = await seed.employee();
   const other = await seed.employee();
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [READ_SELF],
   });
@@ -148,7 +143,6 @@ test.for(["self", "all"] as const)(
   async (scope, { orm, seed }) => {
     const employee = await seed.employee();
     const ctx = signedIn(orm, {
-      profiles: ["EMPLOYEE"],
       employeeId: employee.id,
       grants: [READ_SELF, { ...UPDATE_SELF, scope }],
     });
@@ -177,7 +171,6 @@ test("refuses public history and hides embedded public records without a read gr
 }) => {
   const employee = await seed.employee();
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [UPDATE_SELF],
   });
@@ -204,7 +197,6 @@ test("answers access through each subject and allows deleting the owner's non-em
   const employee = await seed.employee({ userId: owner.user!.userId });
   const other = await seed.employee();
   const ctx = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [
       UPDATE_SELF,
@@ -237,12 +229,10 @@ test("answers access through each subject and allows deleting the owner's non-em
 test("permits writing a public record only with update on all", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const narrow = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [UPDATE_SELF],
   });
   const broad = signedIn(orm, {
-    profiles: ["EMPLOYEE"],
     employeeId: employee.id,
     grants: [{ ...UPDATE_SELF, scope: "all" }],
   });

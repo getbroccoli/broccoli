@@ -1,4 +1,4 @@
-import { type Column, inArray, type SQL, sql } from "drizzle-orm";
+import { type Column, type SQL, sql } from "drizzle-orm";
 
 import { ApplicationError } from "../applicationError";
 import type { RecordScope, Subject } from "./permissions";
@@ -16,11 +16,9 @@ export function inRecordScope(scope: RecordScope, subjectColumn: Column): SQL {
   if (scope === "none") {
     throw new ApplicationError("FORBIDDEN", "You are not allowed to do this.");
   }
+  if (scope === "all") return sql`true`;
+  const subjects = scope.filter((subject) => subject !== "public");
+  // One array parameter, not one per id: a query binds at most 65,535 parameters.
   // shortcut: no record type has public records yet; the first one adds `subject is null or …`.
-  return scope === "all"
-    ? sql`true`
-    : inArray(
-        subjectColumn,
-        scope.filter((subject) => subject !== "public"),
-      );
+  return sql`${subjectColumn} = any(${sql.param(subjects)}::uuid[])`;
 }
