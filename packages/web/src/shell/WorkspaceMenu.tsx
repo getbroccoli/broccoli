@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOut } from "@/features/auth";
-import { ExitDemoDialog } from "@/features/demo";
+import { ExitDemoDialog, useDemoPresent } from "@/features/demo";
 import { ResetSetupDialog } from "@/features/setup";
 import { t } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
@@ -22,6 +22,7 @@ import { useSessionChange } from "@/lib/useSessionChange";
 export function WorkspaceMenu() {
   const router = useRouter();
   const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
+  const demoPresent = useDemoPresent();
   const company = useQuery(WorkspaceMenuDocument).data?.company;
   const openedOnPath = useRef<string | null>(null);
   // Outside the menu, which closes when an item is chosen.
@@ -87,15 +88,14 @@ export function WorkspaceMenu() {
             </DropdownMenuItem>
           )}
           {/* The demo's owner exits the demo instead. */}
-          {!demoExpiresAt && me.operations.includes("RESET_WORKSPACE") && (
+          {demoPresent === false && me.operations.includes("RESET_WORKSPACE") && (
             <DropdownMenuItem variant="destructive" onClick={() => setResettingSetup(true)}>
               <ArrowCounterClockwise size={14} />
               {t("setup.reset.open")}
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
-          {demoExpiresAt ? (
-            // The demo's owner has no password, so signing out would lock them out.
+          {demoPresent && me.operations.includes("RESET_WORKSPACE") && (
             <DropdownMenuGroup>
               <DropdownMenuLabel>{t("demo.menu.label")}</DropdownMenuLabel>
               <DropdownMenuItem variant="destructive" onClick={() => setExitingDemo(true)}>
@@ -103,7 +103,9 @@ export function WorkspaceMenu() {
                 {t("demo.exit.open")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
-          ) : (
+          )}
+          {/* The demo's provisional owner has no password, so signing out would lock them out. */}
+          {!demoExpiresAt && (
             <DropdownMenuGroup>
               <DropdownMenuLabel className="truncate">
                 {t("auth.signedInAs", { email: me.email })}
