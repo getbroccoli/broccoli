@@ -1,16 +1,4 @@
-import {
-  and,
-  eq,
-  getTableColumns,
-  ilike,
-  inArray,
-  isNotNull,
-  ne,
-  or,
-  sql,
-  type SQL,
-  type SQLWrapper,
-} from "drizzle-orm";
+import { and, eq, ilike, inArray, isNotNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -37,7 +25,9 @@ import {
   type EmployeeOrderField,
   type NewEmployee,
 } from "../domain";
+import { EMPLOYEE_COLUMNS, firstEmploymentOf } from "./employeeColumns";
 import { employees } from "./employeesTable";
+import { employmentRepository } from "./employmentRepository";
 import { employments } from "./employmentsTable";
 
 /** Employees stored in Postgres, through the pool or inside a transaction. */
@@ -117,7 +107,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     insert: async (newEmployee: EmployeeRow): Promise<Employee> => {
       try {
         const inserted = await orm().insert(employees).values(newEmployee).returning();
-        const [employee] = await openEmployments(orm(), inserted, [newEmployee]);
+        const [employee] = await openEmployments(db, inserted, [newEmployee]);
         return employee!;
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
@@ -135,7 +125,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       }
       try {
         const inserted = await orm().insert(employees).values(rows).returning();
-        return await openEmployments(orm(), inserted, rows);
+        return await openEmployments(db, inserted, rows);
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
@@ -150,7 +140,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
           .values(batch)
           .onConflictDoNothing({ target: employees.email })
           .returning();
-        inserted.push(...(await openEmployments(orm(), rows, batch)));
+        inserted.push(...(await openEmployments(db, rows, batch)));
       }
       return inserted;
     },
@@ -304,17 +294,6 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
   };
 }
 
-/**
- * Every column, and the start date: the start of the first employment, an unknown start counting
- * as the earliest.
- */
-export const EMPLOYEE_COLUMNS = {
-  ...getTableColumns(employees),
-  startDate: sql`(${firstEmploymentOf(employees.id, employments.startDate)})`.mapWith(
-    employments.startDate,
-  ),
-};
-
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
 
@@ -367,7 +346,7 @@ function matches(search: string): SQL {
  * row that inserted them, and returns them as employees.
  */
 async function openEmployments(
-  orm: ReturnType<typeof ormOf>,
+  db: Orm | Tx,
   inserted: StoredEmployee[],
   rows: readonly EmployeeRow[],
 ): Promise<Employee[]> {
@@ -382,17 +361,8 @@ async function openEmployments(
     ...employee,
     startDate: startDates.get(employee.email) ?? null,
   }));
-  if (created.length > 0) {
-    await orm
-      .insert(employments)
-      .values(created.map(({ id, startDate }) => ({ employeeId: id, startDate })));
-  }
+  await employmentRepository(db).insertOpen(
+    created.map(({ id, startDate }) => ({ employeeId: id, startDate })),
+  );
   return created;
-}
-
-/** A query for the id, or `column`, of the employee's first employment. */
-function firstEmploymentOf(employeeId: string | SQLWrapper, column: SQLWrapper = employments.id) {
-  return sql`select ${column} from ${employments}
-    where ${employments.employeeId} = ${employeeId}
-    order by ${employments.startDate} nulls first limit 1`;
 }

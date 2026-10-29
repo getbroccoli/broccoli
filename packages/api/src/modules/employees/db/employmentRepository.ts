@@ -6,6 +6,10 @@ import { employments } from "./employmentsTable";
 
 /** Employments stored in Postgres, through the pool or inside a transaction. */
 export interface EmploymentRepository {
+  /** Opens an open-ended employment, without a manager, for each new employee. */
+  insertOpen(
+    newEmployments: readonly { employeeId: string; startDate: CalendarDate | null }[],
+  ): Promise<void>;
   /** Holds back other manager changes until the caller commits, so two cannot form a loop together. */
   lockManagers(): Promise<void>;
   /** The direct manager of each employee's employment held on `date`; those without one are left out. */
@@ -33,6 +37,14 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
   const orm = () => ormOf(db);
 
   return {
+    insertOpen: async (newEmployments) => {
+      if (newEmployments.length > 0) {
+        await orm()
+          .insert(employments)
+          .values([...newEmployments]);
+      }
+    },
+
     lockManagers: async () => {
       await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
     },

@@ -3,7 +3,7 @@ import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { user } from "../../../core/auth";
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { Employee, Invite } from "../domain";
-import { EMPLOYEE_COLUMNS } from "./employeeRepository";
+import { EMPLOYEE_COLUMNS } from "./employeeColumns";
 import { employees } from "./employeesTable";
 import { invites } from "./invitesTable";
 
