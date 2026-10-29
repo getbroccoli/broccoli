@@ -151,7 +151,7 @@ export function createMailSettings({
       try {
         const { messageId } = await saved.mailer.send({
           template: TEST_EMAIL_TEMPLATE,
-          values: {},
+          values: { origin: saved.linkOrigin, recipient: caller.email },
           to: caller.email,
           fromName: "Broccoli",
           idempotencyKey: randomUUID(),

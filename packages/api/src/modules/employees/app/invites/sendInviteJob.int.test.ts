@@ -60,7 +60,7 @@ test("emails the invite with the saved origin, names, note and expiry", async ({
     to: "avery@example.com",
     fromName: "User via Acme Corp",
     values: {
-      firstName: "Avery",
+      recipient: "avery@example.com",
       inviterName: "User",
       companyName: "Acme Corp",
       note: "Welcome to the team",
@@ -69,7 +69,7 @@ test("emails the invite with the saved origin, names, note and expiry", async ({
     },
   });
   const message = mail.messages[0]!;
-  expect(message.template.render(message.values).text).toContain("Questions? Ask User directly.");
+  expect(message.template.render(message.values).text).toContain("Sent to avery@example.com.");
 });
 
 test("a managed invite is sent as the inviter, without the company", async ({ orm, seed }) => {

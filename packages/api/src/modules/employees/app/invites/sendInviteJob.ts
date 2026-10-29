@@ -60,7 +60,7 @@ export function sendInviteJob({
           const { messageId } = await saved.mailer.send({
             template: INVITE_TEMPLATE,
             values: {
-              firstName: employee.firstName,
+              recipient: invite.email,
               inviterName: inviter?.name ?? null,
               companyName,
               note: invite.note,

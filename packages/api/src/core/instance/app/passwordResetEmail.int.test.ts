@@ -23,7 +23,10 @@ test("emails a reset link at the saved origin to a user with a password", async 
   expect(mail.messages).toMatchObject([
     {
       template: { name: "password_reset" },
-      values: { resetLink: "https://saved.example.com/reset-password#reset-token" },
+      values: {
+        resetLink: "https://saved.example.com/reset-password#reset-token",
+        recipient: TEST_OWNER.email,
+      },
       to: TEST_OWNER.email,
       fromName: "Broccoli",
     },
@@ -47,7 +50,10 @@ test("a managed reset is sent through the relay for a person with a password", a
   expect(mail.messages).toMatchObject([
     {
       template: { name: "password_reset" },
-      values: { resetLink: "https://broccoli.example.com/reset-password#reset-token" },
+      values: {
+        resetLink: "https://broccoli.example.com/reset-password#reset-token",
+        recipient: user.email,
+      },
       to: user.email,
       fromName: "Broccoli",
     },

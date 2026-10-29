@@ -22,7 +22,7 @@ export interface MailMessage<Values> {
 export interface EmailTemplate<Values> {
   /** Names the email, such as `password_reset`. */
   name: string;
-  /** The subject, plain text and simple HTML; escape values in the HTML with `escapeHtml`. */
+  /** The subject, plain text and HTML; build the HTML with `emailLayout`, which escapes values. */
   render(values: Values): RenderedEmail;
 }
 

@@ -1,4 +1,5 @@
 // Public values.
+export { emailLayout } from "./emailLayout";
 export { escapeHtml } from "./escapeHtml";
 export { createMailer } from "./mailer";
 export { MailRefusedError } from "./mailRefusedError";
