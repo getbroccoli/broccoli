@@ -47,6 +47,7 @@ export const invitesEn = {
   "invites.links.copyAll": "Copy all as a list",
   "invites.links.done": "Done",
   "invites.links.copyByHand": "Copy this text by hand",
+  "invites.panel.invite": "Invite…",
   "invites.panel.copyLink": "Copy invite link",
   "invites.panel.linkFailed": "Couldn't create the invite link.",
   "invites.action.send": "Send invite",

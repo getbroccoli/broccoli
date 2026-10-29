@@ -104,7 +104,11 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             </DropdownMenuTrigger>
             {/* As wide as its item, not the trigger, so the name stays on one line. */}
             <DropdownMenuContent align="end" className="w-auto max-w-80">
-              <InviteMenuItems person={employee} onLinkCreated={setCopiedLink} />
+              <InviteMenuItems
+                person={employee}
+                onInvite={() => setInviting(true)}
+                onLinkCreated={setCopiedLink}
+              />
               {employee.access.canDelete && (
                 <DropdownMenuItem variant="destructive" onClick={() => setRemoving(true)}>
                   <span className="truncate">

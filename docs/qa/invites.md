@@ -38,8 +38,8 @@ A manual check of inviting people from People, by email and by copied link, and 
 ## The person's panel
 
 - [ ] The header shows only name and job title. The Work email card shows the sign-in state beside its label on one line, with a dot (grey, amber, red when not sent or expired, green when joined); only "not sent" or "expired" is spelled out, the expiry shows on hover, and its invite action beside the address: "Send invite" when not invited, a quiet "Resend" while pending, "Resend invite" when not sent or expired, none once joined. Each opens the invite dialog for that person.
-- [ ] The ⋯ menu offers "Copy invite link" (opens "Invite link for <name>" with the date it stops working, Copy link and Done) and, while an invite is pending, "Cancel invite".
-- [ ] "Cancel invite" shows "Invite cancelled"; the state becomes "Not invited" and the link stops working.
+- [ ] The ⋯ menu offers "Invite…" (the same dialog as the card's button), "Copy invite link" (opens "Invite link for <name>" with the date it stops working, Copy link and Done) and, while an invite is pending, "Cancel invite".
+- [ ] "Cancel invite" shows the toast "Invite cancelled" above the panel; the state becomes "Not invited" and the link stops working.
 - [ ] History shows "Invited", "Invite cancelled" and "Joined" lines with Sign-in: Not invited → Pending → Joined.
 
 ## Joining
