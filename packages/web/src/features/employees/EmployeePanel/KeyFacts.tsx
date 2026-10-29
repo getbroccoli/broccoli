@@ -48,9 +48,13 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
   ];
 
   return (
-    <dl className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
+    // Dates are short; the work email, last, takes the rest of the row.
+    <dl className="flex flex-wrap gap-3">
       {facts.map(({ icon: FactIcon, label, value, status, action }) => (
-        <div key={label} className="rounded-xl border border-border px-3 py-2.5">
+        <div
+          key={label}
+          className="min-w-0 flex-[0_1_10rem] rounded-xl border border-border px-3 py-2.5 last:flex-[1_1_18rem]"
+        >
           <dt className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase">
             <FactIcon aria-hidden className="size-3.5 shrink-0" />
             {label}
