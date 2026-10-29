@@ -6,8 +6,9 @@ import type { Mailer } from "./mailer";
 import { parseJson } from "./parseJson";
 
 /**
- * Sends through Broccoli's mail relay with a managed instance's credential. The relay sends as
- * "<fromName> via Broccoli" and refuses links outside the instance's own origin. Not `fetchJson`
+ * Sends through Broccoli's mail relay with a managed instance's credential: the email's blocks,
+ * which the relay renders in Broccoli's layout itself. It sends as "<fromName> via Broccoli" and
+ * refuses links outside the instance's own origin. Not `fetchJson`
  * (RULE22 exception): it drops a refusal's status and body, which decide whether to retry.
  */
 export function createRelayMailer({
@@ -19,18 +20,18 @@ export function createRelayMailer({
 }): Mailer {
   return {
     send: async ({ template, values, to, fromName, idempotencyKey }) => {
-      const { subject, text, html } = template.render(values);
+      const { subject, blocks, footer } = template.render(values);
       let response: Response;
       try {
-        response = await fetch(urlUnder(url, "v1/send"), {
+        response = await fetch(urlUnder(url, "v2/send"), {
           method: "POST",
           headers: { authorization: `Bearer ${credential}`, "content-type": "application/json" },
           body: JSON.stringify({
             to,
             fromName: fitHeader(fromName, MAX_FROM_NAME_LENGTH),
             subject: fitHeader(subject, MAX_SUBJECT_LENGTH),
-            text,
-            html,
+            blocks,
+            footer,
             idempotencyKey,
           }),
           signal: AbortSignal.timeout(TIMEOUT_MS),

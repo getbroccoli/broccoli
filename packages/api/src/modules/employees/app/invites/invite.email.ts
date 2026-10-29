@@ -1,4 +1,4 @@
-import { type EmailTemplate, emailLayout } from "../../../../integrations/mail";
+import type { EmailTemplate } from "../../../../integrations/mail";
 
 /** What the invite email says. */
 export interface InviteEmailValues {
@@ -18,34 +18,22 @@ export const INVITE_TEMPLATE: EmailTemplate<InviteEmailValues> = {
     const invited = inviterName
       ? `${inviterName} invited you to ${companyName}`
       : `You're invited to ${companyName}`;
-    const lead = "Join to see your profile, time off and team.";
-    const join = `Join ${companyName}`;
-    const expiry = `Link expires ${formatDay(expiresAt)}.`;
-    const footer = `Sent to ${recipient}. Not expecting this? Ignore it.`;
     return {
       subject: `${invited} on Broccoli`,
-      text: [
-        `${invited}.`,
-        lead,
-        note && `"${note}"${inviterName ? ` (${inviterName})` : ""}`,
-        `${join}: ${link}`,
-        expiry,
-        footer,
-      ]
-        .filter((part) => part)
-        .join("\n\n"),
-      html: emailLayout.page({
-        origin: new URL(link).origin,
-        content: [
-          emailLayout.company(companyName),
-          emailLayout.heading(invited),
-          emailLayout.paragraph(lead),
-          note ? emailLayout.note(note, inviterName) : "",
-          emailLayout.button(join, link, expiry),
-          emailLayout.pasteLink(link),
-        ].join(""),
-        footer,
-      }),
+      blocks: [
+        { type: "company", name: companyName },
+        { type: "heading", text: invited },
+        { type: "paragraph", text: "Join to see your profile, time off and team." },
+        ...(note ? [{ type: "note" as const, text: note, author: inviterName }] : []),
+        {
+          type: "button",
+          label: `Join ${companyName}`,
+          link,
+          hint: `Link expires ${formatDay(expiresAt)}.`,
+        },
+        { type: "pasteLink", link },
+      ],
+      footer: `Sent to ${recipient}. Not expecting this? Ignore it.`,
     };
   },
 };

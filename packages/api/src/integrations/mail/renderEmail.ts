@@ -1,13 +1,88 @@
 import { escapeHtml } from "./escapeHtml";
 
+/** What an email says, as blocks Broccoli's layout draws; the template that sends it owns it. */
+export interface EmailContent {
+  subject: string;
+  blocks: EmailBlock[];
+  /** Below the card, such as who the email went to. */
+  footer: string;
+}
+
+/** One part of an email's card, top to bottom; text is plain, links are absolute URLs. */
+export type EmailBlock =
+  /** The company's initial in a square, beside its name. */
+  | { type: "company"; name: string }
+  | { type: "heading"; text: string }
+  | { type: "paragraph"; text: string }
+  /** A personal note in a green box, signed by its author when there is one. */
+  | { type: "note"; text: string; author: string | null }
+  /** The email's one action, followed by a short line about it. */
+  | { type: "button"; label: string; link: string; hint: string }
+  /** The button's link written out, for clients that don't show the button. */
+  | { type: "pasteLink"; link: string };
+
 /**
- * Broccoli's email look: the mark, one white card and a footer, in tables and inline styles that
- * mail clients keep, with a dark version for clients that support one. Broccoli's mail relay
- * accepts only emails matching its samples of this layout, so give it new samples first.
+ * The HTML and plain text of `content` in Broccoli's email look: the mark served by `origin`, one
+ * white card and a footer, in tables and inline styles that mail clients keep, with a dark version
+ * where clients support one. Broccoli's mail relay renders managed email with a copy of this file
+ * (`src/services/emailRenderer.ts` in broccoli-integrations), so change both together.
  */
-export const emailLayout = {
-  /** The whole email around `content`, built from the blocks below; `origin` serves the mark. */
-  page: ({ origin, content, footer }: { origin: string; content: string; footer: string }) =>
+export function renderEmail(
+  { blocks, footer }: EmailContent,
+  origin: string,
+): { html: string; text: string } {
+  return {
+    html: page({ origin, content: blocks.map(blockHtml).join(""), footer }),
+    text: [...blocks.flatMap(blockText), footer].join("\n\n"),
+  };
+}
+
+/** Where an instance serves the mark, a 56px PNG shown at 28px. */
+const MARK_PATH = "/email/broccoli-mark.png";
+
+function blockHtml(block: EmailBlock): string {
+  switch (block.type) {
+    case "company":
+      return company(block.name);
+    case "heading":
+      return heading(block.text);
+    case "paragraph":
+      return paragraph(block.text);
+    case "note":
+      return note(block.text, block.author);
+    case "button":
+      return button(block.label, block.link, block.hint);
+    case "pasteLink":
+      return pasteLink(block.link);
+  }
+}
+
+function blockText(block: EmailBlock): string[] {
+  switch (block.type) {
+    case "company":
+      return [];
+    case "heading":
+    case "paragraph":
+      return [block.text];
+    case "note":
+      return [`"${block.text}"${block.author ? ` (${block.author})` : ""}`];
+    case "button":
+      return [`${block.label}: ${block.link}`, block.hint];
+    case "pasteLink":
+      return [];
+  }
+}
+
+function page({
+  origin,
+  content,
+  footer,
+}: {
+  origin: string;
+  content: string;
+  footer: string;
+}): string {
+  return (
     `<html lang="en"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width, initial-scale=1">` +
     `<meta name="color-scheme" content="light dark">` +
@@ -22,23 +97,29 @@ export const emailLayout = {
     `<span class="ink" style="vertical-align:middle;padding-left:8px;font-size:15px;font-weight:600;color:#2A2722;">Broccoli</span></td></tr>` +
     `<tr><td class="card" style="background-color:#FFFFFF;border:1px solid #E6E3DC;border-radius:20px;padding:40px 44px;color:#2A2722;${FONT}">${content}</td></tr>` +
     `<tr><td class="muted" style="padding:24px 0 0 0;text-align:center;font-size:12px;line-height:1.6;color:#8C877E;${FONT}">${escapeHtml(footer)}</td></tr>` +
-    `</table></td></tr></table></body></html>`,
+    `</table></td></tr></table></body></html>`
+  );
+}
 
-  /** The company's initial in a square, beside its name. */
-  company: (name: string) =>
+function company(name: string): string {
+  return (
     `<table ${LAYOUT_TABLE} style="margin:0 0 24px 0;"><tr>` +
     `<td class="badge" width="44" height="44" align="center" style="width:44px;height:44px;border-radius:12px;background-color:#2A2722;color:#FFFFFF;font-size:18px;font-weight:700;">${escapeHtml(initial(name))}</td>` +
     `<td class="ink" style="padding-left:12px;font-size:16px;font-weight:600;color:#2A2722;">${escapeHtml(name)}</td>` +
-    `</tr></table>`,
+    `</tr></table>`
+  );
+}
 
-  heading: (text: string) =>
-    `<h1 class="ink" style="margin:0 0 10px 0;font-size:28px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:#2A2722;">${escapeHtml(text)}</h1>`,
+function heading(text: string): string {
+  return `<h1 class="ink" style="margin:0 0 10px 0;font-size:28px;line-height:1.2;font-weight:700;letter-spacing:-0.02em;color:#2A2722;">${escapeHtml(text)}</h1>`;
+}
 
-  paragraph: (text: string) =>
-    `<p class="soft" style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#5A554D;">${escapeHtml(text)}</p>`,
+function paragraph(text: string): string {
+  return `<p class="soft" style="margin:0 0 24px 0;font-size:16px;line-height:1.6;color:#5A554D;">${escapeHtml(text)}</p>`;
+}
 
-  /** A personal note in a green box, signed by its author when there is one. */
-  note: (text: string, author: string | null) =>
+function note(text: string, author: string | null): string {
+  return (
     `<table ${LAYOUT_TABLE} width="100%" style="margin:0 0 24px 0;"><tr>` +
     `<td class="note" style="background-color:#EEF5EF;border-radius:14px;padding:18px 20px;">` +
     `<p class="ink" style="margin:0;font-size:16px;line-height:1.55;color:#2A2722;">“${escapeHtml(text)}”</p>` +
@@ -47,24 +128,26 @@ export const emailLayout = {
         `<span class="avatar" style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:11px;background-color:#5E8B68;color:#FFFFFF;font-size:10px;font-weight:700;text-align:center;vertical-align:middle;">${escapeHtml(initials(author))}</span>` +
         `<span style="vertical-align:middle;padding-left:8px;">${escapeHtml(author)}</span></p>`
       : "") +
-    `</td></tr></table>`,
+    `</td></tr></table>`
+  );
+}
 
-  /** The email's one action, followed by a short line about it. */
-  button: (label: string, link: string, hint: string) =>
+function button(label: string, link: string, hint: string): string {
+  return (
     `<table ${LAYOUT_TABLE} style="margin:0 0 12px 0;"><tr>` +
     `<td class="button" style="background-color:#2A2722;border-radius:12px;">` +
     `<a class="button-label" href="${escapeHtml(link)}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:600;color:#FFFFFF;text-decoration:none;">${escapeHtml(label)}</a>` +
     `</td></tr></table>` +
-    `<p class="muted" style="margin:0 0 24px 0;font-size:14px;line-height:1.5;color:#78736A;">${escapeHtml(hint)}</p>`,
+    `<p class="muted" style="margin:0 0 24px 0;font-size:14px;line-height:1.5;color:#78736A;">${escapeHtml(hint)}</p>`
+  );
+}
 
-  /** The button's link written out, for clients that don't show the button. */
-  pasteLink: (link: string) =>
+function pasteLink(link: string): string {
+  return (
     `<p class="muted rule" style="margin:0;padding-top:24px;border-top:1px solid #E6E3DC;font-size:13px;line-height:1.6;color:#78736A;">Or paste this link:<br>` +
-    `<a class="link" href="${escapeHtml(link)}" style="color:#4A7553;word-break:break-all;">${escapeHtml(link)}</a></p>`,
-};
-
-/** Where an instance serves the mark, a 56px PNG shown at 28px. */
-export const MARK_PATH = "/email/broccoli-mark.png";
+    `<a class="link" href="${escapeHtml(link)}" style="color:#4A7553;word-break:break-all;">${escapeHtml(link)}</a></p>`
+  );
+}
 
 const LAYOUT_TABLE = `role="presentation" cellpadding="0" cellspacing="0" border="0"`;
 const FONT =

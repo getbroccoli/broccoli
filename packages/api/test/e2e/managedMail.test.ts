@@ -44,11 +44,16 @@ test("a managed person receives an invite and a password reset through Broccoli'
     to: employee.email,
     fromName: "Avery Stone",
     subject: expect.any(String) as unknown,
-    text: expect.stringContaining(`${MANAGED_ASSIGNMENT.publicOrigin}/invite#`) as unknown,
-    html: expect.stringContaining(`${MANAGED_ASSIGNMENT.publicOrigin}/invite#`) as unknown,
+    blocks: expect.arrayContaining([
+      expect.objectContaining({
+        type: "button",
+        link: expect.stringContaining(`${MANAGED_ASSIGNMENT.publicOrigin}/invite#`) as unknown,
+      }),
+    ]) as unknown,
+    footer: `Sent to ${employee.email}. Not expecting this? Ignore it.`,
     idempotencyKey: expect.stringMatching(/\S+/) as unknown,
   });
-  const inviteLink = new URL(invite.body.text.match(/https?:\/\/\S+/)![0]);
+  const inviteLink = new URL(invite.body.blocks.find((block) => block.type === "button")!.link);
   expect(
     (
       await browser.post("/api/auth/invite/accept", {
@@ -70,9 +75,14 @@ test("a managed person receives an invite and a password reset through Broccoli'
     body: {
       to: employee.email,
       fromName: "Broccoli",
-      html: expect.stringContaining(
-        `${MANAGED_ASSIGNMENT.publicOrigin}/reset-password#`,
-      ) as unknown,
+      blocks: expect.arrayContaining([
+        expect.objectContaining({
+          type: "button",
+          link: expect.stringContaining(
+            `${MANAGED_ASSIGNMENT.publicOrigin}/reset-password#`,
+          ) as unknown,
+        }),
+      ]) as unknown,
     },
   });
 });
@@ -106,8 +116,11 @@ test("a managed invite reaches the relay when the inviter's name has quotes and 
   expect(body.fromName).toHaveLength(100);
   expect(body.subject).not.toMatch(/[\r\n]/);
   expect(body.subject).toHaveLength(200);
-  expect(body.text).toContain(inviterName);
-  expect(body.text).toContain(companyName);
+  expect(body.blocks).toContainEqual({
+    type: "heading",
+    text: `${inviterName} invited you to ${companyName}`,
+  });
+  expect(body.blocks).toContainEqual({ type: "company", name: companyName });
 });
 
 test("an unreadable relay answer is retried, not taken as sent", async () => {

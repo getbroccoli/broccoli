@@ -48,7 +48,7 @@ export interface InstanceMailer {
 
 /** The mail integration, which use-case tests replace with a fake. */
 export interface MailIntegration {
-  createMailer: (transport: MailTransport) => Mailer;
+  createMailer: (transport: MailTransport, origin: string) => Mailer;
   createRelayMailer: (relay: { url: string; credential: string }) => Mailer;
   verifySmtpServer: (url: string) => Promise<void>;
 }
@@ -151,7 +151,7 @@ export function createMailSettings({
       try {
         const { messageId } = await saved.mailer.send({
           template: TEST_EMAIL_TEMPLATE,
-          values: { origin: saved.linkOrigin, recipient: caller.email },
+          values: { recipient: caller.email },
           to: caller.email,
           fromName: "Broccoli",
           idempotencyKey: randomUUID(),
@@ -198,10 +198,11 @@ async function readSavedMailer(
     source === "smtp_server"
       ? { kind: source, url: secret, from }
       : { kind: source, apiUrl: resendApiUrl, key: secret, from };
+  // A choice is always saved with an origin; the fallback only satisfies the type.
+  const origin = publicOrigin ?? linkOrigin ?? "";
   return {
-    mailer: mail.createMailer(transport),
-    // A choice is always saved with an origin; the fallback only satisfies the type.
-    linkOrigin: publicOrigin ?? linkOrigin ?? "",
+    mailer: mail.createMailer(transport, origin),
+    linkOrigin: origin,
     sendsThroughBroccoli: false,
   };
 }

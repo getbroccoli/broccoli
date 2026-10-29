@@ -1,3 +1,4 @@
+import { type EmailContent, renderEmail } from "./renderEmail";
 import { createResendMailer } from "./resendMailer";
 import { createSmtpMailer } from "./smtpMailer";
 
@@ -22,14 +23,8 @@ export interface MailMessage<Values> {
 export interface EmailTemplate<Values> {
   /** Names the email, such as `password_reset`. */
   name: string;
-  /** The subject, plain text and HTML; build the HTML with `emailLayout`, which escapes values. */
-  render(values: Values): RenderedEmail;
-}
-
-export interface RenderedEmail {
-  subject: string;
-  text: string;
-  html: string;
+  /** What the email says, as blocks of plain text and links. */
+  render(values: Values): EmailContent;
 }
 
 /** Where a self-hosted instance sends its email: the owner's SMTP server or their Resend key. */
@@ -37,18 +32,31 @@ export type MailTransport =
   | { kind: "smtp_server"; url: string; from: string }
   | { kind: "resend_api"; apiUrl: string; key: string; from: string };
 
-/** A mailer for `transport`, built per send so a changed choice applies at once. */
-export function createMailer(transport: MailTransport): Mailer {
+/**
+ * A mailer for `transport`, rendering each email with the mark served by `origin`; built per send
+ * so a changed choice applies at once.
+ */
+export function createMailer(transport: MailTransport, origin: string): Mailer {
   const deliver =
     transport.kind === "smtp_server" ? createSmtpMailer(transport) : createResendMailer(transport);
   return {
-    send: ({ template, values, ...envelope }) =>
-      deliver({ ...envelope, ...template.render(values), from: transport.from }),
+    send: ({ template, values, ...envelope }) => {
+      const content = template.render(values);
+      return deliver({
+        ...envelope,
+        ...renderEmail(content, origin),
+        subject: content.subject,
+        from: transport.from,
+      });
+    },
   };
 }
 
 /** A rendered email ready for a provider. */
-export interface OutgoingMail extends RenderedEmail {
+export interface OutgoingMail {
+  subject: string;
+  text: string;
+  html: string;
   from: string;
   fromName: string;
   to: string;
