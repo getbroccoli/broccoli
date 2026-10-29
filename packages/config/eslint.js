@@ -25,7 +25,7 @@ const RESTRICTED_SYNTAX = [
   },
 ];
 
-// RULE68 in docs/code-quality.md.
+// RULE69 in docs/code-quality.md.
 const EMAIL_TEMPLATE_OUTSIDE_EMAIL_FILE = {
   selector: "VariableDeclarator[id.typeAnnotation.typeAnnotation.typeName.name='EmailTemplate']",
   message: "Put an email template in its own <name>.email.ts file next to the code that sends it.",
