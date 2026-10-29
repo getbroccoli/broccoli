@@ -3,6 +3,7 @@ import { z } from "zod";
 import { readText, urlUnder } from "../../utils";
 import { MailRefusedError } from "./mailRefusedError";
 import type { Mailer } from "./mailer";
+import type { EmailBlock } from "./renderEmail";
 import { parseJson } from "./parseJson";
 
 /**
@@ -30,8 +31,8 @@ export function createRelayMailer({
             to,
             fromName: fitHeader(fromName, MAX_FROM_NAME_LENGTH),
             subject: fitHeader(subject, MAX_SUBJECT_LENGTH),
-            blocks,
-            footer,
+            blocks: blocks.map(fitBlock),
+            footer: footer.slice(0, MAX_TEXT_LENGTH),
             idempotencyKey,
           }),
           signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -58,6 +59,7 @@ const MAX_ANSWER_BYTES = 64 * 1024;
 // The relay's limits on what goes into a header; the email's text keeps the full names.
 const MAX_FROM_NAME_LENGTH = 100;
 const MAX_SUBJECT_LENGTH = 200;
+const MAX_TEXT_LENGTH = 1_000;
 
 const sentSchema = z.object({ messageId: z.string() });
 const relayErrorSchema = z.object({ error: z.string() });
@@ -69,6 +71,18 @@ function fitHeader(value: string, maxLength: number): string {
     .replace(/\s*[\r\n]+\s*/g, " ")
     .trim()
     .slice(0, maxLength);
+}
+
+/** `block` with each text cut to the relay's limit; a name can be longer, a link never is cut. */
+function fitBlock(block: EmailBlock): EmailBlock {
+  return Object.fromEntries(
+    Object.entries(block).map(([name, value]) => [
+      name,
+      typeof value === "string" && name !== "type" && name !== "link"
+        ? value.slice(0, MAX_TEXT_LENGTH)
+        : value,
+    ]),
+  ) as EmailBlock;
 }
 
 /** The relay's message id; an answer without one may hide an unsent email, so it is retried. */
