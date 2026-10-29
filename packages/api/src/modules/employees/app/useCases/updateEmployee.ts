@@ -15,6 +15,7 @@ import {
 } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
+import { readableResult } from "./readableResult";
 
 /**
  * Changes the fields an update sends and records the change in the employee's history, in one
@@ -25,7 +26,7 @@ export async function updateEmployee(
   { transact, logger }: EmployeeContext,
   ctx: SecurityContext,
   { id, ...input }: EmployeeUpdateInput & { id: string },
-): Promise<{ employee: Employee; historyLine: HistoryLine | null }> {
+): Promise<{ employee: Employee | null; historyLine: HistoryLine | null }> {
   const employeeId = parseUuid(id);
   if (!employeeId) {
     ctx.requireEveryRecord("employee", "update");
@@ -61,7 +62,7 @@ export async function updateEmployee(
       "Updated an employee",
     );
   }
-  return { employee, historyLine };
+  return readableResult(ctx, employee, historyLine);
 }
 
 /**

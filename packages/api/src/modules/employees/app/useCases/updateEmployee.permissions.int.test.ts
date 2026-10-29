@@ -139,9 +139,10 @@ test("refuses a manager after their report moves outside their reporting line", 
   const employees = employeeUseCases(orm);
   await employees.updateEmployee(ctx, { id: ben.id, jobTitle: "Engineer" });
   await seed.manager(ben.id, other.id);
+  const nextRequest = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
 
   await expect(
-    employees.updateEmployee(ctx, { id: ben.id, jobTitle: "Lead" }),
+    employees.updateEmployee(nextRequest, { id: ben.id, jobTitle: "Lead" }),
   ).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "You are not allowed to do this.",
@@ -166,8 +167,9 @@ test("allows an employee to manage their first report without a profile change",
     employees.updateEmployee(ctx, { id: dan.id, jobTitle: "Lead" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await seed.manager(dan.id, carl.id);
+  const nextRequest = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: carl.id });
 
-  await employees.updateEmployee(ctx, { id: dan.id, jobTitle: "Lead" });
+  await employees.updateEmployee(nextRequest, { id: dan.id, jobTitle: "Lead" });
 
   expect(await employees.readEmployee(OWNER, dan.id)).toMatchObject({ jobTitle: "Lead" });
 });

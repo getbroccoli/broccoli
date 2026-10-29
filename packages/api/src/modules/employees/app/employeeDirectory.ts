@@ -14,6 +14,7 @@ export function employeeDirectory(orm: Orm): EmployeeDirectory {
     employeeIdOfUser,
     // One query, so the whole line is read as it was at one moment.
     managersAbove: (employeeIds) => employments.findManagersAbove(employeeIds, todayInUtc()),
+    reportsBelow: (employeeId) => employments.findReportsBelow(employeeId, todayInUtc()),
     ownersEmployeeId: async () => {
       const owner = await readOwner(orm);
       return owner ? employeeIdOfUser(owner.userId) : null;

@@ -8,9 +8,13 @@ import {
   PERMISSION_PROFILES,
   type PermissionObject,
   type PermissionProfile,
+  type ProfileDefinition,
   type RecordAction,
+  type RecordScope,
   type Scope,
+  type Subject,
 } from "./permissions";
+import { isInRecordScope } from "./recordScope";
 
 /**
  * Who is calling application code, and what they may do. Every business function
@@ -50,16 +54,18 @@ export interface SecurityContext {
 
   /**
    * Refuses with FORBIDDEN unless the caller's grants reach every record of the object for the
-   * action: lists while reads reach everyone, and creating a record tied to nobody yet.
+   * action: creating a record tied to nobody yet, and ids that name no record.
    */
   requireEveryRecord(object: PermissionObject, action: RecordAction): void;
 
+  /**
+   * The records the caller's grants reach for the action, by subject, to filter reads before
+   * paging; read once per context for each object and action. Never refuses: see `RecordScope`.
+   */
+  recordScope(object: PermissionObject, action: RecordAction): Promise<RecordScope>;
+
   /** Refuses with FORBIDDEN unless the record of this subject is in scope for the action. */
-  requireInScope(
-    object: PermissionObject,
-    action: RecordAction,
-    subjectEmployeeId: string,
-  ): Promise<void>;
+  requireInScope(object: PermissionObject, action: RecordAction, subject: Subject): Promise<void>;
 
   /**
    * Refuses with FORBIDDEN an update of this subject's record out of scope, or one that sends a
@@ -67,7 +73,7 @@ export interface SecurityContext {
    */
   requireWrite(
     object: PermissionObject,
-    subjectEmployeeId: string,
+    subject: Subject,
     fields: readonly string[],
   ): Promise<void>;
 
@@ -77,8 +83,8 @@ export interface SecurityContext {
    */
   recordAccess(
     object: PermissionObject,
-    subjectEmployeeIds: readonly string[],
-  ): Promise<Map<string, RecordAccess>>;
+    subjects: readonly Subject[],
+  ): Promise<Map<Subject, RecordAccess>>;
 }
 
 /** What the caller may do to one record. */
@@ -98,6 +104,8 @@ export interface EmployeeDirectory {
    * and so on; employees without a manager are left out.
    */
   managersAbove(employeeIds: readonly string[]): Promise<Map<string, string[]>>;
+  /** Everyone below the employee today, with their depth: 1 for a direct report, and so on. */
+  reportsBelow(employeeId: string): Promise<{ id: string; depth: number }[]>;
   /** The employee linked to the owner's user; null without one. */
   ownersEmployeeId(): Promise<string | null>;
 }
@@ -128,14 +136,22 @@ export class PrincipalSecurityContext implements SecurityContext {
     readonly isSetupHolder: boolean,
     readonly externalAgentSessionId: string | null = null,
     private readonly directory: EmployeeDirectory | null = null,
+    private readonly profiles: Record<PermissionProfile, ProfileDefinition> = PERMISSION_PROFILES,
   ) {}
 
   private ownersEmployeeId: Promise<string | null> | undefined;
   private effective: EffectiveProfile | undefined;
+  private readonly scopes = new Map<string, Promise<RecordScope>>();
+  private reports: Promise<{ id: string; depth: number }[]> | undefined;
+  private managers: Promise<Map<string, string[]>> | undefined;
 
-  /** A signed-in user; built by `resolveSecurityContext`. */
-  static user(user: SignedInUser, directory: EmployeeDirectory): SecurityContext {
-    return new PrincipalSecurityContext({ ...user }, false, null, directory);
+  /** A signed-in user; built by `resolveSecurityContext`, and by tests with other profiles. */
+  static user(
+    user: SignedInUser,
+    directory: EmployeeDirectory,
+    profiles?: Record<PermissionProfile, ProfileDefinition>,
+  ): SecurityContext {
+    return new PrincipalSecurityContext({ ...user }, false, null, directory, profiles);
   }
 
   /** The browser holding setup; built by `resolveSecurityContext`. */
@@ -192,26 +208,34 @@ export class PrincipalSecurityContext implements SecurityContext {
     }
   }
 
+  recordScope(object: PermissionObject, action: RecordAction): Promise<RecordScope> {
+    if (this.isSystem) return Promise.resolve("all");
+    return this.resolveScope(
+      this.grants(object, action).map(({ scope }) => scope),
+      action,
+    );
+  }
+
   async requireInScope(
     object: PermissionObject,
     action: RecordAction,
-    subjectEmployeeId: string,
+    subject: Subject,
   ): Promise<void> {
-    const access = await this.actionsOn(object, subjectEmployeeId, [action]);
+    const access = await this.actionsOn(object, subject, [action]);
     if (!access.has(action)) {
       throw new ApplicationError("FORBIDDEN", NOT_ALLOWED);
     }
-    if (action === "delete" && (await this.isOwnersEmployee(subjectEmployeeId))) {
+    if (action === "delete" && (await this.isOwnersEmployee(object, subject))) {
       throw new ApplicationError("FORBIDDEN", "The owner cannot be deleted.");
     }
   }
 
   async requireWrite(
     object: PermissionObject,
-    subjectEmployeeId: string,
+    subject: Subject,
     fields: readonly string[],
   ): Promise<void> {
-    const writable = (await this.actionsOn(object, subjectEmployeeId, ["update"])).get("update");
+    const writable = (await this.actionsOn(object, subject, ["update"])).get("update");
     if (!writable) {
       throw new ApplicationError("FORBIDDEN", NOT_ALLOWED);
     }
@@ -227,14 +251,14 @@ export class PrincipalSecurityContext implements SecurityContext {
 
   async recordAccess(
     object: PermissionObject,
-    subjectEmployeeIds: readonly string[],
-  ): Promise<Map<string, RecordAccess>> {
-    const access = await this.actionsOnEach(object, subjectEmployeeIds, ["update", "delete"]);
-    const records = new Map<string, RecordAccess>();
+    subjects: readonly Subject[],
+  ): Promise<Map<Subject, RecordAccess>> {
+    const access = await this.actionsOnEach(object, subjects, ["update", "delete"]);
+    const records = new Map<Subject, RecordAccess>();
     for (const [subject, actions] of access) {
       records.set(subject, {
         canUpdate: actions.has("update"),
-        canDelete: actions.has("delete") && !(await this.isOwnersEmployee(subject)),
+        canDelete: actions.has("delete") && !(await this.isOwnersEmployee(object, subject)),
         writableFields: actions.get("update") ?? [],
       });
     }
@@ -245,9 +269,9 @@ export class PrincipalSecurityContext implements SecurityContext {
   private profile(): EffectiveProfile | null {
     if (!this.user) return null;
     this.effective ??= {
-      grants: this.user.permissionProfiles.flatMap((name) => PERMISSION_PROFILES[name].grants),
+      grants: this.user.permissionProfiles.flatMap((name) => this.profiles[name].grants),
       operations: new Set(
-        this.user.permissionProfiles.flatMap((name) => PERMISSION_PROFILES[name].operations),
+        this.user.permissionProfiles.flatMap((name) => this.profiles[name].operations),
       ),
     };
     return this.effective;
@@ -259,65 +283,86 @@ export class PrincipalSecurityContext implements SecurityContext {
     );
   }
 
+  /**
+   * The subjects these scopes reach together for the action, read once per context. Every object
+   * has employee subjects today: an object about another kind resolves its scopes here.
+   */
+  private resolveScope(scopes: readonly Scope[], action: RecordAction): Promise<RecordScope> {
+    const held = new Set(scopes);
+    const key = `${action === "read"}:${[...held].sort().join()}`;
+    let resolved = this.scopes.get(key);
+    if (!resolved) {
+      resolved = this.reachedBy(held, action);
+      this.scopes.set(key, resolved);
+    }
+    return resolved;
+  }
+
+  private async reachedBy(scopes: ReadonlySet<Scope>, action: RecordAction): Promise<RecordScope> {
+    if (scopes.has("all")) return "all";
+    if (scopes.size === 0) return "none";
+    // Public records: every read grant reaches them, only grants on `all` write them.
+    const reached = new Set<Subject>(action === "read" ? ["public"] : []);
+    const employeeId = this.user?.employeeId;
+    if (!employeeId) return [...reached];
+    if (scopes.has("self")) reached.add(employeeId);
+    if (scopes.has("direct_reports") || scopes.has("all_reports")) {
+      this.reports ??= this.directory!.reportsBelow(employeeId);
+      for (const { id, depth } of await this.reports) {
+        if (depth === 1 || scopes.has("all_reports")) reached.add(id);
+      }
+    }
+    if (scopes.has("managers")) {
+      this.managers ??= this.directory!.managersAbove([employeeId]);
+      for (const id of (await this.managers).get(employeeId) ?? []) reached.add(id);
+    }
+    return [...reached];
+  }
+
   /** The actions among `actions` the caller holds on the subject, each with the fields it may write. */
   private async actionsOn(
     object: PermissionObject,
-    subjectEmployeeId: string,
+    subject: Subject,
     actions: readonly RecordAction[],
   ): Promise<Map<RecordAction, "*" | readonly string[]>> {
-    return (await this.actionsOnEach(object, [subjectEmployeeId], actions)).get(subjectEmployeeId)!;
+    return (await this.actionsOnEach(object, [subject], actions)).get(subject)!;
   }
 
-  /** `actionsOn` for each subject, by subject, reading the reporting line once for them all. */
+  /** `actionsOn` for each subject, by subject; each grant's scope is resolved once for them all. */
   private async actionsOnEach(
     object: PermissionObject,
-    subjectEmployeeIds: readonly string[],
+    subjects: readonly Subject[],
     actions: readonly RecordAction[],
-  ): Promise<Map<string, Map<RecordAction, "*" | readonly string[]>>> {
-    if (this.isSystem) {
-      return new Map(
-        subjectEmployeeIds.map((subject) => [subject, new Map(actions.map((a) => [a, "*"]))]),
-      );
-    }
-    const grants = actions.map((action) => [action, this.grants(object, action)] as const);
-    const employeeId = this.user?.employeeId ?? null;
-    const needsLine = grants.some(([, held]) =>
-      held.some(({ scope }) => scope === "direct_reports" || scope === "all_reports"),
+  ): Promise<Map<Subject, Map<RecordAction, "*" | readonly string[]>>> {
+    const access = new Map(
+      subjects.map((subject) => [subject, new Map<RecordAction, "*" | readonly string[]>()]),
     );
-    const managersAbove =
-      employeeId && needsLine
-        ? await this.directory!.managersAbove(subjectEmployeeIds)
-        : new Map<string, string[]>();
-    const reaches = (scope: Scope, subject: string): boolean => {
-      if (scope === "all") return true;
-      if (employeeId === null) return false;
-      if (scope === "self") return subject === employeeId;
-      const above = managersAbove.get(subject) ?? [];
-      return scope === "direct_reports" ? above[0] === employeeId : above.includes(employeeId);
-    };
-    return new Map(
-      subjectEmployeeIds.map((subject) => {
-        const access = new Map<RecordAction, "*" | readonly string[]>();
-        for (const [action, held] of grants) {
-          for (const grant of held) {
-            if (!reaches(grant.scope, subject)) continue;
-            const before = access.get(action) ?? [];
-            const fields = grant.fields ?? [];
-            access.set(
-              action,
-              before === "*" || fields === "*" ? "*" : [...new Set([...before, ...fields])],
-            );
-          }
+    for (const action of actions) {
+      const grants: readonly Pick<Grant, "scope" | "fields">[] = this.isSystem
+        ? [{ scope: "all", fields: "*" }]
+        : this.grants(object, action);
+      for (const grant of grants) {
+        const scope = await this.resolveScope([grant.scope], action);
+        for (const [subject, held] of access) {
+          if (!isInRecordScope(scope, subject)) continue;
+          const before = held.get(action) ?? [];
+          const fields = grant.fields ?? [];
+          held.set(
+            action,
+            before === "*" || fields === "*" ? "*" : [...new Set([...before, ...fields])],
+          );
         }
-        return [subject, access];
-      }),
-    );
+      }
+    }
+    return access;
   }
 
-  private async isOwnersEmployee(subjectEmployeeId: string): Promise<boolean> {
+  /** Whether the record is the owner's employee, which nobody deletes. */
+  private async isOwnersEmployee(object: PermissionObject, subject: Subject): Promise<boolean> {
+    if (object !== "employee") return false;
     // Read once per context, which lives for one request.
     this.ownersEmployeeId ??= this.directory?.ownersEmployeeId() ?? Promise.resolve(null);
-    return (await this.ownersEmployeeId) === subjectEmployeeId;
+    return (await this.ownersEmployeeId) === subject;
   }
 }
 

@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { assert } from "vitest";
 
 import {
   ADMIN,
@@ -186,6 +187,7 @@ test("a deletion addressed by uppercase id keeps its history under the canonical
     lastName: "Stone",
     email: "avery@example.com",
   });
+  assert(employee);
 
   const deleted = await employees.deleteEmployee(OWNER, { id: employee.id.toUpperCase() });
 

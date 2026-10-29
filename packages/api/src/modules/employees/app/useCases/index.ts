@@ -15,12 +15,16 @@ import { updateEmployee } from "./updateEmployee";
 
 /** Everything a user can do with employees; the adapters call nothing else. */
 export interface EmployeeUseCases {
-  createEmployee: (ctx: SecurityContext, input: NewEmployeeInput) => Promise<Employee>;
-  /** Changes the fields sent; refuses an unknown id with NOT_FOUND. */
+  /** Adds an employee; returns null when the caller may not read them. */
+  createEmployee: (ctx: SecurityContext, input: NewEmployeeInput) => Promise<Employee | null>;
+  /**
+   * Changes the fields sent; refuses an unknown id with NOT_FOUND. The employee and line are null
+   * when the caller may not read the employee.
+   */
   updateEmployee: (
     ctx: SecurityContext,
     input: EmployeeUpdateInput & { id: string },
-  ) => Promise<{ employee: Employee; historyLine: HistoryLine | null }>;
+  ) => Promise<{ employee: Employee | null; historyLine: HistoryLine | null }>;
   /**
    * Removes an employee and returns their id and the lines it added to their reports' history;
    * refuses an unknown id with NOT_FOUND.
@@ -33,7 +37,10 @@ export interface EmployeeUseCases {
   readEmployee: (ctx: SecurityContext, id: string) => Promise<Employee | null>;
   /** The signed-in user's own employee; null for a user without one, such as the owner. */
   readMyEmployee: (ctx: SecurityContext) => Promise<Employee | null>;
-  /** Each employee's manager today, by the id asked for; employees without one are left out. */
+  /**
+   * Each employee's manager today, by the id asked for; left out without one, or when the caller
+   * may not read the employee or their manager.
+   */
   readManagers: (
     ctx: SecurityContext,
     employeeIds: readonly string[],
@@ -49,13 +56,17 @@ export interface EmployeeUseCases {
   readAvatar: (ctx: SecurityContext, fileId: string) => Promise<StoredFile | null>;
   /**
    * Replaces the profiles given to the user an employee signs in as; refuses an unknown id with
-   * NOT_FOUND, an employee without a user, and the owner.
+   * NOT_FOUND, an employee without a user, and the owner. The employee and line are null when the
+   * caller may not read the employee.
    */
   setPermissionProfiles: (
     ctx: SecurityContext,
     input: { id: string; profiles: readonly PermissionProfile[]; changeReason?: string | null },
-  ) => Promise<{ employee: Employee; historyLine: HistoryLine | null }>;
-  /** The profiles of each employee's user, by employee id; employees without a user are left out. */
+  ) => Promise<{ employee: Employee | null; historyLine: HistoryLine | null }>;
+  /**
+   * The profiles of each employee's user, by employee id; employees without a user, or whom the
+   * caller may not read, are left out.
+   */
   readPermissionProfiles: (
     ctx: SecurityContext,
     employeeIds: readonly string[],

@@ -1,5 +1,5 @@
 import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
-import type { SecurityContext } from "../../../../core/security";
+import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { parseUuid, todayInUtc } from "../../../../utils";
 import type { Tx } from "../../../../core/db";
 import { employeeRepository, employmentRepository } from "../../db";
@@ -10,7 +10,8 @@ import { employeeNotFound } from "./employeeNotFound";
 /**
  * Removes an employee and their avatar and records what they held, their manager too, as a
  * deletion line, in one transaction; their history stays. Their reports are left without a
- * manager, with a line each, which it returns with the deleted employee's id.
+ * manager, with a line each, which it returns, those of reports the caller may read, with the
+ * deleted employee's id.
  */
 export async function deleteEmployee(
   { transact, logger }: EmployeeContext,
@@ -57,7 +58,13 @@ export async function deleteEmployee(
     const reportCount = reportHistoryLines.length;
     logger.info({ employeeId, reportCount }, "Cleared the manager of reports");
   }
-  return { deletedEmployeeId: employeeId, reportHistoryLines };
+  const scope = await ctx.recordScope("employee", "read");
+  return {
+    deletedEmployeeId: employeeId,
+    reportHistoryLines: reportHistoryLines.filter(({ recordId }) =>
+      isInRecordScope(scope, recordId),
+    ),
+  };
 }
 
 async function findManagerOf(tx: Tx, employeeId: string): Promise<Employee | null> {

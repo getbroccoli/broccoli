@@ -3,6 +3,7 @@ import { PrincipalSecurityContext, type EmployeeDirectory } from "../../src/core
 const nobody: EmployeeDirectory = {
   employeeIdOfUser: () => Promise.resolve(null),
   managersAbove: () => Promise.resolve(new Map()),
+  reportsBelow: () => Promise.resolve([]),
   ownersEmployeeId: () => Promise.resolve(null),
 };
 

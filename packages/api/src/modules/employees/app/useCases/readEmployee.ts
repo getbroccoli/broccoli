@@ -1,6 +1,6 @@
 import type { Connection, PageArgs } from "../../../../core/pagination";
 import { createRecordHistoryReader, type HistoryLine } from "../../../../core/records";
-import type { SecurityContext } from "../../../../core/security";
+import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { parseUuid, todayInUtc } from "../../../../utils";
 import type { EmployeeRepository, EmploymentRepository } from "../../db";
 import type { Employee } from "../../domain";
@@ -31,24 +31,26 @@ export async function readMyEmployee(
   return employeeId ? employees.findById(employeeId) : null;
 }
 
-/** Each employee's manager today, by the id asked for; employees without one are left out. */
+/**
+ * Each employee's manager today, by the id asked for; left out without one, or when the caller
+ * may not read the employee or their manager.
+ */
 export async function readManagers(
   { employees, employments }: { employees: EmployeeRepository; employments: EmploymentRepository },
   ctx: SecurityContext,
   employeeIds: readonly string[],
 ): Promise<Map<string, Employee>> {
-  ctx.requireEveryRecord("employee", "read");
+  const scope = await ctx.recordScope("employee", "read");
   const asked = employeeIds.flatMap((askedId) => {
     const id = parseUuid(askedId);
-    return id ? [{ askedId, id }] : [];
+    return id && isInRecordScope(scope, id) ? [{ askedId, id }] : [];
   });
   const managerIds = await employments.findManagerIds(
     asked.map(({ id }) => id),
     todayInUtc(),
   );
-  const managers = new Map(
-    (await employees.findByIds([...new Set(managerIds.values())])).map((m) => [m.id, m]),
-  );
+  const readable = [...new Set(managerIds.values())].filter((id) => isInRecordScope(scope, id));
+  const managers = new Map((await employees.findByIds(readable)).map((m) => [m.id, m]));
   return new Map(
     asked.flatMap(({ askedId, id }) => {
       const manager = managers.get(managerIds.get(id) ?? "");

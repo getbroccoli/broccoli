@@ -1,6 +1,7 @@
 import type { Orm } from "../../../../core/db";
 import { readFile, type StoredFile } from "../../../../core/files";
-import type { SecurityContext } from "../../../../core/security";
+import { ApplicationError } from "../../../../core/applicationError";
+import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { parseUuid } from "../../../../utils";
 import type { EmployeeRepository } from "../../db";
 
@@ -10,7 +11,16 @@ export async function readAvatar(
   ctx: SecurityContext,
   fileId: string,
 ): Promise<StoredFile | null> {
-  ctx.requireEveryRecord("employee", "read");
   const id = parseUuid(fileId);
-  return id && (await employees.hasAvatar(id)) ? readFile(orm, id) : null;
+  const employeeIds = id ? await employees.findIdsByAvatar(id) : [];
+  if (!id || employeeIds.length === 0) {
+    ctx.requireEveryRecord("employee", "read");
+    return null;
+  }
+  // Imported people can share a photo: any of them in scope makes it readable.
+  const scope = await ctx.recordScope("employee", "read");
+  if (!employeeIds.some((employeeId) => isInRecordScope(scope, employeeId))) {
+    throw new ApplicationError("FORBIDDEN", "You are not allowed to do this.");
+  }
+  return readFile(orm, id);
 }

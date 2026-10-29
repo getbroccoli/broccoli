@@ -1,3 +1,5 @@
+import { assert } from "vitest";
+
 import {
   recordChangedEvents,
   employeeUseCases,
@@ -63,6 +65,7 @@ test("changes only sent fields and records their old and normalised new values",
     jobTitle: "Engineer",
     startDate: "2026-02-28",
   });
+  assert(employee);
 
   const { transact, events } = recordChangedEvents(orm);
 
@@ -136,6 +139,7 @@ test.for(["jobTitle", "startDate"] as const)("clears %s when sent null", async (
     jobTitle: "Engineer",
     startDate: "2026-02-28",
   });
+  assert(employee);
 
   const updated = await employees.updateEmployee(OWNER, {
     id: employee.id,
@@ -160,6 +164,7 @@ test("a save with unchanged values records no line and publishes nothing", async
     email: "avery@example.com",
     jobTitle: "Engineer",
   });
+  assert(employee);
   const employees = employeeUseCases(orm, { transact });
   const before = await employees.readEmployeeHistory(OWNER, employee.id, {});
 
@@ -185,6 +190,7 @@ test("refuses a taken email without changing the employee or history", async ({ 
     lastName: "Stone",
     email: "avery@example.com",
   });
+  assert(employee);
   const before = await employees.readEmployeeHistory(OWNER, employee.id, {});
 
   await expect(
@@ -259,6 +265,7 @@ test("parallel job title edits keep their old and new values chained", async ({ 
     email: "avery@example.com",
     jobTitle: "Engineer",
   });
+  assert(employee);
 
   await Promise.all([
     employees.updateEmployee(OWNER, { id: employee.id, jobTitle: "Lead" }),
@@ -295,13 +302,14 @@ test("an update addressed by uppercase id keeps its history under the canonical 
     email: "avery@example.com",
     jobTitle: "Engineer",
   });
+  assert(employee);
 
   const updated = await employees.updateEmployee(OWNER, {
     id: employee.id.toUpperCase(),
     jobTitle: "Lead",
   });
 
-  expect(updated.employee.id).toBe(employee.id);
+  expect(updated.employee?.id).toBe(employee.id);
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation }))).toEqual(
     [

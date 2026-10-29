@@ -18,6 +18,11 @@ export interface EmploymentRepository {
     employeeIds: readonly string[],
     date: CalendarDate,
   ): Promise<Map<string, string[]>>;
+  /**
+   * Everyone below the manager in reporting lines active on `date`, in one query, with their
+   * depth: 1 for a direct report, 2 for theirs, and so on.
+   */
+  findReportsBelow(managerId: string, date: CalendarDate): Promise<{ id: string; depth: number }[]>;
   /** Sets the manager of the employment active on `date`, starting an open one when there is none. */
   setManager(employeeId: string, managerId: string | null, date: CalendarDate): Promise<void>;
   /** Removes `managerId` as manager from every employment naming them; returns whose they were. */
@@ -61,6 +66,21 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
         above.set(start, [...(above.get(start) ?? []), id]);
       }
       return above;
+    },
+
+    findReportsBelow: async (managerId, date) => {
+      // `cycle` stops a line at a report already found in it, so a loop in stored data still ends.
+      const rows = await orm().execute<{ id: string; depth: number }>(sql`
+        with recursive below(id, depth) as (
+          select ${employments.employeeId}, 1 from ${employments}
+          where ${employments.directManagerId} = ${managerId} and ${activeOn(date)}
+          union all
+          select e.employee_id, below.depth + 1 from ${employments} e
+          join below on e.direct_manager_id = below.id
+          where daterange(e.start_date, e.end_date, '[]') @> ${date}::date
+        ) cycle id set is_loop using path
+        select id, min(depth)::int as depth from below where not is_loop group by id`);
+      return rows.rows;
     },
 
     setManager: async (employeeId, managerId, date) => {

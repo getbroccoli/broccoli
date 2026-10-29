@@ -18,6 +18,7 @@ test("sorts by start date regardless of the database date style", async ({ orm, 
       after: null,
       order: { field: "START_DATE", direction: "ASC" },
       search: null,
+      scope: "all",
     });
   });
 

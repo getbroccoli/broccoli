@@ -1,7 +1,12 @@
 import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import { type Connection, type PageArgs, paginate } from "../../pagination";
-import type { PermissionObject, SecurityContext } from "../../security";
+import {
+  isInRecordScope,
+  type PermissionObject,
+  type SecurityContext,
+  type Subject,
+} from "../../security";
 import { findUserEmails, HISTORY_SORT_VALUES, recordHistoryRepository } from "../db";
 import {
   authorOf,
@@ -99,15 +104,15 @@ export function purgeRecordHistory(tx: Tx, recordType: RecordType): Promise<numb
 export interface RecordTypeRegistration {
   /** The GraphQL type of its records, such as "Employee"; resolves `RecordChange.record`. */
   graphqlType: string;
-  /**
-   * Refuses with FORBIDDEN a caller who may not read this record type's history. It gets the
-   * record's id but must not need the record to exist: a deleted record keeps its history.
-   */
-  requireHistoryAccess(ctx: SecurityContext, recordId: string): void | Promise<void>;
   /** The id as history stores it, such as an employee's lowercase uuid; null when it names no record. */
   canonicalId(recordId: string): string | null;
-  /** The records that still exist among these canonical ids, by id, for a caller who may read them. */
-  loadRecords(ctx: SecurityContext, ids: readonly string[]): Promise<Map<string, unknown>>;
+  /**
+   * The subject of each record that still exists among these canonical ids, by id, or "public";
+   * core decides from it who may read the record, its history and what they may do to it.
+   */
+  subjectsOf(ids: readonly string[]): Promise<Map<string, Subject>>;
+  /** The records that still exist among these canonical ids, by id; core keeps those the caller may read. */
+  loadRecords(ids: readonly string[]): Promise<Map<string, unknown>>;
   /** Its permission object, and the fields an update may change by their input names, for `access`. */
   permissions: { object: PermissionObject; editableFields: readonly string[] };
 }
@@ -115,23 +120,29 @@ export interface RecordTypeRegistration {
 /** What the caller may do to each of these records, by id, as `AnyRecord.access` shows it. */
 export async function readRecordAccess(
   ctx: SecurityContext,
-  { permissions: { object, editableFields } }: RecordTypeRegistration,
+  registration: RecordTypeRegistration,
   recordIds: readonly string[],
 ): Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>> {
-  // shortcut: the record is its own subject while employees are the only record type; a type
-  // whose records belong to an employee adds how to find that employee.
-  const access = await ctx.recordAccess(object, recordIds);
+  const { object, editableFields } = registration.permissions;
+  const subjects = await registration.subjectsOf(recordIds);
+  const access = await ctx.recordAccess(object, [...new Set(subjects.values())]);
   return new Map(
-    [...access].map(([id, { canUpdate, canDelete, writableFields }]) => [
-      id,
-      {
-        canUpdate,
-        canDelete,
-        editableFields: editableFields.filter(
-          (field) => writableFields === "*" || writableFields.includes(field),
-        ),
-      },
-    ]),
+    recordIds.map((id) => {
+      const subject = subjects.get(id);
+      const found = subject === undefined ? undefined : access.get(subject);
+      if (!found) return [id, { canUpdate: false, canDelete: false, editableFields: [] }];
+      const { canUpdate, canDelete, writableFields } = found;
+      return [
+        id,
+        {
+          canUpdate,
+          canDelete,
+          editableFields: editableFields.filter(
+            (field) => writableFields === "*" || writableFields.includes(field),
+          ),
+        },
+      ];
+    }),
   );
 }
 
@@ -172,20 +183,37 @@ export function createRecordHistoryReader(
   return {
     readHistory: async (ctx, recordType, recordId, args) => {
       const registration = registrationOf(recordType);
-      await registration.requireHistoryAccess(ctx, recordId);
+      const { object } = registration.permissions;
       const canonicalId = registration.canonicalId(recordId);
+      // A record that is gone has no subject: only a caller who reads every record reads its history.
+      const subject =
+        canonicalId && (await registration.subjectsOf([canonicalId])).get(canonicalId);
+      if (subject) {
+        await ctx.requireInScope(object, "read", subject);
+      } else {
+        ctx.requireEveryRecord(object, "read");
+      }
       return canonicalId === null
         ? { edges: [], pageInfo: { hasNextPage: false, endCursor: null } }
         : readRecordHistory(orm, recordType, canonicalId, args);
     },
     readRecords: async (ctx, recordType, ids) => {
       const registration = registrationOf(recordType);
-      const records = await registration.loadRecords(ctx, ids);
+      const [scope, subjects, records] = await Promise.all([
+        ctx.recordScope(registration.permissions.object, "read"),
+        registration.subjectsOf(ids),
+        registration.loadRecords(ids),
+      ]);
       return new Map(
-        [...records].map(([id, record]) => [
-          id,
-          { ...(record as object), __typename: registration.graphqlType },
-        ]),
+        [...records]
+          .filter(([id]) => {
+            const subject = subjects.get(id);
+            return subject !== undefined && isInRecordScope(scope, subject);
+          })
+          .map(([id, record]) => [
+            id,
+            { ...(record as object), __typename: registration.graphqlType },
+          ]),
       );
     },
   };
