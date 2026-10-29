@@ -83,17 +83,7 @@ export function LoginForm({ forgotPassword, passwordChanged }: Props) {
       <form.Field name="password">
         {(field) => (
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="login-password">{t("auth.login.password")}</Label>
-              {forgotPassword && (
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                >
-                  {t("auth.login.forgotPassword")}
-                </Link>
-              )}
-            </div>
+            <Label htmlFor="login-password">{t("auth.login.password")}</Label>
             <Input
               ref={passwordInput}
               id="login-password"
@@ -124,6 +114,14 @@ export function LoginForm({ forgotPassword, passwordChanged }: Props) {
           </Button>
         )}
       </form.Subscribe>
+      {forgotPassword && (
+        <Link
+          to="/forgot-password"
+          className="self-center text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          {t("auth.login.forgotPassword")}
+        </Link>
+      )}
     </form>
   );
 }
