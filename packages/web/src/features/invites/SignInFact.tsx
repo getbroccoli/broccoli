@@ -14,7 +14,7 @@ const TONE_DOT = {
   joined: "bg-brand",
 } as const;
 
-/** A person's sign-in under their work email: a dot for its tone, then the state. */
+/** A person's sign-in on their work email: a dot for its tone, then the state. */
 export function SignInLine({ status }: { status: SignInStatusFragment }) {
   return (
     <span className="flex items-center gap-1.5 text-xs">
@@ -41,7 +41,7 @@ export function InviteButton({ status, onInvite }: InviteButtonProps) {
     <Button
       variant={action.prominent ? "outline" : "ghost"}
       size="xs"
-      className={cn("-my-1 -mr-1.5", action.prominent && "text-foreground")}
+      className={cn("-my-1 -mr-1.5 shrink-0", action.prominent && "text-foreground")}
       onClick={onInvite}
     >
       <PaperPlaneTilt aria-hidden />

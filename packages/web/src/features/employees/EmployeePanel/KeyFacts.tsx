@@ -12,7 +12,7 @@ import { tenureOf } from "@/lib/tenure";
 type Props = {
   startDate: string | null;
   email: string;
-  /** Shown to admins only, under the work email with its invite action. */
+  /** Shown to admins only, on the work email with its invite action. */
   signIn: { status: SignInStatusFragment; onInvite: () => void } | null;
 };
 
@@ -23,8 +23,10 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
     icon: Icon;
     label: string;
     value: string;
+    /** Beside the label, such as the sign-in state. */
+    status?: ReactNode;
+    /** Beside the value, such as the invite action. */
     action?: ReactNode;
-    footer?: ReactNode;
   }[] = [
     ...(startDate
       ? [
@@ -40,22 +42,28 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
       icon: Envelope,
       label: t("people.panel.fact.email"),
       value: email,
+      status: signIn && <SignInLine status={signIn.status} />,
       action: signIn && <InviteButton status={signIn.status} onInvite={signIn.onInvite} />,
-      footer: signIn && <SignInLine status={signIn.status} />,
     },
   ];
 
   return (
     <dl className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
-      {facts.map(({ icon: FactIcon, label, value, action, footer }) => (
+      {facts.map(({ icon: FactIcon, label, value, status, action }) => (
         <div key={label} className="rounded-xl border border-border px-3 py-2.5">
           <dt className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
             <FactIcon aria-hidden className="size-3.5" />
             {label}
-            {action && <span className="ml-auto tracking-normal normal-case">{action}</span>}
+            {status && (
+              <span className="ml-auto font-normal tracking-normal text-foreground normal-case">
+                {status}
+              </span>
+            )}
           </dt>
-          <dd className="truncate pt-1 text-sm font-medium">{value}</dd>
-          {footer && <dd className="pt-1">{footer}</dd>}
+          <dd className="flex items-center gap-2 pt-1 text-sm font-medium">
+            <span className="min-w-0 flex-1 truncate">{value}</span>
+            {action}
+          </dd>
         </div>
       ))}
     </dl>

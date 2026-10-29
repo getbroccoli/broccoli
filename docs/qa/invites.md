@@ -15,7 +15,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 
 ## People
 
-- [ ] As the owner, People shows a checkbox per person who can be invited, a "Select this page" checkbox in the header, and a "Sign-in" column: "Not invited" for everyone at first. Unticked checkboxes are plainly visible without hovering. Demo people show no checkbox.
+- [ ] As the owner, People shows a checkbox on every row, plainly visible without hovering, a "Select this page" checkbox in the header, and a "Sign-in" column: "Not invited" for everyone at first. Demo and joined people can be selected too; the invite dialog lists them as skipped.
 - [ ] Clicking a checkbox selects the row without opening the person's panel; the toolbar becomes "N selected", Invite and Clear. Clear empties the selection.
 - [ ] Selecting people on two pages keeps both selections.
 
@@ -37,7 +37,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 
 ## The person's panel
 
-- [ ] The header shows only name and job title. The Work email card shows the sign-in state under the address, with a dot (grey, amber, red when not sent or expired, green when joined), and its invite action: "Send invite" when not invited, a quiet "Resend" while pending, "Resend invite" when not sent or expired, none once joined. Each opens the invite dialog for that person.
+- [ ] The header shows only name and job title. The Work email card shows the sign-in state beside its label, with a dot (grey, amber, red when not sent or expired, green when joined), and its invite action beside the address: "Send invite" when not invited, a quiet "Resend" while pending, "Resend invite" when not sent or expired, none once joined. Each opens the invite dialog for that person.
 - [ ] The ⋯ menu offers "Copy invite link" (copies a new link and says until when it works) and, while an invite is pending, "Cancel invite".
 - [ ] "Cancel invite" shows "Invite cancelled"; the state becomes "Not invited" and the link stops working.
 - [ ] History shows "Invited", "Invite cancelled" and "Joined" lines with Sign-in: Not invited → Pending → Joined.

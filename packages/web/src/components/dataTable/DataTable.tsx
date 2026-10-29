@@ -27,8 +27,6 @@ export interface DataTableColumn<Row, SortKey extends string = string> {
 export interface DataTableSelection<Row> {
   selectedIds: ReadonlySet<string>;
   onChange: (selectedIds: ReadonlySet<string>) => void;
-  /** Rows without a checkbox, such as people who cannot be invited. */
-  isSelectable?: (row: Row) => boolean;
   /** Names a row for its checkbox, such as a person's name. */
   rowLabel: (row: Row) => string;
 }
@@ -86,10 +84,9 @@ export function DataTable<Row, SortKey extends string>({
   // The pager shows only when there is another page to move to.
   const showPager = pager && !notice && (pager.hasNextPage || !pager.isFirstPage);
   const selecting = selection && selection.selectedIds.size > 0;
-  const selectable =
-    selection && rows ? rows.filter((row) => selection.isSelectable?.(row) ?? true) : [];
+  const pageRows = selection && rows ? rows : [];
   const pageSelected =
-    selectable.length > 0 && selectable.every((row) => selection!.selectedIds.has(getRowId(row)));
+    pageRows.length > 0 && pageRows.every((row) => selection!.selectedIds.has(getRowId(row)));
   const toggle = (ids: string[], checked: boolean) => {
     const next = new Set(selection!.selectedIds);
     for (const id of ids) {
@@ -135,10 +132,10 @@ export function DataTable<Row, SortKey extends string>({
                         checked={pageSelected}
                         indeterminate={
                           !pageSelected &&
-                          selectable.some((row) => selection.selectedIds.has(getRowId(row)))
+                          pageRows.some((row) => selection.selectedIds.has(getRowId(row)))
                         }
-                        disabled={selectable.length === 0}
-                        onCheckedChange={(checked) => toggle(selectable.map(getRowId), checked)}
+                        disabled={pageRows.length === 0}
+                        onCheckedChange={(checked) => toggle(pageRows.map(getRowId), checked)}
                       />
                     )
                   }
@@ -194,15 +191,11 @@ export function DataTable<Row, SortKey extends string>({
                     >
                       {index === 0 && selection ? (
                         <div className="flex items-center gap-3">
-                          {(selection.isSelectable?.(row) ?? true) ? (
-                            <Checkbox
-                              aria-label={t("table.selectRow", { name: selection.rowLabel(row) })}
-                              checked={selection.selectedIds.has(getRowId(row))}
-                              onCheckedChange={(checked) => toggle([getRowId(row)], checked)}
-                            />
-                          ) : (
-                            <span className="size-4 shrink-0" />
-                          )}
+                          <Checkbox
+                            aria-label={t("table.selectRow", { name: selection.rowLabel(row) })}
+                            checked={selection.selectedIds.has(getRowId(row))}
+                            onCheckedChange={(checked) => toggle([getRowId(row)], checked)}
+                          />
                           <div className="min-w-0 flex-1">{column.cell(row)}</div>
                         </div>
                       ) : (
