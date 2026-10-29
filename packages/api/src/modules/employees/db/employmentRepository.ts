@@ -14,8 +14,8 @@ export interface EmploymentRepository {
   /** Holds back other manager changes until the caller commits, so two cannot form a loop together. */
   lockManagers(): Promise<void>;
   /**
-   * Takes the table lock an employment write needs before the caller locks employee rows, the
-   * order manager changes and resets take theirs in, so they cannot deadlock.
+   * Takes the table lock employee and employment writes need before the caller locks employee rows,
+   * the order manager changes and resets take theirs in, so they cannot deadlock.
    */
   lockForWrites(): Promise<void>;
   /** The direct manager of each employee's employment held on `date`; those without one are left out. */

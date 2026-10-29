@@ -150,9 +150,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
     update: async (id: string, changes: Partial<NewEmployee>) => {
       const { startDate, ...fields } = changes;
-      if (startDate !== undefined) {
-        await employmentRepository(db).lockForWrites();
-      }
+      await employmentRepository(db).lockForWrites();
       // Locked before it is read, so the read sees a start date committed while it waited.
       await lockEmployees(orm(), [id]);
       const [before] = await orm()
