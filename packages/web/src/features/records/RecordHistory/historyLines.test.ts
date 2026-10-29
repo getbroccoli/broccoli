@@ -66,17 +66,15 @@ it("summarises one changed field with its label and stored text", () => {
 });
 
 it("summarises one changed field with its stored labels instead of ids", () => {
-  const change = {
+  const fieldChange = change({
     field: "manager",
     oldValue: "00000000-0000-4000-8000-000000000001",
     newValue: "00000000-0000-4000-8000-000000000002",
     oldLabel: "Robin Reed",
     newLabel: "Taylor Brook",
-    oldHidden: false,
-    newHidden: false,
-  };
+  });
 
-  const summary = summaryOf({ ...line, changes: [change] }, description);
+  const summary = summaryOf({ ...line, changes: [fieldChange] }, description);
 
   expect(summary).toEqual({
     kind: "changed",
@@ -87,17 +85,14 @@ it("summarises one changed field with its stored labels instead of ids", () => {
 });
 
 it("shows Hidden for a hidden old reference while keeping the visible new label", () => {
-  const change = {
+  const fieldChange = change({
     field: "manager",
-    oldValue: null,
-    oldLabel: null,
     oldHidden: true,
     newValue: "00000000-0000-4000-8000-000000000002",
     newLabel: "Taylor Brook",
-    newHidden: false,
-  };
+  });
 
-  const summary = summaryOf({ ...line, changes: [change] }, description);
+  const summary = summaryOf({ ...line, changes: [fieldChange] }, description);
 
   expect(summary).toEqual({
     kind: "changed",
@@ -108,17 +103,13 @@ it("shows Hidden for a hidden old reference while keeping the visible new label"
 });
 
 it("formats both values using the changed field's formatter", () => {
-  const change = {
+  const fieldChange = change({
     field: "startDate",
     oldValue: "2025-01-06",
     newValue: "2025-02-07",
-    oldLabel: null,
-    newLabel: null,
-    oldHidden: false,
-    newHidden: false,
-  };
+  });
 
-  const summary = summaryOf({ ...line, changes: [change] }, description);
+  const summary = summaryOf({ ...line, changes: [fieldChange] }, description);
 
   expect(summary).toEqual({
     kind: "changed",
@@ -129,17 +120,12 @@ it("formats both values using the changed field's formatter", () => {
 });
 
 it("keeps a missing old value null when a field is set", () => {
-  const change = {
+  const fieldChange = change({
     field: "startDate",
-    oldValue: null,
     newValue: "2025-01-06",
-    oldLabel: null,
-    newLabel: null,
-    oldHidden: false,
-    newHidden: false,
-  };
+  });
 
-  const summary = summaryOf({ ...line, changes: [change] }, description);
+  const summary = summaryOf({ ...line, changes: [fieldChange] }, description);
 
   expect(summary).toEqual({
     kind: "changed",
@@ -150,17 +136,12 @@ it("keeps a missing old value null when a field is set", () => {
 });
 
 it("keeps a missing new value null when a field is cleared", () => {
-  const change = {
+  const fieldChange = change({
     field: "startDate",
     oldValue: "2025-01-06",
-    newValue: null,
-    oldLabel: null,
-    newLabel: null,
-    oldHidden: false,
-    newHidden: false,
-  };
+  });
 
-  const summary = summaryOf({ ...line, changes: [change] }, description);
+  const summary = summaryOf({ ...line, changes: [fieldChange] }, description);
 
   expect(summary).toEqual({
     kind: "changed",
@@ -171,17 +152,13 @@ it("keeps a missing new value null when a field is cleared", () => {
 });
 
 it("labels an unknown field in sentence case and leaves its values unformatted", () => {
-  const change = {
+  const fieldChange = change({
     field: "costCenter",
     oldValue: "001",
     newValue: "002",
-    oldLabel: null,
-    newLabel: null,
-    oldHidden: false,
-    newHidden: false,
-  };
+  });
 
-  const summary = summaryOf({ ...line, changes: [change] }, description);
+  const summary = summaryOf({ ...line, changes: [fieldChange] }, description);
 
   expect(summary).toEqual({
     kind: "changed",
@@ -193,24 +170,15 @@ it("labels an unknown field in sentence case and leaves its values unformatted",
 
 it("summarises several changed fields with their labels in change order", () => {
   const changes = [
-    {
+    change({
       field: "jobTitle",
       oldValue: "Designer",
       newValue: "Lead designer",
-      oldLabel: null,
-      newLabel: null,
-      oldHidden: false,
-      newHidden: false,
-    },
-    {
+    }),
+    change({
       field: "costCenter",
-      oldValue: null,
       newValue: "002",
-      oldLabel: null,
-      newLabel: null,
-      oldHidden: false,
-      newHidden: false,
-    },
+    }),
   ];
 
   const summary = summaryOf({ ...line, changes }, description);
@@ -220,24 +188,14 @@ it("summarises several changed fields with their labels in change order", () => 
 
 it("names a created record from its title field's new value", () => {
   const changes = [
-    {
+    change({
       field: "jobTitle",
-      oldValue: null,
       newValue: "Designer",
-      oldLabel: null,
-      newLabel: null,
-      oldHidden: false,
-      newHidden: false,
-    },
-    {
+    }),
+    change({
       field: "firstName",
-      oldValue: null,
       newValue: "Avery",
-      oldLabel: null,
-      newLabel: null,
-      oldHidden: false,
-      newHidden: false,
-    },
+    }),
   ];
 
   const summary = summaryOf({ ...line, operation: "CREATED", changes }, description);
@@ -257,15 +215,10 @@ it("leaves a created record's title null when its title field is missing", () =>
 
 it("names a deleted record from its title field's old value", () => {
   const changes = [
-    {
+    change({
       field: "firstName",
       oldValue: "Avery",
-      newValue: null,
-      oldLabel: null,
-      newLabel: null,
-      oldHidden: false,
-      newHidden: false,
-    },
+    }),
   ];
 
   const summary = summaryOf({ ...line, operation: "DELETED", changes }, description);
@@ -325,17 +278,27 @@ const line: Parameters<typeof summaryOf>[0] = {
   cause: { kind: "EDITED_DIRECTLY" },
   reason: null,
   changes: [
-    {
+    change({
       field: "jobTitle",
       oldValue: "Designer",
       newValue: "Lead designer",
-      oldLabel: null,
-      newLabel: null,
-      oldHidden: false,
-      newHidden: false,
-    },
+    }),
   ],
 };
+
+type FieldChange = Parameters<typeof summaryOf>[0]["changes"][number];
+
+function change(overrides: Pick<FieldChange, "field"> & Partial<FieldChange>): FieldChange {
+  return {
+    oldValue: null,
+    newValue: null,
+    oldLabel: null,
+    newLabel: null,
+    oldHidden: false,
+    newHidden: false,
+    ...overrides,
+  };
+}
 
 const description: RecordDescription = {
   titleField: "firstName",
