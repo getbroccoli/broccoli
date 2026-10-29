@@ -173,7 +173,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         await orm()
           .update(employments)
           .set({ startDate })
-          .where(sql`${employments.id} = (${firstEmploymentOf(id)})`);
+          .where(eq(employments.id, firstEmploymentOf(id)));
       }
       // The changes are normalised as stored, so the stored employee is the old one with them.
       return { before, after: { ...before, ...changes } };

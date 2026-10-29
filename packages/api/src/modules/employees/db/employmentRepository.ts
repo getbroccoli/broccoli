@@ -1,4 +1,5 @@
-import { eq, type SQL, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, or, type SQL, sql } from "drizzle-orm";
+import { alias, QueryBuilder } from "drizzle-orm/pg-core";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -131,9 +132,17 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
  * starts, their next one.
  */
 function heldOn(date: CalendarDate, employment: SQL = sql`${employments}`) {
-  return sql`${employment}.id = (
-    select held.id from ${employments} held
-    where held.employee_id = ${employment}.employee_id
-      and (held.end_date is null or held.end_date >= ${date}::date)
-    order by held.start_date nulls first limit 1)`;
+  const held = alias(employments, "held");
+  const heldEmployment = new QueryBuilder()
+    .select({ id: held.id })
+    .from(held)
+    .where(
+      and(
+        sql`${held.employeeId} = ${employment}.employee_id`,
+        or(isNull(held.endDate), gte(held.endDate, date)),
+      ),
+    )
+    .orderBy(sql`${held.startDate} nulls first`)
+    .limit(1);
+  return sql`${employment}.id = ${heldEmployment}`;
 }

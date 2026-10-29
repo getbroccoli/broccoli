@@ -1,4 +1,5 @@
-import { getTableColumns, sql, type SQLWrapper } from "drizzle-orm";
+import { eq, getTableColumns, sql, type SQLWrapper } from "drizzle-orm";
+import { type PgColumn, QueryBuilder } from "drizzle-orm/pg-core";
 
 import { employees } from "./employeesTable";
 import { employments } from "./employmentsTable";
@@ -9,7 +10,7 @@ import { employments } from "./employmentsTable";
  */
 export const EMPLOYEE_COLUMNS = {
   ...getTableColumns(employees),
-  startDate: sql`(${firstEmploymentOf(employees.id, employments.startDate)})`.mapWith(
+  startDate: sql`${firstEmploymentOf(employees.id, employments.startDate)}`.mapWith(
     employments.startDate,
   ),
 };
@@ -17,9 +18,12 @@ export const EMPLOYEE_COLUMNS = {
 /** A query for the id, or `column`, of the employee's first employment. */
 export function firstEmploymentOf(
   employeeId: string | SQLWrapper,
-  column: SQLWrapper = employments.id,
+  column: PgColumn = employments.id,
 ) {
-  return sql`select ${column} from ${employments}
-    where ${employments.employeeId} = ${employeeId}
-    order by ${employments.startDate} nulls first limit 1`;
+  return new QueryBuilder()
+    .select({ value: column })
+    .from(employments)
+    .where(eq(employments.employeeId, employeeId))
+    .orderBy(sql`${employments.startDate} nulls first`)
+    .limit(1);
 }
