@@ -32,5 +32,6 @@ export function employeeRecordType(orm: Orm): RecordTypeRegistration {
       return new Map(employees.map((employee) => [employee.id, employee]));
     },
     permissions: { object: "employee", editableFields: EDITABLE_FIELDS },
+    references: { manager: "employee" },
   };
 }

@@ -63,7 +63,7 @@ type Setup {
 
 # Adds the employee's causes to the shared list; the server merges them.
 enum RecordChangeCauseKind {
-  "The person's manager was removed, so they have none; the ref is the removed employee."
+  "The person's manager was removed, so they have none; the line's manager change names them. No ref."
   MANAGER_REMOVED
   "An admin invited the person to sign in, or made them a new link; the ref is the invite."
   INVITE_SENT

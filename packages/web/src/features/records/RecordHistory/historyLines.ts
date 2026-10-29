@@ -63,16 +63,21 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
   }
 }
 
-/** A change's values as the record type shows them: the label stored with an id, else the value formatted. */
+/**
+ * A change's values as the record type shows them: "Hidden" for a record the reader may not read,
+ * else the label stored with an id, else the value formatted.
+ */
 export function shownValues(
-  { field, oldValue, newValue, oldLabel, newLabel }: FieldChange,
+  { field, oldValue, newValue, oldLabel, newLabel, oldHidden, newHidden }: FieldChange,
   description: RecordDescription,
 ): { oldValue: string | null; newValue: string | null } {
   const format =
     description.fields.find(({ key }) => key === field)?.format ?? ((value: string) => value);
+  const shown = (hidden: boolean, label: string | null | undefined, value: string | null) =>
+    hidden ? t("records.history.hidden") : (label ?? (value === null ? null : format(value)));
   return {
-    oldValue: oldLabel ?? (oldValue === null ? null : format(oldValue)),
-    newValue: newLabel ?? (newValue === null ? null : format(newValue)),
+    oldValue: shown(oldHidden, oldLabel, oldValue),
+    newValue: shown(newHidden, newLabel, newValue),
   };
 }
 

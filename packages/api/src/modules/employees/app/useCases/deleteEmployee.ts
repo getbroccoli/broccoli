@@ -89,7 +89,8 @@ async function updateReportHistory(
   return appendRecordHistory(ctx, tx, {
     recordType: "employee",
     operation: "UPDATED",
-    cause: { kind: "MANAGER_REMOVED", ref: manager.id },
+    // The removed manager is in each line's `manager` change; a ref would only repeat them.
+    cause: { kind: "MANAGER_REMOVED" },
     records: reportIds.map((recordId) => ({ recordId, changes: managerChanges(manager, null) })),
   });
 }

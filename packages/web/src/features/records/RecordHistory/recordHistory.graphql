@@ -31,5 +31,7 @@ fragment RecordHistory_line on RecordChange {
     newValue
     oldLabel
     newLabel
+    oldHidden
+    newHidden
   }
 }

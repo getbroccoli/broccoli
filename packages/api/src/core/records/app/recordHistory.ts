@@ -11,6 +11,7 @@ import { findUserEmails, HISTORY_SORT_VALUES, recordHistoryRepository } from "..
 import {
   authorOf,
   type CauseKind,
+  type FieldChange,
   type HistoryAppend,
   type HistoryLine,
   type RecordOperation,
@@ -115,7 +116,15 @@ export interface RecordTypeRegistration {
   loadRecords(ids: readonly string[]): Promise<Map<string, unknown>>;
   /** Its permission object, and the fields an update may change by their input names, for `access`. */
   permissions: { object: PermissionObject; editableFields: readonly string[] };
+  /** The change fields in its history whose values are ids of another record type, by field. */
+  references?: Partial<Record<string, RecordType>>;
 }
+
+/** A field change as a reader sees it: a value naming a record they may not read is hidden. */
+export type VisibleFieldChange = FieldChange & { oldHidden: boolean; newHidden: boolean };
+
+/** A history line as a reader sees it. */
+export type VisibleHistoryLine = Omit<HistoryLine, "changes"> & { changes: VisibleFieldChange[] };
 
 /** What the caller may do to each of these records, by id, as `AnyRecord.access` shows it. */
 export async function readRecordAccess(
@@ -167,6 +176,15 @@ export interface RecordHistoryReader {
     recordType: RecordType,
     ids: readonly string[],
   ): Promise<Map<string, LoadedRecord>>;
+  /**
+   * The lines, in their order, with each value that names a record the caller may not read hidden:
+   * value and label null, its flag set. A record that is gone stays shown only to a caller who
+   * reads every record of its type. Never refuses.
+   */
+  hideOutOfScopeReferences(
+    ctx: SecurityContext,
+    lines: readonly HistoryLine[],
+  ): Promise<VisibleHistoryLine[]>;
 }
 
 export function createRecordHistoryReader(
@@ -216,5 +234,57 @@ export function createRecordHistoryReader(
           ]),
       );
     },
+    hideOutOfScopeReferences: async (ctx, lines) => {
+      const referencedIds = new Map<RecordType, Set<string>>();
+      for (const line of lines) {
+        for (const { field, oldValue, newValue } of line.changes) {
+          const type = registry[line.recordType]?.references?.[field];
+          if (!type) continue;
+          const ids = referencedIds.get(type) ?? new Set<string>();
+          for (const id of [oldValue, newValue]) if (id !== null) ids.add(id);
+          referencedIds.set(type, ids);
+        }
+      }
+      const readable = new Map<RecordType, (id: string) => boolean>();
+      for (const [type, ids] of referencedIds) {
+        readable.set(type, await readableAmong(ctx, registry[type], [...ids]));
+      }
+      return lines.map((line) => ({
+        ...line,
+        changes: line.changes.map((change) => {
+          const type = registry[line.recordType]?.references?.[change.field];
+          const shown = (id: string | null) => !type || id === null || readable.get(type)!(id);
+          const [oldShown, newShown] = [shown(change.oldValue), shown(change.newValue)];
+          return {
+            ...change,
+            ...(oldShown ? {} : { oldValue: null, oldLabel: null }),
+            ...(newShown ? {} : { newValue: null, newLabel: null }),
+            oldHidden: !oldShown,
+            newHidden: !newShown,
+          };
+        }),
+      }));
+    },
+  };
+}
+
+/**
+ * Which of these ids of one record type the caller may read: by their subjects, or, for a record
+ * that is gone, only with a read reaching every record. An unregistered type reads as none.
+ */
+async function readableAmong(
+  ctx: SecurityContext,
+  registration: RecordTypeRegistration | undefined,
+  ids: readonly string[],
+): Promise<(id: string) => boolean> {
+  if (!registration) return () => false;
+  const canonical = ids.filter((id) => registration.canonicalId(id) === id);
+  const [scope, subjects] = await Promise.all([
+    ctx.recordScope(registration.permissions.object, "read"),
+    registration.subjectsOf(canonical),
+  ]);
+  return (id) => {
+    const subject = subjects.get(id);
+    return subject === undefined ? scope === "all" : isInRecordScope(scope, subject);
   };
 }
