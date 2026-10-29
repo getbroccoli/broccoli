@@ -26,7 +26,8 @@ A manual check of how a self-hosted instance sends email, and of resetting a for
 ## Forgot password
 
 - [ ] With "No email" saved, `/login` shows no "Forgot password?".
-- [ ] With the SMTP server saved, `/login` shows "Forgot password?" next to Password; it opens `/forgot-password`.
+- [ ] With the SMTP server saved, `/login` shows "Forgot password?" below Sign in before and after a failed attempt; it opens `/forgot-password`.
+- [ ] Tab moves through Email → Password → Sign in → Forgot password, including after a failed attempt. Check the same order in the password form on a managed workspace.
 - [ ] `owner@example.com` shows "If that address has an account, we sent a link…", and Mailpit receives "Reset your Broccoli password" within seconds.
 - [ ] `nobody@example.com` shows the same answer, and Mailpit receives nothing.
 - [ ] A sixth request within a minute shows "Too many attempts. Try again in a moment."
