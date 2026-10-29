@@ -3,7 +3,7 @@ import { escapeHtml } from "./escapeHtml";
 /**
  * Broccoli's email look: the mark, one white card and a footer, in tables and inline styles that
  * mail clients keep, with a dark version for clients that support one. Broccoli's mail relay
- * accepts exactly these tags, attributes and styles, so change them there too.
+ * accepts only emails matching its samples of this layout, so give it new samples first.
  */
 export const emailLayout = {
   /** The whole email around `content`, built from the blocks below; `origin` serves the mark. */
