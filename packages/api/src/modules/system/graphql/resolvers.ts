@@ -116,7 +116,8 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
 
 /** The `Setup` object for `security`, as `Query.setup` and every setup payload return it. */
 export async function readSetupView(orm: Orm, mode: Mode, security: SecurityContext | null) {
-  const { step, demoExpiresAt, ownerSignInMethod, mailSource } = await readInstance(orm);
+  const { step, demoExpiresAt, ownerSignInMethod, mailSource, assignment } =
+    await readInstance(orm);
   return {
     id: "instance",
     step: STEPS[step],
@@ -128,8 +129,9 @@ export async function readSetupView(orm: Orm, mode: Mode, security: SecurityCont
     // Only the owner learns when their demo ends.
     demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
     ownerSignInMethod: ownerSignInMethod && OWNER_SIGN_IN_METHODS[ownerSignInMethod],
-    // Managed instances store no mail choice; their email arrives with the relay.
-    passwordResetByEmail: mailSource !== null && mailSource !== "no_email",
+    // A managed instance emails through Broccoli's relay once assigned; it stores no mail choice.
+    passwordResetByEmail:
+      mode === "managed" ? assignment !== null : mailSource !== null && mailSource !== "no_email",
   };
 }
 

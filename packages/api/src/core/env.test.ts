@@ -52,6 +52,7 @@ it("reads the self-hosted public URL", () => {
 it.each([
   ["MANAGED_INSTANCE_ID", "slot-1"],
   ["MANAGED_ACCOUNTS_URL", "https://accounts.example.com"],
+  ["MANAGED_MAIL_RELAY_URL", "https://relay.example.com/mail"],
 ])("refuses %s when self-hosted", (variable, value) => {
   expect(() => loadEnv({ ...DATABASE, [variable]: value })).toThrow(variable);
 });
@@ -69,13 +70,23 @@ it("requires the instance id when managed", () => {
   expect(() => loadEnv({ ...DATABASE, BROCCOLI_MODE: "managed" })).toThrow(/MANAGED_INSTANCE_ID/);
 });
 
-it("defaults the accounts origin when managed", () => {
+it("defaults the accounts origin and the mail relay when managed", () => {
   const env = loadEnv(MANAGED);
   expect(env.deployment).toEqual({
     mode: "managed",
     instanceId: "slot-1",
     accountsOrigin: DEFAULT_ACCOUNTS_URL,
+    mailRelayUrl: "https://integrations.dev.getbroccoli.com/mail",
   });
+});
+
+it("reads the mail relay URL when managed", () => {
+  const env = loadEnv({
+    ...MANAGED,
+    MANAGED_MAIL_RELAY_URL: "https://relay.example.com/mail",
+  });
+
+  expect(env.deployment).toMatchObject({ mailRelayUrl: "https://relay.example.com/mail" });
 });
 
 it("refuses the self-hosted public URL when managed", () => {

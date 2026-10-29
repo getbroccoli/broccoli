@@ -1,4 +1,4 @@
-import { ApplicationError } from "../../../../core/applicationError";
+import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import { type MailSettings, readInstance } from "../../../../core/instance";
 import type { JobHandlers, JobQueue } from "../../../../core/jobs";
@@ -23,6 +23,7 @@ import {
   type InviteDelivery,
   inviteExpiry,
   inviteLink,
+  noteHasLink,
   parseInviteInput,
   type SignInStatus,
 } from "../../domain";
@@ -125,6 +126,9 @@ export function createEmployeeInviteService({
         throw new ApplicationError("CONFLICT", "Invites start once the demo ends.");
       }
       const mailer = input.delivery === "copied_by_owner" ? null : await readMailer();
+      if (mailer?.sendsThroughBroccoli && note && noteHasLink(note)) {
+        throw invalidInput([{ field: "note", code: "has_link" }]);
+      }
       const delivery: InviteDelivery = mailer ? "sent_by_email" : "copied_by_owner";
       const now = new Date();
       const sent = await transact(async (tx) => {

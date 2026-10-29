@@ -8,6 +8,7 @@ import type { SecretBox } from "../../secrets";
 import type { SecurityContext } from "../../security";
 import {
   createMailer,
+  createRelayMailer,
   MailRefusedError,
   type Mailer,
   type MailTransport,
@@ -30,13 +31,25 @@ export interface MailSettings {
   configureDevelopmentMail(ctx: SecurityContext, linkOrigin: string): Promise<void>;
   /** Sends the caller a test email with the saved choice. */
   sendTestEmail(ctx: SecurityContext): Promise<void>;
-  /** The saved choice's mailer and the origin its links use; null without email or on managed. */
-  readMailer(ctx: SecurityContext): Promise<{ mailer: Mailer; linkOrigin: string } | null>;
+  /**
+   * How this instance sends email now: the saved choice on self-hosted, Broccoli's mail relay on
+   * an initialized managed instance; null without email.
+   */
+  readMailer(ctx: SecurityContext): Promise<InstanceMailer | null>;
+}
+
+/** A mailer and the origin its links use. */
+export interface InstanceMailer {
+  mailer: Mailer;
+  linkOrigin: string;
+  /** Whether Broccoli's relay sends it, as "<sender> via Broccoli", accepting only the instance's own links. */
+  sendsThroughBroccoli: boolean;
 }
 
 /** The mail integration, which use-case tests replace with a fake. */
 export interface MailIntegration {
   createMailer: (transport: MailTransport) => Mailer;
+  createRelayMailer: (relay: { url: string; credential: string }) => Mailer;
   verifySmtpServer: (url: string) => Promise<void>;
 }
 
@@ -47,7 +60,7 @@ export function createMailSettings({
   deployment,
   logger,
   resendApiUrl,
-  mail = { createMailer, verifySmtpServer },
+  mail = { createMailer, createRelayMailer, verifySmtpServer },
 }: {
   orm: Orm;
   transact: Transact;
@@ -151,7 +164,9 @@ export function createMailSettings({
 
     readMailer: async (ctx) => {
       ctx.require("MANAGE_WORKSPACE");
-      return deployment.mode === "managed" ? null : readMailer();
+      return deployment.mode === "managed"
+        ? readRelayMailer(orm, { secretBox, mail, url: deployment.mailRelayUrl })
+        : readMailer();
     },
   };
 }
@@ -172,7 +187,7 @@ async function readSavedMailer(
     resendApiUrl: string;
     publicOrigin: string | null;
   },
-): Promise<{ mailer: Mailer; linkOrigin: string } | null> {
+): Promise<InstanceMailer | null> {
   const { source, from, encryptedSecret, linkOrigin } =
     await instanceRepository(orm).readMailSender();
   if (source === "no_email" || from === null || encryptedSecret === null) {
@@ -187,6 +202,27 @@ async function readSavedMailer(
     mailer: mail.createMailer(transport),
     // A choice is always saved with an origin; the fallback only satisfies the type.
     linkOrigin: publicOrigin ?? linkOrigin ?? "",
+    sendsThroughBroccoli: false,
+  };
+}
+
+/** The relay's mailer with the instance's credential and origin; null before its init. */
+async function readRelayMailer(
+  orm: Orm,
+  { secretBox, mail, url }: { secretBox: SecretBox; mail: MailIntegration; url: string },
+): Promise<InstanceMailer | null> {
+  const repository = instanceRepository(orm);
+  const [{ assignment }, encryptedCredential] = await Promise.all([
+    repository.readInstance(),
+    repository.readInstanceCredential(),
+  ]);
+  if (!assignment || encryptedCredential === null) {
+    return null;
+  }
+  return {
+    mailer: mail.createRelayMailer({ url, credential: secretBox.decrypt(encryptedCredential) }),
+    linkOrigin: assignment.publicOrigin,
+    sendsThroughBroccoli: true,
   };
 }
 

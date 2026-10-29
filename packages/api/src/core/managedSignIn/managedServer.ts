@@ -5,10 +5,11 @@ import { createRemoteJWKSet } from "jose";
 import { createBetterAuth, type DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { ManagedDeployment } from "../env";
-import { readInstance } from "../instance";
+import { type PasswordResetEmail, readInstance } from "../instance";
 import type { Logger } from "../logger";
 import type { Readiness } from "../readiness";
 import type { SecretBox } from "../secrets";
+import { PrincipalSecurityContext } from "../security";
 import { managedAuth } from "./app";
 import { callbackOnlyTrust, managedSignInPlugin } from "./betterAuth";
 import { initRouter, waitingGate } from "./http";
@@ -24,6 +25,8 @@ export interface ManagedServerOptions {
   secretBox: SecretBox;
   /** The modules' sign-in endpoints. */
   plugins: BetterAuthPlugin[];
+  /** Emails reset links to people who joined by invite; the owner has no password to reset. */
+  passwordResetEmail: Pick<PasswordResetEmail, "queue">;
 }
 
 /**
@@ -40,6 +43,7 @@ export function managedServer({
   logger,
   secretBox,
   plugins,
+  passwordResetEmail,
 }: ManagedServerOptions): DeploymentServer {
   const signer = {
     issuer: accountsOrigin,
@@ -51,6 +55,9 @@ export function managedServer({
       secret,
       logger,
       publicUrl: assignment.publicOrigin,
+      // Better Auth asks for a reset without a signed-in user.
+      sendResetPassword: (user, token) =>
+        passwordResetEmail.queue(PrincipalSecurityContext.system(), user, token),
       plugins: [managedSignInPlugin({ transact, assignment, tokenCheck: signer }), ...plugins],
       trustedOrigins: callbackOnlyTrust(assignment),
     }),

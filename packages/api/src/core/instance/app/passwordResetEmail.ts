@@ -12,7 +12,7 @@ import { PASSWORD_RESET_TEMPLATE } from "./passwordReset.email";
 
 /**
  * Emails the link of Better Auth's password reset, from a job so every address answers alike and
- * a failed send retries. Only a user with a password gets one, and only while email is chosen.
+ * a failed send retries. Only a user with a password gets one, and only while the instance sends email.
  */
 export interface PasswordResetEmail {
   /** Better Auth's `sendResetPassword`, as the system: queues the email, or does nothing. */
@@ -53,8 +53,7 @@ export function createPasswordResetEmail({
   return {
     queue: async (ctx, user, token) => {
       ctx.require("MANAGE_WORKSPACE");
-      const mail = await mailSettings.read(system);
-      if (mail === null || mail.source === "no_email") {
+      if ((await mailSettings.readMailer(system)) === null) {
         return;
       }
       // Without a password the user, such as the demo's owner, would gain one through the reset.

@@ -1,6 +1,7 @@
 import {
   expect,
   fakeMail,
+  MANAGED_INSTANCE_CREDENTIAL,
   EMPLOYEE,
   passwordResetEmail,
   SYSTEM,
@@ -27,6 +28,47 @@ test("emails a reset link at the saved origin to a user with a password", async 
       fromName: "Broccoli",
     },
   ]);
+});
+
+test("a managed reset is sent through the relay for a person with a password", async ({
+  orm,
+  seed,
+}) => {
+  await seed.assignment({ instanceCredential: MANAGED_INSTANCE_CREDENTIAL });
+  const user = await seed.user({ email: "avery@example.com", password: TEST_OWNER.password });
+  await seed.employee({ email: user.email, userId: user.id });
+  const mail = fakeMail();
+  const reset = passwordResetEmail(orm, { mode: "managed", mail });
+
+  await reset.queue(SYSTEM, { id: user.id }, "reset-token");
+  expect(reset.sentJobs).toHaveLength(1);
+  await reset.jobs["instance.sendPasswordResetEmail"]!.run(reset.sentJobs[0]!.payload);
+
+  expect(mail.messages).toMatchObject([
+    {
+      template: { name: "password_reset" },
+      values: { resetLink: "https://broccoli.example.com/reset-password#reset-token" },
+      to: user.email,
+      fromName: "Broccoli",
+    },
+  ]);
+  expect(mail.relayTransports).toContainEqual({
+    url: "http://127.0.0.1:9",
+    credential: MANAGED_INSTANCE_CREDENTIAL,
+  });
+  expect(mail.transports).toEqual([]);
+});
+
+test("the managed owner gets no reset email", async ({ orm, seed }) => {
+  await seed.assignment({ instanceCredential: MANAGED_INSTANCE_CREDENTIAL });
+  const owner = await seed.owner();
+  const mail = fakeMail();
+  const reset = passwordResetEmail(orm, { mode: "managed", mail });
+
+  await reset.queue(SYSTEM, { id: owner.user!.userId }, "reset-token");
+
+  expect(reset.sentJobs).toEqual([]);
+  expect(mail.messages).toEqual([]);
 });
 
 test("queues no reset email for a user without a password", async ({ orm, seed }) => {

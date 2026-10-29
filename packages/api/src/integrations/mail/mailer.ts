@@ -12,7 +12,6 @@ export interface MailMessage<Values> {
   template: EmailTemplate<Values>;
   values: Values;
   to: string;
-  replyTo?: string;
   /** The sender's display name, used as it is. */
   fromName: string;
   /** Makes a retried send of the same email a no-op where the provider supports it. */
@@ -53,6 +52,5 @@ export interface OutgoingMail extends RenderedEmail {
   from: string;
   fromName: string;
   to: string;
-  replyTo?: string;
   idempotencyKey: string;
 }

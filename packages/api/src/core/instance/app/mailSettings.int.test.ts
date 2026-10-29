@@ -1,4 +1,13 @@
-import { expect, fakeMail, mailSettings, EMPLOYEE, OWNER, SETUP_HOLDER, test } from "#test/support";
+import {
+  expect,
+  fakeMail,
+  mailSettings,
+  MANAGED_INSTANCE_CREDENTIAL,
+  EMPLOYEE,
+  OWNER,
+  SETUP_HOLDER,
+  test,
+} from "#test/support";
 
 import { MailRefusedError } from "../../../integrations/mail";
 
@@ -204,7 +213,39 @@ test("refuses mail settings on a managed instance", async ({ orm }) => {
     code: "CONFLICT",
   });
   expect(await settings.read(OWNER)).toBeNull();
+});
+
+test("a managed instance has no mailer before init", async ({ orm, seed }) => {
+  const settings = mailSettings(orm, { mode: "managed" });
+
   expect(await settings.readMailer(OWNER)).toBeNull();
+  await seed.assignment();
+  expect(await settings.readMailer(OWNER)).toBeNull();
+});
+
+test("a managed instance mails through Broccoli's relay with its own origin", async ({
+  orm,
+  seed,
+}) => {
+  await seed.assignment({ instanceCredential: MANAGED_INSTANCE_CREDENTIAL });
+  const mail = fakeMail();
+  const settings = mailSettings(orm, {
+    mode: "managed",
+    mailRelayUrl: "https://relay.example.com/mail",
+    mail,
+  });
+
+  const saved = await settings.readMailer(OWNER);
+
+  expect(saved).toMatchObject({
+    mailer: { send: expect.any(Function) as unknown },
+    linkOrigin: "https://broccoli.example.com",
+    sendsThroughBroccoli: true,
+  });
+  expect(mail.relayTransports).toEqual([
+    { url: "https://relay.example.com/mail", credential: MANAGED_INSTANCE_CREDENTIAL },
+  ]);
+  expect(mail.transports).toEqual([]);
 });
 
 test.for([EMPLOYEE, SETUP_HOLDER])(
@@ -267,6 +308,7 @@ test.for([
 
   expect(await mailSettings(orm, { publicUrl }).readMailer(OWNER)).toMatchObject({
     linkOrigin: origin,
+    sendsThroughBroccoli: false,
   });
 });
 

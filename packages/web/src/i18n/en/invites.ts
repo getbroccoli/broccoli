@@ -24,6 +24,9 @@ export const invitesEn = {
   "invites.dialog.note": "Note (optional)",
   "invites.dialog.noteHint": "It goes into every invite.",
   "invites.dialog.emailedFrom": "Emailed from {from} · Change in Settings",
+  "invites.dialog.emailedByBroccoli": "Emailed by Broccoli.",
+  "invites.dialog.noteHasLink":
+    "Links can't go in the note. Share them once the person has joined.",
   "invites.dialog.send": "Send {count} invites",
   "invites.dialog.sendOne": "Send invite",
   "invites.dialog.createLinks": "Create {count} invite links",

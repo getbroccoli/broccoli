@@ -30,6 +30,8 @@ export interface ManagedDeployment {
   instanceId: string;
   /** Issuer of init tokens and sign-in tickets; its keys are at `/.well-known/jwks.json`. */
   accountsOrigin: string;
+  /** Broccoli's mail relay, which sends the instance's email. */
+  mailRelayUrl: string;
 }
 
 export interface Env {
@@ -60,12 +62,19 @@ const DEFAULT_SLACK_RELAY_URL = "https://integrations.dev.getbroccoli.com";
 // shortcut: the production integrations service is not live yet; switch to https://integrations.getbroccoli.com/ai before the release.
 const DEFAULT_BROCCOLI_AI_URL = "https://integrations.dev.getbroccoli.com/ai";
 
+// shortcut: the production integrations service is not live yet; switch to https://integrations.getbroccoli.com/mail before the release.
+const DEFAULT_MAIL_RELAY_URL = "https://integrations.dev.getbroccoli.com/mail";
+
 /** Compose passes unset variables as empty strings, so blank means unset. */
 function blankAsUnset(value: unknown): unknown {
   return typeof value === "string" && value.trim() === "" ? undefined : value;
 }
 
-const MANAGED_VARIABLES = ["MANAGED_INSTANCE_ID", "MANAGED_ACCOUNTS_URL"] as const;
+const MANAGED_VARIABLES = [
+  "MANAGED_INSTANCE_ID",
+  "MANAGED_ACCOUNTS_URL",
+  "MANAGED_MAIL_RELAY_URL",
+] as const;
 
 const envSchema = z
   .object({
@@ -82,6 +91,7 @@ const envSchema = z
     ),
     MANAGED_INSTANCE_ID: z.preprocess(blankAsUnset, z.string().optional()),
     MANAGED_ACCOUNTS_URL: z.preprocess(blankAsUnset, z.string().optional()),
+    MANAGED_MAIL_RELAY_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
     OPENROUTER_API_KEY: z.preprocess(blankAsUnset, z.string().optional()),
     BRAND_LOOKUP_URL: z.preprocess(blankAsUnset, z.url({ protocol: /^https?$/ }).optional()),
     SLACK_RELAY_URL: z.preprocess(
@@ -125,6 +135,7 @@ const envSchema = z
             mode: "managed",
             instanceId: variables.MANAGED_INSTANCE_ID!,
             accountsOrigin: accountsOrigin(variables.MANAGED_ACCOUNTS_URL)!,
+            mailRelayUrl: variables.MANAGED_MAIL_RELAY_URL ?? DEFAULT_MAIL_RELAY_URL,
           }
         : { mode: "self_hosted", publicUrl: variables.SELF_HOSTED_PUBLIC_URL },
     openRouterKey: variables.OPENROUTER_API_KEY ?? null,

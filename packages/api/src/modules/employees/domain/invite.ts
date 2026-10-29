@@ -13,6 +13,11 @@ export const MAX_INVITEES = 1_000;
 /** The longest note an invite carries. */
 export const NOTE_MAX_LENGTH = 1_000;
 
+/** Whether a note holds a link, which Broccoli's relay refuses outside the instance's origin. */
+export function noteHasLink(note: string): boolean {
+  return /https?:\/\/|www\./i.test(note);
+}
+
 /** How the person gets their invite: by email, or as a link the admin copies and sends. */
 export type InviteDelivery = "sent_by_email" | "copied_by_owner";
 

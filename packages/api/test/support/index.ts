@@ -78,6 +78,7 @@ export { signedIn } from "./signedIn";
 
 export { fakeMail } from "./fakeMail";
 export { startFakeResend } from "./fakeResend";
+export { startFakeMailRelay } from "./fakeMailRelay";
 
 export { startMailTestEnv, SAVE_MAIL_SETTINGS, RESEND_CHOICE } from "./mailTestEnv";
 

@@ -27,6 +27,7 @@ export {
   inviteLink,
   MAX_INVITEES,
   NOTE_MAX_LENGTH,
+  noteHasLink,
   parseInviteInput,
   type Invite,
   type InviteDelivery,

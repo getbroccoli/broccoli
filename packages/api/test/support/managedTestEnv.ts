@@ -12,17 +12,21 @@ import {
 import { TestEnv, type TestEnvOptions } from "./testEnv";
 
 /** Server options for a managed instance that trusts `accounts`. */
-export function managedOptions(accounts: FakeAccounts): TestEnvOptions {
-  return { managed: { instanceId: MANAGED_INSTANCE_ID, accountsUrl: accounts.url } };
+export function managedOptions(accounts: FakeAccounts, mailRelayUrl?: string): TestEnvOptions {
+  return { managed: { instanceId: MANAGED_INSTANCE_ID, accountsUrl: accounts.url, mailRelayUrl } };
 }
 
 /** A managed instance waiting for init, and its accounts service; both stop when the test ends. */
-export async function startManagedEnv(
-  options: Omit<TestEnvOptions, "managed"> = {},
-): Promise<{ env: TestEnv; accounts: FakeAccounts }> {
+export async function startManagedEnv({
+  mailRelayUrl,
+  ...options
+}: Omit<TestEnvOptions, "managed"> & { mailRelayUrl?: string } = {}): Promise<{
+  env: TestEnv;
+  accounts: FakeAccounts;
+}> {
   const accounts = await startFakeAccounts();
   onTestFinished(() => accounts.stop());
-  const env = await TestEnv.start({ ...options, ...managedOptions(accounts) });
+  const env = await TestEnv.start({ ...options, ...managedOptions(accounts, mailRelayUrl) });
   onTestFinished(() => env.stop());
   return { env, accounts };
 }

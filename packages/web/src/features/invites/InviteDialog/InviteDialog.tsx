@@ -68,6 +68,10 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
   const tooMany = invited.length > MAX_PEOPLE;
   const delivery = data?.setup.inviteDelivery ?? "COPIED_BY_OWNER";
   const byEmail = delivery === "SENT_BY_EMAIL";
+  // Broccoli emails managed invites and refuses links in them; the person sees links once joined.
+  const noteHasLink =
+    payloadError?.__typename === "InvalidInputError" &&
+    payloadError.fields.some(({ field, code }) => field === "note" && code === "has_link");
   const nameOf = (id: string) => {
     const person = people.find((candidate) => candidate.id === id);
     return person ? `${person.firstName} ${person.lastName}` : "";
@@ -180,16 +184,24 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
                   rows={3}
                   onChange={(event) => setNote(event.target.value)}
                   aria-describedby="invite-note-hint"
+                  aria-invalid={noteHasLink || undefined}
                   className="w-full rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 />
                 <p id="invite-note-hint" className="text-sm text-muted-foreground">
                   {t("invites.dialog.noteHint")}{" "}
-                  {data?.setup.mail?.from && (
+                  {data?.setup.mail?.from ? (
                     <Link to="/settings" className="underline underline-offset-2">
                       {t("invites.dialog.emailedFrom", { from: data.setup.mail.from })}
                     </Link>
+                  ) : (
+                    t("invites.dialog.emailedByBroccoli")
                   )}
                 </p>
+                {noteHasLink && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {t("invites.dialog.noteHasLink")}
+                  </p>
+                )}
               </div>
             )}
             {tooMany && (
@@ -197,7 +209,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
                 {t("invites.dialog.tooMany", { max: MAX_PEOPLE.toLocaleString("en-GB") })}
               </p>
             )}
-            {(error || payloadError) && (
+            {(error || payloadError) && !noteHasLink && (
               <p role="alert" className="text-sm text-destructive">
                 {t("invites.dialog.failed")}
               </p>

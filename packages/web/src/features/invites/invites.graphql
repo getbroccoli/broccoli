@@ -31,6 +31,12 @@ mutation InviteEmployees($input: InviteSendInput!) {
         ... on Error {
           message
         }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
       }
     }
   }

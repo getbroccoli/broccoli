@@ -75,7 +75,13 @@ export async function startServer(
     const services = { orm: database.orm, transact, secret: authSecret, logger, plugins };
     deployment =
       env.deployment.mode === "managed"
-        ? managedServer({ ...services, deployment: env.deployment, readiness, secretBox })
+        ? managedServer({
+            ...services,
+            deployment: env.deployment,
+            readiness,
+            secretBox,
+            passwordResetEmail,
+          })
         : selfHostedServer({
             ...services,
             publicUrl: env.deployment.publicUrl,

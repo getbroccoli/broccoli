@@ -1,18 +1,9 @@
-import { randomUUID } from "node:crypto";
-
-import { hashPassword } from "better-auth/crypto";
-
-import { account, user } from "../../src/core/auth";
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance/db";
 import type { AiSource, MailSource, SetupStep } from "../../src/core/instance/domain";
 import { hashSetupToken } from "../../src/core/instance/helpers";
-import {
-  PrincipalSecurityContext,
-  type SecurityContext,
-  userPermissionProfiles,
-} from "../../src/core/security";
+import { PrincipalSecurityContext, type SecurityContext } from "../../src/core/security";
 import { employeeDirectory, type Employee } from "../../src/modules/employees";
 import { employeeRepository, employmentRepository } from "../../src/modules/employees/db";
 import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
@@ -20,6 +11,7 @@ import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
 import { slackConnectionRepository } from "../../src/modules/slack/db";
 import { parseCalendarDate, todayInUtc } from "../../src/utils";
 import { TEST_SECRET_BOX } from "./testSecretBox";
+import { seedUser } from "./seedUser";
 import { testTransactor } from "./testTransactor";
 
 type SeedEmployee = Partial<
@@ -39,8 +31,9 @@ export class TestSeed {
   async owner({
     email = "owner@example.com",
     password,
-  }: { email?: string; password?: string } = {}): Promise<SecurityContext> {
-    const saved = await this.user({ email, password });
+    name,
+  }: { email?: string; password?: string; name?: string } = {}): Promise<SecurityContext> {
+    const saved = await this.user({ email, password, name });
     const instance = instanceRepository(this.orm);
     await instance.setOwner(saved.id, (await instance.readInstance()).step);
     return PrincipalSecurityContext.user(
@@ -55,32 +48,8 @@ export class TestSeed {
     );
   }
 
-  async user({
-    email,
-    password,
-    permissionProfiles = [],
-  }: {
-    email: string;
-    password?: string;
-    permissionProfiles?: "ADMIN"[];
-  }): Promise<{ id: string; email: string }> {
-    const saved = { id: randomUUID(), email: email.toLowerCase() };
-    await this.orm.insert(user).values({ ...saved, name: "User" });
-    if (permissionProfiles.length > 0) {
-      await this.orm
-        .insert(userPermissionProfiles)
-        .values(permissionProfiles.map((profile) => ({ userId: saved.id, profile })));
-    }
-    if (password !== undefined) {
-      await this.orm.insert(account).values({
-        id: randomUUID(),
-        accountId: saved.id,
-        providerId: "credential",
-        userId: saved.id,
-        password: await hashPassword(password),
-      });
-    }
-    return saved;
+  user(options: Parameters<typeof seedUser>[1]): Promise<{ id: string; email: string }> {
+    return seedUser(this.orm, options);
   }
 
   async manager(employeeId: string, managerId: string | null): Promise<void> {
@@ -88,12 +57,17 @@ export class TestSeed {
   }
 
   /** Makes the instance managed, as the accounts service assigns it. */
-  async assignment(): Promise<void> {
+  async assignment({ instanceCredential }: { instanceCredential?: string } = {}): Promise<void> {
     await instanceRepository(this.orm).setAssignment({
       companyId: "company-1",
       publicOrigin: "https://broccoli.example.com",
       websiteOrigin: "https://example.com",
     });
+    if (instanceCredential !== undefined) {
+      await instanceRepository(this.orm).saveInstanceCredential(
+        TEST_SECRET_BOX.encrypt(instanceCredential),
+      );
+    }
   }
 
   /** Moves setup straight to `step`, whatever step it is at. */
