@@ -44,11 +44,16 @@ test("a managed person receives an invite and a password reset through Broccoli'
     to: employee.email,
     fromName: "Avery Stone",
     subject: expect.any(String) as unknown,
-    text: expect.stringContaining(`${MANAGED_ASSIGNMENT.publicOrigin}/invite#`) as unknown,
-    html: expect.stringContaining(`${MANAGED_ASSIGNMENT.publicOrigin}/invite#`) as unknown,
+    blocks: expect.arrayContaining([
+      expect.objectContaining({
+        type: "button",
+        link: expect.stringContaining(`${MANAGED_ASSIGNMENT.publicOrigin}/invite#`) as unknown,
+      }),
+    ]) as unknown,
+    footer: `Sent to ${employee.email}. Not expecting this? Ignore it.`,
     idempotencyKey: expect.stringMatching(/\S+/) as unknown,
   });
-  const inviteLink = new URL(invite.body.text.match(/https?:\/\/\S+/)![0]);
+  const inviteLink = new URL(invite.body.blocks.find((block) => block.type === "button")!.link);
   expect(
     (
       await browser.post("/api/auth/invite/accept", {
@@ -70,16 +75,21 @@ test("a managed person receives an invite and a password reset through Broccoli'
     body: {
       to: employee.email,
       fromName: "Broccoli",
-      html: expect.stringContaining(
-        `${MANAGED_ASSIGNMENT.publicOrigin}/reset-password#`,
-      ) as unknown,
+      blocks: expect.arrayContaining([
+        expect.objectContaining({
+          type: "button",
+          link: expect.stringContaining(
+            `${MANAGED_ASSIGNMENT.publicOrigin}/reset-password#`,
+          ) as unknown,
+        }),
+      ]) as unknown,
     },
   });
 });
 
 test("a managed invite reaches the relay when the inviter's name has quotes and the names are long", async () => {
   const { env, owner, relay } = await startManagedMailEnv();
-  const inviterName = `Alex "AJ" <Reed>\r\n${"Long".repeat(30)}`;
+  const inviterName = 'Alex "AJ" <Reed>\r\n'.padEnd(990, "x");
   const companyName = `Acme ${"C".repeat(95)}`;
   await env.changeUserName(TEST_OWNER.email, inviterName);
   const renamed = await owner.graphql(
@@ -106,8 +116,16 @@ test("a managed invite reaches the relay when the inviter's name has quotes and 
   expect(body.fromName).toHaveLength(100);
   expect(body.subject).not.toMatch(/[\r\n]/);
   expect(body.subject).toHaveLength(200);
-  expect(body.text).toContain(inviterName);
-  expect(body.text).toContain(companyName);
+  expect(body.blocks.find((block) => block.type === "heading")!.text).toContain(inviterName);
+  expect(body.blocks).toContainEqual({ type: "company", name: companyName });
+  for (const block of body.blocks) {
+    for (const [field, value] of Object.entries(block)) {
+      if (field !== "type" && field !== "link" && typeof value === "string") {
+        expect(value.length).toBeLessThanOrEqual(1_000);
+      }
+    }
+  }
+  expect(body.footer.length).toBeLessThanOrEqual(1_000);
 });
 
 test("an unreadable relay answer is retried, not taken as sent", async () => {

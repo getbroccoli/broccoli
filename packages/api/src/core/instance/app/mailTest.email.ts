@@ -1,10 +1,17 @@
-import { type EmailTemplate, escapeHtml } from "../../../integrations/mail";
+import type { EmailTemplate } from "../../../integrations/mail";
 
 /** The email that checks the chosen mail settings. */
-export const TEST_EMAIL_TEMPLATE: EmailTemplate<Record<string, never>> = {
+export const TEST_EMAIL_TEMPLATE: EmailTemplate<{ recipient: string }> = {
   name: "test_email",
-  render: () => {
-    const body = "This test email shows that Broccoli can send email with your settings.";
-    return { subject: "Broccoli can send email", text: body, html: `<p>${escapeHtml(body)}</p>` };
-  },
+  render: ({ recipient }) => ({
+    subject: "Broccoli can send email",
+    blocks: [
+      { type: "heading", text: "Broccoli can send email" },
+      {
+        type: "paragraph",
+        text: "This test email shows that Broccoli can send email with your settings.",
+      },
+    ],
+    footer: `Sent to ${recipient}.`,
+  }),
 };

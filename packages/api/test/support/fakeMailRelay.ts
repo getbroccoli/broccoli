@@ -2,6 +2,8 @@ import type { IncomingHttpHeaders } from "node:http";
 
 import express from "express";
 
+import type { EmailBlock } from "../../src/integrations/mail";
+
 import { startSimpleHttpServer } from "./simpleHttpServer";
 
 export async function startFakeMailRelay() {
@@ -10,8 +12,8 @@ export async function startFakeMailRelay() {
       to: string;
       fromName: string;
       subject: string;
-      text: string;
-      html: string;
+      blocks: EmailBlock[];
+      footer: string;
       idempotencyKey: string;
     };
     headers: IncomingHttpHeaders;
@@ -19,7 +21,7 @@ export async function startFakeMailRelay() {
   const answers: { status: number; body: string }[] = [];
   const app = express();
   app.use(express.json());
-  app.post("/v1/send", (request, response) => {
+  app.post("/v2/send", (request, response) => {
     const body = request.body as (typeof emails)[number]["body"];
     if (
       typeof body.fromName !== "string" ||

@@ -82,7 +82,10 @@ export function createPasswordResetEmail({
           try {
             const { messageId } = await saved.mailer.send({
               template: PASSWORD_RESET_TEMPLATE,
-              values: { resetLink: `${saved.linkOrigin}/reset-password#${token}` },
+              values: {
+                resetLink: `${saved.linkOrigin}/reset-password#${token}`,
+                recipient: email,
+              },
               to: email,
               fromName: "Broccoli",
               idempotencyKey: createHash("sha256").update(token).digest("hex"),

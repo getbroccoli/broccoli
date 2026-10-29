@@ -1,8 +1,9 @@
-import { type EmailTemplate, escapeHtml } from "../../../../integrations/mail";
+import type { EmailTemplate } from "../../../../integrations/mail";
 
 /** What the invite email says. */
 export interface InviteEmailValues {
-  firstName: string;
+  /** The address the invite goes to, named in the footer. */
+  recipient: string;
   /** The inviter's name; null when their account has none, as the owner's may not. */
   inviterName: string | null;
   companyName: string;
@@ -13,28 +14,26 @@ export interface InviteEmailValues {
 
 export const INVITE_TEMPLATE: EmailTemplate<InviteEmailValues> = {
   name: "invite",
-  render: ({ firstName, inviterName, companyName, note, link, expiresAt }) => {
-    const subject = inviterName
-      ? `${inviterName} invited you to ${companyName} on Broccoli`
-      : `You're invited to ${companyName} on Broccoli`;
-    const greeting = `Hi ${firstName}, ${inviterName ? `${inviterName} invited you` : "you're invited"} to ${companyName} on Broccoli.`;
-    const join = `Join ${companyName}`;
-    const expiry = `The link works once, until ${formatDay(expiresAt)}.`;
-    const questions = inviterName && `Questions? Ask ${inviterName} directly.`;
+  render: ({ recipient, inviterName, companyName, note, link, expiresAt }) => {
+    const invited = inviterName
+      ? `${inviterName} invited you to ${companyName}`
+      : `You're invited to ${companyName}`;
     return {
-      subject,
-      text: [greeting, note && `"${note}"`, `${join}: ${link}`, expiry, questions]
-        .filter((part) => part)
-        .join("\n\n"),
-      html: [
-        `<p>${escapeHtml(greeting)}</p>`,
-        note && `<blockquote>${escapeHtml(note)}</blockquote>`,
-        `<p><a href="${escapeHtml(link)}">${escapeHtml(join)}</a></p>`,
-        `<p>${escapeHtml(expiry)}</p>`,
-        questions && `<p>${escapeHtml(questions)}</p>`,
-      ]
-        .filter((part) => part)
-        .join("\n"),
+      subject: `${invited} on Broccoli`,
+      blocks: [
+        { type: "company", name: companyName },
+        { type: "heading", text: invited },
+        { type: "paragraph", text: "Join to see your profile, time off and team." },
+        ...(note ? [{ type: "note" as const, text: note, author: inviterName }] : []),
+        {
+          type: "button",
+          label: `Join ${companyName}`,
+          link,
+          hint: `Link expires ${formatDay(expiresAt)}.`,
+        },
+        { type: "pasteLink", link },
+      ],
+      footer: `Sent to ${recipient}. Not expecting this? Ignore it.`,
     };
   },
 };

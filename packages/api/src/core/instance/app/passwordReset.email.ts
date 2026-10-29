@@ -1,19 +1,21 @@
-import { type EmailTemplate, escapeHtml } from "../../../integrations/mail";
+import type { EmailTemplate } from "../../../integrations/mail";
 
 /** The password reset email, linking to the reset page. */
-export const PASSWORD_RESET_TEMPLATE: EmailTemplate<{ resetLink: string }> = {
+export const PASSWORD_RESET_TEMPLATE: EmailTemplate<{ resetLink: string; recipient: string }> = {
   name: "password_reset",
-  render: ({ resetLink }) => {
-    const intro = "Someone asked to reset the password of your Broccoli account.";
-    const expiry = "The link works once, for one hour. If it wasn't you, ignore this email.";
-    return {
-      subject: "Reset your Broccoli password",
-      text: [intro, `Choose a new password: ${resetLink}`, expiry].join("\n\n"),
-      html: [
-        `<p>${escapeHtml(intro)}</p>`,
-        `<p><a href="${escapeHtml(resetLink)}">Choose a new password</a></p>`,
-        `<p>${escapeHtml(expiry)}</p>`,
-      ].join("\n"),
-    };
-  },
+  render: ({ resetLink, recipient }) => ({
+    subject: "Reset your Broccoli password",
+    blocks: [
+      { type: "heading", text: "Reset your password" },
+      { type: "paragraph", text: "Someone asked to reset your Broccoli password." },
+      {
+        type: "button",
+        label: "Choose a new password",
+        link: resetLink,
+        hint: "Link expires in 1 hour. Didn't ask? Ignore this email.",
+      },
+      { type: "pasteLink", link: resetLink },
+    ],
+    footer: `Sent to ${recipient}.`,
+  }),
 };

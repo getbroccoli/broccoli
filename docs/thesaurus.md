@@ -52,5 +52,5 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Sign-in state**: whether a person can sign in: not invited, pending (an invite is open or has expired), or joined.
 - **Joined**: a person whose user is linked to their employee record (`employees.user_id`), after accepting an invite.
 - **Mail choice**: how a self-hosted instance sends email: the owner's SMTP server, their Resend key, or no email. Saved on the instance in Settings; password reset works only while email is chosen.
-- **Mail relay**: Broccoli's sender for managed instances, at `MANAGED_MAIL_RELAY_URL`. The instance sends each rendered email with its instance credential; the relay sends it as "<sender> via Broccoli" and refuses links outside the instance's own origin. Self-hosted instances never use it.
+- **Mail relay**: Broccoli's sender for managed instances, at `MANAGED_MAIL_RELAY_URL`. The instance sends each email as blocks with its instance credential; the relay renders it in Broccoli's layout and sends it as "<sender> via Broccoli" and refuses links outside the instance's own origin. Self-hosted instances never use it.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.

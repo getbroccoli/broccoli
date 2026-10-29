@@ -31,7 +31,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 
 - [ ] On a fresh `pnpm dev` instance, Invite offers email delivery without first visiting Settings.
 - [ ] Invite shows the note field, "It goes into every invite." and "Emailed from people@example.com · Change in Settings", and the buttons "Create links to copy" and "Send invite(s)".
-- [ ] "Send" closes with "Invite sent"; Mailpit receives "You're invited to Acme Corp on Broccoli" (or "<name> invited you…" when the inviter's account has a name) with the note, a "Join Acme Corp" link to `/invite#…`, the expiry date and, when the inviter has a name, "Questions? Ask <name> directly." It comes from "Acme Corp" <people@example.com>, with no Reply-To.
+- [ ] "Send" closes with "Invite sent"; Mailpit receives "You're invited to Acme Corp on Broccoli" (or "<name> invited you…" when the inviter's account has a name) in Broccoli's layout: the Broccoli mark, a card with the company's initial and name, the note signed by the inviter, a "Join Acme Corp" button to `/invite#…`, the expiry date, the same link written out and "Sent to <address>" below the card. In a mail client set to dark mode it turns dark. It comes from "Acme Corp" <people@example.com>, with no Reply-To.
 - [ ] With Resend and a made-up key, the Sign-in column shows "Pending · not sent" after reloading People.
 - [ ] "Create links to copy" while email is chosen shows links and emails nothing.
 
@@ -58,7 +58,7 @@ On a managed workspace created through the website, inviting a real mailbox you 
 
 - [ ] The modal shows the note and "Emailed by Broccoli." under it; no mail settings are needed.
 - [ ] A note with a link (`https://…` or `www.…`) shows "Links can't go in the note. Share them once the person has joined." and nobody is invited.
-- [ ] The invite arrives from "<your name> via Broccoli" at `noreply@notifications.getbroccoli.com`, with no reply-to, and the message headers show SPF, DKIM and DMARC passing.
+- [ ] The invite arrives from "<your name> via Broccoli" at `noreply@notifications.getbroccoli.com`, with no reply-to, in the same layout with the Broccoli mark loaded from the workspace's address, and the message headers show SPF, DKIM and DMARC passing.
 - [ ] Its link opens the invite page on the workspace's own address; joining works as above.
 - [ ] Signed out, `/login` offers "Forgot password?" under the email form; the invited person gets the reset email from "Broccoli" and the new password works.
 - [ ] The owner's own address gets no reset email: the owner signs in through the accounts service.
