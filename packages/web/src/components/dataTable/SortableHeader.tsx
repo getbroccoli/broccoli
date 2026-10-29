@@ -1,7 +1,10 @@
 import { ArrowsDownUp, CaretDown, CaretUp } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 
 import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/class-names";
+
+import { HeadContent } from "./HeadContent";
 
 export interface DataTableSort<SortKey extends string = string> {
   key: SortKey;
@@ -15,6 +18,8 @@ interface SortableHeaderProps<SortKey extends string> {
   onSortChange: (sort: DataTableSort<SortKey>) => void;
   density: DataTableDensity;
   className?: string;
+  /** Shown before the label, such as a checkbox that selects the page. */
+  leading?: ReactNode;
 }
 
 /** Compact lists such as the directory, or comfortable ones with fewer, taller rows. */
@@ -33,10 +38,15 @@ export function SortableHeader<SortKey extends string>({
   onSortChange,
   density,
   className,
+  leading,
 }: SortableHeaderProps<SortKey>) {
   const headClassName = cn(HEAD_TEXT[density], className);
   if (!sortKey) {
-    return <TableHead className={headClassName}>{label}</TableHead>;
+    return (
+      <TableHead className={headClassName}>
+        <HeadContent leading={leading}>{label}</HeadContent>
+      </TableHead>
+    );
   }
 
   const direction = sort.key === sortKey ? sort.direction : undefined;
@@ -44,14 +54,16 @@ export function SortableHeader<SortKey extends string>({
 
   return (
     <TableHead aria-sort={direction ? `${direction}ending` : "none"} className={headClassName}>
-      <button
-        type="button"
-        onClick={() => onSortChange({ key: sortKey, direction: nextDirection })}
-        className="group/head -mx-1 inline-flex items-center gap-1 rounded-sm px-1 [text-transform:inherit] outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        {label}
-        <SortIcon direction={direction} />
-      </button>
+      <HeadContent leading={leading}>
+        <button
+          type="button"
+          onClick={() => onSortChange({ key: sortKey, direction: nextDirection })}
+          className="group/head -mx-1 inline-flex items-center gap-1 rounded-sm px-1 [text-transform:inherit] outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {label}
+          <SortIcon direction={direction} />
+        </button>
+      </HeadContent>
     </TableHead>
   );
 }

@@ -66,7 +66,7 @@ Once the owner exists, setup answers `OWNER_EXISTS`. Sign in with the same body 
 
 ## Send email
 
-`pnpm dev` runs Mailpit and prints its address. Settings starts with "Your mail server (SMTP)", `smtp://mailpit:1025` and `people@example.com` filled in; after "Check and save", every email Broccoli sends then arrives in Mailpit. See [Email settings and password reset](email-settings.md).
+`pnpm dev` runs Mailpit and configures a fresh instance to send through it from `people@example.com` before printing its address. Email works without visiting Settings. Saved email choices survive restarts; while Mailpit is chosen, links use the current development port. See [Email settings and password reset](email-settings.md), and [Invites](invites.md) for inviting people.
 
 ## Add employees
 

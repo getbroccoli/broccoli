@@ -11,6 +11,8 @@ export interface RecordField {
   editor: "text" | "date" | ComponentType<FieldEditorProps>;
   /** How a stored value shows, such as a date as DD/MM/YYYY. */
   format: (value: string) => string;
+  /** Shown only in history, never as a field of the panel, such as a person's sign-in. */
+  historyOnly?: boolean;
 }
 
 /**

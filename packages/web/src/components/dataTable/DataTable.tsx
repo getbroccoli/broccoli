@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { type DataTableDensity, SortableHeader, type DataTableSort } from "./SortableHeader";
@@ -10,7 +12,7 @@ import { TableSkeleton } from "./TableStates";
 // The first column stays put while the rows scroll sideways; in a compact list the inset shadow marks its edge.
 const PINNED_COLUMN = "sticky left-0 z-10 bg-card";
 const PINNED_EDGE = "shadow-[inset_-1px_0_0_var(--color-border)]";
-const INTERACTIVE = "a, button, input, select, textarea, [role=button]";
+const INTERACTIVE = "a, button, input, select, textarea, [role=button], [role=checkbox]";
 
 export interface DataTableColumn<Row, SortKey extends string = string> {
   id: string;
@@ -19,6 +21,14 @@ export interface DataTableColumn<Row, SortKey extends string = string> {
   /** Set to make the column sortable by this key. */
   sortKey?: SortKey;
   className?: string;
+}
+
+/** Rows people can pick with checkboxes, such as to act on several at once. */
+export interface DataTableSelection<Row> {
+  selectedIds: ReadonlySet<string>;
+  onChange: (selectedIds: ReadonlySet<string>) => void;
+  /** Names a row for its checkbox, such as a person's name. */
+  rowLabel: (row: Row) => string;
 }
 
 interface DataTableProps<Row, SortKey extends string> {
@@ -42,6 +52,10 @@ interface DataTableProps<Row, SortKey extends string> {
   density?: DataTableDensity;
   /** Opens a row on a click anywhere in it; keyboard users reach the same through a link in the row. */
   onRowClick?: (row: Row) => void;
+  /** Checkboxes in the first column. */
+  selection?: DataTableSelection<Row>;
+  /** Replaces the toolbar while any row is selected. */
+  bulkBar?: ReactNode;
 }
 
 /**
@@ -62,18 +76,38 @@ export function DataTable<Row, SortKey extends string>({
   summary,
   density = "compact",
   onRowClick,
+  selection,
+  bulkBar,
 }: DataTableProps<Row, SortKey>) {
   const placeholder = notice ?? (rows?.length === 0 ? emptyState : undefined);
   const comfortable = density === "comfortable";
   // The pager shows only when there is another page to move to.
   const showPager = pager && !notice && (pager.hasNextPage || !pager.isFirstPage);
+  const selecting = selection && selection.selectedIds.size > 0;
+  const pageRows = selection && rows ? rows : [];
+  const pageSelected =
+    pageRows.length > 0 && pageRows.every((row) => selection!.selectedIds.has(getRowId(row)));
+  const toggle = (ids: string[], checked: boolean) => {
+    const next = new Set(selection!.selectedIds);
+    for (const id of ids) {
+      if (checked) next.add(id);
+      else next.delete(id);
+    }
+    selection!.onChange(next);
+  };
 
   return (
     <section className="overflow-hidden rounded-xl border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-      {toolbar && (
-        <div className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5">
-          {toolbar}
+      {selecting && bulkBar ? (
+        <div className="flex min-h-[53px] items-center gap-3 border-b border-border/60 bg-row-selected px-3 py-2.5">
+          {bulkBar}
         </div>
+      ) : (
+        toolbar && (
+          <div className="flex items-center justify-between gap-3 border-b border-border/60 px-3 py-2.5">
+            {toolbar}
+          </div>
+        )
       )}
       <div className="subtle-scrollbar max-h-[70vh] overflow-auto">
         <table
@@ -90,6 +124,21 @@ export function DataTable<Row, SortKey extends string>({
               {columns.map((column, index) => (
                 <SortableHeader
                   key={column.id}
+                  leading={
+                    index === 0 &&
+                    selection && (
+                      <Checkbox
+                        aria-label={t("table.selectPage")}
+                        checked={pageSelected}
+                        indeterminate={
+                          !pageSelected &&
+                          pageRows.some((row) => selection.selectedIds.has(getRowId(row)))
+                        }
+                        disabled={pageRows.length === 0}
+                        onCheckedChange={(checked) => toggle(pageRows.map(getRowId), checked)}
+                      />
+                    )
+                  }
                   label={column.header}
                   sortKey={column.sortKey}
                   sort={sort}
@@ -140,7 +189,18 @@ export function DataTable<Row, SortKey extends string>({
                         column.className,
                       )}
                     >
-                      {column.cell(row)}
+                      {index === 0 && selection ? (
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            aria-label={t("table.selectRow", { name: selection.rowLabel(row) })}
+                            checked={selection.selectedIds.has(getRowId(row))}
+                            onCheckedChange={(checked) => toggle([getRowId(row)], checked)}
+                          />
+                          <div className="min-w-0 flex-1">{column.cell(row)}</div>
+                        </div>
+                      ) : (
+                        column.cell(row)
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>

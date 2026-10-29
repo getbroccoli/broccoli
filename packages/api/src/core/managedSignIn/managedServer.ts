@@ -1,3 +1,4 @@
+import type { BetterAuthPlugin } from "better-auth";
 import express from "express";
 import { createRemoteJWKSet } from "jose";
 
@@ -21,6 +22,8 @@ export interface ManagedServerOptions {
   readiness: Readiness;
   logger: Logger;
   secretBox: SecretBox;
+  /** The modules' sign-in endpoints. */
+  plugins: BetterAuthPlugin[];
 }
 
 /**
@@ -36,6 +39,7 @@ export function managedServer({
   readiness,
   logger,
   secretBox,
+  plugins,
 }: ManagedServerOptions): DeploymentServer {
   const signer = {
     issuer: accountsOrigin,
@@ -47,7 +51,7 @@ export function managedServer({
       secret,
       logger,
       publicUrl: assignment.publicOrigin,
-      plugins: [managedSignInPlugin({ transact, assignment, tokenCheck: signer })],
+      plugins: [managedSignInPlugin({ transact, assignment, tokenCheck: signer }), ...plugins],
       trustedOrigins: callbackOnlyTrust(assignment),
     }),
   );

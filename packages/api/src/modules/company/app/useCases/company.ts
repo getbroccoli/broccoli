@@ -1,4 +1,6 @@
 import type { Orm, Transact } from "../../../../core/db";
+import type { SecurityContext } from "../../../../core/security";
+import { companyRepository } from "../../db";
 import { readOwner } from "../../../../core/instance";
 import type { CompanyRepository } from "../../db";
 import { suggestName } from "../../domain";
@@ -31,4 +33,10 @@ export async function readCompany({ orm, companies }: CompanyContext): Promise<C
     suggestedName: suggestName({ brandName, ownerEmail: owner?.email ?? null }),
     logoFileId,
   };
+}
+
+/** The stored company, for Broccoli's own emails and pages, such as an invite's. */
+export function readStoredCompany(ctx: SecurityContext, orm: Orm) {
+  ctx.requireSystem();
+  return companyRepository(orm).read();
 }

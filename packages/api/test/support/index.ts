@@ -1,5 +1,5 @@
 export { expect } from "vitest";
-export { employeeDirectory } from "../../src/modules/employees";
+export { deleteAllEmployees, employeeDirectory } from "../../src/modules/employees";
 export {
   ADMIN,
   EMPLOYEE,
@@ -44,6 +44,7 @@ export {
   companyUseCases,
   demoUseCases,
   employeeUseCases,
+  employeeInviteService,
   externalAgentUseCases,
   importUseCases,
   slackUseCases,
@@ -81,3 +82,5 @@ export { startFakeResend } from "./fakeResend";
 export { startMailTestEnv, SAVE_MAIL_SETTINGS, RESEND_CHOICE } from "./mailTestEnv";
 
 export { createGraphqlContext } from "./graphqlContext";
+
+export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";

@@ -71,7 +71,8 @@ export async function startServer(
         jobs: jobRunner.queue,
       });
     modules = manifests;
-    const services = { orm: database.orm, transact, secret: authSecret, logger };
+    const plugins = modules.flatMap((module) => (module.authPlugin ? [module.authPlugin] : []));
+    const services = { orm: database.orm, transact, secret: authSecret, logger, plugins };
     deployment =
       env.deployment.mode === "managed"
         ? managedServer({ ...services, deployment: env.deployment, readiness, secretBox })
@@ -100,8 +101,7 @@ export async function startServer(
     app.use(healthRouter(readiness, deployment.initStatus));
     app.use("/api/auth", refuseBearerAuth);
     app.use(deployment.router);
-    app.all("/api/auth/{*path}", authHandler(deployment.auth));
-    app.use(graphql.router);
+    // Before the auth handler, so a module's router can guard its own sign-in endpoints.
     for (const module of modules) {
       if (module.events) {
         eventBus.subscribe(module.events);
@@ -110,6 +110,8 @@ export async function startServer(
         app.use("/api", module.router(resolveSecurity, deployment.publicOrigin));
       }
     }
+    app.all("/api/auth/{*path}", authHandler(deployment.auth));
+    app.use(graphql.router);
     if (webApp) {
       app.use(webApp);
     }

@@ -1,5 +1,13 @@
 import { eq } from "drizzle-orm";
-import { expect, ADMIN, EMPLOYEE, SYSTEM, test } from "#test/support";
+import {
+  deleteAllEmployees,
+  employeeUseCases,
+  expect,
+  ADMIN,
+  EMPLOYEE,
+  SYSTEM,
+  test,
+} from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, type Tx } from "../../db";
@@ -168,6 +176,39 @@ test("rolls back a demo reset when clearing people fails", async ({ orm, seed, t
     step: "done",
     setupSession: null,
   });
+});
+
+test("exiting the demo deletes every linked user before removing its provisional owner", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.demoOwner({ expiresAt });
+  await seed.employee({ userId: owner.user!.userId });
+  for (const email of ["avery@example.com", "robin@example.com"]) {
+    const joined = await seed.user({ email });
+    await seed.employee({ email, userId: joined.id });
+  }
+
+  await transact((tx) =>
+    exitDemo(
+      owner,
+      tx,
+      { userId: owner.user!.userId, now },
+      {
+        clearPeople: deleteAllEmployees,
+        deleteOwner: async () => {
+          expect(await ormOf(tx).select({ id: user.id }).from(user)).toEqual([
+            { id: owner.user!.userId },
+          ]);
+          await ormOf(tx).delete(user).where(eq(user.id, owner.user!.userId));
+        },
+      },
+    ),
+  );
+
+  expect(await orm.select().from(user)).toEqual([]);
+  expect((await employeeUseCases(orm).listEmployees(SYSTEM, {})).edges).toEqual([]);
 });
 
 const now = new Date("2026-01-02T12:00:00Z");

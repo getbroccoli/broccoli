@@ -5,6 +5,9 @@ query Session {
     isOwner
     permissionProfiles
     operations
+    employee {
+      id
+    }
   }
   setup {
     id

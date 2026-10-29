@@ -1,3 +1,4 @@
+import type { BetterAuthPlugin } from "better-auth";
 import type express from "express";
 
 import type { Orm, Transact } from "./db";
@@ -48,6 +49,8 @@ export interface ModuleManifest {
     resolveSecurity: SecurityResolver,
     publicOrigin: (request: express.Request) => Promise<string>,
   ) => express.Router;
+  /** Endpoints under `/api/auth/` that sign people in, on both modes; the module's router mounts first. */
+  authPlugin?: BetterAuthPlugin;
 }
 
 /** Every module of the API, and what self-hosted setup and sign-in need from them. */

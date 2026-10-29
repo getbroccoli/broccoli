@@ -4,6 +4,7 @@ import { companyEn } from "./en/company";
 import { demoEn } from "./en/demo";
 import { externalAgentsEn } from "./en/externalAgents";
 import { importsEn } from "./en/imports";
+import { invitesEn } from "./en/invites";
 import { navEn } from "./en/nav";
 import { notFoundEn } from "./en/notFound";
 import { peopleEn } from "./en/people";
@@ -24,6 +25,7 @@ export const en = {
   ...navEn,
   ...demoEn,
   ...peopleEn,
+  ...invitesEn,
   ...recordsEn,
   ...tableEn,
   ...companyEn,

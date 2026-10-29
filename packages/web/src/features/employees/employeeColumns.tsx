@@ -6,6 +6,7 @@ import {
   type EmployeeColumns_EmployeeFragment,
 } from "@/__generated__/graphql";
 import type { DataTableColumn } from "@/components/dataTable";
+import { SignInCell } from "@/features/invites";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
@@ -56,6 +57,13 @@ export const EMPLOYEE_COLUMNS: DataTableColumn<EmployeeRow, SortKey>[] = [
   },
 ];
 
+/** Whether each person can sign in; only admins see it. */
+export const SIGN_IN_COLUMN: DataTableColumn<EmployeeRow, SortKey> = {
+  id: "signIn",
+  header: t("people.column.signIn"),
+  cell: ({ signInStatus }) => <SignInCell status={signInStatus} />,
+};
+
 /**
  * Reads the table's fragment for the employees a query returned. Undefined while the
  * first page loads, so the table shows its skeleton.
@@ -70,4 +78,15 @@ export function useEmployeeRows(
     from: employees ?? [],
   });
   return employees && complete ? data : undefined;
+}
+
+/** The rows the cache holds now for these ids; people it no longer holds are left out. */
+export function useCachedEmployeeRows(ids: ReadonlySet<string>): EmployeeRow[] {
+  const { data } = useFragment({
+    fragment: EmployeeColumns_EmployeeFragmentDoc,
+    fragmentName: "EmployeeColumns_employee",
+    from: [...ids].map((id) => ({ __typename: "Employee" as const, id })),
+  });
+  // A person the cache no longer holds reads as a partial object.
+  return data.filter((row) => row?.id && row.firstName) as EmployeeRow[];
 }

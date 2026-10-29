@@ -23,7 +23,12 @@ export {
   createMailSettings,
   createPasswordResetEmail,
 } from "./app";
-export { refuseBearerAuth, resolveSecurityContext } from "./betterAuth";
+export {
+  inAuthTransaction,
+  linkPassword,
+  refuseBearerAuth,
+  resolveSecurityContext,
+} from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
 export { AssignmentConflictError, OwnerExistsError } from "./domain";
 

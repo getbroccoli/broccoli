@@ -6,6 +6,12 @@ import type { EmployeeFieldKey } from "./employeeDraft";
 import { EmployeePicker } from "../EmployeePicker";
 import { PermissionProfilePicker } from "./PermissionProfilePicker";
 
+const SIGN_IN_LABELS: Partial<Record<string, string>> = {
+  NOT_INVITED: t("invites.state.notInvited"),
+  INVITED: t("invites.state.pending"),
+  JOINED: t("invites.state.joined"),
+};
+
 const PROFILE_LABELS: Partial<Record<string, string>> = {
   EMPLOYEE: t("people.panel.permissionProfile.employee"),
   ADMIN: t("people.panel.permissionProfile.admin"),
@@ -46,6 +52,14 @@ export const EMPLOYEE_DESCRIPTION = {
           .split(",")
           .map((name) => PROFILE_LABELS[name.trim()] ?? name.trim())
           .join(", "),
+    },
+    {
+      key: "signIn",
+      label: t("people.panel.field.signIn"),
+      section: t("people.panel.section.access"),
+      editor: "text",
+      format: (value) => SIGN_IN_LABELS[value] ?? value,
+      historyOnly: true,
     },
   ],
 } satisfies RecordDescription;

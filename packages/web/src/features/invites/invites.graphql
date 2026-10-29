@@ -1,0 +1,67 @@
+query InviteDelivery {
+  setup {
+    id
+    inviteDelivery
+    mail {
+      id
+      from
+    }
+  }
+}
+
+mutation InviteEmployees($input: InviteSendInput!) {
+  employee {
+    invite(input: $input) {
+      invites {
+        employee {
+          id
+          signInStatus {
+            ...SignInStatus @unmask
+          }
+        }
+        expiresAt
+        delivery
+        link
+        historyLine {
+          ...RecordHistory_line @unmask
+        }
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
+mutation CancelInvite($input: InviteCancelInput!) {
+  employee {
+    cancelInvite(input: $input) {
+      employee {
+        id
+        signInStatus {
+          ...SignInStatus @unmask
+        }
+      }
+      historyLine {
+        ...RecordHistory_line @unmask
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
+fragment SignInStatus on SignInStatus {
+  state
+  expiresAt
+  notSent
+  emailHasAccount
+  canBeInvited
+}

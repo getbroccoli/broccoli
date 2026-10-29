@@ -8,8 +8,6 @@ import type { SecretBox } from "../../secrets";
 import type { SecurityContext } from "../../security";
 import {
   createMailer,
-  type EmailTemplate,
-  escapeHtml,
   MailRefusedError,
   type Mailer,
   type MailTransport,
@@ -17,6 +15,7 @@ import {
 } from "../../../integrations/mail";
 import { instanceRepository } from "../db";
 import { decideMailSettings, type MailChoice, type MailConfig } from "../domain";
+import { TEST_EMAIL_TEMPLATE } from "./mailTest.email";
 
 /**
  * How a self-hosted instance sends email: the owner's SMTP server, their Resend key, or no email.
@@ -27,6 +26,8 @@ export interface MailSettings {
   read(ctx: SecurityContext): Promise<MailConfig | null>;
   /** Checks the choice, then saves it with the origin its links use; a managed instance refuses. */
   save(ctx: SecurityContext, choice: MailChoice, linkOrigin: string): Promise<MailConfig>;
+  /** Development startup chooses Mailpit once and keeps its links on the current dev port. */
+  configureDevelopmentMail(ctx: SecurityContext, linkOrigin: string): Promise<void>;
   /** Sends the caller a test email with the saved choice. */
   sendTestEmail(ctx: SecurityContext): Promise<void>;
   /** The saved choice's mailer and the origin its links use; null without email or on managed. */
@@ -102,6 +103,31 @@ export function createMailSettings({
       return withoutOrigin(await instanceRepository(orm).readMailSettings());
     },
 
+    configureDevelopmentMail: async (ctx, linkOrigin) => {
+      ctx.requireSystem();
+      if (deployment.mode === "managed") return;
+      if ((await instanceRepository(orm).readInstance()).mailSource === null) {
+        await checkSmtpServer(mail, MAILPIT_URL, logger);
+      }
+      await transact(async (tx) => {
+        const repository = instanceRepository(tx);
+        const instance = await repository.lockInstance();
+        if (instance.mailSource === null) {
+          await repository.storeMailSettings({
+            source: "smtp_server",
+            from: "people@example.com",
+            encryptedSecret: secretBox.encrypt(MAILPIT_URL),
+            linkOrigin,
+          });
+        } else if (instance.mailSource === "smtp_server") {
+          const saved = await repository.readMailSender();
+          if (saved.encryptedSecret && secretBox.decrypt(saved.encryptedSecret) === MAILPIT_URL) {
+            await repository.storeMailSettings({ ...saved, linkOrigin });
+          }
+        }
+      });
+    },
+
     sendTestEmail: async (ctx) => {
       ctx.require("MANAGE_WORKSPACE");
       const caller = ctx.user;
@@ -129,6 +155,8 @@ export function createMailSettings({
     },
   };
 }
+
+const MAILPIT_URL = "smtp://mailpit:1025";
 
 /** The saved choice's mailer and link origin, from one read so the secret matches its source. */
 async function readSavedMailer(
@@ -161,14 +189,6 @@ async function readSavedMailer(
     linkOrigin: publicOrigin ?? linkOrigin ?? "",
   };
 }
-
-const TEST_EMAIL_TEMPLATE: EmailTemplate<Record<string, never>> = {
-  name: "test_email",
-  render: () => {
-    const body = "This test email shows that Broccoli can send email with your settings.";
-    return { subject: "Broccoli can send email", text: body, html: `<p>${escapeHtml(body)}</p>` };
-  },
-};
 
 /** Longest provider reason shown to the owner. */
 const MAX_REASON_LENGTH = 300;

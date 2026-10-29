@@ -1,4 +1,4 @@
-import { companyUseCases, expect, SETUP_HOLDER, SYSTEM, test } from "#test/support";
+import { companyUseCases, EMPLOYEE, expect, SETUP_HOLDER, SYSTEM, test } from "#test/support";
 
 test("suggests a name from the owner's domain before the company is named", async ({
   orm,
@@ -39,4 +39,12 @@ test("returns no suggested name before an owner or brand exists", async ({ orm }
     suggestedName: null,
     logoFileId: null,
   });
+});
+
+test("allows an employee to read the company", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const company = companyUseCases(orm);
+  await company.update(owner, { name: "Acme Corp" });
+
+  expect(await company.getCompany(EMPLOYEE)).toMatchObject({ name: "Acme Corp" });
 });

@@ -9,3 +9,8 @@ export {
 export { createEmployeeUseCases, type EmployeeUseCases } from "./useCases";
 export { employeeDirectory } from "./employeeDirectory";
 export { employeeRecordType } from "./employeeRecordType";
+export {
+  createEmployeeInviteService,
+  type EmployeeInviteService,
+  type InviteDetails,
+} from "./invites/employeeInviteService";

@@ -22,9 +22,13 @@ import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
-import { createCompanyUseCases } from "../../src/modules/company";
+import { createCompanyUseCases, readStoredCompany } from "../../src/modules/company";
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
-import { createEmployeeUseCases, deleteAllEmployees } from "../../src/modules/employees";
+import {
+  createEmployeeInviteService,
+  createEmployeeUseCases,
+  deleteAllEmployees,
+} from "../../src/modules/employees";
 import { createImportUseCases } from "../../src/modules/imports";
 import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
 import { createSystemUseCases } from "../../src/modules/system";
@@ -142,8 +146,32 @@ export function passwordResetEmail(
     jobs: {
       send: (_tx, name, payload) => {
         assert.equal(name, "instance.sendPasswordResetEmail");
-        assert("encryptedToken" in payload);
+        assert("userId" in payload && "encryptedToken" in payload);
         sentJobs.push({ name: "instance.sendPasswordResetEmail", payload });
+        return Promise.resolve();
+      },
+    },
+  });
+  return { ...service, sentJobs };
+}
+
+export function employeeInviteService(
+  orm: Orm,
+  { mail = fakeMail() }: { mail?: Parameters<typeof createMailSettings>[0]["mail"] } = {},
+) {
+  const sentJobs: { name: "employees.sendInvite"; payload: Jobs["employees.sendInvite"] }[] = [];
+  const service = createEmployeeInviteService({
+    orm,
+    transact: testTransactor(orm),
+    secretBox: TEST_SECRET_BOX,
+    mailSettings: mailSettings(orm, { mail }),
+    readCompany: (ctx) => readStoredCompany(ctx, orm),
+    logger: createLogger("silent"),
+    jobs: {
+      send: (_tx, name, payload) => {
+        assert.equal(name, "employees.sendInvite");
+        assert("inviteId" in payload && "encryptedToken" in payload);
+        sentJobs.push({ name: "employees.sendInvite", payload });
         return Promise.resolve();
       },
     },

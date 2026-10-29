@@ -12,6 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
+import {
+  type CopiedLink,
+  CopiedLinkDialog,
+  InviteDialog,
+  InviteMenuItems,
+} from "@/features/invites";
 import { EditableField, EditBar, RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
@@ -36,6 +42,8 @@ type Props = {
 export function EmployeeRecord({ employee, onClose }: Props) {
   const draft = useEmployeeDraft(employee);
   const [removing, setRemoving] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [copiedLink, setCopiedLink] = useState<CopiedLink | null>(null);
   // Set once the employee is removed, so closing their panel asks nothing.
   const removed = useRef(false);
   const blocker = useBlocker({
@@ -52,6 +60,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   // The draft holds the manager's id; the panel shows their name.
   // Permissions show only for someone who signs in.
   const fields = EMPLOYEE_DESCRIPTION.fields
+    .filter((field) => !("historyOnly" in field))
     .filter((field) => field.key !== "permissionProfiles" || employee.permissionProfiles)
     .map((field) =>
       field.key === "manager"
@@ -85,7 +94,8 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             <p className="truncate text-sm text-muted-foreground">{employee.jobTitle}</p>
           )}
         </div>
-        {employee.access.canDelete && (
+        {/* Only admins see a sign-in status, and with it the invite actions. */}
+        {(employee.access.canDelete || employee.signInStatus) && (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant="ghost" size="icon" aria-label={t("people.panel.more")} />}
@@ -94,11 +104,18 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             </DropdownMenuTrigger>
             {/* As wide as its item, not the trigger, so the name stays on one line. */}
             <DropdownMenuContent align="end" className="w-auto max-w-80">
-              <DropdownMenuItem variant="destructive" onClick={() => setRemoving(true)}>
-                <span className="truncate">
-                  {t("people.panel.remove.menu", { name: fullName })}
-                </span>
-              </DropdownMenuItem>
+              <InviteMenuItems
+                person={employee}
+                onInvite={() => setInviting(true)}
+                onLinkCreated={setCopiedLink}
+              />
+              {employee.access.canDelete && (
+                <DropdownMenuItem variant="destructive" onClick={() => setRemoving(true)}>
+                  <span className="truncate">
+                    {t("people.panel.remove.menu", { name: fullName })}
+                  </span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -110,7 +127,15 @@ export function EmployeeRecord({ employee, onClose }: Props) {
       </header>
 
       <div className="subtle-scrollbar flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-6">
-        <KeyFacts startDate={employee.startDate ?? null} email={employee.email} />
+        <KeyFacts
+          startDate={employee.startDate ?? null}
+          email={employee.email}
+          signIn={
+            employee.signInStatus
+              ? { status: employee.signInStatus, onInvite: () => setInviting(true) }
+              : null
+          }
+        />
 
         <section aria-labelledby="employee-details" className="flex flex-col gap-2">
           <h2
@@ -182,6 +207,8 @@ export function EmployeeRecord({ employee, onClose }: Props) {
         onDiscard={() => blocker.proceed?.()}
         onKeepEditing={() => blocker.reset?.()}
       />
+      <InviteDialog people={[employee]} open={inviting} onOpenChange={setInviting} />
+      <CopiedLinkDialog link={copiedLink} onClose={() => setCopiedLink(null)} />
       <RemoveEmployeeDialog
         open={removing}
         onOpenChange={setRemoving}
