@@ -26,6 +26,7 @@ import {
 } from "../../../core/db";
 import { user } from "../../../core/auth";
 import { deleteFiles, storeFile } from "../../../core/files";
+import { inRecordScope, type RecordScope } from "../../../core/security";
 import type { KeysetQuery, KeysetRow } from "../../../core/pagination";
 import type { RasterImage } from "../../../utils";
 import {
@@ -80,8 +81,8 @@ export interface EmployeeRepository {
   findWithAvatars(): Promise<Employee[]>;
   hasAny(): Promise<boolean>;
   hasDemo(): Promise<boolean>;
-  /** Whether an employee's avatar is this file. */
-  hasAvatar(fileId: string): Promise<boolean>;
+  /** The employee whose avatar is this file; null when it is nobody's. */
+  findIdByAvatar(fileId: string): Promise<string | null>;
   /** Up to `limit` employees after `after`, with their sort values as Postgres computed them. */
   findPage(query: EmployeePageQuery): Promise<KeysetRow<Employee, unknown[]>[]>;
 }
@@ -98,6 +99,8 @@ export const EMPLOYEE_SORT_VALUES: Record<EmployeeOrderField, z.ZodType<unknown[
 export interface EmployeePageQuery extends KeysetQuery<EmployeeOrderField, unknown[]> {
   /** Trimmed and non-blank, or null for no filter. */
   search: string | null;
+  /** The employees the caller may read; `inRecordScope` refuses "none". */
+  scope: RecordScope;
 }
 
 /** A demo employee to insert, with the avatar to store for them. */
@@ -237,9 +240,16 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
     hasDemo: () => exists(orm(), eq(employees.isDemo, true)),
 
-    hasAvatar: (fileId: string) => exists(orm(), eq(employees.avatarFileId, fileId)),
+    findIdByAvatar: async (fileId: string) => {
+      const [row] = await orm()
+        .select({ id: employees.id })
+        .from(employees)
+        .where(eq(employees.avatarFileId, fileId))
+        .limit(1);
+      return row?.id ?? null;
+    },
 
-    findPage: async ({ order, after, limit, search }: EmployeePageQuery) => {
+    findPage: async ({ order, after, limit, search, scope }: EmployeePageQuery) => {
       const columns = keysetColumns(order);
       const keys = Object.fromEntries(
         columns.map(({ expression }, index) => [`key${index}`, expression]),
@@ -250,7 +260,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         .where(
           sql.join(
             [
-              sql`true`,
+              inRecordScope(scope, employees.id),
               ...(search ? [matches(search)] : []),
               ...(after ? [afterKeyset(columns, after)] : []),
             ],

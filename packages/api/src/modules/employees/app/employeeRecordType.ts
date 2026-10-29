@@ -15,18 +15,19 @@ const EDITABLE_FIELDS = [
 ];
 
 /**
- * The employee as a record type that keeps history: who may read its history, the id history
- * keeps, and how `RecordChange.record` loads employees. `recordHistory` and `Employee.history`
- * both read through it, so one rule covers both.
+ * The employee as a record type that keeps history: the id history keeps, and how core finds
+ * employees and their subjects, each employee being their own. `recordHistory` and
+ * `Employee.history` both read through it, so one rule covers both.
  */
 export function employeeRecordType(orm: Orm): RecordTypeRegistration {
   return {
     graphqlType: "Employee",
-    // Everyone who may read every employee reads every history; a deleted record keeps its own.
-    requireHistoryAccess: (ctx) => ctx.requireEveryRecord("employee", "read"),
     canonicalId: parseUuid,
-    loadRecords: async (ctx, ids) => {
-      ctx.requireEveryRecord("employee", "read");
+    subjectsOf: async (ids) => {
+      const employees = await employeeRepository(orm).findByIds(ids);
+      return new Map(employees.map(({ id }) => [id, id]));
+    },
+    loadRecords: async (ids) => {
       const employees = await employeeRepository(orm).findByIds(ids);
       return new Map(employees.map((employee) => [employee.id, employee]));
     },

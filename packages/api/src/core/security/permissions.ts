@@ -6,18 +6,35 @@ export type PermissionProfile = "EMPLOYEE" | "ADMIN" | "OWNER";
 /** The default profile: every user has it; it is never stored and never removed. */
 export const DEFAULT_PROFILE = "EMPLOYEE";
 
+/** The kinds of record permissions apply to; tests add their own by declaration merging. */
+export interface PermissionObjects {
+  employee: true;
+}
+
 /** A kind of record permissions apply to. */
-export type PermissionObject = "employee";
+export type PermissionObject = keyof PermissionObjects;
 
 /** What can be done to one record of an object. */
 export type RecordAction = "create" | "read" | "update" | "delete";
 
 /**
- * Which records a grant reaches, relative to the caller's employee: the caller, people they
- * manage directly, everyone below them in the reporting line, or everyone. Neither report scope
- * includes the caller.
+ * Which records a grant reaches, by their subject, relative to the caller's employee: the caller,
+ * people they manage directly, everyone below them in the reporting line, everyone above them in
+ * it, or everyone. Neither report scope includes the caller.
  */
-export type Scope = "self" | "direct_reports" | "all_reports" | "all";
+export type Scope = "self" | "direct_reports" | "all_reports" | "managers" | "all";
+
+/**
+ * Whom a record is about: the id of its subject, an employee today, or "public" for a record about
+ * nobody, which every read grant on its object reaches and only grants on `all` write.
+ */
+export type Subject = string;
+
+/**
+ * The records a caller's grants reach for one action: none, all, or the subjects reached, with
+ * "public" among them when public records are.
+ */
+export type RecordScope = "none" | "all" | readonly Subject[];
 
 /** Things done outside any record. */
 export const OPERATIONS = ["MANAGE_WORKSPACE", "RESET_WORKSPACE"] as const;

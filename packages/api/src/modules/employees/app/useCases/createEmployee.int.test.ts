@@ -1,3 +1,5 @@
+import { assert } from "vitest";
+
 import { employeeUseCases, expectHistoryReplaysTo, expect, OWNER, test } from "#test/support";
 
 test("creates an employee and returns it normalised", async ({ orm }) => {
@@ -10,6 +12,7 @@ test("creates an employee and returns it normalised", async ({ orm }) => {
     jobTitle: "  Engineer  ",
     startDate: "2026-02-28",
   });
+  assert(employee);
 
   expect(employee).toMatchObject({
     firstName: "Employee",
@@ -68,6 +71,7 @@ test("creation records each populated field in a history line", async ({ orm }) 
     jobTitle: "Engineer",
     startDate: "2026-02-28",
   });
+  assert(employee);
 
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges).toHaveLength(1);

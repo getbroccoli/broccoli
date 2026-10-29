@@ -3,6 +3,7 @@ import { type Orm, ormOf } from "../../../../core/db";
 import { readOwner } from "../../../../core/instance";
 import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
 import {
+  isInRecordScope,
   parseGivenProfiles,
   permissionProfileRepository,
   type PermissionProfile,
@@ -14,6 +15,7 @@ import { employeeRepository } from "../../db";
 import type { Employee } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
+import { readableResult } from "./readableResult";
 
 /**
  * Replaces the profiles given to the user an employee signs in as and records the change in the
@@ -27,7 +29,7 @@ export async function setPermissionProfiles(
     profiles,
     changeReason,
   }: { id: string; profiles: readonly PermissionProfile[]; changeReason?: string | null },
-): Promise<{ employee: Employee; historyLine: HistoryLine | null }> {
+): Promise<{ employee: Employee | null; historyLine: HistoryLine | null }> {
   ctx.require("MANAGE_WORKSPACE");
   const given = parseGivenProfiles(profiles);
   const reason = parseChangeReason(changeReason);
@@ -73,7 +75,7 @@ export async function setPermissionProfiles(
       "Changed an employee's permission profiles",
     );
   }
-  return { employee, historyLine };
+  return readableResult(ctx, employee, historyLine);
 }
 
 /**
@@ -85,8 +87,11 @@ export async function readPermissionProfiles(
   ctx: SecurityContext,
   employeeIds: readonly string[],
 ): Promise<Map<string, PermissionProfile[]>> {
-  ctx.requireEveryRecord("employee", "read");
-  const ids = employeeIds.flatMap((id) => parseUuid(id) ?? []);
+  const scope = await ctx.recordScope("employee", "read");
+  const ids = employeeIds.flatMap((id) => {
+    const employeeId = parseUuid(id);
+    return employeeId && isInRecordScope(scope, employeeId) ? [employeeId] : [];
+  });
   const linked = (ids.length === 0 ? [] : await employeeRepository(orm).findByIds(ids)).flatMap(
     ({ id, userId }) => (userId ? [{ id, userId }] : []),
   );

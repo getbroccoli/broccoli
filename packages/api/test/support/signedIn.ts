@@ -1,5 +1,10 @@
 import type { Orm } from "../../src/core/db";
-import { PrincipalSecurityContext, type PermissionProfile } from "../../src/core/security";
+import {
+  PERMISSION_PROFILES,
+  PrincipalSecurityContext,
+  type Grant,
+  type PermissionProfile,
+} from "../../src/core/security";
 import { employeeDirectory } from "../../src/modules/employees";
 
 export function signedIn(
@@ -7,9 +12,11 @@ export function signedIn(
   {
     profiles,
     employeeId,
+    grants,
   }: {
     profiles: readonly PermissionProfile[];
     employeeId: string | null;
+    grants?: readonly Grant[];
   },
 ) {
   return PrincipalSecurityContext.user(
@@ -21,5 +28,8 @@ export function signedIn(
       employeeId,
     },
     employeeDirectory(orm),
+    grants === undefined
+      ? undefined
+      : { ...PERMISSION_PROFILES, EMPLOYEE: { builtIn: true, grants, operations: [] } },
   );
 }

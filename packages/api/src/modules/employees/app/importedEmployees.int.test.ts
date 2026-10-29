@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import { assert } from "vitest";
 
 import {
   recordChangedEvents,
@@ -235,11 +236,13 @@ test("deleting all employees purges history including already deleted employees 
     lastName: "Stone",
     email: "avery@example.com",
   });
+  assert(kept);
   const deleted = await employees.createEmployee(OWNER, {
     firstName: "Robin",
     lastName: "Reed",
     email: "robin@example.com",
   });
+  assert(deleted);
   await employees.deleteEmployee(OWNER, { id: deleted.id });
   const { transact, events } = recordChangedEvents(orm);
 

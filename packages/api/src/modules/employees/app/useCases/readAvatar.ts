@@ -10,7 +10,12 @@ export async function readAvatar(
   ctx: SecurityContext,
   fileId: string,
 ): Promise<StoredFile | null> {
-  ctx.requireEveryRecord("employee", "read");
   const id = parseUuid(fileId);
-  return id && (await employees.hasAvatar(id)) ? readFile(orm, id) : null;
+  const employeeId = id ? await employees.findIdByAvatar(id) : null;
+  if (!id || !employeeId) {
+    ctx.requireEveryRecord("employee", "read");
+    return null;
+  }
+  await ctx.requireInScope("employee", "read", employeeId);
+  return readFile(orm, id);
 }
