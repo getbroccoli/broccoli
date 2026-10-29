@@ -4,8 +4,7 @@ import type { SignInStatusFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/class-names";
 
-import { SignInCell } from "./SignInCell";
-import { inviteAction, signInTone } from "./signInStatus";
+import { inviteAction, signInLabel, signInTone } from "./signInStatus";
 
 const TONE_DOT = {
   none: "bg-muted-foreground/40",
@@ -14,15 +13,22 @@ const TONE_DOT = {
   joined: "bg-brand",
 } as const;
 
-/** A person's sign-in on their work email: a dot for its tone, then the state. */
+/**
+ * A person's sign-in on their work email: a dot for its tone, then the state. Only a problem
+ * (not sent, expired) keeps its hint; the expiry shows on hover, so the line stays short.
+ */
 export function SignInLine({ status }: { status: SignInStatusFragment }) {
+  const now = new Date();
+  const tone = signInTone(status, now);
+  const { state, hint } = signInLabel(status, now);
   return (
-    <span className="flex items-center gap-1.5 text-xs">
-      <span
-        aria-hidden
-        className={cn("size-2 shrink-0 rounded-full", TONE_DOT[signInTone(status, new Date())])}
-      />
-      <SignInCell status={status} />
+    <span
+      className="flex items-center gap-1.5 text-xs whitespace-nowrap"
+      title={hint ? `${state} · ${hint}` : undefined}
+    >
+      <span aria-hidden className={cn("size-2 shrink-0 rounded-full", TONE_DOT[tone])} />
+      {state}
+      {tone === "problem" && <span className="text-destructive">{`· ${hint}`}</span>}
     </span>
   );
 }

@@ -51,8 +51,8 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
     <dl className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3">
       {facts.map(({ icon: FactIcon, label, value, status, action }) => (
         <div key={label} className="rounded-xl border border-border px-3 py-2.5">
-          <dt className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider text-muted-foreground uppercase">
-            <FactIcon aria-hidden className="size-3.5" />
+          <dt className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase">
+            <FactIcon aria-hidden className="size-3.5 shrink-0" />
             {label}
             {status && (
               <span className="ml-auto font-normal tracking-normal text-foreground normal-case">
