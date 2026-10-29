@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { SignInStatusFragment } from "@/__generated__/graphql";
-import { groupInvitees, signInLabel } from "./signInStatus";
+import { groupInvitees, inviteAction, signInLabel, signInTone } from "./signInStatus";
 
 it("skips joined people with the joined reason even when their email has an account", () => {
   const person = {
@@ -100,6 +100,38 @@ it("labels a failed pending invite as not sent even after expiry", () => {
   const label = signInLabel(status, now);
 
   expect(label).toEqual({ state: "Pending", hint: "not sent" });
+});
+
+it("offers Send invite, prominently, to someone not invited", () => {
+  const status = { ...pending, state: "NOT_INVITED" as const, expiresAt: null };
+
+  expect(inviteAction(status, now)).toEqual({ label: "Send invite", prominent: true });
+});
+
+it("offers a quiet Resend while an invite is open", () => {
+  expect(inviteAction(pending, now)).toEqual({ label: "Resend", prominent: false });
+});
+
+it("offers Resend invite, prominently, when an invite was not sent or has expired", () => {
+  const notSent = { ...pending, notSent: true };
+  const expired = { ...pending, expiresAt: now.toISOString() };
+
+  expect(inviteAction(notSent, now)).toEqual({ label: "Resend invite", prominent: true });
+  expect(inviteAction(expired, now)).toEqual({ label: "Resend invite", prominent: true });
+});
+
+it("offers no invite action to someone who cannot be invited", () => {
+  const joined = { ...pending, state: "JOINED" as const, canBeInvited: false };
+
+  expect(inviteAction(joined, now)).toBeNull();
+});
+
+it("tones a sign-in by state, with a failed or expired invite as a problem", () => {
+  expect(signInTone({ ...pending, state: "NOT_INVITED", expiresAt: null }, now)).toBe("none");
+  expect(signInTone(pending, now)).toBe("waiting");
+  expect(signInTone({ ...pending, notSent: true }, now)).toBe("problem");
+  expect(signInTone({ ...pending, expiresAt: now.toISOString() }, now)).toBe("problem");
+  expect(signInTone({ ...pending, state: "JOINED", canBeInvited: false }, now)).toBe("joined");
 });
 
 const now = new Date("2026-10-28T12:00:00Z");

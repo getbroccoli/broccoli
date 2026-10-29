@@ -17,7 +17,6 @@ import {
   CopiedLinkDialog,
   InviteDialog,
   InviteMenuItems,
-  SignInCell,
 } from "@/features/invites";
 import { EditableField, EditBar, RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
@@ -94,11 +93,6 @@ export function EmployeeRecord({ employee, onClose }: Props) {
           {employee.jobTitle && (
             <p className="truncate text-sm text-muted-foreground">{employee.jobTitle}</p>
           )}
-          {employee.signInStatus && (
-            <p className="text-xs">
-              <SignInCell status={employee.signInStatus} />
-            </p>
-          )}
         </div>
         {/* Only admins see a sign-in status, and with it the invite actions. */}
         {(employee.access.canDelete || employee.signInStatus) && (
@@ -110,11 +104,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             </DropdownMenuTrigger>
             {/* As wide as its item, not the trigger, so the name stays on one line. */}
             <DropdownMenuContent align="end" className="w-auto max-w-80">
-              <InviteMenuItems
-                person={employee}
-                onInvite={() => setInviting(true)}
-                onLinkCreated={setCopiedLink}
-              />
+              <InviteMenuItems person={employee} onLinkCreated={setCopiedLink} />
               {employee.access.canDelete && (
                 <DropdownMenuItem variant="destructive" onClick={() => setRemoving(true)}>
                   <span className="truncate">
@@ -133,7 +123,15 @@ export function EmployeeRecord({ employee, onClose }: Props) {
       </header>
 
       <div className="subtle-scrollbar flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-6">
-        <KeyFacts startDate={employee.startDate ?? null} email={employee.email} />
+        <KeyFacts
+          startDate={employee.startDate ?? null}
+          email={employee.email}
+          signIn={
+            employee.signInStatus
+              ? { status: employee.signInStatus, onInvite: () => setInviting(true) }
+              : null
+          }
+        />
 
         <section aria-labelledby="employee-details" className="flex flex-col gap-2">
           <h2

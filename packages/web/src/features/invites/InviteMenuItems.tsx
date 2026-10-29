@@ -11,17 +11,15 @@ import type { CopiedLink, Invitee } from "./InviteDialog";
 
 type Props = {
   person: Invitee;
-  /** Opens the invite dialog for this person. */
-  onInvite: () => void;
   /** Shows a new link, which only this answer holds. */
   onLinkCreated: (link: CopiedLink) => void;
 };
 
 /**
- * A person's invite actions in their panel's menu: copy a new link, invite, and cancel an open
- * invite. Nothing for someone who cannot be invited, such as someone who joined.
+ * A person's invite actions in their panel's menu: copy a new link and cancel an open invite.
+ * Nothing for someone who cannot be invited, such as someone who joined.
  */
-export function InviteMenuItems({ person, onInvite, onLinkCreated }: Props) {
+export function InviteMenuItems({ person, onLinkCreated }: Props) {
   const [invite] = usePayloadMutation(InviteEmployeesDocument, {
     update: (cache, { data }) => addInviteHistoryLines(cache, data?.employee.invite.invites ?? []),
   });
@@ -66,7 +64,6 @@ export function InviteMenuItems({ person, onInvite, onLinkCreated }: Props) {
       <DropdownMenuItem onClick={() => void copyLink()}>
         {t("invites.panel.copyLink")}
       </DropdownMenuItem>
-      <DropdownMenuItem onClick={onInvite}>{t("invites.panel.invite")}</DropdownMenuItem>
       {status.state === "PENDING" && (
         <DropdownMenuItem onClick={() => void cancelInvite()}>
           {t("invites.panel.cancel")}

@@ -18,6 +18,36 @@ export function signInLabel(
   }
 }
 
+/**
+ * The invite action a person's panel offers: Send invite, a quiet Resend while an invite is open,
+ * or Resend invite when it was not sent or has expired. None for someone who cannot be invited.
+ */
+export function inviteAction(
+  status: SignInStatusFragment,
+  now: Date,
+): { label: string; prominent: boolean } | null {
+  if (!status.canBeInvited) return null;
+  if (status.state === "NOT_INVITED") return { label: t("invites.action.send"), prominent: true };
+  return isStale(status, now)
+    ? { label: t("invites.action.resendStale"), prominent: true }
+    : { label: t("invites.action.resend"), prominent: false };
+}
+
+/** How a sign-in reads at a glance: a failed or expired invite is a problem. */
+export function signInTone(
+  status: SignInStatusFragment,
+  now: Date,
+): "none" | "waiting" | "problem" | "joined" {
+  switch (status.state) {
+    case "JOINED":
+      return "joined";
+    case "NOT_INVITED":
+      return "none";
+    case "PENDING":
+      return isStale(status, now) ? "problem" : "waiting";
+  }
+}
+
 /** Who an invite reaches and who it skips, for the invite dialog. */
 export function groupInvitees<Person extends { signInStatus?: SignInStatusFragment | null }>(
   people: readonly Person[],
@@ -50,6 +80,11 @@ function pendingHint({ expiresAt, notSent }: SignInStatusFragment, now: Date): s
   if (days <= 0) return t("invites.state.expired");
   if (days === 1) return t("invites.state.expiresWithinDay");
   return t("invites.state.expiresIn", { days: String(days) });
+}
+
+function isStale({ state, expiresAt, notSent }: SignInStatusFragment, now: Date): boolean {
+  if (state !== "PENDING") return false;
+  return notSent || (!!expiresAt && new Date(expiresAt).getTime() <= now.getTime());
 }
 
 function skipReason(status: SignInStatusFragment | null | undefined): SkipReason {
