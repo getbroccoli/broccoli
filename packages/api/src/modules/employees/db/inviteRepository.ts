@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { user } from "../../../core/auth";
 import { type Orm, ormOf, type Tx } from "../../../core/db";
@@ -34,7 +34,7 @@ export interface InviteRepository {
 
 /** An employee as an invite sees them. */
 export interface Invitee {
-  employee: Employee;
+  employee: Pick<Employee, "id" | "firstName" | "lastName" | "email" | "userId">;
   /** Part of the sample company, which nobody signs in as. */
   isDemo: boolean;
   /** Whether a user already signs in with the employee's email. */
@@ -105,12 +105,17 @@ export function inviteRepository(db: Orm | Tx): InviteRepository {
     },
 
     findInvitees: async (employeeIds) => {
-      const { isDemo, ...employeeColumns } = getTableColumns(employees);
       return (
         orm()
           .select({
-            employee: employeeColumns,
-            isDemo,
+            employee: {
+              id: employees.id,
+              firstName: employees.firstName,
+              lastName: employees.lastName,
+              email: employees.email,
+              userId: employees.userId,
+            },
+            isDemo: employees.isDemo,
             emailHasAccount: sql<boolean>`${user.id} is not null`,
           })
           .from(employees)

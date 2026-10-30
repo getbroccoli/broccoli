@@ -1,15 +1,4 @@
-import {
-  and,
-  eq,
-  getTableColumns,
-  ilike,
-  inArray,
-  isNotNull,
-  ne,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, eq, ilike, inArray, isNotNull, ne, or, sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -28,7 +17,7 @@ import { user } from "../../../core/auth";
 import { deleteFiles, storeFile } from "../../../core/files";
 import { inRecordScope, type RecordScope } from "../../../core/security";
 import type { KeysetQuery, KeysetRow } from "../../../core/pagination";
-import type { RasterImage } from "../../../utils";
+import type { CalendarDate, RasterImage } from "../../../utils";
 import {
   EmailTakenError,
   type Employee,
@@ -37,8 +26,10 @@ import {
   type NewEmployee,
 } from "../domain";
 import { employees } from "./employeesTable";
+import { employmentRepository, firstEmploymentOf } from "./employmentRepository";
+import { employments } from "./employmentsTable";
 
-/** Employees stored in Postgres, through the pool or inside a transaction. */
+/** Employees stored in Postgres, through the pool or inside a transaction, which inserts need. */
 export interface EmployeeRepository {
   /** Throws `EmailTakenError` when another employee has the email. */
   insert(newEmployee: EmployeeRow): Promise<Employee>;
@@ -47,13 +38,12 @@ export interface EmployeeRepository {
   /** Inserts employees, skipping emails another employee has; returns the inserted ones. */
   insertSkippingTakenEmails(newEmployees: readonly EmployeeRow[]): Promise<Employee[]>;
   /**
-   * Changes an employee's fields in one statement and returns the employee before and after it,
-   * as Postgres replaced it under the row's lock; null when no employee has the id. Throws
-   * `EmailTakenError` like `insert`.
+   * Changes an employee's fields under the row's lock and returns the employee before and after;
+   * null when no employee has the id. Throws `EmailTakenError` like `insert`.
    */
   update(
     id: string,
-    changes: Partial<NewEmployee>,
+    changes: Partial<EmployeeFields>,
   ): Promise<{ before: Employee; after: Employee } | null>;
   /**
    * Deletes an employee, their avatar and the user who signs in as them, and returns what was
@@ -114,8 +104,10 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
 
   return {
     insert: async (newEmployee: EmployeeRow): Promise<Employee> => {
+      await employmentRepository(db).lockForWrites();
       try {
-        const [employee] = await orm().insert(employees).values(newEmployee).returning();
+        const inserted = await orm().insert(employees).values(newEmployee).returning();
+        const [employee] = await openEmployments(db, inserted, [newEmployee]);
         return employee!;
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
@@ -131,37 +123,45 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
         });
         rows.push({ ...employee, avatarFileId, isDemo: true });
       }
+      await employmentRepository(db).lockForWrites();
       try {
-        return await orm().insert(employees).values(rows).returning();
+        const inserted = await orm().insert(employees).values(rows).returning();
+        return await openEmployments(db, inserted, rows);
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
     },
 
     insertSkippingTakenEmails: async (newEmployees: readonly EmployeeRow[]) => {
+      await employmentRepository(db).lockForWrites();
       const inserted: Employee[] = [];
       for (let start = 0; start < newEmployees.length; start += INSERT_BATCH_SIZE) {
+        const batch = newEmployees.slice(start, start + INSERT_BATCH_SIZE);
         const rows = await orm()
           .insert(employees)
-          .values(newEmployees.slice(start, start + INSERT_BATCH_SIZE))
+          .values(batch)
           .onConflictDoNothing({ target: employees.email })
           .returning();
-        inserted.push(...rows);
+        inserted.push(...(await openEmployments(db, rows, batch)));
       }
       return inserted;
     },
 
-    update: async (id: string, changes: Partial<NewEmployee>) => {
+    update: async (id: string, changes: Partial<EmployeeFields>) => {
+      await employmentRepository(db).lockForWrites();
+      // Locked before it is read, so the read sees a change committed while it waited.
+      await lockEmployees(orm(), [id]);
+      const [before] = await orm().select().from(employees).where(eq(employees.id, id));
+      if (!before) {
+        return null;
+      }
       try {
-        const [row] = await orm()
-          .update(employees)
-          .set(changes)
-          .where(eq(employees.id, id))
-          .returning({ ...EMPLOYEE_COLUMNS, ...OLD_EMPLOYEE_COLUMNS });
-        return row ? beforeAndAfter(row) : null;
+        await orm().update(employees).set(changes).where(eq(employees.id, id));
       } catch (error) {
         throw isUniqueViolation(error, EMAIL_UNIQUE_CONSTRAINT) ? new EmailTakenError() : error;
       }
+      // The changes are normalised as stored, so the stored employee is the old one with them.
+      return { before, after: { ...before, ...changes } };
     },
 
     delete: async (id: string): Promise<Employee | null> => {
@@ -181,15 +181,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       return employee ?? null;
     },
 
-    lockByIds: async (ids) => {
-      // In id order, so two callers locking overlapping people cannot deadlock.
-      await orm()
-        .select({ id: employees.id })
-        .from(employees)
-        .where(inArray(employees.id, [...ids]))
-        .orderBy(employees.id)
-        .for("update");
-    },
+    lockByIds: (ids) => lockEmployees(orm(), ids),
 
     linkUser: async (id, userId) => {
       await orm().update(employees).set({ userId }).where(eq(employees.id, id));
@@ -276,32 +268,15 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
   };
 }
 
-const EMPLOYEE_COLUMNS = getTableColumns(employees);
-
-/** Every column as `UPDATE … RETURNING` saw it before the update (Postgres 18), as `old_<key>`. */
-const OLD_EMPLOYEE_COLUMNS = Object.fromEntries(
-  Object.entries(EMPLOYEE_COLUMNS).map(([key, column]) => [
-    `old_${key}`,
-    sql.raw(`old.${column.name}`).mapWith(column),
-  ]),
-);
-
-/** Splits a row of `EMPLOYEE_COLUMNS` and `OLD_EMPLOYEE_COLUMNS` into the employee before and after. */
-function beforeAndAfter(row: Record<string, unknown>): { before: Employee; after: Employee } {
-  const employeeWith = (prefix: string) =>
-    // The keys are the table's own columns, so the object is a stored employee.
-    Object.fromEntries(
-      Object.keys(EMPLOYEE_COLUMNS).map((key) => [key, row[`${prefix}${key}`]]),
-    ) as unknown as Employee;
-  return { before: employeeWith("old_"), after: employeeWith("") };
-}
-
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
 
 /** A new employee as stored, with the columns only the module itself sets. */
 type EmployeeRow = NewEmployee &
   Partial<Pick<Employee, "avatarFileId" | "userId">> & { isDemo?: boolean };
+
+/** The fields an update changes on the employee's own row; the start date is on their employments. */
+type EmployeeFields = Omit<NewEmployee, "startDate">;
 
 async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {
   const rows = await orm.select({ id: employees.id }).from(employees).where(condition).limit(1);
@@ -325,7 +300,10 @@ function keysetColumns({ field, direction }: EmployeeOrder): KeysetOrder {
       // As ISO text, whatever the DateStyle: it sorts like the date, and node-postgres
       // would turn a date into a JS Date.
       return keysetOrder(
-        nullsLast(sql`to_char(${employees.startDate}, 'YYYY-MM-DD')`, descending),
+        nullsLast(
+          sql`to_char(${firstEmploymentOf(employees.id, employments.startDate)}, 'YYYY-MM-DD')`,
+          descending,
+        ),
         id,
         descending,
       );
@@ -338,4 +316,36 @@ function matches(search: string): SQL {
     ilike(sql`${employees.firstName} || ' ' || ${employees.lastName}`, pattern),
     ilike(employees.email, pattern),
   )!;
+}
+
+/**
+ * Opens an open-ended employment for each inserted employee, starting on the start date of the
+ * row that inserted them, and returns the employees.
+ */
+async function openEmployments(
+  db: Orm | Tx,
+  inserted: Employee[],
+  rows: readonly EmployeeRow[],
+): Promise<Employee[]> {
+  const startDates = new Map<string, CalendarDate | null>();
+  for (const { email, startDate } of rows) {
+    // The first row with an email is the one inserted; a later one was skipped.
+    if (!startDates.has(email)) {
+      startDates.set(email, startDate);
+    }
+  }
+  await employmentRepository(db).insertOpen(
+    inserted.map(({ id, email }) => ({ employeeId: id, startDate: startDates.get(email) ?? null })),
+  );
+  return inserted;
+}
+
+async function lockEmployees(orm: ReturnType<typeof ormOf>, ids: readonly string[]) {
+  // In id order, so two callers locking overlapping people cannot deadlock.
+  await orm
+    .select({ id: employees.id })
+    .from(employees)
+    .where(inArray(employees.id, [...ids]))
+    .orderBy(employees.id)
+    .for("update");
 }

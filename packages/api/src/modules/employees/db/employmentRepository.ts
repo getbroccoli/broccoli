@@ -1,4 +1,5 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, or, type SQL, sql, type SQLWrapper } from "drizzle-orm";
+import { alias, type PgColumn, QueryBuilder } from "drizzle-orm/pg-core";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -6,9 +7,20 @@ import { employments } from "./employmentsTable";
 
 /** Employments stored in Postgres, through the pool or inside a transaction. */
 export interface EmploymentRepository {
-  /** Holds back other manager changes until the caller commits, so two cannot form a loop together. */
-  lockManagers(): Promise<void>;
-  /** The direct manager of each employee's employment active on `date`; those without one are left out. */
+  /** Opens an open-ended employment, without a manager, for each new employee. */
+  insertOpen(
+    newEmployments: readonly { employeeId: string; startDate: CalendarDate | null }[],
+  ): Promise<void>;
+  /** Each employee's start date: the start of their first employment, an unknown one counting first. */
+  findStartDates(employeeIds: readonly string[]): Promise<Map<string, CalendarDate | null>>;
+  /** Moves the start of the employee's first employment. */
+  setStartDate(employeeId: string, startDate: CalendarDate | null): Promise<void>;
+  /**
+   * Serializes employee and employment writes until the transaction ends, preventing reporting loops.
+   * Take it before employee row locks so edits, manager changes and resets cannot deadlock.
+   */
+  lockForWrites(): Promise<void>;
+  /** The direct manager of each employee's employment held on `date`; those without one are left out. */
   findManagerIds(employeeIds: readonly string[], date: CalendarDate): Promise<Map<string, string>>;
   /**
    * Everyone above each employee in reporting lines active on `date`: their manager first, that
@@ -23,7 +35,7 @@ export interface EmploymentRepository {
    * depth: 1 for a direct report, 2 for theirs, and so on.
    */
   findReportsBelow(managerId: string, date: CalendarDate): Promise<{ id: string; depth: number }[]>;
-  /** Sets the manager of the employment active on `date`, starting an open one when there is none. */
+  /** Sets the manager of the employment held on `date`; throws when the employee holds none. */
   setManager(employeeId: string, managerId: string | null, date: CalendarDate): Promise<void>;
   /** Removes `managerId` as manager from every employment naming them; returns whose they were. */
   clearManager(managerId: string): Promise<string[]>;
@@ -33,7 +45,35 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
   const orm = () => ormOf(db);
 
   return {
-    lockManagers: async () => {
+    insertOpen: async (newEmployments) => {
+      if (newEmployments.length > 0) {
+        await orm()
+          .insert(employments)
+          .values([...newEmployments]);
+      }
+    },
+
+    findStartDates: async (employeeIds) => {
+      const rows = await orm()
+        .selectDistinctOn([employments.employeeId], {
+          employeeId: employments.employeeId,
+          startDate: employments.startDate,
+        })
+        .from(employments)
+        // One array parameter: an import passes more ids than Postgres's 65,535 parameters.
+        .where(sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])`)
+        .orderBy(employments.employeeId, sql`${employments.startDate} nulls first`);
+      return new Map(rows.map(({ employeeId, startDate }) => [employeeId, startDate]));
+    },
+
+    setStartDate: async (employeeId, startDate) => {
+      await orm()
+        .update(employments)
+        .set({ startDate })
+        .where(eq(employments.id, firstEmploymentOf(employeeId)));
+    },
+
+    lockForWrites: async () => {
       await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
     },
 
@@ -43,7 +83,7 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
         .from(employments)
         .where(
           sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])
-            and ${employments.directManagerId} is not null and ${activeOn(date)}`,
+            and ${employments.directManagerId} is not null and ${heldOn(date)}`,
         );
       return new Map(rows.map(({ employeeId, managerId }) => [employeeId, managerId!]));
     },
@@ -54,11 +94,11 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
         with recursive above(start, id, depth) as (
           select ${employments.employeeId}, ${employments.directManagerId}, 1 from ${employments}
           where ${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])
-            and ${activeOn(date)}
+            and ${heldOn(date)}
           union all
           select above.start, e.direct_manager_id, above.depth + 1 from ${employments} e
           join above on e.employee_id = above.id
-          where daterange(e.start_date, e.end_date, '[]') @> ${date}::date
+          where ${heldOn(date, sql`e`)}
         ) cycle id set is_loop using path
         select start, id from above where id is not null and not is_loop order by start, depth`);
       const above = new Map<string, string[]>();
@@ -73,11 +113,11 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
       const rows = await orm().execute<{ id: string; depth: number }>(sql`
         with recursive below(id, depth) as (
           select ${employments.employeeId}, 1 from ${employments}
-          where ${employments.directManagerId} = ${managerId} and ${activeOn(date)}
+          where ${employments.directManagerId} = ${managerId} and ${heldOn(date)}
           union all
           select e.employee_id, below.depth + 1 from ${employments} e
           join below on e.direct_manager_id = below.id
-          where daterange(e.start_date, e.end_date, '[]') @> ${date}::date
+          where ${heldOn(date, sql`e`)}
         ) cycle id set is_loop using path
         select id, min(depth)::int as depth from below where not is_loop group by id`);
       return rows.rows;
@@ -87,10 +127,10 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
       const updated = await orm()
         .update(employments)
         .set({ directManagerId: managerId })
-        .where(sql`${employments.employeeId} = ${employeeId} and ${activeOn(date)}`)
+        .where(sql`${employments.employeeId} = ${employeeId} and ${heldOn(date)}`)
         .returning({ id: employments.id });
       if (updated.length === 0) {
-        await orm().insert(employments).values({ employeeId, directManagerId: managerId });
+        throw new Error(`Employee ${employeeId} has no employment on or after ${date}`);
       }
     },
 
@@ -105,6 +145,35 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
   };
 }
 
-function activeOn(date: CalendarDate) {
-  return sql`daterange(${employments.startDate}, ${employments.endDate}, '[]') @> ${date}::date`;
+/** A query for the id, or `column`, of the employee's first employment, an unknown start counting first. */
+export function firstEmploymentOf(
+  employeeId: string | SQLWrapper,
+  column: PgColumn = employments.id,
+) {
+  return new QueryBuilder()
+    .select({ value: column })
+    .from(employments)
+    .where(eq(employments.employeeId, employeeId))
+    .orderBy(sql`${employments.startDate} nulls first`)
+    .limit(1);
+}
+
+/**
+ * Whether `employment` is the one its person holds on `date`: the one active then or, before it
+ * starts, their next one.
+ */
+function heldOn(date: CalendarDate, employment: SQL = sql`${employments}`) {
+  const held = alias(employments, "held");
+  const heldEmployment = new QueryBuilder()
+    .select({ id: held.id })
+    .from(held)
+    .where(
+      and(
+        sql`${held.employeeId} = ${employment}.employee_id`,
+        or(isNull(held.endDate), gte(held.endDate, date)),
+      ),
+    )
+    .orderBy(sql`${held.startDate} nulls first`)
+    .limit(1);
+  return sql`${employment}.id = ${heldEmployment}`;
 }

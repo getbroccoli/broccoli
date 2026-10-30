@@ -149,31 +149,34 @@ export class TestSeed {
     ...overrides
   }: SeedEmployee = {}): Promise<Employee> {
     const number = ++this.#count;
-    return employeeRepository(this.orm).insert({
-      firstName: "Employee",
-      lastName: String(number),
-      email: `employee${number}@example.com`,
-      jobTitle: null,
-      startDate: startDate === null ? null : calendarDate(startDate),
-      avatarFileId,
-      ...overrides,
-    });
+    return testTransactor(this.orm)((tx) =>
+      employeeRepository(tx).insert({
+        firstName: "Employee",
+        lastName: String(number),
+        email: `employee${number}@example.com`,
+        jobTitle: null,
+        startDate: startDate === null ? null : calendarDate(startDate),
+        avatarFileId,
+        ...overrides,
+      }),
+    );
   }
 
   /** `count` default employees in one insert. */
   employees(count: number): Promise<Employee[]> {
-    return employeeRepository(this.orm).insertSkippingTakenEmails(
-      Array.from({ length: count }, () => {
-        const number = ++this.#count;
-        return {
-          firstName: "Employee",
-          lastName: String(number),
-          email: `employee${number}@example.com`,
-          jobTitle: null,
-          startDate: null,
-          avatarFileId: null,
-        };
-      }),
+    const newEmployees = Array.from({ length: count }, () => {
+      const number = ++this.#count;
+      return {
+        firstName: "Employee",
+        lastName: String(number),
+        email: `employee${number}@example.com`,
+        jobTitle: null,
+        startDate: null,
+        avatarFileId: null,
+      };
+    });
+    return testTransactor(this.orm)((tx) =>
+      employeeRepository(tx).insertSkippingTakenEmails(newEmployees),
     );
   }
 

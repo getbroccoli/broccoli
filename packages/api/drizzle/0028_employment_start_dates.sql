@@ -1,0 +1,1 @@
+ALTER TABLE "employees" DROP COLUMN "start_date";

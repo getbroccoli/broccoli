@@ -5,9 +5,9 @@ import type { CalendarDate } from "../../../utils";
 import { employees } from "./employeesTable";
 
 /**
- * A person's work for the company over a period, and who manages them then. A person's
- * employments never overlap: an exclusion constraint the migration adds, since drizzle cannot
- * declare one.
+ * A person's work for the company over a period, and who manages them then. Every employee has one
+ * from their creation, and their employments never overlap: an exclusion constraint the migration
+ * adds, since drizzle cannot declare one.
  */
 export const employments = pgTable(
   "employments",
@@ -23,7 +23,7 @@ export const employments = pgTable(
     }),
     /** Percent of full time. */
     fte: integer("fte").notNull().default(100),
-    /** Null: since the person joined. */
+    /** Null: unknown. The first employment's start is the person's start date. */
     startDate: date("start_date", { mode: "string" }).$type<CalendarDate>(),
     /** Null: open-ended. */
     endDate: date("end_date", { mode: "string" }).$type<CalendarDate>(),

@@ -37,11 +37,13 @@ export async function updateEmployee(
   const { employee, historyLine } = await transact(async (tx) => {
     if (managerId !== undefined) {
       // Before the employee row, in the order a deletion takes them, so the two cannot deadlock.
-      await employmentRepository(tx).lockManagers();
+      await employmentRepository(tx).lockForWrites();
     }
-    const { before, after } = await saveChanges(employeeRepository(tx), employeeId, changes);
+    const { startDate, ...fields } = changes;
+    const { before, after } = await saveChanges(employeeRepository(tx), employeeId, fields);
     const changed = [
       ...employeeChanges(before, after),
+      ...(startDate === undefined ? [] : await changeStartDate(tx, employeeId, startDate)),
       ...(managerId === undefined ? [] : await changeManager(tx, employeeId, managerId)),
     ];
     if (changed.length === 0) {
@@ -65,10 +67,31 @@ export async function updateEmployee(
   return readableResult(ctx, employee, historyLine);
 }
 
+/** Moves the employee's start date and returns the history change; refuses an employee deleted meanwhile. */
+async function changeStartDate(
+  tx: Tx,
+  employeeId: string,
+  startDate: CalendarDate | null,
+): Promise<FieldChange[]> {
+  const employments = employmentRepository(tx);
+  // In the order an update takes them, so the read sees a start date committed while it waited.
+  await employments.lockForWrites();
+  await employeeRepository(tx).lockByIds([employeeId]);
+  const startDates = await employments.findStartDates([employeeId]);
+  if (!startDates.has(employeeId)) {
+    throw employeeNotFound();
+  }
+  const before = startDates.get(employeeId)!;
+  if (before !== startDate) {
+    await employments.setStartDate(employeeId, startDate);
+  }
+  return employeeChanges({ startDate: before }, { startDate });
+}
+
 /**
  * Makes `managerId` the employee's manager from today and returns the history change; refuses an
  * unknown manager, the employee themselves, or one who already reports to them. Needs
- * `lockManagers` held.
+ * `lockForWrites` held.
  */
 async function changeManager(
   tx: Tx,
@@ -115,7 +138,7 @@ async function findEmployee(tx: Tx, id: string | null | undefined): Promise<Empl
 async function saveChanges(
   employees: EmployeeRepository,
   employeeId: string,
-  changes: Partial<NewEmployee>,
+  changes: Partial<Omit<NewEmployee, "startDate">>,
 ): Promise<{ before: Employee; after: Employee }> {
   if (Object.keys(changes).length === 0) {
     const employee = await employees.findById(employeeId);

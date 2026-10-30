@@ -28,8 +28,9 @@ export async function deleteEmployee(
   const { historyId, reportHistoryLines } = await transact(async (tx) => {
     const employments = employmentRepository(tx);
     // First, as a manager change takes it, so the manager read below is the one being removed.
-    await employments.lockManagers();
+    await employments.lockForWrites();
     const manager = await findManagerOf(tx, employeeId);
+    const startDate = (await employments.findStartDates([employeeId])).get(employeeId) ?? null;
     // Before the delete: its foreign key would clear them too, but without saying whose.
     const reportIds = await employments.clearManager(employeeId);
     const deleted = await employeeRepository(tx).delete(employeeId);
@@ -44,7 +45,10 @@ export async function deleteEmployee(
       records: [
         {
           recordId: employeeId,
-          changes: [...employeeChanges(deleted, null), ...managerChanges(manager, null)],
+          changes: [
+            ...employeeChanges({ ...deleted, startDate }, null),
+            ...managerChanges(manager, null),
+          ],
         },
       ],
     });

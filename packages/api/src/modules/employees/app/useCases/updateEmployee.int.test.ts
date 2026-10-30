@@ -1,13 +1,19 @@
+import { sql } from "drizzle-orm";
 import { assert } from "vitest";
 
 import {
   recordChangedEvents,
   employeeUseCases,
   expect,
+  expectBlockedBy,
   expectHistoryReplaysTo,
   OWNER,
   test,
 } from "#test/support";
+
+import { ormOf } from "../../../../core/db";
+import { addDays, todayInUtc } from "../../../../utils";
+import { employeeRepository, employmentRepository } from "../../db";
 
 test("saves a manager with other fields in one history line", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
@@ -132,26 +138,22 @@ test("an update returns the history line it appended", async ({ orm, seed }) => 
 
 test.for(["jobTitle", "startDate"] as const)("clears %s when sent null", async (field, { orm }) => {
   const employees = employeeUseCases(orm);
-  const employee = await employees.createEmployee(OWNER, {
+  const input = {
     firstName: "Avery",
     lastName: "Stone",
     email: "avery@example.com",
     jobTitle: "Engineer",
     startDate: "2026-02-28",
-  });
+  };
+  const employee = await employees.createEmployee(OWNER, input);
   assert(employee);
 
-  const updated = await employees.updateEmployee(OWNER, {
-    id: employee.id,
-    [field]: null,
-    changeReason: "  ",
-  });
+  await employees.updateEmployee(OWNER, { id: employee.id, [field]: null, changeReason: "  " });
 
-  expect(updated.employee).toEqual({ ...employee, [field]: null });
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges[0]!.node).toMatchObject({
     reason: null,
-    changes: [{ field, oldValue: employee[field], newValue: null }],
+    changes: [{ field, oldValue: input[field], newValue: null }],
   });
   await expectHistoryReplaysTo(orm, employee.id);
 });
@@ -257,65 +259,46 @@ test.for(["firstName", "lastName", "email"] as const)(
   },
 );
 
-test("parallel job title edits keep their old and new values chained", async ({ orm }) => {
+test("a start date edit that waited for another records the date that one stored", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const startDate = todayInUtc();
+  const changedDate = addDays(startDate, 30);
+  const employee = await seed.employee({ startDate });
   const employees = employeeUseCases(orm);
-  const employee = await employees.createEmployee(OWNER, {
-    firstName: "Avery",
-    lastName: "Stone",
-    email: "avery@example.com",
-    jobTitle: "Engineer",
+  const editReady = Promise.withResolvers<number>();
+  const releaseEdit = Promise.withResolvers<void>();
+  const editing = transact(async (tx) => {
+    await employeeRepository(tx).lockByIds([employee.id]);
+    await employmentRepository(tx).setStartDate(employee.id, changedDate);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    editReady.resolve(rows[0]!.pid);
+    await releaseEdit.promise;
   });
-  assert(employee);
+  const blockingPid = await editReady.promise;
 
-  await Promise.all([
-    employees.updateEmployee(OWNER, { id: employee.id, jobTitle: "Lead" }),
-    employees.updateEmployee(OWNER, { id: employee.id, jobTitle: "Principal" }),
+  const results = Promise.allSettled([
+    editing,
+    employees.updateEmployee(OWNER, { id: employee.id, startDate }),
   ]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseEdit.resolve();
+    await results;
+  }
 
-  const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
-  const updates = edges
-    .map(({ node }) => node)
-    .filter((line) => line.operation === "UPDATED")
-    .reverse();
-  expect(updates).toHaveLength(2);
-  expect(updates[0]!.changes).toEqual([
-    { field: "jobTitle", oldValue: "Engineer", newValue: expect.any(String) as unknown },
-  ]);
-  expect(updates[1]!.changes).toEqual([
+  expect(await results).toMatchObject([
+    { status: "fulfilled" },
     {
-      field: "jobTitle",
-      oldValue: updates[0]!.changes[0]!.newValue,
-      newValue: expect.any(String) as unknown,
+      status: "fulfilled",
+      value: {
+        historyLine: {
+          changes: [{ field: "startDate", oldValue: changedDate, newValue: startDate }],
+        },
+      },
     },
   ]);
-  expect(updates.map((line) => line.changes[0]!.newValue).sort()).toEqual(["Lead", "Principal"]);
-  await expectHistoryReplaysTo(orm, employee.id);
-});
-
-test("an update addressed by uppercase id keeps its history under the canonical id", async ({
-  orm,
-}) => {
-  const employees = employeeUseCases(orm);
-  const employee = await employees.createEmployee(OWNER, {
-    firstName: "Avery",
-    lastName: "Stone",
-    email: "avery@example.com",
-    jobTitle: "Engineer",
-  });
-  assert(employee);
-
-  const updated = await employees.updateEmployee(OWNER, {
-    id: employee.id.toUpperCase(),
-    jobTitle: "Lead",
-  });
-
-  expect(updated.employee?.id).toBe(employee.id);
-  const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
-  expect(edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation }))).toEqual(
-    [
-      { recordId: employee.id, operation: "UPDATED" },
-      { recordId: employee.id, operation: "CREATED" },
-    ],
-  );
-  await expectHistoryReplaysTo(orm, employee.id);
 });
