@@ -3,6 +3,7 @@ import type { Connection, PageArgs } from "../../../../core/pagination";
 import type { HistoryLine } from "../../../../core/records";
 import type { PermissionProfile, SecurityContext } from "../../../../core/security";
 import { employeeRepository, employmentRepository } from "../../db";
+import type { CalendarDate } from "../../../../utils";
 import type { Employee, EmployeeUpdateInput, NewEmployeeInput } from "../../domain";
 import { createEmployee } from "./createEmployee";
 import { deleteEmployee } from "./deleteEmployee";
@@ -10,7 +11,13 @@ import type { EmployeeContext } from "./employeeContext";
 import { type EmployeeListArgs, listEmployees } from "./listEmployees";
 import { readPermissionProfiles, setPermissionProfiles } from "./permissionProfiles";
 import { readAvatar } from "./readAvatar";
-import { readEmployee, readEmployeeHistory, readManagers, readMyEmployee } from "./readEmployee";
+import {
+  readEmployee,
+  readEmployeeHistory,
+  readManagers,
+  readMyEmployee,
+  readStartDates,
+} from "./readEmployee";
 import { updateEmployee } from "./updateEmployee";
 
 /** Everything a user can do with employees; the adapters call nothing else. */
@@ -45,6 +52,11 @@ export interface EmployeeUseCases {
     ctx: SecurityContext,
     employeeIds: readonly string[],
   ) => Promise<Map<string, Employee>>;
+  /** Each employee's start date, by the id asked for; left out when the caller may not read the employee. */
+  readStartDates: (
+    ctx: SecurityContext,
+    employeeIds: readonly string[],
+  ) => Promise<Map<string, CalendarDate | null>>;
   /** An employee's history, newest first, also after the employee is deleted. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -83,6 +95,7 @@ export function createEmployeeUseCases(context: EmployeeContext): EmployeeUseCas
     readEmployee: (ctx, id) => readEmployee(employees, ctx, id),
     readMyEmployee: (ctx) => readMyEmployee(employees, ctx),
     readManagers: (ctx, employeeIds) => readManagers({ employees, employments }, ctx, employeeIds),
+    readStartDates: (ctx, employeeIds) => readStartDates(employments, ctx, employeeIds),
     readEmployeeHistory: (ctx, employeeId, args) =>
       readEmployeeHistory(context, ctx, employeeId, args),
     listEmployees: (ctx, args) => listEmployees(employees, ctx, args),

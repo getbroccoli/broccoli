@@ -2,6 +2,7 @@ import DataLoader from "dataloader";
 
 import { type GraphqlContext, perRequest } from "../../../core/graphql";
 import type { PermissionProfile } from "../../../core/security";
+import type { CalendarDate } from "../../../utils";
 import type { EmployeeInviteService, EmployeeUseCases } from "../app";
 import type { Employee, SignInStatus } from "../domain";
 
@@ -9,6 +10,8 @@ import type { Employee, SignInStatus } from "../domain";
 export interface EmployeeLoaders {
   /** An employee's manager today, or null without one. */
   manager: DataLoader<string, Employee | null>;
+  /** An employee's start date: the start of their first employment. */
+  startDate: DataLoader<string, CalendarDate | null>;
   /** The profiles of the user who signs in as an employee, or null without one. */
   permissionProfiles: DataLoader<string, PermissionProfile[] | null>;
   /** Whether a person can sign in, and their invite. */
@@ -24,6 +27,10 @@ export function employeeLoaders(
     manager: new DataLoader<string, Employee | null>(async (employeeIds) => {
       const managers = await useCases.readManagers(context.getActor(), employeeIds);
       return employeeIds.map((id) => managers.get(id) ?? null);
+    }),
+    startDate: new DataLoader<string, CalendarDate | null>(async (employeeIds) => {
+      const startDates = await useCases.readStartDates(context.getActor(), employeeIds);
+      return employeeIds.map((id) => startDates.get(id) ?? null);
     }),
     permissionProfiles: new DataLoader<string, PermissionProfile[] | null>(async (employeeIds) => {
       const profiles = await useCases.readPermissionProfiles(context.getActor(), employeeIds);

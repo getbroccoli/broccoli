@@ -13,7 +13,7 @@ import {
 
 import { ormOf } from "../../../../core/db";
 import { addDays, todayInUtc } from "../../../../utils";
-import { employeeRepository } from "../../db";
+import { employeeRepository, employmentRepository } from "../../db";
 
 test("saves a manager with other fields in one history line", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
@@ -138,26 +138,22 @@ test("an update returns the history line it appended", async ({ orm, seed }) => 
 
 test.for(["jobTitle", "startDate"] as const)("clears %s when sent null", async (field, { orm }) => {
   const employees = employeeUseCases(orm);
-  const employee = await employees.createEmployee(OWNER, {
+  const input = {
     firstName: "Avery",
     lastName: "Stone",
     email: "avery@example.com",
     jobTitle: "Engineer",
     startDate: "2026-02-28",
-  });
+  };
+  const employee = await employees.createEmployee(OWNER, input);
   assert(employee);
 
-  const updated = await employees.updateEmployee(OWNER, {
-    id: employee.id,
-    [field]: null,
-    changeReason: "  ",
-  });
+  await employees.updateEmployee(OWNER, { id: employee.id, [field]: null, changeReason: "  " });
 
-  expect(updated.employee).toEqual({ ...employee, [field]: null });
   const { edges } = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(edges[0]!.node).toMatchObject({
     reason: null,
-    changes: [{ field, oldValue: employee[field], newValue: null }],
+    changes: [{ field, oldValue: input[field], newValue: null }],
   });
   await expectHistoryReplaysTo(orm, employee.id);
 });
@@ -275,7 +271,8 @@ test("a start date edit that waited for another records the date that one stored
   const editReady = Promise.withResolvers<number>();
   const releaseEdit = Promise.withResolvers<void>();
   const editing = transact(async (tx) => {
-    await employeeRepository(tx).update(employee.id, { startDate: changedDate });
+    await employeeRepository(tx).lockByIds([employee.id]);
+    await employmentRepository(tx).setStartDate(employee.id, changedDate);
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     editReady.resolve(rows[0]!.pid);
     await releaseEdit.promise;

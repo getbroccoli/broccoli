@@ -186,11 +186,19 @@ test("allows an admin without an employee to change every employee update field"
     lastName: "Reed",
     email: "anna@example.com",
     jobTitle: "Lead",
-    startDate: "2026-01-01",
   };
+  const startDate = "2026-01-01";
 
-  await employees.updateEmployee(ADMIN, { id: employee.id, ...changes, managerId: manager.id });
+  await employees.updateEmployee(ADMIN, {
+    id: employee.id,
+    ...changes,
+    startDate,
+    managerId: manager.id,
+  });
 
   expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject(changes);
+  expect(await employees.readStartDates(OWNER, [employee.id])).toEqual(
+    new Map([[employee.id, startDate]]),
+  );
   expect((await employees.readManagers(OWNER, [employee.id])).get(employee.id)).toEqual(manager);
 });

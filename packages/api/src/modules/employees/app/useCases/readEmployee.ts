@@ -1,7 +1,7 @@
 import type { Connection, PageArgs } from "../../../../core/pagination";
 import { createRecordHistoryReader, type HistoryLine } from "../../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../../core/security";
-import { parseUuid, todayInUtc } from "../../../../utils";
+import { type CalendarDate, parseUuid, todayInUtc } from "../../../../utils";
 import type { EmployeeRepository, EmploymentRepository } from "../../db";
 import type { Employee } from "../../domain";
 import { employeeRecordType } from "../employeeRecordType";
@@ -56,6 +56,25 @@ export async function readManagers(
       const manager = managers.get(managerIds.get(id) ?? "");
       return manager ? [[askedId, manager] as const] : [];
     }),
+  );
+}
+
+/** Each employee's start date, by the id asked for; left out when the caller may not read the employee. */
+export async function readStartDates(
+  employments: EmploymentRepository,
+  ctx: SecurityContext,
+  employeeIds: readonly string[],
+): Promise<Map<string, CalendarDate | null>> {
+  const scope = await ctx.recordScope("employee", "read");
+  const asked = employeeIds.flatMap((askedId) => {
+    const id = parseUuid(askedId);
+    return id && isInRecordScope(scope, id) ? [{ askedId, id }] : [];
+  });
+  const startDates = await employments.findStartDates(asked.map(({ id }) => id));
+  return new Map(
+    asked.flatMap(({ askedId, id }) =>
+      startDates.has(id) ? [[askedId, startDates.get(id)!] as const] : [],
+    ),
   );
 }
 

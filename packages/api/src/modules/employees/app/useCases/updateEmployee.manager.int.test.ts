@@ -65,7 +65,9 @@ test("keeps the manager when the start date moves", async ({ orm, seed }) => {
   await employees.updateEmployee(OWNER, { id: employee.id, startDate });
 
   expect(await managerOf(employees, employee.id)).toEqual(manager);
-  expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ startDate });
+  expect(await employees.readStartDates(OWNER, [employee.id])).toEqual(
+    new Map([[employee.id, startDate]]),
+  );
 });
 
 test("changes a manager and records both managers' ids and names", async ({ orm, seed }) => {
@@ -285,7 +287,9 @@ test("a start date edit waiting for a manager change lets it finish", async ({
   }
 
   expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
-  expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ startDate });
+  expect(await employees.readStartDates(OWNER, [employee.id])).toEqual(
+    new Map([[employee.id, startDate]]),
+  );
   expect(await managerOf(employees, employee.id)).toEqual(manager);
 });
 

@@ -69,6 +69,7 @@ export function createResolvers(
     },
     Employee: {
       avatarUrl: ({ avatarFileId }) => avatarFileId && avatarUrl(avatarFileId),
+      startDate: (employee, _args, context) => loaders(context).startDate.load(employee.id),
       managerId: async (employee, _args, context) =>
         (await loaders(context).manager.load(employee.id))?.id ?? null,
       manager: (employee, _args, context) => loaders(context).manager.load(employee.id),

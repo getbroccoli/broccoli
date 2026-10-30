@@ -1,5 +1,5 @@
-import { and, eq, gte, isNull, or, type SQL, sql } from "drizzle-orm";
-import { alias, QueryBuilder } from "drizzle-orm/pg-core";
+import { and, eq, gte, isNull, or, type SQL, sql, type SQLWrapper } from "drizzle-orm";
+import { alias, type PgColumn, QueryBuilder } from "drizzle-orm/pg-core";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -11,6 +11,10 @@ export interface EmploymentRepository {
   insertOpen(
     newEmployments: readonly { employeeId: string; startDate: CalendarDate | null }[],
   ): Promise<void>;
+  /** Each employee's start date: the start of their first employment, an unknown one counting first. */
+  findStartDates(employeeIds: readonly string[]): Promise<Map<string, CalendarDate | null>>;
+  /** Moves the start of the employee's first employment. */
+  setStartDate(employeeId: string, startDate: CalendarDate | null): Promise<void>;
   /** Holds back other manager changes until the caller commits, so two cannot form a loop together. */
   lockManagers(): Promise<void>;
   /**
@@ -49,6 +53,26 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
           .insert(employments)
           .values([...newEmployments]);
       }
+    },
+
+    findStartDates: async (employeeIds) => {
+      const rows = await orm()
+        .selectDistinctOn([employments.employeeId], {
+          employeeId: employments.employeeId,
+          startDate: employments.startDate,
+        })
+        .from(employments)
+        // One array parameter: an import passes more ids than Postgres's 65,535 parameters.
+        .where(sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])`)
+        .orderBy(employments.employeeId, sql`${employments.startDate} nulls first`);
+      return new Map(rows.map(({ employeeId, startDate }) => [employeeId, startDate]));
+    },
+
+    setStartDate: async (employeeId, startDate) => {
+      await orm()
+        .update(employments)
+        .set({ startDate })
+        .where(eq(employments.id, firstEmploymentOf(employeeId)));
     },
 
     lockManagers: async () => {
@@ -125,6 +149,19 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
       return [...new Set(rows.map(({ employeeId }) => employeeId))];
     },
   };
+}
+
+/** A query for the id, or `column`, of the employee's first employment, an unknown start counting first. */
+export function firstEmploymentOf(
+  employeeId: string | SQLWrapper,
+  column: PgColumn = employments.id,
+) {
+  return new QueryBuilder()
+    .select({ value: column })
+    .from(employments)
+    .where(eq(employments.employeeId, employeeId))
+    .orderBy(sql`${employments.startDate} nulls first`)
+    .limit(1);
 }
 
 /**

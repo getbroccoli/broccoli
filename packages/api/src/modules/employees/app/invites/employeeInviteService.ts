@@ -142,8 +142,16 @@ export function createEmployeeInviteService({
           throw employeeNotFound();
         }
         const openOf = new Map(open.map((invite) => [invite.employeeId, invite]));
+        const invited = invitees.filter(canBeInvited).map(({ employee }) => employee);
+        // Whole, for the answer, which returns them.
+        const employeesById = new Map(
+          (await employeeRepository(tx).findByIds(invited.map(({ id }) => id))).map((employee) => [
+            employee.id,
+            employee,
+          ]),
+        );
         const made: SentInvite[] = [];
-        for (const { employee } of invitees.filter(canBeInvited)) {
+        for (const employee of invited) {
           const replaced = openOf.get(employee.id);
           const { token, tokenHash } = createInviteToken();
           const invite = await inviteRepository(tx).replace(
@@ -172,7 +180,7 @@ export function createEmployeeInviteService({
             });
           }
           made.push({
-            employee,
+            employee: employeesById.get(employee.id)!,
             expiresAt: invite.expiresAt,
             delivery,
             link: delivery === "copied_by_owner" ? inviteLink(linkOrigin, token) : null,

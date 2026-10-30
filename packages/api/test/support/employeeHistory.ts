@@ -33,12 +33,14 @@ export async function expectHistoryReplaysTo(orm: Orm, employeeId: string): Prom
     }
   }
 
-  const employee = await employeeUseCases(orm).readEmployee(OWNER, employeeId);
+  const employees = employeeUseCases(orm);
+  const employee = await employees.readEmployee(OWNER, employeeId);
+  const startDates = await employees.readStartDates(OWNER, [employeeId]);
   expect(replayed).toEqual({
     firstName: employee?.firstName ?? null,
     lastName: employee?.lastName ?? null,
     email: employee?.email ?? null,
     jobTitle: employee?.jobTitle ?? null,
-    startDate: employee?.startDate ?? null,
+    startDate: startDates.get(employeeId) ?? null,
   });
 }

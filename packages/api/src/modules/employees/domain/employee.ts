@@ -18,8 +18,6 @@ export interface Employee {
   /** Work email, lowercased; unique. */
   email: string;
   jobTitle: string | null;
-  /** First working day: the start of their first employment. */
-  startDate: CalendarDate | null;
   /** The file holding their avatar, or null. */
   avatarFileId: string | null;
   createdAt: Date;
@@ -41,7 +39,10 @@ export interface NewEmployeeInput {
   startDate?: string | null;
 }
 
-export type NewEmployee = Omit<Employee, "id" | "avatarFileId" | "createdAt" | "userId">;
+export type NewEmployee = Omit<Employee, "id" | "avatarFileId" | "createdAt" | "userId"> & {
+  /** First working day: the start of their first employment. */
+  startDate: CalendarDate | null;
+};
 
 /** The fields an update sends; an absent field stays as it is, and null clears a nullable one. */
 export interface EmployeeUpdateInput {
@@ -130,9 +131,13 @@ export function parseEmployeeUpdate(input: EmployeeUpdateInput): EmployeeUpdate 
 
 /**
  * How a change turned `before` into `after`, field by field, as history keeps it: a new employee
- * has no `before`, a deleted one no `after`. Fields that did not change are left out.
+ * has no `before`, a deleted one no `after`. Fields that did not change, or that neither side
+ * holds, are left out.
  */
-export function employeeChanges(before: Employee | null, after: Employee | null): FieldChange[] {
+export function employeeChanges(
+  before: Partial<NewEmployee> | null,
+  after: Partial<NewEmployee> | null,
+): FieldChange[] {
   return HISTORY_FIELDS.flatMap((field) => {
     const oldValue = before?.[field] ?? null;
     const newValue = after?.[field] ?? null;

@@ -3,7 +3,7 @@ import { assert } from "vitest";
 import { employeeUseCases, expectHistoryReplaysTo, expect, OWNER, test } from "#test/support";
 
 test("creates an employee and returns it normalised", async ({ orm }) => {
-  const { createEmployee } = employeeUseCases(orm);
+  const { createEmployee, readStartDates } = employeeUseCases(orm);
 
   const employee = await createEmployee(OWNER, {
     firstName: "  Employee  ",
@@ -19,8 +19,10 @@ test("creates an employee and returns it normalised", async ({ orm }) => {
     lastName: "One",
     email: "employee.one@example.com",
     jobTitle: "Engineer",
-    startDate: "2026-02-28",
   });
+  expect(await readStartDates(OWNER, [employee.id])).toEqual(
+    new Map([[employee.id, "2026-02-28"]]),
+  );
   expect(employee.id).toMatch(/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/);
   expect(employee.createdAt).toBeInstanceOf(Date);
 });
