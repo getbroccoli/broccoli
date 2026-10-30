@@ -65,7 +65,7 @@ export async function findTakenEmails(
 export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<void> {
   ctx.requireSetupAccess("MANAGE_WORKSPACE");
   // Before the employees table, in the order a manager change takes them, so the two cannot deadlock.
-  await employmentRepository(tx).lockManagers();
+  await employmentRepository(tx).lockForWrites();
   // The owner keeps their user, so they stay signed in.
   const owner = await readOwner(tx);
   await employeeRepository(tx).deleteAll(owner?.userId ?? null);

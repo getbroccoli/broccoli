@@ -265,7 +265,7 @@ test("an employee created while a reset waits for the employees table does not d
   const resetReady = Promise.withResolvers<number>();
   const releaseReset = Promise.withResolvers<void>();
   const resetting = transact(async (tx) => {
-    await employmentRepository(tx).lockManagers();
+    await employmentRepository(tx).lockForWrites();
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     resetReady.resolve(rows[0]!.pid);
     await releaseReset.promise;
@@ -301,7 +301,7 @@ test("a job title edit waiting for a reset lets it lock the employee", async ({
   const resetReady = Promise.withResolvers<number>();
   const releaseReset = Promise.withResolvers<void>();
   const resetting = transact(async (tx) => {
-    await employmentRepository(tx).lockManagers();
+    await employmentRepository(tx).lockForWrites();
     await ormOf(tx).execute(sql`lock table employees in share row exclusive mode`);
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     resetReady.resolve(rows[0]!.pid);

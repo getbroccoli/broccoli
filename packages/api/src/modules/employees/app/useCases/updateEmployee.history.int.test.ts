@@ -86,7 +86,7 @@ test("a start date edit that waited for a deletion refuses the deleted employee"
   const deleteReady = Promise.withResolvers<number>();
   const releaseDelete = Promise.withResolvers<void>();
   const deleting = transact(async (tx) => {
-    await employmentRepository(tx).lockManagers();
+    await employmentRepository(tx).lockForWrites();
     await employeeRepository(tx).delete(employee.id);
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     deleteReady.resolve(rows[0]!.pid);

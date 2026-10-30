@@ -15,11 +15,9 @@ export interface EmploymentRepository {
   findStartDates(employeeIds: readonly string[]): Promise<Map<string, CalendarDate | null>>;
   /** Moves the start of the employee's first employment. */
   setStartDate(employeeId: string, startDate: CalendarDate | null): Promise<void>;
-  /** Holds back other manager changes until the caller commits, so two cannot form a loop together. */
-  lockManagers(): Promise<void>;
   /**
-   * Takes the table lock employee and employment writes need before the caller locks employee rows,
-   * the order manager changes and resets take theirs in, so they cannot deadlock.
+   * Serializes employee and employment writes until the transaction ends, preventing reporting loops.
+   * Take it before employee row locks so edits, manager changes and resets cannot deadlock.
    */
   lockForWrites(): Promise<void>;
   /** The direct manager of each employee's employment held on `date`; those without one are left out. */
@@ -75,12 +73,8 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
         .where(eq(employments.id, firstEmploymentOf(employeeId)));
     },
 
-    lockManagers: async () => {
-      await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
-    },
-
     lockForWrites: async () => {
-      await orm().execute(sql`lock table ${employments} in row exclusive mode`);
+      await orm().execute(sql`lock table ${employments} in share row exclusive mode`);
     },
 
     findManagerIds: async (employeeIds, date) => {

@@ -266,7 +266,7 @@ test("a start date edit waiting for a manager change lets it finish", async ({
   const managerReady = Promise.withResolvers<number>();
   const releaseManager = Promise.withResolvers<void>();
   const managing = transact(async (tx) => {
-    await employmentRepository(tx).lockManagers();
+    await employmentRepository(tx).lockForWrites();
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     managerReady.resolve(rows[0]!.pid);
     await releaseManager.promise;
