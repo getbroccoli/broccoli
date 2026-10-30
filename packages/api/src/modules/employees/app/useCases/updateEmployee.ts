@@ -67,7 +67,7 @@ export async function updateEmployee(
   return readableResult(ctx, employee, historyLine);
 }
 
-/** Moves the employee's start date and returns the history change. */
+/** Moves the employee's start date and returns the history change; refuses an employee deleted meanwhile. */
 async function changeStartDate(
   tx: Tx,
   employeeId: string,
@@ -77,7 +77,11 @@ async function changeStartDate(
   // In the order an update takes them, so the read sees a start date committed while it waited.
   await employments.lockForWrites();
   await employeeRepository(tx).lockByIds([employeeId]);
-  const before = (await employments.findStartDates([employeeId])).get(employeeId) ?? null;
+  const startDates = await employments.findStartDates([employeeId]);
+  if (!startDates.has(employeeId)) {
+    throw employeeNotFound();
+  }
+  const before = startDates.get(employeeId)!;
   if (before !== startDate) {
     await employments.setStartDate(employeeId, startDate);
   }

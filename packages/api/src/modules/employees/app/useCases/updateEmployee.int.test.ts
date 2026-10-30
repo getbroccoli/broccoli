@@ -302,3 +302,37 @@ test("a start date edit that waited for another records the date that one stored
     },
   ]);
 });
+
+test("a start date edit that waited for a deletion refuses the deleted employee", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee();
+  const deleteReady = Promise.withResolvers<number>();
+  const releaseDelete = Promise.withResolvers<void>();
+  const deleting = transact(async (tx) => {
+    await employmentRepository(tx).lockManagers();
+    await employeeRepository(tx).delete(employee.id);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    deleteReady.resolve(rows[0]!.pid);
+    await releaseDelete.promise;
+  });
+  const blockingPid = await deleteReady.promise;
+
+  const results = Promise.allSettled([
+    deleting,
+    employeeUseCases(orm).updateEmployee(OWNER, { id: employee.id, startDate: todayInUtc() }),
+  ]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseDelete.resolve();
+    await results;
+  }
+
+  expect(await results).toMatchObject([
+    { status: "fulfilled" },
+    { status: "rejected", reason: { code: "NOT_FOUND" } },
+  ]);
+});
