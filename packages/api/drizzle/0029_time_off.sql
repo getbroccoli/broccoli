@@ -54,11 +54,13 @@ CREATE TABLE "time_off_allowance_rules" (
 	"extra_days" numeric,
 	"removed_at" timestamp with time zone,
 	CONSTRAINT "time_off_allowance_rules_yearly_entitlement_columns" CHECK ("time_off_allowance_rules"."kind" <> 'yearly_entitlement' or (
-        "time_off_allowance_rules"."entitlement_days" >= 0 and "time_off_allowance_rules"."entitlement_days_per_week" between 1 and 7
+        "time_off_allowance_rules"."entitlement_days" is not null and "time_off_allowance_rules"."entitlement_days_per_week" is not null
+        and "time_off_allowance_rules"."entitlement_days" >= 0 and "time_off_allowance_rules"."entitlement_days_per_week" between 1 and 7
         and ("time_off_allowance_rules"."max_days" is null or "time_off_allowance_rules"."max_days" >= 0)
         and "time_off_allowance_rules"."after_years" is null and "time_off_allowance_rules"."extra_days" is null)),
 	CONSTRAINT "time_off_allowance_rules_service_extra_columns" CHECK ("time_off_allowance_rules"."kind" <> 'service_extra' or (
-        "time_off_allowance_rules"."after_years" >= 1 and "time_off_allowance_rules"."extra_days" >= 0
+        "time_off_allowance_rules"."after_years" is not null and "time_off_allowance_rules"."extra_days" is not null
+        and "time_off_allowance_rules"."after_years" >= 1 and "time_off_allowance_rules"."extra_days" >= 0
         and "time_off_allowance_rules"."entitlement_days" is null and "time_off_allowance_rules"."entitlement_days_per_week" is null
         and "time_off_allowance_rules"."max_days" is null))
 );
@@ -86,7 +88,9 @@ CREATE TABLE "time_off_policies" (
 	CONSTRAINT "time_off_policies_id_type_unique" UNIQUE("id","time_off_type_id"),
 	CONSTRAINT "time_off_policies_bank_holidays_with_allowance" CHECK (("time_off_policies"."bank_holidays" is not null) = ("time_off_policies"."balance" = 'balance_from_allowance')),
 	CONSTRAINT "time_off_policies_leave_year_with_balance" CHECK (("time_off_policies"."leave_year_start" is not null) = ("time_off_policies"."balance" <> 'no_balance')),
-	CONSTRAINT "time_off_policies_fixed_date_set" CHECK (("time_off_policies"."leave_year_start_month" is not null and "time_off_policies"."leave_year_start_day" is not null)
+	CONSTRAINT "time_off_policies_fixed_date_month_set" CHECK (("time_off_policies"."leave_year_start_month" is not null)
+        = ("time_off_policies"."leave_year_start" is not distinct from 'leave_year_from_fixed_date')),
+	CONSTRAINT "time_off_policies_fixed_date_day_set" CHECK (("time_off_policies"."leave_year_start_day" is not null)
         = ("time_off_policies"."leave_year_start" is not distinct from 'leave_year_from_fixed_date')),
 	CONSTRAINT "time_off_policies_fixed_date_valid" CHECK ("time_off_policies"."leave_year_start_month" between 1 and 12 and "time_off_policies"."leave_year_start_day" between 1 and
         case when "time_off_policies"."leave_year_start_month" = 2 then 28

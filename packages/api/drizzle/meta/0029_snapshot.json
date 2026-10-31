@@ -1,5 +1,5 @@
 {
-  "id": "a3e8fa14-00d7-4337-9a2b-3b379551136b",
+  "id": "c3296b3f-2cd1-4fa4-bc31-b7d974a0d75c",
   "prevId": "6db6869d-9009-4153-9c31-e08a7ecc2e94",
   "version": "7",
   "dialect": "postgresql",
@@ -2220,11 +2220,11 @@
       "checkConstraints": {
         "time_off_allowance_rules_yearly_entitlement_columns": {
           "name": "time_off_allowance_rules_yearly_entitlement_columns",
-          "value": "\"time_off_allowance_rules\".\"kind\" <> 'yearly_entitlement' or (\n        \"time_off_allowance_rules\".\"entitlement_days\" >= 0 and \"time_off_allowance_rules\".\"entitlement_days_per_week\" between 1 and 7\n        and (\"time_off_allowance_rules\".\"max_days\" is null or \"time_off_allowance_rules\".\"max_days\" >= 0)\n        and \"time_off_allowance_rules\".\"after_years\" is null and \"time_off_allowance_rules\".\"extra_days\" is null)"
+          "value": "\"time_off_allowance_rules\".\"kind\" <> 'yearly_entitlement' or (\n        \"time_off_allowance_rules\".\"entitlement_days\" is not null and \"time_off_allowance_rules\".\"entitlement_days_per_week\" is not null\n        and \"time_off_allowance_rules\".\"entitlement_days\" >= 0 and \"time_off_allowance_rules\".\"entitlement_days_per_week\" between 1 and 7\n        and (\"time_off_allowance_rules\".\"max_days\" is null or \"time_off_allowance_rules\".\"max_days\" >= 0)\n        and \"time_off_allowance_rules\".\"after_years\" is null and \"time_off_allowance_rules\".\"extra_days\" is null)"
         },
         "time_off_allowance_rules_service_extra_columns": {
           "name": "time_off_allowance_rules_service_extra_columns",
-          "value": "\"time_off_allowance_rules\".\"kind\" <> 'service_extra' or (\n        \"time_off_allowance_rules\".\"after_years\" >= 1 and \"time_off_allowance_rules\".\"extra_days\" >= 0\n        and \"time_off_allowance_rules\".\"entitlement_days\" is null and \"time_off_allowance_rules\".\"entitlement_days_per_week\" is null\n        and \"time_off_allowance_rules\".\"max_days\" is null)"
+          "value": "\"time_off_allowance_rules\".\"kind\" <> 'service_extra' or (\n        \"time_off_allowance_rules\".\"after_years\" is not null and \"time_off_allowance_rules\".\"extra_days\" is not null\n        and \"time_off_allowance_rules\".\"after_years\" >= 1 and \"time_off_allowance_rules\".\"extra_days\" >= 0\n        and \"time_off_allowance_rules\".\"entitlement_days\" is null and \"time_off_allowance_rules\".\"entitlement_days_per_week\" is null\n        and \"time_off_allowance_rules\".\"max_days\" is null)"
         }
       },
       "isRLSEnabled": false
@@ -2384,9 +2384,13 @@
           "name": "time_off_policies_leave_year_with_balance",
           "value": "(\"time_off_policies\".\"leave_year_start\" is not null) = (\"time_off_policies\".\"balance\" <> 'no_balance')"
         },
-        "time_off_policies_fixed_date_set": {
-          "name": "time_off_policies_fixed_date_set",
-          "value": "(\"time_off_policies\".\"leave_year_start_month\" is not null and \"time_off_policies\".\"leave_year_start_day\" is not null)\n        = (\"time_off_policies\".\"leave_year_start\" is not distinct from 'leave_year_from_fixed_date')"
+        "time_off_policies_fixed_date_month_set": {
+          "name": "time_off_policies_fixed_date_month_set",
+          "value": "(\"time_off_policies\".\"leave_year_start_month\" is not null)\n        = (\"time_off_policies\".\"leave_year_start\" is not distinct from 'leave_year_from_fixed_date')"
+        },
+        "time_off_policies_fixed_date_day_set": {
+          "name": "time_off_policies_fixed_date_day_set",
+          "value": "(\"time_off_policies\".\"leave_year_start_day\" is not null)\n        = (\"time_off_policies\".\"leave_year_start\" is not distinct from 'leave_year_from_fixed_date')"
         },
         "time_off_policies_fixed_date_valid": {
           "name": "time_off_policies_fixed_date_valid",

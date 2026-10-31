@@ -42,6 +42,7 @@ export const timeOffAllowanceRules = pgTable(
     extraDays: numeric("extra_days"),
     removedAt: timestamp("removed_at", { withTimezone: true }),
   },
+  // A check passes when its result is null, so required values are tested for null first.
   (table) => [
     // Named here: the generated name would pass Postgres's 63-character limit.
     foreignKey({
@@ -59,14 +60,16 @@ export const timeOffAllowanceRules = pgTable(
     check(
       "time_off_allowance_rules_yearly_entitlement_columns",
       sql`${table.kind} <> 'yearly_entitlement' or (
-        ${table.entitlementDays} >= 0 and ${table.entitlementDaysPerWeek} between 1 and 7
+        ${table.entitlementDays} is not null and ${table.entitlementDaysPerWeek} is not null
+        and ${table.entitlementDays} >= 0 and ${table.entitlementDaysPerWeek} between 1 and 7
         and (${table.maxDays} is null or ${table.maxDays} >= 0)
         and ${table.afterYears} is null and ${table.extraDays} is null)`,
     ),
     check(
       "time_off_allowance_rules_service_extra_columns",
       sql`${table.kind} <> 'service_extra' or (
-        ${table.afterYears} >= 1 and ${table.extraDays} >= 0
+        ${table.afterYears} is not null and ${table.extraDays} is not null
+        and ${table.afterYears} >= 1 and ${table.extraDays} >= 0
         and ${table.entitlementDays} is null and ${table.entitlementDaysPerWeek} is null
         and ${table.maxDays} is null)`,
     ),

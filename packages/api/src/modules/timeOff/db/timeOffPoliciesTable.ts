@@ -45,8 +45,13 @@ export const timeOffPolicies = pgTable(
       sql`(${table.leaveYearStart} is not null) = (${table.balance} <> 'no_balance')`,
     ),
     check(
-      "time_off_policies_fixed_date_set",
-      sql`(${table.leaveYearStartMonth} is not null and ${table.leaveYearStartDay} is not null)
+      "time_off_policies_fixed_date_month_set",
+      sql`(${table.leaveYearStartMonth} is not null)
+        = (${table.leaveYearStart} is not distinct from 'leave_year_from_fixed_date')`,
+    ),
+    check(
+      "time_off_policies_fixed_date_day_set",
+      sql`(${table.leaveYearStartDay} is not null)
         = (${table.leaveYearStart} is not distinct from 'leave_year_from_fixed_date')`,
     ),
     // A day that exists in every year: never 29 February, never 31 April.
