@@ -14,6 +14,12 @@ export const company = pgTable(
     logoFileId: uuid("logo_file_id").references(() => files.id),
     /** Set by the first brand lookup, whatever it found, so it never runs twice. */
     brandLookedUpAt: timestamp("brand_looked_up_at", { withTimezone: true }),
+    /** Whose bank holidays apply. Text, not a database enum, so new regions need no migration. */
+    bankHolidayCalendar: text("bank_holiday_calendar", {
+      enum: ["england_and_wales", "scotland", "northern_ireland"],
+    })
+      .notNull()
+      .default("england_and_wales"),
   },
   (table) => [check("company_singleton", sql`${table.id}`)],
 );
