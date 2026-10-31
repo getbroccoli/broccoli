@@ -54,6 +54,7 @@
     ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
     "src/modules/system": ["src/core/*", "!src/core/server"],
+    "src/modules/timeOff": ["src/utils"],
     "src/integrations/ai": ["src/utils"],
     "src/integrations/brandLookup": ["src/utils"],
     "src/integrations/mail": ["src/utils"],
