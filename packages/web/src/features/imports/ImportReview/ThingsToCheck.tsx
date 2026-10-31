@@ -31,18 +31,17 @@ const INCOMPLETE = {
   OTHER: "setup.review.checks.incomplete.other",
 } as const;
 
+type Props = {
+  checks: FragmentType<ThingsToCheck_CheckFragment>[];
+  /** Narrows the table to this check's import employees. */
+  onShow: (checkId: string) => void;
+};
+
 /**
  * "N things to check": each kind settled in one go, or shown in the table one by one,
  * as in the setup design. Hidden when nothing is left. Owns the `ThingsToCheck_check` fragment.
  */
-export function ThingsToCheck({
-  checks: from,
-  onShow,
-}: {
-  checks: FragmentType<ThingsToCheck_CheckFragment>[];
-  /** Narrows the table to this check's import employees. */
-  onShow: (checkId: string) => void;
-}) {
+export function ThingsToCheck({ checks: from, onShow }: Props) {
   const [open, setOpen] = useState(false);
   const [chooseSourceForAll, chosen] = usePayloadMutation(ChooseSourceForAllDocument, {
     refetch: [ImportReviewDocument],
@@ -63,15 +62,27 @@ export function ThingsToCheck({
   const busy = chosen.loading || leftOut.loading;
   const failed = chosen.error || leftOut.error;
 
+  const resetFailures = () => {
+    chosen.reset();
+    leftOut.reset();
+  };
+  const changeOpen = (nextOpen: boolean) => {
+    // Resetting a running mutation would also clear its loading state.
+    if (nextOpen && !busy) resetFailures();
+    setOpen(nextOpen);
+  };
   // A failure shows in the line below the kinds.
-  const settle = (work: Promise<unknown>) => void work.catch(() => undefined);
+  const settle = (work: () => Promise<unknown>) => {
+    resetFailures();
+    void work().catch(() => undefined);
+  };
   const show = (checkId: string) => {
     setOpen(false);
     onShow(checkId);
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger render={<button type="button" className="rounded-full" />}>
         <FlagPill className="h-8 px-3 text-sm">{label}</FlagPill>
       </PopoverTrigger>
@@ -99,7 +110,7 @@ export function ThingsToCheck({
                       variant={index === 0 ? "default" : "outline"}
                       disabled={busy}
                       onClick={() =>
-                        settle(
+                        settle(() =>
                           chooseSourceForAll({
                             variables: { field: check.field!, sourceId: source.id },
                           }),
@@ -114,7 +125,7 @@ export function ThingsToCheck({
                     size="sm"
                     disabled={busy}
                     onClick={() =>
-                      settle(leaveOutIncomplete({ variables: { reason: check.reason! } }))
+                      settle(() => leaveOutIncomplete({ variables: { reason: check.reason! } }))
                     }
                   >
                     {t("setup.review.checks.leaveThemOut")}
