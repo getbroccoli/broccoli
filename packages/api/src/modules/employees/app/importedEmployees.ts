@@ -4,7 +4,7 @@ import { readOwner } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository, employmentRepository } from "../db";
 import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
-import { setNewEmployeeManagers } from "./newEmployeeManagers";
+import { setNewEmployeeManagers } from "./setNewEmployeeManagers";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 /** What adding imported employees did. */
