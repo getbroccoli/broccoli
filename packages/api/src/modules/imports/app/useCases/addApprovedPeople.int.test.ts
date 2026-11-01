@@ -133,3 +133,69 @@ test("an existing owner refuses account creation before adding the approved peop
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
   expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(before);
 });
+
+test("adds the reviewed manager on the employee's creation history line", async ({ orm, seed }) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    {
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+      manager: "Missing Person",
+    },
+    { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  await imports.choices.chooseManager(SETUP_HOLDER, {
+    keys: ["avery@example.com"],
+    managerKey: "robin@example.com",
+  });
+
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  await finishSelfHostedSetup(orm);
+
+  const employees = employeeUseCases(orm);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  const avery = edges.find(({ node }) => node.email === "avery@example.com")!.node;
+  const robin = edges.find(({ node }) => node.email === "robin@example.com")!.node;
+  expect((await employees.readManagers(OWNER, [avery.id])).get(avery.id)).toEqual(robin);
+  const history = await employees.readEmployeeHistory(OWNER, avery.id, {});
+  expect(history.edges).toHaveLength(1);
+  expect(history.edges[0]!.node).toMatchObject({
+    operation: "CREATED",
+    cause: { kind: "ADDED_FROM_IMPORT" },
+    changes: expect.arrayContaining([
+      {
+        field: "manager",
+        oldValue: null,
+        newValue: robin.id,
+        oldLabel: null,
+        newLabel: "Robin Reed",
+      },
+    ]) as unknown,
+  });
+  await expectHistoryReplaysTo(orm, avery.id);
+});
+
+test("adds employees in a manager loop without managers", async ({ orm, seed }) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com", manager: "robin@example.com" },
+    { email: "robin@example.com", manager: "avery@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  await finishSelfHostedSetup(orm);
+
+  const employees = employeeUseCases(orm);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  expect(edges).toHaveLength(2);
+  const managers = await employees.readManagers(
+    OWNER,
+    edges.map(({ node }) => node.id),
+  );
+  expect(edges.map(({ node }) => managers.get(node.id) ?? null)).toEqual([null, null]);
+});

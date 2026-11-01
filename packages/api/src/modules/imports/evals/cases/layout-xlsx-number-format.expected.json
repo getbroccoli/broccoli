@@ -5,161 +5,184 @@
       "lastName": "Luu",
       "email": "e01377.552@people.example.test",
       "jobTitle": "Quality Engineer",
-      "startDate": "2011-04-30"
+      "startDate": "2011-04-30",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Brooks",
       "lastName": "Stewart",
       "email": "e03097.553@people.example.test",
       "jobTitle": "HRIS Analyst",
-      "startDate": "2015-12-19"
+      "startDate": "2015-12-19",
+      "manager": "Savannah Ali"
     },
     {
       "firstName": "Naomi",
       "lastName": "Xi",
       "email": "e01668.554@people.example.test",
       "jobTitle": "Director",
-      "startDate": "2002-02-17"
+      "startDate": "2002-02-17",
+      "manager": "Luna Sanders"
     },
     {
       "firstName": "Silas",
       "lastName": "Estrada",
       "email": "e03354.555@people.example.test",
       "jobTitle": "IT Systems Architect",
-      "startDate": "2016-06-24"
+      "startDate": "2016-06-24",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "Skylar",
       "lastName": "Ayala",
       "email": "e02088.556@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2017-02-06"
+      "startDate": "2017-02-06",
+      "manager": "Luna Sanders"
     },
     {
       "firstName": "Lydia",
       "lastName": "Huynh",
       "email": "e03980.557@people.example.test",
       "jobTitle": "Account Representative",
-      "startDate": "2000-08-16"
+      "startDate": "2000-08-16",
+      "manager": "Adam Dang"
     },
     {
       "firstName": "Hazel",
       "lastName": "Cortez",
       "email": "e00972.558@people.example.test",
       "jobTitle": "HRIS Analyst",
-      "startDate": "2021-04-18"
+      "startDate": "2021-04-18",
+      "manager": "Savannah Ali"
     },
     {
       "firstName": "Everleigh",
       "lastName": "Adams",
       "email": "e00824.559@people.example.test",
       "jobTitle": "Analyst II",
-      "startDate": "2020-03-14"
+      "startDate": "2020-03-14",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Layla",
       "lastName": "Salazar",
       "email": "e04359.560@people.example.test",
       "jobTitle": "Solutions Architect",
-      "startDate": "2014-03-19"
+      "startDate": "2014-03-19",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "Willow",
       "lastName": "Chen",
       "email": "e03113.561@people.example.test",
       "jobTitle": "Manager",
-      "startDate": "2012-09-03"
+      "startDate": "2012-09-03",
+      "manager": "Easton Bailey"
     },
     {
       "firstName": "Penelope",
       "lastName": "Griffin",
       "email": "e01488.562@people.example.test",
       "jobTitle": "Director",
-      "startDate": "2021-01-23"
+      "startDate": "2021-01-23",
+      "manager": "Adam Dang"
     },
     {
       "firstName": "Lillian",
       "lastName": "Romero",
       "email": "e01787.563@people.example.test",
       "jobTitle": "Director",
-      "startDate": "2018-12-07"
+      "startDate": "2018-12-07",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Stella",
       "lastName": "Wu",
       "email": "e03550.564@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2014-02-20"
+      "startDate": "2014-02-20",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Parker",
       "lastName": "Vang",
       "email": "e01052.565@people.example.test",
       "jobTitle": "Analyst",
-      "startDate": "2016-12-17"
+      "startDate": "2016-12-17",
+      "manager": "Adam Dang"
     },
     {
       "firstName": "Mila",
       "lastName": "Roberts",
       "email": "e04799.566@people.example.test",
       "jobTitle": "Sr. Business Partner",
-      "startDate": "2017-01-26"
+      "startDate": "2017-01-26",
+      "manager": "Savannah Ali"
     },
     {
       "firstName": "Isaac",
       "lastName": "Liu",
       "email": "e03402.567@people.example.test",
       "jobTitle": "Field Engineer",
-      "startDate": "1992-10-13"
+      "startDate": "1992-10-13",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Jacob",
       "lastName": "Doan",
       "email": "e04128.568@people.example.test",
       "jobTitle": "Analyst II",
-      "startDate": "2021-08-02"
+      "startDate": "2021-08-02",
+      "manager": "Adam Dang"
     },
     {
       "firstName": "Raelynn",
       "lastName": "Ma",
       "email": "e00013.569@people.example.test",
       "jobTitle": "Sr. Analyst",
-      "startDate": "2015-10-08"
+      "startDate": "2015-10-08",
+      "manager": "Luna Sanders"
     },
     {
       "firstName": "Jameson",
       "lastName": "Juarez",
       "email": "e03114.570@people.example.test",
       "jobTitle": "Development Engineer",
-      "startDate": "1994-10-09"
+      "startDate": "1994-10-09",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Everleigh",
       "lastName": "Shah",
       "email": "e04004.571@people.example.test",
       "jobTitle": "Test Engineer",
-      "startDate": "2018-12-14"
+      "startDate": "2018-12-14",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Alexander",
       "lastName": "Foster",
       "email": "e04472.572@people.example.test",
       "jobTitle": "Analyst II",
-      "startDate": "2020-07-03"
+      "startDate": "2020-07-03",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Ryan",
       "lastName": "Ha",
       "email": "e00161.573@people.example.test",
       "jobTitle": "Vice President",
-      "startDate": "2007-01-27"
+      "startDate": "2007-01-27",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Chloe",
       "lastName": "Salazar",
       "email": "e04417.574@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2011-05-22"
+      "startDate": "2011-05-22",
+      "manager": "Savannah Ali"
     }
   ],
   "forbidden": [

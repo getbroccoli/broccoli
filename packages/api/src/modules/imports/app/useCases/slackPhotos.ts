@@ -26,7 +26,7 @@ export async function attachSlackPhotos(
 ): Promise<StoredSlackPhoto[]> {
   const records = importPhotoRepository(tx);
   const waiting = new Map(
-    (await records.findPhotoDownloads(sourceId)).map((download) => [download.externalId, download]),
+    (await records.findPhotoDownloads(sourceId)).map((download) => [download.sourceKey, download]),
   );
   const stored: StoredSlackPhoto[] = [];
   for (const { id, photo } of members) {

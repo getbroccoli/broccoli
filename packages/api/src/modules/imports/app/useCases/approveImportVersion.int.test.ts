@@ -168,13 +168,13 @@ test("changes the version when a person is left out", async ({ orm, seed }) => {
 test("changes the version when an existing source refreshes its people", async ({ orm, seed }) => {
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [
-    { externalId: "U1", email: "avery@example.com", jobTitle: "Designer" },
+    { sourceKey: "U1", email: "avery@example.com", jobTitle: "Designer" },
   ]);
   const imports = importUseCases(orm);
   const before = (await imports.reads.readReview(SETUP_HOLDER)).version;
 
   await seed.importEmployees(source.id, [
-    { externalId: "U1", email: "avery@example.com", jobTitle: "Engineer" },
+    { sourceKey: "U1", email: "avery@example.com", jobTitle: "Engineer" },
   ]);
 
   expect((await imports.reads.readReview(SETUP_HOLDER)).version).not.toBe(before);

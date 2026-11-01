@@ -38,6 +38,15 @@ export function createResolvers(
           () => useCases.deleteEmployee(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
+      setManagers: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["EmployeeSetManagersPayload"]>(
+          () =>
+            useCases.setManagers(context.getActor(), {
+              employeeIds: input.employeeIds,
+              managerId: input.managerId ?? null,
+            }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
       setPermissionProfiles: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
           () => useCases.setPermissionProfiles(context.getActor(), input),

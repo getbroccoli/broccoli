@@ -1,6 +1,11 @@
 import { expect, it } from "vitest";
 
-import { groupEmployeeRecords, hasOpenConflict, type ImportEmployeeRecord, ImportSource } from ".";
+import {
+  groupEmployeeRecords,
+  hasOpenFieldConflict,
+  type ImportEmployeeRecord,
+  ImportSource,
+} from ".";
 
 it("groups a Slack member and a file row with one email into one import employee", () => {
   const file = new ImportSource({ ...mapped, id: "file", kind: "file", name: "staff.csv" });
@@ -73,7 +78,7 @@ it("shows a value from only one source without a conflict", () => {
     pickedRecordId: null,
     options: [{ value: "Engineer", recordIds: [member.id] }],
   });
-  expect(hasOpenConflict(employee!.values.jobTitle)).toBe(false);
+  expect(hasOpenFieldConflict(employee!, "jobTitle")).toBe(false);
 });
 
 it("shows the default and both record options for an open conflict", () => {
@@ -92,7 +97,7 @@ it("shows the default and both record options for an open conflict", () => {
       { value: "Engineer", recordIds: [member.id] },
     ],
   });
-  expect(hasOpenConflict(employee!.values.jobTitle)).toBe(true);
+  expect(hasOpenFieldConflict(employee!, "jobTitle")).toBe(true);
 });
 
 it("reports the picked record id with its value and settles the conflict", () => {
@@ -111,7 +116,7 @@ it("reports the picked record id with its value and settles the conflict", () =>
     choice: "picked",
     pickedRecordId: member.id,
   });
-  expect(hasOpenConflict(employee!.values.jobTitle)).toBe(false);
+  expect(hasOpenFieldConflict(employee!, "jobTitle")).toBe(false);
 });
 
 it("falls back to the default when a picked record is outside the group", () => {
@@ -132,7 +137,7 @@ it("falls back to the default when a picked record is outside the group", () => 
     choice: "default",
     pickedRecordId: null,
   });
-  expect(hasOpenConflict(employee!.values.jobTitle)).toBe(true);
+  expect(hasOpenFieldConflict(employee!, "jobTitle")).toBe(true);
 });
 
 it("shows a typed value and settles the conflict", () => {
@@ -151,7 +156,7 @@ it("shows a typed value and settles the conflict", () => {
     choice: "typed",
     pickedRecordId: null,
   });
-  expect(hasOpenConflict(employee!.values.jobTitle)).toBe(false);
+  expect(hasOpenFieldConflict(employee!, "jobTitle")).toBe(false);
 });
 
 it("merges a typed email with the target’s key first and its choices kept", () => {
@@ -235,4 +240,6 @@ const row: ImportEmployeeRecord = {
   jobTitle: "Designer",
   startDate: null,
   photoFileId: null,
+  manager: null,
+  externalRecordId: null,
 };

@@ -153,6 +153,8 @@ type EmployeeMutations {
   delete(input: EmployeeDeleteInput!): EmployeeDeletePayload!
   "Sets the permission profiles of the user who signs in as this person, and records the change in their history. Admins only."
   setPermissionProfiles(input: EmployeeSetPermissionProfilesInput!): EmployeeUpdatePayload!
+  "Makes one employee the manager of these employees from today, or no one with a null managerId, with a history line each; skips the manager among them. Refused as a whole when it would make a loop, and for a person whose manager the caller may not change."
+  setManagers(input: EmployeeSetManagersInput!): EmployeeSetManagersPayload!
   "Invites people to sign in: one new invite each, replacing any open one; skips people who joined, whose email has an account, or who are demo data. Admins only."
   invite(input: InviteSendInput!): InviteSendPayload!
   "Cancels a person's open invite; its link stops working. Admins only."
@@ -219,6 +221,23 @@ type EmployeeUpdatePayload {
 }
 
 union EmployeeUpdateError = InvalidInputError | NotFoundError
+
+input EmployeeSetManagersInput {
+  "1 to 1,000 employees."
+  employeeIds: [ID!]!
+  "An employee; null for no manager."
+  managerId: ID
+}
+
+"The employees after `setManagers`, those the caller may read, or why it was refused."
+type EmployeeSetManagersPayload {
+  employees: [Employee!]
+  "The lines it added to their history."
+  historyLines: [RecordChange!]
+  error: EmployeeSetManagersError
+}
+
+union EmployeeSetManagersError = InvalidInputError | NotFoundError
 
 "The removed employee's id, or why the removal was refused."
 type EmployeeDeletePayload {

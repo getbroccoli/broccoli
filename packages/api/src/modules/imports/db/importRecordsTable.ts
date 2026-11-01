@@ -19,7 +19,9 @@ export const importRecords = pgTable(
       .references(() => importSources.id, { onDelete: "cascade" }),
     type: text("type", { enum: ["employee"] }).notNull(),
     typeVersion: integer("type_version").notNull(),
-    externalId: text("external_id").notNull(),
+    sourceKey: text("source_key").notNull(),
+    /** The ID the source gives the person, which another record's manager may name. */
+    externalRecordId: text("external_record_id"),
     raw: jsonb("raw").notNull(),
     values: jsonb("values").notNull(),
     /** Where the person's own photo can be downloaded; null for initials. */
@@ -30,6 +32,6 @@ export const importRecords = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    unique("import_records_source_record").on(table.sourceId, table.type, table.externalId),
+    unique("import_records_source_record").on(table.sourceId, table.type, table.sourceKey),
   ],
 );

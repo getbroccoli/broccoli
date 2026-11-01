@@ -30,4 +30,6 @@ const ANSWERS = {
   email: "B",
   jobTitle: "none",
   startDate: "none",
+  manager: "none",
+  externalRecordId: "none",
 };

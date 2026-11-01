@@ -77,6 +77,8 @@ test("returns the model's questions with masked rows", async ({ orm, seed, trans
     "email",
     "jobTitle",
     "startDate",
+    "manager",
+    "externalRecordId",
   ]);
 });
 
@@ -307,6 +309,8 @@ const ANSWERS = {
   email: "B",
   jobTitle: "none",
   startDate: "none",
+  manager: "none",
+  externalRecordId: "none",
 };
 
 function valuesOf(employee: ImportEmployee) {

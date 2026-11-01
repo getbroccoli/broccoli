@@ -27,6 +27,8 @@ export const importChoices = pgTable(
     key: text("key").notNull(),
     leftOut: boolean("left_out").notNull().default(false),
     values: jsonb("values").notNull().default({}),
+    /** The owner's choice of the group's manager, which wins over the sources'. */
+    chosenManager: jsonb("chosen_manager"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

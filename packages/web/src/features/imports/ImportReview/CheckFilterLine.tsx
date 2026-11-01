@@ -3,6 +3,12 @@ import { t } from "@/i18n";
 
 import { type EmployeeFieldKey, pluralLabel } from "./employeeFields";
 
+const MANAGER = {
+  noPersonMatches: "setup.review.filter.manager.noPersonMatches",
+  severalPeopleMatch: "setup.review.filter.manager.severalPeopleMatch",
+  managersFormALoop: "setup.review.filter.manager.managersFormALoop",
+} as const;
+
 const INCOMPLETE = {
   firstName: "setup.review.filter.incomplete.firstName",
   lastName: "setup.review.filter.incomplete.lastName",
@@ -38,6 +44,9 @@ function description(checkId: string): string {
   const [kind, name] = checkId.split(":");
   if (kind === "incomplete" && name && name in INCOMPLETE) {
     return t(INCOMPLETE[name as keyof typeof INCOMPLETE]);
+  }
+  if (kind === "manager" && name && name in MANAGER) {
+    return t(MANAGER[name as keyof typeof MANAGER]);
   }
   return t("setup.review.filter.conflict", { values: pluralLabel(name as EmployeeFieldKey) });
 }

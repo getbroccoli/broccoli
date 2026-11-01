@@ -5,28 +5,32 @@
       "lastName": "Do",
       "email": "e01633.58@people.example.test",
       "jobTitle": "Operations Engineer",
-      "startDate": "2001-05-30"
+      "startDate": "2001-05-30",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Zoey",
       "lastName": "Jackson",
       "email": "e01848.59@people.example.test",
       "jobTitle": "Business Partner",
-      "startDate": "2008-08-21"
+      "startDate": "2008-08-21",
+      "manager": "Savannah Ali"
     },
     {
       "firstName": "Mia",
       "lastName": "Cheng",
       "email": "e01427.96@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2015-04-22"
+      "startDate": "2015-04-22",
+      "manager": "Adam Dang"
     },
     {
       "firstName": "Rylee",
       "lastName": "Yu",
       "email": "e04568.97@people.example.test",
       "jobTitle": "Vice President",
-      "startDate": "2011-07-10"
+      "startDate": "2011-07-10",
+      "manager": "Luna Sanders"
     }
   ],
   "forbidden": [

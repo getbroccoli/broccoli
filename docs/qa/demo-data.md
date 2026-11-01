@@ -17,6 +17,7 @@ A manual check that skipping the import fills the demo company and that Exit dem
 ## Seeded
 
 - [ ] Sorting by start date shows two people starting in the coming weeks.
+- [ ] Everyone but Oliver Bennett, the CEO, has a manager on their panel, such as Daniel Okafor for the engineers.
 - [ ] The company keeps the name saved in the setup step.
 - [ ] The banner shows on every page of the shell, such as `/company`.
 

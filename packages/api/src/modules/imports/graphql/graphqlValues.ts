@@ -42,10 +42,20 @@ export const FIELDS = {
   lastName: "LAST_NAME",
   email: "EMAIL",
   jobTitle: "JOB_TITLE",
+  manager: "MANAGER",
   startDate: "START_DATE",
 } as const;
 export const CHOICES = { default: "DEFAULT", picked: "PICKED", typed: "TYPED" } as const;
-export const CHECK_KINDS = { conflict: "CONFLICT", incomplete: "INCOMPLETE" } as const;
+export const CHECK_KINDS = {
+  conflict: "CONFLICT",
+  incomplete: "INCOMPLETE",
+  manager: "MANAGER",
+} as const;
+export const MANAGER_PROBLEMS = {
+  noPersonMatches: "NO_PERSON_MATCHES",
+  severalPeopleMatch: "SEVERAL_PEOPLE_MATCH",
+  managersFormALoop: "MANAGERS_FORM_A_LOOP",
+} as const;
 
 /** The domain name behind a GraphQL enum value. */
 export function keyOf<K extends string, V extends string>(names: Record<K, V>, value: V): K {

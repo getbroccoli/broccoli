@@ -1,0 +1,57 @@
+fragment ManagerCell_manager on ImportEmployeeManager {
+  reference {
+    ...EmployeeValueCell_value @unmask
+  }
+  employee {
+    id
+    firstName {
+      value
+    }
+    lastName {
+      value
+    }
+  }
+  chosen
+  problem
+}
+
+mutation ChooseEmployeeManager($input: ImportChooseEmployeeManagerInput!) {
+  import {
+    chooseEmployeeManager(input: $input) {
+      import {
+        id
+        # Review's own changes move the version Approve sends.
+        version
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
+query ImportPersonOptions($search: String) {
+  import {
+    id
+    employees(first: 8, filter: { search: $search, ready: true }) {
+      edges {
+        node {
+          id
+          firstName {
+            value
+          }
+          lastName {
+            value
+          }
+          jobTitle {
+            value
+          }
+          avatarUrl
+        }
+      }
+    }
+  }
+}

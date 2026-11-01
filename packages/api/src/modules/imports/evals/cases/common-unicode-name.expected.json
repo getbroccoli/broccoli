@@ -5,49 +5,56 @@
       "lastName": "García",
       "email": "e01633.58@people.example.test",
       "jobTitle": "Operations Engineer",
-      "startDate": "2001-05-30"
+      "startDate": "2001-05-30",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Zoey",
       "lastName": "Jackson",
       "email": "e01848.59@people.example.test",
       "jobTitle": "Business Partner",
-      "startDate": "2008-08-21"
+      "startDate": "2008-08-21",
+      "manager": "Savannah Ali"
     },
     {
       "firstName": "John",
       "lastName": "Chow",
       "email": "e00716.60@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2021-03-11"
+      "startDate": "2021-03-11",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Ava",
       "lastName": "Ayala",
       "email": "e00699.61@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2006-08-16"
+      "startDate": "2006-08-16",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "Natalia",
       "lastName": "Salazar",
       "email": "e00502.62@people.example.test",
       "jobTitle": "Sr. Analyst",
-      "startDate": "2019-01-02"
+      "startDate": "2019-01-02",
+      "manager": "Easton Bailey"
     },
     {
       "firstName": "Skylar",
       "lastName": "Carrillo",
       "email": "e04000.63@people.example.test",
       "jobTitle": "Engineering Manager",
-      "startDate": "2008-12-18"
+      "startDate": "2008-12-18",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Christian",
       "lastName": "Sanders",
       "email": "e02112.64@people.example.test",
       "jobTitle": "Vice President",
-      "startDate": "2013-08-07"
+      "startDate": "2013-08-07",
+      "manager": "Savannah Ali"
     }
   ],
   "forbidden": [

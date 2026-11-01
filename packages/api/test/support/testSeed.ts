@@ -53,7 +53,10 @@ export class TestSeed {
   }
 
   async manager(employeeId: string, managerId: string | null): Promise<void> {
-    await employmentRepository(this.orm).setManager(employeeId, managerId, todayInUtc());
+    await employmentRepository(this.orm).setManagers(
+      new Map([[employeeId, managerId]]),
+      todayInUtc(),
+    );
   }
 
   /** Makes the instance managed, as the accounts service assigns it. */
@@ -242,7 +245,8 @@ export class TestSeed {
   async importEmployees(
     sourceId: string,
     employees: (Partial<ImportEmployeeValues> & {
-      externalId?: string;
+      sourceKey?: string;
+      externalRecordId?: string | null;
       photoUrl?: string | null;
     })[],
   ) {
@@ -250,10 +254,11 @@ export class TestSeed {
       const imports = await lockImport(tx);
       await imports.syncEmployeeRecords(
         sourceId,
-        employees.map(({ externalId, photoUrl, ...values }) => {
+        employees.map(({ sourceKey, externalRecordId = null, photoUrl, ...values }) => {
           const number = ++this.#count;
           return {
-            externalId: externalId ?? `U${number}`,
+            sourceKey: sourceKey ?? `U${number}`,
+            externalRecordId,
             photoUrl,
             raw: {},
             values: {
@@ -261,6 +266,7 @@ export class TestSeed {
               lastName: String(number),
               email: `employee${number}@example.com`,
               jobTitle: null,
+              manager: null,
               startDate: null,
               ...values,
             },

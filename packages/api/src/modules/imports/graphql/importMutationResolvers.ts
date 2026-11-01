@@ -75,6 +75,17 @@ export function importMutationResolvers(useCases: ImportUseCases): Resolvers["Im
           ),
         ["INVALID_INPUT"],
       ),
+    chooseEmployeeManager: (_parent, { input }, context) =>
+      mutationPayload<ResolversTypes["ImportChooseEmployeeManagerPayload"]>(
+        () =>
+          thenImportPayload(
+            useCases.choices.chooseManager(context.getActor(), {
+              keys: input.employeeIds,
+              managerKey: input.managerId ?? null,
+            }),
+          ),
+        ["INVALID_INPUT"],
+      ),
     leaveOutIncomplete: (_parent, { reason }, context) =>
       mutationPayload<ResolversTypes["ImportMutationPayload"]>(() =>
         thenImportPayload(

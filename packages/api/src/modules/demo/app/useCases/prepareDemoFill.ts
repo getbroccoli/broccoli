@@ -21,7 +21,11 @@ export async function prepareDemoFill(today: CalendarDate = todayInUtc()): Promi
     createDemoEmployees(
       ctx,
       tx,
-      people.map(({ employee }, index) => ({ employee, avatar: avatars[index]! })),
+      people.map(({ employee, managerEmail }, index) => ({
+        employee,
+        avatar: avatars[index]!,
+        managerEmail,
+      })),
       { kind: "ADDED_WITH_DEMO" },
     );
 }

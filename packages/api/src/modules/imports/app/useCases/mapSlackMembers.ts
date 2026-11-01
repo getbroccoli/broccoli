@@ -14,13 +14,15 @@ export function mapSlackMembers(members: readonly SlackPerson[]): IncomingRecord
       continue;
     }
     records.set(member.id, {
-      externalId: member.id,
+      sourceKey: member.id,
+      externalRecordId: null,
       raw: rawOf(member),
       values: {
         ...nameOf(member),
         email,
         jobTitle: nonBlank(member.profile?.title),
         startDate: null,
+        manager: null,
       },
       photoUrl: member.photo?.url ?? null,
     });

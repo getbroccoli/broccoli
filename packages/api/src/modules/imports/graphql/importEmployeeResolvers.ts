@@ -1,12 +1,12 @@
 import type { GraphqlContext, Resolvers } from "../../../core/graphql";
 import {
-  hasOpenConflict,
+  hasOpenFieldConflict,
   incompleteReason,
   type ImportEmployee,
   type ImportEmployeeField,
 } from "../domain";
 import { importPhotoUrl } from "../http";
-import { CHOICES, INCOMPLETE_REASONS } from "./graphqlValues";
+import { CHOICES, INCOMPLETE_REASONS, MANAGER_PROBLEMS } from "./graphqlValues";
 import type { ImportLoaders } from "./loaders";
 
 /** An import employee, its values, and the records it is made of. */
@@ -20,6 +20,16 @@ export function importEmployeeResolvers(
       lastName: (employee) => employeeValue(employee, "lastName"),
       email: (employee) => employeeValue(employee, "email"),
       jobTitle: (employee) => employeeValue(employee, "jobTitle"),
+      manager: async (employee, _args, context) => {
+        const { managers } = await loaders(context).review();
+        const { manager, problem } = managers.get(employee.key)!;
+        return {
+          reference: employeeValue(employee, "manager"),
+          employee: manager,
+          chosen: employee.chosenManager !== null,
+          problem: problem && MANAGER_PROBLEMS[problem],
+        };
+      },
       startDate: (employee) => employeeValue(employee, "startDate"),
       avatarUrl: ({ photoFileId }) => photoFileId && importPhotoUrl(photoFileId),
       incompleteReason: (employee) => {
@@ -34,13 +44,14 @@ export function importEmployeeResolvers(
 }
 
 /** One field of an import employee, with the records behind each of its values. */
-function employeeValue({ records, values }: ImportEmployee, field: ImportEmployeeField) {
+function employeeValue(employee: ImportEmployee, field: ImportEmployeeField) {
+  const { records, values } = employee;
   const { value, choice, pickedRecordId, options } = values[field];
   return {
     value,
     choice: CHOICES[choice],
     pickedRecord: records.find(({ id }) => id === pickedRecordId) ?? null,
-    conflict: hasOpenConflict(values[field]),
+    conflict: hasOpenFieldConflict(employee, field),
     options: options.map((option) => ({
       value: option.value,
       records: records.filter(({ id }) => option.recordIds.includes(id)),

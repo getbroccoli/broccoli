@@ -12,6 +12,8 @@ export const FILE_FIELDS = [
   "email",
   "jobTitle",
   "startDate",
+  "manager",
+  "externalRecordId",
 ] as const;
 
 /** What a column of a staff file can hold. */
@@ -162,12 +164,14 @@ export function readFileRecords(
       email: parseEmail(cell("email")),
       jobTitle: nonBlank(cell("jobTitle")),
       startDate: startDates[index]!,
+      manager: nonBlank(cell("manager")),
     };
     if (values.firstName === null && values.lastName === null && values.email === null) {
       return;
     }
     records.push({
-      externalId: `row:${firstRow + index + 1}`,
+      sourceKey: `row:${firstRow + index + 1}`,
+      externalRecordId: nonBlank(cell("externalRecordId")),
       raw: Object.fromEntries(keys.map((key, column) => [key, row[column] ?? ""])),
       values,
     });
@@ -179,7 +183,7 @@ export function readFileRecords(
 export function inSheet(name: string | null, records: IncomingRecord[]): IncomingRecord[] {
   return name === null
     ? records
-    : records.map((record) => ({ ...record, externalId: `${name}!${record.externalId}` }));
+    : records.map((record) => ({ ...record, sourceKey: `${name}!${record.sourceKey}` }));
 }
 
 /** Enough rows to find a heading under a title or a blank line or two. */
@@ -203,6 +207,10 @@ const FIELD_QUESTIONS: Record<FileField, string> = {
   email: "Which column holds the work email? Never a personal or emergency-contact email.",
   jobTitle: "Which column holds the job title or position?",
   startDate: "Which column holds the date the person started or joined? Never a birth or end date.",
+  manager:
+    "Which column holds the person each one reports to, such as a manager, supervisor, line manager or 'reports to' column, by name, email or ID? Never the person's own name, email or ID, an emergency contact or next of kin, or a department.",
+  externalRecordId:
+    "Which column holds each person's own ID in this file, such as an employee number, payroll ID or position ID, the one a manager column would refer to? Never a manager's ID, a department or cost centre code, or a national insurance or tax number.",
 };
 
 function firstRecordRow(headerRow: number | null): number {

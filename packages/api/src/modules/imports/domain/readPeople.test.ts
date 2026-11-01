@@ -87,13 +87,15 @@ test("keeps separate names ahead of the full name and preserves the original per
   expect(parseReadPeople({ people: [person] })).toEqual({
     records: [
       {
-        externalId: "person:1",
+        externalRecordId: null,
+        sourceKey: "person:1",
         raw: person,
         values: {
           firstName: "Avery",
           lastName: "Stone",
           email: "avery@example.com",
           jobTitle: "Designer",
+          manager: null,
           startDate: "2026-10-21",
         },
       },
@@ -109,8 +111,22 @@ test.each([
   const result = parseReadPeople({ people: names.map((fullName) => ({ fullName })) });
 
   expect(result.records.map(({ values }) => values)).toEqual([
-    { firstName: "Avery", lastName: "Stone", email: null, jobTitle: null, startDate: null },
-    { firstName: "Robin", lastName: "Reed", email: null, jobTitle: null, startDate: null },
+    {
+      firstName: "Avery",
+      lastName: "Stone",
+      email: null,
+      jobTitle: null,
+      manager: null,
+      startDate: null,
+    },
+    {
+      firstName: "Robin",
+      lastName: "Reed",
+      email: null,
+      jobTitle: null,
+      manager: null,
+      startDate: null,
+    },
   ]);
 });
 
@@ -148,6 +164,7 @@ test("turns blank fields into null", () => {
     lastName: null,
     email: null,
     jobTitle: null,
+    manager: null,
     startDate: null,
   });
 });
@@ -164,7 +181,7 @@ test("skips and counts people without a name or email", () => {
 test("numbers records by their original list positions including skipped people", () => {
   const result = parseReadPeople({ people: [{ firstName: "Avery" }, {}, { firstName: "Robin" }] });
 
-  expect(result.records.map(({ externalId }) => externalId)).toEqual(["person:1", "person:3"]);
+  expect(result.records.map(({ sourceKey }) => sourceKey)).toEqual(["person:1", "person:3"]);
 });
 
 test("accepts 10,000 people and strings of 200 characters through the shared schema", () => {
@@ -178,4 +195,21 @@ test("accepts 10,000 people and strings of 200 characters through the shared sch
   expect(MAX_READ_PEOPLE).toBe(10_000);
   expect(readPeopleSchema.safeParse(body).success).toBe(true);
   expect(parseReadPeople(body).records).toHaveLength(10_000);
+});
+
+test("reads a trimmed manager reference and the person's own ID", () => {
+  const { records } = parseReadPeople({
+    people: [{ firstName: "Avery", manager: "  robin@example.com  ", id: "  EMP-17  " }],
+  });
+
+  expect(records[0]).toMatchObject({
+    externalRecordId: "EMP-17",
+    values: { manager: "robin@example.com" },
+  });
+});
+
+test("leaves a blank own ID empty", () => {
+  const { records } = parseReadPeople({ people: [{ firstName: "Avery", id: "  " }] });
+
+  expect(records[0]?.externalRecordId).toBeNull();
 });

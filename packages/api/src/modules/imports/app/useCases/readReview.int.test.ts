@@ -47,6 +47,25 @@ test("does not count a left-out import employee as ready", async ({ orm, seed })
   expect((await imports.reads.readReview(OWNER)).readyEmployees.length).toBe(1);
 });
 
+test("filters the employee list to people Approve would add", async ({ orm, seed }) => {
+  const source = await seed.importSource();
+  await seed.employee({ email: "taken@example.com" });
+  await seed.importEmployees(source.id, [
+    { email: "ready@example.com" },
+    { email: "incomplete@example.com", lastName: null },
+    { email: "leftout@example.com" },
+    { email: "taken@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  await imports.choices.setLeftOut(OWNER, { key: "leftout@example.com", leftOut: true });
+
+  const review = await imports.reads.readReview(OWNER);
+
+  expect(
+    review.listEmployees({ filter: { ready: true } }).edges.map(({ node }) => node.key),
+  ).toEqual(["ready@example.com"]);
+});
+
 test("does not count an import employee whose email an employee already has as ready", async ({
   orm,
   seed,
@@ -119,4 +138,44 @@ test("the review keeps the approved employees ready and their sources after appr
   const after = await imports.reads.readReview(owner);
   expect(after.readyEmployees).toEqual(before.readyEmployees);
   expect(after.readyEmployeeSources.map(importSourceValues)).toEqual([importSourceValues(source)]);
+});
+
+test("lists manager checks and filters the review by one of them", async ({ orm, seed }) => {
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com", manager: "Missing Person" },
+    { email: "robin@example.com" },
+  ]);
+
+  const review = await importUseCases(orm).reads.readReview(OWNER);
+
+  expect(review.checks).toEqual([
+    { id: "manager:noPersonMatches", kind: "manager", problem: "noPersonMatches", count: 1 },
+  ]);
+  expect(review.managers.get("avery@example.com")).toEqual({
+    manager: null,
+    problem: "noPersonMatches",
+  });
+  expect(
+    review
+      .listEmployees({ filter: { check: "manager:noPersonMatches" } })
+      .edges.map(({ node }) => node.key),
+  ).toEqual(["avery@example.com"]);
+});
+
+test("changes the review version when a manager is chosen", async ({ orm, seed }) => {
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com" },
+    { email: "robin@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  const before = await imports.reads.readReview(OWNER);
+
+  await imports.choices.chooseManager(OWNER, {
+    keys: ["avery@example.com"],
+    managerKey: "robin@example.com",
+  });
+
+  expect((await imports.reads.readReview(OWNER)).version).not.toBe(before.version);
 });

@@ -118,6 +118,33 @@ test("starting the demo after a Slack read discards the import and its files", a
   expect(remainingFiles).toEqual(employees.edges.map(({ node }) => node.avatarFileId).sort());
 });
 
+test("gives the demo company's employees managers", async ({ orm, seed }) => {
+  await seed.setupStep("import");
+
+  await importUseCases(orm).startDemo(SETUP_HOLDER);
+
+  const employees = employeeUseCases(orm);
+  const { edges } = await employees.listEmployees(OWNER, { first: 100 });
+  const people = edges.map(({ node }) => node);
+  const managers = await employees.readManagers(
+    OWNER,
+    people.map(({ id }) => id),
+  );
+  const ceo = people.find(({ jobTitle }) => jobTitle === "CEO")!;
+  expect(people).toHaveLength(40);
+  expect(managers.get(ceo.id) ?? null).toBeNull();
+  expect(
+    people
+      .filter(({ id }) => id !== ceo.id)
+      .every(({ id }) => {
+        const manager = managers.get(id);
+        return (
+          manager != null && manager.id !== id && people.some((person) => person.id === manager.id)
+        );
+      }),
+  ).toBe(true);
+});
+
 async function hasEmployees(orm: Orm): Promise<boolean> {
   const { edges } = await employeeUseCases(orm).listEmployees(OWNER, { first: 1 });
   return edges.length > 0;

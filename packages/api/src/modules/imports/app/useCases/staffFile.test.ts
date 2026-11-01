@@ -126,6 +126,7 @@ it("reads equal employee values from Excel dates and saved formulas and their CS
       lastName: "Stone",
       email: "avery@example.com",
       jobTitle: null,
+      manager: null,
       startDate: "2024-04-03",
     },
     {
@@ -133,6 +134,7 @@ it("reads equal employee values from Excel dates and saved formulas and their CS
       lastName: "Reed",
       email: "robin@example.com",
       jobTitle: null,
+      manager: null,
       startDate: "2024-04-17",
     },
   ]);
@@ -145,4 +147,6 @@ const UNMAPPED: ColumnMapping = {
   email: null,
   jobTitle: null,
   startDate: null,
+  manager: null,
+  externalRecordId: null,
 };

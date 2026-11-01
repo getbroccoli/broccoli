@@ -77,6 +77,17 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), the button reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
 - [ ] With only incomplete people (for example a Slack workspace of one-word names), "Add N people" is hidden and the footer reads "No one is ready to add. Fix the highlighted details, or go back to add a source."
 
+## Managers
+
+Upload a CSV with a manager column: `Employee #,First Name,Last Name,Supervisor,Work Email`, where Delia Hargrove has no supervisor, Marcus Ellery's is `Hargrove, Delia`, Priya Rao's is `Marcus Ellery`, Tomasz Wrobel's is `102` (Marcus's employee number) and Ingrid Solberg's is `Owen Pellew`, who has no row; all on `acme-corp.example`.
+
+- [ ] The Manager column shows Delia Hargrove for Marcus, Marcus Ellery for Priya and Tomasz, "Not set" for Delia, and an amber "Owen Pellew" for Ingrid; "1 thing to check" reads "1 person whose manager is no one you’re adding" and "Show them" lists Ingrid.
+- [ ] Ingrid's cell opens "Manager for Ingrid Solberg", "Owen Pellew matches no one else you’re adding.", and a search without Ingrid herself; picking Marcus Ellery shows him and toasts "Set Marcus Ellery as manager of 1 person".
+- [ ] Choosing Marcus as Delia's manager shows "In a loop" for both and the check "2 people whose managers would manage each other"; "Add 5 people" still works, and on `/people` Delia and Marcus have no manager while the others have theirs.
+- [ ] Ticking Priya and Tomasz shows "2 selected" with "Set manager"; picking Delia sets both and clears the selection. Choosing "None" there shows "No manager".
+- [ ] After "Use the manager from your files" in a chosen person's popover, the cell shows the file's manager again.
+- [ ] Priya's history on `/people` lists the manager on her creation line.
+
 ## Guards
 
 - [ ] In a second browser profile, `/setup/import/review` goes to `/setup/in-progress`.

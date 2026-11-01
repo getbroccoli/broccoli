@@ -106,6 +106,8 @@ test("answers an unexpected database failure with INTERNAL and logs no personal 
             email: "B",
             jobTitle: "none",
             startDate: "none",
+            manager: "none",
+            externalRecordId: "none",
           },
         },
       ],

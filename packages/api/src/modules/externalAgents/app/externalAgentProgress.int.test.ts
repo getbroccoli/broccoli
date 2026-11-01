@@ -48,6 +48,8 @@ test("shows each reported file stage without adding people", async ({ orm, seed 
       email: "B",
       jobTitle: "none",
       startDate: "none",
+      manager: "none",
+      externalRecordId: "none",
     },
   }));
   await agents.files.answerMappingQuestions(ctx, id, { sheets });

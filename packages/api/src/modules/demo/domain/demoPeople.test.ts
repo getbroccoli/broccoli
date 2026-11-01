@@ -46,3 +46,23 @@ it("moves every start date by one day when today moves by one day", () => {
     })),
   );
 });
+
+it("gives everyone but the CEO a manager among the demo people", () => {
+  const employees = demoPeople(today).map(({ employee, managerEmail }) => ({
+    ...employee,
+    managerEmail,
+  }));
+  const ceo = employees.find(({ jobTitle }) => jobTitle === "CEO")!;
+  const emails = new Set(employees.map(({ email }) => email));
+
+  expect(ceo).toBeDefined();
+  expect(ceo.managerEmail).toBeNull();
+  expect(
+    employees
+      .filter(({ jobTitle }) => jobTitle !== "CEO")
+      .every(
+        ({ email, managerEmail }) =>
+          managerEmail != null && managerEmail !== email && emails.has(managerEmail),
+      ),
+  ).toBe(true);
+});

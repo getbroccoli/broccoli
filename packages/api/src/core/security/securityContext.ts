@@ -68,12 +68,12 @@ export interface SecurityContext {
   requireInScope(object: PermissionObject, action: RecordAction, subject: Subject): Promise<void>;
 
   /**
-   * Refuses with FORBIDDEN an update of this subject's record out of scope, or one that sends a
-   * field the caller may not change, naming each such field; scope, fields and fixed rules in one call.
+   * Refuses with FORBIDDEN an update of these subjects' records when one is out of scope, or one
+   * that sends a field the caller may not change, naming each such field; one reporting-line read.
    */
   requireWrite(
     object: PermissionObject,
-    subject: Subject,
+    subjects: readonly Subject[],
     fields: readonly string[],
   ): Promise<void>;
 
@@ -232,14 +232,17 @@ export class PrincipalSecurityContext implements SecurityContext {
 
   async requireWrite(
     object: PermissionObject,
-    subject: Subject,
+    subjects: readonly Subject[],
     fields: readonly string[],
   ): Promise<void> {
-    const writable = (await this.actionsOn(object, subject, ["update"])).get("update");
-    if (!writable) {
+    const access = await this.actionsOnEach(object, subjects, ["update"]);
+    const writables = [...access.values()].map((actions) => actions.get("update"));
+    if (writables.some((writable) => !writable)) {
       throw new ApplicationError("FORBIDDEN", NOT_ALLOWED);
     }
-    const refused = writable === "*" ? [] : fields.filter((field) => !writable.includes(field));
+    const refused = fields.filter((field) =>
+      writables.some((writable) => writable !== "*" && !writable!.includes(field)),
+    );
     if (refused.length > 0) {
       throw new ApplicationError(
         "FORBIDDEN",

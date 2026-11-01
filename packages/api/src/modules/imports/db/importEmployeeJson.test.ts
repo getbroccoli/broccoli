@@ -11,7 +11,7 @@ it("reads version one employee values", () => {
     startDate: "2026-10-01",
   };
 
-  expect(parseImportEmployeeValues(1, values)).toEqual(values);
+  expect(parseImportEmployeeValues(1, values)).toEqual({ ...values, manager: null });
 });
 
 it("refuses an unknown employee values version", () => {

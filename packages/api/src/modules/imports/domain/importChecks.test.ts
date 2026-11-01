@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
 
+import { matchManagers } from "./importManagers";
+
 import {
   type CheckFilter,
   groupEmployeeRecords,
@@ -24,7 +26,7 @@ it("counts import employees for each conflict kind", () => {
     [],
   );
 
-  expect(listChecks([file, slack], employees)).toEqual([
+  expect(listChecks([file, slack], employees, new Map())).toEqual([
     {
       id: "conflict:firstName",
       kind: "conflict",
@@ -50,7 +52,7 @@ it.each([
 ])("counts import employees with incomplete $reason", ({ reason, values }) => {
   const employees = groupEmployeeRecords([file], [{ ...row, ...values }], []);
 
-  expect(listChecks([file], employees)).toEqual([
+  expect(listChecks([file], employees, new Map())).toEqual([
     { id: `incomplete:${reason}`, kind: "incomplete", reason, count: 1 },
   ]);
 });
@@ -69,7 +71,7 @@ it("lists conflict kinds before incomplete kinds in field order", () => {
     [],
   );
 
-  expect(listChecks([file, slack], employees).map(({ id }) => id)).toEqual([
+  expect(listChecks([file, slack], employees, new Map()).map(({ id }) => id)).toEqual([
     "conflict:firstName",
     "conflict:jobTitle",
     "incomplete:firstName",
@@ -95,7 +97,7 @@ it("lists only sources holding conflicting values, with files before Slack", () 
     [],
   );
 
-  expect(listChecks(sources, employees)).toEqual([
+  expect(listChecks(sources, employees, new Map())).toEqual([
     {
       id: "conflict:jobTitle",
       kind: "conflict",
@@ -116,7 +118,7 @@ it.each<{ description: string; choice: ValueChoice }>([
     [{ key: row.email!, leftOut: false, values: { jobTitle: choice } }],
   );
 
-  expect(listChecks([file, slack], employees)).toEqual([]);
+  expect(listChecks([file, slack], employees, new Map())).toEqual([]);
 });
 
 it("does not count a left-out employee's conflicts or incomplete values", () => {
@@ -129,7 +131,45 @@ it("does not count a left-out employee's conflicts or incomplete values", () => 
     [{ key: row.email!, leftOut: true, values: {} }],
   );
 
-  expect(listChecks([file, slack], employees)).toEqual([]);
+  expect(listChecks([file, slack], employees, new Map())).toEqual([]);
+});
+
+it("excludes a manager conflict settled by choosing a person from counts and filters", () => {
+  const employees = groupEmployeeRecords(
+    [file, slack],
+    [
+      { ...row, manager: "Robin Reed" },
+      { ...row, id: member.id, sourceId: slack.id, manager: "Taylor Brook" },
+      { ...row, id: "robin", email: "robin@example.com" },
+    ],
+    [
+      {
+        key: row.email!,
+        leftOut: false,
+        values: {},
+        chosenManager: { employeeKey: "robin@example.com" },
+      },
+    ],
+  );
+  const check = parseCheckId("conflict:manager");
+
+  expect(listChecks([file, slack], employees, new Map())).toEqual([]);
+  expect(employees.filter((employee) => isInCheck(employee, check, new Map()))).toEqual([]);
+});
+
+it("excludes a manager conflict settled by choosing no manager from counts and filters", () => {
+  const employees = groupEmployeeRecords(
+    [file, slack],
+    [
+      { ...row, manager: "Robin Reed" },
+      { ...row, id: member.id, sourceId: slack.id, manager: "Taylor Brook" },
+    ],
+    [{ key: row.email!, leftOut: false, values: {}, chosenManager: { noManager: true } }],
+  );
+  const check = parseCheckId("conflict:manager");
+
+  expect(listChecks([file, slack], employees, new Map())).toEqual([]);
+  expect(employees.filter((employee) => isInCheck(employee, check, new Map()))).toEqual([]);
 });
 
 it("parses a conflict check id", () => {
@@ -158,7 +198,54 @@ it.each<CheckFilter>([
     [{ key: row.email!, leftOut: true, values: {} }],
   );
 
-  expect(isInCheck(employee!, check)).toBe(false);
+  expect(isInCheck(employee!, check, new Map())).toBe(false);
+});
+
+it("counts manager problems without people who are left out", () => {
+  const employees = groupEmployeeRecords(
+    [file],
+    [
+      { ...row, manager: "Missing Person" },
+      { ...row, id: "other", email: "other@example.com", manager: "Missing Person" },
+    ],
+    [{ key: "other@example.com", leftOut: true, values: {} }],
+  );
+  const managers = matchManagers(
+    employees,
+    employees.filter(({ leftOut }) => !leftOut),
+  );
+
+  expect(listChecks([file], employees, managers)).toEqual([
+    { id: "manager:noPersonMatches", kind: "manager", problem: "noPersonMatches", count: 1 },
+  ]);
+});
+
+it("parses a manager check ID", () => {
+  expect(parseCheckId("manager:noPersonMatches")).toEqual({
+    kind: "manager",
+    problem: "noPersonMatches",
+  });
+});
+
+it("includes only people with the requested manager problem who are not left out", () => {
+  const employees = groupEmployeeRecords(
+    [file],
+    [
+      { ...row, manager: "Missing Person" },
+      { ...row, id: "other", email: "other@example.com", manager: "Missing Person" },
+      { ...row, id: "ready", email: "ready@example.com" },
+    ],
+    [{ key: "other@example.com", leftOut: true, values: {} }],
+  );
+  const managers = matchManagers(
+    employees,
+    employees.filter(({ leftOut }) => !leftOut),
+  );
+  const check = parseCheckId("manager:noPersonMatches");
+
+  expect(
+    employees.filter((employee) => isInCheck(employee, check, managers)).map(({ key }) => key),
+  ).toEqual([row.email]);
 });
 
 const fileState = {
@@ -184,6 +271,8 @@ const row: ImportEmployeeRecord = {
   lastName: "Stone",
   email: "avery@example.com",
   jobTitle: "Designer",
+  manager: null,
+  externalRecordId: null,
   startDate: null,
   photoFileId: null,
 };

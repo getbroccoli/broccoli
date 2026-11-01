@@ -31,7 +31,7 @@ export interface ImportPhoto {
 /** A record's photo still to download. */
 export interface PhotoDownload {
   recordId: string;
-  externalId: string;
+  sourceKey: string;
   photoUrl: string;
 }
 
@@ -41,10 +41,10 @@ export function importPhotoRepository(db: Orm | Tx): ImportPhotoRepository {
   return {
     listPhotoLinks: async (sourceId: string): Promise<Map<string, string>> => {
       const rows = await orm()
-        .select({ externalId: importRecords.externalId, photoUrl: importRecords.photoUrl })
+        .select({ sourceKey: importRecords.sourceKey, photoUrl: importRecords.photoUrl })
         .from(importRecords)
         .where(and(eq(importRecords.sourceId, sourceId), isNotNull(importRecords.photoFileId)));
-      return new Map(rows.map(({ externalId, photoUrl }) => [externalId, photoUrl!]));
+      return new Map(rows.map(({ sourceKey, photoUrl }) => [sourceKey, photoUrl!]));
     },
 
     findPhotoDownloads: (sourceId: string): Promise<PhotoDownload[]> =>
@@ -114,10 +114,10 @@ export async function deleteReplacedPhotos(
   sourceId: string,
   records: readonly IncomingRecord[],
 ): Promise<void> {
-  const incoming = new Map(records.map(({ externalId, photoUrl }) => [externalId, photoUrl]));
+  const incoming = new Map(records.map(({ sourceKey, photoUrl }) => [sourceKey, photoUrl]));
   const stored = await ormOf(db)
     .select({
-      externalId: importRecords.externalId,
+      sourceKey: importRecords.sourceKey,
       photoUrl: importRecords.photoUrl,
       photoFileId: importRecords.photoFileId,
     })
@@ -126,7 +126,7 @@ export async function deleteReplacedPhotos(
   await deletePhotos(
     db,
     stored
-      .filter(({ externalId, photoUrl }) => (incoming.get(externalId) ?? null) !== photoUrl)
+      .filter(({ sourceKey, photoUrl }) => (incoming.get(sourceKey) ?? null) !== photoUrl)
       .map(({ photoFileId }) => photoFileId!),
   );
 }
@@ -145,13 +145,13 @@ async function deletePhotos(db: Orm | Tx, fileIds: string[]): Promise<void> {
 
 const photoDownloadColumns = {
   recordId: importRecords.id,
-  externalId: importRecords.externalId,
+  sourceKey: importRecords.sourceKey,
   photoUrl: importRecords.photoUrl,
 };
 
 /** Rows selected with `needsPhoto`, which only matches records with a photo link. */
 function toPhotoDownloads(
-  rows: { recordId: string; externalId: string; photoUrl: string | null }[],
+  rows: { recordId: string; sourceKey: string; photoUrl: string | null }[],
 ): PhotoDownload[] {
   return rows.map((row) => ({ ...row, photoUrl: row.photoUrl! }));
 }

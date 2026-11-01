@@ -36,6 +36,7 @@ function employee(
     email: "  Avery@EXAMPLE.COM  ",
     jobTitle: "  Designer  ",
     startDate: null,
+    manager: null,
     ...overrides,
   };
   return {
@@ -44,11 +45,13 @@ function employee(
     records: [],
     photoFileId: null,
     leftOut: false,
+    chosenManager: null,
     values: {
       firstName: { value: shown.firstName, choice: "typed", pickedRecordId: null, options: [] },
       lastName: { value: shown.lastName, choice: "typed", pickedRecordId: null, options: [] },
       email: { value: shown.email, choice: "typed", pickedRecordId: null, options: [] },
       jobTitle: { value: shown.jobTitle, choice: "typed", pickedRecordId: null, options: [] },
+      manager: { value: shown.manager, choice: "default", pickedRecordId: null, options: [] },
       startDate: { value: shown.startDate, choice: "typed", pickedRecordId: null, options: [] },
     },
   };

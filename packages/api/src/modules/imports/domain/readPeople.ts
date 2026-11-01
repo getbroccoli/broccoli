@@ -26,6 +26,12 @@ export const readPeopleSchema = z
           email: personValue("Work email address."),
           jobTitle: personValue("Job title or role."),
           startDate: personValue("First working day, as YYYY-MM-DD."),
+          manager: personValue(
+            "The person's manager, supervisor or line manager, by name, email or the file's ID for them, as the file writes it.",
+          ),
+          id: personValue(
+            "The person's own ID in the file, such as an employee number, the one a manager may refer to.",
+          ),
         }),
       )
       .min(1)
@@ -62,9 +68,15 @@ export function parseReadPeople(body: unknown): ReadPeople {
       email: parseEmail(person.email),
       jobTitle: nonBlank(person.jobTitle),
       startDate: (person.startDate && parseCalendarDate(person.startDate.trim())) || null,
+      manager: nonBlank(person.manager),
     };
     if (values.firstName !== null || values.lastName !== null || values.email !== null) {
-      records.push({ externalId: `person:${index + 1}`, raw: person, values });
+      records.push({
+        sourceKey: `person:${index + 1}`,
+        externalRecordId: nonBlank(person.id),
+        raw: person,
+        values,
+      });
     }
   });
   return { records, skipped: people.length - records.length };

@@ -7,3 +7,4 @@ export {
   toEmployeeListVariables,
   type SortKey,
 } from "./employeeListSearch";
+export { type PersonOption, personName, PersonSearch, usePersonSearch } from "./PersonSearch";

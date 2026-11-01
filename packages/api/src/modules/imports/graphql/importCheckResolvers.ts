@@ -1,5 +1,5 @@
 import type { GraphqlContext, Resolvers } from "../../../core/graphql";
-import { CHECK_KINDS, FIELDS, INCOMPLETE_REASONS } from "./graphqlValues";
+import { CHECK_KINDS, FIELDS, INCOMPLETE_REASONS, MANAGER_PROBLEMS } from "./graphqlValues";
 import type { ImportLoaders } from "./loaders";
 
 /** A kind of thing to settle in review, with the sources a conflict is between. */
@@ -10,6 +10,7 @@ export function importCheckResolvers(
     kind: ({ kind }) => CHECK_KINDS[kind],
     field: (check) => (check.kind === "conflict" ? FIELDS[check.field] : null),
     reason: (check) => (check.kind === "incomplete" ? INCOMPLETE_REASONS[check.reason] : null),
+    managerProblem: (check) => (check.kind === "manager" ? MANAGER_PROBLEMS[check.problem] : null),
     sources: (check, _args, context) =>
       check.kind === "conflict"
         ? Promise.all(check.sourceIds.map((id) => loaders(context).source.load(id)))

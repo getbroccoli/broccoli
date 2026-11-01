@@ -5,28 +5,32 @@
       "lastName": "Ellery",
       "email": "marcus.ellery@acme-corp.example",
       "jobTitle": "Operations Lead",
-      "startDate": "2021-03-14"
+      "startDate": "2021-03-14",
+      "manager": "Hargrove, Delia"
     },
     {
       "firstName": "Tomasz",
       "lastName": "Wrobel",
       "email": "tomasz.wrobel@acme-corp.example",
       "jobTitle": "Account Executive",
-      "startDate": "2022-08-02"
+      "startDate": "2022-08-02",
+      "manager": "Hargrove, Delia"
     },
     {
       "firstName": "Ingrid",
       "lastName": "Solberg",
       "email": "ingrid.solberg@acme-corp.example",
       "jobTitle": "Support Specialist",
-      "startDate": "2022-11-21"
+      "startDate": "2022-11-21",
+      "manager": "Pellew, Owen"
     },
     {
       "firstName": "Kwame",
       "lastName": "Boateng",
       "email": "kwame.boateng@acme-corp.example",
       "jobTitle": "Data Analyst",
-      "startDate": "2023-05-09"
+      "startDate": "2023-05-09",
+      "manager": "Pellew, Owen"
     },
     {
       "firstName": "Lucia",

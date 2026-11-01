@@ -18,6 +18,7 @@ import {
   readMyEmployee,
   readStartDates,
 } from "./readEmployee";
+import { setManagers } from "./employeeManagers";
 import { updateEmployee } from "./updateEmployee";
 
 /** Everything a user can do with employees; the adapters call nothing else. */
@@ -32,6 +33,16 @@ export interface EmployeeUseCases {
     ctx: SecurityContext,
     input: EmployeeUpdateInput & { id: string },
   ) => Promise<{ employee: Employee | null; historyLine: HistoryLine | null }>;
+  /**
+   * Makes one employee the manager of these employees from today, or no one with null, with a
+   * history line each; skips the manager among them. Refuses an unknown employee with NOT_FOUND
+   * and the whole call when it would make a loop. Returns the employees the caller may read and
+   * the history lines it added for them.
+   */
+  setManagers: (
+    ctx: SecurityContext,
+    input: { employeeIds: readonly string[]; managerId: string | null },
+  ) => Promise<{ employees: Employee[]; historyLines: HistoryLine[] }>;
   /**
    * Removes an employee and returns their id and the lines it added to their reports' history;
    * refuses an unknown id with NOT_FOUND.
@@ -91,6 +102,7 @@ export function createEmployeeUseCases(context: EmployeeContext): EmployeeUseCas
   return {
     createEmployee: (ctx, input) => createEmployee(context, ctx, input),
     updateEmployee: (ctx, input) => updateEmployee(context, ctx, input),
+    setManagers: (ctx, input) => setManagers(context, ctx, input),
     deleteEmployee: (ctx, input) => deleteEmployee(context, ctx, input),
     readEmployee: (ctx, id) => readEmployee(employees, ctx, id),
     readMyEmployee: (ctx) => readMyEmployee(employees, ctx),

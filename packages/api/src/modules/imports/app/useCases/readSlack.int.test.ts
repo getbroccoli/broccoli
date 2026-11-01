@@ -38,8 +38,8 @@ test("another read keeps surviving member ids, updates values, adds newcomers an
   await seed.slackConnection();
   const source = await seed.importSource();
   const [avery] = await seed.importEmployees(source.id, [
-    { externalId: "U1", firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
-    { externalId: "U2", firstName: "Robin", email: "robin@example.com" },
+    { sourceKey: "U1", firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+    { sourceKey: "U2", firstName: "Robin", email: "robin@example.com" },
   ]);
   const imports = importUseCases(orm, {
     slackApi: fakeSlackApi([
@@ -85,7 +85,7 @@ test("reading another workspace renames the same source and replaces its employe
 }) => {
   await seed.slackConnection({ teamId: "T2", teamName: "Acme Labs" });
   const source = await seed.importSource();
-  await seed.importEmployees(source.id, [{ externalId: "U1", firstName: "Avery" }]);
+  await seed.importEmployees(source.id, [{ sourceKey: "U1", firstName: "Avery" }]);
   const imports = importUseCases(orm, {
     slackApi: fakeSlackApi([
       {
@@ -117,7 +117,7 @@ test("a failed Slack read passes the error through and preserves the source and 
   await seed.slackConnection();
   const source = await seed.importSource();
   const employees = await seed.importEmployees(source.id, [
-    { externalId: "U1", firstName: "Avery" },
+    { sourceKey: "U1", firstName: "Avery" },
   ]);
   const error = new Error("Slack unavailable");
   const imports = importUseCases(orm, {
@@ -146,7 +146,7 @@ test("a refresh whose connection is no longer current leaves the records", async
   await seed.slackConnection();
   const source = await seed.importSource();
   const employees = await seed.importEmployees(source.id, [
-    { externalId: "U1", firstName: "Avery" },
+    { sourceKey: "U1", firstName: "Avery" },
   ]);
   const imports = importUseCases(orm, {
     slackApi: {
@@ -186,7 +186,7 @@ test("deletes a departed Slack member's record and stored photo on the next read
   await seed.slackConnection();
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
-    { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
+    { sourceKey: "U1", photoUrl: SLACK_PHOTO_URL },
   ]);
   await seed.importPhoto(record!.id, {
     photoUrl: SLACK_PHOTO_URL,

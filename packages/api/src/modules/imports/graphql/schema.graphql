@@ -109,6 +109,8 @@ input ImportEmployeeFilter {
   search: String
   "Only the import employees of this check."
   check: ID
+  "Only the import employees Approve would add: ready and not left out."
+  ready: Boolean
 }
 
 "A field of an import employee the owner can choose."
@@ -117,6 +119,7 @@ enum ImportEmployeeField {
   LAST_NAME
   EMAIL
   JOB_TITLE
+  MANAGER
   START_DATE
 }
 
@@ -138,6 +141,8 @@ type ImportEmployee {
   lastName: ImportEmployeeValue!
   email: ImportEmployeeValue!
   jobTitle: ImportEmployeeValue!
+  "Who manages this person, as the sources name them, and who that is among the people Approve would add."
+  manager: ImportEmployeeManager!
   "Its value and options are YYYY-MM-DD."
   startDate: ImportEmployeeValue!
   "Path of the person's Slack photo, such as `/api/imports/photos/<id>`; null without one."
@@ -159,6 +164,28 @@ type ImportEmployeeValue {
   options: [ImportValueOption!]!
 }
 
+"An import employee's manager: the sources' reference, and the person it gives at Approve."
+type ImportEmployeeManager {
+  "The manager as the sources name them: a name, an email or the source's ID; the owner may pick one source's."
+  reference: ImportEmployeeValue!
+  "The import employee who manages this person; null without a manager or with a problem."
+  employee: ImportEmployee
+  "Whether the owner chose a person or no manager, which wins over the sources' reference."
+  chosen: Boolean!
+  "Why the reference or the chosen person gives no manager; null otherwise."
+  problem: ImportManagerProblem
+}
+
+"Why an import employee's manager gives no manager at Approve."
+enum ImportManagerProblem {
+  "No one Approve would add matches the reference or the chosen person."
+  NO_PERSON_MATCHES
+  "Two people or more Approve would add match the reference."
+  SEVERAL_PEOPLE_MATCH
+  "Following managers from this person comes back to them."
+  MANAGERS_FORM_A_LOOP
+}
+
 type ImportValueOption {
   value: String!
   "The records holding it."
@@ -174,6 +201,8 @@ type ImportEmployeeRecord {
   "Lowercased."
   email: String
   jobTitle: String
+  "The manager's name, email or ID, as this source gives it."
+  manager: String
   startDate: Date
 }
 
@@ -192,6 +221,8 @@ enum ImportCheckKind {
   CONFLICT
   "Import employees that Approve would leave out for one reason."
   INCOMPLETE
+  "Import employees whose manager gives no manager at Approve, for one problem."
+  MANAGER
 }
 
 "One kind of thing to settle in review, with how many import employees it concerns."
@@ -204,6 +235,8 @@ type ImportCheck {
   field: ImportEmployeeField
   "Set for INCOMPLETE."
   reason: ImportEmployeeIncompleteReason
+  "Set for MANAGER."
+  managerProblem: ImportManagerProblem
   "For CONFLICT: the sources with a value in these conflicts, files first."
   sources: [ImportSource!]!
 }
@@ -248,7 +281,7 @@ type ImportMutations {
   allowOriginalFileRead(sourceId: ID!, aiSource: AiSource): ImportAllowOriginalFileReadPayload!
   "Removes a source with its records and stored file; removing Slack also disconnects it."
   removeSource(sourceId: ID!): ImportMutationPayload!
-  "Shows a record's value or a typed one for one field of an import employee; with neither, the first source's value again. A typed value must pass the employee rules for that field; a typed email another import employee shows is refused as taken."
+  "Shows a record's value or a typed one for one field of an import employee; with neither, the first source's value again. A typed value must pass the employee rules for that field; a typed email another import employee shows is refused as taken. A manager is never typed, and picking or resetting it drops the person the owner chose."
   chooseEmployeeValue(input: ImportChooseEmployeeValueInput!): ImportChooseEmployeeValuePayload!
   "Picks this source's value for every open conflict on this field that it holds a value in."
   chooseSourceForAll(field: ImportEmployeeField!, sourceId: ID!): ImportMutationPayload!
@@ -256,7 +289,26 @@ type ImportMutations {
   setEmployeeLeftOut(employeeId: ID!, leftOut: Boolean!): ImportSetEmployeeLeftOutPayload!
   "Leaves out every incomplete import employee with this reason."
   leaveOutIncomplete(reason: ImportEmployeeIncompleteReason!): ImportMutationPayload!
+  "Makes one import employee the manager of these import employees, or no one with a null managerId, over the managers their sources name; skips the manager among them. A source's manager comes back with chooseEmployeeValue."
+  chooseEmployeeManager(
+    input: ImportChooseEmployeeManagerInput!
+  ): ImportChooseEmployeeManagerPayload!
 }
+
+input ImportChooseEmployeeManagerInput {
+  "1 to 1,000 import employees."
+  employeeIds: [ID!]!
+  "An import employee; null for no manager."
+  managerId: ID
+}
+
+"The import after `chooseEmployeeManager`, or why the choice was refused."
+type ImportChooseEmployeeManagerPayload {
+  import: Import
+  error: ImportChooseEmployeeManagerError
+}
+
+union ImportChooseEmployeeManagerError = InvalidInputError
 
 input ImportChooseEmployeeValueInput {
   employeeId: ID!

@@ -5,28 +5,32 @@
       "lastName": "Marsh",
       "email": "helena.marsh@acme-corp.example",
       "jobTitle": "Frontend Developer",
-      "startDate": "2021-05-03"
+      "startDate": "2021-05-03",
+      "manager": "Delia Hargrove"
     },
     {
       "firstName": "Andrei",
       "lastName": "Popescu",
       "email": "andrei.popescu@acme-corp.example",
       "jobTitle": "QA Engineer",
-      "startDate": "2022-09-19"
+      "startDate": "2022-09-19",
+      "manager": "Delia Hargrove"
     },
     {
       "firstName": "Fiona",
       "lastName": "Gallagher-Moss",
       "email": "fiona.gallagher-moss@acme-corp.example",
       "jobTitle": "Marketing Lead",
-      "startDate": "2023-02-27"
+      "startDate": "2023-02-27",
+      "manager": "Owen Pellew"
     },
     {
       "firstName": "Yusuf",
       "lastName": "Demir",
       "email": "yusuf.demir@acme-corp.example",
       "jobTitle": "Accountant",
-      "startDate": "2023-11-13"
+      "startDate": "2023-11-13",
+      "manager": "Owen Pellew"
     }
   ],
   "forbidden": [
