@@ -173,8 +173,8 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
             : and(
                 ofSource,
                 notInArray(
-                  importRecords.externalId,
-                  records.map(({ externalId }) => externalId),
+                  importRecords.sourceKey,
+                  records.map(({ sourceKey }) => sourceKey),
                 ),
               ),
         );
@@ -184,18 +184,18 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
           .values(
             records
               .slice(start, start + INSERT_BATCH_SIZE)
-              .map(({ externalId, raw, values, photoUrl }) => ({
+              .map(({ sourceKey, raw, values, photoUrl }) => ({
                 sourceId,
                 type: "employee" as const,
                 typeVersion: IMPORT_EMPLOYEE_VERSION,
-                externalId,
+                sourceKey,
                 raw,
                 values,
                 photoUrl: photoUrl ?? null,
               })),
           )
           .onConflictDoUpdate({
-            target: [importRecords.sourceId, importRecords.type, importRecords.externalId],
+            target: [importRecords.sourceId, importRecords.type, importRecords.sourceKey],
             set: {
               typeVersion: sql`excluded.type_version`,
               raw: sql`excluded.raw`,

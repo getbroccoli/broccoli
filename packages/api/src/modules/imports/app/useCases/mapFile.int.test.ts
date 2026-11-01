@@ -206,13 +206,13 @@ test("maps each sheet's own columns and keeps both records under sheet-qualified
       startDate: null,
     },
   ]);
-  const { rows } = await orm.execute<{ externalId: string; email: string }>(sql`
-    select external_id as "externalId", "values"->>'email' as email
-    from import_records where source_id = ${source.id} order by external_id
+  const { rows } = await orm.execute<{ sourceKey: string; email: string }>(sql`
+    select source_key as "sourceKey", "values"->>'email' as email
+    from import_records where source_id = ${source.id} order by source_key
   `);
   expect(rows).toEqual([
-    { externalId: "Contractors!row:2", email: "robin@example.com" },
-    { externalId: "Staff!row:2", email: "avery@example.com" },
+    { sourceKey: "Contractors!row:2", email: "robin@example.com" },
+    { sourceKey: "Staff!row:2", email: "avery@example.com" },
   ]);
 });
 

@@ -20,8 +20,8 @@ export interface ImportEmployeeRecord extends ImportEmployeeValues {
 
 /** A record as a source delivers it, before it is stored. */
 export interface IncomingRecord {
-  /** The record's id in its source, such as a Slack user id. */
-  externalId: string;
+  /** Broccoli's key for the record within its source, kept across re-reads: a file row or a Slack user id. */
+  sourceKey: string;
   /** The source's values as they came. */
   raw: unknown;
   values: ImportEmployeeValues;

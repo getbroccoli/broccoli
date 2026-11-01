@@ -189,7 +189,7 @@ it("reads every row without a header with letter keys and one-based sheet ids", 
 
   expect(records).toEqual([
     {
-      externalId: "row:1",
+      sourceKey: "row:1",
       raw: { A: "Avery Stone", B: "avery@example.com" },
       values: {
         firstName: "Avery",
@@ -200,7 +200,7 @@ it("reads every row without a header with letter keys and one-based sheet ids", 
       },
     },
     {
-      externalId: "row:2",
+      sourceKey: "row:2",
       raw: { A: "Robin Reed", B: "robin@example.com" },
       values: {
         firstName: "Robin",
@@ -290,7 +290,7 @@ it("uses the row's one-based sheet position as the external id", () => {
     ...UNMAPPED,
     fullName: 0,
   });
-  expect(records.map(({ externalId }) => externalId)).toEqual(["row:4"]);
+  expect(records.map(({ sourceKey }) => sourceKey)).toEqual(["row:4"]);
 });
 
 it("keys raw cells by header, giving blank and repeated headers distinct keys", () => {

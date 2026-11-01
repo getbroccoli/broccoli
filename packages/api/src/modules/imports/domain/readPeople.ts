@@ -64,7 +64,7 @@ export function parseReadPeople(body: unknown): ReadPeople {
       startDate: (person.startDate && parseCalendarDate(person.startDate.trim())) || null,
     };
     if (values.firstName !== null || values.lastName !== null || values.email !== null) {
-      records.push({ externalId: `person:${index + 1}`, raw: person, values });
+      records.push({ sourceKey: `person:${index + 1}`, raw: person, values });
     }
   });
   return { records, skipped: people.length - records.length };

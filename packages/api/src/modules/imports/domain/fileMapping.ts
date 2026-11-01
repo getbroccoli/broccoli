@@ -167,7 +167,7 @@ export function readFileRecords(
       return;
     }
     records.push({
-      externalId: `row:${firstRow + index + 1}`,
+      sourceKey: `row:${firstRow + index + 1}`,
       raw: Object.fromEntries(keys.map((key, column) => [key, row[column] ?? ""])),
       values,
     });
@@ -179,7 +179,7 @@ export function readFileRecords(
 export function inSheet(name: string | null, records: IncomingRecord[]): IncomingRecord[] {
   return name === null
     ? records
-    : records.map((record) => ({ ...record, externalId: `${name}!${record.externalId}` }));
+    : records.map((record) => ({ ...record, sourceKey: `${name}!${record.sourceKey}` }));
 }
 
 /** Enough rows to find a heading under a title or a blank line or two. */

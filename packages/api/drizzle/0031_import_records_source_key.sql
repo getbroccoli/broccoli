@@ -1,0 +1,1 @@
+ALTER TABLE "import_records" RENAME COLUMN "external_id" TO "source_key";

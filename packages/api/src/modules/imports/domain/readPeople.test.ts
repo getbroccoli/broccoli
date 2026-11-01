@@ -87,7 +87,7 @@ test("keeps separate names ahead of the full name and preserves the original per
   expect(parseReadPeople({ people: [person] })).toEqual({
     records: [
       {
-        externalId: "person:1",
+        sourceKey: "person:1",
         raw: person,
         values: {
           firstName: "Avery",
@@ -164,7 +164,7 @@ test("skips and counts people without a name or email", () => {
 test("numbers records by their original list positions including skipped people", () => {
   const result = parseReadPeople({ people: [{ firstName: "Avery" }, {}, { firstName: "Robin" }] });
 
-  expect(result.records.map(({ externalId }) => externalId)).toEqual(["person:1", "person:3"]);
+  expect(result.records.map(({ sourceKey }) => sourceKey)).toEqual(["person:1", "person:3"]);
 });
 
 test("accepts 10,000 people and strings of 200 characters through the shared schema", () => {

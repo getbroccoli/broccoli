@@ -242,7 +242,7 @@ export class TestSeed {
   async importEmployees(
     sourceId: string,
     employees: (Partial<ImportEmployeeValues> & {
-      externalId?: string;
+      sourceKey?: string;
       photoUrl?: string | null;
     })[],
   ) {
@@ -250,10 +250,10 @@ export class TestSeed {
       const imports = await lockImport(tx);
       await imports.syncEmployeeRecords(
         sourceId,
-        employees.map(({ externalId, photoUrl, ...values }) => {
+        employees.map(({ sourceKey, photoUrl, ...values }) => {
           const number = ++this.#count;
           return {
-            externalId: externalId ?? `U${number}`,
+            sourceKey: sourceKey ?? `U${number}`,
             photoUrl,
             raw: {},
             values: {

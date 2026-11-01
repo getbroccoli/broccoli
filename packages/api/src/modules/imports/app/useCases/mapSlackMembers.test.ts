@@ -21,7 +21,7 @@ it("maps profile names, normalises the email and leaves the start date unknown",
 
   expect(records).toMatchObject([
     {
-      externalId: "U1",
+      sourceKey: "U1",
       values: {
         firstName: "Avery",
         lastName: "Stone",
@@ -42,7 +42,7 @@ it("keeps each Slack user id once", () => {
 
   const records = mapSlackMembers([member, member]);
 
-  expect(records.map((record) => record.externalId)).toEqual(["U1"]);
+  expect(records.map((record) => record.sourceKey)).toEqual(["U1"]);
 });
 
 it.each([

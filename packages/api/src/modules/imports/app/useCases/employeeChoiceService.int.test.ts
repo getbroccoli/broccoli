@@ -240,7 +240,7 @@ test("keeps the Slack pick through leave-out changes and refresh", async ({ orm,
   await seed.importEmployees(older.id, [{ email: "avery@example.com", jobTitle: "Designer" }]);
   await seed.importEmployees(newer.id, [{ email: "avery@example.com", jobTitle: "Engineer" }]);
   const [member] = await seed.importEmployees(slack.id, [
-    { externalId: "U1", email: "avery@example.com", jobTitle: "Engineer" },
+    { sourceKey: "U1", email: "avery@example.com", jobTitle: "Engineer" },
   ]);
   const imports = importUseCases(orm);
   await imports.choices.chooseSourceForAll(OWNER, { field: "jobTitle", sourceId: slack.id });
@@ -248,7 +248,7 @@ test("keeps the Slack pick through leave-out changes and refresh", async ({ orm,
   await imports.choices.setLeftOut(OWNER, { key: "avery@example.com", leftOut: false });
 
   await seed.importEmployees(slack.id, [
-    { externalId: "U1", email: "avery@example.com", jobTitle: "Lead engineer" },
+    { sourceKey: "U1", email: "avery@example.com", jobTitle: "Lead engineer" },
   ]);
 
   const page = (await importUseCases(orm).reads.readReview(OWNER)).listEmployees({});

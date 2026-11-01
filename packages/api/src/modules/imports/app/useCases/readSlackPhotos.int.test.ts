@@ -48,7 +48,7 @@ test("keeps a stored photo when Slack's photo link is unchanged", async ({ orm, 
   await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
-    { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
+    { sourceKey: "U1", photoUrl: SLACK_PHOTO_URL },
   ]);
   const fileId = await seed.importPhoto(record!.id, {
     photoUrl: SLACK_PHOTO_URL,
@@ -74,7 +74,7 @@ test("replaces a changed Slack photo and deletes its old file", async ({ orm, se
   await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
-    { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
+    { sourceKey: "U1", photoUrl: SLACK_PHOTO_URL },
   ]);
   const oldFileId = await seed.importPhoto(record!.id, {
     photoUrl: SLACK_PHOTO_URL,
@@ -110,7 +110,7 @@ test("Approve keeps the stored photo while Refresh downloads its replacement", a
   await seed.setupStep("import");
   const source = await seed.importSource();
   const [record] = await seed.importEmployees(source.id, [
-    { externalId: "U1", photoUrl: SLACK_PHOTO_URL },
+    { sourceKey: "U1", photoUrl: SLACK_PHOTO_URL },
   ]);
   const oldFileId = await seed.importPhoto(record!.id, {
     photoUrl: SLACK_PHOTO_URL,
