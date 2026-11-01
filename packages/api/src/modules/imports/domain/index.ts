@@ -35,12 +35,7 @@ export {
   isReady,
   toNewEmployeeInput,
 } from "./importEmployeeMapping";
-export {
-  IMPORT_MANAGER_PROBLEMS,
-  type ImportManager,
-  type ImportManagerProblem,
-  matchManagers,
-} from "./importManagers";
+export { type ImportManager, matchManagers } from "./importManagers";
 export { importVersion } from "./importVersion";
 export {
   type AnsweredMapping,
