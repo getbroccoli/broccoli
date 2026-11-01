@@ -9,7 +9,7 @@ import { type AddedPeople, addApprovedPeople, reportAddedPeople } from "./addApp
 import { approveImport } from "./approveImport";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
-import type { DemoFill, ImportSlack } from "./importContext";
+import type { DemoFill, ImportContext, ImportSlack } from "./importContext";
 import { createImportReadService, type ImportReadService } from "./importReadService";
 import { deleteFinishedImport, finishImport } from "./deleteImport";
 import { readSlack } from "./readSlack";
@@ -41,7 +41,7 @@ export interface ImportUseCases {
   prepareDemoStart: () => Promise<DemoStart>;
   /** Approve of the import the owner reviewed, at the `version` of `reads.readReview`. */
   approveImport: (ctx: SecurityContext, version: string) => Promise<void>;
-  /** Adds the approved people in the caller's transaction, which completes setup. */
+  /** Adds the approved people and sends setup's invites in the caller's transaction, which completes setup. */
   addApprovedPeople: AddApprovedPeople;
   /** Logs the people added once they are committed. */
   reportAddedPeople: (added: AddedPeople) => void;
@@ -69,22 +69,24 @@ export function createImportUseCases({
   originalFileReader,
   jobs,
   prepareDemoFill,
+  invites,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: ImportSlack;
   decisions: Decisions;
   originalFileReader: OriginalFileReader;
   jobs: JobQueue;
   prepareDemoFill: () => Promise<DemoFill>;
+  invites: ImportContext["invites"];
 }): ImportUseCases {
   const readUpload = createUploadReader();
-  const context = { orm, transact, logger, slack, prepareDemoFill };
+  const context = { orm, transact, logger, slack, prepareDemoFill, invites };
   return {
     readSlack: (ctx: SecurityContext) => readSlack(context, ctx),
     removeSource: (ctx: SecurityContext, sourceId: string) => removeSource(context, ctx, sourceId),
     startDemo: (ctx: SecurityContext) => startDemo(context, ctx),
     prepareDemoStart: () => prepareDemoStart(context),
     approveImport: (ctx: SecurityContext, version: string) => approveImport(context, ctx, version),
-    addApprovedPeople,
+    addApprovedPeople: (ctx, tx, finish) => addApprovedPeople(context, ctx, tx, finish),
     reportAddedPeople: (added: AddedPeople) => reportAddedPeople(context, added),
     finishImport: (ctx: SecurityContext) => finishImport(context, ctx),
     deleteFinishedImport: async (ctx: SecurityContext, tx: Tx) => {

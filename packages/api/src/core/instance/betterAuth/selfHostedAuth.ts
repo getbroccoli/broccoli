@@ -42,6 +42,7 @@ export function selfHostedAuth({
         setupPlugin(options.orm, transact, {
           prepareDemoStart: demo.prepareStart,
           addApprovedPeople,
+          publicUrl: options.publicUrl,
         }),
         demoPlugin(options.orm, transact, demo.deleteAllEmployees),
         ...plugins,

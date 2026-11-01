@@ -1,5 +1,6 @@
 import type { Orm, Transact, Tx } from "../../../../core/db";
 import type { Logger } from "../../../../core/logger";
+import type { EmployeeInviteService } from "../../../employees";
 import type { SlackConnectionService } from "../../../slack";
 
 /** What the Slack module offers the import. */
@@ -13,6 +14,8 @@ export interface ImportContext {
   slack: ImportSlack;
   /** Reads what the demo company needs, then returns its fill for the caller's transaction. */
   prepareDemoFill: () => Promise<DemoFill>;
+  /** Invites the people the owner chose as setup finishes. */
+  invites: Pick<EmployeeInviteService, "sendAtSetup">;
 }
 
 /** Writes the demo company inside the caller's transaction; the demo module provides it. */

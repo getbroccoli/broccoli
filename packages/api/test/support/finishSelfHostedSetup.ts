@@ -1,5 +1,6 @@
 import { user } from "../../src/core/auth";
 import { ormOf, type Orm, type Tx } from "../../src/core/db";
+import { NO_SETUP_INVITES, type SetupChoices, type SetupInvite } from "../../src/core/instance";
 import { type AddApprovedPeople, createOwnerAtSetup } from "../../src/core/instance/app";
 import { TestSeed } from "./testSeed";
 import { SYSTEM } from "./testSecurityContext";
@@ -7,13 +8,23 @@ import { testTransactor } from "./testTransactor";
 import { importUseCases } from "./useCases";
 
 /** Finishes the account step with the real owner and import operations. */
-export async function finishSelfHostedSetup(orm: Orm): Promise<void> {
+export async function finishSelfHostedSetup(
+  orm: Orm,
+  choices: Partial<SetupChoices> = {},
+): Promise<SetupInvite[]> {
   await new TestSeed(orm).setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
-  await testTransactor(orm)((tx) => createSetupOwner(tx, importUseCases(orm).addApprovedPeople));
+  const { invites } = await testTransactor(orm)((tx) =>
+    createSetupOwner(tx, importUseCases(orm).addApprovedPeople, choices),
+  );
+  return invites;
 }
 
 /** Creates the owner at the account step in `tx`, for the browser holding a seeded setup session. */
-export function createSetupOwner(tx: Tx, addApprovedPeople: AddApprovedPeople) {
+export function createSetupOwner(
+  tx: Tx,
+  addApprovedPeople: AddApprovedPeople,
+  choices: Partial<SetupChoices> = {},
+) {
   return createOwnerAtSetup(
     SYSTEM,
     tx,
@@ -24,5 +35,6 @@ export function createSetupOwner(tx: Tx, addApprovedPeople: AddApprovedPeople) {
       return { user: owner };
     },
     addApprovedPeople,
+    { ...NO_SETUP_INVITES, ...choices, linkOrigin: "https://broccoli.example.com" },
   );
 }

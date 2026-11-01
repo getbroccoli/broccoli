@@ -143,13 +143,18 @@ export function parseInviteInput({
   note?: string | null;
 }) {
   const ids = parseEmployeeIds(employeeIds);
-  const trimmedNote = note?.trim() || null;
-  if (trimmedNote && trimmedNote.length > NOTE_MAX_LENGTH) {
-    throw invalidInput([{ field: "note", code: "too_long" }]);
-  }
   return {
     employeeIds: ids,
     profiles: profiles ? parseGivenProfiles(profiles) : null,
-    note: trimmedNote,
+    note: parseInviteNote(note),
   };
+}
+
+/** An invite's note as stored: trimmed, null when blank; refuses one over `NOTE_MAX_LENGTH`. */
+export function parseInviteNote(note: string | null | undefined): string | null {
+  const trimmed = note?.trim() || null;
+  if (trimmed && trimmed.length > NOTE_MAX_LENGTH) {
+    throw invalidInput([{ field: "note", code: "too_long" }]);
+  }
+  return trimmed;
 }

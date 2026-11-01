@@ -25,6 +25,7 @@ import {
   inviteLink,
   noteHasLink,
   parseInviteInput,
+  parseInviteNote,
   type SignInStatus,
 } from "../../domain";
 import { employeeDirectory } from "../employeeDirectory";
@@ -39,6 +40,16 @@ export interface EmployeeInviteService {
    * whose email has an account, or who are demo data.
    */
   send(ctx: SecurityContext, input: InviteInput, linkOrigin: string): Promise<SentInvite[]>;
+  /**
+   * Invites people as setup finishes, joining its `tx`: as `send` does, with no profile beside
+   * `EMPLOYEE`, without the cap on how many, and nothing for no one.
+   */
+  sendAtSetup(
+    ctx: SecurityContext,
+    tx: Tx,
+    input: { employeeIds: string[]; note: string | null; invitedByUserId: string },
+    linkOrigin: string,
+  ): Promise<SentInvite[]>;
   /** Cancels the person's open invite; refuses with NOT_FOUND without one. */
   cancel(
     ctx: SecurityContext,
@@ -116,6 +127,7 @@ export function createEmployeeInviteService({
   const invites = inviteRepository(orm);
   const readMailer = () => mailSettings.readMailer(system);
   const readCompanyName = async () => (await readCompany(system)).name ?? "";
+  const newInvite = { jobs, secretBox };
 
   return {
     send: async (ctx, input, linkOrigin) => {
@@ -125,75 +137,38 @@ export function createEmployeeInviteService({
       if ((await readInstance(orm)).demoExpiresAt) {
         throw new ApplicationError("CONFLICT", "Invites start once the demo ends.");
       }
-      const mailer = input.delivery === "copied_by_owner" ? null : await readMailer();
-      if (mailer?.sendsThroughBroccoli && note && noteHasLink(note)) {
-        throw invalidInput([{ field: "note", code: "has_link" }]);
-      }
-      const delivery: InviteDelivery = mailer ? "sent_by_email" : "copied_by_owner";
-      const now = new Date();
-      const sent = await transact(async (tx) => {
-        // Sends, cancels and accepts of one person take turns.
-        await employeeRepository(tx).lockByIds(employeeIds);
-        const [invitees, open] = await Promise.all([
-          inviteRepository(tx).findInvitees(employeeIds),
-          inviteRepository(tx).findOpen(employeeIds),
-        ]);
-        if (invitees.length < employeeIds.length) {
-          throw employeeNotFound();
-        }
-        const openOf = new Map(open.map((invite) => [invite.employeeId, invite]));
-        const invited = invitees.filter(canBeInvited).map(({ employee }) => employee);
-        // Whole, for the answer, which returns them.
-        const employeesById = new Map(
-          (await employeeRepository(tx).findByIds(invited.map(({ id }) => id))).map((employee) => [
-            employee.id,
-            employee,
-          ]),
-        );
-        const made: SentInvite[] = [];
-        for (const employee of invited) {
-          const replaced = openOf.get(employee.id);
-          const { token, tokenHash } = createInviteToken();
-          const invite = await inviteRepository(tx).replace(
-            {
-              employeeId: employee.id,
-              email: employee.email.toLowerCase(),
-              tokenHash,
-              // A new link without profiles keeps the ones its invite had.
-              profiles: profiles ?? replaced?.profiles ?? [],
-              note,
-              invitedByUserId: ctx.user?.userId ?? null,
-              expiresAt: inviteExpiry(now),
-            },
-            now,
-          );
-          const historyLine = await appendSignInLine(ctx, tx, employee.id, {
-            kind: "INVITE_SENT",
-            ref: invite.id,
-            from: replaced ? "INVITED" : "NOT_INVITED",
-            to: "INVITED",
-          });
-          if (delivery === "sent_by_email") {
-            await jobs.send(tx, "employees.sendInvite", {
-              inviteId: invite.id,
-              encryptedToken: secretBox.encrypt(token),
-            });
-          }
-          made.push({
-            employee: employeesById.get(employee.id)!,
-            expiresAt: invite.expiresAt,
-            delivery,
-            link: delivery === "copied_by_owner" ? inviteLink(linkOrigin, token) : null,
-            historyLine,
-          });
-        }
-        return made;
-      });
+      const delivery = await chooseDelivery(readMailer, input.delivery, note);
+      const sent = await transact((tx) =>
+        createInvites(ctx, tx, newInvite, {
+          employeeIds,
+          profiles,
+          note,
+          invitedByUserId: ctx.user?.userId ?? null,
+          delivery,
+          linkOrigin,
+        }),
+      );
       logger.info(
         { employeeIds: sent.map(({ employee }) => employee.id), delivery },
         "Invites created",
       );
       return sent;
+    },
+
+    sendAtSetup: async (ctx, tx, { employeeIds, note, invitedByUserId }, linkOrigin) => {
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
+      const trimmedNote = parseInviteNote(note);
+      if (employeeIds.length === 0) {
+        return [];
+      }
+      return createInvites(ctx, tx, newInvite, {
+        employeeIds,
+        profiles: [],
+        note: trimmedNote,
+        invitedByUserId,
+        delivery: await chooseDelivery(readMailer, null, trimmedNote),
+        linkOrigin,
+      });
     },
 
     cancel: async (ctx, { employeeId: id }) => {
@@ -238,7 +213,8 @@ export function createEmployeeInviteService({
     },
 
     delivery: async (ctx) => {
-      ctx.require("MANAGE_WORKSPACE");
+      // The setup holder previews setup's invites before the owner exists.
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
       return (await readMailer()) ? "sent_by_email" : "copied_by_owner";
     },
 
@@ -308,6 +284,106 @@ export function createEmployeeInviteService({
 
     jobs: sendInviteJob({ orm, logger, secretBox, readMailer, readCompanyName }),
   };
+}
+
+/**
+ * How invites go now: by email while mail is chosen and `requested` asks for nothing else, else
+ * as links. Refuses a note with a link when Broccoli's relay would carry it.
+ */
+async function chooseDelivery(
+  readMailer: () => Promise<{ sendsThroughBroccoli: boolean } | null>,
+  requested: InviteDelivery | null | undefined,
+  note: string | null,
+): Promise<InviteDelivery> {
+  const mailer = requested === "copied_by_owner" ? null : await readMailer();
+  if (mailer?.sendsThroughBroccoli && note && noteHasLink(note)) {
+    throw invalidInput([{ field: "note", code: "has_link" }]);
+  }
+  return mailer ? "sent_by_email" : "copied_by_owner";
+}
+
+/**
+ * Makes one invite for each of these people who can be invited, replacing any open one, joining
+ * `tx`; queues its email or returns its link. Refuses with NOT_FOUND for an id of nobody.
+ */
+async function createInvites(
+  ctx: SecurityContext,
+  tx: Tx,
+  { jobs, secretBox }: { jobs: JobQueue; secretBox: SecretBox },
+  {
+    employeeIds,
+    profiles,
+    note,
+    invitedByUserId,
+    delivery,
+    linkOrigin,
+  }: {
+    employeeIds: string[];
+    /** None keeps an open invite's. */
+    profiles: "ADMIN"[] | null;
+    note: string | null;
+    invitedByUserId: string | null;
+    delivery: InviteDelivery;
+    linkOrigin: string;
+  },
+): Promise<SentInvite[]> {
+  const now = new Date();
+  // Sends, cancels and accepts of one person take turns.
+  await employeeRepository(tx).lockByIds(employeeIds);
+  const [invitees, open] = await Promise.all([
+    inviteRepository(tx).findInvitees(employeeIds),
+    inviteRepository(tx).findOpen(employeeIds),
+  ]);
+  if (invitees.length < employeeIds.length) {
+    throw employeeNotFound();
+  }
+  const openOf = new Map(open.map((invite) => [invite.employeeId, invite]));
+  const invited = invitees.filter(canBeInvited).map(({ employee }) => employee);
+  // Whole, for the answer, which returns them.
+  const employeesById = new Map(
+    (await employeeRepository(tx).findByIds(invited.map(({ id }) => id))).map((employee) => [
+      employee.id,
+      employee,
+    ]),
+  );
+  const made: SentInvite[] = [];
+  for (const employee of invited) {
+    const replaced = openOf.get(employee.id);
+    const { token, tokenHash } = createInviteToken();
+    const invite = await inviteRepository(tx).replace(
+      {
+        employeeId: employee.id,
+        email: employee.email.toLowerCase(),
+        tokenHash,
+        // A new link without profiles keeps the ones its invite had.
+        profiles: profiles ?? replaced?.profiles ?? [],
+        note,
+        invitedByUserId,
+        expiresAt: inviteExpiry(now),
+      },
+      now,
+    );
+    const historyLine = await appendSignInLine(ctx, tx, employee.id, {
+      kind: "INVITE_SENT",
+      ref: invite.id,
+      from: replaced ? "INVITED" : "NOT_INVITED",
+      to: "INVITED",
+    });
+    if (delivery === "sent_by_email") {
+      await jobs.send(tx, "employees.sendInvite", {
+        inviteId: invite.id,
+        encryptedToken: secretBox.encrypt(token),
+      });
+    }
+    made.push({
+      employee: employeesById.get(employee.id)!,
+      expiresAt: invite.expiresAt,
+      delivery,
+      link: delivery === "copied_by_owner" ? inviteLink(linkOrigin, token) : null,
+      historyLine,
+    });
+  }
+  return made;
 }
 
 /** Writes the line that changes the person's `signIn` field. */

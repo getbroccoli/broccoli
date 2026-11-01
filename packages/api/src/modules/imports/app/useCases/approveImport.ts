@@ -14,7 +14,7 @@ import { requireImportAccess } from "./requireImportAccess";
  * the import no longer matches `version`, the one the owner reviewed.
  */
 export async function approveImport(
-  { transact, logger }: ImportContext,
+  { transact, logger, invites }: ImportContext,
   ctx: SecurityContext,
   version: string,
 ): Promise<void> {
@@ -34,7 +34,7 @@ export async function approveImport(
     }
     // A self-hosted instance whose owner has an account has no last step to add them at.
     if ((await readInstance(tx)).step === "done") {
-      await addApprovedPeople(ctx, tx);
+      await addApprovedPeople({ invites }, ctx, tx);
     }
     return true;
   });

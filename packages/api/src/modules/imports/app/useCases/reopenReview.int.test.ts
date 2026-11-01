@@ -14,7 +14,7 @@ import {
 } from "#test/support";
 
 import { readFile } from "../../../../core/files";
-import { readInstance } from "../../../../core/instance";
+import { NO_SETUP_INVITES, readInstance } from "../../../../core/instance";
 
 test.for(["ready", "owner"] as const)(
   "Back reopens the review from %s",
@@ -100,7 +100,10 @@ test("Back preserves values, left-out choices, sources and photos for the next a
     choice: { value: "Engineer" },
   });
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
-  await systemUseCases(orm).completeSetup(owner);
+  await systemUseCases(orm).completeSetup(owner, {
+    ...NO_SETUP_INVITES,
+    linkOrigin: "https://broccoli.example.com",
+  });
 
   expect(
     (await employees.listEmployees(owner, { orderBy: { field: "EMAIL" } })).edges.map(

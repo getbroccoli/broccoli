@@ -61,3 +61,9 @@ export const MANAGER_PROBLEMS = {
 export function keyOf<K extends string, V extends string>(names: Record<K, V>, value: V): K {
   return (Object.keys(names) as K[]).find((key) => names[key] === value)!;
 }
+/** Setup's invite audiences by their GraphQL names. */
+export const SETUP_INVITE_AUDIENCE_INPUTS = {
+  ONLY_ADMINS: "only_admins",
+  ADMINS_AND_MANAGERS: "admins_and_managers",
+  EVERYONE: "everyone",
+} as const;

@@ -26,6 +26,10 @@ type Import {
   checks: [ImportCheck!]!
   "A fingerprint of what Approve would create now; Approve takes it back, so nobody is added unseen."
   version: String!
+  "The people setup invites for this audience among those Approve adds, never the owner's own person."
+  setupInvitees(audience: SetupInviteAudience!, ownerEmployeeKey: ID): [ImportEmployee!]!
+  "The person Approve adds whose work email is the signed-in owner's; null without one, and for the setup holder."
+  ownerCandidate: ImportEmployee
 }
 
 "Where people came from."

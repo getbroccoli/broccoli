@@ -1,3 +1,4 @@
+import { NO_SETUP_INVITES } from "../../../../core/instance";
 import { expect, EMPLOYEE, importUseCases, test } from "#test/support";
 
 import type { Tx } from "../../../../core/db";
@@ -60,7 +61,12 @@ const calls = {
   "choices.leaveOutIncomplete": (imports, ctx) =>
     imports.choices.leaveOutIncomplete(ctx, { reason: "email" }),
   startDemo: (imports, ctx) => imports.startDemo(ctx),
-  addApprovedPeople: (imports, ctx, tx) => imports.addApprovedPeople(ctx, tx),
+  addApprovedPeople: (imports, ctx, tx) =>
+    imports.addApprovedPeople(ctx, tx, {
+      ...NO_SETUP_INVITES,
+      ownerUserId: "owner",
+      linkOrigin: "https://broccoli.example.com",
+    }),
   approveImport: (imports, ctx) => imports.approveImport(ctx, "any-version"),
   finishImport: (imports, ctx) => imports.finishImport(ctx),
   deleteFinishedImport: (imports, ctx, tx) => imports.deleteFinishedImport(ctx, tx),

@@ -17,32 +17,36 @@ export interface ImportedEmployees {
 }
 
 /**
- * An employee an import proposes, with the stored photo it brings as its avatar and the email of
- * their manager among the same inputs.
+ * An employee an import proposes, with the stored photo it brings as its avatar, the email of
+ * their manager among the same inputs and, for the owner's own person, the owner's user.
  */
 export type ImportedEmployeeInput = NewEmployeeInput & {
   avatarFileId?: string;
   managerEmail?: string | null;
+  userId?: string;
 };
 
 /**
  * Adds employees proposed by an import, joining `tx`, with `cause` on their creation lines;
- * skips the ones that do not parse or whose email is taken.
+ * skips the ones that do not parse or whose email is taken. Returns the counts and each new
+ * employee's id by email.
  */
 export async function createImportedEmployees(
   ctx: SecurityContext,
   tx: Tx,
   inputs: readonly ImportedEmployeeInput[],
   cause: HistoryAppend["cause"],
-): Promise<ImportedEmployees> {
+): Promise<ImportedEmployees & { idsByEmail: ReadonlyMap<string, string> }> {
   ctx.requireSetupAccess("MANAGE_WORKSPACE");
   const managerEmails = new Map<string, string>();
-  const newEmployees = inputs.flatMap(({ avatarFileId, managerEmail, ...input }) => {
+  const newEmployees = inputs.flatMap(({ avatarFileId, managerEmail, userId, ...input }) => {
     const employee = tryParseNewEmployee(input);
     if (employee && managerEmail) {
       managerEmails.set(employee.email, managerEmail);
     }
-    return employee ? [{ ...employee, avatarFileId: avatarFileId ?? null }] : [];
+    return employee
+      ? [{ ...employee, avatarFileId: avatarFileId ?? null, userId: userId ?? null }]
+      : [];
   });
   const created = await employeeRepository(tx).insertSkippingTakenEmails(newEmployees);
   const managers = await setNewEmployeeManagers(tx, created, managerEmails);
@@ -51,6 +55,7 @@ export async function createImportedEmployees(
     created: created.length,
     incomplete: inputs.length - newEmployees.length,
     emailTaken: newEmployees.length - created.length,
+    idsByEmail: new Map(created.map(({ id, email }) => [email, id])),
   };
 }
 

@@ -2,7 +2,7 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import type { Instance } from "../domain";
+import type { Instance, SetupChoices, SetupFinish, SetupInvite } from "../domain";
 import { completeOwnerStep } from "./setup";
 
 /** The owner's id and sign-in email, or null before an owner exists. */
@@ -29,14 +29,19 @@ export async function claimOwner<Owner extends OwnerUser>(
 
 /**
  * Adds the people the owner approved in the caller's transaction, so they arrive together
- * with the end of setup. The imports module provides it.
+ * with the end of setup, links the owner to the person they are and invites the people they
+ * chose. Returns the invites. The imports module provides it.
  */
-export type AddApprovedPeople = (ctx: SecurityContext, tx: Tx) => Promise<void>;
+export type AddApprovedPeople = (
+  ctx: SecurityContext,
+  tx: Tx,
+  finish: SetupFinish,
+) => Promise<SetupInvite[]>;
 
 /**
  * The last step of self-hosted setup: makes the user that `createOwner` creates the
- * owner, for the browser holding setup only, adds the approved people, then completes
- * setup and ends the setup session. Refuses with `OwnerExistsError`,
+ * owner, for the browser holding setup only, adds the approved people with the owner's
+ * `choices`, then completes setup and ends the setup session. Returns the owner and the invites. Refuses with `OwnerExistsError`,
  * `SetupInProgressError`, or CONFLICT before the owner step.
  */
 export async function createOwnerAtSetup<Owner extends OwnerUser>(
@@ -45,7 +50,8 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
   { token, now }: { token: string | null; now: Date },
   createOwner: () => Promise<Owner>,
   addApprovedPeople: AddApprovedPeople,
-): Promise<Owner> {
+  choices: SetupChoices & { linkOrigin: string },
+): Promise<{ owner: Owner; invites: SetupInvite[] }> {
   ctx.requireSystem();
   const instance = instanceRepository(tx);
   const current = await lockHeldSetup(tx, { token, now });
@@ -53,10 +59,10 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
     throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
   }
   const owner = await saveOwner(tx, await createOwner(), current);
-  await addApprovedPeople(ctx, tx);
+  const invites = await addApprovedPeople(ctx, tx, { ...choices, ownerUserId: owner.user.id });
   await completeOwnerStep(ctx, tx);
   await instance.clearSetupSession();
-  return owner;
+  return { owner, invites };
 }
 
 /**

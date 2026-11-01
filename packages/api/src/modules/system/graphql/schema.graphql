@@ -147,8 +147,8 @@ type SetupMutations {
   saveMailSettings(input: MailSettingsInput!): SetupSaveMailSettingsPayload!
   "Sends the caller a test email with the saved mail choice; refused with a ConflictError without one, and an UnavailableError carries the provider's reason. Admins only."
   sendTestEmail: SetupSendTestEmailPayload!
-  "Completes setup from the ready step and adds the people the owner approved; refused with a ConflictError at any other step, such as after another tab went back to the review. Admins only."
-  complete: SetupCompletePayload!
+  "Completes setup from the ready step: adds the people the owner approved, links the owner to the person they are and invites the people they chose. Refused with a ConflictError at any other step, such as after another tab went back to the review, and with an InvalidInputError for a note that is too long (`note` / `too_long`) or holds a link Broccoli would email (`note` / `has_link`). Admins only."
+  complete(input: SetupCompleteInput): SetupCompletePayload!
   "Starts a finished setup over: deletes every person and takes setup back to the company step; the company and the AI choice stay. Refused with a ConflictError before setup is done, and during the self-hosted demo. Owner only."
   reset: SetupResetPayload!
 }
@@ -158,13 +158,42 @@ type SetupMutationPayload {
   setup: Setup
 }
 
-"Setup after completing it."
+"Who the owner invites as setup finishes; a one-time choice, never stored."
+enum SetupInviteAudience {
+  "Nobody: the owner is the only admin."
+  ONLY_ADMINS
+  "The people who manage someone among those setup adds."
+  ADMINS_AND_MANAGERS
+  "Everyone setup adds."
+  EVERYONE
+}
+
+"What the owner chose on \"Who uses Broccoli\"."
+input SetupCompleteInput {
+  "The import employee the owner is; their user is linked to the employee it becomes. None links nobody."
+  ownerEmployeeKey: ID
+  inviteAudience: SetupInviteAudience = ONLY_ADMINS
+  "Goes into every invite; plain text, up to 1,000 characters."
+  inviteNote: String
+}
+
+"An invite setup sent."
+type SetupInvite {
+  employeeId: ID!
+  name: String!
+  expiresAt: DateTime!
+  "The link to copy and send when the instance sends no email; only in this answer."
+  link: String
+}
+
+"Setup after completing it, and the invites it sent."
 type SetupCompletePayload {
   setup: Setup
+  invites: [SetupInvite!]
   error: SetupCompleteError
 }
 
-union SetupCompleteError = ConflictError
+union SetupCompleteError = ConflictError | InvalidInputError
 
 "Setup after starting it over."
 type SetupResetPayload {

@@ -63,19 +63,25 @@ export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"
   return createDemoUseCases({ orm, transact: testTransactor(orm) });
 }
 
-export function systemUseCases(orm: Orm) {
-  return createSystemUseCases({
+export function systemUseCases(
+  orm: Orm,
+  options: NonNullable<Parameters<typeof employeeInviteService>[1]> = {},
+) {
+  const invites = employeeInviteService(orm, options);
+  const imports = importUseCases(orm, { invites });
+  const useCases = createSystemUseCases({
     orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),
-    mode: "self_hosted",
-    addApprovedPeople: importUseCases(orm).addApprovedPeople,
+    mode: options.mode ?? "self_hosted",
+    addApprovedPeople: imports.addApprovedPeople,
     deleteAllEmployees,
-    deleteFinishedImport: importUseCases(orm).deleteFinishedImport,
+    deleteFinishedImport: imports.deleteFinishedImport,
     aiSettings: aiSettings(orm),
-    mailSettings: mailSettings(orm),
+    mailSettings: mailSettings(orm, options),
     passwordResetEmail: passwordResetEmail(orm, { mail: fakeMail() }),
   });
+  return { ...useCases, sentJobs: invites.sentJobs };
 }
 
 /** The AI settings on `orm` with a temporary data folder; OpenRouter and Broccoli AI both at `url`. */
@@ -200,6 +206,7 @@ export function importUseCases(
     jobs,
     clock = () => new Date(),
     prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
+    invites = employeeInviteService(orm),
   }: {
     slackApi?: Partial<SlackApi>;
     decisions?: Decisions;
@@ -207,6 +214,7 @@ export function importUseCases(
     jobs?: JobQueue;
     clock?: () => Date;
     prepareDemoFill?: Parameters<typeof createImportUseCases>[0]["prepareDemoFill"];
+    invites?: Parameters<typeof createImportUseCases>[0]["invites"];
   } = {},
 ) {
   const sentJobs: { name: JobName; payload: Jobs[JobName] }[] = [];
@@ -217,6 +225,7 @@ export function importUseCases(
     decisions,
     originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
+    invites,
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
         sentJobs.push({ name, payload });

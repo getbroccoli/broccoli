@@ -12,7 +12,7 @@ import {
 } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
-import { readInstance } from "../../../../core/instance";
+import { NO_SETUP_INVITES, readInstance } from "../../../../core/instance";
 
 test.for([
   { mode: "managed", step: "ready" },
@@ -40,7 +40,10 @@ test.for([
     expect((await readInstance(orm)).step).toBe(step);
     if (mode === "managed") {
       expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
-      await systemUseCases(orm).completeSetup(owner);
+      await systemUseCases(orm).completeSetup(owner, {
+        ...NO_SETUP_INVITES,
+        linkOrigin: "https://broccoli.example.com",
+      });
     }
     const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
     expect(employees.edges.map(({ node }) => node)).toEqual(
@@ -134,7 +137,10 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
   ]);
 
   expect((await readInstance(orm)).step).toBe("ready");
-  await systemUseCases(orm).completeSetup(owner);
+  await systemUseCases(orm).completeSetup(owner, {
+    ...NO_SETUP_INVITES,
+    linkOrigin: "https://broccoli.example.com",
+  });
   const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).toEqual([record!.email]);
 });
@@ -213,7 +219,10 @@ test("approves available records when a failed file is present", async ({ orm, s
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
   expect((await readInstance(orm)).step).toBe("ready");
-  await systemUseCases(orm).completeSetup(owner);
+  await systemUseCases(orm).completeSetup(owner, {
+    ...NO_SETUP_INVITES,
+    linkOrigin: "https://broccoli.example.com",
+  });
   expect(
     (await employeeUseCases(orm).listEmployees(OWNER, {})).edges.map(({ node }) => node),
   ).toMatchObject([{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }]);

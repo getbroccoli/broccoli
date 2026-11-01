@@ -29,6 +29,7 @@ export {
   NOTE_MAX_LENGTH,
   noteHasLink,
   parseInviteInput,
+  parseInviteNote,
   type Invite,
   type InviteDelivery,
   type SignInState,

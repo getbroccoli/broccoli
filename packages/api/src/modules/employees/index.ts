@@ -3,9 +3,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import express from "express";
 
 import type { Mode } from "../../core/env";
-import type { MailSettings } from "../../core/instance";
-import type { SecurityContext } from "../../core/security";
-import { createEmployeeInviteService, createEmployeeUseCases, employeeRecordType } from "./app";
+import { createEmployeeUseCases, type EmployeeInviteService, employeeRecordType } from "./app";
 import { invitePlugin } from "./betterAuth";
 import { createResolvers } from "./graphql";
 import { avatarRouter, inviteRateLimit } from "./http";
@@ -40,16 +38,14 @@ export type {
  */
 export function employeesModule({
   mode,
-  mailSettings,
-  readCompany,
+  invites,
   ...dependencies
-}: Pick<ModuleDependencies, "orm" | "transact" | "logger" | "jobs" | "secretBox"> & {
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   mode: Mode;
-  mailSettings: MailSettings;
-  readCompany: (ctx: SecurityContext) => Promise<{ name: string | null }>;
+  /** Built by startup, which setup's last step shares. */
+  invites: EmployeeInviteService;
 }): ModuleManifest {
   const useCases = createEmployeeUseCases(dependencies);
-  const invites = createEmployeeInviteService({ ...dependencies, mailSettings, readCompany });
   return {
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),

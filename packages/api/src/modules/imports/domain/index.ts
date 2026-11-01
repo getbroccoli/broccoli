@@ -63,3 +63,4 @@ export { parseReadPeople, type ReadPeople, readPeopleSchema } from "./readPeople
 export { splitFullName } from "./personValues";
 export { checkSheets, type FileSheet, type Sheet, type SheetRefusal } from "./sheet";
 export { FileSource, type FileSourceState } from "./fileSource";
+export { findOwnerCandidate, setupInvitees } from "./setupInvitees";

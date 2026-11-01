@@ -4,7 +4,12 @@ import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
 import { companyModule, readStoredCompany } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
-import { deleteAllEmployees, employeeDirectory, employeesModule } from "./employees";
+import {
+  createEmployeeInviteService,
+  deleteAllEmployees,
+  employeeDirectory,
+  employeesModule,
+} from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportUseCases, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
@@ -32,6 +37,12 @@ export function createModules(
   const aiSettings = createAiSettings({ ...core, deployment, openRouter, broccoliAiUrl });
   const mailSettings = createMailSettings({ ...core, deployment, resendApiUrl });
   const passwordResetEmail = createPasswordResetEmail({ ...core, mailSettings });
+  // Built once: the employees module serves it and setup's last step invites through it.
+  const invites = createEmployeeInviteService({
+    ...core,
+    mailSettings,
+    readCompany: (ctx) => readStoredCompany(ctx, core.orm),
+  });
   // Built once: the import serves them and the external agent puts its files through them.
   const importUseCases = createImportUseCases({
     ...core,
@@ -39,6 +50,7 @@ export function createModules(
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
     prepareDemoFill,
+    invites,
   });
   const manifests = [
     systemModule({
@@ -51,12 +63,7 @@ export function createModules(
       deleteAllEmployees,
       deleteFinishedImport: importUseCases.deleteFinishedImport,
     }),
-    employeesModule({
-      ...core,
-      mode: deployment.mode,
-      mailSettings,
-      readCompany: (ctx) => readStoredCompany(ctx, core.orm),
-    }),
+    employeesModule({ ...core, mode: deployment.mode, invites }),
     companyModule({ ...core, brandLookupUrl }),
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule(slackConnection),
