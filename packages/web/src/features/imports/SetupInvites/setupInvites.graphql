@@ -15,7 +15,7 @@ query SetupInvitees($audience: SetupInviteAudience!, $me: ID) {
   }
 }
 
-query WhoUsesBroccoli($me: ID, $meSearch: String) {
+query SetupOwnerPerson($meSearch: String) {
   import {
     id
     ownerCandidate {
@@ -28,6 +28,12 @@ query WhoUsesBroccoli($me: ID, $meSearch: String) {
         }
       }
     }
+  }
+}
+
+query SetupAudiences($me: ID) {
+  import {
+    id
     everyone: setupInvitees(audience: EVERYONE, ownerEmployeeKey: $me) {
       id
     }

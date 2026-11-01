@@ -3,7 +3,11 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { type SetupInviteAudience, WhoUsesBroccoliDocument } from "@/__generated__/graphql";
+import {
+  type SetupInviteAudience,
+  SetupOwnerPersonDocument,
+  SetupAudiencesDocument,
+} from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { personName } from "@/features/employees";
 import {
@@ -16,6 +20,7 @@ import { t } from "@/i18n";
 
 import { BackToReview } from "../BackToReview";
 import { ImportPersonSearch } from "../ImportReview/ImportPersonSearch";
+import { AudienceOption } from "./AudienceOption";
 import { PeopleNames } from "./PeopleNames";
 import { setupPersonName } from "./setupPersonName";
 
@@ -33,8 +38,8 @@ export function WhoStep({ search }: Props) {
   const [picked, setPicked] = useState<{ id: string; name: string } | null>();
   const [changing, setChanging] = useState(false);
   const [audience, setAudience] = useState<SetupInviteAudience>(search.audience);
-  const { data } = useQuery(WhoUsesBroccoliDocument, {
-    variables: { me: search.me, meSearch: search.me },
+  const { data } = useQuery(SetupOwnerPersonDocument, {
+    variables: { meSearch: search.me },
     fetchPolicy: "cache-and-network",
   });
   const navigate = useNavigate();
@@ -49,8 +54,13 @@ export function WhoStep({ search }: Props) {
         ? { id: earlier.id, name: setupPersonName(earlier) }
         : null
       : picked;
-  const managers = (data?.import.managers ?? []).filter(({ id }) => id !== me?.id);
-  const everyone = (data?.import.everyone ?? []).filter(({ id }) => id !== me?.id).length;
+  const audiences = useQuery(SetupAudiencesDocument, {
+    variables: { me: me?.id ?? null },
+    fetchPolicy: "cache-and-network",
+  });
+  const counted = audiences.data ?? audiences.previousData;
+  const managers = counted?.import.managers ?? [];
+  const everyone = counted?.import.everyone.length ?? 0;
 
   const choose = () => void navigate({ to: next, search: { audience, me: me?.id ?? null } });
 
@@ -111,10 +121,10 @@ export function WhoStep({ search }: Props) {
             value="ADMINS_AND_MANAGERS"
             chosen={audience}
             onChoose={setAudience}
-            disabled={data !== undefined && managers.length === 0}
+            disabled={counted !== undefined && managers.length === 0}
             title={t("setup.who.adminsAndManagers")}
             detail={
-              data && managers.length === 0
+              counted && managers.length === 0
                 ? t("setup.who.noManagers")
                 : managers.length === 1
                   ? t("setup.who.adminsAndManagersDetailOne")
@@ -137,51 +147,5 @@ export function WhoStep({ search }: Props) {
         </fieldset>
       </SetupStepForm>
     </SetupLayout>
-  );
-}
-
-type AudienceOptionProps = {
-  value: SetupInviteAudience;
-  chosen: SetupInviteAudience;
-  onChoose: (audience: SetupInviteAudience) => void;
-  title: string;
-  detail: string;
-  disabled?: boolean;
-  children?: React.ReactNode;
-};
-
-/** One answer to "Who should use Broccoli?": who it includes and what they can do. */
-function AudienceOption({
-  value,
-  chosen,
-  onChoose,
-  title,
-  detail,
-  disabled,
-  children,
-}: AudienceOptionProps) {
-  const id = `audience-${value}`;
-  return (
-    <div className="flex gap-3 rounded-xl border px-4 py-3 has-checked:border-primary has-disabled:opacity-60">
-      <input
-        id={id}
-        type="radio"
-        name="audience"
-        className="mt-1"
-        checked={chosen === value}
-        disabled={disabled}
-        onChange={() => onChoose(value)}
-        aria-describedby={`${id}-detail`}
-      />
-      <div className="flex min-w-0 flex-col gap-1">
-        <label htmlFor={id} className="text-sm font-medium">
-          {title}
-        </label>
-        <p id={`${id}-detail`} className="text-sm text-muted-foreground">
-          {detail}
-        </p>
-        {children}
-      </div>
-    </div>
   );
 }
