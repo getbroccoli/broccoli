@@ -1,4 +1,5 @@
 import {
+  ADMIN,
   employeeUseCases,
   importSourceValues,
   expect,
@@ -178,4 +179,12 @@ test("changes the review version when a manager is chosen", async ({ orm, seed }
   });
 
   expect((await imports.reads.readReview(OWNER)).version).not.toBe(before.version);
+});
+
+test("reads the owner's sign-in email for an admin too", async ({ orm, seed }) => {
+  const owner = await seed.owner({ email: "avery@example.com" });
+
+  const review = await importUseCases(orm).reads.readReview(ADMIN);
+
+  expect(review.ownerEmail).toBe(owner.user!.email);
 });

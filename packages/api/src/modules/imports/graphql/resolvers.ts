@@ -48,20 +48,19 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
       checks: async (_parent, _args, context) => (await loaders(context).review()).checks,
       version: async (_parent, _args, context) => (await loaders(context).review()).version,
       setupInvitees: async (_parent, { audience, ownerEmployeeKey, ownerEmail }, context) => {
-        const { readyEmployees, managers } = await loaders(context).review();
+        const review = await loaders(context).review();
         return setupInvitees(
-          readyEmployees,
-          managers,
+          review.readyEmployees,
+          review.managers,
           SETUP_INVITE_AUDIENCE_INPUTS[audience],
           ownerEmployeeKey ?? null,
-          ownerEmail ?? context.getActor().user?.email ?? null,
+          ownerEmail ?? review.ownerEmail,
         );
       },
-      ownerCandidate: async (_parent, _args, context) =>
-        findOwnerCandidate(
-          (await loaders(context).review()).readyEmployees,
-          context.getActor().user?.email ?? null,
-        ),
+      ownerCandidate: async (_parent, _args, context) => {
+        const { readyEmployees, ownerEmail } = await loaders(context).review();
+        return findOwnerCandidate(readyEmployees, ownerEmail);
+      },
       readyEmployee: async (_parent, { key }, context) =>
         (await loaders(context).review()).readyEmployees.find((employee) => employee.key === key) ??
         null,

@@ -30,10 +30,10 @@ type Import {
   setupInvitees(
     audience: SetupInviteAudience!
     ownerEmployeeKey: ID
-    "The email the owner signs in with; defaults to the signed-in user's, such as when the setup holder has not created the account yet."
+    "The email the owner signs in with; defaults to the instance owner's, so the setup holder, who has no account yet, passes the one being typed."
     ownerEmail: String
   ): [ImportEmployee!]!
-  "The person Approve adds whose work email is the signed-in owner's; null without one, and for the setup holder."
+  "The person Approve adds whose work email is the instance owner's sign-in email, whoever asks; null without one, and before the owner exists."
   ownerCandidate: ImportEmployee
   "The person Approve adds with this key, the import employee's id; null when it adds nobody with it."
   readyEmployee(key: ID!): ImportEmployee

@@ -45,7 +45,10 @@ type Props = {
   width?: SetupWidth;
   /** Pre-fills the email, such as the work email of the person the owner said they are. */
   defaultEmail?: string;
-  /** Runs with the email when the owner leaves its field. */
+  /**
+   * Runs with the email when the owner leaves its field, or submits with a new one: that submit
+   * stops there, so the owner sees what the new email changes before creating the account.
+   */
   onEmailEntered: (email: string) => void;
   /** Shown below the fields, such as the invites creating the account sends. */
   children?: ReactNode;
@@ -79,6 +82,11 @@ export function OwnerSetupForm({
   submitLabel,
 }: Props) {
   const emailInput = useRef<HTMLInputElement>(null);
+  const enteredEmail = useRef(defaultEmail);
+  const enterEmail = (email: string) => {
+    enteredEmail.current = email;
+    onEmailEntered(email);
+  };
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
   const [createAndReload, creating] = useSessionChange(async (email: string, password: string) => {
@@ -105,7 +113,14 @@ export function OwnerSetupForm({
   const form = useForm({
     defaultValues: { email: defaultEmail, password: "" },
     validators: { onSubmit: ownerSetupSchema },
-    onSubmit: ({ value }) => createAndReload(value.email, value.password),
+    onSubmit: ({ value }) => {
+      // Pressing Enter in the email field doesn't leave it.
+      if (value.email !== enteredEmail.current) {
+        enterEmail(value.email);
+        return;
+      }
+      return createAndReload(value.email, value.password);
+    },
     // Focus takes a screen reader to the field and reads its error with it.
     onSubmitInvalid: ({ formApi }) => {
       const emailIsInvalid = (formApi.getFieldMeta("email")?.errors.length ?? 0) > 0;
@@ -161,7 +176,7 @@ export function OwnerSetupForm({
                 onChange={(event) => field.handleChange(event.target.value)}
                 onBlur={() => {
                   field.handleBlur();
-                  onEmailEntered(field.state.value);
+                  enterEmail(field.state.value);
                 }}
                 aria-invalid={error !== undefined}
                 aria-describedby={error ? "owner-email-hint owner-email-error" : "owner-email-hint"}
