@@ -30,12 +30,7 @@ export {
   resolveSecurityContext,
 } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
-export {
-  AssignmentConflictError,
-  NO_SETUP_INVITES,
-  OwnerExistsError,
-  SETUP_INVITE_AUDIENCES,
-} from "./domain";
+export { AssignmentConflictError, NO_SETUP_INVITES, OwnerExistsError } from "./domain";
 
 // Public types.
 export type {

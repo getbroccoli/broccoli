@@ -126,7 +126,8 @@ export const setupEn = {
     "You and the {count} people who manage someone. Managers can see everyone in People and edit their team’s job titles.",
   "setup.who.adminsAndManagersDetailOne":
     "You and the 1 person who manages someone. Managers can see everyone in People and edit their team’s job titles.",
-  "setup.who.noManagers": "Nobody manages anyone yet. Set managers in the review to choose this.",
+  "setup.who.noManagers":
+    "Nobody besides you manages anyone yet. Set managers in the review to choose this.",
   "setup.who.everyone": "Everyone",
   "setup.who.everyoneDetail":
     "You and all {count} people. Everyone can see People and edit their own name and photo; managers can also edit their team’s job titles.",
