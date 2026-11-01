@@ -27,14 +27,17 @@ export function SetManagersButton({ employeeIds, onSet }: Props) {
 
   const pick = (manager: PersonOption | null) => {
     setOpen(false);
-    const count = String(employeeIds.length);
+    const people =
+      employeeIds.length === 1
+        ? t("people.bulk.countOne")
+        : t("people.bulk.count", { count: String(employeeIds.length) });
     setManagers({ variables: { input: { employeeIds, managerId: manager?.id ?? null } } }).then(
       () => {
         onSet();
         toast(
           manager
-            ? t("people.bulk.managerSet", { name: personName(manager), count })
-            : t("people.bulk.managerCleared", { count }),
+            ? t("people.bulk.managerSet", { name: personName(manager), people })
+            : t("people.bulk.managerCleared", { people }),
         );
       },
       (failure: unknown) => toast.error(errorMessage(failure)),

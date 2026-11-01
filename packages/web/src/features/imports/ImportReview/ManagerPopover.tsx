@@ -46,7 +46,7 @@ export function ManagerPopover({ employeeId, employeeName, manager, onDone }: Pr
         </PopoverTitle>
         {problem && (
           <PopoverDescription className="text-sm leading-[1.5]">
-            {chosen
+            {chosen && problem === "NO_PERSON_MATCHES"
               ? t("setup.review.manager.problemChosen")
               : t(`setup.review.manager.problem.${problem}`, { reference: reference.value ?? "" })}
           </PopoverDescription>

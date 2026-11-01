@@ -208,7 +208,7 @@ const FIELD_QUESTIONS: Record<FileField, string> = {
   jobTitle: "Which column holds the job title or position?",
   startDate: "Which column holds the date the person started or joined? Never a birth or end date.",
   manager:
-    "Which column holds each person's manager, supervisor or line manager, by name, email or ID? Never the person's own name, email or ID, an emergency contact or next of kin, or a department.",
+    "Which column holds the person each one reports to, such as a manager, supervisor, line manager or 'reports to' column, by name, email or ID? Never the person's own name, email or ID, an emergency contact or next of kin, or a department.",
   externalRecordId:
     "Which column holds each person's own ID in this file, such as an employee number, payroll ID or position ID, the one a manager column would refer to? Never a manager's ID, a department or cost centre code, or a national insurance or tax number.",
 };

@@ -22,11 +22,14 @@ export function useChooseManager() {
       toast.error(t("setup.review.manager.failed"));
       return false;
     }
-    const count = String(employeeIds.length);
+    const people =
+      employeeIds.length === 1
+        ? t("setup.review.countOne")
+        : t("setup.review.count", { count: String(employeeIds.length) });
     toast(
       manager
-        ? t("setup.review.manager.set", { name: personName(manager), count })
-        : t("setup.review.manager.cleared", { count }),
+        ? t("setup.review.manager.set", { name: personName(manager), people })
+        : t("setup.review.manager.cleared", { people }),
     );
     return true;
   };

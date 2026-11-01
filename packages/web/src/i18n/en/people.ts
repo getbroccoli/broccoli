@@ -46,8 +46,10 @@ export const peopleEn = {
   "people.panel.employeePicker.noMatches": "No one found.",
   "people.panel.employeePicker.searchFailed": "Couldn’t search people. Type again to retry.",
   "people.bulk.setManager": "Set manager",
-  "people.bulk.managerSet": "Set {name} as manager of {count} people",
-  "people.bulk.managerCleared": "Removed the manager of {count} people",
+  "people.bulk.managerSet": "Set {name} as manager of {people}",
+  "people.bulk.managerCleared": "Removed the manager of {people}",
+  "people.bulk.count": "{count} people",
+  "people.bulk.countOne": "1 person",
   "people.bulk.managerLoop":
     "That person reports to someone you selected, so they can’t be their manager.",
   "people.bulk.managerFailed": "Couldn’t set the manager. Try again.",

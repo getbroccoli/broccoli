@@ -69,6 +69,9 @@ function shownManager({ reference, employee, chosen, problem }: ManagerCell_Mana
   if (!chosen && reference.conflict) {
     return valuesLabel("manager", reference.options.length);
   }
+  if (problem === "MANAGERS_FORM_A_LOOP") {
+    return t("setup.review.manager.inLoop");
+  }
   if (problem) {
     return chosen ? t("setup.review.manager.chosenNotAdded") : reference.value;
   }
