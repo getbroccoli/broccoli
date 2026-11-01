@@ -19,6 +19,25 @@ test("the setup holder can read invite delivery before the owner exists", async 
   });
 });
 
+test("the setup holder's invite preview excludes the owner's sign-in email regardless of case", async ({
+  env,
+}) => {
+  const browser = await env.startSetupAtImport();
+  const source = await env.seed.importSource();
+  await env.seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+    { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+  ]);
+
+  const response = await browser.graphql(
+    '{ import { setupInvitees(audience: EVERYONE, ownerEmail: "Avery@Example.com") { id } } }',
+  );
+
+  expect(await response.json()).toEqual({
+    data: { import: { setupInvitees: [{ id: "robin@example.com" }] } },
+  });
+});
+
 test("starting the demo signs in its owner for seven days and completes setup", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   const before = Date.now();

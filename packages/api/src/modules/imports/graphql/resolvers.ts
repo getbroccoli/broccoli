@@ -47,14 +47,14 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
         (await loaders(context).review()).readyEmployeeSources,
       checks: async (_parent, _args, context) => (await loaders(context).review()).checks,
       version: async (_parent, _args, context) => (await loaders(context).review()).version,
-      setupInvitees: async (_parent, { audience, ownerEmployeeKey }, context) => {
+      setupInvitees: async (_parent, { audience, ownerEmployeeKey, ownerEmail }, context) => {
         const { readyEmployees, managers } = await loaders(context).review();
         return setupInvitees(
           readyEmployees,
           managers,
           SETUP_INVITE_AUDIENCE_INPUTS[audience],
           ownerEmployeeKey ?? null,
-          context.getActor().user?.email ?? null,
+          ownerEmail ?? context.getActor().user?.email ?? null,
         );
       },
       ownerCandidate: async (_parent, _args, context) =>

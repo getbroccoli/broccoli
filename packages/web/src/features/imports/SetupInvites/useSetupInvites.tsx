@@ -49,10 +49,14 @@ export interface SetupInvites {
  * What setup's last page needs to invite the people the owner chose: who they are, how invites
  * go, the note, and `finish`, which waits on the links dialog in link mode or toasts the count.
  */
-export function useSetupInvites(search: SetupInviteSearch): SetupInvites {
+export function useSetupInvites(
+  search: SetupInviteSearch,
+  /** The email the owner is signing up with, before their account exists; else theirs. */
+  ownerEmail: string | null = null,
+): SetupInvites {
   const inviting = search.audience !== "ONLY_ADMINS";
-  const { data, error } = useQuery(SetupInviteesDocument, {
-    variables: { audience: search.audience, me: search.me ?? null },
+  const { data, error, loading } = useQuery(SetupInviteesDocument, {
+    variables: { audience: search.audience, me: search.me ?? null, ownerEmail },
     skip: !inviting,
     fetchPolicy: "network-only",
   });
@@ -88,7 +92,7 @@ export function useSetupInvites(search: SetupInviteSearch): SetupInvites {
     invitees: data?.import.setupInvitees ?? [],
     company: data?.company.name ?? "",
     byEmail,
-    loaded: !inviting || data !== undefined,
+    loaded: !inviting || (data !== undefined && !loading),
     failed: error !== undefined,
     note,
     setNote,

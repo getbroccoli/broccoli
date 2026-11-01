@@ -1,4 +1,4 @@
-query SetupInvitees($audience: SetupInviteAudience!, $me: ID) {
+query SetupInvitees($audience: SetupInviteAudience!, $me: ID, $ownerEmail: String) {
   company {
     id
     name
@@ -9,7 +9,7 @@ query SetupInvitees($audience: SetupInviteAudience!, $me: ID) {
   }
   import {
     id
-    setupInvitees(audience: $audience, ownerEmployeeKey: $me) {
+    setupInvitees(audience: $audience, ownerEmployeeKey: $me, ownerEmail: $ownerEmail) {
       ...SetupPerson @unmask
     }
   }

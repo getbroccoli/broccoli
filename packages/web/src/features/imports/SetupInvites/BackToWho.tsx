@@ -7,10 +7,12 @@ import { t } from "@/i18n";
 
 type Props = {
   search: SetupInviteSearch;
+  /** While finishing, so the page that shows its answer stays. */
+  disabled?: boolean;
 };
 
 /** "Back" on setup's last page: to "Who uses Broccoli", keeping what the owner chose there. */
-export function BackToWho({ search }: Props) {
+export function BackToWho({ search, disabled }: Props) {
   const navigate = useNavigate();
   return (
     <Button
@@ -18,6 +20,7 @@ export function BackToWho({ search }: Props) {
       variant="ghost"
       size="lg"
       className="h-10 gap-2 px-3"
+      disabled={disabled}
       onClick={() => void navigate({ to: "/setup/who", search })}
     >
       <ArrowLeft aria-hidden />

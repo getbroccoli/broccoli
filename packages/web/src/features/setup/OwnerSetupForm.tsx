@@ -45,6 +45,8 @@ type Props = {
   width?: SetupWidth;
   /** Pre-fills the email, such as the work email of the person the owner said they are. */
   defaultEmail?: string;
+  /** Runs with the email when the owner leaves its field. */
+  onEmailEntered: (email: string) => void;
   /** Shown below the fields, such as the invites creating the account sends. */
   children?: ReactNode;
   /** What the owner chose on "Who uses Broccoli". */
@@ -68,6 +70,7 @@ export function OwnerSetupForm({
   secondaryAction,
   width,
   defaultEmail = "",
+  onEmailEntered,
   children,
   choices,
   canSubmit,
@@ -122,7 +125,10 @@ export function OwnerSetupForm({
       onSubmit={() => void form.handleSubmit()}
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          {secondaryAction}
+          {/* Leaving mid-submit would lose what creating the account answers, such as invite links. */}
+          <fieldset disabled={isSubmitting} className="contents">
+            {secondaryAction}
+          </fieldset>
           <Button
             type="submit"
             size="lg"
@@ -153,7 +159,10 @@ export function OwnerSetupForm({
                 className="h-12 rounded-xl bg-muted/30 px-4"
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
+                onBlur={() => {
+                  field.handleBlur();
+                  onEmailEntered(field.state.value);
+                }}
                 aria-invalid={error !== undefined}
                 aria-describedby={error ? "owner-email-hint owner-email-error" : "owner-email-hint"}
               />
