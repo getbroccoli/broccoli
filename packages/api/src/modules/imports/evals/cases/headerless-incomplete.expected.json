@@ -1,0 +1,19 @@
+{
+  "records": [
+    {
+      "firstName": "Avery",
+      "lastName": "Abbott",
+      "email": null,
+      "jobTitle": "Office Administrator",
+      "startDate": null
+    },
+    {
+      "firstName": "Jordan",
+      "lastName": "Kim",
+      "email": "jordan.kim@acme-corp.example",
+      "jobTitle": "Support Technician",
+      "startDate": "2024-11-03"
+    }
+  ],
+  "forbidden": ["Avery", "Abbott", "Jordan", "Kim", "jordan.kim@acme-corp.example"]
+}

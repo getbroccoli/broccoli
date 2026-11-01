@@ -56,7 +56,7 @@ export function headerQuestion(sheet: Sheet): {
     state: { rows: shownRows },
     questions: {
       headerRow: {
-        instructions: `Which shown row holds the table's column headings? Choose none when the rows have no heading row. ${MASKED} ${UNTRUSTED}`,
+        instructions: `Which shown row holds the table's column headings? Choose a row of field labels even when no data rows follow it. Headings may include masked words. A row repeating the same masked label across columns, above rows with email or date values, is also a heading row. Missing email or date values alone do not make a person row a heading. Choose none when the rows have no heading row. ${MASKED} ${UNTRUSTED}`,
         options: {
           ...Object.fromEntries(rowNumbers.map((number) => [number, `Row ${number}`])),
           [NONE]: "No row holds column headings",

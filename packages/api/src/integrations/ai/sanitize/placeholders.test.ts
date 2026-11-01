@@ -123,6 +123,12 @@ it("keeps heading words", () => {
   ).toEqual({ headings: ["Work email", "Start date", "Eintrittsdatum", "Vorname"] });
 });
 
+it("masks surnames that can appear in staff-file headings", () => {
+  expect(withPlaceholders({ names: ["Avery Worker", "Jordan Company"] })).toEqual({
+    names: ["Xxxxx Xxxxxx", "Xxxxxx Xxxxxxx"],
+  });
+});
+
 it("keeps underscore-separated heading words", () => {
   const headings = ["first_name", "last_name", "preferred_name", "manager_email", "START_DATE"];
 
