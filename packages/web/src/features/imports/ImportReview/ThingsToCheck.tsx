@@ -109,7 +109,7 @@ export function ThingsToCheck({
                       {t("setup.review.checks.useForAll", { source: source.name })}
                     </Button>
                   ))
-                ) : (
+                ) : check.kind === "INCOMPLETE" ? (
                   <Button
                     size="sm"
                     disabled={busy}
@@ -119,7 +119,7 @@ export function ThingsToCheck({
                   >
                     {t("setup.review.checks.leaveThemOut")}
                   </Button>
-                )}
+                ) : null}
                 <Button size="sm" variant="ghost" onClick={() => show(check.id)}>
                   {check.kind === "CONFLICT"
                     ? t("setup.review.checks.oneByOne")
@@ -140,11 +140,20 @@ export function ThingsToCheck({
 }
 
 /** "7 people with different job titles in their sources", "1 person without a work email". */
-function sentence({ kind, count, field, reason }: ThingsToCheck_CheckFragment): string {
+function sentence({
+  kind,
+  count,
+  field,
+  reason,
+  managerProblem,
+}: ThingsToCheck_CheckFragment): string {
   const people =
     count === 1 ? t("setup.review.countOne") : t("setup.review.count", { count: String(count) });
   if (kind === "CONFLICT") {
     return t("setup.review.checks.conflict", { people, values: pluralLabel(fieldKeyOf(field!)) });
+  }
+  if (kind === "MANAGER") {
+    return t(`setup.review.checks.manager.${managerProblem!}`, { people });
   }
   return t(INCOMPLETE[reason!], { people });
 }

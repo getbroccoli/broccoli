@@ -14,6 +14,7 @@ import { employeeNameOf } from "./employeeFields";
 import { EmployeeValueCell } from "./EmployeeValueCell";
 import { ImportPersonCell } from "./ImportPersonCell";
 import { LeftOutCell } from "./LeftOutCell";
+import { ManagerCell } from "./ManagerCell";
 import { SourceStack } from "./SourceStack";
 
 /** A row of the review: one import employee, from one source or more. */
@@ -24,7 +25,7 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     id: "person",
     header: t("setup.review.column.person"),
     sortKey: "name",
-    className: "w-[28%] min-w-44 max-w-0",
+    className: "w-[22%] min-w-44 max-w-0",
     cell: (employee) => (
       <LeftOutCell leftOut={employee.leftOut}>
         <ImportPersonCell employee={employee} />
@@ -35,7 +36,7 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     id: "email",
     header: t("setup.review.column.email"),
     sortKey: "email",
-    className: "w-[24%] min-w-44 max-w-0",
+    className: "w-[20%] min-w-44 max-w-0",
     cell: (employee) => (
       <LeftOutCell leftOut={employee.leftOut}>
         <EmployeeValueCell
@@ -51,7 +52,7 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
   {
     id: "jobTitle",
     header: t("setup.review.column.jobTitle"),
-    className: "w-[18%] min-w-36 max-w-0",
+    className: "w-[14%] min-w-36 max-w-0",
     cell: (employee) => (
       <LeftOutCell leftOut={employee.leftOut}>
         <EmployeeValueCell
@@ -59,6 +60,20 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
           employeeName={nameOf(employee)}
           field="jobTitle"
           value={employee.jobTitle}
+        />
+      </LeftOutCell>
+    ),
+  },
+  {
+    id: "manager",
+    header: t("setup.review.column.manager"),
+    className: "w-[16%] min-w-36 max-w-0",
+    cell: (employee) => (
+      <LeftOutCell leftOut={employee.leftOut}>
+        <ManagerCell
+          employeeId={employee.id}
+          employeeName={nameOf(employee)}
+          manager={employee.manager}
         />
       </LeftOutCell>
     ),

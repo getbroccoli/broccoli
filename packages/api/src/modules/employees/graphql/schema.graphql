@@ -233,6 +233,8 @@ input EmployeeSetManagersInput {
 "The employees after `setManagers`, those the caller may read, or why it was refused."
 type EmployeeSetManagersPayload {
   employees: [Employee!]
+  "The lines it added to their history."
+  historyLines: [RecordChange!]
   error: EmployeeSetManagersError
 }
 

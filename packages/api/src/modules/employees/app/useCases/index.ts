@@ -36,12 +36,13 @@ export interface EmployeeUseCases {
   /**
    * Makes one employee the manager of these employees from today, or no one with null, with a
    * history line each; skips the manager among them. Refuses an unknown employee with NOT_FOUND
-   * and the whole call when it would make a loop. Returns the employees the caller may read.
+   * and the whole call when it would make a loop. Returns the employees the caller may read and
+   * the history lines it added for them.
    */
   setManagers: (
     ctx: SecurityContext,
     input: { employeeIds: readonly string[]; managerId: string | null },
-  ) => Promise<{ employees: Employee[] }>;
+  ) => Promise<{ employees: Employee[]; historyLines: HistoryLine[] }>;
   /**
    * Removes an employee and returns their id and the lines it added to their reports' history;
    * refuses an unknown id with NOT_FOUND.

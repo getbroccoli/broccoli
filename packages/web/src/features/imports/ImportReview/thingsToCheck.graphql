@@ -4,6 +4,7 @@ fragment ThingsToCheck_check on ImportCheck {
   count
   field
   reason
+  managerProblem
   sources {
     id
     name

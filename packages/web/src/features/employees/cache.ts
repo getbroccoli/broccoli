@@ -1,16 +1,13 @@
 import type { ApolloCache } from "@apollo/client";
 
-import {
-  type DeleteEmployeeMutation,
-  EmployeeNameFragmentDoc,
-  EmployeePanelDocument,
-} from "@/__generated__/graphql";
+import { EmployeeNameFragmentDoc, EmployeePanelDocument } from "@/__generated__/graphql";
 import { evictRecord } from "@/apollo";
 import { addHistoryLine } from "@/features/records";
 
-type ReportHistoryLine = NonNullable<
-  DeleteEmployeeMutation["employee"]["delete"]["reportHistoryLines"]
->[number];
+/** A history line a change returned, with the employee it is about. */
+type EmployeeHistoryLine = Parameters<typeof addHistoryLine>[1]["line"] & {
+  record?: { id: string } | null;
+};
 
 /**
  * Records the employee as absent before eviction, so an active panel query stays complete
@@ -29,10 +26,10 @@ export function forgetEmployee(cache: ApolloCache, id: string): void {
   });
 }
 
-/** Adds the "manager removed" line to the cached history of each person a removed employee managed. */
-export function addReportHistoryLines(
+/** Adds lines a change just wrote, such as "manager removed", to each employee's cached history. */
+export function addEmployeeHistoryLines(
   cache: ApolloCache,
-  lines: readonly ReportHistoryLine[],
+  lines: readonly EmployeeHistoryLine[],
 ): void {
   for (const line of lines) {
     if (line.record) {

@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 
-import { addReportHistoryLines, forgetEmployee } from "../cache";
+import { addEmployeeHistoryLines, forgetEmployee } from "../cache";
 
 type Props = {
   open: boolean;
@@ -33,7 +33,7 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
     DeleteEmployeeDocument,
     {
       update: (cache, { data }) =>
-        addReportHistoryLines(cache, data?.employee.delete.reportHistoryLines ?? []),
+        addEmployeeHistoryLines(cache, data?.employee.delete.reportHistoryLines ?? []),
     },
   );
   const failed = Boolean(error || payloadError);

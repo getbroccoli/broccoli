@@ -7,7 +7,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import {
   ApproveImportDocument,
@@ -16,6 +16,7 @@ import {
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import {
+  BulkBar,
   DataTable,
   type DataTablePager,
   TableSearchField,
@@ -33,12 +34,15 @@ import { IMPORT_REVIEW_COLUMNS, useImportReviewRows } from "./importReviewColumn
 import { type ImportReviewSearch, toImportReviewVariables } from "./importReviewSearch";
 import { ApproveNote } from "./ApproveNote";
 import { CheckFilterLine } from "./CheckFilterLine";
+import { ChooseManagerButton } from "./ChooseManagerButton";
+import { employeeNameOf } from "./employeeFields";
 import { SourceChips } from "./SourceChips";
 import { ThingsToCheck } from "./ThingsToCheck";
 
 /**
  * The setup review step: one row per import employee, where the owner settles what the
- * sources disagree on, fixes values and leaves people out, then approves. Approve adds
+ * sources disagree on, fixes values, sets managers, alone or for many selected, and leaves people
+ * out, then approves. Approve adds
  * the ready ones; the router then reloads and routing sends the owner on.
  */
 export function ImportReview() {
@@ -62,6 +66,8 @@ export function ImportReview() {
     error,
   });
   const rows = useImportReviewRows(list.rows);
+  // Kept across pages and searches, so a selection can span them.
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
   const sources = (data ?? previousData)?.import.sources ?? [];
   const [approveImport, { error: approveError, payloadError: approveConflict }] =
     usePayloadMutation(ApproveImportDocument);
@@ -162,6 +168,23 @@ export function ImportReview() {
       )}
       <DataTable
         columns={IMPORT_REVIEW_COLUMNS}
+        selection={{
+          selectedIds,
+          onChange: setSelectedIds,
+          rowLabel: ({ firstName, lastName }) => employeeNameOf(firstName.value, lastName.value),
+        }}
+        bulkBar={
+          <BulkBar
+            count={selectedIds.size}
+            actions={
+              <ChooseManagerButton
+                employeeIds={[...selectedIds]}
+                onChosen={() => setSelectedIds(new Set())}
+              />
+            }
+            onClear={() => setSelectedIds(new Set())}
+          />
+        }
         rows={rows}
         getRowId={(person) => person.id}
         sort={list.sort}

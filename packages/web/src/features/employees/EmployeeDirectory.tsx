@@ -18,10 +18,11 @@ import {
   useEmployeeRows,
 } from "./employeeColumns";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
+import { SetManagersButton } from "./SetManagersButton";
 
 /**
  * The People directory: employees one page at a time, with sort, search and paging in the URL.
- * Admins also see who can sign in, and select people to invite.
+ * Admins also see who can sign in, and select people to invite or give a manager.
  */
 export function EmployeeDirectory() {
   const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
@@ -75,9 +76,15 @@ export function EmployeeDirectory() {
           <BulkBar
             count={selected.length}
             actions={
-              <Button size="sm" onClick={() => setInviting(true)}>
-                {t("invites.bulk.invite")}
-              </Button>
+              <>
+                <SetManagersButton
+                  employeeIds={selected.map(({ id }) => id)}
+                  onSet={() => setSelectedIds(new Set())}
+                />
+                <Button size="sm" onClick={() => setInviting(true)}>
+                  {t("invites.bulk.invite")}
+                </Button>
+              </>
             }
             onClear={() => setSelectedIds(new Set())}
           />
