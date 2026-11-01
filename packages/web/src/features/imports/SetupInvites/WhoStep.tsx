@@ -116,7 +116,9 @@ export function WhoStep({ search }: Props) {
             detail={
               data && managers.length === 0
                 ? t("setup.who.noManagers")
-                : t("setup.who.adminsAndManagersDetail", { count: String(managers.length) })
+                : managers.length === 1
+                  ? t("setup.who.adminsAndManagersDetailOne")
+                  : t("setup.who.adminsAndManagersDetail", { count: String(managers.length) })
             }
           >
             <PeopleNames people={managers.map(setupPersonName)} />
@@ -126,7 +128,11 @@ export function WhoStep({ search }: Props) {
             chosen={audience}
             onChoose={setAudience}
             title={t("setup.who.everyone")}
-            detail={t("setup.who.everyoneDetail", { count: String(everyone) })}
+            detail={
+              everyone === 1
+                ? t("setup.who.everyoneDetailOne")
+                : t("setup.who.everyoneDetail", { count: String(everyone) })
+            }
           />
         </fieldset>
       </SetupStepForm>

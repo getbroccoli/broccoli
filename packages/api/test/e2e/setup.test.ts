@@ -8,6 +8,17 @@ test("exposes no owner sign-in method on a self-hosted instance without a sessio
   expect(await response.json()).toEqual({ data: { setup: { ownerSignInMethod: null } } });
 });
 
+test("the setup holder can read invite delivery before the owner exists", async ({ env }) => {
+  const browser = env.browser();
+  await browser.post("/api/auth/setup/start", undefined);
+
+  const response = await browser.graphql("{ setup { inviteDelivery } }");
+
+  expect(await response.json()).toEqual({
+    data: { setup: { inviteDelivery: "COPIED_BY_OWNER" } },
+  });
+});
+
 test("starting the demo signs in its owner for seven days and completes setup", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   const before = Date.now();

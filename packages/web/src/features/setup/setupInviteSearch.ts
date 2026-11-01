@@ -24,6 +24,9 @@ const schema = z.object({
     .transform((me) => me || null),
 });
 
+/** No choice yet: what the setup pages' URLs leave out. */
+export const DEFAULT_SETUP_INVITE_SEARCH: SetupInviteSearch = { audience: "ONLY_ADMINS", me: null };
+
 /** The choices in a setup page's search params; anything unknown chooses nobody. */
 export function parseSetupInviteSearch(search: Record<string, unknown>): SetupInviteSearch {
   return schema.parse(search);

@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 
 import { OwnerStep } from "@/features/imports";
-import { parseSetupInviteSearch, requireSetupPage } from "@/features/setup";
+import {
+  DEFAULT_SETUP_INVITE_SEARCH,
+  parseSetupInviteSearch,
+  requireSetupPage,
+} from "@/features/setup";
 
 /**
  * The last step of self-hosted setup: the browser holding it creates the owner account,
@@ -9,6 +13,7 @@ import { parseSetupInviteSearch, requireSetupPage } from "@/features/setup";
  */
 export const Route = createFileRoute("/setup/")({
   validateSearch: parseSetupInviteSearch,
+  search: { middlewares: [stripSearchParams(DEFAULT_SETUP_INVITE_SEARCH)] },
   beforeLoad: (gate) => {
     requireSetupPage("owner", gate);
   },

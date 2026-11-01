@@ -57,7 +57,7 @@ enum InviteDelivery {
 
 # Adds how invites reach people to the setup state; the server merges the types.
 type Setup {
-  "How invites reach people now: SENT_BY_EMAIL while mail is chosen, else COPIED_BY_OWNER. Null for callers who may not manage invites."
+  "How invites reach people now: SENT_BY_EMAIL while mail is chosen, else COPIED_BY_OWNER. Null for callers who may not manage invites; the setup holder sees it for setup's invites."
   inviteDelivery: InviteDelivery
 }
 
