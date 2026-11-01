@@ -141,9 +141,17 @@ export function groupEmployeeRecords(
   });
 }
 
-/** A conflict the owner has not settled: two values or more and the default still shown. */
-export function hasOpenConflict({ options, choice }: ImportEmployeeValue): boolean {
-  return options.length > 1 && choice === "default";
+/**
+ * Whether the owner has a conflict to settle on the field: two values or more and the default still
+ * shown, unless a chosen manager settles the manager over the sources.
+ */
+export function hasOpenFieldConflict(
+  employee: ImportEmployee,
+  field: ImportEmployeeField,
+): boolean {
+  const { options, choice } = employee.values[field];
+  const settledByChoice = field === "manager" && employee.chosenManager !== null;
+  return options.length > 1 && choice === "default" && !settledByChoice;
 }
 
 /** The sources in the order their values win: files oldest first, then Slack. */

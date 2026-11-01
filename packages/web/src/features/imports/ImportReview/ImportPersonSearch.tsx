@@ -13,11 +13,13 @@ type Props = {
   onPick: (person: PersonOption | null) => void;
 };
 
-/** Searches the import's people by name or email to pick one, or none. */
+/** Searches the people Approve would add, by name or email, to pick one, or none. */
 export function ImportPersonSearch({ label, excludedId, selectedId, onPick }: Props) {
   const { search, setSearch, typed, query } = usePersonSearch();
   const { data, previousData, loading, error } = useQuery(ImportPersonOptionsDocument, {
     variables: { search: query || null },
+    // Review edits change who matches, so a repeated search asks again.
+    fetchPolicy: "cache-and-network",
   });
   const people =
     (data ?? previousData)?.import.employees.edges

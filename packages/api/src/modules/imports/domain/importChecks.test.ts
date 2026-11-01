@@ -134,6 +134,44 @@ it("does not count a left-out employee's conflicts or incomplete values", () => 
   expect(listChecks([file, slack], employees, new Map())).toEqual([]);
 });
 
+it("excludes a manager conflict settled by choosing a person from counts and filters", () => {
+  const employees = groupEmployeeRecords(
+    [file, slack],
+    [
+      { ...row, manager: "Robin Reed" },
+      { ...row, id: member.id, sourceId: slack.id, manager: "Taylor Brook" },
+      { ...row, id: "robin", email: "robin@example.com" },
+    ],
+    [
+      {
+        key: row.email!,
+        leftOut: false,
+        values: {},
+        chosenManager: { employeeKey: "robin@example.com" },
+      },
+    ],
+  );
+  const check = parseCheckId("conflict:manager");
+
+  expect(listChecks([file, slack], employees, new Map())).toEqual([]);
+  expect(employees.filter((employee) => isInCheck(employee, check, new Map()))).toEqual([]);
+});
+
+it("excludes a manager conflict settled by choosing no manager from counts and filters", () => {
+  const employees = groupEmployeeRecords(
+    [file, slack],
+    [
+      { ...row, manager: "Robin Reed" },
+      { ...row, id: member.id, sourceId: slack.id, manager: "Taylor Brook" },
+    ],
+    [{ key: row.email!, leftOut: false, values: {}, chosenManager: { noManager: true } }],
+  );
+  const check = parseCheckId("conflict:manager");
+
+  expect(listChecks([file, slack], employees, new Map())).toEqual([]);
+  expect(employees.filter((employee) => isInCheck(employee, check, new Map()))).toEqual([]);
+});
+
 it("parses a conflict check id", () => {
   expect(parseCheckId("conflict:jobTitle")).toEqual({ kind: "conflict", field: "jobTitle" });
 });
@@ -162,41 +200,6 @@ it.each<CheckFilter>([
 
   expect(isInCheck(employee!, check, new Map())).toBe(false);
 });
-
-const fileState = {
-  id: "file",
-  kind: "file",
-  name: "staff.csv",
-  readAt: new Date("2026-10-01"),
-  status: "mapped",
-  failure: null,
-  failureMessage: null,
-  readBy: "parsed_by_broccoli",
-  pickedUpByExternalAgentAt: null,
-  externalAgentProgress: null,
-  originalReadAllowedAt: null,
-  originalReadAiSource: null,
-} as const;
-const file = new ImportSource(fileState);
-const slack = new ImportSource({ ...fileState, id: "slack", kind: "slack", name: "Workspace" });
-const row: ImportEmployeeRecord = {
-  id: "row",
-  sourceId: file.id,
-  firstName: "Avery",
-  lastName: "Stone",
-  email: "avery@example.com",
-  jobTitle: "Designer",
-  manager: null,
-  externalRecordId: null,
-  startDate: null,
-  photoFileId: null,
-};
-const member: ImportEmployeeRecord = {
-  ...row,
-  id: "member",
-  sourceId: slack.id,
-  jobTitle: "Engineer",
-};
 
 it("counts manager problems without people who are left out", () => {
   const employees = groupEmployeeRecords(
@@ -244,3 +247,38 @@ it("includes only people with the requested manager problem who are not left out
     employees.filter((employee) => isInCheck(employee, check, managers)).map(({ key }) => key),
   ).toEqual([row.email]);
 });
+
+const fileState = {
+  id: "file",
+  kind: "file",
+  name: "staff.csv",
+  readAt: new Date("2026-10-01"),
+  status: "mapped",
+  failure: null,
+  failureMessage: null,
+  readBy: "parsed_by_broccoli",
+  pickedUpByExternalAgentAt: null,
+  externalAgentProgress: null,
+  originalReadAllowedAt: null,
+  originalReadAiSource: null,
+} as const;
+const file = new ImportSource(fileState);
+const slack = new ImportSource({ ...fileState, id: "slack", kind: "slack", name: "Workspace" });
+const row: ImportEmployeeRecord = {
+  id: "row",
+  sourceId: file.id,
+  firstName: "Avery",
+  lastName: "Stone",
+  email: "avery@example.com",
+  jobTitle: "Designer",
+  manager: null,
+  externalRecordId: null,
+  startDate: null,
+  photoFileId: null,
+};
+const member: ImportEmployeeRecord = {
+  ...row,
+  id: "member",
+  sourceId: slack.id,
+  jobTitle: "Engineer",
+};

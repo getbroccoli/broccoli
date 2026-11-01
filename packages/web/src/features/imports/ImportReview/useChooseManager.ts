@@ -22,10 +22,10 @@ export function useChooseManager() {
       toast.error(t("setup.review.manager.failed"));
       return false;
     }
+    // The server skips the manager among the people.
+    const count = employeeIds.filter((id) => id !== manager?.id).length;
     const people =
-      employeeIds.length === 1
-        ? t("setup.review.countOne")
-        : t("setup.review.count", { count: String(employeeIds.length) });
+      count === 1 ? t("setup.review.countOne") : t("setup.review.count", { count: String(count) });
     toast(
       manager
         ? t("setup.review.manager.set", { name: personName(manager), people })

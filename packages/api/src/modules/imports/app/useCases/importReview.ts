@@ -41,8 +41,8 @@ export interface ImportReview {
 }
 
 export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
-  /** `check` is a check's id: only its import employees. */
-  filter?: { search?: string | null; check?: string | null } | null;
+  /** `check` is a check's id: only its import employees; `ready`: only those Approve adds. */
+  filter?: { search?: string | null; check?: string | null; ready?: boolean | null } | null;
 }
 
 /**
@@ -75,7 +75,8 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
     readyEmployeeSources: sources.filter(({ id }) => readySourceIds.has(id)),
     checks: listChecks(sources, employees, managers),
     managers,
-    listEmployees: (args) => listEmployees(employees, managers, args),
+    listEmployees: (args) =>
+      listEmployees(args.filter?.ready ? readyEmployees : employees, managers, args),
     version: importVersion(employees, readyEmployees),
   };
 }

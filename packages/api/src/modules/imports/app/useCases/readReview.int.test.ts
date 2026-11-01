@@ -47,6 +47,25 @@ test("does not count a left-out import employee as ready", async ({ orm, seed })
   expect((await imports.reads.readReview(OWNER)).readyEmployees.length).toBe(1);
 });
 
+test("filters the employee list to people Approve would add", async ({ orm, seed }) => {
+  const source = await seed.importSource();
+  await seed.employee({ email: "taken@example.com" });
+  await seed.importEmployees(source.id, [
+    { email: "ready@example.com" },
+    { email: "incomplete@example.com", lastName: null },
+    { email: "leftout@example.com" },
+    { email: "taken@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  await imports.choices.setLeftOut(OWNER, { key: "leftout@example.com", leftOut: true });
+
+  const review = await imports.reads.readReview(OWNER);
+
+  expect(
+    review.listEmployees({ filter: { ready: true } }).edges.map(({ node }) => node.key),
+  ).toEqual(["ready@example.com"]);
+});
+
 test("does not count an import employee whose email an employee already has as ready", async ({
   orm,
   seed,

@@ -3,7 +3,7 @@ import type { Transact } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 import { parseEmployeeField } from "../../../employees";
 import {
-  hasOpenConflict,
+  hasOpenFieldConflict,
   IMPORT_EMPLOYEE_FIELDS,
   type ImportEmployee,
   type ImportEmployeeChoices,
@@ -78,7 +78,7 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
             (candidate) =>
               candidate.sourceId === sourceId && holdsRecord(employee, field, candidate.id),
           );
-          return hasOpenConflict(employee.values[field]) && record
+          return hasOpenFieldConflict(employee, field) && record
             ? withValue(employee, field, { recordId: record.id })
             : [];
         }),

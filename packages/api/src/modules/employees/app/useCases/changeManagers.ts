@@ -20,14 +20,14 @@ export async function changeManagers(
   const after = managerId === null ? null : await findAllowedManager(tx, employeeIds, managerId);
   const beforeIds = await employments.findManagerIds(employeeIds, today);
   const before = await findEmployees(tx, [...beforeIds.values()]);
-  const changes = new Map<string, FieldChange[]>();
-  for (const employeeId of employeeIds) {
-    const previous = before.get(beforeIds.get(employeeId) ?? "") ?? null;
-    if (previous?.id !== after?.id) {
-      await employments.setManager(employeeId, after?.id ?? null, today);
-    }
-    changes.set(employeeId, managerChanges(previous, after));
-  }
+  const changes = new Map(
+    employeeIds.map((employeeId) => [
+      employeeId,
+      managerChanges(before.get(beforeIds.get(employeeId) ?? "") ?? null, after),
+    ]),
+  );
+  const changed = employeeIds.filter((employeeId) => changes.get(employeeId)!.length > 0);
+  await employments.setManagers(new Map(changed.map((id) => [id, after?.id ?? null])), today);
   return changes;
 }
 

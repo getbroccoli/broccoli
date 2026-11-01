@@ -1,5 +1,5 @@
 import {
-  hasOpenConflict,
+  hasOpenFieldConflict,
   IMPORT_EMPLOYEE_FIELDS,
   type ImportEmployee,
   type ImportEmployeeField,
@@ -48,7 +48,7 @@ export function listChecks(
 ): ImportCheck[] {
   const counted = employees.filter(({ leftOut }) => !leftOut);
   const conflicts = IMPORT_EMPLOYEE_FIELDS.map((field): ImportCheck => {
-    const open = counted.filter(({ values }) => hasOpenConflict(values[field]));
+    const open = counted.filter((employee) => hasOpenFieldConflict(employee, field));
     return {
       id: `conflict:${field}`,
       kind: "conflict",
@@ -105,7 +105,7 @@ export function isInCheck(
   }
   switch (check.kind) {
     case "conflict":
-      return hasOpenConflict(employee.values[check.field]);
+      return hasOpenFieldConflict(employee, check.field);
     case "incomplete":
       return incompleteReason(employee) === check.reason;
     case "manager":

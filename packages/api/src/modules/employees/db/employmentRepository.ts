@@ -35,8 +35,11 @@ export interface EmploymentRepository {
    * depth: 1 for a direct report, 2 for theirs, and so on.
    */
   findReportsBelow(managerId: string, date: CalendarDate): Promise<{ id: string; depth: number }[]>;
-  /** Sets the manager of the employment held on `date`; throws when the employee holds none. */
-  setManager(employeeId: string, managerId: string | null, date: CalendarDate): Promise<void>;
+  /**
+   * Sets each employee's manager, by employee id, on the employment held on `date`, in one
+   * statement; throws when one holds none.
+   */
+  setManagers(managerIds: ReadonlyMap<string, string | null>, date: CalendarDate): Promise<void>;
   /** Removes `managerId` as manager from every employment naming them; returns whose they were. */
   clearManager(managerId: string): Promise<string[]>;
 }
@@ -123,14 +126,26 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
       return rows.rows;
     },
 
-    setManager: async (employeeId, managerId, date) => {
-      const updated = await orm()
-        .update(employments)
-        .set({ directManagerId: managerId })
-        .where(sql`${employments.employeeId} = ${employeeId} and ${heldOn(date)}`)
-        .returning({ id: employments.id });
-      if (updated.length === 0) {
-        throw new Error(`Employee ${employeeId} has no employment on or after ${date}`);
+    setManagers: async (managerIds, date) => {
+      if (managerIds.size === 0) {
+        return;
+      }
+      const changes = sql.join(
+        [...managerIds].map(
+          ([employeeId, managerId]) => sql`(${employeeId}::uuid, ${managerId}::uuid)`,
+        ),
+        sql`, `,
+      );
+      // An update from a list of values, which the query builder cannot express.
+      const updated = await orm().execute<{ employee_id: string }>(sql`
+        update ${employments} set direct_manager_id = changed.manager_id
+        from (values ${changes}) as changed (employee_id, manager_id)
+        where ${employments.employeeId} = changed.employee_id and ${heldOn(date)}
+        returning ${employments.employeeId}`);
+      if (updated.rows.length !== managerIds.size) {
+        throw new Error(
+          `An employee among ${managerIds.size} has no employment on or after ${date}`,
+        );
       }
     },
 

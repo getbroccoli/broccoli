@@ -36,7 +36,7 @@ mutation ChooseEmployeeManager($input: ImportChooseEmployeeManagerInput!) {
 query ImportPersonOptions($search: String) {
   import {
     id
-    employees(first: 8, filter: { search: $search }) {
+    employees(first: 8, filter: { search: $search, ready: true }) {
       edges {
         node {
           id

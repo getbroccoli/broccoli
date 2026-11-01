@@ -222,7 +222,6 @@ type EmployeeUpdatePayload {
 
 union EmployeeUpdateError = InvalidInputError | NotFoundError
 
-"The removed employee's id, or why the removal was refused."
 input EmployeeSetManagersInput {
   "1 to 1,000 employees."
   employeeIds: [ID!]!
@@ -240,6 +239,7 @@ type EmployeeSetManagersPayload {
 
 union EmployeeSetManagersError = InvalidInputError | NotFoundError
 
+"The removed employee's id, or why the removal was refused."
 type EmployeeDeletePayload {
   deletedEmployeeId: ID
   "The lines the removal added to the history of the people they managed."

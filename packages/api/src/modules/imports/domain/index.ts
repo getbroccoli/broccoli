@@ -10,7 +10,7 @@ export {
 } from "./fileMapping";
 export {
   groupEmployeeRecords,
-  hasOpenConflict,
+  hasOpenFieldConflict,
   IMPORT_EMPLOYEE_FIELDS,
   inSourceOrder,
   type ImportEmployee,

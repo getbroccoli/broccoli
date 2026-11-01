@@ -1,6 +1,6 @@
 import type { GraphqlContext, Resolvers } from "../../../core/graphql";
 import {
-  hasOpenConflict,
+  hasOpenFieldConflict,
   incompleteReason,
   type ImportEmployee,
   type ImportEmployeeField,
@@ -44,13 +44,14 @@ export function importEmployeeResolvers(
 }
 
 /** One field of an import employee, with the records behind each of its values. */
-function employeeValue({ records, values }: ImportEmployee, field: ImportEmployeeField) {
+function employeeValue(employee: ImportEmployee, field: ImportEmployeeField) {
+  const { records, values } = employee;
   const { value, choice, pickedRecordId, options } = values[field];
   return {
     value,
     choice: CHOICES[choice],
     pickedRecord: records.find(({ id }) => id === pickedRecordId) ?? null,
-    conflict: hasOpenConflict(values[field]),
+    conflict: hasOpenFieldConflict(employee, field),
     options: options.map((option) => ({
       value: option.value,
       records: records.filter(({ id }) => option.recordIds.includes(id)),

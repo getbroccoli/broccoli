@@ -205,7 +205,8 @@ export const setupEn = {
   "setup.review.filter.manager.managersFormALoop":
     "Showing people whose managers would manage each other",
   "setup.review.manager.noManager": "No manager",
-  "setup.review.manager.problem.NO_PERSON_MATCHES": "No one you’re adding is {reference}.",
+  "setup.review.manager.problem.NO_PERSON_MATCHES":
+    "{reference} matches no one else you’re adding.",
   "setup.review.manager.problem.SEVERAL_PEOPLE_MATCH":
     "Several people you’re adding are called {reference}.",
   "setup.review.manager.problem.MANAGERS_FORM_A_LOOP":

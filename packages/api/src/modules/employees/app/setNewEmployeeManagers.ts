@@ -21,9 +21,9 @@ export async function setNewEmployeeManagers(
       managers.set(employee.id, manager);
     }
   }
-  const today = todayInUtc();
-  for (const [employeeId, manager] of managers) {
-    await employmentRepository(tx).setManager(employeeId, manager.id, today);
-  }
+  await employmentRepository(tx).setManagers(
+    new Map([...managers].map(([employeeId, manager]) => [employeeId, manager.id])),
+    todayInUtc(),
+  );
   return managers;
 }

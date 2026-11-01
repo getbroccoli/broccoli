@@ -271,7 +271,7 @@ test("a start date edit waiting for a manager change lets it finish", async ({
     managerReady.resolve(rows[0]!.pid);
     await releaseManager.promise;
     await employeeRepository(tx).lockByIds([employee.id]);
-    await employmentRepository(tx).setManager(employee.id, manager.id, todayInUtc());
+    await employmentRepository(tx).setManagers(new Map([[employee.id, manager.id]]), todayInUtc());
   });
   const blockingPid = await managerReady.promise;
 

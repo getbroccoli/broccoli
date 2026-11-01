@@ -27,10 +27,10 @@ export function SetManagersButton({ employeeIds, onSet }: Props) {
 
   const pick = (manager: PersonOption | null) => {
     setOpen(false);
+    // The server skips the manager among the people.
+    const count = employeeIds.filter((id) => id !== manager?.id).length;
     const people =
-      employeeIds.length === 1
-        ? t("people.bulk.countOne")
-        : t("people.bulk.count", { count: String(employeeIds.length) });
+      count === 1 ? t("people.bulk.countOne") : t("people.bulk.count", { count: String(count) });
     setManagers({ variables: { input: { employeeIds, managerId: manager?.id ?? null } } }).then(
       () => {
         onSet();

@@ -128,3 +128,30 @@ test("refuses a typed manager reference", async ({ orm, seed }) => {
     fieldErrors: [{ field: "value", code: "invalid" }],
   });
 });
+
+test("choosing a source for all manager conflicts keeps a chosen person", async ({ orm, seed }) => {
+  const source = await seed.fileSource({ content: "x", status: "mapped" });
+  const other = await seed.fileSource({ content: "x", status: "mapped" });
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com", manager: "robin@example.com" },
+    { email: "robin@example.com" },
+    { email: "taylor@example.com" },
+  ]);
+  await seed.importEmployees(other.id, [
+    { email: "avery@example.com", manager: "taylor@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  await imports.choices.chooseManager(OWNER, {
+    keys: ["avery@example.com"],
+    managerKey: "taylor@example.com",
+  });
+
+  await imports.choices.chooseSourceForAll(OWNER, { field: "manager", sourceId: source.id });
+
+  const review = await importUseCases(orm).reads.readReview(OWNER);
+  const employee = review
+    .listEmployees({})
+    .edges.find(({ node }) => node.key === "avery@example.com")!.node;
+  expect(employee.chosenManager).toEqual({ employeeKey: "taylor@example.com" });
+  expect(review.managers.get(employee.key)?.manager?.key).toBe("taylor@example.com");
+});

@@ -26,8 +26,9 @@ export function matchManagers(
   employees: readonly ImportEmployee[],
   addable: readonly ImportEmployee[],
 ): Map<string, ImportManager> {
+  const candidates = indexCandidates(addable);
   const managers = new Map(
-    employees.map((employee) => [employee.key, managerOf(employee, addable)]),
+    employees.map((employee) => [employee.key, managerOf(employee, candidates)]),
   );
   for (const key of keysInLoops(managers)) {
     managers.set(key, { manager: null, problem: "managersFormALoop" });
@@ -37,29 +38,76 @@ export function matchManagers(
 
 const NO_MANAGER: ImportManager = { manager: null, problem: null };
 
-function managerOf(employee: ImportEmployee, addable: readonly ImportEmployee[]): ImportManager {
-  const others = addable.filter((candidate) => candidate !== employee);
+/** The addable import employees by each way a manager may be named, built once per review. */
+interface Candidates {
+  byKey: Map<string, ImportEmployee[]>;
+  /** By `<source id> <external record id>`, since IDs are local to a source. */
+  bySourceId: Map<string, ImportEmployee[]>;
+  byEmail: Map<string, ImportEmployee[]>;
+  byName: Map<string, ImportEmployee[]>;
+}
+
+function indexCandidates(addable: readonly ImportEmployee[]): Candidates {
+  const candidates: Candidates = {
+    byKey: new Map(),
+    bySourceId: new Map(),
+    byEmail: new Map(),
+    byName: new Map(),
+  };
+  for (const employee of addable) {
+    employee.keys.forEach((key) => addTo(candidates.byKey, key, employee));
+    for (const { sourceId, externalRecordId } of employee.records) {
+      if (externalRecordId !== null) {
+        addTo(candidates.bySourceId, `${sourceId} ${externalRecordId}`, employee);
+      }
+    }
+    if (employee.values.email.value !== null) {
+      addTo(candidates.byEmail, employee.values.email.value, employee);
+    }
+    addTo(candidates.byName, fullNameOf(employee), employee);
+  }
+  return candidates;
+}
+
+function addTo(index: Map<string, ImportEmployee[]>, key: string, employee: ImportEmployee) {
+  const held = index.get(key);
+  if (!held) {
+    index.set(key, [employee]);
+  } else if (held.at(-1) !== employee) {
+    // An employee is indexed in one go, so only its own repeats sit at the end.
+    held.push(employee);
+  }
+}
+
+function managerOf(employee: ImportEmployee, candidates: Candidates): ImportManager {
+  const others = (matches: ImportEmployee[] | undefined) =>
+    (matches ?? []).filter((candidate) => candidate !== employee);
   const chosen = employee.chosenManager;
   if (chosen) {
     if ("noManager" in chosen) {
       return NO_MANAGER;
     }
-    return found(others.filter(({ keys }) => keys.includes(chosen.employeeKey)));
+    return found(others(candidates.byKey.get(chosen.employeeKey)));
   }
   const reference = employee.values.manager.value;
   if (reference === null) {
     return NO_MANAGER;
   }
-  const byId = matchById(employee, reference, others);
+  const byId = [
+    ...new Set(
+      sourcesNaming(employee).flatMap((sourceId) =>
+        others(candidates.bySourceId.get(`${sourceId} ${reference}`)),
+      ),
+    ),
+  ];
   if (byId.length > 0) {
     return found(byId);
   }
   const email = parseEmail(reference);
   if (email !== null) {
-    return found(others.filter(({ values }) => values.email.value === email));
+    return found(others(candidates.byEmail.get(email)));
   }
-  const name = normalisedName(reference);
-  return found(others.filter((candidate) => fullNameOf(candidate) === name));
+  return found(others(candidates.byName.get(normalisedName(reference))));
 }
 
 function found(matches: readonly ImportEmployee[]): ImportManager {
@@ -71,23 +119,13 @@ function found(matches: readonly ImportEmployee[]): ImportManager {
     : { manager: null, problem: "severalPeopleMatch" };
 }
 
-/** The candidates holding a record with the reference as its ID, in the sources that name it; IDs are local to a source. */
-function matchById(
-  employee: ImportEmployee,
-  reference: string,
-  candidates: readonly ImportEmployee[],
-): ImportEmployee[] {
-  const naming = employee.values.manager.options.find(({ value }) => value === reference);
-  const sourceIds = new Set(
-    employee.records
-      .filter(({ id }) => naming?.recordIds.includes(id))
-      .map(({ sourceId }) => sourceId),
-  );
-  return candidates.filter(({ records }) =>
-    records.some(
-      ({ sourceId, externalRecordId }) => sourceIds.has(sourceId) && externalRecordId === reference,
-    ),
-  );
+/** The sources whose IDs the shown reference can name: the picked record's, else those holding it. */
+function sourcesNaming({ records, values }: ImportEmployee): string[] {
+  const { value, pickedRecordId, options } = values.manager;
+  const recordIds = pickedRecordId
+    ? [pickedRecordId]
+    : (options.find((option) => option.value === value)?.recordIds ?? []);
+  return records.filter(({ id }) => recordIds.includes(id)).map(({ sourceId }) => sourceId);
 }
 
 /** A full name compared without case or extra spaces; `Family, Given` reads as `Given Family`. */
@@ -101,17 +139,24 @@ function fullNameOf({ values }: ImportEmployee): string {
   return normalisedName([values.firstName.value, values.lastName.value].join(" "));
 }
 
-/** The keys of the import employees whose managers, followed up, come back to them. */
+/**
+ * The keys of the import employees whose managers, followed up, come back to them; each key is
+ * walked once.
+ */
 function keysInLoops(managers: ReadonlyMap<string, ImportManager>): Set<string> {
   const inLoops = new Set<string>();
+  const walked = new Set<string>();
   for (const start of managers.keys()) {
     const path: string[] = [];
+    const onPath = new Set<string>();
     let key: string | undefined = start;
-    while (key !== undefined && !path.includes(key) && !inLoops.has(key)) {
+    while (key !== undefined && !walked.has(key)) {
+      walked.add(key);
       path.push(key);
+      onPath.add(key);
       key = managers.get(key)?.manager?.key;
     }
-    if (key !== undefined && path.includes(key)) {
+    if (key !== undefined && onPath.has(key)) {
       path.slice(path.indexOf(key)).forEach((member) => inLoops.add(member));
     }
   }

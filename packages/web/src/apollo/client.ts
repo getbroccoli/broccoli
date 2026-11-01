@@ -26,7 +26,12 @@ export function createApolloClient({ onUnauthenticated }: ApolloClientOptions): 
     ]),
     cache: new InMemoryCache({
       possibleTypes: introspection.possibleTypes,
-      typePolicies: withLiveEdges(typePolicies),
+      typePolicies: withLiveEdges({
+        ...typePolicies,
+        // A value has no id, so a query naming only some of its fields, such as a manager's name,
+        // must add to the value review holds rather than replace it.
+        ImportEmployeeValue: { merge: true },
+      }),
     }),
     dataMasking: true,
   });

@@ -72,6 +72,33 @@ it("does not match an ID from another source", () => {
   });
 });
 
+it("matches the manager ID in the picked record's source when sources reuse the ID", () => {
+  const other = new ImportSource({ ...source, id: "other" });
+  const employees = groupEmployeeRecords(
+    [file, other],
+    [
+      { ...avery, manager: "42" },
+      { ...avery, id: "avery-other", sourceId: other.id, manager: "42" },
+      { ...robin, externalRecordId: "42" },
+      {
+        ...robin,
+        id: "taylor",
+        sourceId: other.id,
+        firstName: "Taylor",
+        lastName: "Brook",
+        email: "taylor@example.com",
+        externalRecordId: "42",
+      },
+    ],
+    [{ key: avery.email!, leftOut: false, values: { manager: { recordId: avery.id } } }],
+  );
+
+  expect(matchManagers(employees, employees).get(avery.email!)).toEqual({
+    manager: employees.find(({ key }) => key === robin.email),
+    problem: null,
+  });
+});
+
 it("reports a name shared by several people", () => {
   const employees = groupEmployeeRecords(
     [file],

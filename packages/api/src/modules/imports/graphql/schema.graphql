@@ -109,6 +109,8 @@ input ImportEmployeeFilter {
   search: String
   "Only the import employees of this check."
   check: ID
+  "Only the import employees Approve would add: ready and not left out."
+  ready: Boolean
 }
 
 "A field of an import employee the owner can choose."

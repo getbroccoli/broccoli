@@ -53,7 +53,10 @@ export class TestSeed {
   }
 
   async manager(employeeId: string, managerId: string | null): Promise<void> {
-    await employmentRepository(this.orm).setManager(employeeId, managerId, todayInUtc());
+    await employmentRepository(this.orm).setManagers(
+      new Map([[employeeId, managerId]]),
+      todayInUtc(),
+    );
   }
 
   /** Makes the instance managed, as the accounts service assigns it. */
