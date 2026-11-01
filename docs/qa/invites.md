@@ -15,6 +15,8 @@ A manual check of inviting people from People, by email and by copied link, and 
 
 ## People
 
+- [ ] After a setup where the owner chose their own person on "Who uses Broccoli", that person shows Joined; see [Who uses Broccoli](who-uses-broccoli.md).
+
 - [ ] As the owner, People shows a checkbox on every row, plainly visible without hovering, a "Select this page" checkbox in the header, and a "Sign-in" column: "Not invited" for everyone at first. Demo and joined people can be selected too; the invite dialog lists them as skipped.
 - [ ] Clicking a checkbox selects the row without opening the person's panel; the toolbar becomes "N selected", Invite and Clear. Clear empties the selection.
 - [ ] Selecting people on two pages keeps both selections.

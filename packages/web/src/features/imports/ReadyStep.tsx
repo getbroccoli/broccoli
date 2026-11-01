@@ -4,26 +4,42 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { CompleteSetupDocument, ReadyStepDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
-import { SetupLayout, SetupStepForm } from "@/features/setup";
+import { type SetupInviteSearch, SetupLayout, SetupStepForm } from "@/features/setup";
 import { t } from "@/i18n";
 import { useRouteAction } from "@/lib/useRouteAction";
 
 import { ApprovedPeopleSummary } from "./ApprovedPeopleSummary";
-import { BackToReview } from "./BackToReview";
+import { BackToWho } from "./SetupInvites/BackToWho";
+import { finishLabel } from "./SetupInvites/finishLabel";
+import { SetupInviteSection } from "./SetupInvites/SetupInviteSection";
+import { useSetupInvites } from "./SetupInvites/useSetupInvites";
+
+type Props = {
+  /** What the owner chose on "Who uses Broccoli". */
+  search: SetupInviteSearch;
+};
 
 /**
- * The last step of managed setup: the people it added and where they came from. Start
- * adds the approved people and completes setup, which routing follows into the app; Back
- * reopens the review.
+ * The last step of managed setup: the people it adds, and the invites the owner chose. Start
+ * adds the people, links the owner, sends the invites and completes setup, which routing follows
+ * into the app once any links are copied; Back returns to "Who uses Broccoli".
  */
-export function ReadyStep() {
+export function ReadyStep({ search }: Props) {
   const { data } = useQuery(ReadyStepDocument, { fetchPolicy: "network-only" });
   const [completeSetup, { error, payloadError }] = usePayloadMutation(CompleteSetupDocument);
   const [run, starting] = useRouteAction();
+  const invites = useSetupInvites(search);
   const company = data?.company.name;
+  const noteHasLink =
+    payloadError?.__typename === "InvalidInputError" &&
+    payloadError.fields.some(({ field, code }) => field === "note" && code === "has_link");
 
   // `error` or `payloadError`, such as another tab having gone back to the review, shows a failure.
-  const start = () => run(() => completeSetup());
+  const start = () =>
+    run(async () => {
+      const { invites: sent } = await completeSetup({ variables: { input: invites.choices } });
+      await invites.finish(sent ?? []);
+    });
 
   return (
     <SetupLayout
@@ -37,21 +53,30 @@ export function ReadyStep() {
         onSubmit={start}
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <BackToReview />
-            <Button type="submit" size="lg" className="ml-auto h-10 gap-2 px-4" disabled={starting}>
-              {t(starting ? "setup.ready.starting" : "setup.ready.start")}
+            <BackToWho search={search} />
+            <Button
+              type="submit"
+              size="lg"
+              className="ml-auto h-10 gap-2 px-4"
+              disabled={starting || !invites.loaded}
+            >
+              {starting
+                ? t("setup.ready.starting")
+                : finishLabel(invites, "setup.ready.start", "setup.ready.startAnd")}
               <ArrowRight weight="bold" aria-hidden />
             </Button>
           </div>
         }
       >
         <ApprovedPeopleSummary showEmpty />
-        {(error || payloadError) && (
+        <SetupInviteSection invites={invites} noteHasLink={noteHasLink} />
+        {(error || payloadError) && !noteHasLink && (
           <p role="alert" className="text-center text-sm text-destructive">
             {t("setup.ready.failed")}
           </p>
         )}
       </SetupStepForm>
+      {invites.linksDialog}
     </SetupLayout>
   );
 }

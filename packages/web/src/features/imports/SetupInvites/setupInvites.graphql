@@ -1,0 +1,51 @@
+query SetupInvitees($audience: SetupInviteAudience!, $me: ID) {
+  company {
+    id
+    name
+  }
+  setup {
+    id
+    inviteDelivery
+  }
+  import {
+    id
+    setupInvitees(audience: $audience, ownerEmployeeKey: $me) {
+      ...SetupPerson @unmask
+    }
+  }
+}
+
+query WhoUsesBroccoli($me: ID, $meSearch: String) {
+  import {
+    id
+    ownerCandidate {
+      ...SetupPerson @unmask
+    }
+    chosen: employees(first: 1, filter: { search: $meSearch, ready: true }) {
+      edges {
+        node {
+          ...SetupPerson @unmask
+        }
+      }
+    }
+    everyone: setupInvitees(audience: EVERYONE, ownerEmployeeKey: $me) {
+      id
+    }
+    managers: setupInvitees(audience: ADMINS_AND_MANAGERS, ownerEmployeeKey: $me) {
+      ...SetupPerson @unmask
+    }
+  }
+}
+
+fragment SetupPerson on ImportEmployee {
+  id
+  firstName {
+    value
+  }
+  lastName {
+    value
+  }
+  email {
+    value
+  }
+}

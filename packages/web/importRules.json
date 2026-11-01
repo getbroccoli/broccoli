@@ -81,6 +81,7 @@
       "src/features/demo",
       "src/features/employees",
       "src/features/externalAgents",
+      "src/features/invites",
       "src/features/setup",
       "src/i18n",
       "src/lib/class-names",

@@ -1,14 +1,26 @@
-mutation CompleteSetup {
+mutation CompleteSetup($input: SetupCompleteInput) {
   setup {
-    complete {
+    complete(input: $input) {
       setup {
         id
         step
+      }
+      invites {
+        employeeId
+        name
+        expiresAt
+        link
       }
       error {
         __typename
         ... on Error {
           message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
         }
       }
     }

@@ -11,7 +11,12 @@ import { t, type MessageKey } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
 
 import { NewPasswordField } from "./NewPasswordField";
-import { type SetupResult, setUpOwner } from "./setupApi";
+import {
+  type OwnerSetupChoices,
+  type OwnerSetupInvite,
+  type SetupResult,
+  setUpOwner,
+} from "./setupApi";
 import type { SetupWidth } from "./SetupLayout";
 import { SetupStepForm } from "./SetupStepForm";
 
@@ -38,6 +43,23 @@ type Props = {
   /** Shown on the left of the footer, such as a way back out of setup's last step. */
   secondaryAction?: ReactNode;
   width?: SetupWidth;
+  /** Pre-fills the email, such as the work email of the person the owner said they are. */
+  defaultEmail?: string;
+  /** Shown below the fields, such as the invites creating the account sends. */
+  children?: ReactNode;
+  /** What the owner chose on "Who uses Broccoli"; none links and invites nobody. */
+  choices?: OwnerSetupChoices;
+  /** Runs once the account exists, with the invites it sent, before the owner enters the app. */
+  onCreated?: (invites: OwnerSetupInvite[]) => Promise<void>;
+  /** Runs when the account was refused for its invite note, with the note's error codes. */
+  onNoteRefused?: (codes: string[]) => void;
+  submitLabel?: string;
+};
+
+const NO_CHOICES: OwnerSetupChoices = {
+  ownerEmployeeKey: null,
+  inviteAudience: "ONLY_ADMINS",
+  inviteNote: null,
 };
 
 /**
@@ -45,16 +67,35 @@ type Props = {
  * signed-in owner to the directory. On a conflict, such as an owner created first, the
  * reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
+export function OwnerSetupForm({
+  intro,
+  secondaryAction,
+  width,
+  defaultEmail = "",
+  children,
+  choices = NO_CHOICES,
+  onCreated,
+  onNoteRefused,
+  submitLabel,
+}: Props) {
   const emailInput = useRef<HTMLInputElement>(null);
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
   const [createAndReload, creating] = useSessionChange(async (email: string, password: string) => {
     setFailure(null);
-    const result = await setUpOwner(email, password);
-    // On a conflict, setup moved on in another browser: reloading shows where.
-    if (result === "ok" || result === "conflict") {
+    const { result, invites, fieldErrors } = await setUpOwner(email, password, choices);
+    if (result === "ok") {
+      await onCreated?.(invites);
       return true;
+    }
+    // On a conflict, setup moved on in another browser: reloading shows where.
+    if (result === "conflict") {
+      return true;
+    }
+    const noteCodes = fieldErrors.flatMap(({ field, code }) => (field === "note" ? [code] : []));
+    if (noteCodes.length > 0 && onNoteRefused) {
+      onNoteRefused(noteCodes);
+      return false;
     }
     setFailure(FAILURE_MESSAGES[result]);
     passwordInput.current?.focus();
@@ -62,7 +103,7 @@ export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
   });
 
   const form = useForm({
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: defaultEmail, password: "" },
     validators: { onSubmit: ownerSetupSchema },
     onSubmit: ({ value }) => createAndReload(value.email, value.password),
     // Focus takes a screen reader to the field and reads its error with it.
@@ -91,7 +132,7 @@ export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
             className="ml-auto h-10 gap-2 px-4"
             disabled={isSubmitting || !isFilledIn}
           >
-            {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
+            {isSubmitting ? t("setup.owner.submitting") : (submitLabel ?? t("setup.owner.submit"))}
             <ArrowRight weight="bold" aria-hidden />
           </Button>
         </div>
@@ -140,6 +181,7 @@ export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
           />
         )}
       </form.Field>
+      {children}
       {failure && (
         <p role="alert" className="text-sm text-destructive">
           {t(failure)}

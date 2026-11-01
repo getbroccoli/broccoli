@@ -4,3 +4,5 @@ export { ImportStep } from "./ImportStep";
 export { BackToReview } from "./BackToReview";
 export { ReadyStep } from "./ReadyStep";
 export { importSearch } from "./importSearch";
+export { OwnerStep } from "./SetupInvites/OwnerStep";
+export { WhoStep } from "./SetupInvites/WhoStep";

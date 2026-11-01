@@ -7,3 +7,4 @@ export { SetupInProgress } from "./SetupInProgress";
 export { SetupStepForm } from "./SetupStepForm";
 export { requireFinishedSetup, requireSetupPage, SetupLayout, setupStepPage } from "./SetupLayout";
 export { useSetupPages } from "./useSetupPages";
+export { parseSetupInviteSearch, type SetupInviteSearch } from "./setupInviteSearch";
