@@ -184,11 +184,12 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
           .values(
             records
               .slice(start, start + INSERT_BATCH_SIZE)
-              .map(({ sourceKey, raw, values, photoUrl }) => ({
+              .map(({ sourceKey, externalRecordId, raw, values, photoUrl }) => ({
                 sourceId,
                 type: "employee" as const,
                 typeVersion: IMPORT_EMPLOYEE_VERSION,
                 sourceKey,
+                externalRecordId,
                 raw,
                 values,
                 photoUrl: photoUrl ?? null,
@@ -198,6 +199,7 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
             target: [importRecords.sourceId, importRecords.type, importRecords.sourceKey],
             set: {
               typeVersion: sql`excluded.type_version`,
+              externalRecordId: sql`excluded.external_record_id`,
               raw: sql`excluded.raw`,
               values: sql`excluded.values`,
               photoUrl: sql`excluded.photo_url`,
@@ -221,13 +223,16 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
         await orm()
           .insert(importChoices)
           .values(
-            choices.slice(start, start + INSERT_BATCH_SIZE).map(({ key, leftOut, values }) => ({
-              type,
-              typeVersion: IMPORT_EMPLOYEE_CHOICES_VERSION,
-              key,
-              leftOut,
-              values,
-            })),
+            choices
+              .slice(start, start + INSERT_BATCH_SIZE)
+              .map(({ key, leftOut, values, chosenManager }) => ({
+                type,
+                typeVersion: IMPORT_EMPLOYEE_CHOICES_VERSION,
+                key,
+                leftOut,
+                values,
+                chosenManager: chosenManager ?? null,
+              })),
           )
           .onConflictDoUpdate({
             target: [importChoices.type, importChoices.key],
@@ -235,6 +240,7 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
               typeVersion: sql`excluded.type_version`,
               leftOut: sql`excluded.left_out`,
               values: sql`excluded.values`,
+              chosenManager: sql`excluded.chosen_manager`,
               updatedAt: sql`now()`,
             },
           });

@@ -10,6 +10,11 @@ import {
   incompleteReason,
   type IncompleteReason,
 } from "./importEmployeeMapping";
+import {
+  IMPORT_MANAGER_PROBLEMS,
+  type ImportManager,
+  type ImportManagerProblem,
+} from "./importManagers";
 import type { ImportSource } from "./importSource";
 
 /** One kind of thing the owner may want to settle in review; none blocks Approve. */
@@ -27,12 +32,19 @@ export type ImportCheck =
       kind: "incomplete";
       reason: IncompleteReason;
       count: number;
+    }
+  | {
+      id: `manager:${ImportManagerProblem}`;
+      kind: "manager";
+      problem: ImportManagerProblem;
+      count: number;
     };
 
 /** The checks with anything left, conflicts first; left-out import employees count for none. */
 export function listChecks(
   sources: readonly ImportSource[],
   employees: readonly ImportEmployee[],
+  managers: ReadonlyMap<string, ImportManager>,
 ): ImportCheck[] {
   const counted = employees.filter(({ leftOut }) => !leftOut);
   const conflicts = IMPORT_EMPLOYEE_FIELDS.map((field): ImportCheck => {
@@ -51,13 +63,20 @@ export function listChecks(
     reason,
     count: counted.filter((employee) => incompleteReason(employee) === reason).length,
   }));
-  return [...conflicts, ...incomplete].filter(({ count }) => count > 0);
+  const managerProblems = IMPORT_MANAGER_PROBLEMS.map((problem): ImportCheck => ({
+    id: `manager:${problem}`,
+    kind: "manager",
+    problem,
+    count: counted.filter(({ key }) => managers.get(key)?.problem === problem).length,
+  }));
+  return [...conflicts, ...incomplete, ...managerProblems].filter(({ count }) => count > 0);
 }
 
 /** Which import employees a check id stands for; an id that is no check stands for no one. */
 export type CheckFilter =
   | { kind: "conflict"; field: ImportEmployeeField }
   | { kind: "incomplete"; reason: IncompleteReason }
+  | { kind: "manager"; problem: ImportManagerProblem }
   | { kind: "none" };
 
 /** Reads a check id a client sent, such as `conflict:jobTitle`. */
@@ -68,11 +87,19 @@ export function parseCheckId(checkId: string): CheckFilter {
     return { kind, field };
   }
   const reason = INCOMPLETE_REASONS.find((candidate) => candidate === name);
-  return kind === "incomplete" && reason ? { kind, reason } : { kind: "none" };
+  if (kind === "incomplete" && reason) {
+    return { kind, reason };
+  }
+  const problem = IMPORT_MANAGER_PROBLEMS.find((candidate) => candidate === name);
+  return kind === "manager" && problem ? { kind, problem } : { kind: "none" };
 }
 
 /** Whether the import employee belongs to the check; a left-out one belongs to none. */
-export function isInCheck(employee: ImportEmployee, check: CheckFilter): boolean {
+export function isInCheck(
+  employee: ImportEmployee,
+  check: CheckFilter,
+  managers: ReadonlyMap<string, ImportManager>,
+): boolean {
   if (employee.leftOut) {
     return false;
   }
@@ -81,6 +108,8 @@ export function isInCheck(employee: ImportEmployee, check: CheckFilter): boolean
       return hasOpenConflict(employee.values[check.field]);
     case "incomplete":
       return incompleteReason(employee) === check.reason;
+    case "manager":
+      return managers.get(employee.key)?.problem === check.problem;
     case "none":
       return false;
   }

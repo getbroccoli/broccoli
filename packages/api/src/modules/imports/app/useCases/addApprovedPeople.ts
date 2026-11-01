@@ -8,19 +8,20 @@ import { readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
 
 /**
- * Turns the ready import employees that are not left out into employees, with the values and
- * photo review shows, joining `tx`, in which the caller completes setup.
+ * Turns the ready import employees that are not left out into employees, with the values, photo
+ * and manager review shows, joining `tx`, in which the caller completes setup.
  */
 export async function addApprovedPeople(ctx: SecurityContext, tx: Tx): Promise<void> {
   requireImportAccess(ctx);
   await lockImport(tx);
-  const { readyEmployees } = await readImportReview(ctx, tx);
+  const { readyEmployees, managers } = await readImportReview(ctx, tx);
   const counts = await createImportedEmployees(
     ctx,
     tx,
     readyEmployees.map((employee) => ({
       ...toNewEmployeeInput(employee),
       avatarFileId: employee.photoFileId ?? undefined,
+      managerEmail: managers.get(employee.key)?.manager?.values.email.value,
     })),
     { kind: "ADDED_FROM_IMPORT" },
   );

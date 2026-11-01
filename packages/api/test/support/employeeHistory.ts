@@ -25,6 +25,7 @@ export async function expectHistoryReplaysTo(orm: Orm, employeeId: string): Prom
     email: null,
     jobTitle: null,
     startDate: null,
+    manager: null,
   };
   for (const line of lines.reverse()) {
     for (const change of line.changes) {
@@ -36,11 +37,13 @@ export async function expectHistoryReplaysTo(orm: Orm, employeeId: string): Prom
   const employees = employeeUseCases(orm);
   const employee = await employees.readEmployee(OWNER, employeeId);
   const startDates = await employees.readStartDates(OWNER, [employeeId]);
+  const managers = await employees.readManagers(OWNER, [employeeId]);
   expect(replayed).toEqual({
     firstName: employee?.firstName ?? null,
     lastName: employee?.lastName ?? null,
     email: employee?.email ?? null,
     jobTitle: employee?.jobTitle ?? null,
     startDate: startDates.get(employeeId) ?? null,
+    manager: managers.get(employeeId)?.id ?? null,
   });
 }

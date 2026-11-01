@@ -8,12 +8,16 @@ export interface ImportEmployeeValues {
   email: string | null;
   jobTitle: string | null;
   startDate: CalendarDate | null;
+  /** Who manages the person, as the source names them: a name, an email or the source's ID. */
+  manager: string | null;
 }
 
 /** One source's row of an employee: an import record, not yet an employee. */
 export interface ImportEmployeeRecord extends ImportEmployeeValues {
   id: string;
   sourceId: string;
+  /** The ID the source gives the person, which another record's manager may name. */
+  externalRecordId: string | null;
   /** The stored copy of the person's Slack photo; null for initials. */
   photoFileId: string | null;
 }
@@ -22,6 +26,8 @@ export interface ImportEmployeeRecord extends ImportEmployeeValues {
 export interface IncomingRecord {
   /** Broccoli's key for the record within its source, kept across re-reads: a file row or a Slack user id. */
   sourceKey: string;
+  /** The ID the source gives the person, which another record's manager may name. */
+  externalRecordId: string | null;
   /** The source's values as they came. */
   raw: unknown;
   values: ImportEmployeeValues;
@@ -35,6 +41,7 @@ export const IMPORT_EMPLOYEE_FIELDS = [
   "lastName",
   "email",
   "jobTitle",
+  "manager",
   "startDate",
 ] as const;
 
@@ -43,11 +50,16 @@ export type ImportEmployeeField = (typeof IMPORT_EMPLOYEE_FIELDS)[number];
 /** The owner's choice for one field: a record's value, or a typed one. */
 export type ValueChoice = { recordId: string } | { value: string };
 
+/** The person the owner chose as an import employee's manager, by import employee key, or none. */
+export type ManagerChoice = { employeeKey: string } | { noManager: true };
+
 /** What the owner settled for one import employee, by its key. */
 export interface ImportEmployeeChoices {
   key: string;
   leftOut: boolean;
   values: Partial<Record<ImportEmployeeField, ValueChoice>>;
+  /** Wins over any manager the sources name. */
+  chosenManager?: ManagerChoice;
 }
 
 /** The employee an import will create: the records sharing an email, or one record without an email. */
@@ -62,6 +74,7 @@ export interface ImportEmployee {
   /** The photo of its first record that has one. */
   photoFileId: string | null;
   leftOut: boolean;
+  chosenManager: ManagerChoice | null;
 }
 
 /** One field of an import employee: what review shows and Approve uses, and where it came from. */
@@ -123,6 +136,7 @@ export function groupEmployeeRecords(
       ) as Record<ImportEmployeeField, ImportEmployeeValue>,
       photoFileId: sorted.find((record) => record.photoFileId)?.photoFileId ?? null,
       leftOut: owned[0]?.leftOut ?? false,
+      chosenManager: owned[0]?.chosenManager ?? null,
     };
   });
 }

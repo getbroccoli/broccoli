@@ -175,11 +175,11 @@ test("permits writing a public record only with update on all", async ({ orm, se
     grants: [{ ...UPDATE_SELF, scope: "all" }],
   });
 
-  await expect(narrow.requireWrite("example", "public", ["title"])).rejects.toMatchObject({
+  await expect(narrow.requireWrite("example", ["public"], ["title"])).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "You are not allowed to do this.",
   });
-  await expect(broad.requireWrite("example", "public", ["title"])).resolves.toBeUndefined();
+  await expect(broad.requireWrite("example", ["public"], ["title"])).resolves.toBeUndefined();
 });
 
 const READ_SELF: Grant = {

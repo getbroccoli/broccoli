@@ -5,112 +5,128 @@
       "lastName": "Chin",
       "email": "e00711.533@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2022-01-13"
+      "startDate": "2022-01-13",
+      "manager": "Luna Sanders"
     },
     {
       "firstName": "Eloise",
       "lastName": "Alexander",
       "email": "e04795.534@people.example.test",
       "jobTitle": "Vice President",
-      "startDate": "2018-01-21"
+      "startDate": "2018-01-21",
+      "manager": "Savannah Ali"
     },
     {
       "firstName": "Carter",
       "lastName": "Turner",
       "email": "e03912.535@people.example.test",
       "jobTitle": "Sr. Analyst",
-      "startDate": "2015-11-17"
+      "startDate": "2015-11-17",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Andrew",
       "lastName": "Ma",
       "email": "e02103.536@people.example.test",
       "jobTitle": "HRIS Analyst",
-      "startDate": "2017-09-24"
+      "startDate": "2017-09-24",
+      "manager": "Savannah Ali"
     },
     {
       "firstName": "Hailey",
       "lastName": "Xi",
       "email": "e04213.537@people.example.test",
       "jobTitle": "Manager",
-      "startDate": "2021-11-19"
+      "startDate": "2021-11-19",
+      "manager": "Easton Bailey"
     },
     {
       "firstName": "Aiden",
       "lastName": "Le",
       "email": "e04756.538@people.example.test",
       "jobTitle": "Cloud Infrastructure Architect",
-      "startDate": "1994-12-24"
+      "startDate": "1994-12-24",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "Christopher",
       "lastName": "Lim",
       "email": "e04114.539@people.example.test",
       "jobTitle": "Director",
-      "startDate": "2007-03-13"
+      "startDate": "2007-03-13",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "James",
       "lastName": "Castillo",
       "email": "e01423.540@people.example.test",
       "jobTitle": "Vice President",
-      "startDate": "2001-07-19"
+      "startDate": "2001-07-19",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "Greyson",
       "lastName": "Dang",
       "email": "e03181.541@people.example.test",
       "jobTitle": "Development Engineer",
-      "startDate": "2009-05-11"
+      "startDate": "2009-05-11",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Hannah",
       "lastName": "King",
       "email": "e03305.542@people.example.test",
       "jobTitle": "Manager",
-      "startDate": "2014-10-07"
+      "startDate": "2014-10-07",
+      "manager": "Easton Bailey"
     },
     {
       "firstName": "Wesley",
       "lastName": "Dominguez",
       "email": "e00703.543@people.example.test",
       "jobTitle": "Engineering Manager",
-      "startDate": "2018-04-27"
+      "startDate": "2018-04-27",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Dominic",
       "lastName": "Hu",
       "email": "e04403.544@people.example.test",
       "jobTitle": "Manager",
-      "startDate": "2012-02-13"
+      "startDate": "2012-02-13",
+      "manager": "Easton Bailey"
     },
     {
       "firstName": "Nora",
       "lastName": "Park",
       "email": "e00103.545@people.example.test",
       "jobTitle": "Director",
-      "startDate": "2017-06-28"
+      "startDate": "2017-06-28",
+      "manager": "Easton Bailey"
     },
     {
       "firstName": "Audrey",
       "lastName": "Hwang",
       "email": "e04487.546@people.example.test",
       "jobTitle": "Sr. Analyst",
-      "startDate": "2020-06-17"
+      "startDate": "2020-06-17",
+      "manager": "Easton Bailey"
     },
     {
       "firstName": "Ella",
       "lastName": "Jenkins",
       "email": "e01194.547@people.example.test",
       "jobTitle": "Analyst II",
-      "startDate": "2019-12-20"
+      "startDate": "2019-12-20",
+      "manager": "Luna Sanders"
     },
     {
       "firstName": "Peyton",
       "lastName": "Owens",
       "email": "e02179.548@people.example.test",
       "jobTitle": "Controls Engineer",
-      "startDate": "2014-09-25"
+      "startDate": "2014-09-25",
+      "manager": "Wyatt Chin"
     }
   ],
   "forbidden": [

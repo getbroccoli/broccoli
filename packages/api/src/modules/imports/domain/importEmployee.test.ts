@@ -235,4 +235,6 @@ const row: ImportEmployeeRecord = {
   jobTitle: "Designer",
   startDate: null,
   photoFileId: null,
+  manager: null,
+  externalRecordId: null,
 };

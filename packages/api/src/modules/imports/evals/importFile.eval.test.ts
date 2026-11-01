@@ -74,8 +74,16 @@ function valuesOf({
   email,
   jobTitle,
   startDate,
-}: ImportEmployeeValues): ImportEmployeeValues {
-  return { firstName, lastName, email, jobTitle, startDate };
+  manager,
+}: ImportEmployeeValues): ExpectedEmployee {
+  return {
+    firstName,
+    lastName,
+    email,
+    jobTitle,
+    startDate,
+    ...(manager === null ? {} : { manager }),
+  };
 }
 
 function dollars(cost: number): string {
@@ -83,18 +91,20 @@ function dollars(cost: number): string {
 }
 
 /** Records in a fixed order, so the comparison ignores the order they are listed in. */
-function sorted(records: ImportEmployeeValues[]): ImportEmployeeValues[] {
+function sorted(records: ExpectedEmployee[]): ExpectedEmployee[] {
   return records.toSorted((a, b) => sortKey(a).localeCompare(sortKey(b)));
 }
 
-function sortKey({ firstName, lastName, email, jobTitle, startDate }: ImportEmployeeValues) {
+function sortKey({ firstName, lastName, email, jobTitle, startDate }: ExpectedEmployee) {
   return [firstName, lastName, email, jobTitle, startDate].join("\u0000");
 }
 
 /** What a case's file must become: its records, or the reason it fails. */
 interface ExpectedImport {
-  records?: ImportEmployeeValues[];
+  records?: ExpectedEmployee[];
   failure?: NonNullable<ImportSource["failure"]>;
   /** Personal values in the file that must never reach the model. */
   forbidden: string[];
 }
+
+type ExpectedEmployee = Omit<ImportEmployeeValues, "manager"> & { manager?: string };

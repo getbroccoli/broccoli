@@ -49,6 +49,8 @@ const calls = {
     imports.reads.listEmployeeRecords(ctx, { sourceId: "missing" }),
   "reads.readImportPhoto": (imports, ctx) =>
     imports.reads.readImportPhoto(ctx, "0199f6c4-0000-7000-8000-000000000000"),
+  "choices.chooseManager": (imports, ctx) =>
+    imports.choices.chooseManager(ctx, { keys: ["missing"], managerKey: null }),
   "choices.chooseEmployeeValue": (imports, ctx) =>
     imports.choices.chooseEmployeeValue(ctx, { key: "missing", field: "jobTitle", choice: null }),
   "choices.chooseSourceForAll": (imports, ctx) =>

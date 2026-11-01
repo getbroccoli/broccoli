@@ -6,7 +6,7 @@
 - `tabs-month-first`: Export from a US-format tool, deliberately keeping month-first dates, tab delimiters and reordered columns.
 - `split-names`: UK HR headings `Forename` and `Surname` take precedence over `Known as`, with middle names and day-first start dates.
 - `underscore-split-names`: Synthetic names under `first_name` and `last_name`, beside work emails; underscore-separated headings must keep their meaning through masking.
-- `underscore-preferred-names`: Synthetic staff export with `preferred_name` as the only given-name column, `last_name`, and employee, manager, employment and payroll fields; names, work emails, titles and start dates must survive mapping. All values are invented and emails use reserved example domains.
+- `underscore-preferred-names`: Synthetic staff export with `preferred_name` as the only given-name column, `last_name`, and employee, manager, employment and payroll fields; names, work emails, titles, manager emails and start dates must survive mapping. All values are invented and emails use reserved example domains.
 - `decoy-columns`: UK payroll and HR fields place real work emails and start dates beside NI numbers, personal emails, next-of-kin names and mobiles, dates of birth, leaving dates, departments, employee mobiles, postcodes and payroll IDs.
 - `german-headers`: German headings, umlauts and day-first dates with dots.
 - `ambiguous-dates`: UK staff headings do not resolve numeric dates with both parts at most 12; every start date stays empty.
@@ -16,31 +16,31 @@
 - `workspace-recovery`: Google Workspace CSV headings with required markers, recovery emails beside work emails, dummy passwords and employee IDs; name-like vocabulary stays masked.
 - `german-legal-names`: Personio payroll attributes separate legal surnames from birth names, personal from work email, and hire dates from birth and termination dates.
 - `french-coded-headers`: Lucca-style semicolon CSV uses machine field codes, personal-email decoys and the same emergency contact on every row; French day-first contract dates map to start dates.
-- `spanish-contract-dates`: Factorial-style Spanish contract sheet distinguishes contract start from effective, end and birth dates, with a repeated manager-email decoy.
+- `spanish-contract-dates`: Factorial-style Spanish contract sheet distinguishes contract start from effective, end and birth dates, with a repeated manager email that is read.
 - `dutch-payroll-names`: Nmbrs employee-tab columns distinguish legal given names from everyday names, employee surnames from partner surnames, and work emails from private emails.
 - `french-user-civility`: Sage-style French user CSV has surnames before given names, work emails under Login, civility and permission codes but no job title or start date.
-- `bamboohr-directory`: BambooHR-style employee report with legal First Name beside Preferred Name nicknames, month-first Hire Dates and "Last, First" supervisors.
-- `hibob-people`: HiBob-style people export with only a Display name column, split given-first including a "van" particle and a two-part given name, day-first start dates and a Reports to decoy.
+- `bamboohr-directory`: BambooHR-style employee report with legal First Name beside Preferred Name nicknames, month-first Hire Dates and "Last, First" supervisors read as manager references.
+- `hibob-people`: HiBob-style people export with only a Display name column, split given-first including a "van" particle and a two-part given name, day-first start dates and Reports to read as the manager.
 - `datev-lodas`: DATEV-style payroll export, semicolon-separated with German headings, Familienname before Vorname and Eintritt as start date; there is no email column, and tax ID, social security number, IBAN, birth and exit dates stay out.
-- `workday-worker`: Workday-style worker report with a Legal Name column including a middle name, Hire Date taken as the start over Original Hire Date, Primary Work Email, ISO dates and a Manager decoy.
+- `workday-worker`: Workday-style worker report with a Legal Name column including a middle name, Hire Date taken as the start over Original Hire Date, Primary Work Email, ISO dates and Manager read as the manager.
 - `microsoft-365-users`: Microsoft 365-style user export with First name and Last name beside Display name, the user principal name as work email, an empty job title, no start date, and alternate email and mobile decoys.
-- `personio-english`: Personio-style export with English attribute names, a hyphenated surname, ISO Hire dates and Supervisor, Cost center and Birthday decoys.
+- `personio-english`: Personio-style export with English attribute names, a hyphenated surname, ISO Hire dates Supervisor read as the manager, and Cost center and Birthday decoys.
 - `occupational-surnames`: Dutch and German occupational surnames (Bakker, Visser, Smit, Müller, Schneider, Fischer, Meyer) beside job titles; surnames stay masked while the titles pass.
 - `job-word-surnames`: English surnames that are job words (Baker, Cook, Mason, Taylor, Smith, Porter) beside real job titles; surnames stay masked.
 - `heading-word-names`: Names partly made of heading words the lists allow (Junior, Born, Leiter, Team); those parts pass by design, every other part (Okafor, Lena, Max, Nia) must stay masked.
-- `repeated-manager`: Line manager and emergency contact repeated on every row; both stay masked and neither becomes a record.
+- `repeated-manager`: Line manager and emergency contact repeated on every row; both stay masked and neither becomes a record; the line manager is read as the manager reference.
 - `headerless-german`: No header row, German names and job titles, dotted day-first dates.
 - `headerless-many-rows`: No header row, 12 rows where job titles repeat across rows and names do not.
 - `headerless-name-email`: No header row and only two columns, full name and work email; job title and start date stay empty.
 - `mixed-language-headings`: Semicolon file mixing German and English headings (`Vorname`, `Last name`, `E-Mail`, `Job title`, `Eintrittsdatum`).
 - `totals-row`: Acme Corp staff export with a leading row-number column, a blank line, then a people count and an export timestamp; the footer sits in the unmapped number column, so only the four people become records.
 - `blank-columns-rows`: Staff sheet with empty columns between fields (blank headings), blank lines and a comma-only row between people; the four fields still map.
-- `wide-decoys`: Thirty-column UK payroll export with the five fields scattered among NI, tax, bank, IBAN, address, phone, personal-email, line-manager and emergency-contact decoys, plus birth and leaving dates.
+- `wide-decoys`: Thirty-column UK payroll export with names, work emails, job titles, start dates and line managers read among NI, tax, bank, IBAN, address, phone, personal-email and emergency-contact decoys, plus birth and leaving dates.
 - `single-person`: One header row and one person; the single numeric start date 27/03/2023 has day above 12, so day-first order is known and parses to 2023-03-27.
 - `excel-sheets`: Excel workbook saved by LibreOffice: a Staff sheet with a title row, work emails built by a formula from the names and start dates as date cells that would be ambiguous as text, a Contractors sheet with its own column order, a hidden Leavers sheet that must not be read and a Departments list that maps to nobody.
 - `edge-xlsx-cell-types`: Excel team sheet mixing text, upper-case titles and start dates stored as date cells.
 - `layout-xlsx-cached-formula`: Excel staff sheet with a formula column whose saved values are read, never recalculated; the formula column maps to nothing.
-- `layout-xlsx-date-cells`: Excel export headed `Employee name`, `Company email`, `Role` and `Employment start date`, with start dates as date cells beside a line-manager column.
+- `layout-xlsx-date-cells`: Excel export headed `Employee name`, `Company email`, `Role` and `Employment start date`, with start dates as date cells beside a line-manager column that is read.
 - `layout-xlsx-number-format`: Excel staff sheet with a payroll ID shown zero-padded by its number format (`000012`), read as its value and mapped to nothing.
 - `layout-xlsx-mixed-sheets`: Excel workbook with an Employees sheet (full names), a Contractors sheet (separate first and last names, `Position`, `Joining date`) and an Instructions sheet without people.
 - `layout-xlsx-offset-header`: Excel roster whose table starts in column B under a title row.
@@ -52,3 +52,5 @@
 - `vacant-row`: Staff list with Full Name beside First Name and Last Name, and a vacancy row with only a full-name cell; the separate name columns are the names, so the vacancy is no one.
 
 Names, roles and departments in the `layout-xlsx-*`, `common-unicode-name` and `injection-xlsx` cases come from The Spreadsheet Guru's Company Employee Example Data, which its publisher allows using in any way; the emails and managers are made up.
+
+The manager columns in `common-unicode-name`, `injection-xlsx`, `layout-xlsx-cached-formula`, `layout-xlsx-mixed-sheets`, `layout-xlsx-number-format`, `layout-xlsx-offset-header`, `layout-xlsx-title-row` and `multi-sheet-regions` are also read as manager references, preserving the trimmed cell text. Blank manager cells stay empty.

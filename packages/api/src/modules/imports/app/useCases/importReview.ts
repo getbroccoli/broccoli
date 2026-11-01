@@ -7,11 +7,13 @@ import {
   groupEmployeeRecords,
   type ImportCheck,
   type ImportEmployee,
+  type ImportManager,
   type ImportSource,
   importVersion,
   isInCheck,
   isReady,
   listChecks,
+  matchManagers,
   parseCheckId,
 } from "../../domain";
 import {
@@ -30,6 +32,8 @@ export interface ImportReview {
   readyEmployeeSources: ImportSource[];
   /** What the owner may want to settle before Approve, by kind. */
   checks: ImportCheck[];
+  /** Each import employee's manager among the ready employees, by import employee key. */
+  managers: ReadonlyMap<string, ImportManager>;
   /** The import employees, one page at a time; by name unless ordered otherwise. */
   listEmployees(args: ImportEmployeeListArgs): Connection<ImportEmployee>;
   /** The fingerprint of what Approve would create, which Approve takes back (`importVersion`). */
@@ -61,6 +65,7 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
   const readyEmployees = employees.filter(
     (employee) => !employee.leftOut && isReady(employee, takenEmails),
   );
+  const managers = matchManagers(employees, readyEmployees);
   const readySourceIds = new Set(
     readyEmployees.flatMap(({ records: held }) => held.map(({ sourceId }) => sourceId)),
   );
@@ -68,8 +73,9 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
     employeeCount: employees.length,
     readyEmployees,
     readyEmployeeSources: sources.filter(({ id }) => readySourceIds.has(id)),
-    checks: listChecks(sources, employees),
-    listEmployees: (args) => listEmployees(employees, args),
+    checks: listChecks(sources, employees, managers),
+    managers,
+    listEmployees: (args) => listEmployees(employees, managers, args),
     version: importVersion(employees, readyEmployees),
   };
 }
@@ -78,6 +84,7 @@ const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
 
 function listEmployees(
   employees: readonly ImportEmployee[],
+  managers: ReadonlyMap<string, ImportManager>,
   { filter, ...listArgs }: ImportEmployeeListArgs,
 ): Connection<ImportEmployee> {
   const search = parseSearch(filter?.search);
@@ -85,7 +92,7 @@ function listEmployees(
   const shown = employees.filter(
     (employee) =>
       (search === null || matchesSearch(employee, search)) &&
-      (check === null || isInCheck(employee, check)),
+      (check === null || isInCheck(employee, check, managers)),
   );
   return paginate(listArgs, {
     order: DEFAULT_ORDER,

@@ -5,28 +5,32 @@
       "lastName": "van Dijk",
       "email": "anneke.vandijk@acme-corp.example",
       "jobTitle": "Senior Engineer",
-      "startDate": "2021-03-14"
+      "startDate": "2021-03-14",
+      "manager": "Delia Hargrove"
     },
     {
       "firstName": "Samira",
       "lastName": "Haddad",
       "email": "samira.haddad@acme-corp.example",
       "jobTitle": "Product Designer",
-      "startDate": "2022-08-02"
+      "startDate": "2022-08-02",
+      "manager": "Delia Hargrove"
     },
     {
       "firstName": "Jonas",
       "lastName": "Eklund",
       "email": "jonas.eklund@acme-corp.example",
       "jobTitle": "Customer Success Manager",
-      "startDate": "2022-11-21"
+      "startDate": "2022-11-21",
+      "manager": "Owen Pellew"
     },
     {
       "firstName": "Rosa Maria",
       "lastName": "Delgado",
       "email": "rosa.delgado@acme-corp.example",
       "jobTitle": "Finance Controller",
-      "startDate": "2023-05-09"
+      "startDate": "2023-05-09",
+      "manager": "Owen Pellew"
     }
   ],
   "forbidden": [

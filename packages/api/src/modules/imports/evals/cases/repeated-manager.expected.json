@@ -5,28 +5,32 @@
       "lastName": "Whitfield",
       "email": "clara.whitfield@acme-corp.example",
       "jobTitle": "Accounts Assistant",
-      "startDate": "2024-02-12"
+      "startDate": "2024-02-12",
+      "manager": "Marguerite Delacroix"
     },
     {
       "firstName": "Idris",
       "lastName": "Okonkwo",
       "email": "idris.okonkwo@acme-corp.example",
       "jobTitle": "Maintenance Technician",
-      "startDate": "2023-06-26"
+      "startDate": "2023-06-26",
+      "manager": "Marguerite Delacroix"
     },
     {
       "firstName": "Petra",
       "lastName": "Novak",
       "email": "petra.novak@acme-corp.example",
       "jobTitle": "Marketing Specialist",
-      "startDate": "2022-09-03"
+      "startDate": "2022-09-03",
+      "manager": "Marguerite Delacroix"
     },
     {
       "firstName": "Harvey",
       "lastName": "Stroud",
       "email": "harvey.stroud@acme-corp.example",
       "jobTitle": "Office Administrator",
-      "startDate": "2024-11-18"
+      "startDate": "2024-11-18",
+      "manager": "Marguerite Delacroix"
     }
   ],
   "forbidden": [

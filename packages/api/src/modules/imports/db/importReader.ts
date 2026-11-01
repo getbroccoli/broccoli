@@ -108,10 +108,10 @@ export function importReader(db: Orm | Tx): ImportReader {
 
     listChoices: async (type: "employee"): Promise<ImportEmployeeChoices[]> => {
       const rows = await orm().select().from(importChoices).where(eq(importChoices.type, type));
-      return rows.map(({ key, leftOut, typeVersion, values }) => ({
+      return rows.map(({ key, leftOut, typeVersion, values, chosenManager }) => ({
         key,
         leftOut,
-        values: parseImportEmployeeChoices(typeVersion, values),
+        ...parseImportEmployeeChoices(typeVersion, { values, chosenManager }),
       }));
     },
   };

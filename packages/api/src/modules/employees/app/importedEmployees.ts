@@ -4,6 +4,7 @@ import { readOwner } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository, employmentRepository } from "../db";
 import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
+import { setNewEmployeeManagers } from "./newEmployeeManagers";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 /** What adding imported employees did. */
@@ -15,8 +16,14 @@ export interface ImportedEmployees {
   emailTaken: number;
 }
 
-/** An employee an import proposes, with the stored photo it brings as its avatar. */
-export type ImportedEmployeeInput = NewEmployeeInput & { avatarFileId?: string };
+/**
+ * An employee an import proposes, with the stored photo it brings as its avatar and the email of
+ * their manager among the same inputs.
+ */
+export type ImportedEmployeeInput = NewEmployeeInput & {
+  avatarFileId?: string;
+  managerEmail?: string | null;
+};
 
 /**
  * Adds employees proposed by an import, joining `tx`, with `cause` on their creation lines;
@@ -29,12 +36,17 @@ export async function createImportedEmployees(
   cause: HistoryAppend["cause"],
 ): Promise<ImportedEmployees> {
   ctx.requireSetupAccess("MANAGE_WORKSPACE");
-  const newEmployees = inputs.flatMap(({ avatarFileId, ...input }) => {
+  const managerEmails = new Map<string, string>();
+  const newEmployees = inputs.flatMap(({ avatarFileId, managerEmail, ...input }) => {
     const employee = tryParseNewEmployee(input);
+    if (employee && managerEmail) {
+      managerEmails.set(employee.email, managerEmail);
+    }
     return employee ? [{ ...employee, avatarFileId: avatarFileId ?? null }] : [];
   });
   const created = await employeeRepository(tx).insertSkippingTakenEmails(newEmployees);
-  await recordCreatedEmployees(ctx, tx, created, cause);
+  const managers = await setNewEmployeeManagers(tx, created, managerEmails);
+  await recordCreatedEmployees(ctx, tx, created, cause, managers);
   return {
     created: created.length,
     incomplete: inputs.length - newEmployees.length,

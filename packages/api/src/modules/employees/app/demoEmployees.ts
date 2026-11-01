@@ -4,12 +4,14 @@ import type { SecurityContext } from "../../../core/security";
 import type { RasterImage } from "../../../utils";
 import { employeeRepository } from "../db";
 import { type NewEmployeeInput, parseNewEmployee } from "../domain";
+import { setNewEmployeeManagers } from "./newEmployeeManagers";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
-/** A demo employee and their avatar. */
+/** A demo employee, their avatar and the email of their manager among the demo employees. */
 export interface DemoEmployee {
   employee: NewEmployeeInput;
   avatar: RasterImage;
+  managerEmail?: string | null;
 }
 
 /**
@@ -29,7 +31,13 @@ export async function createDemoEmployees(
   const employees = await employeeRepository(tx).insertDemo(
     demoEmployees.map(({ employee, avatar }) => ({ employee: parseNewEmployee(employee), avatar })),
   );
-  await recordCreatedEmployees(ctx, tx, employees, cause);
+  const managerEmails = new Map(
+    demoEmployees.flatMap(({ employee, managerEmail }) =>
+      managerEmail ? [[employee.email, managerEmail] as const] : [],
+    ),
+  );
+  const managers = await setNewEmployeeManagers(tx, employees, managerEmails);
+  await recordCreatedEmployees(ctx, tx, employees, cause, managers);
 }
 
 /** Whether the instance holds demo employees, such as when setup leaves the demo; joins `db`. */

@@ -8,8 +8,9 @@ import {
   type ImportEmployee,
   type ImportEmployeeChoices,
   type ImportEmployeeField,
+  incompleteReason,
   type IncompleteReason,
-  isInCheck,
+  type ManagerChoice,
   type ValueChoice,
 } from "../../domain";
 import { readImportEmployees } from "./readImportEmployees";
@@ -35,6 +36,14 @@ export interface EmployeeChoiceService {
   setLeftOut(ctx: SecurityContext, args: { key: string; leftOut: boolean }): Promise<void>;
   /** Leaves out every incomplete import employee with this reason. */
   leaveOutIncomplete(ctx: SecurityContext, args: { reason: IncompleteReason }): Promise<void>;
+  /**
+   * Makes the import employee `managerKey` the manager of these import employees, or no one with
+   * null, over any manager their sources name; skips the manager among them.
+   */
+  chooseManager(
+    ctx: SecurityContext,
+    args: { keys: readonly string[]; managerKey: string | null },
+  ): Promise<void>;
 }
 
 export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceService {
@@ -83,11 +92,31 @@ export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceS
     leaveOutIncomplete: (ctx, { reason }) =>
       changeChoices(ctx, transact, (employees) =>
         employees
-          .filter((employee) => isInCheck(employee, { kind: "incomplete", reason }))
+          .filter((employee) => incompleteReason(employee) === reason)
           .flatMap((employee) => withLeftOut(employee, true)),
       ),
+
+    chooseManager: (ctx, { keys, managerKey }) =>
+      changeChoices(ctx, transact, (employees) => {
+        if (keys.length === 0 || keys.length > MAX_CHOSEN_REPORTS) {
+          throw invalidInput([
+            { field: "employeeIds", code: keys.length === 0 ? "required" : "too_many" },
+          ]);
+        }
+        const manager =
+          managerKey === null ? null : findEmployee(employees, managerKey, "managerId");
+        const chosen: ManagerChoice = manager ? { employeeKey: manager.key } : { noManager: true };
+        const reports = new Set(keys.map((key) => findEmployee(employees, key)));
+        if (manager) {
+          reports.delete(manager);
+        }
+        return [...reports].flatMap((employee) => withChosenManager(employee, chosen));
+      }),
   };
 }
+
+/** The most import employees one manager choice reaches, as many as an invite. */
+const MAX_CHOSEN_REPORTS = 1_000;
 
 /** Reads the import employees and saves the choices `change` returns, in one transaction. */
 async function changeChoices(
@@ -105,12 +134,16 @@ async function changeChoices(
 
 /**
  * The import employee with this key, also when a typed email merged it into another one;
- * refused, naming `employeeId`, when there is none.
+ * refused, naming `field`, when there is none.
  */
-function findEmployee(employees: ImportEmployee[], key: string): ImportEmployee {
+function findEmployee(
+  employees: ImportEmployee[],
+  key: string,
+  field: "employeeId" | "managerId" = "employeeId",
+): ImportEmployee {
   const employee = employees.find((candidate) => candidate.keys.includes(key));
   if (!employee) {
-    throw invalidInput([{ field: "employeeId", code: "not_found" }]);
+    throw invalidInput([{ field, code: "not_found" }]);
   }
   return employee;
 }
@@ -130,8 +163,14 @@ function choicesOf(employee: ImportEmployee): ImportEmployeeChoices[] {
     }
   }
   const [key, ...merged] = employee.keys;
+  const chosenManager = employee.chosenManager ?? undefined;
   return [
-    { key: key!, leftOut: employee.leftOut, values: chosen },
+    {
+      key: key!,
+      leftOut: employee.leftOut,
+      values: chosen,
+      ...(chosenManager && { chosenManager }),
+    },
     ...merged.map((mergedKey) =>
       mergedChoices(mergedKey, employee.values.email.value, employee.leftOut),
     ),
@@ -148,12 +187,25 @@ function withValue(
   const values = { ...own!.values };
   delete values[field];
   const changed = { ...own!, values: choice ? { ...values, [field]: choice } : values };
+  if (field === "manager") {
+    // A source's manager, picked or by default, replaces the person the owner chose.
+    delete changed.chosenManager;
+  }
   if (field !== "email") {
     return [changed, ...merged];
   }
   const email =
     choice && "recordId" in choice ? emailOfRecord(employee, choice.recordId) : choice?.value;
   return [changed, ...merged.map(({ key }) => mergedChoices(key, email ?? null, employee.leftOut))];
+}
+
+/** The choices with the owner's chosen manager under the import employee's own key. */
+function withChosenManager(
+  employee: ImportEmployee,
+  chosenManager: ManagerChoice,
+): ImportEmployeeChoices[] {
+  const [own, ...merged] = choicesOf(employee);
+  return [{ ...own!, chosenManager }, ...merged];
 }
 
 /** Leaves out every import employee it is made of, so it stays left out whichever key leads. */
@@ -184,8 +236,14 @@ function emailOfRecord(employee: ImportEmployee, recordId: string): string | nul
   );
 }
 
-/** A typed value as the employee rules normalise it; refused, naming `value`, when they refuse it or it is blank. */
+/**
+ * A typed value as the employee rules normalise it; refused, naming `value`, when they refuse it
+ * or it is blank, and for a manager, who is a person chosen with `chooseManager`.
+ */
 function typedValue(field: ImportEmployeeField, value: string): ValueChoice {
+  if (field === "manager") {
+    throw invalidInput([{ field: "value", code: "invalid" }]);
+  }
   const parsed = parseEmployeeField(field, value);
   if ("code" in parsed) {
     throw invalidInput([{ field: "value", code: parsed.code }]);

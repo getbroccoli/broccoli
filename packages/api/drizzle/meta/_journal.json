@@ -225,6 +225,13 @@
       "when": 1793519409813,
       "tag": "0031_import_records_source_key",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793519609276,
+      "tag": "0032_import_managers",
+      "breakpoints": true
     }
   ]
 }

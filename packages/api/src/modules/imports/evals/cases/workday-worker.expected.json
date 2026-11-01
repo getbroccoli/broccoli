@@ -5,28 +5,32 @@
       "lastName": "Rao",
       "email": "priya.rao@acme-corp.example",
       "jobTitle": "Backend Engineer",
-      "startDate": "2022-02-14"
+      "startDate": "2022-02-14",
+      "manager": "Delia Hargrove"
     },
     {
       "firstName": "Oluwaseun",
       "lastName": "Adebayo",
       "email": "oluwaseun.adebayo@acme-corp.example",
       "jobTitle": "Payroll Analyst",
-      "startDate": "2021-09-27"
+      "startDate": "2021-09-27",
+      "manager": "Owen Pellew"
     },
     {
       "firstName": "Mikael",
       "lastName": "Johansson",
       "email": "mikael.johansson@acme-corp.example",
       "jobTitle": "Facilities Coordinator",
-      "startDate": "2023-04-17"
+      "startDate": "2023-04-17",
+      "manager": "Owen Pellew"
     },
     {
       "firstName": "Chiara",
       "lastName": "Bellandi",
       "email": "chiara.bellandi@acme-corp.example",
       "jobTitle": "Recruiter",
-      "startDate": "2024-01-08"
+      "startDate": "2024-01-08",
+      "manager": "Delia Hargrove"
     }
   ],
   "forbidden": [

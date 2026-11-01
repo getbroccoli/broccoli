@@ -26,20 +26,25 @@ export function toImportEmployee(record: typeof importRecords.$inferSelect): Imp
   return {
     id: record.id,
     sourceId: record.sourceId,
+    externalRecordId: record.externalRecordId,
     ...parseImportEmployeeValues(record.typeVersion, record.values),
     photoFileId: record.photoFileId,
   };
 }
 
-/** Stored employee choices, read with the schema of their version. */
+/** Stored employee choices and chosen manager, read with the schema of their version. */
 export function parseImportEmployeeChoices(
   typeVersion: number,
-  json: unknown,
-): ImportEmployeeChoices["values"] {
+  stored: { values: unknown; chosenManager: unknown },
+): Pick<ImportEmployeeChoices, "values" | "chosenManager"> {
   if (typeVersion !== IMPORT_EMPLOYEE_CHOICES_VERSION) {
     throw new Error(`Unknown version ${typeVersion} of import employee choices`);
   }
-  return employeeChoicesV1.parse(json);
+  const chosenManager = managerChoice.nullable().parse(stored.chosenManager);
+  return {
+    values: employeeChoicesV1.parse(stored.values),
+    ...(chosenManager && { chosenManager }),
+  };
 }
 
 const valueChoice = z.union([
@@ -52,8 +57,14 @@ const employeeChoicesV1 = z.object({
   lastName: valueChoice.optional(),
   email: valueChoice.optional(),
   jobTitle: valueChoice.optional(),
+  manager: valueChoice.optional(),
   startDate: valueChoice.optional(),
 });
+
+const managerChoice = z.union([
+  z.object({ employeeKey: z.string() }).strict(),
+  z.object({ noManager: z.literal(true) }).strict(),
+]);
 
 const text = z.string().nullable();
 
@@ -62,6 +73,8 @@ const employeeValuesV1 = z.object({
   lastName: text,
   email: text,
   jobTitle: text,
+  // Records read before managers were imported have none.
+  manager: text.default(null),
   startDate: z
     .string()
     .nullable()

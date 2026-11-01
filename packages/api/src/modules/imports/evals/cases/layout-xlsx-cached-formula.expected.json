@@ -5,63 +5,72 @@
       "lastName": "Figueroa",
       "email": "e04108.514@people.example.test",
       "jobTitle": "Sr. Analyst",
-      "startDate": "2012-05-14"
+      "startDate": "2012-05-14",
+      "manager": "Adam Dang"
     },
     {
       "firstName": "Everett",
       "lastName": "Morales",
       "email": "e02917.515@people.example.test",
       "jobTitle": "Solutions Architect",
-      "startDate": "2014-07-10"
+      "startDate": "2014-07-10",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "Genesis",
       "lastName": "Hunter",
       "email": "e03720.516@people.example.test",
       "jobTitle": "Manager",
-      "startDate": "1999-04-22"
+      "startDate": "1999-04-22",
+      "manager": "Luna Sanders"
     },
     {
       "firstName": "Henry",
       "lastName": "Figueroa",
       "email": "e03393.517@people.example.test",
       "jobTitle": "Sr. Manger",
-      "startDate": "2010-07-19"
+      "startDate": "2010-07-19",
+      "manager": "Luna Sanders"
     },
     {
       "firstName": "Nicholas",
       "lastName": "Song",
       "email": "e02977.518@people.example.test",
       "jobTitle": "Analyst II",
-      "startDate": "1999-05-23"
+      "startDate": "1999-05-23",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Jack",
       "lastName": "Alexander",
       "email": "e03371.519@people.example.test",
       "jobTitle": "Vice President",
-      "startDate": "2006-05-29"
+      "startDate": "2006-05-29",
+      "manager": "Emily Davis"
     },
     {
       "firstName": "Jameson",
       "lastName": "Foster",
       "email": "e02531.520@people.example.test",
       "jobTitle": "Analyst",
-      "startDate": "2021-07-18"
+      "startDate": "2021-07-18",
+      "manager": "Isabella Xi"
     },
     {
       "firstName": "Leonardo",
       "lastName": "Lo",
       "email": "e02473.521@people.example.test",
       "jobTitle": "Quality Engineer",
-      "startDate": "2021-11-15"
+      "startDate": "2021-11-15",
+      "manager": "Wyatt Chin"
     },
     {
       "firstName": "Ella",
       "lastName": "Huang",
       "email": "e02468.522@people.example.test",
       "jobTitle": "Vice President",
-      "startDate": "2016-02-28"
+      "startDate": "2016-02-28",
+      "manager": "Isabella Xi"
     }
   ],
   "forbidden": [

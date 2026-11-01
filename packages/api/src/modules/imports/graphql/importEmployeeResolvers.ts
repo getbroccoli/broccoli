@@ -6,7 +6,7 @@ import {
   type ImportEmployeeField,
 } from "../domain";
 import { importPhotoUrl } from "../http";
-import { CHOICES, INCOMPLETE_REASONS } from "./graphqlValues";
+import { CHOICES, INCOMPLETE_REASONS, MANAGER_PROBLEMS } from "./graphqlValues";
 import type { ImportLoaders } from "./loaders";
 
 /** An import employee, its values, and the records it is made of. */
@@ -20,6 +20,16 @@ export function importEmployeeResolvers(
       lastName: (employee) => employeeValue(employee, "lastName"),
       email: (employee) => employeeValue(employee, "email"),
       jobTitle: (employee) => employeeValue(employee, "jobTitle"),
+      manager: async (employee, _args, context) => {
+        const { managers } = await loaders(context).review();
+        const { manager, problem } = managers.get(employee.key)!;
+        return {
+          reference: employeeValue(employee, "manager"),
+          employee: manager,
+          chosen: employee.chosenManager !== null,
+          problem: problem && MANAGER_PROBLEMS[problem],
+        };
+      },
       startDate: (employee) => employeeValue(employee, "startDate"),
       avatarUrl: ({ photoFileId }) => photoFileId && importPhotoUrl(photoFileId),
       incompleteReason: (employee) => {

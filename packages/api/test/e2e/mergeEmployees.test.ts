@@ -238,6 +238,52 @@ test("returns a typed bad email as an InvalidInputError naming value", async ({ 
   });
 });
 
+test("chooses an import employee's manager through the API", async ({ env, slack }) => {
+  slack.pages[0] = [
+    { id: "U1", profile: { first_name: "Avery", last_name: "Stone", email: "avery@example.com" } },
+    { id: "U2", profile: { first_name: "Robin", last_name: "Reed", email: "robin@example.com" } },
+  ];
+  const { browser } = await env.signInAsOwner();
+  await connectAndReadSlack(browser);
+
+  const chosen = await browser.graphql(`mutation {
+    import { chooseEmployeeManager(input: { employeeIds: ["avery@example.com"], managerId: "robin@example.com" }) {
+      import { id } error { __typename ... on Error { message } }
+    } }
+  }`);
+
+  expect(await chosen.json()).toEqual({
+    data: { import: { chooseEmployeeManager: { import: { id: "import" }, error: null } } },
+  });
+  const response = await browser.graphql(`query {
+    import { id employees(filter: { search: "avery@example.com" }) { edges { node {
+      id manager { reference { value } employee { id } chosen problem }
+    } } } }
+  }`);
+  expect(await response.json()).toEqual({
+    data: {
+      import: {
+        id: "import",
+        employees: {
+          edges: [
+            {
+              node: {
+                id: "avery@example.com",
+                manager: {
+                  reference: { value: null },
+                  employee: { id: "robin@example.com" },
+                  chosen: true,
+                  problem: null,
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+  });
+});
+
 const SAVE_COMPANY =
   'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } } }';
 const APPROVED = { data: { import: { approve: { import: { id: "import" }, error: null } } } };
