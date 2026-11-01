@@ -22,6 +22,14 @@ A manual check of the People page against a development stack.
 - [ ] Typing in the search filters by first name, last name, full name or email, ignoring case, after a short pause; the URL holds `q` and the list goes back to the first page.
 - [ ] A search without matches shows "No people match “…”"; "Clear search" empties the field and the URL.
 
+## Set manager
+
+As an admin with at least three people (outside the demo):
+
+- [ ] Ticking two people shows "Set manager" beside "Invite"; picking a person sets both, toasts "Set … as manager of 2 people", clears the selection, and each panel shows the manager and an "Edited" history line.
+- [ ] Choosing "None" removes their manager.
+- [ ] Ticking someone and picking a person who reports to them toasts "That person reports to someone you selected, so they can’t be their manager." and changes nothing.
+
 ## Robustness
 
 - [ ] `/people?sort=bogus&dir=sideways&after=junk&q=` opens the normal list.
