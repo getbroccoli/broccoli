@@ -13,7 +13,7 @@ import {
   parseEmployeeUpdate,
 } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
-import { changeManagers } from "./changeManagers";
+import { changeManagers } from "./employeeManagers";
 import { employeeNotFound } from "./employeeNotFound";
 import { readableResult } from "./readableResult";
 

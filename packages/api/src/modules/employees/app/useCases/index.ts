@@ -18,7 +18,7 @@ import {
   readMyEmployee,
   readStartDates,
 } from "./readEmployee";
-import { setManagers } from "./setManagers";
+import { setManagers } from "./employeeManagers";
 import { updateEmployee } from "./updateEmployee";
 
 /** Everything a user can do with employees; the adapters call nothing else. */

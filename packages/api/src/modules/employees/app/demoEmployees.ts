@@ -4,7 +4,7 @@ import type { SecurityContext } from "../../../core/security";
 import type { RasterImage } from "../../../utils";
 import { employeeRepository } from "../db";
 import { type NewEmployeeInput, parseNewEmployee } from "../domain";
-import { setNewEmployeeManagers } from "./setNewEmployeeManagers";
+import { setNewEmployeeManagers } from "./useCases/employeeManagers";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 /** A demo employee, their avatar and the email of their manager among the demo employees. */
