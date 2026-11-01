@@ -1,0 +1,26 @@
+{
+  "records": [
+    {
+      "firstName": "Avery",
+      "lastName": "Abbott",
+      "email": "avery.abbott@acme-corp.example",
+      "jobTitle": "Product Designer",
+      "startDate": "2025-02-17"
+    },
+    {
+      "firstName": "Jordan",
+      "lastName": "Kim",
+      "email": "jordan.kim@acme-corp.example",
+      "jobTitle": "Support Lead",
+      "startDate": "2024-11-03"
+    }
+  ],
+  "forbidden": [
+    "Avery",
+    "Abbott",
+    "avery.abbott@acme-corp.example",
+    "Jordan",
+    "Kim",
+    "jordan.kim@acme-corp.example"
+  ]
+}
