@@ -35,7 +35,7 @@ export function ManagerPopover({ employeeId, employeeName, manager, onDone }: Pr
   const pickSource = (recordId?: string) =>
     void chooseValue({ variables: { input: { employeeId, field: "MANAGER", recordId } } }).then(
       onDone,
-      () => undefined, // `picking.error` shows it
+      () => undefined, // `picking` shows it
     );
 
   return (
@@ -100,7 +100,7 @@ export function ManagerPopover({ employeeId, employeeName, manager, onDone }: Pr
           />
         </div>
       </div>
-      {picking.error && (
+      {(picking.error || picking.payloadError) && (
         <p role="alert" className="text-sm text-destructive">
           {t("setup.review.saveFailed")}
         </p>

@@ -1,14 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { ApplicationError, invalidInput } from "../../../core/applicationError";
+import { invalidInput } from "../../../core/applicationError";
 import { parseGivenProfiles, type PermissionProfile } from "../../../core/security";
-import { parseUuid } from "../../../utils";
+import { parseEmployeeIds } from "./employee";
 
 /** How long an invite link works. */
 export const INVITE_DAYS = 7;
-
-/** The most people one call invites. */
-export const MAX_INVITEES = 1_000;
 
 /** The longest note an invite carries. */
 export const NOTE_MAX_LENGTH = 1_000;
@@ -145,18 +142,7 @@ export function parseInviteInput({
   profiles?: readonly PermissionProfile[] | null;
   note?: string | null;
 }) {
-  const parsedIds = employeeIds.map(parseUuid);
-  if (parsedIds.some((id) => id === null)) {
-    throw new ApplicationError("NOT_FOUND", "No employee has this id.");
-  }
-  // Parsed first, so one id in two cases counts once.
-  const ids = [...new Set(parsedIds as string[])];
-  if (ids.length === 0) {
-    throw invalidInput([{ field: "employeeIds", code: "required" }]);
-  }
-  if (ids.length > MAX_INVITEES) {
-    throw invalidInput([{ field: "employeeIds", code: "too_many" }]);
-  }
+  const ids = parseEmployeeIds(employeeIds);
   const trimmedNote = note?.trim() || null;
   if (trimmedNote && trimmedNote.length > NOTE_MAX_LENGTH) {
     throw invalidInput([{ field: "note", code: "too_long" }]);

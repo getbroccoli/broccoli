@@ -179,7 +179,8 @@ export const setupEn = {
   "setup.review.checks.incomplete.lastName": "{people} without a last name",
   "setup.review.checks.incomplete.email": "{people} without a work email",
   "setup.review.checks.incomplete.other": "{people} with details that break the rules",
-  "setup.review.checks.manager.NO_PERSON_MATCHES": "{people} whose manager is no one you’re adding",
+  "setup.review.checks.manager.NO_PERSON_MATCHES":
+    "{people} whose manager matches no one you’re adding",
   "setup.review.checks.manager.SEVERAL_PEOPLE_MATCH":
     "{people} whose manager matches more than one person",
   "setup.review.checks.manager.MANAGERS_FORM_A_LOOP":
@@ -199,7 +200,7 @@ export const setupEn = {
   "setup.review.filter.incomplete.email": "Showing people without a work email",
   "setup.review.filter.incomplete.other": "Showing people with details that break the rules",
   "setup.review.filter.manager.noPersonMatches":
-    "Showing people whose manager is no one you’re adding",
+    "Showing people whose manager matches no one you’re adding",
   "setup.review.filter.manager.severalPeopleMatch":
     "Showing people whose manager matches more than one person",
   "setup.review.filter.manager.managersFormALoop":

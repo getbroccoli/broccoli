@@ -4,7 +4,7 @@ import { appendRecordHistory, type FieldChange, type HistoryLine } from "../../.
 import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { parseUuid, todayInUtc } from "../../../../utils";
 import { employeeRepository, employmentRepository } from "../../db";
-import { type Employee, managerChanges } from "../../domain";
+import { type Employee, managerChanges, parseEmployeeIds } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 
@@ -53,24 +53,6 @@ export async function setManagers(
     employees: employees.filter(({ id }) => isReadable(id)),
     historyLines: historyLines.filter(({ recordId }) => isReadable(recordId)),
   };
-}
-
-/** The most employees one call changes, as many as an invite. */
-const MAX_EMPLOYEES = 1_000;
-
-/** Canonical ids, each once; an id that is no uuid names no employee. */
-function parseEmployeeIds(employeeIds: readonly string[]): string[] {
-  const parsed = employeeIds.map(parseUuid);
-  if (parsed.some((id) => id === null)) {
-    throw employeeNotFound();
-  }
-  const ids = [...new Set(parsed as string[])];
-  if (ids.length === 0 || ids.length > MAX_EMPLOYEES) {
-    throw invalidInput([
-      { field: "employeeIds", code: ids.length === 0 ? "required" : "too_many" },
-    ]);
-  }
-  return ids;
 }
 
 /**

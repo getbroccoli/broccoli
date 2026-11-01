@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { invalidInput, type FieldError } from "../../../core/applicationError";
+import { ApplicationError, invalidInput, type FieldError } from "../../../core/applicationError";
 import type { ListOrder } from "../../../core/pagination";
 import { changeReasonSchema, type FieldChange } from "../../../core/records";
-import { type CalendarDate, parseCalendarDate } from "../../../utils";
+import { type CalendarDate, parseCalendarDate, parseUuid } from "../../../utils";
 import { fieldErrorCode, fieldErrorsOf } from "../helpers";
 
 const NAME_MAX_LENGTH = 100;
@@ -170,3 +170,23 @@ export function parseEmployeeField(
 
 /** The fields whose changes history keeps, in the order a history line lists them. */
 const HISTORY_FIELDS = ["firstName", "lastName", "email", "jobTitle", "startDate"] as const;
+
+/** The most employees one call invites or changes. */
+const MAX_SELECTED_EMPLOYEES = 1_000;
+
+/** Canonical ids, each once; an id that is no uuid names no employee. */
+export function parseEmployeeIds(employeeIds: readonly string[]): string[] {
+  const parsedIds = employeeIds.map(parseUuid);
+  if (parsedIds.some((id) => id === null)) {
+    throw new ApplicationError("NOT_FOUND", "No employee has this id.");
+  }
+  // Parsed first, so one id in two cases counts once.
+  const ids = [...new Set(parsedIds as string[])];
+  if (ids.length === 0) {
+    throw invalidInput([{ field: "employeeIds", code: "required" }]);
+  }
+  if (ids.length > MAX_SELECTED_EMPLOYEES) {
+    throw invalidInput([{ field: "employeeIds", code: "too_many" }]);
+  }
+  return ids;
+}
