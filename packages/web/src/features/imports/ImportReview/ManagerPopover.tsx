@@ -93,7 +93,10 @@ export function ManagerPopover({ employeeId, employeeName, manager, onDone }: Pr
             label={t("setup.review.manager.choose")}
             excludedId={employeeId}
             selectedId={employee?.id ?? ""}
-            onPick={(person) => void choose([employeeId], person).then(onDone)}
+            onPick={(person) =>
+              // A failure shows in a toast and keeps the popover open for another try.
+              void choose([employeeId], person).then((chosen) => chosen && onDone())
+            }
           />
         </div>
       </div>

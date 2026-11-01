@@ -130,19 +130,16 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
       if (managerIds.size === 0) {
         return;
       }
-      const changes = sql.join(
-        [...managerIds].map(
-          ([employeeId, managerId]) => sql`(${employeeId}::uuid, ${managerId}::uuid)`,
-        ),
-        sql`, `,
-      );
-      // An update from a list of values, which the query builder cannot express.
-      const updated = await orm().execute<{ employee_id: string }>(sql`
-        update ${employments} set direct_manager_id = changed.manager_id
-        from (values ${changes}) as changed (employee_id, manager_id)
-        where ${employments.employeeId} = changed.employee_id and ${heldOn(date)}
-        returning ${employments.employeeId}`);
-      if (updated.rows.length !== managerIds.size) {
+      const updated = await orm()
+        .update(employments)
+        .set({ directManagerId: sql`changed.manager_id` })
+        // Two array parameters: an import passes more pairs than Postgres's 65,535 parameters.
+        .from(
+          sql`unnest(${sql.param([...managerIds.keys()])}::uuid[], ${sql.param([...managerIds.values()])}::uuid[]) as changed (employee_id, manager_id)`,
+        )
+        .where(sql`${employments.employeeId} = changed.employee_id and ${heldOn(date)}`)
+        .returning({ employeeId: employments.employeeId });
+      if (updated.length !== managerIds.size) {
         throw new Error(
           `An employee among ${managerIds.size} has no employment on or after ${date}`,
         );

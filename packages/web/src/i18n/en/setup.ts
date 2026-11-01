@@ -181,7 +181,7 @@ export const setupEn = {
   "setup.review.checks.incomplete.other": "{people} with details that break the rules",
   "setup.review.checks.manager.NO_PERSON_MATCHES": "{people} whose manager is no one you’re adding",
   "setup.review.checks.manager.SEVERAL_PEOPLE_MATCH":
-    "{people} whose manager’s name several people share",
+    "{people} whose manager matches more than one person",
   "setup.review.checks.manager.MANAGERS_FORM_A_LOOP":
     "{people} whose managers would manage each other",
   "setup.review.checks.leaveThemOut": "Leave them out",
@@ -201,14 +201,14 @@ export const setupEn = {
   "setup.review.filter.manager.noPersonMatches":
     "Showing people whose manager is no one you’re adding",
   "setup.review.filter.manager.severalPeopleMatch":
-    "Showing people whose manager’s name several people share",
+    "Showing people whose manager matches more than one person",
   "setup.review.filter.manager.managersFormALoop":
     "Showing people whose managers would manage each other",
   "setup.review.manager.noManager": "No manager",
   "setup.review.manager.problem.NO_PERSON_MATCHES":
     "{reference} matches no one else you’re adding.",
   "setup.review.manager.problem.SEVERAL_PEOPLE_MATCH":
-    "Several people you’re adding are called {reference}.",
+    "{reference} matches more than one person you’re adding.",
   "setup.review.manager.problem.MANAGERS_FORM_A_LOOP":
     "These managers would manage each other, so none is set.",
   "setup.review.manager.problemChosen": "The person you chose isn’t being added.",
