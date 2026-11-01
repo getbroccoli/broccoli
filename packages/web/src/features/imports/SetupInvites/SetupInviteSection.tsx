@@ -19,6 +19,13 @@ type Props = {
 export function SetupInviteSection({ invites, noteHasLink }: Props) {
   const { mode } = useRouteContext({ from: "__root__" });
   const { invitees, byEmail, company, note, setNote } = invites;
+  if (invites.failed) {
+    return (
+      <p role="alert" className="text-sm text-destructive">
+        {t("setup.invites.loadFailed")}
+      </p>
+    );
+  }
   if (!invites.inviting || !invites.loaded) {
     return null;
   }

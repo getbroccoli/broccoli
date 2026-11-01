@@ -32,6 +32,7 @@ export function OwnerStep({ search }: Props) {
         width="narrow"
         defaultEmail={workEmail}
         choices={invites.choices}
+        canSubmit={invites.loaded}
         onCreated={invites.finish}
         onNoteRefused={(codes) => setNoteHasLink(codes.includes("has_link"))}
         submitLabel={finishLabel(invites, "setup.owner.submit", "setup.owner.submitAnd")}

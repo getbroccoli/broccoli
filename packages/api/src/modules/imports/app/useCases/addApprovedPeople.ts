@@ -48,6 +48,7 @@ export async function addApprovedPeople(
             managers,
             finish.inviteAudience,
             ownerKey,
+            finish.ownerEmail,
           ).flatMap((employee) => idOf(employee) ?? []),
           note: finish.inviteNote,
           invitedByUserId: finish.ownerUserId,

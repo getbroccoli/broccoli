@@ -18,9 +18,10 @@ export const NO_SETUP_INVITES: SetupChoices = {
   inviteNote: null,
 };
 
-/** The choices with what finishing needs: the owner's user and the origin of invite links. */
+/** The choices with what finishing needs: the owner's user and sign-in email, and where invite links point. */
 export interface SetupFinish extends SetupChoices {
   ownerUserId: string;
+  ownerEmail: string;
   linkOrigin: string;
 }
 

@@ -34,20 +34,19 @@ type Props = {
  * when setup finishes. Nothing is sent here; Continue carries both answers to the last page.
  */
 export function WhoStep({ search }: Props) {
-  // Undefined until the owner picks: their earlier answer, else the person with their email.
+  // Undefined until the owner picks here: then their earlier answer, else the person with their email.
   const [picked, setPicked] = useState<{ id: string; name: string } | null>();
   const [changing, setChanging] = useState(false);
   const [audience, setAudience] = useState<SetupInviteAudience>(search.audience);
-  const { data } = useQuery(SetupOwnerPersonDocument, {
-    variables: { meSearch: search.me },
+  const { data, error } = useQuery(SetupOwnerPersonDocument, {
+    // No import employee has an empty key, so without an answer `chosen` is null.
+    variables: { me: search.me ?? "" },
     fetchPolicy: "cache-and-network",
   });
   const navigate = useNavigate();
   const { next } = useSetupPages("who");
 
-  const earlier = search.me
-    ? data?.import.chosen.edges.find(({ node }) => node.id === search.me)?.node
-    : data?.import.ownerCandidate;
+  const earlier = search.me === undefined ? data?.import.ownerCandidate : data?.import.chosen;
   const me =
     picked === undefined
       ? earlier
@@ -55,6 +54,7 @@ export function WhoStep({ search }: Props) {
         : null
       : picked;
   const audiences = useQuery(SetupAudiencesDocument, {
+    skip: !data,
     variables: { me: me?.id ?? null },
     fetchPolicy: "cache-and-network",
   });
@@ -77,7 +77,12 @@ export function WhoStep({ search }: Props) {
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <BackToReview />
-            <Button type="submit" size="lg" className="ml-auto h-10 gap-2 px-4" disabled={!data}>
+            <Button
+              type="submit"
+              size="lg"
+              className="ml-auto h-10 gap-2 px-4"
+              disabled={!data || !counted}
+            >
               {t("setup.who.continue")}
               <ArrowRight weight="bold" aria-hidden />
             </Button>
@@ -145,6 +150,11 @@ export function WhoStep({ search }: Props) {
             }
           />
         </fieldset>
+        {(error || audiences.error) && (
+          <p role="alert" className="text-sm text-destructive">
+            {t("setup.invites.loadFailed")}
+          </p>
+        )}
       </SetupStepForm>
     </SetupLayout>
   );

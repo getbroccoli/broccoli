@@ -54,6 +54,7 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
           managers,
           SETUP_INVITE_AUDIENCE_INPUTS[audience],
           ownerEmployeeKey ?? null,
+          context.getActor().user?.email ?? null,
         );
       },
       ownerCandidate: async (_parent, _args, context) =>
@@ -61,6 +62,9 @@ export function createResolvers(useCases: ImportUseCases): Resolvers {
           (await loaders(context).review()).readyEmployees,
           context.getActor().user?.email ?? null,
         ),
+      readyEmployee: async (_parent, { key }, context) =>
+        (await loaders(context).review()).readyEmployees.find((employee) => employee.key === key) ??
+        null,
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],

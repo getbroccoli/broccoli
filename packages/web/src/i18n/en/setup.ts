@@ -136,6 +136,7 @@ export const setupEn = {
   "setup.who.continue": "Continue",
   "setup.invites.who": "{count} people get an invite",
   "setup.invites.whoOne": "1 person gets an invite",
+  "setup.invites.loadFailed": "Couldn’t load who gets an invite. Reload the page to try again.",
   "setup.invites.previewLabel": "Invite preview",
   "setup.invites.previewSubject": "You’re invited to {company} on Broccoli",
   "setup.invites.previewGreeting": "Hi {name},",

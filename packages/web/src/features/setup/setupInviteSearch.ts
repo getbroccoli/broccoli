@@ -11,21 +11,22 @@ const AUDIENCES = [
 /** What the owner chose on "Who uses Broccoli", carried to setup's last page in its URL. */
 export interface SetupInviteSearch {
   audience: SetupInviteAudience;
-  /** The import employee the owner is; null for none. */
-  me: string | null;
+  /** The import employee the owner is; null when they said they are not in the list, undefined before they answer. */
+  me?: string | null;
 }
 
 const schema = z.object({
   audience: z.enum(AUDIENCES).catch("ONLY_ADMINS"),
   me: z
     .string()
+    .nullable()
     .optional()
     .catch(undefined)
-    .transform((me) => me || null),
+    .transform((me) => (me === "" ? undefined : me)),
 });
 
-/** No choice yet: what the setup pages' URLs leave out. */
-export const DEFAULT_SETUP_INVITE_SEARCH: SetupInviteSearch = { audience: "ONLY_ADMINS", me: null };
+/** Only admins: what the setup pages' URLs leave out. */
+export const DEFAULT_SETUP_INVITE_SEARCH = { audience: "ONLY_ADMINS" } as const;
 
 /** The choices in a setup page's search params; anything unknown chooses nobody. */
 export function parseSetupInviteSearch(search: Record<string, unknown>): SetupInviteSearch {

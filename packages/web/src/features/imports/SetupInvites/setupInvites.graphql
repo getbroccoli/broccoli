@@ -15,18 +15,14 @@ query SetupInvitees($audience: SetupInviteAudience!, $me: ID) {
   }
 }
 
-query SetupOwnerPerson($meSearch: String) {
+query SetupOwnerPerson($me: ID!) {
   import {
     id
     ownerCandidate {
       ...SetupPerson @unmask
     }
-    chosen: employees(first: 1, filter: { search: $meSearch, ready: true }) {
-      edges {
-        node {
-          ...SetupPerson @unmask
-        }
-      }
+    chosen: readyEmployee(key: $me) {
+      ...SetupPerson @unmask
     }
   }
 }

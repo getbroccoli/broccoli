@@ -65,6 +65,7 @@ const calls = {
     imports.addApprovedPeople(ctx, tx, {
       ...NO_SETUP_INVITES,
       ownerUserId: "owner",
+      ownerEmail: "owner@example.com",
       linkOrigin: "https://broccoli.example.com",
     }),
   approveImport: (imports, ctx) => imports.approveImport(ctx, "any-version"),

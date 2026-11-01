@@ -121,7 +121,7 @@ export function createEmployeeInviteService({
   // The job and the public invite page run without a user.
   const system = PrincipalSecurityContext.system();
   const invites = inviteRepository(orm);
-  const readMailer = () => mailSettings.readMailer(system);
+  const readMailer = (tx?: Tx) => mailSettings.readMailer(system, tx);
   const readCompanyName = async () => (await readCompany(system)).name ?? "";
   const newInvite = { jobs, secretBox };
 
@@ -162,7 +162,8 @@ export function createEmployeeInviteService({
         profiles: [],
         note: trimmedNote,
         invitedByUserId,
-        delivery: await chooseDelivery(readMailer, null, trimmedNote),
+        // In `tx`: setup holds its locks here, so another connection could wait on them.
+        delivery: await chooseDelivery(() => readMailer(tx), null, trimmedNote),
         linkOrigin,
       });
     },

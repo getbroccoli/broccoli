@@ -59,7 +59,11 @@ export async function createOwnerAtSetup<Owner extends OwnerUser>(
     throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
   }
   const owner = await saveOwner(tx, await createOwner(), current);
-  const invites = await addApprovedPeople(ctx, tx, { ...choices, ownerUserId: owner.user.id });
+  const invites = await addApprovedPeople(ctx, tx, {
+    ...choices,
+    ownerUserId: owner.user.id,
+    ownerEmail: owner.user.email,
+  });
   await completeOwnerStep(ctx, tx);
   await instance.clearSetupSession();
   return { owner, invites };

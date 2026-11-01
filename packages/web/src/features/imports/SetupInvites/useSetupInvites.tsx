@@ -29,6 +29,8 @@ export interface SetupInvites {
   byEmail: boolean;
   /** Whether the invitees are known, or nobody is invited. */
   loaded: boolean;
+  /** Whether reading the invitees failed; finishing waits until they are known. */
+  failed: boolean;
   note: string;
   setNote: (note: string) => void;
   /** What the finish sends; the note only when invites go by email. */
@@ -49,8 +51,8 @@ export interface SetupInvites {
  */
 export function useSetupInvites(search: SetupInviteSearch): SetupInvites {
   const inviting = search.audience !== "ONLY_ADMINS";
-  const { data } = useQuery(SetupInviteesDocument, {
-    variables: { audience: search.audience, me: search.me },
+  const { data, error } = useQuery(SetupInviteesDocument, {
+    variables: { audience: search.audience, me: search.me ?? null },
     skip: !inviting,
     fetchPolicy: "network-only",
   });
@@ -87,10 +89,11 @@ export function useSetupInvites(search: SetupInviteSearch): SetupInvites {
     company: data?.company.name ?? "",
     byEmail,
     loaded: !inviting || data !== undefined,
+    failed: error !== undefined,
     note,
     setNote,
     choices: {
-      ownerEmployeeKey: search.me,
+      ownerEmployeeKey: search.me ?? null,
       inviteAudience: search.audience,
       inviteNote: byEmail ? note.trim() || null : null,
     },

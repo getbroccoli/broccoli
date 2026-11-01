@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { ApplicationError, invalidInput } from "../../applicationError";
-import type { Orm, Transact } from "../../db";
+import type { Orm, Transact, Tx } from "../../db";
 import type { Deployment } from "../../env";
 import type { Logger } from "../../logger";
 import type { SecretBox } from "../../secrets";
@@ -33,9 +33,9 @@ export interface MailSettings {
   sendTestEmail(ctx: SecurityContext): Promise<void>;
   /**
    * How this instance sends email now: the saved choice on self-hosted, Broccoli's mail relay on
-   * an initialized managed instance; null without email.
+   * an initialized managed instance; null without email. Joins `db` when it is a transaction.
    */
-  readMailer(ctx: SecurityContext): Promise<InstanceMailer | null>;
+  readMailer(ctx: SecurityContext, db?: Orm | Tx): Promise<InstanceMailer | null>;
 }
 
 /** A mailer and the origin its links use. */
@@ -76,7 +76,8 @@ export function createMailSettings({
     deployment.mode === "self_hosted" && deployment.publicUrl
       ? new URL(deployment.publicUrl).origin
       : null;
-  const readMailer = () => readSavedMailer(orm, { secretBox, mail, resendApiUrl, publicOrigin });
+  const readMailer = (db: Orm | Tx = orm) =>
+    readSavedMailer(db, { secretBox, mail, resendApiUrl, publicOrigin });
 
   return {
     read: async (ctx) => {
@@ -162,11 +163,11 @@ export function createMailSettings({
       }
     },
 
-    readMailer: async (ctx) => {
+    readMailer: async (ctx, db = orm) => {
       ctx.require("MANAGE_WORKSPACE");
       return deployment.mode === "managed"
-        ? readRelayMailer(orm, { secretBox, mail, url: deployment.mailRelayUrl })
-        : readMailer();
+        ? readRelayMailer(db, { secretBox, mail, url: deployment.mailRelayUrl })
+        : readMailer(db);
     },
   };
 }
@@ -175,7 +176,7 @@ const MAILPIT_URL = "smtp://mailpit:1025";
 
 /** The saved choice's mailer and link origin, from one read so the secret matches its source. */
 async function readSavedMailer(
-  orm: Orm,
+  db: Orm | Tx,
   {
     secretBox,
     mail,
@@ -189,7 +190,7 @@ async function readSavedMailer(
   },
 ): Promise<InstanceMailer | null> {
   const { source, from, encryptedSecret, linkOrigin } =
-    await instanceRepository(orm).readMailSender();
+    await instanceRepository(db).readMailSender();
   if (source === "no_email" || from === null || encryptedSecret === null) {
     return null;
   }
@@ -209,10 +210,10 @@ async function readSavedMailer(
 
 /** The relay's mailer with the instance's credential and origin; null before its init. */
 async function readRelayMailer(
-  orm: Orm,
+  db: Orm | Tx,
   { secretBox, mail, url }: { secretBox: SecretBox; mail: MailIntegration; url: string },
 ): Promise<InstanceMailer | null> {
-  const repository = instanceRepository(orm);
+  const repository = instanceRepository(db);
   const [{ assignment }, encryptedCredential] = await Promise.all([
     repository.readInstance(),
     repository.readInstanceCredential(),

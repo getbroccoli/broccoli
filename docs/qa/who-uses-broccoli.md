@@ -12,7 +12,8 @@ A manual check of the "Who uses Broccoli" setup page and the invites setup's las
 - [ ] Approve lands on "Who uses Broccoli", the step after "Add your people" in the step list; Back reopens the review.
 - [ ] On managed, signed in as `owner@example.com`, "Which of these people are you?" already shows Avery Stone. On self-hosted it shows "I’m not in the list".
 - [ ] Change opens a search over the people being added; picking Avery shows Avery, and "No one" shows "I’m not in the list".
-- [ ] "Only admins" is chosen. "Admins and managers" says "You and the 2 people who manage someone…" with Avery chosen as you, and Show names lists Robin Stone and Avery's other managers but not Avery. "Everyone" says "You and all 3 people…".
+- [ ] "Only admins" is chosen. With Avery chosen as you, "Admins and managers" says "You and the 1 person who manages someone…" and Show names lists only Robin; "Everyone" says "You and all 3 people…".
+- [ ] Choosing "I’m not in the list", continuing and pressing Back keeps "I’m not in the list"; choosing Robin, continuing and pressing Back keeps Robin.
 - [ ] With nobody managing anyone, "Admins and managers" is disabled and says "Nobody manages anyone yet…".
 
 ## The last page

@@ -1,5 +1,10 @@
 import { ApplicationError } from "../../../../core/applicationError";
-import { completeReadyStep, type SetupChoices, type SetupInvite } from "../../../../core/instance";
+import {
+  completeReadyStep,
+  readOwner,
+  type SetupChoices,
+  type SetupInvite,
+} from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import type { SystemContext } from "./systemContext";
 
@@ -18,7 +23,12 @@ export async function completeSetup(
     if (!(await completeReadyStep(ctx, tx))) {
       throw new ApplicationError("CONFLICT", "Setup is not at the ready step.");
     }
-    // Only a signed-in owner reaches the ready step.
-    return addApprovedPeople(ctx, tx, { ...choices, ownerUserId: ctx.user!.userId });
+    // An admin may finish too; the owner, who exists before managed setup, is linked either way.
+    const owner = (await readOwner(tx))!;
+    return addApprovedPeople(ctx, tx, {
+      ...choices,
+      ownerUserId: owner.userId,
+      ownerEmail: owner.email,
+    });
   });
 }

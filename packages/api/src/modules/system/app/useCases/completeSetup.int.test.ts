@@ -1,4 +1,5 @@
 import {
+  ADMIN,
   employeeInviteService,
   employeeUseCases,
   expect,
@@ -43,7 +44,7 @@ test("finishing managed setup creates exactly the ready people with their avatar
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   expect(await storedFileIds(orm)).toHaveLength(2);
 
-  await systemUseCases(orm).completeSetup(owner, { ...NO_SETUP_INVITES, linkOrigin });
+  await systemUseCases(orm).completeSetup(owner, NO_INVITES);
 
   expect((await readInstance(orm)).step).toBe("done");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toMatchObject([
@@ -61,9 +62,7 @@ test("refuses finishing after another tab goes Back and creates nobody", async (
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await imports.reopenReview(owner);
 
-  await expect(
-    systemUseCases(orm).completeSetup(owner, { ...NO_SETUP_INVITES, linkOrigin }),
-  ).rejects.toMatchObject({
+  await expect(systemUseCases(orm).completeSetup(owner, NO_INVITES)).rejects.toMatchObject({
     code: "CONFLICT",
     message: "Setup is not at the ready step.",
   });
@@ -93,7 +92,7 @@ test("finishing preserves an employee added by hand after approval and skips the
     email: "avery@example.com",
   });
 
-  await systemUseCases(orm).completeSetup(owner, { ...NO_SETUP_INVITES, linkOrigin });
+  await systemUseCases(orm).completeSetup(owner, NO_INVITES);
 
   expect(
     (await employees.listEmployees(owner, { orderBy: { field: "EMAIL" } })).edges.map(
@@ -106,9 +105,7 @@ test("refuses an employee completing setup and keeps the ready step", async ({ o
   await seed.owner();
   await seed.setupStep("ready");
 
-  await expect(
-    systemUseCases(orm).completeSetup(EMPLOYEE, { ...NO_SETUP_INVITES, linkOrigin }),
-  ).rejects.toMatchObject({
+  await expect(systemUseCases(orm).completeSetup(EMPLOYEE, NO_INVITES)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 
@@ -119,8 +116,7 @@ test("invites only the managers when admins and managers are chosen", async ({ o
   const owner = await prepareManagedSetup(orm, seed);
 
   const invites = await systemUseCases(orm).completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin,
+    ...NO_INVITES,
     ownerEmployeeKey: "avery@example.com",
     inviteAudience: "admins_and_managers",
   });
@@ -134,7 +130,7 @@ test("creates no invites when only admins are chosen", async ({ orm, seed }) => 
   const owner = await prepareManagedSetup(orm, seed);
   const setup = systemUseCases(orm);
 
-  const invites = await setup.completeSetup(owner, { ...NO_SETUP_INVITES, linkOrigin });
+  const invites = await setup.completeSetup(owner, NO_INVITES);
 
   expect(invites).toEqual([]);
   expect(setup.sentJobs).toEqual([]);
@@ -157,8 +153,7 @@ test("invites everyone added except the owner's person when everyone is chosen",
   const owner = await prepareManagedSetup(orm, seed);
 
   const invites = await systemUseCases(orm).completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin,
+    ...NO_INVITES,
     ownerEmployeeKey: "avery@example.com",
     inviteAudience: "everyone",
   });
@@ -180,8 +175,7 @@ test("links the owner to their chosen person even when their work email differs"
   const owner = await prepareManagedSetup(orm, seed);
 
   await systemUseCases(orm).completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin,
+    ...NO_INVITES,
     ownerEmployeeKey: "avery@example.com",
   });
 
@@ -197,8 +191,7 @@ test("finishes without linking anyone when the chosen person is absent", async (
   const owner = await prepareManagedSetup(orm, seed);
 
   await systemUseCases(orm).completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin,
+    ...NO_INVITES,
     ownerEmployeeKey: "absent@example.com",
   });
 
@@ -210,8 +203,7 @@ test("finishes without linking anyone when the chosen person is absent", async (
 test("refuses deleting the person linked to the owner at setup", async ({ orm, seed }) => {
   const owner = await prepareManagedSetup(orm, seed);
   await systemUseCases(orm).completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin,
+    ...NO_INVITES,
     ownerEmployeeKey: "avery@example.com",
   });
   const employees = employeeUseCases(orm);
@@ -235,8 +227,7 @@ test("refuses a note with a link on the relay without adding people or queuing i
 
   await expect(
     setup.completeSetup(owner, {
-      ...NO_SETUP_INVITES,
-      linkOrigin,
+      ...NO_INVITES,
       inviteAudience: "everyone",
       inviteNote: "Read https://example.com/welcome",
     }),
@@ -259,8 +250,7 @@ test("queues one email job per invite and returns no links when email is chosen"
   const setup = systemUseCases(orm);
 
   const invites = await setup.completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin,
+    ...NO_INVITES,
     ownerEmployeeKey: "avery@example.com",
     inviteAudience: "everyone",
   });
@@ -281,8 +271,7 @@ test("returns one link per invite without queuing email when no email is chosen"
   const setup = systemUseCases(orm);
 
   const invites = await setup.completeSetup(owner, {
-    ...NO_SETUP_INVITES,
-    linkOrigin,
+    ...NO_INVITES,
     ownerEmployeeKey: "avery@example.com",
     inviteAudience: "everyone",
   });
@@ -293,6 +282,42 @@ test("returns one link per invite without queuing email when no email is chosen"
   }
   expect(new Set(invites.map(({ link }) => link)).size).toBe(2);
   expect(setup.sentJobs).toEqual([]);
+});
+
+test("links the owner's user even when an admin finishes setup", async ({ orm, seed }) => {
+  const owner = await prepareManagedSetup(orm, seed);
+
+  await systemUseCases(orm).completeSetup(ADMIN, {
+    ...NO_INVITES,
+    ownerEmployeeKey: "avery@example.com",
+  });
+
+  const { edges } = await employeeUseCases(orm).listEmployees(owner, {});
+  const avery = edges.find(({ node }) => node.email === "avery@example.com")!.node;
+  expect(avery.userId).toBe(owner.user!.userId);
+});
+
+test("does not invite the person with the owner's sign-in email", async ({ orm, seed }) => {
+  await seed.assignment();
+  const owner = await seed.owner();
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: owner.user!.email },
+    { email: "robin@example.com" },
+  ]);
+  const imports = importUseCases(orm);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+
+  const invites = await systemUseCases(orm).completeSetup(owner, {
+    ...NO_INVITES,
+    inviteAudience: "everyone",
+  });
+
+  const { edges } = await employeeUseCases(orm).listEmployees(owner, {});
+  const robin = edges.find(({ node }) => node.email === "robin@example.com")!.node;
+  expect(invites).toHaveLength(1);
+  expect(invites[0]!.employeeId).toBe(robin.id);
 });
 
 async function prepareManagedSetup(orm: Orm, seed: TestSeed) {
@@ -310,4 +335,4 @@ async function prepareManagedSetup(orm: Orm, seed: TestSeed) {
   return owner;
 }
 
-const linkOrigin = "https://broccoli.example.com";
+const NO_INVITES = { ...NO_SETUP_INVITES, linkOrigin: "https://broccoli.example.com" };

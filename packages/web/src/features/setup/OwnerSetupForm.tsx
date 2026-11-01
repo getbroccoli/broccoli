@@ -47,19 +47,15 @@ type Props = {
   defaultEmail?: string;
   /** Shown below the fields, such as the invites creating the account sends. */
   children?: ReactNode;
-  /** What the owner chose on "Who uses Broccoli"; none links and invites nobody. */
-  choices?: OwnerSetupChoices;
+  /** What the owner chose on "Who uses Broccoli". */
+  choices: OwnerSetupChoices;
+  /** Whether the choices are known, so the account may be created with them. */
+  canSubmit: boolean;
   /** Runs once the account exists, with the invites it sent, before the owner enters the app. */
-  onCreated?: (invites: OwnerSetupInvite[]) => Promise<void>;
+  onCreated: (invites: OwnerSetupInvite[]) => Promise<void>;
   /** Runs when the account was refused for its invite note, with the note's error codes. */
-  onNoteRefused?: (codes: string[]) => void;
-  submitLabel?: string;
-};
-
-const NO_CHOICES: OwnerSetupChoices = {
-  ownerEmployeeKey: null,
-  inviteAudience: "ONLY_ADMINS",
-  inviteNote: null,
+  onNoteRefused: (codes: string[]) => void;
+  submitLabel: string;
 };
 
 /**
@@ -73,7 +69,8 @@ export function OwnerSetupForm({
   width,
   defaultEmail = "",
   children,
-  choices = NO_CHOICES,
+  choices,
+  canSubmit,
   onCreated,
   onNoteRefused,
   submitLabel,
@@ -85,7 +82,7 @@ export function OwnerSetupForm({
     setFailure(null);
     const { result, invites, fieldErrors } = await setUpOwner(email, password, choices);
     if (result === "ok") {
-      await onCreated?.(invites);
+      await onCreated(invites);
       return true;
     }
     // On a conflict, setup moved on in another browser: reloading shows where.
@@ -93,7 +90,7 @@ export function OwnerSetupForm({
       return true;
     }
     const noteCodes = fieldErrors.flatMap(({ field, code }) => (field === "note" ? [code] : []));
-    if (noteCodes.length > 0 && onNoteRefused) {
+    if (noteCodes.length > 0) {
       onNoteRefused(noteCodes);
       return false;
     }
@@ -130,9 +127,9 @@ export function OwnerSetupForm({
             type="submit"
             size="lg"
             className="ml-auto h-10 gap-2 px-4"
-            disabled={isSubmitting || !isFilledIn}
+            disabled={isSubmitting || !isFilledIn || !canSubmit}
           >
-            {isSubmitting ? t("setup.owner.submitting") : (submitLabel ?? t("setup.owner.submit"))}
+            {isSubmitting ? t("setup.owner.submitting") : submitLabel}
             <ArrowRight weight="bold" aria-hidden />
           </Button>
         </div>

@@ -6,11 +6,11 @@ import { ImportSource } from "./importSource";
 import { setupInvitees } from "./setupInvitees";
 
 it("invites nobody when only admins are chosen", () => {
-  expect(setupInvitees(people, managers, "only_admins", null)).toEqual([]);
+  expect(setupInvitees(people, managers, "only_admins", null, null)).toEqual([]);
 });
 
 it("invites every ready person except the owner when everyone is chosen", () => {
-  expect(setupInvitees(people, managers, "everyone", "avery@example.com")).toEqual([
+  expect(setupInvitees(people, managers, "everyone", "avery@example.com", null)).toEqual([
     robin,
     taylor,
     casey,
@@ -18,9 +18,24 @@ it("invites every ready person except the owner when everyone is chosen", () => 
 });
 
 it("invites managers in review order except the owner when admins and managers are chosen", () => {
-  expect(setupInvitees(people, managers, "admins_and_managers", "avery@example.com")).toEqual([
-    robin,
+  expect(setupInvitees(people, managers, "admins_and_managers", "avery@example.com", null)).toEqual(
+    [robin, taylor],
+  );
+});
+
+it("admins and managers leaves out someone whose only reports are not being added", () => {
+  const managers = new Map<string, ImportManager>([
+    ["leftout@example.com", { manager: robin!, problem: null }],
+  ]);
+
+  expect(setupInvitees(people, managers, "admins_and_managers", null, null)).toEqual([]);
+});
+
+it("never invites the person whose work email is the owner's sign-in email", () => {
+  expect(setupInvitees(people, managers, "everyone", null, "Robin@Example.com")).toEqual([
+    avery,
     taylor,
+    casey,
   ]);
 });
 
