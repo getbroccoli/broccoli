@@ -21,11 +21,6 @@ export class LocationNameTakenError extends Error {
   }
 }
 
-/** The key two names share when they name one place: "Leeds" and " leeds" match. */
-export function locationNameKey(name: string): string {
-  return name.trim().toLowerCase();
-}
-
 /** A trimmed location name; throws `INVALID_INPUT` on the `name` field when blank or too long. */
 export function parseLocationName(name: string): string {
   const result = locationSchema.safeParse({ name });

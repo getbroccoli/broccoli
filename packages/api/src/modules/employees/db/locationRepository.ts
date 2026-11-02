@@ -1,7 +1,7 @@
 import { asc, count, eq, sql } from "drizzle-orm";
 
 import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
-import { type Location, locationNameKey, LocationNameTakenError } from "../domain";
+import { type Location, LocationNameTakenError } from "../domain";
 import { employees } from "./employeesTable";
 import { LOCATION_NAME_UNIQUE, locations } from "./locationsTable";
 
@@ -24,8 +24,8 @@ export interface LocationRepository {
   lockWithPeopleCount(id: string): Promise<(Location & { peopleCount: number }) | null>;
   delete(id: string): Promise<void>;
   /**
-   * The location of each trimmed name, by its name key, creating the ones no location has yet with
-   * the first spelling given.
+   * The location of each trimmed name, by that name, matching ignoring case and creating the ones no
+   * location has yet with the first spelling given.
    */
   findOrCreate(names: readonly string[]): Promise<Map<string, Location>>;
   deleteAll(): Promise<void>;
@@ -101,26 +101,20 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
     },
 
     findOrCreate: async (names) => {
-      const firstSpellings = new Map<string, string>();
-      for (const name of names) {
-        if (!firstSpellings.has(locationNameKey(name))) {
-          firstSpellings.set(locationNameKey(name), name);
-        }
-      }
-      if (firstSpellings.size === 0) {
+      if (names.length === 0) {
         return new Map();
       }
+      // Postgres alone decides which names match, by the unique index; a repeat in this insert is skipped.
       await orm()
         .insert(locations)
-        .values([...firstSpellings.values()].map((name) => ({ name })))
+        .values(names.map((name) => ({ name })))
         .onConflictDoNothing();
-      const found = await orm()
-        .select()
-        .from(locations)
-        .where(
-          sql`lower(btrim(${locations.name})) = any(${sql.param([...firstSpellings.keys()])}::text[])`,
-        );
-      return new Map(found.map((location) => [locationNameKey(location.name), location]));
+      const { rows } = await orm().execute<{ given: string; id: string; name: string }>(sql`
+        select given, ${locations.id} as id, ${locations.name} as name
+        from unnest(${sql.param([...names])}::text[]) as given
+        join ${locations} on lower(btrim(${locations.name})) = lower(btrim(given))
+      `);
+      return new Map(rows.map(({ given, id, name }) => [given, { id, name }]));
     },
 
     deleteAll: async () => {

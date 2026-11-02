@@ -6,7 +6,6 @@ import type { RasterImage } from "../../../utils";
 import { employeeRepository, employmentRepository, locationRepository } from "../db";
 import {
   type Employee,
-  locationNameKey,
   type NewEmployeeInput,
   parseNewEmployee,
   tryParseNewEmployee,
@@ -182,6 +181,6 @@ async function placeInLocations<T extends object>(
   const locations = await locationRepository(tx).findOrCreate(names);
   return employees.map(({ employee, locationName }) => ({
     ...employee,
-    locationId: locationName?.trim() ? locations.get(locationNameKey(locationName))!.id : null,
+    locationId: locationName?.trim() ? locations.get(locationName.trim())!.id : null,
   }));
 }

@@ -17,7 +17,6 @@ export {
 export {
   type Location,
   locationChanges,
-  locationNameKey,
   LocationNameTakenError,
   parseLocationName,
 } from "./location";
