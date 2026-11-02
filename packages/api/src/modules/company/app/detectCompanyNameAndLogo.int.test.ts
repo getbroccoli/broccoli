@@ -1,11 +1,11 @@
-import { companyUseCases, expect, PNG as logo, SYSTEM, test } from "#test/support";
+import { companyService, expect, PNG as logo, SYSTEM, test } from "#test/support";
 
-import { createLogger } from "../../../../core/logger";
+import { createLogger } from "../../../core/logger";
 
 test("stores the brand name and logo found for the owner's domain", async ({ orm, seed }) => {
   const actor = await seed.owner();
   const domains: string[] = [];
-  const company = companyUseCases(orm, {
+  const company = companyService(orm, {
     brandLookup: (domain) => {
       domains.push(domain);
       return Promise.resolve({ name: "Example Labs", logo });
@@ -26,7 +26,7 @@ test("stores the brand name and logo found for the owner's domain", async ({ orm
 
 test("keeps the domain suggestion and no logo when no brand is found", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
 
   await company.detectCompanyNameAndLogo(SYSTEM, {
     userId: actor.user!.userId,
@@ -43,7 +43,7 @@ test("keeps the domain suggestion and no logo when no brand is found", async ({ 
 test("does not look up a personal email domain", async ({ orm, seed }) => {
   const actor = await seed.owner({ email: "owner@gmail.com" });
   const domains: string[] = [];
-  const company = companyUseCases(orm, {
+  const company = companyService(orm, {
     brandLookup: (domain) => {
       domains.push(domain);
       return Promise.resolve(null);
@@ -71,7 +71,7 @@ test("logs a failed lookup and resolves without storing a brand", async ({ orm, 
       logs.push(line);
     },
   });
-  const company = companyUseCases(orm, {
+  const company = companyService(orm, {
     logger,
     brandLookup: () => Promise.reject(new Error("Brand service unavailable")),
   });
@@ -97,7 +97,7 @@ test("does not restore a removed logo when owner setup is delivered again", asyn
 }) => {
   const actor = await seed.owner();
   const owner = { userId: actor.user!.userId, email: "owner@example.com" };
-  const company = companyUseCases(orm, {
+  const company = companyService(orm, {
     brandLookup: () => Promise.resolve({ name: "Example Labs", logo }),
   });
   await company.detectCompanyNameAndLogo(SYSTEM, owner);
@@ -117,7 +117,7 @@ test.for(["import", "owner", "done"] as const)(
     const actor = await seed.owner();
     await seed.setupStep(step);
     const domains: string[] = [];
-    const company = companyUseCases(orm, {
+    const company = companyService(orm, {
       brandLookup: (domain) => {
         domains.push(domain);
         return Promise.resolve({ name: "Acme Corp", logo });

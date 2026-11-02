@@ -1,6 +1,6 @@
-import { companyUseCases, expect, EMPLOYEE, SETUP_HOLDER, test } from "#test/support";
+import { companyService, expect, EMPLOYEE, SETUP_HOLDER, test } from "#test/support";
 
-import { createInstanceService } from "../../../../core/instance";
+import { createInstanceService } from "../../../core/instance";
 
 const instances = createInstanceService();
 
@@ -9,7 +9,7 @@ test("saves the owner's company name and moves setup on to the import step", asy
   seed,
 }) => {
   const ctx = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
 
   const saved = await company.update(ctx, { name: "  Example Ltd  " });
 
@@ -20,7 +20,7 @@ test("saves the owner's company name and moves setup on to the import step", asy
 
 test("renames the company after setup is done", async ({ orm, seed }) => {
   const ctx = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   await company.update(ctx, { name: "Example Ltd" });
   await seed.setupStep("done");
 
@@ -33,7 +33,7 @@ test("renames the company after setup is done", async ({ orm, seed }) => {
 
 test("refuses an employee without changing the company or setup step", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const before = await company.getCompany(owner);
 
   await expect(company.update(EMPLOYEE, { name: "Example Ltd" })).rejects.toMatchObject({
@@ -47,7 +47,7 @@ test("refuses an employee without changing the company or setup step", async ({ 
 
 test("leaves the company step unfinished when the name is invalid", async ({ orm, seed }) => {
   const ctx = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
 
   await expect(company.update(ctx, { name: "   " })).rejects.toMatchObject({
     code: "INVALID_INPUT",
@@ -61,7 +61,7 @@ test("leaves the company step unfinished when the name is invalid", async ({ orm
 test("the setup holder names the company without an owner and moves setup to import", async ({
   orm,
 }) => {
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
 
   const saved = await company.update(SETUP_HOLDER, { name: "Acme Corp" });
 

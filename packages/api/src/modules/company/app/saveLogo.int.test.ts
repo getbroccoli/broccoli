@@ -1,7 +1,7 @@
 import { onTestFinished } from "vitest";
 
 import {
-  companyUseCases,
+  companyService,
   expect,
   JPEG,
   EMPLOYEE,
@@ -13,7 +13,7 @@ import {
 
 test("saves a PNG as the current logo", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
 
   const saved = await company.saveLogo(actor, logo);
 
@@ -24,7 +24,7 @@ test("saves a PNG as the current logo", async ({ orm, seed }) => {
 
 test("replaces the logo with a new file and deletes the old file", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const before = await company.saveLogo(actor, logo);
 
   const saved = await company.saveLogo(actor, logo);
@@ -38,7 +38,7 @@ test("replaces the logo with a new file and deletes the old file", async ({ orm,
 
 test("refuses an SVG and keeps the previous logo", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const before = await company.saveLogo(actor, logo);
 
   await expect(
@@ -54,7 +54,7 @@ test("refuses an SVG and keeps the previous logo", async ({ orm, seed }) => {
 
 test("refuses a truncated PNG and keeps the previous logo", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const before = await company.saveLogo(actor, logo);
 
   await expect(company.saveLogo(actor, logo.subarray(0, 8))).rejects.toMatchObject({
@@ -68,7 +68,7 @@ test("refuses a truncated PNG and keeps the previous logo", async ({ orm, seed }
 
 test("refuses an employee without changing the logo", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const before = await company.getCompany(owner);
 
   await expect(company.saveLogo(EMPLOYEE, logo)).rejects.toMatchObject({
@@ -84,7 +84,7 @@ test("keeps the owner's saved logo when a pending brand lookup finishes", async 
   const lookupStarted = Promise.withResolvers<void>();
   const lookup = Promise.withResolvers<{ name: string; logo: Buffer }>();
   const brand = { name: "Example Labs", logo: JPEG };
-  const company = companyUseCases(orm, {
+  const company = companyService(orm, {
     brandLookup: () => {
       lookupStarted.resolve();
       return lookup.promise;

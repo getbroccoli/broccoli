@@ -1,7 +1,6 @@
 export {
-  createCompanyUseCases,
-  readStoredCompany,
+  createCompanyService,
   MAX_LOGO_BYTES,
   type Company,
-  type CompanyUseCases,
-} from "./useCases";
+  type CompanyService,
+} from "./companyService";

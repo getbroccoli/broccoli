@@ -1,6 +1,6 @@
 import {
   employeeUseCases,
-  companyUseCases,
+  companyService,
   demoUseCases,
   expect,
   ADMIN,
@@ -23,7 +23,7 @@ test("exiting the demo deletes every employee and their avatars and returns to c
   transact,
 }) => {
   const demo = demoUseCases(orm);
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const { listEmployees } = employeeUseCases(orm);
   await seed.assignment();
   const owner = await seed.owner();

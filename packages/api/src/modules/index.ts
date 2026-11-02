@@ -6,7 +6,7 @@ import {
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
-import { companyModule, readStoredCompany } from "./company";
+import { companyModule, createCompany } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
 import { createEmployeeSetupService, employeeDirectory, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
@@ -38,6 +38,7 @@ export function createModules(
   const aiSettings = createAiSettingsService({ ...core, deployment, openRouter, broccoliAiUrl });
   const mailSettings = createMailSettingsService({ ...core, deployment, resendApiUrl });
   const passwordResetEmail = createPasswordResetEmailService({ ...core, mailSettings });
+  const company = createCompany({ ...core, brandLookupUrl });
   // Built once: the import serves them and the external agent puts its files through them.
   const importUseCases = createImportUseCases({
     ...core,
@@ -61,9 +62,9 @@ export function createModules(
       ...core,
       mode: deployment.mode,
       mailSettings,
-      readCompany: (ctx) => readStoredCompany(ctx, core.orm),
+      readCompany: company.readStoredCompany,
     }),
-    companyModule({ ...core, brandLookupUrl }),
+    companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule(slackConnection),
     importsModule(importUseCases),

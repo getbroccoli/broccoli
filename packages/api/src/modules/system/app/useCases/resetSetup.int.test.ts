@@ -1,5 +1,5 @@
 import {
-  companyUseCases,
+  companyService,
   employeeUseCases,
   expect,
   importUseCases,
@@ -24,7 +24,7 @@ test("resetting a finished setup deletes every employee and avatar and keeps the
   seed,
 }) => {
   const owner = await seed.owner({ password: TEST_OWNER.password });
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   await company.update(owner, { name: "Acme Corp" });
   await seed.aiSource("broccoli_ai");
   await seed.setupStep("done");

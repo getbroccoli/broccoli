@@ -41,7 +41,7 @@ export { TestSeed } from "./testSeed";
 export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
 export {
-  companyUseCases,
+  companyService,
   demoUseCases,
   employeeUseCases,
   employeeInviteService,

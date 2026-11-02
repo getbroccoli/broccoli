@@ -1,8 +1,8 @@
-import { companyUseCases, expect, PNG as logo, storedFileIds, SYSTEM, test } from "#test/support";
+import { companyService, expect, PNG as logo, storedFileIds, SYSTEM, test } from "#test/support";
 
 test("removes the logo and stops serving its old id", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm, {
+  const company = companyService(orm, {
     brandLookup: () => Promise.resolve({ name: "Example Labs", logo }),
   });
   await company.detectCompanyNameAndLogo(SYSTEM, {
@@ -24,7 +24,7 @@ test("keeps the logo removed when a pending lookup finishes", async ({ orm, seed
   const actor = await seed.owner();
   const lookupStarted = Promise.withResolvers<void>();
   const lookup = Promise.withResolvers<{ name: string; logo: Buffer }>();
-  const company = companyUseCases(orm, {
+  const company = companyService(orm, {
     brandLookup: () => {
       lookupStarted.resolve();
       return lookup.promise;

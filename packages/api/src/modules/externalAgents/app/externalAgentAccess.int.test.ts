@@ -1,5 +1,5 @@
 import {
-  companyUseCases,
+  companyService,
   expect,
   importUseCases,
   SETUP_EXTERNAL_AGENT,
@@ -63,7 +63,7 @@ test.for([
     "choices.leaveOutIncomplete": () =>
       imports.choices.leaveOutIncomplete(SETUP_EXTERNAL_AGENT, { reason: "email" }),
     "company.update": () =>
-      companyUseCases(orm).update(SETUP_EXTERNAL_AGENT, { name: "Changed company" }),
+      companyService(orm).update(SETUP_EXTERNAL_AGENT, { name: "Changed company" }),
     readSlack: () => imports.readSlack(SETUP_EXTERNAL_AGENT),
     "ai.save": () => systemUseCases(orm).ai.save(SETUP_EXTERNAL_AGENT, { source: "broccoli_ai" }),
   };

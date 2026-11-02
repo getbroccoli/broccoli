@@ -1,12 +1,12 @@
-import { companyUseCases, expect, EMPLOYEE, PNG, test } from "#test/support";
+import { companyService, expect, EMPLOYEE, PNG, test } from "#test/support";
 
-import { createFileStorageService } from "../../../../core/files";
+import { createFileStorageService } from "../../../core/files";
 
 const fileStorage = createFileStorageService();
 
 test("returns the current logo's bytes and WebP MIME type", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const saved = await company.saveLogo(actor, PNG);
   const stored = await fileStorage.readFile(orm, saved.logoFileId!);
 
@@ -17,7 +17,7 @@ test("returns the current logo's bytes and WebP MIME type", async ({ orm, seed }
 
 test("returns null for a replaced logo's id", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const before = await company.saveLogo(actor, PNG);
   await company.saveLogo(actor, PNG);
 
@@ -28,7 +28,7 @@ test("returns null for a replaced logo's id", async ({ orm, seed }) => {
 
 test("allows an employee to read the company logo", async ({ orm, seed }) => {
   const actor = await seed.owner();
-  const company = companyUseCases(orm);
+  const company = companyService(orm);
   const saved = await company.saveLogo(actor, PNG);
 
   const logo = await company.readLogo(EMPLOYEE, saved.logoFileId!);

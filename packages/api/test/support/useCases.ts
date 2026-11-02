@@ -22,7 +22,7 @@ import { createLogger, type Logger } from "../../src/core/logger";
 import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
-import { createCompanyUseCases, readStoredCompany } from "../../src/modules/company";
+import { createCompanyService } from "../../src/modules/company";
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
 import {
   createEmployeeInviteService,
@@ -48,17 +48,17 @@ import { testTransactor } from "./testTransactor";
 const employeeSetup = createEmployeeSetupService();
 
 /**
- * The company use cases on `orm` with test defaults: no brand is found and logs are
+ * The company service on `orm` with test defaults: no brand is found and logs are
  * silent. A test passes only the dependency it is about.
  */
-export function companyUseCases(
-  orm: Parameters<typeof createCompanyUseCases>[0]["orm"],
+export function companyService(
+  orm: Parameters<typeof createCompanyService>[0]["orm"],
   {
     brandLookup = () => Promise.resolve(null),
     logger = createLogger("silent"),
   }: { brandLookup?: BrandLookup; logger?: Logger } = {},
 ) {
-  return createCompanyUseCases({ orm, transact: testTransactor(orm), logger, brandLookup });
+  return createCompanyService({ orm, transact: testTransactor(orm), logger, brandLookup });
 }
 
 /** Every employee service a person's actions reach, together. */
@@ -199,7 +199,7 @@ export function employeeInviteService(
     transact: testTransactor(orm),
     secretBox: TEST_SECRET_BOX,
     mailSettings: mailSettings(orm, options),
-    readCompany: (ctx) => readStoredCompany(ctx, orm),
+    readCompany: companyService(orm).readStoredCompany,
     logger: createLogger("silent"),
     jobs: {
       send: (_tx, name, payload) => {
