@@ -92,6 +92,9 @@ fragment EmployeePanel_employee on Employee {
   manager {
     ...EmployeeName @unmask
   }
+  location {
+    ...LocationName @unmask
+  }
   avatarUrl
   permissionProfiles
   signInStatus {

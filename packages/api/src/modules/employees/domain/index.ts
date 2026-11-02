@@ -14,6 +14,12 @@ export {
   type NewEmployee,
   type NewEmployeeInput,
 } from "./employee";
+export {
+  type Location,
+  locationChanges,
+  LocationNameTakenError,
+  parseLocationName,
+} from "./location";
 export { managerChanges } from "./managerChanges";
 export {
   parseDateField,

@@ -5,6 +5,7 @@
       "lastName": "Kagame",
       "email": "ruth@cells.example.test",
       "jobTitle": "Senior Engineer",
+      "location": null,
       "startDate": "2019-05-06"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Iglesias",
       "email": "pablo@cells.example.test",
       "jobTitle": "Designer",
+      "location": null,
       "startDate": "2022-01-17"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Eze",
       "email": "ngozi@cells.example.test",
       "jobTitle": "ANALYST",
+      "location": null,
       "startDate": "2023-08-28"
     }
   ],

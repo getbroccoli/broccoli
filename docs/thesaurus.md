@@ -31,6 +31,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Change reason**: why, in the change author's own words: `changeReason` on an input, the reason on its history line.
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
 - **Employment**: a person's work for the company over a period, with its start and end dates and their direct manager; one at a time, never overlapping. A person's start date is the start of their first employment. Not "contract", which in the UK means the written contract of employment.
+- **Location**: a named place where people work, such as an office or "Remote", which admins manage in Settings; a person is in one at a time. Not "site" or "office", which a staff file may call it.
 - **Policy group**: a named set of people who share the same settings, such as "Everyone"; every new person joins "Everyone".
 - **Working pattern**: a named way of working, such as "Standard" or "Part-time Tue–Thu": the minutes worked on each weekday, Monday to Sunday, from a date. A group works one by default and a person can be put on one from a date. Not "workload", "schedule" or "policy".
 - **Pattern week**: a working pattern's minutes for each weekday and its full day, from a date until its next week.

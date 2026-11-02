@@ -5,6 +5,7 @@
       "lastName": "Fenwick",
       "email": "zarela.fenwick@staff.example",
       "jobTitle": "Software Engineer",
+      "location": "Remote",
       "startDate": "2023-03-17",
       "manager": "orvella.drelwick@staff.example"
     },
@@ -13,6 +14,7 @@
       "lastName": "Quillmere",
       "email": "tavren.quillmere@staff.example",
       "jobTitle": "Finance Analyst",
+      "location": "Remote",
       "startDate": "2024-06-21",
       "manager": "orvella.drelwick@staff.example"
     },
@@ -21,6 +23,7 @@
       "lastName": "Vosswick",
       "email": "nerali.vosswick@staff.example",
       "jobTitle": "Office Manager",
+      "location": "Remote",
       "startDate": "2025-02-14",
       "manager": "orvella.drelwick@staff.example"
     }

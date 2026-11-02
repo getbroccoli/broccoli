@@ -9,6 +9,7 @@ it("reads version one employee values", () => {
     email: "avery@example.com",
     jobTitle: "Designer",
     startDate: "2026-10-01",
+    location: "Leeds",
   };
 
   expect(parseImportEmployeeValues(1, values)).toEqual({ ...values, manager: null });

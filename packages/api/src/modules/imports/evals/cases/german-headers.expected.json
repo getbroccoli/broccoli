@@ -5,6 +5,7 @@
       "lastName": "Müller",
       "email": "joerg.mueller@acme-corp.example",
       "jobTitle": "Entwickler",
+      "location": null,
       "startDate": "2024-03-21"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Schröder",
       "email": "kaethe.schroeder@acme-corp.example",
       "jobTitle": "Designerin",
+      "location": null,
       "startDate": "2023-05-04"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Krüger",
       "email": "soeren.krueger@acme-corp.example",
       "jobTitle": "Buchhalter",
+      "location": null,
       "startDate": "2025-01-15"
     }
   ],

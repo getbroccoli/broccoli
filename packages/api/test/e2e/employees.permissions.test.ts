@@ -96,6 +96,7 @@ test("returns every editable field and deletion access to the owner", async ({ e
             "lastName",
             "email",
             "jobTitle",
+            "locationId",
             "startDate",
             "managerId",
             "avatar",

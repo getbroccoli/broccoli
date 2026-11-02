@@ -3,6 +3,7 @@ import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-c
 
 import { user } from "../../../core/auth";
 import { files } from "../../../core/files";
+import { locations } from "./locationsTable";
 
 export const employees = pgTable(
   "employees",
@@ -14,6 +15,8 @@ export const employees = pgTable(
     lastName: text("last_name").notNull(),
     email: text("email").notNull().unique("employees_email_unique"),
     jobTitle: text("job_title"),
+    /** Where they work now; a location someone is in cannot be deleted. */
+    locationId: uuid("location_id").references(() => locations.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /** The employee owns this file and deletes it with the employee. */
     avatarFileId: uuid("avatar_file_id").references(() => files.id),

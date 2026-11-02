@@ -57,6 +57,7 @@ const employeeChoicesV1 = z.object({
   lastName: valueChoice.optional(),
   email: valueChoice.optional(),
   jobTitle: valueChoice.optional(),
+  location: valueChoice.optional(),
   manager: valueChoice.optional(),
   startDate: valueChoice.optional(),
 });
@@ -73,6 +74,7 @@ const employeeValuesV1 = z.object({
   lastName: text,
   email: text,
   jobTitle: text,
+  location: text,
   // Records read before managers were imported have none.
   manager: text.default(null),
   startDate: z

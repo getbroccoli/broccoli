@@ -24,6 +24,8 @@
     "idtype",
     "indienstdatum",
     "indiensttreding",
+    "kantoor",
+    "locatie",
     "medewerker",
     "mobielprive",
     "mobielwerk",
@@ -40,11 +42,13 @@
     "telefoonprive",
     "telefoonwerk",
     "uitdienstdatum",
+    "vestiging",
     "voorletters",
     "voornaam",
     "voornamen",
     "voorvoegsels",
     "voorvoegselspartner",
+    "werklocatie",
     "werknemer"
   ],
   "jobTitles": []

@@ -22,10 +22,10 @@ import { EditableField, EditBar, FieldValue, RecordHistory } from "@/features/re
 import { t } from "@/i18n";
 
 import { Avatar } from "../Avatar";
-import { cachedEmployeeName } from "../cache";
+import { cachedEmployeeName, cachedLocationName } from "../cache";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
-import type { EmployeeFieldKey } from "./employeeDraft";
+import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
 import { KeyFacts } from "./KeyFacts";
 import { RemoveEmployeeDialog } from "./RemoveEmployeeDialog";
 import { useEmployeeDraft } from "./useEmployeeDraft";
@@ -65,14 +65,16 @@ export function EmployeeRecord({ employee, onClose }: Props) {
     .map((field) =>
       field.key === "manager"
         ? { ...field, format: (id: string) => cachedEmployeeName(cache, id) ?? id }
-        : field,
+        : field.key === "location"
+          ? { ...field, format: (id: string) => cachedLocationName(cache, id) ?? id }
+          : field,
     );
   const { operations } = useRouteContext({ from: "/_authenticated" }).me;
   const editable = new Set(employee.access.editableFields);
   const canEdit = (key: EmployeeFieldKey) =>
     key === "permissionProfiles"
       ? operations.includes("MANAGE_WORKSPACE") && !employee.permissionProfiles?.includes("OWNER")
-      : editable.has(key === "manager" ? "managerId" : key);
+      : editable.has(INPUT_KEYS[key as keyof typeof INPUT_KEYS] ?? key);
   const sections = Map.groupBy(fields, (field) => field.section);
   // In panel order, as the person reads the fields.
   const changedLabels = EMPLOYEE_DESCRIPTION.fields

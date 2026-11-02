@@ -5,6 +5,7 @@
       "lastName": "MacRae",
       "email": "eilidh.macrae@acme-corp.example",
       "jobTitle": "Office Administrator",
+      "location": null,
       "startDate": "2024-08-12"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Zieliński",
       "email": "piotr.zielinski@acme-corp.example",
       "jobTitle": "Maintenance Technician",
+      "location": null,
       "startDate": "2023-04-24"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Baptiste",
       "email": "leon.baptiste@acme-corp.example",
       "jobTitle": "Sales Adviser",
+      "location": null,
       "startDate": "2025-01-20"
     }
   ],

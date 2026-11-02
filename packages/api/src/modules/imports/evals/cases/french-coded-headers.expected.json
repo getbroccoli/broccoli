@@ -5,6 +5,7 @@
       "lastName": "Perrin",
       "email": "celine.perrin@acme-corp.example",
       "jobTitle": null,
+      "location": null,
       "startDate": "2022-04-23"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Roux",
       "email": "thibaut.roux@acme-corp.example",
       "jobTitle": null,
+      "location": null,
       "startDate": "2023-06-17"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Favre",
       "email": "aurelie.favre@acme-corp.example",
       "jobTitle": null,
+      "location": null,
       "startDate": "2024-08-21"
     }
   ],

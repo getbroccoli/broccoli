@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { EmailSettings } from "@/features/settings";
+import { EmailSettings, LocationSettings } from "@/features/settings";
 import { t } from "@/i18n";
 import { PageHeader } from "@/shell";
 
@@ -14,7 +14,10 @@ export const Route = createFileRoute("/_authenticated/settings")({
   component: () => (
     <>
       <PageHeader title={t("settings.title")} />
-      <EmailSettings />
+      <div className="flex flex-col gap-10">
+        <EmailSettings />
+        <LocationSettings />
+      </div>
     </>
   ),
 });

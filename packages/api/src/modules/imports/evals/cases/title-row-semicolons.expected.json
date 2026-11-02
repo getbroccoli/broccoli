@@ -5,6 +5,7 @@
       "lastName": "Hughes",
       "email": "mairwen.hughes@acme-corp.example",
       "jobTitle": "Bookkeeper",
+      "location": null,
       "startDate": "2024-04-23"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Mehta",
       "email": "dev.mehta@acme-corp.example",
       "jobTitle": "Operations Assistant",
+      "location": null,
       "startDate": "2023-06-05"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Campbell-Reed",
       "email": null,
       "jobTitle": "Customer Service Adviser",
+      "location": null,
       "startDate": "2025-02-14"
     }
   ],

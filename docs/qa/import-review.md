@@ -12,7 +12,7 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] "Review your people" opens `/setup/import/review`, titled "Review your people". In the step list, "Add your people" is current with its pages beneath it: "Gather everyone’s details" checked and "Review your people" in a card.
 - [ ] "Details came from" lists the Slack workspace and the file, each with its mark (a PDF its PDF icon, an Excel file its Excel icon); the search field sits at the right of that row.
 - [ ] A chip's × asks "Remove <name>?"; confirming takes its people out of the table and the chip away. Removing Slack also disconnects it on the import page.
-- [ ] The table lists one row per person, by name: Person (Slack photo or initials, and name), Email, Job title, Start date ("Not set" when missing), Sources, and a menu; its footer reads "N people".
+- [ ] The table lists one row per person, by name: Person (Slack photo or initials, and name), Email, Job title, Location, Start date ("Not set" when missing), Sources, and a menu; its footer reads "N people".
 - [ ] The one-word Slack member shows an amber "No last name" pill under the name; the row without an email shows "No valid work email" and its email "Not set" in amber.
 - [ ] Someone in both Slack and the file shows once, with both source marks overlapping in Sources; hovering them names the sources.
 
@@ -76,6 +76,11 @@ A manual check of the setup review step, between the import and Approve, on a de
 - [ ] With `/setup/import/review` open in two tabs, "Add N people" in both adds each person once.
 - [ ] Opened while a file is still read (by its URL, or after "Retry" in another tab), the button reads "Reading your files…" and is disabled; approving from a tab opened before the Retry shows "Couldn’t add your people. Try again." and adds no one.
 - [ ] With only incomplete people (for example a Slack workspace of one-word names), "Add N people" is hidden and the footer reads "No one is ready to add. Fix the highlighted details, or go back to add a source."
+
+## Locations
+
+- [ ] Give the CSV an `Office` column with "Leeds", "leeds " and "York" on three rows. Each row shows its value under Location; a person without one shows "Not set" and is still ready.
+- [ ] After Approve, Settings → Locations lists "Leeds" with 2 people and "York" with 1, and each person's panel shows their location.
 
 ## Managers
 

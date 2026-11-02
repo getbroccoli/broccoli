@@ -5,6 +5,7 @@
       "lastName": "Okafor",
       "email": null,
       "jobTitle": "Buyer",
+      "location": null,
       "startDate": null
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Brandvold",
       "email": null,
       "jobTitle": "Controller",
+      "location": null,
       "startDate": null
     }
   ],

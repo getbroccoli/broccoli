@@ -8,6 +8,7 @@ import {
   createEmployeePermissionService,
   createEmployeeReadService,
   createEmployeeService,
+  createLocationService,
   type EmployeeInviteService,
   employeeRecordType,
 } from "./app";
@@ -26,6 +27,7 @@ export {
   createGroupWorkingPatternService,
   createWorkingPatternService,
   createEmployeeWorkingPatternService,
+  createLocationService,
   employeeDirectory,
 } from "./app";
 export { employeeFieldErrors, parseEmployeeField } from "./domain";
@@ -42,6 +44,7 @@ export type {
   GroupWorkingPatternService,
   WorkingPatternService,
   EmployeeWorkingPatternService,
+  LocationService,
 } from "./app";
 export type {
   Employee,
@@ -71,6 +74,7 @@ export function employeesModule({
     ...createEmployeeReadService(dependencies),
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
+    ...createLocationService(dependencies),
   };
   return {
     name: "employees",

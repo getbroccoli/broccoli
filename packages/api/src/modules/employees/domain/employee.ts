@@ -5,6 +5,7 @@ import type { ListOrder } from "../../../core/pagination";
 import { changeReasonSchema, type FieldChange } from "../../../core/records";
 import { type CalendarDate, parseCalendarDate, parseUuid } from "../../../utils";
 import { fieldErrorCode, fieldErrorsOf } from "../helpers";
+import { locationNameSchema } from "./location";
 
 const NAME_MAX_LENGTH = 100;
 const EMAIL_MAX_LENGTH = 254;
@@ -18,6 +19,8 @@ export interface Employee {
   /** Work email, lowercased; unique. */
   email: string;
   jobTitle: string | null;
+  /** Where they work now, or null. */
+  locationId: string | null;
   /** The file holding their avatar, or null. */
   avatarFileId: string | null;
   createdAt: Date;
@@ -39,7 +42,10 @@ export interface NewEmployeeInput {
   startDate?: string | null;
 }
 
-export type NewEmployee = Omit<Employee, "id" | "avatarFileId" | "createdAt" | "userId"> & {
+export type NewEmployee = Omit<
+  Employee,
+  "id" | "avatarFileId" | "createdAt" | "userId" | "locationId"
+> & {
   /** First working day: the start of their first employment. */
   startDate: CalendarDate | null;
 };
@@ -53,15 +59,19 @@ export interface EmployeeUpdateInput {
   startDate?: string | null;
   /** Their direct manager's employee id; null for none. */
   managerId?: string | null;
+  /** Their location's id; null for none. */
+  locationId?: string | null;
   /** Why the change is made, kept on its history line. */
   changeReason?: string | null;
 }
 
-/** A validated update: the fields to change, normalised, the manager, and the reason for its history line. */
+/** A validated update: the fields to change, normalised, the manager, the location and the reason for its history line. */
 export interface EmployeeUpdate {
   changes: Partial<NewEmployee>;
   /** Absent: unchanged; null: no manager. Not checked to be an employee yet. */
   managerId?: string | null;
+  /** Absent: unchanged; null: no location. Not checked to be a location yet. */
+  locationId?: string | null;
   reason: string | null;
 }
 
@@ -100,9 +110,11 @@ const newEmployeeSchema = z.object({
 });
 
 // An absent field stays absent: `partial` skips its normalisation, so it does not become null.
-const employeeUpdateSchema = newEmployeeSchema
-  .partial()
-  .extend({ managerId: z.string().nullish(), changeReason: changeReasonSchema });
+const employeeUpdateSchema = newEmployeeSchema.partial().extend({
+  managerId: z.string().nullish(),
+  locationId: z.string().nullish(),
+  changeReason: changeReasonSchema,
+});
 
 /** Validates and normalises a new employee; throws `INVALID_INPUT` naming each bad field. */
 export function parseNewEmployee(input: NewEmployeeInput): NewEmployee {
@@ -125,8 +137,13 @@ export function parseEmployeeUpdate(input: EmployeeUpdateInput): EmployeeUpdate 
       ),
     );
   }
-  const { changeReason: reason, managerId, ...changes } = result.data;
-  return { changes, reason, ...(managerId !== undefined && { managerId }) };
+  const { changeReason: reason, managerId, locationId, ...changes } = result.data;
+  return {
+    changes,
+    reason,
+    ...(managerId !== undefined && { managerId }),
+    ...(locationId !== undefined && { locationId }),
+  };
 }
 
 /**
@@ -157,12 +174,13 @@ export function employeeFieldErrors(input: NewEmployeeInput): FieldError[] {
   return result.success ? [] : fieldErrorsOf(result.error);
 }
 
-/** One field of a new employee as the employee rules normalise it, or why the rules refuse it. */
+/** One field of a new employee, or their location's name, as the rules normalise it, or why they refuse it. */
 export function parseEmployeeField(
-  field: keyof NewEmployeeInput,
+  field: keyof NewEmployeeInput | "location",
   value: string,
 ): { value: string | null } | { code: string } {
-  const result = newEmployeeSchema.shape[field].safeParse(value);
+  const schema = field === "location" ? locationNameSchema : newEmployeeSchema.shape[field];
+  const result = schema.safeParse(value);
   return result.success
     ? { value: result.data ?? null }
     : { code: fieldErrorCode(result.error.issues[0]!) };

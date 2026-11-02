@@ -85,3 +85,56 @@ test("a job title edit waiting for a reset lets it lock the employee", async ({
   expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
   expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ jobTitle: "Lead" });
 });
+
+test("a location edit racing a reset settles without a deadlock", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee();
+  const location = await seed.location("Leeds");
+  const resetReady = Promise.withResolvers<number>();
+  const releaseReset = Promise.withResolvers<void>();
+  const resetting = transact(async (tx) => {
+    await employmentRepository(tx).lockForWrites();
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    resetReady.resolve(rows[0]!.pid);
+    await releaseReset.promise;
+    await employeeSetup.deleteAllEmployees(OWNER, tx);
+  });
+  const blockingPid = await resetReady.promise;
+
+  const results = Promise.allSettled([
+    resetting,
+    employeeServices(orm).updateEmployee(OWNER, { id: employee.id, locationId: location.id }),
+  ]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseReset.resolve();
+    await results;
+  }
+
+  const [reset, edit] = await results;
+  expect(reset.status).toBe("fulfilled");
+  if (edit.status === "rejected") {
+    // Reset may remove either the employee or the chosen location before the edit resumes.
+    expect(edit.reason).toMatchObject({
+      code: expect.stringMatching(/^(NOT_FOUND|INVALID_INPUT)$/) as unknown,
+    });
+  }
+});
+
+test("deleting all employees also deletes occupied and empty locations", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const leeds = await seed.location("Leeds");
+  await seed.location("York");
+  await seed.employee({ locationId: leeds.id });
+
+  await transact((tx) => employeeSetup.deleteAllEmployees(OWNER, tx));
+
+  expect(await employeeServices(orm).listLocations(OWNER)).toEqual([]);
+});

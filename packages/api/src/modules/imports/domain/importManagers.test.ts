@@ -255,6 +255,7 @@ const avery: ImportEmployeeRecord = {
   lastName: "Stone",
   email: "avery@example.com",
   jobTitle: null,
+  location: null,
   manager: null,
   externalRecordId: null,
   startDate: null,

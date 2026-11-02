@@ -27,6 +27,7 @@ export async function expectHistoryReplaysTo(orm: Orm, employeeId: string): Prom
     jobTitle: null,
     startDate: null,
     manager: null,
+    location: null,
   };
   for (const line of lines.reverse()) {
     for (const change of line.changes) {
@@ -46,5 +47,6 @@ export async function expectHistoryReplaysTo(orm: Orm, employeeId: string): Prom
     jobTitle: employee?.jobTitle ?? null,
     startDate: startDates.get(employeeId) ?? null,
     manager: managers.get(employeeId)?.id ?? null,
+    location: employee?.locationId ?? null,
   });
 }

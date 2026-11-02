@@ -11,6 +11,7 @@ export const FILE_FIELDS = [
   "lastName",
   "email",
   "jobTitle",
+  "location",
   "startDate",
   "manager",
   "externalRecordId",
@@ -163,6 +164,7 @@ export function readFileRecords(
       ...names[index]!,
       email: parseEmail(cell("email")),
       jobTitle: nonBlank(cell("jobTitle")),
+      location: nonBlank(cell("location")),
       startDate: startDates[index]!,
       manager: nonBlank(cell("manager")),
     };
@@ -206,6 +208,8 @@ const FIELD_QUESTIONS: Record<FileField, string> = {
   lastName: "Which column holds only the family or last name, and nothing else?",
   email: "Which column holds the work email? Never a personal or emergency-contact email.",
   jobTitle: "Which column holds the job title or position?",
+  location:
+    "Which column holds where the person works, such as their site, office or work location? When several columns qualify, choose the most specific place: a site or office over an agency or region. Never a home address, a country of residence, a department or org unit, where things are stored, or how they work (onsite, hybrid or remote as a work mode).",
   startDate: "Which column holds the date the person started or joined? Never a birth or end date.",
   manager:
     "Which column holds the person each one reports to, such as a manager, supervisor, line manager or 'reports to' column, by name, email or ID? Never the person's own name, email or ID, an emergency contact or next of kin, or a department.",

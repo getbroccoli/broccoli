@@ -5,6 +5,7 @@
       "lastName": "Abbott",
       "email": "avery.abbott@acme-corp.example",
       "jobTitle": "Product Designer",
+      "location": null,
       "startDate": "2025-02-17"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Kim",
       "email": "jordan.kim@acme-corp.example",
       "jobTitle": "Support Lead",
+      "location": null,
       "startDate": "2024-11-03"
     }
   ],

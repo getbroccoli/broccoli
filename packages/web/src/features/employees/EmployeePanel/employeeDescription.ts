@@ -4,6 +4,7 @@ import { formatCalendarDate } from "@/lib/formatDate";
 
 import type { EmployeeFieldKey } from "./employeeDraft";
 import { EmployeePicker } from "../EmployeePicker";
+import { LocationPicker } from "../LocationPicker";
 import { PermissionProfilePicker } from "./PermissionProfilePicker";
 
 const SIGN_IN_LABELS: Partial<Record<string, string>> = {
@@ -23,6 +24,14 @@ export const EMPLOYEE_DESCRIPTION = {
   titleField: "firstName",
   fields: [
     textField("jobTitle", "people.panel.section.job"),
+    {
+      key: "location",
+      label: t("people.panel.field.location"),
+      section: t("people.panel.section.job"),
+      editor: LocationPicker,
+      // History shows the location's name stored with the id; the panel looks the id up itself.
+      format: (id) => id,
+    },
     {
       key: "manager",
       label: t("people.panel.field.manager"),

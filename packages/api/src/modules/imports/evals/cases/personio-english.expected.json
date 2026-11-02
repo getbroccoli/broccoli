@@ -5,6 +5,7 @@
       "lastName": "Marsh",
       "email": "helena.marsh@acme-corp.example",
       "jobTitle": "Frontend Developer",
+      "location": "Berlin",
       "startDate": "2021-05-03",
       "manager": "Delia Hargrove"
     },
@@ -13,6 +14,7 @@
       "lastName": "Popescu",
       "email": "andrei.popescu@acme-corp.example",
       "jobTitle": "QA Engineer",
+      "location": "Berlin",
       "startDate": "2022-09-19",
       "manager": "Delia Hargrove"
     },
@@ -21,6 +23,7 @@
       "lastName": "Gallagher-Moss",
       "email": "fiona.gallagher-moss@acme-corp.example",
       "jobTitle": "Marketing Lead",
+      "location": "Munich",
       "startDate": "2023-02-27",
       "manager": "Owen Pellew"
     },
@@ -29,6 +32,7 @@
       "lastName": "Demir",
       "email": "yusuf.demir@acme-corp.example",
       "jobTitle": "Accountant",
+      "location": "Munich",
       "startDate": "2023-11-13",
       "manager": "Owen Pellew"
     }

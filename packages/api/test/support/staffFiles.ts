@@ -14,6 +14,7 @@ export const STAFF_MAPPING_ANSWERS = {
         lastName: "none",
         email: "B",
         jobTitle: "none",
+        location: "none",
         startDate: "none",
         manager: "none",
         externalRecordId: "none",

@@ -8,6 +8,8 @@ import type {
   EmployeeManagerService,
   EmployeePermissionService,
   EmployeeReadService,
+  LocationService,
+  LocationWithPeopleCount,
 } from "../app";
 import type { Employee, SignInStatus } from "../domain";
 
@@ -21,11 +23,16 @@ export interface EmployeeLoaders {
   permissionProfiles: DataLoader<string, PermissionProfile[] | null>;
   /** Whether a person can sign in, and their invite. */
   signInStatus: DataLoader<string, SignInStatus | null>;
+  /** A location by id; every location is read once per request, since a company has few. */
+  location: DataLoader<string, LocationWithPeopleCount | null>;
 }
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function employeeLoaders(
-  services: EmployeeReadService & EmployeeManagerService & EmployeePermissionService,
+  services: EmployeeReadService &
+    EmployeeManagerService &
+    EmployeePermissionService &
+    LocationService,
   invites: EmployeeInviteService,
 ): (context: GraphqlContext) => EmployeeLoaders {
   return perRequest((context) => ({
@@ -44,6 +51,10 @@ export function employeeLoaders(
     signInStatus: new DataLoader<string, SignInStatus | null>(async (employeeIds) => {
       const statuses = await invites.readStatuses(context.getActor(), employeeIds);
       return employeeIds.map((id) => statuses.get(id) ?? null);
+    }),
+    location: new DataLoader<string, LocationWithPeopleCount | null>(async (locationIds) => {
+      const locations = await services.listLocations(context.getActor());
+      return locationIds.map((id) => locations.find((location) => location.id === id) ?? null);
     }),
   }));
 }

@@ -73,6 +73,7 @@ function valuesOf({
   lastName,
   email,
   jobTitle,
+  location,
   startDate,
   manager,
 }: ImportEmployeeValues): ExpectedEmployee {
@@ -81,6 +82,7 @@ function valuesOf({
     lastName,
     email,
     jobTitle,
+    location,
     startDate,
     ...(manager === null ? {} : { manager }),
   };
@@ -95,8 +97,8 @@ function sorted(records: ExpectedEmployee[]): ExpectedEmployee[] {
   return records.toSorted((a, b) => sortKey(a).localeCompare(sortKey(b)));
 }
 
-function sortKey({ firstName, lastName, email, jobTitle, startDate }: ExpectedEmployee) {
-  return [firstName, lastName, email, jobTitle, startDate].join("\u0000");
+function sortKey({ firstName, lastName, email, jobTitle, location, startDate }: ExpectedEmployee) {
+  return [firstName, lastName, email, jobTitle, location, startDate].join("\u0000");
 }
 
 /** What a case's file must become: its records, or the reason it fails. */

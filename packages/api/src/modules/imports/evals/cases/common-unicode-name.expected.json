@@ -5,6 +5,7 @@
       "lastName": "García",
       "email": "e01633.58@people.example.test",
       "jobTitle": "Operations Engineer",
+      "location": null,
       "startDate": "2001-05-30",
       "manager": "Wyatt Chin"
     },
@@ -13,6 +14,7 @@
       "lastName": "Jackson",
       "email": "e01848.59@people.example.test",
       "jobTitle": "Business Partner",
+      "location": null,
       "startDate": "2008-08-21",
       "manager": "Savannah Ali"
     },
@@ -21,6 +23,7 @@
       "lastName": "Chow",
       "email": "e00716.60@people.example.test",
       "jobTitle": "Sr. Manger",
+      "location": null,
       "startDate": "2021-03-11",
       "manager": "Isabella Xi"
     },
@@ -29,6 +32,7 @@
       "lastName": "Ayala",
       "email": "e00699.61@people.example.test",
       "jobTitle": "Sr. Manger",
+      "location": null,
       "startDate": "2006-08-16",
       "manager": "Emily Davis"
     },
@@ -37,6 +41,7 @@
       "lastName": "Salazar",
       "email": "e00502.62@people.example.test",
       "jobTitle": "Sr. Analyst",
+      "location": null,
       "startDate": "2019-01-02",
       "manager": "Easton Bailey"
     },
@@ -45,6 +50,7 @@
       "lastName": "Carrillo",
       "email": "e04000.63@people.example.test",
       "jobTitle": "Engineering Manager",
+      "location": null,
       "startDate": "2008-12-18",
       "manager": "Wyatt Chin"
     },
@@ -53,6 +59,7 @@
       "lastName": "Sanders",
       "email": "e02112.64@people.example.test",
       "jobTitle": "Vice President",
+      "location": null,
       "startDate": "2013-08-07",
       "manager": "Savannah Ali"
     }

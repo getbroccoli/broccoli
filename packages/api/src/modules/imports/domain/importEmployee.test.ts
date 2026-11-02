@@ -238,6 +238,7 @@ const row: ImportEmployeeRecord = {
   lastName: "Stone",
   email: "avery@example.com",
   jobTitle: "Designer",
+  location: null,
   startDate: null,
   photoFileId: null,
   manager: null,

@@ -20,6 +20,7 @@ export function importEmployeeResolvers(
       lastName: (employee) => employeeValue(employee, "lastName"),
       email: (employee) => employeeValue(employee, "email"),
       jobTitle: (employee) => employeeValue(employee, "jobTitle"),
+      location: (employee) => employeeValue(employee, "location"),
       manager: async (employee, _args, context) => {
         const { managers } = await loaders(context).review();
         const { manager, problem } = managers.get(employee.key)!;

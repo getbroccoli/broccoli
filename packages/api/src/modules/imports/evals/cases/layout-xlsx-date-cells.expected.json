@@ -5,6 +5,7 @@
       "lastName": "Chin",
       "email": "e00711.533@people.example.test",
       "jobTitle": "Sr. Manger",
+      "location": null,
       "startDate": "2022-01-13",
       "manager": "Luna Sanders"
     },
@@ -13,6 +14,7 @@
       "lastName": "Alexander",
       "email": "e04795.534@people.example.test",
       "jobTitle": "Vice President",
+      "location": null,
       "startDate": "2018-01-21",
       "manager": "Savannah Ali"
     },
@@ -21,6 +23,7 @@
       "lastName": "Turner",
       "email": "e03912.535@people.example.test",
       "jobTitle": "Sr. Analyst",
+      "location": null,
       "startDate": "2015-11-17",
       "manager": "Isabella Xi"
     },
@@ -29,6 +32,7 @@
       "lastName": "Ma",
       "email": "e02103.536@people.example.test",
       "jobTitle": "HRIS Analyst",
+      "location": null,
       "startDate": "2017-09-24",
       "manager": "Savannah Ali"
     },
@@ -37,6 +41,7 @@
       "lastName": "Xi",
       "email": "e04213.537@people.example.test",
       "jobTitle": "Manager",
+      "location": null,
       "startDate": "2021-11-19",
       "manager": "Easton Bailey"
     },
@@ -45,6 +50,7 @@
       "lastName": "Le",
       "email": "e04756.538@people.example.test",
       "jobTitle": "Cloud Infrastructure Architect",
+      "location": null,
       "startDate": "1994-12-24",
       "manager": "Emily Davis"
     },
@@ -53,6 +59,7 @@
       "lastName": "Lim",
       "email": "e04114.539@people.example.test",
       "jobTitle": "Director",
+      "location": null,
       "startDate": "2007-03-13",
       "manager": "Emily Davis"
     },
@@ -61,6 +68,7 @@
       "lastName": "Castillo",
       "email": "e01423.540@people.example.test",
       "jobTitle": "Vice President",
+      "location": null,
       "startDate": "2001-07-19",
       "manager": "Emily Davis"
     },
@@ -69,6 +77,7 @@
       "lastName": "Dang",
       "email": "e03181.541@people.example.test",
       "jobTitle": "Development Engineer",
+      "location": null,
       "startDate": "2009-05-11",
       "manager": "Wyatt Chin"
     },
@@ -77,6 +86,7 @@
       "lastName": "King",
       "email": "e03305.542@people.example.test",
       "jobTitle": "Manager",
+      "location": null,
       "startDate": "2014-10-07",
       "manager": "Easton Bailey"
     },
@@ -85,6 +95,7 @@
       "lastName": "Dominguez",
       "email": "e00703.543@people.example.test",
       "jobTitle": "Engineering Manager",
+      "location": null,
       "startDate": "2018-04-27",
       "manager": "Wyatt Chin"
     },
@@ -93,6 +104,7 @@
       "lastName": "Hu",
       "email": "e04403.544@people.example.test",
       "jobTitle": "Manager",
+      "location": null,
       "startDate": "2012-02-13",
       "manager": "Easton Bailey"
     },
@@ -101,6 +113,7 @@
       "lastName": "Park",
       "email": "e00103.545@people.example.test",
       "jobTitle": "Director",
+      "location": null,
       "startDate": "2017-06-28",
       "manager": "Easton Bailey"
     },
@@ -109,6 +122,7 @@
       "lastName": "Hwang",
       "email": "e04487.546@people.example.test",
       "jobTitle": "Sr. Analyst",
+      "location": null,
       "startDate": "2020-06-17",
       "manager": "Easton Bailey"
     },
@@ -117,6 +131,7 @@
       "lastName": "Jenkins",
       "email": "e01194.547@people.example.test",
       "jobTitle": "Analyst II",
+      "location": null,
       "startDate": "2019-12-20",
       "manager": "Luna Sanders"
     },
@@ -125,6 +140,7 @@
       "lastName": "Owens",
       "email": "e02179.548@people.example.test",
       "jobTitle": "Controls Engineer",
+      "location": null,
       "startDate": "2014-09-25",
       "manager": "Wyatt Chin"
     }

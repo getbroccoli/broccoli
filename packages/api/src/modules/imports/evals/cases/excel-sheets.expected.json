@@ -5,6 +5,7 @@
       "lastName": "Shah",
       "email": "priya.shah@acme.example",
       "jobTitle": "Office manager",
+      "location": null,
       "startDate": "2024-04-03"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Okafor",
       "email": "tom.okafor@acme.example",
       "jobTitle": "Software engineer",
+      "location": null,
       "startDate": "2023-11-07"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Kowalski",
       "email": "mia.kowalski@acme.example",
       "jobTitle": "Accountant",
+      "location": null,
       "startDate": "2025-01-12"
     },
     {
@@ -26,6 +29,7 @@
       "lastName": "Fischer",
       "email": "lena.fischer@acme.example",
       "jobTitle": "Data analyst",
+      "location": null,
       "startDate": null
     },
     {
@@ -33,6 +37,7 @@
       "lastName": "Haddad",
       "email": "omar.haddad@acme.example",
       "jobTitle": "UX designer",
+      "location": null,
       "startDate": null
     }
   ],

@@ -34,6 +34,8 @@ export const peopleEn = {
   "people.panel.field.jobTitle": "Job title",
   "people.panel.field.startDate": "Start date",
   "people.panel.field.manager": "Manager",
+  "people.panel.field.location": "Location",
+  "people.panel.location.none": "No location",
   "people.panel.field.permissionProfiles": "Permissions",
   "people.panel.permissionProfile.base": "Everyone who works here has this",
   "people.panel.section.access": "Access",
@@ -65,6 +67,7 @@ export const peopleEn = {
   "people.panel.error.invalid": "This isn’t valid.",
   "people.panel.error.taken": "Another person has this email.",
   "people.panel.error.managerNotFound": "This person was removed. Choose someone else.",
+  "people.panel.error.locationNotFound": "This location was deleted. Choose another.",
   "people.panel.error.managerSelf": "A person can’t be their own manager.",
   "people.panel.error.managerLoop":
     "The person you chose already reports to them, so they can’t be their manager.",

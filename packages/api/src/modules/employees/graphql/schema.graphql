@@ -12,6 +12,8 @@ type Employee implements AnyRecord {
   managerId: ID
   "The person's direct manager today; null without one."
   manager: Employee
+  "Where the person works now; null without a location."
+  location: Location
   "Path of the employee's avatar, such as `/api/employees/avatar/<id>`; null without one."
   avatarUrl: String
   createdAt: DateTime!
@@ -128,6 +130,8 @@ input EmployeeUpdateInput {
   startDate: Date
   "The person's direct manager from today; null for none. Not the person themselves, nor someone who reports to them."
   managerId: ID
+  "Where the person works; null for no location. Admins only."
+  locationId: ID
   "Why the change is made, kept on the history line as its reason; at most 500 characters."
   changeReason: String
 }
@@ -259,6 +263,8 @@ type User {
 
 # Each module declares its own root fields; the server merges them into one type.
 type Query {
+  "Every location, by name ignoring case."
+  locations: [Location!]!
   "One employee; null when there is none."
   employee(id: ID!): Employee
   "Employees, one page at a time."
@@ -273,4 +279,62 @@ type Query {
 
 type Mutation {
   employee: EmployeeMutations!
+  location: LocationMutations!
 }
+
+"A place where people work, such as an office or Remote; a person is in one at a time."
+type Location {
+  id: ID!
+  "Unique, ignoring case and surrounding spaces."
+  name: String!
+  "How many people are in this location now."
+  peopleCount: Int!
+}
+
+input LocationCreateInput {
+  "1 to 100 characters; unique, ignoring case and surrounding spaces."
+  name: String!
+}
+
+input LocationUpdateInput {
+  id: ID!
+  "1 to 100 characters; unique, ignoring case and surrounding spaces. People's history keeps the old name."
+  name: String!
+}
+
+input LocationDeleteInput {
+  id: ID!
+}
+
+type LocationMutations {
+  "Adds a location. Admins only."
+  create(input: LocationCreateInput!): LocationCreatePayload!
+  "Renames a location. Admins only."
+  update(input: LocationUpdateInput!): LocationUpdatePayload!
+  "Deletes a location nobody is in; refused with a conflict while someone is. Admins only."
+  delete(input: LocationDeleteInput!): LocationDeletePayload!
+}
+
+"The new location, or why it was refused."
+type LocationCreatePayload {
+  location: Location
+  error: LocationCreateError
+}
+
+union LocationCreateError = InvalidInputError
+
+"The renamed location, or why it was refused."
+type LocationUpdatePayload {
+  location: Location
+  error: LocationUpdateError
+}
+
+union LocationUpdateError = InvalidInputError | NotFoundError
+
+"The deleted location's id, or why it was refused."
+type LocationDeletePayload {
+  deletedLocationId: ID
+  error: LocationDeleteError
+}
+
+union LocationDeleteError = NotFoundError | ConflictError

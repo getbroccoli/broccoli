@@ -5,6 +5,7 @@
       "lastName": "Baker",
       "email": "mark.baker@acme-corp.example",
       "jobTitle": null,
+      "location": null,
       "startDate": null
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Cook",
       "email": "will.cook@acme-corp.example",
       "jobTitle": null,
+      "location": null,
       "startDate": null
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Land",
       "email": "rose.land@acme-corp.example",
       "jobTitle": null,
+      "location": null,
       "startDate": null
     }
   ],

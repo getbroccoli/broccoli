@@ -43,6 +43,7 @@ test("maps a dropped file through masked questions and shows its people to the h
             lastName: "none",
             email: "B",
             jobTitle: "none",
+            location: "none",
             startDate: "none",
             manager: "none",
             externalRecordId: "none",

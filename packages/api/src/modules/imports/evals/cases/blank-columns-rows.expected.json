@@ -5,6 +5,7 @@
       "lastName": "Pugh",
       "email": "rhiannon.pugh@acme-corp.example",
       "jobTitle": "Warehouse Supervisor",
+      "location": null,
       "startDate": "2021-03-14"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Okafor",
       "email": "anselm.okafor@acme-corp.example",
       "jobTitle": "Payroll Clerk",
+      "location": null,
       "startDate": "2022-11-02"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Delaney",
       "email": "saoirse.delaney@acme-corp.example",
       "jobTitle": "Facilities Coordinator",
+      "location": null,
       "startDate": "2023-09-25"
     },
     {
@@ -26,6 +29,7 @@
       "lastName": "Halvorsen",
       "email": "margit.halvorsen@acme-corp.example",
       "jobTitle": "Procurement Analyst",
+      "location": null,
       "startDate": "2024-01-08"
     }
   ],

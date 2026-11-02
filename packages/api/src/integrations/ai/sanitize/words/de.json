@@ -52,7 +52,11 @@
     "titel",
     "vorgesetzter",
     "vorname",
-    "vorsatzwort"
+    "vorsatzwort",
+    "standort",
+    "arbeitsort",
+    "niederlassung",
+    "büro"
   ],
   "jobTitles": [
     "buchhalter",

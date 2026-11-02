@@ -5,6 +5,7 @@
       "lastName": "Romero",
       "email": "alba.romero@acme-corp.example",
       "jobTitle": "Ingeniero de software",
+      "location": null,
       "startDate": "2022-04-23",
       "manager": "raul.molina@acme-corp.example"
     },
@@ -13,6 +14,7 @@
       "lastName": "Vidal",
       "email": "sergio.vidal@acme-corp.example",
       "jobTitle": "Ingeniero de software",
+      "location": null,
       "startDate": "2023-06-17",
       "manager": "raul.molina@acme-corp.example"
     },
@@ -21,6 +23,7 @@
       "lastName": "Fuentes",
       "email": "ines.fuentes@acme-corp.example",
       "jobTitle": "Ingeniero de software",
+      "location": null,
       "startDate": "2024-08-21",
       "manager": "raul.molina@acme-corp.example"
     }

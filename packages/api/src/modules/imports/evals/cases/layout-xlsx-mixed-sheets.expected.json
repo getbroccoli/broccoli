@@ -5,6 +5,7 @@
       "lastName": "Do",
       "email": "e01633.58@people.example.test",
       "jobTitle": "Operations Engineer",
+      "location": null,
       "startDate": "2001-05-30",
       "manager": "Wyatt Chin"
     },
@@ -13,6 +14,7 @@
       "lastName": "Jackson",
       "email": "e01848.59@people.example.test",
       "jobTitle": "Business Partner",
+      "location": null,
       "startDate": "2008-08-21",
       "manager": "Savannah Ali"
     },
@@ -21,6 +23,7 @@
       "lastName": "Cheng",
       "email": "e01427.96@people.example.test",
       "jobTitle": "Sr. Manger",
+      "location": null,
       "startDate": "2015-04-22",
       "manager": "Adam Dang"
     },
@@ -29,6 +32,7 @@
       "lastName": "Yu",
       "email": "e04568.97@people.example.test",
       "jobTitle": "Vice President",
+      "location": null,
       "startDate": "2011-07-10",
       "manager": "Luna Sanders"
     }

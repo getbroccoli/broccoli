@@ -5,6 +5,7 @@
       "lastName": "Ellery",
       "email": "marcus.ellery@acme-corp.example",
       "jobTitle": "Operations Lead",
+      "location": "Austin",
       "startDate": "2021-03-14",
       "manager": "Hargrove, Delia"
     },
@@ -13,6 +14,7 @@
       "lastName": "Wrobel",
       "email": "tomasz.wrobel@acme-corp.example",
       "jobTitle": "Account Executive",
+      "location": "Austin",
       "startDate": "2022-08-02",
       "manager": "Hargrove, Delia"
     },
@@ -21,6 +23,7 @@
       "lastName": "Solberg",
       "email": "ingrid.solberg@acme-corp.example",
       "jobTitle": "Support Specialist",
+      "location": "Denver",
       "startDate": "2022-11-21",
       "manager": "Pellew, Owen"
     },
@@ -29,6 +32,7 @@
       "lastName": "Boateng",
       "email": "kwame.boateng@acme-corp.example",
       "jobTitle": "Data Analyst",
+      "location": "Denver",
       "startDate": "2023-05-09",
       "manager": "Pellew, Owen"
     },
@@ -37,6 +41,7 @@
       "lastName": "Ferraro",
       "email": "lucia.ferraro@acme-corp.example",
       "jobTitle": "Office Manager",
+      "location": "Austin",
       "startDate": "2024-01-16"
     }
   ],

@@ -3,13 +3,14 @@ import { t } from "@/i18n";
 
 /** The import employee fields review shows, by their GraphQL name. */
 export type EmployeeFieldKey =
-  "firstName" | "lastName" | "email" | "jobTitle" | "manager" | "startDate";
+  "firstName" | "lastName" | "email" | "jobTitle" | "location" | "manager" | "startDate";
 
 export const FIELD_ENUMS = {
   firstName: "FIRST_NAME",
   lastName: "LAST_NAME",
   email: "EMAIL",
   jobTitle: "JOB_TITLE",
+  location: "LOCATION",
   manager: "MANAGER",
   startDate: "START_DATE",
 } as const satisfies Record<EmployeeFieldKey, ImportEmployeeField>;

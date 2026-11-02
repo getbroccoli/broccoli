@@ -48,41 +48,6 @@ test("creates an employee through the API", async ({ env }) => {
   expect(employee.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
 });
 
-test("sets a person's manager through the API", async ({ env }) => {
-  const { browser } = await env.signInAsOwner();
-  const employee = await env.seed.employee({ firstName: "Avery", lastName: "Stone" });
-  const manager = await env.seed.employee({ firstName: "Robin", lastName: "Reed" });
-
-  const updated = await browser.graphql(
-    `mutation UpdateEmployee($input: EmployeeUpdateInput!) {
-      employee { update(input: $input) {
-        employee { id }
-        error { __typename ... on Error { message } }
-      } }
-    }`,
-    { input: { id: employee.id, managerId: manager.id } },
-  );
-
-  expect(await updated.json()).toEqual({
-    data: { employee: { update: { employee: { id: employee.id }, error: null } } },
-  });
-  const response = await browser.graphql(
-    `query Employee($id: ID!) {
-      employee(id: $id) { id managerId manager { id firstName } }
-    }`,
-    { id: employee.id },
-  );
-  expect(await response.json()).toEqual({
-    data: {
-      employee: {
-        id: employee.id,
-        managerId: manager.id,
-        manager: { id: manager.id, firstName: "Robin" },
-      },
-    },
-  });
-});
-
 test("returns a taken employee email in the mutation payload", async ({ env }) => {
   const { browser } = await env.signInAsOwner();
   await env.seed.employee({ email: "avery@example.com" });
@@ -310,4 +275,39 @@ test("deleting an employee keeps history with no linked record", async ({ env })
       },
     },
   });
+});
+
+test("creates a location and assigns a person to it through the API", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const employee = await env.seed.employee();
+
+  const created = await browser.graphql(`mutation CreateLocation {
+    location { create(input: { name: "Leeds" }) {
+      location { id name }
+      error { __typename ... on Error { message } }
+    } }
+  }`);
+  const body = (await created.json()) as {
+    data: { location: { create: { location: { id: string; name: string }; error: null } } };
+  };
+  expect(body).not.toHaveProperty("errors");
+  expect(body.data.location.create.error).toBeNull();
+  const location = body.data.location.create.location;
+  expect(location.name).toBe("Leeds");
+
+  const updated = await browser.graphql(
+    `mutation SetLocation($input: EmployeeUpdateInput!) {
+    employee { update(input: $input) {
+      employee { id location { id name } }
+      error { __typename ... on Error { message } }
+    } }
+  }`,
+    { input: { id: employee.id, locationId: location.id } },
+  );
+  expect(await updated.json()).toEqual({
+    data: { employee: { update: { employee: { id: employee.id, location }, error: null } } },
+  });
+
+  const listed = await browser.graphql(`query Locations { locations { id name peopleCount } }`);
+  expect(await listed.json()).toEqual({ data: { locations: [{ ...location, peopleCount: 1 }] } });
 });

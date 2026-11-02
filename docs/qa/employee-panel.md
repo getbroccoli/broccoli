@@ -34,6 +34,13 @@ A manual check of opening a person from People, editing them in place, their his
 - [ ] Picking someone who reports to them (directly or through others) keeps the field open with "The person you chose already reports to them, so they can’t be their manager." and saves nothing.
 - [ ] Removing a manager clears Manager on each of their reports; opening a report (without reloading) shows "cleared manager <name>" with "Manager removed" in their history.
 
+## Location
+
+- [ ] Job shows Location under Job title: "—" without one, else the location's name.
+- [ ] As the owner, clicking it opens a menu of the locations Settings lists and "No location"; picking one and saving adds "set location to <name>", then "changed location <old> → <new>"; "No location" reads "cleared location <old>".
+- [ ] Renaming the location in Settings shows the new name on the panel; the history lines keep the old name.
+- [ ] Signed in as an employee who is not an admin, the location shows on any person's panel but cannot be edited, not even on their reports' panels.
+
 ## Leaving with unsaved changes
 
 - [ ] With unsaved changes, Close, Escape or Back asks "Discard N unsaved changes?"; Keep editing stays, Discard leaves without saving.
