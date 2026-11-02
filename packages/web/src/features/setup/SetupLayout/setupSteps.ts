@@ -62,12 +62,6 @@ const REVIEW = {
   path: "/setup/import/review",
   step: "IMPORT",
 } as const satisfies PageDefinition;
-// Both pages, and Setup AI before them, belong to the server's `import` step, until Approve.
-const PEOPLE = {
-  id: "people",
-  title: "setup.import.title",
-  pages: [IMPORT, REVIEW],
-} as const satisfies StepDefinition;
 // After Approve, so it belongs to the server step of setup's last page.
 const WHO_SELF_HOSTED = {
   id: "who",
@@ -76,6 +70,16 @@ const WHO_SELF_HOSTED = {
   step: "OWNER",
 } as const satisfies PageDefinition;
 const WHO_MANAGED = { ...WHO_SELF_HOSTED, step: "READY" } as const satisfies PageDefinition;
+// Gathering and review, and Setup AI before them, belong to the server's `import` step, until Approve.
+const PEOPLE_SELF_HOSTED = {
+  id: "people",
+  title: "setup.import.title",
+  pages: [IMPORT, REVIEW, WHO_SELF_HOSTED],
+} as const satisfies StepDefinition;
+const PEOPLE_MANAGED = {
+  ...PEOPLE_SELF_HOSTED,
+  pages: [IMPORT, REVIEW, WHO_MANAGED],
+} as const satisfies StepDefinition;
 const READY = {
   id: "ready",
   title: "setup.ready.title",
@@ -93,8 +97,8 @@ const FINISHED: SetupPath = "/people";
  * key, signed up before setup and sees what it will add last.
  */
 const SETUP_STEPS = {
-  SELF_HOSTED: [COMPANY, AI, PEOPLE, WHO_SELF_HOSTED, OWNER],
-  MANAGED: [COMPANY, PEOPLE, WHO_MANAGED, READY],
+  SELF_HOSTED: [COMPANY, AI, PEOPLE_SELF_HOSTED, OWNER],
+  MANAGED: [COMPANY, PEOPLE_MANAGED, READY],
 } as const satisfies Record<Mode, readonly (PageDefinition | StepDefinition)[]>;
 
 type Page =

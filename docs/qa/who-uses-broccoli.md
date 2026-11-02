@@ -9,7 +9,7 @@ A manual check of the "Who uses Broccoli" setup page and the invites setup's las
 
 ## The page
 
-- [ ] Approve lands on "Who uses Broccoli?", with "Nothing is sent yet." above three cards, the step after "Add your people" in the step list; Back reopens the review.
+- [ ] Approve lands on "Who uses Broccoli?", with "Nothing is sent yet." above three cards, listed under "Add your people" after "Review your people" in the step list; Back reopens the review.
 - [ ] On managed, signed in as `owner@example.com`, "Which of these people are you?" already shows Avery Stone. On self-hosted it shows "I’m not in the list".
 - [ ] Change opens a search over the people being added; picking Avery shows Avery, and "No one" shows "I’m not in the list".
 - [ ] "Only admins" is chosen, and the line under the cards says people won't get an invite. With Avery chosen as you, "Admins and managers" says "Plus the 1 person with a team", and choosing it says "1 invite…" with Show names listing only Robin; "Everyone" says "Plus all 3 other people".

@@ -195,9 +195,9 @@ it("marks people and ready later while company is current", () => {
       pages: [
         { id: "import", state: "later" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
-    { id: "who", state: "later" },
     { id: "ready", state: "later" },
   ]);
 });
@@ -213,9 +213,9 @@ it("marks people current and earlier steps done while importing", () => {
       pages: [
         { id: "import", state: "current" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
-    { id: "who", state: "later" },
     { id: "ready", state: "later" },
   ]);
 });
@@ -231,9 +231,9 @@ it("keeps people current with import done while reviewing", () => {
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "current" },
+        { id: "who", state: "later" },
       ],
     },
-    { id: "who", state: "later" },
     { id: "ready", state: "later" },
   ]);
 });
@@ -249,9 +249,9 @@ it("marks company and people done while ready is current", () => {
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "done" },
+        { id: "who", state: "done" },
       ],
     },
-    { id: "who", state: "done" },
     { id: "ready", state: "current" },
   ]);
 });
@@ -268,9 +268,9 @@ it("keeps the self-hosted owner later while reviewing people", () => {
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "current" },
+        { id: "who", state: "later" },
       ],
     },
-    { id: "who", state: "later" },
     { id: "owner", state: "later" },
   ]);
 });
@@ -287,9 +287,9 @@ it("marks company and people done while the self-hosted owner is current", () =>
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "done" },
+        { id: "who", state: "done" },
       ],
     },
-    { id: "who", state: "done" },
     { id: "owner", state: "current" },
   ]);
 });
@@ -306,9 +306,9 @@ it("places Setup AI between company and people on a self-hosted instance", () =>
       pages: [
         { id: "import", state: "later" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
-    { id: "who", state: "later" },
     { id: "owner", state: "later" },
   ]);
 });
@@ -325,9 +325,15 @@ it("marks Setup AI done while gathering people on a self-hosted instance", () =>
       pages: [
         { id: "import", state: "current" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
-    { id: "who", state: "later" },
     { id: "owner", state: "later" },
   ]);
+});
+
+it("lists who uses Broccoli as the current page of people, after the review", () => {
+  const people = stepViews("who", "MANAGED").find(({ id }) => id === "people");
+
+  expect(people?.pages.map(({ state }) => state)).toEqual(["done", "done", "current"]);
 });
