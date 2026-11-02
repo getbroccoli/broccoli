@@ -59,8 +59,6 @@ export interface WorkingPatternTimeline {
   policyWeeks: ReadonlyMap<string, readonly PatternWeek[]>;
 }
 
-const MINUTES_IN_A_DAY = 1440;
-
 /** The name a policy is saved under; refuses a blank one. */
 export function parsePolicyName(name: string): string {
   const trimmed = name.trim();
@@ -126,13 +124,13 @@ export function workingWeeksOf(
 
 /** The policy that applies on `date`: the person's own, else their group's, else none. */
 export function policyOn(timeline: WorkingPatternTimeline, date: CalendarDate): string | null {
-  const assignment = timeline.assignments.find((row) => covers(row, date));
+  const assignment = timeline.assignments.find((row) => coversDate(row, date));
   if (assignment) {
     return assignment.policyId;
   }
-  const membership = timeline.memberships.find((row) => covers(row, date));
+  const membership = timeline.memberships.find((row) => coversDate(row, date));
   const groupPolicies = membership ? timeline.groupPolicies.get(membership.policyGroupId) : [];
-  return groupPolicies?.find((row) => covers(row, date))?.policyId ?? null;
+  return groupPolicies?.find((row) => coversDate(row, date))?.policyId ?? null;
 }
 
 /**
@@ -140,7 +138,7 @@ export function policyOn(timeline: WorkingPatternTimeline, date: CalendarDate): 
  * covers `from` ends the day before, one starting on `from` goes; a later one it would overlap
  * refuses the new one.
  */
-export function makeRoom(
+export function makeRoomForDatedPolicy(
   rows: readonly DatedPolicy[],
   from: CalendarDate,
   until: CalendarDate | null,
@@ -155,13 +153,13 @@ export function makeRoom(
   const replaced = rows.find((row) => row.effectiveFrom === from) ?? null;
   const ended =
     rows.find(
-      (row) => row !== replaced && isBefore(row.effectiveFrom, from) && covers(row, from),
+      (row) => row !== replaced && isBefore(row.effectiveFrom, from) && coversDate(row, from),
     ) ?? null;
   return { ended, replaced };
 }
 
 /** Whether a dated row applies on `date`. */
-export function covers(
+export function coversDate(
   row: { effectiveFrom: CalendarDate | null; effectiveUntil: CalendarDate | null },
   date: CalendarDate,
 ): boolean {
@@ -215,3 +213,5 @@ function isSameWeek(week: WorkingWeek, pattern: PatternWeek | null): boolean {
 function isMinutesInADay(value: number, least: number): boolean {
   return Number.isInteger(value) && value >= least && value <= MINUTES_IN_A_DAY;
 }
+
+const MINUTES_IN_A_DAY = 1440;

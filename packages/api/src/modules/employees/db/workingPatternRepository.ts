@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { union } from "drizzle-orm/pg-core";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -117,27 +118,35 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
     },
 
     async isPolicyUsed(policyId) {
-      const { rows } = await orm().execute<{ used: boolean }>(
-        sql`select exists (select 1 from ${policyGroupWorkingPatterns}
-            where ${policyGroupWorkingPatterns.workingPatternPolicyId} = ${policyId})
-          or exists (select 1 from ${employeeWorkingPatternAssignments}
-            where ${employeeWorkingPatternAssignments.workingPatternPolicyId} = ${policyId}) as used`,
-      );
-      return rows[0]!.used;
+      const [byGroup] = await orm()
+        .select({ id: policyGroupWorkingPatterns.id })
+        .from(policyGroupWorkingPatterns)
+        .where(eq(policyGroupWorkingPatterns.workingPatternPolicyId, policyId))
+        .limit(1);
+      const [byPerson] = await orm()
+        .select({ id: employeeWorkingPatternAssignments.id })
+        .from(employeeWorkingPatternAssignments)
+        .where(eq(employeeWorkingPatternAssignments.workingPatternPolicyId, policyId))
+        .limit(1);
+      return byGroup !== undefined || byPerson !== undefined;
     },
 
     async findEmployeesOnPolicy(policyId) {
-      const { rows } = await orm().execute<{ employee_id: string }>(
-        sql`select ${employeeWorkingPatternAssignments.employeeId} as employee_id
-          from ${employeeWorkingPatternAssignments}
-          where ${employeeWorkingPatternAssignments.workingPatternPolicyId} = ${policyId}
-          union
-          select ${employeePolicyGroups.employeeId} from ${employeePolicyGroups}
-          join ${policyGroupWorkingPatterns}
-            on ${policyGroupWorkingPatterns.policyGroupId} = ${employeePolicyGroups.policyGroupId}
-          where ${policyGroupWorkingPatterns.workingPatternPolicyId} = ${policyId}`,
+      const rows = await union(
+        orm()
+          .select({ employeeId: employeeWorkingPatternAssignments.employeeId })
+          .from(employeeWorkingPatternAssignments)
+          .where(eq(employeeWorkingPatternAssignments.workingPatternPolicyId, policyId)),
+        orm()
+          .select({ employeeId: employeePolicyGroups.employeeId })
+          .from(employeePolicyGroups)
+          .innerJoin(
+            policyGroupWorkingPatterns,
+            eq(policyGroupWorkingPatterns.policyGroupId, employeePolicyGroups.policyGroupId),
+          )
+          .where(eq(policyGroupWorkingPatterns.workingPatternPolicyId, policyId)),
       );
-      return rows.map(({ employee_id }) => employee_id);
+      return rows.map(({ employeeId }) => employeeId);
     },
 
     async findGroupPolicies(groupIds) {

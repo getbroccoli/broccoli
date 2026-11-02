@@ -2,11 +2,12 @@ import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Orm, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, parseUuid } from "../../../utils";
+import { addDays, type CalendarDate, parseUuid } from "../../../utils";
 import { policyGroupRepository, workingPatternRepository } from "../db";
 import {
-  covers,
-  makeRoom,
+  coversDate,
+  type DatedPolicy,
+  makeRoomForDatedPolicy,
   parseDateField,
   parsePolicyName,
   parseWeek,
@@ -184,13 +185,10 @@ export function createWorkingPatternPolicyService({
     async setGroupPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const effectiveFrom = parseDateField("effectiveFrom", input.effectiveFrom);
-      const policyGroupId = await transact(async (tx) => {
+      await changeGroupPatterns(input.policyGroupId, effectiveFrom, async (tx, groupId, rows) => {
         const patterns = workingPatternRepository(tx);
-        await patterns.lockForWrites();
-        const groupId = await existingGroup(tx, input.policyGroupId);
         const policy = referencedPolicy(await patterns.findPolicies(), input.policyId);
-        const rows = (await patterns.findGroupPolicies([groupId])).get(groupId) ?? [];
-        const { ended, replaced } = makeRoom(rows, effectiveFrom, null);
+        const { ended, replaced } = makeRoomForDatedPolicy(rows, effectiveFrom, null);
         if (replaced) {
           await patterns.deleteGroupPolicy(replaced.id);
         }
@@ -202,63 +200,56 @@ export function createWorkingPatternPolicyService({
           effectiveFrom,
           effectiveUntil: null,
         });
-        publishWorkingPatternChange(
-          tx,
-          await policyGroupRepository(tx).findMemberIds(groupId),
-          effectiveFrom,
-        );
-        return groupId;
       });
-      logger.info({ policyGroupId, effectiveFrom }, "Set a group's working pattern");
     },
 
     async endGroupPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const effectiveUntil = parseDateField("effectiveUntil", input.effectiveUntil);
-      const policyGroupId = await transact(async (tx) => {
-        const patterns = workingPatternRepository(tx);
-        await patterns.lockForWrites();
-        const groupId = await existingGroup(tx, input.policyGroupId);
-        const rows = (await patterns.findGroupPolicies([groupId])).get(groupId) ?? [];
-        const row = rows.find((candidate) => covers(candidate, effectiveUntil));
+      const changedFrom = addDays(effectiveUntil, 1);
+      await changeGroupPatterns(input.policyGroupId, changedFrom, async (tx, _groupId, rows) => {
+        const row = rows.find((candidate) => coversDate(candidate, effectiveUntil));
         if (!row) {
-          throw new ApplicationError("NOT_FOUND", "The group has no working pattern on this date.");
+          throw noGroupPattern();
         }
-        await patterns.endGroupPolicy(row.id, effectiveUntil);
-        const members = await policyGroupRepository(tx).findMemberIds(groupId);
-        publishWorkingPatternChange(tx, members, addDays(effectiveUntil, 1));
-        return groupId;
+        await workingPatternRepository(tx).endGroupPolicy(row.id, effectiveUntil);
       });
-      logger.info({ policyGroupId, effectiveUntil }, "Ended a group's working pattern");
     },
 
     async removeGroupPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const effectiveFrom =
         input.effectiveFrom === null ? null : parseDateField("effectiveFrom", input.effectiveFrom);
-      const policyGroupId = await transact(async (tx) => {
-        const patterns = workingPatternRepository(tx);
-        await patterns.lockForWrites();
-        const groupId = await existingGroup(tx, input.policyGroupId);
-        const rows = (await patterns.findGroupPolicies([groupId])).get(groupId) ?? [];
+      await changeGroupPatterns(input.policyGroupId, effectiveFrom, async (tx, _groupId, rows) => {
         const row = rows.find((candidate) => candidate.effectiveFrom === effectiveFrom);
         if (!row) {
-          throw new ApplicationError(
-            "NOT_FOUND",
-            "The group has no working pattern from this date.",
-          );
+          throw noGroupPattern();
         }
-        await patterns.deleteGroupPolicy(row.id);
-        publishWorkingPatternChange(
-          tx,
-          await policyGroupRepository(tx).findMemberIds(groupId),
-          effectiveFrom,
-        );
-        return groupId;
+        await workingPatternRepository(tx).deleteGroupPolicy(row.id);
       });
-      logger.info({ policyGroupId, effectiveFrom }, "Removed a group's working pattern");
     },
   };
+
+  /**
+   * Changes one group's dated policies in one transaction and tells other modules its members'
+   * working weeks may have changed from `changedFrom`.
+   */
+  async function changeGroupPatterns(
+    policyGroupId: string,
+    changedFrom: CalendarDate | null,
+    change: (tx: Tx, groupId: string, rows: DatedPolicy[]) => Promise<void>,
+  ): Promise<void> {
+    const groupId = await transact(async (tx) => {
+      const patterns = workingPatternRepository(tx);
+      await patterns.lockForWrites();
+      const id = await existingGroup(tx, policyGroupId);
+      await change(tx, id, (await patterns.findGroupPolicies([id])).get(id) ?? []);
+      const members = await policyGroupRepository(tx).findMemberIds(id);
+      publishWorkingPatternChange(tx, members, changedFrom);
+      return id;
+    });
+    logger.info({ policyGroupId: groupId, changedFrom }, "Changed a group's working pattern");
+  }
 }
 
 async function findPolicy(db: Orm, policyId: string): Promise<WorkingPatternPolicy> {
@@ -296,4 +287,8 @@ async function existingGroup(tx: Tx, policyGroupId: string): Promise<string> {
     throw invalidInput([{ field: "policyGroupId", code: "not_found" }]);
   }
   return id;
+}
+
+function noGroupPattern(): ApplicationError {
+  return new ApplicationError("NOT_FOUND", "The group has no working pattern on this date.");
 }

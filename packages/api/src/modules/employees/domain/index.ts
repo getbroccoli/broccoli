@@ -16,8 +16,8 @@ export {
 } from "./employee";
 export { managerChanges } from "./managerChanges";
 export {
-  covers,
-  makeRoom,
+  coversDate,
+  makeRoomForDatedPolicy,
   parseDateField,
   parsePolicyName,
   parseWeek,

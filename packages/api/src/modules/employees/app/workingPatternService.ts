@@ -6,8 +6,8 @@ import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { addDays, type CalendarDate, parseUuid } from "../../../utils";
 import { employeeRepository, policyGroupRepository, workingPatternRepository } from "../db";
 import {
-  covers,
-  makeRoom,
+  coversDate,
+  makeRoomForDatedPolicy,
   parseDateField,
   parseEmployeeIds,
   policyOn,
@@ -93,7 +93,7 @@ export function createWorkingPatternService({
       return changeAssignments(ctx, employeeId, effectiveFrom, async (tx, rows) => {
         const patterns = workingPatternRepository(tx);
         const policy = referencedPolicy(await patterns.findPolicies(), input.policyId);
-        const { ended, replaced } = makeRoom(rows, effectiveFrom, effectiveUntil);
+        const { ended, replaced } = makeRoomForDatedPolicy(rows, effectiveFrom, effectiveUntil);
         if (replaced) {
           await patterns.deleteAssignment(replaced.id);
         }
@@ -112,7 +112,7 @@ export function createWorkingPatternService({
       const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
       const effectiveUntil = parseDateField("effectiveUntil", input.effectiveUntil);
       return changeAssignments(ctx, employeeId, addDays(effectiveUntil, 1), async (tx, rows) => {
-        const row = rows.find((candidate) => covers(candidate, effectiveUntil));
+        const row = rows.find((candidate) => coversDate(candidate, effectiveUntil));
         if (!row) {
           throw noOwnPattern();
         }

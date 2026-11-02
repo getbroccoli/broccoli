@@ -88,7 +88,7 @@ export { expectHistoryReplaysTo } from "./employeeHistory";
 export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";
 export { signedIn } from "./signedIn";
-export { workingPatternService } from "./workingPatternServices";
+export { workingPatternService } from "./workingPatternService";
 
 export { fakeMail } from "./fakeMail";
 export { startFakeResend } from "./fakeResend";
