@@ -1,0 +1,175 @@
+import {
+  companyService,
+  employeeServices,
+  expect,
+  importServices,
+  ADMIN,
+  EMPLOYEE,
+  PNG,
+  SLACK_PHOTO_URL,
+  storedFileIds,
+  systemService,
+  test,
+  TEST_OWNER,
+  instances,
+  owners,
+} from "#test/support";
+
+import { user } from "../../../core/auth";
+import { NO_SETUP_INVITES } from "../../../core/instance";
+
+test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner({ password: TEST_OWNER.password });
+  const company = companyService(orm);
+  await company.update(owner, { name: "Acme Corp" });
+  await seed.aiSource("broccoli_ai");
+  await seed.setupStep("done");
+  const firstAvatar = await seed.file({ content: PNG, mimeType: "image/png" });
+  const secondAvatar = await seed.file({ content: PNG, mimeType: "image/png" });
+  await seed.employee({ avatarFileId: firstAvatar });
+  await seed.employee({ avatarFileId: secondAvatar });
+  await seed.employee();
+  const originalOwner = await owners.readOwner(orm);
+
+  await systemService(orm).resetSetup(owner);
+
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(await instances.readInstance(orm)).toMatchObject({
+    step: "company",
+    aiSource: "broccoli_ai",
+    ownerUserId: owner.user!.userId,
+  });
+  expect(await owners.readOwner(orm)).toEqual(originalOwner);
+  expect(await company.getCompany(owner)).toMatchObject({ name: "Acme Corp" });
+});
+
+test("resets a finished setup whose import was not cleaned up yet", async ({ orm, seed }) => {
+  await seed.assignment();
+  const owner = await seed.owner();
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  const records = await seed.importEmployees(source.id, [{ photoUrl: SLACK_PHOTO_URL }]);
+  const avatarFileId = await seed.importPhoto(records[0]!.id, {
+    photoUrl: SLACK_PHOTO_URL,
+    content: PNG,
+    mimeType: "image/png",
+  });
+  const imports = importServices(orm);
+  const system = systemService(orm);
+  const employees = employeeServices(orm);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  await system.completeSetup(owner, {
+    ...NO_SETUP_INVITES,
+    linkOrigin: "https://broccoli.example.com",
+  });
+  expect((await employees.listEmployees(owner, {})).edges).toMatchObject([
+    { node: { avatarFileId } },
+  ]);
+  expect(await imports.reads.listSources(owner)).toHaveLength(1);
+
+  await system.resetSetup(owner);
+
+  expect((await instances.readInstance(orm)).step).toBe("company");
+  expect((await employees.listEmployees(owner, {})).edges).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(await imports.reads.listSources(owner)).toEqual([]);
+  expect((await imports.reads.readReview(owner)).listEmployees({}).edges).toEqual([]);
+});
+
+test("refuses an employee resetting setup", async ({ orm, seed }) => {
+  await seed.owner();
+  await seed.setupStep("done");
+
+  await expect(systemService(orm).resetSetup(EMPLOYEE)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
+
+  expect((await instances.readInstance(orm)).step).toBe("done");
+});
+
+test("refuses resetting before setup is done and keeps the employees", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  await seed.setupStep("import");
+  const employee = await seed.employee();
+
+  await expect(systemService(orm).resetSetup(owner)).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "Setup is not done.",
+  });
+
+  expect((await instances.readInstance(orm)).step).toBe("import");
+  const { edges } = await employeeServices(orm).listEmployees(owner, {});
+  expect(edges.map(({ node }) => node)).toEqual([employee]);
+});
+
+test("refuses resetting the self-hosted demo and keeps its owner and employees", async ({
+  orm,
+  seed,
+}) => {
+  const demoExpiresAt = new Date("2099-10-20T12:00:00Z");
+  const owner = await seed.demoOwner({ expiresAt: demoExpiresAt });
+  const avatarFileId = await seed.file({ content: PNG, mimeType: "image/png" });
+  const employee = await seed.employee({ avatarFileId });
+
+  await expect(systemService(orm).resetSetup(owner)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Exit the demo instead.",
+  });
+
+  expect(await instances.readInstance(orm)).toMatchObject({
+    step: "done",
+    ownerUserId: owner.user!.userId,
+    demoExpiresAt,
+  });
+  const { edges } = await employeeServices(orm).listEmployees(owner, {});
+  expect(edges.map(({ node }) => node)).toEqual([employee]);
+  expect(await storedFileIds(orm)).toEqual([avatarFileId]);
+});
+
+test("refuses a concurrent second reset", async ({ orm, seed }) => {
+  await seed.assignment();
+  const owner = await seed.owner();
+  await seed.setupStep("done");
+  await seed.employee();
+  const system = systemService(orm);
+
+  const results = await Promise.allSettled([system.resetSetup(owner), system.resetSetup(owner)]);
+
+  expect(results.filter(({ status }) => status === "fulfilled")).toEqual([
+    { status: "fulfilled", value: undefined },
+  ]);
+  expect(results.filter(({ status }) => status === "rejected")).toMatchObject([
+    { reason: { code: "CONFLICT", message: "Setup is not done." } },
+  ]);
+  expect((await instances.readInstance(orm)).step).toBe("company");
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
+});
+
+test("refuses an admin resetting the workspace", async ({ orm }) => {
+  await expect(systemService(orm).resetSetup(ADMIN)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message: "Only the owner can do this.",
+  });
+});
+
+test("resetting setup deletes linked users while keeping the owner's user", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner({ password: TEST_OWNER.password });
+  await seed.setupStep("done");
+  await seed.employee({ userId: owner.user!.userId });
+  for (const email of ["avery@example.com", "robin@example.com"]) {
+    const joined = await seed.user({ email });
+    await seed.employee({ email, userId: joined.id });
+  }
+
+  await systemService(orm).resetSetup(owner);
+
+  expect(await orm.select({ id: user.id }).from(user)).toEqual([{ id: owner.user!.userId }]);
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
+});

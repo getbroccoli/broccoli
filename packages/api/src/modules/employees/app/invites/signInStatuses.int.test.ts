@@ -1,5 +1,5 @@
 import { onTestFinished, vi } from "vitest";
-import { employeeInviteService, employeeUseCases, expect, test } from "#test/support";
+import { employeeInviteService, employeeServices, expect, test } from "#test/support";
 
 test("reports not invited before a person has an invite", async ({ orm, seed }) => {
   const owner = await seed.owner();
@@ -101,7 +101,7 @@ test("lookup returns null after the person's email changed since the invite", as
     "https://copy.example.com",
   );
   const token = new URL(sent!.link!).hash.slice(1);
-  await employeeUseCases(orm).updateEmployee(owner, { id: employee.id, email: "new@example.com" });
+  await employeeServices(orm).updateEmployee(owner, { id: employee.id, email: "new@example.com" });
 
   const details = await service.lookUp(token);
 

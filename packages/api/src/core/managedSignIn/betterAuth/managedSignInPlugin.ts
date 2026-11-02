@@ -11,7 +11,7 @@ import { authDatabase } from "../../auth";
 import { ormOf, type Transact } from "../../db";
 import type { ManagedAssignment } from "../../instance";
 import { PrincipalSecurityContext } from "../../security";
-import { SignInRefusedError, signInWithTicket } from "../app";
+import { createManagedSignInService, SignInRefusedError } from "../app";
 import { InvalidTokenError, type ManagedTicket } from "../domain";
 import { parseTicketClaims } from "../jwt";
 import { verifyToken, type TokenCheck } from "../jwt";
@@ -22,6 +22,8 @@ const STATE_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_TICKET_LENGTH = 8192;
 const SIGN_IN_METHODS = new Set(["google", "email"]);
 const CALLBACK_PATH = "/api/auth/managed/callback";
+
+const managedSignIn = createManagedSignInService();
 // SameSite=None: the website's form POST must carry the cookie even across sites; the
 // state match and the exact Origin check are what authorize the callback.
 const STATE_COOKIE_OPTIONS = { httpOnly: true, secure: true, sameSite: "none", path: "/" } as const;
@@ -77,7 +79,7 @@ export function managedSignInPlugin({ transact, assignment, tokenCheck }: Manage
     return transact((tx) =>
       // Better Auth's writes join the transaction that uses the ticket.
       runWithAdapter(authDatabase(ormOf(tx))(options), async () => {
-        const { userId } = await signInWithTicket(
+        const { userId } = await managedSignIn.signInWithTicket(
           PrincipalSecurityContext.system(),
           tx,
           ticket,

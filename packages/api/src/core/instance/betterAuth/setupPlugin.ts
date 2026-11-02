@@ -9,13 +9,12 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
 import {
+  createSetupDemoService,
+  createSetupSessionService,
+  createOwnerService,
+  createInstanceService,
   type AddApprovedPeople,
-  createOwnerAtSetup,
   type DemoStart,
-  readInstance,
-  readSetupHolder,
-  startDemoAtSetup,
-  startSetup,
 } from "../app";
 import {
   demoExpiry,
@@ -29,6 +28,11 @@ import { provisionalOwnerEmail } from "../helpers";
 import { inAuthTransaction } from "./authTransaction";
 import { assertValidCredentials, credentialsBody, linkPassword } from "./credentials";
 import { readSetupToken, setSetupCookie } from "./setupCookie";
+
+const setupDemo = createSetupDemoService();
+const setupSessions = createSetupSessionService();
+const owners = createOwnerService();
+const instances = createInstanceService();
 
 const SYSTEM = PrincipalSecurityContext.system();
 
@@ -83,7 +87,7 @@ export function setupPlugin(
       startSetup: createAuthEndpoint("/setup/start", { method: "POST" }, async (ctx) => {
         const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
         const session = await refusingSetupConflicts(() =>
-          transact((tx) => startSetup(SYSTEM, tx, { token, now: new Date() })),
+          transact((tx) => setupSessions.startSetup(SYSTEM, tx, { token, now: new Date() })),
         );
         setSetupCookie(ctx, session.token, SETUP_SESSION_DAYS * DAY_SECONDS);
         return ctx.json({ holder: "you" });
@@ -134,10 +138,10 @@ export function setupPlugin(
 const DAY_SECONDS = 24 * 60 * 60;
 
 async function assertHoldsSetup(orm: Orm, token: string | null): Promise<void> {
-  if ((await readInstance(orm)).ownerUserId) {
+  if ((await instances.readInstance(orm)).ownerUserId) {
     throw APIError.from("CONFLICT", OWNER_EXISTS);
   }
-  if ((await readSetupHolder(orm, { token, now: new Date() })) !== "you") {
+  if ((await setupSessions.readSetupHolder(orm, { token, now: new Date() })) !== "you") {
     throw APIError.from("CONFLICT", SETUP_IN_PROGRESS);
   }
 }
@@ -162,7 +166,7 @@ function createOwner(
 ) {
   const { internalAdapter } = ctx.context;
   return inAuthTransaction(transact, ctx, (tx) =>
-    createOwnerAtSetup(
+    owners.createOwnerAtSetup(
       SYSTEM,
       tx,
       { token, now: new Date() },
@@ -193,7 +197,7 @@ function createDemoOwner(
   const { internalAdapter } = ctx.context;
   const now = new Date();
   return inAuthTransaction(transact, ctx, (tx) =>
-    startDemoAtSetup(
+    setupDemo.startDemoAtSetup(
       SYSTEM,
       tx,
       { token, now },

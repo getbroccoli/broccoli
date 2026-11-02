@@ -1,9 +1,11 @@
 import { sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
-import { deleteFiles, storeFile } from "../../../core/files";
+import { createFileStorageService } from "../../../core/files";
 import type { RasterImage } from "../../../utils";
 import { company } from "./companyTable";
+
+const fileStorage = createFileStorageService();
 
 /** The company stored in Postgres, through the pool or inside a transaction. */
 export interface CompanyRepository {
@@ -72,11 +74,11 @@ export function companyRepository(db: Orm | Tx): CompanyRepository {
         .update(company)
         .set({ logoFileId, brandLookedUpAt: sql`coalesce(${company.brandLookedUpAt}, now())` });
       // After the update: a file the company still references cannot be deleted.
-      await deleteFiles(db, current?.logoFileId ? [current.logoFileId] : []);
+      await fileStorage.deleteFiles(db, current?.logoFileId ? [current.logoFileId] : []);
     },
   };
 }
 
 function storeLogo(db: Orm | Tx, logo: RasterImage): Promise<string> {
-  return storeFile(db, { content: logo.bytes, mimeType: logo.mimeType });
+  return fileStorage.storeFile(db, { content: logo.bytes, mimeType: logo.mimeType });
 }

@@ -4,13 +4,17 @@ import { readSdl } from "../../core/graphql";
 import type { Mode } from "../../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import type { ImportUseCases } from "../imports";
-import { createExternalAgentUseCases } from "./app";
+import type { ImportServices } from "../imports";
+import { createExternalAgentServices } from "./app";
 import { createResolvers } from "./graphql";
 import { externalAgentFilesRouter, externalAgentRouter } from "./http";
 
 // Public values.
-export { createExternalAgentCodeOnServer, createExternalAgentUseCases } from "./app";
+export {
+  createExternalAgentActivity,
+  createExternalAgentServices,
+  createExternalAgentSessionService,
+} from "./app";
 
 /**
  * The owner's own coding agent, such as Claude Code or Codex, working on setup through a limited
@@ -19,22 +23,22 @@ export { createExternalAgentCodeOnServer, createExternalAgentUseCases } from "./
 export function externalAgentsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
     mode: Mode;
-    imports: Pick<ImportUseCases, "answeredMapping" | "originalFileReads">;
+    imports: Pick<ImportServices, "answeredMapping" | "originalFileReads">;
   },
 ): ModuleManifest {
-  const useCases = createExternalAgentUseCases(dependencies);
+  const services = createExternalAgentServices(dependencies);
   return {
     name: "externalAgents",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(dependencies.orm, dependencies.mode, useCases),
+    resolvers: createResolvers(dependencies.orm, dependencies.mode, services),
     router: (resolveSecurity) =>
       express
         .Router()
-        .use(externalAgentRouter(useCases, dependencies.logger))
-        .use(externalAgentFilesRouter(useCases, resolveSecurity)),
+        .use(externalAgentRouter(services, dependencies.logger))
+        .use(externalAgentFilesRouter(services, resolveSecurity)),
     events: {
       "imports.original_file_read_allowed": () => {
-        useCases.files.notifyFileWaiting(PrincipalSecurityContext.system());
+        services.files.notifyFileWaiting(PrincipalSecurityContext.system());
         return Promise.resolve();
       },
     },

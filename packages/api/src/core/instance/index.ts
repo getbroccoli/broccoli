@@ -1,27 +1,15 @@
 import "./events";
 // Public values.
 export {
-  assignInstance,
-  chooseExternalAgentSource,
-  lockExternalAgentChoice,
-  lockSetupOpenToExternalAgent,
-  chooseExternalAgentOnServer,
-  readSetupOpenToExternalAgent,
-  claimOwner,
-  approveImportStep,
-  completeCompanyStep,
-  completeImportStep,
-  completeReadyStep,
-  isImportOpen,
-  readSetupHolder,
-  reopenImportStep,
-  returnToCompanyStep,
-  readOwner,
-  readInstance,
-  recordOwnerSignInMethod,
-  createAiSettings,
-  createMailSettings,
-  createPasswordResetEmail,
+  createAiSettingsService,
+  createExternalAgentChoiceService,
+  createInstanceService,
+  createMailSettingsService,
+  createManagedInstanceService,
+  createOwnerService,
+  createPasswordResetEmailService,
+  createSetupSessionService,
+  createSetupStepService,
 } from "./app";
 export {
   inAuthTransaction,
@@ -37,12 +25,12 @@ export type {
   AddApprovedPeople,
   DemoStart,
   SetupDemo,
-  AiSettings,
+  AiSettingsService,
   OriginalFileReader,
   InstanceMailer,
   MailIntegration,
-  MailSettings,
-  PasswordResetEmail,
+  MailSettingsService,
+  PasswordResetEmailService,
 } from "./app";
 export { MAIL_SOURCES } from "./domain";
 export type {

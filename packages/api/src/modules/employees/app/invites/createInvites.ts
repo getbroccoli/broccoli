@@ -1,7 +1,7 @@
 import { invalidInput } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
 import type { JobQueue } from "../../../../core/jobs";
-import { appendRecordHistory } from "../../../../core/records";
+import { createRecordHistoryService } from "../../../../core/records";
 import type { SecretBox } from "../../../../core/secrets";
 import type { SecurityContext } from "../../../../core/security";
 import { employeeRepository, inviteRepository } from "../../db";
@@ -13,8 +13,10 @@ import {
   inviteLink,
   noteHasLink,
 } from "../../domain";
-import { employeeNotFound } from "../useCases/employeeNotFound";
+import { employeeNotFound } from "../employeeNotFound";
 import type { SentInvite } from "./employeeInviteService";
+
+const recordHistory = createRecordHistoryService();
 
 /**
  * How invites go now: by email while mail is chosen and `requested` asks for nothing else, else
@@ -133,7 +135,7 @@ export async function appendSignInLine(
     to: string;
   },
 ) {
-  const [line] = await appendRecordHistory(ctx, tx, {
+  const [line] = await recordHistory.append(ctx, tx, {
     recordType: "employee",
     operation: "UPDATED",
     cause: { kind, ref },

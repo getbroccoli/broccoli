@@ -12,9 +12,12 @@ import {
   type RequestSecurity,
   type SecurityContext,
 } from "../../security";
-import { readInstance, readSetupHolder } from "../app";
+import { createSetupSessionService, createInstanceService } from "../app";
 import type { Instance } from "../domain";
 import { readSetupToken } from "./setupCookie";
+
+const setupSessions = createSetupSessionService();
+const instances = createInstanceService();
 
 /**
  * The signed-in user of a request, or the browser holding setup; the demo's provisional
@@ -49,7 +52,7 @@ export async function resolveSecurityContext(
     return { security: await resolveSetupHolder(orm, requestHeaders), renewedCookies };
   }
   const { id: userId, email } = session.user;
-  const instance = await readInstance(orm);
+  const instance = await instances.readInstance(orm);
   const isOwner = userId === instance.ownerUserId;
   if (hasDemoEnded(instance, userId)) {
     return { security: null, renewedCookies: [] };
@@ -79,7 +82,7 @@ async function resolveSetupHolder(
   requestHeaders: IncomingHttpHeaders,
 ): Promise<SecurityContext | null> {
   const token = readSetupToken(requestHeaders.cookie);
-  if (!token || (await readSetupHolder(orm, { token, now: new Date() })) !== "you") {
+  if (!token || (await setupSessions.readSetupHolder(orm, { token, now: new Date() })) !== "you") {
     return null;
   }
   return PrincipalSecurityContext.setupHolder();

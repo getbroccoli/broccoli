@@ -4,7 +4,7 @@ import { requireSignedIn } from "../../../core/security";
 import { sendApplicationError } from "../../../core/applicationError";
 import { sendFile } from "../../../core/files";
 import type { SecurityResolver } from "../../../core/security";
-import { type CompanyUseCases, MAX_LOGO_BYTES } from "../app";
+import { type CompanyService, MAX_LOGO_BYTES } from "../app";
 
 /** Where the logo with this file id is served. */
 export function logoUrl(fileId: string): string {
@@ -17,7 +17,7 @@ export function logoUrl(fileId: string): string {
  * GET is cached for good.
  */
 export function logoRouter(
-  useCases: CompanyUseCases,
+  company: CompanyService,
   resolveSecurity: SecurityResolver,
 ): express.Router {
   // The session cookie is renewed by GraphQL, which every page calls.
@@ -34,8 +34,8 @@ export function logoRouter(
         try {
           // Without a body Express leaves `body` unset; an empty image is refused like any other.
           const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
-          const company = await useCases.saveLogo(await signedIn(request), bytes);
-          response.json({ logoUrl: company.logoFileId && logoUrl(company.logoFileId) });
+          const saved = await company.saveLogo(await signedIn(request), bytes);
+          response.json({ logoUrl: saved.logoFileId && logoUrl(saved.logoFileId) });
         } catch (error) {
           sendApplicationError(error, response);
         }
@@ -43,7 +43,7 @@ export function logoRouter(
     )
     .get("/company/logo/:fileId", async (request, response) => {
       try {
-        sendFile(await useCases.readLogo(await signedIn(request), request.params.fileId), response);
+        sendFile(await company.readLogo(await signedIn(request), request.params.fileId), response);
       } catch (error) {
         sendApplicationError(error, response);
       }

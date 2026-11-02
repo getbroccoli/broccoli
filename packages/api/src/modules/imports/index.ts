@@ -3,16 +3,16 @@ import express from "express";
 import { readSdl } from "../../core/graphql";
 import type { ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import type { ImportUseCases } from "./app";
+import type { ImportServices } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
 // Public values.
-export { createImportUseCases, READ_PEOPLE_JSON_SCHEMA } from "./app";
+export { createImportServices, READ_PEOPLE_JSON_SCHEMA } from "./app";
 export { EXTERNAL_AGENT_FILE_PROGRESS, parseReadPeople, parseStaffFileName } from "./domain";
 
 // Public types.
-export type { ImportUseCases, ReadPeopleOutcome } from "./app";
+export type { ImportServices, ReadPeopleOutcome } from "./app";
 export type {
   AnsweredMapping,
   ExternalAgentParseFileWay,
@@ -27,33 +27,33 @@ export type {
  */
 export function importsModule(
   /** Built once by `createModules`, which also gives them to the external agent. */
-  useCases: ImportUseCases,
+  services: ImportServices,
 ): ModuleManifest {
   return {
     name: "imports",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(useCases),
+    resolvers: createResolvers(services),
     router: (resolveSecurity) =>
       express
         .Router()
-        .use(filesRouter(useCases, resolveSecurity))
-        .use(photoRouter(useCases, resolveSecurity)),
+        .use(filesRouter(services, resolveSecurity))
+        .use(photoRouter(services, resolveSecurity)),
     events: {
-      "instance.setup_completed": () => useCases.finishImport(PrincipalSecurityContext.system()),
-      "imports.people_added": (added) => Promise.resolve(useCases.reportAddedPeople(added)),
+      "instance.setup_completed": () => services.finishImport(PrincipalSecurityContext.system()),
+      "imports.people_added": (added) => Promise.resolve(services.reportAddedPeople(added)),
     },
     jobs: {
       "imports.mapFile": {
-        run: (job) => useCases.files.mapFile(PrincipalSecurityContext.system(), job),
-        onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
+        run: (job) => services.files.mapFile(PrincipalSecurityContext.system(), job),
+        onFailed: (job) => services.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },
       "imports.readOriginalFile": {
         run: (job) =>
-          useCases.originalFileReads.readOriginalFile(PrincipalSecurityContext.system(), job),
+          services.originalFileReads.readOriginalFile(PrincipalSecurityContext.system(), job),
         // A model may take minutes to read a whole file, twice with a new Broccoli AI token.
         expireInSeconds: 15 * 60,
         // Both jobs end alike: the file fails, unless a newer run has started.
-        onFailed: (job) => useCases.files.markFileFailed(PrincipalSecurityContext.system(), job),
+        onFailed: (job) => services.files.markFileFailed(PrincipalSecurityContext.system(), job),
       },
     },
   };

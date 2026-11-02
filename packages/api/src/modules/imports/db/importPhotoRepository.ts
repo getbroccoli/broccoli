@@ -1,9 +1,11 @@
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
-import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
+import { createFileStorageService, type StoredFile } from "../../../core/files";
 import type { IncomingRecord } from "../domain";
 import { importRecords } from "./importRecordsTable";
+
+const fileStorage = createFileStorageService();
 
 /** The photos of the import's records: which to download, attaching them and deleting them. */
 export interface ImportPhotoRepository {
@@ -73,7 +75,7 @@ export function importPhotoRepository(db: Orm | Tx): ImportPhotoRepository {
       if (!waiting) {
         return null;
       }
-      const photoFileId = await storeFile(db, photo);
+      const photoFileId = await fileStorage.storeFile(db, photo);
       await orm().update(importRecords).set({ photoFileId }).where(eq(importRecords.id, recordId));
       return photoFileId;
     },
@@ -140,7 +142,7 @@ async function deletePhotos(db: Orm | Tx, fileIds: string[]): Promise<void> {
     .update(importRecords)
     .set({ photoFileId: null })
     .where(inArray(importRecords.photoFileId, fileIds));
-  await deleteFiles(db, fileIds);
+  await fileStorage.deleteFiles(db, fileIds);
 }
 
 const photoDownloadColumns = {

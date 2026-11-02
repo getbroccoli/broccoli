@@ -5,7 +5,7 @@ import { createRemoteJWKSet } from "jose";
 import { createBetterAuth, type DeploymentServer } from "../auth";
 import type { Orm, Transact } from "../db";
 import type { ManagedDeployment } from "../env";
-import { type PasswordResetEmail, readInstance } from "../instance";
+import { createInstanceService, type PasswordResetEmailService } from "../instance";
 import type { Logger } from "../logger";
 import type { Readiness } from "../readiness";
 import type { SecretBox } from "../secrets";
@@ -13,6 +13,8 @@ import { PrincipalSecurityContext } from "../security";
 import { managedAuth } from "./app";
 import { callbackOnlyTrust, managedSignInPlugin } from "./betterAuth";
 import { initRouter, waitingGate } from "./http";
+
+const instances = createInstanceService();
 
 export interface ManagedServerOptions {
   deployment: ManagedDeployment;
@@ -26,7 +28,7 @@ export interface ManagedServerOptions {
   /** The modules' sign-in endpoints. */
   plugins: BetterAuthPlugin[];
   /** Emails reset links to people who joined by invite; the owner has no password to reset. */
-  passwordResetEmail: Pick<PasswordResetEmail, "queue">;
+  passwordResetEmail: Pick<PasswordResetEmailService, "queue">;
 }
 
 /**
@@ -71,6 +73,6 @@ export function managedServer({
       .use(waitingGate(auth)),
     initStatus: async () => ((await auth.current()) ? "ready" : "waiting"),
     // The waiting gate answers until init stored the assignment, so it exists here.
-    publicOrigin: async () => (await readInstance(orm)).assignment!.publicOrigin,
+    publicOrigin: async () => (await instances.readInstance(orm)).assignment!.publicOrigin,
   };
 }

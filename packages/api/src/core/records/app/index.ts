@@ -1,15 +1,10 @@
 export {
-  appendRecordHistory,
-  createRecordHistoryReader,
-  purgeRecordHistory,
-  readAuthorEmails,
-  readRecordAccess,
-  readRecordHistory,
+  createRecordHistoryReaderService,
   type LoadedRecord,
-  type RecordChanged,
+  type RecordHistoryReaderService,
   type RecordTypeRegistration,
   type RecordTypeRegistry,
-  type RecordHistoryReader,
   type VisibleFieldChange,
   type VisibleHistoryLine,
-} from "./recordHistory";
+} from "./recordHistoryReaderService";
+export { createRecordHistoryService, type RecordChanged } from "./recordHistoryService";

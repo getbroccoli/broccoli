@@ -1,5 +1,5 @@
 import {
-  companyUseCases,
+  companyService,
   employeeInviteService,
   expect,
   fakeMail,
@@ -39,7 +39,7 @@ test("queues one encrypted email job per invite without returning links", async 
 
 test("emails the invite with the saved origin, names, note and expiry", async ({ orm, seed }) => {
   const owner = await seed.owner();
-  await companyUseCases(orm).update(owner, { name: "Acme Corp" });
+  await companyService(orm).update(owner, { name: "Acme Corp" });
   await seed.mailSettings({ linkOrigin: "https://saved.example.com" });
   const employee = await seed.employee({ firstName: "Avery", email: "avery@example.com" });
   const mail = fakeMail();
@@ -77,7 +77,7 @@ test("emails the invite with the saved origin, names, note and expiry", async ({
 test("a managed invite is sent as the inviter, without the company", async ({ orm, seed }) => {
   await seed.assignment({ instanceCredential: MANAGED_INSTANCE_CREDENTIAL });
   const owner = await seed.owner({ name: "Robin Reed" });
-  await companyUseCases(orm).update(owner, { name: "Acme Corp" });
+  await companyService(orm).update(owner, { name: "Acme Corp" });
   const employee = await seed.employee();
   const mail = fakeMail();
   const service = employeeInviteService(orm, { mode: "managed", mail });
@@ -102,7 +102,7 @@ test("a managed invite is sent as the inviter, without the company", async ({ or
 test("a managed invite uses the company name when the inviter has none", async ({ orm, seed }) => {
   await seed.assignment({ instanceCredential: MANAGED_INSTANCE_CREDENTIAL });
   const owner = await seed.owner({ name: "" });
-  await companyUseCases(orm).update(owner, { name: "Acme Corp" });
+  await companyService(orm).update(owner, { name: "Acme Corp" });
   const employee = await seed.employee();
   const mail = fakeMail();
   const service = employeeInviteService(orm, { mode: "managed", mail });

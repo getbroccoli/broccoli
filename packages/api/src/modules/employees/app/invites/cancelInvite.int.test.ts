@@ -1,4 +1,4 @@
-import { employeeInviteService, employeeUseCases, expect, test } from "#test/support";
+import { employeeInviteService, employeeServices, expect, test } from "#test/support";
 
 test("cancels a pending invite and records the sign-in change", async ({ orm, seed }) => {
   const owner = await seed.owner();
@@ -15,7 +15,7 @@ test("cancels a pending invite and records the sign-in change", async ({ orm, se
     emailHasAccount: false,
     canBeInvited: true,
   });
-  const { edges } = await employeeUseCases(orm).readEmployeeHistory(owner, employee.id, {});
+  const { edges } = await employeeServices(orm).readEmployeeHistory(owner, employee.id, {});
   expect(edges).toHaveLength(2);
   expect(edges[0]!.node).toMatchObject({
     cause: { kind: "INVITE_CANCELLED" },

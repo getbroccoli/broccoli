@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../../core/applicationError";
-import { lockSetupOpenToExternalAgent } from "../../../core/instance";
+import { createExternalAgentChoiceService } from "../../../core/instance";
 import type { StoredFile } from "../../../core/files";
 import type { SecurityContext } from "../../../core/security";
 import {
@@ -13,6 +13,8 @@ import {
 } from "../../imports";
 import { type ExternalAgentContext, asLiveExternalAgent } from "./externalAgentContext";
 
+const externalAgentChoice = createExternalAgentChoiceService();
+
 /**
  * The owner drops staff files on Gather, and the external agent maps them by answering Broccoli's
  * masked questions; it gets a file only once the owner allowed it to read that one in full, and
@@ -20,40 +22,44 @@ import { type ExternalAgentContext, asLiveExternalAgent } from "./externalAgentC
  */
 export interface ExternalAgentFileService {
   /** The setup holder's drop: stores the file waiting for the agent's answers; returns its id. */
-  uploadForExternalAgent(
+  uploadForExternalAgent: (
     ctx: SecurityContext,
     file: { name: string; bytes: Uint8Array },
-  ): Promise<string>;
+  ) => Promise<string>;
   /** The files waiting for the agent, and how it maps each. */
-  listUnmappedFiles(ctx: SecurityContext): Promise<UnmappedFile[]>;
+  listUnmappedFiles: (ctx: SecurityContext) => Promise<UnmappedFile[]>;
   /**
    * Long polling: as `listUnmappedFiles`, but with none waiting, waits up to `seconds` for the
    * owner's next drop; `signal` ends the wait early with none.
    */
-  pollUnmappedFiles(
+  pollUnmappedFiles: (
     ctx: SecurityContext,
     request: { seconds: number; signal?: AbortSignal },
-  ): Promise<UnmappedFile[]>;
+  ) => Promise<UnmappedFile[]>;
   /** Updates the file card with the stage reported by the live agent. */
-  reportFileProgress(
+  reportFileProgress: (
     ctx: SecurityContext,
     sourceId: string,
     progress: ExternalAgentFileProgress,
-  ): Promise<void>;
+  ) => Promise<void>;
   /** A waiting file's masked questions. */
-  readMappingQuestions(ctx: SecurityContext, sourceId: string): Promise<MappingQuestions>;
+  readMappingQuestions: (ctx: SecurityContext, sourceId: string) => Promise<MappingQuestions>;
   /** Maps a waiting file with the agent's answers. */
-  answerMappingQuestions(
+  answerMappingQuestions: (
     ctx: SecurityContext,
     sourceId: string,
     answers: MappingAnswersInput,
-  ): Promise<AnsweredMapping>;
+  ) => Promise<AnsweredMapping>;
   /** The original of a file the owner let the agent read in full. */
-  readOriginalFile(ctx: SecurityContext, sourceId: string): Promise<StoredFile>;
+  readOriginalFile: (ctx: SecurityContext, sourceId: string) => Promise<StoredFile>;
   /** The agent's people for a file it read in full replace the file's records, each time it sends. */
-  sendReadPeople(ctx: SecurityContext, sourceId: string, body: unknown): Promise<ReadPeopleOutcome>;
+  sendReadPeople: (
+    ctx: SecurityContext,
+    sourceId: string,
+    body: unknown,
+  ) => Promise<ReadPeopleOutcome>;
   /** Wakes the agent's waits: a file now waits for it, such as one the owner let it read in full. */
-  notifyFileWaiting(ctx: SecurityContext): void;
+  notifyFileWaiting: (ctx: SecurityContext) => void;
 }
 
 /** A file waiting for the external agent, by id only. */
@@ -72,7 +78,7 @@ export function createExternalAgentFileService(
     uploadForExternalAgent: async (ctx, { name, bytes }) => {
       const upload = await imports.answeredMapping.readStaffUpload(ctx, { name, bytes });
       const id = await transact(async (tx) => {
-        const now = await lockSetupOpenToExternalAgent(tx, clock);
+        const now = await externalAgentChoice.lockSetupOpenToExternalAgent(tx, clock);
         if (!now) {
           throw new ApplicationError("CONFLICT", "Choose your agent first.");
         }

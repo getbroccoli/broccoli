@@ -1,5 +1,5 @@
 export { expect } from "vitest";
-export { deleteAllEmployees, employeeDirectory } from "../../src/modules/employees";
+export { createEmployeeSetupService, employeeDirectory } from "../../src/modules/employees";
 export {
   ADMIN,
   EMPLOYEE,
@@ -41,18 +41,30 @@ export { TestSeed } from "./testSeed";
 export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
 export {
-  companyUseCases,
-  demoUseCases,
-  employeeUseCases,
+  companyService,
+  demoService,
+  employeeServices,
   employeeInviteService,
-  externalAgentUseCases,
-  importUseCases,
-  slackUseCases,
-  systemUseCases,
+  externalAgentServices,
+  importServices,
+  slackServices,
+  systemService,
   aiSettings,
   mailSettings,
   passwordResetEmail,
-} from "./useCases";
+} from "./services";
+export type { EmployeeServices } from "./services";
+export {
+  demoFill,
+  employeeSetup,
+  fileStorage,
+  instances,
+  managedInstance,
+  owners,
+  recordHistory,
+  setupSessions,
+  setupSteps,
+} from "./statelessServices";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,

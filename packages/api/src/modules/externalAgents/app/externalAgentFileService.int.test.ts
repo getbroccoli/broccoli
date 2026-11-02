@@ -1,33 +1,32 @@
 import {
   expect,
-  externalAgentUseCases,
-  importUseCases,
+  externalAgentServices,
+  importServices,
   SETUP_HOLDER,
   SYSTEM,
   test,
+  instances,
 } from "#test/support";
-
-import { readInstance } from "../../../core/instance";
 
 test("refuses a drop when another AI source is chosen", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   await seed.aiSource("broccoli_ai");
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
 
   await expect(agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV)).rejects.toMatchObject({
     code: "CONFLICT",
   });
 
-  expect(await importUseCases(orm).reads.listSources(SETUP_HOLDER)).toEqual([]);
+  expect(await importServices(orm).reads.listSources(SETUP_HOLDER)).toEqual([]);
 });
 
 test("queues no model job for a dropped file", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
 
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
 
-  expect(await importUseCases(orm).reads.listSources(SETUP_HOLDER)).toMatchObject([
+  expect(await importServices(orm).reads.listSources(SETUP_HOLDER)).toMatchObject([
     { id, status: "mapping", readBy: "answered_by_external_agent" },
   ]);
   expect(agents.sentJobs).toEqual([]);
@@ -35,7 +34,7 @@ test("queues no model job for a dropped file", async ({ orm, seed }) => {
 
 test("answers a waiting file at once", { timeout: 5_000 }, async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -51,7 +50,7 @@ test("answers a waiting file at once", { timeout: 5_000 }, async ({ orm, seed })
 
 test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -67,7 +66,7 @@ test("answers a file dropped during the wait", { timeout: 5_000 }, async ({ orm,
 
 test("answers no files when the wait runs out", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -87,7 +86,7 @@ test(
   { timeout: 5_000 },
   async ({ orm, seed }) => {
     await seed.externalAgentSetup();
-    const agents = externalAgentUseCases(orm);
+    const agents = externalAgentServices(orm);
     const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
     const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
       code,
@@ -111,7 +110,7 @@ test(
   { timeout: 5_000 },
   async ({ orm, seed }) => {
     await seed.externalAgentSetup();
-    const agents = externalAgentUseCases(orm);
+    const agents = externalAgentServices(orm);
     const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
     const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
       code,
@@ -130,7 +129,7 @@ test(
 
 test("lets a later session answer a file dropped before it connected", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const first = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   await agents.sessions.startExternalAgentSession(SYSTEM, {
     code: first.code,
@@ -156,7 +155,7 @@ test("lets a later session answer a file dropped before it connected", async ({ 
 
 test("writes an answer only before a concurrent Disconnect completes", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -164,7 +163,7 @@ test("writes an answer only before a concurrent Disconnect completes", async ({ 
   });
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   let disconnected = false;
 
   const [answer, disconnect] = await Promise.allSettled([
@@ -202,7 +201,7 @@ test("refuses stale approval racing an answer and prevents answers after refresh
   seed,
 }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -210,7 +209,7 @@ test("refuses stale approval racing an answer and prevents answers after refresh
   });
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   const review = await imports.reads.readReview(SETUP_HOLDER);
 
   const [answer, approval] = await Promise.allSettled([
@@ -224,12 +223,12 @@ test("refuses stale approval racing an answer and prevents answers after refresh
   });
   // Before the answer, the file is still mapping; after it, the reviewed version is stale.
   expect(approval).toMatchObject({ status: "rejected", reason: { code: "CONFLICT" } });
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   const refreshed = await imports.reads.readReview(SETUP_HOLDER);
   expect(refreshed.readyEmployees).toHaveLength(1);
   await imports.approveImport(SETUP_HOLDER, refreshed.version);
   const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: id });
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
   await expect(agents.files.answerMappingQuestions(ctx, id, ANSWERS)).rejects.toMatchObject({
     code: "UNAUTHENTICATED",

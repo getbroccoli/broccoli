@@ -1,8 +1,10 @@
 import type { Orm } from "../../../core/db";
-import { readOwner } from "../../../core/instance";
+import { createOwnerService } from "../../../core/instance";
 import type { EmployeeDirectory } from "../../../core/security";
 import { todayInUtc } from "../../../utils";
 import { employeeRepository, employmentRepository } from "../db";
+
+const owners = createOwnerService();
 
 /** What permission checks read about people: who a user is, and who is above whom today. */
 export function employeeDirectory(orm: Orm): EmployeeDirectory {
@@ -16,7 +18,7 @@ export function employeeDirectory(orm: Orm): EmployeeDirectory {
     managersAbove: (employeeIds) => employments.findManagersAbove(employeeIds, todayInUtc()),
     reportsBelow: (employeeId) => employments.findReportsBelow(employeeId, todayInUtc()),
     ownersEmployeeId: async () => {
-      const owner = await readOwner(orm);
+      const owner = await owners.readOwner(orm);
       return owner ? employeeIdOfUser(owner.userId) : null;
     },
   };

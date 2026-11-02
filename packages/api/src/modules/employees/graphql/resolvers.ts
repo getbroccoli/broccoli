@@ -1,18 +1,27 @@
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import type { EmployeeInviteService, EmployeeUseCases } from "../app";
+import type {
+  EmployeeInviteService,
+  EmployeeManagerService,
+  EmployeePermissionService,
+  EmployeeReadService,
+  EmployeeService,
+} from "../app";
 import { avatarUrl } from "../http";
 import { employeeLoaders } from "./loaders";
 
 export function createResolvers(
-  useCases: EmployeeUseCases,
+  services: EmployeeService &
+    EmployeeReadService &
+    EmployeeManagerService &
+    EmployeePermissionService,
   invites: EmployeeInviteService,
 ): Resolvers {
-  const loaders = employeeLoaders(useCases, invites);
+  const loaders = employeeLoaders(services, invites);
   return {
     Query: {
-      employee: (_parent, { id }, context) => useCases.readEmployee(context.getActor(), id),
+      employee: (_parent, { id }, context) => services.readEmployee(context.getActor(), id),
       employees: (_parent, { first, after, orderBy, filter }, context) =>
-        useCases.listEmployees(context.getActor(), {
+        services.listEmployees(context.getActor(), {
           first: first ?? undefined,
           after,
           orderBy,
@@ -25,23 +34,23 @@ export function createResolvers(
     EmployeeMutations: {
       create: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeCreatePayload"]>(
-          async () => ({ employee: await useCases.createEmployee(context.getActor(), input) }),
+          async () => ({ employee: await services.createEmployee(context.getActor(), input) }),
           ["INVALID_INPUT"],
         ),
       update: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
-          () => useCases.updateEmployee(context.getActor(), input),
+          () => services.updateEmployee(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
       delete: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeDeletePayload"]>(
-          () => useCases.deleteEmployee(context.getActor(), input),
+          () => services.deleteEmployee(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
       setManagers: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeSetManagersPayload"]>(
           () =>
-            useCases.setManagers(context.getActor(), {
+            services.setManagers(context.getActor(), {
               employeeIds: input.employeeIds,
               managerId: input.managerId ?? null,
             }),
@@ -49,7 +58,7 @@ export function createResolvers(
         ),
       setPermissionProfiles: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeUpdatePayload"]>(
-          () => useCases.setPermissionProfiles(context.getActor(), input),
+          () => services.setPermissionProfiles(context.getActor(), input),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
       invite: (_parent, { input }, context) =>
@@ -77,7 +86,7 @@ export function createResolvers(
           : null,
     },
     User: {
-      employee: (_user, _args, context) => useCases.readMyEmployee(context.getActor()),
+      employee: (_user, _args, context) => services.readMyEmployee(context.getActor()),
     },
     Employee: {
       avatarUrl: ({ avatarFileId }) => avatarFileId && avatarUrl(avatarFileId),
@@ -96,7 +105,7 @@ export function createResolvers(
       },
       // shortcut: one query per employee; batch it when a list selects history.
       history: (employee, { first, after }, context) =>
-        useCases.readEmployeeHistory(context.getActor(), employee.id, {
+        services.readEmployeeHistory(context.getActor(), employee.id, {
           first: first ?? undefined,
           after,
         }),

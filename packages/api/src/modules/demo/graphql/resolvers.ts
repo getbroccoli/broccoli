@@ -1,11 +1,11 @@
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import type { DemoUseCases } from "../app";
+import type { DemoService } from "../app";
 
-export function createResolvers(useCases: DemoUseCases): Resolvers {
+export function createResolvers(demo: DemoService): Resolvers {
   return {
     Query: {
       demo: async (_parent, _args, context) =>
-        toGraphql(await useCases.getDemoData(context.getActor())),
+        toGraphql(await demo.getDemoData(context.getActor())),
     },
     Mutation: {
       demo: () => ({}),
@@ -13,7 +13,7 @@ export function createResolvers(useCases: DemoUseCases): Resolvers {
     DemoMutations: {
       exit: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["DemoExitPayload"]>(
-          async () => ({ demoData: toGraphql(await useCases.exitDemo(context.getActor())) }),
+          async () => ({ demoData: toGraphql(await demo.exitDemo(context.getActor())) }),
           ["CONFLICT"],
         ),
     },

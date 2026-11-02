@@ -8,7 +8,7 @@ import { expect, EMPLOYEE, SYSTEM, test, TEST_SECRET_BOX } from "#test/support";
 
 import { instance, instanceRepository } from "../db";
 import type { Orm } from "../../db";
-import { createBroccoliAiTokens } from "./broccoliAiTokens";
+import { createBroccoliAiTokensService } from "./broccoliAiTokensService";
 
 test("keeps an existing trial token after the instance database is cleared", async ({ orm }) => {
   const { tokens } = await tokensInFreshFolder(orm);
@@ -74,5 +74,8 @@ test("refuses an employee reading or saving the trial token", async ({ orm }) =>
 async function tokensInFreshFolder(orm: Orm) {
   const dataDir = await mkdtemp(join(tmpdir(), "broccoli-token-"));
   onTestFinished(() => rm(dataDir, { recursive: true, force: true }));
-  return { tokens: createBroccoliAiTokens({ orm, secretBox: TEST_SECRET_BOX, dataDir }), dataDir };
+  return {
+    tokens: createBroccoliAiTokensService({ orm, secretBox: TEST_SECRET_BOX, dataDir }),
+    dataDir,
+  };
 }

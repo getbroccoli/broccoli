@@ -1,1 +1,5 @@
-export { createSystemUseCases, type SystemContext, type SystemUseCases } from "./useCases";
+export {
+  createSystemService,
+  type SystemService,
+  type SystemServiceDependencies,
+} from "./systemService";

@@ -1,17 +1,19 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../core/db";
-import { lockSetupOpenToExternalAgent } from "../../../core/instance";
+import { createExternalAgentChoiceService } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
-import type { ImportUseCases } from "../../imports";
+import type { ImportServices } from "../../imports";
 import { externalAgentRepository } from "../db";
 import type { ExternalAgentActivity } from "./externalAgentActivity";
+
+const externalAgentChoice = createExternalAgentChoiceService();
 
 /** What the external agent's use cases share. */
 export interface ExternalAgentContext {
   orm: Orm;
   transact: Transact;
   /** The import, which the agent's files go into. */
-  imports: Pick<ImportUseCases, "answeredMapping" | "originalFileReads">;
+  imports: Pick<ImportServices, "answeredMapping" | "originalFileReads">;
   /** Now; tests pass their own. */
   clock: () => Date;
   activity: ExternalAgentActivity;
@@ -29,7 +31,7 @@ export function asLiveExternalAgent<T>(
 ): Promise<T> {
   const sessionId = ctx.requireSetupExternalAgent();
   return transact(async (tx) => {
-    const now = await lockSetupOpenToExternalAgent(tx, clock);
+    const now = await externalAgentChoice.lockSetupOpenToExternalAgent(tx, clock);
     const live = now && (await externalAgentRepository(tx).lockLiveSession(sessionId, now));
     if (!live) {
       throw new ApplicationError("UNAUTHENTICATED", "Your agent's session ended.");

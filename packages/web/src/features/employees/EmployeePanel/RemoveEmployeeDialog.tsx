@@ -29,7 +29,7 @@ type Props = {
 /** Confirms removing an employee, with an optional reason; their history stays. No undo. */
 export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }: Props) {
   const [reason, setReason] = useState("");
-  const [deleteEmployee, { loading, error, payloadError }] = usePayloadMutation(
+  const [deleteEmployee, { loading, error, payloadError, reset }] = usePayloadMutation(
     DeleteEmployeeDocument,
     {
       update: (cache, { data }) =>
@@ -64,7 +64,17 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={(nextOpen) => !loading && onOpenChange(nextOpen)}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (loading) return;
+        if (!nextOpen) {
+          setReason("");
+          reset();
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("people.panel.remove.title", { name: fullName })}</AlertDialogTitle>

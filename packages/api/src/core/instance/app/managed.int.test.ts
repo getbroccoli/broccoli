@@ -5,13 +5,13 @@ import {
   SYSTEM,
   test,
   TEST_SECRET_BOX,
+  instances,
+  managedInstance,
 } from "#test/support";
 
 import type { Transact } from "../../db";
 import { AssignmentConflictError, type ManagedAssignment } from "../domain";
 import { instanceRepository } from "../db";
-import { assignInstance } from "./managed";
-import { readInstance } from "./instance";
 
 const ACME: ManagedAssignment = {
   companyId: "c-acme",
@@ -25,19 +25,24 @@ test("refuses an employee assigning an instance and leaves it unassigned", async
 }) => {
   await expect(
     transact((tx) =>
-      assignInstance(EMPLOYEE, tx, ACME, TEST_SECRET_BOX.encrypt(MANAGED_INSTANCE_CREDENTIAL)),
+      managedInstance.assignInstance(
+        EMPLOYEE,
+        tx,
+        ACME,
+        TEST_SECRET_BOX.encrypt(MANAGED_INSTANCE_CREDENTIAL),
+      ),
     ),
   ).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 
-  expect((await readInstance(orm)).assignment).toBeNull();
+  expect((await instances.readInstance(orm)).assignment).toBeNull();
 });
 
 test("stores the first assignment", async ({ orm, transact }) => {
   await assign(transact, ACME);
 
-  expect((await readInstance(orm)).assignment).toEqual(ACME);
+  expect((await instances.readInstance(orm)).assignment).toEqual(ACME);
 });
 
 test("replaces the credential when the same assignment arrives again", async ({
@@ -49,7 +54,7 @@ test("replaces the credential when the same assignment arrives again", async ({
 
   await assign(transact, { ...ACME }, replacement);
 
-  expect((await readInstance(orm)).assignment).toEqual(ACME);
+  expect((await instances.readInstance(orm)).assignment).toEqual(ACME);
   expect(await instanceRepository(orm).readInstanceCredential()).toBe(replacement);
 });
 
@@ -65,7 +70,7 @@ test.for([
   await expect(assign(transact, { ...ACME, ...change }, replacement)).rejects.toBeInstanceOf(
     AssignmentConflictError,
   );
-  expect((await readInstance(orm)).assignment).toEqual(ACME);
+  expect((await instances.readInstance(orm)).assignment).toEqual(ACME);
   expect(await instanceRepository(orm).readInstanceCredential()).toBe(original);
 });
 
@@ -87,7 +92,9 @@ test("keeps one assignment when two arrive together", async ({ orm, transact }) 
   expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
   const rejected = results.find((result) => result.status === "rejected");
   expect(rejected?.reason).toBeInstanceOf(AssignmentConflictError);
-  expect(["c-acme", "c-other"]).toContain((await readInstance(orm)).assignment?.companyId);
+  expect(["c-acme", "c-other"]).toContain(
+    (await instances.readInstance(orm)).assignment?.companyId,
+  );
 });
 
 function assign(
@@ -95,5 +102,7 @@ function assign(
   assignment: ManagedAssignment,
   encryptedCredential = TEST_SECRET_BOX.encrypt(MANAGED_INSTANCE_CREDENTIAL),
 ) {
-  return transact((tx) => assignInstance(SYSTEM, tx, assignment, encryptedCredential));
+  return transact((tx) =>
+    managedInstance.assignInstance(SYSTEM, tx, assignment, encryptedCredential),
+  );
 }

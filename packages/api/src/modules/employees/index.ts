@@ -3,27 +3,40 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import express from "express";
 
 import type { Mode } from "../../core/env";
-import { createEmployeeUseCases, type EmployeeInviteService, employeeRecordType } from "./app";
+import {
+  createEmployeeManagerService,
+  createEmployeePermissionService,
+  createEmployeeReadService,
+  createEmployeeService,
+  type EmployeeInviteService,
+  employeeRecordType,
+} from "./app";
 import { invitePlugin } from "./betterAuth";
 import { createResolvers } from "./graphql";
 import { avatarRouter, inviteRateLimit } from "./http";
 
 // Public values.
 export {
-  createDemoEmployees,
   createEmployeeInviteService,
-  createEmployeeUseCases,
-  createImportedEmployees,
-  deleteAllEmployees,
+  createEmployeeManagerService,
+  createEmployeePermissionService,
+  createEmployeeReadService,
+  createEmployeeService,
+  createEmployeeSetupService,
   employeeDirectory,
-  findEmployeesWithAvatars,
-  findTakenEmails,
-  hasDemoEmployees,
 } from "./app";
 export { employeeFieldErrors, parseEmployeeField } from "./domain";
 
 // Public types.
-export type { EmployeeInviteService, ImportedEmployees, InviteDetails } from "./app";
+export type {
+  EmployeeInviteService,
+  EmployeeManagerService,
+  EmployeePermissionService,
+  EmployeeReadService,
+  EmployeeService,
+  ImportedEmployees,
+  InviteDetails,
+} from "./app";
 export type {
   Employee,
   EmployeeOrder,
@@ -45,11 +58,16 @@ export function employeesModule({
   /** Built by startup, which setup's last step shares. */
   invites: EmployeeInviteService;
 }): ModuleManifest {
-  const useCases = createEmployeeUseCases(dependencies);
+  const services = {
+    ...createEmployeeService(dependencies),
+    ...createEmployeeReadService(dependencies),
+    ...createEmployeeManagerService(dependencies),
+    ...createEmployeePermissionService(dependencies),
+  };
   return {
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(useCases, invites),
+    resolvers: createResolvers(services, invites),
     recordTypes: { employee: employeeRecordType(dependencies.orm) },
     jobs: invites.jobs,
     authPlugin: invitePlugin(invites, dependencies),
@@ -57,6 +75,6 @@ export function employeesModule({
       express
         .Router()
         .use(inviteRateLimit(mode, dependencies.logger))
-        .use(avatarRouter(useCases, resolveSecurity)),
+        .use(avatarRouter(services, resolveSecurity)),
   };
 }

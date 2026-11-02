@@ -1,11 +1,12 @@
 import { user } from "../../src/core/auth";
 import { ormOf, type Orm, type Tx } from "../../src/core/db";
 import { NO_SETUP_INVITES, type SetupChoices, type SetupInvite } from "../../src/core/instance";
-import { type AddApprovedPeople, createOwnerAtSetup } from "../../src/core/instance/app";
+import { type AddApprovedPeople } from "../../src/core/instance/app";
 import { TestSeed } from "./testSeed";
 import { SYSTEM } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
-import { importUseCases } from "./useCases";
+import { importServices } from "./services";
+import { owners } from "./statelessServices";
 
 /** Finishes the account step with the real owner and import operations. */
 export async function finishSelfHostedSetup(
@@ -14,7 +15,7 @@ export async function finishSelfHostedSetup(
 ): Promise<SetupInvite[]> {
   await new TestSeed(orm).setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
   const { invites } = await testTransactor(orm)((tx) =>
-    createSetupOwner(tx, importUseCases(orm).addApprovedPeople, choices),
+    createSetupOwner(tx, importServices(orm).addApprovedPeople, choices),
   );
   return invites;
 }
@@ -25,7 +26,7 @@ export function createSetupOwner(
   addApprovedPeople: AddApprovedPeople,
   choices: Partial<SetupChoices> = {},
 ) {
-  return createOwnerAtSetup(
+  return owners.createOwnerAtSetup(
     SYSTEM,
     tx,
     { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") },

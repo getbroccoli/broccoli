@@ -1,7 +1,7 @@
 import { and, eq, notInArray, sql } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
-import { deleteFiles, storeFile, type StoredFile } from "../../../core/files";
+import { createFileStorageService, type StoredFile } from "../../../core/files";
 import {
   type ImportEmployeeChoices,
   type ImportSourceReader,
@@ -15,6 +15,8 @@ import { deleteReplacedPhotos } from "./importPhotoRepository";
 import { importRecords } from "./importRecordsTable";
 import { importSources } from "./importSourcesTable";
 import { importReader, type ImportReader } from "./importReader";
+
+const fileStorage = createFileStorageService();
 
 /** Reads and changes the import in a transaction that holds its lock (`lockImport`). */
 export interface ImportRepository extends ImportReader {
@@ -84,7 +86,7 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
     },
 
     insertFileSource: async (name, readBy, file, status): Promise<string> => {
-      const fileId = await storeFile(tx, file);
+      const fileId = await fileStorage.storeFile(tx, file);
       const [row] = await orm()
         .insert(importSources)
         .values({ kind: "file", name, readBy, fileId, status })
@@ -156,7 +158,7 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
         .delete(importSources)
         .where(eq(importSources.id, id))
         .returning({ fileId: importSources.fileId });
-      await deleteFiles(tx, [...presentIds(photos), ...presentIds(uploads)]);
+      await fileStorage.deleteFiles(tx, [...presentIds(photos), ...presentIds(uploads)]);
     },
 
     syncEmployeeRecords: async (sourceId: string, records: IncomingRecord[]): Promise<void> => {
@@ -215,7 +217,10 @@ export async function lockImport(tx: Tx): Promise<ImportRepository> {
         .returning({ fileId: importRecords.photoFileId });
       const uploads = await orm().delete(importSources).returning({ fileId: importSources.fileId });
       await orm().delete(importChoices);
-      await deleteFiles(tx, [...(keepPhotos ? [] : presentIds(photos)), ...presentIds(uploads)]);
+      await fileStorage.deleteFiles(tx, [
+        ...(keepPhotos ? [] : presentIds(photos)),
+        ...presentIds(uploads),
+      ]);
     },
 
     saveChoices: async (type: "employee", choices: ImportEmployeeChoices[]): Promise<void> => {

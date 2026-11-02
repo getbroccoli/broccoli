@@ -1,11 +1,10 @@
 import { EXAMPLE_RECORD, EXAMPLE_REGISTRATION, expect, OWNER, signedIn, test } from "#test/support";
 
 import type { Grant } from "../security";
-import { readRecordAccess } from "./app";
-import { createRecordHistoryReader } from ".";
+import { createRecordHistoryReaderService } from ".";
 
 test("refuses history of an unregistered type", async ({ orm }) => {
-  const reader = createRecordHistoryReader(orm, {});
+  const reader = createRecordHistoryReaderService(orm, {});
 
   await expect(
     reader.readHistory(OWNER, "example", EXAMPLE_RECORD.recordId, {}),
@@ -22,7 +21,7 @@ test("refuses history when the record's subject is out of scope", async ({ orm, 
     employeeId: employee.id,
     grants: [READ_SELF],
   });
-  const reader = createRecordHistoryReader(orm, {
+  const reader = createRecordHistoryReaderService(orm, {
     example: {
       ...EXAMPLE_REGISTRATION,
       subjectsOf: () => Promise.resolve(new Map([[EXAMPLE_RECORD.recordId, other.id]])),
@@ -44,7 +43,7 @@ test("reads records through their subjects, including two records of the same su
     employeeId: employee.id,
     grants: [READ_SELF],
   });
-  const reader = createRecordHistoryReader(orm, {
+  const reader = createRecordHistoryReaderService(orm, {
     example: {
       ...EXAMPLE_REGISTRATION,
       subjectsOf: () =>
@@ -89,10 +88,10 @@ test.for(["self", "all"] as const)(
       subjectsOf: () => Promise.resolve(new Map([["example-1", "public"]])),
       loadRecords: () => Promise.resolve(new Map([["example-1", { title: "Public" }]])),
     };
-    const reader = createRecordHistoryReader(orm, { example: registration });
+    const reader = createRecordHistoryReaderService(orm, { example: registration });
 
     const records = await reader.readRecords(ctx, "example", ["example-1"]);
-    const access = await readRecordAccess(ctx, registration, ["example-1"]);
+    const access = await reader.readAccess(ctx, "example", ["example-1"]);
 
     expect(records).toEqual(new Map([["example-1", { title: "Public", __typename: "Example" }]]));
     expect(access.get("example-1")).toEqual({
@@ -112,7 +111,7 @@ test("refuses public history and hides embedded public records without a read gr
     employeeId: employee.id,
     grants: [UPDATE_SELF],
   });
-  const reader = createRecordHistoryReader(orm, {
+  const reader = createRecordHistoryReaderService(orm, {
     example: {
       ...EXAMPLE_REGISTRATION,
       subjectsOf: () => Promise.resolve(new Map([["example-1", "public"]])),
@@ -152,8 +151,9 @@ test("answers access through each subject and allows deleting the owner's non-em
         ]),
       ),
   };
+  const reader = createRecordHistoryReaderService(orm, { example: registration });
 
-  const access = await readRecordAccess(ctx, registration, ["example-1", "example-2", "example-3"]);
+  const access = await reader.readAccess(ctx, "example", ["example-1", "example-2", "example-3"]);
 
   expect(access).toEqual(
     new Map([

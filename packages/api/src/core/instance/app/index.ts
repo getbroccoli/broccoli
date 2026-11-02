@@ -1,29 +1,27 @@
 export {
-  approveImportStep,
-  completeCompanyStep,
-  completeImportStep,
-  completeReadyStep,
-  isImportOpen,
-  reopenImportStep,
-  returnToCompanyStep,
-} from "./setup";
-export { claimOwner, createOwnerAtSetup, readOwner, type AddApprovedPeople } from "./owner";
-export { readInstance } from "./instance";
-export { exitDemo, startDemoAtSetup, type DemoReset, type DemoStart, type SetupDemo } from "./demo";
-export { assignInstance, recordOwnerSignInMethod } from "./managed";
-export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
-export { createAiSettings, type AiSettings, type OriginalFileReader } from "./aiSettings";
-export { createPasswordResetEmail, type PasswordResetEmail } from "./passwordResetEmail";
+  createAiSettingsService,
+  type AiSettingsService,
+  type OriginalFileReader,
+} from "./aiSettingsService";
+export { createExternalAgentChoiceService } from "./externalAgentChoiceService";
+export { createInstanceService } from "./instanceService";
 export {
-  createMailSettings,
+  createMailSettingsService,
   type InstanceMailer,
   type MailIntegration,
-  type MailSettings,
-} from "./mailSettings";
+  type MailSettingsService,
+} from "./mailSettingsService";
+export { createManagedInstanceService } from "./managedInstanceService";
+export { createOwnerService, type AddApprovedPeople } from "./ownerService";
 export {
-  chooseExternalAgentSource,
-  lockExternalAgentChoice,
-  lockSetupOpenToExternalAgent,
-  chooseExternalAgentOnServer,
-  readSetupOpenToExternalAgent,
-} from "./externalAgent";
+  createPasswordResetEmailService,
+  type PasswordResetEmailService,
+} from "./passwordResetEmailService";
+export {
+  createSetupDemoService,
+  type DemoReset,
+  type DemoStart,
+  type SetupDemo,
+} from "./setupDemoService";
+export { createSetupSessionService, type SetupHolder } from "./setupSessionService";
+export { createSetupStepService } from "./setupStepService";
