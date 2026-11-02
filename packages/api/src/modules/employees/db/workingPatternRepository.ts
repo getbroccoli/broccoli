@@ -244,6 +244,7 @@ function patternWeekOf(row: WeekRow): PatternWeek {
       row.sundayMinutes,
     ] as WeekdayMinutes,
     fullDayMinutes: row.fullDayMinutes,
+    bankHolidayCalendar: row.bankHolidayCalendar,
   };
 }
 
@@ -260,6 +261,7 @@ function weekRow(workingPatternId: string, week: PatternWeek) {
     saturdayMinutes: saturday,
     sundayMinutes: sunday,
     fullDayMinutes: week.fullDayMinutes,
+    bankHolidayCalendar: week.bankHolidayCalendar,
   };
 }
 

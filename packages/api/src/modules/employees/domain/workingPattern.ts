@@ -1,5 +1,6 @@
 import { invalidInput } from "../../../core/applicationError";
 import { type CalendarDate, parseCalendarDate } from "../../../utils";
+import type { BankHolidayCalendar } from "../../bankHolidays";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
@@ -10,6 +11,7 @@ export interface PatternWeek {
   minutes: WeekdayMinutes;
   /** The minutes one day of leave stands for. */
   fullDayMinutes: number;
+  bankHolidayCalendar: BankHolidayCalendar;
 }
 
 /** A named way of working that groups and people are put on. */
@@ -23,13 +25,14 @@ export interface WorkingPattern {
 }
 
 /**
- * What a person works from a date until the next working week starts; minutes and full day are
- * null while they have no working pattern.
+ * What a person works from a date until the next working week starts, and whose bank holidays
+ * apply; all null while they have no working pattern.
  */
 export interface WorkingWeek {
   effectiveFrom: CalendarDate;
   minutes: WeekdayMinutes | null;
   fullDayMinutes: number | null;
+  bankHolidayCalendar: BankHolidayCalendar | null;
 }
 
 /** The name a pattern is saved under; refuses a blank one. */

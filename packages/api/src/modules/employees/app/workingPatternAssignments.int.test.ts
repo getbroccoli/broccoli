@@ -43,9 +43,24 @@ test("a newer assignment ends the earlier one without resuming it afterwards", a
       })
     ).get(employee.id),
   ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-09-01", minutes: [0, 0, 0, 0, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
+    {
+      effectiveFrom: "2026-08-01",
+      minutes: [450, 0, 0, 0, 0, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-09-01",
+      minutes: [0, 0, 0, 0, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-10-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
   ]);
 });
 

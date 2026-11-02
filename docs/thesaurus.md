@@ -35,6 +35,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Policy group**: a named set of people who share the same settings, such as "Everyone"; every new person joins "Everyone".
 - **Working pattern**: a named way of working, such as "Standard" or "Part-time Tue–Thu": the minutes worked on each weekday, Monday to Sunday, from a date. A group works one by default and a person can be put on one from a date. Not "workload", "schedule" or "policy".
 - **Pattern week**: a working pattern's minutes for each weekday and its full day, from a date until its next week.
+- **Bank holiday calendar**: one nation's bank holidays (England and Wales, Scotland or Northern Ireland), chosen on a pattern week.
 - **Full day**: the minutes one day of leave stands for in a pattern week; at least its longest weekday.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.

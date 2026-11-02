@@ -34,6 +34,7 @@ export {
   coversDate,
   makeRoomForDatedPattern,
   patternOn,
+  weekInForce,
   workingWeeksOf,
   type DatedPattern,
   type GroupMembership,

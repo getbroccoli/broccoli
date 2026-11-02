@@ -91,8 +91,18 @@ test("ending an assignment returns to the group on the next day and records that
       })
     ).get(employee.id),
   ).toEqual([
-    { effectiveFrom: "2026-09-01", minutes: [0, 450, 450, 450, 0, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
+    {
+      effectiveFrom: "2026-09-01",
+      minutes: [0, 450, 450, 450, 0, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-10-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
   ]);
 });
 
@@ -142,6 +152,7 @@ test("removing an assignment restores the group over its dates and records the c
       effectiveFrom: "2026-08-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
     },
   ]);
 });

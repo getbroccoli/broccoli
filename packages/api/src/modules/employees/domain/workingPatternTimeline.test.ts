@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 
 import type { CalendarDate } from "../../../utils";
+import type { PatternWeek, WeekdayMinutes } from "./workingPattern";
 import {
   coversDate,
   makeRoomForDatedPattern,
@@ -67,16 +68,14 @@ it("splits at an assignment start and the day after its inclusive end", () => {
     ],
     memberships: [],
     groupPatterns: new Map(),
-    patternWeeks: new Map([
-      ["short", [{ effectiveFrom: null, minutes: [240, 0, 0, 0, 0, 0, 0], fullDayMinutes: 240 }]],
-    ]),
+    patternWeeks: new Map([["short", [patternWeek([240, 0, 0, 0, 0, 0, 0], 240)]]]),
   };
   expect(
     workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
   ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null },
-    { effectiveFrom: "2026-09-01", minutes: [240, 0, 0, 0, 0, 0, 0], fullDayMinutes: 240 },
-    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null },
+    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
+    patternWeek([240, 0, 0, 0, 0, 0, 0], 240, "2026-09-01" as CalendarDate),
+    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
   ]);
 });
 it("splits at a group link's start and end", () => {
@@ -96,19 +95,14 @@ it("splits at a group link's start and end", () => {
         ],
       ],
     ]),
-    patternWeeks: new Map([
-      [
-        "standard",
-        [{ effectiveFrom: null, minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 }],
-      ],
-    ]),
+    patternWeeks: new Map([["standard", [patternWeek([450, 0, 0, 0, 0, 0, 0], 450)]]]),
   };
   expect(
     workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
   ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null },
-    { effectiveFrom: "2026-09-01", minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null },
+    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
+    patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-01" as CalendarDate),
+    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
   ]);
 });
 it("splits at a membership's start and end", () => {
@@ -127,19 +121,14 @@ it("splits at a membership's start and end", () => {
         [{ id: "link", workingPatternId: "standard", effectiveFrom: null, effectiveUntil: null }],
       ],
     ]),
-    patternWeeks: new Map([
-      [
-        "standard",
-        [{ effectiveFrom: null, minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 }],
-      ],
-    ]),
+    patternWeeks: new Map([["standard", [patternWeek([450, 0, 0, 0, 0, 0, 0], 450)]]]),
   };
   expect(
     workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
   ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null },
-    { effectiveFrom: "2026-09-01", minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null },
+    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
+    patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-01" as CalendarDate),
+    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
   ]);
 });
 it("merges identical weeks across assignment and pattern changes", () => {
@@ -160,28 +149,19 @@ it("merges identical weeks across assignment and pattern changes", () => {
       ],
     ]),
     patternWeeks: new Map([
-      [
-        "standard",
-        [{ effectiveFrom: null, minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 }],
-      ],
+      ["standard", [patternWeek([450, 0, 0, 0, 0, 0, 0], 450)]],
       [
         "short",
         [
-          { effectiveFrom: null, minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-          {
-            effectiveFrom: "2026-09-15" as CalendarDate,
-            minutes: [450, 0, 0, 0, 0, 0, 0],
-            fullDayMinutes: 450,
-          },
+          patternWeek([450, 0, 0, 0, 0, 0, 0], 450),
+          patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-15" as CalendarDate),
         ],
       ],
     ]),
   };
   expect(
     workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
-  ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-  ]);
+  ).toEqual([patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-08-01" as CalendarDate)]);
 });
 it("splits when weekday minutes or full day minutes change within the requested period", () => {
   const timeline: WorkingPatternTimeline = {
@@ -199,22 +179,10 @@ it("splits when weekday minutes or full day minutes change within the requested 
       [
         "short",
         [
-          { effectiveFrom: null, minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-          {
-            effectiveFrom: "2026-09-05" as CalendarDate,
-            minutes: [240, 0, 0, 0, 0, 0, 0],
-            fullDayMinutes: 450,
-          },
-          {
-            effectiveFrom: "2026-09-15" as CalendarDate,
-            minutes: [240, 0, 0, 0, 0, 0, 0],
-            fullDayMinutes: 480,
-          },
-          {
-            effectiveFrom: "2026-09-21" as CalendarDate,
-            minutes: [480, 0, 0, 0, 0, 0, 0],
-            fullDayMinutes: 480,
-          },
+          patternWeek([450, 0, 0, 0, 0, 0, 0], 450),
+          patternWeek([240, 0, 0, 0, 0, 0, 0], 450, "2026-09-05" as CalendarDate),
+          patternWeek([240, 0, 0, 0, 0, 0, 0], 480, "2026-09-15" as CalendarDate),
+          patternWeek([480, 0, 0, 0, 0, 0, 0], 480, "2026-09-21" as CalendarDate),
         ],
       ],
     ]),
@@ -222,15 +190,15 @@ it("splits when weekday minutes or full day minutes change within the requested 
   expect(
     workingWeeksOf(timeline, "2026-09-01" as CalendarDate, "2026-09-15" as CalendarDate),
   ).toEqual([
-    { effectiveFrom: "2026-09-01", minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-09-05", minutes: [240, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-09-15", minutes: [240, 0, 0, 0, 0, 0, 0], fullDayMinutes: 480 },
+    patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-01" as CalendarDate),
+    patternWeek([240, 0, 0, 0, 0, 0, 0], 450, "2026-09-05" as CalendarDate),
+    patternWeek([240, 0, 0, 0, 0, 0, 0], 480, "2026-09-15" as CalendarDate),
   ]);
   expect(
     workingWeeksOf(timeline, "2026-09-10" as CalendarDate, "2026-09-20" as CalendarDate),
   ).toEqual([
-    { effectiveFrom: "2026-09-10", minutes: [240, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-09-15", minutes: [240, 0, 0, 0, 0, 0, 0], fullDayMinutes: 480 },
+    patternWeek([240, 0, 0, 0, 0, 0, 0], 450, "2026-09-10" as CalendarDate),
+    patternWeek([240, 0, 0, 0, 0, 0, 0], 480, "2026-09-15" as CalendarDate),
   ]);
 });
 
@@ -243,7 +211,9 @@ it("has no pattern without an assignment or a linked group", () => {
   };
   expect(
     workingWeeksOf(timeline, "2026-09-01" as CalendarDate, "2026-09-30" as CalendarDate),
-  ).toEqual([{ effectiveFrom: "2026-09-01", minutes: null, fullDayMinutes: null }]);
+  ).toEqual([
+    { effectiveFrom: "2026-09-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
+  ]);
   const unlinkedGroup: WorkingPatternTimeline = {
     ...timeline,
     memberships: [{ policyGroupId: "group", effectiveFrom: null, effectiveUntil: null }],
@@ -304,3 +274,11 @@ it("covers inclusive boundaries and treats null boundaries as open", () => {
     coversDate({ effectiveFrom: null, effectiveUntil: null }, "2026-09-01" as CalendarDate),
   ).toBe(true);
 });
+
+function patternWeek(
+  minutes: WeekdayMinutes,
+  fullDayMinutes: number,
+  effectiveFrom: CalendarDate | null = null,
+): PatternWeek {
+  return { effectiveFrom, minutes, fullDayMinutes, bankHolidayCalendar: "england_and_wales" };
+}
