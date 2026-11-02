@@ -20,7 +20,10 @@ export interface JobHandler<Name extends JobName> {
    * slowest call, so a slow call is never sent twice. Two minutes by default.
    */
   expireInSeconds?: number;
-  /** Also sends the job with `payload` on every occurrence of `cron` in `timeZone`; a missed occurrence runs once on start. */
+  /**
+   * Also sends the job with `payload` when `cron` comes due in `timeZone`, at most once a minute;
+   * a missed occurrence runs once on start.
+   */
   schedule?: { cron: string; timeZone: string; payload: Jobs[Name] };
 }
 
