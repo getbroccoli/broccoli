@@ -1,0 +1,278 @@
+import { addDays, addYears, type CalendarDate, daysBetween, weekdayOf } from "../../../utils";
+
+/** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
+export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
+
+/** The nation whose bank holidays a working week follows. */
+export type BankHolidayCalendar = "england_and_wales" | "scotland" | "northern_ireland";
+
+/** A person's employment; a null start or end is open. */
+export interface EmploymentPeriod {
+  startDate: CalendarDate | null;
+  endDate: CalendarDate | null;
+}
+
+/** One part of a policy's allowance, as stored in `time_off_allowance_rules`. */
+export type AllowanceRule =
+  | {
+      id: string;
+      kind: "yearly_entitlement";
+      /** Days for a working week of `entitlementDaysPerWeek` days (28 for 5). */
+      entitlementDays: number;
+      entitlementDaysPerWeek: number;
+      /** The most a full year grants; null: no cap. */
+      maxDays: number | null;
+    }
+  | {
+      id: string;
+      kind: "service_extra";
+      /** The step is reached on this anniversary of the service start. */
+      afterYears: number;
+      /** Extra days a year for a full-time week, from that step. */
+      extraDays: number;
+    };
+
+/** The policy that applies to the person for this type from a date to a date; null is open. */
+export interface DatedPolicy {
+  effectiveFrom: CalendarDate | null;
+  /** The last day it applies. */
+  effectiveUntil: CalendarDate | null;
+  balance: "balance_from_allowance" | "unlimited_balance" | "no_balance";
+  /** Null unless the balance is `balance_from_allowance`. */
+  bankHolidays: "bank_holidays_included_in_allowance" | "bank_holidays_on_top_of_allowance" | null;
+  rules: readonly AllowanceRule[];
+}
+
+/** What a person works from a date until the next week; minutes null while they have no pattern. */
+export interface DatedWorkingWeek {
+  effectiveFrom: CalendarDate;
+  minutes: WeekdayMinutes | null;
+  fullDayMinutes: number | null;
+  bankHolidayCalendar: BankHolidayCalendar | null;
+}
+
+/** Everything one allowance's target depends on. */
+export interface AllowanceTargetInputs {
+  leaveYear: { start: CalendarDate; end: CalendarDate };
+  employments: readonly EmploymentPeriod[];
+  /** The first employment's start, from which service steps count; null: no step is reached. */
+  serviceStart: CalendarDate | null;
+  /** Oldest first, never overlapping. */
+  policies: readonly DatedPolicy[];
+  /** Oldest first; before the first one the person has no working week. */
+  workingWeeks: readonly DatedWorkingWeek[];
+  /** Each calendar's bank holiday dates. */
+  bankHolidays: ReadonlyMap<BankHolidayCalendar, readonly CalendarDate[]>;
+}
+
+/** One line identity of an allowance and the amount its ledger lines should add up to. */
+export interface AllowanceTargetLine {
+  kind:
+    | "entitlement_grant"
+    | "bank_holiday_allowance_grant"
+    | "bank_holiday_taken"
+    | "rounding_up_to_half_day";
+  /** Set on entitlement grants only. */
+  allowanceRuleId: string | null;
+  /** Set on bank holidays taken only. */
+  bankHolidayDate: CalendarDate | null;
+  /** Days, rounded to six decimal places. */
+  amount: number;
+  /** The first day of the earliest part of the leave year that contributes to this line. */
+  firstDate: CalendarDate;
+}
+
+/**
+ * The lines an allowance should have: entitlement grants in rule order, the bank holiday
+ * allowance grant, bank holidays taken by date, then the rounding up to the half day.
+ */
+export function allowanceTargetOf(inputs: AllowanceTargetInputs): AllowanceTargetLine[] {
+  const parts = keptParts(inputs);
+  const lines = new Map<string, AllowanceTargetLine>();
+  const add = (identity: Identity, part: Part, amount: number) => {
+    const key = `${identity.kind}:${identity.allowanceRuleId}:${identity.bankHolidayDate}`;
+    const line = lines.get(key) ?? { ...identity, amount: 0, firstDate: part.from };
+    lines.set(key, { ...line, amount: line.amount + amount });
+  };
+  for (const part of parts) {
+    addPart(inputs, part, add);
+  }
+  const target = [...lines.values()]
+    .map((line) => ({ ...line, amount: toMicroDays(line.amount) / MICRO_DAYS_IN_A_DAY }))
+    .toSorted(byLineOrder);
+  const rounding = roundingUpToHalfDay(target);
+  return rounding === null ? target : [...target, { ...rounding, firstDate: parts[0]!.from }];
+}
+
+/** A stretch of the leave year in which nothing the target depends on changes. */
+interface Part {
+  from: CalendarDate;
+  until: CalendarDate;
+  policy: DatedPolicy;
+  minutes: WeekdayMinutes;
+  fullDayMinutes: number;
+  bankHolidays: readonly CalendarDate[];
+}
+
+type Identity = Pick<AllowanceTargetLine, "kind" | "allowanceRuleId" | "bankHolidayDate">;
+
+function keptParts(inputs: AllowanceTargetInputs): Part[] {
+  const starts = partStarts(inputs);
+  return starts.flatMap((from, index) => {
+    const next = starts[index + 1];
+    const until = next ? addDays(next, -1) : inputs.leaveYear.end;
+    const employed = inputs.employments.some(({ startDate, endDate }) =>
+      covers(startDate, endDate, from),
+    );
+    const policy = inputs.policies.find(({ effectiveFrom, effectiveUntil }) =>
+      covers(effectiveFrom, effectiveUntil, from),
+    );
+    const week = inputs.workingWeeks.findLast(({ effectiveFrom }) => effectiveFrom <= from);
+    const { minutes, fullDayMinutes, bankHolidayCalendar } = week ?? {};
+    if (!employed || policy?.balance !== "balance_from_allowance" || !minutes || !fullDayMinutes) {
+      return [];
+    }
+    const bankHolidays =
+      (bankHolidayCalendar && inputs.bankHolidays.get(bankHolidayCalendar)) || [];
+    return [
+      {
+        from,
+        until,
+        policy,
+        minutes,
+        fullDayMinutes,
+        bankHolidays,
+      },
+    ];
+  });
+}
+
+function partStarts(inputs: AllowanceTargetInputs): CalendarDate[] {
+  const { leaveYear, employments, policies, workingWeeks, serviceStart } = inputs;
+  const changes = [
+    ...employments.flatMap(({ startDate, endDate }) => [startDate, dayAfter(endDate)]),
+    ...policies.flatMap(({ effectiveFrom, effectiveUntil }) => [
+      effectiveFrom,
+      dayAfter(effectiveUntil),
+    ]),
+    ...workingWeeks.map(({ effectiveFrom }) => effectiveFrom),
+    ...policies.flatMap(({ rules }) =>
+      rules.map((rule) =>
+        rule.kind === "service_extra" && serviceStart
+          ? addYears(serviceStart, rule.afterYears)
+          : null,
+      ),
+    ),
+  ].filter(
+    (date): date is CalendarDate =>
+      date !== null && date > leaveYear.start && date <= leaveYear.end,
+  );
+  return [leaveYear.start, ...new Set(changes)].toSorted();
+}
+
+function addPart(
+  inputs: AllowanceTargetInputs,
+  part: Part,
+  add: (identity: Identity, part: Part, amount: number) => void,
+): void {
+  const { leaveYear } = inputs;
+  const daysPerWeek = part.minutes.reduce((sum, minutes) => sum + minutes, 0) / part.fullDayMinutes;
+  const share =
+    (daysBetween(part.from, part.until) + 1) / (daysBetween(leaveYear.start, leaveYear.end) + 1);
+  const yearly = part.policy.rules.find((rule) => rule.kind === "yearly_entitlement");
+  if (yearly) {
+    const days = (yearly.entitlementDays / yearly.entitlementDaysPerWeek) * daysPerWeek;
+    const capped = yearly.maxDays === null ? days : Math.min(days, yearly.maxDays);
+    add(grantOf(yearly.id), part, capped * share);
+  }
+  const step = serviceStepOn(part.policy, inputs.serviceStart, part.from);
+  if (step) {
+    const fullTimeDays = yearly?.entitlementDaysPerWeek ?? FULL_TIME_DAYS_PER_WEEK;
+    add(grantOf(step.id), part, (step.extraDays / fullTimeDays) * daysPerWeek * share);
+  }
+  if (part.policy.bankHolidays === "bank_holidays_on_top_of_allowance") {
+    const inYear = part.bankHolidays.filter(
+      (date) => date >= leaveYear.start && date <= leaveYear.end,
+    );
+    const identity = {
+      kind: "bank_holiday_allowance_grant",
+      allowanceRuleId: null,
+      bankHolidayDate: null,
+    } as const;
+    add(identity, part, ((inYear.length * daysPerWeek) / FULL_TIME_DAYS_PER_WEEK) * share);
+  }
+  for (const date of part.bankHolidays.filter((date) => date >= part.from && date <= part.until)) {
+    const identity = {
+      kind: "bank_holiday_taken",
+      allowanceRuleId: null,
+      bankHolidayDate: date,
+    } as const;
+    add(identity, part, -part.minutes[weekdayOf(date)]! / part.fullDayMinutes);
+  }
+}
+
+/** The highest service step reached on `date`, if any. */
+function serviceStepOn(
+  policy: DatedPolicy,
+  serviceStart: CalendarDate | null,
+  date: CalendarDate,
+): Extract<AllowanceRule, { kind: "service_extra" }> | undefined {
+  return policy.rules
+    .filter((rule) => rule.kind === "service_extra")
+    .filter((rule) => serviceStart !== null && addYears(serviceStart, rule.afterYears) <= date)
+    .toSorted((a, b) => b.afterYears - a.afterYears)[0];
+}
+
+/** The grants' sum rounded up once to the half day, as the difference to add; null without grants. */
+function roundingUpToHalfDay(
+  lines: readonly AllowanceTargetLine[],
+): Omit<AllowanceTargetLine, "firstDate"> | null {
+  const grants = lines.filter((line) => line.kind !== "bank_holiday_taken");
+  if (grants.length === 0) {
+    return null;
+  }
+  const sum = grants.reduce((total, line) => total + toMicroDays(line.amount), 0);
+  const halfDays = MICRO_DAYS_IN_A_DAY / 2;
+  const rounded = Math.ceil(sum / halfDays) * halfDays;
+  return {
+    kind: "rounding_up_to_half_day",
+    allowanceRuleId: null,
+    bankHolidayDate: null,
+    amount: (rounded - sum) / MICRO_DAYS_IN_A_DAY,
+  };
+}
+
+function grantOf(allowanceRuleId: string): Identity {
+  return { kind: "entitlement_grant", allowanceRuleId, bankHolidayDate: null };
+}
+
+function byLineOrder(a: AllowanceTargetLine, b: AllowanceTargetLine): number {
+  const byKind = LINE_ORDER.indexOf(a.kind) - LINE_ORDER.indexOf(b.kind);
+  return byKind || (a.bankHolidayDate ?? "").localeCompare(b.bankHolidayDate ?? "");
+}
+
+function covers(
+  from: CalendarDate | null,
+  until: CalendarDate | null,
+  date: CalendarDate,
+): boolean {
+  return (from === null || from <= date) && (until === null || date <= until);
+}
+
+function dayAfter(date: CalendarDate | null): CalendarDate | null {
+  return date && addDays(date, 1);
+}
+
+/** Days in millionths, so amounts add up exactly; `+ 0` turns -0 into 0. */
+function toMicroDays(days: number): number {
+  return Math.round(days * MICRO_DAYS_IN_A_DAY) + 0;
+}
+
+const MICRO_DAYS_IN_A_DAY = 1_000_000;
+const FULL_TIME_DAYS_PER_WEEK = 5;
+const LINE_ORDER: readonly AllowanceTargetLine["kind"][] = [
+  "entitlement_grant",
+  "bank_holiday_allowance_grant",
+  "bank_holiday_taken",
+  "rounding_up_to_half_day",
+];

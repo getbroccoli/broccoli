@@ -34,6 +34,24 @@ export function addDays(date: CalendarDate, days: number): CalendarDate {
     .slice(0, 10) as CalendarDate;
 }
 
+/** The same day `years` later; 29 February becomes 1 March in other years. */
+export function addYears(date: CalendarDate, years: number): CalendarDate {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(Date.UTC(year! + years, month! - 1, day))
+    .toISOString()
+    .slice(0, 10) as CalendarDate;
+}
+
+/** How many days `until` is after `from`; negative when it is before. */
+export function daysBetween(from: CalendarDate, until: CalendarDate): number {
+  return (Date.parse(until) - Date.parse(from)) / MILLISECONDS_IN_A_DAY;
+}
+
+/** The day of the week, 0 for Monday to 6 for Sunday. */
+export function weekdayOf(date: CalendarDate): number {
+  return (new Date(date).getUTCDay() + 6) % 7;
+}
+
 /** Today as a calendar day in UTC. */
 export function todayInUtc(): CalendarDate {
   return new Date().toISOString().slice(0, 10) as CalendarDate;
@@ -54,3 +72,5 @@ export function parseDateColumn(cells: readonly string[]): (CalendarDate | null)
 }
 
 const NUMERIC_DATE = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/;
+
+const MILLISECONDS_IN_A_DAY = 86_400_000;
