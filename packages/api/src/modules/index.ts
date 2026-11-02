@@ -10,7 +10,7 @@ import { companyModule, createCompany } from "./company";
 import { createDemoFillService, demoModule } from "./demo";
 import { createEmployeeSetupService, employeeDirectory, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
-import { createImportUseCases, importsModule } from "./imports";
+import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
 
@@ -40,7 +40,7 @@ export function createModules(
   const passwordResetEmail = createPasswordResetEmailService({ ...core, mailSettings });
   const company = createCompany({ ...core, brandLookupUrl });
   // Built once: the import serves them and the external agent puts its files through them.
-  const importUseCases = createImportUseCases({
+  const importServices = createImportServices({
     ...core,
     slack: slackConnection,
     decisions: aiSettings.decisions,
@@ -54,9 +54,9 @@ export function createModules(
       aiSettings,
       mailSettings,
       passwordResetEmail,
-      addApprovedPeople: importUseCases.addApprovedPeople,
+      addApprovedPeople: importServices.addApprovedPeople,
       deleteAllEmployees: employeeSetup.deleteAllEmployees,
-      deleteFinishedImport: importUseCases.deleteFinishedImport,
+      deleteFinishedImport: importServices.deleteFinishedImport,
     }),
     employeesModule({
       ...core,
@@ -67,16 +67,16 @@ export function createModules(
     companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule(slackConnection),
-    importsModule(importUseCases),
-    externalAgentsModule({ ...core, mode: deployment.mode, imports: importUseCases }),
+    importsModule(importServices),
+    externalAgentsModule({ ...core, mode: deployment.mode, imports: importServices }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core.orm, manifests)],
     setupDemo: {
-      prepareStart: importUseCases.prepareDemoStart,
+      prepareStart: importServices.prepareDemoStart,
       deleteAllEmployees: employeeSetup.deleteAllEmployees,
     },
-    addApprovedPeople: importUseCases.addApprovedPeople,
+    addApprovedPeople: importServices.addApprovedPeople,
     employeeDirectory: employeeDirectory(core.orm),
     passwordResetEmail,
   };

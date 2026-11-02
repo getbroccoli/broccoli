@@ -5,7 +5,7 @@ import type { SecurityContext } from "../../../../core/security";
 
 // The external agent's operations admit their own callers; their tests check them. The demo
 // start takes no caller: the start it returns checks the caller setup runs it with.
-type ImportUseCases = Omit<
+type ImportServices = Omit<
   ReturnType<typeof importUseCases>,
   "reportAddedPeople" | "sentJobs" | "answeredMapping" | "originalFileReads" | "prepareDemoStart"
 > & {
@@ -17,10 +17,10 @@ type ImportUseCases = Omit<
 
 /** Every use case by name; a service's as `service.name`, so none can be left out below. */
 type UseCaseName = {
-  [Name in keyof ImportUseCases]: ImportUseCases[Name] extends (...args: never[]) => unknown
+  [Name in keyof ImportServices]: ImportServices[Name] extends (...args: never[]) => unknown
     ? Name
-    : `${Name}.${keyof ImportUseCases[Name] & string}`;
-}[keyof ImportUseCases];
+    : `${Name}.${keyof ImportServices[Name] & string}`;
+}[keyof ImportServices];
 
 const calls = {
   "originalFileReads.allowOriginalFileRead": (imports, ctx) =>
@@ -65,7 +65,7 @@ const calls = {
   finishImport: (imports, ctx) => imports.finishImport(ctx),
   deleteFinishedImport: (imports, ctx, tx) => imports.deleteFinishedImport(ctx, tx),
   reopenReview: (imports, ctx) => imports.reopenReview(ctx),
-} satisfies Record<UseCaseName, (imports: ImportUseCases, ctx: SecurityContext, tx: Tx) => unknown>;
+} satisfies Record<UseCaseName, (imports: ImportServices, ctx: SecurityContext, tx: Tx) => unknown>;
 
 test.for(Object.entries(calls))("%s refuses an employee", async ([, call], { orm, transact }) => {
   const imports = importUseCases(orm);

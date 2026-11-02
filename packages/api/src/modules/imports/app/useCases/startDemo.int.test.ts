@@ -12,7 +12,7 @@ import {
 import { createInstanceService } from "../../../../core/instance";
 import type { Orm, Tx } from "../../../../core/db";
 
-import { prepareDemoStart } from "./startDemo";
+import { createImportDemoService } from "./importDemoService";
 
 const instances = createInstanceService();
 
@@ -34,13 +34,14 @@ test("the prepared demo start completes setup and fills the demo company in the 
   const owner = await seed.owner();
   await seed.setupStep("import");
   const filledIn: Tx[] = [];
-  const startDemo = await prepareDemoStart({
+  const startDemo = await createImportDemoService({
+    transact,
     prepareDemoFill: () =>
       Promise.resolve((tx: Tx) => {
         filledIn.push(tx);
         return Promise.resolve();
       }),
-  });
+  }).prepareDemoStart();
 
   await transact(async (tx) => {
     await startDemo(owner, tx);

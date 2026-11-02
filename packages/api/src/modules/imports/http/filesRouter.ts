@@ -4,7 +4,7 @@ import { rateLimit } from "express-rate-limit";
 import { sendApplicationError } from "../../../core/applicationError";
 import type { SecurityResolver } from "../../../core/security";
 import { requireSignedIn, type SecurityContext } from "../../../core/security";
-import type { ImportUseCases } from "../app";
+import type { ImportServices } from "../app";
 import { parseStaffFileName } from "../domain";
 
 /** Large enough for a staff list of thousands of people. */
@@ -17,7 +17,7 @@ const UPLOADS_PER_MINUTE = 30;
  * answers the new source's id; its mapping runs in the background.
  */
 export function filesRouter(
-  useCases: ImportUseCases,
+  useCases: ImportServices,
   resolveSecurity: SecurityResolver,
 ): express.Router {
   return express.Router().post(

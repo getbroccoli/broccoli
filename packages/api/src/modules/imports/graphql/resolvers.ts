@@ -1,5 +1,5 @@
 import type { Resolvers } from "../../../core/graphql";
-import type { ImportUseCases } from "../app";
+import type { ImportServices } from "../app";
 import {
   AGENT_FILE_PROGRESS,
   AI_SOURCES,
@@ -14,7 +14,7 @@ import { importEmployeeResolvers } from "./importEmployeeResolvers";
 import { importMutationResolvers } from "./importMutationResolvers";
 import { importLoaders } from "./loaders";
 
-export function createResolvers(useCases: ImportUseCases): Resolvers {
+export function createResolvers(useCases: ImportServices): Resolvers {
   const loaders = importLoaders(useCases);
   return {
     Query: {

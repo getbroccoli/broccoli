@@ -4,7 +4,7 @@ import { readSdl } from "../../core/graphql";
 import type { Mode } from "../../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import type { ImportUseCases } from "../imports";
+import type { ImportServices } from "../imports";
 import { createExternalAgentUseCases } from "./app";
 import { createResolvers } from "./graphql";
 import { externalAgentFilesRouter, externalAgentRouter } from "./http";
@@ -19,7 +19,7 @@ export { createExternalAgentCodeOnServer, createExternalAgentUseCases } from "./
 export function externalAgentsModule(
   dependencies: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
     mode: Mode;
-    imports: Pick<ImportUseCases, "answeredMapping" | "originalFileReads">;
+    imports: Pick<ImportServices, "answeredMapping" | "originalFileReads">;
   },
 ): ModuleManifest {
   const useCases = createExternalAgentUseCases(dependencies);

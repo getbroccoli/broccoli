@@ -1,6 +1,6 @@
 import type { Orm, Transact } from "../../../core/db";
 import { PrincipalSecurityContext } from "../../../core/security";
-import type { ImportUseCases } from "../../imports";
+import type { ImportServices } from "../../imports";
 import {
   type ExternalAgentCode,
   type ExternalAgentSessionService,
@@ -28,7 +28,7 @@ export function createExternalAgentUseCases({
 }: {
   orm: Orm;
   transact: Transact;
-  imports: Pick<ImportUseCases, "answeredMapping" | "originalFileReads">;
+  imports: Pick<ImportServices, "answeredMapping" | "originalFileReads">;
   clock?: () => Date;
 }): ExternalAgentUseCases {
   const context = { orm, transact, imports, clock, activity: createExternalAgentActivity() };

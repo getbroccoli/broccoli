@@ -36,7 +36,7 @@ import {
   type EmployeeReadService,
   type EmployeeService,
 } from "../../src/modules/employees";
-import { createImportUseCases } from "../../src/modules/imports";
+import { createImportServices } from "../../src/modules/imports";
 import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
 import { createSystemService } from "../../src/modules/system";
 import { parseCalendarDate } from "../../src/utils";
@@ -210,7 +210,7 @@ export function employeeInviteService(
 }
 
 export function importUseCases(
-  orm: Parameters<typeof createImportUseCases>[0]["orm"],
+  orm: Parameters<typeof createImportServices>[0]["orm"],
   {
     slackApi = {},
     decisions = NO_DECISIONS,
@@ -224,11 +224,11 @@ export function importUseCases(
     originalFileReader?: Pick<OriginalFileReader, "readOriginalFile">;
     jobs?: JobQueue;
     clock?: () => Date;
-    prepareDemoFill?: Parameters<typeof createImportUseCases>[0]["prepareDemoFill"];
+    prepareDemoFill?: Parameters<typeof createImportServices>[0]["prepareDemoFill"];
   } = {},
 ) {
   const sentJobs: { name: JobName; payload: Jobs[JobName] }[] = [];
-  const useCases = createImportUseCases({
+  const useCases = createImportServices({
     orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),

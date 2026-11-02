@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 
 import { type GraphqlContext, perRequest } from "../../../core/graphql";
-import type { ImportReview, ImportUseCases } from "../app";
+import type { ImportReview, ImportServices } from "../app";
 import type { ImportProgress, ImportSource } from "../domain";
 
 /** One request's loaders for import data. */
@@ -16,12 +16,12 @@ export interface ImportLoaders {
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function importLoaders(
-  useCases: ImportUseCases,
+  useCases: ImportServices,
 ): (context: GraphqlContext) => ImportLoaders {
   return perRequest((context) => createLoaders(useCases, context));
 }
 
-function createLoaders(useCases: ImportUseCases, context: GraphqlContext): ImportLoaders {
+function createLoaders(useCases: ImportServices, context: GraphqlContext): ImportLoaders {
   const ctx = context.getActor();
   let progress: Promise<ImportProgress> | undefined;
   let review: Promise<ImportReview> | undefined;

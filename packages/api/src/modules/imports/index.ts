@@ -3,16 +3,16 @@ import express from "express";
 import { readSdl } from "../../core/graphql";
 import type { ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
-import type { ImportUseCases } from "./app";
+import type { ImportServices } from "./app";
 import { createResolvers } from "./graphql";
 import { filesRouter, photoRouter } from "./http";
 
 // Public values.
-export { createImportUseCases, READ_PEOPLE_JSON_SCHEMA } from "./app";
+export { createImportServices, READ_PEOPLE_JSON_SCHEMA } from "./app";
 export { EXTERNAL_AGENT_FILE_PROGRESS, parseReadPeople, parseStaffFileName } from "./domain";
 
 // Public types.
-export type { ImportUseCases, ReadPeopleOutcome } from "./app";
+export type { ImportServices, ReadPeopleOutcome } from "./app";
 export type {
   AnsweredMapping,
   ExternalAgentParseFileWay,
@@ -27,7 +27,7 @@ export type {
  */
 export function importsModule(
   /** Built once by `createModules`, which also gives them to the external agent. */
-  useCases: ImportUseCases,
+  useCases: ImportServices,
 ): ModuleManifest {
   return {
     name: "imports",

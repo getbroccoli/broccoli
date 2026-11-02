@@ -1,11 +1,11 @@
 import { invalidInput } from "../../../core/applicationError";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import type { ImportUseCases } from "../app";
+import type { ImportServices } from "../app";
 import type { ValueChoice } from "../domain";
 import { AI_SOURCES, FIELDS, IMPORT, INCOMPLETE_REASONS, keyOf } from "./graphqlValues";
 
 /** The import's mutations; each answers with the import, or a payload error it expects. */
-export function importMutationResolvers(useCases: ImportUseCases): Resolvers["ImportMutations"] {
+export function importMutationResolvers(useCases: ImportServices): Resolvers["ImportMutations"] {
   return {
     readSlack: (_parent, _args, context) =>
       mutationPayload<ResolversTypes["ImportReadSlackPayload"]>(
