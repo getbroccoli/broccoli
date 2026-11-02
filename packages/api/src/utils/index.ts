@@ -3,6 +3,7 @@ export {
   addDays,
   addYears,
   daysBetween,
+  isWithin,
   parseCalendarDate,
   parseDateColumn,
   todayInUtc,

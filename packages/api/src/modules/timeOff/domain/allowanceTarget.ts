@@ -1,4 +1,11 @@
-import { addDays, addYears, type CalendarDate, daysBetween, weekdayOf } from "../../../utils";
+import {
+  addDays,
+  addYears,
+  type CalendarDate,
+  daysBetween,
+  isWithin,
+  weekdayOf,
+} from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
@@ -121,10 +128,10 @@ function keptParts(inputs: AllowanceTargetInputs): Part[] {
     const next = starts[index + 1];
     const until = next ? addDays(next, -1) : inputs.leaveYear.end;
     const employed = inputs.employments.some(({ startDate, endDate }) =>
-      covers(startDate, endDate, from),
+      isWithin(from, startDate, endDate),
     );
     const policy = inputs.policies.find(({ effectiveFrom, effectiveUntil }) =>
-      covers(effectiveFrom, effectiveUntil, from),
+      isWithin(from, effectiveFrom, effectiveUntil),
     );
     const week = inputs.workingWeeks.findLast(({ effectiveFrom }) => effectiveFrom <= from);
     const { minutes, fullDayMinutes, bankHolidayCalendar } = week ?? {};
@@ -149,10 +156,10 @@ function keptParts(inputs: AllowanceTargetInputs): Part[] {
 function partStarts(inputs: AllowanceTargetInputs): CalendarDate[] {
   const { leaveYear, employments, policies, workingWeeks, serviceStart } = inputs;
   const changes = [
-    ...employments.flatMap(({ startDate, endDate }) => [startDate, dayAfter(endDate)]),
+    ...employments.flatMap(({ startDate, endDate }) => [startDate, endDate && addDays(endDate, 1)]),
     ...policies.flatMap(({ effectiveFrom, effectiveUntil }) => [
       effectiveFrom,
-      dayAfter(effectiveUntil),
+      effectiveUntil && addDays(effectiveUntil, 1),
     ]),
     ...workingWeeks.map(({ effectiveFrom }) => effectiveFrom),
     ...policies.flatMap(({ rules }) =>
@@ -192,8 +199,8 @@ function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void 
     }
   }
   if (part.policy.bankHolidays === "bank_holidays_on_top_of_allowance") {
-    const inYear = part.bankHolidays.filter(
-      (date) => date >= leaveYear.start && date <= leaveYear.end,
+    const inYear = part.bankHolidays.filter((date) =>
+      isWithin(date, leaveYear.start, leaveYear.end),
     );
     const identity = {
       kind: "bank_holiday_allowance_grant",
@@ -207,7 +214,7 @@ function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void 
       ((inYear.length * daysPerWeek) / FULL_TIME_DAYS_PER_WEEK) * share,
     );
   }
-  for (const date of part.bankHolidays.filter((date) => date >= part.from && date <= part.until)) {
+  for (const date of part.bankHolidays.filter((date) => isWithin(date, part.from, part.until))) {
     const identity = {
       kind: "bank_holiday_taken",
       allowanceRuleId: null,
@@ -264,18 +271,6 @@ function grantOf(allowanceRuleId: string): Identity {
 function byLineOrder(a: AllowanceTargetLine, b: AllowanceTargetLine): number {
   const byKind = LINE_ORDER.indexOf(a.kind) - LINE_ORDER.indexOf(b.kind);
   return byKind || (a.bankHolidayDate ?? "").localeCompare(b.bankHolidayDate ?? "");
-}
-
-function covers(
-  from: CalendarDate | null,
-  until: CalendarDate | null,
-  date: CalendarDate,
-): boolean {
-  return (from === null || from <= date) && (until === null || date <= until);
-}
-
-function dayAfter(date: CalendarDate | null): CalendarDate | null {
-  return date && addDays(date, 1);
 }
 
 /** Days in millionths, so amounts add up exactly; `+ 0` turns -0 into 0. */

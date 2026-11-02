@@ -52,6 +52,15 @@ export function weekdayOf(date: CalendarDate): number {
   return (new Date(date).getUTCDay() + 6) % 7;
 }
 
+/** Whether `date` is from `from` to `until`, both included; a null end is open. */
+export function isWithin(
+  date: CalendarDate,
+  from: CalendarDate | null,
+  until: CalendarDate | null,
+): boolean {
+  return (from === null || from <= date) && (until === null || date <= until);
+}
+
 /** Today as a calendar day in UTC. */
 export function todayInUtc(): CalendarDate {
   return new Date().toISOString().slice(0, 10) as CalendarDate;
