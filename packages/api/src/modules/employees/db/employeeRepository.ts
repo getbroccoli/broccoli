@@ -345,11 +345,12 @@ async function openEmployments(
 }
 
 async function lockEmployees(orm: ReturnType<typeof ormOf>, ids: readonly string[]) {
-  // In id order, so two callers locking overlapping people cannot deadlock.
+  // In id order, so two callers locking overlapping people cannot deadlock. Not `for update`:
+  // rows that reference the person, such as a new allowance, need not wait for the change.
   await orm
     .select({ id: employees.id })
     .from(employees)
     .where(inArray(employees.id, [...ids]))
     .orderBy(employees.id)
-    .for("update");
+    .for("no key update");
 }

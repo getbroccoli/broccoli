@@ -10,6 +10,8 @@ import {
   transactWithTimeOffEvents,
   workingPatternService,
 } from "#test/support";
+// eslint-disable-next-line boundaries/dependencies -- Holds the same row lock as an employee change for this regression.
+import { employeeRepository } from "../../employees/db";
 
 test("adding a person writes no allowance when no policy is linked", async ({ orm }) => {
   const employees = employeeServices(orm);
@@ -60,6 +62,44 @@ test("adding a person grants Annual leave before returning when Everyone has a p
     Array.from({ length: 9 }, () => ({ causeKind: "employee_added", causeRef: null })),
   );
 });
+
+test(
+  "linking a policy grants a person whose row another change holds",
+  { timeout: 10_000 },
+  async ({ orm, seed, transact, signal }) => {
+    const employee = await seed.employee({ startDate: "2025-01-01" });
+    const service = timeOffService(orm);
+    const policyGroupId = await seed.everyoneGroupId();
+    const policy = (await service.listPolicies(OWNER, orm)).find(
+      (p) => p.key === "uk_statutory_minimum",
+    )!;
+    const locked = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const releaseLock = () => release.resolve();
+    // Release on timeout too, so a blocked grant cannot strand database cleanup.
+    signal.addEventListener("abort", releaseLock, { once: true });
+    const holding = transact(async (tx) => {
+      await employeeRepository(tx).lockByIds([employee.id]);
+      locked.resolve();
+      await release.promise;
+    });
+
+    try {
+      await Promise.race([locked.promise, holding]);
+      await transact((tx) =>
+        service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+      );
+
+      expect(await readAllowances(orm, employee.id)).toMatchObject([
+        { typeKey: "annual_leave", total: 20 },
+      ]);
+    } finally {
+      release.resolve();
+      signal.removeEventListener("abort", releaseLock);
+      await holding;
+    }
+  },
+);
 
 test("moving a start date to October appends corrections and keeps the earlier allowance lines", async ({
   orm,
