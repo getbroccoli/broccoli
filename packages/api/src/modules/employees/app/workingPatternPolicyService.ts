@@ -155,7 +155,7 @@ export function createWorkingPatternPolicyService({
         if (await patterns.isPolicyUsed(policy.id)) {
           throw new ApplicationError(
             "CONFLICT",
-            "Move everyone and every group off this working pattern first.",
+            "A person or group is on this working pattern on some date, past or future, so it is kept.",
           );
         }
         await patterns.deletePolicy(policy.id);

@@ -25,7 +25,28 @@ test("assigning a policy returns the employee's history line with the previous g
     changes: [
       { field: "workingPattern", oldValue: "Standard", newValue: "Tuesday to Thursday" },
       { field: "effectiveFrom", oldValue: null, newValue: "2026-09-01" },
+      { field: "effectiveUntil", oldValue: null, newValue: null },
     ],
+  });
+});
+
+test("replacing an assignment records its previous and new end dates", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const patterns = workingPatternService(orm);
+  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
+  const input = {
+    employeeId: employee.id,
+    policyId: standard.id,
+    effectiveFrom: "2026-09-01",
+  };
+  await patterns.assignPolicy(OWNER, { ...input, effectiveUntil: "2026-09-30" });
+
+  const history = await patterns.assignPolicy(OWNER, { ...input, effectiveUntil: "2026-10-31" });
+
+  expect(history.changes).toContainEqual({
+    field: "effectiveUntil",
+    oldValue: "2026-09-30",
+    newValue: "2026-10-31",
   });
 });
 
@@ -58,6 +79,7 @@ test("ending an assignment returns to the group on the next day and records that
     changes: [
       { field: "workingPattern", oldValue: "Tuesday to Thursday", newValue: "Standard" },
       { field: "effectiveFrom", oldValue: null, newValue: "2026-10-01" },
+      { field: "effectiveUntil", oldValue: null, newValue: "2026-09-30" },
     ],
   });
   expect(
@@ -104,6 +126,7 @@ test("removing an assignment restores the group over its dates and records the c
     changes: [
       { field: "workingPattern", oldValue: "Tuesday to Thursday", newValue: "Standard" },
       { field: "effectiveFrom", oldValue: null, newValue: "2026-09-01" },
+      { field: "effectiveUntil", oldValue: "2026-09-30", newValue: null },
     ],
   });
   expect(
@@ -141,5 +164,6 @@ test("assignment history uses null when the employee had no working pattern", as
   expect(history.changes).toMatchObject([
     { field: "workingPattern", oldValue: null, newValue: "Standard" },
     { field: "effectiveFrom", oldValue: null, newValue: "2026-09-01" },
+    { field: "effectiveUntil", oldValue: null, newValue: null },
   ]);
 });

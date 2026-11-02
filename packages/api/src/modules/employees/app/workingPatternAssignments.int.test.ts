@@ -32,6 +32,7 @@ test("a newer assignment ends the earlier one without resuming it afterwards", a
   expect(history.changes).toMatchObject([
     { field: "workingPattern", oldValue: "Monday", newValue: "Friday" },
     { field: "effectiveFrom", oldValue: null, newValue: "2026-09-01" },
+    { field: "effectiveUntil", oldValue: null, newValue: "2026-09-30" },
   ]);
   expect(
     (

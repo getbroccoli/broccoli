@@ -6,11 +6,8 @@ export {
 export { employmentRepository, type EmploymentRepository } from "./employmentRepository";
 export { employeePolicyGroups } from "./employeePolicyGroupsTable";
 export { policyGroups } from "./policyGroupsTable";
-export { policyGroupRepository, type PolicyGroupRepository } from "./policyGroupRepository";
-export {
-  workingPatternRepository,
-  type WorkingPatternRepository,
-} from "./workingPatternRepository";
+export { policyGroupRepository } from "./policyGroupRepository";
+export { workingPatternRepository } from "./workingPatternRepository";
 export {
   inviteRepository,
   type Invitee,

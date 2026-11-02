@@ -116,6 +116,7 @@ export function createWorkingPatternService({
           effectiveFrom,
           effectiveUntil,
         });
+        return { before: replaced?.effectiveUntil ?? null, after: effectiveUntil };
       });
     },
 
@@ -129,6 +130,7 @@ export function createWorkingPatternService({
           throw noOwnPattern();
         }
         await workingPatternRepository(tx).endAssignment(row.id, effectiveUntil);
+        return { before: row.effectiveUntil, after: effectiveUntil };
       });
     },
 
@@ -142,6 +144,7 @@ export function createWorkingPatternService({
           throw noOwnPattern();
         }
         await workingPatternRepository(tx).deleteAssignment(row.id);
+        return { before: row.effectiveUntil, after: null };
       });
     },
   };
@@ -149,12 +152,13 @@ export function createWorkingPatternService({
 
 /**
  * Changes one person's own dated policies in one transaction, then writes the history line
- * naming the policy that applied on `changedFrom` before and after, and publishes the change.
+ * naming the policy that applied on `changedFrom` before and after, with the end date the change
+ * moved, and publishes the change.
  */
 async function changeAssignments(
   { transact, logger }: { transact: Transact; logger: Logger },
   { ctx, employeeId, changedFrom }: AssignmentChange,
-  change: (tx: Tx, rows: DatedPolicy[], policies: WorkingPatternPolicy[]) => Promise<void>,
+  change: (tx: Tx, rows: DatedPolicy[], policies: WorkingPatternPolicy[]) => Promise<EndChange>,
 ): Promise<HistoryLine> {
   const line = await transact(async (tx) => {
     // The employee write lock first, as deleting an employee takes it, so the two cannot deadlock.
@@ -164,7 +168,11 @@ async function changeAssignments(
       throw employeeNotFound();
     }
     const before = await readTimelines(tx, [employeeId]);
-    await change(tx, before.timelines.get(employeeId)!.assignments.slice(), before.policies);
+    const end = await change(
+      tx,
+      before.timelines.get(employeeId)!.assignments.slice(),
+      before.policies,
+    );
     const after = await readTimelines(tx, [employeeId]);
     publishWorkingPatternChange(tx, [employeeId], changedFrom);
     const [added] = await recordHistory.append(ctx, tx, {
@@ -181,6 +189,7 @@ async function changeAssignments(
               newValue: policyNameOn(after, employeeId, changedFrom),
             },
             { field: "effectiveFrom", oldValue: null, newValue: changedFrom },
+            { field: "effectiveUntil", oldValue: end.before, newValue: end.after },
           ],
         },
       ],
@@ -196,6 +205,12 @@ interface AssignmentChange {
   employeeId: string;
   /** The first date whose working pattern the change may move. */
   changedFrom: CalendarDate;
+}
+
+/** The end date of the person's own policy a change moved, before and after; null: none or open. */
+interface EndChange {
+  before: CalendarDate | null;
+  after: CalendarDate | null;
 }
 
 interface Timelines {
