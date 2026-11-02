@@ -101,9 +101,9 @@ export function createWorkingPatternService({
           ? null
           : parseUntil(effectiveFrom, input.effectiveUntil, "effectiveUntil");
       const change = { ctx, employeeId, changedFrom: effectiveFrom };
-      return changeAssignments({ transact, logger }, change, async (tx, rows) => {
+      return changeAssignments({ transact, logger }, change, async (tx, rows, policies) => {
         const patterns = workingPatternRepository(tx);
-        const policy = referencedPolicy(await patterns.findPolicies(), input.policyId);
+        const policy = referencedPolicy(policies, input.policyId);
         const { ended, replaced } = makeRoomForDatedPolicy(rows, effectiveFrom, effectiveUntil);
         if (replaced) {
           await patterns.deleteAssignment(replaced.id);
@@ -154,7 +154,7 @@ export function createWorkingPatternService({
 async function changeAssignments(
   { transact, logger }: { transact: Transact; logger: Logger },
   { ctx, employeeId, changedFrom }: AssignmentChange,
-  change: (tx: Tx, rows: DatedPolicy[]) => Promise<void>,
+  change: (tx: Tx, rows: DatedPolicy[], policies: WorkingPatternPolicy[]) => Promise<void>,
 ): Promise<HistoryLine> {
   const line = await transact(async (tx) => {
     // The employee write lock first, as deleting an employee takes it, so the two cannot deadlock.
@@ -164,7 +164,7 @@ async function changeAssignments(
       throw employeeNotFound();
     }
     const before = await readTimelines(tx, [employeeId]);
-    await change(tx, before.timelines.get(employeeId)!.assignments.slice());
+    await change(tx, before.timelines.get(employeeId)!.assignments.slice(), before.policies);
     const after = await readTimelines(tx, [employeeId]);
     publishWorkingPatternChange(tx, [employeeId], changedFrom);
     const [added] = await recordHistory.append(ctx, tx, {
