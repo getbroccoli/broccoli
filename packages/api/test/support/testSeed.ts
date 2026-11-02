@@ -5,7 +5,11 @@ import type { AiSource, MailSource, SetupStep } from "../../src/core/instance/do
 import { hashSetupToken } from "../../src/core/instance/helpers";
 import { PrincipalSecurityContext, type SecurityContext } from "../../src/core/security";
 import { employeeDirectory, type Employee } from "../../src/modules/employees";
-import { employeeRepository, employmentRepository } from "../../src/modules/employees/db";
+import {
+  employeeRepository,
+  employmentRepository,
+  locationRepository,
+} from "../../src/modules/employees/db";
 import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
 import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
 import { slackConnectionRepository } from "../../src/modules/slack/db";
@@ -146,6 +150,10 @@ export class TestSeed {
     await instance.storeAiSource("external_agent");
   }
 
+  location(name: string) {
+    return testTransactor(this.orm)((tx) => locationRepository(tx).insert(name));
+  }
+
   employee({
     startDate = null,
     avatarFileId = null,
@@ -158,6 +166,7 @@ export class TestSeed {
         lastName: String(number),
         email: `employee${number}@example.com`,
         jobTitle: null,
+        locationId: null,
         startDate: startDate === null ? null : calendarDate(startDate),
         avatarFileId,
         ...overrides,
@@ -174,6 +183,7 @@ export class TestSeed {
         lastName: String(number),
         email: `employee${number}@example.com`,
         jobTitle: null,
+        locationId: null,
         startDate: null,
         avatarFileId: null,
       };
@@ -266,6 +276,7 @@ export class TestSeed {
               lastName: String(number),
               email: `employee${number}@example.com`,
               jobTitle: null,
+              location: null,
               manager: null,
               startDate: null,
               ...values,

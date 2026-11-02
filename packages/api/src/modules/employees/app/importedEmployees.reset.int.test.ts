@@ -85,3 +85,17 @@ test("a job title edit waiting for a reset lets it lock the employee", async ({
   expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
   expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ jobTitle: "Lead" });
 });
+
+test("deleting all employees also deletes occupied and empty locations", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const leeds = await seed.location("Leeds");
+  await seed.location("York");
+  await seed.employee({ locationId: leeds.id });
+
+  await transact((tx) => employeeSetup.deleteAllEmployees(OWNER, tx));
+
+  expect(await employeeServices(orm).listLocations(OWNER)).toEqual([]);
+});

@@ -14,6 +14,11 @@ export {
   type EmployeeSetupService,
   type ImportedEmployees,
 } from "./employeeSetupService";
+export {
+  createLocationService,
+  type LocationService,
+  type LocationWithPeopleCount,
+} from "./locationService";
 export { employeeDirectory } from "./employeeDirectory";
 export { employeeRecordType } from "./employeeRecordType";
 export {

@@ -9,12 +9,19 @@ import {
 } from "../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInUtc } from "../../../utils";
-import { type EmployeeRepository, employeeRepository, employmentRepository } from "../db";
+import {
+  type EmployeeRepository,
+  employeeRepository,
+  employmentRepository,
+  locationRepository,
+} from "../db";
 import {
   EmailTakenError,
   type Employee,
   employeeChanges,
   type EmployeeUpdateInput,
+  type Location,
+  locationChanges,
   managerChanges,
   type NewEmployee,
   type NewEmployeeInput,
@@ -83,16 +90,21 @@ export function createEmployeeService({
         throw employeeNotFound();
       }
       await ctx.requireWrite("employee", [employeeId], fieldsSent(input));
-      const { changes, managerId, reason } = parseEmployeeUpdate(input);
+      const { changes, managerId, locationId, reason } = parseEmployeeUpdate(input);
       const { employee, historyLine } = await transact(async (tx) => {
         if (managerId !== undefined) {
           // Before the employee row, in the order a deletion takes them, so the two cannot deadlock.
           await employmentRepository(tx).lockForWrites();
         }
         const { startDate, ...fields } = changes;
-        const { before, after } = await saveChanges(employeeRepository(tx), employeeId, fields);
+        const location = locationId === undefined ? undefined : await holdLocation(tx, locationId);
+        const { before, after } = await saveChanges(employeeRepository(tx), employeeId, {
+          ...fields,
+          ...(location !== undefined && { locationId: location?.id ?? null }),
+        });
         const changed = [
           ...employeeChanges(before, after),
+          ...(location === undefined ? [] : await movedLocation(tx, before.locationId, location)),
           ...(startDate === undefined ? [] : await changeStartDate(tx, employeeId, startDate)),
           ...(managerId === undefined
             ? []
@@ -148,6 +160,7 @@ export function createEmployeeService({
               recordId: employeeId,
               changes: [
                 ...employeeChanges({ ...deleted, startDate }, null),
+                ...(await movedLocation(tx, deleted.locationId, null)),
                 ...managerChanges(manager, null),
               ],
             },
@@ -195,11 +208,34 @@ async function changeStartDate(
   return employeeChanges({ startDate: before }, { startDate });
 }
 
+/** The location an update moves the person to, held until commit; refuses an id that names none. */
+async function holdLocation(tx: Tx, locationId: string | null): Promise<Location | null> {
+  if (locationId === null) {
+    return null;
+  }
+  const id = parseUuid(locationId);
+  const location = id ? await locationRepository(tx).findAndHold(id) : null;
+  if (!location) {
+    throw invalidInput([{ field: "locationId", code: "not_found" }]);
+  }
+  return location;
+}
+
+/** The history change of moving from the location `beforeId` to `after`. */
+async function movedLocation(
+  tx: Tx,
+  beforeId: string | null,
+  after: Location | null,
+): Promise<FieldChange[]> {
+  const [before] = beforeId ? await locationRepository(tx).findByIds([beforeId]) : [];
+  return locationChanges(before ?? null, after);
+}
+
 /** The employee before and after saving `changes`; refuses an unknown employee or a taken email. */
 async function saveChanges(
   employees: EmployeeRepository,
   employeeId: string,
-  changes: Partial<Omit<NewEmployee, "startDate">>,
+  changes: Partial<Omit<NewEmployee, "startDate"> & Pick<Employee, "locationId">>,
 ): Promise<{ before: Employee; after: Employee }> {
   if (Object.keys(changes).length === 0) {
     const employee = await employees.findById(employeeId);

@@ -1,5 +1,7 @@
 import {
   employeeServices,
+  importServices,
+  SETUP_HOLDER,
   expectHistoryReplaysTo,
   expect,
   EMPLOYEE,
@@ -76,6 +78,7 @@ test("records a creation line for each demo employee with the supplied cause", a
         email: "avery@example.com",
         startDate: "2026-02-28",
       },
+      locationName: "Leeds",
       avatar: { bytes: PNG, mimeType: "image/png" as const },
     },
     {
@@ -104,6 +107,28 @@ test("records a creation line for each demo employee with the supplied cause", a
       cause: { kind: "ADDED_WITH_DEMO", ref: null },
       author: { kind: "SIGNED_IN_USER", id: OWNER.user!.userId },
     });
+    if (employee.email === "avery@example.com") {
+      expect(employee.locationId).not.toBeNull();
+      expect(history.edges[0]!.node.changes).toContainEqual({
+        field: "location",
+        oldValue: null,
+        newValue: employee.locationId,
+        oldLabel: null,
+        newLabel: "Leeds",
+      });
+    }
     await expectHistoryReplaysTo(orm, employee.id);
+  }
+});
+
+test("fills the demo company with locations that have people", async ({ orm, seed }) => {
+  await seed.setupStep("import");
+
+  await importServices(orm).startDemo(SETUP_HOLDER);
+
+  const locations = await employeeServices(orm).listLocations(OWNER);
+  expect(locations.length).toBeGreaterThan(0);
+  for (const location of locations) {
+    expect(location.peopleCount).toBeGreaterThan(0);
   }
 });

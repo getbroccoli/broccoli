@@ -14,6 +14,13 @@ export {
   type NewEmployee,
   type NewEmployeeInput,
 } from "./employee";
+export {
+  type Location,
+  locationChanges,
+  locationNameKey,
+  LocationNameTakenError,
+  parseLocationName,
+} from "./location";
 export { managerChanges } from "./managerChanges";
 export {
   canAccept,

@@ -5,6 +5,7 @@ import type {
   EmployeePermissionService,
   EmployeeReadService,
   EmployeeService,
+  LocationService,
 } from "../app";
 import { avatarUrl } from "../http";
 import { employeeLoaders } from "./loaders";
@@ -13,12 +14,14 @@ export function createResolvers(
   services: EmployeeService &
     EmployeeReadService &
     EmployeeManagerService &
-    EmployeePermissionService,
+    EmployeePermissionService &
+    LocationService,
   invites: EmployeeInviteService,
 ): Resolvers {
   const loaders = employeeLoaders(services, invites);
   return {
     Query: {
+      locations: (_parent, _args, context) => services.listLocations(context.getActor()),
       employee: (_parent, { id }, context) => services.readEmployee(context.getActor(), id),
       employees: (_parent, { first, after, orderBy, filter }, context) =>
         services.listEmployees(context.getActor(), {
@@ -30,6 +33,30 @@ export function createResolvers(
     },
     Mutation: {
       employee: () => ({}),
+      location: () => ({}),
+    },
+    LocationMutations: {
+      create: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["LocationCreatePayload"]>(
+          async () => ({
+            // A new location has nobody in it yet.
+            location: {
+              ...(await services.createLocation(context.getActor(), input)),
+              peopleCount: 0,
+            },
+          }),
+          ["INVALID_INPUT"],
+        ),
+      update: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["LocationUpdatePayload"]>(async () => {
+          const { id } = await services.updateLocation(context.getActor(), input);
+          return { location: await loaders(context).location.load(id) };
+        }, ["INVALID_INPUT", "NOT_FOUND"]),
+      delete: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["LocationDeletePayload"]>(
+          () => services.deleteLocation(context.getActor(), input),
+          ["NOT_FOUND", "CONFLICT"],
+        ),
     },
     EmployeeMutations: {
       create: (_parent, { input }, context) =>
@@ -94,6 +121,8 @@ export function createResolvers(
       managerId: async (employee, _args, context) =>
         (await loaders(context).manager.load(employee.id))?.id ?? null,
       manager: (employee, _args, context) => loaders(context).manager.load(employee.id),
+      location: ({ locationId }, _args, context) =>
+        locationId ? loaders(context).location.load(locationId) : null,
       permissionProfiles: (employee, _args, context) =>
         loaders(context).permissionProfiles.load(employee.id),
       signInStatus: async (employee, _args, context) => {

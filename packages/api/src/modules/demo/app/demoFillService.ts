@@ -31,10 +31,11 @@ export function createDemoFillService(): DemoFillService {
         employeeSetup.createDemoEmployees(
           ctx,
           tx,
-          people.map(({ employee, managerEmail }, index) => ({
+          people.map(({ employee, managerEmail, locationName }, index) => ({
             employee,
             avatar: avatars[index]!,
             managerEmail,
+            locationName,
           })),
           { kind: "ADDED_WITH_DEMO" },
         );

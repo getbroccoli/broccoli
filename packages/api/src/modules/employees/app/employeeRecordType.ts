@@ -9,6 +9,7 @@ const EDITABLE_FIELDS = [
   "lastName",
   "email",
   "jobTitle",
+  "locationId",
   "startDate",
   "managerId",
   "avatar",

@@ -8,6 +8,7 @@ import {
   createEmployeePermissionService,
   createEmployeeReadService,
   createEmployeeService,
+  createLocationService,
   type EmployeeInviteService,
   employeeRecordType,
 } from "./app";
@@ -23,6 +24,7 @@ export {
   createEmployeeReadService,
   createEmployeeService,
   createEmployeeSetupService,
+  createLocationService,
   employeeDirectory,
 } from "./app";
 export { employeeFieldErrors, parseEmployeeField } from "./domain";
@@ -36,6 +38,7 @@ export type {
   EmployeeService,
   ImportedEmployees,
   InviteDetails,
+  LocationService,
 } from "./app";
 export type {
   Employee,
@@ -63,6 +66,7 @@ export function employeesModule({
     ...createEmployeeReadService(dependencies),
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
+    ...createLocationService(dependencies),
   };
   return {
     name: "employees",

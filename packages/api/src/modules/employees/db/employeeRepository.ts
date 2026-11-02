@@ -97,7 +97,7 @@ export interface EmployeePageQuery extends KeysetQuery<EmployeeOrderField, unkno
 
 /** A demo employee to insert, with the avatar to store for them. */
 export interface NewDemoEmployee {
-  employee: NewEmployee;
+  employee: NewEmployee & Pick<Employee, "locationId">;
   avatar: RasterImage;
 }
 
@@ -275,10 +275,10 @@ const INSERT_BATCH_SIZE = 1_000;
 
 /** A new employee as stored, with the columns only the module itself sets. */
 type EmployeeRow = NewEmployee &
-  Partial<Pick<Employee, "avatarFileId" | "userId">> & { isDemo?: boolean };
+  Partial<Pick<Employee, "avatarFileId" | "userId" | "locationId">> & { isDemo?: boolean };
 
 /** The fields an update changes on the employee's own row; the start date is on their employments. */
-type EmployeeFields = Omit<NewEmployee, "startDate">;
+type EmployeeFields = Omit<NewEmployee, "startDate"> & Pick<Employee, "locationId">;
 
 async function exists(orm: ReturnType<typeof ormOf>, condition: SQL | undefined): Promise<boolean> {
   const rows = await orm.select({ id: employees.id }).from(employees).where(condition).limit(1);

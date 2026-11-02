@@ -30,10 +30,12 @@ import {
   createEmployeePermissionService,
   createEmployeeReadService,
   createEmployeeService,
+  createLocationService,
   type EmployeeManagerService,
   type EmployeePermissionService,
   type EmployeeReadService,
   type EmployeeService,
+  type LocationService,
 } from "../../src/modules/employees";
 import { createImportServices } from "../../src/modules/imports";
 import { createExternalAgentServices } from "../../src/modules/externalAgents";
@@ -63,7 +65,8 @@ export function companyService(
 export type EmployeeServices = EmployeeService &
   EmployeeReadService &
   EmployeeManagerService &
-  EmployeePermissionService;
+  EmployeePermissionService &
+  LocationService;
 
 /** Every employee service on `orm`, with silent logs. */
 export function employeeServices(
@@ -76,6 +79,7 @@ export function employeeServices(
     ...createEmployeeReadService(dependencies),
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
+    ...createLocationService(dependencies),
   };
 }
 
@@ -213,8 +217,10 @@ export function importServices(
   orm: Parameters<typeof createImportServices>[0]["orm"],
   {
     slackApi = {},
-    decisions = NO_DECISIONS,
-    originalFileReader = NO_ORIGINAL_FILE_READER,
+    decisions = { decide: () => Promise.reject(new Error("Unexpected model request")) },
+    originalFileReader = {
+      readOriginalFile: () => Promise.reject(new Error("Unexpected model request")),
+    },
     jobs,
     clock = () => new Date(),
     prepareDemoFill: prepareFill = () => demoFill.prepareDemoFill(DEMO_TODAY),
@@ -311,13 +317,4 @@ export function externalAgentServices(
   return { ...services, sentJobs: imports.sentJobs };
 }
 
-/** The default model of use-case tests: one that is never asked. */
-const NO_DECISIONS: Decisions = {
-  decide: () => Promise.reject(new Error("Unexpected model request")),
-};
-
 const DEMO_TODAY = parseCalendarDate("2026-10-13")!;
-
-const NO_ORIGINAL_FILE_READER: Pick<OriginalFileReader, "readOriginalFile"> = {
-  readOriginalFile: () => Promise.reject(new Error("Unexpected model request")),
-};
