@@ -260,6 +260,13 @@
       "when": 1793631895933,
       "tag": "0036_bank_holiday_calendars",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793633199653,
+      "tag": "0037_standard_leave_policies",
+      "breakpoints": true
     }
   ]
 }
