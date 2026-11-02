@@ -83,8 +83,9 @@ export interface AllowanceTargetLine {
 }
 
 /**
- * The lines an allowance should have: entitlement grants in rule order, the bank holiday
- * allowance grant, bank holidays taken by date, then the rounding up to the half day.
+ * The lines an allowance should have: entitlement grants in the order they first grant (rule
+ * order within a part), the bank holiday allowance grant, bank holidays taken by date, then the
+ * rounding up to the half day.
  */
 export function allowanceTargetOf(inputs: AllowanceTargetInputs): AllowanceTargetLine[] {
   const parts = keptParts(inputs);
@@ -171,7 +172,6 @@ function partStarts(inputs: AllowanceTargetInputs): CalendarDate[] {
 }
 
 function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void {
-  const add = (identity: Identity, amount: number) => addAmount(lines, identity, part, amount);
   const { leaveYear } = inputs;
   const daysPerWeek = part.minutes.reduce((sum, minutes) => sum + minutes, 0) / part.fullDayMinutes;
   const share =
@@ -183,9 +183,14 @@ function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void 
     if (rule.kind === "yearly_entitlement") {
       const days = (rule.entitlementDays / rule.entitlementDaysPerWeek) * daysPerWeek;
       const capped = rule.maxDays === null ? days : Math.min(days, rule.maxDays);
-      add(grantOf(rule.id), capped * share);
+      addAmount(lines, grantOf(rule.id), part, capped * share);
     } else if (rule === step) {
-      add(grantOf(rule.id), (rule.extraDays / fullTimeDays) * daysPerWeek * share);
+      addAmount(
+        lines,
+        grantOf(rule.id),
+        part,
+        (rule.extraDays / fullTimeDays) * daysPerWeek * share,
+      );
     }
   }
   if (part.policy.bankHolidays === "bank_holidays_on_top_of_allowance") {
@@ -197,7 +202,12 @@ function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void 
       allowanceRuleId: null,
       bankHolidayDate: null,
     } as const;
-    add(identity, ((inYear.length * daysPerWeek) / FULL_TIME_DAYS_PER_WEEK) * share);
+    addAmount(
+      lines,
+      identity,
+      part,
+      ((inYear.length * daysPerWeek) / FULL_TIME_DAYS_PER_WEEK) * share,
+    );
   }
   for (const date of part.bankHolidays.filter((date) => date >= part.from && date <= part.until)) {
     const identity = {
@@ -205,7 +215,7 @@ function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void 
       allowanceRuleId: null,
       bankHolidayDate: date,
     } as const;
-    add(identity, -part.minutes[weekdayOf(date)]! / part.fullDayMinutes);
+    addAmount(lines, identity, part, -part.minutes[weekdayOf(date)]! / part.fullDayMinutes);
   }
 }
 
