@@ -18,7 +18,7 @@ export interface EmploymentChanges {
   ) => Promise<void>;
 }
 
-/** No one listens, such as in tests of this module alone. */
+/** No one listens: setup's reads and deletions add no one. */
 export const noEmploymentChanges: EmploymentChanges = {
   async afterEmploymentsChanged() {},
 };

@@ -30,13 +30,11 @@ export {
   createEmployeeWorkingPatternService,
   createLocationService,
   employeeDirectory,
-  noEmploymentChanges,
 } from "./app";
 export { employeeFieldErrors, parseEmployeeField } from "./domain";
 
 // Public types.
 export type {
-  EmploymentChangeCause,
   EmploymentChanges,
   EmployeeInviteService,
   EmployeeManagerService,

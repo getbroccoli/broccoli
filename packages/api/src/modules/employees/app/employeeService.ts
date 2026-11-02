@@ -30,7 +30,7 @@ import {
 } from "../domain";
 import { changeManagers } from "./employeeManagerService";
 import { employeeNotFound } from "./employeeNotFound";
-import { type EmploymentChanges, noEmploymentChanges } from "./employmentChanges";
+import type { EmploymentChanges } from "./employmentChanges";
 import { readableResult } from "./readableResult";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
@@ -65,9 +65,9 @@ export interface EmployeeService {
 export function createEmployeeService({
   transact,
   logger,
-  employmentChanges = noEmploymentChanges,
+  employmentChanges,
 }: Pick<ModuleDependencies, "transact" | "logger"> & {
-  employmentChanges?: EmploymentChanges;
+  employmentChanges: EmploymentChanges;
 }): EmployeeService {
   return {
     async createEmployee(ctx, input) {
