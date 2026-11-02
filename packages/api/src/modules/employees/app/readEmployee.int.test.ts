@@ -40,9 +40,11 @@ test("returns the manager under every requested spelling of an employee id", asy
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   // Letters ensure the two spellings differ, independent of the generated id.
   const id = "00000000-0000-4000-8000-00000000000a";
-  // One statement, so the employment's reference is checked once both have the new id.
+  // One statement, so the references are checked once every row has the new id.
   await orm.execute(sql`
-    with renamed as (update employees set id = ${id} where id = ${employee.id})
+    with renamed as (update employees set id = ${id} where id = ${employee.id}),
+      grouped as (update employee_policy_groups set employee_id = ${id}
+        where employee_id = ${employee.id})
     update employments set employee_id = ${id} where employee_id = ${employee.id}`);
   const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id, managerId: manager.id });

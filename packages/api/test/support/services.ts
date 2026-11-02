@@ -30,7 +30,6 @@ import {
   createEmployeePermissionService,
   createEmployeeReadService,
   createEmployeeService,
-  createWorkingPatternService,
   type EmployeeManagerService,
   type EmployeePermissionService,
   type EmployeeReadService,
@@ -78,14 +77,6 @@ export function employeeServices(
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
   };
-}
-
-/** The working pattern service on `orm`, with silent logs; pass `transact` to receive its events. */
-export function workingPatternService(
-  orm: Orm,
-  { transact = testTransactor(orm) }: { transact?: Transact } = {},
-) {
-  return createWorkingPatternService({ orm, transact, logger: createLogger("silent") });
 }
 
 export function demoService(orm: Parameters<typeof createDemoService>[0]["orm"]) {

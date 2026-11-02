@@ -24,6 +24,7 @@ export {
   createEmployeeReadService,
   createEmployeeService,
   createEmployeeSetupService,
+  createWorkingPatternPolicyService,
   createWorkingPatternService,
   employeeDirectory,
 } from "./app";
@@ -38,6 +39,7 @@ export type {
   EmployeeService,
   ImportedEmployees,
   InviteDetails,
+  WorkingPatternPolicyService,
   WorkingPatternService,
 } from "./app";
 export type {

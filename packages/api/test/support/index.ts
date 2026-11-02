@@ -44,7 +44,6 @@ export {
   companyService,
   demoService,
   employeeServices,
-  workingPatternService,
   employeeInviteService,
   externalAgentServices,
   importServices,
@@ -89,6 +88,7 @@ export { expectHistoryReplaysTo } from "./employeeHistory";
 export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";
 export { signedIn } from "./signedIn";
+export { workingPatternService } from "./workingPatternServices";
 
 export { fakeMail } from "./fakeMail";
 export { startFakeResend } from "./fakeResend";
