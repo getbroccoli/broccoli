@@ -17,17 +17,17 @@ export {
 export { managerChanges } from "./managerChanges";
 export {
   coversDate,
-  makeRoomForDatedPolicy,
+  makeRoomForDatedPattern,
   parseDateField,
-  parsePolicyName,
+  parsePatternName,
   parseWeek,
-  policyOn,
+  patternOn,
   workingWeeksOf,
-  type DatedPolicy,
+  type DatedPattern,
   type GroupMembership,
   type PatternWeek,
   type WeekdayMinutes,
-  type WorkingPatternPolicy,
+  type WorkingPattern,
   type WorkingPatternTimeline,
   type WorkingWeek,
 } from "./workingPattern";

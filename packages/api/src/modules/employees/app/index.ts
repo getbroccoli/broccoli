@@ -19,11 +19,11 @@ export {
   createGroupWorkingPatternService,
   type GroupWorkingPatternService,
 } from "./groupWorkingPatternService";
-export {
-  createWorkingPatternPolicyService,
-  type WorkingPatternPolicyService,
-} from "./workingPatternPolicyService";
 export { createWorkingPatternService, type WorkingPatternService } from "./workingPatternService";
+export {
+  createEmployeeWorkingPatternService,
+  type EmployeeWorkingPatternService,
+} from "./employeeWorkingPatternService";
 export { employeeRecordType } from "./employeeRecordType";
 export {
   createEmployeeInviteService,

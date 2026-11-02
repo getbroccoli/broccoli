@@ -11,26 +11,26 @@ test("a dated group switch changes only its members without their own assignment
   await seed.moveToGroup(member.id, policyGroupId);
   await seed.moveToGroup(assigned.id, policyGroupId);
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  const monday = await patterns.createPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-08-01",
   });
-  await patterns.assignPolicy(OWNER, {
+  await patterns.assignPattern(OWNER, {
     employeeId: assigned.id,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-08-01",
   });
 
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
   });
 
@@ -58,21 +58,21 @@ test("setting a group pattern on the same date replaces that link", async ({ orm
   const employee = await seed.employee();
   const policyGroupId = await seed.everyoneGroupId();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  const monday = await patterns.createPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
   });
 
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
   });
 
@@ -94,31 +94,31 @@ test("correcting a group link keeps the later link and its boundary", async ({ o
   const employee = await seed.employee();
   const policyGroupId = await seed.everyoneGroupId();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  const monday = await patterns.createPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  const friday = await patterns.createPolicy(OWNER, {
+  const friday = await patterns.createPattern(OWNER, {
     name: "Friday",
     minutes: [0, 0, 0, 0, 450, 0, 0],
     fullDayMinutes: 450,
   });
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
   });
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-10-01",
   });
 
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: friday.id,
+    workingPatternId: friday.id,
     effectiveFrom: "2026-09-01",
   });
 
@@ -167,14 +167,14 @@ test("removing a dated group link leaves a gap without reopening the earlier lin
   const employee = await seed.employee();
   const policyGroupId = await seed.everyoneGroupId();
   const patterns = workingPatternService(orm);
-  const monday = await patterns.createPolicy(OWNER, {
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
   await patterns.setGroupPattern(OWNER, {
     policyGroupId,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
   });
 
@@ -223,25 +223,25 @@ test("removing the group's initial link removes its pattern from the beginning",
   ]);
 });
 
-test("a group link requires an existing policy and group", async ({ orm, seed }) => {
+test("a group link requires an existing pattern and group", async ({ orm, seed }) => {
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   const missingId = "00000000-0000-4000-8000-000000000001";
 
   await expect(
     patterns.setGroupPattern(OWNER, {
       policyGroupId: await seed.everyoneGroupId(),
-      policyId: missingId,
+      workingPatternId: missingId,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
-    fieldErrors: [{ field: "policyId", code: "not_found" }],
+    fieldErrors: [{ field: "workingPatternId", code: "not_found" }],
   });
   await expect(
     patterns.setGroupPattern(OWNER, {
       policyGroupId: missingId,
-      policyId: standard.id,
+      workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({

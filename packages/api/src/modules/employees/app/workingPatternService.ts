@@ -1,280 +1,190 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Transact, Tx } from "../../../core/db";
-import type { Logger } from "../../../core/logger";
+import type { Orm, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
-import { createRecordHistoryService, type HistoryLine } from "../../../core/records";
-import { isInRecordScope, type SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, parseUuid } from "../../../utils";
+import type { SecurityContext } from "../../../core/security";
+import { parseUuid } from "../../../utils";
+import { workingPatternRepository } from "../db";
 import {
-  employeeRepository,
-  employmentRepository,
-  policyGroupRepository,
-  workingPatternRepository,
-} from "../db";
-import {
-  coversDate,
-  type DatedPolicy,
-  makeRoomForDatedPolicy,
   parseDateField,
-  parseEmployeeIds,
-  policyOn,
-  type WorkingPatternPolicy,
-  type WorkingPatternTimeline,
-  type WorkingWeek,
-  workingWeeksOf,
+  parsePatternName,
+  parseWeek,
+  type WeekdayMinutes,
+  type WorkingPattern,
 } from "../domain";
-import { employeeNotFound } from "./employeeNotFound";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
-import { referencedPolicy } from "./workingPatternPolicyService";
-
-const recordHistory = createRecordHistoryService();
 
 /**
- * Who works which working pattern when: groups and people put on policies from a date, and the
- * working weeks other modules read. Every change is dated; a past date is a correction.
+ * The working patterns admins keep: their names and dated weeks. A change to a pattern's minutes
+ * is a new week from a date, so earlier weeks keep theirs.
  */
 export interface WorkingPatternService {
-  /**
-   * Each employee's working weeks from `from` to `until`, by id: the first starts on `from`, a new
-   * one wherever minutes or full day change. Refuses with FORBIDDEN an employee whose working
-   * pattern the caller may not read, and with NOT_FOUND an id that names no employee.
-   */
-  readWorkingWeeks: (
+  /** Every pattern with its weeks, by name. Admins only. */
+  listPatterns: (ctx: SecurityContext) => Promise<WorkingPattern[]>;
+  /** A new pattern whose only week applies from the beginning. Admins only. */
+  createPattern: (
     ctx: SecurityContext,
-    input: { employeeIds: readonly string[]; from: string; until: string },
-  ) => Promise<Map<string, WorkingWeek[]>>;
-  /**
-   * Puts a person on their own policy from a date, until a date or open-ended, ahead of their
-   * group's; an earlier one of theirs ends the day before. Returns the history line it added.
-   */
-  assignPolicy: (
+    input: { name: string; minutes: WeekdayMinutes; fullDayMinutes: number },
+  ) => Promise<WorkingPattern>;
+  /** Renames a pattern for every date. Admins only. */
+  renamePattern: (
+    ctx: SecurityContext,
+    input: { workingPatternId: string; name: string },
+  ) => Promise<WorkingPattern>;
+  /** New minutes for a pattern from a date, replacing a week that starts on it. Admins only. */
+  changePattern: (
     ctx: SecurityContext,
     input: {
-      employeeId: string;
-      policyId: string;
+      workingPatternId: string;
       effectiveFrom: string;
-      effectiveUntil?: string | null;
+      minutes: WeekdayMinutes;
+      fullDayMinutes: number;
     },
-  ) => Promise<HistoryLine>;
-  /** Ends a person's own policy on a date; their group's applies from the next day. */
-  endAssignment: (
+  ) => Promise<WorkingPattern>;
+  /** Removes the week that starts on a date, so the one before applies again. Admins only. */
+  removePatternWeek: (
     ctx: SecurityContext,
-    input: { employeeId: string; effectiveUntil: string },
-  ) => Promise<HistoryLine>;
-  /** Removes a person's own policy that starts on a date, as a correction. */
-  removeAssignment: (
-    ctx: SecurityContext,
-    input: { employeeId: string; effectiveFrom: string },
-  ) => Promise<HistoryLine>;
+    input: { workingPatternId: string; effectiveFrom: string },
+  ) => Promise<WorkingPattern>;
+  /** Deletes a pattern no group or person is put on, other than Standard. Admins only. */
+  deletePattern: (ctx: SecurityContext, input: { workingPatternId: string }) => Promise<void>;
 }
 
 export function createWorkingPatternService({
+  orm,
   transact,
   logger,
-}: Pick<ModuleDependencies, "transact" | "logger">): WorkingPatternService {
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger">): WorkingPatternService {
   return {
-    async readWorkingWeeks(ctx, input) {
-      const from = parseDateField("from", input.from);
-      const until = parseUntil(from, input.until, "until");
-      const employeeIds = parseEmployeeIds(input.employeeIds);
-      const scope = await ctx.recordScope("working_pattern", "read");
-      if (employeeIds.some((id) => !isInRecordScope(scope, id))) {
-        throw new ApplicationError("FORBIDDEN", "You cannot read this working pattern.");
-      }
-      const { timelines } = await transact(async (tx) => {
-        await workingPatternRepository(tx).lockForReads();
-        if ((await employeeRepository(tx).findByIds(employeeIds)).length < employeeIds.length) {
-          throw employeeNotFound();
-        }
-        return readTimelines(tx, employeeIds);
-      });
-      return new Map(
-        employeeIds.map((id) => [id, workingWeeksOf(timelines.get(id)!, from, until)]),
-      );
+    async listPatterns(ctx) {
+      ctx.require("MANAGE_WORKSPACE");
+      return workingPatternRepository(orm).findPatterns();
     },
 
-    async assignPolicy(ctx, input) {
-      const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
+    async createPattern(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
+      const name = parsePatternName(input.name);
+      const week = parseWeek(input);
+      const saved = await transact(async (tx) => {
+        const repository = workingPatternRepository(tx);
+        await repository.lockForWrites();
+        refuseTakenName(await repository.findPatterns(), name);
+        return findPattern(tx, await repository.insertPattern(name, week));
+      });
+      logger.info({ workingPatternId: saved.id }, "Created a working pattern");
+      return saved;
+    },
+
+    async renamePattern(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
+      const name = parsePatternName(input.name);
+      const saved = await transact(async (tx) => {
+        const repository = workingPatternRepository(tx);
+        await repository.lockForWrites();
+        const patterns = await repository.findPatterns();
+        const pattern = existingPattern(patterns, input.workingPatternId);
+        refuseTakenName(
+          patterns.filter(({ id }) => id !== pattern.id),
+          name,
+        );
+        await repository.renamePattern(pattern.id, name);
+        return findPattern(tx, pattern.id);
+      });
+      logger.info({ workingPatternId: saved.id }, "Renamed a working pattern");
+      return saved;
+    },
+
+    async changePattern(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
       const effectiveFrom = parseDateField("effectiveFrom", input.effectiveFrom);
-      const effectiveUntil =
-        input.effectiveUntil == null
-          ? null
-          : parseUntil(effectiveFrom, input.effectiveUntil, "effectiveUntil");
-      const change = { ctx, employeeId, changedFrom: effectiveFrom };
-      return changeAssignments({ transact, logger }, change, async (tx, rows, policies) => {
-        const patterns = workingPatternRepository(tx);
-        const policy = referencedPolicy(policies, input.policyId);
-        const { ended, replaced } = makeRoomForDatedPolicy(rows, effectiveFrom, effectiveUntil);
-        if (replaced) {
-          await patterns.deleteAssignment(replaced.id);
-        }
-        if (ended) {
-          await patterns.endAssignment(ended.id, addDays(effectiveFrom, -1));
-        }
-        await patterns.insertAssignment(employeeId, {
-          policyId: policy.id,
+      const week = parseWeek(input);
+      const saved = await transact(async (tx) => {
+        const repository = workingPatternRepository(tx);
+        await repository.lockForWrites();
+        const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
+        await repository.saveWeek(pattern.id, { ...week, effectiveFrom });
+        publishWorkingPatternChange(
+          tx,
+          await repository.findEmployeesOnPattern(pattern.id),
           effectiveFrom,
-          effectiveUntil,
-        });
-        return { before: replaced?.effectiveUntil ?? null, after: effectiveUntil };
+        );
+        return findPattern(tx, pattern.id);
       });
+      logger.info({ workingPatternId: saved.id, effectiveFrom }, "Changed a working pattern");
+      return saved;
     },
 
-    async endAssignment(ctx, input) {
-      const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
-      const effectiveUntil = parseDateField("effectiveUntil", input.effectiveUntil);
-      const change = { ctx, employeeId, changedFrom: addDays(effectiveUntil, 1) };
-      return changeAssignments({ transact, logger }, change, async (tx, rows) => {
-        const row = rows.find((candidate) => coversDate(candidate, effectiveUntil));
-        if (!row) {
-          throw noOwnPattern();
-        }
-        await workingPatternRepository(tx).endAssignment(row.id, effectiveUntil);
-        return { before: row.effectiveUntil, after: effectiveUntil };
-      });
-    },
-
-    async removeAssignment(ctx, input) {
-      const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
+    async removePatternWeek(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
       const effectiveFrom = parseDateField("effectiveFrom", input.effectiveFrom);
-      const change = { ctx, employeeId, changedFrom: effectiveFrom };
-      return changeAssignments({ transact, logger }, change, async (tx, rows) => {
-        const row = rows.find((candidate) => candidate.effectiveFrom === effectiveFrom);
-        if (!row) {
-          throw noOwnPattern();
+      const saved = await transact(async (tx) => {
+        const repository = workingPatternRepository(tx);
+        await repository.lockForWrites();
+        const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
+        if (!(await repository.deleteWeek(pattern.id, effectiveFrom))) {
+          throw new ApplicationError(
+            "NOT_FOUND",
+            "The working pattern has no week from this date.",
+          );
         }
-        await workingPatternRepository(tx).deleteAssignment(row.id);
-        return { before: row.effectiveUntil, after: null };
+        publishWorkingPatternChange(
+          tx,
+          await repository.findEmployeesOnPattern(pattern.id),
+          effectiveFrom,
+        );
+        return findPattern(tx, pattern.id);
       });
+      logger.info({ workingPatternId: saved.id, effectiveFrom }, "Removed a working pattern week");
+      return saved;
+    },
+
+    async deletePattern(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
+      const workingPatternId = await transact(async (tx) => {
+        const repository = workingPatternRepository(tx);
+        await repository.lockForWrites();
+        const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
+        if (pattern.isStandard) {
+          throw new ApplicationError("CONFLICT", "The Standard working pattern cannot be deleted.");
+        }
+        if (await repository.isPatternUsed(pattern.id)) {
+          throw new ApplicationError(
+            "CONFLICT",
+            "A person or group is on this working pattern on some date, past or future, so it is kept.",
+          );
+        }
+        await repository.deletePattern(pattern.id);
+        return pattern.id;
+      });
+      logger.info({ workingPatternId }, "Deleted a working pattern");
     },
   };
 }
 
-/**
- * Changes one person's own dated policies in one transaction, then writes the history line
- * naming the policy that applied on `changedFrom` before and after, with the end date the change
- * moved, and publishes the change.
- */
-async function changeAssignments(
-  { transact, logger }: { transact: Transact; logger: Logger },
-  { ctx, employeeId, changedFrom }: AssignmentChange,
-  change: (tx: Tx, rows: DatedPolicy[], policies: WorkingPatternPolicy[]) => Promise<EndChange>,
-): Promise<HistoryLine> {
-  const line = await transact(async (tx) => {
-    // The employee write lock first, as deleting an employee takes it, so the two cannot deadlock.
-    await employmentRepository(tx).lockForWrites();
-    await workingPatternRepository(tx).lockForWrites();
-    if (!(await employeeRepository(tx).findById(employeeId))) {
-      throw employeeNotFound();
-    }
-    const before = await readTimelines(tx, [employeeId]);
-    const end = await change(
-      tx,
-      before.timelines.get(employeeId)!.assignments.slice(),
-      before.policies,
-    );
-    const after = await readTimelines(tx, [employeeId]);
-    publishWorkingPatternChange(tx, [employeeId], changedFrom);
-    const [added] = await recordHistory.append(ctx, tx, {
-      recordType: "working_pattern",
-      operation: "UPDATED",
-      cause: { kind: "EDITED_DIRECTLY" },
-      records: [
-        {
-          recordId: employeeId,
-          changes: [
-            {
-              field: "workingPattern",
-              oldValue: policyNameOn(before, employeeId, changedFrom),
-              newValue: policyNameOn(after, employeeId, changedFrom),
-            },
-            { field: "effectiveFrom", oldValue: null, newValue: changedFrom },
-            { field: "effectiveUntil", oldValue: end.before, newValue: end.after },
-          ],
-        },
-      ],
-    });
-    return added!;
-  });
-  logger.info({ employeeId, effectiveFrom: changedFrom }, "Changed a person's working pattern");
-  return line;
-}
-
-interface AssignmentChange {
-  ctx: SecurityContext;
-  employeeId: string;
-  /** The first date whose working pattern the change may move. */
-  changedFrom: CalendarDate;
-}
-
-/** The end date of the person's own policy a change moved, before and after; null: none or open. */
-interface EndChange {
-  before: CalendarDate | null;
-  after: CalendarDate | null;
-}
-
-interface Timelines {
-  timelines: Map<string, WorkingPatternTimeline>;
-  policies: WorkingPatternPolicy[];
-}
-
-/**
- * Each employee's working pattern: their own policies, their groups with those groups' policies,
- * and the weeks of the policies these name; with every policy.
- */
-async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
-  const patterns = workingPatternRepository(tx);
-  // One after another: they share the transaction's connection.
-  const assignments = await patterns.findAssignments(employeeIds);
-  const memberships = await policyGroupRepository(tx).findMemberships(employeeIds);
-  const policies = await patterns.findPolicies();
-  const groupIds = [...memberships.values()].flat().map(({ policyGroupId }) => policyGroupId);
-  const groupPolicies = await patterns.findGroupPolicies([...new Set(groupIds)]);
-  const weeksOf = new Map(policies.map(({ id, weeks }) => [id, weeks]));
-  const timelines = new Map(
-    employeeIds.map((id) => {
-      const own = memberships.get(id) ?? [];
-      const theirGroups = new Map(
-        own.map(({ policyGroupId }) => [policyGroupId, groupPolicies.get(policyGroupId) ?? []]),
-      );
-      const rows = [...(assignments.get(id) ?? []), ...[...theirGroups.values()].flat()];
-      const policyWeeks = new Map(rows.map(({ policyId }) => [policyId, weeksOf.get(policyId)!]));
-      return [
-        id,
-        {
-          assignments: assignments.get(id) ?? [],
-          memberships: own,
-          groupPolicies: theirGroups,
-          policyWeeks,
-        },
-      ];
-    }),
-  );
-  return { timelines, policies };
-}
-
-function policyNameOn({ timelines, policies }: Timelines, employeeId: string, date: CalendarDate) {
-  const policyId = policyOn(timelines.get(employeeId)!, date);
-  return policies.find(({ id }) => id === policyId)?.name ?? null;
-}
-
-async function requireAssignmentWrite(ctx: SecurityContext, employeeId: string) {
-  const id = parseUuid(employeeId);
-  if (!id) {
-    throw employeeNotFound();
+/** The pattern an input names; refuses one that does not exist as invalid input. */
+export function referencedPattern(patterns: readonly WorkingPattern[], workingPatternId: string) {
+  const pattern = patterns.find(({ id }) => id === parseUuid(workingPatternId));
+  if (!pattern) {
+    throw invalidInput([{ field: "workingPatternId", code: "not_found" }]);
   }
-  await ctx.requireInScope("working_pattern", "update", id);
-  return id;
+  return pattern;
 }
 
-function parseUntil(from: CalendarDate, value: string, field: string): CalendarDate {
-  const until = parseDateField(field, value);
-  if (until < from) {
-    throw invalidInput([{ field, code: "before_start" }]);
+async function findPattern(db: Orm | Tx, workingPatternId: string): Promise<WorkingPattern> {
+  const patterns = await workingPatternRepository(db).findPatterns();
+  return patterns.find(({ id }) => id === workingPatternId)!;
+}
+
+/** The pattern acted on; refuses one that does not exist with NOT_FOUND. */
+function existingPattern(patterns: readonly WorkingPattern[], workingPatternId: string) {
+  const pattern = patterns.find(({ id }) => id === parseUuid(workingPatternId));
+  if (!pattern) {
+    throw new ApplicationError("NOT_FOUND", "No working pattern has this id.");
   }
-  return until;
+  return pattern;
 }
 
-function noOwnPattern(): ApplicationError {
-  return new ApplicationError("NOT_FOUND", "The person has no working pattern of their own here.");
+function refuseTakenName(patterns: readonly WorkingPattern[], name: string) {
+  if (patterns.some((pattern) => pattern.name === name)) {
+    throw invalidInput([{ field: "name", code: "taken" }]);
+  }
 }

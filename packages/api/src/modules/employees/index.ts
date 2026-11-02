@@ -24,8 +24,8 @@ export {
   createEmployeeService,
   createEmployeeSetupService,
   createGroupWorkingPatternService,
-  createWorkingPatternPolicyService,
   createWorkingPatternService,
+  createEmployeeWorkingPatternService,
   employeeDirectory,
 } from "./app";
 export { employeeFieldErrors, parseEmployeeField } from "./domain";
@@ -40,8 +40,8 @@ export type {
   ImportedEmployees,
   InviteDetails,
   GroupWorkingPatternService,
-  WorkingPatternPolicyService,
   WorkingPatternService,
+  EmployeeWorkingPatternService,
 } from "./app";
 export type {
   Employee,

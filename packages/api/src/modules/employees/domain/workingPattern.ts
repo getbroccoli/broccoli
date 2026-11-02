@@ -4,7 +4,7 @@ import { addDays, type CalendarDate, parseCalendarDate } from "../../../utils";
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
 
-/** A policy's minutes from a date until its next week starts; null from the beginning. */
+/** A pattern's minutes from a date until its next week starts; null from the beginning. */
 export interface PatternWeek {
   effectiveFrom: CalendarDate | null;
   minutes: WeekdayMinutes;
@@ -13,10 +13,10 @@ export interface PatternWeek {
 }
 
 /** A named way of working that groups and people are put on. */
-export interface WorkingPatternPolicy {
+export interface WorkingPattern {
   id: string;
   name: string;
-  /** The seeded Standard policy, which cannot be deleted. */
+  /** The seeded Standard pattern, which cannot be deleted. */
   isStandard: boolean;
   /** Oldest first; the first starts from the beginning. */
   weeks: PatternWeek[];
@@ -32,10 +32,10 @@ export interface WorkingWeek {
   fullDayMinutes: number | null;
 }
 
-/** A dated row of a group's or a person's working pattern: a policy from a date to a date. */
-export interface DatedPolicy {
+/** A dated row of a group's or a person's working pattern: a pattern from a date to a date. */
+export interface DatedPattern {
   id: string;
-  policyId: string;
+  workingPatternId: string;
   /** Null: from the beginning. */
   effectiveFrom: CalendarDate | null;
   /** The last day; null: open-ended. */
@@ -51,16 +51,16 @@ export interface GroupMembership {
 
 /** What decides one person's working weeks. */
 export interface WorkingPatternTimeline {
-  assignments: readonly DatedPolicy[];
+  assignments: readonly DatedPattern[];
   memberships: readonly GroupMembership[];
-  /** Each group's dated policies, by group id. */
-  groupPolicies: ReadonlyMap<string, readonly DatedPolicy[]>;
-  /** Each policy's weeks, oldest first, by policy id. */
-  policyWeeks: ReadonlyMap<string, readonly PatternWeek[]>;
+  /** Each group's dated patterns, by group id. */
+  groupPatterns: ReadonlyMap<string, readonly DatedPattern[]>;
+  /** Each pattern's weeks, oldest first, by pattern id. */
+  patternWeeks: ReadonlyMap<string, readonly PatternWeek[]>;
 }
 
-/** The name a policy is saved under; refuses a blank one. */
-export function parsePolicyName(name: string): string {
+/** The name a pattern is saved under; refuses a blank one. */
+export function parsePatternName(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) {
     throw invalidInput([{ field: "name", code: "required" }]);
@@ -122,15 +122,15 @@ export function workingWeeksOf(
   return weeks;
 }
 
-/** The policy that applies on `date`: the person's own, else their group's, else none. */
-export function policyOn(timeline: WorkingPatternTimeline, date: CalendarDate): string | null {
+/** The pattern that applies on `date`: the person's own, else their group's, else none. */
+export function patternOn(timeline: WorkingPatternTimeline, date: CalendarDate): string | null {
   const assignment = timeline.assignments.find((row) => coversDate(row, date));
   if (assignment) {
-    return assignment.policyId;
+    return assignment.workingPatternId;
   }
   const membership = timeline.memberships.find((row) => coversDate(row, date));
-  const groupPolicies = membership ? timeline.groupPolicies.get(membership.policyGroupId) : [];
-  return groupPolicies?.find((row) => coversDate(row, date))?.policyId ?? null;
+  const groupPatterns = membership ? timeline.groupPatterns.get(membership.policyGroupId) : [];
+  return groupPatterns?.find((row) => coversDate(row, date))?.workingPatternId ?? null;
 }
 
 /**
@@ -138,11 +138,11 @@ export function policyOn(timeline: WorkingPatternTimeline, date: CalendarDate): 
  * covers `from` ends the day before, one starting on `from` goes; a later one it would overlap
  * refuses the new one.
  */
-export function makeRoomForDatedPolicy(
-  rows: readonly DatedPolicy[],
+export function makeRoomForDatedPattern(
+  rows: readonly DatedPattern[],
   from: CalendarDate,
   until: CalendarDate | null,
-): { ended: DatedPolicy | null; replaced: DatedPolicy | null } {
+): { ended: DatedPattern | null; replaced: DatedPattern | null } {
   const overlapsLater = rows.some(
     ({ effectiveFrom }) =>
       effectiveFrom !== null && effectiveFrom > from && (until === null || effectiveFrom <= until),
@@ -174,8 +174,8 @@ function isBefore(start: CalendarDate | null, date: CalendarDate, orSame = false
 }
 
 function patternWeekOn(timeline: WorkingPatternTimeline, date: CalendarDate): PatternWeek | null {
-  const policyId = policyOn(timeline, date);
-  const weeks = policyId ? (timeline.policyWeeks.get(policyId) ?? []) : [];
+  const workingPatternId = patternOn(timeline, date);
+  const weeks = workingPatternId ? (timeline.patternWeeks.get(workingPatternId) ?? []) : [];
   return weeks.findLast((week) => isBefore(week.effectiveFrom, date, true)) ?? null;
 }
 
@@ -188,14 +188,14 @@ function changeDates(
   const rows = [
     ...timeline.assignments,
     ...timeline.memberships,
-    ...[...timeline.groupPolicies.values()].flat(),
+    ...[...timeline.groupPatterns.values()].flat(),
   ];
   const candidates = [
     ...rows.flatMap((row) => [
       row.effectiveFrom,
       row.effectiveUntil && addDays(row.effectiveUntil, 1),
     ]),
-    ...[...timeline.policyWeeks.values()].flat().map((week) => week.effectiveFrom),
+    ...[...timeline.patternWeeks.values()].flat().map((week) => week.effectiveFrom),
   ];
   const inPeriod = candidates.filter(
     (date): date is CalendarDate => date !== null && date > from && date <= until,

@@ -2,8 +2,8 @@ import type { Orm, Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import {
   createGroupWorkingPatternService,
-  createWorkingPatternPolicyService,
   createWorkingPatternService,
+  createEmployeeWorkingPatternService,
 } from "../../src/modules/employees";
 import { testTransactor } from "./testTransactor";
 
@@ -14,8 +14,8 @@ export function workingPatternService(
 ) {
   const dependencies = { orm, transact, logger: createLogger("silent") };
   return {
+    ...createEmployeeWorkingPatternService(dependencies),
     ...createWorkingPatternService(dependencies),
-    ...createWorkingPatternPolicyService(dependencies),
     ...createGroupWorkingPatternService(dependencies),
   };
 }

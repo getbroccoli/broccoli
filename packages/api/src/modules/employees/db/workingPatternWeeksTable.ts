@@ -2,10 +2,10 @@ import { sql } from "drizzle-orm";
 import { check, date, foreignKey, integer, pgTable, unique, uuid } from "drizzle-orm/pg-core";
 
 import type { CalendarDate } from "../../../utils";
-import { workingPatternPolicies } from "./workingPatternPoliciesTable";
+import { workingPatterns } from "./workingPatternsTable";
 
 /**
- * A policy's minutes on each weekday from a date until its next week starts. A change to a policy
+ * A pattern's minutes on each weekday from a date until its next week starts. A change to a pattern
  * is a new row, so the weeks before it keep their minutes.
  */
 export const workingPatternWeeks = pgTable(
@@ -14,8 +14,8 @@ export const workingPatternWeeks = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
-    workingPatternPolicyId: uuid("working_pattern_policy_id").notNull(),
-    /** Null only on the policy's first week: from the beginning. */
+    workingPatternId: uuid("working_pattern_id").notNull(),
+    /** Null only on the pattern's first week: from the beginning. */
     effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>(),
     mondayMinutes: integer("monday_minutes").notNull(),
     tuesdayMinutes: integer("tuesday_minutes").notNull(),
@@ -30,12 +30,12 @@ export const workingPatternWeeks = pgTable(
   (table) => [
     // Named here: the generated name would pass Postgres's 63-character limit.
     foreignKey({
-      name: "working_pattern_weeks_policy_fk",
-      columns: [table.workingPatternPolicyId],
-      foreignColumns: [workingPatternPolicies.id],
+      name: "working_pattern_weeks_pattern_fk",
+      columns: [table.workingPatternId],
+      foreignColumns: [workingPatterns.id],
     }).onDelete("cascade"),
-    unique("working_pattern_weeks_policy_from_unique")
-      .on(table.workingPatternPolicyId, table.effectiveFrom)
+    unique("working_pattern_weeks_pattern_from_unique")
+      .on(table.workingPatternId, table.effectiveFrom)
       .nullsNotDistinct(),
     check(
       "working_pattern_weeks_minutes_in_a_day",

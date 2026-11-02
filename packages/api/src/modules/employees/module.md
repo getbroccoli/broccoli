@@ -15,43 +15,43 @@ A working pattern is the minutes a person works on each weekday, Monday to Sunda
 
 ### Data model
 
-- **`working_pattern_policies`:** a named way of working, such as "Standard" or "Part-time Tue–Thu". The migration creates Standard (key `standard_working_pattern`), which cannot be deleted.
-- **`working_pattern_weeks`:** a policy's minutes for each weekday and its full day, from a date until its next week. A policy's first week has no date: it applies from the beginning.
-- **`policy_group_working_patterns`:** which policy a group works by default, from a date to a date. Standard is linked to "Everyone" for all dates.
-- **`employee_working_pattern_assignments`:** one person's own policy between two dates, ahead of their group's.
+- **`working_patterns`:** a named way of working, such as "Standard" or "Part-time Tue–Thu". The migration creates Standard (key `standard_working_pattern`), which cannot be deleted.
+- **`working_pattern_weeks`:** a pattern's minutes for each weekday and its full day, from a date until its next week. A pattern's first week has no date: it applies from the beginning.
+- **`policy_group_working_patterns`:** which working pattern a group works by default, from a date to a date. Standard is linked to "Everyone" for all dates.
+- **`employee_working_pattern_assignments`:** one person's own working pattern between two dates, ahead of their group's.
 
 ### Which working pattern applies
 
 For one person on one date:
 
 1. their own assignment on that date, if any;
-2. otherwise the policy their group works on that date;
+2. otherwise the working pattern their group works on that date;
 3. otherwise none.
 
-The policy's week on that date gives the minutes and the full day.
+That pattern's week on that date gives the minutes and the full day.
 
 ### Rules
 
 - Every change is dated, and earlier dates keep what they had. A change with a past date is a correction; replacing a row on the same date or removing one is a correction too.
-- A policy's minutes change by adding a week from a date. A group changes policy by ending its link and starting a new one; a person's own assignment works the same way.
+- A pattern's minutes change by adding a week from a date. A group changes pattern by ending its link and starting a new one; a person's own assignment works the same way.
 - The **full day** is the minutes one day of leave stands for. It is at least the longest weekday, so a day of leave never costs more than 1. Time off costs a day as that day's minutes ÷ the full day.
-- Only admins change policies, group links and assignments. A person's working pattern is readable by them, everyone above them in the reporting line, and admins.
+- Only admins change working patterns, group links and assignments. A person's working pattern is readable by them, everyone above them in the reporting line, and admins.
 - Changes to a person's own assignment are written to history as the `working_pattern` record type, apart from the employee's own history, since not everyone who reads a person may read their working pattern. Resetting all employees purges both.
 - Every change that can move someone's working weeks publishes `employees.working_pattern_changed` with the people concerned and the first date that changed. Other modules read working weeks through `WorkingPatternService.readWorkingWeeks`, never these tables.
 
 ### Example: part-time from September
 
-Sam is in "Everyone" and works Standard. From 1 September Sam works a part-time policy of their own, until the end of November.
+Sam is in "Everyone" and works Standard. From 1 September Sam works a part-time pattern of their own, until the end of November.
 
 ```json
 {
-  "working_pattern_policies": [
-    { "id": "wpp_standard", "name": "Standard", "key": "standard_working_pattern" },
-    { "id": "wpp_part_time", "name": "Part-time Tue–Thu", "key": null }
+  "working_patterns": [
+    { "id": "wp_standard", "name": "Standard", "key": "standard_working_pattern" },
+    { "id": "wp_part_time", "name": "Part-time Tue–Thu", "key": null }
   ],
   "working_pattern_weeks": [
     {
-      "working_pattern_policy_id": "wpp_standard",
+      "working_pattern_id": "wp_standard",
       "effective_from": null,
       "monday_minutes": 450,
       "tuesday_minutes": 450,
@@ -63,7 +63,7 @@ Sam is in "Everyone" and works Standard. From 1 September Sam works a part-time 
       "full_day_minutes": 450
     },
     {
-      "working_pattern_policy_id": "wpp_part_time",
+      "working_pattern_id": "wp_part_time",
       "effective_from": null,
       "monday_minutes": 0,
       "tuesday_minutes": 450,
@@ -78,7 +78,7 @@ Sam is in "Everyone" and works Standard. From 1 September Sam works a part-time 
   "policy_group_working_patterns": [
     {
       "policy_group_id": "group_everyone",
-      "working_pattern_policy_id": "wpp_standard",
+      "working_pattern_id": "wp_standard",
       "effective_from": null,
       "effective_until": null
     }
@@ -86,7 +86,7 @@ Sam is in "Everyone" and works Standard. From 1 September Sam works a part-time 
   "employee_working_pattern_assignments": [
     {
       "employee_id": "emp_sam",
-      "working_pattern_policy_id": "wpp_part_time",
+      "working_pattern_id": "wp_part_time",
       "effective_from": "2026-09-01",
       "effective_until": "2026-11-30"
     }

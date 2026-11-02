@@ -1,5 +1,5 @@
 {
-  "id": "2787bc3d-3dc0-4be6-95bd-9dcc2e4dbcaa",
+  "id": "7d3deba1-9f04-42bf-8170-46533a7c49ca",
   "prevId": "0e1e1342-d814-4a9b-8a8e-c2c63ab336f1",
   "version": "7",
   "dialect": "postgresql",
@@ -1048,8 +1048,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "working_pattern_policy_id": {
-          "name": "working_pattern_policy_id",
+        "working_pattern_id": {
+          "name": "working_pattern_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -1068,11 +1068,11 @@
         }
       },
       "indexes": {
-        "employee_working_pattern_assignments_policy_idx": {
-          "name": "employee_working_pattern_assignments_policy_idx",
+        "employee_working_pattern_assignments_pattern_idx": {
+          "name": "employee_working_pattern_assignments_pattern_idx",
           "columns": [
             {
-              "expression": "working_pattern_policy_id",
+              "expression": "working_pattern_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1094,11 +1094,11 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "employee_working_pattern_assignments_policy_fk": {
-          "name": "employee_working_pattern_assignments_policy_fk",
+        "employee_working_pattern_assignments_pattern_fk": {
+          "name": "employee_working_pattern_assignments_pattern_fk",
           "tableFrom": "employee_working_pattern_assignments",
-          "tableTo": "working_pattern_policies",
-          "columnsFrom": ["working_pattern_policy_id"],
+          "tableTo": "working_patterns",
+          "columnsFrom": ["working_pattern_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -1405,8 +1405,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "working_pattern_policy_id": {
-          "name": "working_pattern_policy_id",
+        "working_pattern_id": {
+          "name": "working_pattern_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -1425,11 +1425,11 @@
         }
       },
       "indexes": {
-        "policy_group_working_patterns_policy_idx": {
-          "name": "policy_group_working_patterns_policy_idx",
+        "policy_group_working_patterns_pattern_idx": {
+          "name": "policy_group_working_patterns_pattern_idx",
           "columns": [
             {
-              "expression": "working_pattern_policy_id",
+              "expression": "working_pattern_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1451,11 +1451,11 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "policy_group_working_patterns_policy_fk": {
-          "name": "policy_group_working_patterns_policy_fk",
+        "policy_group_working_patterns_pattern_fk": {
+          "name": "policy_group_working_patterns_pattern_fk",
           "tableFrom": "policy_group_working_patterns",
-          "tableTo": "working_pattern_policies",
-          "columnsFrom": ["working_pattern_policy_id"],
+          "tableTo": "working_patterns",
+          "columnsFrom": ["working_pattern_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -1472,8 +1472,8 @@
       },
       "isRLSEnabled": false
     },
-    "public.working_pattern_policies": {
-      "name": "working_pattern_policies",
+    "public.working_patterns": {
+      "name": "working_patterns",
       "schema": "",
       "columns": {
         "id": {
@@ -1500,22 +1500,22 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "working_pattern_policies_name_unique": {
-          "name": "working_pattern_policies_name_unique",
+        "working_patterns_name_unique": {
+          "name": "working_patterns_name_unique",
           "nullsNotDistinct": false,
           "columns": ["name"]
         },
-        "working_pattern_policies_key_unique": {
-          "name": "working_pattern_policies_key_unique",
+        "working_patterns_key_unique": {
+          "name": "working_patterns_key_unique",
           "nullsNotDistinct": false,
           "columns": ["key"]
         }
       },
       "policies": {},
       "checkConstraints": {
-        "working_pattern_policies_name_not_blank": {
-          "name": "working_pattern_policies_name_not_blank",
-          "value": "btrim(\"working_pattern_policies\".\"name\") <> ''"
+        "working_patterns_name_not_blank": {
+          "name": "working_patterns_name_not_blank",
+          "value": "btrim(\"working_patterns\".\"name\") <> ''"
         }
       },
       "isRLSEnabled": false
@@ -1531,8 +1531,8 @@
           "notNull": true,
           "default": "uuidv7()"
         },
-        "working_pattern_policy_id": {
-          "name": "working_pattern_policy_id",
+        "working_pattern_id": {
+          "name": "working_pattern_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -1594,11 +1594,11 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "working_pattern_weeks_policy_fk": {
-          "name": "working_pattern_weeks_policy_fk",
+        "working_pattern_weeks_pattern_fk": {
+          "name": "working_pattern_weeks_pattern_fk",
           "tableFrom": "working_pattern_weeks",
-          "tableTo": "working_pattern_policies",
-          "columnsFrom": ["working_pattern_policy_id"],
+          "tableTo": "working_patterns",
+          "columnsFrom": ["working_pattern_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -1606,10 +1606,10 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "working_pattern_weeks_policy_from_unique": {
-          "name": "working_pattern_weeks_policy_from_unique",
+        "working_pattern_weeks_pattern_from_unique": {
+          "name": "working_pattern_weeks_pattern_from_unique",
           "nullsNotDistinct": true,
-          "columns": ["working_pattern_policy_id", "effective_from"]
+          "columns": ["working_pattern_id", "effective_from"]
         }
       },
       "policies": {},

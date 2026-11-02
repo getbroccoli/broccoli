@@ -88,52 +88,54 @@ test("a read refuses the whole selection when it includes another employee", asy
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
 
-test("an employee cannot read or manage workspace policies", async ({ orm }) => {
+test("an employee cannot read or manage workspace patterns", async ({ orm }) => {
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
 
-  await expect(patterns.listPolicies(EMPLOYEE)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  await expect(patterns.listPatterns(EMPLOYEE)).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    patterns.createPolicy(EMPLOYEE, {
+    patterns.createPattern(EMPLOYEE, {
       name: "Short days",
       minutes: [240, 240, 240, 240, 240, 0, 0],
       fullDayMinutes: 240,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    patterns.renamePolicy(EMPLOYEE, {
-      policyId: standard.id,
+    patterns.renamePattern(EMPLOYEE, {
+      workingPatternId: standard.id,
       name: "Renamed",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    patterns.changePolicy(EMPLOYEE, {
-      policyId: standard.id,
+    patterns.changePattern(EMPLOYEE, {
+      workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
       minutes: [480, 480, 480, 480, 480, 0, 0],
       fullDayMinutes: 480,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    patterns.removePolicyWeek(EMPLOYEE, {
-      policyId: standard.id,
+    patterns.removePatternWeek(EMPLOYEE, {
+      workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  await expect(patterns.deletePolicy(EMPLOYEE, { policyId: standard.id })).rejects.toMatchObject({
+  await expect(
+    patterns.deletePattern(EMPLOYEE, { workingPatternId: standard.id }),
+  ).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 });
 
 test("an employee cannot change a group's pattern", async ({ orm, seed }) => {
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   const policyGroupId = await seed.everyoneGroupId();
 
   await expect(
     patterns.setGroupPattern(EMPLOYEE, {
       policyGroupId,
-      policyId: standard.id,
+      workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -160,17 +162,17 @@ test("a manager without admin permission cannot change a report's assignment", a
   await seed.manager(employee.id, manager.id);
   const caller = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: manager.id });
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  await patterns.assignPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
   });
 
   await expect(
-    patterns.assignPolicy(caller, {
+    patterns.assignPattern(caller, {
       employeeId: employee.id,
-      policyId: standard.id,
+      workingPatternId: standard.id,
       effectiveFrom: "2026-10-01",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });

@@ -5,23 +5,23 @@ import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import { addDays, type CalendarDate, parseUuid } from "../../../utils";
 import { policyGroupRepository, workingPatternRepository } from "../db";
-import { coversDate, type DatedPolicy, makeRoomForDatedPolicy, parseDateField } from "../domain";
+import { coversDate, type DatedPattern, makeRoomForDatedPattern, parseDateField } from "../domain";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
-import { referencedPolicy } from "./workingPatternPolicyService";
+import { referencedPattern } from "./workingPatternService";
 
-/** The working pattern policy each group's members work by default, from a date. Admins only. */
+/** The working pattern each group's members work by default, from a date. Admins only. */
 export interface GroupWorkingPatternService {
-  /** Puts a group on a policy from a date; its earlier policy ends the day before. Admins only. */
+  /** Puts a group on a pattern from a date; its earlier pattern ends the day before. Admins only. */
   setGroupPattern: (
     ctx: SecurityContext,
-    input: { policyGroupId: string; policyId: string; effectiveFrom: string },
+    input: { policyGroupId: string; workingPatternId: string; effectiveFrom: string },
   ) => Promise<void>;
-  /** Ends the group's policy on a date; the group then has none. Admins only. */
+  /** Ends the group's pattern on a date; the group then has none. Admins only. */
   endGroupPattern: (
     ctx: SecurityContext,
     input: { policyGroupId: string; effectiveUntil: string },
   ) => Promise<void>;
-  /** Removes the group's policy that starts on a date, null for from the beginning. Admins only. */
+  /** Removes the group's pattern that starts on a date, null for from the beginning. Admins only. */
   removeGroupPattern: (
     ctx: SecurityContext,
     input: { policyGroupId: string; effectiveFrom: string | null },
@@ -41,20 +41,23 @@ export function createGroupWorkingPatternService({
         input.policyGroupId,
         effectiveFrom,
         async (tx, groupId, rows) => {
-          const patterns = workingPatternRepository(tx);
-          const policy = referencedPolicy(await patterns.findPolicies(), input.policyId);
+          const repository = workingPatternRepository(tx);
+          const pattern = referencedPattern(
+            await repository.findPatterns(),
+            input.workingPatternId,
+          );
           // A correction on a link's own date keeps that link's end, so a later link stays.
           const until =
             rows.find((row) => row.effectiveFrom === effectiveFrom)?.effectiveUntil ?? null;
-          const { ended, replaced } = makeRoomForDatedPolicy(rows, effectiveFrom, until);
+          const { ended, replaced } = makeRoomForDatedPattern(rows, effectiveFrom, until);
           if (replaced) {
-            await patterns.deleteGroupPolicy(replaced.id);
+            await repository.deleteGroupLink(replaced.id);
           }
           if (ended) {
-            await patterns.endGroupPolicy(ended.id, addDays(effectiveFrom, -1));
+            await repository.endGroupLink(ended.id, addDays(effectiveFrom, -1));
           }
-          await patterns.insertGroupPolicy(groupId, {
-            policyId: policy.id,
+          await repository.insertGroupLink(groupId, {
+            workingPatternId: pattern.id,
             effectiveFrom,
             effectiveUntil: until,
           });
@@ -75,7 +78,7 @@ export function createGroupWorkingPatternService({
           if (!row) {
             throw noGroupPattern();
           }
-          await workingPatternRepository(tx).endGroupPolicy(row.id, effectiveUntil);
+          await workingPatternRepository(tx).endGroupLink(row.id, effectiveUntil);
         },
       );
     },
@@ -93,7 +96,7 @@ export function createGroupWorkingPatternService({
           if (!row) {
             throw noGroupPattern();
           }
-          await workingPatternRepository(tx).deleteGroupPolicy(row.id);
+          await workingPatternRepository(tx).deleteGroupLink(row.id);
         },
       );
     },
@@ -101,20 +104,20 @@ export function createGroupWorkingPatternService({
 }
 
 /**
- * Changes one group's dated policies in one transaction and tells other modules its members'
+ * Changes one group's dated patterns in one transaction and tells other modules its members'
  * working weeks may have changed from `changedFrom`.
  */
 async function changeGroupPatterns(
   { transact, logger }: { transact: Transact; logger: Logger },
   policyGroupId: string,
   changedFrom: CalendarDate | null,
-  change: (tx: Tx, groupId: string, rows: DatedPolicy[]) => Promise<void>,
+  change: (tx: Tx, groupId: string, rows: DatedPattern[]) => Promise<void>,
 ): Promise<void> {
   const groupId = await transact(async (tx) => {
-    const patterns = workingPatternRepository(tx);
-    await patterns.lockForWrites();
+    const repository = workingPatternRepository(tx);
+    await repository.lockForWrites();
     const id = await existingGroup(tx, policyGroupId);
-    await change(tx, id, (await patterns.findGroupPolicies([id])).get(id) ?? []);
+    await change(tx, id, (await repository.findGroupLinks([id])).get(id) ?? []);
     const members = await policyGroupRepository(tx).findMemberIds(id);
     publishWorkingPatternChange(tx, members, changedFrom);
     return id;

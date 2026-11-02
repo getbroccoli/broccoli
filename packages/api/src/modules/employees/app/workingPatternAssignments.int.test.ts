@@ -6,25 +6,25 @@ test("a newer assignment ends the earlier one without resuming it afterwards", a
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const monday = await patterns.createPolicy(OWNER, {
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  const friday = await patterns.createPolicy(OWNER, {
+  const friday = await patterns.createPattern(OWNER, {
     name: "Friday",
     minutes: [0, 0, 0, 0, 450, 0, 0],
     fullDayMinutes: 450,
   });
-  await patterns.assignPolicy(OWNER, {
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-08-01",
   });
 
-  const history = await patterns.assignPolicy(OWNER, {
+  const history = await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: friday.id,
+    workingPatternId: friday.id,
     effectiveFrom: "2026-09-01",
     effectiveUntil: "2026-09-30",
   });
@@ -55,21 +55,21 @@ test("an assignment on the same start date replaces the existing assignment", as
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const monday = await patterns.createPolicy(OWNER, {
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  await patterns.assignPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
   });
 
-  await patterns.assignPolicy(OWNER, {
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
     effectiveUntil: "2026-09-30",
   });
@@ -94,24 +94,24 @@ test("an assignment cannot overlap a later assignment and a refusal preserves ex
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const monday = await patterns.createPolicy(OWNER, {
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  await patterns.assignPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-10-01",
   });
   const period = { employeeIds: [employee.id], from: "2026-08-01", until: "2026-11-30" };
   const before = await patterns.readWorkingWeeks(OWNER, period);
 
   await expect(
-    patterns.assignPolicy(OWNER, {
+    patterns.assignPattern(OWNER, {
       employeeId: employee.id,
-      policyId: standard.id,
+      workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
       effectiveUntil: "2026-10-01",
     }),
@@ -120,9 +120,9 @@ test("an assignment cannot overlap a later assignment and a refusal preserves ex
     fieldErrors: [{ field: "effectiveUntil", code: "overlaps" }],
   });
   await expect(
-    patterns.assignPolicy(OWNER, {
+    patterns.assignPattern(OWNER, {
       employeeId: employee.id,
-      policyId: standard.id,
+      workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({
@@ -135,21 +135,21 @@ test("an assignment cannot overlap a later assignment and a refusal preserves ex
 test("an assignment may end the day before a later assignment starts", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const monday = await patterns.createPolicy(OWNER, {
+  const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  await patterns.assignPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-10-01",
   });
 
-  await patterns.assignPolicy(OWNER, {
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: monday.id,
+    workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
     effectiveUntil: "2026-09-30",
   });

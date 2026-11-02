@@ -287,10 +287,10 @@ test("deleting all employees purges history including already deleted employees 
 test("deleting all employees purges working pattern history", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  await patterns.assignPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
   });
   expect((await recordHistory.read(orm, "working_pattern", employee.id, {})).edges).toHaveLength(1);

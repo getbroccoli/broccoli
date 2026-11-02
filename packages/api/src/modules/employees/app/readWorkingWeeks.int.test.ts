@@ -50,14 +50,14 @@ test("an own assignment overrides the group only between its inclusive dates", a
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const policy = await patterns.createPolicy(OWNER, {
+  const pattern = await patterns.createPattern(OWNER, {
     name: "Tuesday to Thursday",
     minutes: [0, 450, 450, 450, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  await patterns.assignPolicy(OWNER, {
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: policy.id,
+    workingPatternId: pattern.id,
     effectiveFrom: "2026-09-01",
     effectiveUntil: "2026-09-30",
   });
@@ -82,12 +82,12 @@ test("a Standard change applies to its employees from its date and preserves ear
   const first = await seed.employee();
   const second = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   const earlier = { employeeIds: [first.id, second.id], from: "2026-08-01", until: "2026-08-31" };
   const before = await patterns.readWorkingWeeks(OWNER, earlier);
 
-  await patterns.changePolicy(OWNER, {
-    policyId: standard.id,
+  await patterns.changePattern(OWNER, {
+    workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
     fullDayMinutes: 480,
@@ -107,22 +107,22 @@ test("a Standard change applies to its employees from its date and preserves ear
   );
 });
 
-test("identical weeks merge across assignment and policy changes", async ({ orm, seed }) => {
+test("identical weeks merge across assignment and pattern changes", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const policy = await patterns.createPolicy(OWNER, {
+  const pattern = await patterns.createPattern(OWNER, {
     name: "Same hours",
     minutes: [450, 450, 450, 450, 450, 0, 0],
     fullDayMinutes: 450,
   });
-  await patterns.assignPolicy(OWNER, {
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: policy.id,
+    workingPatternId: pattern.id,
     effectiveFrom: "2026-09-01",
     effectiveUntil: "2026-09-30",
   });
-  await patterns.changePolicy(OWNER, {
-    policyId: policy.id,
+  await patterns.changePattern(OWNER, {
+    workingPatternId: pattern.id,
     effectiveFrom: "2026-09-15",
     minutes: [450, 450, 450, 450, 450, 0, 0],
     fullDayMinutes: 450,
@@ -149,9 +149,9 @@ test("a full day change splits working weeks even when weekday minutes stay the 
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  await patterns.changePolicy(OWNER, {
-    policyId: standard.id,
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.changePattern(OWNER, {
+    workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
     minutes: [450, 450, 450, 450, 450, 0, 0],
     fullDayMinutes: 480,
@@ -175,14 +175,14 @@ test("a read starts with the week already in effect and excludes later changes",
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const policy = await patterns.createPolicy(OWNER, {
+  const pattern = await patterns.createPattern(OWNER, {
     name: "Short days",
     minutes: [240, 240, 240, 240, 240, 0, 0],
     fullDayMinutes: 240,
   });
-  await patterns.assignPolicy(OWNER, {
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: policy.id,
+    workingPatternId: pattern.id,
     effectiveFrom: "2026-09-01",
     effectiveUntil: "2026-09-30",
   });
@@ -209,10 +209,10 @@ test("an own assignment gives an employee outside every group a working pattern"
   const employee = await seed.employee();
   await seed.leaveGroups(employee.id);
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
-  await patterns.assignPolicy(OWNER, {
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
-    policyId: standard.id,
+    workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
     effectiveUntil: "2026-09-30",
   });

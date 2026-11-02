@@ -3,10 +3,10 @@ import { check, date, foreignKey, index, pgTable, uuid } from "drizzle-orm/pg-co
 
 import type { CalendarDate } from "../../../utils";
 import { policyGroups } from "./policyGroupsTable";
-import { workingPatternPolicies } from "./workingPatternPoliciesTable";
+import { workingPatterns } from "./workingPatternsTable";
 
 /**
- * Which policy a group's members work by default, and when; a group's rows never overlap (an
+ * Which pattern a group's members work by default, and when; a group's rows never overlap (an
  * exclusion constraint the migration adds). Dated, so switching a group keeps its past weeks.
  */
 export const policyGroupWorkingPatterns = pgTable(
@@ -16,7 +16,7 @@ export const policyGroupWorkingPatterns = pgTable(
       .primaryKey()
       .default(sql`uuidv7()`),
     policyGroupId: uuid("policy_group_id").notNull(),
-    workingPatternPolicyId: uuid("working_pattern_policy_id").notNull(),
+    workingPatternId: uuid("working_pattern_id").notNull(),
     /** Null: from the beginning. */
     effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>(),
     /** The last day the row applies; null: open-ended. */
@@ -30,11 +30,11 @@ export const policyGroupWorkingPatterns = pgTable(
       foreignColumns: [policyGroups.id],
     }).onDelete("cascade"),
     foreignKey({
-      name: "policy_group_working_patterns_policy_fk",
-      columns: [table.workingPatternPolicyId],
-      foreignColumns: [workingPatternPolicies.id],
+      name: "policy_group_working_patterns_pattern_fk",
+      columns: [table.workingPatternId],
+      foreignColumns: [workingPatterns.id],
     }),
-    index("policy_group_working_patterns_policy_idx").on(table.workingPatternPolicyId),
+    index("policy_group_working_patterns_pattern_idx").on(table.workingPatternId),
     check(
       "policy_group_working_patterns_dates_in_order",
       sql`${table.effectiveUntil} >= ${table.effectiveFrom}`,
