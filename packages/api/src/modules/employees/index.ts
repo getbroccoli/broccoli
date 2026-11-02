@@ -24,6 +24,9 @@ export {
   createEmployeeReadService,
   createEmployeeService,
   createEmployeeSetupService,
+  createGroupWorkingPatternService,
+  createWorkingPatternService,
+  createEmployeeWorkingPatternService,
   createLocationService,
   employeeDirectory,
 } from "./app";
@@ -38,6 +41,9 @@ export type {
   EmployeeService,
   ImportedEmployees,
   InviteDetails,
+  GroupWorkingPatternService,
+  WorkingPatternService,
+  EmployeeWorkingPatternService,
   LocationService,
 } from "./app";
 export type {
@@ -46,6 +52,8 @@ export type {
   EmployeeOrderField,
   NewEmployee,
   NewEmployeeInput,
+  WeekdayMinutes,
+  WorkingWeek,
 } from "./domain";
 
 /**

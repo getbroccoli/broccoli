@@ -20,6 +20,15 @@ export {
   type LocationWithPeopleCount,
 } from "./locationService";
 export { employeeDirectory } from "./employeeDirectory";
+export {
+  createGroupWorkingPatternService,
+  type GroupWorkingPatternService,
+} from "./groupWorkingPatternService";
+export { createWorkingPatternService, type WorkingPatternService } from "./workingPatternService";
+export {
+  createEmployeeWorkingPatternService,
+  type EmployeeWorkingPatternService,
+} from "./employeeWorkingPatternService";
 export { employeeRecordType } from "./employeeRecordType";
 export {
   createEmployeeInviteService,

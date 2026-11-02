@@ -15,6 +15,7 @@ import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
 import { slackConnectionRepository } from "../../src/modules/slack/db";
 import { parseCalendarDate, todayInUtc } from "../../src/utils";
 import { TEST_SECRET_BOX } from "./testSecretBox";
+import { everyoneGroupId, insertPolicyGroup, leaveGroups, moveToGroup } from "./seedPolicyGroups";
 import { seedUser } from "./seedUser";
 import { testTransactor } from "./testTransactor";
 
@@ -173,6 +174,19 @@ export class TestSeed {
       }),
     );
   }
+
+  /** The id of the seeded "Everyone" group, which every new employee joins. */
+  everyoneGroupId = () => everyoneGroupId(this.orm);
+
+  /** A new policy group with no one in it. */
+  policyGroup = (name = `Group ${++this.#count}`) => insertPolicyGroup(this.orm, name);
+
+  /** Takes an employee out of every group, for all dates. */
+  leaveGroups = (employeeId: string) => leaveGroups(this.orm, employeeId);
+
+  /** Moves an employee into only `policyGroupId`, for all dates or from `from` with no group before. */
+  moveToGroup = (employeeId: string, policyGroupId: string, from: string | null = null) =>
+    moveToGroup(this.orm, { employeeId, policyGroupId, from });
 
   /** `count` default employees in one insert. */
   employees(count: number): Promise<Employee[]> {

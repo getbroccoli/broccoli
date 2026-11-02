@@ -14,11 +14,12 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 ## Data model
 
 - **`time_off_types`:** a kind of time off: Annual leave, Sickness, Family leave, Other, or the company's own. `type_key` marks the four seeded types, so rules never depend on a name.
-- **`policy_groups`** and **`employee_policy_groups`** (employees module): named sets of people, such as "Everyone" or "UK office", and who is in which group from when to when.
-- **`time_off_policies`:** the rules for one type. This is where `balance` (`balance_from_allowance`, `unlimited_balance`, `no_balance`), bank holidays (included in the allowance or on top) and the leave year start (a fixed date or the employee's start date) are set. A policy is either a group's default for that type or used only through assignments.
+- **`policy_groups`** and **`employee_policy_groups`** (employees module): named sets of people, such as "Everyone" or "UK office", and who is in which group from when to when. Every new person joins "Everyone"; see the [employees module](../employees/module.md#policy-groups).
+- **`time_off_policies`:** the rules for one type. This is where `balance` (`balance_from_allowance`, `unlimited_balance`, `no_balance`), bank holidays (included in the allowance or on top) and the leave year start (a fixed date or the employee's start date) are set. A policy is a group's default for that type through `policy_group_time_off_policies`, or used only through assignments.
 - **`time_off_allowance_rules`:** the parts that add up to a policy's allowance:
   - `yearly_entitlement`: days for a working week, as contracts state them (28 for 5), with an optional `max_days`;
   - `service_extra`: extra days after a number of years of service.
+- **`policy_group_time_off_policies`:** which policy a group gets for one type, from a date to a date. Dated, so moving a group to another policy keeps its earlier dates. The migration links the default policies to "Everyone" for all dates.
 - **`time_off_policy_assignments`:** exceptions, meaning one person on a given policy between two dates.
 - **`allowances`:** one person's allowance for one type and one leave year. It has no amount column; its dates are fixed when it is created and never change.
 - **`allowance_ledger_lines`:** every change to an allowance (grants, bank holidays, booked days, manual adjustments, rounding), with its effective date, cause and author.
@@ -30,7 +31,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 For one employee, type and date:
 
 1. the person's assignment on that date, if any;
-2. otherwise their group's policy for that type;
+2. otherwise the policy their group gets for that type on that date;
 3. otherwise none, and the person cannot book that type.
 
 An assignment or membership counts only on days the person has an employment.

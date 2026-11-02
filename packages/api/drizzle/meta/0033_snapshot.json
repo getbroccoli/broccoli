@@ -1,5 +1,5 @@
 {
-  "id": "5c0546d0-af38-46ae-88f6-d53b59bcc6fa",
+  "id": "7d3deba1-9f04-42bf-8170-46533a7c49ca",
   "prevId": "0e1e1342-d814-4a9b-8a8e-c2c63ab336f1",
   "version": "7",
   "dialect": "postgresql",
@@ -938,12 +938,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "location_id": {
-          "name": "location_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1001,15 +995,6 @@
         }
       },
       "foreignKeys": {
-        "employees_location_id_locations_id_fk": {
-          "name": "employees_location_id_locations_id_fk",
-          "tableFrom": "employees",
-          "tableTo": "locations",
-          "columnsFrom": ["location_id"],
-          "columnsTo": ["id"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "employees_avatar_file_id_files_id_fk": {
           "name": "employees_avatar_file_id_files_id_fk",
           "tableFrom": "employees",
@@ -1046,6 +1031,90 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.employee_working_pattern_assignments": {
+      "name": "employee_working_pattern_assignments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "employee_id": {
+          "name": "employee_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "working_pattern_id": {
+          "name": "working_pattern_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_until": {
+          "name": "effective_until",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "employee_working_pattern_assignments_pattern_idx": {
+          "name": "employee_working_pattern_assignments_pattern_idx",
+          "columns": [
+            {
+              "expression": "working_pattern_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "employee_working_pattern_assignments_employee_fk": {
+          "name": "employee_working_pattern_assignments_employee_fk",
+          "tableFrom": "employee_working_pattern_assignments",
+          "tableTo": "employees",
+          "columnsFrom": ["employee_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "employee_working_pattern_assignments_pattern_fk": {
+          "name": "employee_working_pattern_assignments_pattern_fk",
+          "tableFrom": "employee_working_pattern_assignments",
+          "tableTo": "working_patterns",
+          "columnsFrom": ["working_pattern_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "employee_working_pattern_assignments_dates_in_order": {
+          "name": "employee_working_pattern_assignments_dates_in_order",
+          "value": "\"employee_working_pattern_assignments\".\"effective_until\" >= \"employee_working_pattern_assignments\".\"effective_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.employments": {
       "name": "employments",
       "schema": "",
@@ -1068,13 +1137,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
-        },
-        "fte": {
-          "name": "fte",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 100
         },
         "start_date": {
           "name": "start_date",
@@ -1130,10 +1192,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "employments_fte_range": {
-          "name": "employments_fte_range",
-          "value": "\"employments\".\"fte\" between 1 and 100"
-        },
         "employments_not_own_manager": {
           "name": "employments_not_own_manager",
           "value": "\"employments\".\"direct_manager_id\" <> \"employments\".\"employee_id\""
@@ -1292,53 +1350,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.locations": {
-      "name": "locations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "uuidv7()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "locations_name_unique": {
-          "name": "locations_name_unique",
-          "columns": [
-            {
-              "expression": "lower(btrim(\"name\"))",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "locations_name_not_blank": {
-          "name": "locations_name_not_blank",
-          "value": "btrim(\"locations\".\"name\") <> ''"
-        }
-      },
-      "isRLSEnabled": false
-    },
     "public.policy_groups": {
       "name": "policy_groups",
       "schema": "",
@@ -1375,6 +1386,243 @@
       },
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.policy_group_working_patterns": {
+      "name": "policy_group_working_patterns",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "policy_group_id": {
+          "name": "policy_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "working_pattern_id": {
+          "name": "working_pattern_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_until": {
+          "name": "effective_until",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "policy_group_working_patterns_pattern_idx": {
+          "name": "policy_group_working_patterns_pattern_idx",
+          "columns": [
+            {
+              "expression": "working_pattern_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "policy_group_working_patterns_group_fk": {
+          "name": "policy_group_working_patterns_group_fk",
+          "tableFrom": "policy_group_working_patterns",
+          "tableTo": "policy_groups",
+          "columnsFrom": ["policy_group_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "policy_group_working_patterns_pattern_fk": {
+          "name": "policy_group_working_patterns_pattern_fk",
+          "tableFrom": "policy_group_working_patterns",
+          "tableTo": "working_patterns",
+          "columnsFrom": ["working_pattern_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "policy_group_working_patterns_dates_in_order": {
+          "name": "policy_group_working_patterns_dates_in_order",
+          "value": "\"policy_group_working_patterns\".\"effective_until\" >= \"policy_group_working_patterns\".\"effective_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.working_patterns": {
+      "name": "working_patterns",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "working_patterns_name_unique": {
+          "name": "working_patterns_name_unique",
+          "nullsNotDistinct": false,
+          "columns": ["name"]
+        },
+        "working_patterns_key_unique": {
+          "name": "working_patterns_key_unique",
+          "nullsNotDistinct": false,
+          "columns": ["key"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "working_patterns_name_not_blank": {
+          "name": "working_patterns_name_not_blank",
+          "value": "btrim(\"working_patterns\".\"name\") <> ''"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.working_pattern_weeks": {
+      "name": "working_pattern_weeks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "working_pattern_id": {
+          "name": "working_pattern_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "monday_minutes": {
+          "name": "monday_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tuesday_minutes": {
+          "name": "tuesday_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "wednesday_minutes": {
+          "name": "wednesday_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thursday_minutes": {
+          "name": "thursday_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "friday_minutes": {
+          "name": "friday_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "saturday_minutes": {
+          "name": "saturday_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sunday_minutes": {
+          "name": "sunday_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_day_minutes": {
+          "name": "full_day_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "working_pattern_weeks_pattern_fk": {
+          "name": "working_pattern_weeks_pattern_fk",
+          "tableFrom": "working_pattern_weeks",
+          "tableTo": "working_patterns",
+          "columnsFrom": ["working_pattern_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "working_pattern_weeks_pattern_from_unique": {
+          "name": "working_pattern_weeks_pattern_from_unique",
+          "nullsNotDistinct": true,
+          "columns": ["working_pattern_id", "effective_from"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "working_pattern_weeks_minutes_in_a_day": {
+          "name": "working_pattern_weeks_minutes_in_a_day",
+          "value": "least(\"working_pattern_weeks\".\"monday_minutes\", \"working_pattern_weeks\".\"tuesday_minutes\", \"working_pattern_weeks\".\"wednesday_minutes\",\n        \"working_pattern_weeks\".\"thursday_minutes\", \"working_pattern_weeks\".\"friday_minutes\", \"working_pattern_weeks\".\"saturday_minutes\",\n        \"working_pattern_weeks\".\"sunday_minutes\") >= 0\n        and greatest(\"working_pattern_weeks\".\"monday_minutes\", \"working_pattern_weeks\".\"tuesday_minutes\", \"working_pattern_weeks\".\"wednesday_minutes\",\n        \"working_pattern_weeks\".\"thursday_minutes\", \"working_pattern_weeks\".\"friday_minutes\", \"working_pattern_weeks\".\"saturday_minutes\",\n        \"working_pattern_weeks\".\"sunday_minutes\") between 1 and \"working_pattern_weeks\".\"full_day_minutes\""
+        },
+        "working_pattern_weeks_full_day_in_a_day": {
+          "name": "working_pattern_weeks_full_day_in_a_day",
+          "value": "\"working_pattern_weeks\".\"full_day_minutes\" <= 1440"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.external_agent_codes": {
@@ -2162,6 +2410,96 @@
       },
       "isRLSEnabled": false
     },
+    "public.policy_group_time_off_policies": {
+      "name": "policy_group_time_off_policies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "policy_group_id": {
+          "name": "policy_group_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "time_off_type_id": {
+          "name": "time_off_type_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "time_off_policy_id": {
+          "name": "time_off_policy_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_until": {
+          "name": "effective_until",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "policy_group_time_off_policies_policy_idx": {
+          "name": "policy_group_time_off_policies_policy_idx",
+          "columns": [
+            {
+              "expression": "time_off_policy_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "policy_group_time_off_policies_type_fk": {
+          "name": "policy_group_time_off_policies_type_fk",
+          "tableFrom": "policy_group_time_off_policies",
+          "tableTo": "time_off_types",
+          "columnsFrom": ["time_off_type_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "policy_group_time_off_policies_policy_of_type_fk": {
+          "name": "policy_group_time_off_policies_policy_of_type_fk",
+          "tableFrom": "policy_group_time_off_policies",
+          "tableTo": "time_off_policies",
+          "columnsFrom": ["time_off_policy_id", "time_off_type_id"],
+          "columnsTo": ["id", "time_off_type_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "policy_group_time_off_policies_dates_in_order": {
+          "name": "policy_group_time_off_policies_dates_in_order",
+          "value": "\"policy_group_time_off_policies\".\"effective_until\" >= \"policy_group_time_off_policies\".\"effective_from\""
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.time_off_allowance_rules": {
       "name": "time_off_allowance_rules",
       "schema": "",
@@ -2386,12 +2724,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "policy_group_id": {
-          "name": "policy_group_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "balance": {
           "name": "balance",
           "type": "text",
@@ -2437,11 +2769,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "time_off_policies_group_type_unique": {
-          "name": "time_off_policies_group_type_unique",
-          "nullsNotDistinct": false,
-          "columns": ["policy_group_id", "time_off_type_id"]
-        },
         "time_off_policies_id_type_unique": {
           "name": "time_off_policies_id_type_unique",
           "nullsNotDistinct": false,

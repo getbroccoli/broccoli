@@ -5,9 +5,8 @@ import { timeOffTypes } from "./timeOffTypesTable";
 
 /**
  * The rules for one time off type: how leave is counted, bank holidays and the leave year. The
- * amounts are its allowance rules. `policy_group_id` names the group it applies to by default;
- * null means it is used only through assignments. The migration adds that foreign key, since
- * the employees module owns the groups.
+ * amounts are its allowance rules; the groups it applies to, and when, are in
+ * `policy_group_time_off_policies`.
  */
 export const timeOffPolicies = pgTable(
   "time_off_policies",
@@ -19,7 +18,6 @@ export const timeOffPolicies = pgTable(
       .notNull()
       .references(() => timeOffTypes.id),
     name: text("name").notNull(),
-    policyGroupId: uuid("policy_group_id"),
     balance: text("balance", {
       enum: ["balance_from_allowance", "unlimited_balance", "no_balance"],
     }).notNull(),
@@ -33,7 +31,6 @@ export const timeOffPolicies = pgTable(
     leaveYearStartDay: integer("leave_year_start_day"),
   },
   (table) => [
-    unique("time_off_policies_group_type_unique").on(table.policyGroupId, table.timeOffTypeId),
     // The target of the assignments' foreign key, which keeps a policy on its own type.
     unique("time_off_policies_id_type_unique").on(table.id, table.timeOffTypeId),
     check(

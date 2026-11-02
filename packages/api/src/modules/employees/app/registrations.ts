@@ -1,5 +1,6 @@
 // What this module adds to core's shared registries.
 
+import type { CalendarDate } from "../../../utils";
 import type { SendInviteJob } from "./invites/sendInviteJob";
 
 declare module "../../../core/jobs" {
@@ -8,9 +9,21 @@ declare module "../../../core/jobs" {
   }
 }
 
+declare module "../../../core/events" {
+  interface DomainEvents {
+    /**
+     * The working weeks of these employees may have changed from `from` on, null from the
+     * beginning; a reader recalculates what depends on them from that date.
+     */
+    "employees.working_pattern_changed": { employeeIds: string[]; from: CalendarDate | null };
+  }
+}
+
 declare module "../../../core/records" {
   interface RecordTypes {
     employee: true;
+    /** A person's own working pattern changes; the record id is the employee's. */
+    working_pattern: true;
   }
   interface CauseKinds {
     /** The person's manager was removed, so they have none; the line's `manager` change names them. No ref. */
