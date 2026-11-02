@@ -10,4 +10,4 @@ export {
   type InviteRepository,
   type NewInvite,
 } from "./inviteRepository";
-export { locationRepository, type LocationRepository } from "./locationRepository";
+export { locationRepository } from "./locationRepository";
