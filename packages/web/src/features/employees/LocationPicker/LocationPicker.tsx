@@ -26,7 +26,8 @@ export function LocationPicker({
   onDone,
   onRevert,
 }: Props) {
-  const { data } = useQuery(LocationPickerDocument);
+  // Locations change in Settings, so the list reloads whenever the picker opens.
+  const { data } = useQuery(LocationPickerDocument, { fetchPolicy: "cache-and-network" });
   const shown = value ? field.format(value) : t("people.panel.location.none");
 
   return (

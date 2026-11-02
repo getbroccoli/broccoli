@@ -1,4 +1,4 @@
-import { employeeFieldErrors, type NewEmployeeInput } from "../../employees";
+import { employeeFieldErrors, type NewEmployeeInput, parseEmployeeField } from "../../employees";
 import type { ImportEmployee } from "./importEmployee";
 
 /** Why Approve would leave an import employee out; the first failing field wins. */
@@ -19,6 +19,11 @@ export function isReady(employee: ImportEmployee, takenEmails: ReadonlySet<strin
 /** Why the import employee is incomplete, or null when it is ready. */
 export function incompleteReason(employee: ImportEmployee): IncompleteReason | null {
   const fields = employeeFieldErrors(toNewEmployeeInput(employee)).map(({ field }) => field);
+  const location = employee.values.location.value;
+  // A missing location is fine; one the location rules refuse, such as a too long name, is not.
+  if (location && "code" in parseEmployeeField("location", location)) {
+    fields.push("location");
+  }
   if (fields.length === 0) {
     return null;
   }

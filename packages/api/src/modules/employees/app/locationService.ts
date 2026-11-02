@@ -42,7 +42,9 @@ export function createLocationService({
     async createLocation(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const name = parseLocationName(input.name);
-      const location = await refuseTakenName(() => locations.insert(name));
+      const location = await refuseTakenName(() =>
+        transact((tx) => locationRepository(tx).insert(name)),
+      );
       logger.info({ locationId: location.id }, "Added a location");
       return location;
     },
@@ -50,7 +52,9 @@ export function createLocationService({
       ctx.require("MANAGE_WORKSPACE");
       const id = parseLocationId(input.id);
       const name = parseLocationName(input.name);
-      const location = await refuseTakenName(() => locations.rename(id, name));
+      const location = await refuseTakenName(() =>
+        transact((tx) => locationRepository(tx).rename(id, name)),
+      );
       if (!location) {
         throw locationNotFound();
       }

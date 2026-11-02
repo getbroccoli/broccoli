@@ -13,13 +13,16 @@ import { nameFailure } from "./nameFailure";
 
 /** The Settings page's Locations section: the places people work, which admins add, rename and delete. */
 export function LocationSettings() {
-  const { data, error, refetch } = useQuery(LocationSettingsDocument);
+  // Counts and order are the server's, and change from people's panels, so they reload whenever shown.
+  const { data, error, refetch } = useQuery(LocationSettingsDocument, {
+    fetchPolicy: "cache-and-network",
+  });
   const [name, setName] = useState("");
   // The list is ordered by the server, so it reloads with the new location in its place.
   const [createLocation, creation] = usePayloadMutation(CreateLocationDocument, {
     refetch: [LocationSettingsDocument],
   });
-  const failure = nameFailure(creation.payloadError);
+  const failure = nameFailure(creation.payloadError, creation.error);
 
   const add = async (event: FormEvent) => {
     event.preventDefault();

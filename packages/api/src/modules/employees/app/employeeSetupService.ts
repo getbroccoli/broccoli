@@ -7,6 +7,7 @@ import { employeeRepository, employmentRepository, locationRepository } from "..
 import {
   type Employee,
   type NewEmployeeInput,
+  parseLocationName,
   parseNewEmployee,
   tryParseNewEmployee,
 } from "../domain";
@@ -177,10 +178,15 @@ async function placeInLocations<T extends object>(
   tx: Tx,
   employees: readonly { employee: T; locationName?: string | null }[],
 ): Promise<(T & { locationId: string | null })[]> {
-  const names = employees.flatMap(({ locationName }) => locationName?.trim() || []);
-  const locations = await locationRepository(tx).findOrCreate(names);
-  return employees.map(({ employee, locationName }) => ({
+  // A blank name is no location; any other must pass the location rules, as review checked.
+  const names = employees.map(({ locationName }) =>
+    locationName?.trim() ? parseLocationName(locationName) : null,
+  );
+  const locations = await locationRepository(tx).findOrCreate(
+    names.filter((name) => name !== null),
+  );
+  return employees.map(({ employee }, index) => ({
     ...employee,
-    locationId: locationName?.trim() ? locations.get(locationName.trim())!.id : null,
+    locationId: names[index] ? locations.get(names[index])!.id : null,
   }));
 }

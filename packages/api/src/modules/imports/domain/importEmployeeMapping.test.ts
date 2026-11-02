@@ -17,6 +17,11 @@ it.each([
     values: { jobTitle: "a".repeat(101) },
     reason: "other",
   },
+  {
+    description: "a location over 100 characters",
+    values: { location: "a".repeat(101) },
+    reason: "other",
+  },
 ])("reports $reason for an import employee with $description", ({ values, reason }) => {
   const incomplete = employee(values);
 

@@ -26,7 +26,7 @@ export const readPeopleSchema = z
           email: personValue("Work email address."),
           jobTitle: personValue("Job title or role."),
           location: personValue(
-            "Where the person works: their site, office or work location, such as a city or Remote; the most specific place when several qualify, such as a site over a branch or agency. Never a home address, a country of residence, a department or org unit, where things are stored, or a work mode such as onsite or hybrid.",
+            "Where the person works: their site, office or work location, such as a city or Remote; the most specific place when several qualify, such as a site over an agency or region. Never a home address, a country of residence, a department or org unit, where things are stored, or a work mode such as onsite or hybrid.",
           ),
           startDate: personValue("First working day, as YYYY-MM-DD."),
           manager: personValue(

@@ -92,8 +92,8 @@ export function createEmployeeService({
       await ctx.requireWrite("employee", [employeeId], fieldsSent(input));
       const { changes, managerId, locationId, reason } = parseEmployeeUpdate(input);
       const { employee, historyLine } = await transact(async (tx) => {
-        if (managerId !== undefined) {
-          // Before the employee row, in the order a deletion takes them, so the two cannot deadlock.
+        if (managerId !== undefined || locationId !== undefined) {
+          // Before the employee row and the location, in the order a deletion or reset takes them, so they cannot deadlock.
           await employmentRepository(tx).lockForWrites();
         }
         const { startDate, ...fields } = changes;

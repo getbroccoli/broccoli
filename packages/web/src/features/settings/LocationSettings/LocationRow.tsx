@@ -5,11 +5,12 @@ import {
   type LocationSettingsQuery,
   UpdateLocationDocument,
 } from "@/__generated__/graphql";
-import { evictRecord, usePayloadMutation } from "@/apollo";
+import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 
+import { forgetLocation } from "../cache";
 import { nameFailure } from "./nameFailure";
 
 type Props = {
@@ -22,10 +23,10 @@ export function LocationRow({ location }: Props) {
   const [updateLocation, update] = usePayloadMutation(UpdateLocationDocument);
   const [deleteLocation, deletion] = usePayloadMutation(DeleteLocationDocument, {
     update: (cache, { data }) => {
-      if (data?.location.delete.deletedLocationId) evictRecord(cache, "Location", location.id);
+      if (data?.location.delete.deletedLocationId) forgetLocation(cache, location.id);
     },
   });
-  const failure = nameFailure(update.payloadError);
+  const failure = nameFailure(update.payloadError, update.error);
 
   const rename = async (event: FormEvent) => {
     event.preventDefault();
@@ -84,10 +85,10 @@ export function LocationRow({ location }: Props) {
             ? t("settings.locations.peopleOne")
             : t("settings.locations.people", { count: String(location.peopleCount) })}
         </p>
-        {deletion.payloadError && (
+        {(deletion.payloadError || deletion.error) && (
           <p role="alert" className="text-sm text-destructive">
             {t(
-              deletion.payloadError.__typename === "ConflictError"
+              deletion.payloadError?.__typename === "ConflictError"
                 ? "settings.locations.inUse"
                 : "settings.locations.failed",
               { name: location.name },
