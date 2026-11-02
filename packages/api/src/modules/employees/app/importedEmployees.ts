@@ -1,11 +1,13 @@
 import type { Orm, Tx } from "../../../core/db";
-import { type HistoryAppend, purgeRecordHistory } from "../../../core/records";
+import { createRecordHistoryService, type HistoryAppend } from "../../../core/records";
 import { readOwner } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository, employmentRepository } from "../db";
 import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
 import { setNewEmployeeManagers } from "./useCases/employeeManagers";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
+
+const recordHistory = createRecordHistoryService();
 
 /** What adding imported employees did. */
 export interface ImportedEmployees {
@@ -82,5 +84,5 @@ export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<
   const owner = await readOwner(tx);
   await employeeRepository(tx).deleteAll(owner?.userId ?? null);
   // After the delete, which waits for any update holding an employee row, so its line goes too.
-  await purgeRecordHistory(tx, "employee");
+  await recordHistory.purge(tx, "employee");
 }

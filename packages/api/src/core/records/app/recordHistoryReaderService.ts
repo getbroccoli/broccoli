@@ -1,104 +1,48 @@
 import { ApplicationError } from "../../applicationError";
-import type { Orm, Tx } from "../../db";
-import { type Connection, type PageArgs, paginate } from "../../pagination";
+import type { Orm } from "../../db";
+import type { Connection, PageArgs } from "../../pagination";
 import {
   isInRecordScope,
   type PermissionObject,
   type SecurityContext,
   type Subject,
 } from "../../security";
-import { findUserEmails, HISTORY_SORT_VALUES, recordHistoryRepository } from "../db";
-import {
-  authorOf,
-  type CauseKind,
-  type FieldChange,
-  type HistoryAppend,
-  type HistoryLine,
-  type RecordOperation,
-  type RecordType,
-} from "../domain";
+import { findUserEmails } from "../db";
+import type { FieldChange, HistoryLine, RecordType } from "../domain";
+import { createRecordHistoryService } from "./recordHistoryService";
 
-/** A change to one record, published once its transaction commits; it carries field keys, never values. */
-export interface RecordChanged {
-  historyId: string;
-  recordType: RecordType;
-  recordId: string;
-  operation: RecordOperation;
-  fields: string[];
-  causeKind: CauseKind;
-  causeRef: string | null;
-}
-
-declare module "../../events" {
-  interface DomainEvents {
-    "records.changed": RecordChanged;
-  }
-}
-
-/**
- * Appends one history line per record in `tx`, made by the author of `ctx`, and publishes one
- * `records.changed` per line. Returns the lines in the order of `append.records`.
- */
-export async function appendRecordHistory(
-  ctx: SecurityContext,
-  tx: Tx,
-  { recordType, operation, cause, reason = null, records }: HistoryAppend,
-): Promise<HistoryLine[]> {
-  const author = authorOf(ctx);
-  const lines = await recordHistoryRepository(tx).insert(
-    records.map(({ recordId, changes }) => ({
-      recordType,
-      recordId,
-      operation,
-      author,
-      cause: { kind: cause.kind, ref: cause.ref ?? null },
-      reason,
-      changes,
-    })),
-  );
-  for (const line of lines) {
-    tx.publish("records.changed", {
-      historyId: line.id,
-      recordType,
-      recordId: line.recordId,
-      operation,
-      fields: line.changes.map(({ field }) => field),
-      causeKind: line.cause.kind,
-      causeRef: line.cause.ref,
-    });
-  }
-  return lines;
-}
-
-/** One record's history, newest first, one page at a time. The caller authorizes the read. */
-export async function readRecordHistory(
-  db: Orm | Tx,
-  recordType: RecordType,
-  recordId: string,
-  args: PageArgs,
-): Promise<Connection<HistoryLine>> {
-  return paginate(args, {
-    order: { field: "NEWEST", direction: "DESC" },
-    keysetValues: { NEWEST: HISTORY_SORT_VALUES },
-    fetch: ({ after, limit }) =>
-      recordHistoryRepository(db).findPage({ recordType, recordId, after, limit }),
-  });
-}
-
-/** The current email of each author among these users who still exists, by user id. */
-export function readAuthorEmails(
-  orm: Orm,
-  userIds: readonly string[],
-): Promise<Map<string, string>> {
-  return findUserEmails(orm, userIds);
-}
-
-/**
- * Deletes every history line of one record type in `tx`, without publishing; returns how many.
- * Only a deliberate reset calls it, such as leaving the demo, never an ordinary removal.
- */
-export function purgeRecordHistory(tx: Tx, recordType: RecordType): Promise<number> {
-  return recordHistoryRepository(tx).deleteRecordType(recordType);
+/** Reads the history of a record of any type, its records and their access, for whoever its type allows. */
+export interface RecordHistoryReaderService {
+  /** Refuses with FORBIDDEN a record type nobody registered; an id that names no record reads as empty. */
+  readHistory(
+    ctx: SecurityContext,
+    recordType: RecordType,
+    recordId: string,
+    args: PageArgs,
+  ): Promise<Connection<HistoryLine>>;
+  /** The records still there among these ids, each marked with its GraphQL type, by id. */
+  readRecords(
+    ctx: SecurityContext,
+    recordType: RecordType,
+    ids: readonly string[],
+  ): Promise<Map<string, LoadedRecord>>;
+  /**
+   * The lines, in their order, with each value that names a record the caller may not read hidden:
+   * value and label null, its flag set. A record that is gone stays shown only to a caller who
+   * reads every record of its type. Never refuses.
+   */
+  hideOutOfScopeReferences(
+    ctx: SecurityContext,
+    lines: readonly HistoryLine[],
+  ): Promise<VisibleHistoryLine[]>;
+  /** The current email of each author among these users who still exists, by user id. */
+  readAuthorEmails(userIds: readonly string[]): Promise<Map<string, string>>;
+  /** What the caller may do to each of these records, by id, as `AnyRecord.access` shows it. */
+  readAccess(
+    ctx: SecurityContext,
+    recordType: RecordType,
+    recordIds: readonly string[],
+  ): Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>>;
 }
 
 /** What core needs from the module that owns a record type. */
@@ -126,71 +70,17 @@ export type VisibleFieldChange = FieldChange & { oldHidden: boolean; newHidden: 
 /** A history line as a reader sees it. */
 export type VisibleHistoryLine = Omit<HistoryLine, "changes"> & { changes: VisibleFieldChange[] };
 
-/** What the caller may do to each of these records, by id, as `AnyRecord.access` shows it. */
-export async function readRecordAccess(
-  ctx: SecurityContext,
-  registration: RecordTypeRegistration,
-  recordIds: readonly string[],
-): Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>> {
-  const { object, editableFields } = registration.permissions;
-  const subjects = await registration.subjectsOf(recordIds);
-  const access = await ctx.recordAccess(object, [...new Set(subjects.values())]);
-  return new Map(
-    recordIds.map((id) => {
-      const subject = subjects.get(id);
-      const found = subject === undefined ? undefined : access.get(subject);
-      if (!found) return [id, { canUpdate: false, canDelete: false, editableFields: [] }];
-      const { canUpdate, canDelete, writableFields } = found;
-      return [
-        id,
-        {
-          canUpdate,
-          canDelete,
-          editableFields: editableFields.filter(
-            (field) => writableFields === "*" || writableFields.includes(field),
-          ),
-        },
-      ];
-    }),
-  );
-}
-
 /** A record as `RecordChange.record` returns it, marked with its GraphQL type. */
 export type LoadedRecord = { __typename: string };
 
 /** The record types that keep history, each registered by the module that owns it. */
 export type RecordTypeRegistry = { [Type in RecordType]?: RecordTypeRegistration };
 
-/** Reads the history of a record of any type, and its records, for whoever its type allows. */
-export interface RecordHistoryReader {
-  /** Refuses with FORBIDDEN a record type nobody registered; an id that names no record reads as empty. */
-  readHistory(
-    ctx: SecurityContext,
-    recordType: RecordType,
-    recordId: string,
-    args: PageArgs,
-  ): Promise<Connection<HistoryLine>>;
-  /** The records still there among these ids, each marked with its GraphQL type, by id. */
-  readRecords(
-    ctx: SecurityContext,
-    recordType: RecordType,
-    ids: readonly string[],
-  ): Promise<Map<string, LoadedRecord>>;
-  /**
-   * The lines, in their order, with each value that names a record the caller may not read hidden:
-   * value and label null, its flag set. A record that is gone stays shown only to a caller who
-   * reads every record of its type. Never refuses.
-   */
-  hideOutOfScopeReferences(
-    ctx: SecurityContext,
-    lines: readonly HistoryLine[],
-  ): Promise<VisibleHistoryLine[]>;
-}
-
-export function createRecordHistoryReader(
+export function createRecordHistoryReaderService(
   orm: Orm,
   registry: RecordTypeRegistry,
-): RecordHistoryReader {
+): RecordHistoryReaderService {
+  const history = createRecordHistoryService();
   const registrationOf = (recordType: RecordType) => {
     const registration = registry[recordType];
     if (!registration) {
@@ -213,7 +103,7 @@ export function createRecordHistoryReader(
       }
       return canonicalId === null
         ? { edges: [], pageInfo: { hasNextPage: false, endCursor: null } }
-        : readRecordHistory(orm, recordType, canonicalId, args);
+        : history.read(orm, recordType, canonicalId, args);
     },
     readRecords: async (ctx, recordType, ids) => {
       const registration = registrationOf(recordType);
@@ -264,6 +154,31 @@ export function createRecordHistoryReader(
           };
         }),
       }));
+    },
+    readAuthorEmails: (userIds) => findUserEmails(orm, userIds),
+    readAccess: async (ctx, recordType, recordIds) => {
+      const registration = registrationOf(recordType);
+      const { object, editableFields } = registration.permissions;
+      const subjects = await registration.subjectsOf(recordIds);
+      const access = await ctx.recordAccess(object, [...new Set(subjects.values())]);
+      return new Map(
+        recordIds.map((id) => {
+          const subject = subjects.get(id);
+          const found = subject === undefined ? undefined : access.get(subject);
+          if (!found) return [id, { canUpdate: false, canDelete: false, editableFields: [] }];
+          const { canUpdate, canDelete, writableFields } = found;
+          return [
+            id,
+            {
+              canUpdate,
+              canDelete,
+              editableFields: editableFields.filter(
+                (field) => writableFields === "*" || writableFields.includes(field),
+              ),
+            },
+          ];
+        }),
+      );
     },
   };
 }

@@ -2,16 +2,18 @@ import { expect } from "vitest";
 
 import type { Orm } from "../../src/core/db";
 import type { Connection } from "../../src/core/pagination";
-import { type HistoryLine, readRecordHistory } from "../../src/core/records";
+import { createRecordHistoryService, type HistoryLine } from "../../src/core/records";
 import { OWNER } from "./testSecurityContext";
 import { employeeUseCases } from "./useCases";
+
+const recordHistory = createRecordHistoryService();
 
 /** Replaying every change must reconstruct the stored employee, or empty fields after deletion. */
 export async function expectHistoryReplaysTo(orm: Orm, employeeId: string): Promise<void> {
   const lines: HistoryLine[] = [];
   let after: string | null = null;
   do {
-    const page: Connection<HistoryLine> = await readRecordHistory(orm, "employee", employeeId, {
+    const page: Connection<HistoryLine> = await recordHistory.read(orm, "employee", employeeId, {
       first: 100,
       after,
     });

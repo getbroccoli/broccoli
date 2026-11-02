@@ -1,5 +1,5 @@
 import type { Connection, PageArgs } from "../../../../core/pagination";
-import { createRecordHistoryReader, type HistoryLine } from "../../../../core/records";
+import { createRecordHistoryReaderService, type HistoryLine } from "../../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { type CalendarDate, parseUuid, todayInUtc } from "../../../../utils";
 import type { EmployeeRepository, EmploymentRepository } from "../../db";
@@ -85,7 +85,7 @@ export function readEmployeeHistory(
   employeeId: string,
   args: PageArgs,
 ): Promise<Connection<HistoryLine>> {
-  return createRecordHistoryReader(orm, { employee: employeeRecordType(orm) }).readHistory(
+  return createRecordHistoryReaderService(orm, { employee: employeeRecordType(orm) }).readHistory(
     ctx,
     "employee",
     employeeId,

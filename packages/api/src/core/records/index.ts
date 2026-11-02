@@ -1,21 +1,18 @@
 import type { Orm } from "../db";
 import { readSdl, type Resolvers } from "../graphql";
-import { createRecordHistoryReader, type RecordTypeRegistry } from "./app";
+import { createRecordHistoryReaderService, type RecordTypeRegistry } from "./app";
 import { createResolvers } from "./graphql";
 
 // Public values.
-export {
-  appendRecordHistory,
-  createRecordHistoryReader,
-  purgeRecordHistory,
-  readRecordHistory,
-} from "./app";
+export { createRecordHistoryReaderService, createRecordHistoryService } from "./app";
 export { changeReasonSchema, parseChangeReason } from "./domain";
 
 // Public types.
 export type {
   LoadedRecord,
   RecordChanged,
+  RecordHistoryReaderService,
+  RecordHistoryService,
   RecordTypeRegistration,
   RecordTypeRegistry,
 } from "./app";
@@ -45,6 +42,6 @@ export function recordsManifest(
   return {
     name: "records",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(orm, registry, createRecordHistoryReader(orm, registry)),
+    resolvers: createResolvers(registry, createRecordHistoryReaderService(orm, registry)),
   };
 }

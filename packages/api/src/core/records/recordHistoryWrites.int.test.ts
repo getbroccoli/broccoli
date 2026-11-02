@@ -12,7 +12,9 @@ import {
 } from "#test/support";
 
 import { ormOf } from "../db";
-import { appendRecordHistory, purgeRecordHistory, readRecordHistory } from ".";
+import { createRecordHistoryService } from ".";
+
+const recordHistory = createRecordHistoryService();
 
 test("appends one line per record and reads a record's lines newest first", async ({
   orm,
@@ -21,7 +23,7 @@ test("appends one line per record and reads a record's lines newest first", asyn
   const records = [EXAMPLE_RECORD, { ...EXAMPLE_RECORD, recordId: "example-2" }];
 
   const created = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY", ref: "source-1" },
@@ -30,7 +32,7 @@ test("appends one line per record and reads a record's lines newest first", asyn
     }),
   );
   const updated = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "UPDATED",
       cause: { kind: "EDITED_DIRECTLY" },
@@ -60,12 +62,12 @@ test("appends one line per record and reads a record's lines newest first", asyn
   }
   expect(updated[0]).toMatchObject({ cause: { kind: "EDITED_DIRECTLY", ref: null }, reason: null });
   expect(
-    (await readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, {})).edges.map(
+    (await recordHistory.read(orm, "example", EXAMPLE_RECORD.recordId, {})).edges.map(
       ({ node }) => node,
     ),
   ).toEqual([updated[0], created[0]]);
   expect(
-    (await readRecordHistory(orm, "example", "example-2", {})).edges.map(({ node }) => node),
+    (await recordHistory.read(orm, "example", "example-2", {})).edges.map(({ node }) => node),
   ).toEqual([created[1]]);
 });
 
@@ -79,7 +81,7 @@ test.for([
   },
 ])("records the $author.kind author", async ({ ctx, author }, { orm, transact }) => {
   await transact((tx) =>
-    appendRecordHistory(ctx, tx, {
+    recordHistory.append(ctx, tx, {
       recordType: "example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY" },
@@ -87,7 +89,7 @@ test.for([
     }),
   );
 
-  const { edges } = await readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, {});
+  const { edges } = await recordHistory.read(orm, "example", EXAMPLE_RECORD.recordId, {});
   expect(edges.map(({ node }) => node.author)).toEqual([author]);
 });
 
@@ -97,7 +99,7 @@ test("publishes one event per line only after commit, with field keys and no val
   const { transact, events } = recordChangedEvents(orm);
 
   const lines = await transact(async (tx) => {
-    const lines = await appendRecordHistory(OWNER, tx, {
+    const lines = await recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY", ref: "source-1" },
@@ -125,7 +127,7 @@ test("a rolled-back append keeps no lines and publishes nothing", async ({ orm }
 
   await expect(
     transact(async (tx) => {
-      await appendRecordHistory(OWNER, tx, {
+      await recordHistory.append(OWNER, tx, {
         recordType: "example",
         operation: "CREATED",
         cause: { kind: "EDITED_DIRECTLY" },
@@ -135,7 +137,7 @@ test("a rolled-back append keeps no lines and publishes nothing", async ({ orm }
     }),
   ).rejects.toMatchObject({ cause: { code: "22012" } });
 
-  expect((await readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, {})).edges).toEqual([]);
+  expect((await recordHistory.read(orm, "example", EXAMPLE_RECORD.recordId, {})).edges).toEqual([]);
   expect(events).toEqual([]);
 });
 
@@ -144,16 +146,16 @@ test("continues newest-first paging from the cursor even after another append", 
   transact,
 }) => {
   const lines = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "UPDATED",
       cause: { kind: "EDITED_DIRECTLY" },
       records: [EXAMPLE_RECORD, EXAMPLE_RECORD, EXAMPLE_RECORD],
     }),
   );
-  const first = await readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, { first: 2 });
+  const first = await recordHistory.read(orm, "example", EXAMPLE_RECORD.recordId, { first: 2 });
   await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "UPDATED",
       cause: { kind: "EDITED_DIRECTLY" },
@@ -161,7 +163,7 @@ test("continues newest-first paging from the cursor even after another append", 
     }),
   );
 
-  const second = await readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, {
+  const second = await recordHistory.read(orm, "example", EXAMPLE_RECORD.recordId, {
     first: 2,
     after: first.pageInfo.endCursor,
   });
@@ -177,27 +179,42 @@ test("purges every line of only the selected record type without publishing", as
   transact,
 }) => {
   await transact(async (tx) => {
-    await appendRecordHistory(OWNER, tx, {
+    await recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY" },
       records: [EXAMPLE_RECORD, { ...EXAMPLE_RECORD, recordId: "example-2" }],
     });
-    await appendRecordHistory(OWNER, tx, {
+    await recordHistory.append(OWNER, tx, {
       recordType: "other_example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY" },
       records: [EXAMPLE_RECORD],
     });
   });
-  const other = await readRecordHistory(orm, "other_example", EXAMPLE_RECORD.recordId, {});
+  const other = await recordHistory.read(orm, "other_example", EXAMPLE_RECORD.recordId, {});
   const { transact: transactWithEvents, events } = recordChangedEvents(orm);
 
-  const removed = await transactWithEvents((tx) => purgeRecordHistory(tx, "example"));
+  const removed = await transactWithEvents((tx) => recordHistory.purge(tx, "example"));
 
   expect(removed).toBe(2);
-  expect((await readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, {})).edges).toEqual([]);
-  expect((await readRecordHistory(orm, "example", "example-2", {})).edges).toEqual([]);
-  expect(await readRecordHistory(orm, "other_example", EXAMPLE_RECORD.recordId, {})).toEqual(other);
+  expect((await recordHistory.read(orm, "example", EXAMPLE_RECORD.recordId, {})).edges).toEqual([]);
+  expect((await recordHistory.read(orm, "example", "example-2", {})).edges).toEqual([]);
+  expect(await recordHistory.read(orm, "other_example", EXAMPLE_RECORD.recordId, {})).toEqual(
+    other,
+  );
   expect(events).toEqual([]);
+});
+
+test("refuses a history cursor id beyond the signed 64-bit range", async ({ orm }) => {
+  const after = Buffer.from(JSON.stringify(["NEWEST", "DESC", "9223372036854775808"])).toString(
+    "base64url",
+  );
+
+  await expect(
+    recordHistory.read(orm, "example", EXAMPLE_RECORD.recordId, { after }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "after", code: "invalid" }],
+  });
 });

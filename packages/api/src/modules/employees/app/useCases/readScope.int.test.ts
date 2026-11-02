@@ -8,7 +8,7 @@ import {
   WEBP,
 } from "#test/support";
 
-import { createRecordHistoryReader } from "../../../../core/records";
+import { createRecordHistoryReaderService } from "../../../../core/records";
 import type { Grant } from "../../../../core/security";
 import { employeeRecordType } from "..";
 
@@ -193,7 +193,7 @@ test("hides the caller's out-of-scope manager in their history", async ({ orm, s
   const ctx = signedIn(orm, { employeeId: mia.id, grants: [READ_SELF, READ_REPORTS] });
   const employees = employeeUseCases(orm);
   await employees.updateEmployee(OWNER, { id: mia.id, managerId: null });
-  const reader = createRecordHistoryReader(orm, { employee: employeeRecordType(orm) });
+  const reader = createRecordHistoryReaderService(orm, { employee: employeeRecordType(orm) });
 
   const page = await employees.readEmployeeHistory(ctx, mia.id, {});
   const visible = await reader.hideOutOfScopeReferences(
@@ -238,7 +238,7 @@ test("hides the caller's out-of-scope manager in an update's returned history li
       },
     ],
   });
-  const reader = createRecordHistoryReader(orm, { employee: employeeRecordType(orm) });
+  const reader = createRecordHistoryReaderService(orm, { employee: employeeRecordType(orm) });
 
   const { historyLine } = await employeeUseCases(orm).updateEmployee(ctx, {
     id: mia.id,

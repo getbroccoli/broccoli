@@ -3,7 +3,7 @@ import type { Orm, Transact, Tx } from "../../../../core/db";
 import { type MailSettings, readInstance } from "../../../../core/instance";
 import type { JobHandlers, JobQueue } from "../../../../core/jobs";
 import type { Logger } from "../../../../core/logger";
-import { appendRecordHistory, type HistoryLine } from "../../../../core/records";
+import { createRecordHistoryService, type HistoryLine } from "../../../../core/records";
 import type { SecretBox } from "../../../../core/secrets";
 import {
   permissionProfileRepository,
@@ -30,6 +30,8 @@ import {
 import { employeeDirectory } from "../employeeDirectory";
 import { employeeNotFound } from "../useCases/employeeNotFound";
 import { sendInviteJob } from "./sendInviteJob";
+
+const recordHistory = createRecordHistoryService();
 
 /** An admin's invites to sign in, from sending them to the person joining. */
 export interface EmployeeInviteService {
@@ -327,7 +329,7 @@ async function appendSignInLine(
     to: string;
   },
 ) {
-  const [line] = await appendRecordHistory(ctx, tx, {
+  const [line] = await recordHistory.append(ctx, tx, {
     recordType: "employee",
     operation: "UPDATED",
     cause: { kind, ref },

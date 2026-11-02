@@ -1,4 +1,8 @@
-import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
+import {
+  createRecordHistoryService,
+  type HistoryLine,
+  parseChangeReason,
+} from "../../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { parseUuid, todayInUtc } from "../../../../utils";
 import type { Tx } from "../../../../core/db";
@@ -6,6 +10,8 @@ import { employeeRepository, employmentRepository } from "../../db";
 import { type Employee, employeeChanges, managerChanges } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
+
+const recordHistory = createRecordHistoryService();
 
 /**
  * Removes an employee and their avatar and records what they held, their manager too, as a
@@ -37,7 +43,7 @@ export async function deleteEmployee(
     if (!deleted) {
       throw employeeNotFound();
     }
-    const [line] = await appendRecordHistory(ctx, tx, {
+    const [line] = await recordHistory.append(ctx, tx, {
       recordType: "employee",
       operation: "DELETED",
       cause: { kind: "EDITED_DIRECTLY" },
@@ -90,7 +96,7 @@ async function updateReportHistory(
   if (reportIds.length === 0) {
     return [];
   }
-  return appendRecordHistory(ctx, tx, {
+  return recordHistory.append(ctx, tx, {
     recordType: "employee",
     operation: "UPDATED",
     // The removed manager is in each line's `manager` change; a ref would only repeat them.

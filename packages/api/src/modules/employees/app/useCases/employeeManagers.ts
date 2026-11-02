@@ -1,12 +1,18 @@
 import { invalidInput } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
-import { appendRecordHistory, type FieldChange, type HistoryLine } from "../../../../core/records";
+import {
+  createRecordHistoryService,
+  type FieldChange,
+  type HistoryLine,
+} from "../../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { parseUuid, todayInUtc } from "../../../../utils";
 import { employeeRepository, employmentRepository } from "../../db";
 import { type Employee, managerChanges, parseEmployeeIds } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
+
+const recordHistory = createRecordHistoryService();
 
 /**
  * Makes `managerId` the manager of these employees from today, or no one with null, with a history
@@ -35,7 +41,7 @@ export async function setManagers(
     const lines =
       records.length === 0
         ? []
-        : await appendRecordHistory(ctx, tx, {
+        : await recordHistory.append(ctx, tx, {
             recordType: "employee",
             operation: "UPDATED",
             cause: { kind: "EDITED_DIRECTLY" },

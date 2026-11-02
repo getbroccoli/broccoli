@@ -1,26 +1,22 @@
 import DataLoader from "dataloader";
 
-import type { Orm } from "../../db";
 import { type GraphqlContext, perRequest, type Resolvers } from "../../graphql";
 import {
   type LoadedRecord,
-  readAuthorEmails,
-  readRecordAccess,
-  type RecordHistoryReader,
+  type RecordHistoryReaderService,
   type RecordTypeRegistry,
   type VisibleFieldChange,
 } from "../app";
 import type { HistoryLine, RecordType } from "../domain";
 
 export function createResolvers(
-  orm: Orm,
   registry: RecordTypeRegistry,
-  reader: RecordHistoryReader,
+  reader: RecordHistoryReaderService,
 ): Resolvers {
   const authorEmails = perRequest(
     () =>
       new DataLoader<string, string | null>(async (userIds) => {
-        const emails = await readAuthorEmails(orm, userIds);
+        const emails = await reader.readAuthorEmails(userIds);
         return userIds.map((userId) => emails.get(userId) ?? null);
       }),
   );
@@ -58,11 +54,15 @@ export function createResolvers(
   // `AnyRecord.access` on each registered type, one read per type and request however many
   // records a list holds; core cannot name the types statically.
   const accessResolvers = Object.fromEntries(
-    Object.values(registry).map((registration) => {
+    Object.entries(registry).map(([recordType, registration]) => {
       const access = perRequest(
         (context) =>
           new DataLoader(async (ids: readonly string[]) => {
-            const found = await readRecordAccess(context.getActor(), registration, ids);
+            const found = await reader.readAccess(
+              context.getActor(),
+              recordType as RecordType,
+              ids,
+            );
             return ids.map((id) => found.get(id)!);
           }),
       );

@@ -1,6 +1,10 @@
 import { invalidInput } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
-import { appendRecordHistory, type FieldChange, type HistoryLine } from "../../../../core/records";
+import {
+  createRecordHistoryService,
+  type FieldChange,
+  type HistoryLine,
+} from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../../utils";
 import { type EmployeeRepository, employeeRepository, employmentRepository } from "../../db";
@@ -16,6 +20,8 @@ import type { EmployeeContext } from "./employeeContext";
 import { changeManagers } from "./employeeManagers";
 import { employeeNotFound } from "./employeeNotFound";
 import { readableResult } from "./readableResult";
+
+const recordHistory = createRecordHistoryService();
 
 /**
  * Changes the fields an update sends and records the change in the employee's history, in one
@@ -51,7 +57,7 @@ export async function updateEmployee(
     if (changed.length === 0) {
       return { employee: after, historyLine: null };
     }
-    const [line] = await appendRecordHistory(ctx, tx, {
+    const [line] = await recordHistory.append(ctx, tx, {
       recordType: "employee",
       operation: "UPDATED",
       cause: { kind: "EDITED_DIRECTLY" },

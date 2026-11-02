@@ -1,7 +1,11 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import { type Orm, ormOf } from "../../../../core/db";
 import { readOwner } from "../../../../core/instance";
-import { appendRecordHistory, type HistoryLine, parseChangeReason } from "../../../../core/records";
+import {
+  createRecordHistoryService,
+  type HistoryLine,
+  parseChangeReason,
+} from "../../../../core/records";
 import {
   isInRecordScope,
   parseGivenProfiles,
@@ -16,6 +20,8 @@ import type { Employee } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 import { readableResult } from "./readableResult";
+
+const recordHistory = createRecordHistoryService();
 
 /**
  * Replaces the profiles given to the user an employee signs in as and records the change in the
@@ -55,7 +61,7 @@ export async function setPermissionProfiles(
     if (before === after) {
       return { employee, historyLine: null };
     }
-    const [line] = await appendRecordHistory(ctx, tx, {
+    const [line] = await recordHistory.append(ctx, tx, {
       recordType: "employee",
       operation: "UPDATED",
       cause: { kind: "EDITED_DIRECTLY" },
