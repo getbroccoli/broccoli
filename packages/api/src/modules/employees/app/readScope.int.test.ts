@@ -8,9 +8,9 @@ import {
   WEBP,
 } from "#test/support";
 
-import { createRecordHistoryReaderService } from "../../../../core/records";
-import type { Grant } from "../../../../core/security";
-import { employeeRecordType } from "..";
+import { createRecordHistoryReaderService } from "../../../core/records";
+import type { Grant } from "../../../core/security";
+import { employeeRecordType } from ".";
 
 test("lists the caller and everyone below them in the reporting line", async ({ orm, seed }) => {
   const { mia, ann, leo } = await reportingLine(seed);

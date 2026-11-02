@@ -1,5 +1,5 @@
 export { expect } from "vitest";
-export { deleteAllEmployees, employeeDirectory } from "../../src/modules/employees";
+export { createEmployeeSetupService, employeeDirectory } from "../../src/modules/employees";
 export {
   ADMIN,
   EMPLOYEE,
@@ -53,6 +53,7 @@ export {
   mailSettings,
   passwordResetEmail,
 } from "./useCases";
+export type { EmployeeServices } from "./useCases";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,

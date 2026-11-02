@@ -8,11 +8,13 @@ import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
 import { companyModule, readStoredCompany } from "./company";
 import { demoModule, prepareDemoFill } from "./demo";
-import { deleteAllEmployees, employeeDirectory, employeesModule } from "./employees";
+import { createEmployeeSetupService, employeeDirectory, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportUseCases, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
+
+const employeeSetup = createEmployeeSetupService();
 
 /** Settings that only some modules need, read from the environment by `main.ts`. */
 export interface ModuleSettings {
@@ -52,7 +54,7 @@ export function createModules(
       mailSettings,
       passwordResetEmail,
       addApprovedPeople: importUseCases.addApprovedPeople,
-      deleteAllEmployees,
+      deleteAllEmployees: employeeSetup.deleteAllEmployees,
       deleteFinishedImport: importUseCases.deleteFinishedImport,
     }),
     employeesModule({
@@ -71,7 +73,7 @@ export function createModules(
     manifests: [...manifests, recordsManifest(core.orm, manifests)],
     setupDemo: {
       prepareStart: importUseCases.prepareDemoStart,
-      deleteAllEmployees,
+      deleteAllEmployees: employeeSetup.deleteAllEmployees,
     },
     addApprovedPeople: importUseCases.addApprovedPeople,
     employeeDirectory: employeeDirectory(core.orm),

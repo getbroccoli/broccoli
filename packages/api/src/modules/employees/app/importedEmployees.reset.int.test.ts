@@ -10,14 +10,17 @@ import {
 } from "#test/support";
 
 import { ormOf } from "../../../core/db";
-import { deleteAllEmployees } from ".";
+import { employeeRepository, employmentRepository } from "../db";
+import { createEmployeeSetupService } from ".";
+
+const employeeSetup = createEmployeeSetupService();
 
 test("an employee created during a reset keeps its creation history", async ({ orm, transact }) => {
   const employees = employeeUseCases(orm);
   const resetReady = Promise.withResolvers<number>();
   const releaseReset = Promise.withResolvers<void>();
   const resetting = transact(async (tx) => {
-    await deleteAllEmployees(OWNER, tx);
+    await employeeSetup.deleteAllEmployees(OWNER, tx);
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     resetReady.resolve(rows[0]!.pid);
     await releaseReset.promise;
@@ -48,4 +51,39 @@ test("an employee created during a reset keeps its creation history", async ({ o
     history.edges.map(({ node }) => ({ recordId: node.recordId, operation: node.operation })),
   ).toEqual([{ recordId: employee.id, operation: "CREATED" }]);
   await expectHistoryReplaysTo(orm, employee.id);
+});
+
+test("a job title edit waiting for a reset lets it lock the employee", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee({ jobTitle: "Engineer" });
+  const employees = employeeUseCases(orm);
+  const resetReady = Promise.withResolvers<number>();
+  const releaseReset = Promise.withResolvers<void>();
+  const resetting = transact(async (tx) => {
+    await employmentRepository(tx).lockForWrites();
+    await ormOf(tx).execute(sql`lock table employees in share row exclusive mode`);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    resetReady.resolve(rows[0]!.pid);
+    await releaseReset.promise;
+    // Take the row lock reset's DELETE needs, keeping the employee for the waiting edit.
+    await employeeRepository(tx).lockByIds([employee.id]);
+  });
+  const blockingPid = await resetReady.promise;
+
+  const results = Promise.allSettled([
+    resetting,
+    employees.updateEmployee(OWNER, { id: employee.id, jobTitle: "Lead" }),
+  ]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseReset.resolve();
+    await results;
+  }
+
+  expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
+  expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ jobTitle: "Lead" });
 });

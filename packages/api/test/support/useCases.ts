@@ -26,8 +26,15 @@ import { createCompanyUseCases, readStoredCompany } from "../../src/modules/comp
 import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
 import {
   createEmployeeInviteService,
-  createEmployeeUseCases,
-  deleteAllEmployees,
+  createEmployeeManagerService,
+  createEmployeePermissionService,
+  createEmployeeReadService,
+  createEmployeeService,
+  createEmployeeSetupService,
+  type EmployeeManagerService,
+  type EmployeePermissionService,
+  type EmployeeReadService,
+  type EmployeeService,
 } from "../../src/modules/employees";
 import { createImportUseCases } from "../../src/modules/imports";
 import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
@@ -37,6 +44,8 @@ import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { testTransactor } from "./testTransactor";
+
+const employeeSetup = createEmployeeSetupService();
 
 /**
  * The company use cases on `orm` with test defaults: no brand is found and logs are
@@ -52,11 +61,24 @@ export function companyUseCases(
   return createCompanyUseCases({ orm, transact: testTransactor(orm), logger, brandLookup });
 }
 
+/** Every employee service a person's actions reach, together. */
+export type EmployeeServices = EmployeeService &
+  EmployeeReadService &
+  EmployeeManagerService &
+  EmployeePermissionService;
+
+/** Every employee service on `orm`, with silent logs. */
 export function employeeUseCases(
   orm: Orm,
   { transact = testTransactor(orm) }: { transact?: Transact } = {},
-) {
-  return createEmployeeUseCases({ orm, transact, logger: createLogger("silent") });
+): EmployeeServices {
+  const dependencies = { orm, transact, logger: createLogger("silent") };
+  return {
+    ...createEmployeeService(dependencies),
+    ...createEmployeeReadService(dependencies),
+    ...createEmployeeManagerService(dependencies),
+    ...createEmployeePermissionService(dependencies),
+  };
 }
 
 export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"]) {
@@ -70,7 +92,7 @@ export function systemUseCases(orm: Orm) {
     logger: createLogger("silent"),
     mode: "self_hosted",
     addApprovedPeople: importUseCases(orm).addApprovedPeople,
-    deleteAllEmployees,
+    deleteAllEmployees: employeeSetup.deleteAllEmployees,
     deleteFinishedImport: importUseCases(orm).deleteFinishedImport,
     aiSettings: aiSettings(orm),
     mailSettings: mailSettings(orm),

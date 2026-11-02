@@ -14,8 +14,10 @@ import {
   test,
 } from "#test/support";
 
-import { user } from "../../../../core/auth";
-import { createDemoEmployees } from "..";
+import { user } from "../../../core/auth";
+import { createEmployeeSetupService } from ".";
+
+const employeeSetup = createEmployeeSetupService();
 
 test("removing a manager clears them from every report with a history line", async ({
   orm,
@@ -115,7 +117,7 @@ test("deletes the employee and avatar while keeping a history of their removed v
     startDate: "2026-02-28",
   };
   await transact((tx) =>
-    createDemoEmployees(
+    employeeSetup.createDemoEmployees(
       OWNER,
       tx,
       [{ employee: input, avatar: { bytes: PNG, mimeType: "image/png" } }],

@@ -1,7 +1,11 @@
 import type { Orm, Tx } from "../../../../core/db";
 import { type Connection, type ListArgs, paginate, parseSearch } from "../../../../core/pagination";
 import type { SecurityContext } from "../../../../core/security";
-import { type EmployeeOrder, type EmployeeOrderField, findTakenEmails } from "../../../employees";
+import {
+  createEmployeeSetupService,
+  type EmployeeOrder,
+  type EmployeeOrderField,
+} from "../../../employees";
 import { importReader } from "../../db";
 import {
   groupEmployeeRecords,
@@ -21,6 +25,8 @@ import {
   matchesSearch,
   pageImportEmployees,
 } from "./importEmployeeList";
+
+const employeeSetup = createEmployeeSetupService();
 
 /** The import as the setup review step shows it, read once, so its counts, checks and list agree. */
 export interface ImportReview {
@@ -57,7 +63,7 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
     imports.listChoices("employee"),
   ]);
   const employees = groupEmployeeRecords(sources, records, choices);
-  const takenEmails = await findTakenEmails(
+  const takenEmails = await employeeSetup.findTakenEmails(
     ctx,
     db,
     employees.flatMap(({ values }) => values.email.value ?? []),

@@ -1,9 +1,11 @@
 import type { Tx } from "../../../../core/db";
 import { PrincipalSecurityContext } from "../../../../core/security";
 import { type CalendarDate, todayInUtc } from "../../../../utils";
-import { createDemoEmployees } from "../../../employees";
+import { createEmployeeSetupService } from "../../../employees";
 import { demoPeople } from "../../domain";
 import { readAvatars } from "./readAvatars";
+
+const employeeSetup = createEmployeeSetupService();
 
 /** Writes the demo company inside the caller's transaction. */
 export type DemoFill = (tx: Tx) => Promise<void>;
@@ -18,7 +20,7 @@ export async function prepareDemoFill(today: CalendarDate = todayInUtc()): Promi
   // Broccoli fills the sample company; the caller's own access was checked before.
   const ctx = PrincipalSecurityContext.system();
   return (tx) =>
-    createDemoEmployees(
+    employeeSetup.createDemoEmployees(
       ctx,
       tx,
       people.map(({ employee, managerEmail }, index) => ({

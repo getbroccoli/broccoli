@@ -9,7 +9,9 @@ import {
   test,
 } from "#test/support";
 
-import { createDemoEmployees, hasDemoEmployees } from ".";
+import { createEmployeeSetupService } from ".";
+
+const employeeSetup = createEmployeeSetupService();
 
 test("refuses an employee creating demo employees without storing employees or avatars", async ({
   orm,
@@ -19,7 +21,7 @@ test("refuses an employee creating demo employees without storing employees or a
 
   await expect(
     transact((tx) =>
-      createDemoEmployees(
+      employeeSetup.createDemoEmployees(
         EMPLOYEE,
         tx,
         [
@@ -38,7 +40,7 @@ test("refuses an employee creating demo employees without storing employees or a
 });
 
 test("refuses an employee checking whether demo employees exist", async ({ orm }) => {
-  await expect(async () => hasDemoEmployees(EMPLOYEE, orm)).rejects.toMatchObject({
+  await expect(async () => employeeSetup.hasDemoEmployees(EMPLOYEE, orm)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 });
@@ -47,7 +49,7 @@ test("creates no demo employees when employees exist", async ({ orm, seed, trans
   const employee = await seed.employee();
 
   await transact((tx) =>
-    createDemoEmployees(
+    employeeSetup.createDemoEmployees(
       OWNER,
       tx,
       [
@@ -91,7 +93,7 @@ test("records a creation line for each demo employee with the supplied cause", a
   ];
 
   await transact((tx) =>
-    createDemoEmployees(OWNER, tx, demoEmployees, { kind: "ADDED_WITH_DEMO" }),
+    employeeSetup.createDemoEmployees(OWNER, tx, demoEmployees, { kind: "ADDED_WITH_DEMO" }),
   );
 
   const employees = employeeUseCases(orm);

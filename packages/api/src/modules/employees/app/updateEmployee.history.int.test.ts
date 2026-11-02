@@ -10,9 +10,9 @@ import {
   test,
 } from "#test/support";
 
-import { ormOf } from "../../../../core/db";
-import { todayInUtc } from "../../../../utils";
-import { employeeRepository, employmentRepository } from "../../db";
+import { ormOf } from "../../../core/db";
+import { todayInUtc } from "../../../utils";
+import { employeeRepository, employmentRepository } from "../db";
 
 test("parallel job title edits keep their old and new values chained", async ({ orm }) => {
   const employees = employeeUseCases(orm);

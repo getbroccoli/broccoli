@@ -1,9 +1,8 @@
 import fc from "fast-check";
 
-import { employeeUseCases, expect, OWNER, test } from "#test/support";
+import { employeeUseCases, expect, OWNER, test, type EmployeeServices } from "#test/support";
 
-import { ApplicationError } from "../../../../core/applicationError";
-import type { EmployeeUseCases } from ".";
+import { ApplicationError } from "../../../core/applicationError";
 
 // A property test states a rule that must hold for every input and lets fast-check hunt for an
 // input that breaks it. On a failure it shrinks the input to the smallest one that still fails,
@@ -47,7 +46,7 @@ test(
  * as "self", and [0, 2] after 2 → 5 → 0 as "loop".
  */
 async function changeManagerOrAcceptRefusal(
-  useCases: EmployeeUseCases,
+  useCases: EmployeeServices,
   employeeId: string,
   managerId: string,
 ) {
@@ -66,7 +65,7 @@ async function changeManagerOrAcceptRefusal(
  * Follows managers up from `employeeId`, such as 2 → 5 → 0, and fails when the chain reaches
  * anyone twice.
  */
-async function expectNoManagerLoop(useCases: EmployeeUseCases, employeeId: string) {
+async function expectNoManagerLoop(useCases: EmployeeServices, employeeId: string) {
   const chain = new Set<string>();
   let current: string | undefined = employeeId;
   while (current !== undefined) {

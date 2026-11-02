@@ -1,11 +1,13 @@
 import type { Tx } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
-import { createImportedEmployees, type ImportedEmployees } from "../../../employees";
+import { createEmployeeSetupService, type ImportedEmployees } from "../../../employees";
 import { lockImport } from "../../db";
 import { toNewEmployeeInput } from "../../domain";
 import type { ImportContext } from "./importContext";
 import { readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
+
+const employeeSetup = createEmployeeSetupService();
 
 /**
  * Turns the ready import employees that are not left out into employees, with the values, photo
@@ -15,7 +17,7 @@ export async function addApprovedPeople(ctx: SecurityContext, tx: Tx): Promise<v
   requireImportAccess(ctx);
   await lockImport(tx);
   const { readyEmployees, managers } = await readImportReview(ctx, tx);
-  const counts = await createImportedEmployees(
+  const counts = await employeeSetup.createImportedEmployees(
     ctx,
     tx,
     readyEmployees.map((employee) => ({

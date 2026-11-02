@@ -18,14 +18,16 @@ import { ormOf } from "../../../core/db";
 
 import { employeeRepository, employmentRepository } from "../db";
 import { parseNewEmployee } from "../domain";
-import { createImportedEmployees, deleteAllEmployees, findTakenEmails } from ".";
+import { createEmployeeSetupService } from ".";
+
+const employeeSetup = createEmployeeSetupService();
 
 test("creates complete employees and counts incomplete inputs", async ({ orm, transact }) => {
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
   const robin = { firstName: "Robin", lastName: "Reed", email: "robin@example.com" };
 
   const result = await transact((tx) =>
-    createImportedEmployees(
+    employeeSetup.createImportedEmployees(
       OWNER,
       tx,
       [avery, { firstName: "Sam", lastName: "", email: "sam@example.com" }, robin],
@@ -49,7 +51,7 @@ test("skips a taken email and leaves the existing employee unchanged", async ({
   const existing = await seed.employee({ email: "avery@example.com" });
 
   const result = await transact((tx) =>
-    createImportedEmployees(
+    employeeSetup.createImportedEmployees(
       OWNER,
       tx,
       [{ firstName: "Avery", lastName: "Stone", email: existing.email }],
@@ -66,7 +68,7 @@ test("finds only taken emails among 70,000 distinct emails", async ({ orm, seed 
   const existing = await seed.employee({ email: "employee69999@example.com" });
   const emails = Array.from({ length: 70_000 }, (_, index) => `employee${index}@example.com`);
 
-  const taken = await findTakenEmails(OWNER, orm, emails);
+  const taken = await employeeSetup.findTakenEmails(OWNER, orm, emails);
 
   expect(taken).toEqual(new Set([existing.email]));
 });
@@ -75,7 +77,7 @@ test("creates the first input when two inputs have the same email", async ({ orm
   const first = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
 
   const result = await transact((tx) =>
-    createImportedEmployees(OWNER, tx, [first, { ...first, lastName: "Reed" }], {
+    employeeSetup.createImportedEmployees(OWNER, tx, [first, { ...first, lastName: "Reed" }], {
       kind: "ADDED_FROM_IMPORT",
     }),
   );
@@ -93,7 +95,7 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
   }));
 
   const result = await transact((tx) =>
-    createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
+    employeeSetup.createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
   );
 
   expect(result).toEqual({ created: 1_001, incomplete: 0, emailTaken: 0 });
@@ -112,7 +114,9 @@ test("sets managers when importing 33,000 employees", async ({ orm, transact }) 
     managerEmail: index === 0 ? null : "person0@example.com",
   }));
 
-  await transact((tx) => createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }));
+  await transact((tx) =>
+    employeeSetup.createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
+  );
 
   const people = employeeUseCases(orm);
   const id = (await people.listEmployees(OWNER, { filter: { search: "32999" } })).edges[0]!.node.id;
@@ -122,7 +126,7 @@ test("sets managers when importing 33,000 employees", async ({ orm, transact }) 
 test("refuses an employee and creates no employees", async ({ orm, transact }) => {
   await expect(
     transact((tx) =>
-      createImportedEmployees(
+      employeeSetup.createImportedEmployees(
         EMPLOYEE,
         tx,
         [{ firstName: "Avery", lastName: "Stone", email: "avery@example.com" }],
@@ -147,7 +151,7 @@ test("assigns avatars only to complete employees with untaken emails, keeping th
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
 
   const result = await transact((tx) =>
-    createImportedEmployees(
+    employeeSetup.createImportedEmployees(
       OWNER,
       tx,
       [
@@ -184,7 +188,7 @@ test("deleting all employees deletes their avatars", async ({ orm, seed, transac
   );
   await seed.employee({ avatarFileId: await seed.file({ content: PNG, mimeType: "image/png" }) });
 
-  await transact((tx) => deleteAllEmployees(OWNER, tx));
+  await transact((tx) => employeeSetup.deleteAllEmployees(OWNER, tx));
 
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
@@ -198,7 +202,7 @@ test("records one creation per inserted employee with the supplied cause and non
   const { transact, events } = recordChangedEvents(orm);
 
   const result = await transact((tx) =>
-    createImportedEmployees(
+    employeeSetup.createImportedEmployees(
       OWNER,
       tx,
       [
@@ -265,7 +269,7 @@ test("deleting all employees purges history including already deleted employees 
   await employees.deleteEmployee(OWNER, { id: deleted.id });
   const { transact, events } = recordChangedEvents(orm);
 
-  await transact((tx) => deleteAllEmployees(OWNER, tx));
+  await transact((tx) => employeeSetup.deleteAllEmployees(OWNER, tx));
 
   expect((await employees.listEmployees(OWNER, {})).edges).toEqual([]);
   expect((await employees.readEmployeeHistory(OWNER, kept.id, {})).edges).toEqual([]);
@@ -284,7 +288,7 @@ test("an employee created while a reset waits for the employees table does not d
     const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
     resetReady.resolve(rows[0]!.pid);
     await releaseReset.promise;
-    await deleteAllEmployees(OWNER, tx);
+    await employeeSetup.deleteAllEmployees(OWNER, tx);
   });
   const blockingPid = await resetReady.promise;
 
@@ -304,39 +308,4 @@ test("an employee created while a reset waits for the employees table does not d
   }
 
   expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
-});
-
-test("a job title edit waiting for a reset lets it lock the employee", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  const employee = await seed.employee({ jobTitle: "Engineer" });
-  const employees = employeeUseCases(orm);
-  const resetReady = Promise.withResolvers<number>();
-  const releaseReset = Promise.withResolvers<void>();
-  const resetting = transact(async (tx) => {
-    await employmentRepository(tx).lockForWrites();
-    await ormOf(tx).execute(sql`lock table employees in share row exclusive mode`);
-    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
-    resetReady.resolve(rows[0]!.pid);
-    await releaseReset.promise;
-    // Take the row lock reset's DELETE needs, keeping the employee for the waiting edit.
-    await employeeRepository(tx).lockByIds([employee.id]);
-  });
-  const blockingPid = await resetReady.promise;
-
-  const results = Promise.allSettled([
-    resetting,
-    employees.updateEmployee(OWNER, { id: employee.id, jobTitle: "Lead" }),
-  ]);
-  try {
-    await expectBlockedBy(orm, blockingPid);
-  } finally {
-    releaseReset.resolve();
-    await results;
-  }
-
-  expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
-  expect(await employees.readEmployee(OWNER, employee.id)).toMatchObject({ jobTitle: "Lead" });
 });

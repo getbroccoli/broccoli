@@ -1,6 +1,6 @@
-import type { HistoryLine } from "../../../../core/records";
-import { isInRecordScope, type SecurityContext } from "../../../../core/security";
-import type { Employee } from "../../domain";
+import type { HistoryLine } from "../../../core/records";
+import { isInRecordScope, type SecurityContext } from "../../../core/security";
+import type { Employee } from "../domain";
 
 /**
  * A write's result as its caller may see it: the employee and their history line, or both null

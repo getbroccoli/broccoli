@@ -1,9 +1,11 @@
 import type { Tx } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
-import { findEmployeesWithAvatars } from "../../../employees";
+import { createEmployeeSetupService } from "../../../employees";
 import { importPhotoRepository, lockImport } from "../../db";
 import type { ImportContext } from "./importContext";
 import { requireImportAccess } from "./requireImportAccess";
+
+const employeeSetup = createEmployeeSetupService();
 
 /** Deletes the whole import with its uploaded files and photos, joining `tx`. */
 export async function deleteImport(tx: Tx): Promise<void> {
@@ -26,7 +28,7 @@ export async function finishImport(context: ImportContext, ctx: SecurityContext)
 export async function deleteFinishedImport(ctx: SecurityContext, tx: Tx) {
   requireImportAccess(ctx);
   const imports = await lockImport(tx);
-  const employees = await findEmployeesWithAvatars(ctx, tx);
+  const employees = await employeeSetup.findEmployeesWithAvatars(ctx, tx);
   const deleted = await importPhotoRepository(tx).deletePhotosExcept(
     employees.flatMap(({ avatarFileId }) => avatarFileId ?? []),
   );

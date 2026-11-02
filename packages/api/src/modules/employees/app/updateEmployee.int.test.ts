@@ -11,9 +11,9 @@ import {
   test,
 } from "#test/support";
 
-import { ormOf } from "../../../../core/db";
-import { addDays, todayInUtc } from "../../../../utils";
-import { employeeRepository, employmentRepository } from "../../db";
+import { ormOf } from "../../../core/db";
+import { addDays, todayInUtc } from "../../../utils";
+import { employeeRepository, employmentRepository } from "../db";
 
 test("saves a manager with other fields in one history line", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });

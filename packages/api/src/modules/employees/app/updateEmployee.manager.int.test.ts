@@ -7,12 +7,12 @@ import {
   OWNER,
   recordChangedEvents,
   test,
+  type EmployeeServices,
 } from "#test/support";
 
-import { ormOf } from "../../../../core/db";
-import { addDays, todayInUtc } from "../../../../utils";
-import { employeeRepository, employmentRepository } from "../../db";
-import type { EmployeeUseCases } from ".";
+import { ormOf } from "../../../core/db";
+import { addDays, todayInUtc } from "../../../utils";
+import { employeeRepository, employmentRepository } from "../db";
 
 test("sets a person's manager and records their id and name", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
@@ -293,6 +293,6 @@ test("a start date edit waiting for a manager change lets it finish", async ({
   expect(await managerOf(employees, employee.id)).toEqual(manager);
 });
 
-async function managerOf(employees: EmployeeUseCases, id: string) {
+async function managerOf(employees: EmployeeServices, id: string) {
   return (await employees.readManagers(OWNER, [id])).get(id) ?? null;
 }

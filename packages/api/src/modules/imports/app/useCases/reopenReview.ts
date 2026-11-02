@@ -1,8 +1,10 @@
 import { createSetupStepService } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import { deleteAllEmployees, hasDemoEmployees } from "../../../employees";
+import { createEmployeeSetupService } from "../../../employees";
 import type { ImportContext } from "./importContext";
 import { requireImportAccess } from "./requireImportAccess";
+
+const employeeSetup = createEmployeeSetupService();
 
 const setupSteps = createSetupStepService();
 
@@ -19,8 +21,8 @@ export async function reopenReview(
     if (!(await setupSteps.reopenImportStep(ctx, tx))) {
       return false;
     }
-    if (await hasDemoEmployees(ctx, tx)) {
-      await deleteAllEmployees(ctx, tx);
+    if (await employeeSetup.hasDemoEmployees(ctx, tx)) {
+      await employeeSetup.deleteAllEmployees(ctx, tx);
     }
     return true;
   });

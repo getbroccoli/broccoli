@@ -1,8 +1,10 @@
 import { ApplicationError } from "../../../../core/applicationError";
 import { createSetupStepService, createInstanceService } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
-import { deleteAllEmployees, hasDemoEmployees } from "../../../employees";
+import { createEmployeeSetupService } from "../../../employees";
 import type { DemoContext } from "./demoContext";
+
+const employeeSetup = createEmployeeSetupService();
 
 const setupSteps = createSetupStepService();
 const instances = createInstanceService();
@@ -19,10 +21,13 @@ export async function exitDemo({ transact }: DemoContext, ctx: SecurityContext) 
       throw new ApplicationError("FORBIDDEN", "Exit the demo through setup.");
     }
     // Moving the step first locks the instance row, so a concurrent exit waits and then refuses.
-    if (!(await setupSteps.returnToCompanyStep(ctx, tx)) || !(await hasDemoEmployees(ctx, tx))) {
+    if (
+      !(await setupSteps.returnToCompanyStep(ctx, tx)) ||
+      !(await employeeSetup.hasDemoEmployees(ctx, tx))
+    ) {
       throw new ApplicationError("CONFLICT", "The instance holds no demo data.");
     }
-    await deleteAllEmployees(ctx, tx);
+    await employeeSetup.deleteAllEmployees(ctx, tx);
   });
   return { isPresent: false };
 }

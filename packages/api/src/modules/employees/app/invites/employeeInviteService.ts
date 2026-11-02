@@ -28,7 +28,7 @@ import {
   type SignInStatus,
 } from "../../domain";
 import { employeeDirectory } from "../employeeDirectory";
-import { employeeNotFound } from "../useCases/employeeNotFound";
+import { employeeNotFound } from "../employeeNotFound";
 import { sendInviteJob } from "./sendInviteJob";
 
 const instances = createInstanceService();

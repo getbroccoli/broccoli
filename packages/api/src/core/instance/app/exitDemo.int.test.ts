@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import {
-  deleteAllEmployees,
+  createEmployeeSetupService,
   employeeUseCases,
   expect,
   ADMIN,
@@ -200,7 +200,7 @@ test("exiting the demo deletes every linked user before removing its provisional
       tx,
       { userId: owner.user!.userId, now },
       {
-        clearPeople: deleteAllEmployees,
+        clearPeople: createEmployeeSetupService().deleteAllEmployees,
         deleteOwner: async () => {
           expect(await ormOf(tx).select({ id: user.id }).from(user)).toEqual([
             { id: owner.user!.userId },

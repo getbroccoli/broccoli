@@ -7,10 +7,10 @@ import {
   SETUP_HOLDER,
   test,
   WEBP,
+  type EmployeeServices,
 } from "#test/support";
 
-import type { SecurityContext } from "../../../../core/security";
-import type { EmployeeUseCases } from ".";
+import type { SecurityContext } from "../../../core/security";
 
 const reads = {
   listEmployees: (employees, ctx) => employees.listEmployees(ctx, {}),
@@ -22,7 +22,7 @@ const reads = {
 } satisfies Record<
   string,
   (
-    employees: EmployeeUseCases,
+    employees: EmployeeServices,
     ctx: SecurityContext,
     id: string,
     avatarFileId: string,
@@ -57,7 +57,7 @@ const writes = {
     employees.setPermissionProfiles(ctx, { id, profiles: ["ADMIN"] }),
 } satisfies Record<
   string,
-  (employees: EmployeeUseCases, ctx: SecurityContext, id: string) => Promise<unknown>
+  (employees: EmployeeServices, ctx: SecurityContext, id: string) => Promise<unknown>
 >;
 
 for (const [profile, ctx] of [
