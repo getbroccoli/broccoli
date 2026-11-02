@@ -48,6 +48,7 @@ export function createEmployeeReadService({
   orm,
 }: Pick<ModuleDependencies, "orm">): EmployeeReadService {
   const employees = employeeRepository(orm);
+  const history = createRecordHistoryReaderService(orm, { employee: employeeRecordType(orm) });
   return {
     async readEmployee(ctx, id) {
       const employeeId = parseUuid(id);
@@ -85,12 +86,7 @@ export function createEmployeeReadService({
       );
     },
     readEmployeeHistory: (ctx, employeeId, args) =>
-      createRecordHistoryReaderService(orm, { employee: employeeRecordType(orm) }).readHistory(
-        ctx,
-        "employee",
-        employeeId,
-        args,
-      ),
+      history.readHistory(ctx, "employee", employeeId, args),
     async readAvatar(ctx, fileId) {
       const id = parseUuid(fileId);
       const employeeIds = id ? await employees.findIdsByAvatar(id) : [];

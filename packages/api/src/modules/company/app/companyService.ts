@@ -63,21 +63,10 @@ export function createCompanyService({
   brandLookup: BrandLookup;
 }): CompanyService {
   const companies = companyRepository(orm);
-  const readCompany = async (): Promise<Company> => {
-    const [{ name, brandName, logoFileId }, owner] = await Promise.all([
-      companies.read(),
-      owners.readOwner(orm),
-    ]);
-    return {
-      name,
-      suggestedName: suggestName({ brandName, ownerEmail: owner?.email ?? null }),
-      logoFileId,
-    };
-  };
   return {
     async getCompany(ctx) {
       requireCompanyRead(ctx);
-      return readCompany();
+      return readCompany(orm);
     },
     async update(ctx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
@@ -86,7 +75,7 @@ export function createCompanyService({
         await companyRepository(tx).saveName(name);
         await setupSteps.completeCompanyStep(ctx, tx);
       });
-      return readCompany();
+      return readCompany(orm);
     },
     async saveLogo(ctx, bytes) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
@@ -95,12 +84,12 @@ export function createCompanyService({
         throw invalidInput([{ field: "logo", code: "invalid" }]);
       }
       await transact((tx) => companyRepository(tx).replaceLogo(logo));
-      return readCompany();
+      return readCompany(orm);
     },
     async removeLogo(ctx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await transact((tx) => companyRepository(tx).replaceLogo(null));
-      return readCompany();
+      return readCompany(orm);
     },
     async readLogo(ctx, fileId) {
       requireCompanyRead(ctx);
@@ -139,4 +128,17 @@ function requireCompanyRead(ctx: SecurityContext): void {
   if (!ctx.user) {
     ctx.requireSetupAccess("MANAGE_WORKSPACE");
   }
+}
+
+/** The stored company with the name suggested from its brand or the owner's email domain. */
+async function readCompany(orm: Orm): Promise<Company> {
+  const [{ name, brandName, logoFileId }, owner] = await Promise.all([
+    companyRepository(orm).read(),
+    owners.readOwner(orm),
+  ]);
+  return {
+    name,
+    suggestedName: suggestName({ brandName, ownerEmail: owner?.email ?? null }),
+    logoFileId,
+  };
 }
