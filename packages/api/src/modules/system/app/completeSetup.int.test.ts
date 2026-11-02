@@ -6,11 +6,11 @@ import {
   PNG,
   SLACK_PHOTO_URL,
   storedFileIds,
-  systemUseCases,
+  systemService,
   test,
 } from "#test/support";
 
-import { createInstanceService } from "../../../../core/instance";
+import { createInstanceService } from "../../../core/instance";
 
 const instances = createInstanceService();
 
@@ -42,7 +42,7 @@ test("finishing managed setup creates exactly the ready people with their avatar
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   expect(await storedFileIds(orm)).toHaveLength(2);
 
-  await systemUseCases(orm).completeSetup(owner);
+  await systemService(orm).completeSetup(owner);
 
   expect((await instances.readInstance(orm)).step).toBe("done");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toMatchObject([
@@ -60,7 +60,7 @@ test("refuses finishing after another tab goes Back and creates nobody", async (
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await imports.reopenReview(owner);
 
-  await expect(systemUseCases(orm).completeSetup(owner)).rejects.toMatchObject({
+  await expect(systemService(orm).completeSetup(owner)).rejects.toMatchObject({
     code: "CONFLICT",
     message: "Setup is not at the ready step.",
   });
@@ -90,7 +90,7 @@ test("finishing preserves an employee added by hand after approval and skips the
     email: "avery@example.com",
   });
 
-  await systemUseCases(orm).completeSetup(owner);
+  await systemService(orm).completeSetup(owner);
 
   expect(
     (await employees.listEmployees(owner, { orderBy: { field: "EMAIL" } })).edges.map(
@@ -103,7 +103,7 @@ test("refuses an employee completing setup and keeps the ready step", async ({ o
   await seed.owner();
   await seed.setupStep("ready");
 
-  await expect(systemUseCases(orm).completeSetup(EMPLOYEE)).rejects.toMatchObject({
+  await expect(systemService(orm).completeSetup(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 

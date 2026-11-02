@@ -8,13 +8,13 @@ import {
   PNG,
   SLACK_PHOTO_URL,
   storedFileIds,
-  systemUseCases,
+  systemService,
   test,
   TEST_OWNER,
 } from "#test/support";
 
-import { user } from "../../../../core/auth";
-import { createOwnerService, createInstanceService } from "../../../../core/instance";
+import { user } from "../../../core/auth";
+import { createOwnerService, createInstanceService } from "../../../core/instance";
 
 const owners = createOwnerService();
 const instances = createInstanceService();
@@ -35,7 +35,7 @@ test("resetting a finished setup deletes every employee and avatar and keeps the
   await seed.employee();
   const originalOwner = await owners.readOwner(orm);
 
-  await systemUseCases(orm).resetSetup(owner);
+  await systemService(orm).resetSetup(owner);
 
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
@@ -60,7 +60,7 @@ test("resets a finished setup whose import was not cleaned up yet", async ({ orm
     mimeType: "image/png",
   });
   const imports = importUseCases(orm);
-  const system = systemUseCases(orm);
+  const system = systemService(orm);
   const employees = employeeUseCases(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await system.completeSetup(owner);
@@ -82,7 +82,7 @@ test("refuses an employee resetting setup", async ({ orm, seed }) => {
   await seed.owner();
   await seed.setupStep("done");
 
-  await expect(systemUseCases(orm).resetSetup(EMPLOYEE)).rejects.toMatchObject({
+  await expect(systemService(orm).resetSetup(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 
@@ -94,7 +94,7 @@ test("refuses resetting before setup is done and keeps the employees", async ({ 
   await seed.setupStep("import");
   const employee = await seed.employee();
 
-  await expect(systemUseCases(orm).resetSetup(owner)).rejects.toMatchObject({
+  await expect(systemService(orm).resetSetup(owner)).rejects.toMatchObject({
     code: "CONFLICT",
     message: "Setup is not done.",
   });
@@ -113,7 +113,7 @@ test("refuses resetting the self-hosted demo and keeps its owner and employees",
   const avatarFileId = await seed.file({ content: PNG, mimeType: "image/png" });
   const employee = await seed.employee({ avatarFileId });
 
-  await expect(systemUseCases(orm).resetSetup(owner)).rejects.toMatchObject({
+  await expect(systemService(orm).resetSetup(owner)).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "Exit the demo instead.",
   });
@@ -133,7 +133,7 @@ test("refuses a concurrent second reset", async ({ orm, seed }) => {
   const owner = await seed.owner();
   await seed.setupStep("done");
   await seed.employee();
-  const system = systemUseCases(orm);
+  const system = systemService(orm);
 
   const results = await Promise.allSettled([system.resetSetup(owner), system.resetSetup(owner)]);
 
@@ -148,7 +148,7 @@ test("refuses a concurrent second reset", async ({ orm, seed }) => {
 });
 
 test("refuses an admin resetting the workspace", async ({ orm }) => {
-  await expect(systemUseCases(orm).resetSetup(ADMIN)).rejects.toMatchObject({
+  await expect(systemService(orm).resetSetup(ADMIN)).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "Only the owner can do this.",
   });
@@ -166,7 +166,7 @@ test("resetting setup deletes linked users while keeping the owner's user", asyn
     await seed.employee({ email, userId: joined.id });
   }
 
-  await systemUseCases(orm).resetSetup(owner);
+  await systemService(orm).resetSetup(owner);
 
   expect(await orm.select({ id: user.id }).from(user)).toEqual([{ id: owner.user!.userId }]);
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);

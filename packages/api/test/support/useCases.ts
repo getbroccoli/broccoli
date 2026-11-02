@@ -38,7 +38,7 @@ import {
 } from "../../src/modules/employees";
 import { createImportUseCases } from "../../src/modules/imports";
 import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
-import { createSystemUseCases } from "../../src/modules/system";
+import { createSystemService } from "../../src/modules/system";
 import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
@@ -86,18 +86,13 @@ export function demoService(orm: Parameters<typeof createDemoService>[0]["orm"])
   return createDemoService({ orm, transact: testTransactor(orm) });
 }
 
-export function systemUseCases(orm: Orm) {
-  return createSystemUseCases({
-    orm,
+export function systemService(orm: Orm) {
+  return createSystemService({
     transact: testTransactor(orm),
     logger: createLogger("silent"),
-    mode: "self_hosted",
     addApprovedPeople: importUseCases(orm).addApprovedPeople,
     deleteAllEmployees: employeeSetup.deleteAllEmployees,
     deleteFinishedImport: importUseCases(orm).deleteFinishedImport,
-    aiSettings: aiSettings(orm),
-    mailSettings: mailSettings(orm),
-    passwordResetEmail: passwordResetEmail(orm, { mail: fakeMail() }),
   });
 }
 

@@ -5,10 +5,12 @@ import {
   createSetupSessionService,
   createInstanceService,
   type AiConfig,
+  type AiSettingsService,
   type MailConfig,
+  type MailSettingsService,
 } from "../../../core/instance";
 import { OPERATIONS, type SecurityContext } from "../../../core/security";
-import type { SystemUseCases } from "../app";
+import type { SystemService } from "../app";
 
 const setupSessions = createSetupSessionService();
 const instances = createInstanceService();
@@ -48,7 +50,20 @@ const AI_SOURCE_INPUTS = {
   EXTERNAL_AGENT: "external_agent",
 } as const;
 
-export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases): Resolvers {
+export function createResolvers(
+  {
+    orm,
+    mode,
+    aiSettings,
+    mailSettings,
+  }: {
+    orm: Orm;
+    mode: Mode;
+    aiSettings: Pick<AiSettingsService, "read" | "save">;
+    mailSettings: Pick<MailSettingsService, "read" | "save" | "sendTestEmail">;
+  },
+  system: SystemService,
+): Resolvers {
   const readSetup = (security: SecurityContext | null) => readSetupView(orm, mode, security);
   return {
     Query: {
@@ -68,9 +83,9 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       },
     },
     Setup: {
-      ai: async (_parent, _args, context) => toGraphql(await useCases.ai.read(context.getActor())),
+      ai: async (_parent, _args, context) => toGraphql(await aiSettings.read(context.getActor())),
       mail: async (_parent, _args, context) =>
-        toMailGraphql(await useCases.mail.read(context.getActor())),
+        toMailGraphql(await mailSettings.read(context.getActor())),
     },
     Mutation: {
       setup: () => ({}),
@@ -79,19 +94,19 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       complete: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupCompletePayload"]>(async () => {
           const actor = context.getActor();
-          await useCases.completeSetup(actor);
+          await system.completeSetup(actor);
           return { setup: await readSetup(actor) };
         }, ["CONFLICT"]),
       reset: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupResetPayload"]>(async () => {
           const actor = context.getActor();
-          await useCases.resetSetup(actor);
+          await system.resetSetup(actor);
           return { setup: await readSetup(actor) };
         }, ["CONFLICT"]),
       saveAiSource: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["SetupSaveAiSourcePayload"]>(async () => {
           const actor = context.getActor();
-          await useCases.ai.save(actor, {
+          await aiSettings.save(actor, {
             source: AI_SOURCE_INPUTS[input.source],
             openRouterKey: input.openRouterKey,
           });
@@ -100,7 +115,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       saveMailSettings: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["SetupSaveMailSettingsPayload"]>(async () => {
           const actor = context.getActor();
-          await useCases.mail.save(
+          await mailSettings.save(
             actor,
             { source: MAIL_SOURCE_INPUTS[input.source], from: input.from, secret: input.secret },
             await context.publicOrigin(),
@@ -110,7 +125,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
       sendTestEmail: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupSendTestEmailPayload"]>(async () => {
           const actor = context.getActor();
-          await useCases.mail.sendTestEmail(actor);
+          await mailSettings.sendTestEmail(actor);
           return { setup: await readSetup(actor) };
         }, ["UNAVAILABLE", "CONFLICT"]),
     },

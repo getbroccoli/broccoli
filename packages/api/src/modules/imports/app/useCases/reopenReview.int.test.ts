@@ -9,7 +9,7 @@ import {
   SETUP_HOLDER,
   SLACK_PHOTO_URL,
   storedFileIds,
-  systemUseCases,
+  systemService,
   test,
 } from "#test/support";
 
@@ -106,7 +106,7 @@ test("Back preserves values, left-out choices, sources and photos for the next a
     choice: { value: "Engineer" },
   });
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
-  await systemUseCases(orm).completeSetup(owner);
+  await systemService(orm).completeSetup(owner);
 
   expect(
     (await employees.listEmployees(owner, { orderBy: { field: "EMAIL" } })).edges.map(

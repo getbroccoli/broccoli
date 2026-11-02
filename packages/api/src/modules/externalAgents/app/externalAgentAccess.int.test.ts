@@ -1,11 +1,11 @@
 import {
+  aiSettings,
   companyService,
   expect,
   importUseCases,
   SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   storedFileIds,
-  systemUseCases,
   test,
 } from "#test/support";
 
@@ -65,7 +65,7 @@ test.for([
     "company.update": () =>
       companyService(orm).update(SETUP_EXTERNAL_AGENT, { name: "Changed company" }),
     readSlack: () => imports.readSlack(SETUP_EXTERNAL_AGENT),
-    "ai.save": () => systemUseCases(orm).ai.save(SETUP_EXTERNAL_AGENT, { source: "broccoli_ai" }),
+    "ai.save": () => aiSettings(orm).save(SETUP_EXTERNAL_AGENT, { source: "broccoli_ai" }),
   };
 
   await expect(

@@ -48,7 +48,7 @@ export {
   externalAgentUseCases,
   importUseCases,
   slackUseCases,
-  systemUseCases,
+  systemService,
   aiSettings,
   mailSettings,
   passwordResetEmail,
