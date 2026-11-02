@@ -1,6 +1,6 @@
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
-import { type MailSettings, readInstance } from "../../../../core/instance";
+import { type MailSettings, readInstance, readOwner } from "../../../../core/instance";
 import type { JobHandlers, JobQueue } from "../../../../core/jobs";
 import type { Logger } from "../../../../core/logger";
 import type { HistoryLine } from "../../../../core/records";
@@ -196,15 +196,16 @@ export function createEmployeeInviteService({
     readStatuses: async (ctx, ids) => {
       ctx.require("MANAGE_WORKSPACE");
       const employeeIds = ids.flatMap((id) => parseUuid(id) ?? []);
-      const [invitees, open] = await Promise.all([
+      const [invitees, open, owner] = await Promise.all([
         invites.findInvitees(employeeIds),
         invites.findOpen(employeeIds),
+        readOwner(orm),
       ]);
       const openOf = new Map(open.map((invite) => [invite.employeeId, invite]));
       return new Map(
         invitees.map((invitee) => [
           invitee.employee.id,
-          signInStatus(invitee, openOf.get(invitee.employee.id)),
+          signInStatus(invitee, openOf.get(invitee.employee.id), owner),
         ]),
       );
     },

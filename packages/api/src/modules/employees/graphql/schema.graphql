@@ -37,6 +37,8 @@ enum SignInState {
 
 type SignInStatus {
   state: SignInState!
+  "The linked user is the workspace owner, or an unlinked, non-demo employee has the owner's email."
+  isWorkspaceOwner: Boolean!
   "When the pending invite stops working; null without one."
   expiresAt: DateTime
   "Whether sending the pending invite's email failed."

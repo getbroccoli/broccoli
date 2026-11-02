@@ -29,6 +29,6 @@ A manual check of the "Who uses Broccoli" setup page and the invites setup's las
 
 ## After setup
 
-- [ ] On People, the owner's person (Avery) shows Joined; the invited people show Pending; the others show Not invited.
+- [ ] On People, the owner's person (Avery) shows Workspace owner; the invited people show Pending; the others show Not invited.
 - [ ] Avery's panel has no Delete; the owner sees themself as their person on "Your profile".
 - [ ] "Only admins" left everyone but the owner's person Not invited.

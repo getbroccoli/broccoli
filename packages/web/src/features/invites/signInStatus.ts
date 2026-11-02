@@ -8,6 +8,7 @@ export function signInLabel(
   status: SignInStatusFragment,
   now: Date,
 ): { state: string; hint: string | null } {
+  if (status.isWorkspaceOwner) return { state: t("invites.state.workspaceOwner"), hint: null };
   switch (status.state) {
     case "JOINED":
       return { state: t("invites.state.joined"), hint: null };
@@ -38,6 +39,7 @@ export function signInTone(
   status: SignInStatusFragment,
   now: Date,
 ): "none" | "waiting" | "problem" | "joined" {
+  if (status.isWorkspaceOwner) return "joined";
   switch (status.state) {
     case "JOINED":
       return "joined";
