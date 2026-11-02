@@ -37,6 +37,7 @@ export function LocationRow({ location }: Props) {
   };
 
   const cancel = () => {
+    if (update.loading) return;
     setDraft(null);
     update.reset();
   };
@@ -60,7 +61,7 @@ export function LocationRow({ location }: Props) {
             <Button type="submit" disabled={update.loading}>
               {t("settings.locations.save")}
             </Button>
-            <Button type="button" variant="ghost" onClick={cancel}>
+            <Button type="button" variant="ghost" disabled={update.loading} onClick={cancel}>
               {t("settings.locations.cancel")}
             </Button>
           </div>
