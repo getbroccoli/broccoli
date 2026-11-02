@@ -2,10 +2,13 @@ import type { Decisions } from "../../../integrations/ai";
 import type { OriginalFileReader } from "../../../core/instance";
 import type { JobQueue } from "../../../core/jobs";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
-import type { EmployeeInviteService } from "../../employees";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
-import { createImportApprovalService, type ImportApprovalService } from "./importApprovalService";
+import {
+  createImportApprovalService,
+  type ImportApprovalService,
+  type SetupInvites,
+} from "./importApprovalService";
 import {
   createImportDemoService,
   type DemoFill,
@@ -64,8 +67,7 @@ export function createImportServices({
   originalFileReader: OriginalFileReader;
   jobs: JobQueue;
   prepareDemoFill: () => Promise<DemoFill>;
-  /** Invites the people the owner chose as setup finishes. */
-  invites: Pick<EmployeeInviteService, "sendAtSetup">;
+  invites: SetupInvites;
 }): ImportServices {
   const readUpload = createUploadReader();
   return {

@@ -33,7 +33,7 @@ export interface AddedPeople extends ImportedEmployees {
 }
 
 /** Invites the people the owner chose as setup finishes; the employees module provides it. */
-type SetupInvites = Pick<EmployeeInviteService, "sendAtSetup">;
+export type SetupInvites = Pick<EmployeeInviteService, "sendAtSetup">;
 
 /** The owner's approval of the reviewed import, the people it adds, and reopening the review. */
 export interface ImportApprovalService {
