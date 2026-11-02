@@ -107,7 +107,7 @@ it("rejects startup and closes the database pool when a module router throws", a
             },
           },
         ],
-        addApprovedPeople: () => Promise.resolve(),
+        addApprovedPeople: () => Promise.resolve([]),
         setupDemo: {
           prepareStart: () => Promise.reject(new Error("No demo")),
           deleteAllEmployees: () => Promise.resolve(),

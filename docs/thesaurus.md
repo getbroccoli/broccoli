@@ -50,7 +50,8 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Invite link**: `<origin>/invite#<token>`; only the token's hash is stored, so a link is shown or emailed once and never again.
 - **Invite delivery**: how an invite reaches the person: `SENT_BY_EMAIL` while the instance sends email (a self-hosted mail choice, or the mail relay on managed), else `COPIED_BY_OWNER`, a link the admin copies and sends themselves.
 - **Sign-in state**: whether a person can sign in: not invited, pending (an invite is open or has expired), or joined.
-- **Joined**: a person whose user is linked to their employee record (`employees.user_id`), after accepting an invite.
+- **Joined**: a person whose user is linked to their employee record (`employees.user_id`), after accepting an invite; the owner joins when setup finishes, as the person they chose on "Who uses Broccoli".
+- **Setup invite audience**: who the owner invites as setup finishes, chosen on the "Who uses Broccoli" page after setup approve: only admins (nobody), admins and managers (the people who manage someone), or everyone. A one-time choice, never stored: later invites go through People.
 - **Mail choice**: how a self-hosted instance sends email: the owner's SMTP server, their Resend key, or no email. Saved on the instance in Settings; password reset works only while email is chosen.
 - **Mail relay**: Broccoli's sender for managed instances, at `MANAGED_MAIL_RELAY_URL`. The instance sends each email as blocks with its instance credential; the relay renders it in Broccoli's layout and sends it as "<sender> via Broccoli" and refuses links outside the instance's own origin. Self-hosted instances never use it.
 - **Slack connection**: the instance's connected Slack workspace and its encrypted token, owned by the `slack` module. Connecting imports nothing; the import reads the workspace when the owner asks.

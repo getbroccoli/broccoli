@@ -2,14 +2,19 @@ import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import type { Instance } from "../domain";
+import type { Instance, SetupChoices, SetupFinish, SetupInvite } from "../domain";
 import { createSetupStepService } from "./setupStepService";
 
 /**
  * Adds the people the owner approved in the caller's transaction, so they arrive together
- * with the end of setup. The imports module provides it.
+ * with the end of setup, links the owner to the person they are and invites the people they
+ * chose. Returns the invites. The imports module provides it.
  */
-export type AddApprovedPeople = (ctx: SecurityContext, tx: Tx) => Promise<void>;
+export type AddApprovedPeople = (
+  ctx: SecurityContext,
+  tx: Tx,
+  finish: SetupFinish,
+) => Promise<SetupInvite[]>;
 
 export interface OwnerUser {
   user: { id: string; email: string };
@@ -31,8 +36,9 @@ export interface OwnerService {
   ) => Promise<Owner>;
   /**
    * The last step of self-hosted setup: makes the user that `createOwner` creates the
-   * owner, for the browser holding setup only, adds the approved people, then completes
-   * setup and ends the setup session. Refuses with `OwnerExistsError`,
+   * owner, for the browser holding setup only, adds the approved people with the owner's
+   * `choices`, then completes setup and ends the setup session. Returns the owner and the
+   * invites. Refuses with `OwnerExistsError`,
    * `SetupInProgressError`, or CONFLICT before the owner step.
    */
   createOwnerAtSetup: <Owner extends OwnerUser>(
@@ -41,7 +47,8 @@ export interface OwnerService {
     session: { token: string | null; now: Date },
     createOwner: () => Promise<Owner>,
     addApprovedPeople: AddApprovedPeople,
-  ) => Promise<Owner>;
+    choices: SetupChoices & { linkOrigin: string },
+  ) => Promise<{ owner: Owner; invites: SetupInvite[] }>;
 }
 
 export function createOwnerService(): OwnerService {
@@ -54,17 +61,21 @@ export function createOwnerService(): OwnerService {
       current.requireUnclaimedOwner();
       return saveOwner(tx, await createOwner(), current);
     },
-    async createOwnerAtSetup(ctx, tx, session, createOwner, addApprovedPeople) {
+    async createOwnerAtSetup(ctx, tx, session, createOwner, addApprovedPeople, choices) {
       ctx.requireSystem();
       const current = await lockHeldSetup(tx, session);
       if (current.step !== "owner") {
         throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
       }
       const owner = await saveOwner(tx, await createOwner(), current);
-      await addApprovedPeople(ctx, tx);
+      const invites = await addApprovedPeople(ctx, tx, {
+        ...choices,
+        ownerUserId: owner.user.id,
+        ownerEmail: owner.user.email,
+      });
       await setupSteps.completeOwnerStep(ctx, tx);
       await instanceRepository(tx).clearSetupSession();
-      return owner;
+      return { owner, invites };
     },
   };
 }

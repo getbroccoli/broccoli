@@ -3,6 +3,24 @@ import { expect, it } from "vitest";
 import type { SignInStatusFragment } from "@/__generated__/graphql";
 import { groupInvitees, inviteAction, signInLabel, signInTone } from "./signInStatus";
 
+it.each(["NOT_INVITED", "JOINED"] as const)(
+  "labels the workspace owner instead of %s without offering an invite",
+  (state) => {
+    const status = {
+      ...pending,
+      state,
+      expiresAt: null,
+      isWorkspaceOwner: true,
+      emailHasAccount: true,
+      canBeInvited: false,
+    };
+
+    expect(signInLabel(status, now)).toEqual({ state: "Workspace owner", hint: null });
+    expect(signInTone(status, now)).toBe("joined");
+    expect(inviteAction(status, now)).toBeNull();
+  },
+);
+
 it("skips joined people with the joined reason even when their email has an account", () => {
   const person = {
     id: "employee-1",
@@ -138,6 +156,7 @@ const now = new Date("2026-10-28T12:00:00Z");
 
 const pending: SignInStatusFragment = {
   state: "PENDING",
+  isWorkspaceOwner: false,
   expiresAt: "2026-10-31T00:00:00Z",
   notSent: false,
   emailHasAccount: false,

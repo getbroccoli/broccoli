@@ -1,4 +1,5 @@
 import type { Orm, Tx } from "../../../core/db";
+import { createOwnerService } from "../../../core/instance";
 import { type Connection, type ListArgs, paginate, parseSearch } from "../../../core/pagination";
 import type { SecurityContext } from "../../../core/security";
 import {
@@ -27,6 +28,7 @@ import {
 } from "./importEmployeeList";
 
 const employeeSetup = createEmployeeSetupService();
+const owners = createOwnerService();
 
 /** The import as the setup review step shows it, read once, so its counts, checks and list agree. */
 export interface ImportReview {
@@ -44,6 +46,8 @@ export interface ImportReview {
   listEmployees(args: ImportEmployeeListArgs): Connection<ImportEmployee>;
   /** The fingerprint of what Approve would create, which Approve takes back (`importVersion`). */
   version: string;
+  /** The instance owner's sign-in email, whoever reads; null before the owner exists. */
+  ownerEmail: string | null;
 }
 
 export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
@@ -57,10 +61,11 @@ export interface ImportEmployeeListArgs extends ListArgs<EmployeeOrderField> {
  */
 export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Promise<ImportReview> {
   const imports = importReader(db);
-  const [sources, records, choices] = await Promise.all([
+  const [sources, records, choices, owner] = await Promise.all([
     imports.listSources(),
     imports.listEmployeeRecords(),
     imports.listChoices("employee"),
+    owners.readOwner(db),
   ]);
   const employees = groupEmployeeRecords(sources, records, choices);
   const takenEmails = await employeeSetup.findTakenEmails(
@@ -84,6 +89,7 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
     listEmployees: (args) =>
       listEmployees(args.filter?.ready ? readyEmployees : employees, managers, args),
     version: importVersion(employees, readyEmployees),
+    ownerEmail: owner?.email ?? null,
   };
 }
 

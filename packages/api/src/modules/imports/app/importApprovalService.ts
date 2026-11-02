@@ -4,12 +4,18 @@ import {
   type AddApprovedPeople,
   createInstanceService,
   createSetupStepService,
+  type SetupFinish,
+  type SetupInvite,
 } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { createEmployeeSetupService, type ImportedEmployees } from "../../employees";
+import {
+  createEmployeeSetupService,
+  type EmployeeInviteService,
+  type ImportedEmployees,
+} from "../../employees";
 import { lockImport } from "../db";
-import { isReading, toNewEmployeeInput } from "../domain";
+import { isReading, setupInvitees, toNewEmployeeInput } from "../domain";
 import { readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
 
@@ -21,7 +27,13 @@ const employeeSetup = createEmployeeSetupService();
 export interface AddedPeople extends ImportedEmployees {
   /** The import employees that were selected, by their records and photo. */
   selected: { recordIds: string[]; photoFileId: string | null }[];
+  /** The employee the owner's user was linked to; null for none. */
+  ownerEmployeeId: string | null;
+  invitedEmployeeIds: string[];
 }
+
+/** Invites the people the owner chose as setup finishes; the employees module provides it. */
+export type SetupInvites = Pick<EmployeeInviteService, "sendAtSetup">;
 
 /** The owner's approval of the reviewed import, the people it adds, and reopening the review. */
 export interface ImportApprovalService {
@@ -33,10 +45,11 @@ export interface ImportApprovalService {
   approveImport: (ctx: SecurityContext, version: string) => Promise<void>;
   /**
    * Turns the ready import employees that are not left out into employees, with the values, photo
-   * and manager review shows, joining `tx`, in which the caller completes setup.
+   * and manager review shows, joining `tx`, in which the caller completes setup; links the owner's
+   * user to the person they said they are and invites the people they chose. Returns the invites.
    */
   addApprovedPeople: AddApprovedPeople;
-  /** Logs the people added once they are committed. */
+  /** Logs the people added, the owner's link and the invites once they are committed. */
   reportAddedPeople: (added: AddedPeople) => void;
   /**
    * Takes setup from the owner or ready step back to the import step, so the owner can change
@@ -48,7 +61,10 @@ export interface ImportApprovalService {
 export function createImportApprovalService({
   transact,
   logger,
-}: Pick<ModuleDependencies, "transact" | "logger">): ImportApprovalService {
+  invites,
+}: Pick<ModuleDependencies, "transact" | "logger"> & {
+  invites: SetupInvites;
+}): ImportApprovalService {
   return {
     async approveImport(ctx, version) {
       requireImportAccess(ctx);
@@ -67,7 +83,7 @@ export function createImportApprovalService({
         }
         // A self-hosted instance whose owner has an account has no last step to add them at.
         if ((await instances.readInstance(tx)).step === "done") {
-          await addApprovedPeople(ctx, tx);
+          await addApprovedPeople(invites, ctx, tx);
         }
         return true;
       });
@@ -75,11 +91,17 @@ export function createImportApprovalService({
         logger.info("Approved the import");
       }
     },
-    addApprovedPeople,
-    reportAddedPeople({ selected, ...counts }) {
+    addApprovedPeople: (ctx, tx, finish) => addApprovedPeople(invites, ctx, tx, finish),
+    reportAddedPeople({ selected, ownerEmployeeId, invitedEmployeeIds, ...counts }) {
       logger.info(counts, "Added the approved people");
       for (const employee of selected) {
         logger.info(employee, "Selected an import employee");
+      }
+      if (ownerEmployeeId) {
+        logger.info({ employeeId: ownerEmployeeId }, "Linked the owner to their employee");
+      }
+      if (invitedEmployeeIds.length > 0) {
+        logger.info({ employeeIds: invitedEmployeeIds }, "Invites created at setup");
       }
     },
     async reopenReview(ctx) {
@@ -100,25 +122,65 @@ export function createImportApprovalService({
   };
 }
 
-async function addApprovedPeople(ctx: SecurityContext, tx: Tx): Promise<void> {
+/**
+ * Adds the approved people joining `tx`; with `finish`, links the owner's user to the person they
+ * said they are and invites the people they chose, returning those invites.
+ */
+async function addApprovedPeople(
+  invites: SetupInvites,
+  ctx: SecurityContext,
+  tx: Tx,
+  finish?: SetupFinish,
+): Promise<SetupInvite[]> {
   requireImportAccess(ctx);
   await lockImport(tx);
   const { readyEmployees, managers } = await readImportReview(ctx, tx);
-  const counts = await employeeSetup.createImportedEmployees(
+  const ownerKey = finish?.ownerEmployeeKey ?? null;
+  const { idsByEmail, ...counts } = await employeeSetup.createImportedEmployees(
     ctx,
     tx,
     readyEmployees.map((employee) => ({
       ...toNewEmployeeInput(employee),
       avatarFileId: employee.photoFileId ?? undefined,
       managerEmail: managers.get(employee.key)?.manager?.values.email.value,
+      userId: employee.key === ownerKey ? finish?.ownerUserId : undefined,
     })),
     { kind: "ADDED_FROM_IMPORT" },
   );
+  const idOf = (employee: { values: { email: { value: string | null } } }) =>
+    idsByEmail.get(employee.values.email.value?.toLowerCase() ?? "");
+  const owner = readyEmployees.find(({ key }) => key === ownerKey);
+  const sent = finish
+    ? await invites.sendAtSetup(
+        ctx,
+        tx,
+        {
+          employeeIds: setupInvitees(
+            readyEmployees,
+            managers,
+            finish.inviteAudience,
+            ownerKey,
+            finish.ownerEmail,
+          ).flatMap((employee) => idOf(employee) ?? []),
+          note: finish.inviteNote,
+          invitedByUserId: finish.ownerUserId,
+        },
+        finish.linkOrigin,
+      )
+    : [];
   tx.publish("imports.people_added", {
     ...counts,
     selected: readyEmployees.map(({ records, photoFileId }) => ({
       recordIds: records.map(({ id }) => id),
       photoFileId,
     })),
+    ownerEmployeeId: (owner && idOf(owner)) ?? null,
+    invitedEmployeeIds: sent.map(({ employee }) => employee.id),
   });
+  return sent.map(({ employee, expiresAt, link }) => ({
+    employeeId: employee.id,
+    name: `${employee.firstName} ${employee.lastName}`,
+    expiresAt,
+    link,
+  }));
 }

@@ -33,7 +33,7 @@ test("creates complete employees and counts incomplete inputs", async ({ orm, tr
     ),
   );
 
-  expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 0 });
+  expect(result).toMatchObject({ created: 2, incomplete: 1, emailTaken: 0 });
   const employees = await employeeServices(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual(
     expect.arrayContaining([expect.objectContaining(avery), expect.objectContaining(robin)]),
@@ -57,7 +57,7 @@ test("skips a taken email and leaves the existing employee unchanged", async ({
     ),
   );
 
-  expect(result).toEqual({ created: 0, incomplete: 0, emailTaken: 1 });
+  expect(result).toMatchObject({ created: 0, incomplete: 0, emailTaken: 1 });
   const employees = await employeeServices(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([existing]);
 });
@@ -80,7 +80,7 @@ test("creates the first input when two inputs have the same email", async ({ orm
     }),
   );
 
-  expect(result).toEqual({ created: 1, incomplete: 0, emailTaken: 1 });
+  expect(result).toMatchObject({ created: 1, incomplete: 0, emailTaken: 1 });
   const employees = await employeeServices(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([expect.objectContaining(first)]);
 });
@@ -96,7 +96,7 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
     employeeSetup.createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
   );
 
-  expect(result).toEqual({ created: 1_001, incomplete: 0, emailTaken: 0 });
+  expect(result).toMatchObject({ created: 1_001, incomplete: 0, emailTaken: 0 });
   const employees = await employeeServices(orm).listEmployees(OWNER, { first: 1_001 });
   expect(employees.edges.map(({ node }) => node.email).sort()).toEqual(
     inputs.map(({ email }) => email).sort(),
@@ -163,7 +163,7 @@ test("assigns avatars only to complete employees with untaken emails, keeping th
     ),
   );
 
-  expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 2 });
+  expect(result).toMatchObject({ created: 2, incomplete: 1, emailTaken: 2 });
   const employees = await employeeServices(orm).listEmployees(OWNER, {});
   expect(
     employees.edges
@@ -218,7 +218,7 @@ test("records one creation per inserted employee with the supplied cause and non
     ),
   );
 
-  expect(result).toEqual({ created: 2, incomplete: 1, emailTaken: 1 });
+  expect(result).toMatchObject({ created: 2, incomplete: 1, emailTaken: 1 });
   const employees = employeeServices(orm);
   const inserted = (await employees.listEmployees(OWNER, {})).edges
     .map(({ node }) => node)

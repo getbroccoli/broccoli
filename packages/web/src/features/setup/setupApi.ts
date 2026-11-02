@@ -1,3 +1,4 @@
+import type { SetupInviteAudience } from "@/__generated__/graphql";
 import { postJson } from "@/lib/postJson";
 
 /** How an attempt to create the owner ended, as the setup form reports it. */
@@ -25,20 +26,60 @@ export async function startSetup(): Promise<boolean> {
   }
 }
 
-/** Creates the instance's owner and signs them in; the API sets the session cookie. */
-export function setUpOwner(email: string, password: string): Promise<SetupResult> {
-  return postCredentials("/api/auth/setup", email, password);
+/** What the owner chose on "Who uses Broccoli", sent with their account. */
+export interface OwnerSetupChoices {
+  ownerEmployeeKey: string | null;
+  inviteAudience: SetupInviteAudience;
+  inviteNote: string | null;
 }
 
-async function postCredentials(
-  path: string,
+/** An invite setup sent; the link only when the owner copies it. */
+export interface OwnerSetupInvite {
+  employeeId: string;
+  name: string;
+  expiresAt: string;
+  link: string | null;
+}
+
+/** How creating the owner ended, with the invites it sent and, when refused, the fields at fault. */
+export interface OwnerSetupOutcome {
+  result: SetupResult;
+  invites: OwnerSetupInvite[];
+  fieldErrors: { field: string; code: string }[];
+}
+
+/**
+ * Creates the instance's owner, adds the approved people and sends the chosen invites, then signs
+ * the owner in; the API sets the session cookie.
+ */
+export async function setUpOwner(
   email: string,
   password: string,
-): Promise<SetupResult> {
+  choices: OwnerSetupChoices,
+): Promise<OwnerSetupOutcome> {
   try {
-    const response = await postJson(path, { email, password });
-    return SETUP_RESULT_BY_STATUS[response.status] ?? "failed";
+    const response = await postJson("/api/auth/setup", {
+      email,
+      password,
+      ...choices,
+      inviteAudience: AUDIENCES[choices.inviteAudience],
+    });
+    const body = (await response.json().catch(() => ({}))) as Partial<{
+      invites: OwnerSetupInvite[];
+      fieldErrors: { field: string; code: string }[];
+    }>;
+    return {
+      result: SETUP_RESULT_BY_STATUS[response.status] ?? "failed",
+      invites: body.invites ?? [],
+      fieldErrors: body.fieldErrors ?? [],
+    };
   } catch {
-    return "failed";
+    return { result: "failed", invites: [], fieldErrors: [] };
   }
 }
+
+const AUDIENCES = {
+  ONLY_ADMINS: "only_admins",
+  ADMINS_AND_MANAGERS: "admins_and_managers",
+  EVERYONE: "everyone",
+} as const satisfies Record<SetupInviteAudience, string>;

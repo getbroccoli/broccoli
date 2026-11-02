@@ -4,6 +4,7 @@ import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
+import { NO_SETUP_INVITES } from "../domain";
 
 test("refuses an employee claiming ownership without creating a user or advancing setup", async ({
   orm,
@@ -55,7 +56,7 @@ test("creates the owner for the holder, completes setup and ends the session", a
     },
   });
 
-  const owner = await transact((tx) =>
+  const { owner } = await transact((tx) =>
     owners.createOwnerAtSetup(
       SYSTEM,
       tx,
@@ -65,6 +66,7 @@ test("creates the owner for the holder, completes setup and ends the session", a
       },
       () => insertOwner(tx),
       importServices(orm).addApprovedPeople,
+      CHOICES,
     ),
   );
 
@@ -94,6 +96,7 @@ test.for([null, "another-token"])(
           },
           () => insertOwner(tx),
           importServices(orm).addApprovedPeople,
+          CHOICES,
         ),
       ),
     ).rejects.toMatchObject({ name: "SetupInProgressError" });
@@ -119,6 +122,7 @@ test("refuses owner creation with an expired setup session", async ({ orm, seed,
         },
         () => insertOwner(tx),
         importServices(orm).addApprovedPeople,
+        CHOICES,
       ),
     ),
   ).rejects.toMatchObject({ name: "SetupInProgressError" });
@@ -143,6 +147,7 @@ test.for(["company", "import"] as const)(
           },
           () => insertOwner(tx),
           importServices(orm).addApprovedPeople,
+          CHOICES,
         ),
       ),
     ).rejects.toMatchObject({
@@ -168,6 +173,7 @@ test("keeps one owner when two creations arrive together", async ({ orm, seed, t
         credential,
         () => insertOwner(tx, "owner-1"),
         importServices(orm).addApprovedPeople,
+        CHOICES,
       ),
     ),
     transact((tx) =>
@@ -177,6 +183,7 @@ test("keeps one owner when two creations arrive together", async ({ orm, seed, t
         credential,
         () => insertOwner(tx, "owner-2"),
         importServices(orm).addApprovedPeople,
+        CHOICES,
       ),
     ),
   ]);
@@ -198,3 +205,5 @@ async function insertOwner(tx: Tx, id = "owner-1") {
   await ormOf(tx).insert(user).values(owner);
   return { user: owner };
 }
+
+const CHOICES = { ...NO_SETUP_INVITES, linkOrigin: "https://broccoli.example.com" };

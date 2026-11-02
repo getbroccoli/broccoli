@@ -112,6 +112,42 @@ test("a managed owner completes setup from the ready step over GraphQL", async (
   });
 });
 
+test("completing managed setup returns the invites for everyone", async () => {
+  const { env, accounts } = await startManagedEnv();
+  const browser = await signInAsManagedOwner(env, accounts);
+  await browser.graphql(`mutation {
+    company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } }
+  }`);
+  const source = await env.seed.importSource();
+  await env.seed.importEmployees(source.id, [
+    { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+  ]);
+  expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
+    data: { import: { approve: { error: null } } },
+  });
+
+  const response = await browser.graphql(`mutation {
+    setup { complete(input: { inviteAudience: EVERYONE }) {
+      setup { id step }
+      invites { employeeId name link }
+      error { __typename ... on Error { message } }
+    } }
+  }`);
+
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    data: {
+      setup: {
+        complete: {
+          setup: { id: "instance", step: "DONE" },
+          invites: [{ employeeId: expect.any(String) as unknown, name: "Robin Reed", link: null }],
+          error: null,
+        },
+      },
+    },
+  });
+});
+
 test("refuses a replayed ticket", async () => {
   const { env, accounts } = await assignedEnv();
   const { state } = await start(env);

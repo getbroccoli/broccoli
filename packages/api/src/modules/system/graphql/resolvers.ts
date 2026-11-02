@@ -33,6 +33,11 @@ const OWNER_SIGN_IN_METHODS = {
   sign_in_with_google: "SIGN_IN_WITH_GOOGLE",
   sign_in_with_email: "SIGN_IN_WITH_EMAIL",
 } as const;
+const SETUP_INVITE_AUDIENCE_INPUTS = {
+  ONLY_ADMINS: "only_admins",
+  ADMINS_AND_MANAGERS: "admins_and_managers",
+  EVERYONE: "everyone",
+} as const;
 const KEY_ORIGINS = { environment: "ENVIRONMENT", saved: "SAVED" } as const;
 const MAIL_SOURCES = {
   smtp_server: "SMTP_SERVER",
@@ -91,12 +96,17 @@ export function createResolvers(
       setup: () => ({}),
     },
     SetupMutations: {
-      complete: (_parent, _args, context) =>
+      complete: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["SetupCompletePayload"]>(async () => {
           const actor = context.getActor();
-          await system.completeSetup(actor);
-          return { setup: await readSetup(actor) };
-        }, ["CONFLICT"]),
+          const invites = await system.completeSetup(actor, {
+            ownerEmployeeKey: input?.ownerEmployeeKey ?? null,
+            inviteAudience: SETUP_INVITE_AUDIENCE_INPUTS[input?.inviteAudience ?? "ONLY_ADMINS"],
+            inviteNote: input?.inviteNote ?? null,
+            linkOrigin: await context.publicOrigin(),
+          });
+          return { setup: await readSetup(actor), invites };
+        }, ["CONFLICT", "INVALID_INPUT"]),
       reset: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupResetPayload"]>(async () => {
           const actor = context.getActor();

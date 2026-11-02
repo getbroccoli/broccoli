@@ -3,22 +3,30 @@ import type { Transact, Tx } from "../../../core/db";
 import {
   type AddApprovedPeople,
   createInstanceService,
+  createOwnerService,
   createSetupStepService,
+  type SetupChoices,
+  type SetupInvite,
 } from "../../../core/instance";
 import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
 
 const setupSteps = createSetupStepService();
 const instances = createInstanceService();
+const owners = createOwnerService();
 
 /** The instance-wide setup beyond its steps: completing a managed setup and starting over. */
 export interface SystemService {
   /**
    * Completes a managed setup once the owner has seen what it will add: adds the approved
-   * people and publishes `instance.setup_completed`, in one transaction. Refused at any step
-   * but `ready`, such as after another tab went back to the review.
+   * people, links the owner to their person, sends the invites they chose and publishes
+   * `instance.setup_completed`, in one transaction. Returns the invites. Refused at any step but
+   * `ready`, such as after another tab went back to the review.
    */
-  completeSetup: (ctx: SecurityContext) => Promise<void>;
+  completeSetup: (
+    ctx: SecurityContext,
+    choices: SetupChoices & { linkOrigin: string },
+  ) => Promise<SetupInvite[]>;
   /**
    * Starts a finished setup over: deletes every employee and takes setup back to the company
    * step, in one transaction; the company, the AI choice and the owner stay. Refused at any step
@@ -47,14 +55,19 @@ export function createSystemService({
   deleteFinishedImport,
 }: SystemServiceDependencies): SystemService {
   return {
-    async completeSetup(ctx) {
-      await transact(async (tx) => {
+    completeSetup: (ctx, choices) =>
+      transact(async (tx) => {
         if (!(await setupSteps.completeReadyStep(ctx, tx))) {
           throw new ApplicationError("CONFLICT", "Setup is not at the ready step.");
         }
-        await addApprovedPeople(ctx, tx);
-      });
-    },
+        // An admin may finish too; the owner, who exists before managed setup, is linked either way.
+        const owner = (await owners.readOwner(tx))!;
+        return addApprovedPeople(ctx, tx, {
+          ...choices,
+          ownerUserId: owner.userId,
+          ownerEmail: owner.email,
+        });
+      }),
     async resetSetup(ctx) {
       ctx.require("RESET_WORKSPACE");
       await transact(async (tx) => {

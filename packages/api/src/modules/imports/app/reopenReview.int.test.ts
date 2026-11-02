@@ -15,6 +15,8 @@ import {
   fileStorage,
 } from "#test/support";
 
+import { NO_SETUP_INVITES } from "../../../core/instance";
+
 test.for(["ready", "owner"] as const)(
   "Back reopens the review from %s",
   async (step, { orm, seed }) => {
@@ -102,7 +104,10 @@ test("Back preserves values, left-out choices, sources and photos for the next a
     choice: { value: "Engineer" },
   });
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
-  await systemService(orm).completeSetup(owner);
+  await systemService(orm).completeSetup(owner, {
+    ...NO_SETUP_INVITES,
+    linkOrigin: "https://broccoli.example.com",
+  });
 
   expect(
     (await employees.listEmployees(owner, { orderBy: { field: "EMAIL" } })).edges.map(

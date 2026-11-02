@@ -9,6 +9,7 @@ export type SetupPath =
   | "/setup/ai"
   | "/setup/import"
   | "/setup/import/review"
+  | "/setup/who"
   | "/setup"
   | "/setup/ready"
   | "/people";
@@ -61,11 +62,23 @@ const REVIEW = {
   path: "/setup/import/review",
   step: "IMPORT",
 } as const satisfies PageDefinition;
-// Both pages, and Setup AI before them, belong to the server's `import` step, until Approve.
-const PEOPLE = {
+// After Approve, so it belongs to the server step of setup's last page.
+const WHO_SELF_HOSTED = {
+  id: "who",
+  title: "setup.who.step",
+  path: "/setup/who",
+  step: "OWNER",
+} as const satisfies PageDefinition;
+const WHO_MANAGED = { ...WHO_SELF_HOSTED, step: "READY" } as const satisfies PageDefinition;
+// Gathering and review, and Setup AI before them, belong to the server's `import` step, until Approve.
+const PEOPLE_SELF_HOSTED = {
   id: "people",
   title: "setup.import.title",
-  pages: [IMPORT, REVIEW],
+  pages: [IMPORT, REVIEW, WHO_SELF_HOSTED],
+} as const satisfies StepDefinition;
+const PEOPLE_MANAGED = {
+  ...PEOPLE_SELF_HOSTED,
+  pages: [IMPORT, REVIEW, WHO_MANAGED],
 } as const satisfies StepDefinition;
 const READY = {
   id: "ready",
@@ -79,17 +92,23 @@ const FINISHED: SetupPath = "/people";
 
 /**
  * The setup flow: the steps in order, each with the copy key of its title. The owner may go
- * back to the company until Approve. A self-hosted owner picks how files are read with AI and
- * creates their account last; a managed one keeps its provided key, signed up before setup
- * and sees what it will add last.
+ * back to the company until Approve, then chooses who uses Broccoli. A self-hosted owner picks
+ * how files are read with AI and creates their account last; a managed one keeps its provided
+ * key, signed up before setup and sees what it will add last.
  */
 const SETUP_STEPS = {
-  SELF_HOSTED: [COMPANY, AI, PEOPLE, OWNER],
-  MANAGED: [COMPANY, PEOPLE, READY],
+  SELF_HOSTED: [COMPANY, AI, PEOPLE_SELF_HOSTED, OWNER],
+  MANAGED: [COMPANY, PEOPLE_MANAGED, READY],
 } as const satisfies Record<Mode, readonly (PageDefinition | StepDefinition)[]>;
 
 type Page =
-  typeof OWNER | typeof COMPANY | typeof AI | typeof IMPORT | typeof REVIEW | typeof READY;
+  | typeof OWNER
+  | typeof COMPANY
+  | typeof AI
+  | typeof IMPORT
+  | typeof REVIEW
+  | typeof WHO_SELF_HOSTED
+  | typeof READY;
 
 /** A setup page: a step's own page, or one of its pages. */
 export type SetupStepId = Page["id"];

@@ -1,0 +1,53 @@
+query SetupInvitees($audience: SetupInviteAudience!, $me: ID, $ownerEmail: String) {
+  company {
+    id
+    name
+  }
+  setup {
+    id
+    inviteDelivery
+  }
+  import {
+    id
+    setupInvitees(audience: $audience, ownerEmployeeKey: $me, ownerEmail: $ownerEmail) {
+      ...SetupPerson @unmask
+    }
+  }
+}
+
+query SetupOwnerPerson($me: ID!) {
+  import {
+    id
+    ownerCandidate {
+      ...SetupPerson @unmask
+    }
+    chosen: readyEmployee(key: $me) {
+      ...SetupPerson @unmask
+    }
+  }
+}
+
+query SetupAudiences($me: ID) {
+  import {
+    id
+    everyone: setupInvitees(audience: EVERYONE, ownerEmployeeKey: $me) {
+      id
+    }
+    managers: setupInvitees(audience: ADMINS_AND_MANAGERS, ownerEmployeeKey: $me) {
+      ...SetupPerson @unmask
+    }
+  }
+}
+
+fragment SetupPerson on ImportEmployee {
+  id
+  firstName {
+    value
+  }
+  lastName {
+    value
+  }
+  email {
+    value
+  }
+}

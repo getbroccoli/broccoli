@@ -8,7 +8,12 @@ import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
 import { companyModule, createCompany } from "./company";
 import { createDemoFillService, demoModule } from "./demo";
-import { createEmployeeSetupService, employeeDirectory, employeesModule } from "./employees";
+import {
+  createEmployeeInviteService,
+  createEmployeeSetupService,
+  employeeDirectory,
+  employeesModule,
+} from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
@@ -39,6 +44,12 @@ export function createModules(
   const mailSettings = createMailSettingsService({ ...core, deployment, resendApiUrl });
   const passwordResetEmail = createPasswordResetEmailService({ ...core, mailSettings });
   const company = createCompany({ ...core, brandLookupUrl });
+  // Built once: the employees module serves it and setup's last step invites through it.
+  const invites = createEmployeeInviteService({
+    ...core,
+    mailSettings,
+    readCompany: company.readStoredCompany,
+  });
   // Built once: the import serves them and the external agent puts its files through them.
   const importServices = createImportServices({
     ...core,
@@ -46,6 +57,7 @@ export function createModules(
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
     prepareDemoFill: createDemoFillService().prepareDemoFill,
+    invites,
   });
   const manifests = [
     systemModule({
@@ -58,12 +70,7 @@ export function createModules(
       deleteAllEmployees: employeeSetup.deleteAllEmployees,
       deleteFinishedImport: importServices.deleteFinishedImport,
     }),
-    employeesModule({
-      ...core,
-      mode: deployment.mode,
-      mailSettings,
-      readCompany: company.readStoredCompany,
-    }),
+    employeesModule({ ...core, mode: deployment.mode, invites }),
     companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule(slackConnection),

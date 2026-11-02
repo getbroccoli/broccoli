@@ -11,7 +11,12 @@ import { t, type MessageKey } from "@/i18n";
 import { useSessionChange } from "@/lib/useSessionChange";
 
 import { NewPasswordField } from "./NewPasswordField";
-import { type SetupResult, setUpOwner } from "./setupApi";
+import {
+  type OwnerSetupChoices,
+  type OwnerSetupInvite,
+  type SetupResult,
+  setUpOwner,
+} from "./setupApi";
 import type { SetupWidth } from "./SetupLayout";
 import { SetupStepForm } from "./SetupStepForm";
 
@@ -38,6 +43,24 @@ type Props = {
   /** Shown on the left of the footer, such as a way back out of setup's last step. */
   secondaryAction?: ReactNode;
   width?: SetupWidth;
+  /** Pre-fills the email, such as the work email of the person the owner said they are. */
+  defaultEmail?: string;
+  /**
+   * Runs with the email when the owner leaves its field, or submits with a new one: that submit
+   * stops there, so the owner sees what the new email changes before creating the account.
+   */
+  onEmailEntered: (email: string) => void;
+  /** Shown below the fields, such as the invites creating the account sends. */
+  children?: ReactNode;
+  /** What the owner chose on "Who uses Broccoli". */
+  choices: OwnerSetupChoices;
+  /** Whether the choices are known, so the account may be created with them. */
+  canSubmit: boolean;
+  /** Runs once the account exists, with the invites it sent, before the owner enters the app. */
+  onCreated: (invites: OwnerSetupInvite[]) => Promise<void>;
+  /** Runs when the account was refused for its invite note, with the note's error codes. */
+  onNoteRefused: (codes: string[]) => void;
+  submitLabel: string;
 };
 
 /**
@@ -45,16 +68,42 @@ type Props = {
  * signed-in owner to the directory. On a conflict, such as an owner created first, the
  * reload routes the visitor to wherever setup now is.
  */
-export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
+export function OwnerSetupForm({
+  intro,
+  secondaryAction,
+  width,
+  defaultEmail = "",
+  onEmailEntered,
+  children,
+  choices,
+  canSubmit,
+  onCreated,
+  onNoteRefused,
+  submitLabel,
+}: Props) {
   const emailInput = useRef<HTMLInputElement>(null);
+  const enteredEmail = useRef(defaultEmail);
+  const enterEmail = (email: string) => {
+    enteredEmail.current = email;
+    onEmailEntered(email);
+  };
   const passwordInput = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<MessageKey | null>(null);
   const [createAndReload, creating] = useSessionChange(async (email: string, password: string) => {
     setFailure(null);
-    const result = await setUpOwner(email, password);
-    // On a conflict, setup moved on in another browser: reloading shows where.
-    if (result === "ok" || result === "conflict") {
+    const { result, invites, fieldErrors } = await setUpOwner(email, password, choices);
+    if (result === "ok") {
+      await onCreated(invites);
       return true;
+    }
+    // On a conflict, setup moved on in another browser: reloading shows where.
+    if (result === "conflict") {
+      return true;
+    }
+    const noteCodes = fieldErrors.flatMap(({ field, code }) => (field === "note" ? [code] : []));
+    if (noteCodes.length > 0) {
+      onNoteRefused(noteCodes);
+      return false;
     }
     setFailure(FAILURE_MESSAGES[result]);
     passwordInput.current?.focus();
@@ -62,9 +111,16 @@ export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
   });
 
   const form = useForm({
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: defaultEmail, password: "" },
     validators: { onSubmit: ownerSetupSchema },
-    onSubmit: ({ value }) => createAndReload(value.email, value.password),
+    onSubmit: ({ value }) => {
+      // Pressing Enter in the email field doesn't leave it.
+      if (value.email !== enteredEmail.current) {
+        enterEmail(value.email);
+        return;
+      }
+      return createAndReload(value.email, value.password);
+    },
     // Focus takes a screen reader to the field and reads its error with it.
     onSubmitInvalid: ({ formApi }) => {
       const emailIsInvalid = (formApi.getFieldMeta("email")?.errors.length ?? 0) > 0;
@@ -84,14 +140,17 @@ export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
       onSubmit={() => void form.handleSubmit()}
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          {secondaryAction}
+          {/* Leaving mid-submit would lose what creating the account answers, such as invite links. */}
+          <fieldset disabled={isSubmitting} className="contents">
+            {secondaryAction}
+          </fieldset>
           <Button
             type="submit"
             size="lg"
             className="ml-auto h-10 gap-2 px-4"
-            disabled={isSubmitting || !isFilledIn}
+            disabled={isSubmitting || !isFilledIn || !canSubmit}
           >
-            {t(isSubmitting ? "setup.owner.submitting" : "setup.owner.submit")}
+            {isSubmitting ? t("setup.owner.submitting") : submitLabel}
             <ArrowRight weight="bold" aria-hidden />
           </Button>
         </div>
@@ -115,7 +174,10 @@ export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
                 className="h-12 rounded-xl bg-muted/30 px-4"
                 value={field.state.value}
                 onChange={(event) => field.handleChange(event.target.value)}
-                onBlur={field.handleBlur}
+                onBlur={() => {
+                  field.handleBlur();
+                  enterEmail(field.state.value);
+                }}
                 aria-invalid={error !== undefined}
                 aria-describedby={error ? "owner-email-hint owner-email-error" : "owner-email-hint"}
               />
@@ -140,6 +202,7 @@ export function OwnerSetupForm({ intro, secondaryAction, width }: Props) {
           />
         )}
       </form.Field>
+      {children}
       {failure && (
         <p role="alert" className="text-sm text-destructive">
           {t(failure)}

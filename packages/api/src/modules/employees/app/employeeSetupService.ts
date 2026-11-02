@@ -26,12 +26,13 @@ export interface ImportedEmployees {
 }
 
 /**
- * An employee an import proposes, with the stored photo it brings as its avatar and the email of
- * their manager among the same inputs.
+ * An employee an import proposes, with the stored photo it brings as its avatar, the email of
+ * their manager among the same inputs and, for the owner's own person, the owner's user.
  */
 export type ImportedEmployeeInput = NewEmployeeInput & {
   avatarFileId?: string;
   managerEmail?: string | null;
+  userId?: string;
 };
 
 /** A demo employee, their avatar and the email of their manager among the demo employees. */
@@ -45,14 +46,15 @@ export interface DemoEmployee {
 export interface EmployeeSetupService {
   /**
    * Adds employees proposed by an import, with `cause` on their creation lines; skips the ones
-   * that do not parse or whose email is taken.
+   * that do not parse or whose email is taken. Returns the counts and each new employee's id by
+   * email.
    */
   createImportedEmployees: (
     ctx: SecurityContext,
     tx: Tx,
     inputs: readonly ImportedEmployeeInput[],
     cause: HistoryAppend["cause"],
-  ) => Promise<ImportedEmployees>;
+  ) => Promise<ImportedEmployees & { idsByEmail: ReadonlyMap<string, string> }>;
   /**
    * Adds the demo employees with their avatars to an instance without employees, with `cause`
    * on their creation lines; otherwise does nothing.
@@ -85,12 +87,14 @@ export function createEmployeeSetupService(): EmployeeSetupService {
     async createImportedEmployees(ctx, tx, inputs, cause) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const managerEmails = new Map<string, string>();
-      const newEmployees = inputs.flatMap(({ avatarFileId, managerEmail, ...input }) => {
+      const newEmployees = inputs.flatMap(({ avatarFileId, managerEmail, userId, ...input }) => {
         const employee = tryParseNewEmployee(input);
         if (employee && managerEmail) {
           managerEmails.set(employee.email, managerEmail);
         }
-        return employee ? [{ ...employee, avatarFileId: avatarFileId ?? null }] : [];
+        return employee
+          ? [{ ...employee, avatarFileId: avatarFileId ?? null, userId: userId ?? null }]
+          : [];
       });
       const created = await employeeRepository(tx).insertSkippingTakenEmails(newEmployees);
       const managers = await setNewEmployeeManagers(tx, created, managerEmails);
@@ -99,6 +103,7 @@ export function createEmployeeSetupService(): EmployeeSetupService {
         created: created.length,
         incomplete: inputs.length - newEmployees.length,
         emailTaken: newEmployees.length - created.length,
+        idsByEmail: new Map(created.map(({ id, email }) => [email, id])),
       };
     },
     async createDemoEmployees(ctx, tx, demoEmployees, cause) {

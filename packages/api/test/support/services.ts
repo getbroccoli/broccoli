@@ -83,14 +83,17 @@ export function demoService(orm: Parameters<typeof createDemoService>[0]["orm"])
   return createDemoService({ orm, transact: testTransactor(orm) });
 }
 
-export function systemService(orm: Orm) {
-  return createSystemService({
+export function systemService(orm: Orm, options: { mode?: Mode } = {}) {
+  const invites = employeeInviteService(orm, options);
+  const imports = importServices(orm, { invites });
+  const service = createSystemService({
     transact: testTransactor(orm),
     logger: createLogger("silent"),
-    addApprovedPeople: importServices(orm).addApprovedPeople,
+    addApprovedPeople: imports.addApprovedPeople,
     deleteAllEmployees: employeeSetup.deleteAllEmployees,
-    deleteFinishedImport: importServices(orm).deleteFinishedImport,
+    deleteFinishedImport: imports.deleteFinishedImport,
   });
+  return { ...service, sentJobs: invites.sentJobs };
 }
 
 /** The AI settings on `orm` with a temporary data folder; OpenRouter and Broccoli AI both at `url`. */
@@ -215,6 +218,7 @@ export function importServices(
     jobs,
     clock = () => new Date(),
     prepareDemoFill: prepareFill = () => demoFill.prepareDemoFill(DEMO_TODAY),
+    invites = employeeInviteService(orm),
   }: {
     slackApi?: Partial<SlackApi>;
     decisions?: Decisions;
@@ -222,6 +226,7 @@ export function importServices(
     jobs?: JobQueue;
     clock?: () => Date;
     prepareDemoFill?: Parameters<typeof createImportServices>[0]["prepareDemoFill"];
+    invites?: Parameters<typeof createImportServices>[0]["invites"];
   } = {},
 ) {
   const sentJobs: { name: JobName; payload: Jobs[JobName] }[] = [];
@@ -232,6 +237,7 @@ export function importServices(
     decisions,
     originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
+    invites,
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
         sentJobs.push({ name, payload });

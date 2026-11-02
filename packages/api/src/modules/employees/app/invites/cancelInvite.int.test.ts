@@ -12,6 +12,7 @@ test("cancels a pending invite and records the sign-in change", async ({ orm, se
     state: "not_invited",
     expiresAt: null,
     notSent: false,
+    isWorkspaceOwner: false,
     emailHasAccount: false,
     canBeInvited: true,
   });

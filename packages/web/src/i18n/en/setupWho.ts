@@ -1,0 +1,38 @@
+/** English copy under `setup.who.*`, the "Who uses Broccoli" setup page. */
+export const setupWhoEn = {
+  "setup.who.step": "Who uses Broccoli",
+  "setup.who.title": "Who uses Broccoli?",
+  "setup.who.description": "Choose who signs in. You can change this later.",
+  "setup.who.nothingSent": "Nothing is sent yet.",
+  "setup.who.nothingSentDetail": "You choose when to send invites, at the end of setup.",
+  "setup.who.youTitle": "Which of these people are you?",
+  "setup.who.youHint": "Your account becomes this person's, so you see yourself in People.",
+  "setup.who.notInList": "I’m not in the list",
+  "setup.who.change": "Change",
+  "setup.who.onlyAdmins": "Only admins",
+  "setup.who.onlyAdminsWho": "You, and admins you add later",
+  "setup.who.onlyAdminsCanRecords": "Keep everyone’s records",
+  "setup.who.onlyAdminsCanInvite": "Invite more people from People",
+  "setup.who.onlyAdminsCannot": "Nobody else signs in",
+  "setup.who.adminsAndManagers": "Admins and managers",
+  "setup.who.adminsAndManagersWho": "Plus the {count} people with a team",
+  "setup.who.adminsAndManagersWhoOne": "Plus the 1 person with a team",
+  "setup.who.noManagers": "Nobody besides you has a team yet. Set managers in the review.",
+  "setup.who.managersCanSee": "Managers see everyone in People",
+  "setup.who.managersCanEdit": "Managers edit their team’s job titles",
+  "setup.who.adminsAndManagersCannot": "Their teams don’t sign in",
+  "setup.who.everyone": "Everyone",
+  "setup.who.everyoneWho": "Plus all {count} other people",
+  "setup.who.everyoneWhoOne": "Plus 1 other person",
+  "setup.who.everyoneCanSee": "See everyone in People",
+  "setup.who.everyoneCanEdit": "Correct their own name and photo",
+  "setup.who.everyoneCanManage": "Managers edit their team’s job titles",
+  "setup.who.invitesLater":
+    "{count} invites. You’ll see the invite and can add a note before sending it, on the last step.",
+  "setup.who.invitesLaterOne":
+    "1 invite. You’ll see the invite and can add a note before sending it, on the last step.",
+  "setup.who.noInvites":
+    "People won’t get an invite. You can let more people in later from People.",
+  "setup.who.showNames": "Show names",
+  "setup.who.continue": "Continue",
+} as const;

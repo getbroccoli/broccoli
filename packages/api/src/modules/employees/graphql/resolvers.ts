@@ -79,8 +79,11 @@ export function createResolvers(
         ),
     },
     Setup: {
+      // The setup holder previews setup's invites before the owner exists.
       inviteDelivery: async (_setup, _args, { security }) =>
-        security?.can("MANAGE_WORKSPACE") ? DELIVERIES[await invites.delivery(security)] : null,
+        security?.isSetupHolder || security?.can("MANAGE_WORKSPACE")
+          ? DELIVERIES[await invites.delivery(security)]
+          : null,
     },
     User: {
       employee: (_user, _args, context) => services.readMyEmployee(context.getActor()),

@@ -4,7 +4,11 @@ import type { JobQueue } from "../../../core/jobs";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { createEmployeeChoiceService, type EmployeeChoiceService } from "./employeeChoiceService";
 import { createFileSourceService, type FileSourceService } from "./fileSourceService";
-import { createImportApprovalService, type ImportApprovalService } from "./importApprovalService";
+import {
+  createImportApprovalService,
+  type ImportApprovalService,
+  type SetupInvites,
+} from "./importApprovalService";
 import {
   createImportDemoService,
   type DemoFill,
@@ -56,17 +60,19 @@ export function createImportServices({
   originalFileReader,
   jobs,
   prepareDemoFill,
+  invites,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: ImportSlack;
   decisions: Decisions;
   originalFileReader: OriginalFileReader;
   jobs: JobQueue;
   prepareDemoFill: () => Promise<DemoFill>;
+  invites: SetupInvites;
 }): ImportServices {
   const readUpload = createUploadReader();
   return {
     ...createImportSourceService({ orm, transact, logger, slack }),
-    ...createImportApprovalService({ transact, logger }),
+    ...createImportApprovalService({ transact, logger, invites }),
     ...createImportLifecycleService({ transact, logger }),
     ...createImportDemoService({ transact, prepareDemoFill }),
     reads: createImportReadService(orm),

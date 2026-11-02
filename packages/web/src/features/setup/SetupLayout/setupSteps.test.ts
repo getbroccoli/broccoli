@@ -13,11 +13,11 @@ import {
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
-  ["OWNER", "SELF_HOSTED", "/setup"],
+  ["OWNER", "SELF_HOSTED", "/setup/who"],
   ["DONE", "SELF_HOSTED", "/people"],
   ["COMPANY", "MANAGED", "/setup/company"],
   ["IMPORT", "MANAGED", "/setup/import"],
-  ["READY", "MANAGED", "/setup/ready"],
+  ["READY", "MANAGED", "/setup/who"],
   ["DONE", "MANAGED", "/people"],
 ] as const)("enters %s in %s through %s", (step, mode, expected) => {
   expect(setupStepPage(step, mode)).toBe(expected);
@@ -28,11 +28,11 @@ it.each([
   ["ai", "SELF_HOSTED", "/setup/company"],
   ["import", "SELF_HOSTED", "/setup/ai"],
   ["review", "SELF_HOSTED", "/setup/import"],
-  ["owner", "SELF_HOSTED", undefined],
+  ["owner", "SELF_HOSTED", "/setup/who"],
   ["company", "MANAGED", undefined],
   ["import", "MANAGED", "/setup/company"],
   ["review", "MANAGED", "/setup/import"],
-  ["ready", "MANAGED", undefined],
+  ["ready", "MANAGED", "/setup/who"],
 ] as const)("gives %s in %s the Back destination %s", (page, mode, expected) => {
   expect(previousPage(page, mode)).toBe(expected);
 });
@@ -41,11 +41,13 @@ it.each([
   ["company", "SELF_HOSTED", "/setup/ai"],
   ["ai", "SELF_HOSTED", "/setup/import"],
   ["import", "SELF_HOSTED", "/setup/import/review"],
-  ["review", "SELF_HOSTED", "/setup"],
+  ["review", "SELF_HOSTED", "/setup/who"],
+  ["who", "SELF_HOSTED", "/setup"],
   ["owner", "SELF_HOSTED", "/people"],
   ["company", "MANAGED", "/setup/import"],
   ["import", "MANAGED", "/setup/import/review"],
-  ["review", "MANAGED", "/setup/ready"],
+  ["review", "MANAGED", "/setup/who"],
+  ["who", "MANAGED", "/setup/ready"],
   ["ready", "MANAGED", "/people"],
 ] as const)("continues from %s in %s to %s", (page, mode, expected) => {
   expect(nextPage(page, mode)).toBe(expected);
@@ -100,8 +102,8 @@ it.each([
   ["ai", "IMPORT", "MANAGED", { id: "owner" }, false, "/setup/import"],
   ["company", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
   ["import", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
-  ["import", "OWNER", "SELF_HOSTED", null, true, "/setup"],
-  ["company", "OWNER", "SELF_HOSTED", { id: "owner" }, false, "/setup"],
+  ["import", "OWNER", "SELF_HOSTED", null, true, "/setup/who"],
+  ["company", "OWNER", "SELF_HOSTED", { id: "owner" }, false, "/setup/who"],
 ] as const)(
   "sends a visitor opening %s at %s in %s to the current setup page",
   (page, setupStep, mode, me, holdsSetup, to) => {
@@ -135,9 +137,9 @@ it("returns the signed-in user when setup is done", () => {
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
-  ["OWNER", "SELF_HOSTED", "/setup"],
+  ["OWNER", "SELF_HOSTED", "/setup/who"],
   ["IMPORT", "MANAGED", "/setup/import"],
-  ["READY", "MANAGED", "/setup/ready"],
+  ["READY", "MANAGED", "/setup/who"],
 ] as const)(
   "sends a signed-in user at %s in %s to %s before entering the app",
   (setupStep, mode, to) => {
@@ -193,6 +195,7 @@ it("marks people and ready later while company is current", () => {
       pages: [
         { id: "import", state: "later" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
     { id: "ready", state: "later" },
@@ -210,6 +213,7 @@ it("marks people current and earlier steps done while importing", () => {
       pages: [
         { id: "import", state: "current" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
     { id: "ready", state: "later" },
@@ -227,6 +231,7 @@ it("keeps people current with import done while reviewing", () => {
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "current" },
+        { id: "who", state: "later" },
       ],
     },
     { id: "ready", state: "later" },
@@ -244,6 +249,7 @@ it("marks company and people done while ready is current", () => {
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "done" },
+        { id: "who", state: "done" },
       ],
     },
     { id: "ready", state: "current" },
@@ -262,6 +268,7 @@ it("keeps the self-hosted owner later while reviewing people", () => {
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "current" },
+        { id: "who", state: "later" },
       ],
     },
     { id: "owner", state: "later" },
@@ -280,6 +287,7 @@ it("marks company and people done while the self-hosted owner is current", () =>
       pages: [
         { id: "import", state: "done" },
         { id: "review", state: "done" },
+        { id: "who", state: "done" },
       ],
     },
     { id: "owner", state: "current" },
@@ -298,6 +306,7 @@ it("places Setup AI between company and people on a self-hosted instance", () =>
       pages: [
         { id: "import", state: "later" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
     { id: "owner", state: "later" },
@@ -316,8 +325,15 @@ it("marks Setup AI done while gathering people on a self-hosted instance", () =>
       pages: [
         { id: "import", state: "current" },
         { id: "review", state: "later" },
+        { id: "who", state: "later" },
       ],
     },
     { id: "owner", state: "later" },
   ]);
+});
+
+it("lists who uses Broccoli as the current page of people, after the review", () => {
+  const people = stepViews("who", "MANAGED").find(({ id }) => id === "people");
+
+  expect(people?.pages.map(({ state }) => state)).toEqual(["done", "done", "current"]);
 });

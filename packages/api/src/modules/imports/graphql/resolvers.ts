@@ -1,5 +1,6 @@
 import type { Resolvers } from "../../../core/graphql";
 import type { ImportServices } from "../app";
+import { findOwnerCandidate, setupInvitees } from "../domain";
 import {
   AGENT_FILE_PROGRESS,
   AI_SOURCES,
@@ -7,6 +8,7 @@ import {
   IMPORT,
   KINDS,
   READERS,
+  SETUP_INVITE_AUDIENCE_INPUTS,
   STATUSES,
 } from "./graphqlValues";
 import { importCheckResolvers } from "./importCheckResolvers";
@@ -45,6 +47,23 @@ export function createResolvers(services: ImportServices): Resolvers {
         (await loaders(context).review()).readyEmployeeSources,
       checks: async (_parent, _args, context) => (await loaders(context).review()).checks,
       version: async (_parent, _args, context) => (await loaders(context).review()).version,
+      setupInvitees: async (_parent, { audience, ownerEmployeeKey, ownerEmail }, context) => {
+        const review = await loaders(context).review();
+        return setupInvitees(
+          review.readyEmployees,
+          review.managers,
+          SETUP_INVITE_AUDIENCE_INPUTS[audience],
+          ownerEmployeeKey ?? null,
+          ownerEmail ?? review.ownerEmail,
+        );
+      },
+      ownerCandidate: async (_parent, _args, context) => {
+        const { readyEmployees, ownerEmail } = await loaders(context).review();
+        return findOwnerCandidate(readyEmployees, ownerEmail);
+      },
+      readyEmployee: async (_parent, { key }, context) =>
+        (await loaders(context).review()).readyEmployees.find((employee) => employee.key === key) ??
+        null,
     },
     ImportSource: {
       kind: ({ kind }) => KINDS[kind],

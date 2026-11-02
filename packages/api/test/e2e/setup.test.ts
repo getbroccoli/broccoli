@@ -1,4 +1,4 @@
-import { expect, test } from "#test/support";
+import { approveReviewedImport, expect, test, TEST_OWNER } from "#test/support";
 
 test("exposes no owner sign-in method on a self-hosted instance without a session", async ({
   env,
@@ -6,6 +6,36 @@ test("exposes no owner sign-in method on a self-hosted instance without a sessio
   const response = await env.browser().graphql("{ setup { ownerSignInMethod } }");
 
   expect(await response.json()).toEqual({ data: { setup: { ownerSignInMethod: null } } });
+});
+
+test("the setup holder can read invite delivery before the owner exists", async ({ env }) => {
+  const browser = env.browser();
+  await browser.post("/api/auth/setup/start", undefined);
+
+  const response = await browser.graphql("{ setup { inviteDelivery } }");
+
+  expect(await response.json()).toEqual({
+    data: { setup: { inviteDelivery: "COPIED_BY_OWNER" } },
+  });
+});
+
+test("the setup holder's invite preview excludes the owner's sign-in email regardless of case", async ({
+  env,
+}) => {
+  const browser = await env.startSetupAtImport();
+  const source = await env.seed.importSource();
+  await env.seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+    { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+  ]);
+
+  const response = await browser.graphql(
+    '{ import { setupInvitees(audience: EVERYONE, ownerEmail: "Avery@Example.com") { id } } }',
+  );
+
+  expect(await response.json()).toEqual({
+    data: { import: { setupInvitees: [{ id: "robin@example.com" }] } },
+  });
 });
 
 test("starting the demo signs in its owner for seven days and completes setup", async ({ env }) => {
@@ -176,6 +206,38 @@ test("refuses to reset a real owner's setup and keeps their session and employee
       employees: { edges: [{ node: { id: employee.id } }] },
     },
   });
+});
+
+test("creating the self-hosted owner returns invite links for the other people", async ({
+  env,
+}) => {
+  const browser = await env.startSetupAtImport();
+  const source = await env.seed.importSource();
+  await env.seed.importEmployees(source.id, [
+    { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
+    { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+    { firstName: "Taylor", lastName: "Brook", email: "taylor@example.com" },
+  ]);
+  expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
+    data: { import: { approve: { error: null } } },
+  });
+
+  const response = await browser.post("/api/auth/setup", {
+    ...TEST_OWNER,
+    inviteAudience: "everyone",
+    ownerEmployeeKey: "avery@example.com",
+  });
+
+  expect(response.status).toBe(200);
+  const body = (await response.json()) as {
+    invites: { employeeId: string; name: string; link: string }[];
+  };
+  expect(body.invites.map(({ name }) => name).sort()).toEqual(["Robin Reed", "Taylor Brook"]);
+  for (const invite of body.invites) {
+    expect(invite.employeeId).toEqual(expect.any(String));
+    expect(invite.link).toMatch(new RegExp(`^${env.url}/invite#[A-Za-z0-9_-]{43}$`));
+  }
+  expect(new Set(body.invites.map(({ link }) => link)).size).toBe(2);
 });
 
 function sessionCookieOf(response: Response): string | undefined {

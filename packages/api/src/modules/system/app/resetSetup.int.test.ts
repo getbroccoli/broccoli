@@ -16,6 +16,7 @@ import {
 } from "#test/support";
 
 import { user } from "../../../core/auth";
+import { NO_SETUP_INVITES } from "../../../core/instance";
 
 test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({
   orm,
@@ -61,7 +62,10 @@ test("resets a finished setup whose import was not cleaned up yet", async ({ orm
   const system = systemService(orm);
   const employees = employeeServices(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
-  await system.completeSetup(owner);
+  await system.completeSetup(owner, {
+    ...NO_SETUP_INVITES,
+    linkOrigin: "https://broccoli.example.com",
+  });
   expect((await employees.listEmployees(owner, {})).edges).toMatchObject([
     { node: { avatarFileId } },
   ]);

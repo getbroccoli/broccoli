@@ -3,6 +3,7 @@ import { createAuthEndpoint } from "@better-auth/core/api";
 import { APIError } from "@better-auth/core/error";
 import type { BetterAuthPlugin } from "better-auth";
 import { setSessionCookie } from "better-auth/cookies";
+import { z } from "zod";
 
 import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact } from "../../db";
@@ -15,7 +16,14 @@ import {
   type AddApprovedPeople,
   type DemoStart,
 } from "../app";
-import { demoExpiry, OwnerExistsError, SETUP_SESSION_DAYS, SetupInProgressError } from "../domain";
+import {
+  demoExpiry,
+  OwnerExistsError,
+  SETUP_INVITE_AUDIENCES,
+  SETUP_SESSION_DAYS,
+  type SetupChoices,
+  SetupInProgressError,
+} from "../domain";
 import { provisionalOwnerEmail } from "../helpers";
 import { inAuthTransaction } from "./authTransaction";
 import { assertValidCredentials, credentialsBody, linkPassword } from "./credentials";
@@ -37,6 +45,13 @@ const NOT_AT_OWNER_STEP = {
   code: "NOT_AT_OWNER_STEP",
   message: "Finish the import before creating the owner",
 };
+/** The owner's credentials and what they chose on "Who uses Broccoli". */
+const setupBody = credentialsBody.extend({
+  ownerEmployeeKey: z.string().nullish(),
+  inviteAudience: z.enum(SETUP_INVITE_AUDIENCES).optional(),
+  inviteNote: z.string().nullish(),
+});
+
 const NOT_AT_IMPORT_STEP = {
   code: "NOT_AT_IMPORT_STEP",
   message: "Name the company before starting the demo",
@@ -46,7 +61,7 @@ const NOT_AT_IMPORT_STEP = {
  * Self-hosted setup before the owner exists. `POST /api/auth/setup/start` gives setup
  * to the first browser, or renews it for the browser holding it, through the
  * `broccoli_setup` cookie. `POST /api/auth/setup`, the last step, creates the owner
- * for that browser with the approved people and signs them in; it answers after the handlers of
+ * for that browser with the approved people, sends the invites they chose and signs them in; it answers after the handlers of
  * `instance.owner_claimed` and `instance.setup_completed` have run. Instead of the
  * import, `POST /api/auth/setup/demo` starts the demo for that browser, signed in as a
  * provisional owner without credentials (see `demoPlugin`). `setupRouter` limits and
@@ -58,7 +73,13 @@ export function setupPlugin(
   {
     prepareDemoStart,
     addApprovedPeople,
-  }: { prepareDemoStart: () => Promise<DemoStart>; addApprovedPeople: AddApprovedPeople },
+    publicUrl,
+  }: {
+    prepareDemoStart: () => Promise<DemoStart>;
+    addApprovedPeople: AddApprovedPeople;
+    /** Where invite links point; unset takes the address the request came to. */
+    publicUrl?: string;
+  },
 ) {
   return {
     id: "setup",
@@ -71,31 +92,33 @@ export function setupPlugin(
         setSetupCookie(ctx, session.token, SETUP_SESSION_DAYS * DAY_SECONDS);
         return ctx.json({ holder: "you" });
       }),
-      setup: createAuthEndpoint(
-        "/setup",
-        { method: "POST", body: credentialsBody },
-        async (ctx) => {
-          assertValidCredentials(ctx.body, ctx.context.password.config);
-          const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
-          // Checked early to skip the slow hashing; the transaction checks again.
-          await assertHoldsSetup(orm, token);
-          // Hashing is slow, so it happens before the transaction takes its lock.
-          const passwordHash = await ctx.context.password.hash(ctx.body.password);
-          const owner = await refusingSetupConflicts(
-            () =>
-              createOwner(transact, ctx, {
-                token,
-                email: ctx.body.email.toLowerCase(),
-                passwordHash,
-                addApprovedPeople,
-              }),
-            NOT_AT_OWNER_STEP,
-          );
-          await setSessionCookie(ctx, owner);
-          setSetupCookie(ctx, "", 0);
-          return ctx.json({ user: { id: owner.user.id, email: owner.user.email } });
-        },
-      ),
+      setup: createAuthEndpoint("/setup", { method: "POST", body: setupBody }, async (ctx) => {
+        assertValidCredentials(ctx.body, ctx.context.password.config);
+        const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
+        // Checked early to skip the slow hashing; the transaction checks again.
+        await assertHoldsSetup(orm, token);
+        // Hashing is slow, so it happens before the transaction takes its lock.
+        const passwordHash = await ctx.context.password.hash(ctx.body.password);
+        const { owner, invites } = await refusingSetupConflicts(
+          () =>
+            createOwner(transact, ctx, {
+              token,
+              email: ctx.body.email.toLowerCase(),
+              passwordHash,
+              addApprovedPeople,
+              choices: {
+                ownerEmployeeKey: ctx.body.ownerEmployeeKey ?? null,
+                inviteAudience: ctx.body.inviteAudience ?? "only_admins",
+                inviteNote: ctx.body.inviteNote ?? null,
+                linkOrigin: new URL(publicUrl ?? ctx.request?.url ?? ctx.context.baseURL).origin,
+              },
+            }),
+          NOT_AT_OWNER_STEP,
+        );
+        await setSessionCookie(ctx, owner);
+        setSetupCookie(ctx, "", 0);
+        return ctx.json({ user: { id: owner.user.id, email: owner.user.email }, invites });
+      }),
       startDemo: createAuthEndpoint("/setup/demo", { method: "POST" }, async (ctx) => {
         const token = readSetupToken(ctx.headers?.get("cookie") ?? undefined);
         // Reading the demo company's images is slow, so it happens before the lock.
@@ -132,11 +155,13 @@ function createOwner(
     email,
     passwordHash,
     addApprovedPeople,
+    choices,
   }: {
     token: string | null;
     email: string;
     passwordHash: string;
     addApprovedPeople: AddApprovedPeople;
+    choices: SetupChoices & { linkOrigin: string };
   },
 ) {
   const { internalAdapter } = ctx.context;
@@ -154,6 +179,7 @@ function createOwner(
         return { user, session: await internalAdapter.createSession(user.id) };
       },
       addApprovedPeople,
+      choices,
     ),
   );
 }
@@ -194,7 +220,10 @@ function createDemoOwner(
   );
 }
 
-/** Answers the refusals of setup as HTTP conflicts; `stepConflict` names a wrong step. */
+/**
+ * Answers the refusals of setup as HTTP conflicts, and an invalid invite note as a bad request
+ * naming its fields; `stepConflict` names a wrong step.
+ */
 async function refusingSetupConflicts<T>(
   run: () => Promise<T>,
   stepConflict?: { code: string; message: string },
@@ -210,6 +239,13 @@ async function refusingSetupConflicts<T>(
     }
     if (stepConflict && error instanceof ApplicationError && error.code === "CONFLICT") {
       throw APIError.from("CONFLICT", stepConflict);
+    }
+    if (error instanceof ApplicationError && error.code === "INVALID_INPUT") {
+      throw new APIError("BAD_REQUEST", {
+        code: "INVALID_INPUT",
+        message: error.message,
+        fieldErrors: error.fieldErrors,
+      });
     }
     throw error;
   }
