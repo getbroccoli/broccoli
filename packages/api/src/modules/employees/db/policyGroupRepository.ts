@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
+import type { GroupMembership } from "../domain";
 import { employeePolicyGroups } from "./employeePolicyGroupsTable";
 import { policyGroups } from "./policyGroupsTable";
 
@@ -8,6 +9,12 @@ import { policyGroups } from "./policyGroupsTable";
 export interface PolicyGroupRepository {
   /** Puts new employees into the seeded "Everyone" group since their employment started. */
   joinEveryone(employeeIds: readonly string[]): Promise<void>;
+  /** Whether a group has this id. */
+  exists(groupId: string): Promise<boolean>;
+  /** Each employee's groups over time, by employee id. */
+  findMemberships(employeeIds: readonly string[]): Promise<Map<string, GroupMembership[]>>;
+  /** The employees in the group on any date. */
+  findMemberIds(groupId: string): Promise<string[]>;
 }
 
 export function policyGroupRepository(db: Orm | Tx): PolicyGroupRepository {
@@ -24,6 +31,35 @@ export function policyGroupRepository(db: Orm | Tx): PolicyGroupRepository {
       await orm()
         .insert(employeePolicyGroups)
         .values(employeeIds.map((employeeId) => ({ employeeId, policyGroupId: everyone!.id })));
+    },
+
+    async exists(groupId) {
+      const [group] = await orm()
+        .select({ id: policyGroups.id })
+        .from(policyGroups)
+        .where(eq(policyGroups.id, groupId));
+      return group !== undefined;
+    },
+
+    async findMemberships(employeeIds) {
+      const rows = await orm()
+        .select()
+        .from(employeePolicyGroups)
+        .where(inArray(employeePolicyGroups.employeeId, [...employeeIds]));
+      const memberships = new Map<string, GroupMembership[]>();
+      for (const { employeeId, policyGroupId, effectiveFrom, effectiveUntil } of rows) {
+        const membership = { policyGroupId, effectiveFrom, effectiveUntil };
+        memberships.set(employeeId, [...(memberships.get(employeeId) ?? []), membership]);
+      }
+      return memberships;
+    },
+
+    async findMemberIds(groupId) {
+      const rows = await orm()
+        .selectDistinct({ employeeId: employeePolicyGroups.employeeId })
+        .from(employeePolicyGroups)
+        .where(eq(employeePolicyGroups.policyGroupId, groupId));
+      return rows.map(({ employeeId }) => employeeId);
     },
   };
 }

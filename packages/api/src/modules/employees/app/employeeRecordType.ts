@@ -35,3 +35,15 @@ export function employeeRecordType(orm: Orm): RecordTypeRegistration {
     references: { manager: "employee" },
   };
 }
+
+/**
+ * A person's own working pattern changes as a record type: its record is the employee, so core
+ * shows these lines only to callers who may read that person's working pattern.
+ */
+export function workingPatternRecordType(orm: Orm): RecordTypeRegistration {
+  return {
+    ...employeeRecordType(orm),
+    permissions: { object: "working_pattern", editableFields: [] },
+    references: {},
+  };
+}

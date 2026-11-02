@@ -15,11 +15,21 @@ export {
   type NewEmployeeInput,
 } from "./employee";
 export { managerChanges } from "./managerChanges";
-export type {
-  PatternWeek,
-  WeekdayMinutes,
-  WorkingPatternPolicy,
-  WorkingWeek,
+export {
+  covers,
+  makeRoom,
+  parseDateField,
+  parsePolicyName,
+  parseWeek,
+  policyOn,
+  workingWeeksOf,
+  type DatedPolicy,
+  type GroupMembership,
+  type PatternWeek,
+  type WeekdayMinutes,
+  type WorkingPatternPolicy,
+  type WorkingPatternTimeline,
+  type WorkingWeek,
 } from "./workingPattern";
 export {
   canAccept,

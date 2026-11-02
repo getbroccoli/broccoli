@@ -6,6 +6,10 @@ export {
 export { employmentRepository, type EmploymentRepository } from "./employmentRepository";
 export { policyGroupRepository, type PolicyGroupRepository } from "./policyGroupRepository";
 export {
+  workingPatternRepository,
+  type WorkingPatternRepository,
+} from "./workingPatternRepository";
+export {
   inviteRepository,
   type Invitee,
   type InviteRepository,
