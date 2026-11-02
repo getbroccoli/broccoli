@@ -35,14 +35,18 @@
     "nacionalidad",
     "nombre",
     "número",
+    "oficina",
     "preferido",
     "profesional",
     "provincia",
     "puesto",
+    "sede",
     "seguridad",
+    "sucursal",
     "teléfono",
     "trabajo",
-    "título"
+    "título",
+    "ubicación"
   ],
   "jobTitles": ["ingeniero", "software"]
 }

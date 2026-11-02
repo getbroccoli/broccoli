@@ -5,7 +5,7 @@
       "lastName": "Nováková",
       "email": "hana.novakova@acme-corp.example",
       "jobTitle": "IT Administrator",
-      "location": null,
+      "location": "Czechia",
       "startDate": null
     },
     {
@@ -13,7 +13,7 @@
       "lastName": "O'Connor",
       "email": "liam.oconnor@acme-corp.example",
       "jobTitle": "Sales Director",
-      "location": null,
+      "location": "Ireland",
       "startDate": null
     },
     {
@@ -21,7 +21,7 @@
       "lastName": "Cardoso",
       "email": "beatriz.cardoso@acme-corp.example",
       "jobTitle": "Marketing Specialist",
-      "location": null,
+      "location": "Portugal",
       "startDate": null
     },
     {
@@ -29,7 +29,7 @@
       "lastName": "Volkov",
       "email": "dmitri.volkov@acme-corp.example",
       "jobTitle": null,
-      "location": null,
+      "location": "United Kingdom",
       "startDate": null
     }
   ],

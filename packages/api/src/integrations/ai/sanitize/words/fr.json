@@ -2,6 +2,7 @@
   "booleans": ["oui", "non"],
   "headings": [
     "agence",
+    "bureau",
     "civilité",
     "contrat",
     "courriel",
@@ -13,6 +14,7 @@
     "etablissement",
     "fonction",
     "identifiant",
+    "lieu",
     "matricule",
     "naissance",
     "nom",
@@ -23,6 +25,7 @@
     "prénom",
     "salarié",
     "service",
+    "site",
     "société",
     "téléphone",
     "ville",
