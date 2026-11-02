@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { assert } from "vitest";
 
 import {
@@ -10,8 +11,11 @@ import {
   transactWithTimeOffEvents,
   workingPatternService,
 } from "#test/support";
-// eslint-disable-next-line boundaries/dependencies -- Holds the same row lock as an employee change for this regression.
-import { employeeRepository } from "../../employees/db";
+import { ormOf } from "../../../core/db";
+import { parseCalendarDate } from "../../../utils";
+// eslint-disable-next-line boundaries/dependencies -- Coordinates the employee writes with a concurrent policy link for this regression.
+import { employeeRepository, employmentRepository } from "../../employees/db";
+import { allowancesOnEmploymentChanges } from "./allowanceTriggers";
 
 test("adding a person writes no allowance when no policy is linked", async ({ orm }) => {
   const employees = employeeServices(orm);
@@ -64,10 +68,11 @@ test("adding a person grants Annual leave before returning when Everyone has a p
 });
 
 test(
-  "linking a policy grants a person whose row another change holds",
+  "a change to a person's email and start date and a policy link that overlap both complete",
   { timeout: 10_000 },
   async ({ orm, seed, transact, signal }) => {
     const employee = await seed.employee({ startDate: "2025-01-01" });
+    const startDate = parseCalendarDate("2026-10-12")!;
     const service = timeOffService(orm);
     const policyGroupId = await seed.everyoneGroupId();
     const policy = (await service.listPolicies(OWNER, orm)).find(
@@ -78,25 +83,48 @@ test(
     const releaseLock = () => release.resolve();
     // Release on timeout too, so a blocked grant cannot strand database cleanup.
     signal.addEventListener("abort", releaseLock, { once: true });
-    const holding = transact(async (tx) => {
-      await employeeRepository(tx).lockByIds([employee.id]);
+    const changing = transact(async (tx) => {
+      await employeeRepository(tx).update(employee.id, { email: "new.address@example.com" });
       locked.resolve();
       await release.promise;
+      await employmentRepository(tx).setStartDate(employee.id, startDate);
+      await allowancesOnEmploymentChanges(service).afterEmploymentsChanged(OWNER, tx, {
+        employeeIds: [employee.id],
+        cause: { kind: "START_DATE_CHANGED", ref: startDate },
+      });
     });
+    await Promise.race([locked.promise, changing]);
+    const linkPid = Promise.withResolvers<number>();
+    const linking = transact(async (tx) => {
+      const { rows } = await ormOf(tx).execute<{ pid: number }>(
+        sql`select pg_backend_pid() as pid`,
+      );
+      linkPid.resolve(rows[0]!.pid);
+      return service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] });
+    });
+    const results = Promise.allSettled([changing, linking]);
 
     try {
-      await Promise.race([locked.promise, holding]);
-      await transact((tx) =>
-        service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
-      );
+      const pid = await linkPid.promise;
+      while (true) {
+        signal.throwIfAborted();
+        const { rows } = await orm.execute<{ waiting: boolean }>(sql`
+          select exists (select from pg_locks where pid = ${pid} and not granted) as waiting
+        `);
+        if (rows[0]!.waiting) {
+          break;
+        }
+      }
+      release.resolve();
 
+      expect(await results).toMatchObject([{ status: "fulfilled" }, { status: "fulfilled" }]);
       expect(await readAllowances(orm, employee.id)).toMatchObject([
-        { typeKey: "annual_leave", total: 20 },
+        { typeKey: "annual_leave", total: 4.5 },
       ]);
     } finally {
       release.resolve();
       signal.removeEventListener("abort", releaseLock);
-      await holding;
+      await results;
     }
   },
 );

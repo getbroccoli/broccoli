@@ -24,7 +24,10 @@ export interface EnsuredAllowances {
 }
 
 export interface AllowanceEngineDependencies {
-  employeeReads: Pick<EmployeeReadService, "readEmploymentPeriods" | "readPolicyGroupMemberships">;
+  employeeReads: Pick<
+    EmployeeReadService,
+    "holdEmployees" | "readEmploymentPeriods" | "readPolicyGroupMemberships"
+  >;
   workingWeeks: Pick<EmployeeWorkingPatternService, "readWorkingWeeksInTransaction">;
   bankHolidays: BankHolidayService;
   /** The engine's date: leave years that ended before it are never recalculated. */
@@ -45,6 +48,9 @@ export async function ensureAllowancesOf(
     return { allowancesCreated: 0, linesAppended: 0 };
   }
   const allowances = allowanceRepository(tx);
+  // The people first: a change to them that runs the engine holds them before its allowance
+  // locks, so the two cannot deadlock.
+  await dependencies.employeeReads.holdEmployees(tx, ids);
   await allowances.lockEmployees(ids);
   const { people, policies } = await readPeople(dependencies.employeeReads, tx, ids);
   const today = dependencies.today();

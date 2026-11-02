@@ -9,6 +9,8 @@ import { policyGroups } from "./policyGroupsTable";
 export interface PolicyGroupRepository {
   /** Puts new employees into the seeded "Everyone" group since their employment started. */
   joinEveryoneGroup(employeeIds: readonly string[]): Promise<void>;
+  /** The id of the seeded "Everyone" group. */
+  findEveryoneId(): Promise<string>;
   /** Whether a group has this id. */
   exists(groupId: string): Promise<boolean>;
   /** Each employee's groups over time, by employee id. */
@@ -24,14 +26,13 @@ export function policyGroupRepository(db: Orm | Tx): PolicyGroupRepository {
       if (employeeIds.length === 0) {
         return;
       }
-      const [everyone] = await orm()
-        .select({ id: policyGroups.id })
-        .from(policyGroups)
-        .where(eq(policyGroups.key, "everyone"));
+      const everyoneId = await findEveryoneId(orm());
       await orm()
         .insert(employeePolicyGroups)
-        .values(employeeIds.map((employeeId) => ({ employeeId, policyGroupId: everyone!.id })));
+        .values(employeeIds.map((employeeId) => ({ employeeId, policyGroupId: everyoneId })));
     },
+
+    findEveryoneId: () => findEveryoneId(orm()),
 
     async exists(groupId) {
       const [group] = await orm()
@@ -62,4 +63,12 @@ export function policyGroupRepository(db: Orm | Tx): PolicyGroupRepository {
       return rows.map(({ employeeId }) => employeeId);
     },
   };
+}
+
+async function findEveryoneId(orm: ReturnType<typeof ormOf>): Promise<string> {
+  const [everyone] = await orm
+    .select({ id: policyGroups.id })
+    .from(policyGroups)
+    .where(eq(policyGroups.key, "everyone"));
+  return everyone!.id;
 }
