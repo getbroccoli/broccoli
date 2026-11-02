@@ -26,6 +26,12 @@
       "src/core/records",
       "src/modules/*"
     ],
+    "src/modules/bankHolidays": [
+      "src/core/*",
+      "!src/core/server",
+      "src/integrations/bankHolidays",
+      "src/utils"
+    ],
     "src/modules/company": [
       "src/core/*",
       "!src/core/server",
@@ -36,8 +42,8 @@
     "src/modules/employees": [
       "src/core/*",
       "!src/core/server",
-      "src/integrations/bankHolidays",
       "src/integrations/mail",
+      "src/modules/bankHolidays",
       "src/utils"
     ],
     "src/modules/imports": [

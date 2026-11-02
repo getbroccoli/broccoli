@@ -3,4 +3,4 @@
 export { createStaticBankHolidaySource } from "./bankHolidaySource";
 
 // Public types.
-export type { BankHolidaySource, SourcedBankHoliday } from "./bankHolidaySource";
+export type { BankHolidayDay, BankHolidaySource } from "./bankHolidaySource";

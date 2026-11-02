@@ -43,8 +43,7 @@ That pattern's week on that date gives the minutes, the full day and whose bank 
 
 - Each pattern week names a **bank holiday calendar**: `england_and_wales` (the default, and Standard's), `scotland` or `northern_ireland`. Someone moving to Glasgow from 1 July is put on a Scotland pattern from 1 July, so earlier bank holidays keep England and Wales.
 - Changing a pattern's calendar is a new week from a date, like a change of minutes. A change that gives no calendar keeps the one in force on its date.
-- The dates come from a `BankHolidaySource` (`integrations/bankHolidays`). Today's source answers from GOV.UK's dates copied into the code (`https://www.gov.uk/bank-holidays.json`), so every workspace has them offline; a new or cancelled bank holiday is a code change. Another source, such as one fetching the feed, replaces it without changing the reads.
-- Other modules read the dates through `BankHolidayService.readBankHolidays`, combining them with each working week's calendar.
+- The calendars and their dates belong to the [bank holidays module](../bankHolidays/module.md).
 
 ### Example: part-time from September
 

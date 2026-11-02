@@ -1,4 +1,3 @@
-export { createBankHolidayService, type BankHolidayService } from "./bankHolidayService";
 export {
   createEmployeeManagerService,
   type EmployeeManagerService,

@@ -7,15 +7,15 @@ test("England and Wales has its eight named bank holidays in 2026", async () => 
     until: "2026-12-31",
   });
 
-  expect(holidays).toEqual([
-    { calendar: "england_and_wales", date: "2026-01-01", name: "New Year’s Day" },
-    { calendar: "england_and_wales", date: "2026-04-03", name: "Good Friday" },
-    { calendar: "england_and_wales", date: "2026-04-06", name: "Easter Monday" },
-    { calendar: "england_and_wales", date: "2026-05-04", name: "Early May bank holiday" },
-    { calendar: "england_and_wales", date: "2026-05-25", name: "Spring bank holiday" },
-    { calendar: "england_and_wales", date: "2026-08-31", name: "Summer bank holiday" },
-    { calendar: "england_and_wales", date: "2026-12-25", name: "Christmas Day" },
-    { calendar: "england_and_wales", date: "2026-12-28", name: "Boxing Day" },
+  expect(holidays.get("england_and_wales")).toEqual([
+    { date: "2026-01-01", name: "New Year’s Day" },
+    { date: "2026-04-03", name: "Good Friday" },
+    { date: "2026-04-06", name: "Easter Monday" },
+    { date: "2026-05-04", name: "Early May bank holiday" },
+    { date: "2026-05-25", name: "Spring bank holiday" },
+    { date: "2026-08-31", name: "Summer bank holiday" },
+    { date: "2026-12-25", name: "Christmas Day" },
+    { date: "2026-12-28", name: "Boxing Day" },
   ]);
 });
 
@@ -26,7 +26,7 @@ test("Scotland has its ten bank holidays in 2026", async () => {
     until: "2026-12-31",
   });
 
-  expect(holidays.map(({ date }) => date)).toEqual([
+  expect(holidays.get("scotland")?.map(({ date }) => date)).toEqual([
     "2026-01-01",
     "2026-01-02",
     "2026-04-03",
@@ -47,24 +47,31 @@ test("bank holiday reads include both period bounds and exclude dates outside th
     until: "2026-04-06",
   });
 
-  expect(holidays).toEqual([
-    { calendar: "england_and_wales", date: "2026-04-03", name: "Good Friday" },
-    { calendar: "england_and_wales", date: "2026-04-06", name: "Easter Monday" },
+  expect(holidays.get("england_and_wales")).toEqual([
+    { date: "2026-04-03", name: "Good Friday" },
+    { date: "2026-04-06", name: "Easter Monday" },
   ]);
 });
 
-test("bank holidays from several calendars are ordered by date then calendar", async () => {
+test("bank holidays of several calendars come back by calendar", async () => {
   const holidays = await bankHolidayService().readBankHolidays(OWNER, {
     calendars: ["scotland", "england_and_wales"],
     from: "2026-01-01",
     until: "2026-01-02",
   });
 
-  expect(holidays).toEqual([
-    { calendar: "england_and_wales", date: "2026-01-01", name: "New Year’s Day" },
-    { calendar: "scotland", date: "2026-01-01", name: "New Year’s Day" },
-    { calendar: "scotland", date: "2026-01-02", name: "2nd January" },
-  ]);
+  expect(holidays).toEqual(
+    new Map([
+      [
+        "scotland",
+        [
+          { date: "2026-01-01", name: "New Year’s Day" },
+          { date: "2026-01-02", name: "2nd January" },
+        ],
+      ],
+      ["england_and_wales", [{ date: "2026-01-01", name: "New Year’s Day" }]],
+    ]),
+  );
 });
 
 test("bank holiday reads refuse an invalid start date", async () => {

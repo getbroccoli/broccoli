@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, date, foreignKey, integer, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 
 import type { CalendarDate } from "../../../utils";
-import { BANK_HOLIDAY_CALENDARS } from "../domain";
+import { BANK_HOLIDAY_CALENDARS } from "../../bankHolidays";
 import { workingPatterns } from "./workingPatternsTable";
 
 /**

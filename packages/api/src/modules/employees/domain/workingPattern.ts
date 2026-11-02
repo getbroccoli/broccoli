@@ -1,23 +1,9 @@
 import { invalidInput } from "../../../core/applicationError";
 import { type CalendarDate, parseCalendarDate } from "../../../utils";
+import type { BankHolidayCalendar } from "../../bankHolidays";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
-
-/** Whose bank holidays apply: one nation's, as GOV.UK publishes them. */
-export const BANK_HOLIDAY_CALENDARS = [
-  "england_and_wales",
-  "scotland",
-  "northern_ireland",
-] as const;
-export type BankHolidayCalendar = (typeof BANK_HOLIDAY_CALENDARS)[number];
-
-/** One nation's bank holiday. */
-export interface BankHoliday {
-  calendar: BankHolidayCalendar;
-  date: CalendarDate;
-  name: string;
-}
 
 /** A pattern's minutes from a date until its next week starts; null from the beginning. */
 export interface PatternWeek {
@@ -80,15 +66,6 @@ export function parseWeek(week: { minutes: readonly number[]; fullDayMinutes: nu
     throw invalidInput([{ field: "fullDayMinutes", code: "shorter_than_longest_day" }]);
   }
   return { minutes: [...minutes] as unknown as WeekdayMinutes, fullDayMinutes };
-}
-
-/** A calendar sent as `bankHolidayCalendar`; refuses one that is not known. */
-export function parseBankHolidayCalendar(value: string): BankHolidayCalendar {
-  const calendar = BANK_HOLIDAY_CALENDARS.find((known) => known === value);
-  if (!calendar) {
-    throw invalidInput([{ field: "bankHolidayCalendar", code: "invalid" }]);
-  }
-  return calendar;
 }
 
 /** A `YYYY-MM-DD` date sent in `field`; refuses anything else. */

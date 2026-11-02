@@ -9,7 +9,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 - A balance is never stored. It is the sum of dated ledger lines, and each line names its cause.
 - Ledger lines are append-only: a correction is a new line, never an update.
 - Changes over time are dated rows (group membership, policy assignments, employments, working patterns), never edits of the past.
-- Time off reads employments, policy groups, working patterns and bank holidays through other modules' public operations, never their tables. Whose bank holidays apply comes with each working week; the dates come from the employees module's `BankHolidayService`.
+- Time off reads employments, policy groups, working patterns and bank holidays through other modules' public operations, never their tables. Whose bank holidays apply comes with each working week; the dates come from the bank holidays module's `BankHolidayService`.
 
 ## Data model
 

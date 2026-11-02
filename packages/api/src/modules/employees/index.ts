@@ -18,7 +18,6 @@ import { avatarRouter, inviteRateLimit } from "./http";
 
 // Public values.
 export {
-  createBankHolidayService,
   createEmployeeInviteService,
   createEmployeeManagerService,
   createEmployeePermissionService,
@@ -35,7 +34,6 @@ export { employeeFieldErrors, parseEmployeeField } from "./domain";
 
 // Public types.
 export type {
-  BankHolidayService,
   EmployeeInviteService,
   EmployeeManagerService,
   EmployeePermissionService,
@@ -49,8 +47,6 @@ export type {
   LocationService,
 } from "./app";
 export type {
-  BankHoliday,
-  BankHolidayCalendar,
   Employee,
   EmployeeOrder,
   EmployeeOrderField,

@@ -1,22 +1,24 @@
 import { GOV_UK_BANK_HOLIDAYS } from "./govUkBankHolidays";
 
-/** One bank holiday of a calendar, such as `england_and_wales`. */
-export interface SourcedBankHoliday {
-  calendar: string;
+/** One bank holiday of a calendar. */
+export interface BankHolidayDay {
   /** `YYYY-MM-DD`. */
   date: string;
   name: string;
 }
 
-/**
- * Where bank holiday dates come from: the calendars' bank holidays from `from` to `until`
- * inclusive (`YYYY-MM-DD`), by date then calendar. A calendar the source does not know has none.
- */
-export type BankHolidaySource = (
-  calendars: readonly string[],
-  from: string,
-  until: string,
-) => Promise<SourcedBankHoliday[]>;
+/** Where bank holiday dates come from. */
+export interface BankHolidaySource {
+  /**
+   * Each named calendar's bank holidays from `startDate` to `endDate` inclusive (`YYYY-MM-DD`),
+   * oldest first. A calendar the source does not know has none.
+   */
+  getCalendars(
+    calendarNames: readonly string[],
+    startDate: string,
+    endDate: string,
+  ): Promise<Map<string, BankHolidayDay[]>>;
+}
 
 /**
  * A source that answers from GOV.UK's dates copied into the code, so it works offline.
@@ -24,13 +26,18 @@ export type BankHolidaySource = (
  * fetches the GOV.UK feed when a release can no longer keep up.
  */
 export function createStaticBankHolidaySource(): BankHolidaySource {
-  return (calendars, from, until) =>
-    Promise.resolve(
-      calendars
-        .flatMap((calendar) =>
-          (GOV_UK_BANK_HOLIDAYS[calendar] ?? []).map(([date, name]) => ({ calendar, date, name })),
-        )
-        .filter(({ date }) => date >= from && date <= until)
-        .sort((a, b) => a.date.localeCompare(b.date) || a.calendar.localeCompare(b.calendar)),
-    );
+  return {
+    getCalendars(calendarNames, startDate, endDate) {
+      return Promise.resolve(
+        new Map(
+          calendarNames.map((calendarName) => [
+            calendarName,
+            (GOV_UK_BANK_HOLIDAYS[calendarName] ?? [])
+              .filter(([date]) => date >= startDate && date <= endDate)
+              .map(([date, name]) => ({ date, name })),
+          ]),
+        ),
+      );
+    },
+  };
 }
