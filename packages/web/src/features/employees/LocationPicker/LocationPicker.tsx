@@ -56,12 +56,14 @@ export function LocationPicker({
       <DropdownMenuContent align="start">
         <DropdownMenuRadioGroup value={value} onValueChange={(id: string) => onChange(id)}>
           {data?.locations.map((location) => (
-            <DropdownMenuRadioItem key={location.id} value={location.id}>
+            <DropdownMenuRadioItem key={location.id} value={location.id} closeOnClick>
               {location.name}
             </DropdownMenuRadioItem>
           ))}
           {data?.locations.length ? <DropdownMenuSeparator /> : null}
-          <DropdownMenuRadioItem value="">{t("people.panel.location.none")}</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="" closeOnClick>
+            {t("people.panel.location.none")}
+          </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>

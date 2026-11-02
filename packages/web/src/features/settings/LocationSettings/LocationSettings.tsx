@@ -23,8 +23,10 @@ export function LocationSettings() {
 
   const add = async (event: FormEvent) => {
     event.preventDefault();
-    await createLocation({ variables: { input: { name } } }).catch(() => undefined);
-    setName((current) => (current === name ? "" : current));
+    await createLocation({ variables: { input: { name } } })
+      // Emptied only once added, and only if nothing was typed meanwhile.
+      .then(() => setName((current) => (current === name ? "" : current)))
+      .catch(() => undefined);
   };
 
   return (
