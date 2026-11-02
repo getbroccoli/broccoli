@@ -15,6 +15,12 @@ export {
   type NewEmployeeInput,
 } from "./employee";
 export { managerChanges } from "./managerChanges";
+export type {
+  PatternWeek,
+  WeekdayMinutes,
+  WorkingPatternPolicy,
+  WorkingWeek,
+} from "./workingPattern";
 export {
   canAccept,
   canBeInvited,

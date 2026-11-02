@@ -9,6 +9,8 @@ export const DEFAULT_PROFILE = "EMPLOYEE";
 /** The kinds of record permissions apply to; tests add their own by declaration merging. */
 export interface PermissionObjects {
   employee: true;
+  /** A person's working pattern; its subject is the person. */
+  working_pattern: true;
 }
 
 /** A kind of record permissions apply to. */
@@ -74,6 +76,13 @@ const ADMIN: ProfileDefinition = {
       scope: "all",
       fields: "*",
     },
+    {
+      key: "working_pattern.manage.all",
+      object: "working_pattern",
+      actions: ["create", "read", "update", "delete"],
+      scope: "all",
+      fields: "*",
+    },
   ],
   operations: ["MANAGE_WORKSPACE"],
 };
@@ -100,6 +109,18 @@ export const PERMISSION_PROFILES: Record<PermissionProfile, ProfileDefinition> =
         actions: ["update"],
         scope: "all_reports",
         fields: ["firstName", "lastName", "avatar", "jobTitle"],
+      },
+      {
+        key: "working_pattern.read.self",
+        object: "working_pattern",
+        actions: ["read"],
+        scope: "self",
+      },
+      {
+        key: "working_pattern.read.reports",
+        object: "working_pattern",
+        actions: ["read"],
+        scope: "all_reports",
       },
     ],
     operations: [],

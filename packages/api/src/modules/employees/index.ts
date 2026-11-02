@@ -23,6 +23,7 @@ export {
   createEmployeeReadService,
   createEmployeeService,
   createEmployeeSetupService,
+  createWorkingPatternService,
   employeeDirectory,
 } from "./app";
 export { employeeFieldErrors, parseEmployeeField } from "./domain";
@@ -36,6 +37,7 @@ export type {
   EmployeeService,
   ImportedEmployees,
   InviteDetails,
+  WorkingPatternService,
 } from "./app";
 export type {
   Employee,
@@ -43,6 +45,8 @@ export type {
   EmployeeOrderField,
   NewEmployee,
   NewEmployeeInput,
+  WeekdayMinutes,
+  WorkingWeek,
 } from "./domain";
 
 /**

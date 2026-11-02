@@ -4,6 +4,7 @@ export {
   type EmployeeRepository,
 } from "./employeeRepository";
 export { employmentRepository, type EmploymentRepository } from "./employmentRepository";
+export { policyGroupRepository, type PolicyGroupRepository } from "./policyGroupRepository";
 export {
   inviteRepository,
   type Invitee,

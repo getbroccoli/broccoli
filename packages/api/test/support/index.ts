@@ -44,6 +44,7 @@ export {
   companyService,
   demoService,
   employeeServices,
+  workingPatternService,
   employeeInviteService,
   externalAgentServices,
   importServices,

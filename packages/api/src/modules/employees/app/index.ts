@@ -15,6 +15,7 @@ export {
   type ImportedEmployees,
 } from "./employeeSetupService";
 export { employeeDirectory } from "./employeeDirectory";
+export { createWorkingPatternService, type WorkingPatternService } from "./workingPatternService";
 export { employeeRecordType } from "./employeeRecordType";
 export {
   createEmployeeInviteService,

@@ -1,3 +1,5 @@
+import { eq } from "drizzle-orm";
+
 import type { Orm } from "../../src/core/db";
 import { files } from "../../src/core/files";
 import { instanceRepository } from "../../src/core/instance/db";
@@ -6,6 +8,8 @@ import { hashSetupToken } from "../../src/core/instance/helpers";
 import { PrincipalSecurityContext, type SecurityContext } from "../../src/core/security";
 import { employeeDirectory, type Employee } from "../../src/modules/employees";
 import { employeeRepository, employmentRepository } from "../../src/modules/employees/db";
+import { employeePolicyGroups } from "../../src/modules/employees/db/employeePolicyGroupsTable";
+import { policyGroups } from "../../src/modules/employees/db/policyGroupsTable";
 import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
 import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
 import { slackConnectionRepository } from "../../src/modules/slack/db";
@@ -163,6 +167,44 @@ export class TestSeed {
         ...overrides,
       }),
     );
+  }
+
+  /** The id of the seeded "Everyone" group, which every new employee joins. */
+  async everyoneGroupId(): Promise<string> {
+    const [everyone] = await this.orm
+      .select({ id: policyGroups.id })
+      .from(policyGroups)
+      .where(eq(policyGroups.key, "everyone"));
+    return everyone!.id;
+  }
+
+  /** A new policy group with no one in it. */
+  async policyGroup(name = `Group ${++this.#count}`): Promise<string> {
+    const [group] = await this.orm
+      .insert(policyGroups)
+      .values({ name })
+      .returning({ id: policyGroups.id });
+    return group!.id;
+  }
+
+  /** Takes an employee out of every group, for all dates. */
+  async leaveGroups(employeeId: string): Promise<void> {
+    await this.orm
+      .delete(employeePolicyGroups)
+      .where(eq(employeePolicyGroups.employeeId, employeeId));
+  }
+
+  /**
+   * Moves an employee out of every group and into `policyGroupId` for all dates, or from `from`
+   * with no group before it.
+   */
+  async moveToGroup(employeeId: string, policyGroupId: string, from: string | null = null) {
+    await this.leaveGroups(employeeId);
+    await this.orm.insert(employeePolicyGroups).values({
+      employeeId,
+      policyGroupId,
+      effectiveFrom: from === null ? null : calendarDate(from),
+    });
   }
 
   /** `count` default employees in one insert. */
