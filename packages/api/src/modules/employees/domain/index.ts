@@ -16,6 +16,24 @@ export {
 } from "./employee";
 export { managerChanges } from "./managerChanges";
 export {
+  parseDateField,
+  parsePatternName,
+  parseWeek,
+  type PatternWeek,
+  type WeekdayMinutes,
+  type WorkingPattern,
+  type WorkingWeek,
+} from "./workingPattern";
+export {
+  coversDate,
+  makeRoomForDatedPattern,
+  patternOn,
+  workingWeeksOf,
+  type DatedPattern,
+  type GroupMembership,
+  type WorkingPatternTimeline,
+} from "./workingPatternTimeline";
+export {
   canAccept,
   canBeInvited,
   createInviteToken,

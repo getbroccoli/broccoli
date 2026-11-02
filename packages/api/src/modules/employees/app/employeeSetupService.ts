@@ -146,6 +146,7 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       await employeeRepository(tx).deleteAll(owner?.userId ?? null);
       // After the delete, which waits for any update holding an employee row, so its line goes too.
       await recordHistory.purge(tx, "employee");
+      await recordHistory.purge(tx, "working_pattern");
     },
   };
 }

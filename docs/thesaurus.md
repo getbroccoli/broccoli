@@ -30,7 +30,11 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Change cause**: why a change to a record happened or what started it, such as `EDITED_DIRECTLY` or `ADDED_FROM_IMPORT`, with the id of what caused it when there is one. The module whose action is the cause declares it.
 - **Change reason**: why, in the change author's own words: `changeReason` on an input, the reason on its history line.
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
-- **Employment**: a person's work for the company over a period, with its start and end dates, their FTE and their direct manager; one at a time, never overlapping. A person's start date is the start of their first employment. Not "contract", which in the UK means the written contract of employment.
+- **Employment**: a person's work for the company over a period, with its start and end dates and their direct manager; one at a time, never overlapping. A person's start date is the start of their first employment. Not "contract", which in the UK means the written contract of employment.
+- **Policy group**: a named set of people who share the same settings, such as "Everyone"; every new person joins "Everyone".
+- **Working pattern**: a named way of working, such as "Standard" or "Part-time Tue–Thu": the minutes worked on each weekday, Monday to Sunday, from a date. A group works one by default and a person can be put on one from a date. Not "workload", "schedule" or "policy".
+- **Pattern week**: a working pattern's minutes for each weekday and its full day, from a date until its next week.
+- **Full day**: the minutes one day of leave stands for in a pattern week; at least its longest weekday.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.
 - **Company**: the business the instance belongs to; its name and logo. One per instance.
