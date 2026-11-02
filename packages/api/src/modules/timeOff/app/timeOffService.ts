@@ -70,12 +70,14 @@ export function createTimeOffService({
     ensureAllowances,
     async linkGroupPolicies(ctx, tx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const policyGroupId = parseUuid(input.policyGroupId);
-      if (!policyGroupId) {
-        throw new ApplicationError("NOT_FOUND", "The policy group does not exist.");
-      }
       const repository = timeOffPolicyRepository(tx);
       await repository.lockGroupLinks();
+      const policyGroupId = parseUuid(input.policyGroupId);
+      const employeeIds =
+        policyGroupId && (await employeeReads.readPolicyGroupMemberIds(tx, policyGroupId));
+      if (!policyGroupId || !employeeIds) {
+        throw new ApplicationError("NOT_FOUND", "The policy group does not exist.");
+      }
       const policies = await repository.findAll();
       const chosen = input.timeOffPolicyIds.map((id) => {
         const policy = policies.find((candidate) => candidate.id === parseUuid(id));
@@ -102,7 +104,6 @@ export function createTimeOffService({
           timeOffPolicyId: id,
         })),
       );
-      const employeeIds = await employeeReads.readPolicyGroupMemberIds(tx, policyGroupId);
       const ensured = await ensureAllowances(ctx, tx, {
         employeeIds,
         cause: { kind: "POLICY_LINKED_TO_GROUP", ref: policyGroupId },

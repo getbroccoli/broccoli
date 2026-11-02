@@ -1,5 +1,38 @@
 import { EMPLOYEE, expect, OWNER, readAllowances, test, timeOffService } from "#test/support";
 
+test("linking a group of 700 people gives each of them an allowance", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  await seed.employees(700);
+  const service = timeOffService(orm);
+  const policyGroupId = await seed.everyoneGroupId();
+  const policy = (await service.listPolicies(OWNER, orm)).find(
+    (p) => p.key === "uk_statutory_minimum",
+  )!;
+
+  const result = await transact((tx) =>
+    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+  );
+
+  expect(result).toEqual({ employeeCount: 700, allowancesCreated: 700, linesAppended: 6300 });
+});
+
+test("refuses with NOT_FOUND a group that does not exist", async ({ orm, transact }) => {
+  const service = timeOffService(orm);
+  const policyGroupId = crypto.randomUUID();
+  const policy = (await service.listPolicies(OWNER, orm)).find(
+    (p) => p.key === "uk_statutory_minimum",
+  )!;
+
+  await expect(
+    transact((tx) =>
+      service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    ),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
 test("linking the statutory minimum grants a full-timer 20 days after bank holidays", async ({
   orm,
   seed,

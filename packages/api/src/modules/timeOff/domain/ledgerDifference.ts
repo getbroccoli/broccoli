@@ -49,7 +49,7 @@ export function ledgerDifference(
       return [];
     }
     const { kind, allowanceRuleId, bankHolidayDate } = (line ?? sum)!;
-    // shortcut: a changed grant takes effect from its first contributing day, not from the first part that changed; narrow it when the balance history (BRO-212) shows dates.
+    // shortcut: a changed grant takes effect from its first contributing day, not from the first part that changed; narrow it when the balance history shows dates.
     const effectiveDate = bankHolidayDate ?? line?.firstDate ?? allowance.leaveYearStart;
     return [
       {

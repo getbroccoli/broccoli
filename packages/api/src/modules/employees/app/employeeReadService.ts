@@ -11,7 +11,7 @@ import {
 import { createRecordHistoryReaderService, type HistoryLine } from "../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
-import type { Orm, Tx } from "../../../core/db";
+import type { Tx } from "../../../core/db";
 import {
   EMPLOYEE_SORT_VALUES,
   employeeRepository,
@@ -53,10 +53,11 @@ export interface EmployeeReadService {
     tx: Tx,
     employeeIds: readonly string[],
   ) => Promise<Map<string, GroupMembership[]>>;
-  /** Trusted: the employees in a group on any date, in the caller's transaction. */
-  readPolicyGroupMemberIds: (tx: Tx, policyGroupId: string) => Promise<string[]>;
-  /** Trusted: the id of the seeded "Everyone" group. */
-  readEveryoneGroupId: (db: Orm | Tx) => Promise<string>;
+  /**
+   * Trusted: the employees in a group on any date, in the caller's transaction; null when no group
+   * has this id.
+   */
+  readPolicyGroupMemberIds: (tx: Tx, policyGroupId: string) => Promise<string[] | null>;
   /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -111,9 +112,10 @@ export function createEmployeeReadService({
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
     readPolicyGroupMemberships: (tx, employeeIds) =>
       policyGroupRepository(tx).findMemberships(employeeIds),
-    readPolicyGroupMemberIds: (tx, policyGroupId) =>
-      policyGroupRepository(tx).findMemberIds(policyGroupId),
-    readEveryoneGroupId: (db) => policyGroupRepository(db).findEveryoneId(),
+    async readPolicyGroupMemberIds(tx, policyGroupId) {
+      const groups = policyGroupRepository(tx);
+      return (await groups.exists(policyGroupId)) ? groups.findMemberIds(policyGroupId) : null;
+    },
     readEmployeeHistory: (ctx, employeeId, args) =>
       history.readHistory(ctx, "employee", employeeId, args),
     async readAvatar(ctx, fileId) {

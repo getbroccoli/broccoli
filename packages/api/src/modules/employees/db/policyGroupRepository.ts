@@ -9,8 +9,6 @@ import { policyGroups } from "./policyGroupsTable";
 export interface PolicyGroupRepository {
   /** Puts new employees into the seeded "Everyone" group since their employment started. */
   joinEveryoneGroup(employeeIds: readonly string[]): Promise<void>;
-  /** The id of the seeded "Everyone" group. */
-  findEveryoneId(): Promise<string>;
   /** Whether a group has this id. */
   exists(groupId: string): Promise<boolean>;
   /** Each employee's groups over time, by employee id. */
@@ -21,23 +19,18 @@ export interface PolicyGroupRepository {
 
 export function policyGroupRepository(db: Orm | Tx): PolicyGroupRepository {
   const orm = () => ormOf(db);
-  const repository: PolicyGroupRepository = {
+  return {
     async joinEveryoneGroup(employeeIds) {
       if (employeeIds.length === 0) {
         return;
       }
-      const policyGroupId = await repository.findEveryoneId();
-      await orm()
-        .insert(employeePolicyGroups)
-        .values(employeeIds.map((employeeId) => ({ employeeId, policyGroupId })));
-    },
-
-    async findEveryoneId() {
       const [everyone] = await orm()
         .select({ id: policyGroups.id })
         .from(policyGroups)
         .where(eq(policyGroups.key, "everyone"));
-      return everyone!.id;
+      await orm()
+        .insert(employeePolicyGroups)
+        .values(employeeIds.map((employeeId) => ({ employeeId, policyGroupId: everyone!.id })));
     },
 
     async exists(groupId) {
@@ -69,5 +62,4 @@ export function policyGroupRepository(db: Orm | Tx): PolicyGroupRepository {
       return rows.map(({ employeeId }) => employeeId);
     },
   };
-  return repository;
 }

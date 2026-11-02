@@ -33,15 +33,16 @@ export function leaveYearContaining(
   serviceStart: CalendarDate | null,
   date: CalendarDate,
 ): { start: CalendarDate; end: CalendarDate } {
-  const year = Number(date.slice(0, 4));
-  const first =
+  const origin =
     leaveYear.kind === "leave_year_from_fixed_date"
-      ? (`${year}-${pad(leaveYear.month)}-${pad(leaveYear.day)}` as CalendarDate)
-      : serviceStart
-        ? addYears(serviceStart, year - Number(serviceStart.slice(0, 4)))
-        : (`${year}-01-01` as CalendarDate);
-  const start = first <= date ? first : addYears(first, -1);
-  return { start, end: addDays(addYears(start, 1), -1) };
+      ? (`2000-${pad(leaveYear.month)}-${pad(leaveYear.day)}` as CalendarDate)
+      : (serviceStart ?? ("2000-01-01" as CalendarDate));
+  // Each boundary is counted from the origin, so a 29 February start keeps its anniversary.
+  let years = Number(date.slice(0, 4)) - Number(origin.slice(0, 4));
+  if (addYears(origin, years) > date) {
+    years -= 1;
+  }
+  return { start: addYears(origin, years), end: addDays(addYears(origin, years + 1), -1) };
 }
 
 function pad(value: number): string {

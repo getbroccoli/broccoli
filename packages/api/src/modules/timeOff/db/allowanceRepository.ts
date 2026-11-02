@@ -50,12 +50,12 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
     },
 
     async insert(newAllowances) {
-      return newAllowances.length === 0
-        ? []
-        : orm()
-            .insert(allowances)
-            .values([...newAllowances])
-            .returning();
+      const inserted: Allowance[] = [];
+      for (let start = 0; start < newAllowances.length; start += INSERT_BATCH_SIZE) {
+        const batch = newAllowances.slice(start, start + INSERT_BATCH_SIZE);
+        inserted.push(...(await orm().insert(allowances).values(batch).returning()));
+      }
+      return inserted;
     },
 
     async findEngineSums(allowanceIds) {
@@ -94,25 +94,30 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
     },
 
     async insertLines(lines) {
-      if (lines.length === 0) {
-        return 0;
+      let added = 0;
+      for (let start = 0; start < lines.length; start += INSERT_BATCH_SIZE) {
+        const batch = lines.slice(start, start + INSERT_BATCH_SIZE);
+        const rows = await orm()
+          .insert(allowanceLedgerLines)
+          .values(
+            batch.map((line) => ({
+              ...line,
+              unit: "days" as const,
+              authorKind: "broccoli_itself",
+              authorId: null,
+            })),
+          )
+          .onConflictDoNothing({ target: allowanceLedgerLines.idempotencyKey })
+          .returning({ id: allowanceLedgerLines.id });
+        added += rows.length;
       }
-      const added = await orm()
-        .insert(allowanceLedgerLines)
-        .values(
-          lines.map((line) => ({
-            ...line,
-            unit: "days" as const,
-            authorKind: "broccoli_itself",
-            authorId: null,
-          })),
-        )
-        .onConflictDoNothing({ target: allowanceLedgerLines.idempotencyKey })
-        .returning({ id: allowanceLedgerLines.id });
-      return added.length;
+      return added;
     },
   };
 }
+
+/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
+const INSERT_BATCH_SIZE = 1_000;
 
 /** The advisory lock's first key, so the engine's per-employee locks clash with no other lock. */
 const LOCK_CLASS = 2090;

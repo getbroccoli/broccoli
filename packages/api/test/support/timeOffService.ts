@@ -25,8 +25,9 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
-    await employeeSetup.deleteAllEmployees(ctx, tx);
+    // Links first: linking holds their lock while its allowances wait on employee rows.
     await timeOff.deleteAllGroupPolicies(ctx, tx);
+    await employeeSetup.deleteAllEmployees(ctx, tx);
   };
 }
 
