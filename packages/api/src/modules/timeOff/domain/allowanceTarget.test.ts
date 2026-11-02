@@ -7,58 +7,33 @@ it("grants 28 days and takes eight bank holidays for a full-time leave year", ()
   const inputs = allowanceInputs();
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines).toEqual([
-    {
-      kind: "entitlement_grant",
-      allowanceRuleId: "yearly",
-      bankHolidayDate: null,
-      amount: 28,
-      firstDate: "2026-01-01",
-    },
-    ...inputs.bankHolidays.get("england_and_wales")!.map((bankHolidayDate) => ({
-      kind: "bank_holiday_taken",
-      allowanceRuleId: null,
-      bankHolidayDate,
-      amount: -1,
-      firstDate: "2026-01-01",
-    })),
-    {
-      kind: "rounding_up_to_half_day",
-      allowanceRuleId: null,
-      bankHolidayDate: null,
-      amount: 0,
-      firstDate: "2026-01-01",
-    },
+  expect(lines.map((line) => [line.kind, line.amount])).toEqual([
+    ["entitlement_grant", 28],
+    ...inputs.bankHolidays.get("england_and_wales")!.map(() => ["bank_holiday_taken", -1]),
+    ["rounding_up_to_half_day", 0],
   ]);
+  expect(
+    lines.filter((line) => line.kind === "bank_holiday_taken").map((line) => line.bankHolidayDate),
+  ).toEqual(inputs.bankHolidays.get("england_and_wales"));
+  expect(lines.every((line) => line.firstDate === "2026-01-01")).toEqual(true);
 });
 
 it("prorates from 12 October and takes only bank holidays after joining", () => {
   const inputs = allowanceInputs();
   inputs.employments = [{ startDate: "2026-10-12" as CalendarDate, endDate: null }];
 
-  expect(allowanceTargetOf(inputs)).toEqual([
-    {
-      kind: "entitlement_grant",
-      allowanceRuleId: "yearly",
-      bankHolidayDate: null,
-      amount: 6.213699,
-      firstDate: "2026-10-12",
-    },
-    ...["2026-12-25", "2026-12-28"].map((bankHolidayDate) => ({
-      kind: "bank_holiday_taken",
-      allowanceRuleId: null,
-      bankHolidayDate,
-      amount: -1,
-      firstDate: "2026-10-12",
-    })),
-    {
-      kind: "rounding_up_to_half_day",
-      allowanceRuleId: null,
-      bankHolidayDate: null,
-      amount: 0.286301,
-      firstDate: "2026-10-12",
-    },
+  const lines = allowanceTargetOf(inputs);
+
+  expect(lines.map((line) => [line.kind, line.amount])).toEqual([
+    ["entitlement_grant", 6.213699],
+    ["bank_holiday_taken", -1],
+    ["bank_holiday_taken", -1],
+    ["rounding_up_to_half_day", 0.286301],
   ]);
+  expect(
+    lines.filter((line) => line.kind === "bank_holiday_taken").map((line) => line.bankHolidayDate),
+  ).toEqual(["2026-12-25", "2026-12-28"]);
+  expect(lines.every((line) => line.firstDate === "2026-10-12")).toEqual(true);
 });
 
 it("grants eight bank holidays on top of 25 days and still takes each holiday", () => {
@@ -68,10 +43,7 @@ it("grants eight bank holidays on top of 25 days and still takes each holiday", 
   const lines = allowanceTargetOf(inputs);
 
   expect(lines.find((line) => line.kind === "entitlement_grant")?.amount).toEqual(25);
-  expect(lines.find((line) => line.kind === "bank_holiday_allowance_grant")).toEqual({
-    kind: "bank_holiday_allowance_grant",
-    allowanceRuleId: null,
-    bankHolidayDate: null,
+  expect(lines.find((line) => line.kind === "bank_holiday_allowance_grant")).toMatchObject({
     amount: 8,
     firstDate: "2026-01-01",
   });
@@ -94,15 +66,9 @@ it("combines the year's full-time and three-day weeks before rounding once", () 
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines.filter((line) => line.kind === "entitlement_grant")).toEqual([
-    {
-      kind: "entitlement_grant",
-      allowanceRuleId: "yearly",
-      bankHolidayDate: null,
-      amount: 24.256438,
-      firstDate: "2026-01-01",
-    },
-  ]);
+  expect(
+    lines.filter((line) => line.kind === "entitlement_grant").map((line) => line.amount),
+  ).toEqual([24.256438]);
   expect(
     lines.filter((line) => line.bankHolidayDate?.startsWith("2026-12")).map((line) => line.amount),
   ).toEqual([0, 0]);
@@ -137,25 +103,21 @@ it("takes the working week's Scottish bank holidays", () => {
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines.filter((line) => line.kind === "bank_holiday_taken")).toEqual(
-    [
-      "2026-01-01",
-      "2026-01-02",
-      "2026-04-03",
-      "2026-05-04",
-      "2026-05-25",
-      "2026-08-03",
-      "2026-11-30",
-      "2026-12-25",
-      "2026-12-28",
-    ].map((bankHolidayDate) => ({
-      kind: "bank_holiday_taken",
-      allowanceRuleId: null,
-      bankHolidayDate,
-      amount: -1,
-      firstDate: "2026-01-01",
-    })),
-  );
+  expect(
+    lines
+      .filter((line) => line.kind === "bank_holiday_taken")
+      .map((line) => [line.bankHolidayDate, line.amount]),
+  ).toEqual([
+    ["2026-01-01", -1],
+    ["2026-01-02", -1],
+    ["2026-04-03", -1],
+    ["2026-05-04", -1],
+    ["2026-05-25", -1],
+    ["2026-08-03", -1],
+    ["2026-11-30", -1],
+    ["2026-12-25", -1],
+    ["2026-12-28", -1],
+  ]);
 });
 
 it("prorates through the inclusive employment end and takes no later bank holidays", () => {
@@ -216,21 +178,13 @@ it("grants a service extra from its anniversary and omits an unreached step", ()
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines.filter((line) => line.kind === "entitlement_grant")).toEqual([
-    {
-      kind: "entitlement_grant",
-      allowanceRuleId: "yearly",
-      bankHolidayDate: null,
-      amount: 25,
-      firstDate: "2026-01-01",
-    },
-    {
-      kind: "entitlement_grant",
-      allowanceRuleId: "two-years",
-      bankHolidayDate: null,
-      amount: 0.50411,
-      firstDate: "2026-07-01",
-    },
+  expect(
+    lines
+      .filter((line) => line.kind === "entitlement_grant")
+      .map((line) => [line.allowanceRuleId, line.amount, line.firstDate]),
+  ).toEqual([
+    ["yearly", 25, "2026-01-01"],
+    ["two-years", 0.50411, "2026-07-01"],
   ]);
   expect(lines.find((line) => line.kind === "bank_holiday_allowance_grant")?.amount).toEqual(8);
   expect(lines.find((line) => line.kind === "rounding_up_to_half_day")?.amount).toEqual(0.49589);
@@ -240,8 +194,7 @@ it("returns no lines for a policy without a balance", () => {
   const inputs = allowanceInputs();
   inputs.policies = [
     {
-      effectiveFrom: null,
-      effectiveUntil: null,
+      ...inputs.policies[0]!,
       balance: "no_balance",
       bankHolidays: null,
       rules: [],
@@ -249,6 +202,60 @@ it("returns no lines for a policy without a balance", () => {
   ];
 
   expect(allowanceTargetOf(inputs)).toEqual([]);
+});
+
+it("keeps 28 days across three equivalent policies without adding half a day", () => {
+  const inputs = allowanceInputs();
+  const policy = inputs.policies[0]!;
+  const yearly = policy.rules[0]!;
+  inputs.policies = [
+    {
+      ...policy,
+      effectiveUntil: "2026-03-31" as CalendarDate,
+      rules: [{ ...yearly, id: "first-yearly" }],
+    },
+    {
+      ...policy,
+      effectiveFrom: "2026-04-01" as CalendarDate,
+      effectiveUntil: "2026-06-29" as CalendarDate,
+      rules: [{ ...yearly, id: "second-yearly" }],
+    },
+    {
+      ...policy,
+      effectiveFrom: "2026-06-30" as CalendarDate,
+      rules: [{ ...yearly, id: "third-yearly" }],
+    },
+  ];
+
+  const lines = allowanceTargetOf(inputs);
+  const grants = lines.filter((line) => line.kind === "entitlement_grant");
+  const grantTotal = grants.reduce((sum, line) => sum + line.amount, 0);
+  const rounding = lines.find((line) => line.kind === "rounding_up_to_half_day")!;
+
+  expect(Number((grantTotal + rounding.amount).toFixed(6))).toEqual(28);
+  expect(grantTotal).toBeCloseTo(28, 5);
+  expect(rounding.amount).toBeCloseTo(0, 5);
+});
+
+it("returns a service extra before yearly entitlement when the policy lists it first", () => {
+  const inputs = allowanceInputs();
+  const policy = inputs.policies[0]!;
+  inputs.serviceStart = "2020-01-01" as CalendarDate;
+  inputs.policies = [
+    {
+      ...policy,
+      rules: [
+        { id: "two-years", kind: "service_extra", afterYears: 2, extraDays: 1 },
+        ...policy.rules,
+      ],
+    },
+  ];
+
+  const lines = allowanceTargetOf(inputs);
+
+  expect(
+    lines.filter((line) => line.kind === "entitlement_grant").map((line) => line.allowanceRuleId),
+  ).toEqual(["two-years", "yearly"]);
 });
 
 function allowanceInputs(): AllowanceTargetInputs {

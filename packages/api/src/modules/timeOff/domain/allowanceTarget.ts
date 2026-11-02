@@ -88,19 +88,16 @@ export interface AllowanceTargetLine {
  */
 export function allowanceTargetOf(inputs: AllowanceTargetInputs): AllowanceTargetLine[] {
   const parts = keptParts(inputs);
-  const lines = new Map<string, AllowanceTargetLine>();
-  const add = (identity: Identity, part: Part, amount: number) => {
-    const key = `${identity.kind}:${identity.allowanceRuleId}:${identity.bankHolidayDate}`;
-    const line = lines.get(key) ?? { ...identity, amount: 0, firstDate: part.from };
-    lines.set(key, { ...line, amount: line.amount + amount });
-  };
+  const lines: Lines = new Map();
   for (const part of parts) {
-    addPart(inputs, part, add);
+    addPart(lines, inputs, part);
   }
-  const target = [...lines.values()]
-    .map((line) => ({ ...line, amount: toMicroDays(line.amount) / MICRO_DAYS_IN_A_DAY }))
-    .toSorted(byLineOrder);
-  const rounding = roundingUpToHalfDay(target);
+  const exact = [...lines.values()].toSorted(byLineOrder);
+  const target = exact.map((line) => ({
+    ...line,
+    amount: toMicroDays(line.amount) / MICRO_DAYS_IN_A_DAY,
+  }));
+  const rounding = roundingUpToHalfDay(exact);
   return rounding === null ? target : [...target, { ...rounding, firstDate: parts[0]!.from }];
 }
 
@@ -115,6 +112,9 @@ interface Part {
 }
 
 type Identity = Pick<AllowanceTargetLine, "kind" | "allowanceRuleId" | "bankHolidayDate">;
+
+/** Each identity's line, with its amount not yet rounded. */
+type Lines = Map<string, AllowanceTargetLine>;
 
 function keptParts(inputs: AllowanceTargetInputs): Part[] {
   const starts = partStarts(inputs);
@@ -170,25 +170,23 @@ function partStarts(inputs: AllowanceTargetInputs): CalendarDate[] {
   return [leaveYear.start, ...new Set(changes)].toSorted();
 }
 
-function addPart(
-  inputs: AllowanceTargetInputs,
-  part: Part,
-  add: (identity: Identity, part: Part, amount: number) => void,
-): void {
+function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void {
+  const add = (identity: Identity, amount: number) => addAmount(lines, identity, part, amount);
   const { leaveYear } = inputs;
   const daysPerWeek = part.minutes.reduce((sum, minutes) => sum + minutes, 0) / part.fullDayMinutes;
   const share =
     (daysBetween(part.from, part.until) + 1) / (daysBetween(leaveYear.start, leaveYear.end) + 1);
   const yearly = part.policy.rules.find((rule) => rule.kind === "yearly_entitlement");
-  if (yearly) {
-    const days = (yearly.entitlementDays / yearly.entitlementDaysPerWeek) * daysPerWeek;
-    const capped = yearly.maxDays === null ? days : Math.min(days, yearly.maxDays);
-    add(grantOf(yearly.id), part, capped * share);
-  }
+  const fullTimeDays = yearly?.entitlementDaysPerWeek ?? FULL_TIME_DAYS_PER_WEEK;
   const step = serviceStepOn(part.policy, inputs.serviceStart, part.from);
-  if (step) {
-    const fullTimeDays = yearly?.entitlementDaysPerWeek ?? FULL_TIME_DAYS_PER_WEEK;
-    add(grantOf(step.id), part, (step.extraDays / fullTimeDays) * daysPerWeek * share);
+  for (const rule of part.policy.rules) {
+    if (rule.kind === "yearly_entitlement") {
+      const days = (rule.entitlementDays / rule.entitlementDaysPerWeek) * daysPerWeek;
+      const capped = rule.maxDays === null ? days : Math.min(days, rule.maxDays);
+      add(grantOf(rule.id), capped * share);
+    } else if (rule === step) {
+      add(grantOf(rule.id), (rule.extraDays / fullTimeDays) * daysPerWeek * share);
+    }
   }
   if (part.policy.bankHolidays === "bank_holidays_on_top_of_allowance") {
     const inYear = part.bankHolidays.filter(
@@ -199,7 +197,7 @@ function addPart(
       allowanceRuleId: null,
       bankHolidayDate: null,
     } as const;
-    add(identity, part, ((inYear.length * daysPerWeek) / FULL_TIME_DAYS_PER_WEEK) * share);
+    add(identity, ((inYear.length * daysPerWeek) / FULL_TIME_DAYS_PER_WEEK) * share);
   }
   for (const date of part.bankHolidays.filter((date) => date >= part.from && date <= part.until)) {
     const identity = {
@@ -207,7 +205,7 @@ function addPart(
       allowanceRuleId: null,
       bankHolidayDate: date,
     } as const;
-    add(identity, part, -part.minutes[weekdayOf(date)]! / part.fullDayMinutes);
+    add(identity, -part.minutes[weekdayOf(date)]! / part.fullDayMinutes);
   }
 }
 
@@ -223,22 +221,31 @@ function serviceStepOn(
     .toSorted((a, b) => b.afterYears - a.afterYears)[0];
 }
 
-/** The grants' sum rounded up once to the half day, as the difference to add; null without grants. */
+function addAmount(lines: Lines, identity: Identity, part: Part, amount: number): void {
+  const key = `${identity.kind}:${identity.allowanceRuleId}:${identity.bankHolidayDate}`;
+  const line = lines.get(key) ?? { ...identity, amount: 0, firstDate: part.from };
+  lines.set(key, { ...line, amount: line.amount + amount });
+}
+
+/**
+ * What brings the rounded grants to their exact sum rounded up once to the half day; null without
+ * grants. Rounding the exact sum, not the rounded lines, keeps a split grant from gaining a half day.
+ */
 function roundingUpToHalfDay(
-  lines: readonly AllowanceTargetLine[],
+  exactLines: readonly AllowanceTargetLine[],
 ): Omit<AllowanceTargetLine, "firstDate"> | null {
-  const grants = lines.filter((line) => line.kind !== "bank_holiday_taken");
+  const grants = exactLines.filter((line) => line.kind !== "bank_holiday_taken");
   if (grants.length === 0) {
     return null;
   }
-  const sum = grants.reduce((total, line) => total + toMicroDays(line.amount), 0);
-  const halfDays = MICRO_DAYS_IN_A_DAY / 2;
-  const rounded = Math.ceil(sum / halfDays) * halfDays;
+  const exactSum = toMicroDays(grants.reduce((total, line) => total + line.amount, 0));
+  const roundedSum = grants.reduce((total, line) => total + toMicroDays(line.amount), 0);
+  const halfDay = MICRO_DAYS_IN_A_DAY / 2;
   return {
     kind: "rounding_up_to_half_day",
     allowanceRuleId: null,
     bankHolidayDate: null,
-    amount: (rounded - sum) / MICRO_DAYS_IN_A_DAY,
+    amount: (Math.ceil(exactSum / halfDay) * halfDay - roundedSum) / MICRO_DAYS_IN_A_DAY,
   };
 }
 
