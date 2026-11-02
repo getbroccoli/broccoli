@@ -2,8 +2,8 @@ import { sql } from "drizzle-orm";
 
 import {
   expect,
-  externalAgentUseCases,
-  importUseCases,
+  externalAgentServices,
+  importServices,
   SETUP_HOLDER,
   SYSTEM,
   aiSettings,
@@ -18,7 +18,7 @@ test("refuses a code that expires while the exchange waits for the instance lock
 }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
-  const agents = externalAgentUseCases(orm, { clock: () => now });
+  const agents = externalAgentServices(orm, { clock: () => now });
   const { code, expiresAt } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
 
   const result = await expireWhileWaiting(
@@ -39,7 +39,7 @@ test("refuses a call when the agent session expires while waiting for the instan
 }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
-  const agents = externalAgentUseCases(orm, { clock: () => now });
+  const agents = externalAgentServices(orm, { clock: () => now });
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token, expiresAt } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -62,7 +62,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
   "%s ends a live session",
   async (operation, { orm, seed }) => {
     await seed.externalAgentSetup();
-    const agents = externalAgentUseCases(orm);
+    const agents = externalAgentServices(orm);
     const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
     const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
       code,
@@ -86,7 +86,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
 test("expires a session two hours after exchange despite recent calls", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
-  const agents = externalAgentUseCases(orm, { clock: () => now });
+  const agents = externalAgentServices(orm, { clock: () => now });
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   now = new Date("2026-10-20T13:00:00Z");
   const { token, expiresAt } = await agents.sessions.startExternalAgentSession(SYSTEM, {
@@ -106,7 +106,7 @@ test("expires a session two hours after exchange despite recent calls", async ({
 
 test("refuses a session once an owner exists even at the import step", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -122,7 +122,7 @@ test("refuses a session once an owner exists even at the import step", async ({ 
 
 test("refuses a session after setup leaves import", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -140,7 +140,7 @@ test("refuses a session when the setup session expires", async ({ orm, seed }) =
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
   await seed.setupSession({ expiresAt: new Date("2026-10-20T13:00:00Z") });
-  const agents = externalAgentUseCases(orm, { clock: () => now });
+  const agents = externalAgentServices(orm, { clock: () => now });
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -156,7 +156,7 @@ test("refuses a session when the setup session expires", async ({ orm, seed }) =
 
 test("refuses a session after OpenRouter is saved", async ({ orm, seed, fakeDecisions }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -180,7 +180,7 @@ test("choosing the agent again never revives a session idled by OpenRouter", asy
   fakeDecisions,
 }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -201,14 +201,14 @@ test("choosing the agent again never revives a session idled by OpenRouter", asy
 
 test("refuses a session after approval", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
     client: "Test agent",
   });
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   const version = (await imports.reads.readReview(SETUP_HOLDER)).version;
 
   await imports.approveImport(SETUP_HOLDER, version);
@@ -219,7 +219,7 @@ test("refuses a session after approval", async ({ orm, seed }) => {
 
 test("refuses a live token after the demo starts", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -228,7 +228,7 @@ test("refuses a live token after the demo starts", async ({ orm, seed }) => {
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
   expect(await agents.files.listUnmappedFiles(ctx)).toEqual([]);
 
-  await importUseCases(orm).startDemo(SETUP_HOLDER);
+  await importServices(orm).startDemo(SETUP_HOLDER);
 
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
   await expect(agents.files.listUnmappedFiles(ctx)).rejects.toMatchObject(SESSION_ENDED);

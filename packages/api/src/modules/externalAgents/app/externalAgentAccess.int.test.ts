@@ -1,11 +1,11 @@
 import {
-  companyUseCases,
+  aiSettings,
+  companyService,
   expect,
-  importUseCases,
+  importServices,
   SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   storedFileIds,
-  systemUseCases,
   test,
 } from "#test/support";
 
@@ -29,7 +29,7 @@ test.for([
   "readSlack",
   "ai.save",
 ] as const)("%s refuses the external agent", async (operation, { orm }) => {
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   const calls = {
     approveImport: () => imports.approveImport(SETUP_EXTERNAL_AGENT, "reviewed-version"),
     reopenReview: () => imports.reopenReview(SETUP_EXTERNAL_AGENT),
@@ -63,9 +63,9 @@ test.for([
     "choices.leaveOutIncomplete": () =>
       imports.choices.leaveOutIncomplete(SETUP_EXTERNAL_AGENT, { reason: "email" }),
     "company.update": () =>
-      companyUseCases(orm).update(SETUP_EXTERNAL_AGENT, { name: "Changed company" }),
+      companyService(orm).update(SETUP_EXTERNAL_AGENT, { name: "Changed company" }),
     readSlack: () => imports.readSlack(SETUP_EXTERNAL_AGENT),
-    "ai.save": () => systemUseCases(orm).ai.save(SETUP_EXTERNAL_AGENT, { source: "broccoli_ai" }),
+    "ai.save": () => aiSettings(orm).save(SETUP_EXTERNAL_AGENT, { source: "broccoli_ai" }),
   };
 
   await expect(

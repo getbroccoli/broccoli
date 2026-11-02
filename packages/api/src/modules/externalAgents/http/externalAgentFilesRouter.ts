@@ -5,7 +5,7 @@ import { sendApplicationError } from "../../../core/applicationError";
 import type { SecurityResolver } from "../../../core/security";
 import { requireSignedIn, type SecurityContext } from "../../../core/security";
 import { parseStaffFileName } from "../../imports";
-import type { ExternalAgentUseCases } from "../app";
+import type { ExternalAgentServices } from "../app";
 
 /** Large enough for a staff list of thousands of people, as the import's own upload. */
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -19,7 +19,7 @@ const UPLOADS_PER_MINUTE = 30;
  * once the owner allows it.
  */
 export function externalAgentFilesRouter(
-  useCases: ExternalAgentUseCases,
+  services: ExternalAgentServices,
   resolveSecurity: SecurityResolver,
 ): express.Router {
   return express.Router().post(
@@ -42,7 +42,7 @@ export function externalAgentFilesRouter(
         const name = parseStaffFileName(request.query.name);
         // Without a body Express leaves `body` unset; an empty file is refused like any other.
         const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
-        response.json({ id: await useCases.files.uploadForExternalAgent(ctx, { name, bytes }) });
+        response.json({ id: await services.files.uploadForExternalAgent(ctx, { name, bytes }) });
       } catch (error) {
         sendApplicationError(error, response);
       }

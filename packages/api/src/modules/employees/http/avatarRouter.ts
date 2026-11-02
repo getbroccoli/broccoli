@@ -4,7 +4,7 @@ import { requireSignedIn } from "../../../core/security";
 import { sendApplicationError } from "../../../core/applicationError";
 import { sendFile } from "../../../core/files";
 import type { SecurityResolver } from "../../../core/security";
-import type { EmployeeUseCases } from "../app";
+import type { EmployeeReadService } from "../app";
 
 /** Where the avatar in this file is served. */
 export function avatarUrl(fileId: string): string {
@@ -13,13 +13,13 @@ export function avatarUrl(fileId: string): string {
 
 /** `GET /api/employees/avatar/:fileId` serves an employee's avatar, cached for good. */
 export function avatarRouter(
-  useCases: EmployeeUseCases,
+  employees: EmployeeReadService,
   resolveSecurity: SecurityResolver,
 ): express.Router {
   return express.Router().get("/employees/avatar/:fileId", async (request, response) => {
     try {
       const ctx = requireSignedIn((await resolveSecurity(request.headers)).security);
-      sendFile(await useCases.readAvatar(ctx, request.params.fileId), response);
+      sendFile(await employees.readAvatar(ctx, request.params.fileId), response);
     } catch (error) {
       sendApplicationError(error, response);
     }

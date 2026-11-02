@@ -4,7 +4,7 @@ import { rateLimit } from "express-rate-limit";
 import { sendApplicationError } from "../../../core/applicationError";
 import type { SecurityResolver } from "../../../core/security";
 import { requireSignedIn, type SecurityContext } from "../../../core/security";
-import type { ImportUseCases } from "../app";
+import type { ImportServices } from "../app";
 import { parseStaffFileName } from "../domain";
 
 /** Large enough for a staff list of thousands of people. */
@@ -17,7 +17,7 @@ const UPLOADS_PER_MINUTE = 30;
  * answers the new source's id; its mapping runs in the background.
  */
 export function filesRouter(
-  useCases: ImportUseCases,
+  services: ImportServices,
   resolveSecurity: SecurityResolver,
 ): express.Router {
   return express.Router().post(
@@ -44,7 +44,7 @@ export function filesRouter(
         const name = parseStaffFileName(request.query.name);
         // Without a body Express leaves `body` unset; an empty file is refused like any other.
         const bytes = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
-        response.json({ sourceId: await useCases.files.uploadFile(ctx, { name, bytes }) });
+        response.json({ sourceId: await services.files.uploadFile(ctx, { name, bytes }) });
       } catch (error) {
         sendApplicationError(error, response);
       }

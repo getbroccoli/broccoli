@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import {
   aiSettings,
   expect,
-  externalAgentUseCases,
+  externalAgentServices,
   EMPLOYEE,
   OWNER,
   SETUP_EXTERNAL_AGENT,
@@ -28,7 +28,7 @@ test("refuses choosing the agent through AI settings, which would keep its sessi
 
 test("allows exactly one of two parallel exchanges of a code", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
 
   const exchanges = await Promise.allSettled([
@@ -44,7 +44,7 @@ test("allows exactly one of two parallel exchanges of a code", async ({ orm, see
 
 test("refuses a wrong code", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
 
   await expect(
     sessions.startExternalAgentSession(SYSTEM, { code: "wrong-code", client: "Test agent" }),
@@ -53,7 +53,7 @@ test("refuses a wrong code", async ({ orm, seed }) => {
 
 test("refuses a used code", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   await sessions.startExternalAgentSession(SYSTEM, { code, client: "Test agent" });
 
@@ -64,7 +64,7 @@ test("refuses a used code", async ({ orm, seed }) => {
 
 test("exchanges a system-created code for a session only once", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
   const { code } = await sessions.createExternalAgentCode(SYSTEM);
 
   const { token } = await sessions.startExternalAgentSession(SYSTEM, {
@@ -83,7 +83,7 @@ test("a system-created code ends the session from the setup holder's code", asyn
   seed,
 }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -99,7 +99,7 @@ test("a system-created code ends the session from the setup holder's code", asyn
 test("refuses a code to the system before the external agent is chosen", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   await seed.aiSource("broccoli_ai");
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
 
   await expect(sessions.createExternalAgentCode(SYSTEM)).rejects.toMatchObject({
     code: "CONFLICT",
@@ -109,7 +109,7 @@ test("refuses a code to the system before the external agent is chosen", async (
 test("refuses a code at its two-hour deadline", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
-  const { sessions } = externalAgentUseCases(orm, { clock: () => now });
+  const { sessions } = externalAgentServices(orm, { clock: () => now });
   const { code, expiresAt } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   expect(expiresAt).toEqual(new Date("2026-10-20T14:00:00Z"));
   now = expiresAt;
@@ -123,7 +123,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
   "%s cancels an unused code",
   async (operation, { orm, seed }) => {
     await seed.externalAgentSetup();
-    const { sessions } = externalAgentUseCases(orm);
+    const { sessions } = externalAgentServices(orm);
     const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
 
     if (operation === "createExternalAgentCode")
@@ -138,7 +138,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
 
 test("exchanges a code for a session", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
   const issued = await sessions.createExternalAgentCode(SETUP_HOLDER);
 
   const session = await sessions.startExternalAgentSession(SYSTEM, {
@@ -161,7 +161,7 @@ test("exchanges a code for a session", async ({ orm, seed }) => {
 
 test("shows the external agent as listening right after it connects", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
 
   await sessions.startExternalAgentSession(SYSTEM, { code, client: "Test agent" });
@@ -177,7 +177,7 @@ test("shows the external agent as not listening 30 seconds after its last call",
 }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
-  const { sessions } = externalAgentUseCases(orm, { clock: () => now });
+  const { sessions } = externalAgentServices(orm, { clock: () => now });
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   await sessions.startExternalAgentSession(SYSTEM, { code, client: "Test agent" });
 
@@ -194,7 +194,7 @@ test("shows the external agent as listening while a wait stays open past 30 seco
 }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
-  const { sessions, files } = externalAgentUseCases(orm, { clock: () => now });
+  const { sessions, files } = externalAgentServices(orm, { clock: () => now });
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -222,7 +222,7 @@ test("shows the external agent as listening again after a list call following a 
 }) => {
   await seed.externalAgentSetup();
   let now = new Date("2026-10-20T12:00:00Z");
-  const { sessions, files } = externalAgentUseCases(orm, { clock: () => now });
+  const { sessions, files } = externalAgentServices(orm, { clock: () => now });
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -245,7 +245,7 @@ test.for([EMPLOYEE, SETUP_EXTERNAL_AGENT])(
   "refuses a code to a caller without setup access",
   async (ctx, { orm, seed }) => {
     await seed.externalAgentSetup();
-    const { sessions } = externalAgentUseCases(orm);
+    const { sessions } = externalAgentServices(orm);
 
     await expect(sessions.createExternalAgentCode(ctx)).rejects.toMatchObject({
       code: "FORBIDDEN",
@@ -258,7 +258,7 @@ test.for(["chooseExternalAgent", "createExternalAgentCode", "disconnectExternalA
   async (operation, { orm, seed }) => {
     await seed.externalAgentSetup();
     await seed.assignment();
-    const { sessions } = externalAgentUseCases(orm);
+    const { sessions } = externalAgentServices(orm);
 
     await expect(
       operation === "createExternalAgentCode"
@@ -273,7 +273,7 @@ test.for(["owner", "ready", "done"] as const)(
   async (step, { orm, seed }) => {
     await seed.externalAgentSetup();
     await seed.setupStep(step);
-    const { sessions } = externalAgentUseCases(orm);
+    const { sessions } = externalAgentServices(orm);
 
     await expect(sessions.createExternalAgentCode(SETUP_HOLDER)).rejects.toMatchObject({
       code: "CONFLICT",
@@ -283,7 +283,7 @@ test.for(["owner", "ready", "done"] as const)(
 
 test("stores only hashes of the code and token", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const { sessions } = externalAgentUseCases(orm);
+  const { sessions } = externalAgentServices(orm);
   const { code } = await sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await sessions.startExternalAgentSession(SYSTEM, {
     code,

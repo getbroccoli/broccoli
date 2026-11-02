@@ -1,14 +1,20 @@
-import { createAiSettings, createMailSettings, createPasswordResetEmail } from "../core/instance";
+import {
+  createAiSettingsService,
+  createMailSettingsService,
+  createPasswordResetEmailService,
+} from "../core/instance";
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
-import { companyModule, readStoredCompany } from "./company";
-import { demoModule, prepareDemoFill } from "./demo";
-import { deleteAllEmployees, employeeDirectory, employeesModule } from "./employees";
+import { companyModule, createCompany } from "./company";
+import { createDemoFillService, demoModule } from "./demo";
+import { createEmployeeSetupService, employeeDirectory, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
-import { createImportUseCases, importsModule } from "./imports";
+import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
+
+const employeeSetup = createEmployeeSetupService();
 
 /** Settings that only some modules need, read from the environment by `main.ts`. */
 export interface ModuleSettings {
@@ -29,16 +35,17 @@ export function createModules(
 ): Modules {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
-  const aiSettings = createAiSettings({ ...core, deployment, openRouter, broccoliAiUrl });
-  const mailSettings = createMailSettings({ ...core, deployment, resendApiUrl });
-  const passwordResetEmail = createPasswordResetEmail({ ...core, mailSettings });
+  const aiSettings = createAiSettingsService({ ...core, deployment, openRouter, broccoliAiUrl });
+  const mailSettings = createMailSettingsService({ ...core, deployment, resendApiUrl });
+  const passwordResetEmail = createPasswordResetEmailService({ ...core, mailSettings });
+  const company = createCompany({ ...core, brandLookupUrl });
   // Built once: the import serves them and the external agent puts its files through them.
-  const importUseCases = createImportUseCases({
+  const importServices = createImportServices({
     ...core,
     slack: slackConnection,
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
-    prepareDemoFill,
+    prepareDemoFill: createDemoFillService().prepareDemoFill,
   });
   const manifests = [
     systemModule({
@@ -47,29 +54,29 @@ export function createModules(
       aiSettings,
       mailSettings,
       passwordResetEmail,
-      addApprovedPeople: importUseCases.addApprovedPeople,
-      deleteAllEmployees,
-      deleteFinishedImport: importUseCases.deleteFinishedImport,
+      addApprovedPeople: importServices.addApprovedPeople,
+      deleteAllEmployees: employeeSetup.deleteAllEmployees,
+      deleteFinishedImport: importServices.deleteFinishedImport,
     }),
     employeesModule({
       ...core,
       mode: deployment.mode,
       mailSettings,
-      readCompany: (ctx) => readStoredCompany(ctx, core.orm),
+      readCompany: company.readStoredCompany,
     }),
-    companyModule({ ...core, brandLookupUrl }),
+    companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact }),
     slackModule(slackConnection),
-    importsModule(importUseCases),
-    externalAgentsModule({ ...core, mode: deployment.mode, imports: importUseCases }),
+    importsModule(importServices),
+    externalAgentsModule({ ...core, mode: deployment.mode, imports: importServices }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core.orm, manifests)],
     setupDemo: {
-      prepareStart: importUseCases.prepareDemoStart,
-      deleteAllEmployees,
+      prepareStart: importServices.prepareDemoStart,
+      deleteAllEmployees: employeeSetup.deleteAllEmployees,
     },
-    addApprovedPeople: importUseCases.addApprovedPeople,
+    addApprovedPeople: importServices.addApprovedPeople,
     employeeDirectory: employeeDirectory(core.orm),
     passwordResetEmail,
   };

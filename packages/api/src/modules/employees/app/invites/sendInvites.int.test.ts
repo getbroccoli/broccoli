@@ -1,6 +1,6 @@
 import { and, isNull, sql } from "drizzle-orm";
 import { onTestFinished, vi } from "vitest";
-import { employeeInviteService, employeeUseCases, expect, test } from "#test/support";
+import { employeeInviteService, employeeServices, expect, test } from "#test/support";
 
 test("returns a private copied link per person when no mail is chosen", async ({ orm, seed }) => {
   const owner = await seed.owner();
@@ -92,7 +92,7 @@ test("replaces the open invite and writes one history line per send", async ({ o
     .where(and(isNull(sql`accepted_at`), isNull(sql`cancelled_at`), isNull(sql`replaced_at`)));
   expect(rows).toHaveLength(1);
   expect(rows[0]!.row).toMatchObject({ employee_id: employee.id });
-  const { edges } = await employeeUseCases(orm).readEmployeeHistory(owner, employee.id, {});
+  const { edges } = await employeeServices(orm).readEmployeeHistory(owner, employee.id, {});
   expect(edges).toHaveLength(2);
   expect(edges.map(({ node }) => node)).toMatchObject([
     {
@@ -118,7 +118,7 @@ test("creates one invite for duplicate employee ids", async ({ orm, seed }) => {
 
   expect(sent).toHaveLength(1);
   expect(
-    (await employeeUseCases(orm).readEmployeeHistory(owner, employee.id, {})).edges,
+    (await employeeServices(orm).readEmployeeHistory(owner, employee.id, {})).edges,
   ).toHaveLength(1);
 });
 

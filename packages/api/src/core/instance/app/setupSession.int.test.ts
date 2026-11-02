@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
 
-import { expect, EMPLOYEE, SYSTEM, test } from "#test/support";
+import { expect, EMPLOYEE, SYSTEM, test, instances, setupSessions } from "#test/support";
 
 import { hashSetupToken } from "../helpers";
-import { readInstance, readSetupHolder, startSetup } from ".";
 
 test("starts a setup session on a fresh instance and stores only its hash", async ({
   orm,
@@ -11,12 +10,14 @@ test("starts a setup session on a fresh instance and stores only its hash", asyn
 }) => {
   const now = new Date("2026-01-01T12:00:00Z");
 
-  const session = await transact((tx) => startSetup(SYSTEM, tx, { token: null, now }));
+  const session = await transact((tx) =>
+    setupSessions.startSetup(SYSTEM, tx, { token: null, now }),
+  );
 
   expect(session.token).toEqual(expect.any(String));
   expect(session.token.length).toBeGreaterThan(0);
   expect(session.expiresAt).toEqual(new Date("2026-01-04T12:00:00Z"));
-  expect((await readInstance(orm)).setupSession).toEqual({
+  expect((await instances.readInstance(orm)).setupSession).toEqual({
     tokenHash: createHash("sha256").update(session.token).digest("hex"),
     expiresAt: session.expiresAt,
   });
@@ -26,10 +27,12 @@ test("extends the session when its holder starts again", async ({ orm, seed, tra
   await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
   const now = new Date("2026-01-02T12:00:00Z");
 
-  const session = await transact((tx) => startSetup(SYSTEM, tx, { token: "setup-token", now }));
+  const session = await transact((tx) =>
+    setupSessions.startSetup(SYSTEM, tx, { token: "setup-token", now }),
+  );
 
   expect(session).toEqual({ token: "setup-token", expiresAt: new Date("2026-01-05T12:00:00Z") });
-  expect((await readInstance(orm)).setupSession).toEqual({
+  expect((await instances.readInstance(orm)).setupSession).toEqual({
     tokenHash: hashSetupToken("setup-token"),
     expiresAt: session.expiresAt,
   });
@@ -43,7 +46,7 @@ test.for([null, "another-token"])(
 
     await expect(
       transact((tx) =>
-        startSetup(SYSTEM, tx, {
+        setupSessions.startSetup(SYSTEM, tx, {
           token,
           now: new Date("2026-01-02T12:00:00Z"),
         }),
@@ -53,7 +56,7 @@ test.for([null, "another-token"])(
       message: "Setup is in progress on another device",
     });
 
-    expect((await readInstance(orm)).setupSession).toEqual({
+    expect((await instances.readInstance(orm)).setupSession).toEqual({
       tokenHash: hashSetupToken("setup-token"),
       expiresAt,
     });
@@ -66,7 +69,9 @@ test.for([null, "setup-token"])(
     const now = new Date("2026-01-04T12:00:00Z");
     await seed.setupSession({ expiresAt: now });
 
-    await expect(transact((tx) => startSetup(SYSTEM, tx, { token, now }))).rejects.toMatchObject({
+    await expect(
+      transact((tx) => setupSessions.startSetup(SYSTEM, tx, { token, now })),
+    ).rejects.toMatchObject({
       name: "SetupInProgressError",
     });
   },
@@ -76,8 +81,8 @@ test("two simultaneous starts leave one holder", async ({ orm, transact }) => {
   const now = new Date("2026-01-01T12:00:00Z");
 
   const results = await Promise.allSettled([
-    transact((tx) => startSetup(SYSTEM, tx, { token: null, now })),
-    transact((tx) => startSetup(SYSTEM, tx, { token: null, now })),
+    transact((tx) => setupSessions.startSetup(SYSTEM, tx, { token: null, now })),
+    transact((tx) => setupSessions.startSetup(SYSTEM, tx, { token: null, now })),
   ]);
 
   expect(results.filter(({ status }) => status === "fulfilled")).toHaveLength(1);
@@ -85,7 +90,7 @@ test("two simultaneous starts leave one holder", async ({ orm, transact }) => {
     { reason: { name: "SetupInProgressError" } },
   ]);
   const winner = results.find((result) => result.status === "fulfilled")!;
-  expect(await readSetupHolder(orm, { token: winner.value.token, now })).toBe("you");
+  expect(await setupSessions.readSetupHolder(orm, { token: winner.value.token, now })).toBe("you");
 });
 
 test("refuses a start once an owner exists", async ({ seed, transact }) => {
@@ -93,7 +98,7 @@ test("refuses a start once an owner exists", async ({ seed, transact }) => {
 
   await expect(
     transact((tx) =>
-      startSetup(SYSTEM, tx, {
+      setupSessions.startSetup(SYSTEM, tx, {
         token: null,
         now: new Date("2026-01-01T12:00:00Z"),
       }),
@@ -104,21 +109,24 @@ test("refuses a start once an owner exists", async ({ seed, transact }) => {
 test("refuses an employee starting setup", async ({ orm, transact }) => {
   await expect(
     transact((tx) =>
-      startSetup(EMPLOYEE, tx, {
+      setupSessions.startSetup(EMPLOYEE, tx, {
         token: null,
         now: new Date("2026-01-01T12:00:00Z"),
       }),
     ),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect((await readInstance(orm)).setupSession).toBeNull();
+  expect((await instances.readInstance(orm)).setupSession).toBeNull();
 });
 
 test("reports you for the valid setup holder", async ({ orm, seed }) => {
   await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
 
   expect(
-    await readSetupHolder(orm, { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") }),
+    await setupSessions.readSetupHolder(orm, {
+      token: "setup-token",
+      now: new Date("2026-01-02T12:00:00Z"),
+    }),
   ).toBe("you");
 });
 
@@ -131,14 +139,17 @@ test.for([
   async (credential, { orm, seed }) => {
     await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
 
-    expect(await readSetupHolder(orm, credential)).toBe("another_device");
+    expect(await setupSessions.readSetupHolder(orm, credential)).toBe("another_device");
   },
 );
 
 test("reports nobody when no setup session exists", async ({ orm }) => {
-  expect(await readSetupHolder(orm, { token: null, now: new Date("2026-01-01T12:00:00Z") })).toBe(
-    "nobody",
-  );
+  expect(
+    await setupSessions.readSetupHolder(orm, {
+      token: null,
+      now: new Date("2026-01-01T12:00:00Z"),
+    }),
+  ).toBe("nobody");
 });
 
 test("reports nobody once an owner exists even with a setup session", async ({ orm, seed }) => {
@@ -146,6 +157,9 @@ test("reports nobody once an owner exists even with a setup session", async ({ o
   await seed.owner();
 
   expect(
-    await readSetupHolder(orm, { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") }),
+    await setupSessions.readSetupHolder(orm, {
+      token: "setup-token",
+      now: new Date("2026-01-02T12:00:00Z"),
+    }),
   ).toBe("nobody");
 });

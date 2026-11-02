@@ -1,10 +1,10 @@
 import express from "express";
 import { onTestFinished } from "vitest";
 
-import { expect, startSimpleHttpServer, storedFileIds, test } from "#test/support";
+import { expect, startSimpleHttpServer, storedFileIds, test, fileStorage } from "#test/support";
 
 import type { Orm } from "../db";
-import { deleteFiles, readFile, sendFile, storeFile } from ".";
+import { sendFile } from ".";
 
 test("serves stored bytes with their MIME type, immutable private caching and nosniff", async ({
   orm,
@@ -12,7 +12,7 @@ test("serves stored bytes with their MIME type, immutable private caching and no
 }) => {
   const content = Buffer.from([0, 1, 127, 128, 255]);
   const fileId = await transact((tx) =>
-    storeFile(tx, { content, mimeType: "application/octet-stream" }),
+    fileStorage.storeFile(tx, { content, mimeType: "application/octet-stream" }),
   );
   const url = await startFileServer(orm);
 
@@ -35,20 +35,26 @@ test("returns 404 for a null file", async ({ orm }) => {
 
 test("keeps stored files when deleting an empty list", async ({ orm, transact }) => {
   const fileId = await transact((tx) =>
-    storeFile(tx, { content: Buffer.from("file"), mimeType: "application/octet-stream" }),
+    fileStorage.storeFile(tx, {
+      content: Buffer.from("file"),
+      mimeType: "application/octet-stream",
+    }),
   );
 
-  await transact((tx) => deleteFiles(tx, []));
+  await transact((tx) => fileStorage.deleteFiles(tx, []));
 
   expect(await storedFileIds(orm)).toEqual([fileId]);
 });
 
 test("keeps stored files when deleting an unknown id", async ({ orm, transact }) => {
   const fileId = await transact((tx) =>
-    storeFile(tx, { content: Buffer.from("file"), mimeType: "application/octet-stream" }),
+    fileStorage.storeFile(tx, {
+      content: Buffer.from("file"),
+      mimeType: "application/octet-stream",
+    }),
   );
 
-  await transact((tx) => deleteFiles(tx, ["00000000-0000-4000-8000-000000000001"]));
+  await transact((tx) => fileStorage.deleteFiles(tx, ["00000000-0000-4000-8000-000000000001"]));
 
   expect(await storedFileIds(orm)).toEqual([fileId]);
 });
@@ -56,7 +62,7 @@ test("keeps stored files when deleting an unknown id", async ({ orm, transact })
 test("does not keep a file when its transaction rolls back", async ({ orm, transact }) => {
   await expect(
     transact(async (tx) => {
-      await storeFile(tx, {
+      await fileStorage.storeFile(tx, {
         content: Buffer.from("file"),
         mimeType: "application/octet-stream",
       });
@@ -69,7 +75,7 @@ test("does not keep a file when its transaction rolls back", async ({ orm, trans
 
 async function startFileServer(orm: Orm): Promise<string> {
   const app = express().get("/:fileId", async (request, response) => {
-    const file = await readFile(orm, request.params.fileId);
+    const file = await fileStorage.readFile(orm, request.params.fileId);
     sendFile(file, response);
   });
   const server = await startSimpleHttpServer(app);

@@ -5,7 +5,7 @@ import { afterAll } from "vitest";
 
 import {
   expect,
-  importUseCases,
+  importServices,
   type LiveDecisions,
   OWNER,
   startLiveDecisions,
@@ -33,7 +33,7 @@ test.for(caseNames())("%s", async (file, { orm, onTestFinished }) => {
       await model.stop();
     }
   });
-  const imports = importUseCases(orm, { decisions: model.decisions });
+  const imports = importServices(orm, { decisions: model.decisions });
 
   const sourceId = await imports.files.uploadFile(OWNER, {
     name: file,

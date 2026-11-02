@@ -1,8 +1,10 @@
 import type { Tx } from "../../../core/db";
-import { appendRecordHistory, type HistoryAppend } from "../../../core/records";
+import { createRecordHistoryService, type HistoryAppend } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { employmentRepository } from "../db";
 import { type Employee, employeeChanges, managerChanges } from "../domain";
+
+const recordHistory = createRecordHistoryService();
 
 /** Appends a creation line for each of these new employees, with their manager by id, joining `tx`. */
 export async function recordCreatedEmployees(
@@ -13,7 +15,7 @@ export async function recordCreatedEmployees(
   managers: ReadonlyMap<string, Employee> = new Map(),
 ): Promise<void> {
   const startDates = await employmentRepository(tx).findStartDates(employees.map(({ id }) => id));
-  await appendRecordHistory(ctx, tx, {
+  await recordHistory.append(ctx, tx, {
     recordType: "employee",
     operation: "CREATED",
     cause,

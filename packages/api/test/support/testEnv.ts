@@ -9,7 +9,6 @@ import { inject } from "vitest";
 
 import { session, user } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
-import { readInstance } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
 import { createTestDatabase, type TestDatabase } from "./testDatabases";
@@ -20,6 +19,7 @@ import {
   waitForStartup,
   type TestBroccoliServerOptions,
 } from "./testBroccoliServer";
+import { instances } from "./statelessServices";
 
 export type TestEnvOptions = Omit<TestBroccoliServerOptions, "dataDir">;
 
@@ -119,7 +119,7 @@ export class TestEnv {
       .from(session)
       .where(eq(session.userId, userId));
     assert(savedSession);
-    const { demoExpiresAt } = await readInstance(this.database.orm);
+    const { demoExpiresAt } = await instances.readInstance(this.database.orm);
     return { ...savedSession, demoExpiresAt };
   }
 

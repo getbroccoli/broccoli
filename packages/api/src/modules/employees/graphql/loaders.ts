@@ -3,7 +3,12 @@ import DataLoader from "dataloader";
 import { type GraphqlContext, perRequest } from "../../../core/graphql";
 import type { PermissionProfile } from "../../../core/security";
 import type { CalendarDate } from "../../../utils";
-import type { EmployeeInviteService, EmployeeUseCases } from "../app";
+import type {
+  EmployeeInviteService,
+  EmployeeManagerService,
+  EmployeePermissionService,
+  EmployeeReadService,
+} from "../app";
 import type { Employee, SignInStatus } from "../domain";
 
 /** One request's loaders for employee data. */
@@ -20,20 +25,20 @@ export interface EmployeeLoaders {
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function employeeLoaders(
-  useCases: EmployeeUseCases,
+  services: EmployeeReadService & EmployeeManagerService & EmployeePermissionService,
   invites: EmployeeInviteService,
 ): (context: GraphqlContext) => EmployeeLoaders {
   return perRequest((context) => ({
     manager: new DataLoader<string, Employee | null>(async (employeeIds) => {
-      const managers = await useCases.readManagers(context.getActor(), employeeIds);
+      const managers = await services.readManagers(context.getActor(), employeeIds);
       return employeeIds.map((id) => managers.get(id) ?? null);
     }),
     startDate: new DataLoader<string, CalendarDate | null>(async (employeeIds) => {
-      const startDates = await useCases.readStartDates(context.getActor(), employeeIds);
+      const startDates = await services.readStartDates(context.getActor(), employeeIds);
       return employeeIds.map((id) => startDates.get(id) ?? null);
     }),
     permissionProfiles: new DataLoader<string, PermissionProfile[] | null>(async (employeeIds) => {
-      const profiles = await useCases.readPermissionProfiles(context.getActor(), employeeIds);
+      const profiles = await services.readPermissionProfiles(context.getActor(), employeeIds);
       return employeeIds.map((id) => profiles.get(id) ?? null);
     }),
     signInStatus: new DataLoader<string, SignInStatus | null>(async (employeeIds) => {

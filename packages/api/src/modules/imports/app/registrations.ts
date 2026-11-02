@@ -1,7 +1,7 @@
 // What this module adds to core's shared registries.
-import type { AddedPeople } from "./useCases/addApprovedPeople";
-import type { MapFileJob } from "./useCases/fileSourceService";
-import type { ReadOriginalFileJob } from "./useCases/originalFileReadService";
+import type { AddedPeople } from "./importApprovalService";
+import type { MapFileJob } from "./fileSourceService";
+import type { ReadOriginalFileJob } from "./originalFileReadService";
 
 declare module "../../../core/records" {
   interface CauseKinds {

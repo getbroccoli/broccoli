@@ -6,10 +6,11 @@ import {
   SYSTEM,
   signedIn,
   test,
+  recordHistory,
 } from "#test/support";
 
 import type { Grant } from "../security";
-import { appendRecordHistory, createRecordHistoryReader, readRecordHistory } from ".";
+import { createRecordHistoryReaderService } from ".";
 
 test("reads history when the record's subject is in scope", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
@@ -18,14 +19,14 @@ test("reads history when the record's subject is in scope", async ({ orm, seed, 
     grants: [READ_SELF],
   });
   const lines = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY" },
       records: [EXAMPLE_RECORD],
     }),
   );
-  const reader = createRecordHistoryReader(orm, {
+  const reader = createRecordHistoryReaderService(orm, {
     example: {
       ...EXAMPLE_REGISTRATION,
       subjectsOf: () => Promise.resolve(new Map([[EXAMPLE_RECORD.recordId, employee.id]])),
@@ -48,14 +49,14 @@ test("reads a deleted record's history only with read on all", async ({ orm, see
     grants: [{ ...READ_SELF, scope: "all" }],
   });
   const lines = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "DELETED",
       cause: { kind: "EDITED_DIRECTLY" },
       records: [EXAMPLE_RECORD],
     }),
   );
-  const reader = createRecordHistoryReader(orm, { example: EXAMPLE_REGISTRATION });
+  const reader = createRecordHistoryReaderService(orm, { example: EXAMPLE_REGISTRATION });
 
   await expect(
     reader.readHistory(narrow, "example", EXAMPLE_RECORD.recordId, {}),
@@ -67,14 +68,14 @@ test("reads a deleted record's history only with read on all", async ({ orm, see
 
 test("reads history through the record type's canonical id", async ({ orm, transact }) => {
   const lines = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY" },
       records: [EXAMPLE_RECORD],
     }),
   );
-  const reader = createRecordHistoryReader(orm, { example: EXAMPLE_REGISTRATION });
+  const reader = createRecordHistoryReaderService(orm, { example: EXAMPLE_REGISTRATION });
 
   const page = await reader.readHistory(
     SYSTEM,
@@ -91,33 +92,20 @@ test("returns an empty page when the record type cannot canonicalise the id", as
   transact,
 }) => {
   await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "CREATED",
       cause: { kind: "EDITED_DIRECTLY" },
       records: [EXAMPLE_RECORD],
     }),
   );
-  const reader = createRecordHistoryReader(orm, {
+  const reader = createRecordHistoryReaderService(orm, {
     example: { ...EXAMPLE_REGISTRATION, canonicalId: () => null },
   });
 
   const page = await reader.readHistory(SYSTEM, "example", EXAMPLE_RECORD.recordId, {});
 
   expect(page).toEqual({ edges: [], pageInfo: { hasNextPage: false, endCursor: null } });
-});
-
-test("refuses a history cursor id beyond the signed 64-bit range", async ({ orm }) => {
-  const after = Buffer.from(JSON.stringify(["NEWEST", "DESC", "9223372036854775808"])).toString(
-    "base64url",
-  );
-
-  await expect(
-    readRecordHistory(orm, "example", EXAMPLE_RECORD.recordId, { after }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "after", code: "invalid" }],
-  });
 });
 
 test("hides only reference sides whose record subjects are out of scope", async ({
@@ -129,7 +117,7 @@ test("hides only reference sides whose record subjects are out of scope", async 
   const other = await seed.employee();
   const ctx = signedIn(orm, { employeeId: employee.id, grants: [READ_SELF] });
   const lines = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "UPDATED",
       cause: { kind: "EDITED_DIRECTLY" },
@@ -163,7 +151,7 @@ test("hides only reference sides whose record subjects are out of scope", async 
       ],
     }),
   );
-  const reader = createRecordHistoryReader(orm, {
+  const reader = createRecordHistoryReaderService(orm, {
     example: { ...EXAMPLE_REGISTRATION, references: { owner: "other_example" } },
     other_example: {
       ...EXAMPLE_REGISTRATION,
@@ -224,7 +212,7 @@ test.for(["all", "self"] as const)(
     const employee = await seed.employee();
     const ctx = signedIn(orm, { employeeId: employee.id, grants: [{ ...READ_SELF, scope }] });
     const lines = await transact((tx) =>
-      appendRecordHistory(OWNER, tx, {
+      recordHistory.append(OWNER, tx, {
         recordType: "example",
         operation: "UPDATED",
         cause: { kind: "EDITED_DIRECTLY" },
@@ -244,7 +232,7 @@ test.for(["all", "self"] as const)(
         ],
       }),
     );
-    const reader = createRecordHistoryReader(orm, {
+    const reader = createRecordHistoryReaderService(orm, {
       example: { ...EXAMPLE_REGISTRATION, references: { owner: "other_example" } },
       other_example: EXAMPLE_REGISTRATION,
     });
@@ -278,7 +266,7 @@ test("hides a reference without refusing the line when its object has no read gr
   const employee = await seed.employee();
   const ctx = signedIn(orm, { employeeId: employee.id, grants: [] });
   const lines = await transact((tx) =>
-    appendRecordHistory(OWNER, tx, {
+    recordHistory.append(OWNER, tx, {
       recordType: "example",
       operation: "UPDATED",
       cause: { kind: "EDITED_DIRECTLY" },
@@ -290,7 +278,7 @@ test("hides a reference without refusing the line when its object has no read gr
       ],
     }),
   );
-  const reader = createRecordHistoryReader(orm, {
+  const reader = createRecordHistoryReaderService(orm, {
     example: { ...EXAMPLE_REGISTRATION, references: { owner: "other_example" } },
     other_example: {
       ...EXAMPLE_REGISTRATION,

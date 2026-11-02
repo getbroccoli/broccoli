@@ -1,5 +1,5 @@
 // Public values.
-export { deleteFiles, readFile, storeFile } from "./app";
+export { createFileStorageService } from "./app";
 export { sendFile } from "./http";
 export { files } from "./db";
 
