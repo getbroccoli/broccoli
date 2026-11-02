@@ -50,6 +50,8 @@ export function LocationRow({ location }: Props) {
               aria-label={t("settings.locations.rename", { name: location.name })}
               value={draft}
               autoFocus
+              // Held still while saving, so the saved name is the one shown.
+              readOnly={update.loading}
               aria-invalid={failure !== null}
               aria-describedby={failure ? `location-${location.id}-error` : undefined}
               onChange={(event) => setDraft(event.target.value)}

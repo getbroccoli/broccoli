@@ -104,11 +104,14 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
       if (names.length === 0) {
         return new Map();
       }
-      // Postgres alone decides which names match, by the unique index; a repeat in this insert is skipped.
-      await orm()
-        .insert(locations)
-        .values(names.map((name) => ({ name })))
-        .onConflictDoNothing();
+      // Postgres alone decides which names match, by the unique index; a repeat is skipped.
+      const distinct = [...new Set(names)];
+      for (let start = 0; start < distinct.length; start += INSERT_BATCH_SIZE) {
+        await orm()
+          .insert(locations)
+          .values(distinct.slice(start, start + INSERT_BATCH_SIZE).map((name) => ({ name })))
+          .onConflictDoNothing();
+      }
       const { rows } = await orm().execute<{ given: string; id: string; name: string }>(sql`
         select given, ${locations.id} as id, ${locations.name} as name
         from unnest(${sql.param([...names])}::text[]) as given
@@ -122,6 +125,9 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
     },
   };
 }
+
+/** Rows per insert, well below Postgres's limit of 65,535 parameters. */
+const INSERT_BATCH_SIZE = 1_000;
 
 function nameTakenOr(error: unknown): unknown {
   return isUniqueViolation(error, LOCATION_NAME_UNIQUE) ? new LocationNameTakenError() : error;
