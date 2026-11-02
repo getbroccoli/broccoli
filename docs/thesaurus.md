@@ -36,6 +36,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Working pattern**: a named way of working, such as "Standard" or "Part-time Tue–Thu": the minutes worked on each weekday, Monday to Sunday, from a date. A group works one by default and a person can be put on one from a date. Not "workload", "schedule" or "policy".
 - **Pattern week**: a working pattern's minutes for each weekday and its full day, from a date until its next week.
 - **Bank holiday calendar**: one nation's bank holidays (England and Wales, Scotland or Northern Ireland), chosen on a pattern week.
+- **Standard leave policy**: one of the three Annual leave policies Broccoli ships, which code finds by key: the UK statutory minimum (28 days for a five-day week, at most 28, bank holidays included), 20 days plus bank holidays, and 25 days plus bank holidays; each leave year starts on 1 January.
 - **Full day**: the minutes one day of leave stands for in a pattern week; at least its longest weekday.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.

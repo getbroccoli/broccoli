@@ -4,7 +4,6 @@ export {
   type AllowanceRule,
   type AllowanceTargetInputs,
   type AllowanceTargetLine,
-  type BankHolidayCalendar,
   type DatedPolicy,
   type DatedWorkingWeek,
 } from "./allowanceTarget";
