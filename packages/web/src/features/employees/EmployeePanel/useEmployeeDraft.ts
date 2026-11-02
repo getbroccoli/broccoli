@@ -144,8 +144,16 @@ function mapEdits<Result>(
 }
 
 function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
-  const { firstName, lastName, email, jobTitle, location, managerId, startDate, permissionProfiles } =
-    employee;
+  const {
+    firstName,
+    lastName,
+    email,
+    jobTitle,
+    location,
+    managerId,
+    startDate,
+    permissionProfiles,
+  } = employee;
   return {
     firstName,
     lastName,

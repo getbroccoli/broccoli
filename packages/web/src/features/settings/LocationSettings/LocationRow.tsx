@@ -62,7 +62,11 @@ export function LocationRow({ location }: Props) {
             </Button>
           </div>
           {failure && (
-            <p id={`location-${location.id}-error`} role="alert" className="text-sm text-destructive">
+            <p
+              id={`location-${location.id}-error`}
+              role="alert"
+              className="text-sm text-destructive"
+            >
               {t(failure, { name: draft.trim() })}
             </p>
           )}

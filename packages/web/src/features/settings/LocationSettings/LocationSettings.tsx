@@ -1,10 +1,7 @@
 import { useQuery } from "@apollo/client/react";
 import { type FormEvent, useState } from "react";
 
-import {
-  CreateLocationDocument,
-  LocationSettingsDocument,
-} from "@/__generated__/graphql";
+import { CreateLocationDocument, LocationSettingsDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +48,10 @@ export function LocationSettings() {
               ))}
             </ul>
           )}
-          <form onSubmit={(event) => void add(event)} className="flex flex-col gap-1 border-t border-border p-3">
+          <form
+            onSubmit={(event) => void add(event)}
+            className="flex flex-col gap-1 border-t border-border p-3"
+          >
             <div className="flex gap-2">
               <Input
                 aria-label={t("settings.locations.newName")}
