@@ -36,7 +36,7 @@ The policy's week on that date gives the minutes and the full day.
 - A policy's minutes change by adding a week from a date. A group changes policy by ending its link and starting a new one; a person's own assignment works the same way.
 - The **full day** is the minutes one day of leave stands for. It is at least the longest weekday, so a day of leave never costs more than 1. Time off costs a day as that day's minutes ÷ the full day.
 - Only admins change policies, group links and assignments. A person's working pattern is readable by them, everyone above them in the reporting line, and admins.
-- Changes to a person's own assignment are written to their history as the `working_pattern` record type, which only readers of their working pattern see.
+- Changes to a person's own assignment are written to history as the `working_pattern` record type, apart from the employee's own history, since not everyone who reads a person may read their working pattern. Resetting all employees purges both.
 - Every change that can move someone's working weeks publishes `employees.working_pattern_changed` with the people concerned and the first date that changed. Other modules read working weeks through `WorkingPatternService.readWorkingWeeks`, never these tables.
 
 ### Example: part-time from September

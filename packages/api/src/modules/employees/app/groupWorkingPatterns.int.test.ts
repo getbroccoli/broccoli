@@ -90,6 +90,50 @@ test("setting a group pattern on the same date replaces that link", async ({ orm
   ]);
 });
 
+test("correcting a group link keeps the later link and its boundary", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const policyGroupId = await seed.everyoneGroupId();
+  const patterns = workingPatternService(orm);
+  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
+  const monday = await patterns.createPolicy(OWNER, {
+    name: "Monday",
+    minutes: [450, 0, 0, 0, 0, 0, 0],
+    fullDayMinutes: 450,
+  });
+  const friday = await patterns.createPolicy(OWNER, {
+    name: "Friday",
+    minutes: [0, 0, 0, 0, 450, 0, 0],
+    fullDayMinutes: 450,
+  });
+  await patterns.setGroupPattern(OWNER, {
+    policyGroupId,
+    policyId: monday.id,
+    effectiveFrom: "2026-09-01",
+  });
+  await patterns.setGroupPattern(OWNER, {
+    policyGroupId,
+    policyId: standard.id,
+    effectiveFrom: "2026-10-01",
+  });
+
+  await patterns.setGroupPattern(OWNER, {
+    policyGroupId,
+    policyId: friday.id,
+    effectiveFrom: "2026-09-01",
+  });
+
+  const weeks = await patterns.readWorkingWeeks(OWNER, {
+    employeeIds: [employee.id],
+    from: "2026-08-01",
+    until: "2026-10-31",
+  });
+  expect(weeks.get(employee.id)).toEqual([
+    { effectiveFrom: "2026-08-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
+    { effectiveFrom: "2026-09-01", minutes: [0, 0, 0, 0, 450, 0, 0], fullDayMinutes: 450 },
+    { effectiveFrom: "2026-10-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
+  ]);
+});
+
 test("ending a group pattern leaves its members without a pattern from the next day", async ({
   orm,
   seed,

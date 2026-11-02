@@ -14,6 +14,8 @@ import { workingPatternWeeks } from "./workingPatternWeeksTable";
 export interface WorkingPatternRepository {
   /** Holds back other working pattern writes until the transaction ends. */
   lockForWrites(): Promise<void>;
+  /** Holds back working pattern writes, not reads, so several reads see one state. */
+  lockForReads(): Promise<void>;
   /** Every policy with its weeks, oldest first, by name. */
   findPolicies(): Promise<WorkingPatternPolicy[]>;
   /** A new policy with one week from the beginning; returns its id. */
@@ -29,8 +31,8 @@ export interface WorkingPatternRepository {
   isPolicyUsed(policyId: string): Promise<boolean>;
   /** The employees on the policy on any date, themselves or through a group. */
   findEmployeesOnPolicy(policyId: string): Promise<string[]>;
-  /** Each group's dated policies, by group id; every group's without ids. */
-  findGroupPolicies(groupIds?: readonly string[]): Promise<Map<string, DatedPolicy[]>>;
+  /** Each group's dated policies, by group id. */
+  findGroupPolicies(groupIds: readonly string[]): Promise<Map<string, DatedPolicy[]>>;
   /** Each employee's own dated policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, DatedPolicy[]>>;
   insertGroupPolicy(groupId: string, row: Omit<DatedPolicy, "id">): Promise<void>;
@@ -54,21 +56,39 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
       );
     },
 
+    async lockForReads() {
+      await orm().execute(
+        sql`lock table ${workingPatternWeeks}, ${policyGroupWorkingPatterns},
+          ${employeeWorkingPatternAssignments} in share mode`,
+      );
+    },
+
     async findPolicies() {
-      const policies = await orm()
+      const rows = await orm()
         .select()
         .from(workingPatternPolicies)
-        .orderBy(asc(workingPatternPolicies.name));
-      const weeks = await orm()
-        .select()
-        .from(workingPatternWeeks)
-        .orderBy(sql`${workingPatternWeeks.effectiveFrom} asc nulls first`);
-      return policies.map(({ id, name, key }) => ({
-        id,
-        name,
-        isStandard: key === "standard_working_pattern",
-        weeks: weeks.filter((week) => week.workingPatternPolicyId === id).map(patternWeekOf),
-      }));
+        .leftJoin(
+          workingPatternWeeks,
+          eq(workingPatternWeeks.workingPatternPolicyId, workingPatternPolicies.id),
+        )
+        .orderBy(
+          asc(workingPatternPolicies.name),
+          sql`${workingPatternWeeks.effectiveFrom} asc nulls first`,
+        );
+      const policies = new Map<string, WorkingPatternPolicy>();
+      for (const { working_pattern_policies: policy, working_pattern_weeks: week } of rows) {
+        const found = policies.get(policy.id) ?? {
+          id: policy.id,
+          name: policy.name,
+          isStandard: policy.key === "standard_working_pattern",
+          weeks: [],
+        };
+        policies.set(policy.id, {
+          ...found,
+          weeks: week ? [...found.weeks, patternWeekOf(week)] : found.weeks,
+        });
+      }
+      return [...policies.values()];
     },
 
     async insertPolicy(name, week) {
@@ -154,7 +174,7 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
       const rows = await orm()
         .select()
         .from(table)
-        .where(groupIds ? inArray(table.policyGroupId, [...groupIds]) : undefined);
+        .where(inArray(table.policyGroupId, [...groupIds]));
       return groupBy(rows, ({ policyGroupId }) => policyGroupId);
     },
 

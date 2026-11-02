@@ -16,11 +16,15 @@ export {
 } from "./employeeSetupService";
 export { employeeDirectory } from "./employeeDirectory";
 export {
+  createGroupWorkingPatternService,
+  type GroupWorkingPatternService,
+} from "./groupWorkingPatternService";
+export {
   createWorkingPatternPolicyService,
   type WorkingPatternPolicyService,
 } from "./workingPatternPolicyService";
 export { createWorkingPatternService, type WorkingPatternService } from "./workingPatternService";
-export { employeeRecordType, workingPatternRecordType } from "./employeeRecordType";
+export { employeeRecordType } from "./employeeRecordType";
 export {
   createEmployeeInviteService,
   type EmployeeInviteService,

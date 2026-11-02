@@ -1,12 +1,13 @@
 import type { Orm, Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import {
+  createGroupWorkingPatternService,
   createWorkingPatternPolicyService,
   createWorkingPatternService,
 } from "../../src/modules/employees";
 import { testTransactor } from "./testTransactor";
 
-/** Both working pattern services on `orm`, with silent logs; pass `transact` to receive their events. */
+/** Every working pattern service on `orm`, with silent logs; pass `transact` to receive their events. */
 export function workingPatternService(
   orm: Orm,
   { transact = testTransactor(orm) }: { transact?: Transact } = {},
@@ -15,5 +16,6 @@ export function workingPatternService(
   return {
     ...createWorkingPatternService(dependencies),
     ...createWorkingPatternPolicyService(dependencies),
+    ...createGroupWorkingPatternService(dependencies),
   };
 }

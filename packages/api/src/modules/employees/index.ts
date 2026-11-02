@@ -10,7 +10,6 @@ import {
   createEmployeeService,
   type EmployeeInviteService,
   employeeRecordType,
-  workingPatternRecordType,
 } from "./app";
 import { invitePlugin } from "./betterAuth";
 import { createResolvers } from "./graphql";
@@ -24,6 +23,7 @@ export {
   createEmployeeReadService,
   createEmployeeService,
   createEmployeeSetupService,
+  createGroupWorkingPatternService,
   createWorkingPatternPolicyService,
   createWorkingPatternService,
   employeeDirectory,
@@ -39,6 +39,7 @@ export type {
   EmployeeService,
   ImportedEmployees,
   InviteDetails,
+  GroupWorkingPatternService,
   WorkingPatternPolicyService,
   WorkingPatternService,
 } from "./app";
@@ -75,10 +76,7 @@ export function employeesModule({
     name: "employees",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
     resolvers: createResolvers(services, invites),
-    recordTypes: {
-      employee: employeeRecordType(dependencies.orm),
-      working_pattern: workingPatternRecordType(dependencies.orm),
-    },
+    recordTypes: { employee: employeeRecordType(dependencies.orm) },
     jobs: invites.jobs,
     authPlugin: invitePlugin(invites, dependencies),
     router: (resolveSecurity) =>

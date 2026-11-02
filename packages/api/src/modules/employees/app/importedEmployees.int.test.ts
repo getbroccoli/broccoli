@@ -13,6 +13,8 @@ import {
   storedFileIds,
   test,
   employeeSetup,
+  recordHistory,
+  workingPatternService,
 } from "#test/support";
 
 import { ormOf } from "../../../core/db";
@@ -273,6 +275,22 @@ test("deleting all employees purges history including already deleted employees 
   expect((await employees.readEmployeeHistory(OWNER, kept.id, {})).edges).toEqual([]);
   expect((await employees.readEmployeeHistory(OWNER, deleted.id, {})).edges).toEqual([]);
   expect(events).toEqual([]);
+});
+
+test("deleting all employees purges working pattern history", async ({ orm, seed, transact }) => {
+  const employee = await seed.employee();
+  const patterns = workingPatternService(orm);
+  const standard = (await patterns.listPolicies(OWNER)).find((policy) => policy.isStandard)!;
+  await patterns.assignPolicy(OWNER, {
+    employeeId: employee.id,
+    policyId: standard.id,
+    effectiveFrom: "2026-09-01",
+  });
+  expect((await recordHistory.read(orm, "working_pattern", employee.id, {})).edges).toHaveLength(1);
+
+  await transact((tx) => employeeSetup.deleteAllEmployees(OWNER, tx));
+
+  expect((await recordHistory.read(orm, "working_pattern", employee.id, {})).edges).toEqual([]);
 });
 
 test("an employee created while a reset waits for the employees table does not deadlock it", async ({
