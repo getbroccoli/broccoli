@@ -11,8 +11,6 @@ export { changeReasonSchema, parseChangeReason } from "./domain";
 export type {
   LoadedRecord,
   RecordChanged,
-  RecordHistoryReaderService,
-  RecordHistoryService,
   RecordTypeRegistration,
   RecordTypeRegistry,
 } from "./app";

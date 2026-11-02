@@ -1,6 +1,2 @@
 export { managedAuth } from "./managedAuth";
-export {
-  createManagedSignInService,
-  type ManagedSignInService,
-  SignInRefusedError,
-} from "./managedSignInService";
+export { createManagedSignInService, SignInRefusedError } from "./managedSignInService";

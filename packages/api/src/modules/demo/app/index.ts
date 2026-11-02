@@ -1,2 +1,2 @@
-export { createDemoFillService, type DemoFill, type DemoFillService } from "./demoFillService";
+export { createDemoFillService } from "./demoFillService";
 export { createDemoService, type DemoService } from "./demoService";

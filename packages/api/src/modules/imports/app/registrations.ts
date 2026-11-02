@@ -1,5 +1,5 @@
 // What this module adds to core's shared registries.
-import type { AddedPeople } from ".";
+import type { AddedPeople } from "./importApprovalService";
 import type { MapFileJob } from "./fileSourceService";
 import type { ReadOriginalFileJob } from "./originalFileReadService";
 

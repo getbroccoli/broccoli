@@ -36,7 +36,6 @@ export type {
   EmployeePermissionService,
   EmployeeReadService,
   EmployeeService,
-  EmployeeSetupService,
   ImportedEmployees,
   InviteDetails,
 } from "./app";

@@ -30,11 +30,7 @@ import {
   type OriginalFileReadService,
 } from "./originalFileReadService";
 
-export type { AddedPeople } from "./importApprovalService";
-export type { DemoFill } from "./importDemoService";
-export type { ImportSlack } from "./importSourceService";
 export type { ImportReview } from "./importReview";
-export type { StaffUpload } from "./uploadReader";
 export { READ_PEOPLE_JSON_SCHEMA, type ReadPeopleOutcome } from "./originalFileReadService";
 
 /** The import's services, built once; the adapters and the external agent call nothing else. */

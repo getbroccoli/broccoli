@@ -23,12 +23,6 @@ export { AssignmentConflictError, OwnerExistsError } from "./domain";
 // Public types.
 export type {
   AddApprovedPeople,
-  ExternalAgentChoiceService,
-  InstanceService,
-  ManagedInstanceService,
-  OwnerService,
-  SetupSessionService,
-  SetupStepService,
   DemoStart,
   SetupDemo,
   AiSettingsService,

@@ -3,22 +3,16 @@ export {
   type AiSettingsService,
   type OriginalFileReader,
 } from "./aiSettingsService";
-export {
-  createExternalAgentChoiceService,
-  type ExternalAgentChoiceService,
-} from "./externalAgentChoiceService";
-export { createInstanceService, type InstanceService } from "./instanceService";
+export { createExternalAgentChoiceService } from "./externalAgentChoiceService";
+export { createInstanceService } from "./instanceService";
 export {
   createMailSettingsService,
   type InstanceMailer,
   type MailIntegration,
   type MailSettingsService,
 } from "./mailSettingsService";
-export {
-  createManagedInstanceService,
-  type ManagedInstanceService,
-} from "./managedInstanceService";
-export { createOwnerService, type AddApprovedPeople, type OwnerService } from "./ownerService";
+export { createManagedInstanceService } from "./managedInstanceService";
+export { createOwnerService, type AddApprovedPeople } from "./ownerService";
 export {
   createPasswordResetEmailService,
   type PasswordResetEmailService,
@@ -28,11 +22,6 @@ export {
   type DemoReset,
   type DemoStart,
   type SetupDemo,
-  type SetupDemoService,
 } from "./setupDemoService";
-export {
-  createSetupSessionService,
-  type SetupHolder,
-  type SetupSessionService,
-} from "./setupSessionService";
-export { createSetupStepService, type SetupStepService } from "./setupStepService";
+export { createSetupSessionService, type SetupHolder } from "./setupSessionService";
+export { createSetupStepService } from "./setupStepService";

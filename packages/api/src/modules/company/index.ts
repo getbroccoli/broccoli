@@ -10,7 +10,6 @@ import { logoRouter } from "./http";
 export { createCompanyService } from "./app";
 
 // Public types.
-export type { CompanyService } from "./app";
 
 /** The company service, built once and shared by the company module and the invites that name the company. */
 export function createCompany({

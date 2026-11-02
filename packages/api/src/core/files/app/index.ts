@@ -1,2 +1,2 @@
-export { createFileStorageService, type FileStorageService } from "./fileStorageService";
+export { createFileStorageService } from "./fileStorageService";
 export type { StoredFile } from "../db";
