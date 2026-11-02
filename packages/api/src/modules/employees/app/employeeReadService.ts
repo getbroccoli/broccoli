@@ -11,8 +11,14 @@ import {
 import { createRecordHistoryReaderService, type HistoryLine } from "../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
-import { EMPLOYEE_SORT_VALUES, employeeRepository, employmentRepository } from "../db";
-import type { Employee, EmployeeOrder, EmployeeOrderField } from "../domain";
+import type { Orm, Tx } from "../../../core/db";
+import {
+  EMPLOYEE_SORT_VALUES,
+  employeeRepository,
+  employmentRepository,
+  policyGroupRepository,
+} from "../db";
+import type { Employee, EmployeeOrder, EmployeeOrderField, GroupMembership } from "../domain";
 import { employeeRecordType } from "./employeeRecordType";
 
 const fileStorage = createFileStorageService();
@@ -34,6 +40,23 @@ export interface EmployeeReadService {
     ctx: SecurityContext,
     employeeIds: readonly string[],
   ) => Promise<Map<string, CalendarDate | null>>;
+  /**
+   * Trusted, for time off: each employee's employments, oldest first, by id, in the caller's
+   * transaction. A null start is unknown, a null end open-ended.
+   */
+  readEmploymentPeriods: (
+    tx: Tx,
+    employeeIds: readonly string[],
+  ) => Promise<Map<string, { startDate: CalendarDate | null; endDate: CalendarDate | null }[]>>;
+  /** Trusted, for time off: each employee's policy groups over time, by id, in the caller's transaction. */
+  readPolicyGroupMemberships: (
+    tx: Tx,
+    employeeIds: readonly string[],
+  ) => Promise<Map<string, GroupMembership[]>>;
+  /** Trusted: the employees in a group on any date, in the caller's transaction. */
+  readPolicyGroupMemberIds: (tx: Tx, policyGroupId: string) => Promise<string[]>;
+  /** Trusted: the id of the seeded "Everyone" group. */
+  readEveryoneGroupId: (db: Orm | Tx) => Promise<string>;
   /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -85,6 +108,12 @@ export function createEmployeeReadService({
         ),
       );
     },
+    readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
+    readPolicyGroupMemberships: (tx, employeeIds) =>
+      policyGroupRepository(tx).findMemberships(employeeIds),
+    readPolicyGroupMemberIds: (tx, policyGroupId) =>
+      policyGroupRepository(tx).findMemberIds(policyGroupId),
+    readEveryoneGroupId: (db) => policyGroupRepository(db).findEveryoneId(),
     readEmployeeHistory: (ctx, employeeId, args) =>
       history.readHistory(ctx, "employee", employeeId, args),
     async readAvatar(ctx, fileId) {

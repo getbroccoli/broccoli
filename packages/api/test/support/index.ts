@@ -44,7 +44,6 @@ export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
 export {
   companyService,
-  demoService,
   employeeServices,
   employeeInviteService,
   externalAgentServices,
@@ -102,3 +101,5 @@ export { startMailTestEnv, SAVE_MAIL_SETTINGS, RESEND_CHOICE } from "./mailTestE
 export { createGraphqlContext } from "./graphqlContext";
 
 export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
+export { readAllowances, timeOffService } from "./timeOffService";
+export { demoService } from "./demoService";

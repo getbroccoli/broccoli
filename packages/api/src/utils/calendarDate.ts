@@ -67,6 +67,16 @@ export function todayInUtc(): CalendarDate {
 }
 
 /**
+ * Today as a calendar day in London.
+ * shortcut: every company's "today" is London's; take the company's timezone once it has one.
+ */
+export function todayInLondon(): CalendarDate {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London" }).format(
+    new Date(),
+  ) as CalendarDate;
+}
+
+/**
  * A column of dates: ISO, or d/m/yyyy or m/d/yyyy with `/`, `.` or `-`. The order is
  * read from the whole column; when no cell tells, only ISO dates are read.
  */

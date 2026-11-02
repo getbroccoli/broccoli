@@ -13,10 +13,35 @@ import {
   TEST_OWNER,
   instances,
   owners,
+  OWNER,
+  timeOffService,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
 import { NO_SETUP_INVITES } from "../../../core/instance";
+
+test("resetting a finished setup removes the group's time off policies", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner({ password: TEST_OWNER.password });
+  await seed.setupStep("done");
+  await seed.employee({ startDate: "2025-01-01" });
+  const service = timeOffService(orm);
+  const policyGroupId = await seed.everyoneGroupId();
+  const policy = (await service.listPolicies(OWNER, orm)).find(
+    (p) => p.key === "uk_statutory_minimum",
+  )!;
+  await transact((tx) =>
+    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+  );
+  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([policy]);
+
+  await systemService(orm).resetSetup(owner);
+
+  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([]);
+});
 
 test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({
   orm,

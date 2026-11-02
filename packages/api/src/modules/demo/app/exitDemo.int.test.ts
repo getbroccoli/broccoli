@@ -10,9 +10,32 @@ import {
   instances,
   setupSteps,
   demoFill,
+  OWNER,
+  timeOffService,
 } from "#test/support";
 
 import { parseCalendarDate } from "../../../utils";
+
+test("exiting the demo removes the group's time off policies", async ({ orm, seed, transact }) => {
+  await seed.assignment();
+  const owner = await seed.owner();
+  await companyService(orm).update(owner, { name: "Acme Corp" });
+  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  await transact((tx) => setupSteps.completeImportStep(owner, tx));
+  const service = timeOffService(orm);
+  const policyGroupId = await seed.everyoneGroupId();
+  const policy = (await service.listPolicies(OWNER, orm)).find(
+    (p) => p.key === "uk_statutory_minimum",
+  )!;
+  await transact((tx) =>
+    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+  );
+  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([policy]);
+
+  await demoService(orm).exitDemo(owner);
+
+  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([]);
+});
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({
   orm,

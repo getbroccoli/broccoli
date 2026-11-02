@@ -13,6 +13,10 @@ export interface EmploymentRepository {
   ): Promise<void>;
   /** Each employee's start date: the start of their first employment, an unknown one counting first. */
   findStartDates(employeeIds: readonly string[]): Promise<Map<string, CalendarDate | null>>;
+  /** Each employee's employments, oldest first, by employee id. */
+  findPeriods(
+    employeeIds: readonly string[],
+  ): Promise<Map<string, { startDate: CalendarDate | null; endDate: CalendarDate | null }[]>>;
   /** Moves the start of the employee's first employment. */
   setStartDate(employeeId: string, startDate: CalendarDate | null): Promise<void>;
   /**
@@ -67,6 +71,26 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
         .where(sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])`)
         .orderBy(employments.employeeId, sql`${employments.startDate} nulls first`);
       return new Map(rows.map(({ employeeId, startDate }) => [employeeId, startDate]));
+    },
+
+    findPeriods: async (employeeIds) => {
+      const rows = await orm()
+        .select({
+          employeeId: employments.employeeId,
+          startDate: employments.startDate,
+          endDate: employments.endDate,
+        })
+        .from(employments)
+        .where(sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])`)
+        .orderBy(employments.employeeId, sql`${employments.startDate} nulls first`);
+      const periods = new Map<
+        string,
+        { startDate: CalendarDate | null; endDate: CalendarDate | null }[]
+      >();
+      for (const { employeeId, ...period } of rows) {
+        periods.set(employeeId, [...(periods.get(employeeId) ?? []), period]);
+      }
+      return periods;
     },
 
     setStartDate: async (employeeId, startDate) => {

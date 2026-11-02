@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../../core/applicationError";
-import type { Orm, Transact } from "../../../core/db";
+import type { Orm, Transact, Tx } from "../../../core/db";
 import { createInstanceService, createSetupStepService } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import { createEmployeeSetupService } from "../../employees";
@@ -23,9 +23,12 @@ export interface DemoService {
 export function createDemoService({
   orm,
   transact,
+  deleteAllEmployees,
 }: {
   orm: Orm;
   transact: Transact;
+  /** Deletes every employee and what goes with them, such as the groups' time off policies. */
+  deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): DemoService {
   return {
     async getDemoData(ctx) {
@@ -45,7 +48,7 @@ export function createDemoService({
         ) {
           throw new ApplicationError("CONFLICT", "The instance holds no demo data.");
         }
-        await employeeSetup.deleteAllEmployees(ctx, tx);
+        await deleteAllEmployees(ctx, tx);
       });
       return { isPresent: false };
     },

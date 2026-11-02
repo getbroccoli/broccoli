@@ -1,0 +1,49 @@
+import { addDays, addYears, type CalendarDate } from "../../../utils";
+import type { AllowanceRule, DatedPolicy } from "./allowanceTarget";
+
+/** The standard leave policies' keys, by which code finds them. */
+export type StandardLeavePolicyKey =
+  "uk_statutory_minimum" | "uk_20_days_plus_bank_holidays" | "uk_25_days_plus_bank_holidays";
+
+/** The keys of the four seeded time off types. */
+export type TimeOffTypeKey = "annual_leave" | "sickness" | "family_leave" | "other";
+
+/** A policy with its type and allowance rules. */
+export interface TimeOffPolicy {
+  id: string;
+  name: string;
+  key: StandardLeavePolicyKey | null;
+  timeOffType: { id: string; name: string; typeKey: TimeOffTypeKey | null };
+  balance: DatedPolicy["balance"];
+  bankHolidays: DatedPolicy["bankHolidays"];
+  /** Null for a `no_balance` policy. */
+  leaveYear:
+    | { kind: "leave_year_from_fixed_date"; month: number; day: number }
+    | { kind: "leave_year_from_employee_start_date" }
+    | null;
+  rules: AllowanceRule[];
+}
+
+/**
+ * The policy's leave year containing `date`: from its fixed date, or from the anniversary of
+ * `serviceStart`, falling back to 1 January when the start is unknown.
+ */
+export function leaveYearContaining(
+  leaveYear: NonNullable<TimeOffPolicy["leaveYear"]>,
+  serviceStart: CalendarDate | null,
+  date: CalendarDate,
+): { start: CalendarDate; end: CalendarDate } {
+  const year = Number(date.slice(0, 4));
+  const first =
+    leaveYear.kind === "leave_year_from_fixed_date"
+      ? (`${year}-${pad(leaveYear.month)}-${pad(leaveYear.day)}` as CalendarDate)
+      : serviceStart
+        ? addYears(serviceStart, year - Number(serviceStart.slice(0, 4)))
+        : (`${year}-01-01` as CalendarDate);
+  const start = first <= date ? first : addYears(first, -1);
+  return { start, end: addDays(addYears(start, 1), -1) };
+}
+
+function pad(value: number): string {
+  return String(value).padStart(2, "0");
+}

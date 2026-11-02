@@ -62,8 +62,11 @@ export function createImportApprovalService({
   transact,
   logger,
   invites,
+  deleteAllEmployees,
 }: Pick<ModuleDependencies, "transact" | "logger"> & {
   invites: SetupInvites;
+  /** Deletes every employee and what goes with them, such as the groups' time off policies. */
+  deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): ImportApprovalService {
   return {
     async approveImport(ctx, version) {
@@ -111,7 +114,7 @@ export function createImportApprovalService({
           return false;
         }
         if (await employeeSetup.hasDemoEmployees(ctx, tx)) {
-          await employeeSetup.deleteAllEmployees(ctx, tx);
+          await deleteAllEmployees(ctx, tx);
         }
         return true;
       });

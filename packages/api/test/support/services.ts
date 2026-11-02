@@ -23,7 +23,6 @@ import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyService } from "../../src/modules/company";
-import { createDemoService } from "../../src/modules/demo";
 import {
   createEmployeeInviteService,
   createEmployeeManagerService,
@@ -44,8 +43,9 @@ import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
 import { TEST_SECRET_BOX } from "./testSecretBox";
-import { demoFill, employeeSetup } from "./statelessServices";
+import { demoFill } from "./statelessServices";
 import { testTransactor } from "./testTransactor";
+import { deleteAllEmployees } from "./timeOffService";
 
 /**
  * The company service on `orm` with test defaults: no brand is found and logs are
@@ -83,10 +83,6 @@ export function employeeServices(
   };
 }
 
-export function demoService(orm: Parameters<typeof createDemoService>[0]["orm"]) {
-  return createDemoService({ orm, transact: testTransactor(orm) });
-}
-
 export function systemService(orm: Orm, options: { mode?: Mode } = {}) {
   const invites = employeeInviteService(orm, options);
   const imports = importServices(orm, { invites });
@@ -94,7 +90,7 @@ export function systemService(orm: Orm, options: { mode?: Mode } = {}) {
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     addApprovedPeople: imports.addApprovedPeople,
-    deleteAllEmployees: employeeSetup.deleteAllEmployees,
+    deleteAllEmployees: deleteAllEmployees(orm),
     deleteFinishedImport: imports.deleteFinishedImport,
   });
   return { ...service, sentJobs: invites.sentJobs };
@@ -244,6 +240,7 @@ export function importServices(
     originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
     invites,
+    deleteAllEmployees: deleteAllEmployees(orm),
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
         sentJobs.push({ name, payload });
