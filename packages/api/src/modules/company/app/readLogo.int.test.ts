@@ -1,8 +1,4 @@
-import { companyService, expect, EMPLOYEE, PNG, test } from "#test/support";
-
-import { createFileStorageService } from "../../../core/files";
-
-const fileStorage = createFileStorageService();
+import { companyService, expect, EMPLOYEE, PNG, test, fileStorage } from "#test/support";
 
 test("returns the current logo's bytes and WebP MIME type", async ({ orm, seed }) => {
   const actor = await seed.owner();

@@ -1,13 +1,9 @@
-import { importServices, expect, EMPLOYEE, SYSTEM, test } from "#test/support";
+import { importServices, expect, EMPLOYEE, SYSTEM, test, instances, owners } from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
-import { createOwnerService, createInstanceService } from ".";
-
-const owners = createOwnerService();
-const instances = createInstanceService();
 
 test("refuses an employee claiming ownership without creating a user or advancing setup", async ({
   orm,

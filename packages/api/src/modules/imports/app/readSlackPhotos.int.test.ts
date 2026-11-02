@@ -16,13 +16,9 @@ import {
   storedFileIds,
   test,
   WEBP,
+  instances,
+  fileStorage,
 } from "#test/support";
-
-import { createFileStorageService } from "../../../core/files";
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
-const fileStorage = createFileStorageService();
 
 test.for([
   { content: PNG, mimeType: "image/png" },

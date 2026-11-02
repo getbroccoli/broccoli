@@ -12,12 +12,10 @@ import {
   PNG,
   storedFileIds,
   test,
+  employeeSetup,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
-import { createEmployeeSetupService } from ".";
-
-const employeeSetup = createEmployeeSetupService();
 
 test("removing a manager clears them from every report with a history line", async ({
   orm,

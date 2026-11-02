@@ -1,12 +1,11 @@
 import { user } from "../../src/core/auth";
 import { ormOf, type Orm, type Tx } from "../../src/core/db";
-import { createOwnerService, type AddApprovedPeople } from "../../src/core/instance/app";
+import { type AddApprovedPeople } from "../../src/core/instance/app";
 import { TestSeed } from "./testSeed";
 import { SYSTEM } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
 import { importServices } from "./services";
-
-const owners = createOwnerService();
+import { owners } from "./statelessServices";
 
 /** Finishes the account step with the real owner and import operations. */
 export async function finishSelfHostedSetup(orm: Orm): Promise<void> {

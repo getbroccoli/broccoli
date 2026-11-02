@@ -12,15 +12,13 @@ import {
   PNG,
   storedFileIds,
   test,
+  employeeSetup,
 } from "#test/support";
 
 import { ormOf } from "../../../core/db";
 
 import { employeeRepository, employmentRepository } from "../db";
 import { parseNewEmployee } from "../domain";
-import { createEmployeeSetupService } from ".";
-
-const employeeSetup = createEmployeeSetupService();
 
 test("creates complete employees and counts incomplete inputs", async ({ orm, transact }) => {
   const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };

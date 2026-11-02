@@ -11,13 +11,11 @@ import {
   systemService,
   test,
   TEST_OWNER,
+  instances,
+  owners,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
-import { createOwnerService, createInstanceService } from "../../../core/instance";
-
-const owners = createOwnerService();
-const instances = createInstanceService();
 
 test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({
   orm,

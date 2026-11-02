@@ -1,12 +1,8 @@
 import { createHash } from "node:crypto";
 
-import { expect, EMPLOYEE, SYSTEM, test } from "#test/support";
+import { expect, EMPLOYEE, SYSTEM, test, instances, setupSessions } from "#test/support";
 
 import { hashSetupToken } from "../helpers";
-import { createSetupSessionService, createInstanceService } from ".";
-
-const setupSessions = createSetupSessionService();
-const instances = createInstanceService();
 
 test("starts a setup session on a fresh instance and stores only its hash", async ({
   orm,

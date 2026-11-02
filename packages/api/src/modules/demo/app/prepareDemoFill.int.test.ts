@@ -1,10 +1,14 @@
-import { employeeServices, demoService, expect, OWNER, storedFileIds, test } from "#test/support";
-
-import { createDemoFillService } from "./demoFillService";
+import {
+  employeeServices,
+  demoService,
+  expect,
+  OWNER,
+  storedFileIds,
+  test,
+  demoFill,
+} from "#test/support";
 
 import { parseCalendarDate } from "../../../utils";
-
-const demoFill = createDemoFillService();
 
 test("fills 40 demo employees with distinct stored avatars", async ({ orm, transact }) => {
   const demo = demoService(orm);

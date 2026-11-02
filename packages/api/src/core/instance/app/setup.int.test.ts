@@ -1,12 +1,8 @@
-import { expect, EMPLOYEE, SETUP_HOLDER, SYSTEM, test } from "#test/support";
+import { expect, EMPLOYEE, SETUP_HOLDER, SYSTEM, test, instances, setupSteps } from "#test/support";
 
 import { transactor } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
-import { createSetupStepService, createInstanceService } from ".";
-
-const setupSteps = createSetupStepService();
-const instances = createInstanceService();
 
 test("refuses an employee completing the company step and keeps the current step", async ({
   orm,

@@ -6,12 +6,11 @@ import {
   SYSTEM,
   signedIn,
   test,
+  recordHistory,
 } from "#test/support";
 
 import type { Grant } from "../security";
-import { createRecordHistoryService, createRecordHistoryReaderService } from ".";
-
-const recordHistory = createRecordHistoryService();
+import { createRecordHistoryReaderService } from ".";
 
 test("reads history when the record's subject is in scope", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();

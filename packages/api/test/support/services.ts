@@ -23,14 +23,13 @@ import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyService } from "../../src/modules/company";
-import { createDemoFillService, createDemoService } from "../../src/modules/demo";
+import { createDemoService } from "../../src/modules/demo";
 import {
   createEmployeeInviteService,
   createEmployeeManagerService,
   createEmployeePermissionService,
   createEmployeeReadService,
   createEmployeeService,
-  createEmployeeSetupService,
   type EmployeeManagerService,
   type EmployeePermissionService,
   type EmployeeReadService,
@@ -43,10 +42,8 @@ import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
 import { TEST_SECRET_BOX } from "./testSecretBox";
+import { demoFill, employeeSetup } from "./statelessServices";
 import { testTransactor } from "./testTransactor";
-
-const employeeSetup = createEmployeeSetupService();
-const demoFill = createDemoFillService();
 
 /**
  * The company service on `orm` with test defaults: no brand is found and logs are

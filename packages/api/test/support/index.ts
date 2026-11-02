@@ -54,6 +54,17 @@ export {
   passwordResetEmail,
 } from "./services";
 export type { EmployeeServices } from "./services";
+export {
+  demoFill,
+  employeeSetup,
+  fileStorage,
+  instances,
+  managedInstance,
+  owners,
+  recordHistory,
+  setupSessions,
+  setupSteps,
+} from "./statelessServices";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,

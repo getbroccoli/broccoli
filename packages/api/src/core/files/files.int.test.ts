@@ -1,12 +1,10 @@
 import express from "express";
 import { onTestFinished } from "vitest";
 
-import { expect, startSimpleHttpServer, storedFileIds, test } from "#test/support";
+import { expect, startSimpleHttpServer, storedFileIds, test, fileStorage } from "#test/support";
 
 import type { Orm } from "../db";
-import { createFileStorageService, sendFile } from ".";
-
-const fileStorage = createFileStorageService();
+import { sendFile } from ".";
 
 test("serves stored bytes with their MIME type, immutable private caching and nosniff", async ({
   orm,

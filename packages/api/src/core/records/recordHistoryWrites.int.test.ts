@@ -9,12 +9,10 @@ import {
   SETUP_HOLDER,
   SYSTEM,
   test,
+  recordHistory,
 } from "#test/support";
 
 import { ormOf } from "../db";
-import { createRecordHistoryService } from ".";
-
-const recordHistory = createRecordHistoryService();
 
 test("appends one line per record and reads a record's lines newest first", async ({
   orm,

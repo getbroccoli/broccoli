@@ -5,11 +5,8 @@ import {
   OWNER,
   SETUP_HOLDER,
   test,
+  instances,
 } from "#test/support";
-
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test("stores a record pick for a later read", async ({ orm, seed }) => {
   const slack = await seed.importSource();

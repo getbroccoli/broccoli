@@ -1,8 +1,4 @@
-import { companyService, expect, EMPLOYEE, SETUP_HOLDER, test } from "#test/support";
-
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
+import { companyService, expect, EMPLOYEE, SETUP_HOLDER, test, instances } from "#test/support";
 
 test("saves the owner's company name and moves setup on to the import step", async ({
   orm,

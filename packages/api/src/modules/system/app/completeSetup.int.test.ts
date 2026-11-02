@@ -8,11 +8,8 @@ import {
   storedFileIds,
   systemService,
   test,
+  instances,
 } from "#test/support";
-
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test("finishing managed setup creates exactly the ready people with their avatars", async ({
   orm,

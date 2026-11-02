@@ -5,16 +5,13 @@ import {
   SYSTEM,
   test,
   TEST_SECRET_BOX,
+  instances,
+  managedInstance,
 } from "#test/support";
 
 import type { Transact } from "../../db";
 import { AssignmentConflictError, type ManagedAssignment } from "../domain";
 import { instanceRepository } from "../db";
-import { createManagedInstanceService } from "./managedInstanceService";
-import { createInstanceService } from "./instanceService";
-
-const managedInstance = createManagedInstanceService();
-const instances = createInstanceService();
 
 const ACME: ManagedAssignment = {
   companyId: "c-acme",

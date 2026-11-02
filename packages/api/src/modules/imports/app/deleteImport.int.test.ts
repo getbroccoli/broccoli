@@ -10,13 +10,10 @@ import {
   storedFileIds,
   SYSTEM,
   test,
+  fileStorage,
 } from "#test/support";
 
-import { createFileStorageService } from "../../../core/files";
-
 import { importReader } from "../db";
-
-const fileStorage = createFileStorageService();
 
 test("finishing the import deletes its rows, staff files and unused photos but keeps employee avatars", async ({
   orm,

@@ -9,7 +9,6 @@ import { inject } from "vitest";
 
 import { session, user } from "../../src/core/auth";
 import { connectDatabase, type Database } from "../../src/core/db";
-import { createInstanceService } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";
 import type { RunningServer } from "../../src/core/server";
 import { createTestDatabase, type TestDatabase } from "./testDatabases";
@@ -20,8 +19,7 @@ import {
   waitForStartup,
   type TestBroccoliServerOptions,
 } from "./testBroccoliServer";
-
-const instances = createInstanceService();
+import { instances } from "./statelessServices";
 
 export type TestEnvOptions = Omit<TestBroccoliServerOptions, "dataDir">;
 

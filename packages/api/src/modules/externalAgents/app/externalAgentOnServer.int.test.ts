@@ -6,11 +6,8 @@ import {
   SETUP_HOLDER,
   SYSTEM,
   test,
+  instances,
 } from "#test/support";
-
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test.for([SETUP_HOLDER, OWNER])(
   "refuses the server command to a non-system caller without saving a source",

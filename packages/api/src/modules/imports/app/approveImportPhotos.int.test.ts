@@ -13,11 +13,8 @@ import {
   SLACK_PHOTO_URL,
   storedFileIds,
   test,
+  fileStorage,
 } from "#test/support";
-
-import { createFileStorageService } from "../../../core/files";
-
-const fileStorage = createFileStorageService();
 
 test("finishing gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
   await seed.setupStep("import");

@@ -11,13 +11,9 @@ import {
   storedFileIds,
   systemService,
   test,
+  instances,
+  fileStorage,
 } from "#test/support";
-
-import { createFileStorageService } from "../../../core/files";
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
-const fileStorage = createFileStorageService();
 
 test.for(["ready", "owner"] as const)(
   "Back reopens the review from %s",

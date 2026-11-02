@@ -11,12 +11,10 @@ import {
   test,
   sampleXlsxFile,
   xlsxFileWithDistantCell,
+  instances,
 } from "#test/support";
 
 import { files } from "../../../core/files";
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,

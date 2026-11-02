@@ -9,11 +9,8 @@ import {
   slackServices,
   storedFileIds,
   test,
+  instances,
 } from "#test/support";
-
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test("removes the source, its records and its stored file", async ({ orm, seed }) => {
   const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });

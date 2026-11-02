@@ -2,18 +2,16 @@ import { randomUUID } from "node:crypto";
 
 import { eq, sql } from "drizzle-orm";
 
-import { expect, SYSTEM, test } from "#test/support";
+import { expect, SYSTEM, test, instances } from "#test/support";
 
 import { account, user } from "../../auth";
 import { ormOf, type Orm, transactor } from "../../db";
 import { createEventBus } from "../../events";
-import { createInstanceService } from "../../instance";
 import { createLogger } from "../../logger";
 import type { ManagedTicket } from "../domain";
 import { managedTicket, managedTicketRepository } from "../db";
 import { createManagedSignInService, SignInRefusedError } from "./managedSignInService";
 
-const instances = createInstanceService();
 const managedSignIn = createManagedSignInService();
 
 const NOW = new Date("2026-10-12T10:00:00Z");

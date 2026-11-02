@@ -9,12 +9,10 @@ import {
   OWNER,
   test,
   systemService,
+  instances,
 } from "#test/support";
 
 import { ormOf } from "../../../core/db";
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test.for([
   { mode: "managed", step: "ready" },

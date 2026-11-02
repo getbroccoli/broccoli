@@ -7,14 +7,12 @@ import {
   fakeSlackApi,
   storedFileIds,
   test,
+  instances,
 } from "#test/support";
 
-import { createInstanceService } from "../../../core/instance";
 import type { Orm, Tx } from "../../../core/db";
 
 import { createImportDemoService } from "./importDemoService";
-
-const instances = createInstanceService();
 
 test("starting the demo completes setup", async ({ orm, seed }) => {
   const owner = await seed.owner();

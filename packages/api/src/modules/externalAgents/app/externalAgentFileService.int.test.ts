@@ -5,11 +5,8 @@ import {
   SETUP_HOLDER,
   SYSTEM,
   test,
+  instances,
 } from "#test/support";
-
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test("refuses a drop when another AI source is chosen", async ({ orm, seed }) => {
   await seed.externalAgentSetup();

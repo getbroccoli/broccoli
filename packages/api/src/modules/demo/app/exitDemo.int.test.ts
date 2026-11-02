@@ -7,16 +7,12 @@ import {
   EMPLOYEE,
   storedFileIds,
   test,
+  instances,
+  setupSteps,
+  demoFill,
 } from "#test/support";
 
-import { createDemoFillService } from "./demoFillService";
-
-import { createSetupStepService, createInstanceService } from "../../../core/instance";
 import { parseCalendarDate } from "../../../utils";
-
-const setupSteps = createSetupStepService();
-const instances = createInstanceService();
-const demoFill = createDemoFillService();
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({
   orm,

@@ -7,11 +7,8 @@ import {
   SETUP_HOLDER,
   type TestSeed,
   test,
+  instances,
 } from "#test/support";
-
-import { createInstanceService } from "../../../core/instance";
-
-const instances = createInstanceService();
 
 test("keeps review pages and their version tied to the snapshot when another source arrives", async ({
   orm,

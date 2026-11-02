@@ -7,13 +7,11 @@ import {
   expectHistoryReplaysTo,
   OWNER,
   test,
+  employeeSetup,
 } from "#test/support";
 
 import { ormOf } from "../../../core/db";
 import { employeeRepository, employmentRepository } from "../db";
-import { createEmployeeSetupService } from ".";
-
-const employeeSetup = createEmployeeSetupService();
 
 test("an employee created during a reset keeps its creation history", async ({ orm, transact }) => {
   const employees = employeeServices(orm);

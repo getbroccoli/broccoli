@@ -7,11 +7,8 @@ import {
   PNG,
   storedFileIds,
   test,
+  employeeSetup,
 } from "#test/support";
-
-import { createEmployeeSetupService } from ".";
-
-const employeeSetup = createEmployeeSetupService();
 
 test("refuses an employee creating demo employees without storing employees or avatars", async ({
   orm,

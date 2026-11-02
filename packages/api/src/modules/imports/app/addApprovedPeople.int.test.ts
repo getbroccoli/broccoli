@@ -13,15 +13,13 @@ import {
   SLACK_PHOTO_URL,
   storedFileIds,
   test,
+  instances,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
 import { ormOf, transactor } from "../../../core/db";
 import { createEventBus } from "../../../core/events";
-import { createInstanceService } from "../../../core/instance";
 import { createLogger } from "../../../core/logger";
-
-const instances = createInstanceService();
 
 test("approval by the setup holder creates nobody until account creation", async ({
   orm,

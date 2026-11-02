@@ -1,16 +1,21 @@
-import { expect, EMPLOYEE, SYSTEM, test, type TestSeed } from "#test/support";
+import {
+  expect,
+  EMPLOYEE,
+  SYSTEM,
+  test,
+  type TestSeed,
+  instances,
+  setupSteps,
+} from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
 import type { SecurityContext } from "../../security";
-import { createSetupDemoService, createSetupStepService, createInstanceService } from ".";
+import { createSetupDemoService } from ".";
 
 const setupDemo = createSetupDemoService();
-const setupSteps = createSetupStepService();
-const instances = createInstanceService();
-
 test("starts a seven-day demo for the setup holder, claims the owner and completes setup", async ({
   orm,
   seed,

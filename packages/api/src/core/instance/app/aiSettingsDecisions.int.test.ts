@@ -7,11 +7,8 @@ import {
   SYSTEM,
   test,
   TEST_SECRET_BOX,
+  managedInstance,
 } from "#test/support";
-
-import { createManagedInstanceService } from "./managedInstanceService";
-
-const managedInstance = createManagedInstanceService();
 
 test("routes OpenRouter with the saved key", async ({ orm, seed, fakeDecisions }) => {
   await seed.aiSource("openrouter", "saved-key");
