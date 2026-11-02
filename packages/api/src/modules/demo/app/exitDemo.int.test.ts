@@ -1,5 +1,5 @@
 import {
-  employeeUseCases,
+  employeeServices,
   companyService,
   demoService,
   expect,
@@ -25,7 +25,7 @@ test("exiting the demo deletes every employee and their avatars and returns to c
 }) => {
   const demo = demoService(orm);
   const company = companyService(orm);
-  const { listEmployees } = employeeUseCases(orm);
+  const { listEmployees } = employeeServices(orm);
   await seed.assignment();
   const owner = await seed.owner();
   await company.update(owner, { name: "Acme Corp" });
@@ -68,7 +68,7 @@ test("refuses a concurrent second exit and keeps the first exit's outcome", asyn
     { reason: { code: "CONFLICT", message: "The instance holds no demo data." } },
   ]);
   expect((await instances.readInstance(orm)).step).toBe("company");
-  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
 });
 
 test("refuses to exit before setup is done and keeps the employees", async ({
@@ -81,7 +81,7 @@ test("refuses to exit before setup is done and keeps the employees", async ({
   await seed.setupStep("company");
   await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
   const demo = demoService(orm);
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const before = await employees.listEmployees(owner, {});
 
   await expect(demo.exitDemo(owner)).rejects.toMatchObject({
@@ -109,7 +109,7 @@ test("refuses to exit without demo data and keeps the completed setup and employ
   });
 
   expect((await instances.readInstance(orm)).step).toBe("done");
-  const { edges } = await employeeUseCases(orm).listEmployees(owner, { first: 100 });
+  const { edges } = await employeeServices(orm).listEmployees(owner, { first: 100 });
   expect(edges.map(({ node }) => node)).toEqual([employee]);
 });
 
@@ -121,7 +121,7 @@ test("refuses the provisional owner exiting the demo and keeps the demo records"
   const owner = await seed.demoOwner({ expiresAt: new Date("2026-10-20T12:00:00Z") });
   await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
   const demo = demoService(orm);
-  const { listEmployees } = employeeUseCases(orm);
+  const { listEmployees } = employeeServices(orm);
   const employees = await listEmployees(owner, { first: 100 });
   const avatarIds = await storedFileIds(orm);
 

@@ -1,8 +1,8 @@
 import {
   companyService,
-  employeeUseCases,
+  employeeServices,
   expect,
-  importUseCases,
+  importServices,
   ADMIN,
   EMPLOYEE,
   PNG,
@@ -37,7 +37,7 @@ test("resetting a finished setup deletes every employee and avatar and keeps the
 
   await systemService(orm).resetSetup(owner);
 
-  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(await instances.readInstance(orm)).toMatchObject({
     step: "company",
@@ -59,9 +59,9 @@ test("resets a finished setup whose import was not cleaned up yet", async ({ orm
     content: PNG,
     mimeType: "image/png",
   });
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   const system = systemService(orm);
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await system.completeSetup(owner);
   expect((await employees.listEmployees(owner, {})).edges).toMatchObject([
@@ -100,7 +100,7 @@ test("refuses resetting before setup is done and keeps the employees", async ({ 
   });
 
   expect((await instances.readInstance(orm)).step).toBe("import");
-  const { edges } = await employeeUseCases(orm).listEmployees(owner, {});
+  const { edges } = await employeeServices(orm).listEmployees(owner, {});
   expect(edges.map(({ node }) => node)).toEqual([employee]);
 });
 
@@ -123,7 +123,7 @@ test("refuses resetting the self-hosted demo and keeps its owner and employees",
     ownerUserId: owner.user!.userId,
     demoExpiresAt,
   });
-  const { edges } = await employeeUseCases(orm).listEmployees(owner, {});
+  const { edges } = await employeeServices(orm).listEmployees(owner, {});
   expect(edges.map(({ node }) => node)).toEqual([employee]);
   expect(await storedFileIds(orm)).toEqual([avatarFileId]);
 });
@@ -144,7 +144,7 @@ test("refuses a concurrent second reset", async ({ orm, seed }) => {
     { reason: { code: "CONFLICT", message: "Setup is not done." } },
   ]);
   expect((await instances.readInstance(orm)).step).toBe("company");
-  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
 });
 
 test("refuses an admin resetting the workspace", async ({ orm }) => {
@@ -169,5 +169,5 @@ test("resetting setup deletes linked users while keeping the owner's user", asyn
   await systemService(orm).resetSetup(owner);
 
   expect(await orm.select({ id: user.id }).from(user)).toEqual([{ id: owner.user!.userId }]);
-  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
 });

@@ -14,8 +14,8 @@ import { importEmployeeResolvers } from "./importEmployeeResolvers";
 import { importMutationResolvers } from "./importMutationResolvers";
 import { importLoaders } from "./loaders";
 
-export function createResolvers(useCases: ImportServices): Resolvers {
-  const loaders = importLoaders(useCases);
+export function createResolvers(services: ImportServices): Resolvers {
+  const loaders = importLoaders(services);
   return {
     Query: {
       import: () => IMPORT,
@@ -23,10 +23,10 @@ export function createResolvers(useCases: ImportServices): Resolvers {
     Mutation: {
       import: () => ({}),
     },
-    ImportMutations: importMutationResolvers(useCases),
+    ImportMutations: importMutationResolvers(services),
     Import: {
       id: () => "import",
-      sources: (_parent, _args, context) => useCases.reads.listSources(context.getActor()),
+      sources: (_parent, _args, context) => services.reads.listSources(context.getActor()),
       reading: async (_parent, _args, context) => (await loaders(context).progress()).reading,
       demoAvailable: async (_parent, _args, context) =>
         (await loaders(context).progress()).demoAvailable,
@@ -60,7 +60,7 @@ export function createResolvers(useCases: ImportServices): Resolvers {
       failure: ({ failure }) => (failure ? FAILURES[failure] : null),
       employeeCount: ({ id }, _args, context) => loaders(context).employeeCount.load(id),
       records: ({ id }, { first, after }, context) =>
-        useCases.reads.listEmployeeRecords(context.getActor(), {
+        services.reads.listEmployeeRecords(context.getActor(), {
           first: first ?? undefined,
           after,
           sourceId: id,

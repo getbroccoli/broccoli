@@ -1,10 +1,10 @@
-import { employeeUseCases, expect, OWNER, signedIn, test } from "#test/support";
+import { employeeServices, expect, OWNER, signedIn, test } from "#test/support";
 
 test("sets several employees' manager with a history line for each", async ({ orm, seed }) => {
   const avery = await seed.employee();
   const taylor = await seed.employee();
   const robin = await seed.employee({ firstName: "Robin", lastName: "Reed" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   const result = await employees.setManagers(OWNER, {
     employeeIds: [avery.id, taylor.id],
@@ -42,7 +42,7 @@ test("sets several employees' manager with a history line for each", async ({ or
 test("skips the manager among the selected employees", async ({ orm, seed }) => {
   const avery = await seed.employee();
   const robin = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await employees.setManagers(OWNER, { employeeIds: [avery.id, robin.id], managerId: robin.id });
 
@@ -56,7 +56,7 @@ test("clears selected employees' managers with null", async ({ orm, seed }) => {
   const avery = await seed.employee();
   const robin = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   await seed.manager(avery.id, robin.id);
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await employees.setManagers(OWNER, { employeeIds: [avery.id], managerId: null });
 
@@ -85,7 +85,7 @@ test("refuses the whole selection when one manager change would make a loop", as
   const robin = await seed.employee();
   const taylor = await seed.employee();
   await seed.manager(robin.id, avery.id);
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const ids = [taylor.id, avery.id, robin.id];
   const before = await employees.readManagers(OWNER, ids);
 
@@ -105,7 +105,7 @@ test("refuses an unknown employee", async ({ orm, seed }) => {
   const robin = await seed.employee();
 
   await expect(
-    employeeUseCases(orm).setManagers(OWNER, {
+    employeeServices(orm).setManagers(OWNER, {
       employeeIds: ["00000000-0000-4000-8000-000000000001"],
       managerId: robin.id,
     }),
@@ -118,7 +118,7 @@ test("refuses a caller who cannot change managers", async ({ orm, seed }) => {
   const taylor = await seed.employee();
   await seed.manager(avery.id, robin.id);
   const caller = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: robin.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await expect(
     employees.setManagers(caller, { employeeIds: [avery.id], managerId: taylor.id }),

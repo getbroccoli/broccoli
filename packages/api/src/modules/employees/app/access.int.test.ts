@@ -1,6 +1,6 @@
 import {
   ADMIN,
-  employeeUseCases,
+  employeeServices,
   EMPLOYEE,
   expect,
   OWNER,
@@ -39,7 +39,7 @@ for (const [profile, ctx] of [
     const employee = await seed.employee({ avatarFileId });
 
     await expect(
-      call(employeeUseCases(orm), ctx, employee.id, avatarFileId),
+      call(employeeServices(orm), ctx, employee.id, avatarFileId),
     ).resolves.toBeDefined();
   });
 }
@@ -68,14 +68,14 @@ for (const [profile, ctx] of [
     const user = await seed.user({ email: "joined@example.com" });
     const employee = await seed.employee({ userId: user.id });
 
-    await expect(call(employeeUseCases(orm), ctx, employee.id)).resolves.toBeDefined();
+    await expect(call(employeeServices(orm), ctx, employee.id)).resolves.toBeDefined();
   });
 }
 
 test.for(Object.entries(writes))("EMPLOYEE is refused %s", async ([name, call], { orm, seed }) => {
   const employee = await seed.employee();
 
-  await expect(call(employeeUseCases(orm), EMPLOYEE, employee.id)).rejects.toMatchObject({
+  await expect(call(employeeServices(orm), EMPLOYEE, employee.id)).rejects.toMatchObject({
     code: "FORBIDDEN",
     message:
       name === "setPermissionProfiles"
@@ -86,7 +86,7 @@ test.for(Object.entries(writes))("EMPLOYEE is refused %s", async ([name, call], 
 });
 
 test("refuses the setup holder listing employees", async ({ orm }) => {
-  await expect(employeeUseCases(orm).listEmployees(SETUP_HOLDER, {})).rejects.toMatchObject({
+  await expect(employeeServices(orm).listEmployees(SETUP_HOLDER, {})).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "You are not allowed to do this.",
   });

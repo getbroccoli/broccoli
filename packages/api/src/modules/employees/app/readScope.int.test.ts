@@ -1,5 +1,5 @@
 import {
-  employeeUseCases,
+  employeeServices,
   expect,
   OWNER,
   signedIn,
@@ -19,7 +19,7 @@ test("lists the caller and everyone below them in the reporting line", async ({ 
     grants: [READ_SELF, READ_REPORTS],
   });
 
-  const page = await employeeUseCases(orm).listEmployees(ctx, {});
+  const page = await employeeServices(orm).listEmployees(ctx, {});
 
   expect(page.edges.map(({ node }) => node.id)).toEqual([ann.id, leo.id, mia.id]);
 });
@@ -33,7 +33,7 @@ test("pages only through in-scope employees and ends without exposing another pa
     employeeId: mia.id,
     grants: [READ_SELF, READ_REPORTS],
   });
-  const { listEmployees } = employeeUseCases(orm);
+  const { listEmployees } = employeeServices(orm);
 
   const first = await listEmployees(ctx, { first: 2 });
   const second = await listEmployees(ctx, { first: 2, after: first.pageInfo.endCursor });
@@ -51,7 +51,7 @@ test("returns no search results for an employee out of scope", async ({ orm, see
     grants: [READ_SELF, READ_REPORTS],
   });
 
-  const page = await employeeUseCases(orm).listEmployees(ctx, { filter: { search: "Zed" } });
+  const page = await employeeServices(orm).listEmployees(ctx, { filter: { search: "Zed" } });
 
   expect(page).toEqual({ edges: [], pageInfo: { hasNextPage: false, endCursor: null } });
 });
@@ -66,7 +66,7 @@ test("reads the avatar of a report in scope", async ({ orm, seed }) => {
     grants: [READ_SELF, READ_REPORTS],
   });
 
-  const avatar = await employeeUseCases(orm).readAvatar(ctx, avatarFileId);
+  const avatar = await employeeServices(orm).readAvatar(ctx, avatarFileId);
 
   expect(avatar).toEqual({ content: WEBP, mimeType: "image/webp" });
 });
@@ -82,7 +82,7 @@ test("reads a shared avatar when any employee using it is in scope", async ({ or
     grants: [READ_SELF, READ_REPORTS],
   });
 
-  const avatar = await employeeUseCases(orm).readAvatar(ctx, avatarFileId);
+  const avatar = await employeeServices(orm).readAvatar(ctx, avatarFileId);
 
   expect(avatar).toEqual({ content: WEBP, mimeType: "image/webp" });
 });
@@ -96,7 +96,7 @@ test("refuses the avatar of an employee out of scope", async ({ orm, seed }) => 
     grants: [READ_SELF, READ_REPORTS],
   });
 
-  await expect(employeeUseCases(orm).readAvatar(ctx, avatarFileId)).rejects.toMatchObject({
+  await expect(employeeServices(orm).readAvatar(ctx, avatarFileId)).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "You are not allowed to do this.",
   });
@@ -112,7 +112,7 @@ test("returns a report's manager but hides the caller's out-of-scope manager", a
     grants: [READ_SELF, READ_REPORTS],
   });
 
-  const managers = await employeeUseCases(orm).readManagers(ctx, [ann.id, mia.id]);
+  const managers = await employeeServices(orm).readManagers(ctx, [ann.id, mia.id]);
 
   expect(managers).toEqual(new Map([[ann.id, mia]]));
 });
@@ -124,7 +124,7 @@ test("returns the caller's manager with self and managers read scopes", async ({
     grants: [READ_SELF, READ_MANAGERS],
   });
 
-  const managers = await employeeUseCases(orm).readManagers(ctx, [mia.id]);
+  const managers = await employeeServices(orm).readManagers(ctx, [mia.id]);
 
   expect(managers).toEqual(new Map([[mia.id, boss]]));
 });
@@ -141,7 +141,7 @@ test("hides an out-of-scope employee's manager even when that manager is in scop
     grants: [READ_SELF, READ_MANAGERS],
   });
 
-  const managers = await employeeUseCases(orm).readManagers(ctx, [kim.id]);
+  const managers = await employeeServices(orm).readManagers(ctx, [kim.id]);
 
   expect(managers).toEqual(new Map());
 });
@@ -153,7 +153,7 @@ test("lists only immediate reports with the direct_reports scope", async ({ orm,
     grants: [{ ...READ_REPORTS, scope: "direct_reports" }],
   });
 
-  const page = await employeeUseCases(orm).listEmployees(ctx, {});
+  const page = await employeeServices(orm).listEmployees(ctx, {});
 
   expect(page.edges.map(({ node }) => node.id)).toEqual([ann.id]);
 });
@@ -176,7 +176,7 @@ test("updates an unreadable report but returns neither the employee nor the hist
       },
     ],
   });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   const result = await employees.updateEmployee(ctx, { id: ann.id, jobTitle: "Lead" });
 
@@ -191,7 +191,7 @@ test("updates an unreadable report but returns neither the employee nor the hist
 test("hides the caller's out-of-scope manager in their history", async ({ orm, seed }) => {
   const { mia } = await reportingLine(seed);
   const ctx = signedIn(orm, { employeeId: mia.id, grants: [READ_SELF, READ_REPORTS] });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: mia.id, managerId: null });
   const reader = createRecordHistoryReaderService(orm, { employee: employeeRecordType(orm) });
 
@@ -240,7 +240,7 @@ test("hides the caller's out-of-scope manager in an update's returned history li
   });
   const reader = createRecordHistoryReaderService(orm, { employee: employeeRecordType(orm) });
 
-  const { historyLine } = await employeeUseCases(orm).updateEmployee(ctx, {
+  const { historyLine } = await employeeServices(orm).updateEmployee(ctx, {
     id: mia.id,
     managerId: null,
   });
@@ -281,7 +281,7 @@ test("deleting a manager returns only readable report history while storing ever
       { key: "employee.delete.all", object: "employee", actions: ["delete"], scope: "all" },
     ],
   });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   const result = await employees.deleteEmployee(ctx, { id: boss.id });
 

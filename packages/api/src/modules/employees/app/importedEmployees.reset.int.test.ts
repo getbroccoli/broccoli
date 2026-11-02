@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import {
-  employeeUseCases,
+  employeeServices,
   expect,
   expectBlockedBy,
   expectHistoryReplaysTo,
@@ -16,7 +16,7 @@ import { createEmployeeSetupService } from ".";
 const employeeSetup = createEmployeeSetupService();
 
 test("an employee created during a reset keeps its creation history", async ({ orm, transact }) => {
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const resetReady = Promise.withResolvers<number>();
   const releaseReset = Promise.withResolvers<void>();
   const resetting = transact(async (tx) => {
@@ -59,7 +59,7 @@ test("a job title edit waiting for a reset lets it lock the employee", async ({
   transact,
 }) => {
   const employee = await seed.employee({ jobTitle: "Engineer" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const resetReady = Promise.withResolvers<number>();
   const releaseReset = Promise.withResolvers<void>();
   const resetting = transact(async (tx) => {

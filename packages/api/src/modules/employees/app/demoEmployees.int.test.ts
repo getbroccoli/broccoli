@@ -1,5 +1,5 @@
 import {
-  employeeUseCases,
+  employeeServices,
   expectHistoryReplaysTo,
   expect,
   EMPLOYEE,
@@ -17,7 +17,7 @@ test("refuses an employee creating demo employees without storing employees or a
   orm,
   transact,
 }) => {
-  const { listEmployees } = employeeUseCases(orm);
+  const { listEmployees } = employeeServices(orm);
 
   await expect(
     transact((tx) =>
@@ -62,7 +62,7 @@ test("creates no demo employees when employees exist", async ({ orm, seed, trans
     ),
   );
 
-  const { edges } = await employeeUseCases(orm).listEmployees(OWNER, {});
+  const { edges } = await employeeServices(orm).listEmployees(OWNER, {});
   expect(edges.map(({ node }) => node)).toEqual([employee]);
   expect(await storedFileIds(orm)).toEqual([]);
 });
@@ -96,7 +96,7 @@ test("records a creation line for each demo employee with the supplied cause", a
     employeeSetup.createDemoEmployees(OWNER, tx, demoEmployees, { kind: "ADDED_WITH_DEMO" }),
   );
 
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const { edges } = await employees.listEmployees(OWNER, {});
   expect(edges).toHaveLength(2);
   for (const { node: employee } of edges) {

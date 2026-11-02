@@ -43,17 +43,17 @@ export { storedFileIds } from "./storedFileIds";
 export {
   companyService,
   demoService,
-  employeeUseCases,
+  employeeServices,
   employeeInviteService,
-  externalAgentUseCases,
-  importUseCases,
-  slackUseCases,
+  externalAgentServices,
+  importServices,
+  slackServices,
   systemService,
   aiSettings,
   mailSettings,
   passwordResetEmail,
-} from "./useCases";
-export type { EmployeeServices } from "./useCases";
+} from "./services";
+export type { EmployeeServices } from "./services";
 export { EXAMPLE_PAYLOAD } from "./exampleEvent";
 export {
   fetchReadiness,

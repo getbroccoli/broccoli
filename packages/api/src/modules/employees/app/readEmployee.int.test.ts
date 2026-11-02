@@ -1,22 +1,22 @@
 import { sql } from "drizzle-orm";
 
-import { employeeUseCases, expect, OWNER, test } from "#test/support";
+import { employeeServices, expect, OWNER, test } from "#test/support";
 
 test("returns the employee with the requested id", async ({ orm, seed }) => {
   const employee = await seed.employee();
 
-  expect(await employeeUseCases(orm).readEmployee(OWNER, employee.id)).toEqual(employee);
+  expect(await employeeServices(orm).readEmployee(OWNER, employee.id)).toEqual(employee);
 });
 
 test("returns null for an unknown employee", async ({ orm }) => {
   expect(
-    await employeeUseCases(orm).readEmployee(OWNER, "00000000-0000-4000-8000-000000000001"),
+    await employeeServices(orm).readEmployee(OWNER, "00000000-0000-4000-8000-000000000001"),
   ).toBeNull();
 });
 
 test("returns history for an employee id written in uppercase", async ({ orm, seed }) => {
   const employee = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, jobTitle: "Lead" });
   const history = await employees.readEmployeeHistory(OWNER, employee.id, {});
 
@@ -29,7 +29,7 @@ test("returns history for an employee id written in uppercase", async ({ orm, se
 test("leaves out a person who never had a manager", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
 
-  expect(await employeeUseCases(orm).readManagers(OWNER, [employee.id])).toEqual(new Map());
+  expect(await employeeServices(orm).readManagers(OWNER, [employee.id])).toEqual(new Map());
 });
 
 test("returns the manager under every requested spelling of an employee id", async ({
@@ -44,7 +44,7 @@ test("returns the manager under every requested spelling of an employee id", asy
   await orm.execute(sql`
     with renamed as (update employees set id = ${id} where id = ${employee.id})
     update employments set employee_id = ${id} where employee_id = ${employee.id}`);
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id, managerId: manager.id });
 
   const managers = await employees.readManagers(OWNER, [id, id.toUpperCase()]);

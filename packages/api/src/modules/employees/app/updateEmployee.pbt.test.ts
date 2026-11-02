@@ -1,6 +1,6 @@
 import fc from "fast-check";
 
-import { employeeUseCases, expect, OWNER, test, type EmployeeServices } from "#test/support";
+import { employeeServices, expect, OWNER, test, type EmployeeServices } from "#test/support";
 
 import { ApplicationError } from "../../../core/applicationError";
 
@@ -12,7 +12,7 @@ test(
   "invariant: the employees hierarchy never forms a loop",
   { timeout: 30_000 },
   async ({ orm, seed }) => {
-    const useCases = employeeUseCases(orm);
+    const services = employeeServices(orm);
     // One change, [person, new manager], as positions in the team; anyone may pick anyone,
     // themselves too. [2, 5]: person 2 now reports to person 5.
     const managerChange = fc.tuple(fc.nat(TEAM_SIZE - 1), fc.nat(TEAM_SIZE - 1));
@@ -26,12 +26,12 @@ test(
         const team = await seed.employees(TEAM_SIZE);
 
         for (const [person, manager] of changes) {
-          await changeManagerOrAcceptRefusal(useCases, team[person]!.id, team[manager]!.id);
+          await changeManagerOrAcceptRefusal(services, team[person]!.id, team[manager]!.id);
 
           // The invariant, checked after every step: nobody's chain of managers comes back to
           // them. 2 → 5 → 0 ends, so it holds; 2 → 5 → 0 → 2 would break it.
           for (const member of team) {
-            await expectNoManagerLoop(useCases, member.id);
+            await expectNoManagerLoop(services, member.id);
           }
         }
       }),
@@ -46,12 +46,12 @@ test(
  * as "self", and [0, 2] after 2 → 5 → 0 as "loop".
  */
 async function changeManagerOrAcceptRefusal(
-  useCases: EmployeeServices,
+  services: EmployeeServices,
   employeeId: string,
   managerId: string,
 ) {
   try {
-    await useCases.updateEmployee(OWNER, { id: employeeId, managerId });
+    await services.updateEmployee(OWNER, { id: employeeId, managerId });
   } catch (error) {
     if (!(error instanceof ApplicationError)) {
       throw error;
@@ -65,13 +65,13 @@ async function changeManagerOrAcceptRefusal(
  * Follows managers up from `employeeId`, such as 2 → 5 → 0, and fails when the chain reaches
  * anyone twice.
  */
-async function expectNoManagerLoop(useCases: EmployeeServices, employeeId: string) {
+async function expectNoManagerLoop(services: EmployeeServices, employeeId: string) {
   const chain = new Set<string>();
   let current: string | undefined = employeeId;
   while (current !== undefined) {
     expect(chain.has(current)).toBe(false);
     chain.add(current);
-    current = (await useCases.readManagers(OWNER, [current])).get(current)?.id;
+    current = (await services.readManagers(OWNER, [current])).get(current)?.id;
   }
 }
 

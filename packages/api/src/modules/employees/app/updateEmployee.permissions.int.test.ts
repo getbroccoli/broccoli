@@ -1,9 +1,9 @@
-import { ADMIN, employeeUseCases, expect, OWNER, signedIn, test } from "#test/support";
+import { ADMIN, employeeServices, expect, OWNER, signedIn, test } from "#test/support";
 
 test("allows an employee to change their own first name", async ({ orm, seed }) => {
   const anna = await seed.employee({ firstName: "Anna" });
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await employees.updateEmployee(ctx, {
     id: anna.id,
@@ -20,7 +20,7 @@ test("refuses an employee changing their own job title without saving their name
 }) => {
   const anna = await seed.employee({ firstName: "Anna", jobTitle: "Engineer" });
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await expect(
     employees.updateEmployee(ctx, { id: anna.id, firstName: "Anne", jobTitle: "Lead" }),
@@ -39,7 +39,7 @@ test("allows a manager to change their direct report's job title", async ({ orm,
   const ben = await seed.employee({ firstName: "Ben" });
   await seed.manager(ben.id, anna.id);
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await employees.updateEmployee(ctx, { id: ben.id, jobTitle: "Lead" });
 
@@ -56,7 +56,7 @@ test("allows a manager to change a report's job title through another manager", 
   await seed.manager(ben.id, anna.id);
   await seed.manager(carl.id, ben.id);
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await employees.updateEmployee(ctx, { id: carl.id, jobTitle: "Lead" });
 
@@ -71,7 +71,7 @@ test.for(["email", "managerId"] as const)(
     const other = await seed.employee();
     await seed.manager(ben.id, anna.id);
     const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
-    const employees = employeeUseCases(orm);
+    const employees = employeeServices(orm);
     const changes = field === "email" ? { email: "changed@example.com" } : { managerId: other.id };
 
     await expect(employees.updateEmployee(ctx, { id: ben.id, ...changes })).rejects.toMatchObject({
@@ -90,7 +90,7 @@ test("returns refused fields in the order sent", async ({ orm, seed }) => {
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
 
   await expect(
-    employeeUseCases(orm).updateEmployee(ctx, {
+    employeeServices(orm).updateEmployee(ctx, {
       id: anna.id,
       managerId: null,
       email: "changed@example.com",
@@ -115,7 +115,7 @@ test("refuses a manager changing a coworker outside their reporting line", async
   const coworker = await seed.employee();
   await seed.manager(ben.id, anna.id);
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await expect(
     employees.updateEmployee(ctx, { id: coworker.id, jobTitle: "Lead" }),
@@ -136,7 +136,7 @@ test("refuses a manager after their report moves outside their reporting line", 
   const other = await seed.employee();
   await seed.manager(ben.id, anna.id);
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(ctx, { id: ben.id, jobTitle: "Engineer" });
   await seed.manager(ben.id, other.id);
   const nextRequest = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: anna.id });
@@ -162,7 +162,7 @@ test("allows an employee to manage their first report without a profile change",
   await seed.manager(ben.id, anna.id);
   await seed.manager(carl.id, ben.id);
   const ctx = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: carl.id });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await expect(
     employees.updateEmployee(ctx, { id: dan.id, jobTitle: "Lead" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
@@ -180,7 +180,7 @@ test("allows an admin without an employee to change every employee update field"
 }) => {
   const employee = await seed.employee();
   const manager = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const changes = {
     firstName: "Anna",
     lastName: "Reed",

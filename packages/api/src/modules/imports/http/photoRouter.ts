@@ -13,13 +13,13 @@ export function importPhotoUrl(fileId: string): string {
 
 /** `GET /api/imports/photos/:fileId` serves an import employee's photo, cached for good. */
 export function photoRouter(
-  useCases: ImportServices,
+  services: ImportServices,
   resolveSecurity: SecurityResolver,
 ): express.Router {
   return express.Router().get("/imports/photos/:fileId", async (request, response) => {
     try {
       const ctx = requireSignedIn((await resolveSecurity(request.headers)).security);
-      sendFile(await useCases.reads.readImportPhoto(ctx, request.params.fileId), response);
+      sendFile(await services.reads.readImportPhoto(ctx, request.params.fileId), response);
     } catch (error) {
       sendApplicationError(error, response);
     }

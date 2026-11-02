@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { assert } from "vitest";
 
 import {
-  employeeUseCases,
+  employeeServices,
   expect,
   expectBlockedBy,
   expectHistoryReplaysTo,
@@ -15,7 +15,7 @@ import { todayInUtc } from "../../../utils";
 import { employeeRepository, employmentRepository } from "../db";
 
 test("parallel job title edits keep their old and new values chained", async ({ orm }) => {
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const employee = await employees.createEmployee(OWNER, {
     firstName: "Avery",
     lastName: "Stone",
@@ -52,7 +52,7 @@ test("parallel job title edits keep their old and new values chained", async ({ 
 test("an update addressed by uppercase id keeps its history under the canonical id", async ({
   orm,
 }) => {
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const employee = await employees.createEmployee(OWNER, {
     firstName: "Avery",
     lastName: "Stone",
@@ -96,7 +96,7 @@ test("a start date edit that waited for a deletion refuses the deleted employee"
 
   const results = Promise.allSettled([
     deleting,
-    employeeUseCases(orm).updateEmployee(OWNER, { id: employee.id, startDate: todayInUtc() }),
+    employeeServices(orm).updateEmployee(OWNER, { id: employee.id, startDate: todayInUtc() }),
   ]);
   try {
     await expectBlockedBy(orm, blockingPid);

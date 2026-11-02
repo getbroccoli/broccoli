@@ -1,9 +1,9 @@
 import { assert } from "vitest";
 
-import { employeeUseCases, expectHistoryReplaysTo, expect, OWNER, test } from "#test/support";
+import { employeeServices, expectHistoryReplaysTo, expect, OWNER, test } from "#test/support";
 
 test("creates an employee and returns it normalised", async ({ orm }) => {
-  const { createEmployee, readStartDates } = employeeUseCases(orm);
+  const { createEmployee, readStartDates } = employeeServices(orm);
 
   const employee = await createEmployee(OWNER, {
     firstName: "  Employee  ",
@@ -28,7 +28,7 @@ test("creates an employee and returns it normalised", async ({ orm }) => {
 });
 
 test("refuses an email that differs only in case", async ({ orm, seed }) => {
-  const { createEmployee } = employeeUseCases(orm);
+  const { createEmployee } = employeeServices(orm);
   await seed.employee({ email: "employee.one@example.com" });
 
   await expect(
@@ -45,7 +45,7 @@ test("refuses an email that differs only in case", async ({ orm, seed }) => {
 });
 
 test("refuses invalid input with one field error per field", async ({ orm }) => {
-  const { createEmployee } = employeeUseCases(orm);
+  const { createEmployee } = employeeServices(orm);
 
   await expect(
     createEmployee(OWNER, {
@@ -64,7 +64,7 @@ test("refuses invalid input with one field error per field", async ({ orm }) => 
 });
 
 test("creation records each populated field in a history line", async ({ orm }) => {
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   const employee = await employees.createEmployee(OWNER, {
     firstName: "  Avery  ",

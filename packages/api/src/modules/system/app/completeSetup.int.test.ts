@@ -1,7 +1,7 @@
 import {
-  employeeUseCases,
+  employeeServices,
   expect,
-  importUseCases,
+  importServices,
   EMPLOYEE,
   PNG,
   SLACK_PHOTO_URL,
@@ -37,7 +37,7 @@ test("finishing managed setup creates exactly the ready people with their avatar
     content: PNG,
     mimeType: "image/png",
   });
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   await imports.choices.setLeftOut(owner, { key: "leftout@example.com", leftOut: true });
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   expect(await storedFileIds(orm)).toHaveLength(2);
@@ -45,7 +45,7 @@ test("finishing managed setup creates exactly the ready people with their avatar
   await systemService(orm).completeSetup(owner);
 
   expect((await instances.readInstance(orm)).step).toBe("done");
-  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toMatchObject([
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toMatchObject([
     { node: { email: "avery@example.com", avatarFileId: avatar } },
   ]);
 });
@@ -56,7 +56,7 @@ test("refuses finishing after another tab goes Back and creates nobody", async (
   await seed.setupStep("import");
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{}]);
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
   await imports.reopenReview(owner);
 
@@ -66,7 +66,7 @@ test("refuses finishing after another tab goes Back and creates nobody", async (
   });
 
   expect((await instances.readInstance(orm)).step).toBe("import");
-  expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
 });
 
 test("finishing preserves an employee added by hand after approval and skips their import email", async ({
@@ -81,9 +81,9 @@ test("finishing preserves an employee added by hand after approval and skips the
     { email: "avery@example.com" },
     { email: "robin@example.com" },
   ]);
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const existing = await employees.createEmployee(owner, {
     firstName: "Avery",
     lastName: "Stone",

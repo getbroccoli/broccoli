@@ -5,7 +5,7 @@ import {
   ADMIN,
   signedIn,
   recordChangedEvents,
-  employeeUseCases,
+  employeeServices,
   expect,
   expectHistoryReplaysTo,
   OWNER,
@@ -26,7 +26,7 @@ test("removing a manager clears them from every report with a history line", asy
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   const avery = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const taylor = await seed.employee({ firstName: "Taylor", lastName: "Brook" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   for (const report of [avery, taylor]) {
     await employees.updateEmployee(OWNER, { id: report.id, managerId: manager.id });
   }
@@ -78,7 +78,7 @@ test("a removed person's deletion line keeps their manager", async ({ orm, seed 
     startDate: "2026-02-28",
   });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
 
   await employees.deleteEmployee(OWNER, { id: employee.id });
@@ -124,14 +124,14 @@ test("deletes the employee and avatar while keeping a history of their removed v
       { kind: "ADDED_WITH_DEMO" },
     ),
   );
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const employee = (await employees.listEmployees(OWNER, {})).edges[0]!.node;
   const before = await employees.readEmployeeHistory(OWNER, employee.id, {});
   expect(await storedFileIds(orm)).toEqual([employee.avatarFileId]);
 
   const { transact: transactWithEvents, events } = recordChangedEvents(orm);
 
-  const deleted = await employeeUseCases(orm, {
+  const deleted = await employeeServices(orm, {
     transact: transactWithEvents,
   }).deleteEmployee(OWNER, { id: employee.id, changeReason: "  Left  " });
 
@@ -173,7 +173,7 @@ test("deletes the employee and avatar while keeping a history of their removed v
 test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
   "refuses deletion of unknown id %s",
   async (id, { orm }) => {
-    await expect(employeeUseCases(orm).deleteEmployee(OWNER, { id })).rejects.toMatchObject({
+    await expect(employeeServices(orm).deleteEmployee(OWNER, { id })).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "No employee has this id.",
     });
@@ -183,7 +183,7 @@ test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
 test("a deletion addressed by uppercase id keeps its history under the canonical id", async ({
   orm,
 }) => {
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const employee = await employees.createEmployee(OWNER, {
     firstName: "Avery",
     lastName: "Stone",
@@ -208,7 +208,7 @@ test("a deletion addressed by uppercase id keeps its history under the canonical
 test("refuses an admin deleting the employee linked to the owner", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const employee = await seed.employee({ userId: owner.user!.userId });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const admin = signedIn(orm, { profiles: ["EMPLOYEE", "ADMIN"], employeeId: null });
 
   await expect(employees.deleteEmployee(admin, { id: employee.id })).rejects.toMatchObject({
@@ -222,7 +222,7 @@ test("refuses an admin deleting the employee linked to the owner", async ({ orm,
 
 test("allows an admin to delete another employee", async ({ orm, seed }) => {
   const employee = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await employees.deleteEmployee(ADMIN, { id: employee.id });
 
@@ -237,10 +237,10 @@ test("deleting a joined employee deletes their user and keeps the owner", async 
   });
   const employee = await seed.employee({ userId: joined.id });
 
-  await employeeUseCases(orm).deleteEmployee(owner, { id: employee.id });
+  await employeeServices(orm).deleteEmployee(owner, { id: employee.id });
 
   expect(await orm.select({ id: user.id }).from(user)).toEqual([{ id: owner.user!.userId }]);
-  expect(await employeeUseCases(orm).readEmployee(owner, employee.id)).toBeNull();
+  expect(await employeeServices(orm).readEmployee(owner, employee.id)).toBeNull();
 });
 
 test("rolls back the linked user deletion with the employee deletion", async ({
@@ -251,7 +251,7 @@ test("rolls back the linked user deletion with the employee deletion", async ({
   const owner = await seed.owner();
   const joined = await seed.user({ email: "joined@example.com" });
   const employee = await seed.employee({ userId: joined.id });
-  const employees = employeeUseCases(orm, {
+  const employees = employeeServices(orm, {
     transact: (work) =>
       transact(async (tx) => {
         await work(tx);

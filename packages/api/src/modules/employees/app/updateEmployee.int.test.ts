@@ -3,7 +3,7 @@ import { assert } from "vitest";
 
 import {
   recordChangedEvents,
-  employeeUseCases,
+  employeeServices,
   expect,
   expectBlockedBy,
   expectHistoryReplaysTo,
@@ -19,7 +19,7 @@ test("saves a manager with other fields in one history line", async ({ orm, seed
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   const { transact, events } = recordChangedEvents(orm);
-  const employees = employeeUseCases(orm, { transact });
+  const employees = employeeServices(orm, { transact });
 
   const updated = await employees.updateEmployee(OWNER, {
     id: employee.id,
@@ -63,7 +63,7 @@ test("saves a manager with other fields in one history line", async ({ orm, seed
 test("changes only sent fields and records their old and normalised new values", async ({
   orm,
 }) => {
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const employee = await employees.createEmployee(OWNER, {
     firstName: "Avery",
     lastName: "Stone",
@@ -75,7 +75,7 @@ test("changes only sent fields and records their old and normalised new values",
 
   const { transact, events } = recordChangedEvents(orm);
 
-  const updated = await employeeUseCases(orm, {
+  const updated = await employeeServices(orm, {
     transact,
   }).updateEmployee(OWNER, {
     id: employee.id,
@@ -124,7 +124,7 @@ test("changes only sent fields and records their old and normalised new values",
 
 test("an update returns the history line it appended", async ({ orm, seed }) => {
   const employee = await seed.employee({ jobTitle: "Engineer" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   const { historyLine } = await employees.updateEmployee(OWNER, {
     id: employee.id,
@@ -137,7 +137,7 @@ test("an update returns the history line it appended", async ({ orm, seed }) => 
 });
 
 test.for(["jobTitle", "startDate"] as const)("clears %s when sent null", async (field, { orm }) => {
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const input = {
     firstName: "Avery",
     lastName: "Stone",
@@ -160,14 +160,14 @@ test.for(["jobTitle", "startDate"] as const)("clears %s when sent null", async (
 
 test("a save with unchanged values records no line and publishes nothing", async ({ orm }) => {
   const { transact, events } = recordChangedEvents(orm);
-  const employee = await employeeUseCases(orm).createEmployee(OWNER, {
+  const employee = await employeeServices(orm).createEmployee(OWNER, {
     firstName: "Avery",
     lastName: "Stone",
     email: "avery@example.com",
     jobTitle: "Engineer",
   });
   assert(employee);
-  const employees = employeeUseCases(orm, { transact });
+  const employees = employeeServices(orm, { transact });
   const before = await employees.readEmployeeHistory(OWNER, employee.id, {});
 
   const updated = await employees.updateEmployee(OWNER, {
@@ -186,7 +186,7 @@ test("a save with unchanged values records no line and publishes nothing", async
 
 test("refuses a taken email without changing the employee or history", async ({ orm, seed }) => {
   await seed.employee({ email: "taken@example.com" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const employee = await employees.createEmployee(OWNER, {
     firstName: "Avery",
     lastName: "Stone",
@@ -214,7 +214,7 @@ test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
   "refuses an update to unknown id %s",
   async (id, { orm }) => {
     await expect(
-      employeeUseCases(orm).updateEmployee(OWNER, { id, jobTitle: "Lead" }),
+      employeeServices(orm).updateEmployee(OWNER, { id, jobTitle: "Lead" }),
     ).rejects.toMatchObject({
       code: "NOT_FOUND",
       message: "No employee has this id.",
@@ -224,7 +224,7 @@ test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
 
 test("refuses a reason longer than 500 characters", async ({ orm, seed }) => {
   const employee = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await expect(
     employees.updateEmployee(OWNER, {
@@ -245,7 +245,7 @@ test.for(["firstName", "lastName", "email"] as const)(
   "refuses null for required field %s",
   async (field, { orm, seed }) => {
     const employee = await seed.employee();
-    const employees = employeeUseCases(orm);
+    const employees = employeeServices(orm);
 
     await expect(
       employees.updateEmployee(OWNER, { id: employee.id, [field]: null }),
@@ -267,7 +267,7 @@ test("a start date edit that waited for another records the date that one stored
   const startDate = todayInUtc();
   const changedDate = addDays(startDate, 30);
   const employee = await seed.employee({ startDate });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const editReady = Promise.withResolvers<number>();
   const releaseEdit = Promise.withResolvers<void>();
   const editing = transact(async (tx) => {

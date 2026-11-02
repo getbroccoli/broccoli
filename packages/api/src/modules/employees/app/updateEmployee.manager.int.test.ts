@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import {
-  employeeUseCases,
+  employeeServices,
   expect,
   expectBlockedBy,
   OWNER,
@@ -17,7 +17,7 @@ import { employeeRepository, employmentRepository } from "../db";
 test("sets a person's manager and records their id and name", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   const { historyLine } = await employees.updateEmployee(OWNER, {
     id: employee.id,
@@ -47,7 +47,7 @@ test("sets a person's manager and records their id and name", async ({ orm, seed
 test("shows the manager of a person who starts next month", async ({ orm, seed }) => {
   const employee = await seed.employee({ startDate: addDays(todayInUtc(), 30) });
   const manager = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
 
@@ -58,7 +58,7 @@ test("keeps the manager when the start date moves", async ({ orm, seed }) => {
   const today = todayInUtc();
   const employee = await seed.employee({ startDate: addDays(today, -30) });
   const manager = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
   const startDate = addDays(today, 30);
 
@@ -74,7 +74,7 @@ test("changes a manager and records both managers' ids and names", async ({ orm,
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const previous = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   const next = await seed.employee({ firstName: "Taylor", lastName: "Brook" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, managerId: previous.id });
 
   const { historyLine } = await employees.updateEmployee(OWNER, {
@@ -104,7 +104,7 @@ test("changes a manager and records both managers' ids and names", async ({ orm,
 test("clears a manager and records their removed id and name", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
 
   const { historyLine } = await employees.updateEmployee(OWNER, {
@@ -134,7 +134,7 @@ test("clears a manager and records their removed id and name", async ({ orm, see
 test("leaves the manager unchanged when managerId is absent", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
 
   const { historyLine } = await employees.updateEmployee(OWNER, {
@@ -151,12 +151,12 @@ test("leaves the manager unchanged when managerId is absent", async ({ orm, seed
 test("setting the same manager again records nothing", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
   const before = await employees.readEmployeeHistory(OWNER, employee.id, {});
   const { transact, events } = recordChangedEvents(orm);
 
-  const { historyLine } = await employeeUseCases(orm, { transact }).updateEmployee(OWNER, {
+  const { historyLine } = await employeeServices(orm, { transact }).updateEmployee(OWNER, {
     id: employee.id,
     managerId: manager.id,
   });
@@ -172,7 +172,7 @@ test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
   async (managerId, { orm, seed }) => {
     const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
     const manager = await seed.employee({ firstName: "Robin", lastName: "Reed" });
-    const employees = employeeUseCases(orm);
+    const employees = employeeServices(orm);
     await employees.updateEmployee(OWNER, { id: employee.id, managerId: manager.id });
     const before = await employees.readEmployeeHistory(OWNER, employee.id, {});
 
@@ -191,7 +191,7 @@ test.for(["00000000-0000-4000-8000-000000000001", "not-a-uuid"])(
 
 test("refuses making a person their own manager without changing them", async ({ orm, seed }) => {
   const employee = await seed.employee({ firstName: "Avery", lastName: "Stone" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
 
   await expect(
     employees.updateEmployee(OWNER, {
@@ -216,7 +216,7 @@ test("refuses a manager who reports through two levels without changing the repo
   const avery = await seed.employee({ firstName: "Avery", lastName: "Stone" });
   const robin = await seed.employee({ firstName: "Robin", lastName: "Reed" });
   const taylor = await seed.employee({ firstName: "Taylor", lastName: "Brook" });
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: robin.id, managerId: avery.id });
   await employees.updateEmployee(OWNER, { id: taylor.id, managerId: robin.id });
 
@@ -242,7 +242,7 @@ test("refuses a loop through a manager who starts next month", async ({ orm, see
   const avery = await seed.employee();
   const robin = await seed.employee({ startDate: addDays(todayInUtc(), 30) });
   const taylor = await seed.employee();
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: avery.id, managerId: robin.id });
   await employees.updateEmployee(OWNER, { id: robin.id, managerId: taylor.id });
 
@@ -262,7 +262,7 @@ test("a start date edit waiting for a manager change lets it finish", async ({
   const employee = await seed.employee();
   const manager = await seed.employee();
   const startDate = addDays(todayInUtc(), 30);
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const managerReady = Promise.withResolvers<number>();
   const releaseManager = Promise.withResolvers<void>();
   const managing = transact(async (tx) => {

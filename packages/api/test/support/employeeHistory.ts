@@ -4,7 +4,7 @@ import type { Orm } from "../../src/core/db";
 import type { Connection } from "../../src/core/pagination";
 import { createRecordHistoryService, type HistoryLine } from "../../src/core/records";
 import { OWNER } from "./testSecurityContext";
-import { employeeUseCases } from "./useCases";
+import { employeeServices } from "./services";
 
 const recordHistory = createRecordHistoryService();
 
@@ -36,7 +36,7 @@ export async function expectHistoryReplaysTo(orm: Orm, employeeId: string): Prom
     }
   }
 
-  const employees = employeeUseCases(orm);
+  const employees = employeeServices(orm);
   const employee = await employees.readEmployee(OWNER, employeeId);
   const startDates = await employees.readStartDates(OWNER, [employeeId]);
   const managers = await employees.readManagers(OWNER, [employeeId]);

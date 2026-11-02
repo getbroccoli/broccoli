@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { expect, importUseCases, OWNER, startLiveDecisions, SYSTEM, test } from "#test/support";
+import { expect, importServices, OWNER, startLiveDecisions, SYSTEM, test } from "#test/support";
 
 import type { ImportEmployeeValues } from "../domain";
 
@@ -13,7 +13,7 @@ test.for(["title-row-semicolons", "simple"])(
       console.info(`${name}: original read model cost $${model.cost().toFixed(6)}`);
       await model.stop();
     });
-    const imports = importUseCases(orm, {
+    const imports = importServices(orm, {
       originalFileReader: {
         readOriginalFile: (_source, request) => model.originalFileReader.readOriginalFile(request),
       },

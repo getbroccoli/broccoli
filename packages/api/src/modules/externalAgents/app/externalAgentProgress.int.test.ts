@@ -1,7 +1,7 @@
 import {
   expect,
-  externalAgentUseCases,
-  importUseCases,
+  externalAgentServices,
+  importServices,
   importSourceValues,
   SETUP_HOLDER,
   SYSTEM,
@@ -10,7 +10,7 @@ import {
 
 test("shows each reported file stage without adding people", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -18,7 +18,7 @@ test("shows each reported file stage without adding people", async ({ orm, seed 
   });
   const ctx = (await agents.sessions.readExternalAgentSession({ token }))!;
   const id = await agents.files.uploadForExternalAgent(SETUP_HOLDER, CSV);
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toMatchObject([
     { id, externalAgentProgress: null, pickedUpByExternalAgentAt: null },
   ]);
@@ -75,7 +75,7 @@ test("refuses progress for unknown files and files waiting for original-read con
   seed,
 }) => {
   await seed.externalAgentSetup();
-  const agents = externalAgentUseCases(orm);
+  const agents = externalAgentServices(orm);
   const { code } = await agents.sessions.createExternalAgentCode(SETUP_HOLDER);
   const { token } = await agents.sessions.startExternalAgentSession(SYSTEM, {
     code,
@@ -93,7 +93,7 @@ test("refuses progress for unknown files and files waiting for original-read con
     code: "NOT_FOUND",
   });
   expect(
-    (await importUseCases(orm).reads.listSources(SETUP_HOLDER)).map(importSourceValues),
+    (await importServices(orm).reads.listSources(SETUP_HOLDER)).map(importSourceValues),
   ).toMatchObject([{ id, externalAgentProgress: null, pickedUpByExternalAgentAt: null }]);
 });
 

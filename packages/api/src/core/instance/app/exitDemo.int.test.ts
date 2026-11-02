@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import {
   createEmployeeSetupService,
-  employeeUseCases,
+  employeeServices,
   expect,
   ADMIN,
   EMPLOYEE,
@@ -212,7 +212,7 @@ test("exiting the demo deletes every linked user before removing its provisional
   );
 
   expect(await orm.select().from(user)).toEqual([]);
-  expect((await employeeUseCases(orm).listEmployees(SYSTEM, {})).edges).toEqual([]);
+  expect((await employeeServices(orm).listEmployees(SYSTEM, {})).edges).toEqual([]);
 });
 
 const now = new Date("2026-01-02T12:00:00Z");

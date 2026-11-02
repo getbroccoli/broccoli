@@ -2,7 +2,7 @@ import {
   aiSettings,
   companyService,
   expect,
-  importUseCases,
+  importServices,
   SETUP_EXTERNAL_AGENT,
   SETUP_HOLDER,
   storedFileIds,
@@ -29,7 +29,7 @@ test.for([
   "readSlack",
   "ai.save",
 ] as const)("%s refuses the external agent", async (operation, { orm }) => {
-  const imports = importUseCases(orm);
+  const imports = importServices(orm);
   const calls = {
     approveImport: () => imports.approveImport(SETUP_EXTERNAL_AGENT, "reviewed-version"),
     reopenReview: () => imports.reopenReview(SETUP_EXTERNAL_AGENT),

@@ -1,4 +1,4 @@
-import { importUseCases, expect, EMPLOYEE, SYSTEM, test } from "#test/support";
+import { importServices, expect, EMPLOYEE, SYSTEM, test } from "#test/support";
 
 import { user } from "../../auth";
 import { ormOf, transactor, type Tx } from "../../db";
@@ -68,7 +68,7 @@ test("creates the owner for the holder, completes setup and ends the session", a
         now: new Date("2026-01-02T12:00:00Z"),
       },
       () => insertOwner(tx),
-      importUseCases(orm).addApprovedPeople,
+      importServices(orm).addApprovedPeople,
     ),
   );
 
@@ -97,7 +97,7 @@ test.for([null, "another-token"])(
             now: new Date("2026-01-02T12:00:00Z"),
           },
           () => insertOwner(tx),
-          importUseCases(orm).addApprovedPeople,
+          importServices(orm).addApprovedPeople,
         ),
       ),
     ).rejects.toMatchObject({ name: "SetupInProgressError" });
@@ -122,7 +122,7 @@ test("refuses owner creation with an expired setup session", async ({ orm, seed,
           now,
         },
         () => insertOwner(tx),
-        importUseCases(orm).addApprovedPeople,
+        importServices(orm).addApprovedPeople,
       ),
     ),
   ).rejects.toMatchObject({ name: "SetupInProgressError" });
@@ -146,7 +146,7 @@ test.for(["company", "import"] as const)(
             now: new Date("2026-01-02T12:00:00Z"),
           },
           () => insertOwner(tx),
-          importUseCases(orm).addApprovedPeople,
+          importServices(orm).addApprovedPeople,
         ),
       ),
     ).rejects.toMatchObject({
@@ -171,7 +171,7 @@ test("keeps one owner when two creations arrive together", async ({ orm, seed, t
         tx,
         credential,
         () => insertOwner(tx, "owner-1"),
-        importUseCases(orm).addApprovedPeople,
+        importServices(orm).addApprovedPeople,
       ),
     ),
     transact((tx) =>
@@ -180,7 +180,7 @@ test("keeps one owner when two creations arrive together", async ({ orm, seed, t
         tx,
         credential,
         () => insertOwner(tx, "owner-2"),
-        importUseCases(orm).addApprovedPeople,
+        importServices(orm).addApprovedPeople,
       ),
     ),
   ]);

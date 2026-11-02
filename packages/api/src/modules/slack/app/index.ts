@@ -1,6 +1,8 @@
 export {
   createSlackConnectionService,
+  type SlackConnectionFailure,
+  type SlackConnectionReturn,
   type SlackConnectionService,
   type SlackMembersRead,
-  type SlackPerson,
-} from "./useCases";
+} from "./slackConnectionService";
+export type { SlackPerson } from "./readSlackPeople";

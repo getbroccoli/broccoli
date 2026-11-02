@@ -1,0 +1,203 @@
+import { sql } from "drizzle-orm";
+
+import {
+  employeeServices,
+  expectHistoryReplaysTo,
+  createSetupOwner,
+  expect,
+  finishSelfHostedSetup,
+  importServices,
+  OWNER,
+  PNG,
+  SETUP_HOLDER,
+  SLACK_PHOTO_URL,
+  storedFileIds,
+  test,
+} from "#test/support";
+
+import { user } from "../../../core/auth";
+import { ormOf, transactor } from "../../../core/db";
+import { createEventBus } from "../../../core/events";
+import { createInstanceService } from "../../../core/instance";
+import { createLogger } from "../../../core/logger";
+
+const instances = createInstanceService();
+
+test("approval by the setup holder creates nobody until account creation", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  const avery = { firstName: "Avery", lastName: "Stone", email: "avery@example.com" };
+  await seed.importEmployees(source.id, [avery]);
+  const imports = importServices(orm);
+
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+
+  expect((await instances.readInstance(orm)).step).toBe("owner");
+  expect((await employeeServices(orm).listEmployees(OWNER, {})).edges).toEqual([]);
+  await finishSelfHostedSetup(orm);
+  const employees = await employeeServices(orm).listEmployees(OWNER, {});
+  expect(employees.edges.map(({ node }) => node)).toMatchObject([avery]);
+  const employeeId = employees.edges[0]!.node.id;
+  const history = await employeeServices(orm).readEmployeeHistory(OWNER, employeeId, {});
+  expect(history.edges).toHaveLength(1);
+  expect(history.edges[0]!.node).toMatchObject({
+    operation: "CREATED",
+    cause: { kind: "ADDED_FROM_IMPORT", ref: null },
+  });
+  await expectHistoryReplaysTo(orm, employeeId);
+});
+
+test("a database failure after account creation leaves no owner or employees and preserves the import", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
+  await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
+  const records = await seed.importEmployees(source.id, [
+    { email: "avery@example.com", photoUrl: SLACK_PHOTO_URL },
+    { email: "leftout@example.com", photoUrl: SLACK_PHOTO_URL },
+  ]);
+  const photos = await Promise.all(
+    records.map((record) =>
+      seed.importPhoto(record.id, {
+        photoUrl: SLACK_PHOTO_URL,
+        content: PNG,
+        mimeType: "image/png",
+      }),
+    ),
+  );
+  const imports = importServices(orm);
+  await imports.choices.setLeftOut(SETUP_HOLDER, { key: "leftout@example.com", leftOut: true });
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  const before = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
+  const files = await storedFileIds(orm);
+  const instance = await instances.readInstance(orm);
+  const eventBus = createEventBus(createLogger("silent"));
+  const completed: unknown[] = [];
+  eventBus.subscribe({
+    "instance.setup_completed": (payload) => {
+      completed.push(payload);
+      return Promise.resolve();
+    },
+  });
+  const transact = transactor(orm, eventBus);
+
+  await expect(
+    transact(async (tx) => {
+      await createSetupOwner(tx, imports.addApprovedPeople);
+      await ormOf(tx).execute(sql`select 1 / 0`);
+    }),
+  ).rejects.toMatchObject({ cause: { code: "22012" } });
+
+  expect((await employeeServices(orm).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect(await orm.select().from(user)).toEqual([]);
+  expect(await instances.readInstance(orm)).toEqual(instance);
+  expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(
+    before,
+  );
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toMatchObject([{ id: source.id }]);
+  expect(await storedFileIds(orm)).toEqual(files);
+  expect(completed).toEqual([]);
+
+  await imports.reopenReview(SETUP_HOLDER);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  await finishSelfHostedSetup(orm);
+  expect((await instances.readInstance(orm)).step).toBe("done");
+  expect((await employeeServices(orm).listEmployees(OWNER, {})).edges).toMatchObject([
+    { node: { email: "avery@example.com", avatarFileId: photos[0] } },
+  ]);
+});
+
+test("an existing owner refuses account creation before adding the approved people", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner();
+  await seed.setupStep("owner");
+  await seed.setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [{}]);
+  const imports = importServices(orm);
+  const users = await orm.select().from(user);
+  const before = (await imports.reads.readReview(owner)).listEmployees({});
+
+  await expect(
+    transact((tx) => createSetupOwner(tx, imports.addApprovedPeople)),
+  ).rejects.toMatchObject({ name: "OwnerExistsError" });
+
+  expect(await orm.select().from(user)).toEqual(users);
+  expect((await instances.readInstance(orm)).step).toBe("owner");
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
+  expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(before);
+});
+
+test("adds the reviewed manager on the employee's creation history line", async ({ orm, seed }) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    {
+      firstName: "Avery",
+      lastName: "Stone",
+      email: "avery@example.com",
+      manager: "Missing Person",
+    },
+    { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
+  ]);
+  const imports = importServices(orm);
+  await imports.choices.chooseManager(SETUP_HOLDER, {
+    keys: ["avery@example.com"],
+    managerKey: "robin@example.com",
+  });
+
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  await finishSelfHostedSetup(orm);
+
+  const employees = employeeServices(orm);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  const avery = edges.find(({ node }) => node.email === "avery@example.com")!.node;
+  const robin = edges.find(({ node }) => node.email === "robin@example.com")!.node;
+  expect((await employees.readManagers(OWNER, [avery.id])).get(avery.id)).toEqual(robin);
+  const history = await employees.readEmployeeHistory(OWNER, avery.id, {});
+  expect(history.edges).toHaveLength(1);
+  expect(history.edges[0]!.node).toMatchObject({
+    operation: "CREATED",
+    cause: { kind: "ADDED_FROM_IMPORT" },
+    changes: expect.arrayContaining([
+      {
+        field: "manager",
+        oldValue: null,
+        newValue: robin.id,
+        oldLabel: null,
+        newLabel: "Robin Reed",
+      },
+    ]) as unknown,
+  });
+  await expectHistoryReplaysTo(orm, avery.id);
+});
+
+test("adds employees in a manager loop without managers", async ({ orm, seed }) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com", manager: "robin@example.com" },
+    { email: "robin@example.com", manager: "avery@example.com" },
+  ]);
+  const imports = importServices(orm);
+
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  await finishSelfHostedSetup(orm);
+
+  const employees = employeeServices(orm);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  expect(edges).toHaveLength(2);
+  const managers = await employees.readManagers(
+    OWNER,
+    edges.map(({ node }) => node.id),
+  );
+  expect(edges.map(({ node }) => managers.get(node.id) ?? null)).toEqual([null, null]);
+});

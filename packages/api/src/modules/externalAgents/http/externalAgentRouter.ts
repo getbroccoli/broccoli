@@ -33,10 +33,10 @@ const SKILL = readFileSync(new URL("./broccoliSetupSkill.md", import.meta.url), 
  * anywhere else. Answers are never cached.
  */
 export function externalAgentRouter(
-  useCases: ExternalAgentServices,
+  services: ExternalAgentServices,
   logger: Logger,
 ): express.Router {
-  const asExternalAgent = externalAgentSession(useCases);
+  const asExternalAgent = externalAgentSession(services);
   const perSession = rateLimit({
     windowMs: 60_000,
     limit: FILE_REQUESTS_PER_MINUTE,
@@ -75,7 +75,7 @@ export function externalAgentRouter(
       express.json(),
       async (request, response) => {
         const { code, client } = (request.body ?? {}) as { code?: unknown; client?: unknown };
-        const session = await useCases.sessions.startExternalAgentSession(
+        const session = await services.sessions.startExternalAgentSession(
           PrincipalSecurityContext.system(),
           {
             code: typeof code === "string" ? code : "",
@@ -90,7 +90,7 @@ export function externalAgentRouter(
       asExternalAgent,
       perSession,
       async (_request, response) => {
-        response.json(await useCases.files.listUnmappedFiles(externalAgentOf(response)));
+        response.json(await services.files.listUnmappedFiles(externalAgentOf(response)));
       },
     )
     .get(
@@ -106,7 +106,7 @@ export function externalAgentRouter(
         if (response.destroyed) {
           abandoned.abort();
         }
-        const files = await useCases.files.pollUnmappedFiles(externalAgentOf(response), {
+        const files = await services.files.pollUnmappedFiles(externalAgentOf(response), {
           seconds,
           signal: abandoned.signal,
         });
@@ -121,7 +121,7 @@ export function externalAgentRouter(
       perSession,
       express.json({ limit: 1024 }),
       async (request, response) => {
-        await useCases.files.reportFileProgress(
+        await services.files.reportFileProgress(
           externalAgentOf(response),
           sourceIdOf(request, response),
           parseProgress(request.body),
@@ -135,7 +135,7 @@ export function externalAgentRouter(
       perSession,
       async (request, response) => {
         response.json(
-          await useCases.files.readMappingQuestions(
+          await services.files.readMappingQuestions(
             externalAgentOf(response),
             sourceIdOf(request, response),
           ),
@@ -149,7 +149,7 @@ export function externalAgentRouter(
       json,
       async (request, response) => {
         response.json(
-          await useCases.files.answerMappingQuestions(
+          await services.files.answerMappingQuestions(
             externalAgentOf(response),
             sourceIdOf(request, response),
             parseAnswers(request.body),
@@ -162,7 +162,7 @@ export function externalAgentRouter(
       asExternalAgent,
       perSession,
       async (request, response) => {
-        const file = await useCases.files.readOriginalFile(
+        const file = await services.files.readOriginalFile(
           externalAgentOf(response),
           sourceIdOf(request, response),
         );
@@ -177,7 +177,7 @@ export function externalAgentRouter(
       json,
       async (request, response) => {
         response.json(
-          await useCases.files.sendReadPeople(
+          await services.files.sendReadPeople(
             externalAgentOf(response),
             sourceIdOf(request, response),
             request.body,
@@ -192,11 +192,11 @@ const BEARER = /^Bearer (\S{1,200})$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Admits a request by its bearer token alone, as the external agent's security context. */
-function externalAgentSession(useCases: ExternalAgentServices): express.RequestHandler {
+function externalAgentSession(services: ExternalAgentServices): express.RequestHandler {
   // Express 5 passes a rejected handler on to the router's error handler.
   return async (request, response, next) => {
     const token = BEARER.exec(request.headers.authorization ?? "")?.[1];
-    const ctx = token && (await useCases.sessions.readExternalAgentSession({ token }));
+    const ctx = token && (await services.sessions.readExternalAgentSession({ token }));
     if (!ctx) {
       throw new ApplicationError("UNAUTHENTICATED", "Your agent's session ended.");
     }

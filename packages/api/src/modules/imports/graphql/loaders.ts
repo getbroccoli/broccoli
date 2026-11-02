@@ -16,27 +16,27 @@ export interface ImportLoaders {
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function importLoaders(
-  useCases: ImportServices,
+  services: ImportServices,
 ): (context: GraphqlContext) => ImportLoaders {
-  return perRequest((context) => createLoaders(useCases, context));
+  return perRequest((context) => createLoaders(services, context));
 }
 
-function createLoaders(useCases: ImportServices, context: GraphqlContext): ImportLoaders {
+function createLoaders(services: ImportServices, context: GraphqlContext): ImportLoaders {
   const ctx = context.getActor();
   let progress: Promise<ImportProgress> | undefined;
   let review: Promise<ImportReview> | undefined;
   return {
     source: new DataLoader<string, ImportSource>(async (ids) => {
       const sources = new Map(
-        (await useCases.reads.readSources(ctx, ids)).map((source) => [source.id, source]),
+        (await services.reads.readSources(ctx, ids)).map((source) => [source.id, source]),
       );
       return ids.map((id) => sources.get(id) ?? new Error(`No import source ${id}`));
     }),
     employeeCount: new DataLoader<string, number>(async (sourceIds) => {
-      const counts = await useCases.reads.countEmployees(ctx, sourceIds);
+      const counts = await services.reads.countEmployees(ctx, sourceIds);
       return sourceIds.map((id) => counts.get(id)!);
     }),
-    progress: () => (progress ??= useCases.reads.readProgress(ctx)),
-    review: () => (review ??= useCases.reads.readReview(ctx)),
+    progress: () => (progress ??= services.reads.readProgress(ctx)),
+    review: () => (review ??= services.reads.readReview(ctx)),
   };
 }

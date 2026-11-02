@@ -4,14 +4,14 @@ import { createOwnerService, type AddApprovedPeople } from "../../src/core/insta
 import { TestSeed } from "./testSeed";
 import { SYSTEM } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
-import { importUseCases } from "./useCases";
+import { importServices } from "./services";
 
 const owners = createOwnerService();
 
 /** Finishes the account step with the real owner and import operations. */
 export async function finishSelfHostedSetup(orm: Orm): Promise<void> {
   await new TestSeed(orm).setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
-  await testTransactor(orm)((tx) => createSetupOwner(tx, importUseCases(orm).addApprovedPeople));
+  await testTransactor(orm)((tx) => createSetupOwner(tx, importServices(orm).addApprovedPeople));
 }
 
 /** Creates the owner at the account step in `tx`, for the browser holding a seeded setup session. */

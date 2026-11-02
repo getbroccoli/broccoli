@@ -1,4 +1,4 @@
-import { employeeUseCases, demoService, expect, OWNER, storedFileIds, test } from "#test/support";
+import { employeeServices, demoService, expect, OWNER, storedFileIds, test } from "#test/support";
 
 import { createDemoFillService } from "./demoFillService";
 
@@ -8,7 +8,7 @@ const demoFill = createDemoFillService();
 
 test("fills 40 demo employees with distinct stored avatars", async ({ orm, transact }) => {
   const demo = demoService(orm);
-  const { listEmployees } = employeeUseCases(orm);
+  const { listEmployees } = employeeServices(orm);
 
   await transact(await demoFill.prepareDemoFill(today));
 
@@ -20,7 +20,7 @@ test("fills 40 demo employees with distinct stored avatars", async ({ orm, trans
   expect(avatarIds.toSorted()).toEqual(await storedFileIds(orm));
   expect(await demo.getDemoData(OWNER)).toEqual({ isPresent: true });
   for (const { node: employee } of employees.edges) {
-    const history = await employeeUseCases(orm).readEmployeeHistory(OWNER, employee.id, {});
+    const history = await employeeServices(orm).readEmployeeHistory(OWNER, employee.id, {});
     expect(history.edges).toHaveLength(1);
     expect(history.edges[0]!.node).toMatchObject({
       operation: "CREATED",
@@ -31,7 +31,7 @@ test("fills 40 demo employees with distinct stored avatars", async ({ orm, trans
 
 test("adds nothing when demo data has already been filled", async ({ orm, transact }) => {
   const demo = demoService(orm);
-  const { listEmployees } = employeeUseCases(orm);
+  const { listEmployees } = employeeServices(orm);
   const fill = await demoFill.prepareDemoFill(today);
   await transact(fill);
   const before = await listEmployees(OWNER, { first: 100 });
@@ -47,7 +47,7 @@ test("adds nothing when demo data has already been filled", async ({ orm, transa
 test("does not fill demo data when a real employee exists", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
   const demo = demoService(orm);
-  const { listEmployees } = employeeUseCases(orm);
+  const { listEmployees } = employeeServices(orm);
 
   await transact(await demoFill.prepareDemoFill(today));
 

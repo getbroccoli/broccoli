@@ -1,0 +1,261 @@
+import { strToU8, zipSync } from "fflate";
+
+import {
+  importSourceValues,
+  expect,
+  importServices,
+  OWNER,
+  SETUP_HOLDER,
+  storedFileIds,
+  SYSTEM,
+  test,
+  sampleXlsxFile,
+  xlsxFileWithDistantCell,
+} from "#test/support";
+
+import { files } from "../../../core/files";
+import { createInstanceService } from "../../../core/instance";
+
+const instances = createInstanceService();
+
+test("stores a mapping source named after the file and sends its first job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importServices(orm, { decisions: fake.decisions });
+  const bytes = Buffer.from("Name,Email\nAvery Stone,avery@example.com");
+
+  const sourceId = await imports.files.uploadFile(OWNER, { name: "staff.csv", bytes });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: sourceId, kind: "file", name: "staff.csv", status: "mapping", failure: null },
+  ]);
+  expect(imports.sentJobs).toEqual([
+    { name: "imports.mapFile", payload: { sourceId, attempt: 0 } },
+  ]);
+  expect(
+    await orm.select({ content: files.content, mimeType: files.mimeType }).from(files),
+  ).toEqual([{ content: bytes, mimeType: "text/csv" }]);
+});
+
+test("refuses a second upload while the first is being read without storing anything or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importServices(orm, { decisions: fake.decisions });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  const first = Promise.allSettled([
+    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+  ]);
+
+  try {
+    await expect(
+      imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes }),
+    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+
+    expect(await imports.reads.listSources(OWNER)).toEqual([]);
+    expect(await storedFileIds(orm)).toEqual([]);
+    expect(imports.sentJobs).toEqual([]);
+  } finally {
+    expect(await first).toMatchObject([
+      {
+        status: "rejected",
+        reason: {
+          code: "INVALID_INPUT",
+          fieldErrors: [{ field: "file", code: "unsupported_file" }],
+        },
+      },
+    ]);
+  }
+});
+
+test("accepts the next upload after the first upload finishes with an unreadable workbook", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importServices(orm, { decisions: fake.decisions });
+  const bytes = sampleXlsxFile({ sheets: [{ name: "Staff", rows: [["Name"], ["Avery Stone"]] }] });
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "slow.xlsx", bytes: xlsxFileWithDistantCell() }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
+  });
+
+  const sourceId = await imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: sourceId, kind: "file", name: "staff.xlsx", status: "mapping" },
+  ]);
+  expect(await storedFileIds(orm)).toHaveLength(1);
+  expect(imports.sentJobs).toEqual([
+    { name: "imports.mapFile", payload: { sourceId, attempt: 0 } },
+  ]);
+});
+
+test("refuses an upload after setup is complete without storing anything or sending a job", async ({
+  orm,
+  seed,
+  fakeDecisions: fake,
+}) => {
+  const owner = await seed.owner();
+  await seed.setupStep("done");
+  const imports = importServices(orm, { decisions: fake.decisions });
+
+  await expect(
+    imports.files.uploadFile(owner, { name: "staff.csv", bytes: Buffer.from("Name\nAvery Stone") }),
+  ).rejects.toMatchObject({ code: "CONFLICT", message: "Setup is complete." });
+
+  expect(await imports.reads.listSources(owner)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses an upload after Approve while setup still awaits the owner", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
+  const imports = importServices(orm);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  expect((await instances.readInstance(orm)).step).toBe("owner");
+
+  await expect(
+    imports.files.uploadFile(SETUP_HOLDER, {
+      name: "staff.csv",
+      bytes: Buffer.from("Name,Email\nAvery Stone,avery@example.com"),
+    }),
+  ).rejects.toMatchObject({ code: "CONFLICT" });
+
+  expect(await imports.reads.listSources(SETUP_HOLDER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses a NUL byte as unsupported without storing the file", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importServices(orm, { decisions: fake.decisions });
+
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "staff.csv", bytes: Buffer.from("Name\nAvery\0") }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
+  });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("fails the file when its current attempt is exhausted", async ({ orm, seed }) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", attempt: 2 });
+  const imports = importServices(orm);
+
+  await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 2 });
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, status: "failed", failure: "unavailable" },
+  ]);
+});
+
+test("a failure reported after setup moved on leaves the source mapping", async ({ orm, seed }) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", attempt: 0 });
+  await seed.setupStep("owner");
+  const imports = importServices(orm);
+
+  await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 0 });
+
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
+  expect((await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges).toEqual(
+    [],
+  );
+});
+
+test("a stale failure leaves the source unchanged", async ({ orm, seed }) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", attempt: 2 });
+  const imports = importServices(orm);
+
+  await imports.files.markFileFailed(SYSTEM, { sourceId: source.id, attempt: 1 });
+
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
+});
+
+test("restarts a failed file with the next attempt", async ({ orm, seed }) => {
+  const source = await seed.fileSource({
+    content: "Name\nAvery Stone",
+    status: "failed",
+    failure: "unavailable",
+  });
+  const imports = importServices(orm);
+
+  await imports.files.retryFile(OWNER, source.id);
+
+  expect(await imports.reads.listSources(OWNER)).toMatchObject([
+    { id: source.id, status: "mapping", failure: null },
+  ]);
+  expect(imports.sentJobs).toEqual([
+    { name: "imports.mapFile", payload: { sourceId: source.id, attempt: 1 } },
+  ]);
+});
+
+test("leaves a mapped file unchanged without sending a job", async ({ orm, seed }) => {
+  const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
+  const imports = importServices(orm);
+
+  await imports.files.retryFile(OWNER, source.id);
+
+  expect((await imports.reads.listSources(OWNER)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses a retry after setup is complete without changing the source or sending a job", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner();
+  await seed.setupStep("done");
+  const source = await seed.fileSource({
+    content: "Name\nAvery Stone",
+    status: "failed",
+    failure: "unavailable",
+  });
+  const imports = importServices(orm);
+
+  await expect(imports.files.retryFile(owner, source.id)).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "Setup is complete.",
+  });
+
+  expect((await imports.reads.listSources(owner)).map(importSourceValues)).toEqual([
+    importSourceValues(source),
+  ]);
+  expect(imports.sentJobs).toEqual([]);
+});
+
+test("refuses a ZIP without a workbook without storing it or sending a job", async ({
+  orm,
+  fakeDecisions: fake,
+}) => {
+  const imports = importServices(orm, { decisions: fake.decisions });
+  const bytes = zipSync({ "staff.txt": strToU8("Name\nAvery Stone") });
+
+  await expect(
+    imports.files.uploadFile(OWNER, { name: "staff.xlsx", bytes }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "file", code: "unsupported_file" }],
+  });
+
+  expect(await imports.reads.listSources(OWNER)).toEqual([]);
+  expect(await storedFileIds(orm)).toEqual([]);
+  expect(imports.sentJobs).toEqual([]);
+});
