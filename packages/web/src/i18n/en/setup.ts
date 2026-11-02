@@ -112,29 +112,6 @@ export const setupEn = {
   "setup.import.next": "Review your people",
   "setup.import.reading": "Reading your files…",
   "setup.import.needsAttention": "Your files need attention",
-  "setup.who.title": "Who uses Broccoli",
-  "setup.who.description": "Choose who gets in now. Nothing is sent until the last step.",
-  "setup.who.youTitle": "Which of these people are you?",
-  "setup.who.youHint": "Your account becomes this person's, so you see yourself in People.",
-  "setup.who.notInList": "I’m not in the list",
-  "setup.who.change": "Change",
-  "setup.who.audienceTitle": "Who should use Broccoli?",
-  "setup.who.onlyAdmins": "Only admins",
-  "setup.who.onlyAdminsDetail": "Just you. Invite others from People whenever you’re ready.",
-  "setup.who.adminsAndManagers": "Admins and managers",
-  "setup.who.adminsAndManagersDetail":
-    "You and the {count} people who manage someone. Managers can see everyone in People and edit their team’s job titles.",
-  "setup.who.adminsAndManagersDetailOne":
-    "You and the 1 person who manages someone. Managers can see everyone in People and edit their team’s job titles.",
-  "setup.who.noManagers":
-    "Nobody besides you manages anyone yet. Set managers in the review to choose this.",
-  "setup.who.everyone": "Everyone",
-  "setup.who.everyoneDetail":
-    "You and all {count} people. Everyone can see People and edit their own name and photo; managers can also edit their team’s job titles.",
-  "setup.who.everyoneDetailOne":
-    "You and 1 more person. Everyone can see People and edit their own name and photo; managers can also edit their team’s job titles.",
-  "setup.who.showNames": "Show names",
-  "setup.who.continue": "Continue",
   "setup.invites.who": "{count} people get an invite",
   "setup.invites.whoOne": "1 person gets an invite",
   "setup.invites.loadFailed": "Couldn’t load who gets an invite. Reload the page to try again.",

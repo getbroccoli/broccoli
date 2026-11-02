@@ -71,7 +71,7 @@ const PEOPLE = {
 // After Approve, so it belongs to the server step of setup's last page.
 const WHO_SELF_HOSTED = {
   id: "who",
-  title: "setup.who.title",
+  title: "setup.who.step",
   path: "/setup/who",
   step: "OWNER",
 } as const satisfies PageDefinition;

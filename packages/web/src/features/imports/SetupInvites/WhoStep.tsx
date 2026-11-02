@@ -1,5 +1,11 @@
 import { useQuery } from "@apollo/client/react";
-import { ArrowRight } from "@phosphor-icons/react";
+import {
+  ArrowRight,
+  PaperPlaneTilt,
+  ShieldCheck,
+  UserCircleGear,
+  UsersThree,
+} from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -62,6 +68,9 @@ export function WhoStep({ search }: Props) {
   const managers = counted?.import.managers ?? [];
   const everyone = counted?.import.everyone.length ?? 0;
 
+  const invited = audience === "EVERYONE" ? everyone : managers.length;
+  const count = (n: number) => ({ count: String(n) });
+
   const choose = () => void navigate({ to: next, search: { audience, me: me?.id ?? null } });
 
   return (
@@ -69,10 +78,10 @@ export function WhoStep({ search }: Props) {
       step="who"
       title={t("setup.who.title")}
       description={t("setup.who.description")}
-      width="narrow"
+      width="wide"
     >
       <SetupStepForm
-        width="narrow"
+        width="wide"
         onSubmit={choose}
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
@@ -89,7 +98,75 @@ export function WhoStep({ search }: Props) {
           </div>
         }
       >
-        <section className="flex flex-col gap-3">
+        <p className="-mt-4 flex items-center gap-2.5 self-start rounded-xl bg-brand-soft/60 px-4 py-3 text-[15px] text-brand-deep">
+          <PaperPlaneTilt size={18} className="shrink-0" aria-hidden />
+          <span>
+            <span className="font-semibold">{t("setup.who.nothingSent")}</span>{" "}
+            {t("setup.who.nothingSentDetail")}
+          </span>
+        </p>
+        <fieldset className="flex flex-col gap-6">
+          <legend className="sr-only">{t("setup.who.title")}</legend>
+          <div className="grid gap-3 md:grid-cols-3">
+            <AudienceOption
+              value="ONLY_ADMINS"
+              chosen={audience}
+              onChoose={setAudience}
+              icon={ShieldCheck}
+              title={t("setup.who.onlyAdmins")}
+              who={t("setup.who.onlyAdminsWho")}
+              can={[t("setup.who.onlyAdminsCanRecords"), t("setup.who.onlyAdminsCanInvite")]}
+              cannot={t("setup.who.onlyAdminsCannot")}
+            />
+            <AudienceOption
+              value="ADMINS_AND_MANAGERS"
+              chosen={audience}
+              onChoose={setAudience}
+              disabled={counted !== undefined && managers.length === 0}
+              icon={UserCircleGear}
+              title={t("setup.who.adminsAndManagers")}
+              who={
+                counted && managers.length === 0
+                  ? t("setup.who.noManagers")
+                  : managers.length === 1
+                    ? t("setup.who.adminsAndManagersWhoOne")
+                    : t("setup.who.adminsAndManagersWho", count(managers.length))
+              }
+              can={[t("setup.who.managersCanSee"), t("setup.who.managersCanEdit")]}
+              cannot={t("setup.who.adminsAndManagersCannot")}
+            />
+            <AudienceOption
+              value="EVERYONE"
+              chosen={audience}
+              onChoose={setAudience}
+              icon={UsersThree}
+              title={t("setup.who.everyone")}
+              who={
+                everyone === 1
+                  ? t("setup.who.everyoneWhoOne")
+                  : t("setup.who.everyoneWho", count(everyone))
+              }
+              can={[
+                t("setup.who.everyoneCanSee"),
+                t("setup.who.everyoneCanEdit"),
+                t("setup.who.everyoneCanManage"),
+              ]}
+            />
+          </div>
+          <div className="flex max-w-[62ch] flex-col gap-2 text-[15px] leading-[1.55] text-muted-foreground">
+            <p>
+              {audience === "ONLY_ADMINS"
+                ? t("setup.who.noInvites")
+                : invited === 1
+                  ? t("setup.who.invitesLaterOne")
+                  : t("setup.who.invitesLater", count(invited))}
+            </p>
+            {audience === "ADMINS_AND_MANAGERS" && (
+              <PeopleNames people={managers.map(setupPersonName)} />
+            )}
+          </div>
+        </fieldset>
+        <section className="flex max-w-[592px] flex-col gap-3">
           <h2 className="text-sm font-medium">{t("setup.who.youTitle")}</h2>
           {!changing && (
             <div className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3">
@@ -113,43 +190,6 @@ export function WhoStep({ search }: Props) {
           )}
           <p className="text-sm text-muted-foreground">{t("setup.who.youHint")}</p>
         </section>
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-3 text-sm font-medium">{t("setup.who.audienceTitle")}</legend>
-          <AudienceOption
-            value="ONLY_ADMINS"
-            chosen={audience}
-            onChoose={setAudience}
-            title={t("setup.who.onlyAdmins")}
-            detail={t("setup.who.onlyAdminsDetail")}
-          />
-          <AudienceOption
-            value="ADMINS_AND_MANAGERS"
-            chosen={audience}
-            onChoose={setAudience}
-            disabled={counted !== undefined && managers.length === 0}
-            title={t("setup.who.adminsAndManagers")}
-            detail={
-              counted && managers.length === 0
-                ? t("setup.who.noManagers")
-                : managers.length === 1
-                  ? t("setup.who.adminsAndManagersDetailOne")
-                  : t("setup.who.adminsAndManagersDetail", { count: String(managers.length) })
-            }
-          >
-            <PeopleNames people={managers.map(setupPersonName)} />
-          </AudienceOption>
-          <AudienceOption
-            value="EVERYONE"
-            chosen={audience}
-            onChoose={setAudience}
-            title={t("setup.who.everyone")}
-            detail={
-              everyone === 1
-                ? t("setup.who.everyoneDetailOne")
-                : t("setup.who.everyoneDetail", { count: String(everyone) })
-            }
-          />
-        </fieldset>
         {(error || audiences.error) && (
           <p role="alert" className="text-sm text-destructive">
             {t("setup.invites.loadFailed")}
