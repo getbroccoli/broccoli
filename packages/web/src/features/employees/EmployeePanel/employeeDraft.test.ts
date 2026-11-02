@@ -99,6 +99,7 @@ const saved: EmployeeValues = {
   lastName: "Morgan",
   email: "avery@example.com",
   jobTitle: null,
+  location: null,
   manager: null,
   startDate: null,
   permissionProfiles: null,

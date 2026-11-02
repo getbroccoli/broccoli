@@ -16,6 +16,9 @@ fragment ImportReviewColumns_importEmployee on ImportEmployee {
   jobTitle {
     ...EmployeeValueCell_value @unmask
   }
+  location {
+    ...EmployeeValueCell_value @unmask
+  }
   manager {
     ...ManagerCell_manager @unmask
   }

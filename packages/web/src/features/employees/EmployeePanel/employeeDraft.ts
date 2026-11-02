@@ -6,6 +6,7 @@ export const EMPLOYEE_FIELD_KEYS = [
   "lastName",
   "email",
   "jobTitle",
+  "location",
   "manager",
   "startDate",
   "permissionProfiles",
@@ -16,7 +17,7 @@ export type EmployeeFieldKey = (typeof EMPLOYEE_FIELD_KEYS)[number];
 /** The fields `employee.update` changes; the permission profile has its own mutation. */
 type UpdatedFieldKey = Exclude<EmployeeFieldKey, "permissionProfiles">;
 
-/** An employee's saved values, the manager as their id; null is empty. */
+/** An employee's saved values, the manager and location as their ids; null is empty. */
 export type EmployeeValues = Record<EmployeeFieldKey, string | null>;
 
 /** The fields whose draft differs from the saved value; an empty draft equals an empty value. */
@@ -29,7 +30,7 @@ export function changedFields(
 
 /**
  * One `employee.update` for every changed field but the permission profiles, which save on their
- * own, an emptied one as null and the manager as `managerId`, with the trimmed reason.
+ * own, an emptied one as null and the manager and location by id, with the trimmed reason.
  */
 export function toUpdateInput(
   id: string,
@@ -47,5 +48,8 @@ export function toUpdateInput(
 }
 
 function inputKey(key: UpdatedFieldKey): keyof EmployeeUpdateInput {
-  return key === "manager" ? "managerId" : key;
+  return key === "manager" || key === "location" ? INPUT_KEYS[key] : key;
 }
+
+/** The input name of each field the panel holds by id. */
+export const INPUT_KEYS = { manager: "managerId", location: "locationId" } as const;

@@ -1,0 +1,10 @@
+query LocationPicker {
+  locations {
+    ...LocationName @unmask
+  }
+}
+
+fragment LocationName on Location {
+  id
+  name
+}

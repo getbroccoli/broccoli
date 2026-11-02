@@ -17,6 +17,7 @@ import {
   changedFields,
   type EmployeeFieldKey,
   type EmployeeValues,
+  INPUT_KEYS,
   toUpdateInput,
 } from "./employeeDraft";
 
@@ -106,7 +107,7 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
         failed instanceof PayloadFailure ? (failed.payloadError as typeof payloadError) : null;
       if (refused?.__typename !== "InvalidInputError") return;
       const messages = new Map(
-        refused.fields.map(({ field, code }) => [draftKey(field), fieldMessage(code)]),
+        refused.fields.map(({ field, code }) => [draftKey(field), fieldMessage(field, code)]),
       );
       setEdits((current) =>
         mapEdits(current, ({ value }, key) => ({ value, error: messages.get(key) })),
@@ -143,13 +144,14 @@ function mapEdits<Result>(
 }
 
 function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
-  const { firstName, lastName, email, jobTitle, managerId, startDate, permissionProfiles } =
+  const { firstName, lastName, email, jobTitle, location, managerId, startDate, permissionProfiles } =
     employee;
   return {
     firstName,
     lastName,
     email,
     jobTitle: jobTitle ?? null,
+    location: location?.id ?? null,
     manager: managerId ?? null,
     startDate: startDate ?? null,
     permissionProfiles: permissionProfiles?.join(",") ?? null,
@@ -158,10 +160,13 @@ function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
 
 /** The draft field an input field's error belongs to. */
 function draftKey(field: string): string {
-  return field === "managerId" ? "manager" : field;
+  return Object.entries(INPUT_KEYS).find(([, input]) => input === field)?.[0] ?? field;
 }
 
-function fieldMessage(code: string): string {
+function fieldMessage(field: string, code: string): string {
+  if (field === "locationId" && code === "not_found") {
+    return t("people.panel.error.locationNotFound");
+  }
   return t(FIELD_MESSAGES[code] ?? "people.panel.error.invalid");
 }
 

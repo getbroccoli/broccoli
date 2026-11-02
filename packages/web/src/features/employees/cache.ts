@@ -1,6 +1,10 @@
 import type { ApolloCache } from "@apollo/client";
 
-import { EmployeeNameFragmentDoc, EmployeePanelDocument } from "@/__generated__/graphql";
+import {
+  EmployeeNameFragmentDoc,
+  EmployeePanelDocument,
+  LocationNameFragmentDoc,
+} from "@/__generated__/graphql";
 import { evictRecord } from "@/apollo";
 import { addHistoryLine } from "@/features/records";
 
@@ -45,4 +49,14 @@ export function cachedEmployeeName(cache: ApolloCache, id: string): string | nul
     fragment: EmployeeNameFragmentDoc,
   });
   return employee && `${employee.firstName} ${employee.lastName}`;
+}
+
+/** The name of a location the cache holds, such as one the panel or the picker loaded. */
+export function cachedLocationName(cache: ApolloCache, id: string): string | null {
+  return (
+    cache.readFragment({
+      id: cache.identify({ __typename: "Location", id }),
+      fragment: LocationNameFragmentDoc,
+    })?.name ?? null
+  );
 }

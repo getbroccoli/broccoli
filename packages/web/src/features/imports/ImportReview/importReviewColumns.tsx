@@ -65,6 +65,21 @@ export const IMPORT_REVIEW_COLUMNS: DataTableColumn<ImportReviewRow, SortKey>[] 
     ),
   },
   {
+    id: "location",
+    header: t("setup.review.column.location"),
+    className: "w-[12%] min-w-32 max-w-0",
+    cell: (employee) => (
+      <LeftOutCell leftOut={employee.leftOut}>
+        <EmployeeValueCell
+          employeeId={employee.id}
+          employeeName={nameOf(employee)}
+          field="location"
+          value={employee.location}
+        />
+      </LeftOutCell>
+    ),
+  },
+  {
     id: "manager",
     header: t("setup.review.column.manager"),
     className: "w-[16%] min-w-36 max-w-0",

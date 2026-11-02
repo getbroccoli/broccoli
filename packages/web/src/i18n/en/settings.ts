@@ -1,6 +1,25 @@
 /** English copy under `settings.*`. */
 export const settingsEn = {
   "settings.title": "Settings",
+  "settings.locations.title": "Locations",
+  "settings.locations.description":
+    "Where people work, such as an office or Remote. Pick a person's location on their panel.",
+  "settings.locations.empty": "No locations yet.",
+  "settings.locations.newName": "New location, such as Leeds",
+  "settings.locations.add": "Add",
+  "settings.locations.people": "{count} people",
+  "settings.locations.peopleOne": "1 person",
+  "settings.locations.renameAction": "Rename",
+  "settings.locations.rename": "Rename {name}",
+  "settings.locations.save": "Save",
+  "settings.locations.cancel": "Cancel",
+  "settings.locations.delete": "Delete",
+  "settings.locations.nameRequired": "Enter a name.",
+  "settings.locations.nameTooLong": "Use at most 100 characters.",
+  "settings.locations.nameTaken": "There is already a location called {name}.",
+  "settings.locations.inUse": "Move everyone out of {name} first.",
+  "settings.locations.failed": "The change could not be saved. Try again.",
+  "settings.locations.loadFailed": "Locations could not be loaded.",
   "settings.email.title": "Email",
   "settings.email.description":
     "How Broccoli sends email, such as password reset links. People need email to reset a forgotten password.",

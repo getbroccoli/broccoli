@@ -1,0 +1,69 @@
+query LocationSettings {
+  locations {
+    id
+    name
+    peopleCount
+  }
+}
+
+mutation CreateLocation($input: LocationCreateInput!) {
+  location {
+    create(input: $input) {
+      location {
+        id
+        name
+        peopleCount
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation UpdateLocation($input: LocationUpdateInput!) {
+  location {
+    update(input: $input) {
+      location {
+        id
+        name
+        peopleCount
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation DeleteLocation($input: LocationDeleteInput!) {
+  location {
+    delete(input: $input) {
+      deletedLocationId
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
