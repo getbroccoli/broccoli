@@ -67,10 +67,11 @@ export async function ensureAllowancesOf(
     }),
   );
   const typeIds = [...new Set(policies.map(({ timeOffType }) => timeOffType.id))];
+  const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
   const created = await allowances.insert(
     ids.flatMap((id) =>
       typeIds.flatMap((typeId) => {
-        const own = existing.filter(({ employeeId }) => employeeId === id);
+        const own = existingOf.get(id) ?? [];
         const allowance = newAllowance(people.get(id)!, policies, own, typeId, date);
         return allowance ? [{ employeeId: id, ...allowance }] : [];
       }),
