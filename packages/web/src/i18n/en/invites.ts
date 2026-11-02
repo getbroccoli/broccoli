@@ -1,5 +1,6 @@
 /** English copy under `invites.*`. */
 export const invitesEn = {
+  "invites.state.workspaceOwner": "Workspace owner",
   "invites.state.notInvited": "Not invited",
   "invites.state.pending": "Pending",
   "invites.state.joined": "Joined",

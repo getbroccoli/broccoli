@@ -1,6 +1,10 @@
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
-import { createInstanceService, type MailSettingsService } from "../../../../core/instance";
+import {
+  createInstanceService,
+  createOwnerService,
+  type MailSettingsService,
+} from "../../../../core/instance";
 import type { JobHandlers, JobQueue } from "../../../../core/jobs";
 import type { Logger } from "../../../../core/logger";
 import type { HistoryLine } from "../../../../core/records";
@@ -29,6 +33,7 @@ import { appendSignInLine, chooseDelivery, createInvites } from "./createInvites
 import { sendInviteJob } from "./sendInviteJob";
 
 const instances = createInstanceService();
+const owners = createOwnerService();
 
 /** An admin's invites to sign in, from sending them to the person joining. */
 export interface EmployeeInviteService {
@@ -198,15 +203,16 @@ export function createEmployeeInviteService({
     readStatuses: async (ctx, ids) => {
       ctx.require("MANAGE_WORKSPACE");
       const employeeIds = ids.flatMap((id) => parseUuid(id) ?? []);
-      const [invitees, open] = await Promise.all([
+      const [invitees, open, owner] = await Promise.all([
         invites.findInvitees(employeeIds),
         invites.findOpen(employeeIds),
+        owners.readOwner(orm),
       ]);
       const openOf = new Map(open.map((invite) => [invite.employeeId, invite]));
       return new Map(
         invitees.map((invitee) => [
           invitee.employee.id,
-          signInStatus(invitee, openOf.get(invitee.employee.id)),
+          signInStatus(invitee, openOf.get(invitee.employee.id), owner),
         ]),
       );
     },

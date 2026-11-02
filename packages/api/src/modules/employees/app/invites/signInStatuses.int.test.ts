@@ -1,6 +1,59 @@
 import { onTestFinished, vi } from "vitest";
 import { employeeInviteService, employeeServices, expect, test } from "#test/support";
 
+test("identifies the workspace owner by email without linking their employee", async ({
+  orm,
+  seed,
+}) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee({ email: "owner@example.com" });
+
+  const statuses = await employeeInviteService(orm).readStatuses(owner, [employee.id]);
+
+  expect(statuses.get(employee.id)).toMatchObject({
+    state: "not_invited",
+    isWorkspaceOwner: true,
+    canBeInvited: false,
+  });
+  expect(await employeeServices(orm).readEmployee(owner, employee.id)).toMatchObject({
+    userId: null,
+  });
+});
+
+test("identifies the linked owner even when their work email differs", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee({ userId: owner.user!.userId });
+
+  const statuses = await employeeInviteService(orm).readStatuses(owner, [employee.id]);
+
+  expect(statuses.get(employee.id)).toMatchObject({
+    state: "joined",
+    isWorkspaceOwner: true,
+    canBeInvited: false,
+  });
+});
+
+test("does not identify another account as the workspace owner", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const user = await seed.user({ email: "other@example.com" });
+  const employee = await seed.employee({ email: user.email });
+  const linked = await seed.employee({ email: "owner@example.com", userId: user.id });
+
+  const statuses = await employeeInviteService(orm).readStatuses(owner, [employee.id, linked.id]);
+
+  expect(statuses.get(employee.id)).toMatchObject({ isWorkspaceOwner: false, canBeInvited: false });
+  expect(statuses.get(linked.id)).toMatchObject({ isWorkspaceOwner: false, canBeInvited: false });
+});
+
+test("does not identify demo data as the workspace owner by email", async ({ orm, seed }) => {
+  const owner = await seed.owner();
+  const employee = await seed.employee({ email: "owner@example.com", isDemo: true });
+
+  const statuses = await employeeInviteService(orm).readStatuses(owner, [employee.id]);
+
+  expect(statuses.get(employee.id)).toMatchObject({ isWorkspaceOwner: false, canBeInvited: false });
+});
+
 test("reports not invited before a person has an invite", async ({ orm, seed }) => {
   const owner = await seed.owner();
   const employee = await seed.employee();
@@ -11,6 +64,7 @@ test("reports not invited before a person has an invite", async ({ orm, seed }) 
     state: "not_invited",
     expiresAt: null,
     notSent: false,
+    isWorkspaceOwner: false,
     emailHasAccount: false,
     canBeInvited: true,
   });
@@ -35,6 +89,7 @@ test("reports pending with an expiry seven days after sending", async ({ orm, se
     state: "pending",
     expiresAt: sent!.expiresAt,
     notSent: false,
+    isWorkspaceOwner: false,
     emailHasAccount: false,
     canBeInvited: true,
   });
@@ -60,6 +115,7 @@ test("keeps an expired invite pending", async ({ orm, seed }) => {
     state: "pending",
     expiresAt: sent!.expiresAt,
     notSent: false,
+    isWorkspaceOwner: false,
     emailHasAccount: false,
     canBeInvited: true,
   });

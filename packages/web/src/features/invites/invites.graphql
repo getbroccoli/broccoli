@@ -66,6 +66,7 @@ mutation CancelInvite($input: InviteCancelInput!) {
 
 fragment SignInStatus on SignInStatus {
   state
+  isWorkspaceOwner
   expiresAt
   notSent
   emailHasAccount

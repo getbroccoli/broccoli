@@ -24,6 +24,8 @@ export type SignInState = "not_invited" | "pending" | "joined";
 /** A person's sign-in state, and what an admin needs to know about their invite. */
 export interface SignInStatus {
   state: SignInState;
+  /** The linked user is the owner, or an unlinked, non-demo employee has the owner's email. */
+  isWorkspaceOwner: boolean;
   /** When the pending invite stops working; null without one. */
   expiresAt: Date | null;
   /** Whether sending the pending invite's email failed. */
@@ -119,11 +121,21 @@ export function isExpired(invite: Invite): boolean {
 
 /** A person's sign-in state from whether they joined and their open invite. */
 export function signInStatus(
-  invitee: { employee: { userId: string | null }; isDemo: boolean; emailHasAccount: boolean },
+  invitee: {
+    employee: { userId: string | null; email: string };
+    isDemo: boolean;
+    emailHasAccount: boolean;
+  },
   open: Invite | undefined,
+  owner: { userId: string; email: string } | null,
 ): SignInStatus {
   const { emailHasAccount } = invitee;
-  const known = { emailHasAccount, canBeInvited: canBeInvited(invitee) };
+  const isWorkspaceOwner =
+    !!owner &&
+    (invitee.employee.userId
+      ? invitee.employee.userId === owner.userId
+      : !invitee.isDemo && invitee.employee.email.toLowerCase() === owner.email);
+  const known = { emailHasAccount, isWorkspaceOwner, canBeInvited: canBeInvited(invitee) };
   if (invitee.employee.userId) {
     return { state: "joined", expiresAt: null, notSent: false, ...known };
   }
