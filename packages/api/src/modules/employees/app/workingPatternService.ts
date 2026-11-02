@@ -2,12 +2,16 @@ import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Orm, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { parseUuid } from "../../../utils";
+import { type CalendarDate, parseUuid } from "../../../utils";
 import { workingPatternRepository } from "../db";
 import {
+  type BankHolidayCalendar,
+  parseBankHolidayCalendar,
   parseDateField,
   parsePatternName,
   parseWeek,
+  weekInForce,
+  type PatternWeek,
   type WeekdayMinutes,
   type WorkingPattern,
 } from "../domain";
@@ -20,17 +24,28 @@ import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
 export interface WorkingPatternService {
   /** Every pattern with its weeks, by name. Admins only. */
   listPatterns: (ctx: SecurityContext) => Promise<WorkingPattern[]>;
-  /** A new pattern whose only week applies from the beginning. Admins only. */
+  /**
+   * A new pattern whose only week applies from the beginning, with England and Wales bank holidays
+   * unless another calendar is given. Admins only.
+   */
   createPattern: (
     ctx: SecurityContext,
-    input: { name: string; minutes: WeekdayMinutes; fullDayMinutes: number },
+    input: {
+      name: string;
+      minutes: WeekdayMinutes;
+      fullDayMinutes: number;
+      bankHolidayCalendar?: string;
+    },
   ) => Promise<WorkingPattern>;
   /** Renames a pattern for every date. Admins only. */
   renamePattern: (
     ctx: SecurityContext,
     input: { workingPatternId: string; name: string },
   ) => Promise<WorkingPattern>;
-  /** New minutes for a pattern from a date, replacing a week that starts on it. Admins only. */
+  /**
+   * New minutes or calendar for a pattern from a date, replacing a week that starts on it; without
+   * a calendar it keeps the one in force on that date. Admins only.
+   */
   changePattern: (
     ctx: SecurityContext,
     input: {
@@ -38,6 +53,7 @@ export interface WorkingPatternService {
       effectiveFrom: string;
       minutes: WeekdayMinutes;
       fullDayMinutes: number;
+      bankHolidayCalendar?: string;
     },
   ) => Promise<WorkingPattern>;
   /** Removes the week that starts on a date, so the one before applies again. Admins only. */
@@ -63,14 +79,20 @@ export function createWorkingPatternService({
     async createPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const name = parsePatternName(input.name);
-      const week = parseWeek(input);
+      const week = {
+        ...parseWeek(input),
+        bankHolidayCalendar: optionalCalendar(input.bankHolidayCalendar) ?? "england_and_wales",
+      };
       const saved = await transact(async (tx) => {
         const repository = workingPatternRepository(tx);
         await repository.lockForWrites();
         refuseTakenName(await repository.findPatterns(), name);
         return findPattern(tx, await repository.insertPattern(name, week));
       });
-      logger.info({ workingPatternId: saved.id }, "Created a working pattern");
+      logger.info(
+        { workingPatternId: saved.id, bankHolidayCalendar: week.bankHolidayCalendar },
+        "Created a working pattern",
+      );
       return saved;
     },
 
@@ -97,11 +119,16 @@ export function createWorkingPatternService({
       ctx.require("MANAGE_WORKSPACE");
       const effectiveFrom = parseDateField("effectiveFrom", input.effectiveFrom);
       const week = parseWeek(input);
+      const calendar = optionalCalendar(input.bankHolidayCalendar);
       const saved = await transact(async (tx) => {
         const repository = workingPatternRepository(tx);
         await repository.lockForWrites();
         const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
-        await repository.saveWeek(pattern.id, { ...week, effectiveFrom });
+        await repository.saveWeek(pattern.id, {
+          ...week,
+          effectiveFrom,
+          bankHolidayCalendar: calendar ?? calendarInForce(pattern.weeks, effectiveFrom),
+        });
         publishWorkingPatternChange(
           tx,
           await repository.findEmployeesOnPattern(pattern.id),
@@ -109,7 +136,14 @@ export function createWorkingPatternService({
         );
         return findPattern(tx, pattern.id);
       });
-      logger.info({ workingPatternId: saved.id, effectiveFrom }, "Changed a working pattern");
+      logger.info(
+        {
+          workingPatternId: saved.id,
+          effectiveFrom,
+          bankHolidayCalendar: calendarInForce(saved.weeks, effectiveFrom),
+        },
+        "Changed a working pattern",
+      );
       return saved;
     },
 
@@ -181,6 +215,15 @@ function existingPattern(patterns: readonly WorkingPattern[], workingPatternId: 
     throw new ApplicationError("NOT_FOUND", "No working pattern has this id.");
   }
   return pattern;
+}
+
+function calendarInForce(weeks: readonly PatternWeek[], date: CalendarDate): BankHolidayCalendar {
+  // A pattern's first week starts from the beginning, so one is always in force.
+  return weekInForce(weeks, date)!.bankHolidayCalendar;
+}
+
+function optionalCalendar(value: string | undefined): BankHolidayCalendar | null {
+  return value === undefined ? null : parseBankHolidayCalendar(value);
 }
 
 function refuseTakenName(patterns: readonly WorkingPattern[], name: string) {

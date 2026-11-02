@@ -63,6 +63,28 @@ test("assigning a pattern publishes the employee and assignment start date", asy
   expect(events[0]!.from).toBe("2026-09-01");
 });
 
+test("changing only a calendar publishes its affected employees and change date", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee();
+  const { events, transact } = workingPatternChangedEvents(orm);
+  const patterns = workingPatternService(orm, { transact });
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+
+  await patterns.changePattern(OWNER, {
+    workingPatternId: standard.id,
+    effectiveFrom: "2026-07-01",
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    fullDayMinutes: 450,
+    bankHolidayCalendar: "scotland",
+  });
+
+  expect(events).toHaveLength(1);
+  expect(events[0]!.employeeIds).toEqual(expect.arrayContaining([employee.id]));
+  expect(events[0]!.from).toBe("2026-07-01");
+});
+
 function workingPatternChangedEvents(orm: Orm) {
   const events: DomainEvents["employees.working_pattern_changed"][] = [];
   const eventBus = createEventBus(createLogger("silent"));

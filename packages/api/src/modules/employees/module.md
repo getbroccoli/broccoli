@@ -16,7 +16,7 @@ A working pattern is the minutes a person works on each weekday, Monday to Sunda
 ### Data model
 
 - **`working_patterns`:** a named way of working, such as "Standard" or "Part-time Tue–Thu". The migration creates Standard (key `standard_working_pattern`), which cannot be deleted.
-- **`working_pattern_weeks`:** a pattern's minutes for each weekday and its full day, from a date until its next week. A pattern's first week has no date: it applies from the beginning.
+- **`working_pattern_weeks`:** a pattern's minutes for each weekday, its full day and its bank holiday calendar, from a date until its next week. A pattern's first week has no date: it applies from the beginning.
 - **`policy_group_working_patterns`:** which working pattern a group works by default, from a date to a date. Standard is linked to "Everyone" for all dates.
 - **`employee_working_pattern_assignments`:** one person's own working pattern between two dates, ahead of their group's.
 
@@ -28,7 +28,7 @@ For one person on one date:
 2. otherwise the working pattern their group works on that date;
 3. otherwise none.
 
-That pattern's week on that date gives the minutes and the full day.
+That pattern's week on that date gives the minutes, the full day and whose bank holidays apply.
 
 ### Rules
 
@@ -38,6 +38,13 @@ That pattern's week on that date gives the minutes and the full day.
 - Only admins change working patterns, group links and assignments. A person's working pattern is readable by them, everyone above them in the reporting line, and admins.
 - Changes to a person's own assignment are written to history as the `working_pattern` record type, apart from the employee's own history, since not everyone who reads a person may read their working pattern. Resetting all employees purges both.
 - Every change that can move someone's working weeks publishes `employees.working_pattern_changed` with the people concerned and the first date that changed. Other modules read working weeks through `WorkingPatternService.readWorkingWeeks`, never these tables.
+
+### Bank holidays
+
+- Each pattern week names a **bank holiday calendar**: `england_and_wales` (the default, and Standard's), `scotland` or `northern_ireland`. Someone moving to Glasgow from 1 July is put on a Scotland pattern from 1 July, so earlier bank holidays keep England and Wales.
+- Changing a pattern's calendar is a new week from a date, like a change of minutes. A change that gives no calendar keeps the one in force on its date.
+- The dates come from a `BankHolidaySource` (`integrations/bankHolidays`). Today's source answers from GOV.UK's dates copied into the code (`https://www.gov.uk/bank-holidays.json`), so every workspace has them offline; a new or cancelled bank holiday is a code change. Another source, such as one fetching the feed, replaces it without changing the reads.
+- Other modules read the dates through `BankHolidayService.readBankHolidays`, combining them with each working week's calendar.
 
 ### Example: part-time from September
 

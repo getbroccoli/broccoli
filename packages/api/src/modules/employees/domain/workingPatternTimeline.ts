@@ -29,7 +29,7 @@ export interface WorkingPatternTimeline {
   patternWeeks: ReadonlyMap<string, readonly PatternWeek[]>;
 }
 
-/** The working weeks from `from` to `until`: one wherever minutes or full day change. */
+/** The working weeks from `from` to `until`: one wherever minutes, full day or calendar change. */
 export function workingWeeksOf(
   timeline: WorkingPatternTimeline,
   from: CalendarDate,
@@ -44,6 +44,7 @@ export function workingWeeksOf(
         effectiveFrom: date,
         minutes: week?.minutes ?? null,
         fullDayMinutes: week?.fullDayMinutes ?? null,
+        bankHolidayCalendar: week?.bankHolidayCalendar ?? null,
       });
     }
   }
@@ -86,6 +87,11 @@ export function makeRoomForDatedPattern(
   return { ended, replaced };
 }
 
+/** A pattern's week in force on `date`: the last that starts on or before it. */
+export function weekInForce(weeks: readonly PatternWeek[], date: CalendarDate): PatternWeek | null {
+  return weeks.findLast((week) => isBefore(week.effectiveFrom, date, true)) ?? null;
+}
+
 /** Whether a dated row applies on `date`. */
 export function coversDate(
   row: { effectiveFrom: CalendarDate | null; effectiveUntil: CalendarDate | null },
@@ -104,7 +110,7 @@ function isBefore(start: CalendarDate | null, date: CalendarDate, orSame = false
 function patternWeekOn(timeline: WorkingPatternTimeline, date: CalendarDate): PatternWeek | null {
   const workingPatternId = patternOn(timeline, date);
   const weeks = workingPatternId ? (timeline.patternWeeks.get(workingPatternId) ?? []) : [];
-  return weeks.findLast((week) => isBefore(week.effectiveFrom, date, true)) ?? null;
+  return weekInForce(weeks, date);
 }
 
 /** `from` and every later date up to `until` where a row or week starts, or a row has ended. */
@@ -134,6 +140,7 @@ function changeDates(
 function isSameWeek(week: WorkingWeek, pattern: PatternWeek | null): boolean {
   return (
     week.fullDayMinutes === (pattern?.fullDayMinutes ?? null) &&
+    week.bankHolidayCalendar === (pattern?.bankHolidayCalendar ?? null) &&
     (week.minutes ?? []).join() === (pattern?.minutes ?? []).join()
   );
 }

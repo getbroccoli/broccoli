@@ -12,12 +12,40 @@ test("an admin creates a pattern with one week applying from the beginning", asy
   expect(pattern).toMatchObject({
     name: "Tuesday to Thursday",
     isStandard: false,
-    weeks: [{ effectiveFrom: null, minutes: [0, 450, 450, 450, 0, 0, 0], fullDayMinutes: 450 }],
+    weeks: [
+      {
+        effectiveFrom: null,
+        minutes: [0, 450, 450, 450, 0, 0, 0],
+        fullDayMinutes: 450,
+        bankHolidayCalendar: "england_and_wales",
+      },
+    ],
   });
   expect(await patterns.listPatterns(ADMIN)).toContainEqual(pattern);
 });
 
-test("changing a pattern on an existing date replaces that week's minutes", async ({ orm }) => {
+test("creating a pattern keeps its chosen bank holiday calendar", async ({ orm }) => {
+  const patterns = workingPatternService(orm);
+
+  const pattern = await patterns.createPattern(OWNER, {
+    name: "Standard Scotland",
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    fullDayMinutes: 450,
+    bankHolidayCalendar: "scotland",
+  });
+
+  expect(pattern.weeks).toEqual([
+    {
+      effectiveFrom: null,
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "scotland",
+    },
+  ]);
+  expect(await patterns.listPatterns(OWNER)).toContainEqual(pattern);
+});
+
+test("changing minutes on an existing date preserves that week's calendar", async ({ orm }) => {
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   await patterns.changePattern(OWNER, {
@@ -25,6 +53,7 @@ test("changing a pattern on an existing date replaces that week's minutes", asyn
     effectiveFrom: "2026-09-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
     fullDayMinutes: 480,
+    bankHolidayCalendar: "scotland",
   });
 
   const changed = await patterns.changePattern(OWNER, {
@@ -35,8 +64,18 @@ test("changing a pattern on an existing date replaces that week's minutes", asyn
   });
 
   expect(changed.weeks).toEqual([
-    { effectiveFrom: null, minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-09-01", minutes: [420, 420, 420, 420, 420, 0, 0], fullDayMinutes: 450 },
+    {
+      effectiveFrom: null,
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-09-01",
+      minutes: [420, 420, 420, 420, 420, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "scotland",
+    },
   ]);
   expect(await patterns.listPatterns(OWNER)).toContainEqual(changed);
 });
@@ -171,4 +210,52 @@ test("removing a date without a pattern week leaves its first week intact", asyn
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
 
   expect(await patterns.listPatterns(OWNER)).toContainEqual(standard);
+});
+
+test("changing minutes keeps the calendar in effect on that date despite a later calendar change", async ({
+  orm,
+}) => {
+  const patterns = workingPatternService(orm);
+  const pattern = await patterns.createPattern(OWNER, {
+    name: "Standard Scotland",
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    fullDayMinutes: 450,
+    bankHolidayCalendar: "scotland",
+  });
+  await patterns.changePattern(OWNER, {
+    workingPatternId: pattern.id,
+    effectiveFrom: "2026-10-01",
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    fullDayMinutes: 450,
+    bankHolidayCalendar: "northern_ireland",
+  });
+
+  const changed = await patterns.changePattern(OWNER, {
+    workingPatternId: pattern.id,
+    effectiveFrom: "2026-07-01",
+    minutes: [420, 420, 420, 420, 420, 0, 0],
+    fullDayMinutes: 450,
+  });
+
+  expect(changed.weeks).toEqual([
+    {
+      effectiveFrom: null,
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "scotland",
+    },
+    {
+      effectiveFrom: "2026-07-01",
+      minutes: [420, 420, 420, 420, 420, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "scotland",
+    },
+    {
+      effectiveFrom: "2026-10-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "northern_ireland",
+    },
+  ]);
+  expect(await patterns.listPatterns(OWNER)).toContainEqual(changed);
 });

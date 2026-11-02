@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
-import { check, date, foreignKey, integer, pgTable, unique, uuid } from "drizzle-orm/pg-core";
+import { check, date, foreignKey, integer, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 
 import type { CalendarDate } from "../../../utils";
+import { BANK_HOLIDAY_CALENDARS } from "../domain";
 import { workingPatterns } from "./workingPatternsTable";
 
 /**
@@ -26,6 +27,10 @@ export const workingPatternWeeks = pgTable(
     sundayMinutes: integer("sunday_minutes").notNull(),
     /** The minutes one day of leave stands for. */
     fullDayMinutes: integer("full_day_minutes").notNull(),
+    /** Whose bank holidays apply. Text with a check, so a new region is no type migration. */
+    bankHolidayCalendar: text("bank_holiday_calendar", { enum: BANK_HOLIDAY_CALENDARS })
+      .notNull()
+      .default("england_and_wales"),
   },
   (table) => [
     // Named here: the generated name would pass Postgres's 63-character limit.
@@ -47,5 +52,9 @@ export const workingPatternWeeks = pgTable(
         ${table.sundayMinutes}) between 1 and ${table.fullDayMinutes}`,
     ),
     check("working_pattern_weeks_full_day_in_a_day", sql`${table.fullDayMinutes} <= 1440`),
+    check(
+      "working_pattern_weeks_bank_holiday_calendar_known",
+      sql`${table.bankHolidayCalendar} in ('england_and_wales', 'scotland', 'northern_ireland')`,
+    ),
   ],
 );

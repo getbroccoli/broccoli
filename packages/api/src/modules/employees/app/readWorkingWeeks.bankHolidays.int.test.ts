@@ -1,0 +1,78 @@
+import { expect, OWNER, test, workingPatternService } from "#test/support";
+
+test("assigning a Scotland pattern changes the calendar from its date despite identical hours", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee();
+  const patterns = workingPatternService(orm);
+  const pattern = await patterns.createPattern(OWNER, {
+    name: "Standard Scotland",
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    fullDayMinutes: 450,
+    bankHolidayCalendar: "scotland",
+  });
+  await patterns.assignPattern(OWNER, {
+    employeeId: employee.id,
+    workingPatternId: pattern.id,
+    effectiveFrom: "2026-07-01",
+  });
+
+  const weeks = await patterns.readWorkingWeeks(OWNER, {
+    employeeIds: [employee.id],
+    from: "2026-01-01",
+    until: "2026-12-31",
+  });
+
+  expect(weeks.get(employee.id)).toEqual([
+    {
+      effectiveFrom: "2026-01-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-07-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "scotland",
+    },
+  ]);
+});
+
+test("changing only a pattern's calendar starts a new working week from its date", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee();
+  const patterns = workingPatternService(orm);
+  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  await patterns.changePattern(OWNER, {
+    workingPatternId: standard.id,
+    effectiveFrom: "2026-07-01",
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    fullDayMinutes: 450,
+    bankHolidayCalendar: "scotland",
+  });
+
+  const weeks = await patterns.readWorkingWeeks(OWNER, {
+    employeeIds: [employee.id],
+    from: "2026-01-01",
+    until: "2026-12-31",
+  });
+
+  expect(weeks.get(employee.id)).toEqual([
+    {
+      effectiveFrom: "2026-01-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-07-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "scotland",
+    },
+  ]);
+});

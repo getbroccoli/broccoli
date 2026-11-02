@@ -23,6 +23,7 @@ test("an employee can read their own working weeks", async ({ orm, seed }) => {
       effectiveFrom: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
     },
   ]);
 });
@@ -49,6 +50,7 @@ test("a manager above the direct manager can read the employee's working weeks",
       effectiveFrom: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
     },
   ]);
 });
@@ -67,6 +69,7 @@ test("an admin can read an unrelated employee's working weeks", async ({ orm, se
       effectiveFrom: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
     },
   ]);
 });

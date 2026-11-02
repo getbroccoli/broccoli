@@ -4,12 +4,28 @@ import { type CalendarDate, parseCalendarDate } from "../../../utils";
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
 
+/** Whose bank holidays apply: one nation's, as GOV.UK publishes them. */
+export const BANK_HOLIDAY_CALENDARS = [
+  "england_and_wales",
+  "scotland",
+  "northern_ireland",
+] as const;
+export type BankHolidayCalendar = (typeof BANK_HOLIDAY_CALENDARS)[number];
+
+/** One nation's bank holiday. */
+export interface BankHoliday {
+  calendar: BankHolidayCalendar;
+  date: CalendarDate;
+  name: string;
+}
+
 /** A pattern's minutes from a date until its next week starts; null from the beginning. */
 export interface PatternWeek {
   effectiveFrom: CalendarDate | null;
   minutes: WeekdayMinutes;
   /** The minutes one day of leave stands for. */
   fullDayMinutes: number;
+  bankHolidayCalendar: BankHolidayCalendar;
 }
 
 /** A named way of working that groups and people are put on. */
@@ -23,13 +39,14 @@ export interface WorkingPattern {
 }
 
 /**
- * What a person works from a date until the next working week starts; minutes and full day are
- * null while they have no working pattern.
+ * What a person works from a date until the next working week starts, and whose bank holidays
+ * apply; all null while they have no working pattern.
  */
 export interface WorkingWeek {
   effectiveFrom: CalendarDate;
   minutes: WeekdayMinutes | null;
   fullDayMinutes: number | null;
+  bankHolidayCalendar: BankHolidayCalendar | null;
 }
 
 /** The name a pattern is saved under; refuses a blank one. */
@@ -63,6 +80,15 @@ export function parseWeek(week: { minutes: readonly number[]; fullDayMinutes: nu
     throw invalidInput([{ field: "fullDayMinutes", code: "shorter_than_longest_day" }]);
   }
   return { minutes: [...minutes] as unknown as WeekdayMinutes, fullDayMinutes };
+}
+
+/** A calendar sent as `bankHolidayCalendar`; refuses one that is not known. */
+export function parseBankHolidayCalendar(value: string): BankHolidayCalendar {
+  const calendar = BANK_HOLIDAY_CALENDARS.find((known) => known === value);
+  if (!calendar) {
+    throw invalidInput([{ field: "bankHolidayCalendar", code: "invalid" }]);
+  }
+  return calendar;
 }
 
 /** A `YYYY-MM-DD` date sent in `field`; refuses anything else. */

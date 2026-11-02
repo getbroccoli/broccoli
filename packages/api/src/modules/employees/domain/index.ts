@@ -22,9 +22,13 @@ export {
 } from "./location";
 export { managerChanges } from "./managerChanges";
 export {
+  BANK_HOLIDAY_CALENDARS,
+  parseBankHolidayCalendar,
   parseDateField,
   parsePatternName,
   parseWeek,
+  type BankHoliday,
+  type BankHolidayCalendar,
   type PatternWeek,
   type WeekdayMinutes,
   type WorkingPattern,
@@ -34,6 +38,7 @@ export {
   coversDate,
   makeRoomForDatedPattern,
   patternOn,
+  weekInForce,
   workingWeeksOf,
   type DatedPattern,
   type GroupMembership,

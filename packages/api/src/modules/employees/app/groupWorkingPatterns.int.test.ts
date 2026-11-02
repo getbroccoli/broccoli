@@ -44,11 +44,17 @@ test("a dated group switch changes only its members without their own assignment
       effectiveFrom: "2026-08-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
     },
   ];
   expect(weeks.get(member.id)).toEqual([
     ...unchanged,
-    { effectiveFrom: "2026-09-01", minutes: [450, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 },
+    {
+      effectiveFrom: "2026-09-01",
+      minutes: [450, 0, 0, 0, 0, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
   ]);
   expect(weeks.get(assigned.id)).toEqual(unchanged);
   expect(weeks.get(outsider.id)).toEqual(unchanged);
@@ -92,9 +98,24 @@ test("correcting a group link keeps the later link and its boundary", async ({ o
     until: "2026-10-31",
   });
   expect(weeks.get(employee.id)).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-09-01", minutes: [0, 0, 0, 0, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
+    {
+      effectiveFrom: "2026-08-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-09-01",
+      minutes: [0, 0, 0, 0, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    {
+      effectiveFrom: "2026-10-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
   ]);
 });
 
@@ -119,8 +140,13 @@ test("ending a group pattern leaves its members without a pattern from the next 
       })
     ).get(employee.id),
   ).toEqual([
-    { effectiveFrom: "2026-09-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null },
+    {
+      effectiveFrom: "2026-09-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
   ]);
 });
 
@@ -153,8 +179,13 @@ test("removing a dated group link leaves a gap without reopening the earlier lin
       })
     ).get(employee.id),
   ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-09-01", minutes: null, fullDayMinutes: null },
+    {
+      effectiveFrom: "2026-08-01",
+      minutes: [450, 450, 450, 450, 450, 0, 0],
+      fullDayMinutes: 450,
+      bankHolidayCalendar: "england_and_wales",
+    },
+    { effectiveFrom: "2026-09-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
   ]);
 });
 
