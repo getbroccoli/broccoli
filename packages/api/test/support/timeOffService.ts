@@ -1,9 +1,16 @@
 import { asc, eq } from "drizzle-orm";
 
-import type { Orm, Transact, Tx } from "../../src/core/db";
+import { type Orm, type Transact, transactor, type Tx } from "../../src/core/db";
+import { createEventBus } from "../../src/core/events";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
-import { createTimeOffService } from "../../src/modules/timeOff";
+import { createDemoFillService } from "../../src/modules/demo";
+import { createEmployeeReadService } from "../../src/modules/employees";
+import {
+  allowancesOnEmploymentChanges,
+  createTimeOffService,
+  timeOffModule,
+} from "../../src/modules/timeOff";
 import {
   allowanceLedgerLines,
   allowances,
@@ -38,6 +45,34 @@ export async function linkStatutoryMinimumToEveryone(orm: Orm, seed: TestSeed, t
   await transact((tx) =>
     service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
   );
+}
+
+/** People added or given a new start date get their allowances, as startup composes it. */
+export function employmentChanges(orm: Orm) {
+  return allowancesOnEmploymentChanges(timeOffService(orm));
+}
+
+/** The demo fill on `orm`, linking "Everyone" to the demo's time off policies. */
+export function demoFillService(orm: Orm) {
+  const dependencies = { orm, transact: testTransactor(orm), logger: createLogger("silent") };
+  return createDemoFillService({
+    employmentChanges: employmentChanges(orm),
+    timeOff: timeOffService(orm),
+    employeeReads: createEmployeeReadService(dependencies),
+  });
+}
+
+/** Transactions on `orm` whose committed events reach time off's handlers, and no one else's. */
+export function transactWithTimeOffEvents(orm: Orm): Transact {
+  const eventBus = createEventBus(createLogger("silent"));
+  eventBus.subscribe(
+    timeOffModule({
+      timeOff: timeOffService(orm),
+      transact: testTransactor(orm),
+      logger: createLogger("silent"),
+    }).events!,
+  );
+  return transactor(orm, eventBus);
 }
 
 /** Deletes every employee and the groups' time off policies, as startup composes it. */

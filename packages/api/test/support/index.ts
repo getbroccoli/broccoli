@@ -56,7 +56,6 @@ export {
 } from "./services";
 export type { EmployeeServices } from "./services";
 export {
-  demoFill,
   employeeSetup,
   fileStorage,
   instances,
@@ -103,8 +102,10 @@ export { createGraphqlContext } from "./graphqlContext";
 export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
 export {
   type AllowanceLine,
+  demoFillService,
   linkStatutoryMinimumToEveryone,
   readAllowances,
   timeOffService,
+  transactWithTimeOffEvents,
 } from "./timeOffService";
 export { demoService } from "./demoService";

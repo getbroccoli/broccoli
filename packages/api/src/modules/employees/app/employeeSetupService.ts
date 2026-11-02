@@ -63,14 +63,14 @@ export interface EmployeeSetupService {
   ) => Promise<ImportedEmployees & { idsByEmail: ReadonlyMap<string, string> }>;
   /**
    * Adds the demo employees with their avatars to an instance without employees, with `cause`
-   * on their creation lines; otherwise does nothing.
+   * on their creation lines, and returns true; otherwise does nothing and returns false.
    */
   createDemoEmployees: (
     ctx: SecurityContext,
     tx: Tx,
     demoEmployees: readonly DemoEmployee[],
     cause: HistoryAppend["cause"],
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   /** Whether the instance holds demo employees, such as when setup leaves the demo. */
   hasDemoEmployees: (ctx: SecurityContext, db: Orm | Tx) => Promise<boolean>;
   /** The emails among these that an employee already has, so an import adds no one with them. */
@@ -132,7 +132,7 @@ export function createEmployeeSetupService(
     async createDemoEmployees(ctx, tx, demoEmployees, cause) {
       ctx.require("MANAGE_WORKSPACE");
       if (await employeeRepository(tx).hasAny()) {
-        return;
+        return false;
       }
       const placed = await placeInLocations(
         tx,
@@ -152,6 +152,7 @@ export function createEmployeeSetupService(
       const managers = await setNewEmployeeManagers(tx, employees, managerEmails);
       await recordCreatedEmployees(ctx, tx, employees, cause, managers);
       await employeesAdded(employmentChanges, ctx, tx, employees);
+      return true;
     },
     hasDemoEmployees(ctx, db) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");

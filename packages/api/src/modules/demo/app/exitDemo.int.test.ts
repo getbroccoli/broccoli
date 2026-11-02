@@ -9,8 +9,7 @@ import {
   test,
   instances,
   setupSteps,
-  demoFill,
-  OWNER,
+  demoFillService,
   timeOffService,
 } from "#test/support";
 
@@ -20,21 +19,15 @@ test("exiting the demo removes the group's time off policies", async ({ orm, see
   await seed.assignment();
   const owner = await seed.owner();
   await companyService(orm).update(owner, { name: "Acme Corp" });
-  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
   const service = timeOffService(orm);
   const policyGroupId = await seed.everyoneGroupId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
-  );
-  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([policy]);
+  expect(await service.readGroupPolicies(owner, { policyGroupId })).toHaveLength(4);
 
   await demoService(orm).exitDemo(owner);
 
-  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([]);
+  expect(await service.readGroupPolicies(owner, { policyGroupId })).toEqual([]);
 });
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({
@@ -49,7 +42,7 @@ test("exiting the demo deletes every employee and their avatars and returns to c
   const owner = await seed.owner();
   await company.update(owner, { name: "Acme Corp" });
   const today = parseCalendarDate("2026-10-13")!;
-  await transact(await demoFill.prepareDemoFill(today));
+  await transact(await demoFillService(orm).prepareDemoFill(today));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
   await seed.employee();
   expect((await instances.readInstance(orm)).step).toBe("done");
@@ -75,7 +68,7 @@ test("refuses a concurrent second exit and keeps the first exit's outcome", asyn
   const owner = await seed.owner();
   await seed.assignment();
   await seed.setupStep("done");
-  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   const demo = demoService(orm);
 
   const results = await Promise.allSettled([demo.exitDemo(owner), demo.exitDemo(owner)]);
@@ -98,7 +91,7 @@ test("refuses to exit before setup is done and keeps the employees", async ({
   const owner = await seed.owner();
   await seed.assignment();
   await seed.setupStep("company");
-  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   const demo = demoService(orm);
   const employees = employeeServices(orm);
   const before = await employees.listEmployees(owner, {});
@@ -138,7 +131,7 @@ test("refuses the provisional owner exiting the demo and keeps the demo records"
   transact,
 }) => {
   const owner = await seed.demoOwner({ expiresAt: new Date("2026-10-20T12:00:00Z") });
-  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   const demo = demoService(orm);
   const { listEmployees } = employeeServices(orm);
   const employees = await listEmployees(owner, { first: 100 });

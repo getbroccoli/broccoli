@@ -35,7 +35,6 @@ import {
   type EmployeeReadService,
   type EmployeeService,
   type LocationService,
-  noEmploymentChanges,
 } from "../../src/modules/employees";
 import { createImportServices } from "../../src/modules/imports";
 import { createExternalAgentServices } from "../../src/modules/externalAgents";
@@ -44,7 +43,7 @@ import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
 import { TEST_SECRET_BOX } from "./testSecretBox";
-import { demoFill } from "./statelessServices";
+import { demoFillService, employmentChanges } from "./timeOffService";
 import { testTransactor } from "./testTransactor";
 import { deleteAllEmployees } from "./timeOffService";
 
@@ -76,7 +75,7 @@ export function employeeServices(
 ): EmployeeServices {
   const dependencies = { orm, transact, logger: createLogger("silent") };
   return {
-    ...createEmployeeService(dependencies),
+    ...createEmployeeService({ ...dependencies, employmentChanges: employmentChanges(orm) }),
     ...createEmployeeReadService(dependencies),
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
@@ -220,7 +219,7 @@ export function importServices(
     },
     jobs,
     clock = () => new Date(),
-    prepareDemoFill: prepareFill = () => demoFill.prepareDemoFill(DEMO_TODAY),
+    prepareDemoFill: prepareFill = () => demoFillService(orm).prepareDemoFill(DEMO_TODAY),
     invites = employeeInviteService(orm),
   }: {
     slackApi?: Partial<SlackApi>;
@@ -242,7 +241,7 @@ export function importServices(
     prepareDemoFill: prepareFill,
     invites,
     deleteAllEmployees: deleteAllEmployees(orm),
-    employmentChanges: noEmploymentChanges,
+    employmentChanges: employmentChanges(orm),
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
         sentJobs.push({ name, payload });

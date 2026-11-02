@@ -11,16 +11,16 @@ import { companyModule, createCompany } from "./company";
 import { createDemoFillService, demoModule } from "./demo";
 import {
   createEmployeeInviteService,
+  createEmployeeReadService,
   createEmployeeSetupService,
   employeeDirectory,
   employeesModule,
-  noEmploymentChanges,
 } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
-import { createTimeOffService } from "./timeOff";
+import { allowancesOnEmploymentChanges, createTimeOffService, timeOffModule } from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -57,8 +57,8 @@ export function createModules(
     await timeOff.deleteAllGroupPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
   };
-  // shortcut: no one listens yet; time off's allowances fill it.
-  const employmentChanges = noEmploymentChanges;
+  // People added or given a new start date get their allowances in the same transaction.
+  const employmentChanges = allowancesOnEmploymentChanges(timeOff);
   // Built once: the employees module serves it and setup's last step invites through it.
   const invites = createEmployeeInviteService({
     ...core,
@@ -71,7 +71,11 @@ export function createModules(
     slack: slackConnection,
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
-    prepareDemoFill: createDemoFillService(employmentChanges).prepareDemoFill,
+    prepareDemoFill: createDemoFillService({
+      employmentChanges,
+      timeOff,
+      employeeReads: createEmployeeReadService(core),
+    }).prepareDemoFill,
     invites,
     deleteAllEmployees,
     employmentChanges,
@@ -93,6 +97,7 @@ export function createModules(
     slackModule(slackConnection),
     importsModule(importServices),
     externalAgentsModule({ ...core, mode: deployment.mode, imports: importServices }),
+    timeOffModule({ ...core, timeOff }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core.orm, manifests)],
