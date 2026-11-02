@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { readFile, type StoredFile } from "../../../../core/files";
+import { createFileStorageService, type StoredFile } from "../../../../core/files";
 import type { Orm } from "../../../../core/db";
 import {
   type Connection,
@@ -19,6 +19,8 @@ import {
 } from "../../domain";
 import { type ImportReview, readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
+
+const fileStorage = createFileStorageService();
 
 /** Reading the import: its sources, their records and the review they make. Every function checks `ctx`. */
 export interface ImportReadService {
@@ -47,7 +49,9 @@ export function createImportReadService(orm: Orm): ImportReadService {
     readImportPhoto: async (ctx: SecurityContext, fileId: string): Promise<StoredFile | null> => {
       requireImportAccess(ctx);
       const id = parseUuid(fileId);
-      return id && (await importPhotoRepository(orm).hasPhoto(id)) ? readFile(orm, id) : null;
+      return id && (await importPhotoRepository(orm).hasPhoto(id))
+        ? fileStorage.readFile(orm, id)
+        : null;
     },
 
     listSources: (ctx: SecurityContext): Promise<ImportSource[]> => {

@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { OriginalFileRead } from "../../../../integrations/ai";
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
-import { readFile, type StoredFile } from "../../../../core/files";
+import { createFileStorageService, type StoredFile } from "../../../../core/files";
 import { type AiSource, type OriginalFileReader } from "../../../../core/instance";
 import type { Logger } from "../../../../core/logger";
 import type { JobQueue } from "../../../../core/jobs";
@@ -26,6 +26,8 @@ import { lockOpenImport, openImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
 import { readStaffFile } from "./staffFile";
 import { PDF_MIME_TYPE } from "./uploadReader";
+
+const fileStorage = createFileStorageService();
 
 /**
  * Reading a staff file in full, personal data included, once the owner allowed it for that file:
@@ -129,7 +131,7 @@ export function createOriginalFileReadService({
       if (!source?.isCurrentOriginalRead(attempt)) {
         return;
       }
-      const file = await readFile(orm, source.fileId);
+      const file = await fileStorage.readFile(orm, source.fileId);
       if (!file) {
         throw new Error(`File source ${sourceId} has no file`);
       }
@@ -159,7 +161,7 @@ export function createOriginalFileReadService({
       const imports = await lockOpenImport(tx);
       const source = await readableByExternalAgent(imports, sourceId);
       await answeredSourceRepository(tx).recordPickup(sourceId);
-      const file = await readFile(tx, source.fileId);
+      const file = await fileStorage.readFile(tx, source.fileId);
       if (!file) {
         throw new Error(`File source ${sourceId} has no file`);
       }

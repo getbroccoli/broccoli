@@ -1,6 +1,8 @@
-import { readFile, type StoredFile } from "../../../../core/files";
+import { createFileStorageService, type StoredFile } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
 import type { CompanyContext } from "./company";
+
+const fileStorage = createFileStorageService();
 
 /** The current logo's file, or null when `fileId` is not the current logo. */
 export async function readLogo(
@@ -13,5 +15,5 @@ export async function readLogo(
     ctx.requireSetupAccess("MANAGE_WORKSPACE");
   }
   const { logoFileId } = await companies.read();
-  return logoFileId === fileId ? readFile(orm, fileId) : null;
+  return logoFileId === fileId ? fileStorage.readFile(orm, fileId) : null;
 }

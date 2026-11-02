@@ -18,8 +18,10 @@ import {
   WEBP,
 } from "#test/support";
 
-import { readFile } from "../../../../core/files";
+import { createFileStorageService } from "../../../../core/files";
 import { readInstance } from "../../../../core/instance";
+
+const fileStorage = createFileStorageService();
 
 test.for([
   { content: PNG, mimeType: "image/png" },
@@ -37,7 +39,7 @@ test.for([
   const [fileId] = await storedFileIds(orm);
   expect(fileId).toEqual(expect.any(String));
   expect(employees.edges.map(({ node }) => node.photoFileId)).toEqual([fileId]);
-  const stored = await readFile(orm, fileId!);
+  const stored = await fileStorage.readFile(orm, fileId!);
   expect(stored?.mimeType).toBe("image/webp");
   expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
   expect(readPhoto).toHaveBeenCalledWith(new URL(SLACK_PHOTO_URL));
@@ -96,7 +98,7 @@ test("replaces a changed Slack photo and deletes its old file", async ({ orm, se
   expect(fileId).toEqual(expect.any(String));
   expect(fileId).not.toBe(oldFileId);
   expect(await storedFileIds(orm)).toEqual([fileId]);
-  const stored = await readFile(orm, fileId!);
+  const stored = await fileStorage.readFile(orm, fileId!);
   expect(stored?.mimeType).toBe("image/webp");
   expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
   expect(readPhoto).toHaveBeenCalledExactlyOnceWith(new URL(photoUrl));

@@ -12,9 +12,11 @@ import {
   test,
 } from "#test/support";
 
-import { readFile } from "../../../../core/files";
+import { createFileStorageService } from "../../../../core/files";
 
 import { importReader } from "../../db";
+
+const fileStorage = createFileStorageService();
 
 test("finishing the import deletes its rows, staff files and unused photos but keeps employee avatars", async ({
   orm,
@@ -56,7 +58,7 @@ test("finishing the import deletes its rows, staff files and unused photos but k
   await finishSelfHostedSetup(orm);
   const employees = employeeUseCases(orm);
   const approved = await employees.listEmployees(OWNER, {});
-  expect(await readFile(orm, photoIds.get("leftout@example.com")!)).toEqual({
+  expect(await fileStorage.readFile(orm, photoIds.get("leftout@example.com")!)).toEqual({
     content: PNG,
     mimeType: "image/png",
   });
@@ -68,8 +70,11 @@ test("finishing the import deletes its rows, staff files and unused photos but k
   expect(await importReader(orm).listChoices("employee")).toEqual([]);
   const keptFileIds = [avatarFileId, existingAvatarFileId].sort();
   expect(await storedFileIds(orm)).toEqual(keptFileIds);
-  expect(await readFile(orm, avatarFileId)).toEqual({ content: PNG, mimeType: "image/png" });
-  expect(await readFile(orm, existingAvatarFileId)).toEqual({
+  expect(await fileStorage.readFile(orm, avatarFileId)).toEqual({
+    content: PNG,
+    mimeType: "image/png",
+  });
+  expect(await fileStorage.readFile(orm, existingAvatarFileId)).toEqual({
     content: PNG,
     mimeType: "image/png",
   });

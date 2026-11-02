@@ -1,7 +1,7 @@
 import { withPlaceholders } from "../../../../integrations/ai";
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
-import { readFile } from "../../../../core/files";
+import { createFileStorageService } from "../../../../core/files";
 import type { SecurityContext } from "../../../../core/security";
 import { answeredSourceRepository, type ImportRepository } from "../../db";
 import {
@@ -23,6 +23,8 @@ import {
 import { lockOpenImport } from "./openImport";
 import { readStaffFile } from "./staffFile";
 import type { StaffUpload, UploadReader } from "./uploadReader";
+
+const fileStorage = createFileStorageService();
 
 /**
  * Staff files mapped by answers to Broccoli's masked questions instead of by its model: the
@@ -188,7 +190,7 @@ async function readAnsweredFile(
   if (source.originalReadAllowedAt) {
     throw new ApplicationError("CONFLICT", "Read this file in full and send its people.");
   }
-  const file = await readFile(tx, source.fileId);
+  const file = await fileStorage.readFile(tx, source.fileId);
   const sheets = file && (await readStaffFile(file.content));
   if (!sheets || typeof sheets === "string") {
     // The upload read the same bytes, so only a changed file gets here.

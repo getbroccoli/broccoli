@@ -13,8 +13,10 @@ import {
   test,
 } from "#test/support";
 
-import { readFile } from "../../../../core/files";
+import { createFileStorageService } from "../../../../core/files";
 import { readInstance } from "../../../../core/instance";
+
+const fileStorage = createFileStorageService();
 
 test.for(["ready", "owner"] as const)(
   "Back reopens the review from %s",
@@ -91,7 +93,10 @@ test("Back preserves values, left-out choices, sources and photos for the next a
   );
   expect(await storedFileIds(orm)).toEqual(fileIds);
   for (const photoId of photoIds) {
-    expect(await readFile(orm, photoId)).toEqual({ content: PNG, mimeType: "image/png" });
+    expect(await fileStorage.readFile(orm, photoId)).toEqual({
+      content: PNG,
+      mimeType: "image/png",
+    });
   }
   await imports.choices.setLeftOut(owner, { key: "robin@example.com", leftOut: false });
   await imports.choices.chooseEmployeeValue(owner, {

@@ -1,6 +1,6 @@
 import type { Decisions } from "../../../../integrations/ai";
 import type { Orm, Transact } from "../../../../core/db";
-import { readFile } from "../../../../core/files";
+import { createFileStorageService } from "../../../../core/files";
 import type { Logger } from "../../../../core/logger";
 import type { JobQueue } from "../../../../core/jobs";
 import type { SecurityContext } from "../../../../core/security";
@@ -24,6 +24,8 @@ import type { UploadReader } from "./uploadReader";
 import { readStaffFile } from "./staffFile";
 import { lockOpenImport, openImport } from "./openImport";
 import { requireImportAccess } from "./requireImportAccess";
+
+const fileStorage = createFileStorageService();
 
 /**
  * Staff files as import sources, through their life: upload, mapping in the background,
@@ -105,7 +107,7 @@ export function createFileSourceService({
       if (!source?.isCurrentMapping(attempt)) {
         return;
       }
-      const file = await readFile(orm, source.fileId);
+      const file = await fileStorage.readFile(orm, source.fileId);
       const sheets = file && (await readStaffFile(file.content));
       if (!sheets || typeof sheets === "string") {
         // Upload read the same bytes, so only a changed file gets here.

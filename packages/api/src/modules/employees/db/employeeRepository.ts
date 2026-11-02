@@ -14,7 +14,7 @@ import {
   type Tx,
 } from "../../../core/db";
 import { user } from "../../../core/auth";
-import { deleteFiles, storeFile } from "../../../core/files";
+import { createFileStorageService } from "../../../core/files";
 import { inRecordScope, type RecordScope } from "../../../core/security";
 import type { KeysetQuery, KeysetRow } from "../../../core/pagination";
 import type { CalendarDate, RasterImage } from "../../../utils";
@@ -28,6 +28,8 @@ import {
 import { employees } from "./employeesTable";
 import { employmentRepository, firstEmploymentOf } from "./employmentRepository";
 import { employments } from "./employmentsTable";
+
+const fileStorage = createFileStorageService();
 
 /** Employees stored in Postgres, through the pool or inside a transaction, which inserts need. */
 export interface EmployeeRepository {
@@ -117,7 +119,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     insertDemo: async (demoEmployees: readonly NewDemoEmployee[]): Promise<Employee[]> => {
       const rows: EmployeeRow[] = [];
       for (const { employee, avatar } of demoEmployees) {
-        const avatarFileId = await storeFile(db, {
+        const avatarFileId = await fileStorage.storeFile(db, {
           content: avatar.bytes,
           mimeType: avatar.mimeType,
         });
@@ -167,7 +169,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     delete: async (id: string): Promise<Employee | null> => {
       const [employee] = await orm().delete(employees).where(eq(employees.id, id)).returning();
       if (employee?.avatarFileId) {
-        await deleteFiles(db, [employee.avatarFileId]);
+        await fileStorage.deleteFiles(db, [employee.avatarFileId]);
       }
       if (employee?.userId) {
         // Their sessions, password and profiles go with the user.
@@ -199,7 +201,7 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
       const deleted = await orm()
         .delete(employees)
         .returning({ avatarFileId: employees.avatarFileId, userId: employees.userId });
-      await deleteFiles(
+      await fileStorage.deleteFiles(
         db,
         deleted.flatMap(({ avatarFileId }) => (avatarFileId ? [avatarFileId] : [])),
       );

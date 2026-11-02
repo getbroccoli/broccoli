@@ -15,7 +15,9 @@ import {
   test,
 } from "#test/support";
 
-import { readFile } from "../../../../core/files";
+import { createFileStorageService } from "../../../../core/files";
+
+const fileStorage = createFileStorageService();
 
 test("finishing gives the employee the Slack photo as their avatar", async ({ orm, seed }) => {
   await seed.setupStep("import");
@@ -35,7 +37,7 @@ test("finishing gives the employee the Slack photo as their avatar", async ({ or
     employees.edges.map(({ node }) => ({ email: node.email, avatarFileId: node.avatarFileId })),
   ).toEqual([{ email: "avery@example.com", avatarFileId: fileId }]);
   expect(await storedFileIds(orm)).toEqual([fileId]);
-  const stored = await readFile(orm, fileId!);
+  const stored = await fileStorage.readFile(orm, fileId!);
   expect(stored?.mimeType).toBe("image/webp");
   expect(await sharp(stored!.content).metadata()).toMatchObject({ format: "webp" });
 });
@@ -74,7 +76,10 @@ test("approving keeps all import photos, record links and staff files", async ({
     [...photoIds.values(), existingAvatar, staffFileId!].sort(),
   );
   for (const photoId of photoIds.values()) {
-    expect(await readFile(orm, photoId)).toEqual({ content: PNG, mimeType: "image/png" });
+    expect(await fileStorage.readFile(orm, photoId)).toEqual({
+      content: PNG,
+      mimeType: "image/png",
+    });
   }
   expect((await imports.reads.listSources(SETUP_HOLDER)).map(importSourceValues)).toEqual([
     importSourceValues(staff),

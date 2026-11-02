@@ -1,9 +1,11 @@
 import type { Orm } from "../../../../core/db";
-import { readFile, type StoredFile } from "../../../../core/files";
+import { createFileStorageService, type StoredFile } from "../../../../core/files";
 import { ApplicationError } from "../../../../core/applicationError";
 import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { parseUuid } from "../../../../utils";
 import type { EmployeeRepository } from "../../db";
+
+const fileStorage = createFileStorageService();
 
 /** The avatar file with this id, or null when it is no employee's avatar. */
 export async function readAvatar(
@@ -22,5 +24,5 @@ export async function readAvatar(
   if (!employeeIds.some((employeeId) => isInRecordScope(scope, employeeId))) {
     throw new ApplicationError("FORBIDDEN", "You are not allowed to do this.");
   }
-  return readFile(orm, id);
+  return fileStorage.readFile(orm, id);
 }
