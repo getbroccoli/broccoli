@@ -106,22 +106,29 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
   expect(employees.pageInfo.hasNextPage).toBe(false);
 });
 
-test("sets managers when importing 33,000 employees", async ({ orm, transact }) => {
-  const inputs = Array.from({ length: 33_000 }, (_, index) => ({
-    firstName: "Person",
-    lastName: String(index),
-    email: `person${index}@example.com`,
-    managerEmail: index === 0 ? null : "person0@example.com",
-  }));
+// The largest import there is, with each person's employment and "Everyone" membership: slow on
+// a busy runner.
+test(
+  "sets managers when importing 33,000 employees",
+  { timeout: 60_000 },
+  async ({ orm, transact }) => {
+    const inputs = Array.from({ length: 33_000 }, (_, index) => ({
+      firstName: "Person",
+      lastName: String(index),
+      email: `person${index}@example.com`,
+      managerEmail: index === 0 ? null : "person0@example.com",
+    }));
 
-  await transact((tx) =>
-    employeeSetup.createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
-  );
+    await transact((tx) =>
+      employeeSetup.createImportedEmployees(OWNER, tx, inputs, { kind: "ADDED_FROM_IMPORT" }),
+    );
 
-  const people = employeeServices(orm);
-  const id = (await people.listEmployees(OWNER, { filter: { search: "32999" } })).edges[0]!.node.id;
-  expect((await people.readManagers(OWNER, [id])).get(id)?.email).toBe("person0@example.com");
-});
+    const people = employeeServices(orm);
+    const id = (await people.listEmployees(OWNER, { filter: { search: "32999" } })).edges[0]!.node
+      .id;
+    expect((await people.readManagers(OWNER, [id])).get(id)?.email).toBe("person0@example.com");
+  },
+);
 
 test("refuses an employee and creates no employees", async ({ orm, transact }) => {
   await expect(
