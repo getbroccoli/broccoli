@@ -1,0 +1,42 @@
+import { sql } from "drizzle-orm";
+import { check, date, foreignKey, index, pgTable, uuid } from "drizzle-orm/pg-core";
+
+import type { CalendarDate } from "../../../utils";
+import { employees } from "./employeesTable";
+import { workingPatternPolicies } from "./workingPatternPoliciesTable";
+
+/**
+ * An exception: one person on a policy between two dates, ahead of their group's. A person's rows
+ * never overlap (an exclusion constraint the migration adds).
+ */
+export const employeeWorkingPatternAssignments = pgTable(
+  "employee_working_pattern_assignments",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`uuidv7()`),
+    employeeId: uuid("employee_id").notNull(),
+    workingPatternPolicyId: uuid("working_pattern_policy_id").notNull(),
+    effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>().notNull(),
+    /** The last day the row applies; null: open-ended. */
+    effectiveUntil: date("effective_until", { mode: "string" }).$type<CalendarDate>(),
+  },
+  (table) => [
+    // Named here: the generated names would pass Postgres's 63-character limit.
+    foreignKey({
+      name: "employee_working_pattern_assignments_employee_fk",
+      columns: [table.employeeId],
+      foreignColumns: [employees.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "employee_working_pattern_assignments_policy_fk",
+      columns: [table.workingPatternPolicyId],
+      foreignColumns: [workingPatternPolicies.id],
+    }),
+    index("employee_working_pattern_assignments_policy_idx").on(table.workingPatternPolicyId),
+    check(
+      "employee_working_pattern_assignments_dates_in_order",
+      sql`${table.effectiveUntil} >= ${table.effectiveFrom}`,
+    ),
+  ],
+);

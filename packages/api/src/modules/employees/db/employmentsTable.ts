@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, date, index, integer, pgTable, uuid } from "drizzle-orm/pg-core";
+import { check, date, index, pgTable, uuid } from "drizzle-orm/pg-core";
 
 import type { CalendarDate } from "../../../utils";
 import { employees } from "./employeesTable";
@@ -21,8 +21,6 @@ export const employments = pgTable(
     directManagerId: uuid("direct_manager_id").references(() => employees.id, {
       onDelete: "set null",
     }),
-    /** Percent of full time. */
-    fte: integer("fte").notNull().default(100),
     /** Null: unknown. The first employment's start is the person's start date. */
     startDate: date("start_date", { mode: "string" }).$type<CalendarDate>(),
     /** Null: open-ended. */
@@ -30,7 +28,6 @@ export const employments = pgTable(
   },
   (table) => [
     index("employments_direct_manager_idx").on(table.directManagerId),
-    check("employments_fte_range", sql`${table.fte} between 1 and 100`),
     check("employments_not_own_manager", sql`${table.directManagerId} <> ${table.employeeId}`),
   ],
 );
