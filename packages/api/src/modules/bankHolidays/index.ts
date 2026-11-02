@@ -1,7 +1,7 @@
 // Public values.
-export { createBankHolidayService } from "./app";
+export { createBankHolidayService, createStaticBankHolidaySource } from "./app";
 export { BANK_HOLIDAY_CALENDARS, parseBankHolidayCalendar } from "./domain";
 
 // Public types.
-export type { BankHolidayService } from "./app";
+export type { BankHolidayService, BankHolidaySource } from "./app";
 export type { BankHolidayCalendar, BankHolidayDay } from "./domain";

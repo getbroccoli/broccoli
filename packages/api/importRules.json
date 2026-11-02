@@ -26,12 +26,7 @@
       "src/core/records",
       "src/modules/*"
     ],
-    "src/modules/bankHolidays": [
-      "src/core/*",
-      "!src/core/server",
-      "src/integrations/bankHolidays",
-      "src/utils"
-    ],
+    "src/modules/bankHolidays": ["src/core/*", "!src/core/server", "src/utils"],
     "src/modules/company": [
       "src/core/*",
       "!src/core/server",
@@ -64,7 +59,6 @@
     "src/modules/system": ["src/core/*", "!src/core/server"],
     "src/modules/timeOff": ["src/utils"],
     "src/integrations/ai": ["src/utils"],
-    "src/integrations/bankHolidays": [],
     "src/integrations/brandLookup": ["src/utils"],
     "src/integrations/mail": ["src/utils"],
     "src/integrations/slack": ["src/utils"],

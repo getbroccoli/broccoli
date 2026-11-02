@@ -1,6 +1,8 @@
+import type { BankHolidayCalendar } from "../domain";
+
 /** Every date of https://www.gov.uk/bank-holidays.json on 2026-11-02, by calendar: date and name. */
 export const GOV_UK_BANK_HOLIDAYS: Readonly<
-  Record<string, readonly (readonly [string, string])[]>
+  Record<BankHolidayCalendar, readonly (readonly [string, string])[]>
 > = {
   england_and_wales: [
     ["2019-01-01", "New Year’s Day"],

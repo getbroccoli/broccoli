@@ -1,11 +1,11 @@
 import type { SecurityContext } from "../../../core/security";
-import type { BankHolidaySource } from "../../../integrations/bankHolidays";
 import {
   type BankHolidayCalendar,
   type BankHolidayDay,
   parseBankHolidayCalendar,
   parsePeriodDate,
 } from "../domain";
+import type { BankHolidaySource } from "./bankHolidaySource";
 
 /** Each nation's bank holidays, for the modules that cost leave. Dates are public facts. */
 export interface BankHolidayService {
@@ -32,16 +32,7 @@ export function createBankHolidayService({
       const calendars = input.calendars.map(parseBankHolidayCalendar);
       const from = parsePeriodDate("from", input.from);
       const until = parsePeriodDate("until", input.until);
-      const days = await bankHolidaySource.getCalendars(calendars, from, until);
-      return new Map(
-        calendars.map((calendar) => [
-          calendar,
-          (days.get(calendar) ?? []).map(({ date, name }) => ({
-            date: parsePeriodDate("date", date),
-            name,
-          })),
-        ]),
-      );
+      return await bankHolidaySource.getCalendars(calendars, from, until);
     },
   };
 }
