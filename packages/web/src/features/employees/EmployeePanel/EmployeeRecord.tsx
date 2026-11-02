@@ -142,6 +142,9 @@ export function EmployeeRecord({ employee, onClose }: Props) {
               onRevert={() => draft.revert("email")}
             />
           }
+          emailMark={
+            draft.fieldErrors.email ? "invalid" : draft.changed.includes("email") ? "changed" : null
+          }
           signIn={
             employee.signInStatus
               ? { status: employee.signInStatus, onInvite: () => setInviting(true) }

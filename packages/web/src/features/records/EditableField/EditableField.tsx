@@ -4,11 +4,13 @@ import { cn } from "@/lib/class-names";
 
 import { FieldValue } from "./FieldValue";
 
+type Props = ComponentProps<typeof FieldValue>;
+
 /**
  * One field of a record's panel: its label and its value, edited in place. An edited field keeps
  * a mark until the panel saves or cancels.
  */
-export function EditableField(props: ComponentProps<typeof FieldValue>) {
+export function EditableField(props: Props) {
   const { field, saved, draft, error } = props;
   const changed = draft !== undefined && (draft || null) !== saved;
 
