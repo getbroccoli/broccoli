@@ -6,8 +6,8 @@ import { instanceRepository } from "../db";
 /** The persistent Broccoli AI trial token of this install. */
 export interface BroccoliAiTokensService {
   /** Reads the token, moving an older database token into the data folder on first use. */
-  read(ctx: SecurityContext): Promise<string | null>;
-  save(ctx: SecurityContext, token: string): Promise<void>;
+  read: (ctx: SecurityContext) => Promise<string | null>;
+  save: (ctx: SecurityContext, token: string) => Promise<void>;
 }
 
 export function createBroccoliAiTokensService({

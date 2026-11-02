@@ -18,30 +18,30 @@ export interface OwnerUser {
 /** The instance's owner, claimed once; claiming publishes `instance.owner_claimed`. */
 export interface OwnerService {
   /** The owner's id and sign-in email, or null before an owner exists. Trusted read: no `ctx`. */
-  readOwner(db: Orm | Tx): Promise<{ userId: string; email: string } | null>;
+  readOwner: (db: Orm | Tx) => Promise<{ userId: string; email: string } | null>;
   /**
    * Makes the user that `createOwner` creates the owner, once per instance, keeping the
    * setup step. The row lock makes a concurrent claim wait and then fail with
    * `OwnerExistsError`.
    */
-  claimOwner<Owner extends OwnerUser>(
+  claimOwner: <Owner extends OwnerUser>(
     ctx: SecurityContext,
     tx: Tx,
     createOwner: () => Promise<Owner>,
-  ): Promise<Owner>;
+  ) => Promise<Owner>;
   /**
    * The last step of self-hosted setup: makes the user that `createOwner` creates the
    * owner, for the browser holding setup only, adds the approved people, then completes
    * setup and ends the setup session. Refuses with `OwnerExistsError`,
    * `SetupInProgressError`, or CONFLICT before the owner step.
    */
-  createOwnerAtSetup<Owner extends OwnerUser>(
+  createOwnerAtSetup: <Owner extends OwnerUser>(
     ctx: SecurityContext,
     tx: Tx,
     session: { token: string | null; now: Date },
     createOwner: () => Promise<Owner>,
     addApprovedPeople: AddApprovedPeople,
-  ): Promise<Owner>;
+  ) => Promise<Owner>;
 }
 
 export function createOwnerService(): OwnerService {

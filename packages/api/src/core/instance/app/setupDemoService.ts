@@ -34,13 +34,13 @@ export interface SetupDemoService {
    * setup now that an owner exists, gives the demo its deadline and ends the setup session.
    * Refuses with `OwnerExistsError`, `SetupInProgressError`, or CONFLICT at another step.
    */
-  startDemoAtSetup<Owner extends OwnerUser>(
+  startDemoAtSetup: <Owner extends OwnerUser>(
     ctx: SecurityContext,
     tx: Tx,
     session: { token: string | null; now: Date },
     createOwner: () => Promise<Owner>,
     startDemo: DemoStart,
-  ): Promise<Owner>;
+  ) => Promise<Owner>;
   /**
    * Ends the demo for its provisional owner before the deadline and takes setup back to the
    * company step: runs `clearPeople`, removes the owner and its deadline, runs `deleteOwner`,
@@ -48,12 +48,12 @@ export interface SetupDemoService {
    * for its cookie. The company and the AI source stay. Refuses with FORBIDDEN anyone else,
    * after the deadline, or without a demo.
    */
-  exitDemo(
+  exitDemo: (
     ctx: SecurityContext,
     tx: Tx,
     exit: { userId: string; now: Date },
     reset: { clearPeople: DemoReset; deleteOwner: () => Promise<void> },
-  ): Promise<{ token: string; expiresAt: Date }>;
+  ) => Promise<{ token: string; expiresAt: Date }>;
 }
 
 export function createSetupDemoService(): SetupDemoService {

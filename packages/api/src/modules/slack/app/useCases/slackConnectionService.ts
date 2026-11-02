@@ -21,28 +21,30 @@ import { readSlackPeople, type SlackPerson } from "./readSlackPeople";
  */
 export interface SlackConnectionService {
   /** Starts connecting Slack: the browser goes to Slack and comes back to `returnTo`. */
-  beginSlackConnection(ctx: SecurityContext, returnTo: string): SlackConnectionStart;
+  beginSlackConnection: (ctx: SecurityContext, returnTo: string) => SlackConnectionStart;
   /**
    * Finishes connecting Slack when the browser returns: checks that the return belongs
    * to this browser and the owner, exchanges the code, and stores the workspace with
    * its token encrypted. Reading its members is up to the caller. Null on success.
    */
-  finishSlackConnection(
+  finishSlackConnection: (
     ctx: SecurityContext,
     slackReturn: SlackConnectionReturn,
-  ): Promise<SlackConnectionFailure | null>;
+  ) => Promise<SlackConnectionFailure | null>;
   /** The connected workspace, or null. */
-  getSlackConnection(ctx: SecurityContext): Promise<{ teamId: string; teamName: string } | null>;
+  getSlackConnection: (
+    ctx: SecurityContext,
+  ) => Promise<{ teamId: string; teamName: string } | null>;
   /**
    * The people of the connected workspace with their photos, downloading only those whose
    * link `knownPhotos` does not hold; refuses when Slack is not connected or does not answer.
    */
-  readSlackMembers(
+  readSlackMembers: (
     ctx: SecurityContext,
     options: { knownPhotos: ReadonlyMap<string, string> },
-  ): Promise<SlackMembersRead>;
+  ) => Promise<SlackMembersRead>;
   /** Forgets the connected workspace and its token inside the caller's transaction. */
-  disconnectSlack(ctx: SecurityContext, tx: Tx): Promise<void>;
+  disconnectSlack: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
 /** Where to send the browser to connect Slack, and what the browser keeps until it returns. */

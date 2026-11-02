@@ -21,9 +21,9 @@ import { createBroccoliAiTokensService } from "./broccoliAiTokensService";
  */
 export interface AiSettingsService {
   /** The AI files are read with now; null on a managed instance. */
-  read(ctx: SecurityContext): Promise<AiConfig | null>;
+  read: (ctx: SecurityContext) => Promise<AiConfig | null>;
   /** Checks that the chosen source works, then saves it; a managed instance refuses. */
-  save(ctx: SecurityContext, choice: AiChoice): Promise<AiConfig>;
+  save: (ctx: SecurityContext, choice: AiChoice) => Promise<AiConfig>;
   /** The model Broccoli asks on its own, sent where the settings point at each request. */
   decisions: Decisions;
   /** A model reading a file in full, once the owner allowed it. */

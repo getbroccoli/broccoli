@@ -14,35 +14,35 @@ import { createRecordHistoryService } from "./recordHistoryService";
 /** Reads the history of a record of any type, its records and their access, for whoever its type allows. */
 export interface RecordHistoryReaderService {
   /** Refuses with FORBIDDEN a record type nobody registered; an id that names no record reads as empty. */
-  readHistory(
+  readHistory: (
     ctx: SecurityContext,
     recordType: RecordType,
     recordId: string,
     args: PageArgs,
-  ): Promise<Connection<HistoryLine>>;
+  ) => Promise<Connection<HistoryLine>>;
   /** The records still there among these ids, each marked with its GraphQL type, by id. */
-  readRecords(
+  readRecords: (
     ctx: SecurityContext,
     recordType: RecordType,
     ids: readonly string[],
-  ): Promise<Map<string, LoadedRecord>>;
+  ) => Promise<Map<string, LoadedRecord>>;
   /**
    * The lines, in their order, with each value that names a record the caller may not read hidden:
    * value and label null, its flag set. A record that is gone stays shown only to a caller who
    * reads every record of its type. Never refuses.
    */
-  hideOutOfScopeReferences(
+  hideOutOfScopeReferences: (
     ctx: SecurityContext,
     lines: readonly HistoryLine[],
-  ): Promise<VisibleHistoryLine[]>;
+  ) => Promise<VisibleHistoryLine[]>;
   /** The current email of each author among these users who still exists, by user id. */
-  readAuthorEmails(userIds: readonly string[]): Promise<Map<string, string>>;
+  readAuthorEmails: (userIds: readonly string[]) => Promise<Map<string, string>>;
   /** What the caller may do to each of these records, by id, as `AnyRecord.access` shows it. */
-  readAccess(
+  readAccess: (
     ctx: SecurityContext,
     recordType: RecordType,
     recordIds: readonly string[],
-  ): Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>>;
+  ) => Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>>;
 }
 
 /** What core needs from the module that owns a record type. */

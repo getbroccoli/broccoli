@@ -24,18 +24,18 @@ import { TEST_EMAIL_TEMPLATE } from "./mailTest.email";
  */
 export interface MailSettingsService {
   /** The saved choice; null on a managed instance. */
-  read(ctx: SecurityContext): Promise<MailConfig | null>;
+  read: (ctx: SecurityContext) => Promise<MailConfig | null>;
   /** Checks the choice, then saves it with the origin its links use; a managed instance refuses. */
-  save(ctx: SecurityContext, choice: MailChoice, linkOrigin: string): Promise<MailConfig>;
+  save: (ctx: SecurityContext, choice: MailChoice, linkOrigin: string) => Promise<MailConfig>;
   /** Development startup chooses Mailpit once and keeps its links on the current dev port. */
-  configureDevelopmentMail(ctx: SecurityContext, linkOrigin: string): Promise<void>;
+  configureDevelopmentMail: (ctx: SecurityContext, linkOrigin: string) => Promise<void>;
   /** Sends the caller a test email with the saved choice. */
-  sendTestEmail(ctx: SecurityContext): Promise<void>;
+  sendTestEmail: (ctx: SecurityContext) => Promise<void>;
   /**
    * How this instance sends email now: the saved choice on self-hosted, Broccoli's mail relay on
    * an initialized managed instance; null without email.
    */
-  readMailer(ctx: SecurityContext): Promise<InstanceMailer | null>;
+  readMailer: (ctx: SecurityContext) => Promise<InstanceMailer | null>;
 }
 
 /** A mailer and the origin its links use. */

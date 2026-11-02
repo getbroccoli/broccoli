@@ -16,13 +16,13 @@ export interface SetupSessionService {
    * Any other browser gets `SetupInProgressError`, also once the session has expired:
    * only a new, empty database frees setup again.
    */
-  startSetup(
+  startSetup: (
     ctx: SecurityContext,
     tx: Tx,
     session: { token: string | null; now: Date },
-  ): Promise<{ token: string; expiresAt: Date }>;
+  ) => Promise<{ token: string; expiresAt: Date }>;
   /** Who holds setup for the browser that sent `token`; nobody once an owner exists. Trusted read: no `ctx`. */
-  readSetupHolder(orm: Orm, session: { token: string | null; now: Date }): Promise<SetupHolder>;
+  readSetupHolder: (orm: Orm, session: { token: string | null; now: Date }) => Promise<SetupHolder>;
 }
 
 export function createSetupSessionService(): SetupSessionService {

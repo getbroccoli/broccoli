@@ -33,42 +33,46 @@ const fileStorage = createFileStorageService();
  */
 export interface AnsweredMappingService {
   /** Reads a staff file the setup holder uploads; refuses one that cannot be read, storing nothing. */
-  readStaffUpload(
+  readStaffUpload: (
     ctx: SecurityContext,
     file: { name: string; bytes: Uint8Array },
-  ): Promise<StaffUpload>;
+  ) => Promise<StaffUpload>;
   /**
    * Stores the file as a source waiting for answers, with no mapping job, or a PDF waiting for the
    * owner's consent; returns its id.
    */
-  addAnsweredSource(ctx: SecurityContext, tx: Tx, file: AnsweredFile): Promise<string>;
+  addAnsweredSource: (ctx: SecurityContext, tx: Tx, file: AnsweredFile) => Promise<string>;
   /**
    * The sources waiting for the external agent, and how it maps each, without their names, which
    * may name a person.
    */
-  readUnmappedSources(
+  readUnmappedSources: (
     ctx: SecurityContext,
     tx: Tx,
-  ): Promise<{ id: string; way: ExternalAgentParseFileWay }[]>;
+  ) => Promise<{ id: string; way: ExternalAgentParseFileWay }[]>;
   /**
    * Per sheet, its first rows as placeholders and the questions Broccoli's model gets; records
    * that the external agent picked the file up.
    */
-  readMappingQuestions(ctx: SecurityContext, tx: Tx, sourceId: string): Promise<MappingQuestions>;
+  readMappingQuestions: (
+    ctx: SecurityContext,
+    tx: Tx,
+    sourceId: string,
+  ) => Promise<MappingQuestions>;
   /** Records the agent’s progress only for a file currently available to it. */
-  reportFileProgress(
+  reportFileProgress: (
     ctx: SecurityContext,
     tx: Tx,
     sourceId: string,
     progress: ExternalAgentFileProgress,
-  ): Promise<void>;
+  ) => Promise<void>;
   /** Maps the waiting source with these answers, as Broccoli's model's answers would. */
-  answerMapping(
+  answerMapping: (
     ctx: SecurityContext,
     tx: Tx,
     sourceId: string,
     answers: MappingAnswersInput,
-  ): Promise<AnsweredMapping>;
+  ) => Promise<AnsweredMapping>;
 }
 
 /** A staff file the upload reader has read. */

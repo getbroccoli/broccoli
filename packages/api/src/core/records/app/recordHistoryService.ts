@@ -17,19 +17,19 @@ export interface RecordHistoryService {
    * Appends one history line per record in `tx`, made by the author of `ctx`, and publishes one
    * `records.changed` per line. Returns the lines in the order of `append.records`.
    */
-  append(ctx: SecurityContext, tx: Tx, append: HistoryAppend): Promise<HistoryLine[]>;
+  append: (ctx: SecurityContext, tx: Tx, append: HistoryAppend) => Promise<HistoryLine[]>;
   /** One record's history, newest first, one page at a time. */
-  read(
+  read: (
     db: Orm | Tx,
     recordType: RecordType,
     recordId: string,
     args: PageArgs,
-  ): Promise<Connection<HistoryLine>>;
+  ) => Promise<Connection<HistoryLine>>;
   /**
    * Deletes every history line of one record type in `tx`, without publishing; returns how many.
    * Only a deliberate reset calls it, such as leaving the demo, never an ordinary removal.
    */
-  purge(tx: Tx, recordType: RecordType): Promise<number>;
+  purge: (tx: Tx, recordType: RecordType) => Promise<number>;
 }
 
 /** A change to one record, published once its transaction commits; it carries field keys, never values. */

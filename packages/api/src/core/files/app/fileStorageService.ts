@@ -7,11 +7,11 @@ import { fileRepository, type StoredFile } from "../db";
  */
 export interface FileStorageService {
   /** Stores a file the caller has already parsed and capped; returns its id. */
-  storeFile(db: Orm | Tx, file: StoredFile): Promise<string>;
+  storeFile: (db: Orm | Tx, file: StoredFile) => Promise<string>;
   /** Deletes the files with these ids; a file still referenced fails the write. */
-  deleteFiles(db: Orm | Tx, ids: readonly string[]): Promise<void>;
+  deleteFiles: (db: Orm | Tx, ids: readonly string[]) => Promise<void>;
   /** The file with this id, or null; the caller has checked that the id is one of its own. */
-  readFile(db: Orm | Tx, id: string): Promise<StoredFile | null>;
+  readFile: (db: Orm | Tx, id: string) => Promise<StoredFile | null>;
 }
 
 export function createFileStorageService(): FileStorageService {

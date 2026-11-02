@@ -41,31 +41,31 @@ export interface EmployeeInviteService {
    * and `delivery` asks for nothing else, else as links in the answer. Skips people who joined,
    * whose email has an account, or who are demo data.
    */
-  send(ctx: SecurityContext, input: InviteInput, linkOrigin: string): Promise<SentInvite[]>;
+  send: (ctx: SecurityContext, input: InviteInput, linkOrigin: string) => Promise<SentInvite[]>;
   /** Cancels the person's open invite; refuses with NOT_FOUND without one. */
-  cancel(
+  cancel: (
     ctx: SecurityContext,
     input: { employeeId: string },
-  ): Promise<{ employee: Employee; historyLine: HistoryLine }>;
+  ) => Promise<{ employee: Employee; historyLine: HistoryLine }>;
   /** Each person's sign-in state, by employee id; unknown ids are left out. */
-  readStatuses(
+  readStatuses: (
     ctx: SecurityContext,
     employeeIds: readonly string[],
-  ): Promise<Map<string, SignInStatus>>;
+  ) => Promise<Map<string, SignInStatus>>;
   /** How invites reach people now. */
-  delivery(ctx: SecurityContext): Promise<InviteDelivery>;
+  delivery: (ctx: SecurityContext) => Promise<InviteDelivery>;
   /** What the invite page shows for a token; null for one that does not open an invite. */
-  lookUp(token: string): Promise<InviteDetails | null>;
+  lookUp: (token: string) => Promise<InviteDetails | null>;
   /**
    * Joins the person behind the token in `tx`, which Better Auth's writes join: `createUser` makes
    * their user, then they get the invite's profiles and their employee. Null for a token that does
    * not open an invite, such as one used a moment ago.
    */
-  accept<Joined extends { user: { id: string } }>(
+  accept: <Joined extends { user: { id: string } }>(
     tx: Tx,
     token: string,
     createUser: (account: { email: string; name: string }) => Promise<Joined>,
-  ): Promise<{ joined: Joined; inviteId: string; employeeId: string } | null>;
+  ) => Promise<{ joined: Joined; inviteId: string; employeeId: string } | null>;
   jobs: JobHandlers;
 }
 

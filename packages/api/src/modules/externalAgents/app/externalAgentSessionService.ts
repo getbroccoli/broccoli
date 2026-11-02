@@ -15,27 +15,27 @@ const externalAgentChoice = createExternalAgentChoiceService();
  */
 export interface ExternalAgentSessionService {
   /** Makes the external agent the AI source, ending any agent session. */
-  chooseExternalAgent(ctx: SecurityContext): Promise<void>;
+  chooseExternalAgent: (ctx: SecurityContext) => Promise<void>;
   /** A new one-time code, shown once; refused with CONFLICT unless the agent is chosen. */
-  createExternalAgentCode(ctx: SecurityContext): Promise<ExternalAgentCode>;
+  createExternalAgentCode: (ctx: SecurityContext) => Promise<ExternalAgentCode>;
   /**
    * As `createExternalAgentCode`, for the command on the server: chooses the agent first while no
    * AI source is saved, so it connects right after install. System only.
    */
-  createExternalAgentCodeOnServer(ctx: SecurityContext): Promise<ExternalAgentCode>;
+  createExternalAgentCodeOnServer: (ctx: SecurityContext) => Promise<ExternalAgentCode>;
   /** The session for a live code, used up by this call; UNAUTHENTICATED for any other code. */
-  startExternalAgentSession(
+  startExternalAgentSession: (
     ctx: SecurityContext,
     request: ExternalAgentSessionRequest,
-  ): Promise<ExternalAgentSession>;
+  ) => Promise<ExternalAgentSession>;
   /** The external agent's security context for a live session's token; null for any other token. */
-  readExternalAgentSession(request: { token: string }): Promise<SecurityContext | null>;
+  readExternalAgentSession: (request: { token: string }) => Promise<SecurityContext | null>;
   /** Ends the agent's session; its next call is refused. */
-  disconnectExternalAgent(ctx: SecurityContext): Promise<void>;
+  disconnectExternalAgent: (ctx: SecurityContext) => Promise<void>;
   /** The connected agent and whether it listens for files now, or null when none is connected. */
-  readExternalAgentConnection(
+  readExternalAgentConnection: (
     ctx: SecurityContext,
-  ): Promise<(ExternalAgentConnection & { listening: boolean }) | null>;
+  ) => Promise<(ExternalAgentConnection & { listening: boolean }) | null>;
 }
 
 export interface ExternalAgentCode {

@@ -16,7 +16,7 @@ import { PASSWORD_RESET_TEMPLATE } from "./passwordReset.email";
  */
 export interface PasswordResetEmailService {
   /** Better Auth's `sendResetPassword`, as the system: queues the email, or does nothing. */
-  queue(ctx: SecurityContext, user: { id: string }, token: string): Promise<void>;
+  queue: (ctx: SecurityContext, user: { id: string }, token: string) => Promise<void>;
   /** Sends the queued email. */
   jobs: JobHandlers;
 }

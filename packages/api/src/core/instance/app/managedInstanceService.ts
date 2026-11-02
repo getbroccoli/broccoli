@@ -11,14 +11,18 @@ export interface ManagedInstanceService {
    * it carries; any other assignment is refused, as is one on an instance whose owner was already
    * set up.
    */
-  assignInstance(
+  assignInstance: (
     ctx: SecurityContext,
     tx: Tx,
     assignment: ManagedAssignment,
     encryptedInstanceCredential: string,
-  ): Promise<void>;
+  ) => Promise<void>;
   /** Stores how the owner signs in, joining `tx`, unless a method is stored already. */
-  recordOwnerSignInMethod(ctx: SecurityContext, tx: Tx, method: OwnerSignInMethod): Promise<void>;
+  recordOwnerSignInMethod: (
+    ctx: SecurityContext,
+    tx: Tx,
+    method: OwnerSignInMethod,
+  ) => Promise<void>;
 }
 
 export function createManagedInstanceService(): ManagedInstanceService {

@@ -30,12 +30,12 @@ export interface ManagedSignInService {
    * first time a ticket names it. Runs in the transaction that creates the session, so a
    * failure leaves the ticket unused.
    */
-  signInWithTicket(
+  signInWithTicket: (
     ctx: SecurityContext,
     tx: Tx,
     ticket: ManagedTicket,
     clock: () => Date,
-  ): Promise<{ userId: string }>;
+  ) => Promise<{ userId: string }>;
 }
 
 export function createManagedSignInService(): ManagedSignInService {

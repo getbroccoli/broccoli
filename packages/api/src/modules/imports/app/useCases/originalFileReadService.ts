@@ -39,25 +39,25 @@ export interface OriginalFileReadService {
    * The owner's consent for one file, refused if the displayed provider is no longer chosen.
    * The file's records stay until the read ends.
    */
-  allowOriginalFileRead(
+  allowOriginalFileRead: (
     ctx: SecurityContext,
     sourceId: string,
     expectedAiSource: AiSource | null,
-  ): Promise<void>;
+  ) => Promise<void>;
   /**
    * The job: Broccoli's model reads the file and its people replace the records. A run that is no
    * longer current, or of a closed import, writes nothing; a retryable failure rejects.
    */
-  readOriginalFile(ctx: SecurityContext, job: ReadOriginalFileJob): Promise<void>;
+  readOriginalFile: (ctx: SecurityContext, job: ReadOriginalFileJob) => Promise<void>;
   /** The original of a file the external agent may read in full; records that it picked it up. */
-  readOriginalBytes(ctx: SecurityContext, tx: Tx, sourceId: string): Promise<StoredFile>;
+  readOriginalBytes: (ctx: SecurityContext, tx: Tx, sourceId: string) => Promise<StoredFile>;
   /** The external agent's people for a file it may read in full replace the file's records, each time. */
-  addReadPeople(
+  addReadPeople: (
     ctx: SecurityContext,
     tx: Tx,
     sourceId: string,
     people: ReadPeople,
-  ): Promise<ReadPeopleOutcome>;
+  ) => Promise<ReadPeopleOutcome>;
 }
 
 /** One run of Broccoli's model reading a file in full. */

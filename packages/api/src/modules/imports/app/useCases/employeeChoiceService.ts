@@ -23,27 +23,27 @@ export interface EmployeeChoiceService {
    * Shows a record's value or a typed one for one field of an import employee; null puts
    * the first source's value back. A typed value must pass the employee rules for that field.
    */
-  chooseEmployeeValue(
+  chooseEmployeeValue: (
     ctx: SecurityContext,
     args: { key: string; field: ImportEmployeeField; choice: ValueChoice | null },
-  ): Promise<void>;
+  ) => Promise<void>;
   /** Picks this source's value for every open conflict on `field` that it holds a value in. */
-  chooseSourceForAll(
+  chooseSourceForAll: (
     ctx: SecurityContext,
     args: { field: ImportEmployeeField; sourceId: string },
-  ): Promise<void>;
+  ) => Promise<void>;
   /** Leaves an import employee out of Approve, or adds it back. */
-  setLeftOut(ctx: SecurityContext, args: { key: string; leftOut: boolean }): Promise<void>;
+  setLeftOut: (ctx: SecurityContext, args: { key: string; leftOut: boolean }) => Promise<void>;
   /** Leaves out every incomplete import employee with this reason. */
-  leaveOutIncomplete(ctx: SecurityContext, args: { reason: IncompleteReason }): Promise<void>;
+  leaveOutIncomplete: (ctx: SecurityContext, args: { reason: IncompleteReason }) => Promise<void>;
   /**
    * Makes the import employee `managerKey` the manager of these import employees, or no one with
    * null, over any manager their sources name; skips the manager among them.
    */
-  chooseManager(
+  chooseManager: (
     ctx: SecurityContext,
     args: { keys: readonly string[]; managerKey: string | null },
-  ): Promise<void>;
+  ) => Promise<void>;
 }
 
 export function createEmployeeChoiceService(transact: Transact): EmployeeChoiceService {

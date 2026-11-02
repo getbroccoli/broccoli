@@ -22,40 +22,44 @@ const externalAgentChoice = createExternalAgentChoiceService();
  */
 export interface ExternalAgentFileService {
   /** The setup holder's drop: stores the file waiting for the agent's answers; returns its id. */
-  uploadForExternalAgent(
+  uploadForExternalAgent: (
     ctx: SecurityContext,
     file: { name: string; bytes: Uint8Array },
-  ): Promise<string>;
+  ) => Promise<string>;
   /** The files waiting for the agent, and how it maps each. */
-  listUnmappedFiles(ctx: SecurityContext): Promise<UnmappedFile[]>;
+  listUnmappedFiles: (ctx: SecurityContext) => Promise<UnmappedFile[]>;
   /**
    * Long polling: as `listUnmappedFiles`, but with none waiting, waits up to `seconds` for the
    * owner's next drop; `signal` ends the wait early with none.
    */
-  pollUnmappedFiles(
+  pollUnmappedFiles: (
     ctx: SecurityContext,
     request: { seconds: number; signal?: AbortSignal },
-  ): Promise<UnmappedFile[]>;
+  ) => Promise<UnmappedFile[]>;
   /** Updates the file card with the stage reported by the live agent. */
-  reportFileProgress(
+  reportFileProgress: (
     ctx: SecurityContext,
     sourceId: string,
     progress: ExternalAgentFileProgress,
-  ): Promise<void>;
+  ) => Promise<void>;
   /** A waiting file's masked questions. */
-  readMappingQuestions(ctx: SecurityContext, sourceId: string): Promise<MappingQuestions>;
+  readMappingQuestions: (ctx: SecurityContext, sourceId: string) => Promise<MappingQuestions>;
   /** Maps a waiting file with the agent's answers. */
-  answerMappingQuestions(
+  answerMappingQuestions: (
     ctx: SecurityContext,
     sourceId: string,
     answers: MappingAnswersInput,
-  ): Promise<AnsweredMapping>;
+  ) => Promise<AnsweredMapping>;
   /** The original of a file the owner let the agent read in full. */
-  readOriginalFile(ctx: SecurityContext, sourceId: string): Promise<StoredFile>;
+  readOriginalFile: (ctx: SecurityContext, sourceId: string) => Promise<StoredFile>;
   /** The agent's people for a file it read in full replace the file's records, each time it sends. */
-  sendReadPeople(ctx: SecurityContext, sourceId: string, body: unknown): Promise<ReadPeopleOutcome>;
+  sendReadPeople: (
+    ctx: SecurityContext,
+    sourceId: string,
+    body: unknown,
+  ) => Promise<ReadPeopleOutcome>;
   /** Wakes the agent's waits: a file now waits for it, such as one the owner let it read in full. */
-  notifyFileWaiting(ctx: SecurityContext): void;
+  notifyFileWaiting: (ctx: SecurityContext) => void;
 }
 
 /** A file waiting for the external agent, by id only. */

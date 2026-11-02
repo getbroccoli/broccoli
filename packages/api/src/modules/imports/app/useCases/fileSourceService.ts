@@ -37,20 +37,20 @@ export interface FileSourceService {
    * waiting for the owner's consent; returns the source's id. A file that cannot be read is
    * refused and nothing is stored.
    */
-  uploadFile(ctx: SecurityContext, file: UploadedFile): Promise<string>;
+  uploadFile: (ctx: SecurityContext, file: UploadedFile) => Promise<string>;
   /**
    * The job: for each sheet, the model finds the header row and the columns, code copies
    * the cells into records. A run that is no longer current, or of a closed import, writes
    * nothing; a retryable model failure rejects, so the job runs again.
    */
-  mapFile(ctx: SecurityContext, job: MapFileJob): Promise<void>;
+  mapFile: (ctx: SecurityContext, job: MapFileJob) => Promise<void>;
   /** After the job's last attempt: the file is marked failed, unless a newer run has started. */
-  markFileFailed(ctx: SecurityContext, job: MapFileJob): Promise<void>;
+  markFileFailed: (ctx: SecurityContext, job: MapFileJob) => Promise<void>;
   /**
    * Maps a failed file again, in a new run, or has Broccoli's model map a file still waiting for
    * the external agent's answers; any other source is left as it is.
    */
-  retryFile(ctx: SecurityContext, sourceId: string): Promise<void>;
+  retryFile: (ctx: SecurityContext, sourceId: string) => Promise<void>;
 }
 
 /** A staff file as the owner uploads it. */

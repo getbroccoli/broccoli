@@ -9,27 +9,27 @@ import type { Instance } from "../domain";
  */
 export interface SetupStepService {
   /** Leaves the company step for the import step. */
-  completeCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean>;
+  completeCompanyStep: (ctx: SecurityContext, tx: Tx) => Promise<boolean>;
   /**
    * Leaves the import step without approving it, such as for the demo: to `owner` while the
    * instance has no owner, which self-hosted setup creates last, else to `done`.
    */
-  completeImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean>;
+  completeImportStep: (ctx: SecurityContext, tx: Tx) => Promise<boolean>;
   /**
    * Leaves the import step on setup approve: to `owner` while the instance has no owner, else to
    * `ready`, where a managed owner sees what setup added, or to `done` on a self-hosted instance.
    */
-  approveImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean>;
+  approveImportStep: (ctx: SecurityContext, tx: Tx) => Promise<boolean>;
   /** Takes setup from the owner or ready step back to the import step, so the owner can change the review. */
-  reopenImportStep(ctx: SecurityContext, tx: Tx): Promise<boolean>;
+  reopenImportStep: (ctx: SecurityContext, tx: Tx) => Promise<boolean>;
   /** Takes setup from `done` back to the company step when an owner with an account exits the demo or resets setup. */
-  returnToCompanyStep(ctx: SecurityContext, tx: Tx): Promise<boolean>;
+  returnToCompanyStep: (ctx: SecurityContext, tx: Tx) => Promise<boolean>;
   /** Leaves the owner step for `done` once setup created the owner. */
-  completeOwnerStep(ctx: SecurityContext, tx: Tx): Promise<boolean>;
+  completeOwnerStep: (ctx: SecurityContext, tx: Tx) => Promise<boolean>;
   /** Leaves the ready step for `done` once the managed owner has seen what setup added. */
-  completeReadyStep(ctx: SecurityContext, tx: Tx): Promise<boolean>;
+  completeReadyStep: (ctx: SecurityContext, tx: Tx) => Promise<boolean>;
   /** Whether the import still takes changes: setup has not moved past the import step. Trusted read: no `ctx`. */
-  isImportOpen(db: Orm | Tx): Promise<boolean>;
+  isImportOpen: (db: Orm | Tx) => Promise<boolean>;
 }
 
 export function createSetupStepService(): SetupStepService {

@@ -25,22 +25,25 @@ const fileStorage = createFileStorageService();
 /** Reading the import: its sources, their records and the review they make. Every function checks `ctx`. */
 export interface ImportReadService {
   /** The import record's photo with this file id, or null when it is no record's photo. */
-  readImportPhoto(ctx: SecurityContext, fileId: string): Promise<StoredFile | null>;
+  readImportPhoto: (ctx: SecurityContext, fileId: string) => Promise<StoredFile | null>;
   /** The import's sources, oldest first. */
-  listSources(ctx: SecurityContext): Promise<ImportSource[]>;
+  listSources: (ctx: SecurityContext) => Promise<ImportSource[]>;
   /** The sources with these ids, in any order; for loading many at once. */
-  readSources(ctx: SecurityContext, ids: readonly string[]): Promise<ImportSource[]>;
+  readSources: (ctx: SecurityContext, ids: readonly string[]) => Promise<ImportSource[]>;
   /** The number of employee records of each of these sources. */
-  countEmployees(ctx: SecurityContext, sourceIds: readonly string[]): Promise<Map<string, number>>;
+  countEmployees: (
+    ctx: SecurityContext,
+    sourceIds: readonly string[],
+  ) => Promise<Map<string, number>>;
   /** Whether a file is still being read, and whether the demo company may still replace the import. */
-  readProgress(ctx: SecurityContext): Promise<ImportProgress>;
+  readProgress: (ctx: SecurityContext) => Promise<ImportProgress>;
   /** The import as the setup review step shows it: its import employees, counts and checks. */
-  readReview(ctx: SecurityContext): Promise<ImportReview>;
+  readReview: (ctx: SecurityContext) => Promise<ImportReview>;
   /** One source's employee records, oldest first, one page at a time. */
-  listEmployeeRecords(
+  listEmployeeRecords: (
     ctx: SecurityContext,
     args: PageArgs & { sourceId: string },
-  ): Promise<Connection<ImportEmployeeRecord>>;
+  ) => Promise<Connection<ImportEmployeeRecord>>;
 }
 
 export function createImportReadService(orm: Orm): ImportReadService {

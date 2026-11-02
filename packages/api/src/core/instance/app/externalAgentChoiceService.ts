@@ -9,25 +9,25 @@ export interface ExternalAgentChoiceService {
    * Makes the owner's external agent the AI source, in the caller's `tx` and holding the instance
    * row; refused like `lockExternalAgentChoice`.
    */
-  chooseExternalAgentSource(ctx: SecurityContext, tx: Tx): Promise<void>;
+  chooseExternalAgentSource: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /**
    * Holds the instance row until `tx` ends for a change to the external agent; refused with
    * CONFLICT on a managed instance, once the owner exists or outside the import step.
    */
-  lockExternalAgentChoice(ctx: SecurityContext, tx: Tx): Promise<void>;
+  lockExternalAgentChoice: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /**
    * Chooses the external agent for the command on the server, in the caller's `tx`, while
    * `canChooseExternalAgentOnServer`, so the owner finds Your agent selected. System only.
    */
-  chooseExternalAgentOnServer(ctx: SecurityContext, tx: Tx): Promise<void>;
+  chooseExternalAgentOnServer: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /** Whether the external agent may work now (`isSetupOpenToExternalAgent`). Trusted read: no `ctx`. */
-  readSetupOpenToExternalAgent(db: Orm | Tx, now: Date): Promise<boolean>;
+  readSetupOpenToExternalAgent: (db: Orm | Tx, now: Date) => Promise<boolean>;
   /**
    * Holds the instance row until `tx` ends, so a step move or another AI source cannot land before
    * the caller's write, then reads `clock`: that moment when the external agent may work then, else
    * null. Read after the wait for the lock, so no deadline passes unseen meanwhile.
    */
-  lockSetupOpenToExternalAgent(tx: Tx, clock: () => Date): Promise<Date | null>;
+  lockSetupOpenToExternalAgent: (tx: Tx, clock: () => Date) => Promise<Date | null>;
 }
 
 export function createExternalAgentChoiceService(): ExternalAgentChoiceService {
