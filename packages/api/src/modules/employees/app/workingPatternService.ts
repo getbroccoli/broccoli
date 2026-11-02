@@ -179,11 +179,10 @@ async function readTimelines(
   employeeIds: readonly string[],
 ): Promise<Map<string, WorkingPatternTimeline>> {
   const patterns = workingPatternRepository(db);
-  const [assignments, memberships, policies] = await Promise.all([
-    patterns.findAssignments(employeeIds),
-    policyGroupRepository(db).findMemberships(employeeIds),
-    patterns.findPolicies(),
-  ]);
+  // One after another: inside a transaction they share one connection.
+  const assignments = await patterns.findAssignments(employeeIds);
+  const memberships = await policyGroupRepository(db).findMemberships(employeeIds);
+  const policies = await patterns.findPolicies();
   const groupIds = [...memberships.values()].flat().map(({ policyGroupId }) => policyGroupId);
   const groupPolicies = await patterns.findGroupPolicies([...new Set(groupIds)]);
   const policyWeeks = new Map(policies.map(({ id, weeks }) => [id, weeks]));
