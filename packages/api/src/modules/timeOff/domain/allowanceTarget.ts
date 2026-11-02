@@ -1,10 +1,8 @@
 import { addDays, addYears, type CalendarDate, daysBetween, weekdayOf } from "../../../utils";
+import type { BankHolidayCalendar } from "../../bankHolidays";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
-
-/** The nation whose bank holidays a working week follows. */
-export type BankHolidayCalendar = "england_and_wales" | "scotland" | "northern_ireland";
 
 /** A person's employment; a null start or end is open. */
 export interface EmploymentPeriod {
