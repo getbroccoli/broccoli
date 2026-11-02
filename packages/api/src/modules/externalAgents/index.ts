@@ -5,12 +5,16 @@ import type { Mode } from "../../core/env";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import { PrincipalSecurityContext } from "../../core/security";
 import type { ImportServices } from "../imports";
-import { createExternalAgentUseCases } from "./app";
+import { createExternalAgentServices } from "./app";
 import { createResolvers } from "./graphql";
 import { externalAgentFilesRouter, externalAgentRouter } from "./http";
 
 // Public values.
-export { createExternalAgentCodeOnServer, createExternalAgentUseCases } from "./app";
+export {
+  createExternalAgentActivity,
+  createExternalAgentServices,
+  createExternalAgentSessionService,
+} from "./app";
 
 /**
  * The owner's own coding agent, such as Claude Code or Codex, working on setup through a limited
@@ -22,7 +26,7 @@ export function externalAgentsModule(
     imports: Pick<ImportServices, "answeredMapping" | "originalFileReads">;
   },
 ): ModuleManifest {
-  const useCases = createExternalAgentUseCases(dependencies);
+  const useCases = createExternalAgentServices(dependencies);
   return {
     name: "externalAgents",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),

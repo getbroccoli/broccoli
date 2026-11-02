@@ -16,6 +16,7 @@
       "src/core/env",
       "src/core/events",
       "src/core/logger",
+      "src/core/security",
       "src/modules/externalAgents"
     ],
     "src/modules": [

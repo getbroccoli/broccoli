@@ -13,7 +13,7 @@ import {
   type MappingAnswersInput,
   READ_PEOPLE_JSON_SCHEMA,
 } from "../../imports";
-import type { ExternalAgentUseCases } from "../app";
+import type { ExternalAgentServices } from "../app";
 import { externalAgentErrorHandler, tooManyRequests } from "./externalAgentErrors";
 
 /** Large enough for a staff list of thousands of people. */
@@ -33,7 +33,7 @@ const SKILL = readFileSync(new URL("./broccoliSetupSkill.md", import.meta.url), 
  * anywhere else. Answers are never cached.
  */
 export function externalAgentRouter(
-  useCases: ExternalAgentUseCases,
+  useCases: ExternalAgentServices,
   logger: Logger,
 ): express.Router {
   const asExternalAgent = externalAgentSession(useCases);
@@ -192,7 +192,7 @@ const BEARER = /^Bearer (\S{1,200})$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Admits a request by its bearer token alone, as the external agent's security context. */
-function externalAgentSession(useCases: ExternalAgentUseCases): express.RequestHandler {
+function externalAgentSession(useCases: ExternalAgentServices): express.RequestHandler {
   // Express 5 passes a rejected handler on to the router's error handler.
   return async (request, response, next) => {
     const token = BEARER.exec(request.headers.authorization ?? "")?.[1];

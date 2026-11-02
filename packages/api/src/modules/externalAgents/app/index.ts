@@ -1,26 +1,27 @@
 import type { Orm, Transact } from "../../../core/db";
-import { PrincipalSecurityContext } from "../../../core/security";
 import type { ImportServices } from "../../imports";
-import {
-  type ExternalAgentCode,
-  type ExternalAgentSessionService,
-  createExternalAgentSessionService,
-} from "./externalAgentSessionService";
+import { createExternalAgentActivity } from "./externalAgentActivity";
 import {
   type ExternalAgentFileService,
   createExternalAgentFileService,
 } from "./externalAgentFileService";
-import { createExternalAgentActivity } from "./externalAgentActivity";
+import {
+  type ExternalAgentSessionService,
+  createExternalAgentSessionService,
+} from "./externalAgentSessionService";
 
+export { createExternalAgentActivity } from "./externalAgentActivity";
+export { createExternalAgentSessionService } from "./externalAgentSessionService";
 export type { ExternalAgentCode, ExternalAgentSession } from "./externalAgentSessionService";
 
-/** Everything the owner's external agent and the setup holder do with it; adapters call nothing else. */
-export interface ExternalAgentUseCases {
+/** The services of the owner's external agent and the setup holder; adapters call nothing else. */
+export interface ExternalAgentServices {
   sessions: ExternalAgentSessionService;
   files: ExternalAgentFileService;
 }
 
-export function createExternalAgentUseCases({
+/** Builds both services around one activity, so a file drop wakes the agent's waits. */
+export function createExternalAgentServices({
   orm,
   transact,
   imports,
@@ -30,30 +31,10 @@ export function createExternalAgentUseCases({
   transact: Transact;
   imports: Pick<ImportServices, "answeredMapping" | "originalFileReads">;
   clock?: () => Date;
-}): ExternalAgentUseCases {
+}): ExternalAgentServices {
   const context = { orm, transact, imports, clock, activity: createExternalAgentActivity() };
   return {
     sessions: createExternalAgentSessionService(context),
     files: createExternalAgentFileService(context),
   };
-}
-
-/**
- * A one-time code for the command run inside the server's container, as the system: whoever can run
- * it already controls the server (`createExternalAgentCodeOnServer`).
- */
-export function createExternalAgentCodeOnServer({
-  orm,
-  transact,
-}: {
-  orm: Orm;
-  transact: Transact;
-}): Promise<ExternalAgentCode> {
-  const sessions = createExternalAgentSessionService({
-    orm,
-    transact,
-    clock: () => new Date(),
-    activity: createExternalAgentActivity(),
-  });
-  return sessions.createExternalAgentCodeOnServer(PrincipalSecurityContext.system());
 }

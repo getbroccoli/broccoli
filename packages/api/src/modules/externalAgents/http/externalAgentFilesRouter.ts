@@ -5,7 +5,7 @@ import { sendApplicationError } from "../../../core/applicationError";
 import type { SecurityResolver } from "../../../core/security";
 import { requireSignedIn, type SecurityContext } from "../../../core/security";
 import { parseStaffFileName } from "../../imports";
-import type { ExternalAgentUseCases } from "../app";
+import type { ExternalAgentServices } from "../app";
 
 /** Large enough for a staff list of thousands of people, as the import's own upload. */
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -19,7 +19,7 @@ const UPLOADS_PER_MINUTE = 30;
  * once the owner allows it.
  */
 export function externalAgentFilesRouter(
-  useCases: ExternalAgentUseCases,
+  useCases: ExternalAgentServices,
   resolveSecurity: SecurityResolver,
 ): express.Router {
   return express.Router().post(

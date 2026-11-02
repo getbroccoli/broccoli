@@ -2,9 +2,9 @@ import type { Orm } from "../../../core/db";
 import type { Mode } from "../../../core/env";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import { readSetupView } from "../../system";
-import type { ExternalAgentUseCases } from "../app";
+import type { ExternalAgentServices } from "../app";
 
-export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentUseCases): Resolvers {
+export function createResolvers(orm: Orm, mode: Mode, useCases: ExternalAgentServices): Resolvers {
   return {
     Ai: {
       externalAgent: async (_parent, _args, context) => {

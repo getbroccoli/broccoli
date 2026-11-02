@@ -37,7 +37,7 @@ import {
   type EmployeeService,
 } from "../../src/modules/employees";
 import { createImportServices } from "../../src/modules/imports";
-import { createExternalAgentUseCases } from "../../src/modules/externalAgents";
+import { createExternalAgentServices } from "../../src/modules/externalAgents";
 import { createSystemService } from "../../src/modules/system";
 import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
@@ -295,11 +295,11 @@ export function slackUseCases(
 }
 
 export function externalAgentUseCases(
-  orm: Parameters<typeof createExternalAgentUseCases>[0]["orm"],
+  orm: Parameters<typeof createExternalAgentServices>[0]["orm"],
   { clock = () => new Date("2026-10-20T12:00:00Z") }: { clock?: () => Date } = {},
 ) {
   const imports = importUseCases(orm);
-  const useCases = createExternalAgentUseCases({
+  const useCases = createExternalAgentServices({
     orm,
     transact: testTransactor(orm),
     imports,
