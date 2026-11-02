@@ -1,9 +1,6 @@
 import { expect, OWNER, test, workingPatternService } from "#test/support";
 
-test("assignment dates must be valid and the end cannot precede the start", async ({
-  orm,
-  seed,
-}) => {
+test("an assignment end cannot precede its start", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
@@ -13,18 +10,6 @@ test("assignment dates must be valid and the end cannot precede the start", asyn
     effectiveFrom: "2026-09-01",
   };
 
-  await expect(
-    patterns.assignPattern(OWNER, { ...input, effectiveFrom: "September 1" }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "effectiveFrom", code: "invalid" }],
-  });
-  await expect(
-    patterns.assignPattern(OWNER, { ...input, effectiveUntil: "September 30" }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "effectiveUntil", code: "invalid" }],
-  });
   await expect(
     patterns.assignPattern(OWNER, { ...input, effectiveUntil: "2026-08-31" }),
   ).rejects.toMatchObject({

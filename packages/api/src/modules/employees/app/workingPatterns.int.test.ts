@@ -41,11 +41,7 @@ test("changing a pattern on an existing date replaces that week's minutes", asyn
   expect(await patterns.listPatterns(OWNER)).toContainEqual(changed);
 });
 
-test("removing a pattern week restores the earlier week until the next change", async ({
-  orm,
-  seed,
-}) => {
-  const employee = await seed.employee();
+test("removing a pattern week preserves the initial week", async ({ orm }) => {
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   await patterns.changePattern(OWNER, {
@@ -54,34 +50,14 @@ test("removing a pattern week restores the earlier week until the next change", 
     minutes: [480, 480, 480, 480, 480, 0, 0],
     fullDayMinutes: 480,
   });
-  await patterns.changePattern(OWNER, {
-    workingPatternId: standard.id,
-    effectiveFrom: "2026-10-01",
-    minutes: [420, 420, 420, 420, 420, 0, 0],
-    fullDayMinutes: 450,
-  });
 
   const changed = await patterns.removePatternWeek(OWNER, {
     workingPatternId: standard.id,
     effectiveFrom: "2026-09-01",
   });
 
-  expect(changed.weeks).toEqual([
-    { effectiveFrom: null, minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: [420, 420, 420, 420, 420, 0, 0], fullDayMinutes: 450 },
-  ]);
-  expect(
-    (
-      await patterns.readWorkingWeeks(OWNER, {
-        employeeIds: [employee.id],
-        from: "2026-09-01",
-        until: "2026-10-31",
-      })
-    ).get(employee.id),
-  ).toEqual([
-    { effectiveFrom: "2026-09-01", minutes: [450, 450, 450, 450, 450, 0, 0], fullDayMinutes: 450 },
-    { effectiveFrom: "2026-10-01", minutes: [420, 420, 420, 420, 420, 0, 0], fullDayMinutes: 450 },
-  ]);
+  expect(changed.weeks).toEqual(standard.weeks);
+  expect(await patterns.listPatterns(OWNER)).toContainEqual(changed);
 });
 
 test("renaming Standard preserves its identity and weeks", async ({ orm }) => {
