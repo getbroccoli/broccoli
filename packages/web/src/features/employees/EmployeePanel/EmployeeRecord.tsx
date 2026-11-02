@@ -18,7 +18,7 @@ import {
   InviteDialog,
   InviteMenuItems,
 } from "@/features/invites";
-import { EditableField, EditBar, RecordHistory } from "@/features/records";
+import { EditableField, EditBar, FieldValue, RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
 import { Avatar } from "../Avatar";
@@ -129,7 +129,22 @@ export function EmployeeRecord({ employee, onClose }: Props) {
       <div className="subtle-scrollbar flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-6">
         <KeyFacts
           startDate={employee.startDate ?? null}
-          email={employee.email}
+          email={
+            <FieldValue
+              field={EMAIL_FIELD}
+              recordId={employee.id}
+              saved={draft.saved.email}
+              draft={draft.draft.email}
+              error={draft.fieldErrors.email}
+              disabled={draft.saving}
+              readOnly={!canEdit("email")}
+              onEdit={(value) => draft.edit("email", value)}
+              onRevert={() => draft.revert("email")}
+            />
+          }
+          emailMark={
+            draft.fieldErrors.email ? "invalid" : draft.changed.includes("email") ? "changed" : null
+          }
           signIn={
             employee.signInStatus
               ? { status: employee.signInStatus, onInvite: () => setInviting(true) }
@@ -221,3 +236,5 @@ export function EmployeeRecord({ employee, onClose }: Props) {
     </>
   );
 }
+
+const EMAIL_FIELD = EMPLOYEE_DESCRIPTION.fields.find((field) => field.key === "email")!;

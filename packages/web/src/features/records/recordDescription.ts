@@ -5,13 +5,13 @@ export interface RecordField {
   /** The history field key, such as `jobTitle`. */
   key: string;
   label: string;
-  /** The panel section the field sits in, such as "Job". */
-  section: string;
+  /** The panel section the field sits in, such as "Job"; none for a field shown elsewhere. */
+  section?: string;
   /** A text input, a date picker, or the record type's own editor. */
   editor: "text" | "date" | ComponentType<FieldEditorProps>;
   /** How a stored value shows, such as a date as DD/MM/YYYY. */
   format: (value: string) => string;
-  /** Shown only in history, never as a field of the panel, such as a person's sign-in. */
+  /** Never among the panel's sections: only in history, such as a person's sign-in, or elsewhere. */
   historyOnly?: boolean;
 }
 

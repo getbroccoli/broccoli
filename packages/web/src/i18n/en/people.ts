@@ -27,7 +27,6 @@ export const peopleEn = {
   "people.panel.section.details": "Details",
   "people.panel.section.job": "Job",
   "people.panel.section.personal": "Personal",
-  "people.panel.section.contact": "Contact",
   "people.panel.field.signIn": "Sign-in",
   "people.panel.field.firstName": "First name",
   "people.panel.field.lastName": "Last name",

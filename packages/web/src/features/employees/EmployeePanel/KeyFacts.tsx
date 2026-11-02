@@ -6,27 +6,32 @@ import type { SignInStatusFragment } from "@/__generated__/graphql";
 import { InviteButton, SignInLine } from "@/features/invites";
 import { t } from "@/i18n";
 import { calendarDayOf } from "@/lib/calendarDay";
+import { cn } from "@/lib/class-names";
 import { formatCalendarDate } from "@/lib/formatDate";
 import { tenureOf } from "@/lib/tenure";
 
 type Props = {
   startDate: string | null;
-  email: string;
+  /** The work email, edited in place by those who may change it. */
+  email: ReactNode;
+  /** An unsaved or refused email marks its card as the panel marks its other fields. */
+  emailMark: "changed" | "invalid" | null;
   /** Shown to admins only, on the work email with its invite action. */
   signIn: { status: SignInStatusFragment; onInvite: () => void } | null;
 };
 
 /** The facts at the top of a person's panel: start date, tenure and work email with sign-in. */
-export function KeyFacts({ startDate, email, signIn }: Props) {
+export function KeyFacts({ startDate, email, emailMark, signIn }: Props) {
   const tenure = tenureOf(startDate, calendarDayOf(new Date()));
   const facts: {
     icon: Icon;
     label: string;
-    value: string;
+    value: ReactNode;
     /** Beside the label, such as the sign-in state. */
     status?: ReactNode;
     /** Beside the value, such as the invite action. */
     action?: ReactNode;
+    mark?: "changed" | "invalid" | null;
   }[] = [
     ...(startDate
       ? [
@@ -41,7 +46,9 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
     {
       icon: Envelope,
       label: t("people.panel.fact.email"),
-      value: email,
+      // The field pads its value for its hover and focus ring; this lines the text up with the label.
+      value: <div className="-mx-1.5">{email}</div>,
+      mark: emailMark,
       status: signIn && <SignInLine status={signIn.status} />,
       action: signIn && <InviteButton status={signIn.status} onInvite={signIn.onInvite} />,
     },
@@ -50,10 +57,15 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
   return (
     // Dates are short; the work email, last, takes the rest of the row.
     <dl className="flex flex-wrap gap-3">
-      {facts.map(({ icon: FactIcon, label, value, status, action }) => (
+      {facts.map(({ icon: FactIcon, label, value, status, action, mark }) => (
         <div
           key={label}
-          className="min-w-0 flex-[0_1_10rem] rounded-xl border border-border px-3 py-2.5 last:flex-[1_1_18rem]"
+          className={cn(
+            "min-w-0 flex-[0_1_10rem] rounded-xl border border-border px-3 py-2.5 last:flex-[1_1_18rem]",
+            mark && "border-l-2 bg-brand-soft/40",
+            mark === "changed" && "border-l-brand",
+            mark === "invalid" && "border-l-destructive",
+          )}
         >
           <dt className="flex items-center gap-1.5 text-[11px] font-medium tracking-wider whitespace-nowrap text-muted-foreground uppercase">
             <FactIcon aria-hidden className="size-3.5 shrink-0" />
@@ -65,7 +77,7 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
             )}
           </dt>
           <dd className="flex items-center gap-2 pt-1 text-sm font-medium">
-            <span className="min-w-0 flex-1 truncate">{value}</span>
+            <div className="min-w-0 flex-1">{value}</div>
             {action}
           </dd>
         </div>

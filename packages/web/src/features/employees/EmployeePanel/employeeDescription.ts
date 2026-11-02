@@ -38,7 +38,14 @@ export const EMPLOYEE_DESCRIPTION = {
       editor: "date",
       format: (value) => formatCalendarDate(value) ?? value,
     },
-    textField("email", "people.panel.section.contact"),
+    // The panel edits the work email in its key facts, not among these sections.
+    {
+      key: "email",
+      label: t("people.panel.field.email"),
+      editor: "text",
+      format: (value) => value,
+      historyOnly: true,
+    },
     textField("firstName", "people.panel.section.personal"),
     textField("lastName", "people.panel.section.personal"),
     {
@@ -66,8 +73,7 @@ export const EMPLOYEE_DESCRIPTION = {
 
 function textField(
   key: EmployeeFieldKey,
-  section:
-    "people.panel.section.job" | "people.panel.section.contact" | "people.panel.section.personal",
+  section: "people.panel.section.job" | "people.panel.section.personal",
 ): RecordDescription["fields"][number] {
   return {
     key,
