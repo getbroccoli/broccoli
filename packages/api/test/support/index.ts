@@ -42,7 +42,7 @@ export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
 export {
   companyService,
-  demoUseCases,
+  demoService,
   employeeUseCases,
   employeeInviteService,
   externalAgentUseCases,

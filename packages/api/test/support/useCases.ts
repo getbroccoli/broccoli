@@ -23,7 +23,7 @@ import type { SecretBox } from "../../src/core/secrets";
 import { type BrandLookup } from "../../src/integrations/brandLookup";
 import type { SlackApi, SlackAuthorization } from "../../src/integrations/slack";
 import { createCompanyService } from "../../src/modules/company";
-import { createDemoUseCases, prepareDemoFill } from "../../src/modules/demo";
+import { createDemoFillService, createDemoService } from "../../src/modules/demo";
 import {
   createEmployeeInviteService,
   createEmployeeManagerService,
@@ -46,6 +46,7 @@ import { TEST_SECRET_BOX } from "./testSecretBox";
 import { testTransactor } from "./testTransactor";
 
 const employeeSetup = createEmployeeSetupService();
+const demoFill = createDemoFillService();
 
 /**
  * The company service on `orm` with test defaults: no brand is found and logs are
@@ -81,8 +82,8 @@ export function employeeUseCases(
   };
 }
 
-export function demoUseCases(orm: Parameters<typeof createDemoUseCases>[0]["orm"]) {
-  return createDemoUseCases({ orm, transact: testTransactor(orm) });
+export function demoService(orm: Parameters<typeof createDemoService>[0]["orm"]) {
+  return createDemoService({ orm, transact: testTransactor(orm) });
 }
 
 export function systemUseCases(orm: Orm) {
@@ -221,7 +222,7 @@ export function importUseCases(
     originalFileReader = NO_ORIGINAL_FILE_READER,
     jobs,
     clock = () => new Date(),
-    prepareDemoFill: prepareFill = () => prepareDemoFill(DEMO_TODAY),
+    prepareDemoFill: prepareFill = () => demoFill.prepareDemoFill(DEMO_TODAY),
   }: {
     slackApi?: Partial<SlackApi>;
     decisions?: Decisions;

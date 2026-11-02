@@ -1,7 +1,7 @@
 import {
   employeeUseCases,
   companyService,
-  demoUseCases,
+  demoService,
   expect,
   ADMIN,
   EMPLOYEE,
@@ -9,27 +9,28 @@ import {
   test,
 } from "#test/support";
 
-import { prepareDemoFill } from "./prepareDemoFill";
+import { createDemoFillService } from "./demoFillService";
 
-import { createSetupStepService, createInstanceService } from "../../../../core/instance";
-import { parseCalendarDate } from "../../../../utils";
+import { createSetupStepService, createInstanceService } from "../../../core/instance";
+import { parseCalendarDate } from "../../../utils";
 
 const setupSteps = createSetupStepService();
 const instances = createInstanceService();
+const demoFill = createDemoFillService();
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({
   orm,
   seed,
   transact,
 }) => {
-  const demo = demoUseCases(orm);
+  const demo = demoService(orm);
   const company = companyService(orm);
   const { listEmployees } = employeeUseCases(orm);
   await seed.assignment();
   const owner = await seed.owner();
   await company.update(owner, { name: "Acme Corp" });
   const today = parseCalendarDate("2026-10-13")!;
-  await transact(await prepareDemoFill(today));
+  await transact(await demoFill.prepareDemoFill(today));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
   await seed.employee();
   expect((await instances.readInstance(orm)).step).toBe("done");
@@ -55,8 +56,8 @@ test("refuses a concurrent second exit and keeps the first exit's outcome", asyn
   const owner = await seed.owner();
   await seed.assignment();
   await seed.setupStep("done");
-  await transact(await prepareDemoFill(parseCalendarDate("2026-10-13")));
-  const demo = demoUseCases(orm);
+  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  const demo = demoService(orm);
 
   const results = await Promise.allSettled([demo.exitDemo(owner), demo.exitDemo(owner)]);
 
@@ -78,8 +79,8 @@ test("refuses to exit before setup is done and keeps the employees", async ({
   const owner = await seed.owner();
   await seed.assignment();
   await seed.setupStep("company");
-  await transact(await prepareDemoFill(parseCalendarDate("2026-10-13")));
-  const demo = demoUseCases(orm);
+  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  const demo = demoService(orm);
   const employees = employeeUseCases(orm);
   const before = await employees.listEmployees(owner, {});
 
@@ -96,7 +97,7 @@ test("refuses to exit without demo data and keeps the completed setup and employ
   orm,
   seed,
 }) => {
-  const demo = demoUseCases(orm);
+  const demo = demoService(orm);
   await seed.assignment();
   const owner = await seed.owner();
   await seed.setupStep("done");
@@ -118,8 +119,8 @@ test("refuses the provisional owner exiting the demo and keeps the demo records"
   transact,
 }) => {
   const owner = await seed.demoOwner({ expiresAt: new Date("2026-10-20T12:00:00Z") });
-  await transact(await prepareDemoFill(parseCalendarDate("2026-10-13")));
-  const demo = demoUseCases(orm);
+  await transact(await demoFill.prepareDemoFill(parseCalendarDate("2026-10-13")));
+  const demo = demoService(orm);
   const { listEmployees } = employeeUseCases(orm);
   const employees = await listEmployees(owner, { first: 100 });
   const avatarIds = await storedFileIds(orm);
@@ -136,7 +137,7 @@ test("refuses the provisional owner exiting the demo and keeps the demo records"
 });
 
 test("refuses an employee exiting the demo", async ({ orm }) => {
-  const demo = demoUseCases(orm);
+  const demo = demoService(orm);
 
   await expect(demo.exitDemo(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
@@ -144,7 +145,7 @@ test("refuses an employee exiting the demo", async ({ orm }) => {
 });
 
 test("refuses to reveal demo data status to an employee", async ({ orm }) => {
-  const demo = demoUseCases(orm);
+  const demo = demoService(orm);
 
   await expect(demo.getDemoData(EMPLOYEE)).rejects.toMatchObject({
     code: "FORBIDDEN",
@@ -152,7 +153,7 @@ test("refuses to reveal demo data status to an employee", async ({ orm }) => {
 });
 
 test("refuses an admin resetting the workspace", async ({ orm }) => {
-  await expect(demoUseCases(orm).exitDemo(ADMIN)).rejects.toMatchObject({
+  await expect(demoService(orm).exitDemo(ADMIN)).rejects.toMatchObject({
     code: "FORBIDDEN",
     message: "Only the owner can do this.",
   });

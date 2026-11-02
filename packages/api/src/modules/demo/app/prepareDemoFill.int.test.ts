@@ -1,14 +1,16 @@
-import { employeeUseCases, demoUseCases, expect, OWNER, storedFileIds, test } from "#test/support";
+import { employeeUseCases, demoService, expect, OWNER, storedFileIds, test } from "#test/support";
 
-import { prepareDemoFill } from "./prepareDemoFill";
+import { createDemoFillService } from "./demoFillService";
 
-import { parseCalendarDate } from "../../../../utils";
+import { parseCalendarDate } from "../../../utils";
+
+const demoFill = createDemoFillService();
 
 test("fills 40 demo employees with distinct stored avatars", async ({ orm, transact }) => {
-  const demo = demoUseCases(orm);
+  const demo = demoService(orm);
   const { listEmployees } = employeeUseCases(orm);
 
-  await transact(await prepareDemoFill(today));
+  await transact(await demoFill.prepareDemoFill(today));
 
   const employees = await listEmployees(OWNER, { first: 100 });
   const avatarIds = employees.edges.map(({ node }) => node.avatarFileId);
@@ -28,9 +30,9 @@ test("fills 40 demo employees with distinct stored avatars", async ({ orm, trans
 });
 
 test("adds nothing when demo data has already been filled", async ({ orm, transact }) => {
-  const demo = demoUseCases(orm);
+  const demo = demoService(orm);
   const { listEmployees } = employeeUseCases(orm);
-  const fill = await prepareDemoFill(today);
+  const fill = await demoFill.prepareDemoFill(today);
   await transact(fill);
   const before = await listEmployees(OWNER, { first: 100 });
   const filesBefore = await storedFileIds(orm);
@@ -44,10 +46,10 @@ test("adds nothing when demo data has already been filled", async ({ orm, transa
 
 test("does not fill demo data when a real employee exists", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
-  const demo = demoUseCases(orm);
+  const demo = demoService(orm);
   const { listEmployees } = employeeUseCases(orm);
 
-  await transact(await prepareDemoFill(today));
+  await transact(await demoFill.prepareDemoFill(today));
 
   const employees = await listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node)).toEqual([employee]);

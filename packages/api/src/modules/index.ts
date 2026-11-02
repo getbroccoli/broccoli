@@ -7,7 +7,7 @@ import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
 import { companyModule, createCompany } from "./company";
-import { demoModule, prepareDemoFill } from "./demo";
+import { createDemoFillService, demoModule } from "./demo";
 import { createEmployeeSetupService, employeeDirectory, employeesModule } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportUseCases, importsModule } from "./imports";
@@ -45,7 +45,7 @@ export function createModules(
     slack: slackConnection,
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
-    prepareDemoFill,
+    prepareDemoFill: createDemoFillService().prepareDemoFill,
   });
   const manifests = [
     systemModule({
