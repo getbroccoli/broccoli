@@ -11,8 +11,12 @@ import {
 
 import { prepareDemoFill } from "./prepareDemoFill";
 
-import { completeImportStep, readInstance } from "../../../../core/instance";
+import { createSetupStepService, createInstanceService } from "../../../../core/instance";
 import { parseCalendarDate } from "../../../../utils";
+
+const setupSteps = createSetupStepService();
+
+const instances = createInstanceService();
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({
   orm,
@@ -27,9 +31,9 @@ test("exiting the demo deletes every employee and their avatars and returns to c
   await company.update(owner, { name: "Acme Corp" });
   const today = parseCalendarDate("2026-10-13")!;
   await transact(await prepareDemoFill(today));
-  await transact((tx) => completeImportStep(owner, tx));
+  await transact((tx) => setupSteps.completeImportStep(owner, tx));
   await seed.employee();
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
 
   const exited = await demo.exitDemo(owner);
 
@@ -37,7 +41,7 @@ test("exiting the demo deletes every employee and their avatars and returns to c
   expect((await listEmployees(owner, { first: 100 })).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(await demo.getDemoData(owner)).toEqual({ isPresent: false });
-  expect(await readInstance(orm)).toMatchObject({
+  expect(await instances.readInstance(orm)).toMatchObject({
     step: "company",
     ownerUserId: owner.user!.userId,
   });
@@ -63,7 +67,7 @@ test("refuses a concurrent second exit and keeps the first exit's outcome", asyn
   expect(results.filter(({ status }) => status === "rejected")).toMatchObject([
     { reason: { code: "CONFLICT", message: "The instance holds no demo data." } },
   ]);
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
 });
 
@@ -85,7 +89,7 @@ test("refuses to exit before setup is done and keeps the employees", async ({
     message: "The instance holds no demo data.",
   });
 
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
   expect(await employees.listEmployees(owner, {})).toEqual(before);
 });
 
@@ -104,7 +108,7 @@ test("refuses to exit without demo data and keeps the completed setup and employ
     message: "The instance holds no demo data.",
   });
 
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
   const { edges } = await employeeUseCases(orm).listEmployees(owner, { first: 100 });
   expect(edges.map(({ node }) => node)).toEqual([employee]);
 });
@@ -129,7 +133,7 @@ test("refuses the provisional owner exiting the demo and keeps the demo records"
   expect(await demo.getDemoData(owner)).toEqual({ isPresent: true });
   expect(await listEmployees(owner, { first: 100 })).toEqual(employees);
   expect(await storedFileIds(orm)).toEqual(avatarIds);
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
 });
 
 test("refuses an employee exiting the demo", async ({ orm }) => {

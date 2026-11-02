@@ -1,8 +1,12 @@
 import { ApplicationError } from "../../../../core/applicationError";
-import { readInstance, returnToCompanyStep } from "../../../../core/instance";
+import { createSetupStepService, createInstanceService } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { deleteAllEmployees, hasDemoEmployees } from "../../../employees";
 import type { DemoContext } from "./demoContext";
+
+const setupSteps = createSetupStepService();
+
+const instances = createInstanceService();
 
 /**
  * Ends the demo for an owner with an account: deletes every employee, the demo people and
@@ -12,11 +16,11 @@ import type { DemoContext } from "./demoContext";
 export async function exitDemo({ transact }: DemoContext, ctx: SecurityContext) {
   ctx.require("RESET_WORKSPACE");
   await transact(async (tx) => {
-    if ((await readInstance(tx)).demoExpiresAt) {
+    if ((await instances.readInstance(tx)).demoExpiresAt) {
       throw new ApplicationError("FORBIDDEN", "Exit the demo through setup.");
     }
     // Moving the step first locks the instance row, so a concurrent exit waits and then refuses.
-    if (!(await returnToCompanyStep(ctx, tx)) || !(await hasDemoEmployees(ctx, tx))) {
+    if (!(await setupSteps.returnToCompanyStep(ctx, tx)) || !(await hasDemoEmployees(ctx, tx))) {
       throw new ApplicationError("CONFLICT", "The instance holds no demo data.");
     }
     await deleteAllEmployees(ctx, tx);

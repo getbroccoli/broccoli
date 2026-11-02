@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../../../core/applicationError";
-import { approveImportStep, readInstance } from "../../../../core/instance";
+import { createSetupStepService, createInstanceService } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { lockImport } from "../../db";
 import type { ImportContext } from "./importContext";
@@ -7,6 +7,10 @@ import { isReading } from "../../domain";
 import { addApprovedPeople } from "./addApprovedPeople";
 import { readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
+
+const setupSteps = createSetupStepService();
+
+const instances = createInstanceService();
 
 /**
  * Completes the import step, adding the people only when that completes setup; otherwise the
@@ -22,7 +26,7 @@ export async function approveImport(
   const approved = await transact(async (tx) => {
     // The step move locks the instance row, so a concurrent Approve waits and then finds
     // the step moved.
-    if (!(await approveImportStep(ctx, tx))) {
+    if (!(await setupSteps.approveImportStep(ctx, tx))) {
       return false;
     }
     const imports = await lockImport(tx);
@@ -33,7 +37,7 @@ export async function approveImport(
       throw new ApplicationError("CONFLICT", "Your people changed while you were reviewing.");
     }
     // A self-hosted instance whose owner has an account has no last step to add them at.
-    if ((await readInstance(tx)).step === "done") {
+    if ((await instances.readInstance(tx)).step === "done") {
       await addApprovedPeople(ctx, tx);
     }
     return true;

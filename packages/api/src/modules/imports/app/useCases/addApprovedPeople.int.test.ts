@@ -18,8 +18,10 @@ import {
 import { user } from "../../../../core/auth";
 import { ormOf, transactor } from "../../../../core/db";
 import { createEventBus } from "../../../../core/events";
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
 import { createLogger } from "../../../../core/logger";
+
+const instances = createInstanceService();
 
 test("approval by the setup holder creates nobody until account creation", async ({
   orm,
@@ -33,7 +35,7 @@ test("approval by the setup holder creates nobody until account creation", async
 
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
 
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   await finishSelfHostedSetup(orm);
   const employees = await employeeUseCases(orm).listEmployees(OWNER, {});
@@ -73,7 +75,7 @@ test("a database failure after account creation leaves no owner or employees and
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   const before = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id });
   const files = await storedFileIds(orm);
-  const instance = await readInstance(orm);
+  const instance = await instances.readInstance(orm);
   const eventBus = createEventBus(createLogger("silent"));
   const completed: unknown[] = [];
   eventBus.subscribe({
@@ -93,7 +95,7 @@ test("a database failure after account creation leaves no owner or employees and
 
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect(await orm.select().from(user)).toEqual([]);
-  expect(await readInstance(orm)).toEqual(instance);
+  expect(await instances.readInstance(orm)).toEqual(instance);
   expect(await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: source.id })).toEqual(
     before,
   );
@@ -104,7 +106,7 @@ test("a database failure after account creation leaves no owner or employees and
   await imports.reopenReview(SETUP_HOLDER);
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
   await finishSelfHostedSetup(orm);
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toMatchObject([
     { node: { email: "avery@example.com", avatarFileId: photos[0] } },
   ]);
@@ -129,7 +131,7 @@ test("an existing owner refuses account creation before adding the approved peop
   ).rejects.toMatchObject({ name: "OwnerExistsError" });
 
   expect(await orm.select().from(user)).toEqual(users);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
   expect((await imports.reads.readReview(owner)).listEmployees({})).toEqual(before);
 });

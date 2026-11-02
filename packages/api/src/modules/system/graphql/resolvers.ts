@@ -2,13 +2,17 @@ import type { Orm } from "../../../core/db";
 import type { Mode } from "../../../core/env";
 import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import {
-  readInstance,
-  readSetupHolder,
+  createSetupSessionService,
+  createInstanceService,
   type AiConfig,
   type MailConfig,
 } from "../../../core/instance";
 import { OPERATIONS, type SecurityContext } from "../../../core/security";
 import type { SystemUseCases } from "../app";
+
+const setupSessions = createSetupSessionService();
+
+const instances = createInstanceService();
 
 const STEPS = {
   company: "COMPANY",
@@ -117,7 +121,7 @@ export function createResolvers(orm: Orm, mode: Mode, useCases: SystemUseCases):
 /** The `Setup` object for `security`, as `Query.setup` and every setup payload return it. */
 export async function readSetupView(orm: Orm, mode: Mode, security: SecurityContext | null) {
   const { step, demoExpiresAt, ownerSignInMethod, mailSource, assignment } =
-    await readInstance(orm);
+    await instances.readInstance(orm);
   return {
     id: "instance",
     step: STEPS[step],
@@ -125,7 +129,7 @@ export async function readSetupView(orm: Orm, mode: Mode, security: SecurityCont
     // A live setup cookie made the request the setup holder; any other carries no live token.
     holder: security?.isSetupHolder
       ? ("YOU" as const)
-      : HOLDERS[await readSetupHolder(orm, { token: null, now: new Date() })],
+      : HOLDERS[await setupSessions.readSetupHolder(orm, { token: null, now: new Date() })],
     // Only the owner learns when their demo ends.
     demoExpiresAt: security?.user?.isOwner ? demoExpiresAt : null,
     ownerSignInMethod: ownerSignInMethod && OWNER_SIGN_IN_METHODS[ownerSignInMethod],

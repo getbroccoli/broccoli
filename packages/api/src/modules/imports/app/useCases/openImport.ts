@@ -1,7 +1,9 @@
 import { ApplicationError } from "../../../../core/applicationError";
 import type { Tx } from "../../../../core/db";
-import { isImportOpen } from "../../../../core/instance";
+import { createSetupStepService } from "../../../../core/instance";
 import { type ImportRepository, lockImport } from "../../db";
+
+const setupSteps = createSetupStepService();
 
 /**
  * The repository that changes the import in `tx`, holding the lock Approve takes too, so
@@ -10,7 +12,7 @@ import { type ImportRepository, lockImport } from "../../db";
  */
 export async function openImport(tx: Tx): Promise<ImportRepository | null> {
   const imports = await lockImport(tx);
-  return (await isImportOpen(tx)) ? imports : null;
+  return (await setupSteps.isImportOpen(tx)) ? imports : null;
 }
 
 /** `openImport` for a change the owner asked for: refused once the import is closed. */

@@ -1,7 +1,9 @@
 import { ApplicationError } from "../../../../core/applicationError";
-import { completeReadyStep } from "../../../../core/instance";
+import { createSetupStepService } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import type { SystemContext } from "./systemContext";
+
+const setupSteps = createSetupStepService();
 
 /**
  * Completes a managed setup once the owner has seen what it will add: adds the approved
@@ -13,7 +15,7 @@ export async function completeSetup(
   ctx: SecurityContext,
 ): Promise<void> {
   await transact(async (tx) => {
-    if (!(await completeReadyStep(ctx, tx))) {
+    if (!(await setupSteps.completeReadyStep(ctx, tx))) {
       throw new ApplicationError("CONFLICT", "Setup is not at the ready step.");
     }
     await addApprovedPeople(ctx, tx);

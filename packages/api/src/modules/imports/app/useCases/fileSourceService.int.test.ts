@@ -14,7 +14,9 @@ import {
 } from "#test/support";
 
 import { files } from "../../../../core/files";
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 test("stores a mapping source named after the file and sends its first job", async ({
   orm,
@@ -116,7 +118,7 @@ test("refuses an upload after Approve while setup still awaits the owner", async
   await seed.setupStep("import");
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
 
   await expect(
     imports.files.uploadFile(SETUP_HOLDER, {

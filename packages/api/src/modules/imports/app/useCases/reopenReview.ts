@@ -1,8 +1,10 @@
-import { reopenImportStep } from "../../../../core/instance";
+import { createSetupStepService } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import { deleteAllEmployees, hasDemoEmployees } from "../../../employees";
 import type { ImportContext } from "./importContext";
 import { requireImportAccess } from "./requireImportAccess";
+
+const setupSteps = createSetupStepService();
 
 /**
  * Takes setup from the owner or ready step back to the import step, so the owner can change
@@ -14,7 +16,7 @@ export async function reopenReview(
 ): Promise<void> {
   requireImportAccess(ctx);
   const reopened = await transact(async (tx) => {
-    if (!(await reopenImportStep(ctx, tx))) {
+    if (!(await setupSteps.reopenImportStep(ctx, tx))) {
       return false;
     }
     if (await hasDemoEmployees(ctx, tx)) {

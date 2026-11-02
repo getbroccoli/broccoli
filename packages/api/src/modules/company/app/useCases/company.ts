@@ -1,9 +1,11 @@
 import type { Orm, Transact } from "../../../../core/db";
 import type { SecurityContext } from "../../../../core/security";
 import { companyRepository } from "../../db";
-import { readOwner } from "../../../../core/instance";
+import { createOwnerService } from "../../../../core/instance";
 import type { CompanyRepository } from "../../db";
 import { suggestName } from "../../domain";
+
+const owners = createOwnerService();
 
 /** The largest company logo Broccoli stores. */
 export const MAX_LOGO_BYTES = 5 * 1024 * 1024;
@@ -26,7 +28,7 @@ export interface CompanyContext {
 export async function readCompany({ orm, companies }: CompanyContext): Promise<Company> {
   const [{ name, brandName, logoFileId }, owner] = await Promise.all([
     companies.read(),
-    readOwner(orm),
+    owners.readOwner(orm),
   ]);
   return {
     name,

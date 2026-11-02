@@ -12,7 +12,9 @@ import {
 } from "#test/support";
 
 import { ormOf } from "../../../../core/db";
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 test.for([
   { mode: "managed", step: "ready" },
@@ -37,7 +39,7 @@ test.for([
 
     await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
-    expect((await readInstance(orm)).step).toBe(step);
+    expect((await instances.readInstance(orm)).step).toBe(step);
     if (mode === "managed") {
       expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
       await systemUseCases(orm).completeSetup(owner);
@@ -133,7 +135,7 @@ test("two concurrent approves create the employees once", async ({ orm, seed }) 
     imports.approveImport(owner, (await imports.reads.readReview(owner)).version),
   ]);
 
-  expect((await readInstance(orm)).step).toBe("ready");
+  expect((await instances.readInstance(orm)).step).toBe("ready");
   await systemUseCases(orm).completeSetup(owner);
   const employees = await employeeUseCases(orm).listEmployees(OWNER, { first: 100 });
   expect(employees.edges.map(({ node }) => node.email)).toEqual([record!.email]);
@@ -153,7 +155,7 @@ test.for(["skipped", "company"] as const)(
 
     await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
-    expect((await readInstance(orm)).step).toBe(step === "skipped" ? "done" : "company");
+    expect((await instances.readInstance(orm)).step).toBe(step === "skipped" ? "done" : "company");
     expect(await employees.listEmployees(OWNER, { first: 100 })).toEqual(before);
   },
 );
@@ -169,7 +171,7 @@ test("refuses an employee approving the import", async ({ orm, seed }) => {
     code: "FORBIDDEN",
   });
 
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   expect((await employeeUseCases(orm).listEmployees(OWNER, { first: 100 })).edges).toEqual([]);
 });
 
@@ -190,7 +192,7 @@ test("refuses approval while a file is mapping without advancing setup", async (
     message: "Files are still being read.",
   });
 
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect(
     (await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id })).edges.map(
@@ -212,7 +214,7 @@ test("approves available records when a failed file is present", async ({ orm, s
 
   await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
 
-  expect((await readInstance(orm)).step).toBe("ready");
+  expect((await instances.readInstance(orm)).step).toBe("ready");
   await systemUseCases(orm).completeSetup(owner);
   expect(
     (await employeeUseCases(orm).listEmployees(OWNER, {})).edges.map(({ node }) => node),
@@ -274,7 +276,7 @@ test("waits for an uncommitted upload before refusing approval", async ({
   }
 
   expect(await approval).toMatchObject([{ status: "rejected", reason: { code: "CONFLICT" } }]);
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
 });
 

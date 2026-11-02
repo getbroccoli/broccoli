@@ -1,5 +1,5 @@
 import type { Orm, Transact } from "../../../../core/db";
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
 import type { Logger } from "../../../../core/logger";
 import type { SecurityContext } from "../../../../core/security";
 import type { BrandLookup } from "../../../../integrations/brandLookup";
@@ -7,6 +7,8 @@ import { normalizeImage } from "../../../../utils";
 import { companyRepository } from "../../db";
 import { companyDomain } from "../../domain";
 import { MAX_LOGO_BYTES } from "./company";
+
+const instances = createInstanceService();
 
 /**
  * Looks up the brand of the new owner's email domain once and keeps it for the
@@ -25,7 +27,7 @@ export async function detectCompanyNameAndLogo(
 ): Promise<void> {
   ctx.require("MANAGE_WORKSPACE");
   const domain = companyDomain(email);
-  if (!domain || (await readInstance(orm)).step !== "company") {
+  if (!domain || (await instances.readInstance(orm)).step !== "company") {
     return;
   }
   try {

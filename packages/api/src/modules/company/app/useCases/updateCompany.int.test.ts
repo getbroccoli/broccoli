@@ -1,6 +1,8 @@
 import { companyUseCases, expect, EMPLOYEE, SETUP_HOLDER, test } from "#test/support";
 
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 test("saves the owner's company name and moves setup on to the import step", async ({
   orm,
@@ -13,7 +15,7 @@ test("saves the owner's company name and moves setup on to the import step", asy
 
   expect(saved.name).toBe("Example Ltd");
   expect((await company.getCompany(ctx)).name).toBe("Example Ltd");
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
 });
 
 test("renames the company after setup is done", async ({ orm, seed }) => {
@@ -26,7 +28,7 @@ test("renames the company after setup is done", async ({ orm, seed }) => {
 
   expect(saved.name).toBe("Example Labs");
   expect((await company.getCompany(ctx)).name).toBe("Example Labs");
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
 });
 
 test("refuses an employee without changing the company or setup step", async ({ orm, seed }) => {
@@ -40,7 +42,7 @@ test("refuses an employee without changing the company or setup step", async ({ 
   });
 
   expect(await company.getCompany(owner)).toEqual(before);
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
 });
 
 test("leaves the company step unfinished when the name is invalid", async ({ orm, seed }) => {
@@ -53,7 +55,7 @@ test("leaves the company step unfinished when the name is invalid", async ({ orm
   });
 
   expect((await company.getCompany(ctx)).name).toBeNull();
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
 });
 
 test("the setup holder names the company without an owner and moves setup to import", async ({
@@ -65,5 +67,5 @@ test("the setup holder names the company without an owner and moves setup to imp
 
   expect(saved.name).toBe("Acme Corp");
   expect((await company.getCompany(SETUP_HOLDER)).name).toBe("Acme Corp");
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
 });

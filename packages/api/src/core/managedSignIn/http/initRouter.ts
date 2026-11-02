@@ -3,7 +3,7 @@ import { rateLimit } from "express-rate-limit";
 
 import type { Logger } from "../../logger";
 import type { Transact } from "../../db";
-import { AssignmentConflictError, assignInstance } from "../../instance";
+import { createManagedInstanceService, AssignmentConflictError } from "../../instance";
 import type { Readiness } from "../../readiness";
 import type { AuthSource } from "../../auth";
 import type { SecretBox } from "../../secrets";
@@ -11,6 +11,8 @@ import { PrincipalSecurityContext } from "../../security";
 import { InvalidAssignmentError, InvalidTokenError } from "../domain";
 import { parseInitClaims } from "../jwt";
 import { verifyToken, type TokenCheck } from "../jwt";
+
+const managedInstance = createManagedInstanceService();
 
 const MAX_TOKEN_LENGTH = 8192;
 /** Orchestration sends one init and a few retries; the endpoint is reachable from the internet. */
@@ -66,7 +68,7 @@ export function initRouter({
       phase = "assign_instance";
       const encryptedCredential = secretBox.encrypt(instanceCredential);
       await transact(async (tx) => {
-        await assignInstance(
+        await managedInstance.assignInstance(
           PrincipalSecurityContext.system(),
           tx,
           assignment,

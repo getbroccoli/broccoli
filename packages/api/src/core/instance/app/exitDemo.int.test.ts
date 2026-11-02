@@ -13,7 +13,13 @@ import { user } from "../../auth";
 import { ormOf, type Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
-import { readInstance, readSetupHolder, exitDemo } from ".";
+import { createSetupDemoService, createSetupSessionService, createInstanceService } from ".";
+
+const setupDemo = createSetupDemoService();
+
+const setupSessions = createSetupSessionService();
+
+const instances = createInstanceService();
 
 test("resetting a demo deletes its owner and gives the browser setup at the company step", async ({
   orm,
@@ -27,7 +33,7 @@ test("resetting a demo deletes its owner and gives the browser setup at the comp
   let cleared = false;
 
   const setup = await transact((tx) =>
-    exitDemo(
+    setupDemo.exitDemo(
       owner,
       tx,
       { userId, now },
@@ -45,14 +51,14 @@ test("resetting a demo deletes its owner and gives the browser setup at the comp
 
   expect(cleared).toBe(true);
   expect(await orm.select().from(user)).toEqual([]);
-  expect(await readInstance(orm)).toMatchObject({
+  expect(await instances.readInstance(orm)).toMatchObject({
     ownerUserId: null,
     demoExpiresAt: null,
     step: "company",
   });
   expect(setup.token).toEqual(expect.any(String));
   expect(setup.expiresAt).toEqual(new Date("2026-01-05T12:00:00Z"));
-  expect(await readSetupHolder(orm, { token: setup.token, now })).toBe("you");
+  expect(await setupSessions.readSetupHolder(orm, { token: setup.token, now })).toBe("you");
   expect(await instance.readAiSource()).toEqual({
     source: "broccoli_ai",
     encryptedOpenRouterKey: null,
@@ -88,7 +94,7 @@ test.for([
 
     await expect(
       transact((tx) =>
-        exitDemo(
+        setupDemo.exitDemo(
           SYSTEM,
           tx,
           { userId: userId ?? owner.user!.userId, now },
@@ -109,7 +115,7 @@ test.for([
     expect(cleared).toBe(false);
     expect(deleted).toBe(false);
     expect(await orm.select().from(user)).toEqual(users);
-    expect(await readInstance(orm)).toMatchObject({
+    expect(await instances.readInstance(orm)).toMatchObject({
       ownerUserId: owner.user!.userId,
       step: "done",
       demoExpiresAt: deadline,
@@ -125,7 +131,7 @@ test.for([EMPLOYEE, ADMIN])(
 
     await expect(
       transact((tx) =>
-        exitDemo(
+        setupDemo.exitDemo(
           ctx,
           tx,
           { userId: owner.user!.userId, now },
@@ -147,7 +153,7 @@ test("rolls back a demo reset when clearing people fails", async ({ orm, seed, t
 
   await expect(
     transact((tx) =>
-      exitDemo(
+      setupDemo.exitDemo(
         owner,
         tx,
         { userId, now },
@@ -170,7 +176,7 @@ test("rolls back a demo reset when clearing people fails", async ({ orm, seed, t
 
   expect(deleted).toBe(false);
   expect(await orm.select().from(user)).toEqual(users);
-  expect(await readInstance(orm)).toMatchObject({
+  expect(await instances.readInstance(orm)).toMatchObject({
     ownerUserId: userId,
     demoExpiresAt: expiresAt,
     step: "done",
@@ -191,7 +197,7 @@ test("exiting the demo deletes every linked user before removing its provisional
   }
 
   await transact((tx) =>
-    exitDemo(
+    setupDemo.exitDemo(
       owner,
       tx,
       { userId: owner.user!.userId, now },

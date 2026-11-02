@@ -1,14 +1,20 @@
 import type { Tx } from "../../db";
 import type { SecurityContext } from "../../security";
 import {
-  claimOwner,
+  createManagedInstanceService,
+  createOwnerService,
+  createInstanceService,
   OwnerExistsError,
   type OwnerSignInMethod,
-  readInstance,
-  recordOwnerSignInMethod,
 } from "../../instance";
 import { managedAccountRepository, managedTicketRepository } from "../db";
 import type { ManagedTicket } from "../domain";
+
+const managedInstance = createManagedInstanceService();
+
+const owners = createOwnerService();
+
+const instances = createInstanceService();
 
 /** A valid ticket that may not sign in here: used before, expired, or for someone else. */
 export class SignInRefusedError extends Error {
@@ -38,7 +44,7 @@ export async function signInWithTicket(
   await tickets.deleteExpired(clock());
   const userId = await findOrClaimOwner(ctx, tx, ticket);
   if (ticket.method) {
-    await recordOwnerSignInMethod(ctx, tx, SIGN_IN_METHODS[ticket.method]);
+    await managedInstance.recordOwnerSignInMethod(ctx, tx, SIGN_IN_METHODS[ticket.method]);
   }
   // Checked last, with a fresh clock: the steps above may have waited for other transactions.
   if (ticket.expiresAt <= clock()) {
@@ -57,7 +63,7 @@ async function findOrClaimOwner(
     return claimOwnerFor(ctx, tx, ticket);
   }
   // Only the owner exists until invitations do.
-  if (userId !== (await readInstance(tx)).ownerUserId) {
+  if (userId !== (await instances.readInstance(tx)).ownerUserId) {
     throw new SignInRefusedError();
   }
   return userId;
@@ -66,7 +72,7 @@ async function findOrClaimOwner(
 async function claimOwnerFor(ctx: SecurityContext, tx: Tx, ticket: ManagedTicket): Promise<string> {
   const accounts = managedAccountRepository(tx);
   try {
-    const owner = await claimOwner(ctx, tx, async () => ({
+    const owner = await owners.claimOwner(ctx, tx, async () => ({
       user: await accounts.createUser(ticket),
     }));
     return owner.user.id;

@@ -3,13 +3,11 @@ import { expect, EMPLOYEE, SETUP_HOLDER, SYSTEM, test } from "#test/support";
 import { transactor } from "../../db";
 import { createEventBus } from "../../events";
 import { createLogger } from "../../logger";
-import {
-  approveImportStep,
-  completeCompanyStep,
-  completeImportStep,
-  completeReadyStep,
-  readInstance,
-} from ".";
+import { createSetupStepService, createInstanceService } from ".";
+
+const setupSteps = createSetupStepService();
+
+const instances = createInstanceService();
 
 test("refuses an employee completing the company step and keeps the current step", async ({
   orm,
@@ -18,11 +16,13 @@ test("refuses an employee completing the company step and keeps the current step
 }) => {
   await seed.owner();
 
-  await expect(transact((tx) => completeCompanyStep(EMPLOYEE, tx))).rejects.toMatchObject({
+  await expect(
+    transact((tx) => setupSteps.completeCompanyStep(EMPLOYEE, tx)),
+  ).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
 
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
 });
 
 test("completing the company step moves setup to import without publishing completion", async ({
@@ -38,10 +38,10 @@ test("completing the company step moves setup to import without publishing compl
     },
   });
 
-  const moved = await transact((tx) => completeCompanyStep(SYSTEM, tx));
+  const moved = await transact((tx) => setupSteps.completeCompanyStep(SYSTEM, tx));
 
   expect(moved).toBe(true);
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   expect(received).toEqual([]);
 });
 
@@ -50,10 +50,10 @@ test.for(["import", "owner", "ready", "done"] as const)(
   async (step, { orm, seed, transact }) => {
     await seed.setupStep(step);
 
-    const moved = await transact((tx) => completeCompanyStep(SYSTEM, tx));
+    const moved = await transact((tx) => setupSteps.completeCompanyStep(SYSTEM, tx));
 
     expect(moved).toBe(false);
-    expect((await readInstance(orm)).step).toBe(step);
+    expect((await instances.readInstance(orm)).step).toBe(step);
   },
 );
 
@@ -73,10 +73,10 @@ test("completing the ready step moves setup to done and publishes completion onc
     },
   });
 
-  const moved = await transact((tx) => completeReadyStep(SYSTEM, tx));
+  const moved = await transact((tx) => setupSteps.completeReadyStep(SYSTEM, tx));
 
   expect(moved).toBe(true);
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
   expect(received).toEqual([null]);
 });
 
@@ -93,34 +93,34 @@ test("completing the ready step again publishes nothing", async ({ orm, seed }) 
     },
   });
 
-  const moved = await transact((tx) => completeReadyStep(SYSTEM, tx));
+  const moved = await transact((tx) => setupSteps.completeReadyStep(SYSTEM, tx));
 
   expect(moved).toBe(false);
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
   expect(received).toEqual([]);
 });
 
 test("a fresh instance starts at company", async ({ orm }) => {
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
 });
 
 test("completing import moves to owner when no owner exists", async ({ orm, seed, transact }) => {
   await seed.setupStep("import");
 
-  const moved = await transact((tx) => completeImportStep(SETUP_HOLDER, tx));
+  const moved = await transact((tx) => setupSteps.completeImportStep(SETUP_HOLDER, tx));
 
   expect(moved).toBe(true);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
 });
 
 test("completing import moves to done when an owner exists", async ({ orm, seed, transact }) => {
   const owner = await seed.owner();
   await seed.setupStep("import");
 
-  const moved = await transact((tx) => completeImportStep(owner, tx));
+  const moved = await transact((tx) => setupSteps.completeImportStep(owner, tx));
 
   expect(moved).toBe(true);
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
 });
 
 test.for(["company", "owner", "done"] as const)(
@@ -128,8 +128,8 @@ test.for(["company", "owner", "done"] as const)(
   async (step, { orm, seed, transact }) => {
     await seed.setupStep(step);
 
-    expect(await transact((tx) => completeImportStep(SETUP_HOLDER, tx))).toBe(false);
-    expect((await readInstance(orm)).step).toBe(step);
+    expect(await transact((tx) => setupSteps.completeImportStep(SETUP_HOLDER, tx))).toBe(false);
+    expect((await instances.readInstance(orm)).step).toBe(step);
   },
 );
 
@@ -142,17 +142,17 @@ test("approving import moves to ready when a managed owner exists", async ({
   const owner = await seed.owner();
   await seed.setupStep("import");
 
-  const moved = await transact((tx) => approveImportStep(owner, tx));
+  const moved = await transact((tx) => setupSteps.approveImportStep(owner, tx));
 
   expect(moved).toBe(true);
-  expect((await readInstance(orm)).step).toBe("ready");
+  expect((await instances.readInstance(orm)).step).toBe("ready");
 });
 
 test("approving import moves to owner when no owner exists", async ({ orm, seed, transact }) => {
   await seed.setupStep("import");
 
-  const moved = await transact((tx) => approveImportStep(SETUP_HOLDER, tx));
+  const moved = await transact((tx) => setupSteps.approveImportStep(SETUP_HOLDER, tx));
 
   expect(moved).toBe(true);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
 });

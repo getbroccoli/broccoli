@@ -1,8 +1,10 @@
 import type { SecurityContext } from "../../../../core/security";
-import { completeImportStep, type DemoStart } from "../../../../core/instance";
+import { createSetupStepService, type DemoStart } from "../../../../core/instance";
 import type { ImportContext } from "./importContext";
 import { deleteImport } from "./deleteImport";
 import { requireImportAccess } from "./requireImportAccess";
+
+const setupSteps = createSetupStepService();
 
 /**
  * Leaves the import step of setup with the demo company, in one transaction so the step only
@@ -24,7 +26,7 @@ export async function prepareDemoStart({
   const fillDemo = await prepareDemoFill();
   return async (ctx, tx) => {
     requireImportAccess(ctx);
-    if (await completeImportStep(ctx, tx)) {
+    if (await setupSteps.completeImportStep(ctx, tx)) {
       await deleteImport(tx);
       await fillDemo(tx);
     }

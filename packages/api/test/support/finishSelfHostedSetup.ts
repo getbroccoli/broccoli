@@ -1,10 +1,12 @@
 import { user } from "../../src/core/auth";
 import { ormOf, type Orm, type Tx } from "../../src/core/db";
-import { type AddApprovedPeople, createOwnerAtSetup } from "../../src/core/instance/app";
+import { createOwnerService, type AddApprovedPeople } from "../../src/core/instance/app";
 import { TestSeed } from "./testSeed";
 import { SYSTEM } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
 import { importUseCases } from "./useCases";
+
+const owners = createOwnerService();
 
 /** Finishes the account step with the real owner and import operations. */
 export async function finishSelfHostedSetup(orm: Orm): Promise<void> {
@@ -14,7 +16,7 @@ export async function finishSelfHostedSetup(orm: Orm): Promise<void> {
 
 /** Creates the owner at the account step in `tx`, for the browser holding a seeded setup session. */
 export function createSetupOwner(tx: Tx, addApprovedPeople: AddApprovedPeople) {
-  return createOwnerAtSetup(
+  return owners.createOwnerAtSetup(
     SYSTEM,
     tx,
     { token: "setup-token", now: new Date("2026-01-02T12:00:00Z") },

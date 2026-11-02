@@ -7,14 +7,14 @@ import type { SecretBox } from "../../secrets";
 import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { MailRefusedError } from "../../../integrations/mail";
 import { readPasswordUserEmail } from "../db";
-import type { MailSettings } from "./mailSettings";
+import type { MailSettingsService } from "./mailSettingsService";
 import { PASSWORD_RESET_TEMPLATE } from "./passwordReset.email";
 
 /**
  * Emails the link of Better Auth's password reset, from a job so every address answers alike and
  * a failed send retries. Only a user with a password gets one, and only while the instance sends email.
  */
-export interface PasswordResetEmail {
+export interface PasswordResetEmailService {
   /** Better Auth's `sendResetPassword`, as the system: queues the email, or does nothing. */
   queue(ctx: SecurityContext, user: { id: string }, token: string): Promise<void>;
   /** Sends the queued email. */
@@ -33,7 +33,7 @@ declare module "../../jobs" {
   }
 }
 
-export function createPasswordResetEmail({
+export function createPasswordResetEmailService({
   orm,
   transact,
   jobs,
@@ -45,9 +45,9 @@ export function createPasswordResetEmail({
   transact: Transact;
   jobs: JobQueue;
   secretBox: SecretBox;
-  mailSettings: MailSettings;
+  mailSettings: MailSettingsService;
   logger: Logger;
-}): PasswordResetEmail {
+}): PasswordResetEmailService {
   // The job runs on its own.
   const system = PrincipalSecurityContext.system();
   return {

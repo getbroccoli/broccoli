@@ -1,7 +1,11 @@
 import { ApplicationError } from "../../../../core/applicationError";
-import { readInstance, returnToCompanyStep } from "../../../../core/instance";
+import { createSetupStepService, createInstanceService } from "../../../../core/instance";
 import type { SecurityContext } from "../../../../core/security";
 import type { SystemContext } from "./systemContext";
+
+const setupSteps = createSetupStepService();
+
+const instances = createInstanceService();
 
 /**
  * Starts a finished setup over: deletes every employee and takes setup back to the company
@@ -19,11 +23,11 @@ export async function resetSetup(
 ): Promise<void> {
   ctx.require("RESET_WORKSPACE");
   await transact(async (tx) => {
-    if ((await readInstance(tx)).demoExpiresAt) {
+    if ((await instances.readInstance(tx)).demoExpiresAt) {
       throw new ApplicationError("FORBIDDEN", "Exit the demo instead.");
     }
     // Moving the step first locks the instance row, so a concurrent reset waits and then refuses.
-    if (!(await returnToCompanyStep(ctx, tx))) {
+    if (!(await setupSteps.returnToCompanyStep(ctx, tx))) {
       throw new ApplicationError("CONFLICT", "Setup is not done.");
     }
     // A lost completion event can leave the import holding the employees' avatars.

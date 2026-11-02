@@ -1,29 +1,38 @@
 export {
-  approveImportStep,
-  completeCompanyStep,
-  completeImportStep,
-  completeReadyStep,
-  isImportOpen,
-  reopenImportStep,
-  returnToCompanyStep,
-} from "./setup";
-export { claimOwner, createOwnerAtSetup, readOwner, type AddApprovedPeople } from "./owner";
-export { readInstance } from "./instance";
-export { exitDemo, startDemoAtSetup, type DemoReset, type DemoStart, type SetupDemo } from "./demo";
-export { assignInstance, recordOwnerSignInMethod } from "./managed";
-export { readSetupHolder, startSetup, type SetupHolder } from "./setupSession";
-export { createAiSettings, type AiSettings, type OriginalFileReader } from "./aiSettings";
-export { createPasswordResetEmail, type PasswordResetEmail } from "./passwordResetEmail";
+  createAiSettingsService,
+  type AiSettingsService,
+  type OriginalFileReader,
+} from "./aiSettingsService";
 export {
-  createMailSettings,
+  createExternalAgentChoiceService,
+  type ExternalAgentChoiceService,
+} from "./externalAgentChoiceService";
+export { createInstanceService, type InstanceService } from "./instanceService";
+export {
+  createMailSettingsService,
   type InstanceMailer,
   type MailIntegration,
-  type MailSettings,
-} from "./mailSettings";
+  type MailSettingsService,
+} from "./mailSettingsService";
 export {
-  chooseExternalAgentSource,
-  lockExternalAgentChoice,
-  lockSetupOpenToExternalAgent,
-  chooseExternalAgentOnServer,
-  readSetupOpenToExternalAgent,
-} from "./externalAgent";
+  createManagedInstanceService,
+  type ManagedInstanceService,
+} from "./managedInstanceService";
+export { createOwnerService, type AddApprovedPeople, type OwnerService } from "./ownerService";
+export {
+  createPasswordResetEmailService,
+  type PasswordResetEmailService,
+} from "./passwordResetEmailService";
+export {
+  createSetupDemoService,
+  type DemoReset,
+  type DemoStart,
+  type SetupDemo,
+  type SetupDemoService,
+} from "./setupDemoService";
+export {
+  createSetupSessionService,
+  type SetupHolder,
+  type SetupSessionService,
+} from "./setupSessionService";
+export { createSetupStepService, type SetupStepService } from "./setupStepService";

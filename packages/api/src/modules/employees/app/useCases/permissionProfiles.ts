@@ -1,6 +1,6 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import { type Orm, ormOf } from "../../../../core/db";
-import { readOwner } from "../../../../core/instance";
+import { createOwnerService } from "../../../../core/instance";
 import {
   createRecordHistoryService,
   type HistoryLine,
@@ -20,6 +20,8 @@ import type { Employee } from "../../domain";
 import type { EmployeeContext } from "./employeeContext";
 import { employeeNotFound } from "./employeeNotFound";
 import { readableResult } from "./readableResult";
+
+const owners = createOwnerService();
 
 const recordHistory = createRecordHistoryService();
 
@@ -51,7 +53,7 @@ export async function setPermissionProfiles(
     if (!employee.userId) {
       throw invalidInput([{ field: "id", code: "not_joined" }]);
     }
-    if (employee.userId === (await readOwner(ormOf(tx)))?.userId) {
+    if (employee.userId === (await owners.readOwner(ormOf(tx)))?.userId) {
       throw new ApplicationError("FORBIDDEN", "The owner's permissions cannot change.");
     }
     // The set it replaces, not one read before, so two saves at once record one change.
@@ -105,7 +107,7 @@ export async function readPermissionProfiles(
   const stored = await permissionProfileRepository(orm).findProfiles(
     linked.map(({ userId }) => userId),
   );
-  const ownerUserId = (await readOwner(orm))?.userId;
+  const ownerUserId = (await owners.readOwner(orm))?.userId;
   return new Map(
     linked.map(({ id, userId }) => [
       id,

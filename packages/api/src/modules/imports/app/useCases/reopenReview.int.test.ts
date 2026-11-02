@@ -14,7 +14,9 @@ import {
 } from "#test/support";
 
 import { createFileStorageService } from "../../../../core/files";
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 const fileStorage = createFileStorageService();
 
@@ -27,7 +29,7 @@ test.for(["ready", "owner"] as const)(
 
     await importUseCases(orm).reopenReview(ctx);
 
-    expect((await readInstance(orm)).step).toBe("import");
+    expect((await instances.readInstance(orm)).step).toBe("import");
   },
 );
 
@@ -40,7 +42,7 @@ test.for(["company", "import", "done"] as const)(
 
     await importUseCases(orm).reopenReview(owner);
 
-    expect((await readInstance(orm)).step).toBe(step);
+    expect((await instances.readInstance(orm)).step).toBe(step);
     expect(
       (await employeeUseCases(orm).listEmployees(owner, {})).edges.map(({ node }) => node),
     ).toEqual([employee]);
@@ -130,11 +132,11 @@ test("Back from the terminal demo deletes demo employees and finishes with only 
   await imports.startDemo(SETUP_HOLDER);
   const employees = employeeUseCases(orm);
   expect((await employees.listEmployees(OWNER, {})).edges.length).toBeGreaterThan(0);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
 
   await imports.reopenReview(SETUP_HOLDER);
 
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   expect((await employees.listEmployees(OWNER, {})).edges).toEqual([]);
   const source = await seed.importSource();
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);

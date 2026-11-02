@@ -1,6 +1,6 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
 import type { Orm, Transact, Tx } from "../../../../core/db";
-import { type MailSettings, readInstance } from "../../../../core/instance";
+import { createInstanceService, type MailSettingsService } from "../../../../core/instance";
 import type { JobHandlers, JobQueue } from "../../../../core/jobs";
 import type { Logger } from "../../../../core/logger";
 import { createRecordHistoryService, type HistoryLine } from "../../../../core/records";
@@ -30,6 +30,8 @@ import {
 import { employeeDirectory } from "../employeeDirectory";
 import { employeeNotFound } from "../useCases/employeeNotFound";
 import { sendInviteJob } from "./sendInviteJob";
+
+const instances = createInstanceService();
 
 const recordHistory = createRecordHistoryService();
 
@@ -109,7 +111,7 @@ export function createEmployeeInviteService({
   logger: Logger;
   jobs: JobQueue;
   secretBox: SecretBox;
-  mailSettings: MailSettings;
+  mailSettings: MailSettingsService;
   /** The company, whose name the invite and its page show. */
   readCompany: (ctx: SecurityContext) => Promise<{ name: string | null }>;
 }): EmployeeInviteService {
@@ -124,7 +126,7 @@ export function createEmployeeInviteService({
       ctx.require("MANAGE_WORKSPACE");
       const { employeeIds, profiles, note } = parseInviteInput(input);
       // A demo's owner is provisional; an account they invited would outlive the demo.
-      if ((await readInstance(orm)).demoExpiresAt) {
+      if ((await instances.readInstance(orm)).demoExpiresAt) {
         throw new ApplicationError("CONFLICT", "Invites start once the demo ends.");
       }
       const mailer = input.delivery === "copied_by_owner" ? null : await readMailer();

@@ -1,4 +1,8 @@
-import { createAiSettings, createMailSettings, createPasswordResetEmail } from "../core/instance";
+import {
+  createAiSettingsService,
+  createMailSettingsService,
+  createPasswordResetEmailService,
+} from "../core/instance";
 import type { Deployment } from "../core/env";
 import type { ModuleDependencies, Modules } from "../core/moduleManifest";
 import { recordsManifest } from "../core/records";
@@ -29,9 +33,9 @@ export function createModules(
 ): Modules {
   // Built once: the Slack module serves it and the import reads Slack through it.
   const slackConnection = createSlack({ ...core, slack });
-  const aiSettings = createAiSettings({ ...core, deployment, openRouter, broccoliAiUrl });
-  const mailSettings = createMailSettings({ ...core, deployment, resendApiUrl });
-  const passwordResetEmail = createPasswordResetEmail({ ...core, mailSettings });
+  const aiSettings = createAiSettingsService({ ...core, deployment, openRouter, broccoliAiUrl });
+  const mailSettings = createMailSettingsService({ ...core, deployment, resendApiUrl });
+  const passwordResetEmail = createPasswordResetEmailService({ ...core, mailSettings });
   // Built once: the import serves them and the external agent puts its files through them.
   const importUseCases = createImportUseCases({
     ...core,

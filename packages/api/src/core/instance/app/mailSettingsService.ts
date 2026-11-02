@@ -22,7 +22,7 @@ import { TEST_EMAIL_TEMPLATE } from "./mailTest.email";
  * How a self-hosted instance sends email: the owner's SMTP server, their Resend key, or no email.
  * A managed instance never sees or saves the choice.
  */
-export interface MailSettings {
+export interface MailSettingsService {
   /** The saved choice; null on a managed instance. */
   read(ctx: SecurityContext): Promise<MailConfig | null>;
   /** Checks the choice, then saves it with the origin its links use; a managed instance refuses. */
@@ -53,7 +53,7 @@ export interface MailIntegration {
   verifySmtpServer: (url: string) => Promise<void>;
 }
 
-export function createMailSettings({
+export function createMailSettingsService({
   orm,
   transact,
   secretBox,
@@ -70,7 +70,7 @@ export function createMailSettings({
   /** Resend's API, `https://api.resend.com` in production. */
   resendApiUrl: string;
   mail?: MailIntegration;
-}): MailSettings {
+}): MailSettingsService {
   // `SELF_HOSTED_PUBLIC_URL` wins over the origin the owner saved from.
   const publicOrigin =
     deployment.mode === "self_hosted" && deployment.publicUrl

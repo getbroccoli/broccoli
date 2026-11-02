@@ -13,13 +13,13 @@ import {
 } from "../../../integrations/ai";
 import { instanceRepository } from "../db";
 import { aiConfig, type AiConfig, type AiSource, type SavedAiSource } from "../domain";
-import { createBroccoliAiTokens } from "./broccoliAiTokens";
+import { createBroccoliAiTokensService } from "./broccoliAiTokensService";
 
 /**
  * Where the instance sends AI decisions: the owner's choice on a self-hosted instance, Broccoli AI
  * with its instance credential on a managed one, which never sees or saves the choice.
  */
-export interface AiSettings {
+export interface AiSettingsService {
   /** The AI files are read with now; null on a managed instance. */
   read(ctx: SecurityContext): Promise<AiConfig | null>;
   /** Checks that the chosen source works, then saves it; a managed instance refuses. */
@@ -45,7 +45,7 @@ export interface AiChoice {
   openRouterKey?: string | null;
 }
 
-export function createAiSettings({
+export function createAiSettingsService({
   orm,
   transact,
   secretBox,
@@ -62,8 +62,8 @@ export function createAiSettings({
   /** OpenRouter's API, and `OPENROUTER_API_KEY` or null. */
   openRouter: { url: string; key: string | null };
   broccoliAiUrl: string;
-}): AiSettings {
-  const tokens = createBroccoliAiTokens({ orm, secretBox, dataDir });
+}): AiSettingsService {
+  const tokens = createBroccoliAiTokensService({ orm, secretBox, dataDir });
   // Broccoli reads its AI source and token for decisions it makes on its own.
   const system = PrincipalSecurityContext.system();
   const readConfig = async (db: Orm | Tx) =>

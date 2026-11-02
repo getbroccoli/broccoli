@@ -4,7 +4,7 @@ import { createBetterAuth, fixedAuth, type AuthSource } from "../../auth";
 import type { Orm, Transact } from "../../db";
 import type { Logger } from "../../logger";
 import { PrincipalSecurityContext } from "../../security";
-import type { AddApprovedPeople, PasswordResetEmail, SetupDemo } from "../app";
+import type { AddApprovedPeople, PasswordResetEmailService, SetupDemo } from "../app";
 import { demoPlugin } from "./demoPlugin";
 import { setupPlugin } from "./setupPlugin";
 
@@ -18,7 +18,7 @@ export interface SelfHostedAuthOptions {
   logger: Logger;
   demo: SetupDemo;
   addApprovedPeople: AddApprovedPeople;
-  passwordResetEmail: Pick<PasswordResetEmail, "queue">;
+  passwordResetEmail: Pick<PasswordResetEmailService, "queue">;
   /** The modules' sign-in endpoints. */
   plugins: BetterAuthPlugin[];
 }

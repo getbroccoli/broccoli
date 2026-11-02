@@ -1,9 +1,13 @@
 import { EXAMPLE_PAYLOAD, expect, SYSTEM, test } from "#test/support";
 
 import { createEventBus } from "../events";
-import { completeCompanyStep, readInstance } from "../instance";
+import { createSetupStepService, createInstanceService } from "../instance";
 import { createLogger } from "../logger";
 import { transactor } from ".";
+
+const setupSteps = createSetupStepService();
+
+const instances = createInstanceService();
 
 test("dispatches queued events after the write commits", async ({ orm, seed }) => {
   await seed.owner();
@@ -14,12 +18,12 @@ test("dispatches queued events after the write commits", async ({ orm, seed }) =
   eventBus.subscribe({
     "example.happened": async (payload) => {
       received.push(payload);
-      steps.push((await readInstance(orm)).step);
+      steps.push((await instances.readInstance(orm)).step);
     },
   });
 
   await transact(async (tx) => {
-    await completeCompanyStep(SYSTEM, tx);
+    await setupSteps.completeCompanyStep(SYSTEM, tx);
     tx.publish("example.happened", EXAMPLE_PAYLOAD);
     expect(received).toEqual([]);
   });
@@ -42,13 +46,13 @@ test("rolls back the write and drops queued events when work fails", async ({ or
 
   await expect(
     transact(async (tx) => {
-      await completeCompanyStep(SYSTEM, tx);
+      await setupSteps.completeCompanyStep(SYSTEM, tx);
       tx.publish("example.happened", EXAMPLE_PAYLOAD);
       throw new Error("Work failed");
     }),
   ).rejects.toThrow("Work failed");
 
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
   expect(received).toEqual([]);
 });
 
@@ -59,8 +63,10 @@ test("refuses to use a transaction after it has ended", async ({ orm, seed, tran
   expect(() => tx.publish("example.happened", EXAMPLE_PAYLOAD)).toThrow(
     "The transaction has ended",
   );
-  await expect(completeCompanyStep(SYSTEM, tx)).rejects.toThrow("The transaction has ended");
-  expect((await readInstance(orm)).step).toBe("company");
+  await expect(setupSteps.completeCompanyStep(SYSTEM, tx)).rejects.toThrow(
+    "The transaction has ended",
+  );
+  expect((await instances.readInstance(orm)).step).toBe("company");
 });
 
 test("refuses the publisher's transaction inside an after-commit handler", async ({
@@ -76,7 +82,7 @@ test("refuses the publisher's transaction inside an after-commit handler", async
     eventBus.subscribe({
       "example.happened": async () => {
         try {
-          await completeCompanyStep(SYSTEM, retainedTx);
+          await setupSteps.completeCompanyStep(SYSTEM, retainedTx);
         } catch (error) {
           rejection = error;
         }
@@ -87,5 +93,5 @@ test("refuses the publisher's transaction inside an after-commit handler", async
   });
 
   expect(rejection).toEqual(new Error("The transaction has ended"));
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
 });

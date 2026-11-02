@@ -1,11 +1,13 @@
 import type { Orm, Tx } from "../../../core/db";
 import { createRecordHistoryService, type HistoryAppend } from "../../../core/records";
-import { readOwner } from "../../../core/instance";
+import { createOwnerService } from "../../../core/instance";
 import type { SecurityContext } from "../../../core/security";
 import { employeeRepository, employmentRepository } from "../db";
 import { type Employee, type NewEmployeeInput, tryParseNewEmployee } from "../domain";
 import { setNewEmployeeManagers } from "./useCases/employeeManagers";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
+
+const owners = createOwnerService();
 
 const recordHistory = createRecordHistoryService();
 
@@ -81,7 +83,7 @@ export async function deleteAllEmployees(ctx: SecurityContext, tx: Tx): Promise<
   // Before the employees table, in the order a manager change takes them, so the two cannot deadlock.
   await employmentRepository(tx).lockForWrites();
   // The owner keeps their user, so they stay signed in.
-  const owner = await readOwner(tx);
+  const owner = await owners.readOwner(tx);
   await employeeRepository(tx).deleteAll(owner?.userId ?? null);
   // After the delete, which waits for any update holding an employee row, so its line goes too.
   await recordHistory.purge(tx, "employee");

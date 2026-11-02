@@ -9,7 +9,9 @@ import {
   TEST_SECRET_BOX,
 } from "#test/support";
 
-import { assignInstance } from "./managed";
+import { createManagedInstanceService } from "./managedInstanceService";
+
+const managedInstance = createManagedInstanceService();
 
 test("routes OpenRouter with the saved key", async ({ orm, seed, fakeDecisions }) => {
   await seed.aiSource("openrouter", "saved-key");
@@ -65,7 +67,7 @@ test("managed decisions use the instance credential despite a saved AI choice an
 }) => {
   await seed.aiSource("openrouter", "saved-key");
   await transact((tx) =>
-    assignInstance(
+    managedInstance.assignInstance(
       SYSTEM,
       tx,
       MANAGED_ASSIGNMENT,
@@ -112,7 +114,7 @@ test("managed original file reads use the instance credential", async ({
   fakeDecisions,
 }) => {
   await transact((tx) =>
-    assignInstance(
+    managedInstance.assignInstance(
       SYSTEM,
       tx,
       MANAGED_ASSIGNMENT,

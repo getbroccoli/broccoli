@@ -1,27 +1,15 @@
 import "./events";
 // Public values.
 export {
-  assignInstance,
-  chooseExternalAgentSource,
-  lockExternalAgentChoice,
-  lockSetupOpenToExternalAgent,
-  chooseExternalAgentOnServer,
-  readSetupOpenToExternalAgent,
-  claimOwner,
-  approveImportStep,
-  completeCompanyStep,
-  completeImportStep,
-  completeReadyStep,
-  isImportOpen,
-  readSetupHolder,
-  reopenImportStep,
-  returnToCompanyStep,
-  readOwner,
-  readInstance,
-  recordOwnerSignInMethod,
-  createAiSettings,
-  createMailSettings,
-  createPasswordResetEmail,
+  createAiSettingsService,
+  createExternalAgentChoiceService,
+  createInstanceService,
+  createMailSettingsService,
+  createManagedInstanceService,
+  createOwnerService,
+  createPasswordResetEmailService,
+  createSetupSessionService,
+  createSetupStepService,
 } from "./app";
 export {
   inAuthTransaction,
@@ -35,14 +23,20 @@ export { AssignmentConflictError, OwnerExistsError } from "./domain";
 // Public types.
 export type {
   AddApprovedPeople,
+  ExternalAgentChoiceService,
+  InstanceService,
+  ManagedInstanceService,
+  OwnerService,
+  SetupSessionService,
+  SetupStepService,
   DemoStart,
   SetupDemo,
-  AiSettings,
+  AiSettingsService,
   OriginalFileReader,
   InstanceMailer,
   MailIntegration,
-  MailSettings,
-  PasswordResetEmail,
+  MailSettingsService,
+  PasswordResetEmailService,
 } from "./app";
 export { MAIL_SOURCES } from "./domain";
 export type {

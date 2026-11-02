@@ -19,7 +19,9 @@ import {
 } from "#test/support";
 
 import { createFileStorageService } from "../../../../core/files";
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 const fileStorage = createFileStorageService();
 
@@ -212,7 +214,7 @@ test("a Slack read after Approve writes nothing", async ({ orm, seed }) => {
   await seed.setupStep("import");
   const imports = importUseCases(orm, { slackApi: fakeSlackApi() });
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
 
   await imports.readSlack(SETUP_HOLDER);
 

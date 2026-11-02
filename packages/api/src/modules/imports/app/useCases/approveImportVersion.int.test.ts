@@ -9,7 +9,9 @@ import {
   test,
 } from "#test/support";
 
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 test("keeps review pages and their version tied to the snapshot when another source arrives", async ({
   orm,
@@ -44,7 +46,7 @@ test("keeps review pages and their version tied to the snapshot when another sou
     message: "Your people changed while you were reviewing.",
   });
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
 });
 
 test("refuses an old version without creating employees or advancing setup", async ({
@@ -68,7 +70,7 @@ test("refuses an old version without creating employees or advancing setup", asy
   });
 
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toEqual([]);
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
 });
 
 test("approves the current version", async ({ orm, seed }) => {
@@ -81,13 +83,13 @@ test("approves the current version", async ({ orm, seed }) => {
   const version = (await imports.reads.readReview(SETUP_HOLDER)).version;
 
   await imports.approveImport(SETUP_HOLDER, version);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
   await finishSelfHostedSetup(orm);
 
   expect((await employeeUseCases(orm).listEmployees(OWNER, {})).edges).toMatchObject([
     { node: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" } },
   ]);
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
 });
 
 test("changes the version when another source adds a person", async ({ orm, seed }) => {
@@ -136,7 +138,7 @@ test("refuses an old version after an email becomes taken without adding anyone"
   });
 
   expect(await employees.listEmployees(owner, {})).toEqual(before);
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
 });
 
 test("changes the version when a review choice changes a value", async ({ orm, seed }) => {

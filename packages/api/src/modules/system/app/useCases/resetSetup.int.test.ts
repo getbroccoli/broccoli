@@ -14,7 +14,11 @@ import {
 } from "#test/support";
 
 import { user } from "../../../../core/auth";
-import { readInstance, readOwner } from "../../../../core/instance";
+import { createOwnerService, createInstanceService } from "../../../../core/instance";
+
+const owners = createOwnerService();
+
+const instances = createInstanceService();
 
 test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({
   orm,
@@ -30,18 +34,18 @@ test("resetting a finished setup deletes every employee and avatar and keeps the
   await seed.employee({ avatarFileId: firstAvatar });
   await seed.employee({ avatarFileId: secondAvatar });
   await seed.employee();
-  const originalOwner = await readOwner(orm);
+  const originalOwner = await owners.readOwner(orm);
 
   await systemUseCases(orm).resetSetup(owner);
 
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
-  expect(await readInstance(orm)).toMatchObject({
+  expect(await instances.readInstance(orm)).toMatchObject({
     step: "company",
     aiSource: "broccoli_ai",
     ownerUserId: owner.user!.userId,
   });
-  expect(await readOwner(orm)).toEqual(originalOwner);
+  expect(await owners.readOwner(orm)).toEqual(originalOwner);
   expect(await company.getCompany(owner)).toMatchObject({ name: "Acme Corp" });
 });
 
@@ -68,7 +72,7 @@ test("resets a finished setup whose import was not cleaned up yet", async ({ orm
 
   await system.resetSetup(owner);
 
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
   expect((await employees.listEmployees(owner, {})).edges).toEqual([]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(await imports.reads.listSources(owner)).toEqual([]);
@@ -83,7 +87,7 @@ test("refuses an employee resetting setup", async ({ orm, seed }) => {
     code: "FORBIDDEN",
   });
 
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
 });
 
 test("refuses resetting before setup is done and keeps the employees", async ({ orm, seed }) => {
@@ -96,7 +100,7 @@ test("refuses resetting before setup is done and keeps the employees", async ({ 
     message: "Setup is not done.",
   });
 
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   const { edges } = await employeeUseCases(orm).listEmployees(owner, {});
   expect(edges.map(({ node }) => node)).toEqual([employee]);
 });
@@ -115,7 +119,7 @@ test("refuses resetting the self-hosted demo and keeps its owner and employees",
     message: "Exit the demo instead.",
   });
 
-  expect(await readInstance(orm)).toMatchObject({
+  expect(await instances.readInstance(orm)).toMatchObject({
     step: "done",
     ownerUserId: owner.user!.userId,
     demoExpiresAt,
@@ -140,7 +144,7 @@ test("refuses a concurrent second reset", async ({ orm, seed }) => {
   expect(results.filter(({ status }) => status === "rejected")).toMatchObject([
     { reason: { code: "CONFLICT", message: "Setup is not done." } },
   ]);
-  expect((await readInstance(orm)).step).toBe("company");
+  expect((await instances.readInstance(orm)).step).toBe("company");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
 });
 

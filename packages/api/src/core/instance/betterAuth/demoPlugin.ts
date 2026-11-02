@@ -7,10 +7,14 @@ import { deleteSessionCookie } from "better-auth/cookies";
 import { ApplicationError } from "../../applicationError";
 import type { Orm, Transact } from "../../db";
 import { PrincipalSecurityContext } from "../../security";
-import { type DemoReset, readInstance, exitDemo } from "../app";
+import { createSetupDemoService, createInstanceService, type DemoReset } from "../app";
 import { SETUP_SESSION_DAYS } from "../domain";
 import { inAuthTransaction } from "./authTransaction";
 import { setSetupCookie } from "./setupCookie";
+
+const setupDemo = createSetupDemoService();
+
+const instances = createInstanceService();
 
 const NOT_IN_DEMO_RESET = {
   code: "NOT_IN_DEMO",
@@ -33,7 +37,9 @@ export function demoPlugin(orm: Orm, transact: Transact, deleteAllEmployees: Dem
             update: {
               before: async (session, ctx) => {
                 const userId = ctx?.context.session?.user.id;
-                const deadline = userId ? (await readInstance(orm)).demoDeadlineOf(userId) : null;
+                const deadline = userId
+                  ? (await instances.readInstance(orm)).demoDeadlineOf(userId)
+                  : null;
                 return deadline && session.expiresAt && session.expiresAt > deadline
                   ? { data: { ...session, expiresAt: deadline } }
                   : undefined;
@@ -52,7 +58,7 @@ export function demoPlugin(orm: Orm, transact: Transact, deleteAllEmployees: Dem
           const { internalAdapter } = ctx.context;
           const setup = await refusingResetConflicts(() =>
             inAuthTransaction(transact, ctx, (tx) =>
-              exitDemo(
+              setupDemo.exitDemo(
                 PrincipalSecurityContext.system(),
                 tx,
                 { userId, now: new Date() },

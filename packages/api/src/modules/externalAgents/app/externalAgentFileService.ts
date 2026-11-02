@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../../core/applicationError";
-import { lockSetupOpenToExternalAgent } from "../../../core/instance";
+import { createExternalAgentChoiceService } from "../../../core/instance";
 import type { StoredFile } from "../../../core/files";
 import type { SecurityContext } from "../../../core/security";
 import {
@@ -12,6 +12,8 @@ import {
   type ReadPeopleOutcome,
 } from "../../imports";
 import { type ExternalAgentContext, asLiveExternalAgent } from "./externalAgentContext";
+
+const externalAgentChoice = createExternalAgentChoiceService();
 
 /**
  * The owner drops staff files on Gather, and the external agent maps them by answering Broccoli's
@@ -72,7 +74,7 @@ export function createExternalAgentFileService(
     uploadForExternalAgent: async (ctx, { name, bytes }) => {
       const upload = await imports.answeredMapping.readStaffUpload(ctx, { name, bytes });
       const id = await transact(async (tx) => {
-        const now = await lockSetupOpenToExternalAgent(tx, clock);
+        const now = await externalAgentChoice.lockSetupOpenToExternalAgent(tx, clock);
         if (!now) {
           throw new ApplicationError("CONFLICT", "Choose your agent first.");
         }

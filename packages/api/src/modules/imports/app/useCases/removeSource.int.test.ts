@@ -11,7 +11,9 @@ import {
   test,
 } from "#test/support";
 
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 test("removes the source, its records and its stored file", async ({ orm, seed }) => {
   const source = await seed.fileSource({ content: "Name\nAvery Stone", status: "mapped" });
@@ -35,7 +37,7 @@ test("refuses file removal after Approve and keeps the import and stored file un
   await seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   const imports = importUseCases(orm);
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
   const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileIds = await storedFileIds(orm);
   expect(before.edges).toHaveLength(1);
@@ -118,7 +120,7 @@ test("refuses Slack removal after Approve and keeps the import, photos and conne
   const imports = importUseCases(orm);
   const slack = slackUseCases(orm);
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
   const before = (await imports.reads.readReview(SETUP_HOLDER)).listEmployees({});
   const fileIds = await storedFileIds(orm);
   const connection = await slack.getSlackConnection(SETUP_HOLDER);

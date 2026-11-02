@@ -7,11 +7,13 @@ import { expect, SYSTEM, test } from "#test/support";
 import { account, user } from "../../auth";
 import { ormOf, type Orm, transactor } from "../../db";
 import { createEventBus } from "../../events";
-import { readInstance } from "../../instance";
+import { createInstanceService } from "../../instance";
 import { createLogger } from "../../logger";
 import type { ManagedTicket } from "../domain";
 import { managedTicket, managedTicketRepository } from "../db";
 import { SignInRefusedError, signInWithTicket } from "./signInWithTicket";
+
+const instances = createInstanceService();
 
 const NOW = new Date("2026-10-12T10:00:00Z");
 
@@ -20,7 +22,7 @@ test("creates the owner from the first ticket", async ({ orm }) => {
 
   const { userId } = await result;
 
-  expect(await readInstance(orm)).toMatchObject({ ownerUserId: userId, step: "company" });
+  expect(await instances.readInstance(orm)).toMatchObject({ ownerUserId: userId, step: "company" });
   expect(events).toEqual(["owner_claimed"]);
 });
 
@@ -162,7 +164,7 @@ test.for([
   async ([method, stored], { orm }) => {
     await signIn(orm, ticket({ method })).result;
 
-    expect((await readInstance(orm)).ownerSignInMethod).toBe(stored);
+    expect((await instances.readInstance(orm)).ownerSignInMethod).toBe(stored);
   },
 );
 
@@ -171,7 +173,7 @@ test("fills an existing owner's unknown sign-in method", async ({ orm }) => {
 
   await signIn(orm, ticket({ method: "email" })).result;
 
-  expect((await readInstance(orm)).ownerSignInMethod).toBe("sign_in_with_email");
+  expect((await instances.readInstance(orm)).ownerSignInMethod).toBe("sign_in_with_email");
 });
 
 test("keeps the stored sign-in method when a ticket carries another method", async ({ orm }) => {
@@ -179,13 +181,13 @@ test("keeps the stored sign-in method when a ticket carries another method", asy
 
   await signIn(orm, ticket({ method: "google" })).result;
 
-  expect((await readInstance(orm)).ownerSignInMethod).toBe("sign_in_with_email");
+  expect((await instances.readInstance(orm)).ownerSignInMethod).toBe("sign_in_with_email");
 });
 
 test("leaves the owner's sign-in method unknown for a ticket without one", async ({ orm }) => {
   await signIn(orm, ticket({ method: null })).result;
 
-  expect((await readInstance(orm)).ownerSignInMethod).toBeNull();
+  expect((await instances.readInstance(orm)).ownerSignInMethod).toBeNull();
 });
 
 function ticket(overrides: Partial<ManagedTicket> = {}): ManagedTicket {

@@ -1,16 +1,12 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
-import {
-  chooseExternalAgentSource,
-  lockExternalAgentChoice,
-  lockSetupOpenToExternalAgent,
-  chooseExternalAgentOnServer,
-  readSetupOpenToExternalAgent,
-} from "../../../core/instance";
+import { createExternalAgentChoiceService } from "../../../core/instance";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type ExternalAgentConnection, externalAgentRepository } from "../db";
 import { hoursAfter, newExternalAgentSecret, parseExternalAgentClientName } from "../helpers";
 import type { ExternalAgentContext } from "./externalAgentContext";
+
+const externalAgentChoice = createExternalAgentChoiceService();
 
 /**
  * The owner's external agent connecting during setup: the setup holder chooses it and makes a
@@ -65,7 +61,7 @@ export function createExternalAgentSessionService(
   return {
     chooseExternalAgent: async (ctx) => {
       await transact(async (tx) => {
-        await chooseExternalAgentSource(ctx, tx);
+        await externalAgentChoice.chooseExternalAgentSource(ctx, tx);
         await endExternalAgents(tx, clock());
       });
     },
@@ -78,14 +74,14 @@ export function createExternalAgentSessionService(
     createExternalAgentCodeOnServer: async (ctx) =>
       // One transaction, so a refused code leaves no choice behind.
       transact(async (tx) => {
-        await chooseExternalAgentOnServer(ctx, tx);
+        await externalAgentChoice.chooseExternalAgentOnServer(ctx, tx);
         return createCode(tx, clock);
       }),
 
     startExternalAgentSession: async (ctx, { code, client }) => {
       ctx.require("MANAGE_WORKSPACE");
       return transact(async (tx) => {
-        const now = await lockSetupOpenToExternalAgent(tx, clock);
+        const now = await externalAgentChoice.lockSetupOpenToExternalAgent(tx, clock);
         const session = now && {
           token: newExternalAgentSecret(),
           client: parseExternalAgentClientName(client),
@@ -102,7 +98,7 @@ export function createExternalAgentSessionService(
     readExternalAgentSession: async ({ token }) => {
       const now = clock();
       const sessionId = await externalAgentRepository(orm).findLiveSession(token, now);
-      if (!sessionId || !(await readSetupOpenToExternalAgent(orm, now))) {
+      if (!sessionId || !(await externalAgentChoice.readSetupOpenToExternalAgent(orm, now))) {
         return null;
       }
       return PrincipalSecurityContext.setupExternalAgent(sessionId);
@@ -110,7 +106,7 @@ export function createExternalAgentSessionService(
 
     disconnectExternalAgent: async (ctx) => {
       await transact(async (tx) => {
-        await lockExternalAgentChoice(ctx, tx);
+        await externalAgentChoice.lockExternalAgentChoice(ctx, tx);
         await endExternalAgents(tx, clock());
       });
     },
@@ -119,7 +115,7 @@ export function createExternalAgentSessionService(
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const now = clock();
       const connection =
-        (await readSetupOpenToExternalAgent(orm, now)) &&
+        (await externalAgentChoice.readSetupOpenToExternalAgent(orm, now)) &&
         (await externalAgentRepository(orm).findConnection(now));
       return connection ? { ...connection, listening: activity.isListening(now) } : null;
     },
@@ -128,7 +124,7 @@ export function createExternalAgentSessionService(
 
 /** A new one-time code in `tx`, ending every session and earlier code; CONFLICT unless the agent may work. */
 async function createCode(tx: Tx, clock: () => Date): Promise<ExternalAgentCode> {
-  const now = await lockSetupOpenToExternalAgent(tx, clock);
+  const now = await externalAgentChoice.lockSetupOpenToExternalAgent(tx, clock);
   if (!now) {
     throw new ApplicationError("CONFLICT", "Choose your agent first.");
   }

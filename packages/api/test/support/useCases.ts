@@ -10,11 +10,11 @@ import type { Decisions } from "../../src/integrations/ai";
 import type { Orm, Transact } from "../../src/core/db";
 import type { Mode } from "../../src/core/env";
 import {
-  type AiSettings,
-  createAiSettings,
-  createMailSettings,
-  createPasswordResetEmail,
-  type MailSettings,
+  type AiSettingsService,
+  createAiSettingsService,
+  createMailSettingsService,
+  createPasswordResetEmailService,
+  type MailSettingsService,
   type OriginalFileReader,
 } from "../../src/core/instance";
 import type { JobQueue, JobName, Jobs } from "../../src/core/jobs";
@@ -86,10 +86,10 @@ export function aiSettings(
     url = "http://127.0.0.1:9",
     environmentKey = null,
   }: { mode?: Mode; url?: string; environmentKey?: string | null } = {},
-): AiSettings {
+): AiSettingsService {
   const dataDir = mkdtempSync(join(tmpdir(), "broccoli-data-"));
   onTestFinished(() => rm(dataDir, { recursive: true, force: true }));
-  return createAiSettings({
+  return createAiSettingsService({
     orm,
     transact: testTransactor(orm),
     secretBox: TEST_SECRET_BOX,
@@ -119,10 +119,10 @@ export function mailSettings(
     mode?: Mode;
     publicUrl?: string;
     mailRelayUrl?: string;
-    mail?: Parameters<typeof createMailSettings>[0]["mail"];
+    mail?: Parameters<typeof createMailSettingsService>[0]["mail"];
   } = {},
-): MailSettings {
-  return createMailSettings({
+): MailSettingsService {
+  return createMailSettingsService({
     orm,
     transact: testTransactor(orm),
     secretBox: TEST_SECRET_BOX,
@@ -149,7 +149,7 @@ export function passwordResetEmail(
     name: "instance.sendPasswordResetEmail";
     payload: Jobs["instance.sendPasswordResetEmail"];
   }[] = [];
-  const service = createPasswordResetEmail({
+  const service = createPasswordResetEmailService({
     orm,
     transact: testTransactor(orm),
     secretBox: TEST_SECRET_BOX,

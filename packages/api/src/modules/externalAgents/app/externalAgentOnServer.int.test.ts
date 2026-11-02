@@ -8,7 +8,9 @@ import {
   test,
 } from "#test/support";
 
-import { readInstance } from "../../../core/instance";
+import { createInstanceService } from "../../../core/instance";
+
+const instances = createInstanceService();
 
 test.for([SETUP_HOLDER, OWNER])(
   "refuses the server command to a non-system caller without saving a source",
@@ -19,7 +21,7 @@ test.for([SETUP_HOLDER, OWNER])(
       code: "FORBIDDEN",
     });
 
-    expect((await readInstance(orm)).aiSource).toBeNull();
+    expect((await instances.readInstance(orm)).aiSource).toBeNull();
   },
 );
 
@@ -77,7 +79,7 @@ test("the server command saves no AI source when the setup session has expired",
     message: "Choose your agent first.",
   });
 
-  expect((await readInstance(orm)).aiSource).toBeNull();
+  expect((await instances.readInstance(orm)).aiSource).toBeNull();
 });
 
 test("the server command refuses a code once an owner exists", async ({ orm, seed }) => {

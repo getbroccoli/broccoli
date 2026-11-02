@@ -10,7 +10,9 @@ import {
   test,
 } from "#test/support";
 
-import { readInstance } from "../../../../core/instance";
+import { createInstanceService } from "../../../../core/instance";
+
+const instances = createInstanceService();
 
 test("finishing managed setup creates exactly the ready people with their avatars", async ({
   orm,
@@ -42,7 +44,7 @@ test("finishing managed setup creates exactly the ready people with their avatar
 
   await systemUseCases(orm).completeSetup(owner);
 
-  expect((await readInstance(orm)).step).toBe("done");
+  expect((await instances.readInstance(orm)).step).toBe("done");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toMatchObject([
     { node: { email: "avery@example.com", avatarFileId: avatar } },
   ]);
@@ -63,7 +65,7 @@ test("refuses finishing after another tab goes Back and creates nobody", async (
     message: "Setup is not at the ready step.",
   });
 
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   expect((await employeeUseCases(orm).listEmployees(owner, {})).edges).toEqual([]);
 });
 
@@ -105,5 +107,5 @@ test("refuses an employee completing setup and keeps the ready step", async ({ o
     code: "FORBIDDEN",
   });
 
-  expect((await readInstance(orm)).step).toBe("ready");
+  expect((await instances.readInstance(orm)).step).toBe("ready");
 });

@@ -2,7 +2,7 @@ import type { BetterAuthPlugin } from "better-auth";
 import type express from "express";
 
 import type { Orm, Transact } from "./db";
-import type { AddApprovedPeople, PasswordResetEmail, SetupDemo } from "./instance";
+import type { AddApprovedPeople, PasswordResetEmailService, SetupDemo } from "./instance";
 import type { EventHandlers } from "./events";
 import type { JobHandlers, JobQueue } from "./jobs";
 import type { Resolvers } from "./graphql";
@@ -60,5 +60,5 @@ export interface Modules {
   addApprovedPeople: AddApprovedPeople;
   /** What permission checks read about people. */
   employeeDirectory: EmployeeDirectory;
-  passwordResetEmail: Pick<PasswordResetEmail, "queue">;
+  passwordResetEmail: Pick<PasswordResetEmailService, "queue">;
 }

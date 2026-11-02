@@ -7,7 +7,9 @@ import {
   test,
 } from "#test/support";
 
-import { readInstance } from "../../../core/instance";
+import { createInstanceService } from "../../../core/instance";
+
+const instances = createInstanceService();
 
 test("refuses a drop when another AI source is chosen", async ({ orm, seed }) => {
   await seed.externalAgentSetup();
@@ -224,12 +226,12 @@ test("refuses stale approval racing an answer and prevents answers after refresh
   });
   // Before the answer, the file is still mapping; after it, the reviewed version is stale.
   expect(approval).toMatchObject({ status: "rejected", reason: { code: "CONFLICT" } });
-  expect((await readInstance(orm)).step).toBe("import");
+  expect((await instances.readInstance(orm)).step).toBe("import");
   const refreshed = await imports.reads.readReview(SETUP_HOLDER);
   expect(refreshed.readyEmployees).toHaveLength(1);
   await imports.approveImport(SETUP_HOLDER, refreshed.version);
   const records = await imports.reads.listEmployeeRecords(SETUP_HOLDER, { sourceId: id });
-  expect((await readInstance(orm)).step).toBe("owner");
+  expect((await instances.readInstance(orm)).step).toBe("owner");
   expect(await agents.sessions.readExternalAgentSession({ token })).toBeNull();
   await expect(agents.files.answerMappingQuestions(ctx, id, ANSWERS)).rejects.toMatchObject({
     code: "UNAUTHENTICATED",
