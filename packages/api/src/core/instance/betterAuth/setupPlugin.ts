@@ -22,11 +22,8 @@ import { assertValidCredentials, credentialsBody, linkPassword } from "./credent
 import { readSetupToken, setSetupCookie } from "./setupCookie";
 
 const setupDemo = createSetupDemoService();
-
 const setupSessions = createSetupSessionService();
-
 const owners = createOwnerService();
-
 const instances = createInstanceService();
 
 const SYSTEM = PrincipalSecurityContext.system();

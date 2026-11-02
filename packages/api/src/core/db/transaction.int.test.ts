@@ -6,7 +6,6 @@ import { createLogger } from "../logger";
 import { transactor } from ".";
 
 const setupSteps = createSetupStepService();
-
 const instances = createInstanceService();
 
 test("dispatches queued events after the write commits", async ({ orm, seed }) => {

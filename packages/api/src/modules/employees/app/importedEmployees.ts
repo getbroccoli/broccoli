@@ -8,7 +8,6 @@ import { setNewEmployeeManagers } from "./useCases/employeeManagers";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 const owners = createOwnerService();
-
 const recordHistory = createRecordHistoryService();
 
 /** What adding imported employees did. */

@@ -6,7 +6,6 @@ import { createLogger } from "../../logger";
 import { createSetupStepService, createInstanceService } from ".";
 
 const setupSteps = createSetupStepService();
-
 const instances = createInstanceService();
 
 test("refuses an employee completing the company step and keeps the current step", async ({

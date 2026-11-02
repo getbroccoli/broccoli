@@ -11,9 +11,10 @@ import { createInstanceService } from "../../instance";
 import { createLogger } from "../../logger";
 import type { ManagedTicket } from "../domain";
 import { managedTicket, managedTicketRepository } from "../db";
-import { SignInRefusedError, signInWithTicket } from "./signInWithTicket";
+import { createManagedSignInService, SignInRefusedError } from "./managedSignInService";
 
 const instances = createInstanceService();
+const managedSignIn = createManagedSignInService();
 
 const NOW = new Date("2026-10-12T10:00:00Z");
 
@@ -122,7 +123,7 @@ test("leaves the ticket unused when the transaction fails", async ({ orm, transa
   const value = ticket();
   await expect(
     transact(async (tx) => {
-      await signInWithTicket(SYSTEM, tx, value, () => NOW);
+      await managedSignIn.signInWithTicket(SYSTEM, tx, value, () => NOW);
       throw new Error("later step failed");
     }),
   ).rejects.toThrow("later step failed");
@@ -215,6 +216,9 @@ function signIn(orm: Orm, value: ManagedTicket, clock = () => NOW) {
   });
   return {
     events,
-    result: transactor(orm, eventBus)((tx) => signInWithTicket(SYSTEM, tx, value, clock)),
+    result: transactor(
+      orm,
+      eventBus,
+    )((tx) => managedSignIn.signInWithTicket(SYSTEM, tx, value, clock)),
   };
 }

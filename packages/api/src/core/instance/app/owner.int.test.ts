@@ -7,7 +7,6 @@ import { createLogger } from "../../logger";
 import { createOwnerService, createInstanceService } from ".";
 
 const owners = createOwnerService();
-
 const instances = createInstanceService();
 
 test("refuses an employee claiming ownership without creating a user or advancing setup", async ({

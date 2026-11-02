@@ -13,7 +13,6 @@ import { inAuthTransaction } from "./authTransaction";
 import { setSetupCookie } from "./setupCookie";
 
 const setupDemo = createSetupDemoService();
-
 const instances = createInstanceService();
 
 const NOT_IN_DEMO_RESET = {

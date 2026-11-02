@@ -8,9 +8,7 @@ import type { SecurityContext } from "../../security";
 import { createSetupDemoService, createSetupStepService, createInstanceService } from ".";
 
 const setupDemo = createSetupDemoService();
-
 const setupSteps = createSetupStepService();
-
 const instances = createInstanceService();
 
 test("starts a seven-day demo for the setup holder, claims the owner and completes setup", async ({

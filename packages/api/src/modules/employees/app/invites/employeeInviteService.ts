@@ -32,7 +32,6 @@ import { employeeNotFound } from "../useCases/employeeNotFound";
 import { sendInviteJob } from "./sendInviteJob";
 
 const instances = createInstanceService();
-
 const recordHistory = createRecordHistoryService();
 
 /** An admin's invites to sign in, from sending them to the person joining. */

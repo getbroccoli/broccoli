@@ -17,7 +17,6 @@ import type { Instance } from "../domain";
 import { readSetupToken } from "./setupCookie";
 
 const setupSessions = createSetupSessionService();
-
 const instances = createInstanceService();
 
 /**

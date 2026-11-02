@@ -11,9 +11,7 @@ import { managedAccountRepository, managedTicketRepository } from "../db";
 import type { ManagedTicket } from "../domain";
 
 const managedInstance = createManagedInstanceService();
-
 const owners = createOwnerService();
-
 const instances = createInstanceService();
 
 /** A valid ticket that may not sign in here: used before, expired, or for someone else. */
@@ -24,33 +22,42 @@ export class SignInRefusedError extends Error {
   }
 }
 
-/**
- * Uses the ticket once and returns the user it signs in: the owner it creates on a new
- * instance, or the owner whose subject it names. Stores the owner's sign-in method the
- * first time a ticket names it. Runs in the transaction that creates the session, so a
- * failure leaves the ticket unused.
- */
-export async function signInWithTicket(
-  ctx: SecurityContext,
-  tx: Tx,
-  ticket: ManagedTicket,
-  clock: () => Date,
-): Promise<{ userId: string }> {
-  ctx.requireSystem();
-  const tickets = managedTicketRepository(tx);
-  if (!(await tickets.consume(ticket.jti, ticket.expiresAt))) {
-    throw new SignInRefusedError();
-  }
-  await tickets.deleteExpired(clock());
-  const userId = await findOrClaimOwner(ctx, tx, ticket);
-  if (ticket.method) {
-    await managedInstance.recordOwnerSignInMethod(ctx, tx, SIGN_IN_METHODS[ticket.method]);
-  }
-  // Checked last, with a fresh clock: the steps above may have waited for other transactions.
-  if (ticket.expiresAt <= clock()) {
-    throw new SignInRefusedError();
-  }
-  return { userId };
+/** Managed sign-in with a ticket from the accounts service. */
+export interface ManagedSignInService {
+  /**
+   * Uses the ticket once and returns the user it signs in: the owner it creates on a new
+   * instance, or the owner whose subject it names. Stores the owner's sign-in method the
+   * first time a ticket names it. Runs in the transaction that creates the session, so a
+   * failure leaves the ticket unused.
+   */
+  signInWithTicket(
+    ctx: SecurityContext,
+    tx: Tx,
+    ticket: ManagedTicket,
+    clock: () => Date,
+  ): Promise<{ userId: string }>;
+}
+
+export function createManagedSignInService(): ManagedSignInService {
+  return {
+    async signInWithTicket(ctx, tx, ticket, clock) {
+      ctx.requireSystem();
+      const tickets = managedTicketRepository(tx);
+      if (!(await tickets.consume(ticket.jti, ticket.expiresAt))) {
+        throw new SignInRefusedError();
+      }
+      await tickets.deleteExpired(clock());
+      const userId = await findOrClaimOwner(ctx, tx, ticket);
+      if (ticket.method) {
+        await managedInstance.recordOwnerSignInMethod(ctx, tx, SIGN_IN_METHODS[ticket.method]);
+      }
+      // Checked last, with a fresh clock: the steps above may have waited for other transactions.
+      if (ticket.expiresAt <= clock()) {
+        throw new SignInRefusedError();
+      }
+      return { userId };
+    },
+  };
 }
 
 async function findOrClaimOwner(

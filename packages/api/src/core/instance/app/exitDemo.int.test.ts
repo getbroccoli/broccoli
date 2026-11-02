@@ -16,9 +16,7 @@ import { instanceRepository } from "../db";
 import { createSetupDemoService, createSetupSessionService, createInstanceService } from ".";
 
 const setupDemo = createSetupDemoService();
-
 const setupSessions = createSetupSessionService();
-
 const instances = createInstanceService();
 
 test("resetting a demo deletes its owner and gives the browser setup at the company step", async ({

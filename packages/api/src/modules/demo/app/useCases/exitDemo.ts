@@ -5,7 +5,6 @@ import { deleteAllEmployees, hasDemoEmployees } from "../../../employees";
 import type { DemoContext } from "./demoContext";
 
 const setupSteps = createSetupStepService();
-
 const instances = createInstanceService();
 
 /**

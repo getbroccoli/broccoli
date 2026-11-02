@@ -22,7 +22,6 @@ import { employeeNotFound } from "./employeeNotFound";
 import { readableResult } from "./readableResult";
 
 const owners = createOwnerService();
-
 const recordHistory = createRecordHistoryService();
 
 /**

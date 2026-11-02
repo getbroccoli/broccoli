@@ -14,7 +14,6 @@ import { createManagedInstanceService } from "./managedInstanceService";
 import { createInstanceService } from "./instanceService";
 
 const managedInstance = createManagedInstanceService();
-
 const instances = createInstanceService();
 
 const ACME: ManagedAssignment = {

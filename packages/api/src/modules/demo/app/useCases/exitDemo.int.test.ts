@@ -15,7 +15,6 @@ import { createSetupStepService, createInstanceService } from "../../../../core/
 import { parseCalendarDate } from "../../../../utils";
 
 const setupSteps = createSetupStepService();
-
 const instances = createInstanceService();
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({
