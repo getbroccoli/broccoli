@@ -35,6 +35,7 @@ import {
   type EmployeeReadService,
   type EmployeeService,
   type LocationService,
+  noEmploymentChanges,
 } from "../../src/modules/employees";
 import { createImportServices } from "../../src/modules/imports";
 import { createExternalAgentServices } from "../../src/modules/externalAgents";
@@ -241,6 +242,7 @@ export function importServices(
     prepareDemoFill: prepareFill,
     invites,
     deleteAllEmployees: deleteAllEmployees(orm),
+    employmentChanges: noEmploymentChanges,
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
         sentJobs.push({ name, payload });

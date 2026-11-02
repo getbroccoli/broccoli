@@ -14,6 +14,7 @@ import {
   createEmployeeSetupService,
   employeeDirectory,
   employeesModule,
+  noEmploymentChanges,
 } from "./employees";
 import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
@@ -56,6 +57,8 @@ export function createModules(
     await timeOff.deleteAllGroupPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
   };
+  // shortcut: no one listens yet; time off's allowances fill it.
+  const employmentChanges = noEmploymentChanges;
   // Built once: the employees module serves it and setup's last step invites through it.
   const invites = createEmployeeInviteService({
     ...core,
@@ -68,9 +71,10 @@ export function createModules(
     slack: slackConnection,
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
-    prepareDemoFill: createDemoFillService().prepareDemoFill,
+    prepareDemoFill: createDemoFillService(employmentChanges).prepareDemoFill,
     invites,
     deleteAllEmployees,
+    employmentChanges,
   });
   const manifests = [
     systemModule({
@@ -83,7 +87,7 @@ export function createModules(
       deleteAllEmployees,
       deleteFinishedImport: importServices.deleteFinishedImport,
     }),
-    employeesModule({ ...core, mode: deployment.mode, invites }),
+    employeesModule({ ...core, mode: deployment.mode, invites, employmentChanges }),
     companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact, deleteAllEmployees }),
     slackModule(slackConnection),

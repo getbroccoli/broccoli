@@ -3,10 +3,8 @@ import { readFile } from "node:fs/promises";
 import type { Tx } from "../../../core/db";
 import { PrincipalSecurityContext } from "../../../core/security";
 import { type CalendarDate, parseRasterImage, type RasterImage, todayInUtc } from "../../../utils";
-import { createEmployeeSetupService } from "../../employees";
+import { createEmployeeSetupService, type EmploymentChanges } from "../../employees";
 import { demoPeople } from "../domain";
-
-const employeeSetup = createEmployeeSetupService();
 
 /** Writes the demo company inside the caller's transaction. */
 export type DemoFill = (tx: Tx) => Promise<void>;
@@ -20,7 +18,8 @@ export interface DemoFillService {
   prepareDemoFill: (today?: CalendarDate) => Promise<DemoFill>;
 }
 
-export function createDemoFillService(): DemoFillService {
+export function createDemoFillService(employmentChanges: EmploymentChanges): DemoFillService {
+  const employeeSetup = createEmployeeSetupService(employmentChanges);
   return {
     async prepareDemoFill(today = todayInUtc()) {
       const people = demoPeople(today);

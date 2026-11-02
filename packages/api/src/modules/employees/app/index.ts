@@ -31,6 +31,11 @@ export {
 } from "./employeeWorkingPatternService";
 export { employeeRecordType } from "./employeeRecordType";
 export {
+  type EmploymentChangeCause,
+  type EmploymentChanges,
+  noEmploymentChanges,
+} from "./employmentChanges";
+export {
   createEmployeeInviteService,
   type EmployeeInviteService,
   type InviteDetails,

@@ -8,7 +8,7 @@ import {
 } from "../../src/core/instance";
 import { createRecordHistoryService } from "../../src/core/records";
 import { createDemoFillService } from "../../src/modules/demo";
-import { createEmployeeSetupService } from "../../src/modules/employees";
+import { createEmployeeSetupService, noEmploymentChanges } from "../../src/modules/employees";
 
 /** Services without dependencies, built once for every test. */
 export const instances = createInstanceService();
@@ -19,4 +19,4 @@ export const managedInstance = createManagedInstanceService();
 export const fileStorage = createFileStorageService();
 export const recordHistory = createRecordHistoryService();
 export const employeeSetup = createEmployeeSetupService();
-export const demoFill = createDemoFillService();
+export const demoFill = createDemoFillService(noEmploymentChanges);

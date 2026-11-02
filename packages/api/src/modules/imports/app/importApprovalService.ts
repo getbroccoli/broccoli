@@ -12,6 +12,8 @@ import type { SecurityContext } from "../../../core/security";
 import {
   createEmployeeSetupService,
   type EmployeeInviteService,
+  type EmployeeSetupService,
+  type EmploymentChanges,
   type ImportedEmployees,
 } from "../../employees";
 import { lockImport } from "../db";
@@ -21,7 +23,6 @@ import { requireImportAccess } from "./requireImportAccess";
 
 const setupSteps = createSetupStepService();
 const instances = createInstanceService();
-const employeeSetup = createEmployeeSetupService();
 
 /** What adding the approved people did, published once it commits. */
 export interface AddedPeople extends ImportedEmployees {
@@ -63,11 +64,14 @@ export function createImportApprovalService({
   logger,
   invites,
   deleteAllEmployees,
+  employmentChanges,
 }: Pick<ModuleDependencies, "transact" | "logger"> & {
   invites: SetupInvites;
   /** Deletes every employee and what goes with them, such as the groups' time off policies. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  employmentChanges: EmploymentChanges;
 }): ImportApprovalService {
+  const employeeSetup = createEmployeeSetupService(employmentChanges);
   return {
     async approveImport(ctx, version) {
       requireImportAccess(ctx);
@@ -86,7 +90,7 @@ export function createImportApprovalService({
         }
         // A self-hosted instance whose owner has an account has no last step to add them at.
         if ((await instances.readInstance(tx)).step === "done") {
-          await addApprovedPeople(invites, ctx, tx);
+          await addApprovedPeople(employeeSetup, invites, ctx, tx);
         }
         return true;
       });
@@ -94,7 +98,8 @@ export function createImportApprovalService({
         logger.info("Approved the import");
       }
     },
-    addApprovedPeople: (ctx, tx, finish) => addApprovedPeople(invites, ctx, tx, finish),
+    addApprovedPeople: (ctx, tx, finish) =>
+      addApprovedPeople(employeeSetup, invites, ctx, tx, finish),
     reportAddedPeople({ selected, ownerEmployeeId, invitedEmployeeIds, ...counts }) {
       logger.info(counts, "Added the approved people");
       for (const employee of selected) {
@@ -130,6 +135,7 @@ export function createImportApprovalService({
  * said they are and invites the people they chose, returning those invites.
  */
 async function addApprovedPeople(
+  employeeSetup: EmployeeSetupService,
   invites: SetupInvites,
   ctx: SecurityContext,
   tx: Tx,
