@@ -30,6 +30,8 @@ export function ensureAllowancesJob({
   return {
     "timeOff.ensureAllowances": {
       schedule: { cron: "10 0 * * *", timeZone: "Europe/London", payload: {} },
+      // One run walks every employee; an hour keeps a large workspace from running twice at once.
+      expireInSeconds: 60 * 60,
       run: async () => {
         const cause = causeOn(today());
         const totals = {
