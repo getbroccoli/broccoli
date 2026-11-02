@@ -199,3 +199,41 @@ test("adds employees in a manager loop without managers", async ({ orm, seed }) 
   );
   expect(edges.map(({ node }) => managers.get(node.id) ?? null)).toEqual([null, null]);
 });
+
+test("adds approved people to their chosen locations without creating left-out locations", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
+  const source = await seed.fileSource({
+    content: "Name,Office\nAvery Stone,Leeds",
+    status: "mapped",
+  });
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com", location: "Leeds" },
+    { email: "robin@example.com", location: "leeds" },
+    { email: "sam@example.com", location: "York" },
+    { email: "leftout@example.com", location: "Glasgow" },
+  ]);
+  const imports = importServices(orm);
+  await imports.choices.setLeftOut(SETUP_HOLDER, { key: "leftout@example.com", leftOut: true });
+
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  await finishSelfHostedSetup(orm);
+
+  const employees = employeeServices(orm);
+  const locations = await employees.listLocations(OWNER);
+  expect(locations).toEqual([
+    { id: expect.any(String) as unknown, name: "Leeds", peopleCount: 2 },
+    { id: expect.any(String) as unknown, name: "York", peopleCount: 1 },
+  ]);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  expect(edges.map(({ node }) => ({ email: node.email, locationId: node.locationId }))).toEqual(
+    expect.arrayContaining([
+      { email: "avery@example.com", locationId: locations[0]!.id },
+      { email: "robin@example.com", locationId: locations[0]!.id },
+      { email: "sam@example.com", locationId: locations[1]!.id },
+    ]),
+  );
+  expect(edges).toHaveLength(3);
+});

@@ -35,11 +35,12 @@ test.for(["title-row-semicolons", "simple"])(
 
     const { edges } = await imports.reads.listEmployeeRecords(OWNER, { sourceId: source.id });
     expect(
-      edges.map(({ node: { firstName, lastName, email, jobTitle, startDate } }) => ({
+      edges.map(({ node: { firstName, lastName, email, jobTitle, location, startDate } }) => ({
         firstName,
         lastName,
         email,
         jobTitle,
+        location,
         startDate,
       })),
     ).toEqual(expected.records);

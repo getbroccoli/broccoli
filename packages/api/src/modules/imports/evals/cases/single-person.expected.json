@@ -5,6 +5,7 @@
       "lastName": "Halvorsen",
       "email": "margit.halvorsen@acme-corp.example",
       "jobTitle": "Procurement Analyst",
+      "location": null,
       "startDate": "2023-03-27"
     }
   ],

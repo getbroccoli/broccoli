@@ -5,6 +5,7 @@
       "lastName": "Dang",
       "email": "e04625.20@people.example.test",
       "jobTitle": "Director",
+      "location": "CHO-3100",
       "startDate": "2002-07-09",
       "manager": "Eva Rivera"
     },
@@ -13,6 +14,7 @@
       "lastName": "Alvarado",
       "email": "e03680.21@people.example.test",
       "jobTitle": "Sr. Manger",
+      "location": "MAN-4100",
       "startDate": "2012-01-09",
       "manager": "Emily Davis"
     },
@@ -21,6 +23,7 @@
       "lastName": "Rivera",
       "email": "e04732.22@people.example.test",
       "jobTitle": "Director",
+      "location": "MIA-3100",
       "startDate": "2021-04-02",
       "manager": "Adam Dang"
     }

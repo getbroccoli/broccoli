@@ -130,6 +130,7 @@ enum ImportEmployeeField {
   LAST_NAME
   EMAIL
   JOB_TITLE
+  LOCATION
   MANAGER
   START_DATE
 }
@@ -152,6 +153,8 @@ type ImportEmployee {
   lastName: ImportEmployeeValue!
   email: ImportEmployeeValue!
   jobTitle: ImportEmployeeValue!
+  "Where the person works, such as an office or Remote; Approve puts them in the location of that name, adding it when none has it."
+  location: ImportEmployeeValue!
   "Who manages this person, as the sources name them, and who that is among the people Approve would add."
   manager: ImportEmployeeManager!
   "Its value and options are YYYY-MM-DD."
@@ -212,6 +215,8 @@ type ImportEmployeeRecord {
   "Lowercased."
   email: String
   jobTitle: String
+  "Where the person works, as this source names it."
+  location: String
   "The manager's name, email or ID, as this source gives it."
   manager: String
   startDate: Date

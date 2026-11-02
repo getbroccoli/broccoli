@@ -5,6 +5,7 @@
       "lastName": "Worker",
       "email": "avery.worker@acme-corp.example",
       "jobTitle": "Office Administrator",
+      "location": null,
       "startDate": "2025-02-17"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Company",
       "email": "jordan.company@acme-corp.example",
       "jobTitle": "Support Technician",
+      "location": null,
       "startDate": "2024-11-03"
     }
   ],

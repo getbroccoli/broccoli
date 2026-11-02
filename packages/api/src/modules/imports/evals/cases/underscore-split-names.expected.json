@@ -5,6 +5,7 @@
       "lastName": "Fenwick",
       "email": "zarela.fenwick@staff.example",
       "jobTitle": null,
+      "location": null,
       "startDate": null
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Quillmere",
       "email": "tavren.quillmere@staff.example",
       "jobTitle": null,
+      "location": null,
       "startDate": null
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Vosswick",
       "email": "nerali.vosswick@staff.example",
       "jobTitle": null,
+      "location": null,
       "startDate": null
     }
   ],

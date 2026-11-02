@@ -5,6 +5,7 @@
       "lastName": "Whitcombe",
       "email": "nora.whitcombe@acme-corp.example",
       "jobTitle": "Payroll Administrator",
+      "location": null,
       "startDate": null
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Fenwick",
       "email": "priya.fenwick@acme-corp.example",
       "jobTitle": "Research Lead",
+      "location": null,
       "startDate": null
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Reed-Hartley",
       "email": "anna.reed-hartley@acme-corp.example",
       "jobTitle": "Designer",
+      "location": null,
       "startDate": null
     },
     {
@@ -26,6 +29,7 @@
       "lastName": "O'Vale",
       "email": "siobhan.ovale@acme-corp.example",
       "jobTitle": "Engineer",
+      "location": null,
       "startDate": null
     },
     {
@@ -33,6 +37,7 @@
       "lastName": "de Souza",
       "email": "lucas.desouza@acme-corp.example",
       "jobTitle": "Office Manager",
+      "location": null,
       "startDate": null
     },
     {
@@ -40,6 +45,7 @@
       "lastName": "Brindle",
       "email": "evan.brindle@acme-corp.example",
       "jobTitle": "Recruiter",
+      "location": null,
       "startDate": null
     }
   ],

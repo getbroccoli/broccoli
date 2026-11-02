@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import type { ImportEmployee } from "./importEmployee";
 import { incompleteReason } from "./importEmployeeMapping";
 
-it("returns no incomplete reason for a complete import employee", () => {
+it("an import employee without a location is still complete", () => {
   expect(incompleteReason(employee())).toBeNull();
 });
 
@@ -35,6 +35,7 @@ function employee(
     lastName: "  Stone  ",
     email: "  Avery@EXAMPLE.COM  ",
     jobTitle: "  Designer  ",
+    location: null,
     startDate: null,
     manager: null,
     ...overrides,
@@ -51,6 +52,7 @@ function employee(
       lastName: { value: shown.lastName, choice: "typed", pickedRecordId: null, options: [] },
       email: { value: shown.email, choice: "typed", pickedRecordId: null, options: [] },
       jobTitle: { value: shown.jobTitle, choice: "typed", pickedRecordId: null, options: [] },
+      location: { value: shown.location, choice: "default", pickedRecordId: null, options: [] },
       manager: { value: shown.manager, choice: "default", pickedRecordId: null, options: [] },
       startDate: { value: shown.startDate, choice: "typed", pickedRecordId: null, options: [] },
     },

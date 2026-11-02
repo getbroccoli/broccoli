@@ -5,6 +5,7 @@
       "lastName": "Whitcombe",
       "email": "hannah.whitcombe@acme-corp.example",
       "jobTitle": "Office Manager",
+      "location": null,
       "startDate": "2024-03-01"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "McArden",
       "email": "cian.mcarden@acme-corp.example",
       "jobTitle": "Accounts Assistant",
+      "location": null,
       "startDate": "2023-11-20"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Patel",
       "email": "aisha.patel@acme-corp.example",
       "jobTitle": "Customer Service Adviser",
+      "location": null,
       "startDate": "2025-01-06"
     }
   ],

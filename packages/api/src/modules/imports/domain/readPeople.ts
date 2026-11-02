@@ -25,6 +25,9 @@ export const readPeopleSchema = z
           ),
           email: personValue("Work email address."),
           jobTitle: personValue("Job title or role."),
+          location: personValue(
+            "Where the person works: their office, site or work location, such as a city or Remote. Never a home address, a country of residence, or a work mode such as onsite or hybrid.",
+          ),
           startDate: personValue("First working day, as YYYY-MM-DD."),
           manager: personValue(
             "The person's manager, supervisor or line manager, by name, email or the file's ID for them, as the file writes it.",
@@ -67,6 +70,7 @@ export function parseReadPeople(body: unknown): ReadPeople {
       ...nameOf(person, fullNames[index]!),
       email: parseEmail(person.email),
       jobTitle: nonBlank(person.jobTitle),
+      location: nonBlank(person.location),
       startDate: (person.startDate && parseCalendarDate(person.startDate.trim())) || null,
       manager: nonBlank(person.manager),
     };

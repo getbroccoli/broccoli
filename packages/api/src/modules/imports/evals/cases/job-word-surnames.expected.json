@@ -5,6 +5,7 @@
       "lastName": "Baker",
       "email": "emma.baker@acme-corp.example",
       "jobTitle": "Office Administrator",
+      "location": null,
       "startDate": "2024-01-16"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Cook",
       "email": "oliver.cook@acme-corp.example",
       "jobTitle": "IT Support Technician",
+      "location": null,
       "startDate": "2023-10-05"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Mason",
       "email": "grace.mason@acme-corp.example",
       "jobTitle": "Customer Service Adviser",
+      "location": null,
       "startDate": "2022-05-22"
     },
     {
@@ -26,6 +29,7 @@
       "lastName": "Taylor",
       "email": "harry.taylor@acme-corp.example",
       "jobTitle": "Accounts Assistant",
+      "location": null,
       "startDate": "2024-12-09"
     },
     {
@@ -33,6 +37,7 @@
       "lastName": "Smith",
       "email": "zoe.smith@acme-corp.example",
       "jobTitle": "Regional Sales Representative",
+      "location": null,
       "startDate": "2023-07-30"
     },
     {
@@ -40,6 +45,7 @@
       "lastName": "Porter",
       "email": "ben.porter@acme-corp.example",
       "jobTitle": "Facilities Supervisor",
+      "location": null,
       "startDate": "2025-03-11"
     }
   ],

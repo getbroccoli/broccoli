@@ -7,6 +7,8 @@ export interface ImportEmployeeValues {
   lastName: string | null;
   email: string | null;
   jobTitle: string | null;
+  /** Where the person works, as the source names it, such as an office or "Remote". */
+  location: string | null;
   startDate: CalendarDate | null;
   /** Who manages the person, as the source names them: a name, an email or the source's ID. */
   manager: string | null;
@@ -41,6 +43,7 @@ export const IMPORT_EMPLOYEE_FIELDS = [
   "lastName",
   "email",
   "jobTitle",
+  "location",
   "manager",
   "startDate",
 ] as const;

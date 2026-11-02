@@ -5,6 +5,7 @@
       "lastName": "Hartley",
       "email": "amelia.hartley@acme-corp.example",
       "jobTitle": "Customer Service Adviser",
+      "location": null,
       "startDate": "2024-01-13"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Desai",
       "email": "rohan.desai@acme-corp.example",
       "jobTitle": "Accounts Assistant",
+      "location": null,
       "startDate": "2023-02-27"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Lindqvist",
       "email": "freya.lindqvist@acme-corp.example",
       "jobTitle": "Customer Service Adviser",
+      "location": null,
       "startDate": "2022-04-02"
     },
     {
@@ -26,6 +29,7 @@
       "lastName": "Reid",
       "email": "callum.reid@acme-corp.example",
       "jobTitle": "Maintenance Technician",
+      "location": null,
       "startDate": "2024-06-19"
     },
     {
@@ -33,6 +37,7 @@
       "lastName": "Ashworth",
       "email": "imogen.ashworth@acme-corp.example",
       "jobTitle": "Accounts Assistant",
+      "location": null,
       "startDate": "2021-08-30"
     },
     {
@@ -40,6 +45,7 @@
       "lastName": "Boateng",
       "email": "kwame.boateng@acme-corp.example",
       "jobTitle": "Customer Service Adviser",
+      "location": null,
       "startDate": "2023-10-15"
     },
     {
@@ -47,6 +53,7 @@
       "lastName": "Marchetti",
       "email": "sofia.marchetti@acme-corp.example",
       "jobTitle": "Office Administrator",
+      "location": null,
       "startDate": "2022-12-06"
     },
     {
@@ -54,6 +61,7 @@
       "lastName": "Pritchard",
       "email": "dylan.pritchard@acme-corp.example",
       "jobTitle": "Maintenance Technician",
+      "location": null,
       "startDate": "2025-03-21"
     },
     {
@@ -61,6 +69,7 @@
       "lastName": "Gallagher",
       "email": "niamh.gallagher@acme-corp.example",
       "jobTitle": "Accounts Assistant",
+      "location": null,
       "startDate": "2024-07-10"
     },
     {
@@ -68,6 +77,7 @@
       "lastName": "Hussain",
       "email": "tariq.hussain@acme-corp.example",
       "jobTitle": "Customer Service Adviser",
+      "location": null,
       "startDate": "2021-09-24"
     },
     {
@@ -75,6 +85,7 @@
       "lastName": "Fontaine",
       "email": "elodie.fontaine@acme-corp.example",
       "jobTitle": "Office Administrator",
+      "location": null,
       "startDate": "2023-11-16"
     },
     {
@@ -82,6 +93,7 @@
       "lastName": "Pugh",
       "email": "rhys.pugh@acme-corp.example",
       "jobTitle": "Maintenance Technician",
+      "location": null,
       "startDate": "2025-01-29"
     }
   ],

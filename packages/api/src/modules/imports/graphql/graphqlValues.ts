@@ -42,6 +42,7 @@ export const FIELDS = {
   lastName: "LAST_NAME",
   email: "EMAIL",
   jobTitle: "JOB_TITLE",
+  location: "LOCATION",
   manager: "MANAGER",
   startDate: "START_DATE",
 } as const;

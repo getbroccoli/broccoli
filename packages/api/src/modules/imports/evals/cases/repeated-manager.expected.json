@@ -5,6 +5,7 @@
       "lastName": "Whitfield",
       "email": "clara.whitfield@acme-corp.example",
       "jobTitle": "Accounts Assistant",
+      "location": null,
       "startDate": "2024-02-12",
       "manager": "Marguerite Delacroix"
     },
@@ -13,6 +14,7 @@
       "lastName": "Okonkwo",
       "email": "idris.okonkwo@acme-corp.example",
       "jobTitle": "Maintenance Technician",
+      "location": null,
       "startDate": "2023-06-26",
       "manager": "Marguerite Delacroix"
     },
@@ -21,6 +23,7 @@
       "lastName": "Novak",
       "email": "petra.novak@acme-corp.example",
       "jobTitle": "Marketing Specialist",
+      "location": null,
       "startDate": "2022-09-03",
       "manager": "Marguerite Delacroix"
     },
@@ -29,6 +32,7 @@
       "lastName": "Stroud",
       "email": "harvey.stroud@acme-corp.example",
       "jobTitle": "Office Administrator",
+      "location": null,
       "startDate": "2024-11-18",
       "manager": "Marguerite Delacroix"
     }

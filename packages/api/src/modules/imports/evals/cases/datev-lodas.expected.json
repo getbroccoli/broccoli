@@ -5,6 +5,7 @@
       "lastName": "Brandt",
       "email": null,
       "jobTitle": "Softwareentwicklerin",
+      "location": null,
       "startDate": "2021-04-01"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Lehmann",
       "email": null,
       "jobTitle": "Lagerist",
+      "location": null,
       "startDate": "2022-08-15"
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Albrecht",
       "email": null,
       "jobTitle": "Sachbearbeiterin Buchhaltung",
+      "location": null,
       "startDate": "2022-11-01"
     },
     {
@@ -26,6 +29,7 @@
       "lastName": "Yilmaz",
       "email": null,
       "jobTitle": "Vertriebsmitarbeiter",
+      "location": null,
       "startDate": "2023-03-20"
     }
   ],

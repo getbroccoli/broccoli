@@ -271,6 +271,7 @@ const row: ImportEmployeeRecord = {
   lastName: "Stone",
   email: "avery@example.com",
   jobTitle: "Designer",
+  location: null,
   manager: null,
   externalRecordId: null,
   startDate: null,

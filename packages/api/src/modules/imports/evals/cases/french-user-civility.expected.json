@@ -5,6 +5,7 @@
       "lastName": "Garnier",
       "email": "elodie.garnier@acme-corp.example",
       "jobTitle": null,
+      "location": "ACM-SITE-1",
       "startDate": null
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Chevalier",
       "email": "bastien.chevalier@acme-corp.example",
       "jobTitle": null,
+      "location": "ACM-SITE-2",
       "startDate": null
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Lefèvre",
       "email": "maelle.lefevre@acme-corp.example",
       "jobTitle": null,
+      "location": "ACM-SITE-3",
       "startDate": null
     }
   ],

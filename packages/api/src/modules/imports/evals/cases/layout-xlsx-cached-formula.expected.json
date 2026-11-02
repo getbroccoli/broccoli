@@ -5,6 +5,7 @@
       "lastName": "Figueroa",
       "email": "e04108.514@people.example.test",
       "jobTitle": "Sr. Analyst",
+      "location": null,
       "startDate": "2012-05-14",
       "manager": "Adam Dang"
     },
@@ -13,6 +14,7 @@
       "lastName": "Morales",
       "email": "e02917.515@people.example.test",
       "jobTitle": "Solutions Architect",
+      "location": null,
       "startDate": "2014-07-10",
       "manager": "Emily Davis"
     },
@@ -21,6 +23,7 @@
       "lastName": "Hunter",
       "email": "e03720.516@people.example.test",
       "jobTitle": "Manager",
+      "location": null,
       "startDate": "1999-04-22",
       "manager": "Luna Sanders"
     },
@@ -29,6 +32,7 @@
       "lastName": "Figueroa",
       "email": "e03393.517@people.example.test",
       "jobTitle": "Sr. Manger",
+      "location": null,
       "startDate": "2010-07-19",
       "manager": "Luna Sanders"
     },
@@ -37,6 +41,7 @@
       "lastName": "Song",
       "email": "e02977.518@people.example.test",
       "jobTitle": "Analyst II",
+      "location": null,
       "startDate": "1999-05-23",
       "manager": "Isabella Xi"
     },
@@ -45,6 +50,7 @@
       "lastName": "Alexander",
       "email": "e03371.519@people.example.test",
       "jobTitle": "Vice President",
+      "location": null,
       "startDate": "2006-05-29",
       "manager": "Emily Davis"
     },
@@ -53,6 +59,7 @@
       "lastName": "Foster",
       "email": "e02531.520@people.example.test",
       "jobTitle": "Analyst",
+      "location": null,
       "startDate": "2021-07-18",
       "manager": "Isabella Xi"
     },
@@ -61,6 +68,7 @@
       "lastName": "Lo",
       "email": "e02473.521@people.example.test",
       "jobTitle": "Quality Engineer",
+      "location": null,
       "startDate": "2021-11-15",
       "manager": "Wyatt Chin"
     },
@@ -69,6 +77,7 @@
       "lastName": "Huang",
       "email": "e02468.522@people.example.test",
       "jobTitle": "Vice President",
+      "location": null,
       "startDate": "2016-02-28",
       "manager": "Isabella Xi"
     }

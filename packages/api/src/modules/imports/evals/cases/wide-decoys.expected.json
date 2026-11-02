@@ -5,6 +5,7 @@
       "lastName": "Pugh",
       "email": "rhiannon.pugh@acme-corp.example",
       "jobTitle": "Warehouse Supervisor",
+      "location": "Leeds",
       "startDate": "2021-03-14",
       "manager": "Marguerite Voss"
     },
@@ -13,6 +14,7 @@
       "lastName": "Okafor",
       "email": "anselm.okafor@acme-corp.example",
       "jobTitle": "Payroll Clerk",
+      "location": "Bristol",
       "startDate": "2022-11-02",
       "manager": "Marguerite Voss"
     },
@@ -21,6 +23,7 @@
       "lastName": "Delaney",
       "email": "saoirse.delaney@acme-corp.example",
       "jobTitle": "Facilities Coordinator",
+      "location": "Cardiff",
       "startDate": "2023-09-25",
       "manager": "Tobias Wren"
     }

@@ -21,6 +21,7 @@ export function mapSlackMembers(members: readonly SlackPerson[]): IncomingRecord
         ...nameOf(member),
         email,
         jobTitle: nonBlank(member.profile?.title),
+        location: null,
         startDate: null,
         manager: null,
       },

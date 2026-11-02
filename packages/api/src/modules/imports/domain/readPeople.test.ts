@@ -81,6 +81,7 @@ test("keeps separate names ahead of the full name and preserves the original per
     fullName: "Robin Reed",
     email: "avery@example.com",
     jobTitle: "Designer",
+    location: "  Leeds  ",
     startDate: "2026-10-21",
   };
 
@@ -95,6 +96,7 @@ test("keeps separate names ahead of the full name and preserves the original per
           lastName: "Stone",
           email: "avery@example.com",
           jobTitle: "Designer",
+          location: "Leeds",
           manager: null,
           startDate: "2026-10-21",
         },
@@ -116,6 +118,7 @@ test.each([
       lastName: "Stone",
       email: null,
       jobTitle: null,
+      location: null,
       manager: null,
       startDate: null,
     },
@@ -124,6 +127,7 @@ test.each([
       lastName: "Reed",
       email: null,
       jobTitle: null,
+      location: null,
       manager: null,
       startDate: null,
     },
@@ -156,7 +160,16 @@ test.each(["sometime", "2026-02-30"])("leaves an unreadable start date empty: %s
 
 test("turns blank fields into null", () => {
   const result = parseReadPeople({
-    people: [{ firstName: "Avery", lastName: " ", email: "", jobTitle: "  ", startDate: "" }],
+    people: [
+      {
+        firstName: "Avery",
+        lastName: " ",
+        email: "",
+        jobTitle: "  ",
+        location: "   ",
+        startDate: "",
+      },
+    ],
   });
 
   expect(result.records[0]!.values).toEqual({
@@ -164,6 +177,7 @@ test("turns blank fields into null", () => {
     lastName: null,
     email: null,
     jobTitle: null,
+    location: null,
     manager: null,
     startDate: null,
   });

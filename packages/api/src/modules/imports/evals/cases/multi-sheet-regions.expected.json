@@ -5,6 +5,7 @@
       "lastName": "Richter",
       "email": "jana@globex.example.test",
       "jobTitle": "Country Manager",
+      "location": null,
       "startDate": "2019-05-23"
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "Braun",
       "email": "moritz@globex.example.test",
       "jobTitle": "Sales Engineer",
+      "location": null,
       "startDate": "2021-09-14",
       "manager": "Jana Richter"
     },
@@ -20,6 +22,7 @@
       "lastName": "Yıldız",
       "email": "elif@globex.example.test",
       "jobTitle": "Office Manager",
+      "location": null,
       "startDate": "2022-07-01",
       "manager": "Jana Richter"
     },
@@ -28,6 +31,7 @@
       "lastName": "Patel",
       "email": "george@globex.example.test",
       "jobTitle": "Account Executive",
+      "location": null,
       "startDate": "2020-03-30",
       "manager": "Harriet Cole"
     },
@@ -36,6 +40,7 @@
       "lastName": "Cole",
       "email": "harriet@globex.example.test",
       "jobTitle": "Sales Director",
+      "location": null,
       "startDate": "2016-11-21"
     },
     {
@@ -43,6 +48,7 @@
       "lastName": "Reed",
       "email": "marcus@globex.example.test",
       "jobTitle": "Solutions Architect",
+      "location": null,
       "startDate": null,
       "manager": "Tina Brooks"
     },
@@ -51,6 +57,7 @@
       "lastName": "Brooks",
       "email": "tina@globex.example.test",
       "jobTitle": "VP Engineering",
+      "location": null,
       "startDate": null
     }
   ],

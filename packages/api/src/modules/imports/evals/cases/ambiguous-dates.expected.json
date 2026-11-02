@@ -5,6 +5,7 @@
       "lastName": "Morgan-Hale",
       "email": "rhys.morgan-hale@acme-corp.example",
       "jobTitle": "Warehouse Supervisor",
+      "location": null,
       "startDate": null
     },
     {
@@ -12,6 +13,7 @@
       "lastName": "O'Kerr",
       "email": "niamh.okerr@acme-corp.example",
       "jobTitle": "Bookkeeper",
+      "location": null,
       "startDate": null
     },
     {
@@ -19,6 +21,7 @@
       "lastName": "Adebayo",
       "email": "kemi.adebayo@acme-corp.example",
       "jobTitle": "HR Adviser",
+      "location": null,
       "startDate": null
     }
   ],

@@ -143,6 +143,7 @@ async function addApprovedPeople(
       ...toNewEmployeeInput(employee),
       avatarFileId: employee.photoFileId ?? undefined,
       managerEmail: managers.get(employee.key)?.manager?.values.email.value,
+      locationName: employee.values.location.value,
       userId: employee.key === ownerKey ? finish?.ownerUserId : undefined,
     })),
     { kind: "ADDED_FROM_IMPORT" },

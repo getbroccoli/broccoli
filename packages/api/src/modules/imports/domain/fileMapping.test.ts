@@ -2,17 +2,6 @@ import { expect, it } from "vitest";
 
 import { readColumnMapping, readFileRecords, type ColumnMapping } from "./fileMapping";
 
-const UNMAPPED: ColumnMapping = {
-  fullName: null,
-  firstName: null,
-  lastName: null,
-  email: null,
-  jobTitle: null,
-  startDate: null,
-  manager: null,
-  externalRecordId: null,
-};
-
 it("keeps the higher-confidence field when two fields choose the same column", () => {
   expect(
     readColumnMapping({
@@ -21,6 +10,7 @@ it("keeps the higher-confidence field when two fields choose the same column", (
       lastName: null,
       email: null,
       jobTitle: null,
+      location: null,
       startDate: null,
       manager: null,
       externalRecordId: null,
@@ -36,6 +26,7 @@ it("refuses a mapping without a name or email column", () => {
       lastName: null,
       email: null,
       jobTitle: { choice: "A", confidence: 0.95 },
+      location: null,
       startDate: null,
       manager: null,
       externalRecordId: null,
@@ -51,6 +42,7 @@ it("leaves unanswered fields unmapped", () => {
       lastName: null,
       email: { choice: "B", confidence: 0.95 },
       jobTitle: null,
+      location: null,
       startDate: null,
       manager: null,
       externalRecordId: null,
@@ -60,22 +52,23 @@ it("leaves unanswered fields unmapped", () => {
 
 it("reads every row without a header with letter keys and one-based sheet ids", () => {
   const sheet = [
-    ["Avery Stone", "avery@example.com"],
-    ["Robin Reed", "robin@example.com"],
+    ["Avery Stone", "avery@example.com", " Leeds "],
+    ["Robin Reed", "robin@example.com", "   "],
   ];
 
-  const records = readFileRecords(sheet, null, { ...UNMAPPED, fullName: 0, email: 1 });
+  const records = readFileRecords(sheet, null, { ...UNMAPPED, fullName: 0, email: 1, location: 2 });
 
   expect(records).toEqual([
     {
       externalRecordId: null,
       sourceKey: "row:1",
-      raw: { A: "Avery Stone", B: "avery@example.com" },
+      raw: { A: "Avery Stone", B: "avery@example.com", C: " Leeds " },
       values: {
         firstName: "Avery",
         lastName: "Stone",
         email: "avery@example.com",
         jobTitle: null,
+        location: "Leeds",
         startDate: null,
         manager: null,
       },
@@ -83,12 +76,13 @@ it("reads every row without a header with letter keys and one-based sheet ids", 
     {
       externalRecordId: null,
       sourceKey: "row:2",
-      raw: { A: "Robin Reed", B: "robin@example.com" },
+      raw: { A: "Robin Reed", B: "robin@example.com", C: "   " },
       values: {
         firstName: "Robin",
         lastName: "Reed",
         email: "robin@example.com",
         jobTitle: null,
+        location: null,
         startDate: null,
         manager: null,
       },
@@ -248,3 +242,15 @@ it("leaves blank manager and own-ID cells empty", () => {
   expect(record?.values.manager).toBeNull();
   expect(record?.externalRecordId).toBeNull();
 });
+
+const UNMAPPED: ColumnMapping = {
+  fullName: null,
+  firstName: null,
+  lastName: null,
+  email: null,
+  jobTitle: null,
+  location: null,
+  startDate: null,
+  manager: null,
+  externalRecordId: null,
+};
