@@ -11,7 +11,8 @@ import { tenureOf } from "@/lib/tenure";
 
 type Props = {
   startDate: string | null;
-  email: string;
+  /** The work email, edited in place by those who may change it. */
+  email: ReactNode;
   /** Shown to admins only, on the work email with its invite action. */
   signIn: { status: SignInStatusFragment; onInvite: () => void } | null;
 };
@@ -22,7 +23,7 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
   const facts: {
     icon: Icon;
     label: string;
-    value: string;
+    value: ReactNode;
     /** Beside the label, such as the sign-in state. */
     status?: ReactNode;
     /** Beside the value, such as the invite action. */
@@ -41,7 +42,8 @@ export function KeyFacts({ startDate, email, signIn }: Props) {
     {
       icon: Envelope,
       label: t("people.panel.fact.email"),
-      value: email,
+      // The field pads its value for its hover and focus ring; this lines the text up with the label.
+      value: <div className="-mx-1.5">{email}</div>,
       status: signIn && <SignInLine status={signIn.status} />,
       action: signIn && <InviteButton status={signIn.status} onInvite={signIn.onInvite} />,
     },

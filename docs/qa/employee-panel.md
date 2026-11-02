@@ -11,13 +11,14 @@ A manual check of opening a person from People, editing them in place, their his
 
 - [ ] Clicking anywhere in a row opens that person's panel over the list; the URL becomes `/people/<id>` and keeps the list's search and sort.
 - [ ] Tab to a name and press Enter: the same panel opens.
-- [ ] The panel shows the avatar, name and job title; Start date, Tenure ("2 yrs 1 mo", "Starts in 3 days" for a future start) and Work email; Details in Job, Contact and Personal; History below.
+- [ ] The panel shows the avatar, name and job title; Start date, Tenure ("2 yrs 1 mo", "Starts in 3 days" for a future start) and Work email; Details in Job and Personal; History below.
 - [ ] Close (×), Escape and the browser Back button close the panel and return to the same list.
 - [ ] Reloading `/people/<id>` opens the panel again; an unknown id shows "This person doesn’t exist." with Back to People.
 
 ## Edit in place
 
 - [ ] Hovering a value shows a pencil; clicking it (or Enter on it) turns it into a text field, or a date picker for Start date.
+- [ ] The work email is edited in the Work email card at the top, which keeps its sign-in status and Invite button; an employee viewing their own panel sees it without a pencil.
 - [ ] Editing two fields marks each with a green bar; the bar at the bottom says "2 unsaved changes · <fields in panel order> · saved as one history entry".
 - [ ] Changing a field back to its saved value removes its mark; Escape inside a field reverts only that field; Cancel reverts everything and hides the bar.
 - [ ] "Add reason" turns into one optional field; Save with a reason adds one history line "updated 2 fields: …" with the reason and "Edited"; expanding it shows each old → new value.

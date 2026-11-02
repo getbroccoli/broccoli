@@ -38,7 +38,8 @@ export const EMPLOYEE_DESCRIPTION = {
       editor: "date",
       format: (value) => formatCalendarDate(value) ?? value,
     },
-    textField("email", "people.panel.section.contact"),
+    // The panel edits the work email in its key facts, not among these sections.
+    { ...textField("email", "people.panel.section.contact"), historyOnly: true },
     textField("firstName", "people.panel.section.personal"),
     textField("lastName", "people.panel.section.personal"),
     {
