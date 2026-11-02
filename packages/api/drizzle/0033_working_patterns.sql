@@ -70,18 +70,8 @@ CREATE INDEX "employee_working_pattern_assignments_pattern_idx" ON "employee_wor
 CREATE INDEX "policy_group_working_patterns_pattern_idx" ON "policy_group_working_patterns" USING btree ("working_pattern_id");--> statement-breakpoint
 CREATE INDEX "policy_group_time_off_policies_policy_idx" ON "policy_group_time_off_policies" USING btree ("time_off_policy_id");--> statement-breakpoint
 ALTER TABLE "employments" DROP COLUMN "fte";--> statement-breakpoint
--- Moves each group's time off policy onto a dated link before its column goes.
-INSERT INTO "policy_group_time_off_policies" ("policy_group_id", "time_off_type_id", "time_off_policy_id")
-	SELECT "policy_group_id", "time_off_type_id", "id" FROM "time_off_policies" WHERE "policy_group_id" IS NOT NULL;--> statement-breakpoint
 ALTER TABLE "time_off_policies" DROP COLUMN "policy_group_id";--> statement-breakpoint
 ALTER TABLE "policy_group_time_off_policies" ADD CONSTRAINT "policy_group_time_off_policies_group_fk" FOREIGN KEY ("policy_group_id") REFERENCES "public"."policy_groups"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "policy_group_time_off_policies" ADD CONSTRAINT "policy_group_time_off_policies_no_overlap" EXCLUDE USING gist ("policy_group_id" WITH =, "time_off_type_id" WITH =, daterange("effective_from", "effective_until", '[]') WITH &&);--> statement-breakpoint
 ALTER TABLE "policy_group_working_patterns" ADD CONSTRAINT "policy_group_working_patterns_no_overlap" EXCLUDE USING gist ("policy_group_id" WITH =, daterange("effective_from", "effective_until", '[]') WITH &&);--> statement-breakpoint
-ALTER TABLE "employee_working_pattern_assignments" ADD CONSTRAINT "employee_working_pattern_assignments_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, daterange("effective_from", "effective_until", '[]') WITH &&);--> statement-breakpoint
--- With nothing set up, everyone works Monday to Friday, 7.5 hours a day.
-INSERT INTO "working_patterns" ("name", "key") VALUES ('Standard', 'standard_working_pattern');--> statement-breakpoint
-INSERT INTO "working_pattern_weeks" ("working_pattern_id", "monday_minutes", "tuesday_minutes", "wednesday_minutes", "thursday_minutes", "friday_minutes", "saturday_minutes", "sunday_minutes", "full_day_minutes")
-	SELECT "id", 450, 450, 450, 450, 450, 0, 0, 450 FROM "working_patterns" WHERE "key" = 'standard_working_pattern';--> statement-breakpoint
-INSERT INTO "policy_group_working_patterns" ("policy_group_id", "working_pattern_id")
-	SELECT g."id", p."id" FROM "policy_groups" g CROSS JOIN "working_patterns" p
-	WHERE g."key" = 'everyone' AND p."key" = 'standard_working_pattern';
+ALTER TABLE "employee_working_pattern_assignments" ADD CONSTRAINT "employee_working_pattern_assignments_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, daterange("effective_from", "effective_until", '[]') WITH &&);

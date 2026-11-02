@@ -340,7 +340,7 @@ async function openEmployments(
   await employmentRepository(db).insertOpen(
     inserted.map(({ id, email }) => ({ employeeId: id, startDate: startDates.get(email) ?? null })),
   );
-  await policyGroupRepository(db).joinEveryone(inserted.map(({ id }) => id));
+  await policyGroupRepository(db).joinEveryoneGroup(inserted.map(({ id }) => id));
   return inserted;
 }
 

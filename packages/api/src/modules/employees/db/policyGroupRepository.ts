@@ -8,7 +8,7 @@ import { policyGroups } from "./policyGroupsTable";
 /** Policy groups and who is in them, through the pool or inside a transaction. */
 export interface PolicyGroupRepository {
   /** Puts new employees into the seeded "Everyone" group since their employment started. */
-  joinEveryone(employeeIds: readonly string[]): Promise<void>;
+  joinEveryoneGroup(employeeIds: readonly string[]): Promise<void>;
   /** Whether a group has this id. */
   exists(groupId: string): Promise<boolean>;
   /** Each employee's groups over time, by employee id. */
@@ -20,7 +20,7 @@ export interface PolicyGroupRepository {
 export function policyGroupRepository(db: Orm | Tx): PolicyGroupRepository {
   const orm = () => ormOf(db);
   return {
-    async joinEveryone(employeeIds) {
+    async joinEveryoneGroup(employeeIds) {
       if (employeeIds.length === 0) {
         return;
       }
