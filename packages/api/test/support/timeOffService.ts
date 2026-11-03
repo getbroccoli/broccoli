@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 
-import type { Orm, Tx } from "../../src/core/db";
+import type { Orm, Transact, Tx } from "../../src/core/db";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createTimeOffService } from "../../src/modules/timeOff";
@@ -13,6 +13,8 @@ import {
 import { type CalendarDate } from "../../src/utils";
 import { bankHolidayService } from "./bankHolidayService";
 import { employeeSetup } from "./statelessServices";
+import { OWNER } from "./testSecurityContext";
+import type { TestSeed } from "./testSeed";
 import { testTransactor } from "./testTransactor";
 
 /** The time off service on `orm` with the shipped bank holidays and silent logs; `today` is the engine's date. */
@@ -24,6 +26,18 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
     bankHolidays: bankHolidayService(),
     today: () => today as CalendarDate,
   });
+}
+
+/** Links the UK statutory minimum to the "Everyone" group, as an admin would. */
+export async function linkStatutoryMinimumToEveryone(orm: Orm, seed: TestSeed, transact: Transact) {
+  const service = timeOffService(orm);
+  const policyGroupId = await seed.everyoneGroupId();
+  const policy = (await service.listPolicies(OWNER, orm)).find(
+    ({ key }) => key === "uk_statutory_minimum",
+  )!;
+  await transact((tx) =>
+    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+  );
 }
 
 /** Deletes every employee and the groups' time off policies, as startup composes it. */

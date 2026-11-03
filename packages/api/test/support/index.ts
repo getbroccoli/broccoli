@@ -101,5 +101,10 @@ export { startMailTestEnv, SAVE_MAIL_SETTINGS, RESEND_CHOICE } from "./mailTestE
 export { createGraphqlContext } from "./graphqlContext";
 
 export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
-export { type AllowanceLine, readAllowances, timeOffService } from "./timeOffService";
+export {
+  type AllowanceLine,
+  linkStatutoryMinimumToEveryone,
+  readAllowances,
+  timeOffService,
+} from "./timeOffService";
 export { demoService } from "./demoService";
