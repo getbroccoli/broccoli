@@ -65,7 +65,7 @@ export function createImportApprovalService({
   deleteAllEmployees,
 }: Pick<ModuleDependencies, "transact" | "logger"> & {
   invites: SetupInvites;
-  /** Deletes every employee and what goes with them, such as the groups' time off policies. */
+  /** Deletes every employee and what goes with them, such as the terms' time off policies. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): ImportApprovalService {
   return {

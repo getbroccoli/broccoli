@@ -6,7 +6,7 @@ import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffTypes } from "./timeOffTypesTable";
 
 /**
- * An exception: one person on a policy for one type between two dates, ahead of their group's
+ * An exception: one person on a policy for one type between two dates, ahead of their terms'
  * policy. A person's rows for one type never overlap; the migration adds that exclusion
  * constraint and the foreign key to employees, which another module owns.
  */

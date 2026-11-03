@@ -106,7 +106,7 @@ test("creates 1,001 employees across insert batches", async ({ orm, transact }) 
   expect(employees.pageInfo.hasNextPage).toBe(false);
 });
 
-// The largest import there is, with each person's employment and "Everyone" membership: slow on
+// The largest import there is, with each person's employment and "England and Wales" terms: slow on
 // a busy runner.
 test(
   "sets managers when importing 33,000 employees",

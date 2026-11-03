@@ -27,7 +27,7 @@ export interface EnsuredAllowances {
 export interface AllowanceEngineDependencies {
   employeeReads: Pick<
     EmployeeReadService,
-    "lockEmployees" | "readEmploymentPeriods" | "readPolicyGroupMemberships"
+    "lockEmployees" | "readEmploymentPeriods" | "readTermsMemberships"
   >;
   workingWeeks: Pick<EmployeeWorkingPatternService, "readWorkingWeeksInTransaction">;
   bankHolidays: BankHolidayService;
@@ -80,12 +80,12 @@ async function readPeople(
   const [policies, employments, memberships, assignments, existing] = await Promise.all([
     policyRepository.findAll(),
     employeeReads.readEmploymentPeriods(tx, ids),
-    employeeReads.readPolicyGroupMemberships(tx, ids),
+    employeeReads.readTermsMemberships(tx, ids),
     policyRepository.findAssignments(ids),
     allowanceRepository(tx).findByEmployees(ids),
   ]);
-  const groupIds = [...memberships.values()].flat().map(({ policyGroupId }) => policyGroupId);
-  const groupLinks = await policyRepository.findGroupLinks([...new Set(groupIds)]);
+  const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
+  const termsLinks = await policyRepository.findTermsLinks([...new Set(termsIds)]);
   const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
   const people = ids.map((employeeId) => {
     const periods = employments.get(employeeId) ?? [];
@@ -96,7 +96,7 @@ async function readPeople(
       timeline: {
         assignments: assignments.get(employeeId) ?? [],
         memberships: memberships.get(employeeId) ?? [],
-        groupLinks,
+        termsLinks,
       },
       allowances: existingOf.get(employeeId) ?? [],
     };

@@ -28,11 +28,11 @@ for (const policyKey of [
     const timeOff = timeOffService(orm);
     const employees = employeeServices(orm);
     const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
-    const policyGroupId = await seed.everyoneGroupId();
+    const termsId = await seed.englandAndWalesTermsId();
     const policy = (await timeOff.listPolicies(OWNER, orm)).find(({ key }) => key === policyKey)!;
     await transact((tx) =>
-      timeOff.linkGroupPolicies(OWNER, tx, {
-        policyGroupId,
+      timeOff.linkTermsPolicies(OWNER, tx, {
+        termsId,
         timeOffPolicyIds: [policy.id],
       }),
     );

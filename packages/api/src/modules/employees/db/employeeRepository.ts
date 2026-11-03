@@ -28,7 +28,7 @@ import {
 import { employees } from "./employeesTable";
 import { employmentRepository, firstEmploymentOf } from "./employmentRepository";
 import { employments } from "./employmentsTable";
-import { policyGroupRepository } from "./policyGroupRepository";
+import { termsRepository } from "./termsRepository";
 
 const fileStorage = createFileStorageService();
 
@@ -326,7 +326,7 @@ function matches(search: string): SQL {
 
 /**
  * Opens an open-ended employment for each inserted employee, starting on the start date of the
- * row that inserted them, puts them into "Everyone", and returns the employees.
+ * row that inserted them, puts them on "England and Wales" terms, and returns the employees.
  */
 async function openEmployments(
   db: Orm | Tx,
@@ -343,7 +343,7 @@ async function openEmployments(
   await employmentRepository(db).insertOpen(
     inserted.map(({ id, email }) => ({ employeeId: id, startDate: startDates.get(email) ?? null })),
   );
-  await policyGroupRepository(db).joinEveryoneGroup(inserted.map(({ id }) => id));
+  await termsRepository(db).joinEnglandAndWalesTerms(inserted.map(({ id }) => id));
   return inserted;
 }
 

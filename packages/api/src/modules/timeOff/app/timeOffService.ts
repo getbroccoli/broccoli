@@ -14,7 +14,7 @@ export type TimeOffPolicySummary = Pick<TimeOffPolicy, "id" | "name" | "key" | "
   typeKey: TimeOffPolicy["timeOffType"]["typeKey"];
 };
 
-/** Which time off policies groups get, and the engine that keeps each person's allowances. */
+/** Which time off policies terms get, and the engine that keeps each person's allowances. */
 export interface TimeOffService {
   /**
    * Trusted, for operations that checked their caller, events and jobs: creates each employee's
@@ -28,23 +28,23 @@ export interface TimeOffService {
     input: { employeeIds: readonly string[]; cause: AllowanceCause },
   ) => Promise<EnsuredAllowances>;
   /**
-   * Gives a group each policy for its type from the beginning, then ensures its members'
-   * allowances, in the caller's transaction. Refuses with CONFLICT a type the group already has.
+   * Gives terms each policy for its type from the beginning, then ensures their people's
+   * allowances, in the caller's transaction. Refuses with CONFLICT a type the terms already have.
    */
-  linkGroupPolicies: (
+  linkTermsPolicies: (
     ctx: SecurityContext,
     tx: Tx,
-    input: { policyGroupId: string; timeOffPolicyIds: readonly string[] },
+    input: { termsId: string; timeOffPolicyIds: readonly string[] },
   ) => Promise<EnsuredAllowances & { employeeCount: number }>;
-  /** The policies linked to a group, on any date. */
-  readGroupPolicies: (
+  /** The policies linked to terms, on any date. */
+  readTermsPolicies: (
     ctx: SecurityContext,
-    input: { policyGroupId: string },
+    input: { termsId: string },
   ) => Promise<TimeOffPolicySummary[]>;
   /** Every policy, such as for finding a standard one by its key. */
   listPolicies: (ctx: SecurityContext, db: Orm | Tx) => Promise<TimeOffPolicySummary[]>;
-  /** Unlinks every group's policies when setup or the demo goes back to its start. */
-  deleteAllGroupPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /** Unlinks all terms' policies when setup or the demo goes back to its start. */
+  deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
 export function createTimeOffService({
@@ -69,15 +69,14 @@ export function createTimeOffService({
     ensureAllowancesOf(engine, tx, input);
   return {
     ensureAllowances,
-    async linkGroupPolicies(ctx, tx, input) {
+    async linkTermsPolicies(ctx, tx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const repository = timeOffPolicyRepository(tx);
-      await repository.lockGroupLinks();
-      const policyGroupId = parseUuid(input.policyGroupId);
-      const employeeIds =
-        policyGroupId && (await employeeReads.readPolicyGroupMemberIds(tx, policyGroupId));
-      if (!policyGroupId || !employeeIds) {
-        throw new ApplicationError("NOT_FOUND", "The policy group does not exist.");
+      await repository.lockTermsLinks();
+      const termsId = parseUuid(input.termsId);
+      const employeeIds = termsId && (await employeeReads.readTermsMemberIds(tx, termsId));
+      if (!termsId || !employeeIds) {
+        throw new ApplicationError("NOT_FOUND", "The terms do not exist.");
       }
       const policies = await repository.findAll();
       const chosen = input.timeOffPolicyIds.map((id) => {
@@ -87,7 +86,7 @@ export function createTimeOffService({
         }
         return policy;
       });
-      const linked = (await repository.findGroupLinks([policyGroupId])).get(policyGroupId) ?? [];
+      const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
       const typeIds = [
         ...linked.map(({ timeOffTypeId }) => timeOffTypeId),
         ...chosen.map(({ timeOffType }) => timeOffType.id),
@@ -98,11 +97,11 @@ export function createTimeOffService({
       if (conflict) {
         throw new ApplicationError(
           "CONFLICT",
-          `The group already has a policy for ${conflict.timeOffType.name}.`,
+          `The terms already have a policy for ${conflict.timeOffType.name}.`,
         );
       }
-      await repository.insertGroupLinks(
-        policyGroupId,
+      await repository.insertTermsLinks(
+        termsId,
         chosen.map(({ id, timeOffType }) => ({
           timeOffTypeId: timeOffType.id,
           timeOffPolicyId: id,
@@ -110,18 +109,18 @@ export function createTimeOffService({
       );
       const ensured = await ensureAllowances(ctx, tx, {
         employeeIds,
-        cause: { kind: "POLICY_LINKED_TO_GROUP", ref: policyGroupId },
+        cause: { kind: "POLICY_LINKED_TO_TERMS", ref: termsId },
       });
       return { employeeCount: employeeIds.length, ...ensured };
     },
-    async readGroupPolicies(ctx, { policyGroupId }) {
+    async readTermsPolicies(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const groupId = parseUuid(policyGroupId);
-      if (!groupId) {
+      const termsId = parseUuid(input.termsId);
+      if (!termsId) {
         return [];
       }
       const repository = timeOffPolicyRepository(orm);
-      const linked = (await repository.findGroupLinks([groupId])).get(groupId) ?? [];
+      const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
       const ids = new Set(linked.map(({ timeOffPolicyId }) => timeOffPolicyId));
       return (await repository.findAll()).filter(({ id }) => ids.has(id)).map(toSummary);
     },
@@ -129,9 +128,9 @@ export function createTimeOffService({
       ctx.require("MANAGE_WORKSPACE");
       return (await timeOffPolicyRepository(db).findAll()).map(toSummary);
     },
-    async deleteAllGroupPolicies(ctx, tx) {
+    async deleteAllTermsPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
-      await timeOffPolicyRepository(tx).deleteAllGroupLinks();
+      await timeOffPolicyRepository(tx).deleteAllTermsLinks();
     },
   };
 }

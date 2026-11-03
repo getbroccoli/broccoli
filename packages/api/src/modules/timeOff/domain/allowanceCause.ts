@@ -10,11 +10,11 @@ export type AllowanceCause =
     }
   | {
       kind:
-        | "POLICY_LINKED_TO_GROUP"
+        | "POLICY_LINKED_TO_TERMS"
         | "EMPLOYEE_ADDED"
         | "WORKING_PATTERN_CHANGED"
         | "LEAVE_YEAR_STARTED"
         | "DAILY_CHECK";
-      /** The group id, employee id or date the cause names; null when it names none. */
+      /** The terms id, employee id or date the cause names; null when it names none. */
       ref: string | null;
     };

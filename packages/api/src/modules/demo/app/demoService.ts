@@ -27,7 +27,7 @@ export function createDemoService({
 }: {
   orm: Orm;
   transact: Transact;
-  /** Deletes every employee and what goes with them, such as the groups' time off policies. */
+  /** Deletes every employee and what goes with them, such as the terms' time off policies. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): DemoService {
   return {

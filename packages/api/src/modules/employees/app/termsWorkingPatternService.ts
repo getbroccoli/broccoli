@@ -4,43 +4,43 @@ import type { Logger } from "../../../core/logger";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import { addDays, type CalendarDate, parseUuid } from "../../../utils";
-import { policyGroupRepository, workingPatternRepository } from "../db";
+import { termsRepository, workingPatternRepository } from "../db";
 import { coversDate, type DatedPattern, makeRoomForDatedPattern, parseDateField } from "../domain";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
 import { referencedPattern } from "./workingPatternService";
 
-/** The working pattern each group's members work by default, from a date. Admins only. */
-export interface GroupWorkingPatternService {
-  /** Puts a group on a pattern from a date; its earlier pattern ends the day before. Admins only. */
-  setGroupPattern: (
+/** The working pattern the people on each set of terms work by default, from a date. Admins only. */
+export interface TermsWorkingPatternService {
+  /** Puts terms on a pattern from a date; their earlier pattern ends the day before. Admins only. */
+  setTermsPattern: (
     ctx: SecurityContext,
-    input: { policyGroupId: string; workingPatternId: string; effectiveFrom: string },
+    input: { termsId: string; workingPatternId: string; effectiveFrom: string },
   ) => Promise<void>;
-  /** Ends the group's pattern on a date; the group then has none. Admins only. */
-  endGroupPattern: (
+  /** Ends the terms' pattern on a date; the terms then have none. Admins only. */
+  endTermsPattern: (
     ctx: SecurityContext,
-    input: { policyGroupId: string; effectiveUntil: string },
+    input: { termsId: string; effectiveUntil: string },
   ) => Promise<void>;
-  /** Removes the group's pattern that starts on a date, null for from the beginning. Admins only. */
-  removeGroupPattern: (
+  /** Removes the terms' pattern that starts on a date, null for from the beginning. Admins only. */
+  removeTermsPattern: (
     ctx: SecurityContext,
-    input: { policyGroupId: string; effectiveFrom: string | null },
+    input: { termsId: string; effectiveFrom: string | null },
   ) => Promise<void>;
 }
 
-export function createGroupWorkingPatternService({
+export function createTermsWorkingPatternService({
   transact,
   logger,
-}: Pick<ModuleDependencies, "transact" | "logger">): GroupWorkingPatternService {
+}: Pick<ModuleDependencies, "transact" | "logger">): TermsWorkingPatternService {
   return {
-    async setGroupPattern(ctx, input) {
+    async setTermsPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const effectiveFrom = parseDateField("effectiveFrom", input.effectiveFrom);
-      await changeGroupPatterns(
+      await changeTermsPatterns(
         { transact, logger },
-        input.policyGroupId,
+        input.termsId,
         effectiveFrom,
-        async (tx, groupId, rows) => {
+        async (tx, termsId, rows) => {
           const repository = workingPatternRepository(tx);
           const pattern = referencedPattern(
             await repository.findPatterns(),
@@ -51,12 +51,12 @@ export function createGroupWorkingPatternService({
             rows.find((row) => row.effectiveFrom === effectiveFrom)?.effectiveUntil ?? null;
           const { ended, replaced } = makeRoomForDatedPattern(rows, effectiveFrom, until);
           if (replaced) {
-            await repository.deleteGroupLink(replaced.id);
+            await repository.deleteTermsLink(replaced.id);
           }
           if (ended) {
-            await repository.endGroupLink(ended.id, addDays(effectiveFrom, -1));
+            await repository.endTermsLink(ended.id, addDays(effectiveFrom, -1));
           }
-          await repository.insertGroupLink(groupId, {
+          await repository.insertTermsLink(termsId, {
             workingPatternId: pattern.id,
             effectiveFrom,
             effectiveUntil: until,
@@ -65,38 +65,38 @@ export function createGroupWorkingPatternService({
       );
     },
 
-    async endGroupPattern(ctx, input) {
+    async endTermsPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const effectiveUntil = parseDateField("effectiveUntil", input.effectiveUntil);
       const changedFrom = addDays(effectiveUntil, 1);
-      await changeGroupPatterns(
+      await changeTermsPatterns(
         { transact, logger },
-        input.policyGroupId,
+        input.termsId,
         changedFrom,
-        async (tx, _groupId, rows) => {
+        async (tx, _termsId, rows) => {
           const row = rows.find((candidate) => coversDate(candidate, effectiveUntil));
           if (!row) {
-            throw noGroupPattern();
+            throw noTermsPattern();
           }
-          await workingPatternRepository(tx).endGroupLink(row.id, effectiveUntil);
+          await workingPatternRepository(tx).endTermsLink(row.id, effectiveUntil);
         },
       );
     },
 
-    async removeGroupPattern(ctx, input) {
+    async removeTermsPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const effectiveFrom =
         input.effectiveFrom === null ? null : parseDateField("effectiveFrom", input.effectiveFrom);
-      await changeGroupPatterns(
+      await changeTermsPatterns(
         { transact, logger },
-        input.policyGroupId,
+        input.termsId,
         effectiveFrom,
-        async (tx, _groupId, rows) => {
+        async (tx, _termsId, rows) => {
           const row = rows.find((candidate) => candidate.effectiveFrom === effectiveFrom);
           if (!row) {
-            throw noGroupPattern();
+            throw noTermsPattern();
           }
-          await workingPatternRepository(tx).deleteGroupLink(row.id);
+          await workingPatternRepository(tx).deleteTermsLink(row.id);
         },
       );
     },
@@ -104,35 +104,35 @@ export function createGroupWorkingPatternService({
 }
 
 /**
- * Changes one group's dated patterns in one transaction and tells other modules its members'
+ * Changes one set of terms' dated patterns in one transaction and tells other modules their people's
  * working weeks may have changed from `changedFrom`.
  */
-async function changeGroupPatterns(
+async function changeTermsPatterns(
   { transact, logger }: { transact: Transact; logger: Logger },
-  policyGroupId: string,
+  termsId: string,
   changedFrom: CalendarDate | null,
-  change: (tx: Tx, groupId: string, rows: DatedPattern[]) => Promise<void>,
+  change: (tx: Tx, termsId: string, rows: DatedPattern[]) => Promise<void>,
 ): Promise<void> {
-  const groupId = await transact(async (tx) => {
+  const changedTermsId = await transact(async (tx) => {
     const repository = workingPatternRepository(tx);
     await repository.lockForWrites();
-    const id = await existingGroup(tx, policyGroupId);
-    await change(tx, id, (await repository.findGroupLinks([id])).get(id) ?? []);
-    const members = await policyGroupRepository(tx).findMemberIds(id);
+    const id = await existingTerms(tx, termsId);
+    await change(tx, id, (await repository.findTermsLinks([id])).get(id) ?? []);
+    const members = await termsRepository(tx).findMemberIds(id);
     publishWorkingPatternChange(tx, members, changedFrom);
     return id;
   });
-  logger.info({ policyGroupId: groupId, changedFrom }, "Changed a group's working pattern");
+  logger.info({ termsId: changedTermsId, changedFrom }, "Changed the working pattern of terms");
 }
 
-async function existingGroup(tx: Tx, policyGroupId: string): Promise<string> {
-  const id = parseUuid(policyGroupId);
-  if (!id || !(await policyGroupRepository(tx).exists(id))) {
-    throw invalidInput([{ field: "policyGroupId", code: "not_found" }]);
+async function existingTerms(tx: Tx, termsId: string): Promise<string> {
+  const id = parseUuid(termsId);
+  if (!id || !(await termsRepository(tx).exists(id))) {
+    throw invalidInput([{ field: "termsId", code: "not_found" }]);
   }
   return id;
 }
 
-function noGroupPattern(): ApplicationError {
-  return new ApplicationError("NOT_FOUND", "The group has no working pattern on this date.");
+function noTermsPattern(): ApplicationError {
+  return new ApplicationError("NOT_FOUND", "The terms have no working pattern on this date.");
 }

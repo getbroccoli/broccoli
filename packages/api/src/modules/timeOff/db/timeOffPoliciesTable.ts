@@ -5,8 +5,8 @@ import { timeOffTypes } from "./timeOffTypesTable";
 
 /**
  * The rules for one time off type: how leave is counted, bank holidays and the leave year. The
- * amounts are its allowance rules; the groups it applies to, and when, are in
- * `policy_group_time_off_policies`.
+ * amounts are its allowance rules; the terms it applies to, and when, are in
+ * `terms_time_off_policies`.
  */
 export const timeOffPolicies = pgTable(
   "time_off_policies",

@@ -47,7 +47,7 @@ test("assigning a pattern publishes the employee and assignment start date", asy
   seed,
 }) => {
   const employee = await seed.employee();
-  await seed.leaveGroups(employee.id);
+  await seed.leaveTerms(employee.id);
   const { events, transact } = workingPatternChangedEvents(orm);
   const patterns = workingPatternService(orm, { transact });
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;

@@ -1,6 +1,6 @@
 import { addDays, type CalendarDate } from "../../../utils";
 
-/** A dated row naming a policy: an assignment, or a group's link for one type. */
+/** A dated row naming a policy: an assignment, or terms' link for one type. */
 export interface DatedPolicyRow {
   timeOffTypeId: string;
   timeOffPolicyId: string;
@@ -8,9 +8,9 @@ export interface DatedPolicyRow {
   effectiveUntil: CalendarDate | null;
 }
 
-/** A person's group over a period; null dates are open. */
+/** A person's terms over a period; null dates are open. */
 export interface DatedMembership {
-  policyGroupId: string;
+  termsId: string;
   effectiveFrom: CalendarDate | null;
   effectiveUntil: CalendarDate | null;
 }
@@ -19,12 +19,12 @@ export interface DatedMembership {
 export interface PolicyTimeline {
   assignments: readonly DatedPolicyRow[];
   memberships: readonly DatedMembership[];
-  /** Each group's links, by group id. */
-  groupLinks: ReadonlyMap<string, readonly DatedPolicyRow[]>;
+  /** Policy links, by terms id. */
+  termsLinks: ReadonlyMap<string, readonly DatedPolicyRow[]>;
 }
 
 /**
- * The policy that applies for a type on a date: the person's assignment, else their group's link,
+ * The policy that applies for a type on a date: the person's assignment, else their terms' link,
  * else none. Employment is not checked here: the allowance target keeps only employed days.
  */
 export function policyIdOn(
@@ -38,7 +38,7 @@ export function policyIdOn(
     return assigned.timeOffPolicyId;
   }
   const membership = timeline.memberships.find((row) => covers(row, date));
-  const link = membership && timeline.groupLinks.get(membership.policyGroupId)?.find(ofType);
+  const link = membership && timeline.termsLinks.get(membership.termsId)?.find(ofType);
   return link?.timeOffPolicyId ?? null;
 }
 
@@ -52,7 +52,7 @@ export function policyStretches(
   const rows = [
     ...timeline.assignments,
     ...timeline.memberships,
-    ...[...timeline.groupLinks.values()].flat(),
+    ...[...timeline.termsLinks.values()].flat(),
   ];
   const changeDates = rows
     .flatMap(({ effectiveFrom, effectiveUntil }) => [

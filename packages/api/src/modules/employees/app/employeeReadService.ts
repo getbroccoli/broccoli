@@ -16,9 +16,9 @@ import {
   EMPLOYEE_SORT_VALUES,
   employeeRepository,
   employmentRepository,
-  policyGroupRepository,
+  termsRepository,
 } from "../db";
-import type { Employee, EmployeeOrder, EmployeeOrderField, GroupMembership } from "../domain";
+import type { Employee, EmployeeOrder, EmployeeOrderField, TermsMembership } from "../domain";
 import { employeeRecordType } from "./employeeRecordType";
 
 const fileStorage = createFileStorageService();
@@ -45,8 +45,8 @@ export interface EmployeeReadService {
    * returns their ids, so allowance runs and employee changes take turns. Missing employees are left out.
    */
   lockEmployees: (tx: Tx, employeeIds: readonly string[]) => Promise<string[]>;
-  /** Trusted: the id of the seeded "Everyone" group, which every new employee joins. */
-  readEveryoneGroupId: (tx: Tx) => Promise<string>;
+  /** Trusted: the id of the seeded "England and Wales" terms, which every new employee joins. */
+  readEnglandAndWalesTermsId: (tx: Tx) => Promise<string>;
   /**
    * Trusted, for time off: each employee's employments, oldest first, by id, in the caller's
    * transaction. A null start is unknown, a null end open-ended.
@@ -55,16 +55,16 @@ export interface EmployeeReadService {
     tx: Tx,
     employeeIds: readonly string[],
   ) => Promise<Map<string, { startDate: CalendarDate | null; endDate: CalendarDate | null }[]>>;
-  /** Trusted, for time off: each employee's policy groups over time, by id, in the caller's transaction. */
-  readPolicyGroupMemberships: (
+  /** Trusted, for time off: each employee's terms over time, by id, in the caller's transaction. */
+  readTermsMemberships: (
     tx: Tx,
     employeeIds: readonly string[],
-  ) => Promise<Map<string, GroupMembership[]>>;
+  ) => Promise<Map<string, TermsMembership[]>>;
   /**
-   * Trusted: the employees in a group on any date, in the caller's transaction; null when no group
-   * has this id.
+   * Trusted: the employees on the terms on any date, in the caller's transaction; null when no terms
+   * have this id.
    */
-  readPolicyGroupMemberIds: (tx: Tx, policyGroupId: string) => Promise<string[] | null>;
+  readTermsMemberIds: (tx: Tx, termsId: string) => Promise<string[] | null>;
   /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -117,13 +117,12 @@ export function createEmployeeReadService({
       );
     },
     lockEmployees: (tx, employeeIds) => employeeRepository(tx).lockByIds(employeeIds),
-    readEveryoneGroupId: (tx) => policyGroupRepository(tx).findEveryoneId(),
+    readEnglandAndWalesTermsId: (tx) => termsRepository(tx).findEnglandAndWalesId(),
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
-    readPolicyGroupMemberships: (tx, employeeIds) =>
-      policyGroupRepository(tx).findMemberships(employeeIds),
-    async readPolicyGroupMemberIds(tx, policyGroupId) {
-      const groups = policyGroupRepository(tx);
-      return (await groups.exists(policyGroupId)) ? groups.findMemberIds(policyGroupId) : null;
+    readTermsMemberships: (tx, employeeIds) => termsRepository(tx).findMemberships(employeeIds),
+    async readTermsMemberIds(tx, termsId) {
+      const repository = termsRepository(tx);
+      return (await repository.exists(termsId)) ? repository.findMemberIds(termsId) : null;
     },
     readEmployeeHistory: (ctx, employeeId, args) =>
       history.readHistory(ctx, "employee", employeeId, args),

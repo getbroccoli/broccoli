@@ -20,7 +20,7 @@ import {
 import { user } from "../../../core/auth";
 import { NO_SETUP_INVITES } from "../../../core/instance";
 
-test("resetting a finished setup removes the group's time off policies", async ({
+test("resetting a finished setup removes the terms' time off policies", async ({
   orm,
   seed,
   transact,
@@ -29,18 +29,18 @@ test("resetting a finished setup removes the group's time off policies", async (
   await seed.setupStep("done");
   await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
-  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([policy]);
+  expect(await service.readTermsPolicies(OWNER, { termsId })).toEqual([policy]);
 
   await systemService(orm).resetSetup(owner);
 
-  expect(await service.readGroupPolicies(OWNER, { policyGroupId })).toEqual([]);
+  expect(await service.readTermsPolicies(OWNER, { termsId })).toEqual([]);
 });
 
 test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({

@@ -2,7 +2,7 @@ import { eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { AllowanceRule, DatedPolicyRow, TimeOffPolicy } from "../domain";
-import { policyGroupTimeOffPolicies } from "./policyGroupTimeOffPoliciesTable";
+import { termsTimeOffPolicies } from "./termsTimeOffPoliciesTable";
 import { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
 import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
@@ -12,16 +12,16 @@ import { timeOffTypes } from "./timeOffTypesTable";
 export interface TimeOffPolicyRepository {
   /** Every policy with its type and current rules, by type and name. */
   findAll(): Promise<TimeOffPolicy[]>;
-  /** Serializes changes to groups' links until the transaction ends. */
-  lockGroupLinks(): Promise<void>;
-  /** Each group's links, by group id. */
-  findGroupLinks(policyGroupIds: readonly string[]): Promise<Map<string, DatedPolicyRow[]>>;
-  /** Links each policy to the group for its type, from the beginning and open-ended. */
-  insertGroupLinks(
-    policyGroupId: string,
+  /** Serializes changes to terms' links until the transaction ends. */
+  lockTermsLinks(): Promise<void>;
+  /** Policy links, by terms id. */
+  findTermsLinks(termsIds: readonly string[]): Promise<Map<string, DatedPolicyRow[]>>;
+  /** Links each policy to the terms for its type, from the beginning and open-ended. */
+  insertTermsLinks(
+    termsId: string,
     policies: readonly { timeOffTypeId: string; timeOffPolicyId: string }[],
   ): Promise<void>;
-  deleteAllGroupLinks(): Promise<void>;
+  deleteAllTermsLinks(): Promise<void>;
   /** Each employee's own policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, DatedPolicyRow[]>>;
 }
@@ -58,28 +58,26 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       }));
     },
 
-    async lockGroupLinks() {
-      await orm().execute(
-        sql`lock table ${policyGroupTimeOffPolicies} in share row exclusive mode`,
-      );
+    async lockTermsLinks() {
+      await orm().execute(sql`lock table ${termsTimeOffPolicies} in share row exclusive mode`);
     },
 
-    async findGroupLinks(policyGroupIds) {
+    async findTermsLinks(termsIds) {
       const rows = await orm()
         .select()
-        .from(policyGroupTimeOffPolicies)
-        .where(inArray(policyGroupTimeOffPolicies.policyGroupId, [...policyGroupIds]));
-      return Map.groupBy(rows, ({ policyGroupId }) => policyGroupId);
+        .from(termsTimeOffPolicies)
+        .where(inArray(termsTimeOffPolicies.termsId, [...termsIds]));
+      return Map.groupBy(rows, ({ termsId }) => termsId);
     },
 
-    async insertGroupLinks(policyGroupId, policies) {
+    async insertTermsLinks(termsId, policies) {
       await orm()
-        .insert(policyGroupTimeOffPolicies)
-        .values(policies.map((policy) => ({ policyGroupId, ...policy })));
+        .insert(termsTimeOffPolicies)
+        .values(policies.map((policy) => ({ termsId, ...policy })));
     },
 
-    async deleteAllGroupLinks() {
-      await orm().delete(policyGroupTimeOffPolicies);
+    async deleteAllTermsLinks() {
+      await orm().delete(termsTimeOffPolicies);
     },
 
     async findAssignments(employeeIds) {

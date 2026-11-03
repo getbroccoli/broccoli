@@ -7,12 +7,12 @@ import { ensureAllowancesJob } from "./ensureAllowancesJob";
 test("a run on 1 January creates the new year's allowances", async ({ orm, seed, transact }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm, { today: "2026-06-01" });
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
   const [before] = await readAllowances(orm, employee.id);
   expect(before).toMatchObject({ leaveYearStart: "2026-01-01", total: 20 });
@@ -46,12 +46,12 @@ test("a run on 1 January creates the new year's allowances", async ({ orm, seed,
 
 test("a run repairs a missing allowance", async ({ orm, seed, transact }) => {
   const service = timeOffService(orm, { today: "2026-06-01" });
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
   const employee = await seed.employee({ startDate: "2025-01-01" });
   expect(await readAllowances(orm, employee.id)).toEqual([]);

@@ -60,7 +60,7 @@ export interface WorkingPatternService {
     ctx: SecurityContext,
     input: { workingPatternId: string; effectiveFrom: string },
   ) => Promise<WorkingPattern>;
-  /** Deletes a pattern no group or person is put on, other than Standard. Admins only. */
+  /** Deletes a pattern no terms or person are put on, other than Standard. Admins only. */
   deletePattern: (ctx: SecurityContext, input: { workingPatternId: string }) => Promise<void>;
 }
 
@@ -182,7 +182,7 @@ export function createWorkingPatternService({
         if (await repository.isPatternUsed(pattern.id)) {
           throw new ApplicationError(
             "CONFLICT",
-            "A person or group is on this working pattern on some date, past or future, so it is kept.",
+            "A person or terms are on this working pattern on some date, past or future, so it is kept.",
           );
         }
         await repository.deletePattern(pattern.id);
