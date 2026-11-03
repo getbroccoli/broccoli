@@ -51,10 +51,10 @@ export function createModules(
     ...core,
     bankHolidays: createBankHolidayService({ bankHolidaySource: createStaticBankHolidaySource() }),
   });
-  // Every path that clears the people unlinks the groups' time off policies too, back to a fresh workspace.
+  // Every path that clears the people unlinks the terms' time off policies too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // Links first: linking holds their lock while its allowances wait on employee rows.
-    await timeOff.deleteAllGroupPolicies(ctx, tx);
+    await timeOff.deleteAllTermsPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
   };
   // Built once: the employees module serves it and setup's last step invites through it.

@@ -130,27 +130,27 @@ test("an employee cannot read or manage workspace patterns", async ({ orm }) => 
   });
 });
 
-test("an employee cannot change a group's pattern", async ({ orm, seed }) => {
+test("an employee cannot change a terms' pattern", async ({ orm, seed }) => {
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
 
   await expect(
-    patterns.setGroupPattern(EMPLOYEE, {
-      policyGroupId,
+    patterns.setTermsPattern(EMPLOYEE, {
+      termsId,
       workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    patterns.endGroupPattern(EMPLOYEE, {
-      policyGroupId,
+    patterns.endTermsPattern(EMPLOYEE, {
+      termsId,
       effectiveUntil: "2026-09-30",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    patterns.removeGroupPattern(EMPLOYEE, {
-      policyGroupId,
+    patterns.removeTermsPattern(EMPLOYEE, {
+      termsId,
       effectiveFrom: null,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });

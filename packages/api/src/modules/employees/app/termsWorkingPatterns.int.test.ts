@@ -1,15 +1,15 @@
 import { expect, OWNER, test, workingPatternService } from "#test/support";
 
-test("a dated group switch changes only its members without their own assignment", async ({
+test("a dated terms switch changes only their people without their own assignment", async ({
   orm,
   seed,
 }) => {
   const member = await seed.employee();
   const assigned = await seed.employee();
   const outsider = await seed.employee();
-  const policyGroupId = await seed.policyGroup();
-  await seed.moveToGroup(member.id, policyGroupId);
-  await seed.moveToGroup(assigned.id, policyGroupId);
+  const termsId = await seed.terms();
+  await seed.moveToTerms(member.id, termsId);
+  await seed.moveToTerms(assigned.id, termsId);
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   const monday = await patterns.createPattern(OWNER, {
@@ -17,8 +17,8 @@ test("a dated group switch changes only its members without their own assignment
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  await patterns.setGroupPattern(OWNER, {
-    policyGroupId,
+  await patterns.setTermsPattern(OWNER, {
+    termsId,
     workingPatternId: standard.id,
     effectiveFrom: "2026-08-01",
   });
@@ -28,8 +28,8 @@ test("a dated group switch changes only its members without their own assignment
     effectiveFrom: "2026-08-01",
   });
 
-  await patterns.setGroupPattern(OWNER, {
-    policyGroupId,
+  await patterns.setTermsPattern(OWNER, {
+    termsId,
     workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
   });
@@ -60,9 +60,9 @@ test("a dated group switch changes only its members without their own assignment
   expect(weeks.get(outsider.id)).toEqual(unchanged);
 });
 
-test("correcting a group link keeps the later link and its boundary", async ({ orm, seed }) => {
+test("correcting a terms link keeps the later link and its boundary", async ({ orm, seed }) => {
   const employee = await seed.employee();
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   const monday = await patterns.createPattern(OWNER, {
@@ -75,19 +75,19 @@ test("correcting a group link keeps the later link and its boundary", async ({ o
     minutes: [0, 0, 0, 0, 450, 0, 0],
     fullDayMinutes: 450,
   });
-  await patterns.setGroupPattern(OWNER, {
-    policyGroupId,
+  await patterns.setTermsPattern(OWNER, {
+    termsId,
     workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
   });
-  await patterns.setGroupPattern(OWNER, {
-    policyGroupId,
+  await patterns.setTermsPattern(OWNER, {
+    termsId,
     workingPatternId: standard.id,
     effectiveFrom: "2026-10-01",
   });
 
-  await patterns.setGroupPattern(OWNER, {
-    policyGroupId,
+  await patterns.setTermsPattern(OWNER, {
+    termsId,
     workingPatternId: friday.id,
     effectiveFrom: "2026-09-01",
   });
@@ -119,15 +119,15 @@ test("correcting a group link keeps the later link and its boundary", async ({ o
   ]);
 });
 
-test("ending a group pattern leaves its members without a pattern from the next day", async ({
+test("ending a terms pattern leaves their people without a pattern from the next day", async ({
   orm,
   seed,
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
 
-  await patterns.endGroupPattern(OWNER, {
-    policyGroupId: await seed.everyoneGroupId(),
+  await patterns.endTermsPattern(OWNER, {
+    termsId: await seed.englandAndWalesTermsId(),
     effectiveUntil: "2026-09-30",
   });
 
@@ -150,25 +150,25 @@ test("ending a group pattern leaves its members without a pattern from the next 
   ]);
 });
 
-test("removing a dated group link leaves a gap without reopening the earlier link", async ({
+test("removing a dated terms link leaves a gap without reopening the earlier link", async ({
   orm,
   seed,
 }) => {
   const employee = await seed.employee();
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const patterns = workingPatternService(orm);
   const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  await patterns.setGroupPattern(OWNER, {
-    policyGroupId,
+  await patterns.setTermsPattern(OWNER, {
+    termsId,
     workingPatternId: monday.id,
     effectiveFrom: "2026-09-01",
   });
 
-  await patterns.removeGroupPattern(OWNER, { policyGroupId, effectiveFrom: "2026-09-01" });
+  await patterns.removeTermsPattern(OWNER, { termsId, effectiveFrom: "2026-09-01" });
 
   expect(
     (
@@ -189,14 +189,14 @@ test("removing a dated group link leaves a gap without reopening the earlier lin
   ]);
 });
 
-test("a group link requires an existing pattern and group", async ({ orm, seed }) => {
+test("a terms link requires an existing pattern and terms", async ({ orm, seed }) => {
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   const missingId = "00000000-0000-4000-8000-000000000001";
 
   await expect(
-    patterns.setGroupPattern(OWNER, {
-      policyGroupId: await seed.everyoneGroupId(),
+    patterns.setTermsPattern(OWNER, {
+      termsId: await seed.englandAndWalesTermsId(),
       workingPatternId: missingId,
       effectiveFrom: "2026-09-01",
     }),
@@ -205,30 +205,30 @@ test("a group link requires an existing pattern and group", async ({ orm, seed }
     fieldErrors: [{ field: "workingPatternId", code: "not_found" }],
   });
   await expect(
-    patterns.setGroupPattern(OWNER, {
-      policyGroupId: missingId,
+    patterns.setTermsPattern(OWNER, {
+      termsId: missingId,
       workingPatternId: standard.id,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
-    fieldErrors: [{ field: "policyGroupId", code: "not_found" }],
+    fieldErrors: [{ field: "termsId", code: "not_found" }],
   });
 });
 
-test("ending or removing a group pattern requires a link on that date", async ({ orm, seed }) => {
+test("ending or removing a terms pattern requires a link on that date", async ({ orm, seed }) => {
   const patterns = workingPatternService(orm);
-  const policyGroupId = await seed.policyGroup();
+  const termsId = await seed.terms();
 
   await expect(
-    patterns.endGroupPattern(OWNER, {
-      policyGroupId,
+    patterns.endTermsPattern(OWNER, {
+      termsId,
       effectiveUntil: "2026-09-30",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
   await expect(
-    patterns.removeGroupPattern(OWNER, {
-      policyGroupId,
+    patterns.removeTermsPattern(OWNER, {
+      termsId,
       effectiveFrom: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });

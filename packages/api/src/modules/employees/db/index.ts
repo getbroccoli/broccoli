@@ -4,9 +4,9 @@ export {
   type EmployeeRepository,
 } from "./employeeRepository";
 export { employmentRepository, type EmploymentRepository } from "./employmentRepository";
-export { employeePolicyGroups } from "./employeePolicyGroupsTable";
-export { policyGroups } from "./policyGroupsTable";
-export { policyGroupRepository } from "./policyGroupRepository";
+export { employeeTerms } from "./employeeTermsTable";
+export { terms } from "./termsTable";
+export { termsRepository } from "./termsRepository";
 export { workingPatternRepository } from "./workingPatternRepository";
 export {
   inviteRepository,

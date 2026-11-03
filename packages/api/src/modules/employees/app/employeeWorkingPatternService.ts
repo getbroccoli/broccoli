@@ -8,7 +8,7 @@ import { addDays, type CalendarDate, parseUuid } from "../../../utils";
 import {
   employeeRepository,
   employmentRepository,
-  policyGroupRepository,
+  termsRepository,
   workingPatternRepository,
 } from "../db";
 import {
@@ -53,7 +53,7 @@ export interface EmployeeWorkingPatternService {
   ) => Promise<Map<string, WorkingWeek[]>>;
   /**
    * Puts a person on their own pattern from a date, until a date or open-ended, ahead of their
-   * group's; an earlier one of theirs ends the day before. Returns the history line it added.
+   * terms'; an earlier one of theirs ends the day before. Returns the history line it added.
    */
   assignPattern: (
     ctx: SecurityContext,
@@ -64,7 +64,7 @@ export interface EmployeeWorkingPatternService {
       effectiveUntil?: string | null;
     },
   ) => Promise<HistoryLine>;
-  /** Ends a person's own pattern on a date; their group's applies from the next day. */
+  /** Ends a person's own pattern on a date; their terms' applies from the next day. */
   endAssignment: (
     ctx: SecurityContext,
     input: { employeeId: string; effectiveUntil: string },
@@ -238,25 +238,25 @@ interface Timelines {
 }
 
 /**
- * Each employee's working pattern: their own patterns, their groups with those groups' patterns,
+ * Each employee's working pattern: their own patterns, their terms with those terms' patterns,
  * and the weeks of the patterns these name; with every pattern.
  */
 async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
   const repository = workingPatternRepository(tx);
   // One after another: they share the transaction's connection.
   const assignments = await repository.findAssignments(employeeIds);
-  const memberships = await policyGroupRepository(tx).findMemberships(employeeIds);
+  const memberships = await termsRepository(tx).findMemberships(employeeIds);
   const patterns = await repository.findPatterns();
-  const groupIds = [...memberships.values()].flat().map(({ policyGroupId }) => policyGroupId);
-  const groupPatterns = await repository.findGroupLinks([...new Set(groupIds)]);
+  const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
+  const termsPatterns = await repository.findTermsLinks([...new Set(termsIds)]);
   const weeksOf = new Map(patterns.map(({ id, weeks }) => [id, weeks]));
   const timelines = new Map(
     employeeIds.map((id) => {
       const own = memberships.get(id) ?? [];
-      const theirGroups = new Map(
-        own.map(({ policyGroupId }) => [policyGroupId, groupPatterns.get(policyGroupId) ?? []]),
+      const theirTerms = new Map(
+        own.map(({ termsId }) => [termsId, termsPatterns.get(termsId) ?? []]),
       );
-      const rows = [...(assignments.get(id) ?? []), ...[...theirGroups.values()].flat()];
+      const rows = [...(assignments.get(id) ?? []), ...[...theirTerms.values()].flat()];
       const patternWeeks = new Map(
         rows.map(({ workingPatternId }) => [workingPatternId, weeksOf.get(workingPatternId)!]),
       );
@@ -265,7 +265,7 @@ async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Ti
         {
           assignments: assignments.get(id) ?? [],
           memberships: own,
-          groupPatterns: theirGroups,
+          termsPatterns: theirTerms,
           patternWeeks,
         },
       ];

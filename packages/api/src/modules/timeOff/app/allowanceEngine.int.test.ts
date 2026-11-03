@@ -1,7 +1,7 @@
 import {
   type AllowanceLine,
   employeeServices,
-  linkStatutoryMinimumToEveryone,
+  linkStatutoryMinimumToEnglandAndWales,
   expect,
   OWNER,
   readAllowances,
@@ -36,7 +36,7 @@ test("ensuring allowances grants leave to a person added after the policy was li
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2025-01-01" });
 
   const result = await transact((tx) =>
@@ -75,18 +75,18 @@ test("a start date change corrects the allowance by appending lines", async ({
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
   const [before] = await readAllowances(orm, employee.id);
   expect(rowsOf(before!.lines)).toEqual([
-    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-04-06", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-08-31", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_group"],
+    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-04-06", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-08-31", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_terms"],
   ]);
   expect(before!.total).toEqual(20);
 
@@ -94,15 +94,15 @@ test("a start date change corrects the allowance by appending lines", async ({
 
   const [after] = await readAllowances(orm, employee.id);
   expect(rowsOf(after!.lines)).toEqual([
-    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-04-06", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-08-31", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_group"],
+    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-04-06", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-08-31", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_terms"],
     ["entitlement_grant", "yearly_entitlement", -13.884932, "2026-01-01", "start_date_changed"],
     ["rounding_up_to_half_day", null, 0.384932, "2026-01-01", "start_date_changed"],
     ["bank_holiday_taken", null, 1, "2026-01-01", "start_date_changed"],
@@ -121,7 +121,7 @@ test("a September switch to Tuesday through Thursday cuts the grant and restores
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
   const [before] = await readAllowances(orm, employee.id);
   const patterns = workingPatternService(orm);
   const pattern = await patterns.createPattern(OWNER, {
@@ -144,15 +144,15 @@ test("a September switch to Tuesday through Thursday cuts the grant and restores
 
   const [after] = await readAllowances(orm, employee.id);
   expect(rowsOf(after!.lines)).toEqual([
-    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-04-06", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-08-31", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_group"],
+    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-04-06", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-08-31", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_terms"],
     ["entitlement_grant", "yearly_entitlement", -3.743562, "2026-09-01", "working_pattern_changed"],
     ["bank_holiday_taken", null, 1, "2026-12-25", "working_pattern_changed"],
     ["bank_holiday_taken", null, 1, "2026-12-28", "working_pattern_changed"],
@@ -181,22 +181,22 @@ test("a Scottish working pattern charges Scotland's ten weekday bank holidays", 
     effectiveFrom: "2026-01-01",
   });
 
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
 
   const allowances = await readAllowances(orm, employee.id);
   expect(allowances).toMatchObject([{ total: 18 }]);
   expect(rowsOf(allowances[0]!.lines)).toEqual([
-    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-01-02", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-06-15", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-08-03", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-11-30", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_group"],
-    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_group"],
+    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-01-01", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-01-02", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-04-03", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-04", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-05-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-06-15", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-08-03", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-11-30", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_terms"],
+    ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_terms"],
   ]);
 });
 
@@ -206,7 +206,7 @@ test("ensuring the same allowance twice appends nothing the second time", async 
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2025-01-01" });
   await transact((tx) =>
     service.ensureAllowances(SYSTEM, tx, {
@@ -233,7 +233,7 @@ test("concurrent runs create one allowance and append its lines only once", asyn
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2025-01-01" });
 
   const results = await Promise.all([
@@ -271,7 +271,7 @@ test("a future starter gets an allowance for the leave year they join", async ({
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2027-02-01" });
 
   await transact((tx) =>

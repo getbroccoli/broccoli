@@ -1,7 +1,7 @@
 import type { Orm, Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import {
-  createGroupWorkingPatternService,
+  createTermsWorkingPatternService,
   createWorkingPatternService,
   createEmployeeWorkingPatternService,
 } from "../../src/modules/employees";
@@ -16,6 +16,6 @@ export function workingPatternService(
   return {
     ...createEmployeeWorkingPatternService(dependencies),
     ...createWorkingPatternService(dependencies),
-    ...createGroupWorkingPatternService(dependencies),
+    ...createTermsWorkingPatternService(dependencies),
   };
 }

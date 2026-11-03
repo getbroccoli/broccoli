@@ -31,19 +31,23 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
   });
 }
 
-/** Links the UK statutory minimum to the "Everyone" group, as an admin would. */
-export async function linkStatutoryMinimumToEveryone(orm: Orm, seed: TestSeed, transact: Transact) {
+/** Links the UK statutory minimum to "England and Wales" terms, as an admin would. */
+export async function linkStatutoryMinimumToEnglandAndWales(
+  orm: Orm,
+  seed: TestSeed,
+  transact: Transact,
+) {
   const service = timeOffService(orm);
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     ({ key }) => key === "uk_statutory_minimum",
   )!;
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
 }
 
-/** The demo fill on `orm`, linking "Everyone" to the demo's time off policies. */
+/** The demo fill on `orm`, linking "England and Wales" terms to the demo's time off policies. */
 export function demoFillService(orm: Orm) {
   const dependencies = { orm, transact: testTransactor(orm), logger: createLogger("silent") };
   return createDemoFillService({
@@ -66,12 +70,12 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
   return transactor(orm, eventBus);
 }
 
-/** Deletes every employee and the groups' time off policies, as startup composes it. */
+/** Deletes every employee and the terms' time off policies, as startup composes it. */
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
     // Links first: linking holds their lock while its allowances wait on employee rows.
-    await timeOff.deleteAllGroupPolicies(ctx, tx);
+    await timeOff.deleteAllTermsPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
   };
 }

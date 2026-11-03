@@ -152,15 +152,15 @@ test("a pattern assigned to an employee cannot be deleted", async ({ orm, seed }
   expect(await patterns.listPatterns(OWNER)).toContainEqual(pattern);
 });
 
-test("a pattern linked to an empty group cannot be deleted", async ({ orm, seed }) => {
+test("a pattern linked to empty terms cannot be deleted", async ({ orm, seed }) => {
   const patterns = workingPatternService(orm);
   const pattern = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
     fullDayMinutes: 450,
   });
-  await patterns.setGroupPattern(OWNER, {
-    policyGroupId: await seed.policyGroup(),
+  await patterns.setTermsPattern(OWNER, {
+    termsId: await seed.terms(),
     workingPatternId: pattern.id,
     effectiveFrom: "2026-09-01",
   });

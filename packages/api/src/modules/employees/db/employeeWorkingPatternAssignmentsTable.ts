@@ -6,7 +6,7 @@ import { employees } from "./employeesTable";
 import { workingPatterns } from "./workingPatternsTable";
 
 /**
- * An exception: one person on a pattern between two dates, ahead of their group's. A person's rows
+ * An exception: one person on a pattern between two dates, ahead of their terms'. A person's rows
  * never overlap (an exclusion constraint the migration adds).
  */
 export const employeeWorkingPatternAssignments = pgTable(

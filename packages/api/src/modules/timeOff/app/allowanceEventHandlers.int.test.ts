@@ -5,7 +5,7 @@ import {
   employeeServices,
   employeeSetup,
   expect,
-  linkStatutoryMinimumToEveryone,
+  linkStatutoryMinimumToEnglandAndWales,
   OWNER,
   readAllowances,
   test,
@@ -23,7 +23,7 @@ test("an imported batch gets allowances and replaying its event appends no dupli
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
   const dispatching = transactWithTimeOffEvents(orm);
 
   const { idsByEmail } = await dispatching((tx) =>
@@ -71,18 +71,18 @@ test("adding a person writes no allowance when no policy is linked", async ({ or
   expect(await readAllowances(orm, employee.id)).toEqual([]);
 });
 
-test("adding a person grants Annual leave before returning when Everyone has a policy", async ({
+test("adding a person grants Annual leave before returning when England and Wales terms have a policy", async ({
   orm,
   seed,
   transact,
 }) => {
   const service = timeOffService(orm);
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
 
   const employee = await employeeServices(orm).createEmployee(OWNER, {
@@ -114,7 +114,7 @@ test(
     const employee = await seed.employee({ startDate: "2025-01-01" });
     const startDate = parseCalendarDate("2026-10-12")!;
     const service = timeOffService(orm);
-    const policyGroupId = await seed.everyoneGroupId();
+    const termsId = await seed.englandAndWalesTermsId();
     const policy = (await service.listPolicies(OWNER, orm)).find(
       (p) => p.key === "uk_statutory_minimum",
     )!;
@@ -141,7 +141,7 @@ test(
         sql`select pg_backend_pid() as pid`,
       );
       linkPid.resolve(rows[0]!.pid);
-      return service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] });
+      return service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] });
     });
     const results = Promise.allSettled([changing, linking]);
 
@@ -177,12 +177,12 @@ test("moving a start date to October appends corrections and keeps the earlier a
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
   const [before] = await readAllowances(orm, employee.id);
   expect(before!.total).toBe(20);
@@ -209,12 +209,12 @@ test("a September working pattern change reduces the grant and restores December
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
   const [before] = await readAllowances(orm, employee.id);
   expect(before!.total).toBe(20);

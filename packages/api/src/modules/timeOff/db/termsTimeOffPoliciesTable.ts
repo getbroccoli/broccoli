@@ -6,17 +6,17 @@ import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffTypes } from "./timeOffTypesTable";
 
 /**
- * Which policy a group's members get for one type by default, and when. A group's rows for one
+ * Which policy the people on terms get for one type by default, and when. The terms' rows for one
  * type never overlap; the migration adds that exclusion constraint and the foreign key to
- * `policy_groups`, which the employees module owns.
+ * `terms`, which the employees module owns.
  */
-export const policyGroupTimeOffPolicies = pgTable(
-  "policy_group_time_off_policies",
+export const termsTimeOffPolicies = pgTable(
+  "terms_time_off_policies",
   {
     id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
-    policyGroupId: uuid("policy_group_id").notNull(),
+    termsId: uuid("terms_id").notNull(),
     timeOffTypeId: uuid("time_off_type_id").notNull(),
     timeOffPolicyId: uuid("time_off_policy_id").notNull(),
     /** Null: from the beginning. */
@@ -27,19 +27,19 @@ export const policyGroupTimeOffPolicies = pgTable(
   (table) => [
     // Named here: the generated name would pass Postgres's 63-character limit.
     foreignKey({
-      name: "policy_group_time_off_policies_type_fk",
+      name: "terms_time_off_policies_type_fk",
       columns: [table.timeOffTypeId],
       foreignColumns: [timeOffTypes.id],
     }),
     // Keeps the policy on the row's own type.
     foreignKey({
-      name: "policy_group_time_off_policies_policy_of_type_fk",
+      name: "terms_time_off_policies_policy_of_type_fk",
       columns: [table.timeOffPolicyId, table.timeOffTypeId],
       foreignColumns: [timeOffPolicies.id, timeOffPolicies.timeOffTypeId],
     }),
-    index("policy_group_time_off_policies_policy_idx").on(table.timeOffPolicyId),
+    index("terms_time_off_policies_policy_idx").on(table.timeOffPolicyId),
     check(
-      "policy_group_time_off_policies_dates_in_order",
+      "terms_time_off_policies_dates_in_order",
       sql`${table.effectiveUntil} >= ${table.effectiveFrom}`,
     ),
   ],

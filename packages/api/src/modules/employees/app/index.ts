@@ -21,9 +21,9 @@ export {
 } from "./locationService";
 export { employeeDirectory } from "./employeeDirectory";
 export {
-  createGroupWorkingPatternService,
-  type GroupWorkingPatternService,
-} from "./groupWorkingPatternService";
+  createTermsWorkingPatternService,
+  type TermsWorkingPatternService,
+} from "./termsWorkingPatternService";
 export { createWorkingPatternService, type WorkingPatternService } from "./workingPatternService";
 export {
   createEmployeeWorkingPatternService,

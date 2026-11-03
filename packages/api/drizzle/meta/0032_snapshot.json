@@ -819,8 +819,8 @@
       },
       "isRLSEnabled": false
     },
-    "public.employee_policy_groups": {
-      "name": "employee_policy_groups",
+    "public.employee_terms": {
+      "name": "employee_terms",
       "schema": "",
       "columns": {
         "id": {
@@ -836,8 +836,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "policy_group_id": {
-          "name": "policy_group_id",
+        "terms_id": {
+          "name": "terms_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -856,11 +856,11 @@
         }
       },
       "indexes": {
-        "employee_policy_groups_policy_group_idx": {
-          "name": "employee_policy_groups_policy_group_idx",
+        "employee_terms_terms_idx": {
+          "name": "employee_terms_terms_idx",
           "columns": [
             {
-              "expression": "policy_group_id",
+              "expression": "terms_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -873,20 +873,20 @@
         }
       },
       "foreignKeys": {
-        "employee_policy_groups_employee_id_employees_id_fk": {
-          "name": "employee_policy_groups_employee_id_employees_id_fk",
-          "tableFrom": "employee_policy_groups",
+        "employee_terms_employee_id_employees_id_fk": {
+          "name": "employee_terms_employee_id_employees_id_fk",
+          "tableFrom": "employee_terms",
           "tableTo": "employees",
           "columnsFrom": ["employee_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "employee_policy_groups_policy_group_id_policy_groups_id_fk": {
-          "name": "employee_policy_groups_policy_group_id_policy_groups_id_fk",
-          "tableFrom": "employee_policy_groups",
-          "tableTo": "policy_groups",
-          "columnsFrom": ["policy_group_id"],
+        "employee_terms_terms_id_terms_id_fk": {
+          "name": "employee_terms_terms_id_terms_id_fk",
+          "tableFrom": "employee_terms",
+          "tableTo": "terms",
+          "columnsFrom": ["terms_id"],
           "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -896,9 +896,9 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "employee_policy_groups_dates_in_order": {
-          "name": "employee_policy_groups_dates_in_order",
-          "value": "\"employee_policy_groups\".\"effective_until\" >= \"employee_policy_groups\".\"effective_from\""
+        "employee_terms_dates_in_order": {
+          "name": "employee_terms_dates_in_order",
+          "value": "\"employee_terms\".\"effective_until\" >= \"employee_terms\".\"effective_from\""
         }
       },
       "isRLSEnabled": false
@@ -1277,8 +1277,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.policy_groups": {
-      "name": "policy_groups",
+    "public.terms": {
+      "name": "terms",
       "schema": "",
       "columns": {
         "id": {
@@ -1305,8 +1305,8 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "policy_groups_key_unique": {
-          "name": "policy_groups_key_unique",
+        "terms_key_unique": {
+          "name": "terms_key_unique",
           "nullsNotDistinct": false,
           "columns": ["key"]
         }
@@ -2324,8 +2324,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "policy_group_id": {
-          "name": "policy_group_id",
+        "terms_id": {
+          "name": "terms_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
@@ -2375,10 +2375,10 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "time_off_policies_group_type_unique": {
-          "name": "time_off_policies_group_type_unique",
+        "time_off_policies_terms_type_unique": {
+          "name": "time_off_policies_terms_type_unique",
           "nullsNotDistinct": false,
-          "columns": ["policy_group_id", "time_off_type_id"]
+          "columns": ["terms_id", "time_off_type_id"]
         },
         "time_off_policies_id_type_unique": {
           "name": "time_off_policies_id_type_unique",

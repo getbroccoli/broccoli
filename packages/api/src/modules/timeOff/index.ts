@@ -8,7 +8,7 @@ export { createTimeOffService } from "./app";
 export type { EnsuredAllowances, TimeOffPolicySummary, TimeOffService } from "./app";
 export type { AllowanceCause, StandardLeavePolicyKey } from "./domain";
 
-/** Time off: which policies groups get, and keeping each person's allowances as they change and every day. */
+/** Time off: which policies terms get, and keeping each person's allowances as they change and every day. */
 export function timeOffModule({
   timeOff,
   ...dependencies

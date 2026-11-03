@@ -16,7 +16,7 @@ import { slackConnectionRepository } from "../../src/modules/slack/db";
 import { todayInUtc } from "../../src/utils";
 import { calendarDate } from "./calendarDate";
 import { TEST_SECRET_BOX } from "./testSecretBox";
-import { everyoneGroupId, insertPolicyGroup, leaveGroups, moveToGroup } from "./seedPolicyGroups";
+import { englandAndWalesTermsId, insertTerms, leaveTerms, moveToTerms } from "./seedTerms";
 import { seedUser } from "./seedUser";
 import { testTransactor } from "./testTransactor";
 
@@ -176,18 +176,18 @@ export class TestSeed {
     );
   }
 
-  /** The id of the seeded "Everyone" group, which every new employee joins. */
-  everyoneGroupId = () => everyoneGroupId(this.orm);
+  /** The id of the seeded "England and Wales" terms, which every new employee joins. */
+  englandAndWalesTermsId = () => englandAndWalesTermsId(this.orm);
 
-  /** A new policy group with no one in it. */
-  policyGroup = (name = `Group ${++this.#count}`) => insertPolicyGroup(this.orm, name);
+  /** New terms with no one on them. */
+  terms = (name = `Terms ${++this.#count}`) => insertTerms(this.orm, name);
 
-  /** Takes an employee out of every group, for all dates. */
-  leaveGroups = (employeeId: string) => leaveGroups(this.orm, employeeId);
+  /** Takes an employee off every terms, for all dates. */
+  leaveTerms = (employeeId: string) => leaveTerms(this.orm, employeeId);
 
-  /** Moves an employee into only `policyGroupId`, for all dates or from `from` with no group before. */
-  moveToGroup = (employeeId: string, policyGroupId: string, from: string | null = null) =>
-    moveToGroup(this.orm, { employeeId, policyGroupId, from });
+  /** Moves an employee onto only `termsId`, for all dates or from `from` with no terms before. */
+  moveToTerms = (employeeId: string, termsId: string, from: string | null = null) =>
+    moveToTerms(this.orm, { employeeId, termsId, from });
 
   /** `count` default employees in one insert. */
   employees(count: number): Promise<Employee[]> {

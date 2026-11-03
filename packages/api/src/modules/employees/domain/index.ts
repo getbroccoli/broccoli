@@ -37,7 +37,7 @@ export {
   weekInForce,
   workingWeeksOf,
   type DatedPattern,
-  type GroupMembership,
+  type TermsMembership,
   type WorkingPatternTimeline,
 } from "./workingPatternTimeline";
 export {

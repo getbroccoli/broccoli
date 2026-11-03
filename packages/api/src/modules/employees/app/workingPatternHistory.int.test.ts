@@ -1,6 +1,6 @@
 import { ADMIN, expect, OWNER, test, workingPatternService } from "#test/support";
 
-test("assigning a pattern returns the employee's history line with the previous group pattern", async ({
+test("assigning a pattern returns the employee's history line with the previous terms pattern", async ({
   orm,
   seed,
 }) => {
@@ -50,7 +50,7 @@ test("replacing an assignment records its previous and new end dates", async ({ 
   });
 });
 
-test("ending an assignment returns to the group on the next day and records that date", async ({
+test("ending an assignment returns to the terms on the next day and records that date", async ({
   orm,
   seed,
 }) => {
@@ -106,7 +106,7 @@ test("ending an assignment returns to the group on the next day and records that
   ]);
 });
 
-test("removing an assignment restores the group over its dates and records the correction", async ({
+test("removing an assignment restores the terms over its dates and records the correction", async ({
   orm,
   seed,
 }) => {
@@ -162,7 +162,7 @@ test("assignment history uses null when the employee had no working pattern", as
   seed,
 }) => {
   const employee = await seed.employee();
-  await seed.leaveGroups(employee.id);
+  await seed.leaveTerms(employee.id);
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
 

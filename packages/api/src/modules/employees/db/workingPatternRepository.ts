@@ -4,13 +4,13 @@ import { union } from "drizzle-orm/pg-core";
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import type { DatedPattern, PatternWeek, WeekdayMinutes, WorkingPattern } from "../domain";
-import { employeePolicyGroups } from "./employeePolicyGroupsTable";
+import { employeeTerms } from "./employeeTermsTable";
 import { employeeWorkingPatternAssignments } from "./employeeWorkingPatternAssignmentsTable";
-import { policyGroupWorkingPatterns } from "./policyGroupWorkingPatternsTable";
+import { termsWorkingPatterns } from "./termsWorkingPatternsTable";
 import { workingPatterns } from "./workingPatternsTable";
 import { workingPatternWeeks } from "./workingPatternWeeksTable";
 
-/** Working patterns, their weeks, and the dated rows that put groups and people on them. */
+/** Working patterns, their weeks, and the dated rows that put terms and people on them. */
 export interface WorkingPatternRepository {
   /** Holds back other working pattern writes until the transaction ends. */
   lockForWrites(): Promise<void>;
@@ -30,22 +30,22 @@ export interface WorkingPatternRepository {
   ): Promise<void>;
   /** Deletes the pattern's week that starts on `from`; false when there is none. */
   deleteWeek(workingPatternId: string, from: CalendarDate): Promise<boolean>;
-  /** Whether a group or a person is on the pattern on any date. */
+  /** Whether terms or a person are on the pattern on any date. */
   isPatternUsed(workingPatternId: string): Promise<boolean>;
-  /** The employees on the pattern on any date, themselves or through a group. */
+  /** The employees on the pattern on any date, themselves or through their terms. */
   findEmployeesOnPattern(workingPatternId: string): Promise<string[]>;
-  /** Each group's dated patterns, by group id. */
-  findGroupLinks(groupIds: readonly string[]): Promise<Map<string, DatedPattern[]>>;
+  /** Each terms' dated patterns, by terms id. */
+  findTermsLinks(termsIds: readonly string[]): Promise<Map<string, DatedPattern[]>>;
   /** Each employee's own dated patterns, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, DatedPattern[]>>;
-  insertGroupLink(groupId: string, row: Omit<DatedPattern, "id">): Promise<void>;
+  insertTermsLink(termsId: string, row: Omit<DatedPattern, "id">): Promise<void>;
   insertAssignment(
     employeeId: string,
     row: Omit<DatedPattern, "id" | "effectiveFrom"> & { effectiveFrom: CalendarDate },
   ): Promise<void>;
-  endGroupLink(id: string, until: CalendarDate): Promise<void>;
+  endTermsLink(id: string, until: CalendarDate): Promise<void>;
   endAssignment(id: string, until: CalendarDate): Promise<void>;
-  deleteGroupLink(id: string): Promise<void>;
+  deleteTermsLink(id: string): Promise<void>;
   deleteAssignment(id: string): Promise<void>;
 }
 
@@ -54,14 +54,14 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
   return {
     async lockForWrites() {
       await orm().execute(
-        sql`lock table ${workingPatternWeeks}, ${policyGroupWorkingPatterns},
+        sql`lock table ${workingPatternWeeks}, ${termsWorkingPatterns},
           ${employeeWorkingPatternAssignments} in share row exclusive mode`,
       );
     },
 
     async lockForReads() {
       await orm().execute(
-        sql`lock table ${workingPatternWeeks}, ${policyGroupWorkingPatterns},
+        sql`lock table ${workingPatternWeeks}, ${termsWorkingPatterns},
           ${employeeWorkingPatternAssignments} in share mode`,
       );
     },
@@ -135,17 +135,17 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
     },
 
     async isPatternUsed(workingPatternId) {
-      const [byGroup] = await orm()
-        .select({ id: policyGroupWorkingPatterns.id })
-        .from(policyGroupWorkingPatterns)
-        .where(eq(policyGroupWorkingPatterns.workingPatternId, workingPatternId))
+      const [byTerms] = await orm()
+        .select({ id: termsWorkingPatterns.id })
+        .from(termsWorkingPatterns)
+        .where(eq(termsWorkingPatterns.workingPatternId, workingPatternId))
         .limit(1);
       const [byPerson] = await orm()
         .select({ id: employeeWorkingPatternAssignments.id })
         .from(employeeWorkingPatternAssignments)
         .where(eq(employeeWorkingPatternAssignments.workingPatternId, workingPatternId))
         .limit(1);
-      return byGroup !== undefined || byPerson !== undefined;
+      return byTerms !== undefined || byPerson !== undefined;
     },
 
     async findEmployeesOnPattern(workingPatternId) {
@@ -155,24 +155,21 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
           .from(employeeWorkingPatternAssignments)
           .where(eq(employeeWorkingPatternAssignments.workingPatternId, workingPatternId)),
         orm()
-          .select({ employeeId: employeePolicyGroups.employeeId })
-          .from(employeePolicyGroups)
-          .innerJoin(
-            policyGroupWorkingPatterns,
-            eq(policyGroupWorkingPatterns.policyGroupId, employeePolicyGroups.policyGroupId),
-          )
-          .where(eq(policyGroupWorkingPatterns.workingPatternId, workingPatternId)),
+          .select({ employeeId: employeeTerms.employeeId })
+          .from(employeeTerms)
+          .innerJoin(termsWorkingPatterns, eq(termsWorkingPatterns.termsId, employeeTerms.termsId))
+          .where(eq(termsWorkingPatterns.workingPatternId, workingPatternId)),
       );
       return rows.map(({ employeeId }) => employeeId);
     },
 
-    async findGroupLinks(groupIds) {
-      const table = policyGroupWorkingPatterns;
+    async findTermsLinks(termsIds) {
+      const table = termsWorkingPatterns;
       const rows = await orm()
         .select()
         .from(table)
-        .where(inArray(table.policyGroupId, [...groupIds]));
-      return groupBy(rows, ({ policyGroupId }) => policyGroupId);
+        .where(inArray(table.termsId, [...termsIds]));
+      return groupBy(rows, ({ termsId }) => termsId);
     },
 
     async findAssignments(employeeIds) {
@@ -184,10 +181,10 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
       return groupBy(rows, ({ employeeId }) => employeeId);
     },
 
-    async insertGroupLink(policyGroupId, row) {
+    async insertTermsLink(termsId, row) {
       await orm()
-        .insert(policyGroupWorkingPatterns)
-        .values({ policyGroupId, workingPatternId: row.workingPatternId, ...datesOf(row) });
+        .insert(termsWorkingPatterns)
+        .values({ termsId, workingPatternId: row.workingPatternId, ...datesOf(row) });
     },
 
     async insertAssignment(employeeId, row) {
@@ -199,11 +196,11 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
       });
     },
 
-    async endGroupLink(id, until) {
+    async endTermsLink(id, until) {
       await orm()
-        .update(policyGroupWorkingPatterns)
+        .update(termsWorkingPatterns)
         .set({ effectiveUntil: until })
-        .where(eq(policyGroupWorkingPatterns.id, id));
+        .where(eq(termsWorkingPatterns.id, id));
     },
 
     async endAssignment(id, until) {
@@ -213,8 +210,8 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
         .where(eq(employeeWorkingPatternAssignments.id, id));
     },
 
-    async deleteGroupLink(id) {
-      await orm().delete(policyGroupWorkingPatterns).where(eq(policyGroupWorkingPatterns.id, id));
+    async deleteTermsLink(id) {
+      await orm().delete(termsWorkingPatterns).where(eq(termsWorkingPatterns.id, id));
     },
 
     async deleteAssignment(id) {

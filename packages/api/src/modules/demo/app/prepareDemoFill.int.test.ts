@@ -35,17 +35,17 @@ test("fills 40 demo employees with distinct stored avatars", async ({ orm, trans
   }
 });
 
-test("filling the demo links Everyone's time off policies and grants Annual leave", async ({
+test("filling the demo links England and Wales terms' time off policies and grants Annual leave", async ({
   orm,
   seed,
   transact,
 }) => {
   const service = timeOffService(orm);
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
 
   await transact(await demoFillService(orm).prepareDemoFill(today));
 
-  const policies = await service.readGroupPolicies(OWNER, { policyGroupId });
+  const policies = await service.readTermsPolicies(OWNER, { termsId });
   expect(policies).toHaveLength(4);
   expect(policies).toEqual(
     expect.arrayContaining([

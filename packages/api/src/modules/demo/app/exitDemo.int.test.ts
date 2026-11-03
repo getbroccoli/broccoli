@@ -15,19 +15,19 @@ import {
 
 import { parseCalendarDate } from "../../../utils";
 
-test("exiting the demo removes the group's time off policies", async ({ orm, seed, transact }) => {
+test("exiting the demo removes the terms' time off policies", async ({ orm, seed, transact }) => {
   await seed.assignment();
   const owner = await seed.owner();
   await companyService(orm).update(owner, { name: "Acme Corp" });
   await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
   const service = timeOffService(orm);
-  const policyGroupId = await seed.everyoneGroupId();
-  expect(await service.readGroupPolicies(owner, { policyGroupId })).toHaveLength(4);
+  const termsId = await seed.englandAndWalesTermsId();
+  expect(await service.readTermsPolicies(owner, { termsId })).toHaveLength(4);
 
   await demoService(orm).exitDemo(owner);
 
-  expect(await service.readGroupPolicies(owner, { policyGroupId })).toEqual([]);
+  expect(await service.readTermsPolicies(owner, { termsId })).toEqual([]);
 });
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({

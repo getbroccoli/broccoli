@@ -2,20 +2,20 @@ import { sql } from "drizzle-orm";
 import { check, date, foreignKey, index, pgTable, uuid } from "drizzle-orm/pg-core";
 
 import type { CalendarDate } from "../../../utils";
-import { policyGroups } from "./policyGroupsTable";
+import { terms } from "./termsTable";
 import { workingPatterns } from "./workingPatternsTable";
 
 /**
- * Which pattern a group's members work by default, and when; a group's rows never overlap (an
- * exclusion constraint the migration adds). Dated, so switching a group keeps its past weeks.
+ * Which pattern the people on terms work by default, and when; the terms' rows never overlap (an
+ * exclusion constraint the migration adds). Dated, so switching the terms keeps their past weeks.
  */
-export const policyGroupWorkingPatterns = pgTable(
-  "policy_group_working_patterns",
+export const termsWorkingPatterns = pgTable(
+  "terms_working_patterns",
   {
     id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
-    policyGroupId: uuid("policy_group_id").notNull(),
+    termsId: uuid("terms_id").notNull(),
     workingPatternId: uuid("working_pattern_id").notNull(),
     /** Null: from the beginning. */
     effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>(),
@@ -25,18 +25,18 @@ export const policyGroupWorkingPatterns = pgTable(
   (table) => [
     // Named here: the generated names would pass Postgres's 63-character limit.
     foreignKey({
-      name: "policy_group_working_patterns_group_fk",
-      columns: [table.policyGroupId],
-      foreignColumns: [policyGroups.id],
+      name: "terms_working_patterns_terms_fk",
+      columns: [table.termsId],
+      foreignColumns: [terms.id],
     }).onDelete("cascade"),
     foreignKey({
-      name: "policy_group_working_patterns_pattern_fk",
+      name: "terms_working_patterns_pattern_fk",
       columns: [table.workingPatternId],
       foreignColumns: [workingPatterns.id],
     }),
-    index("policy_group_working_patterns_pattern_idx").on(table.workingPatternId),
+    index("terms_working_patterns_pattern_idx").on(table.workingPatternId),
     check(
-      "policy_group_working_patterns_dates_in_order",
+      "terms_working_patterns_dates_in_order",
       sql`${table.effectiveUntil} >= ${table.effectiveFrom}`,
     ),
   ],

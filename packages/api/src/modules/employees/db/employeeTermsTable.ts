@@ -3,14 +3,14 @@ import { check, date, index, pgTable, uuid } from "drizzle-orm/pg-core";
 
 import type { CalendarDate } from "../../../utils";
 import { employees } from "./employeesTable";
-import { policyGroups } from "./policyGroupsTable";
+import { terms } from "./termsTable";
 
 /**
- * Which group a person is in, and when; one group at a time, so a person's rows never overlap
+ * Which terms a person is on, and when; one terms at a time, so a person's rows never overlap
  * (an exclusion constraint the migration adds). It counts only while they have an employment.
  */
-export const employeePolicyGroups = pgTable(
-  "employee_policy_groups",
+export const employeeTerms = pgTable(
+  "employee_terms",
   {
     id: uuid("id")
       .primaryKey()
@@ -18,19 +18,16 @@ export const employeePolicyGroups = pgTable(
     employeeId: uuid("employee_id")
       .notNull()
       .references(() => employees.id, { onDelete: "cascade" }),
-    policyGroupId: uuid("policy_group_id")
+    termsId: uuid("terms_id")
       .notNull()
-      .references(() => policyGroups.id),
+      .references(() => terms.id),
     /** Null: since the employment started, for a person whose start date is unknown. */
     effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>(),
-    /** The last day the row applies; null: still in the group. */
+    /** The last day the row applies; null: still on the terms. */
     effectiveUntil: date("effective_until", { mode: "string" }).$type<CalendarDate>(),
   },
   (table) => [
-    index("employee_policy_groups_policy_group_idx").on(table.policyGroupId),
-    check(
-      "employee_policy_groups_dates_in_order",
-      sql`${table.effectiveUntil} >= ${table.effectiveFrom}`,
-    ),
+    index("employee_terms_terms_idx").on(table.termsId),
+    check("employee_terms_dates_in_order", sql`${table.effectiveUntil} >= ${table.effectiveFrom}`),
   ],
 );

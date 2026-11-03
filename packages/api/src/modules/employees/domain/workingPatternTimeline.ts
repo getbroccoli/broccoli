@@ -2,7 +2,7 @@ import { invalidInput } from "../../../core/applicationError";
 import { addDays, type CalendarDate } from "../../../utils";
 import type { PatternWeek, WorkingWeek } from "./workingPattern";
 
-/** A dated row of a group's or a person's working pattern: a pattern from a date to a date. */
+/** A dated row of terms' or a person's working pattern: a pattern from a date to a date. */
 export interface DatedPattern {
   id: string;
   workingPatternId: string;
@@ -12,9 +12,9 @@ export interface DatedPattern {
   effectiveUntil: CalendarDate | null;
 }
 
-/** A person's group over a period; null dates are open. */
-export interface GroupMembership {
-  policyGroupId: string;
+/** A person's terms over a period; null dates are open. */
+export interface TermsMembership {
+  termsId: string;
   effectiveFrom: CalendarDate | null;
   effectiveUntil: CalendarDate | null;
 }
@@ -22,9 +22,9 @@ export interface GroupMembership {
 /** What decides one person's working weeks. */
 export interface WorkingPatternTimeline {
   assignments: readonly DatedPattern[];
-  memberships: readonly GroupMembership[];
-  /** Each group's dated patterns, by group id. */
-  groupPatterns: ReadonlyMap<string, readonly DatedPattern[]>;
+  memberships: readonly TermsMembership[];
+  /** Each terms' dated patterns, by terms id. */
+  termsPatterns: ReadonlyMap<string, readonly DatedPattern[]>;
   /** Each pattern's weeks, oldest first, by pattern id. */
   patternWeeks: ReadonlyMap<string, readonly PatternWeek[]>;
 }
@@ -51,15 +51,15 @@ export function workingWeeksOf(
   return weeks;
 }
 
-/** The pattern that applies on `date`: the person's own, else their group's, else none. */
+/** The pattern that applies on `date`: the person's own, else their terms', else none. */
 export function patternOn(timeline: WorkingPatternTimeline, date: CalendarDate): string | null {
   const assignment = timeline.assignments.find((row) => coversDate(row, date));
   if (assignment) {
     return assignment.workingPatternId;
   }
   const membership = timeline.memberships.find((row) => coversDate(row, date));
-  const groupPatterns = membership ? timeline.groupPatterns.get(membership.policyGroupId) : [];
-  return groupPatterns?.find((row) => coversDate(row, date))?.workingPatternId ?? null;
+  const termsPatterns = membership ? timeline.termsPatterns.get(membership.termsId) : [];
+  return termsPatterns?.find((row) => coversDate(row, date))?.workingPatternId ?? null;
 }
 
 /**
@@ -122,7 +122,7 @@ function changeDates(
   const rows = [
     ...timeline.assignments,
     ...timeline.memberships,
-    ...[...timeline.groupPatterns.values()].flat(),
+    ...[...timeline.termsPatterns.values()].flat(),
   ];
   const candidates = [
     ...rows.flatMap((row) => [

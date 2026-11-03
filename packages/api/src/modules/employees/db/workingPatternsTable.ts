@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { check, pgTable, text, uuid } from "drizzle-orm/pg-core";
 
 /**
- * A named way of working that groups and people are put on; its minutes are its weeks. The
+ * A named way of working that terms and people are put on; its minutes are its weeks. The
  * migration inserts Standard; code finds it by its key, never its name.
  */
 export const workingPatterns = pgTable(

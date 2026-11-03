@@ -23,9 +23,9 @@ test("the daily job runs within a minute for 10,000 people with five years of le
   const policy = (await service.listPolicies(OWNER, orm)).find(
     ({ key }) => key === "uk_statutory_minimum",
   )!;
-  const policyGroupId = await seed.everyoneGroupId();
+  const termsId = await seed.englandAndWalesTermsId();
   await transact((tx) =>
-    service.linkGroupPolicies(OWNER, tx, { policyGroupId, timeOffPolicyIds: [policy.id] }),
+    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
   for (const year of [2023, 2024, 2025, 2026]) {
     await runJobOn(orm, transact, `${year}-01-01`);

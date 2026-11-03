@@ -43,7 +43,7 @@ test("returns the manager under every requested spelling of an employee id", asy
   // One statement, so the references are checked once every row has the new id.
   await orm.execute(sql`
     with renamed as (update employees set id = ${id} where id = ${employee.id}),
-      grouped as (update employee_policy_groups set employee_id = ${id}
+      grouped as (update employee_terms set employee_id = ${id}
         where employee_id = ${employee.id})
     update employments set employee_id = ${id} where employee_id = ${employee.id}`);
   const employees = employeeServices(orm);

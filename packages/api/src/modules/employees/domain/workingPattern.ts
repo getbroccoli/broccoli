@@ -14,7 +14,7 @@ export interface PatternWeek {
   bankHolidayCalendar: BankHolidayCalendar;
 }
 
-/** A named way of working that groups and people are put on. */
+/** A named way of working that terms and people are put on. */
 export interface WorkingPattern {
   id: string;
   name: string;

@@ -11,7 +11,7 @@ import {
   type WorkingPatternTimeline,
 } from "./workingPatternTimeline";
 
-it("uses an own assignment on its dates, otherwise the group link on that date", () => {
+it("uses an own assignment on its dates, otherwise the terms link on that date", () => {
   const timeline: WorkingPatternTimeline = {
     assignments: [
       {
@@ -23,14 +23,14 @@ it("uses an own assignment on its dates, otherwise the group link on that date",
     ],
     memberships: [
       {
-        policyGroupId: "group",
+        termsId: "terms",
         effectiveFrom: "2026-08-01" as CalendarDate,
         effectiveUntil: "2026-09-30" as CalendarDate,
       },
     ],
-    groupPatterns: new Map([
+    termsPatterns: new Map([
       [
-        "group",
+        "terms",
         [
           {
             id: "old",
@@ -67,7 +67,7 @@ it("splits at an assignment start and the day after its inclusive end", () => {
       },
     ],
     memberships: [],
-    groupPatterns: new Map(),
+    termsPatterns: new Map(),
     patternWeeks: new Map([["short", [patternWeek([240, 0, 0, 0, 0, 0, 0], 240)]]]),
   };
   expect(
@@ -78,13 +78,13 @@ it("splits at an assignment start and the day after its inclusive end", () => {
     { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
   ]);
 });
-it("splits at a group link's start and end", () => {
+it("splits at a terms link's start and end", () => {
   const timeline: WorkingPatternTimeline = {
     assignments: [],
-    memberships: [{ policyGroupId: "group", effectiveFrom: null, effectiveUntil: null }],
-    groupPatterns: new Map([
+    memberships: [{ termsId: "terms", effectiveFrom: null, effectiveUntil: null }],
+    termsPatterns: new Map([
       [
-        "group",
+        "terms",
         [
           {
             id: "link",
@@ -110,14 +110,14 @@ it("splits at a membership's start and end", () => {
     assignments: [],
     memberships: [
       {
-        policyGroupId: "group",
+        termsId: "terms",
         effectiveFrom: "2026-09-01" as CalendarDate,
         effectiveUntil: "2026-09-30" as CalendarDate,
       },
     ],
-    groupPatterns: new Map([
+    termsPatterns: new Map([
       [
-        "group",
+        "terms",
         [{ id: "link", workingPatternId: "standard", effectiveFrom: null, effectiveUntil: null }],
       ],
     ]),
@@ -141,10 +141,10 @@ it("merges identical weeks across assignment and pattern changes", () => {
         effectiveUntil: "2026-09-30" as CalendarDate,
       },
     ],
-    memberships: [{ policyGroupId: "group", effectiveFrom: null, effectiveUntil: null }],
-    groupPatterns: new Map([
+    memberships: [{ termsId: "terms", effectiveFrom: null, effectiveUntil: null }],
+    termsPatterns: new Map([
       [
-        "group",
+        "terms",
         [{ id: "link", workingPatternId: "standard", effectiveFrom: null, effectiveUntil: null }],
       ],
     ]),
@@ -174,7 +174,7 @@ it("splits when weekday minutes or full day minutes change within the requested 
       },
     ],
     memberships: [],
-    groupPatterns: new Map(),
+    termsPatterns: new Map(),
     patternWeeks: new Map([
       [
         "short",
@@ -202,11 +202,11 @@ it("splits when weekday minutes or full day minutes change within the requested 
   ]);
 });
 
-it("has no pattern without an assignment or a linked group", () => {
+it("has no pattern without an assignment or linked terms", () => {
   const timeline: WorkingPatternTimeline = {
     assignments: [],
     memberships: [],
-    groupPatterns: new Map(),
+    termsPatterns: new Map(),
     patternWeeks: new Map(),
   };
   expect(
@@ -214,11 +214,11 @@ it("has no pattern without an assignment or a linked group", () => {
   ).toEqual([
     { effectiveFrom: "2026-09-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
   ]);
-  const unlinkedGroup: WorkingPatternTimeline = {
+  const unlinkedTerms: WorkingPatternTimeline = {
     ...timeline,
-    memberships: [{ policyGroupId: "group", effectiveFrom: null, effectiveUntil: null }],
+    memberships: [{ termsId: "terms", effectiveFrom: null, effectiveUntil: null }],
   };
-  expect(patternOn(unlinkedGroup, "2026-09-01" as CalendarDate)).toBeNull();
+  expect(patternOn(unlinkedTerms, "2026-09-01" as CalendarDate)).toBeNull();
 });
 
 it("ends an earlier covering row, replaces a same-date row and leaves an expired row alone", () => {

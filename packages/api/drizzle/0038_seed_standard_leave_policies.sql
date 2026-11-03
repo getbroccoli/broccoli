@@ -10,5 +10,5 @@ INSERT INTO "time_off_policies" ("time_off_type_id", "name", "key", "balance", "
 INSERT INTO "time_off_allowance_rules" ("time_off_policy_id", "kind", "entitlement_days", "entitlement_days_per_week")
 	SELECT "id", 'yearly_entitlement', CASE "key" WHEN 'uk_20_days_plus_bank_holidays' THEN 20 ELSE 25 END, 5
 	FROM "time_off_policies" WHERE "key" IN ('uk_20_days_plus_bank_holidays', 'uk_25_days_plus_bank_holidays');--> statement-breakpoint
--- A fresh workspace gives no group a time off policy until an admin or the demo links one.
-DELETE FROM "policy_group_time_off_policies";
+-- A fresh workspace gives no terms a time off policy until an admin or the demo links one.
+DELETE FROM "terms_time_off_policies";
