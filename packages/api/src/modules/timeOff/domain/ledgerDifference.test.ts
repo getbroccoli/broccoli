@@ -5,7 +5,11 @@ import { allowanceInputs, calendarDate } from "#test/support";
 import { calculateAllowance } from "./allowanceCalculator";
 import { type LedgerSum, ledgerDifference, type NewLedgerLine } from "./ledgerDifference";
 
-const allowance = { id: "allowance", leaveYearStart: calendarDate("2026-01-01") };
+const allowance = {
+  id: "allowance",
+  leaveYearStart: calendarDate("2026-01-01"),
+  leaveYearEnd: calendarDate("2026-12-31"),
+};
 const linked = { kind: "POLICY_LINKED_TO_GROUP", ref: "group" } as const;
 
 it("writes every calculated line except a zero rounding for a new allowance", () => {
@@ -80,6 +84,91 @@ it("appends nothing when the ledger already adds up to the calculation", () => {
   const written = ledgerDifference(allowance, target, [], linked);
 
   expect(ledgerDifference(allowance, target, sumsOf(written), linked)).toEqual([]);
+});
+
+it.each([
+  { previousStartDate: null, startDate: calendarDate("2026-07-01") },
+  { previousStartDate: calendarDate("2026-07-01"), startDate: null },
+])(
+  "dates a correction between $previousStartDate and $startDate from the year start",
+  ({ previousStartDate, startDate }) => {
+    const inputs = allowanceInputs();
+    inputs.employments = [{ startDate: previousStartDate, endDate: null }];
+    inputs.serviceStart = previousStartDate;
+    const previous = calculateAllowance(inputs);
+    const before = ledgerDifference(allowance, previous, [], linked);
+    inputs.employments = [{ startDate, endDate: null }];
+    inputs.serviceStart = startDate;
+
+    const lines = ledgerDifference(
+      allowance,
+      calculateAllowance(inputs),
+      sumsOf(before),
+      { kind: "START_DATE_CHANGED", ref: startDate, previousStartDate },
+      previous,
+    );
+
+    expect(lines.find(({ kind }) => kind === "entitlement_grant")).toMatchObject({
+      effectiveDate: "2026-01-01",
+    });
+  },
+);
+
+it.each([
+  { from: "2021-10-01", to: "2021-07-01", amount: "0.756165" },
+  { from: "2021-07-01", to: "2021-10-01", amount: "-0.756165" },
+  { from: "2022-01-01", to: "2021-07-01", amount: "1.512329" },
+  { from: "2021-07-01", to: "2022-01-01", amount: "-1.512329" },
+])(
+  "dates a service grant corrected from $from to $to from the earliest changed anniversary",
+  ({ from, to, amount }) => {
+    const inputs = allowanceInputs();
+    inputs.policies = inputs.policies.map((policy) => ({
+      ...policy,
+      rules: [
+        ...policy.rules,
+        { id: "five-years", kind: "service_extra", afterYears: 5, extraDays: 3 },
+      ],
+    }));
+    const previousStartDate = calendarDate(from);
+    inputs.employments = [{ startDate: previousStartDate, endDate: null }];
+    inputs.serviceStart = previousStartDate;
+    const previous = calculateAllowance(inputs);
+    const before = ledgerDifference(allowance, previous, [], linked);
+    const startDate = calendarDate(to);
+    inputs.employments = [{ startDate, endDate: null }];
+    inputs.serviceStart = startDate;
+
+    const lines = ledgerDifference(
+      allowance,
+      calculateAllowance(inputs),
+      sumsOf(before),
+      { kind: "START_DATE_CHANGED", ref: startDate, previousStartDate },
+      previous,
+    );
+
+    expect(lines.find(({ allowanceRuleId }) => allowanceRuleId === "five-years")).toMatchObject({
+      amount,
+      effectiveDate: "2026-07-01",
+    });
+    expect(lines.find(({ kind }) => kind === "rounding_up_to_half_day")).toMatchObject({
+      effectiveDate: "2026-07-01",
+    });
+  },
+);
+
+it("clamps a correction after the leave year to its final day", () => {
+  const before = ledgerDifference(allowance, calculateAllowance(allowanceInputs()), [], linked);
+
+  const lines = ledgerDifference(allowance, [], sumsOf(before), {
+    kind: "WORKING_PATTERN_CHANGED",
+    ref: "2027-02-01",
+  });
+
+  expect(lines.find(({ kind }) => kind === "entitlement_grant")).toMatchObject({
+    amount: "-28",
+    effectiveDate: "2026-12-31",
+  });
 });
 
 function rowsOf(lines: readonly NewLedgerLine[]) {

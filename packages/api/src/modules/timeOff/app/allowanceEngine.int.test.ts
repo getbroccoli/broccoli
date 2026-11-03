@@ -75,7 +75,6 @@ test("a start date change corrects the allowance by appending lines", async ({
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  const service = timeOffService(orm);
   await linkStatutoryMinimumToEveryone(orm, seed, transact);
   const [before] = await readAllowances(orm, employee.id);
   expect(rowsOf(before!.lines)).toEqual([
@@ -92,12 +91,6 @@ test("a start date change corrects the allowance by appending lines", async ({
   expect(before!.total).toEqual(20);
 
   await employeeServices(orm).updateEmployee(OWNER, { id: employee.id, startDate: "2026-07-01" });
-  await transact((tx) =>
-    service.ensureAllowances(SYSTEM, tx, {
-      employeeIds: [employee.id],
-      cause: { kind: "START_DATE_CHANGED", ref: "2026-07-01" },
-    }),
-  );
 
   const [after] = await readAllowances(orm, employee.id);
   expect(rowsOf(after!.lines)).toEqual([
@@ -110,8 +103,8 @@ test("a start date change corrects the allowance by appending lines", async ({
     ["bank_holiday_taken", null, -1, "2026-08-31", "policy_linked_to_group"],
     ["bank_holiday_taken", null, -1, "2026-12-25", "policy_linked_to_group"],
     ["bank_holiday_taken", null, -1, "2026-12-28", "policy_linked_to_group"],
-    ["entitlement_grant", "yearly_entitlement", -13.884932, "2026-07-01", "start_date_changed"],
-    ["rounding_up_to_half_day", null, 0.384932, "2026-07-01", "start_date_changed"],
+    ["entitlement_grant", "yearly_entitlement", -13.884932, "2026-01-01", "start_date_changed"],
+    ["rounding_up_to_half_day", null, 0.384932, "2026-01-01", "start_date_changed"],
     ["bank_holiday_taken", null, 1, "2026-01-01", "start_date_changed"],
     ["bank_holiday_taken", null, 1, "2026-04-03", "start_date_changed"],
     ["bank_holiday_taken", null, 1, "2026-04-06", "start_date_changed"],

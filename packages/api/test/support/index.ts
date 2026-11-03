@@ -109,3 +109,4 @@ export {
   transactWithTimeOffEvents,
 } from "./timeOffService";
 export { demoService } from "./demoService";
+export { allowanceSnapshot, allowanceIdentitySums } from "./allowanceSnapshot";
