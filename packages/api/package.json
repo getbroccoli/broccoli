@@ -17,6 +17,7 @@
     "test:integration": "vitest run -c vitest.integration.config.ts",
     "test:e2e": "vitest run -c vitest.e2e.config.ts",
     "test:pbt": "vitest run -c vitest.pbt.config.ts",
+    "test:load": "vitest run -c vitest.load.config.ts",
     "eval": "vitest run -c vitest.eval.config.ts",
     "db:generate": "drizzle-kit generate"
   },

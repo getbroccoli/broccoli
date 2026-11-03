@@ -6,7 +6,12 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     // Integration tests need Postgres; `pnpm test:integration` runs them. Evals call the real model; `pnpm eval` runs them.
-    // Property tests run many cases against Postgres; `pnpm test:pbt` runs them.
-    exclude: ["src/**/*.int.test.ts", "src/**/*.eval.test.ts", "src/**/*.pbt.test.ts"],
+    // Property tests run many cases against Postgres; `pnpm test:pbt` runs them. Load tests: `pnpm test:load`.
+    exclude: [
+      "src/**/*.int.test.ts",
+      "src/**/*.eval.test.ts",
+      "src/**/*.pbt.test.ts",
+      "src/**/*.load.test.ts",
+    ],
   },
 });

@@ -77,7 +77,7 @@ services:
       - -c
       - full_page_writes=off
     tmpfs:
-      - /var/lib/postgresql:size=1g
+      - /var/lib/postgresql:size=4g
     ports:
       # An empty HOST_PG_PORT picks a free port, so worktrees never collide.
       - 127.0.0.1:${HOST_PG_PORT:-}:5432
