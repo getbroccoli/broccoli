@@ -1,4 +1,5 @@
 import {
+  type AllowanceLine,
   employeeServices,
   expect,
   OWNER,
@@ -60,6 +61,17 @@ test("ensuring allowances grants leave to a person added after the policy was li
       total: 20,
     },
   ]);
+  expect(rowsOf(allowances[0]!.lines)).toEqual([
+    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01"],
+    ["bank_holiday_taken", null, -1, "2026-01-01"],
+    ["bank_holiday_taken", null, -1, "2026-04-03"],
+    ["bank_holiday_taken", null, -1, "2026-04-06"],
+    ["bank_holiday_taken", null, -1, "2026-05-04"],
+    ["bank_holiday_taken", null, -1, "2026-05-25"],
+    ["bank_holiday_taken", null, -1, "2026-08-31"],
+    ["bank_holiday_taken", null, -1, "2026-12-25"],
+    ["bank_holiday_taken", null, -1, "2026-12-28"],
+  ]);
   expect(allowances[0]!.lines.map(({ causeKind, causeRef }) => ({ causeKind, causeRef }))).toEqual(
     Array.from({ length: 9 }, () => ({ causeKind: "employee_added", causeRef: null })),
   );
@@ -94,7 +106,15 @@ test("a start date change corrects the allowance by appending lines", async ({
   expect(allowances).toMatchObject([{ total: 11.5 }]);
   expect(allowances[0]!.lines.slice(0, before!.lines.length)).toEqual(before!.lines);
   const appended = allowances[0]!.lines.slice(before!.lines.length);
-  expect(appended.length).toBeGreaterThan(0);
+  expect(rowsOf(appended)).toEqual([
+    ["entitlement_grant", "yearly_entitlement", -13.884932, "2026-07-01"],
+    ["rounding_up_to_half_day", null, 0.384932, "2026-07-01"],
+    ["bank_holiday_taken", null, 1, "2026-01-01"],
+    ["bank_holiday_taken", null, 1, "2026-04-03"],
+    ["bank_holiday_taken", null, 1, "2026-04-06"],
+    ["bank_holiday_taken", null, 1, "2026-05-04"],
+    ["bank_holiday_taken", null, 1, "2026-05-25"],
+  ]);
   expect(
     appended.every(
       (line) => line.causeKind === "start_date_changed" && line.causeRef === "2026-07-01",
@@ -139,26 +159,15 @@ test("a September switch to Tuesday through Thursday cuts the grant and restores
   const [after] = await readAllowances(orm, employee.id);
   expect(after!.lines.slice(0, before!.lines.length)).toEqual(before!.lines);
   const appended = after!.lines.slice(before!.lines.length);
-  expect(
-    appended.map(({ kind, rule, effectiveDate, amount }) => [
-      kind,
-      kind === "bank_holiday_taken" ? effectiveDate : rule,
-      amount,
-    ]),
-  ).toEqual([
-    ["entitlement_grant", "yearly_entitlement", -3.743562],
-    ["bank_holiday_taken", "2026-12-25", 1],
-    ["bank_holiday_taken", "2026-12-28", 1],
-    ["rounding_up_to_half_day", null, 0.243562],
+  expect(rowsOf(appended)).toEqual([
+    ["entitlement_grant", "yearly_entitlement", -3.743562, "2026-09-01"],
+    ["bank_holiday_taken", null, 1, "2026-12-25"],
+    ["bank_holiday_taken", null, 1, "2026-12-28"],
+    ["rounding_up_to_half_day", null, 0.243562, "2026-09-01"],
   ]);
   expect(before!.total).toEqual(20);
   expect(after!.total).toEqual(18.5);
   expect(appended.every(({ causeKind }) => causeKind === "working_pattern_changed")).toEqual(true);
-  expect(
-    appended
-      .filter(({ kind }) => kind !== "bank_holiday_taken")
-      .map(({ effectiveDate }) => effectiveDate),
-  ).toEqual(["2026-09-01", "2026-09-01"]);
 });
 
 test("a Scottish working pattern charges Scotland's ten weekday bank holidays", async ({
@@ -191,24 +200,19 @@ test("a Scottish working pattern charges Scotland's ten weekday bank holidays", 
 
   const allowances = await readAllowances(orm, employee.id);
   expect(allowances).toMatchObject([{ total: 18 }]);
-  expect(
-    allowances[0]!.lines
-      .filter((line) => line.kind === "bank_holiday_taken")
-      .map(({ effectiveDate, amount }) => ({ effectiveDate, amount })),
-  ).toEqual(
-    [
-      "2026-01-01",
-      "2026-01-02",
-      "2026-04-03",
-      "2026-05-04",
-      "2026-05-25",
-      "2026-06-15",
-      "2026-08-03",
-      "2026-11-30",
-      "2026-12-25",
-      "2026-12-28",
-    ].map((effectiveDate) => ({ effectiveDate, amount: -1 })),
-  );
+  expect(rowsOf(allowances[0]!.lines)).toEqual([
+    ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01"],
+    ["bank_holiday_taken", null, -1, "2026-01-01"],
+    ["bank_holiday_taken", null, -1, "2026-01-02"],
+    ["bank_holiday_taken", null, -1, "2026-04-03"],
+    ["bank_holiday_taken", null, -1, "2026-05-04"],
+    ["bank_holiday_taken", null, -1, "2026-05-25"],
+    ["bank_holiday_taken", null, -1, "2026-06-15"],
+    ["bank_holiday_taken", null, -1, "2026-08-03"],
+    ["bank_holiday_taken", null, -1, "2026-11-30"],
+    ["bank_holiday_taken", null, -1, "2026-12-25"],
+    ["bank_holiday_taken", null, -1, "2026-12-28"],
+  ]);
 });
 
 test("ensuring the same allowance twice appends nothing the second time", async ({
@@ -314,3 +318,8 @@ test("a future starter gets an allowance for the leave year they join", async ({
     { typeKey: "annual_leave", leaveYearStart: "2027-01-01", leaveYearEnd: "2027-12-31" },
   ]);
 });
+
+/** Each line as [kind, rule kind, amount, effective date]. */
+function rowsOf(lines: readonly AllowanceLine[]) {
+  return lines.map(({ kind, rule, amount, effectiveDate }) => [kind, rule, amount, effectiveDate]);
+}

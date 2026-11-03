@@ -74,3 +74,6 @@ export async function readAllowances(orm: Orm, employeeId: string) {
     }),
   );
 }
+
+/** A ledger line as `readAllowances` returns it. */
+export type AllowanceLine = Awaited<ReturnType<typeof readAllowances>>[number]["lines"][number];
