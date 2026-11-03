@@ -5,13 +5,36 @@ import { createJobRunner, type JobRunner } from ".";
 
 const test = baseTest.extend<{ runner: JobRunner }>({
   runner: async ({ databaseUrl }, use) => {
-    const runner = createJobRunner(databaseUrl, createLogger("silent"), { retryDelaySeconds: 0 });
+    const runner = createJobRunner(databaseUrl, createLogger("silent"), {
+      retryDelaySeconds: 0,
+      cronMonitorIntervalSeconds: 1,
+    });
     try {
       await use(runner);
     } finally {
       await runner.stop();
     }
   },
+});
+
+test("runs a scheduled job with its payload on its schedule", async ({ runner }) => {
+  const ran: (typeof EXAMPLE_JOB)[] = [];
+  await runner.start([
+    {
+      "example.ran": {
+        schedule: { cron: "* * * * * *", timeZone: "Europe/London", payload: EXAMPLE_JOB },
+        run: (payload) => {
+          ran.push(payload);
+          return Promise.resolve();
+        },
+        onFailed: () => {
+          throw new Error("The job should succeed");
+        },
+      },
+    },
+  ]);
+
+  await expect.poll(() => ran, { timeout: 10_000 }).toContainEqual(EXAMPLE_JOB);
 });
 
 test("runs a job sent in a committed transaction once", async ({ runner, transact }) => {

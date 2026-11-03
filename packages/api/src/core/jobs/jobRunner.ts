@@ -20,6 +20,11 @@ export interface JobHandler<Name extends JobName> {
    * slowest call, so a slow call is never sent twice. Two minutes by default.
    */
   expireInSeconds?: number;
+  /**
+   * Also sends the job with `payload` when `cron` comes due in `timeZone`, at most once a minute;
+   * a missed occurrence runs once on start.
+   */
+  schedule?: { cron: string; timeZone: string; payload: Jobs[Name] };
 }
 
 export type JobHandlers = { [Name in JobName]?: JobHandler<Name> };
@@ -41,12 +46,16 @@ export interface JobRunner {
 export function createJobRunner(
   databaseUrl: string,
   logger: Logger,
-  { retryDelaySeconds = 5 }: { retryDelaySeconds?: number } = {},
+  {
+    retryDelaySeconds = 5,
+    cronMonitorIntervalSeconds = 30,
+  }: { retryDelaySeconds?: number; cronMonitorIntervalSeconds?: number } = {},
 ): JobRunner {
   const boss = new PgBoss({
     connectionString: databaseUrl,
     max: 2,
-    schedule: false,
+    schedule: true,
+    cronMonitorIntervalSeconds,
   });
   boss.on("error", (error) =>
     logger.error({ kind: (error as Error | undefined)?.constructor?.name }, "Job runner failed"),
@@ -122,6 +131,10 @@ async function workQueue(
     expireInSeconds: handler.expireInSeconds ?? EXPIRE_IN_SECONDS,
     deadLetter: failedName,
   });
+  if (handler.schedule) {
+    const { cron, timeZone, payload } = handler.schedule;
+    await boss.schedule(name, cron, payload, { tz: timeZone, missed: "once" });
+  }
   await boss.work<Jobs[JobName]>(name, { localConcurrency: CONCURRENCY }, async ([job]) => {
     try {
       await handler.run(job!.data);

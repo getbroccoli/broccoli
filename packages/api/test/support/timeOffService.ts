@@ -57,6 +57,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
   const eventBus = createEventBus(createLogger("silent"));
   eventBus.subscribe(
     timeOffModule({
+      orm,
       timeOff: timeOffService(orm),
       transact: testTransactor(orm),
       logger: createLogger("silent"),

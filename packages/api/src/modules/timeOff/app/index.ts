@@ -5,3 +5,4 @@ export {
   type TimeOffService,
 } from "./timeOffService";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
+export { ensureAllowancesJob } from "./ensureAllowancesJob";

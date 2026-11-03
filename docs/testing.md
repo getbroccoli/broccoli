@@ -45,6 +45,12 @@ Property tests run many random cases, so they run only during development, never
 pnpm --filter @broccoli/api test:pbt
 ```
 
+Load tests fill Postgres with a large workspace, such as the daily allowance job's 10,000 people with five years of leave history, and check a run stays within its time. They live next to the code as `<use-case>.load.test.ts` and, like property tests, run only during development:
+
+```sh
+pnpm --filter @broccoli/api test:load
+```
+
 Each checkout gets its own container on a free port, so worktrees can run the tests at the same time. The data lives in memory; removing the container discards it, including databases left by an interrupted run. To use another Postgres server, set `TEST_DATABASE_URL` to an admin connection URL; the tests create and drop only databases named `broccoli_test_*`.
 
 ## Evals
