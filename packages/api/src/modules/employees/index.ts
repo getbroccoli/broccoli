@@ -11,6 +11,7 @@ import {
   createLocationService,
   type EmployeeInviteService,
   employeeRecordType,
+  type EmploymentChanges,
 } from "./app";
 import { invitePlugin } from "./betterAuth";
 import { createResolvers } from "./graphql";
@@ -34,11 +35,13 @@ export { employeeFieldErrors, parseEmployeeField } from "./domain";
 
 // Public types.
 export type {
+  EmploymentChanges,
   EmployeeInviteService,
   EmployeeManagerService,
   EmployeePermissionService,
   EmployeeReadService,
   EmployeeService,
+  EmployeeSetupService,
   ImportedEmployees,
   InviteDetails,
   GroupWorkingPatternService,
@@ -68,6 +71,7 @@ export function employeesModule({
   mode: Mode;
   /** Built by startup, which setup's last step shares. */
   invites: EmployeeInviteService;
+  employmentChanges: EmploymentChanges;
 }): ModuleManifest {
   const services = {
     ...createEmployeeService(dependencies),

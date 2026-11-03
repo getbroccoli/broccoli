@@ -1,34 +1,56 @@
 import { readFile } from "node:fs/promises";
 
 import type { Tx } from "../../../core/db";
-import { PrincipalSecurityContext } from "../../../core/security";
+import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseRasterImage, type RasterImage, todayInUtc } from "../../../utils";
-import { createEmployeeSetupService } from "../../employees";
+import {
+  createEmployeeSetupService,
+  type EmployeeReadService,
+  type EmploymentChanges,
+} from "../../employees";
+import type { TimeOffService } from "../../timeOff";
 import { demoPeople } from "../domain";
-
-const employeeSetup = createEmployeeSetupService();
 
 /** Writes the demo company inside the caller's transaction. */
 export type DemoFill = (tx: Tx) => Promise<void>;
 
-/** The demo company's people, prepared for a demo start. */
+/** The demo company's people and the time off "Everyone" gets, prepared for a demo start. */
 export interface DemoFillService {
   /**
    * Reads the demo company's avatars, so no file I/O runs while a transaction holds locks, and
-   * returns its fill: the demo company for an instance without employees, otherwise nothing.
+   * returns its fill: for an instance without employees, the demo company, with "Everyone" given
+   * the UK statutory minimum and the record-only policies; otherwise nothing.
    */
   prepareDemoFill: (today?: CalendarDate) => Promise<DemoFill>;
 }
 
-export function createDemoFillService(): DemoFillService {
+export function createDemoFillService({
+  employmentChanges,
+  timeOff,
+  employeeReads,
+}: {
+  employmentChanges: EmploymentChanges;
+  timeOff: Pick<TimeOffService, "listPolicies" | "linkGroupPolicies">;
+  employeeReads: Pick<EmployeeReadService, "readEveryoneGroupId">;
+}): DemoFillService {
+  const employeeSetup = createEmployeeSetupService(employmentChanges);
+  async function linkDemoPolicies(ctx: SecurityContext, tx: Tx) {
+    const policies = await timeOff.listPolicies(ctx, tx);
+    await timeOff.linkGroupPolicies(ctx, tx, {
+      policyGroupId: await employeeReads.readEveryoneGroupId(tx),
+      timeOffPolicyIds: policies
+        .filter(({ key, balance }) => key === "uk_statutory_minimum" || balance === "no_balance")
+        .map(({ id }) => id),
+    });
+  }
   return {
     async prepareDemoFill(today = todayInUtc()) {
       const people = demoPeople(today);
       const avatars = await readAvatars(people.map(({ key }) => key));
       // Broccoli fills the sample company; the caller's own access was checked before.
       const ctx = PrincipalSecurityContext.system();
-      return (tx) =>
-        employeeSetup.createDemoEmployees(
+      return async (tx) => {
+        const added = await employeeSetup.createDemoEmployees(
           ctx,
           tx,
           people.map(({ employee, managerEmail, locationName }, index) => ({
@@ -39,6 +61,10 @@ export function createDemoFillService(): DemoFillService {
           })),
           { kind: "ADDED_WITH_DEMO" },
         );
+        if (added) {
+          await linkDemoPolicies(ctx, tx);
+        }
+      };
     },
   };
 }

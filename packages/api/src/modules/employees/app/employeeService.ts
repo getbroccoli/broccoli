@@ -30,6 +30,7 @@ import {
 } from "../domain";
 import { changeManagers } from "./employeeManagerService";
 import { employeeNotFound } from "./employeeNotFound";
+import type { EmploymentChanges } from "./employmentChanges";
 import { readableResult } from "./readableResult";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
@@ -64,7 +65,10 @@ export interface EmployeeService {
 export function createEmployeeService({
   transact,
   logger,
-}: Pick<ModuleDependencies, "transact" | "logger">): EmployeeService {
+  employmentChanges,
+}: Pick<ModuleDependencies, "transact" | "logger"> & {
+  employmentChanges: EmploymentChanges;
+}): EmployeeService {
   return {
     async createEmployee(ctx, input) {
       ctx.requireEveryRecord("employee", "create");
@@ -73,6 +77,10 @@ export function createEmployeeService({
         const employee = await transact(async (tx) => {
           const employee = await employeeRepository(tx).insert(newEmployee);
           await recordCreatedEmployees(ctx, tx, [employee], { kind: "EDITED_DIRECTLY" });
+          await employmentChanges.afterEmploymentsChanged(ctx, tx, {
+            employeeIds: [employee.id],
+            cause: { kind: "EMPLOYEE_ADDED", ref: null },
+          });
           return employee;
         });
         return (await readableResult(ctx, employee, null)).employee;
@@ -102,10 +110,18 @@ export function createEmployeeService({
           ...fields,
           ...(location !== undefined && { locationId: location?.id ?? null }),
         });
+        const startDateChanges =
+          startDate === undefined ? [] : await changeStartDate(tx, employeeId, startDate);
+        if (startDateChanges.length > 0) {
+          await employmentChanges.afterEmploymentsChanged(ctx, tx, {
+            employeeIds: [employeeId],
+            cause: { kind: "START_DATE_CHANGED", ref: startDate ?? null },
+          });
+        }
         const changed = [
           ...employeeChanges(before, after),
           ...(location === undefined ? [] : await movedLocation(tx, before.locationId, location)),
-          ...(startDate === undefined ? [] : await changeStartDate(tx, employeeId, startDate)),
+          ...startDateChanges,
           ...(managerId === undefined
             ? []
             : (await changeManagers(tx, [employeeId], managerId)).get(employeeId)!),

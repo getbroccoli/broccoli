@@ -56,6 +56,11 @@ export interface EmployeeRepository {
   findById(id: string): Promise<Employee | null>;
   /** Holds these employees' rows until the caller commits, so changes to one person take turns. */
   lockByIds(ids: readonly string[]): Promise<void>;
+  /**
+   * Holds these employees' rows as a row referencing them does, in id order, so it waits for a
+   * change to them that is under way and they are not deleted until the caller commits.
+   */
+  holdForReferences(ids: readonly string[]): Promise<void>;
   /** Links the user who signs in as this employee. */
   linkUser(id: string, userId: string): Promise<void>;
   /** The employee linked to this user, or null. */
@@ -185,6 +190,14 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     lockByIds: (ids) => lockEmployees(orm(), ids),
+    async holdForReferences(ids) {
+      await orm()
+        .select({ id: employees.id })
+        .from(employees)
+        .where(inArray(employees.id, [...ids]))
+        .orderBy(employees.id)
+        .for("key share");
+    },
 
     linkUser: async (id, userId) => {
       await orm().update(employees).set({ userId }).where(eq(employees.id, id));

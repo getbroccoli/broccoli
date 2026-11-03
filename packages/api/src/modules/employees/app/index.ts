@@ -30,6 +30,7 @@ export {
   type EmployeeWorkingPatternService,
 } from "./employeeWorkingPatternService";
 export { employeeRecordType } from "./employeeRecordType";
+export type { EmploymentChanges } from "./employmentChanges";
 export {
   createEmployeeInviteService,
   type EmployeeInviteService,
