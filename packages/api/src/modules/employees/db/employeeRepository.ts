@@ -54,13 +54,11 @@ export interface EmployeeRepository {
    */
   delete(id: string): Promise<Employee | null>;
   findById(id: string): Promise<Employee | null>;
-  /** Holds these employees' rows until the caller commits, so changes to one person take turns. */
-  lockByIds(ids: readonly string[]): Promise<void>;
   /**
-   * Holds these employees' rows as a row referencing them does, in id order, so it waits for a
-   * change to them that is under way and they are not deleted until the caller commits.
+   * Locks existing employees in id order until the transaction ends and returns their ids;
+   * changes to one person take turns, and missing employees are left out.
    */
-  holdForReferences(ids: readonly string[]): Promise<void>;
+  lockByIds(ids: readonly string[]): Promise<string[]>;
   /** Links the user who signs in as this employee. */
   linkUser(id: string, userId: string): Promise<void>;
   /** The employee linked to this user, or null. */
@@ -190,14 +188,6 @@ export function employeeRepository(db: Orm | Tx): EmployeeRepository {
     },
 
     lockByIds: (ids) => lockEmployees(orm(), ids),
-    async holdForReferences(ids) {
-      await orm()
-        .select({ id: employees.id })
-        .from(employees)
-        .where(inArray(employees.id, [...ids]))
-        .orderBy(employees.id)
-        .for("key share");
-    },
 
     linkUser: async (id, userId) => {
       await orm().update(employees).set({ userId }).where(eq(employees.id, id));
@@ -359,10 +349,11 @@ async function openEmployments(
 
 async function lockEmployees(orm: ReturnType<typeof ormOf>, ids: readonly string[]) {
   // In id order, so two callers locking overlapping people cannot deadlock.
-  await orm
+  const rows = await orm
     .select({ id: employees.id })
     .from(employees)
     .where(inArray(employees.id, [...ids]))
     .orderBy(employees.id)
     .for("update");
+  return rows.map(({ id }) => id);
 }

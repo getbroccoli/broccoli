@@ -26,7 +26,7 @@ export interface EnsuredAllowances {
 export interface AllowanceEngineDependencies {
   employeeReads: Pick<
     EmployeeReadService,
-    "holdEmployees" | "readEmploymentPeriods" | "readPolicyGroupMemberships"
+    "lockEmployees" | "readEmploymentPeriods" | "readPolicyGroupMemberships"
   >;
   workingWeeks: Pick<EmployeeWorkingPatternService, "readWorkingWeeksInTransaction">;
   bankHolidays: BankHolidayService;
@@ -43,15 +43,11 @@ export async function ensureAllowancesOf(
   tx: Tx,
   { employeeIds, cause }: { employeeIds: readonly string[]; cause: AllowanceCause },
 ): Promise<EnsuredAllowances> {
-  const ids = [...new Set(employeeIds)];
+  const ids = await dependencies.employeeReads.lockEmployees(tx, employeeIds);
   if (ids.length === 0) {
     return { allowancesCreated: 0, linesAppended: 0 };
   }
   const allowances = allowanceRepository(tx);
-  // The people first: a change to them that runs the engine holds them before its allowance
-  // locks, so the two cannot deadlock.
-  await dependencies.employeeReads.holdEmployees(tx, ids);
-  await allowances.lockEmployees(ids);
   const { people, policies } = await readPeople(dependencies.employeeReads, tx, ids);
   const today = dependencies.today();
   const created = await allowances.insert(missingAllowances(people, policies, today));

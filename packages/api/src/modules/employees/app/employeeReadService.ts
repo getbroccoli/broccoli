@@ -41,10 +41,10 @@ export interface EmployeeReadService {
     employeeIds: readonly string[],
   ) => Promise<Map<string, CalendarDate | null>>;
   /**
-   * Trusted, for time off: holds these employees until the caller commits, after any change to
-   * them under way, so what it reads next stays theirs; take it before time off's own locks.
+   * Trusted, for time off: locks existing employees in id order until the transaction ends and
+   * returns their ids, so allowance runs and employee changes take turns. Missing employees are left out.
    */
-  holdEmployees: (tx: Tx, employeeIds: readonly string[]) => Promise<void>;
+  lockEmployees: (tx: Tx, employeeIds: readonly string[]) => Promise<string[]>;
   /** Trusted: the id of the seeded "Everyone" group, which every new employee joins. */
   readEveryoneGroupId: (tx: Tx) => Promise<string>;
   /**
@@ -116,7 +116,7 @@ export function createEmployeeReadService({
         ),
       );
     },
-    holdEmployees: (tx, employeeIds) => employeeRepository(tx).holdForReferences(employeeIds),
+    lockEmployees: (tx, employeeIds) => employeeRepository(tx).lockByIds(employeeIds),
     readEveryoneGroupId: (tx) => policyGroupRepository(tx).findEveryoneId(),
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
     readPolicyGroupMemberships: (tx, employeeIds) =>
