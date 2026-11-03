@@ -1,4 +1,6 @@
 import type { Decisions } from "../../../integrations/ai";
+import type { Tx } from "../../../core/db";
+import type { SecurityContext } from "../../../core/security";
 import type { OriginalFileReader } from "../../../core/instance";
 import type { JobQueue } from "../../../core/jobs";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
@@ -61,6 +63,7 @@ export function createImportServices({
   jobs,
   prepareDemoFill,
   invites,
+  deleteAllEmployees,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: ImportSlack;
   decisions: Decisions;
@@ -68,11 +71,12 @@ export function createImportServices({
   jobs: JobQueue;
   prepareDemoFill: () => Promise<DemoFill>;
   invites: SetupInvites;
+  deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): ImportServices {
   const readUpload = createUploadReader();
   return {
     ...createImportSourceService({ orm, transact, logger, slack }),
-    ...createImportApprovalService({ transact, logger, invites }),
+    ...createImportApprovalService({ transact, logger, invites, deleteAllEmployees }),
     ...createImportLifecycleService({ transact, logger }),
     ...createImportDemoService({ transact, prepareDemoFill }),
     reads: createImportReadService(orm),

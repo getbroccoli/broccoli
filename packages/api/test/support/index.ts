@@ -24,7 +24,7 @@ export {
 export { startFakeHttpServer } from "./fakeHttpServer";
 export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
-export { allowanceInputs, balanceOf, onTopPolicy, targetRowsOf } from "./allowanceTarget";
+export { allowanceInputs, balanceOf, onTopPolicy, calculatedRowsOf } from "./allowanceCalculator";
 export { calendarDate } from "./calendarDate";
 export { PNG, JPEG, WEBP } from "./images";
 export { fakeSlackApi, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./fakeSlackApi";
@@ -44,7 +44,6 @@ export { TEST_SECRET_BOX } from "./testSecretBox";
 export { storedFileIds } from "./storedFileIds";
 export {
   companyService,
-  demoService,
   employeeServices,
   employeeInviteService,
   externalAgentServices,
@@ -102,3 +101,10 @@ export { startMailTestEnv, SAVE_MAIL_SETTINGS, RESEND_CHOICE } from "./mailTestE
 export { createGraphqlContext } from "./graphqlContext";
 
 export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
+export {
+  type AllowanceLine,
+  linkStatutoryMinimumToEveryone,
+  readAllowances,
+  timeOffService,
+} from "./timeOffService";
+export { demoService } from "./demoService";

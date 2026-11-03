@@ -18,6 +18,14 @@ export const timeOffPolicies = pgTable(
       .notNull()
       .references(() => timeOffTypes.id),
     name: text("name").notNull(),
+    /** Marks the standard leave policies, so code finds them by key, never by name. */
+    key: text("key", {
+      enum: [
+        "uk_statutory_minimum",
+        "uk_20_days_plus_bank_holidays",
+        "uk_25_days_plus_bank_holidays",
+      ],
+    }).unique("time_off_policies_key_unique"),
     balance: text("balance", {
       enum: ["balance_from_allowance", "unlimited_balance", "no_balance"],
     }).notNull(),

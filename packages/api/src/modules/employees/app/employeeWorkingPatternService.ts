@@ -44,6 +44,14 @@ export interface EmployeeWorkingPatternService {
     input: { employeeIds: readonly string[]; from: string; until: string },
   ) => Promise<Map<string, WorkingWeek[]>>;
   /**
+   * Trusted, for time off: `readWorkingWeeks` in the caller's transaction, so it sees people that
+   * transaction created; checks no caller and assumes every id names an employee.
+   */
+  readWorkingWeeksInTransaction: (
+    tx: Tx,
+    input: { employeeIds: readonly string[]; from: CalendarDate; until: CalendarDate },
+  ) => Promise<Map<string, WorkingWeek[]>>;
+  /**
    * Puts a person on their own pattern from a date, until a date or open-ended, ahead of their
    * group's; an earlier one of theirs ends the day before. Returns the history line it added.
    */
@@ -81,17 +89,15 @@ export function createEmployeeWorkingPatternService({
       if (employeeIds.some((id) => !isInRecordScope(scope, id))) {
         throw new ApplicationError("FORBIDDEN", "You cannot read this working pattern.");
       }
-      const { timelines } = await transact(async (tx) => {
-        await workingPatternRepository(tx).lockForReads();
+      return transact(async (tx) => {
         if ((await employeeRepository(tx).findByIds(employeeIds)).length < employeeIds.length) {
           throw employeeNotFound();
         }
-        return readTimelines(tx, employeeIds);
+        return readWorkingWeeksIn(tx, { employeeIds, from, until });
       });
-      return new Map(
-        employeeIds.map((id) => [id, workingWeeksOf(timelines.get(id)!, from, until)]),
-      );
     },
+
+    readWorkingWeeksInTransaction: readWorkingWeeksIn,
 
     async assignPattern(ctx, input) {
       const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
@@ -148,6 +154,19 @@ export function createEmployeeWorkingPatternService({
       });
     },
   };
+}
+
+async function readWorkingWeeksIn(
+  tx: Tx,
+  {
+    employeeIds,
+    from,
+    until,
+  }: { employeeIds: readonly string[]; from: CalendarDate; until: CalendarDate },
+): Promise<Map<string, WorkingWeek[]>> {
+  await workingPatternRepository(tx).lockForReads();
+  const { timelines } = await readTimelines(tx, employeeIds);
+  return new Map(employeeIds.map((id) => [id, workingWeeksOf(timelines.get(id)!, from, until)]));
 }
 
 /**

@@ -1,14 +1,14 @@
 import Big from "big.js";
 
 import type {
-  AllowanceTargetInputs,
-  AllowanceTargetLine,
+  AllowanceInputs,
+  CalculatedAllowanceLine,
   DatedPolicy,
 } from "../../src/modules/timeOff/domain";
 import { calendarDate } from "./calendarDate";
 
 /** A full-timer employed all 2026 on the UK statutory policy, England and Wales bank holidays. */
-export function allowanceInputs(): AllowanceTargetInputs {
+export function allowanceInputs(): AllowanceInputs {
   return {
     leaveYear: { start: calendarDate("2026-01-01"), end: calendarDate("2026-12-31") },
     employments: [{ startDate: null, endDate: null }],
@@ -90,7 +90,7 @@ export function onTopPolicy(): DatedPolicy {
 }
 
 /** Each line as its kind, its rule or bank holiday, and its amount. */
-export function targetRowsOf(lines: readonly AllowanceTargetLine[]) {
+export function calculatedRowsOf(lines: readonly CalculatedAllowanceLine[]) {
   return lines.map((line) => [
     line.kind,
     line.allowanceRuleId ?? line.bankHolidayDate,
@@ -99,6 +99,6 @@ export function targetRowsOf(lines: readonly AllowanceTargetLine[]) {
 }
 
 /** What the lines leave to spend: their amounts added up. */
-export function balanceOf(lines: readonly AllowanceTargetLine[]): string {
+export function balanceOf(lines: readonly CalculatedAllowanceLine[]): string {
   return lines.reduce((sum, line) => sum.plus(line.amount), Big(0)).toString();
 }
