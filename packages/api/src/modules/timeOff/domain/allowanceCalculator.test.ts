@@ -1,13 +1,19 @@
 import { expect, it } from "vitest";
 
-import { allowanceInputs, balanceOf, calendarDate, onTopPolicy, targetRowsOf } from "#test/support";
+import {
+  allowanceInputs,
+  balanceOf,
+  calendarDate,
+  onTopPolicy,
+  calculatedRowsOf,
+} from "#test/support";
 
-import { allowanceTargetOf } from "./allowanceCalculator";
+import { calculateAllowance } from "./allowanceCalculator";
 
 it("grants 28 days and takes eight bank holidays for a full-time leave year", () => {
-  const lines = allowanceTargetOf(allowanceInputs());
+  const lines = calculateAllowance(allowanceInputs());
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "yearly", "28"],
     ["bank_holiday_taken", "2026-01-01", "-1"],
     ["bank_holiday_taken", "2026-04-03", "-1"],
@@ -27,9 +33,9 @@ it("prorates from 12 October and takes only bank holidays after joining", () => 
   const inputs = allowanceInputs();
   inputs.employments = [{ startDate: calendarDate("2026-10-12"), endDate: null }];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "yearly", "6.213699"],
     ["bank_holiday_taken", "2026-12-25", "-1"],
     ["bank_holiday_taken", "2026-12-28", "-1"],
@@ -50,9 +56,9 @@ it("combines the year's full-time and three-day weeks before rounding once", () 
     },
   ];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "yearly", "24.256438"],
     ["bank_holiday_taken", "2026-01-01", "-1"],
     ["bank_holiday_taken", "2026-04-03", "-1"],
@@ -73,9 +79,9 @@ it("caps a six-day worker's statutory entitlement at 28 days", () => {
     { ...inputs.workingWeeks[0]!, minutes: [450, 450, 450, 450, 450, 450, 0] },
   ];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "yearly", "28"],
     ["bank_holiday_taken", "2026-01-01", "-1"],
     ["bank_holiday_taken", "2026-04-03", "-1"],
@@ -94,9 +100,9 @@ it("prorates through the inclusive employment end and takes no later bank holida
   const inputs = allowanceInputs();
   inputs.employments = [{ startDate: null, endDate: calendarDate("2026-06-30") }];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "yearly", "13.884932"],
     ["bank_holiday_taken", "2026-01-01", "-1"],
     ["bank_holiday_taken", "2026-04-03", "-1"],
@@ -121,9 +127,9 @@ it("grants and takes nothing during a gap without a working week", () => {
     { ...inputs.workingWeeks[0]!, effectiveFrom: calendarDate("2026-10-01") },
   ];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "yearly", "20.942466"],
     ["bank_holiday_taken", "2026-01-01", "-1"],
     ["bank_holiday_taken", "2026-04-03", "-1"],
@@ -152,9 +158,9 @@ it("grants a service extra from its anniversary and omits an unreached step", ()
     },
   ];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "yearly", "25"],
     ["entitlement_grant", "two-years", "0.50411"],
     ["bank_holiday_allowance_grant", null, "8"],
@@ -185,7 +191,7 @@ it("returns no lines for a policy without a balance", () => {
     },
   ];
 
-  expect(allowanceTargetOf(inputs)).toEqual([]);
+  expect(calculateAllowance(inputs)).toEqual([]);
 });
 
 it("keeps 28 days across three equivalent policies without adding half a day", () => {
@@ -211,9 +217,9 @@ it("keeps 28 days across three equivalent policies without adding half a day", (
     },
   ];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "first-yearly", "6.90411"],
     ["entitlement_grant", "second-yearly", "6.90411"],
     ["entitlement_grant", "third-yearly", "14.191781"],
@@ -244,9 +250,9 @@ it("returns a service extra before yearly entitlement when the policy lists it f
     },
   ];
 
-  const lines = allowanceTargetOf(inputs);
+  const lines = calculateAllowance(inputs);
 
-  expect(targetRowsOf(lines)).toEqual([
+  expect(calculatedRowsOf(lines)).toEqual([
     ["entitlement_grant", "two-years", "1"],
     ["entitlement_grant", "yearly", "28"],
     ["bank_holiday_taken", "2026-01-01", "-1"],

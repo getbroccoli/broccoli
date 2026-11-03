@@ -11,7 +11,7 @@ import {
 import type { BankHolidayCalendar } from "../../bankHolidays";
 
 /** Everything one allowance's target depends on. */
-export interface AllowanceTargetInputs {
+export interface AllowanceInputs {
   leaveYear: { start: CalendarDate; end: CalendarDate };
   employments: readonly EmploymentPeriod[];
   /** The first employment's start, from which service steps count; null: no step is reached. */
@@ -25,7 +25,7 @@ export interface AllowanceTargetInputs {
 }
 
 /** One line identity of an allowance and the amount its ledger lines should add up to. */
-export interface AllowanceTargetLine {
+export interface CalculatedAllowanceLine {
   kind:
     | "entitlement_grant"
     | "bank_holiday_allowance_grant"
@@ -94,7 +94,7 @@ export type WeekdayMinutes = readonly [number, number, number, number, number, n
  * order within a part), the bank holiday allowance grant, bank holidays taken by date, then the
  * rounding up to the half day.
  */
-export function allowanceTargetOf(inputs: AllowanceTargetInputs): AllowanceTargetLine[] {
+export function calculateAllowance(inputs: AllowanceInputs): CalculatedAllowanceLine[] {
   const parts = keptParts(inputs);
   const lines: Lines = new Map();
   for (const part of parts) {
@@ -116,15 +116,15 @@ interface Part {
   bankHolidays: readonly CalendarDate[];
 }
 
-type Identity = Pick<AllowanceTargetLine, "kind" | "allowanceRuleId" | "bankHolidayDate">;
+type Identity = Pick<CalculatedAllowanceLine, "kind" | "allowanceRuleId" | "bankHolidayDate">;
 
 /** A line with its exact amount, not yet rounded. */
-type ExactLine = Omit<AllowanceTargetLine, "amount"> & { amount: Big };
+type ExactLine = Omit<CalculatedAllowanceLine, "amount"> & { amount: Big };
 
 /** Each identity's line. */
 type Lines = Map<string, ExactLine>;
 
-function keptParts(inputs: AllowanceTargetInputs): Part[] {
+function keptParts(inputs: AllowanceInputs): Part[] {
   const starts = partStarts(inputs);
   return starts.flatMap((from, index) => {
     const next = starts[index + 1];
@@ -155,7 +155,7 @@ function keptParts(inputs: AllowanceTargetInputs): Part[] {
   });
 }
 
-function partStarts(inputs: AllowanceTargetInputs): CalendarDate[] {
+function partStarts(inputs: AllowanceInputs): CalendarDate[] {
   const { leaveYear, employments, policies, workingWeeks, serviceStart } = inputs;
   const changes = [
     ...employments.flatMap(({ startDate, endDate }) => [startDate, endDate && addDays(endDate, 1)]),
@@ -178,7 +178,7 @@ function partStarts(inputs: AllowanceTargetInputs): CalendarDate[] {
   return [leaveYear.start, ...new Set(changes)].toSorted();
 }
 
-function addPart(lines: Lines, inputs: AllowanceTargetInputs, part: Part): void {
+function addPart(lines: Lines, inputs: AllowanceInputs, part: Part): void {
   const { leaveYear } = inputs;
   const daysPerWeek = Big(part.minutes.reduce((sum, minutes) => sum + minutes, 0)).div(
     part.fullDayMinutes,
@@ -253,7 +253,7 @@ function addAmount(lines: Lines, identity: Identity, part: Part, amount: Big): v
  */
 function roundingUpToHalfDay(
   exactLines: readonly ExactLine[],
-): Omit<AllowanceTargetLine, "firstDate"> | null {
+): Omit<CalculatedAllowanceLine, "firstDate"> | null {
   const grants = exactLines.filter((line) => line.kind !== "bank_holiday_taken");
   if (grants.length === 0) {
     return null;
@@ -288,7 +288,7 @@ function toAmount(days: Big): string {
 /** The scale of the amounts' Postgres `numeric`. */
 const DECIMALS = 6;
 const FULL_TIME_DAYS_PER_WEEK = 5;
-const LINE_ORDER: readonly AllowanceTargetLine["kind"][] = [
+const LINE_ORDER: readonly CalculatedAllowanceLine["kind"][] = [
   "entitlement_grant",
   "bank_holiday_allowance_grant",
   "bank_holiday_taken",

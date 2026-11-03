@@ -1,9 +1,9 @@
 export type { AllowanceCause } from "./allowanceCause";
 export {
-  allowanceTargetOf,
+  calculateAllowance,
   type AllowanceRule,
-  type AllowanceTargetInputs,
-  type AllowanceTargetLine,
+  type AllowanceInputs,
+  type CalculatedAllowanceLine,
   type DatedPolicy,
   type DatedWorkingWeek,
 } from "./allowanceCalculator";

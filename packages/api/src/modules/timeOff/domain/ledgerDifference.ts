@@ -1,11 +1,11 @@
 import Big from "big.js";
 import type { CalendarDate } from "../../../utils";
 import type { AllowanceCause } from "./allowanceCause";
-import type { AllowanceTargetLine } from "./allowanceCalculator";
+import type { CalculatedAllowanceLine } from "./allowanceCalculator";
 
 /** What an allowance's lines of one identity add up to now, and how many there are. */
 export interface LedgerSum {
-  kind: AllowanceTargetLine["kind"];
+  kind: CalculatedAllowanceLine["kind"];
   allowanceRuleId: string | null;
   /** The effective date of bank holidays taken; null on other kinds. */
   bankHolidayDate: CalendarDate | null;
@@ -17,7 +17,7 @@ export interface LedgerSum {
 /** A line the engine appends. */
 export interface NewLedgerLine {
   allowanceId: string;
-  kind: AllowanceTargetLine["kind"];
+  kind: CalculatedAllowanceLine["kind"];
   allowanceRuleId: string | null;
   effectiveDate: CalendarDate;
   /** Days with at most six decimal places. */
@@ -34,7 +34,7 @@ export interface NewLedgerLine {
  */
 export function ledgerDifference(
   allowance: { id: string; leaveYearStart: CalendarDate },
-  target: readonly AllowanceTargetLine[],
+  target: readonly CalculatedAllowanceLine[],
   current: readonly LedgerSum[],
   cause: AllowanceCause,
 ): NewLedgerLine[] {

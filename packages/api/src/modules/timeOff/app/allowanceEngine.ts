@@ -6,7 +6,7 @@ import type { EmployeeReadService, EmployeeWorkingPatternService } from "../../e
 import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
 import {
   type AllowanceCause,
-  allowanceTargetOf,
+  calculateAllowance,
   type DatedPolicy,
   leaveYearContaining,
   ledgerDifference,
@@ -159,7 +159,7 @@ async function differenceLines(
   const personOf = new Map(people.map((person) => [person.employeeId, person]));
   return open.flatMap((allowance) => {
     const person = personOf.get(allowance.employeeId)!;
-    const target = allowanceTargetOf({
+    const target = calculateAllowance({
       leaveYear: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
       employments: person.periods,
       serviceStart: person.serviceStart,
