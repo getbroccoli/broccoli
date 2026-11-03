@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { allowanceInputs, balanceOf, onTopPolicy, targetRowsOf } from "#test/support";
 
-import { allowanceTargetOf } from "./allowanceTarget";
+import { allowanceTargetOf } from "./allowanceCalculator";
 
 it("grants eight bank holidays on top of 25 days and still takes each holiday", () => {
   const inputs = allowanceInputs();

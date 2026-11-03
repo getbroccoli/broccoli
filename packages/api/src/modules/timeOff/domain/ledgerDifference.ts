@@ -1,7 +1,7 @@
 import Big from "big.js";
 import type { CalendarDate } from "../../../utils";
 import type { AllowanceCause } from "./allowanceCause";
-import type { AllowanceTargetLine } from "./allowanceTarget";
+import type { AllowanceTargetLine } from "./allowanceCalculator";
 
 /** What an allowance's lines of one identity add up to now, and how many there are. */
 export interface LedgerSum {

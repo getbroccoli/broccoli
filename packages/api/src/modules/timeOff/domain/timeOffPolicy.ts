@@ -1,5 +1,5 @@
 import { addDays, addYears, type CalendarDate } from "../../../utils";
-import type { AllowanceRule, DatedPolicy } from "./allowanceTarget";
+import type { AllowanceRule, DatedPolicy } from "./allowanceCalculator";
 
 /** The standard leave policies' keys, by which code finds them. */
 export type StandardLeavePolicyKey =

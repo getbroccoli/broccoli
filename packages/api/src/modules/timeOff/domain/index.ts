@@ -6,7 +6,7 @@ export {
   type AllowanceTargetLine,
   type DatedPolicy,
   type DatedWorkingWeek,
-} from "./allowanceTarget";
+} from "./allowanceCalculator";
 export { ledgerDifference, type LedgerSum, type NewLedgerLine } from "./ledgerDifference";
 export {
   policyIdOn,

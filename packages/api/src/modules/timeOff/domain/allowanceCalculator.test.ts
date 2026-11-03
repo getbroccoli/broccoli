@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import { allowanceInputs, balanceOf, calendarDate, onTopPolicy, targetRowsOf } from "#test/support";
 
-import { allowanceTargetOf } from "./allowanceTarget";
+import { allowanceTargetOf } from "./allowanceCalculator";
 
 it("grants 28 days and takes eight bank holidays for a full-time leave year", () => {
   const lines = allowanceTargetOf(allowanceInputs());
