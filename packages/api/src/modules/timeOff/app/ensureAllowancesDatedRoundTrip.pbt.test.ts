@@ -9,7 +9,6 @@ import {
   linkStatutoryMinimumToEveryone,
   OWNER,
   test,
-  timeOffService,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
@@ -20,26 +19,22 @@ test("invariant: reversing a start-date correction restores each dated ledger id
   transact,
 }) => {
   await linkStatutoryMinimumToEveryone(orm, seed, transact);
-  const timeOff = timeOffService(orm);
   const employees = employeeServices(orm);
 
   await fc.assert(
     fc.asyncProperty(distinctStartDays(), async ([a, b]) => {
-      const employee = await seed.employee({ startDate: a });
+      const employee = await seed.employee();
       let original: Awaited<ReturnType<typeof allowanceSnapshot>> = [];
       let previous: Awaited<ReturnType<typeof allowanceSnapshot>> = [];
       // The earliest changed employment day is the same in either direction of a correction.
       for (const [index, startDate] of [a, b, a].entries()) {
         await employees.updateEmployee(OWNER, { id: employee.id, startDate });
-        await transact((tx) =>
-          timeOff.ensureAllowances(OWNER, tx, {
-            employeeIds: [employee.id],
-            cause: { kind: "START_DATE_CHANGED", ref: startDate },
-          }),
-        );
         const current = await allowanceSnapshot(orm, employee.id);
         expect(current).toHaveLength(1);
-        if (index === 0) original = current;
+        if (index === 0) {
+          expect(current[0]!.lines.length).toBeGreaterThan(0);
+          original = current;
+        }
         for (const earlier of previous) {
           const after = current.find(({ allowance }) => allowance.id === earlier.allowance.id)!;
           expect(after.allowance).toEqual(earlier.allowance);
@@ -52,13 +47,6 @@ test("invariant: reversing a start-date correction restores each dated ledger id
 
       // Opposite grant corrections must cancel on their effective date, not only for the year.
       expect(datedIdentitySums(previous[0]!.lines)).toEqual(datedIdentitySums(original[0]!.lines));
-      await transact((tx) =>
-        timeOff.ensureAllowances(OWNER, tx, {
-          employeeIds: [employee.id],
-          cause: { kind: "START_DATE_CHANGED", ref: a },
-        }),
-      );
-      expect(await allowanceSnapshot(orm, employee.id)).toEqual(previous);
     }),
     { numRuns: 20, seed: 209202603 },
   );

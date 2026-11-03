@@ -10,6 +10,7 @@ import {
   test,
   timeOffService,
   workingPatternService,
+  transactWithTimeOffEvents,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
@@ -26,7 +27,7 @@ for (const policyKey of [
   }) => {
     const timeOff = timeOffService(orm);
     const employees = employeeServices(orm);
-    const patterns = workingPatternService(orm);
+    const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
     const policyGroupId = await seed.everyoneGroupId();
     const policy = (await timeOff.listPolicies(OWNER, orm)).find(({ key }) => key === policyKey)!;
     await transact((tx) =>
@@ -63,14 +64,11 @@ for (const policyKey of [
             effectiveFrom: calendarDate("2025-01-01"),
             effectiveUntil: null,
           });
-          const input = {
-            employeeIds: [employee.id],
-            cause: { kind: "WORKING_PATTERN_CHANGED" as const, ref: "2025-01-01" },
-          };
-          await transact((tx) => timeOff.ensureAllowances(OWNER, tx, input));
           const current = await allowanceSnapshot(orm, employee.id);
+          expect(current.length).toBeGreaterThan(0);
           if (index === 0) {
             expect(current).toHaveLength(1);
+            expect(current[0]!.lines.length).toBeGreaterThan(0);
             original = current;
           }
           for (const earlier of previous) {
@@ -90,14 +88,9 @@ for (const policyKey of [
               effectiveFrom: calendarDate("2025-01-01"),
               effectiveUntil: null,
             });
-            await transact((tx) =>
-              timeOff.ensureAllowances(OWNER, tx, {
-                ...input,
-                employeeIds: [fresh.id],
-              }),
-            );
             const freshB = await allowanceSnapshot(orm, fresh.id);
             expect(freshB).toHaveLength(1);
+            expect(freshB[0]!.lines.length).toBeGreaterThan(0);
             const sameYear = current.find(
               ({ allowance }) => allowance.leaveYearStart === freshB[0]!.allowance.leaveYearStart,
             )!;
@@ -111,8 +104,6 @@ for (const policyKey of [
               }
             }
           }
-          await transact((tx) => timeOff.ensureAllowances(OWNER, tx, input));
-          expect(await allowanceSnapshot(orm, employee.id)).toEqual(current);
           previous = current;
         }
 

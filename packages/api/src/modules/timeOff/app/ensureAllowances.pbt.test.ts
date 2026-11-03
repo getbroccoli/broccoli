@@ -10,6 +10,7 @@ import {
   test,
   timeOffService,
   workingPatternService,
+  transactWithTimeOffEvents,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
@@ -41,21 +42,16 @@ test("invariant: start-date corrections preserve every earlier ledger line", asy
   transact,
 }) => {
   await linkStatutoryMinimumToEveryone(orm, seed, transact);
-  const service = timeOffService(orm);
   const employees = employeeServices(orm);
   await fc.assert(
     fc.asyncProperty(fc.array(startDate(), { minLength: 2, maxLength: 5 }), async (dates) => {
-      const employee = await seed.employee({ startDate: dates[0]! });
+      const employee = await seed.employee();
       let before: Awaited<ReturnType<typeof readAllowances>> = [];
       for (const startDate of dates) {
         await employees.updateEmployee(OWNER, { id: employee.id, startDate });
-        await transact((tx) =>
-          service.ensureAllowances(OWNER, tx, {
-            employeeIds: [employee.id],
-            cause: { kind: "START_DATE_CHANGED", ref: startDate },
-          }),
-        );
         const after = await readAllowances(orm, employee.id);
+        expect(after.length).toBeGreaterThan(0);
+        expect(after.some(({ lines }) => lines.length > 0)).toBe(true);
         for (const allowance of before) {
           const current = after.find((row) => row.leaveYearStart === allowance.leaveYearStart)!;
           expect(current).toBeDefined();
@@ -74,9 +70,8 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
   transact,
 }) => {
   await linkStatutoryMinimumToEveryone(orm, seed, transact);
-  const service = timeOffService(orm);
   const employees = employeeServices(orm);
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
   await fc.assert(
     // Correct the same assignment date, so the final dated pattern really is identical.
     fc.asyncProperty(
@@ -110,12 +105,6 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
             effectiveFrom: calendarDate("2025-01-01"),
             effectiveUntil: null,
           });
-          await transact((tx) =>
-            service.ensureAllowances(OWNER, tx, {
-              employeeIds: [employee.id],
-              cause: { kind: "WORKING_PATTERN_CHANGED", ref: "2025-01-01" },
-            }),
-          );
         }
         const final = changes.at(-1)!;
         const fresh = await seed.employee({ startDate: final.startDate });
@@ -125,17 +114,13 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
           effectiveFrom: calendarDate("2025-01-01"),
           effectiveUntil: null,
         });
-        await transact((tx) =>
-          service.ensureAllowances(OWNER, tx, {
-            employeeIds: [fresh.id],
-            cause: { kind: "DAILY_CHECK", ref: "2026-06-01" },
-          }),
-        );
         const expected = await readAllowances(orm, fresh.id);
         const actual = await readAllowances(orm, employee.id);
         expect(expected).toHaveLength(1);
+        expect(expected[0]!.lines.length).toBeGreaterThan(0);
         // Moving a start into a later year leaves zero history in the earlier year.
         const sameYear = actual.find((row) => row.leaveYearStart === expected[0]!.leaveYearStart)!;
+        expect(sameYear).toBeDefined();
         expect(sameYear.total).toBe(expected[0]!.total);
       },
     ),

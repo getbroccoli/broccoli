@@ -9,7 +9,6 @@ import {
   linkStatutoryMinimumToEveryone,
   OWNER,
   test,
-  timeOffService,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
@@ -20,7 +19,6 @@ test("invariant: cross-year start corrections keep every line within its allowan
   transact,
 }) => {
   await linkStatutoryMinimumToEveryone(orm, seed, transact);
-  const timeOff = timeOffService(orm);
   const employees = employeeServices(orm);
 
   await fc.assert(
@@ -30,20 +28,16 @@ test("invariant: cross-year start corrections keep every line within its allowan
       async (aOffset, bOffset) => {
         const a = addDays(calendarDate("2026-01-01"), aOffset);
         const b = addDays(calendarDate("2026-01-01"), bOffset);
-        const employee = await seed.employee({ startDate: a });
+        const employee = await seed.employee();
         let original: Awaited<ReturnType<typeof allowanceSnapshot>> = [];
         let previous: Awaited<ReturnType<typeof allowanceSnapshot>> = [];
         for (const [index, startDate] of [a, b, a].entries()) {
           await employees.updateEmployee(OWNER, { id: employee.id, startDate });
-          await transact((tx) =>
-            timeOff.ensureAllowances(OWNER, tx, {
-              employeeIds: [employee.id],
-              cause: { kind: "START_DATE_CHANGED", ref: startDate },
-            }),
-          );
           const current = await allowanceSnapshot(orm, employee.id);
+          expect(current.length).toBeGreaterThan(0);
           if (index === 0) {
             expect(current).toHaveLength(1);
+            expect(current[0]!.lines.length).toBeGreaterThan(0);
             original = current;
           }
           // The spec explicitly clamps correction dates into the allowance's retained year.

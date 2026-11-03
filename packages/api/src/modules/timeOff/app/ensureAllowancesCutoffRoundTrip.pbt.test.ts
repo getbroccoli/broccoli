@@ -9,7 +9,6 @@ import {
   linkStatutoryMinimumToEveryone,
   OWNER,
   test,
-  timeOffService,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
@@ -32,30 +31,19 @@ for (const scenario of [
     transact,
   }) => {
     await linkStatutoryMinimumToEveryone(orm, seed, transact);
-    const timeOff = timeOffService(orm);
     const employees = employeeServices(orm);
     const a = calendarDate("2026-01-01");
 
     await fc.assert(
       fc.asyncProperty(scenario.dates, async ({ b, cutoff }) => {
-        const employee = await seed.employee({ startDate: a });
-        await transact((tx) =>
-          timeOff.ensureAllowances(OWNER, tx, {
-            employeeIds: [employee.id],
-            cause: { kind: "START_DATE_CHANGED", ref: a },
-          }),
-        );
+        const employee = await seed.employee();
+        await employees.updateEmployee(OWNER, { id: employee.id, startDate: a });
         const original = await allowanceSnapshot(orm, employee.id);
         expect(original).toHaveLength(1);
+        expect(original[0]!.lines.length).toBeGreaterThan(0);
 
         for (const startDate of [addDays(a, b), a]) {
           await employees.updateEmployee(OWNER, { id: employee.id, startDate });
-          await transact((tx) =>
-            timeOff.ensureAllowances(OWNER, tx, {
-              employeeIds: [employee.id],
-              cause: { kind: "START_DATE_CHANGED", ref: startDate },
-            }),
-          );
         }
         const restored = await allowanceSnapshot(orm, employee.id);
         expect(restored).toHaveLength(1);
