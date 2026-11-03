@@ -38,16 +38,13 @@ export function ledgerDifference(
   current: readonly LedgerSum[],
   cause: AllowanceCause,
 ): NewLedgerLine[] {
-  const identities = new Map<string, { target?: AllowanceTargetLine; current?: LedgerSum }>();
-  for (const line of target) {
-    identities.set(identityOf(line), { target: line });
-  }
-  for (const sum of current) {
-    identities.set(identityOf(sum), { ...identities.get(identityOf(sum)), current: sum });
-  }
+  const targetOf = new Map(target.map((line) => [identityOf(line), line]));
+  const currentOf = new Map(current.map((sum) => [identityOf(sum), sum]));
   // A line a dated change appends takes effect from that date.
   const changedFrom = DATED_CAUSES.has(cause.kind) ? (cause.ref as CalendarDate) : null;
-  return [...identities].flatMap(([identity, { target: line, current: sum }]) => {
+  return [...new Set([...targetOf.keys(), ...currentOf.keys()])].flatMap((identity) => {
+    const line = targetOf.get(identity);
+    const sum = currentOf.get(identity);
     const difference = Big(line?.amount ?? 0).minus(sum?.amount ?? 0);
     if (difference.eq(0)) {
       return [];

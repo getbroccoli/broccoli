@@ -69,7 +69,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .select()
         .from(policyGroupTimeOffPolicies)
         .where(inArray(policyGroupTimeOffPolicies.policyGroupId, [...policyGroupIds]));
-      return groupBy(rows, ({ policyGroupId }) => policyGroupId);
+      return Map.groupBy(rows, ({ policyGroupId }) => policyGroupId);
     },
 
     async insertGroupLinks(policyGroupId, policies) {
@@ -87,7 +87,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .select()
         .from(timeOffPolicyAssignments)
         .where(inArray(timeOffPolicyAssignments.employeeId, [...employeeIds]));
-      return groupBy(rows, ({ employeeId }) => employeeId);
+      return Map.groupBy(rows, ({ employeeId }) => employeeId);
     },
   };
 }
@@ -107,17 +107,4 @@ function toRule(row: typeof timeOffAllowanceRules.$inferSelect): AllowanceRule {
         afterYears: row.afterYears!,
         extraDays: Number(row.extraDays),
       };
-}
-
-function groupBy<Row extends DatedPolicyRow>(
-  rows: readonly Row[],
-  keyOf: (row: Row) => string,
-): Map<string, DatedPolicyRow[]> {
-  const grouped = new Map<string, DatedPolicyRow[]>();
-  for (const row of rows) {
-    const { timeOffTypeId, timeOffPolicyId, effectiveFrom, effectiveUntil } = row;
-    const dated = { timeOffTypeId, timeOffPolicyId, effectiveFrom, effectiveUntil };
-    grouped.set(keyOf(row), [...(grouped.get(keyOf(row)) ?? []), dated]);
-  }
-  return grouped;
 }

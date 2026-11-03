@@ -10,6 +10,7 @@ import {
   type DatedPolicy,
   leaveYearContaining,
   ledgerDifference,
+  type NewLedgerLine,
   type PolicyTimeline,
   policyIdOn,
   policyStretches,
@@ -35,7 +36,7 @@ export interface AllowanceEngineDependencies {
  * allowance whose leave year has not ended to its target by appending the difference.
  */
 export async function ensureAllowancesOf(
-  { employeeReads, workingWeeks, bankHolidays, today }: AllowanceEngineDependencies,
+  dependencies: AllowanceEngineDependencies,
   tx: Tx,
   { employeeIds, cause }: { employeeIds: readonly string[]; cause: AllowanceCause },
 ): Promise<EnsuredAllowances> {
@@ -44,64 +45,120 @@ export async function ensureAllowancesOf(
     return { allowancesCreated: 0, linesAppended: 0 };
   }
   const allowances = allowanceRepository(tx);
-  const policyRepository = timeOffPolicyRepository(tx);
-  // One after another: they share the transaction's connection.
   await allowances.lockEmployees(ids);
-  const policies = await policyRepository.findAll();
-  const employments = await employeeReads.readEmploymentPeriods(tx, ids);
-  const memberships = await employeeReads.readPolicyGroupMemberships(tx, ids);
+  const { people, policies } = await readPeople(dependencies.employeeReads, tx, ids);
+  const today = dependencies.today();
+  const created = await allowances.insert(missingAllowances(people, policies, today));
+  const open = [
+    ...people.flatMap(({ allowances: own }) =>
+      own.filter(({ leaveYearEnd }) => leaveYearEnd >= today),
+    ),
+    ...created,
+  ];
+  const lines = await differenceLines(dependencies, tx, { people, policies, open, cause });
+  return { allowancesCreated: created.length, linesAppended: await allowances.insertLines(lines) };
+}
+
+interface Person {
+  employeeId: string;
+  periods: readonly { startDate: CalendarDate | null; endDate: CalendarDate | null }[];
+  serviceStart: CalendarDate | null;
+  timeline: PolicyTimeline;
+  allowances: readonly Allowance[];
+}
+
+/** Every policy, and what decides each person's allowances. */
+async function readPeople(
+  employeeReads: AllowanceEngineDependencies["employeeReads"],
+  tx: Tx,
+  ids: readonly string[],
+): Promise<{ people: Person[]; policies: TimeOffPolicy[] }> {
+  const policyRepository = timeOffPolicyRepository(tx);
+  const [policies, employments, memberships, assignments, existing] = await Promise.all([
+    policyRepository.findAll(),
+    employeeReads.readEmploymentPeriods(tx, ids),
+    employeeReads.readPolicyGroupMemberships(tx, ids),
+    policyRepository.findAssignments(ids),
+    allowanceRepository(tx).findByEmployees(ids),
+  ]);
   const groupIds = [...memberships.values()].flat().map(({ policyGroupId }) => policyGroupId);
   const groupLinks = await policyRepository.findGroupLinks([...new Set(groupIds)]);
-  const assignments = await policyRepository.findAssignments(ids);
-  const existing = await allowances.findByEmployees(ids);
-  const date = today();
-  const people = new Map(
-    ids.map((id) => {
-      const periods = employments.get(id) ?? [];
-      const timeline: PolicyTimeline = {
-        assignments: assignments.get(id) ?? [],
-        memberships: memberships.get(id) ?? [],
+  const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
+  const people = ids.map((employeeId) => {
+    const periods = employments.get(employeeId) ?? [];
+    return {
+      employeeId,
+      periods,
+      serviceStart: periods[0]?.startDate ?? null,
+      timeline: {
+        assignments: assignments.get(employeeId) ?? [],
+        memberships: memberships.get(employeeId) ?? [],
         groupLinks,
-      };
-      return [id, { periods, serviceStart: periods[0]?.startDate ?? null, timeline }];
+      },
+      allowances: existingOf.get(employeeId) ?? [],
+    };
+  });
+  return { people, policies };
+}
+
+/** The allowances to create: one per person and type that has none for the year needed. */
+function missingAllowances(
+  people: readonly Person[],
+  policies: readonly TimeOffPolicy[],
+  today: CalendarDate,
+) {
+  const typeIds = [...new Set(policies.map(({ timeOffType }) => timeOffType.id))];
+  return people.flatMap((person) =>
+    typeIds.flatMap((typeId) => {
+      const allowance = newAllowance(person, policies, typeId, today);
+      return allowance ? [{ employeeId: person.employeeId, ...allowance }] : [];
     }),
   );
-  const typeIds = [...new Set(policies.map(({ timeOffType }) => timeOffType.id))];
-  const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
-  const created = await allowances.insert(
-    ids.flatMap((id) =>
-      typeIds.flatMap((typeId) => {
-        const own = existingOf.get(id) ?? [];
-        const allowance = newAllowance(people.get(id)!, policies, own, typeId, date);
-        return allowance ? [{ employeeId: id, ...allowance }] : [];
-      }),
-    ),
-  );
-  const open = [...existing.filter(({ leaveYearEnd }) => leaveYearEnd >= date), ...created];
+}
+
+/** The lines that bring each open allowance to its target. */
+async function differenceLines(
+  { workingWeeks, bankHolidays }: AllowanceEngineDependencies,
+  tx: Tx,
+  {
+    people,
+    policies,
+    open,
+    cause,
+  }: {
+    people: readonly Person[];
+    policies: readonly TimeOffPolicy[];
+    open: readonly Allowance[];
+    cause: AllowanceCause;
+  },
+): Promise<NewLedgerLine[]> {
   if (open.length === 0) {
-    return { allowancesCreated: created.length, linesAppended: 0 };
+    return [];
   }
   const from = open.map(({ leaveYearStart }) => leaveYearStart).toSorted()[0]!;
   const until = open
     .map(({ leaveYearEnd }) => leaveYearEnd)
     .toSorted()
     .at(-1)!;
-  const weeks = await workingWeeks.readWorkingWeeksInTransaction(tx, {
-    employeeIds: [...new Set(open.map(({ employeeId }) => employeeId))],
-    from,
-    until,
-  });
-  const holidays = await bankHolidays.readBankHolidays(PrincipalSecurityContext.system(), {
-    calendars: BANK_HOLIDAY_CALENDARS,
-    from,
-    until,
-  });
+  const [weeks, holidays, sums] = await Promise.all([
+    workingWeeks.readWorkingWeeksInTransaction(tx, {
+      employeeIds: [...new Set(open.map(({ employeeId }) => employeeId))],
+      from,
+      until,
+    }),
+    bankHolidays.readBankHolidays(PrincipalSecurityContext.system(), {
+      calendars: BANK_HOLIDAY_CALENDARS,
+      from,
+      until,
+    }),
+    allowanceRepository(tx).findEngineSums(open.map(({ id }) => id)),
+  ]);
   const holidayDates = new Map(
-    [...holidays].map(([calendar, days]) => [calendar, days.map(({ date: day }) => day)]),
+    [...holidays].map(([calendar, days]) => [calendar, days.map(({ date }) => date)]),
   );
-  const sums = await allowances.findEngineSums(open.map(({ id }) => id));
-  const lines = open.flatMap((allowance) => {
-    const person = people.get(allowance.employeeId)!;
+  const personOf = new Map(people.map((person) => [person.employeeId, person]));
+  return open.flatMap((allowance) => {
+    const person = personOf.get(allowance.employeeId)!;
     const target = allowanceTargetOf({
       leaveYear: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
       employments: person.periods,
@@ -112,13 +169,6 @@ export async function ensureAllowancesOf(
     });
     return ledgerDifference(allowance, target, sums.get(allowance.id) ?? [], cause);
   });
-  return { allowancesCreated: created.length, linesAppended: await allowances.insertLines(lines) };
-}
-
-interface Person {
-  periods: readonly { startDate: CalendarDate | null; endDate: CalendarDate | null }[];
-  serviceStart: CalendarDate | null;
-  timeline: PolicyTimeline;
 }
 
 /**
@@ -128,7 +178,6 @@ interface Person {
 function newAllowance(
   person: Person,
   policies: readonly TimeOffPolicy[],
-  own: readonly Allowance[],
   timeOffTypeId: string,
   today: CalendarDate,
 ): Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd"> | null {
@@ -139,7 +188,7 @@ function newAllowance(
     return null;
   }
   const { start, end } = leaveYearContaining(policy.leaveYear, person.serviceStart, anchor);
-  const overlaps = own.some(
+  const overlaps = person.allowances.some(
     (allowance) =>
       allowance.timeOffTypeId === timeOffTypeId &&
       allowance.leaveYearStart <= end &&

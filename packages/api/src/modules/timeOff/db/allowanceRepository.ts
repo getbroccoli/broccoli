@@ -82,12 +82,8 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           allowanceLedgerLines.allowanceRuleId,
           bankHolidayDate,
         );
-      const sums = new Map<string, LedgerSum[]>();
-      for (const { allowanceId, kind, ...sum } of rows) {
-        const engineKind = kind as LedgerSum["kind"];
-        sums.set(allowanceId, [...(sums.get(allowanceId) ?? []), { ...sum, kind: engineKind }]);
-      }
-      return sums;
+      const sums = rows.map((row) => ({ ...row, kind: row.kind as LedgerSum["kind"] }));
+      return Map.groupBy(sums, ({ allowanceId }) => allowanceId);
     },
 
     async insertLines(lines) {

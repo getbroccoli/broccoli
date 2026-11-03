@@ -1,5 +1,3 @@
-ALTER TABLE "time_off_policies" ADD COLUMN "key" text;--> statement-breakpoint
-ALTER TABLE "time_off_policies" ADD CONSTRAINT "time_off_policies_key_unique" UNIQUE("key");--> statement-breakpoint
 -- The seeded Annual leave policy becomes the UK statutory minimum; two more standard policies grant bank holidays on top.
 UPDATE "time_off_policies" SET "name" = 'UK statutory minimum', "key" = 'uk_statutory_minimum'
 	WHERE "time_off_type_id" = (SELECT "id" FROM "time_off_types" WHERE "type_key" = 'annual_leave');--> statement-breakpoint

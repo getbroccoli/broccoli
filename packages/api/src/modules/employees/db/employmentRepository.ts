@@ -83,14 +83,7 @@ export function employmentRepository(db: Orm | Tx): EmploymentRepository {
         .from(employments)
         .where(sql`${employments.employeeId} = any(${sql.param([...employeeIds])}::uuid[])`)
         .orderBy(employments.employeeId, sql`${employments.startDate} nulls first`);
-      const periods = new Map<
-        string,
-        { startDate: CalendarDate | null; endDate: CalendarDate | null }[]
-      >();
-      for (const { employeeId, ...period } of rows) {
-        periods.set(employeeId, [...(periods.get(employeeId) ?? []), period]);
-      }
-      return periods;
+      return Map.groupBy(rows, ({ employeeId }) => employeeId);
     },
 
     setStartDate: async (employeeId, startDate) => {

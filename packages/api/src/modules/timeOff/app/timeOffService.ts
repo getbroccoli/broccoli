@@ -87,15 +87,18 @@ export function createTimeOffService({
         return policy;
       });
       const linked = (await repository.findGroupLinks([policyGroupId])).get(policyGroupId) ?? [];
-      const taken = new Set(linked.map(({ timeOffTypeId }) => timeOffTypeId));
-      for (const { timeOffType } of chosen) {
-        if (taken.has(timeOffType.id)) {
-          throw new ApplicationError(
-            "CONFLICT",
-            `The group already has a policy for ${timeOffType.name}.`,
-          );
-        }
-        taken.add(timeOffType.id);
+      const typeIds = [
+        ...linked.map(({ timeOffTypeId }) => timeOffTypeId),
+        ...chosen.map(({ timeOffType }) => timeOffType.id),
+      ];
+      const conflict = chosen.find(
+        ({ timeOffType }) => typeIds.indexOf(timeOffType.id) < typeIds.lastIndexOf(timeOffType.id),
+      );
+      if (conflict) {
+        throw new ApplicationError(
+          "CONFLICT",
+          `The group already has a policy for ${conflict.timeOffType.name}.`,
+        );
       }
       await repository.insertGroupLinks(
         policyGroupId,

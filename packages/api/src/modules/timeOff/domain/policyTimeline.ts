@@ -54,29 +54,29 @@ export function policyStretches(
     ...timeline.memberships,
     ...[...timeline.groupLinks.values()].flat(),
   ];
-  const changes = rows
+  const changeDates = rows
     .flatMap(({ effectiveFrom, effectiveUntil }) => [
       effectiveFrom,
       effectiveUntil && addDays(effectiveUntil, 1),
     ])
     .filter((date): date is CalendarDate => date !== null && date > from && date <= until);
-  const starts = [from, ...new Set(changes)].toSorted();
-  const stretches: ReturnType<typeof policyStretches> = [];
-  starts.forEach((start, index) => {
-    const end = index + 1 < starts.length ? addDays(starts[index + 1]!, -1) : until;
-    const timeOffPolicyId = policyIdOn(timeline, timeOffTypeId, start);
-    const last = stretches.at(-1);
-    if (
-      last &&
-      last.timeOffPolicyId === timeOffPolicyId &&
-      last.effectiveUntil === addDays(start, -1)
-    ) {
-      last.effectiveUntil = end;
-    } else if (timeOffPolicyId) {
-      stretches.push({ timeOffPolicyId, effectiveFrom: start, effectiveUntil: end });
-    }
+  const starts = [from, ...new Set(changeDates)].toSorted();
+  // Each date where the policy differs from the day before starts a stretch.
+  const policyChanges = starts
+    .map((start) => ({ start, timeOffPolicyId: policyIdOn(timeline, timeOffTypeId, start) }))
+    .filter((change, index, all) => change.timeOffPolicyId !== all[index - 1]?.timeOffPolicyId);
+  return policyChanges.flatMap(({ start, timeOffPolicyId }, index) => {
+    const next = policyChanges[index + 1];
+    return timeOffPolicyId
+      ? [
+          {
+            timeOffPolicyId,
+            effectiveFrom: start,
+            effectiveUntil: next ? addDays(next.start, -1) : until,
+          },
+        ]
+      : [];
   });
-  return stretches;
 }
 
 function covers(
