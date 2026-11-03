@@ -13,7 +13,8 @@ import {
 import { importPhotoRepository, importReader, lockImport } from "../../src/modules/imports/db";
 import type { ImportEmployeeValues } from "../../src/modules/imports/domain";
 import { slackConnectionRepository } from "../../src/modules/slack/db";
-import { parseCalendarDate, todayInUtc } from "../../src/utils";
+import { todayInUtc } from "../../src/utils";
+import { calendarDate } from "./calendarDate";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { everyoneGroupId, insertPolicyGroup, leaveGroups, moveToGroup } from "./seedPolicyGroups";
 import { seedUser } from "./seedUser";
@@ -329,12 +330,4 @@ export class TestSeed {
     const records = await importReader(this.orm).listEmployeeRecords();
     return records.find(({ id }) => id === recordId)!.photoFileId!;
   }
-}
-
-function calendarDate(value: string) {
-  const date = parseCalendarDate(value);
-  if (!date) {
-    throw new Error(`Seed start date ${value} is not a calendar date`);
-  }
-  return date;
 }

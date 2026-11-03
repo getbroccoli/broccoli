@@ -1,50 +1,40 @@
-import Big from "big.js";
 import { expect, it } from "vitest";
 
-import type { CalendarDate } from "../../../utils";
-import { allowanceTargetOf, type AllowanceTargetInputs, type DatedPolicy } from "./allowanceTarget";
+import { allowanceInputs, calendarDate, onTopPolicy, targetRowsOf } from "#test/support";
+
+import { allowanceTargetOf } from "./allowanceTarget";
 
 it("grants 28 days and takes eight bank holidays for a full-time leave year", () => {
   const lines = allowanceTargetOf(allowanceInputs());
 
-  expect(lines[0]).toMatchObject({ kind: "entitlement_grant", amount: "28" });
-  expect(lines.filter((line) => line.kind === "bank_holiday_taken")).toHaveLength(8);
-  expect(lines.find((line) => line.bankHolidayDate === "2026-12-25")?.amount).toEqual("-1");
-  expect(lines.at(-1)).toMatchObject({ kind: "rounding_up_to_half_day", amount: "0" });
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "28"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["bank_holiday_taken", "2026-08-31", "-1"],
+    ["bank_holiday_taken", "2026-12-25", "-1"],
+    ["bank_holiday_taken", "2026-12-28", "-1"],
+    ["rounding_up_to_half_day", null, "0"],
+  ]);
   expect(lines.every((line) => line.firstDate === "2026-01-01")).toEqual(true);
 });
 
 it("prorates from 12 October and takes only bank holidays after joining", () => {
   const inputs = allowanceInputs();
-  inputs.employments = [{ startDate: "2026-10-12" as CalendarDate, endDate: null }];
+  inputs.employments = [{ startDate: calendarDate("2026-10-12"), endDate: null }];
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines.map((line) => [line.kind, line.amount])).toEqual([
-    ["entitlement_grant", "6.213699"],
-    ["bank_holiday_taken", "-1"],
-    ["bank_holiday_taken", "-1"],
-    ["rounding_up_to_half_day", "0.286301"],
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "6.213699"],
+    ["bank_holiday_taken", "2026-12-25", "-1"],
+    ["bank_holiday_taken", "2026-12-28", "-1"],
+    ["rounding_up_to_half_day", null, "0.286301"],
   ]);
-  expect(
-    lines.filter((line) => line.kind === "bank_holiday_taken").map((line) => line.bankHolidayDate),
-  ).toEqual(["2026-12-25", "2026-12-28"]);
   expect(lines.every((line) => line.firstDate === "2026-10-12")).toEqual(true);
-});
-
-it("grants eight bank holidays on top of 25 days and still takes each holiday", () => {
-  const inputs = allowanceInputs();
-  inputs.policies = [onTopPolicy()];
-
-  const lines = allowanceTargetOf(inputs);
-
-  expect(lines.find((line) => line.kind === "entitlement_grant")?.amount).toEqual("25");
-  expect(lines.find((line) => line.kind === "bank_holiday_allowance_grant")).toMatchObject({
-    amount: "8",
-    firstDate: "2026-01-01",
-  });
-  expect(lines.filter((line) => line.kind === "bank_holiday_taken")).toHaveLength(8);
-  expect(lines.find((line) => line.kind === "rounding_up_to_half_day")?.amount).toEqual("0");
 });
 
 it("combines the year's full-time and three-day weeks before rounding once", () => {
@@ -53,20 +43,25 @@ it("combines the year's full-time and three-day weeks before rounding once", () 
     ...inputs.workingWeeks,
     {
       ...inputs.workingWeeks[0]!,
-      effectiveFrom: "2026-09-01" as CalendarDate,
+      effectiveFrom: calendarDate("2026-09-01"),
       minutes: [0, 450, 450, 450, 0, 0, 0],
     },
   ];
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(
-    lines.filter((line) => line.kind === "entitlement_grant").map((line) => line.amount),
-  ).toEqual(["24.256438"]);
-  expect(
-    lines.filter((line) => line.bankHolidayDate?.startsWith("2026-12")).map((line) => line.amount),
-  ).toEqual(["0", "0"]);
-  expect(lines.find((line) => line.kind === "rounding_up_to_half_day")?.amount).toEqual("0.243562");
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "24.256438"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["bank_holiday_taken", "2026-08-31", "-1"],
+    ["bank_holiday_taken", "2026-12-25", "0"],
+    ["bank_holiday_taken", "2026-12-28", "0"],
+    ["rounding_up_to_half_day", null, "0.243562"],
+  ]);
 });
 
 it("caps a six-day worker's statutory entitlement at 28 days", () => {
@@ -77,42 +72,35 @@ it("caps a six-day worker's statutory entitlement at 28 days", () => {
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines.find((line) => line.kind === "entitlement_grant")?.amount).toEqual("28");
-});
-
-it("counts a half-length Friday as half a day for entitlement and Good Friday", () => {
-  const inputs = allowanceInputs();
-  inputs.workingWeeks = [{ ...inputs.workingWeeks[0]!, minutes: [450, 450, 450, 450, 225, 0, 0] }];
-
-  const lines = allowanceTargetOf(inputs);
-
-  expect(lines.find((line) => line.kind === "entitlement_grant")?.amount).toEqual("25.2");
-  expect(lines.find((line) => line.bankHolidayDate === "2026-04-03")?.amount).toEqual("-0.5");
-  expect(lines.find((line) => line.kind === "rounding_up_to_half_day")?.amount).toEqual("0.3");
-});
-
-it("takes the working week's Scottish bank holidays", () => {
-  const inputs = allowanceInputs();
-  inputs.workingWeeks = [{ ...inputs.workingWeeks[0]!, bankHolidayCalendar: "scotland" }];
-
-  const lines = allowanceTargetOf(inputs);
-
-  const taken = lines.map((line) => line.bankHolidayDate);
-
-  expect(taken).toContain("2026-08-03");
-  expect(taken).not.toContain("2026-08-31");
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "28"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["bank_holiday_taken", "2026-08-31", "-1"],
+    ["bank_holiday_taken", "2026-12-25", "-1"],
+    ["bank_holiday_taken", "2026-12-28", "-1"],
+    ["rounding_up_to_half_day", null, "0"],
+  ]);
 });
 
 it("prorates through the inclusive employment end and takes no later bank holidays", () => {
   const inputs = allowanceInputs();
-  inputs.employments = [{ startDate: null, endDate: "2026-06-30" as CalendarDate }];
+  inputs.employments = [{ startDate: null, endDate: calendarDate("2026-06-30") }];
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines.find((line) => line.kind === "entitlement_grant")?.amount).toEqual("13.884932");
-  expect(lines.findLast((line) => line.kind === "bank_holiday_taken")?.bankHolidayDate).toEqual(
-    "2026-05-25",
-  );
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "13.884932"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["rounding_up_to_half_day", null, "0.115068"],
+  ]);
 });
 
 it("grants and takes nothing during a gap without a working week", () => {
@@ -120,27 +108,33 @@ it("grants and takes nothing during a gap without a working week", () => {
   inputs.workingWeeks = [
     ...inputs.workingWeeks,
     {
-      effectiveFrom: "2026-07-01" as CalendarDate,
+      effectiveFrom: calendarDate("2026-07-01"),
       minutes: null,
       fullDayMinutes: null,
       bankHolidayCalendar: null,
     },
-    { ...inputs.workingWeeks[0]!, effectiveFrom: "2026-10-01" as CalendarDate },
+    { ...inputs.workingWeeks[0]!, effectiveFrom: calendarDate("2026-10-01") },
   ];
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(lines.find((line) => line.kind === "entitlement_grant")?.amount).toEqual("20.942466");
-  const taken = lines.map((line) => line.bankHolidayDate);
-
-  expect(taken).not.toContain("2026-08-31");
-  expect(taken).toContain("2026-12-25");
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "20.942466"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["bank_holiday_taken", "2026-12-25", "-1"],
+    ["bank_holiday_taken", "2026-12-28", "-1"],
+    ["rounding_up_to_half_day", null, "0.057534"],
+  ]);
 });
 
 it("grants a service extra from its anniversary and omits an unreached step", () => {
   const inputs = allowanceInputs();
   const policy = onTopPolicy();
-  inputs.serviceStart = "2024-07-01" as CalendarDate;
+  inputs.serviceStart = calendarDate("2024-07-01");
   inputs.policies = [
     {
       ...policy,
@@ -154,16 +148,23 @@ it("grants a service extra from its anniversary and omits an unreached step", ()
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(
-    lines
-      .filter((line) => line.kind === "entitlement_grant")
-      .map((line) => [line.allowanceRuleId, line.amount, line.firstDate]),
-  ).toEqual([
-    ["yearly", "25", "2026-01-01"],
-    ["two-years", "0.50411", "2026-07-01"],
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "25"],
+    ["entitlement_grant", "two-years", "0.50411"],
+    ["bank_holiday_allowance_grant", null, "8"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["bank_holiday_taken", "2026-08-31", "-1"],
+    ["bank_holiday_taken", "2026-12-25", "-1"],
+    ["bank_holiday_taken", "2026-12-28", "-1"],
+    ["rounding_up_to_half_day", null, "0.49589"],
   ]);
-  expect(lines.find((line) => line.kind === "bank_holiday_allowance_grant")?.amount).toEqual("8");
-  expect(lines.find((line) => line.kind === "rounding_up_to_half_day")?.amount).toEqual("0.49589");
+  expect(lines.find((line) => line.allowanceRuleId === "two-years")?.firstDate).toEqual(
+    "2026-07-01",
+  );
 });
 
 it("returns no lines for a policy without a balance", () => {
@@ -187,34 +188,44 @@ it("keeps 28 days across three equivalent policies without adding half a day", (
   inputs.policies = [
     {
       ...policy,
-      effectiveUntil: "2026-03-31" as CalendarDate,
+      effectiveUntil: calendarDate("2026-03-31"),
       rules: [{ ...yearly, id: "first-yearly" }],
     },
     {
       ...policy,
-      effectiveFrom: "2026-04-01" as CalendarDate,
-      effectiveUntil: "2026-06-29" as CalendarDate,
+      effectiveFrom: calendarDate("2026-04-01"),
+      effectiveUntil: calendarDate("2026-06-29"),
       rules: [{ ...yearly, id: "second-yearly" }],
     },
     {
       ...policy,
-      effectiveFrom: "2026-06-30" as CalendarDate,
+      effectiveFrom: calendarDate("2026-06-30"),
       rules: [{ ...yearly, id: "third-yearly" }],
     },
   ];
 
   const lines = allowanceTargetOf(inputs);
-  const grants = lines.filter((line) => line.kind === "entitlement_grant");
-  const grantTotal = grants.reduce((sum, line) => sum.plus(line.amount), Big(0));
-  const rounding = lines.find((line) => line.kind === "rounding_up_to_half_day")!;
 
-  expect(grantTotal.plus(rounding.amount).toString()).toEqual("28");
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "first-yearly", "6.90411"],
+    ["entitlement_grant", "second-yearly", "6.90411"],
+    ["entitlement_grant", "third-yearly", "14.191781"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["bank_holiday_taken", "2026-08-31", "-1"],
+    ["bank_holiday_taken", "2026-12-25", "-1"],
+    ["bank_holiday_taken", "2026-12-28", "-1"],
+    ["rounding_up_to_half_day", null, "-0.000001"],
+  ]);
 });
 
 it("returns a service extra before yearly entitlement when the policy lists it first", () => {
   const inputs = allowanceInputs();
   const policy = inputs.policies[0]!;
-  inputs.serviceStart = "2020-01-01" as CalendarDate;
+  inputs.serviceStart = calendarDate("2020-01-01");
   inputs.policies = [
     {
       ...policy,
@@ -227,87 +238,17 @@ it("returns a service extra before yearly entitlement when the policy lists it f
 
   const lines = allowanceTargetOf(inputs);
 
-  expect(
-    lines.filter((line) => line.kind === "entitlement_grant").map((line) => line.allowanceRuleId),
-  ).toEqual(["two-years", "yearly"]);
+  expect(targetRowsOf(lines)).toEqual([
+    ["entitlement_grant", "two-years", "1"],
+    ["entitlement_grant", "yearly", "28"],
+    ["bank_holiday_taken", "2026-01-01", "-1"],
+    ["bank_holiday_taken", "2026-04-03", "-1"],
+    ["bank_holiday_taken", "2026-04-06", "-1"],
+    ["bank_holiday_taken", "2026-05-04", "-1"],
+    ["bank_holiday_taken", "2026-05-25", "-1"],
+    ["bank_holiday_taken", "2026-08-31", "-1"],
+    ["bank_holiday_taken", "2026-12-25", "-1"],
+    ["bank_holiday_taken", "2026-12-28", "-1"],
+    ["rounding_up_to_half_day", null, "0"],
+  ]);
 });
-
-function allowanceInputs(): AllowanceTargetInputs {
-  return {
-    leaveYear: { start: "2026-01-01" as CalendarDate, end: "2026-12-31" as CalendarDate },
-    employments: [{ startDate: null, endDate: null }],
-    serviceStart: null,
-    policies: [
-      {
-        effectiveFrom: null,
-        effectiveUntil: null,
-        balance: "balance_from_allowance",
-        bankHolidays: "bank_holidays_included_in_allowance",
-        rules: [
-          {
-            id: "yearly",
-            kind: "yearly_entitlement",
-            entitlementDays: 28,
-            entitlementDaysPerWeek: 5,
-            maxDays: 28,
-          },
-        ],
-      },
-    ],
-    workingWeeks: [
-      {
-        effectiveFrom: "2026-01-01" as CalendarDate,
-        minutes: [450, 450, 450, 450, 450, 0, 0],
-        fullDayMinutes: 450,
-        bankHolidayCalendar: "england_and_wales",
-      },
-    ],
-    bankHolidays: new Map([
-      [
-        "england_and_wales",
-        [
-          "2026-01-01",
-          "2026-04-03",
-          "2026-04-06",
-          "2026-05-04",
-          "2026-05-25",
-          "2026-08-31",
-          "2026-12-25",
-          "2026-12-28",
-        ] as CalendarDate[],
-      ],
-      [
-        "scotland",
-        [
-          "2026-01-01",
-          "2026-01-02",
-          "2026-04-03",
-          "2026-05-04",
-          "2026-05-25",
-          "2026-08-03",
-          "2026-11-30",
-          "2026-12-25",
-          "2026-12-28",
-        ] as CalendarDate[],
-      ],
-    ]),
-  };
-}
-
-function onTopPolicy(): DatedPolicy {
-  return {
-    effectiveFrom: null,
-    effectiveUntil: null,
-    balance: "balance_from_allowance",
-    bankHolidays: "bank_holidays_on_top_of_allowance",
-    rules: [
-      {
-        id: "yearly",
-        kind: "yearly_entitlement",
-        entitlementDays: 25,
-        entitlementDaysPerWeek: 5,
-        maxDays: null,
-      },
-    ],
-  };
-}

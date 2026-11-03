@@ -140,6 +140,7 @@
       "src/modules/imports/db",
       "src/modules/imports/domain",
       "src/modules/slack/db",
+      "src/modules/timeOff/domain",
       "src/utils"
     ],
     "test/e2e": ["src/core/db", "src/core/logger", "src/core/server", "test/support"]
