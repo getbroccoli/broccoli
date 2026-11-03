@@ -4,7 +4,12 @@ import type { Orm, Tx } from "../../src/core/db";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createTimeOffService } from "../../src/modules/timeOff";
-import { allowanceLedgerLines, allowances, timeOffTypes } from "../../src/modules/timeOff/db";
+import {
+  allowanceLedgerLines,
+  allowances,
+  timeOffAllowanceRules,
+  timeOffTypes,
+} from "../../src/modules/timeOff/db";
 import { type CalendarDate } from "../../src/utils";
 import { bankHolidayService } from "./bankHolidayService";
 import { employeeSetup } from "./statelessServices";
@@ -31,7 +36,7 @@ export function deleteAllEmployees(orm: Orm) {
   };
 }
 
-/** An employee's allowances, oldest first, each with its lines in the order they were appended and their sum. */
+/** An employee's allowances, oldest first, each with its lines in the order they were appended (with their rule's kind) and their sum. */
 export async function readAllowances(orm: Orm, employeeId: string) {
   const rows = await orm
     .select({ allowance: allowances, typeKey: timeOffTypes.typeKey })
@@ -44,12 +49,17 @@ export async function readAllowances(orm: Orm, employeeId: string) {
       const lines = await orm
         .select({
           kind: allowanceLedgerLines.kind,
+          rule: timeOffAllowanceRules.kind,
           amount: allowanceLedgerLines.amount,
           effectiveDate: allowanceLedgerLines.effectiveDate,
           causeKind: allowanceLedgerLines.causeKind,
           causeRef: allowanceLedgerLines.causeRef,
         })
         .from(allowanceLedgerLines)
+        .leftJoin(
+          timeOffAllowanceRules,
+          eq(timeOffAllowanceRules.id, allowanceLedgerLines.allowanceRuleId),
+        )
         .where(eq(allowanceLedgerLines.allowanceId, allowance.id))
         // uuidv7 ids sort in insertion order.
         .orderBy(asc(allowanceLedgerLines.id));

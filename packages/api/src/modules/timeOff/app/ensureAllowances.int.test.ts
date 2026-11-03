@@ -102,7 +102,7 @@ test("a start date change corrects the allowance by appending lines", async ({
   ).toBe(true);
 });
 
-test("a September switch to Tuesday through Thursday restores the December bank holidays", async ({
+test("a September switch to Tuesday through Thursday cuts the grant and restores the December bank holidays", async ({
   orm,
   seed,
   transact,
@@ -136,18 +136,29 @@ test("a September switch to Tuesday through Thursday restores the December bank 
     }),
   );
 
-  const allowances = await readAllowances(orm, employee.id);
-  expect(allowances).toMatchObject([{ total: 18.5 }]);
-  const lines = allowances[0]!.lines;
-  expect(lines.slice(0, before!.lines.length)).toEqual(before!.lines);
-  expect(lines.length).toBeGreaterThan(before!.lines.length);
-  for (const date of ["2026-12-25", "2026-12-28"]) {
-    expect(
-      lines
-        .filter((line) => line.kind === "bank_holiday_taken" && line.effectiveDate === date)
-        .reduce((sum, line) => sum + line.amount, 0),
-    ).toBe(0);
-  }
+  const [after] = await readAllowances(orm, employee.id);
+  expect(after!.lines.slice(0, before!.lines.length)).toEqual(before!.lines);
+  const appended = after!.lines.slice(before!.lines.length);
+  expect(
+    appended.map(({ kind, rule, effectiveDate, amount }) => [
+      kind,
+      kind === "bank_holiday_taken" ? effectiveDate : rule,
+      amount,
+    ]),
+  ).toEqual([
+    ["entitlement_grant", "yearly_entitlement", -3.743562],
+    ["bank_holiday_taken", "2026-12-25", 1],
+    ["bank_holiday_taken", "2026-12-28", 1],
+    ["rounding_up_to_half_day", null, 0.243562],
+  ]);
+  expect(before!.total).toEqual(20);
+  expect(after!.total).toEqual(18.5);
+  expect(appended.every(({ causeKind }) => causeKind === "working_pattern_changed")).toEqual(true);
+  expect(
+    appended
+      .filter(({ kind }) => kind !== "bank_holiday_taken")
+      .map(({ effectiveDate }) => effectiveDate),
+  ).toEqual(["2026-09-01", "2026-09-01"]);
 });
 
 test("a Scottish working pattern charges Scotland's ten weekday bank holidays", async ({

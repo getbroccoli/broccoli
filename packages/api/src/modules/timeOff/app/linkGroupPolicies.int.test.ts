@@ -62,6 +62,7 @@ test("linking the statutory minimum grants a full-timer 20 days after bank holid
   expect(allowances[0]!.lines).toEqual([
     {
       kind: "entitlement_grant",
+      rule: "yearly_entitlement",
       amount: 28,
       effectiveDate: "2026-01-01",
       causeKind: "policy_linked_to_group",
@@ -78,6 +79,7 @@ test("linking the statutory minimum grants a full-timer 20 days after bank holid
       "2026-12-28",
     ].map((effectiveDate) => ({
       kind: "bank_holiday_taken",
+      rule: null,
       amount: -1,
       effectiveDate,
       causeKind: "policy_linked_to_group",

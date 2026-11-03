@@ -45,14 +45,17 @@ export function ledgerDifference(
   for (const sum of current) {
     identities.set(identityOf(sum), { ...identities.get(identityOf(sum)), current: sum });
   }
+  // A line a dated change appends takes effect from that date.
+  const changedFrom = DATED_CAUSES.has(cause.kind) ? (cause.ref as CalendarDate) : null;
   return [...identities].flatMap(([identity, { target: line, current: sum }]) => {
     const difference = Big(line?.amount ?? 0).minus(sum?.amount ?? 0);
     if (difference.eq(0)) {
       return [];
     }
     const { kind, allowanceRuleId, bankHolidayDate } = (line ?? sum)!;
-    // shortcut: a changed grant takes effect from its first contributing day, not from the first part that changed; narrow it when the balance history shows dates.
-    const effectiveDate = bankHolidayDate ?? line?.firstDate ?? allowance.leaveYearStart;
+    const firstDate = line?.firstDate ?? allowance.leaveYearStart;
+    const effectiveDate =
+      bankHolidayDate ?? (changedFrom && changedFrom > firstDate ? changedFrom : firstDate);
     return [
       {
         allowanceId: allowance.id,
@@ -75,3 +78,8 @@ function identityOf({
 }: Pick<LedgerSum, "kind" | "allowanceRuleId" | "bankHolidayDate">): string {
   return [kind, allowanceRuleId ?? bankHolidayDate].filter(Boolean).join(":");
 }
+
+const DATED_CAUSES = new Set<AllowanceCause["kind"]>([
+  "START_DATE_CHANGED",
+  "WORKING_PATTERN_CHANGED",
+]);
