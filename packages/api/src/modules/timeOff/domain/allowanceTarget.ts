@@ -10,54 +10,6 @@ import {
 } from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
 
-/** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
-export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
-
-/** A person's employment; a null start or end is open. */
-export interface EmploymentPeriod {
-  startDate: CalendarDate | null;
-  endDate: CalendarDate | null;
-}
-
-/** One part of a policy's allowance, as stored in `time_off_allowance_rules`. */
-export type AllowanceRule =
-  | {
-      id: string;
-      kind: "yearly_entitlement";
-      /** Days for a working week of `entitlementDaysPerWeek` days (28 for 5). */
-      entitlementDays: number;
-      entitlementDaysPerWeek: number;
-      /** The most a full year grants; null: no cap. */
-      maxDays: number | null;
-    }
-  | {
-      id: string;
-      kind: "service_extra";
-      /** The step is reached on this anniversary of the service start. */
-      afterYears: number;
-      /** Extra days a year for a full-time week, from that step. */
-      extraDays: number;
-    };
-
-/** The policy that applies to the person for this type from a date to a date; null is open. */
-export interface DatedPolicy {
-  effectiveFrom: CalendarDate | null;
-  /** The last day it applies. */
-  effectiveUntil: CalendarDate | null;
-  balance: "balance_from_allowance" | "unlimited_balance" | "no_balance";
-  /** Null unless the balance is `balance_from_allowance`. */
-  bankHolidays: "bank_holidays_included_in_allowance" | "bank_holidays_on_top_of_allowance" | null;
-  rules: readonly AllowanceRule[];
-}
-
-/** What a person works from a date until the next week; minutes null while they have no pattern. */
-export interface DatedWorkingWeek {
-  effectiveFrom: CalendarDate;
-  minutes: WeekdayMinutes | null;
-  fullDayMinutes: number | null;
-  bankHolidayCalendar: BankHolidayCalendar | null;
-}
-
 /** Everything one allowance's target depends on. */
 export interface AllowanceTargetInputs {
   leaveYear: { start: CalendarDate; end: CalendarDate };
@@ -88,6 +40,54 @@ export interface AllowanceTargetLine {
   /** The first day of the earliest part of the leave year that contributes to this line. */
   firstDate: CalendarDate;
 }
+
+/** A person's employment; a null start or end is open. */
+export interface EmploymentPeriod {
+  startDate: CalendarDate | null;
+  endDate: CalendarDate | null;
+}
+
+/** The policy that applies to the person for this type from a date to a date; null is open. */
+export interface DatedPolicy {
+  effectiveFrom: CalendarDate | null;
+  /** The last day it applies. */
+  effectiveUntil: CalendarDate | null;
+  balance: "balance_from_allowance" | "unlimited_balance" | "no_balance";
+  /** Null unless the balance is `balance_from_allowance`. */
+  bankHolidays: "bank_holidays_included_in_allowance" | "bank_holidays_on_top_of_allowance" | null;
+  rules: readonly AllowanceRule[];
+}
+
+/** What a person works from a date until the next week; minutes null while they have no pattern. */
+export interface DatedWorkingWeek {
+  effectiveFrom: CalendarDate;
+  minutes: WeekdayMinutes | null;
+  fullDayMinutes: number | null;
+  bankHolidayCalendar: BankHolidayCalendar | null;
+}
+
+/** One part of a policy's allowance, as stored in `time_off_allowance_rules`. */
+export type AllowanceRule =
+  | {
+      id: string;
+      kind: "yearly_entitlement";
+      /** Days for a working week of `entitlementDaysPerWeek` days (28 for 5). */
+      entitlementDays: number;
+      entitlementDaysPerWeek: number;
+      /** The most a full year grants; null: no cap. */
+      maxDays: number | null;
+    }
+  | {
+      id: string;
+      kind: "service_extra";
+      /** The step is reached on this anniversary of the service start. */
+      afterYears: number;
+      /** Extra days a year for a full-time week, from that step. */
+      extraDays: number;
+    };
+
+/** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
+export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
 
 /**
  * The lines an allowance should have: entitlement grants in the order they first grant (rule
