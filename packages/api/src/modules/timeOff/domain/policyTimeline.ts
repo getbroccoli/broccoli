@@ -19,7 +19,7 @@ export interface DatedMembership {
 export interface PolicyTimeline {
   assignments: readonly DatedPolicyRow[];
   memberships: readonly DatedMembership[];
-  /** Each terms' links, by terms id. */
+  /** Policy links, by terms id. */
   termsLinks: ReadonlyMap<string, readonly DatedPolicyRow[]>;
 }
 

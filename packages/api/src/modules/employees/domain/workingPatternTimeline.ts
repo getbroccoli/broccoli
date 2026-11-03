@@ -23,7 +23,7 @@ export interface TermsMembership {
 export interface WorkingPatternTimeline {
   assignments: readonly DatedPattern[];
   memberships: readonly TermsMembership[];
-  /** Each terms' dated patterns, by terms id. */
+  /** Dated patterns, by terms id. */
   termsPatterns: ReadonlyMap<string, readonly DatedPattern[]>;
   /** Each pattern's weeks, oldest first, by pattern id. */
   patternWeeks: ReadonlyMap<string, readonly PatternWeek[]>;

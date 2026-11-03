@@ -14,7 +14,7 @@ export interface TimeOffPolicyRepository {
   findAll(): Promise<TimeOffPolicy[]>;
   /** Serializes changes to terms' links until the transaction ends. */
   lockTermsLinks(): Promise<void>;
-  /** Each terms' links, by terms id. */
+  /** Policy links, by terms id. */
   findTermsLinks(termsIds: readonly string[]): Promise<Map<string, DatedPolicyRow[]>>;
   /** Links each policy to the terms for its type, from the beginning and open-ended. */
   insertTermsLinks(

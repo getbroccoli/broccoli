@@ -34,7 +34,7 @@ export interface WorkingPatternRepository {
   isPatternUsed(workingPatternId: string): Promise<boolean>;
   /** The employees on the pattern on any date, themselves or through their terms. */
   findEmployeesOnPattern(workingPatternId: string): Promise<string[]>;
-  /** Each terms' dated patterns, by terms id. */
+  /** Dated patterns, by terms id. */
   findTermsLinks(termsIds: readonly string[]): Promise<Map<string, DatedPattern[]>>;
   /** Each employee's own dated patterns, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, DatedPattern[]>>;
