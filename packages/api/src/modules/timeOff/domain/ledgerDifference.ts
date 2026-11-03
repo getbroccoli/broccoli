@@ -1,3 +1,4 @@
+import Big from "big.js";
 import type { CalendarDate } from "../../../utils";
 import type { AllowanceCause } from "./allowanceCause";
 import type { AllowanceTargetLine } from "./allowanceTarget";
@@ -8,7 +9,8 @@ export interface LedgerSum {
   allowanceRuleId: string | null;
   /** The effective date of bank holidays taken; null on other kinds. */
   bankHolidayDate: CalendarDate | null;
-  amount: number;
+  /** Days as the database's decimal text. */
+  amount: string;
   lineCount: number;
 }
 
@@ -44,8 +46,8 @@ export function ledgerDifference(
     identities.set(identityOf(sum), { ...identities.get(identityOf(sum)), current: sum });
   }
   return [...identities].flatMap(([identity, { target: line, current: sum }]) => {
-    const difference = toMicroDays(line?.amount ?? 0) - toMicroDays(sum?.amount ?? 0);
-    if (difference === 0) {
+    const difference = Big(line?.amount ?? 0).minus(sum?.amount ?? 0);
+    if (difference.eq(0)) {
       return [];
     }
     const { kind, allowanceRuleId, bankHolidayDate } = (line ?? sum)!;
@@ -57,7 +59,7 @@ export function ledgerDifference(
         kind,
         allowanceRuleId,
         effectiveDate,
-        amount: String(difference / MICRO_DAYS_IN_A_DAY),
+        amount: difference.toString(),
         causeKind: cause.kind.toLowerCase() as NewLedgerLine["causeKind"],
         causeRef: cause.ref,
         idempotencyKey: `${allowance.id}:${identity}:${sum?.lineCount ?? 0}`,
@@ -73,9 +75,3 @@ function identityOf({
 }: Pick<LedgerSum, "kind" | "allowanceRuleId" | "bankHolidayDate">): string {
   return [kind, allowanceRuleId ?? bankHolidayDate].filter(Boolean).join(":");
 }
-
-function toMicroDays(days: number): number {
-  return Math.round(days * MICRO_DAYS_IN_A_DAY);
-}
-
-const MICRO_DAYS_IN_A_DAY = 1_000_000;
