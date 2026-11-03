@@ -1,5 +1,14 @@
 // Public values.
-export { addDays, parseCalendarDate, parseDateColumn, todayInUtc } from "./calendarDate";
+export {
+  addDays,
+  addYears,
+  daysBetween,
+  isWithin,
+  parseCalendarDate,
+  parseDateColumn,
+  todayInUtc,
+  weekdayOf,
+} from "./calendarDate";
 export { AnswerTooLargeError, fetchBytes } from "./fetchBytes";
 export { fetchJson, readText } from "./fetchJson";
 export { normalizeImage } from "./normalizeImage";

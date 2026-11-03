@@ -24,6 +24,8 @@ export {
 export { startFakeHttpServer } from "./fakeHttpServer";
 export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
+export { allowanceInputs, balanceOf, onTopPolicy, targetRowsOf } from "./allowanceTarget";
+export { calendarDate } from "./calendarDate";
 export { PNG, JPEG, WEBP } from "./images";
 export { fakeSlackApi, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./fakeSlackApi";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
