@@ -78,17 +78,22 @@ test("rolling back an import publishes no added employees", async ({ orm }) => {
   expect((await employeeServices(orm).listEmployees(OWNER, {})).edges).toEqual([]);
 });
 
-test("changing or clearing a start date publishes the new date", async ({ orm, seed }) => {
+test("changing or clearing a start date publishes the previous and new dates", async ({
+  orm,
+  seed,
+}) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const { transact, changed } = employmentEvents(orm);
   const employees = employeeServices(orm, { transact });
 
   await employees.updateEmployee(OWNER, { id: employee.id, startDate: "2026-10-12" });
   await employees.updateEmployee(OWNER, { id: employee.id, startDate: null });
+  await employees.updateEmployee(OWNER, { id: employee.id, startDate: "2026-07-01" });
 
   expect(changed).toEqual([
-    { employeeId: employee.id, startDate: "2026-10-12" },
-    { employeeId: employee.id, startDate: null },
+    { employeeId: employee.id, previousStartDate: "2025-01-01", startDate: "2026-10-12" },
+    { employeeId: employee.id, previousStartDate: "2026-10-12", startDate: null },
+    { employeeId: employee.id, previousStartDate: null, startDate: "2026-07-01" },
   ]);
 });
 

@@ -131,6 +131,7 @@ test(
       tx.publish("employees.start_date_changed", {
         employeeId: employee.id,
         startDate,
+        previousStartDate: parseCalendarDate("2025-01-01")!,
       });
     });
     await Promise.race([locked.promise, changing]);

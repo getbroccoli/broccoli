@@ -104,12 +104,6 @@ export function createEmployeeService({
         });
         const startDateChanges =
           startDate === undefined ? [] : await changeStartDate(tx, employeeId, startDate);
-        if (startDateChanges.length > 0) {
-          tx.publish("employees.start_date_changed", {
-            employeeId,
-            startDate: startDate ?? null,
-          });
-        }
         const changed = [
           ...employeeChanges(before, after),
           ...(location === undefined ? [] : await movedLocation(tx, before.locationId, location)),
@@ -212,6 +206,11 @@ async function changeStartDate(
   const before = startDates.get(employeeId)!;
   if (before !== startDate) {
     await employments.setStartDate(employeeId, startDate);
+    tx.publish("employees.start_date_changed", {
+      employeeId,
+      startDate,
+      previousStartDate: before,
+    });
   }
   return employeeChanges({ startDate: before }, { startDate });
 }

@@ -6,6 +6,7 @@ import type { EmployeeReadService, EmployeeWorkingPatternService } from "../../e
 import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
 import {
   type AllowanceCause,
+  type AllowanceInputs,
   calculateAllowance,
   type DatedPolicy,
   leaveYearContaining,
@@ -161,15 +162,26 @@ async function differenceLines(
   const personOf = new Map(people.map((person) => [person.employeeId, person]));
   return open.flatMap((allowance) => {
     const person = personOf.get(allowance.employeeId)!;
-    const target = calculateAllowance({
+    const inputs: AllowanceInputs = {
       leaveYear: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
       employments: person.periods,
       serviceStart: person.serviceStart,
       policies: datedPolicies(person.timeline, policies, allowance),
       workingWeeks: weeks.get(allowance.employeeId)!,
       bankHolidays: holidayDates,
-    });
-    return ledgerDifference(allowance, target, sums.get(allowance.id) ?? [], cause);
+    };
+    const target = calculateAllowance(inputs);
+    const previous =
+      cause.kind === "START_DATE_CHANGED"
+        ? calculateAllowance({
+            ...inputs,
+            serviceStart: cause.previousStartDate,
+            employments: inputs.employments.map((period, index) =>
+              index === 0 ? { ...period, startDate: cause.previousStartDate } : period,
+            ),
+          })
+        : [];
+    return ledgerDifference(allowance, target, sums.get(allowance.id) ?? [], cause, previous);
   });
 }
 
