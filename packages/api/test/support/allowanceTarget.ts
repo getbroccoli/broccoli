@@ -1,3 +1,5 @@
+import Big from "big.js";
+
 import type {
   AllowanceTargetInputs,
   AllowanceTargetLine,
@@ -94,4 +96,9 @@ export function targetRowsOf(lines: readonly AllowanceTargetLine[]) {
     line.allowanceRuleId ?? line.bankHolidayDate,
     line.amount,
   ]);
+}
+
+/** What the lines leave to spend: their amounts added up. */
+export function balanceOf(lines: readonly AllowanceTargetLine[]): string {
+  return lines.reduce((sum, line) => sum.plus(line.amount), Big(0)).toString();
 }

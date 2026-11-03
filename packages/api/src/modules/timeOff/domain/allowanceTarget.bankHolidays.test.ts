@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { allowanceInputs, onTopPolicy, targetRowsOf } from "#test/support";
+import { allowanceInputs, balanceOf, onTopPolicy, targetRowsOf } from "#test/support";
 
 import { allowanceTargetOf } from "./allowanceTarget";
 
@@ -23,6 +23,7 @@ it("grants eight bank holidays on top of 25 days and still takes each holiday", 
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0"],
   ]);
+  expect(balanceOf(lines)).toEqual("25");
 });
 
 it("counts a half-length Friday as half a day for entitlement and Good Friday", () => {
@@ -43,6 +44,7 @@ it("counts a half-length Friday as half a day for entitlement and Good Friday", 
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0.3"],
   ]);
+  expect(balanceOf(lines)).toEqual("18.5");
 });
 
 it("takes the working week's Scottish bank holidays", () => {
@@ -64,4 +66,5 @@ it("takes the working week's Scottish bank holidays", () => {
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0"],
   ]);
+  expect(balanceOf(lines)).toEqual("19");
 });

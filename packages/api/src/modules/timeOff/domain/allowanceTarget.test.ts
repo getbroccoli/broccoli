@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { allowanceInputs, calendarDate, onTopPolicy, targetRowsOf } from "#test/support";
+import { allowanceInputs, balanceOf, calendarDate, onTopPolicy, targetRowsOf } from "#test/support";
 
 import { allowanceTargetOf } from "./allowanceTarget";
 
@@ -19,6 +19,7 @@ it("grants 28 days and takes eight bank holidays for a full-time leave year", ()
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0"],
   ]);
+  expect(balanceOf(lines)).toEqual("20");
   expect(lines.every((line) => line.firstDate === "2026-01-01")).toEqual(true);
 });
 
@@ -34,6 +35,7 @@ it("prorates from 12 October and takes only bank holidays after joining", () => 
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0.286301"],
   ]);
+  expect(balanceOf(lines)).toEqual("4.5");
   expect(lines.every((line) => line.firstDate === "2026-10-12")).toEqual(true);
 });
 
@@ -62,6 +64,7 @@ it("combines the year's full-time and three-day weeks before rounding once", () 
     ["bank_holiday_taken", "2026-12-28", "0"],
     ["rounding_up_to_half_day", null, "0.243562"],
   ]);
+  expect(balanceOf(lines)).toEqual("18.5");
 });
 
 it("caps a six-day worker's statutory entitlement at 28 days", () => {
@@ -84,6 +87,7 @@ it("caps a six-day worker's statutory entitlement at 28 days", () => {
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0"],
   ]);
+  expect(balanceOf(lines)).toEqual("20");
 });
 
 it("prorates through the inclusive employment end and takes no later bank holidays", () => {
@@ -101,6 +105,7 @@ it("prorates through the inclusive employment end and takes no later bank holida
     ["bank_holiday_taken", "2026-05-25", "-1"],
     ["rounding_up_to_half_day", null, "0.115068"],
   ]);
+  expect(balanceOf(lines)).toEqual("9");
 });
 
 it("grants and takes nothing during a gap without a working week", () => {
@@ -129,6 +134,7 @@ it("grants and takes nothing during a gap without a working week", () => {
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0.057534"],
   ]);
+  expect(balanceOf(lines)).toEqual("14");
 });
 
 it("grants a service extra from its anniversary and omits an unreached step", () => {
@@ -162,6 +168,7 @@ it("grants a service extra from its anniversary and omits an unreached step", ()
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0.49589"],
   ]);
+  expect(balanceOf(lines)).toEqual("26");
   expect(lines.find((line) => line.allowanceRuleId === "two-years")?.firstDate).toEqual(
     "2026-07-01",
   );
@@ -220,6 +227,7 @@ it("keeps 28 days across three equivalent policies without adding half a day", (
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "-0.000001"],
   ]);
+  expect(balanceOf(lines)).toEqual("20");
 });
 
 it("returns a service extra before yearly entitlement when the policy lists it first", () => {
@@ -251,4 +259,5 @@ it("returns a service extra before yearly entitlement when the policy lists it f
     ["bank_holiday_taken", "2026-12-28", "-1"],
     ["rounding_up_to_half_day", null, "0"],
   ]);
+  expect(balanceOf(lines)).toEqual("21");
 });
