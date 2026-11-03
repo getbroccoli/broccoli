@@ -5,7 +5,7 @@ A manual check of managing locations in Settings, against a development stack.
 ## Setup
 
 1. Start the stack and create the owner with the demo company as in [QA setup](setup.md).
-2. Sign in as `owner@example.com` and open `/settings`.
+2. Sign in as `owner@example.com` and open `/settings` and the Locations tab.
 
 ## The list
 
