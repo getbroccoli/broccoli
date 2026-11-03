@@ -17,17 +17,17 @@ for (const policyKey of [
   "uk_20_days_plus_bank_holidays",
   "uk_25_days_plus_bank_holidays",
 ]) {
-  test(`invariant: leaving and rejoining the group reverses and restores grants (${policyKey})`, async ({
+  test(`invariant: leaving and rejoining the terms reverses and restores grants (${policyKey})`, async ({
     orm,
     seed,
     transact,
   }) => {
     const timeOff = timeOffService(orm);
-    const policyGroupId = await seed.everyoneGroupId();
+    const termsId = await seed.englandAndWalesTermsId();
     const policy = (await timeOff.listPolicies(OWNER, orm)).find(({ key }) => key === policyKey)!;
     await transact((tx) =>
-      timeOff.linkGroupPolicies(OWNER, tx, {
-        policyGroupId,
+      timeOff.linkTermsPolicies(OWNER, tx, {
+        termsId,
         timeOffPolicyIds: [policy.id],
       }),
     );
@@ -45,10 +45,10 @@ for (const policyKey of [
         expect(allowanceIdentitySums(original[0]!.lines).length).toBeGreaterThan(0);
         let previous = original;
 
-        // No group means neither a policy nor a working pattern applies, for all dates.
+        // Being on no terms means neither a policy nor a working pattern applies, for all dates.
         for (const isMember of [false, true]) {
-          if (isMember) await seed.moveToGroup(employee.id, policyGroupId);
-          else await seed.leaveGroups(employee.id);
+          if (isMember) await seed.moveToTerms(employee.id, termsId);
+          else await seed.leaveTerms(employee.id);
           await transact((tx) => timeOff.ensureAllowances(OWNER, tx, input));
           const current = await allowanceSnapshot(orm, employee.id);
           expect(current).toHaveLength(original.length);

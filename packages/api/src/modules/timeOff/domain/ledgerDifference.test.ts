@@ -10,7 +10,7 @@ const allowance = {
   leaveYearStart: calendarDate("2026-01-01"),
   leaveYearEnd: calendarDate("2026-12-31"),
 };
-const linked = { kind: "POLICY_LINKED_TO_TERMS", ref: "group" } as const;
+const linked = { kind: "POLICY_LINKED_TO_TERMS", ref: "terms" } as const;
 
 it("writes every calculated line except a zero rounding for a new allowance", () => {
   const lines = ledgerDifference(allowance, calculateAllowance(allowanceInputs()), [], linked);
@@ -36,7 +36,7 @@ it("writes every calculated line except a zero rounding for a new allowance", ()
   ]);
   expect(
     lines.every(
-      ({ causeKind, causeRef }) => causeKind === "policy_linked_to_terms" && causeRef === "group",
+      ({ causeKind, causeRef }) => causeKind === "policy_linked_to_terms" && causeRef === "terms",
     ),
   ).toEqual(true);
 });
