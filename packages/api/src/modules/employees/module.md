@@ -6,7 +6,7 @@ The people who work for the company, their employments and managers, the terms t
 
 - **Terms** are a named set of people who share the same working pattern and time off policies, such as "England and Wales" or "UK office". The migration creates "England and Wales"; code finds them by their key, never their name.
 - Every new person starts on "England and Wales" for all dates, however they are created: added by hand, from an import or as demo data.
-- Membership is dated (`employee_terms`): a person is on one terms at a time and can move on an exact date.
+- Membership is dated (`employee_terms`): a person is on one set of terms at a time and can move on an exact date.
 - A person on no terms gets no terms settings: no working pattern and no time off unless they have their own assignment. This is how someone like a non-executive director stays out of both.
 
 ## Working patterns

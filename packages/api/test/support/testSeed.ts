@@ -182,7 +182,7 @@ export class TestSeed {
   /** New terms with no one on them. */
   terms = (name = `Terms ${++this.#count}`) => insertTerms(this.orm, name);
 
-  /** Takes an employee off every terms, for all dates. */
+  /** Takes an employee off all terms, for all dates. */
   leaveTerms = (employeeId: string) => leaveTerms(this.orm, employeeId);
 
   /** Moves an employee onto only `termsId`, for all dates or from `from` with no terms before. */

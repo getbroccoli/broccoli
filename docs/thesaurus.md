@@ -32,7 +32,7 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Employee**: someone who works for the company; later also agents and robots. The People area lists employees.
 - **Employment**: a person's work for the company over a period, with its start and end dates and their direct manager; one at a time, never overlapping. A person's start date is the start of their first employment. Not "contract", which in the UK means the written contract of employment.
 - **Location**: a named place where people work, such as an office or "Remote", which admins manage in Settings; a person is in one at a time. Not "site" or "office", which a staff file may call it.
-- **Terms**: a named set of people who share the same working pattern and time off policies, such as "England and Wales"; a person is on one terms at a time, and every new person starts on "England and Wales". Always plural, like the terms of a contract. Code: `terms`.
+- **Terms**: a named set of people who share the same working pattern and time off policies, such as "England and Wales"; a person is on one set of terms at a time, and every new person starts on "England and Wales". Always plural, like the terms of a contract. Code: `terms`.
 - **Working pattern**: a named way of working, such as "Standard" or "Part-time Tue–Thu": the minutes worked on each weekday, Monday to Sunday, from a date. Terms work one by default and a person can be put on one from a date. Not "workload", "schedule" or "policy".
 - **Pattern week**: a working pattern's minutes for each weekday and its full day, from a date until its next week.
 - **Bank holiday calendar**: one nation's bank holidays (England and Wales, Scotland or Northern Ireland), chosen on a pattern week.

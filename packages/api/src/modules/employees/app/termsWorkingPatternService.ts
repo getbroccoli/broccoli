@@ -9,7 +9,7 @@ import { coversDate, type DatedPattern, makeRoomForDatedPattern, parseDateField 
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
 import { referencedPattern } from "./workingPatternService";
 
-/** The working pattern the people on each terms work by default, from a date. Admins only. */
+/** The working pattern the people on each set of terms work by default, from a date. Admins only. */
 export interface TermsWorkingPatternService {
   /** Puts terms on a pattern from a date; their earlier pattern ends the day before. Admins only. */
   setTermsPattern: (
@@ -104,7 +104,7 @@ export function createTermsWorkingPatternService({
 }
 
 /**
- * Changes one terms' dated patterns in one transaction and tells other modules their people's
+ * Changes one set of terms' dated patterns in one transaction and tells other modules their people's
  * working weeks may have changed from `changedFrom`.
  */
 async function changeTermsPatterns(

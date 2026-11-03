@@ -6,7 +6,7 @@ import { employees } from "./employeesTable";
 import { terms } from "./termsTable";
 
 /**
- * Which terms a person is on, and when; one terms at a time, so a person's rows never overlap
+ * Which terms a person is on, and when; one set of terms at a time, so a person's rows never overlap
  * (an exclusion constraint the migration adds). It counts only while they have an employment.
  */
 export const employeeTerms = pgTable(

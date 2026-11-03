@@ -62,7 +62,7 @@ export interface EmployeeReadService {
   ) => Promise<Map<string, TermsMembership[]>>;
   /**
    * Trusted: the employees on the terms on any date, in the caller's transaction; null when no terms
-   * has this id.
+   * have this id.
    */
   readTermsMemberIds: (tx: Tx, termsId: string) => Promise<string[] | null>;
   /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */

@@ -43,7 +43,7 @@ export interface TimeOffService {
   ) => Promise<TimeOffPolicySummary[]>;
   /** Every policy, such as for finding a standard one by its key. */
   listPolicies: (ctx: SecurityContext, db: Orm | Tx) => Promise<TimeOffPolicySummary[]>;
-  /** Unlinks every terms' policies when setup or the demo goes back to its start. */
+  /** Unlinks all terms' policies when setup or the demo goes back to its start. */
   deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 

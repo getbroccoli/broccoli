@@ -63,9 +63,9 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
 }
 
 async function findEnglandAndWalesId(orm: ReturnType<typeof ormOf>): Promise<string> {
-  const [everyone] = await orm
+  const [englandAndWales] = await orm
     .select({ id: terms.id })
     .from(terms)
     .where(eq(terms.key, "england_and_wales"));
-  return everyone!.id;
+  return englandAndWales!.id;
 }

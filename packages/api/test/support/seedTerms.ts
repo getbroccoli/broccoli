@@ -5,11 +5,11 @@ import { employeeTerms, terms } from "../../src/modules/employees/db";
 import { parseCalendarDate } from "../../src/utils";
 
 export async function englandAndWalesTermsId(orm: Orm): Promise<string> {
-  const [everyone] = await orm
+  const [englandAndWales] = await orm
     .select({ id: terms.id })
     .from(terms)
     .where(eq(terms.key, "england_and_wales"));
-  return everyone!.id;
+  return englandAndWales!.id;
 }
 
 export async function insertTerms(orm: Orm, name: string): Promise<string> {
