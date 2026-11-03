@@ -36,20 +36,19 @@ Each is `balance_from_allowance` with a leave year from 1 January, found by `tim
 
 ## Allowance engine
 
-`TimeOffService.ensureAllowances` is the only code that writes allowances and their engine lines (grants, bank holidays taken, rounding). It joins the caller's transaction and is trusted, so the caller checks permissions and logs the outcome after commit. For each person and type:
+`TimeOffService.ensureAllowances` is the only code that writes allowances and their engine lines (grants, bank holidays taken, rounding). It joins the caller's transaction and is trusted, so the caller checks permissions and logs the outcome after commit. It locks existing employee rows in id order until the transaction ends and skips missing employees, so concurrent runs for one person take turns with employee changes and deletion. For each person and type:
 
 1. Every allowance whose leave year has not ended is recalculated; a closed leave year never is.
 2. An allowance is created for the leave year of the policy that applies on the later of today (London) and the person's start, unless one already overlaps it or the person is employed on none of its days. A `no_balance` policy gets none; an `unlimited_balance` one gets no lines.
 3. The target (`domain/allowanceCalculator.ts`) splits the leave year wherever the employment, policy, working week or service step changes, and pro-rates each rule by the part's days per week and share of the year. On-top policies add the year's bank holidays for the days per week; each bank holiday on a working day is taken by that day's minutes ÷ the full day. The grants are rounded up once to the half day.
-4. Each line identity (a rule's grant, the bank holiday grant, one bank holiday, the rounding) whose lines add up to something else gets one line with the difference, author Broccoli itself, cause and ref from the call. A bank holiday's line takes effect on its date; other lines from their first day in the year, or from the date of a start date or working pattern change when later. The idempotency key is `allowanceId:identity:n`, `n` the identity's existing lines, and a per-person advisory lock keeps concurrent runs from interleaving: a repeat appends nothing.
+4. Each line identity (a rule's grant, the bank holiday grant, one bank holiday, the rounding) whose lines add up to something else gets one line with the difference, author Broccoli itself, cause and ref from the call. A bank holiday's line takes effect on its date; other lines from their first day in the year, or from the date of a start date or working pattern change when later. The idempotency key is `allowanceId:identity:n`, `n` the identity's existing lines: a repeat appends nothing.
 
 Causes (`cause_kind`, with `cause_ref`): `policy_linked_to_group` (group id), `employee_added`, `start_date_changed` (new date), `working_pattern_changed` (from date), `leave_year_started` and `daily_check` (the run's date). Amounts carry six decimal places.
 
 What runs the engine; none writes lines itself, and while no policy is linked each run writes nothing:
 
 - linking policies to a group, for its members, in the same transaction;
-- adding people (one by one, by import approval or the demo) and changing a start date: the employees module's `EmploymentChanges` port, which startup fills with the engine, in the same transaction;
-- `employees.working_pattern_changed`: time off runs the engine for the event's people in its own transaction as the system. Events can be lost in a crash; a daily run repairs that.
+- `employees.added` (one person, import approval or the demo), `employees.start_date_changed` and `employees.working_pattern_changed`: after commit, time off runs the engine for the event's people in its own transaction as the system. Handlers are awaited, but a failure does not undo the employee change. Events can be lost in a crash; there is no automatic retry or scheduled daily repair yet.
 - The demo fill links "Everyone" to `uk_statutory_minimum` and the three record-only policies after adding the demo people.
 
 Full-timer in England and Wales employed all of 2026 on the statutory minimum: grant 28, bank holidays −8, remaining 20. On 25 days plus bank holidays: 25 + 8 − 8 = 25.

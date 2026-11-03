@@ -3,13 +3,11 @@ import { readFile } from "node:fs/promises";
 import type { Tx } from "../../../core/db";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseRasterImage, type RasterImage, todayInUtc } from "../../../utils";
-import {
-  createEmployeeSetupService,
-  type EmployeeReadService,
-  type EmploymentChanges,
-} from "../../employees";
+import { createEmployeeSetupService, type EmployeeReadService } from "../../employees";
 import type { TimeOffService } from "../../timeOff";
 import { demoPeople } from "../domain";
+
+const employeeSetup = createEmployeeSetupService();
 
 /** Writes the demo company inside the caller's transaction. */
 export type DemoFill = (tx: Tx) => Promise<void>;
@@ -25,15 +23,12 @@ export interface DemoFillService {
 }
 
 export function createDemoFillService({
-  employmentChanges,
   timeOff,
   employeeReads,
 }: {
-  employmentChanges: EmploymentChanges;
   timeOff: Pick<TimeOffService, "listPolicies" | "linkGroupPolicies">;
   employeeReads: Pick<EmployeeReadService, "readEveryoneGroupId">;
 }): DemoFillService {
-  const employeeSetup = createEmployeeSetupService(employmentChanges);
   async function linkDemoPolicies(ctx: SecurityContext, tx: Tx) {
     const policies = await timeOff.listPolicies(ctx, tx);
     await timeOff.linkGroupPolicies(ctx, tx, {

@@ -2,7 +2,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import { allowanceEventHandlers, type TimeOffService } from "./app";
 
 // Public values.
-export { allowancesOnEmploymentChanges, createTimeOffService } from "./app";
+export { createTimeOffService } from "./app";
 
 // Public types.
 export type { EnsuredAllowances, TimeOffPolicySummary, TimeOffService } from "./app";

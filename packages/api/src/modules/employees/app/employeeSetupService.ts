@@ -12,7 +12,6 @@ import {
   tryParseNewEmployee,
 } from "../domain";
 import { setNewEmployeeManagers } from "./employeeManagerService";
-import { type EmploymentChanges, noEmploymentChanges } from "./employmentChanges";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
 
 const owners = createOwnerService();
@@ -89,10 +88,7 @@ export interface EmployeeSetupService {
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
-/** `employmentChanges` hears of the people added; the other operations need none. */
-export function createEmployeeSetupService(
-  employmentChanges: EmploymentChanges = noEmploymentChanges,
-): EmployeeSetupService {
+export function createEmployeeSetupService(): EmployeeSetupService {
   return {
     async createImportedEmployees(ctx, tx, inputs, cause) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
@@ -121,7 +117,6 @@ export function createEmployeeSetupService(
       const created = await employeeRepository(tx).insertSkippingTakenEmails(newEmployees);
       const managers = await setNewEmployeeManagers(tx, created, managerEmails);
       await recordCreatedEmployees(ctx, tx, created, cause, managers);
-      await employeesAdded(employmentChanges, ctx, tx, created);
       return {
         created: created.length,
         incomplete: inputs.length - newEmployees.length,
@@ -151,7 +146,6 @@ export function createEmployeeSetupService(
       );
       const managers = await setNewEmployeeManagers(tx, employees, managerEmails);
       await recordCreatedEmployees(ctx, tx, employees, cause, managers);
-      await employeesAdded(employmentChanges, ctx, tx, employees);
       return true;
     },
     hasDemoEmployees(ctx, db) {
@@ -179,18 +173,6 @@ export function createEmployeeSetupService(
       await locationRepository(tx).deleteAll();
     },
   };
-}
-
-function employeesAdded(
-  employmentChanges: EmploymentChanges,
-  ctx: SecurityContext,
-  tx: Tx,
-  employees: readonly Employee[],
-): Promise<void> {
-  return employmentChanges.afterEmploymentsChanged(ctx, tx, {
-    employeeIds: employees.map(({ id }) => id),
-    cause: { kind: "EMPLOYEE_ADDED", ref: null },
-  });
 }
 
 /** Each employee with the id of the location its name matches, adding the locations no one has yet. */

@@ -20,7 +20,7 @@ import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
-import { allowancesOnEmploymentChanges, createTimeOffService, timeOffModule } from "./timeOff";
+import { createTimeOffService, timeOffModule } from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -57,8 +57,6 @@ export function createModules(
     await timeOff.deleteAllGroupPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
   };
-  // People added or given a new start date get their allowances in the same transaction.
-  const employmentChanges = allowancesOnEmploymentChanges(timeOff);
   // Built once: the employees module serves it and setup's last step invites through it.
   const invites = createEmployeeInviteService({
     ...core,
@@ -72,13 +70,11 @@ export function createModules(
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
     prepareDemoFill: createDemoFillService({
-      employmentChanges,
       timeOff,
       employeeReads: createEmployeeReadService(core),
     }).prepareDemoFill,
     invites,
     deleteAllEmployees,
-    employmentChanges,
   });
   const manifests = [
     systemModule({
@@ -91,7 +87,7 @@ export function createModules(
       deleteAllEmployees,
       deleteFinishedImport: importServices.deleteFinishedImport,
     }),
-    employeesModule({ ...core, mode: deployment.mode, invites, employmentChanges }),
+    employeesModule({ ...core, mode: deployment.mode, invites }),
     companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact, deleteAllEmployees }),
     slackModule(slackConnection),

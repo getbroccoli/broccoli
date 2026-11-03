@@ -17,11 +17,6 @@ export interface Allowance {
 
 /** Allowances and their ledger lines, inside a transaction. */
 export interface AllowanceRepository {
-  /**
-   * Holds each employee's allowances for the engine until the transaction ends, so two runs for
-   * one person never interleave; locks in id order, so runs over overlapping people cannot deadlock.
-   */
-  lockEmployees(employeeIds: readonly string[]): Promise<void>;
   findByEmployees(employeeIds: readonly string[]): Promise<Allowance[]>;
   insert(newAllowances: readonly Omit<Allowance, "id">[]): Promise<Allowance[]>;
   /** What the engine's lines of each identity add up to, by allowance id. */
@@ -33,14 +28,6 @@ export interface AllowanceRepository {
 export function allowanceRepository(tx: Tx): AllowanceRepository {
   const orm = () => ormOf(tx);
   return {
-    async lockEmployees(employeeIds) {
-      await orm().execute(
-        sql`select pg_advisory_xact_lock(${LOCK_CLASS}, hashtext(id::text))
-          from unnest(${sql.param([...employeeIds].toSorted())}::uuid[]) with ordinality as e(id, n)
-          order by n`,
-      );
-    },
-
     findByEmployees(employeeIds) {
       return orm()
         .select()
@@ -111,6 +98,3 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;
-
-/** The advisory lock's first key, so the engine's per-employee locks clash with no other lock. */
-const LOCK_CLASS = 2090;

@@ -19,7 +19,8 @@ export interface TimeOffService {
   /**
    * Trusted, for operations that checked their caller, events and jobs: creates each employee's
    * allowance for the current leave year and appends the lines that bring every allowance whose
-   * leave year has not ended to its target, in the caller's transaction. A repeat appends nothing.
+   * leave year has not ended to its target, in the caller's transaction. Missing employees are
+   * skipped, and a repeat appends nothing.
    */
   ensureAllowances: (
     ctx: SecurityContext,

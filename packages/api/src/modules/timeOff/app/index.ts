@@ -4,4 +4,4 @@ export {
   type TimeOffPolicySummary,
   type TimeOffService,
 } from "./timeOffService";
-export { allowanceEventHandlers, allowancesOnEmploymentChanges } from "./allowanceTriggers";
+export { allowanceEventHandlers } from "./allowanceEventHandlers";
