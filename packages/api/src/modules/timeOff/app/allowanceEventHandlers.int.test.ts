@@ -3,7 +3,9 @@ import { assert } from "vitest";
 
 import {
   employeeServices,
+  employeeSetup,
   expect,
+  linkStatutoryMinimumToEveryone,
   OWNER,
   readAllowances,
   test,
@@ -15,7 +17,45 @@ import { ormOf } from "../../../core/db";
 import { parseCalendarDate } from "../../../utils";
 // eslint-disable-next-line boundaries/dependencies -- Coordinates the employee writes with a concurrent policy link for this regression.
 import { employeeRepository, employmentRepository } from "../../employees/db";
-import { allowancesOnEmploymentChanges } from "./allowanceTriggers";
+
+test("an imported batch gets allowances and replaying its event appends no duplicate lines", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  await linkStatutoryMinimumToEveryone(orm, seed, transact);
+  const dispatching = transactWithTimeOffEvents(orm);
+
+  const { idsByEmail } = await dispatching((tx) =>
+    employeeSetup.createImportedEmployees(
+      OWNER,
+      tx,
+      [
+        { firstName: "Sam", lastName: "Stone", email: "sam@example.com", startDate: "2025-01-01" },
+        {
+          firstName: "Robin",
+          lastName: "Reed",
+          email: "robin@example.com",
+          startDate: "2026-10-12",
+        },
+      ],
+      { kind: "ADDED_FROM_IMPORT" },
+    ),
+  );
+  const ids = [...idsByEmail.values()];
+  const before = await Promise.all(ids.map((id) => readAllowances(orm, id)));
+  expect(before).toMatchObject([
+    [{ typeKey: "annual_leave", total: 20 }],
+    [{ typeKey: "annual_leave", total: 4.5 }],
+  ]);
+
+  await dispatching((tx) => {
+    tx.publish("employees.added", { employeeIds: ids });
+    return Promise.resolve();
+  });
+
+  expect(await Promise.all(ids.map((id) => readAllowances(orm, id)))).toEqual(before);
+});
 
 test("adding a person writes no allowance when no policy is linked", async ({ orm }) => {
   const employees = employeeServices(orm);
@@ -83,14 +123,14 @@ test(
     const releaseLock = () => release.resolve();
     // Release on timeout too, so a blocked grant cannot strand database cleanup.
     signal.addEventListener("abort", releaseLock, { once: true });
-    const changing = transact(async (tx) => {
+    const changing = transactWithTimeOffEvents(orm)(async (tx) => {
       await employeeRepository(tx).update(employee.id, { email: "new.address@example.com" });
       locked.resolve();
       await release.promise;
       await employmentRepository(tx).setStartDate(employee.id, startDate);
-      await allowancesOnEmploymentChanges(service).afterEmploymentsChanged(OWNER, tx, {
-        employeeIds: [employee.id],
-        cause: { kind: "START_DATE_CHANGED", ref: startDate },
+      tx.publish("employees.start_date_changed", {
+        employeeId: employee.id,
+        startDate,
       });
     });
     await Promise.race([locked.promise, changing]);

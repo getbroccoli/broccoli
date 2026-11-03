@@ -48,8 +48,7 @@ Causes (`cause_kind`, with `cause_ref`): `policy_linked_to_group` (group id), `e
 What runs the engine; none writes lines itself, and while no policy is linked each run writes nothing:
 
 - linking policies to a group, for its members, in the same transaction;
-- adding people (one by one, by import approval or the demo) and changing a start date: the employees module's `EmploymentChanges` port, which startup fills with the engine, in the same transaction;
-- `employees.working_pattern_changed`: time off runs the engine for the event's people in its own transaction as the system. Events can be lost in a crash; a daily run repairs that.
+- `employees.added` (one person, import approval or the demo), `employees.start_date_changed` and `employees.working_pattern_changed`: after commit, time off runs the engine for the event's people in its own transaction as the system. Handlers are awaited, but a failure does not undo the employee change. Events can be lost in a crash; there is no automatic retry or scheduled daily repair yet.
 - The demo fill links "Everyone" to `uk_statutory_minimum` and the three record-only policies after adding the demo people.
 
 Full-timer in England and Wales employed all of 2026 on the statutory minimum: grant 28, bank holidays −8, remaining 20. On 25 days plus bank holidays: 25 + 8 − 8 = 25.

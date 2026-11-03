@@ -73,6 +73,7 @@ For example, a domain rule decides whether an import source may retry. The appli
 
 ## 5. Events, jobs and workflows
 
+- **Domain changes notify through events**, never injected callbacks or callback ports ([RULE72](code-quality.md#layers-and-place)). The publisher owns the fact and each receiving module owns its reaction, so adding a reaction does not add dependencies to the publisher or its callers. Work that must commit together uses direct public operations in one transaction.
 - **Postgres is the durable work store.** pg-boss runs background jobs in the API process, using the instance's database. Enqueuing joins the business transaction, so rollback drops the work. Handlers run as the system, are idempotent and reject stale work; retries and terminal failures belong to the job lifecycle.
 - **Events currently run in process after commit.** Rollback drops them. Handlers run sequentially and are awaited; handler failures are logged without undoing the committed operation. A crash between commit and dispatch can lose an event, an accepted limitation for now.
 - **Record changes publish `records.changed`**, one event per history line with the record, the operation, the changed field keys and the cause, never values. Processes will be triggered by it; running many changes as one batch belongs to the future process runner, not the event.

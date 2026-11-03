@@ -6,7 +6,7 @@ import { type Employee, employeeChanges, locationChanges, managerChanges } from 
 
 const recordHistory = createRecordHistoryService();
 
-/** Appends a creation line for each of these new employees, with their location and manager by id, joining `tx`. */
+/** Records the new employees with their location and manager by id, and publishes their addition, joining `tx`. */
 export async function recordCreatedEmployees(
   ctx: SecurityContext,
   tx: Tx,
@@ -34,4 +34,7 @@ export async function recordCreatedEmployees(
       ],
     })),
   });
+  if (employees.length > 0) {
+    tx.publish("employees.added", { employeeIds: employees.map(({ id }) => id) });
+  }
 }

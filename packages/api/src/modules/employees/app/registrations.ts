@@ -11,6 +11,10 @@ declare module "../../../core/jobs" {
 
 declare module "../../../core/events" {
   interface DomainEvents {
+    /** People added individually, by import approval or with the demo, in one transaction. */
+    "employees.added": { employeeIds: string[] };
+    /** The person's first employment now starts on this date, or has no known start date. */
+    "employees.start_date_changed": { employeeId: string; startDate: CalendarDate | null };
     /**
      * The working weeks of these employees may have changed from `from` on, null from the
      * beginning; a reader recalculates what depends on them from that date.

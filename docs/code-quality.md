@@ -49,6 +49,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 - **RULE67.** Queries use the Drizzle query builder (`select`, `where(eq(…))`, `.for("update")`). The `sql` template is only for what the builder cannot express, such as a recursive query or a table lock, and takes values only as `${…}` parameters; `sql.raw` takes only constants from code, never input.
 - **RULE65.** A module adds its entries to core's shared registries (`RecordTypes`, `CauseKinds`, `DomainEvents`, `Jobs`) by declaration merging in one file, `app/registrations.ts`, never beside the code that uses them.
 - **RULE21.** Cross-module access uses public operations or events, never another module's tables.
+- **RULE72.** Notify other modules of domain changes through domain events, never injected callbacks or callback ports. The publishing module states what happened; each receiving module owns its reaction. Direct public operations remain for work that must share the caller's transaction ([architecture §5](architecture.md#5-events-jobs-and-workflows)).
 - **RULE22.** Integrations use `utils`' `fetchJson` or `fetchBytes`, no HTTP library and no retries by default.
 
 ## API

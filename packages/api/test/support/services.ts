@@ -43,7 +43,7 @@ import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
 import { TEST_SECRET_BOX } from "./testSecretBox";
-import { demoFillService, employmentChanges } from "./timeOffService";
+import { demoFillService, transactWithTimeOffEvents } from "./timeOffService";
 import { testTransactor } from "./testTransactor";
 import { deleteAllEmployees } from "./timeOffService";
 
@@ -71,11 +71,11 @@ export type EmployeeServices = EmployeeService &
 /** Every employee service on `orm`, with silent logs. */
 export function employeeServices(
   orm: Orm,
-  { transact = testTransactor(orm) }: { transact?: Transact } = {},
+  { transact = transactWithTimeOffEvents(orm) }: { transact?: Transact } = {},
 ): EmployeeServices {
   const dependencies = { orm, transact, logger: createLogger("silent") };
   return {
-    ...createEmployeeService({ ...dependencies, employmentChanges: employmentChanges(orm) }),
+    ...createEmployeeService(dependencies),
     ...createEmployeeReadService(dependencies),
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
@@ -234,14 +234,13 @@ export function importServices(
   const sentJobs: { name: JobName; payload: Jobs[JobName] }[] = [];
   const services = createImportServices({
     orm,
-    transact: testTransactor(orm),
+    transact: transactWithTimeOffEvents(orm),
     logger: createLogger("silent"),
     decisions,
     originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
     invites,
     deleteAllEmployees: deleteAllEmployees(orm),
-    employmentChanges: employmentChanges(orm),
     jobs: jobs ?? {
       send: (_tx, name, payload) => {
         sentJobs.push({ name, payload });

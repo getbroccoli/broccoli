@@ -6,11 +6,7 @@ import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import { createEmployeeReadService } from "../../src/modules/employees";
-import {
-  allowancesOnEmploymentChanges,
-  createTimeOffService,
-  timeOffModule,
-} from "../../src/modules/timeOff";
+import { createTimeOffService, timeOffModule } from "../../src/modules/timeOff";
 import {
   allowanceLedgerLines,
   allowances,
@@ -47,16 +43,10 @@ export async function linkStatutoryMinimumToEveryone(orm: Orm, seed: TestSeed, t
   );
 }
 
-/** People added or given a new start date get their allowances, as startup composes it. */
-export function employmentChanges(orm: Orm) {
-  return allowancesOnEmploymentChanges(timeOffService(orm));
-}
-
 /** The demo fill on `orm`, linking "Everyone" to the demo's time off policies. */
 export function demoFillService(orm: Orm) {
   const dependencies = { orm, transact: testTransactor(orm), logger: createLogger("silent") };
   return createDemoFillService({
-    employmentChanges: employmentChanges(orm),
     timeOff: timeOffService(orm),
     employeeReads: createEmployeeReadService(dependencies),
   });
