@@ -71,8 +71,11 @@ interface Person {
 }
 
 /** Every policy, and what decides each person's allowances. */
-async function readPeople(
-  employeeReads: AllowanceEngineDependencies["employeeReads"],
+export async function readPeople(
+  employeeReads: Pick<
+    AllowanceEngineDependencies["employeeReads"],
+    "readEmploymentPeriods" | "readTermsMemberships"
+  >,
   tx: Tx,
   ids: readonly string[],
 ): Promise<{ people: Person[]; policies: TimeOffPolicy[] }> {
