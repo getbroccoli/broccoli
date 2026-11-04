@@ -110,3 +110,11 @@ export {
 } from "./timeOffService";
 export { demoService } from "./demoService";
 export { allowanceSnapshot, allowanceIdentitySums } from "./allowanceSnapshot";
+export {
+  leaveSetupService,
+  scotlandLeaveSetup,
+  readLeaveTerms,
+  readOwnPatternAssignments,
+} from "./leaveSetup";
+
+export { DecisionsError, type Answers, type Decisions } from "../../src/integrations/ai";

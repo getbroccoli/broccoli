@@ -15,12 +15,15 @@ import {
   owners,
   OWNER,
   timeOffService,
+  readLeaveTerms,
+  scotlandLeaveSetup,
+  workingPatternService,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
 import { NO_SETUP_INVITES } from "../../../core/instance";
 
-test("resetting a finished setup removes the terms' time off policies", async ({
+test("resetting setup restores only the default terms on Standard with leave off", async ({
   orm,
   seed,
   transact,
@@ -30,16 +33,25 @@ test("resetting a finished setup removes the terms' time off policies", async ({
   await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
+  const standard = (await workingPatternService(orm).listPatterns(OWNER)).find(
+    ({ isStandard }) => isStandard,
   )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
-  expect(await service.readTermsPolicies(OWNER, { termsId })).toEqual([policy]);
+  const input = await scotlandLeaveSetup(orm);
+  input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
+  await transact((tx) => service.turnOnLeave(OWNER, tx, input));
+  expect(await readLeaveTerms(orm)).toHaveLength(2);
+  expect(await workingPatternService(orm).listPatterns(OWNER)).toHaveLength(3);
 
   await systemService(orm).resetSetup(owner);
 
+  expect(await readLeaveTerms(orm)).toMatchObject([
+    {
+      id: termsId,
+      key: "default_terms",
+      patterns: [{ workingPatternId: standard.id, effectiveFrom: null, effectiveUntil: null }],
+    },
+  ]);
+  expect(await workingPatternService(orm).listPatterns(OWNER)).toEqual([standard]);
   expect(await service.readTermsPolicies(OWNER, { termsId })).toEqual([]);
 });
 

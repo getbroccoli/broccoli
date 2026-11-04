@@ -8,6 +8,33 @@ import {
   test,
 } from "#test/support";
 
+test("groups only ready people's locations, trimmed and ignoring case, in name order", async ({
+  orm,
+  seed,
+}) => {
+  const source = await seed.importSource();
+  await seed.employee({ email: "existing@example.com" });
+  await seed.importEmployees(source.id, [
+    { email: "leeds@example.com", location: " Leeds " },
+    { email: "glasgow1@example.com", location: " Glasgow " },
+    { email: "glasgow2@example.com", location: "gLaSgOw" },
+    { email: "blank@example.com", location: "   " },
+    { email: "missing@example.com", location: null },
+    { email: "incomplete@example.com", location: "Belfast", lastName: null },
+    { email: "leftout@example.com", location: "Cardiff" },
+    { email: "existing@example.com", location: "London" },
+  ]);
+  const imports = importServices(orm);
+  await imports.choices.setLeftOut(OWNER, { key: "leftout@example.com", leftOut: true });
+
+  const review = await imports.reads.readReview(OWNER);
+
+  expect(review.readyLocations).toEqual([
+    { name: "Glasgow", peopleCount: 2 },
+    { name: "Leeds", peopleCount: 1 },
+  ]);
+});
+
 test("counts ready import employees across Slack and file sources, leaving incomplete records out", async ({
   orm,
   seed,

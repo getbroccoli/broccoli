@@ -11,11 +11,18 @@ import {
   setupSteps,
   demoFillService,
   timeOffService,
+  readLeaveTerms,
+  scotlandLeaveSetup,
+  workingPatternService,
 } from "#test/support";
 
 import { parseCalendarDate } from "../../../utils";
 
-test("exiting the demo removes the terms' time off policies", async ({ orm, seed, transact }) => {
+test("exiting the demo restores only the default terms on Standard with leave off", async ({
+  orm,
+  seed,
+  transact,
+}) => {
   await seed.assignment();
   const owner = await seed.owner();
   await companyService(orm).update(owner, { name: "Acme Corp" });
@@ -24,10 +31,27 @@ test("exiting the demo removes the terms' time off policies", async ({ orm, seed
   const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
   expect(await service.readTermsPolicies(owner, { termsId })).toHaveLength(4);
+  const standard = (await workingPatternService(orm).listPatterns(owner)).find(
+    ({ isStandard }) => isStandard,
+  )!;
+  await transact((tx) => service.deleteAllTermsPolicies(owner, tx));
+  const input = await scotlandLeaveSetup(orm);
+  input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
+  await transact((tx) => service.turnOnLeave(owner, tx, input));
+  expect(await readLeaveTerms(orm)).toHaveLength(2);
+  expect(await workingPatternService(orm).listPatterns(owner)).toHaveLength(3);
 
   await demoService(orm).exitDemo(owner);
 
   expect(await service.readTermsPolicies(owner, { termsId })).toEqual([]);
+  expect(await readLeaveTerms(orm)).toMatchObject([
+    {
+      id: termsId,
+      key: "default_terms",
+      patterns: [{ workingPatternId: standard.id, effectiveFrom: null, effectiveUntil: null }],
+    },
+  ]);
+  expect(await workingPatternService(orm).listPatterns(owner)).toEqual([standard]);
 });
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({

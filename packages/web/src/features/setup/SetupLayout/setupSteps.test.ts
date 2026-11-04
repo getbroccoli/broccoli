@@ -13,11 +13,11 @@ import {
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
-  ["OWNER", "SELF_HOSTED", "/setup/who"],
+  ["OWNER", "SELF_HOSTED", "/setup/leave"],
   ["DONE", "SELF_HOSTED", "/people"],
   ["COMPANY", "MANAGED", "/setup/company"],
   ["IMPORT", "MANAGED", "/setup/import"],
-  ["READY", "MANAGED", "/setup/who"],
+  ["READY", "MANAGED", "/setup/leave"],
   ["DONE", "MANAGED", "/people"],
 ] as const)("enters %s in %s through %s", (step, mode, expected) => {
   expect(setupStepPage(step, mode)).toBe(expected);
@@ -28,10 +28,14 @@ it.each([
   ["ai", "SELF_HOSTED", "/setup/company"],
   ["import", "SELF_HOSTED", "/setup/ai"],
   ["review", "SELF_HOSTED", "/setup/import"],
+  ["leave", "SELF_HOSTED", undefined],
+  ["who", "SELF_HOSTED", "/setup/leave"],
   ["owner", "SELF_HOSTED", "/setup/who"],
   ["company", "MANAGED", undefined],
   ["import", "MANAGED", "/setup/company"],
   ["review", "MANAGED", "/setup/import"],
+  ["leave", "MANAGED", undefined],
+  ["who", "MANAGED", "/setup/leave"],
   ["ready", "MANAGED", "/setup/who"],
 ] as const)("gives %s in %s the Back destination %s", (page, mode, expected) => {
   expect(previousPage(page, mode)).toBe(expected);
@@ -41,12 +45,14 @@ it.each([
   ["company", "SELF_HOSTED", "/setup/ai"],
   ["ai", "SELF_HOSTED", "/setup/import"],
   ["import", "SELF_HOSTED", "/setup/import/review"],
-  ["review", "SELF_HOSTED", "/setup/who"],
+  ["review", "SELF_HOSTED", "/setup/leave"],
+  ["leave", "SELF_HOSTED", "/setup/who"],
   ["who", "SELF_HOSTED", "/setup"],
   ["owner", "SELF_HOSTED", "/people"],
   ["company", "MANAGED", "/setup/import"],
   ["import", "MANAGED", "/setup/import/review"],
-  ["review", "MANAGED", "/setup/who"],
+  ["review", "MANAGED", "/setup/leave"],
+  ["leave", "MANAGED", "/setup/who"],
   ["who", "MANAGED", "/setup/ready"],
   ["ready", "MANAGED", "/people"],
 ] as const)("continues from %s in %s to %s", (page, mode, expected) => {
@@ -80,11 +86,15 @@ it.each([
   ["ai", "IMPORT", "SELF_HOSTED", null, true],
   ["import", "IMPORT", "SELF_HOSTED", null, true],
   ["review", "IMPORT", "SELF_HOSTED", null, true],
+  ["leave", "OWNER", "SELF_HOSTED", null, true],
+  ["who", "OWNER", "SELF_HOSTED", null, true],
   ["owner", "OWNER", "SELF_HOSTED", null, true],
   ["company", "COMPANY", "MANAGED", { id: "owner" }, false],
   ["company", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["import", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["review", "IMPORT", "MANAGED", { id: "owner" }, false],
+  ["leave", "READY", "MANAGED", { id: "owner" }, false],
+  ["who", "READY", "MANAGED", { id: "owner" }, false],
   ["ready", "READY", "MANAGED", { id: "owner" }, false],
 ] as const)(
   "opens %s at %s in %s for an authorized visitor",
@@ -102,8 +112,8 @@ it.each([
   ["ai", "IMPORT", "MANAGED", { id: "owner" }, false, "/setup/import"],
   ["company", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
   ["import", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
-  ["import", "OWNER", "SELF_HOSTED", null, true, "/setup/who"],
-  ["company", "OWNER", "SELF_HOSTED", { id: "owner" }, false, "/setup/who"],
+  ["import", "OWNER", "SELF_HOSTED", null, true, "/setup/leave"],
+  ["company", "OWNER", "SELF_HOSTED", { id: "owner" }, false, "/setup/leave"],
 ] as const)(
   "sends a visitor opening %s at %s in %s to the current setup page",
   (page, setupStep, mode, me, holdsSetup, to) => {
@@ -137,9 +147,9 @@ it("returns the signed-in user when setup is done", () => {
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
-  ["OWNER", "SELF_HOSTED", "/setup/who"],
+  ["OWNER", "SELF_HOSTED", "/setup/leave"],
   ["IMPORT", "MANAGED", "/setup/import"],
-  ["READY", "MANAGED", "/setup/who"],
+  ["READY", "MANAGED", "/setup/leave"],
 ] as const)(
   "sends a signed-in user at %s in %s to %s before entering the app",
   (setupStep, mode, to) => {
@@ -184,156 +194,78 @@ it.each([
   });
 });
 
-it("marks people and ready later while company is current", () => {
-  const steps = stepViews("company", "MANAGED");
+it.each([
+  ["company", "MANAGED", ["current", "later", "later", "later", "later"], ["later", "later"]],
+  ["import", "MANAGED", ["done", "current", "later", "later", "later"], ["current", "later"]],
+  ["review", "MANAGED", ["done", "current", "later", "later", "later"], ["done", "current"]],
+  ["ready", "MANAGED", ["done", "done", "done", "done", "current"], ["done", "done"]],
+  [
+    "review",
+    "SELF_HOSTED",
+    ["done", "done", "current", "later", "later", "later"],
+    ["done", "current"],
+  ],
+  ["owner", "SELF_HOSTED", ["done", "done", "done", "done", "done", "current"], ["done", "done"]],
+  [
+    "ai",
+    "SELF_HOSTED",
+    ["done", "current", "later", "later", "later", "later"],
+    ["later", "later"],
+  ],
+  [
+    "import",
+    "SELF_HOSTED",
+    ["done", "done", "current", "later", "later", "later"],
+    ["current", "later"],
+  ],
+] as const)(
+  "marks the steps and People pages while on %s in %s",
+  (page, mode, states, peopleStates) => {
+    const steps = stepViews(page, mode);
 
-  expect(steps).toMatchObject([
-    { id: "company", state: "current" },
-    {
-      id: "people",
+    expect(steps.map(({ id }) => id)).toEqual(
+      mode === "SELF_HOSTED"
+        ? ["company", "ai", "people", "leave", "who", "owner"]
+        : ["company", "people", "leave", "who", "ready"],
+    );
+    expect(steps.map(({ state }) => state)).toEqual(states);
+    const people = steps.find(({ id }) => id === "people")!;
+    expect(people.pages.map(({ id }) => id)).toEqual(["import", "review"]);
+    expect(people.pages.map(({ state }) => state)).toEqual(peopleStates);
+  },
+);
+
+it.each(["SELF_HOSTED", "MANAGED"] as const)(
+  "gives Leave and Who their own steps in %s",
+  (mode) => {
+    const leave = stepViews("leave", mode);
+    expect(leave.map(({ id }) => id)).toEqual(
+      mode === "SELF_HOSTED"
+        ? ["company", "ai", "people", "leave", "who", "owner"]
+        : ["company", "people", "leave", "who", "ready"],
+    );
+    expect(leave.find(({ id }) => id === "people")).toMatchObject({ state: "done" });
+    expect(leave.find(({ id }) => id === "leave")).toMatchObject({
+      id: "leave",
+      state: "current",
+      pages: [],
+    });
+    expect(leave.find(({ id }) => id === "who")).toMatchObject({
+      id: "who",
       state: "later",
-      pages: [
-        { id: "import", state: "later" },
-        { id: "review", state: "later" },
-        { id: "who", state: "later" },
-      ],
-    },
-    { id: "ready", state: "later" },
-  ]);
-});
+      pages: [],
+    });
 
-it("marks people current and earlier steps done while importing", () => {
-  const steps = stepViews("import", "MANAGED");
-
-  expect(steps).toMatchObject([
-    { id: "company", state: "done" },
-    {
-      id: "people",
-      state: "current",
-      pages: [
-        { id: "import", state: "current" },
-        { id: "review", state: "later" },
-        { id: "who", state: "later" },
-      ],
-    },
-    { id: "ready", state: "later" },
-  ]);
-});
-
-it("keeps people current with import done while reviewing", () => {
-  const steps = stepViews("review", "MANAGED");
-
-  expect(steps).toMatchObject([
-    { id: "company", state: "done" },
-    {
-      id: "people",
-      state: "current",
-      pages: [
-        { id: "import", state: "done" },
-        { id: "review", state: "current" },
-        { id: "who", state: "later" },
-      ],
-    },
-    { id: "ready", state: "later" },
-  ]);
-});
-
-it("marks company and people done while ready is current", () => {
-  const steps = stepViews("ready", "MANAGED");
-
-  expect(steps).toMatchObject([
-    { id: "company", state: "done" },
-    {
-      id: "people",
+    const who = stepViews("who", mode);
+    expect(who.find(({ id }) => id === "leave")).toMatchObject({
+      id: "leave",
       state: "done",
-      pages: [
-        { id: "import", state: "done" },
-        { id: "review", state: "done" },
-        { id: "who", state: "done" },
-      ],
-    },
-    { id: "ready", state: "current" },
-  ]);
-});
-
-it("keeps the self-hosted owner later while reviewing people", () => {
-  const steps = stepViews("review", "SELF_HOSTED");
-
-  expect(steps).toMatchObject([
-    { id: "company", state: "done" },
-    { id: "ai", title: "setup.ai.title", state: "done" },
-    {
-      id: "people",
+      pages: [],
+    });
+    expect(who.find(({ id }) => id === "who")).toMatchObject({
+      id: "who",
       state: "current",
-      pages: [
-        { id: "import", state: "done" },
-        { id: "review", state: "current" },
-        { id: "who", state: "later" },
-      ],
-    },
-    { id: "owner", state: "later" },
-  ]);
-});
-
-it("marks company and people done while the self-hosted owner is current", () => {
-  const steps = stepViews("owner", "SELF_HOSTED");
-
-  expect(steps).toMatchObject([
-    { id: "company", state: "done" },
-    { id: "ai", title: "setup.ai.title", state: "done" },
-    {
-      id: "people",
-      state: "done",
-      pages: [
-        { id: "import", state: "done" },
-        { id: "review", state: "done" },
-        { id: "who", state: "done" },
-      ],
-    },
-    { id: "owner", state: "current" },
-  ]);
-});
-
-it("places Setup AI between company and people on a self-hosted instance", () => {
-  const steps = stepViews("ai", "SELF_HOSTED");
-
-  expect(steps).toMatchObject([
-    { id: "company", state: "done" },
-    { id: "ai", title: "setup.ai.title", state: "current" },
-    {
-      id: "people",
-      state: "later",
-      pages: [
-        { id: "import", state: "later" },
-        { id: "review", state: "later" },
-        { id: "who", state: "later" },
-      ],
-    },
-    { id: "owner", state: "later" },
-  ]);
-});
-
-it("marks Setup AI done while gathering people on a self-hosted instance", () => {
-  const steps = stepViews("import", "SELF_HOSTED");
-
-  expect(steps).toMatchObject([
-    { id: "company", state: "done" },
-    { id: "ai", title: "setup.ai.title", state: "done" },
-    {
-      id: "people",
-      state: "current",
-      pages: [
-        { id: "import", state: "current" },
-        { id: "review", state: "later" },
-        { id: "who", state: "later" },
-      ],
-    },
-    { id: "owner", state: "later" },
-  ]);
-});
-
-it("lists who uses Broccoli as the current page of people, after the review", () => {
-  const people = stepViews("who", "MANAGED").find(({ id }) => id === "people");
-
-  expect(people?.pages.map(({ state }) => state)).toEqual(["done", "done", "current"]);
-});
+      pages: [],
+    });
+  },
+);

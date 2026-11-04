@@ -1,0 +1,145 @@
+import {
+  calendarDate,
+  employeeServices,
+  expect,
+  finishSelfHostedSetup,
+  importServices,
+  instances,
+  OWNER,
+  readAllowances,
+  readLeaveTerms,
+  scotlandLeaveSetup,
+  SETUP_HOLDER,
+  test,
+  timeOffService,
+  workingPatternService,
+} from "#test/support";
+
+test("finishing setup gives Glasgow and Leeds their chosen terms and Annual leave", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: "glasgow@example.com", location: "Glasgow", startDate: calendarDate("2025-01-01") },
+    { email: "leeds@example.com", location: "Leeds", startDate: calendarDate("2025-01-01") },
+  ]);
+  const imports = importServices(orm);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  const leave = await scotlandLeaveSetup(orm);
+
+  await finishSelfHostedSetup(orm, { leave });
+
+  const employees = employeeServices(orm);
+  const { edges } = await employees.listEmployees(OWNER, {});
+  expect(edges).toHaveLength(2);
+  const glasgow = edges.find(({ node }) => node.email === "glasgow@example.com")!.node;
+  const leeds = edges.find(({ node }) => node.email === "leeds@example.com")!.node;
+  const terms = await readLeaveTerms(orm);
+  const scotland = terms.find(({ name }) => name === "Scotland")!;
+  expect(terms).toHaveLength(2);
+  const memberships = await transact((tx) =>
+    employees.readTermsMemberships(tx, [glasgow.id, leeds.id]),
+  );
+  expect(memberships.get(glasgow.id)).toEqual([
+    { termsId: scotland.id, effectiveFrom: null, effectiveUntil: null },
+  ]);
+  expect(memberships.get(leeds.id)).toEqual([
+    { termsId: await seed.defaultTermsId(), effectiveFrom: null, effectiveUntil: null },
+  ]);
+  const weeks = await workingPatternService(orm).readWorkingWeeks(OWNER, {
+    employeeIds: [glasgow.id],
+    from: "2026-01-01",
+    until: "2026-12-31",
+  });
+  expect(weeks.get(glasgow.id)).toEqual([
+    {
+      effectiveFrom: "2026-01-01",
+      minutes: [480, 480, 480, 480, 0, 0, 0],
+      fullDayMinutes: 480,
+      bankHolidayCalendar: "scotland",
+    },
+  ]);
+  // 25 × 4/5 + 10 Scottish bank holidays × 4/5 − 7 falling Mon–Thu = 21 days.
+  expect(await readAllowances(orm, glasgow.id)).toMatchObject([
+    {
+      typeKey: "annual_leave",
+      leaveYearStart: "2026-01-01",
+      leaveYearEnd: "2026-12-31",
+      total: 21,
+    },
+  ]);
+  expect(await readAllowances(orm, leeds.id)).toMatchObject([
+    {
+      typeKey: "annual_leave",
+      leaveYearStart: "2026-01-01",
+      leaveYearEnd: "2026-12-31",
+      total: 20,
+    },
+  ]);
+  for (const [index, termsId] of [await seed.defaultTermsId(), scotland.id].entries()) {
+    const policies = await timeOffService(orm).readTermsPolicies(OWNER, { termsId });
+    expect(policies).toHaveLength(4);
+    expect(policies).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: leave.terms[index]!.annualLeavePolicyId }),
+        expect.objectContaining({ typeKey: "sickness", balance: "no_balance" }),
+        expect.objectContaining({ typeKey: "family_leave", balance: "no_balance" }),
+        expect.objectContaining({ typeKey: "other", balance: "no_balance" }),
+      ]),
+    );
+  }
+});
+
+test("skipping leave finishes setup without policies, new terms or allowances", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [{ startDate: calendarDate("2025-01-01") }]);
+  const imports = importServices(orm);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  const termsBefore = await readLeaveTerms(orm);
+
+  await finishSelfHostedSetup(orm, { leave: null });
+
+  expect((await instances.readInstance(orm)).step).toBe("done");
+  expect(await readLeaveTerms(orm)).toEqual(termsBefore);
+  expect(
+    await timeOffService(orm).readTermsPolicies(OWNER, { termsId: await seed.defaultTermsId() }),
+  ).toEqual([]);
+  const { edges } = await employeeServices(orm).listEmployees(OWNER, {});
+  expect(edges).toHaveLength(1);
+  expect(await readAllowances(orm, edges[0]!.node.id)).toEqual([]);
+});
+
+test("a refused leave choice rolls back the people and keeps setup unfinished", async ({
+  orm,
+  seed,
+}) => {
+  await seed.setupStep("import");
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { location: "Glasgow", startDate: calendarDate("2025-01-01") },
+  ]);
+  const imports = importServices(orm);
+  await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
+  const leave = await scotlandLeaveSetup(orm);
+  leave.terms[1]!.annualLeavePolicyId = "00000000-0000-4000-8000-000000000001";
+  const termsBefore = await readLeaveTerms(orm);
+
+  await expect(finishSelfHostedSetup(orm, { leave })).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "annualLeavePolicyId", code: "invalid" }],
+  });
+
+  expect((await employeeServices(orm).listEmployees(OWNER, {})).edges).toEqual([]);
+  expect((await instances.readInstance(orm)).step).toBe("owner");
+  expect(await readLeaveTerms(orm)).toEqual(termsBefore);
+  expect(
+    await timeOffService(orm).readTermsPolicies(OWNER, { termsId: await seed.defaultTermsId() }),
+  ).toEqual([]);
+});
