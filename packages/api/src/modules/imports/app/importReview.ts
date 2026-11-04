@@ -36,6 +36,11 @@ export interface ImportReview {
   employeeCount: number;
   /** The import employees setup approve adds: ready and not left out. */
   readyEmployees: ImportEmployee[];
+  /**
+   * The locations of the ready employees, by name ignoring case and surrounding spaces (the first
+   * spelling kept, trimmed), with how many of them are in each; people without one are left out.
+   */
+  readyLocations: { name: string; peopleCount: number }[];
   /** The sources of the ready employees, oldest first. */
   readyEmployeeSources: ImportSource[];
   /** What the owner may want to settle before Approve, by kind. */
@@ -83,6 +88,7 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
   return {
     employeeCount: employees.length,
     readyEmployees,
+    readyLocations: locationsOf(readyEmployees),
     readyEmployeeSources: sources.filter(({ id }) => readySourceIds.has(id)),
     checks: listChecks(sources, employees, managers),
     managers,
@@ -94,6 +100,19 @@ export async function readImportReview(ctx: SecurityContext, db: Orm | Tx): Prom
 }
 
 const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
+
+/** Matches the locations adding the people creates, which are one per name ignoring case. */
+function locationsOf(employees: readonly ImportEmployee[]): ImportReview["readyLocations"] {
+  const locations = new Map<string, { name: string; peopleCount: number }>();
+  for (const employee of employees) {
+    const name = employee.values.location.value?.trim();
+    if (name) {
+      const found = locations.get(name.toLowerCase()) ?? { name, peopleCount: 0 };
+      locations.set(name.toLowerCase(), { ...found, peopleCount: found.peopleCount + 1 });
+    }
+  }
+  return [...locations.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 function listEmployees(
   employees: readonly ImportEmployee[],

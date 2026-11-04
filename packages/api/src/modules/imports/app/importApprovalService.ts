@@ -6,6 +6,7 @@ import {
   createSetupStepService,
   type SetupFinish,
   type SetupInvite,
+  type TurnOnLeaveInput,
 } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
@@ -35,6 +36,13 @@ export interface AddedPeople extends ImportedEmployees {
 /** Invites the people the owner chose as setup finishes; the employees module provides it. */
 export type SetupInvites = Pick<EmployeeInviteService, "sendAtSetup">;
 
+/** Turns leave on as setup finishes, joining its transaction; the time off module provides it. */
+export type TurnOnLeave = (
+  ctx: SecurityContext,
+  tx: Tx,
+  input: TurnOnLeaveInput,
+) => Promise<unknown>;
+
 /** The owner's approval of the reviewed import, the people it adds, and reopening the review. */
 export interface ImportApprovalService {
   /**
@@ -62,9 +70,11 @@ export function createImportApprovalService({
   transact,
   logger,
   invites,
+  turnOnLeave,
   deleteAllEmployees,
 }: Pick<ModuleDependencies, "transact" | "logger"> & {
   invites: SetupInvites;
+  turnOnLeave: TurnOnLeave;
   /** Deletes every employee and what goes with them, such as the terms' time off policies. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): ImportApprovalService {
@@ -86,7 +96,7 @@ export function createImportApprovalService({
         }
         // A self-hosted instance whose owner has an account has no last step to add them at.
         if ((await instances.readInstance(tx)).step === "done") {
-          await addApprovedPeople(invites, ctx, tx);
+          await addApprovedPeople({ invites, turnOnLeave }, ctx, tx);
         }
         return true;
       });
@@ -94,7 +104,8 @@ export function createImportApprovalService({
         logger.info("Approved the import");
       }
     },
-    addApprovedPeople: (ctx, tx, finish) => addApprovedPeople(invites, ctx, tx, finish),
+    addApprovedPeople: (ctx, tx, finish) =>
+      addApprovedPeople({ invites, turnOnLeave }, ctx, tx, finish),
     reportAddedPeople({ selected, ownerEmployeeId, invitedEmployeeIds, ...counts }) {
       logger.info(counts, "Added the approved people");
       for (const employee of selected) {
@@ -127,10 +138,11 @@ export function createImportApprovalService({
 
 /**
  * Adds the approved people joining `tx`; with `finish`, links the owner's user to the person they
- * said they are and invites the people they chose, returning those invites.
+ * said they are, turns leave on as they chose and invites the people they chose, returning those
+ * invites.
  */
 async function addApprovedPeople(
-  invites: SetupInvites,
+  { invites, turnOnLeave }: { invites: SetupInvites; turnOnLeave: TurnOnLeave },
   ctx: SecurityContext,
   tx: Tx,
   finish?: SetupFinish,
@@ -153,6 +165,10 @@ async function addApprovedPeople(
   );
   const idOf = (employee: { values: { email: { value: string | null } } }) =>
     idsByEmail.get(employee.values.email.value?.toLowerCase() ?? "");
+  if (finish?.leave) {
+    // After the people exist, so their locations point them at their terms.
+    await turnOnLeave(ctx, tx, finish.leave);
+  }
   const owner = readyEmployees.find(({ key }) => key === ownerKey);
   const sent = finish
     ? await invites.sendAtSetup(

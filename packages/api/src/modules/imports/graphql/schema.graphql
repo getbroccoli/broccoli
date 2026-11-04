@@ -22,6 +22,8 @@ type Import {
   readyEmployeeCount: Int!
   "The sources of the employees Approve would add, oldest first."
   readyEmployeeSources: [ImportSource!]!
+  "The ready employees' locations, by name ignoring case, with how many of them are in each."
+  readyLocations: [ImportLocation!]!
   "What the owner may want to settle, by kind. Nothing here blocks Approve."
   checks: [ImportCheck!]!
   "A fingerprint of what Approve would create now; Approve takes it back, so nobody is added unseen."
@@ -396,4 +398,10 @@ type Mutation {
 enum RecordChangeCauseKind {
   "People approved in the import, from a file or Slack, became employees."
   ADDED_FROM_IMPORT
+}
+
+"A location the import adds people to, as Set up leave shows it."
+type ImportLocation {
+  name: String!
+  peopleCount: Int!
 }

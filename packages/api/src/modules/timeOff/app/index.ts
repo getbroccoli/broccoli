@@ -3,6 +3,13 @@ export {
   createTimeOffService,
   type TimeOffPolicySummary,
   type TimeOffService,
+  type TurnedOnLeave,
 } from "./timeOffService";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
 export { ensureAllowancesJob } from "./ensureAllowancesJob";
+export {
+  createLeaveSetupService,
+  type LeaveSetup,
+  type LeaveSetupService,
+  type LocationCalendarSuggestion,
+} from "./leaveSetupService";

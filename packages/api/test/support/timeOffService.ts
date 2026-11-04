@@ -5,8 +5,11 @@ import { createEventBus } from "../../src/core/events";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
-import { createEmployeeReadService } from "../../src/modules/employees";
-import { createTimeOffService, timeOffModule } from "../../src/modules/timeOff";
+import {
+  createLeaveSetupService,
+  createTimeOffService,
+  timeOffModule,
+} from "../../src/modules/timeOff";
 import {
   allowanceLedgerLines,
   allowances,
@@ -49,11 +52,7 @@ export async function linkStatutoryMinimumToDefaultTerms(
 
 /** The demo fill on `orm`, linking "England and Wales" terms to the demo's time off policies. */
 export function demoFillService(orm: Orm) {
-  const dependencies = { orm, transact: testTransactor(orm), logger: createLogger("silent") };
-  return createDemoFillService({
-    timeOff: timeOffService(orm),
-    employeeReads: createEmployeeReadService(dependencies),
-  });
+  return createDemoFillService({ timeOff: timeOffService(orm) });
 }
 
 /** Transactions on `orm` whose committed events reach time off's handlers, and no one else's. */
@@ -63,6 +62,12 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
     timeOffModule({
       orm,
       timeOff: timeOffService(orm),
+      leaveSetup: createLeaveSetupService({
+        orm,
+        logger: createLogger("silent"),
+        decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },
+        bankHolidays: bankHolidayService(),
+      }),
       transact: testTransactor(orm),
       logger: createLogger("silent"),
     }).events!,

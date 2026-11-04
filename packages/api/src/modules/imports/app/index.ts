@@ -10,6 +10,7 @@ import {
   createImportApprovalService,
   type ImportApprovalService,
   type SetupInvites,
+  type TurnOnLeave,
 } from "./importApprovalService";
 import {
   createImportDemoService,
@@ -63,6 +64,7 @@ export function createImportServices({
   jobs,
   prepareDemoFill,
   invites,
+  turnOnLeave,
   deleteAllEmployees,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   slack: ImportSlack;
@@ -71,6 +73,7 @@ export function createImportServices({
   jobs: JobQueue;
   prepareDemoFill: () => Promise<DemoFill>;
   invites: SetupInvites;
+  turnOnLeave: TurnOnLeave;
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): ImportServices {
   const readUpload = createUploadReader();
@@ -80,6 +83,7 @@ export function createImportServices({
       transact,
       logger,
       invites,
+      turnOnLeave,
       deleteAllEmployees,
     }),
     ...createImportLifecycleService({ transact, logger }),

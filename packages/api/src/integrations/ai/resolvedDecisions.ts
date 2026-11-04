@@ -80,13 +80,13 @@ export function createResolvedDecisions({
     }
   };
   return {
-    decide: async (state, questions, minConfidence) =>
+    decide: async (state, questions, options) =>
       askSource(await readSource(), ({ url, decisionsPath, credential, headers }) =>
         createDecisions({
           endpoint: urlUnder(url, decisionsPath).href,
           credential,
           headers,
-        }).decide(state, questions, minConfidence),
+        }).decide(state, questions, options),
       ),
     readOriginalFile: (source, request) =>
       askSource(source, ({ url, chatCompletionsPath, credential, headers }) =>

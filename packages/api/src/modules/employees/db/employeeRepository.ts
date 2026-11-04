@@ -326,7 +326,7 @@ function matches(search: string): SQL {
 
 /**
  * Opens an open-ended employment for each inserted employee, starting on the start date of the
- * row that inserted them, puts them on "England and Wales" terms, and returns the employees.
+ * row that inserted them, puts them on their location's default terms, and returns the employees.
  */
 async function openEmployments(
   db: Orm | Tx,
@@ -343,7 +343,7 @@ async function openEmployments(
   await employmentRepository(db).insertOpen(
     inserted.map(({ id, email }) => ({ employeeId: id, startDate: startDates.get(email) ?? null })),
   );
-  await termsRepository(db).joinDefaultTerms(inserted.map(({ id }) => id));
+  await termsRepository(db).joinDefaultTerms(inserted);
   return inserted;
 }
 
