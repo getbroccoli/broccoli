@@ -11,6 +11,19 @@ import {
 import { timeOffPolicyRepository } from "../db";
 import type { StandardLeavePolicyKey } from "../domain";
 
+/** The choices of the Set up leave page, and the model's suggestion for each location. Admins only. */
+export interface LeaveSetupService {
+  readLeaveSetup: (ctx: SecurityContext) => Promise<LeaveSetup>;
+  /**
+   * Asks the model, with the location names only, whose bank holidays apply at each location, in the
+   * order given. Never fails: without an answer a location is England and Wales, unsure.
+   */
+  suggestLocationCalendars: (
+    ctx: SecurityContext,
+    input: { locationNames: readonly string[] },
+  ) => Promise<LocationCalendarSuggestion[]>;
+}
+
 /** What the Set up leave page offers. */
 export interface LeaveSetup {
   /** The standard Annual leave policies, the UK statutory minimum first. */
@@ -19,24 +32,11 @@ export interface LeaveSetup {
   bankHolidayCalendars: { calendar: BankHolidayCalendar; countThisYear: number }[];
 }
 
-/** Jev's guess of whose bank holidays apply at a location; unsure ones fall back to England and Wales. */
+/** The model's guess of whose bank holidays apply at a location; unsure ones fall back to England and Wales. */
 export interface LocationCalendarSuggestion {
   locationName: string;
   bankHolidayCalendar: BankHolidayCalendar;
   unsure: boolean;
-}
-
-/** The choices of the Set up leave page, and Jev's suggestion for each location. Admins only. */
-export interface LeaveSetupService {
-  readLeaveSetup: (ctx: SecurityContext) => Promise<LeaveSetup>;
-  /**
-   * Asks Jev, with the location names only, whose bank holidays apply at each location, in the
-   * order given. Never fails: without an answer a location is England and Wales, unsure.
-   */
-  suggestLocationCalendars: (
-    ctx: SecurityContext,
-    input: { locationNames: readonly string[] },
-  ) => Promise<LocationCalendarSuggestion[]>;
 }
 
 export function createLeaveSetupService({
@@ -78,7 +78,7 @@ export function createLeaveSetupService({
     async suggestLocationCalendars(ctx, { locationNames }) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const asked = locationNames.slice(0, MAX_LOCATIONS_ASKED);
-      const answers = asked.length === 0 ? [] : await askJev(decisions, logger, asked);
+      const answers = asked.length === 0 ? [] : await askModel(decisions, logger, asked);
       const suggestions = locationNames.map((locationName, index) => {
         const calendar = BANK_HOLIDAY_CALENDARS.find((known) => known === answers[index]);
         return calendar
@@ -114,8 +114,8 @@ const NATION_OPTIONS = {
     "No UK place can be told from it: a place abroad, or no place at all, such as Remote or Head office.",
 };
 
-/** Jev's choice per location, null where it gave none; all null when it could not answer. */
-async function askJev(
+/** The model's choice per location, null where it gave none; all null when it could not answer. */
+async function askModel(
   decisions: Decisions,
   logger: Logger,
   locationNames: readonly string[],

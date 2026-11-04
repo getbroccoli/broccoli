@@ -78,7 +78,7 @@ export function LeaveStep() {
   const suggestionOf = (name: string) => suggestions.find((s) => s.locationName === name);
   const nationOf = (name: string): BankHolidayCalendar =>
     picked[name] ?? suggestionOf(name)?.bankHolidayCalendar ?? "ENGLAND_AND_WALES";
-  // Without Jev's answer, a location is England and Wales until the owner says otherwise.
+  // Without the model's answer, a location is England and Wales until the owner says otherwise.
   const unsure = (name: string) =>
     !(name in picked) && !suggested.loading && (suggestionOf(name)?.unsure ?? true);
 

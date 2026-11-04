@@ -21,13 +21,6 @@ export type TimeOffPolicySummary = Pick<TimeOffPolicy, "id" | "name" | "key" | "
   typeKey: TimeOffPolicy["timeOffType"]["typeKey"];
 };
 
-/** What turning leave on did; the terms ids are in the order of the input's terms. */
-export interface TurnedOnLeave extends EnsuredAllowances {
-  termsIds: string[];
-  createdPatternIds: string[];
-  movedEmployeeCount: number;
-}
-
 /** Which time off policies terms get, and the engine that keeps each person's allowances. */
 export interface TimeOffService {
   /**
@@ -66,6 +59,13 @@ export interface TimeOffService {
   listPolicies: (ctx: SecurityContext, db: Orm | Tx) => Promise<TimeOffPolicySummary[]>;
   /** Unlinks all terms' policies when setup or the demo goes back to its start. */
   deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+}
+
+/** What turning leave on did; the terms ids are in the order of the input's terms. */
+export interface TurnedOnLeave extends EnsuredAllowances {
+  termsIds: string[];
+  createdPatternIds: string[];
+  movedEmployeeCount: number;
 }
 
 export function createTimeOffService({
