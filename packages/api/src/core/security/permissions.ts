@@ -11,6 +11,8 @@ export interface PermissionObjects {
   employee: true;
   /** A person's working pattern; its subject is the person. */
   working_pattern: true;
+  /** A person's time off and allowances; its subject is the person. */
+  time_off: true;
 }
 
 /** A kind of record permissions apply to. */
@@ -83,6 +85,13 @@ const ADMIN: ProfileDefinition = {
       scope: "all",
       fields: "*",
     },
+    {
+      key: "time_off.manage.all",
+      object: "time_off",
+      actions: ["create", "read", "update", "delete"],
+      scope: "all",
+      fields: "*",
+    },
   ],
   operations: ["MANAGE_WORKSPACE"],
 };
@@ -119,6 +128,13 @@ export const PERMISSION_PROFILES: Record<PermissionProfile, ProfileDefinition> =
       {
         key: "working_pattern.read.reports",
         object: "working_pattern",
+        actions: ["read"],
+        scope: "all_reports",
+      },
+      { key: "time_off.read.self", object: "time_off", actions: ["read"], scope: "self" },
+      {
+        key: "time_off.read.reports",
+        object: "time_off",
         actions: ["read"],
         scope: "all_reports",
       },
