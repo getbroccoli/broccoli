@@ -52,6 +52,13 @@ A manual check of opening a person from People, editing them in place, their his
 - [ ] The demo person's first line is "Broccoli added <first name> with 5 fields: …" with "Demo".
 - [ ] With more than 50 lines, "Show older changes" loads the rest.
 
+## Time off
+
+- [ ] A demo person who started before this year shows "Time off · <this year>" between Details and History: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded this year".
+- [ ] A demo person who started this year shows their pro-rated figures, and entitlement − bank holidays − used equals remaining.
+- [ ] After Reset setup, a person added without turning leave on shows "Time off" with "No time off this year."
+- [ ] Invite a person (see [Invites](invites.md)) and sign in as them: their own panel shows the section; a colleague's panel who is not their report shows no Time off section; once they manage that colleague (Manager above), it shows.
+
 ## Remove
 
 - [ ] ⋯ → "Remove <name>" asks "Remove <name>?" with an optional reason; Cancel keeps them.
