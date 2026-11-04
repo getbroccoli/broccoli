@@ -104,4 +104,17 @@ fragment EmployeePanel_employee on Employee {
     canDelete
     editableFields
   }
+  timeOffTypes {
+    timeOffType {
+      id
+      name
+    }
+    balance
+    periodStart
+    periodEnd
+    entitlement
+    bankHolidays
+    remaining
+    used
+  }
 }

@@ -27,6 +27,7 @@ import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
 import { KeyFacts } from "./KeyFacts";
+import { TimeOffSection } from "./TimeOffSection";
 import { RemoveEmployeeDialog } from "./RemoveEmployeeDialog";
 import { useEmployeeDraft } from "./useEmployeeDraft";
 
@@ -192,6 +193,8 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             ))}
           </div>
         </section>
+
+        {employee.timeOffTypes && <TimeOffSection timeOffTypes={employee.timeOffTypes} />}
 
         <RecordHistory
           recordType="EMPLOYEE"
