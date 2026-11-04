@@ -1,6 +1,6 @@
 import type { Orm } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
-import type { SecurityContext } from "../../../core/security";
+import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type Decisions, DecisionsError } from "../../../integrations/ai";
 import { type CalendarDate, todayInLondon } from "../../../utils";
 import {
@@ -57,7 +57,8 @@ export function createLeaveSetupService({
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const policies = await timeOffPolicyRepository(orm).findAll();
       const year = today().slice(0, 4);
-      const holidays = await bankHolidays.readBankHolidays(ctx, {
+      // The setup holder is no signed-in user; bank holidays are public facts, so Broccoli reads them.
+      const holidays = await bankHolidays.readBankHolidays(PrincipalSecurityContext.system(), {
         calendars: BANK_HOLIDAY_CALENDARS,
         from: `${year}-01-01`,
         until: `${year}-12-31`,
