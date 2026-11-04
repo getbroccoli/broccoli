@@ -41,7 +41,7 @@ export function TimeOffSection({ timeOffTypes }: Props) {
             )}
           </h3>
           {type.balance === "BALANCE_FROM_ALLOWANCE" ? (
-            <dl className="grid grid-cols-4 gap-2 px-3 py-2.5">
+            <dl className="grid grid-cols-2 gap-x-2 gap-y-3 px-3 py-2.5 sm:grid-cols-4">
               <Figure label={t("people.panel.timeOff.entitlement")} days={type.entitlement} />
               <Figure label={t("people.panel.timeOff.bankHolidays")} days={type.bankHolidays} />
               <Figure label={t("people.panel.timeOff.used")} days={type.used} />
