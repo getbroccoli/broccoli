@@ -11,7 +11,7 @@ import {
   createEmployeeWorkingPatternService,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
-import type { AllowanceCause, TimeOffPolicy } from "../domain";
+import type { AllowanceCause, DatedPolicyRow, TimeOffPolicy } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 
 const employeeSetup = createEmployeeSetupService();
@@ -107,7 +107,8 @@ export function createTimeOffService({
         }
         return policy;
       });
-      const ensured = await linkPolicies(engine, tx, termsId, employeeIds, chosen);
+      const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
+      const ensured = await linkPolicies(engine, tx, { termsId, employeeIds, chosen, linked });
       return { employeeCount: employeeIds.length, ...ensured };
     },
     async turnOnLeave(ctx, tx, input) {
@@ -129,10 +130,13 @@ export function createTimeOffService({
       const setUp = await employeeSetup.setUpTerms(ctx, tx, input);
       const totals = { allowancesCreated: 0, linesAppended: 0 };
       for (const [index, termsId] of setUp.termsIds.entries()) {
-        const ensured = await linkPolicies(engine, tx, termsId, setUp.memberIds[index]!, [
-          annualLeave[index]!,
-          ...recordOnly,
-        ]);
+        // No terms had a policy when the lock was taken, so none has links to check against.
+        const ensured = await linkPolicies(engine, tx, {
+          termsId,
+          employeeIds: setUp.memberIds[index]!,
+          chosen: [annualLeave[index]!, ...recordOnly],
+          linked: [],
+        });
         totals.allowancesCreated += ensured.allowancesCreated;
         totals.linesAppended += ensured.linesAppended;
       }
@@ -171,16 +175,26 @@ export function createTimeOffService({
   };
 }
 
-/** Links the policies to the terms, under the caller's lock on the links, and ensures allowances. */
+/**
+ * Links the chosen policies to the terms, which already have `linked`, under the caller's lock on
+ * the links, and ensures their people's allowances.
+ */
 async function linkPolicies(
   engine: Parameters<typeof ensureAllowancesOf>[0],
   tx: Tx,
-  termsId: string,
-  employeeIds: readonly string[],
-  chosen: readonly TimeOffPolicy[],
+  {
+    termsId,
+    employeeIds,
+    chosen,
+    linked,
+  }: {
+    termsId: string;
+    employeeIds: readonly string[];
+    chosen: readonly TimeOffPolicy[];
+    linked: readonly DatedPolicyRow[];
+  },
 ): Promise<EnsuredAllowances> {
   const repository = timeOffPolicyRepository(tx);
-  const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
   const typeIds = [
     ...linked.map(({ timeOffTypeId }) => timeOffTypeId),
     ...chosen.map(({ timeOffType }) => timeOffType.id),

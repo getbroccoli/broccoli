@@ -60,7 +60,7 @@ export function LeaveStep({ search }: Props) {
   };
   const { data, error } = useQuery(LeaveStepDocument, { fetchPolicy: "cache-and-network" });
   const navigate = useNavigate();
-  const { next } = useSetupPages("leave");
+  const { next: nextPath } = useSetupPages("leave");
 
   const locations = data?.import.readyLocations ?? [];
   const suggested = useQuery(LocationCalendarSuggestionsDocument, {
@@ -89,21 +89,25 @@ export function LeaveStep({ search }: Props) {
     (data?.import.readyEmployeeCount ?? 0) -
     locations.reduce((sum, { peopleCount }) => sum + peopleCount, 0);
 
-  const go = (leave: LeaveSetupState["leave"]) => {
-    change({ leave });
-    void navigate({ to: next, search });
+  const go = (next: Partial<LeaveSetupState>) => {
+    change(next);
+    void navigate({ to: nextPath, search });
   };
   const turnOn = () =>
     go({
-      terms: nations.map((nation) => ({
-        bankHolidayCalendar: nation,
-        workingWeek: weekOf(nation),
-        annualLeavePolicyId: policyOf(nation),
-      })),
-      locationTerms: locations.map(({ name }) => ({
-        locationName: name,
-        bankHolidayCalendar: nationOf(name),
-      })),
+      // The nations on screen become the owner's, so a later visit keeps them whatever the model says then.
+      picked: Object.fromEntries(locations.map(({ name }) => [name, nationOf(name)])),
+      leave: {
+        terms: nations.map((nation) => ({
+          bankHolidayCalendar: nation,
+          workingWeek: weekOf(nation),
+          annualLeavePolicyId: policyOf(nation),
+        })),
+        locationTerms: locations.map(({ name }) => ({
+          locationName: name,
+          bankHolidayCalendar: nationOf(name),
+        })),
+      },
     });
 
   return (
@@ -120,7 +124,7 @@ export function LeaveStep({ search }: Props) {
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <BackToReview />
             <div className="ml-auto flex flex-wrap items-center gap-3">
-              <Button type="button" variant="ghost" size="lg" onClick={() => go(null)}>
+              <Button type="button" variant="ghost" size="lg" onClick={() => go({ leave: null })}>
                 {t("setup.leave.skip")}
               </Button>
               <Button type="submit" size="lg" className="h-10 gap-2 px-4" disabled={!data}>

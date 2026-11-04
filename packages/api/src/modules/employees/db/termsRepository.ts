@@ -134,11 +134,12 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
         .selectDistinct({ termsId: employeeTerms.termsId, employeeId: employeeTerms.employeeId })
         .from(employeeTerms)
         .where(inArray(employeeTerms.termsId, [...termsIds]));
-      const members = new Map<string, string[]>();
-      for (const { termsId, employeeId } of rows) {
-        members.set(termsId, [...(members.get(termsId) ?? []), employeeId]);
-      }
-      return members;
+      return new Map(
+        [...Map.groupBy(rows, ({ termsId }) => termsId)].map(([termsId, members]) => [
+          termsId,
+          members.map(({ employeeId }) => employeeId),
+        ]),
+      );
     },
   };
 }
