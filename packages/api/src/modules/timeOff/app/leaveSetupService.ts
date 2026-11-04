@@ -107,11 +107,11 @@ const STANDARD_LEAVE_POLICY_KEYS: readonly StandardLeavePolicyKey[] = [
 ];
 
 const NATION_OPTIONS = {
-  england_and_wales: "A place in England or Wales.",
-  scotland: "A place in Scotland.",
-  northern_ireland: "A place in Northern Ireland.",
+  england_and_wales: "A place in England or Wales, such as Manchester office or Swansea site.",
+  scotland: "A place in Scotland, such as Dundee office or Inverness site.",
+  northern_ireland: "A place in Northern Ireland, such as Newry office or Lisburn site.",
   not_a_uk_place_or_unclear:
-    "Not a place in the UK, or no place at all, such as Remote, HQ or Head office, or unclear.",
+    "No UK place can be told from it: a place abroad, or no place at all, such as Remote or Head office.",
 };
 
 /** Jev's choice per location, null where it gave none; all null when it could not answer. */
@@ -126,7 +126,8 @@ async function askJev(
       {
         instructions:
           `Location ${index + 1} of \`locations\` is where some of a UK company's people work. ` +
-          "Which nation's bank holidays apply to them?",
+          "Its name may add a word such as office, site or HQ to a town or city; the town or city " +
+          "decides. Which nation's bank holidays apply to them?",
         options: NATION_OPTIONS,
       },
     ]),
