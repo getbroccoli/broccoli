@@ -1,5 +1,5 @@
 -- A fresh workspace runs UK leave with nothing to set up: everyone gets the statutory minimum.
-INSERT INTO "terms" ("name", "key") VALUES ('England and Wales', 'england_and_wales');--> statement-breakpoint
+INSERT INTO "terms" ("name", "key") VALUES ('England and Wales', 'default_terms');--> statement-breakpoint
 INSERT INTO "time_off_types" ("name", "needs_approval", "private", "type_key") VALUES
 	('Annual leave', true, false, 'annual_leave'),
 	('Sickness', false, true, 'sickness'),
@@ -12,7 +12,7 @@ INSERT INTO "time_off_policies" ("time_off_type_id", "name", "terms_id", "balanc
 		CASE WHEN t."type_key" = 'annual_leave' THEN 'leave_year_from_fixed_date' END,
 		CASE WHEN t."type_key" = 'annual_leave' THEN 1 END,
 		CASE WHEN t."type_key" = 'annual_leave' THEN 1 END
-	FROM "time_off_types" t CROSS JOIN "terms" g WHERE g."key" = 'england_and_wales';--> statement-breakpoint
+	FROM "time_off_types" t CROSS JOIN "terms" g WHERE g."key" = 'default_terms';--> statement-breakpoint
 INSERT INTO "time_off_allowance_rules" ("time_off_policy_id", "kind", "entitlement_days", "entitlement_days_per_week", "max_days")
 	SELECT p."id", 'yearly_entitlement', 28, 5, 28
 	FROM "time_off_policies" p JOIN "time_off_types" t ON t."id" = p."time_off_type_id" WHERE t."type_key" = 'annual_leave';

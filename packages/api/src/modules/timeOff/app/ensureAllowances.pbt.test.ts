@@ -4,7 +4,7 @@ import {
   calendarDate,
   employeeServices,
   expect,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   OWNER,
   readAllowances,
   test,
@@ -16,7 +16,7 @@ import {
 import { addDays } from "../../../utils";
 
 test("invariant: ensuring unchanged inputs appends nothing", async ({ orm, seed, transact }) => {
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const service = timeOffService(orm);
   await fc.assert(
     fc.asyncProperty(startDate(), async (startDate) => {
@@ -41,7 +41,7 @@ test("invariant: start-date corrections preserve every earlier ledger line", asy
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employees = employeeServices(orm);
   await fc.assert(
     fc.asyncProperty(fc.array(startDate(), { minLength: 2, maxLength: 5 }), async (dates) => {
@@ -69,7 +69,7 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employees = employeeServices(orm);
   const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
   await fc.assert(
@@ -133,7 +133,7 @@ test("invariant: concurrent ensures write the same ledger as one ensure", async 
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const service = timeOffService(orm);
   await fc.assert(
     fc.asyncProperty(startDate(), fc.integer({ min: 2, max: 4 }), async (startDate, contenders) => {

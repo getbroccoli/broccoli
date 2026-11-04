@@ -103,7 +103,7 @@ export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
 export {
   type AllowanceLine,
   demoFillService,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   readAllowances,
   timeOffService,
   transactWithTimeOffEvents,

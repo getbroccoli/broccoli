@@ -343,7 +343,7 @@ async function openEmployments(
   await employmentRepository(db).insertOpen(
     inserted.map(({ id, email }) => ({ employeeId: id, startDate: startDates.get(email) ?? null })),
   );
-  await termsRepository(db).joinEnglandAndWalesTerms(inserted.map(({ id }) => id));
+  await termsRepository(db).joinDefaultTerms(inserted.map(({ id }) => id));
   return inserted;
 }
 

@@ -27,12 +27,12 @@ export function createDemoFillService({
   employeeReads,
 }: {
   timeOff: Pick<TimeOffService, "listPolicies" | "linkTermsPolicies">;
-  employeeReads: Pick<EmployeeReadService, "readEnglandAndWalesTermsId">;
+  employeeReads: Pick<EmployeeReadService, "readDefaultTermsId">;
 }): DemoFillService {
   async function linkDemoPolicies(ctx: SecurityContext, tx: Tx) {
     const policies = await timeOff.listPolicies(ctx, tx);
     await timeOff.linkTermsPolicies(ctx, tx, {
-      termsId: await employeeReads.readEnglandAndWalesTermsId(tx),
+      termsId: await employeeReads.readDefaultTermsId(tx),
       timeOffPolicyIds: policies
         .filter(({ key, balance }) => key === "uk_statutory_minimum" || balance === "no_balance")
         .map(({ id }) => id),

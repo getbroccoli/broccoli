@@ -16,7 +16,7 @@ import { slackConnectionRepository } from "../../src/modules/slack/db";
 import { todayInUtc } from "../../src/utils";
 import { calendarDate } from "./calendarDate";
 import { TEST_SECRET_BOX } from "./testSecretBox";
-import { englandAndWalesTermsId, insertTerms, leaveTerms, moveToTerms } from "./seedTerms";
+import { defaultTermsId, insertTerms, leaveTerms, moveToTerms } from "./seedTerms";
 import { seedUser } from "./seedUser";
 import { testTransactor } from "./testTransactor";
 
@@ -177,7 +177,7 @@ export class TestSeed {
   }
 
   /** The id of the seeded "England and Wales" terms, which every new employee joins. */
-  englandAndWalesTermsId = () => englandAndWalesTermsId(this.orm);
+  defaultTermsId = () => defaultTermsId(this.orm);
 
   /** New terms with no one on them. */
   terms = (name = `Terms ${++this.#count}`) => insertTerms(this.orm, name);

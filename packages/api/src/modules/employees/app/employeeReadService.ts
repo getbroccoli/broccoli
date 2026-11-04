@@ -46,7 +46,7 @@ export interface EmployeeReadService {
    */
   lockEmployees: (tx: Tx, employeeIds: readonly string[]) => Promise<string[]>;
   /** Trusted: the id of the seeded "England and Wales" terms, which every new employee joins. */
-  readEnglandAndWalesTermsId: (tx: Tx) => Promise<string>;
+  readDefaultTermsId: (tx: Tx) => Promise<string>;
   /**
    * Trusted, for time off: each employee's employments, oldest first, by id, in the caller's
    * transaction. A null start is unknown, a null end open-ended.
@@ -117,7 +117,7 @@ export function createEmployeeReadService({
       );
     },
     lockEmployees: (tx, employeeIds) => employeeRepository(tx).lockByIds(employeeIds),
-    readEnglandAndWalesTermsId: (tx) => termsRepository(tx).findEnglandAndWalesId(),
+    readDefaultTermsId: (tx) => termsRepository(tx).findDefaultTermsId(),
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
     readTermsMemberships: (tx, employeeIds) => termsRepository(tx).findMemberships(employeeIds),
     async readTermsMemberIds(tx, termsId) {

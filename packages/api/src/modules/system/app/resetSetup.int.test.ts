@@ -29,7 +29,7 @@ test("resetting a finished setup removes the terms' time off policies", async ({
   await seed.setupStep("done");
   await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;

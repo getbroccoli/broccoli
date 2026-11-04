@@ -7,7 +7,7 @@ import { ensureAllowancesJob } from "./ensureAllowancesJob";
 test("a run on 1 January creates the new year's allowances", async ({ orm, seed, transact }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm, { today: "2026-06-01" });
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
@@ -46,7 +46,7 @@ test("a run on 1 January creates the new year's allowances", async ({ orm, seed,
 
 test("a run repairs a missing allowance", async ({ orm, seed, transact }) => {
   const service = timeOffService(orm, { today: "2026-06-01" });
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;

@@ -28,7 +28,7 @@ for (const policyKey of [
     const timeOff = timeOffService(orm);
     const employees = employeeServices(orm);
     const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
-    const termsId = await seed.englandAndWalesTermsId();
+    const termsId = await seed.defaultTermsId();
     const policy = (await timeOff.listPolicies(OWNER, orm)).find(({ key }) => key === policyKey)!;
     await transact((tx) =>
       timeOff.linkTermsPolicies(OWNER, tx, {

@@ -23,7 +23,7 @@ test("the daily job runs within a minute for 10,000 people with five years of le
   const policy = (await service.listPolicies(OWNER, orm)).find(
     ({ key }) => key === "uk_statutory_minimum",
   )!;
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   await transact((tx) =>
     service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );

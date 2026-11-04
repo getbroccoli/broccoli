@@ -22,7 +22,7 @@ test("exiting the demo removes the terms' time off policies", async ({ orm, seed
   await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   expect(await service.readTermsPolicies(owner, { termsId })).toHaveLength(4);
 
   await demoService(orm).exitDemo(owner);

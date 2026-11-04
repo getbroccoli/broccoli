@@ -7,10 +7,10 @@ import { terms } from "./termsTable";
 
 /** Terms and who is on them, through the pool or inside a transaction. */
 export interface TermsRepository {
-  /** Puts new employees on the seeded "England and Wales" terms since their employment started. */
-  joinEnglandAndWalesTerms(employeeIds: readonly string[]): Promise<void>;
-  /** The id of the seeded "England and Wales" terms. */
-  findEnglandAndWalesId(): Promise<string>;
+  /** Puts new employees on the default terms ("England and Wales") since their employment started. */
+  joinDefaultTerms(employeeIds: readonly string[]): Promise<void>;
+  /** The id of the default terms, the seeded "England and Wales". */
+  findDefaultTermsId(): Promise<string>;
   /** Whether terms have this id. */
   exists(termsId: string): Promise<boolean>;
   /** Each employee's terms over time, by employee id. */
@@ -22,17 +22,17 @@ export interface TermsRepository {
 export function termsRepository(db: Orm | Tx): TermsRepository {
   const orm = () => ormOf(db);
   return {
-    async joinEnglandAndWalesTerms(employeeIds) {
+    async joinDefaultTerms(employeeIds) {
       if (employeeIds.length === 0) {
         return;
       }
-      const englandAndWalesId = await findEnglandAndWalesId(orm());
+      const defaultTermsId = await findDefaultTermsId(orm());
       await orm()
         .insert(employeeTerms)
-        .values(employeeIds.map((employeeId) => ({ employeeId, termsId: englandAndWalesId })));
+        .values(employeeIds.map((employeeId) => ({ employeeId, termsId: defaultTermsId })));
     },
 
-    findEnglandAndWalesId: () => findEnglandAndWalesId(orm()),
+    findDefaultTermsId: () => findDefaultTermsId(orm()),
 
     async exists(termsId) {
       const [found] = await orm().select({ id: terms.id }).from(terms).where(eq(terms.id, termsId));
@@ -62,10 +62,10 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
   };
 }
 
-async function findEnglandAndWalesId(orm: ReturnType<typeof ormOf>): Promise<string> {
-  const [englandAndWales] = await orm
+async function findDefaultTermsId(orm: ReturnType<typeof ormOf>): Promise<string> {
+  const [defaultTerms] = await orm
     .select({ id: terms.id })
     .from(terms)
-    .where(eq(terms.key, "england_and_wales"));
-  return englandAndWales!.id;
+    .where(eq(terms.key, "default_terms"));
+  return defaultTerms!.id;
 }

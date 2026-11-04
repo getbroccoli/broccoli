@@ -32,13 +32,13 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
 }
 
 /** Links the UK statutory minimum to "England and Wales" terms, as an admin would. */
-export async function linkStatutoryMinimumToEnglandAndWales(
+export async function linkStatutoryMinimumToDefaultTerms(
   orm: Orm,
   seed: TestSeed,
   transact: Transact,
 ) {
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     ({ key }) => key === "uk_statutory_minimum",
   )!;

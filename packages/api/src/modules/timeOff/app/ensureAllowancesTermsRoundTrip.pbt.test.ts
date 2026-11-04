@@ -23,7 +23,7 @@ for (const policyKey of [
     transact,
   }) => {
     const timeOff = timeOffService(orm);
-    const termsId = await seed.englandAndWalesTermsId();
+    const termsId = await seed.defaultTermsId();
     const policy = (await timeOff.listPolicies(OWNER, orm)).find(({ key }) => key === policyKey)!;
     await transact((tx) =>
       timeOff.linkTermsPolicies(OWNER, tx, {

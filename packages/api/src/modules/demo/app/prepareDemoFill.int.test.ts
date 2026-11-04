@@ -41,7 +41,7 @@ test("filling the demo links England and Wales terms' time off policies and gran
   transact,
 }) => {
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
 
   await transact(await demoFillService(orm).prepareDemoFill(today));
 
