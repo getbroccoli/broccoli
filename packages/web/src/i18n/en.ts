@@ -11,6 +11,7 @@ import { peopleEn } from "./en/people";
 import { recordsEn } from "./en/records";
 import { settingsEn } from "./en/settings";
 import { setupEn } from "./en/setup";
+import { setupLeaveEn } from "./en/setupLeave";
 import { setupWhoEn } from "./en/setupWho";
 import { tableEn } from "./en/table";
 import { workspaceEn } from "./en/workspace";
@@ -20,6 +21,7 @@ export const en = {
   ...appEn,
   ...authEn,
   ...setupEn,
+  ...setupLeaveEn,
   ...setupWhoEn,
   ...importsEn,
   ...externalAgentsEn,

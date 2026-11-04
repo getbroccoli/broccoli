@@ -6,11 +6,14 @@ import {
   type SetupInviteAudience,
   SetupInviteesDocument,
   type SetupPersonFragment,
+  type TurnOnLeaveInput,
 } from "@/__generated__/graphql";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { type CopiedLink, CopyLinks } from "@/features/invites";
 import type { SetupInviteSearch } from "@/features/setup";
 import { t } from "@/i18n";
+
+import { readLeaveChoice } from "../SetUpLeave/leaveChoice";
 
 /** An invite setup's last step sent, as the API answers. */
 export interface SentSetupInvite {
@@ -33,11 +36,12 @@ export interface SetupInvites {
   failed: boolean;
   note: string;
   setNote: (note: string) => void;
-  /** What the finish sends; the note only when invites go by email. */
+  /** What the finish sends; the note only when invites go by email, leave as Set up leave left it. */
   choices: {
     ownerEmployeeKey: string | null;
     inviteAudience: SetupInviteAudience;
     inviteNote: string | null;
+    leave: TurnOnLeaveInput | null;
   };
   /** Waits until the owner has copied the links, or toasts how many emails went. */
   finish: (invites: readonly SentSetupInvite[]) => Promise<void>;
@@ -100,6 +104,7 @@ export function useSetupInvites(
       ownerEmployeeKey: search.me ?? null,
       inviteAudience: search.audience,
       inviteNote: byEmail ? note.trim() || null : null,
+      leave: readLeaveChoice() ?? null,
     },
     finish,
     linksDialog,

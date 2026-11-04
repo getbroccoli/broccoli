@@ -1,0 +1,28 @@
+query LeaveStep {
+  leaveSetup {
+    annualLeavePolicies {
+      id
+      name
+    }
+    bankHolidayCalendars {
+      calendar
+      countThisYear
+    }
+  }
+  import {
+    id
+    readyEmployeeCount
+    readyLocations {
+      name
+      peopleCount
+    }
+  }
+}
+
+query LocationCalendarSuggestions($locationNames: [String!]!) {
+  locationCalendarSuggestions(locationNames: $locationNames) {
+    locationName
+    bankHolidayCalendar
+    unsure
+  }
+}

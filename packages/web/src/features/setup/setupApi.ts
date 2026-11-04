@@ -1,4 +1,4 @@
-import type { SetupInviteAudience } from "@/__generated__/graphql";
+import type { SetupInviteAudience, TurnOnLeaveInput } from "@/__generated__/graphql";
 import { postJson } from "@/lib/postJson";
 
 /** How an attempt to create the owner ended, as the setup form reports it. */
@@ -26,11 +26,12 @@ export async function startSetup(): Promise<boolean> {
   }
 }
 
-/** What the owner chose on "Who uses Broccoli", sent with their account. */
+/** What the owner chose on "Set up leave" and "Who uses Broccoli", sent with their account. */
 export interface OwnerSetupChoices {
   ownerEmployeeKey: string | null;
   inviteAudience: SetupInviteAudience;
   inviteNote: string | null;
+  leave: TurnOnLeaveInput | null;
 }
 
 /** An invite setup sent; the link only when the owner copies it. */
@@ -63,6 +64,7 @@ export async function setUpOwner(
       password,
       ...choices,
       inviteAudience: AUDIENCES[choices.inviteAudience],
+      leave: choices.leave && lowerCaseLeave(choices.leave),
     });
     const body = (await response.json().catch(() => ({}))) as Partial<{
       invites: OwnerSetupInvite[];
@@ -83,3 +85,18 @@ const AUDIENCES = {
   ADMINS_AND_MANAGERS: "admins_and_managers",
   EVERYONE: "everyone",
 } as const satisfies Record<SetupInviteAudience, string>;
+
+/** The API takes the leave choice's values in lower case, as it stores them. */
+function lowerCaseLeave({ terms, locationTerms }: TurnOnLeaveInput) {
+  return {
+    terms: terms.map((entry) => ({
+      ...entry,
+      bankHolidayCalendar: entry.bankHolidayCalendar.toLowerCase(),
+      workingWeek: entry.workingWeek.toLowerCase(),
+    })),
+    locationTerms: locationTerms.map((entry) => ({
+      ...entry,
+      bankHolidayCalendar: entry.bankHolidayCalendar.toLowerCase(),
+    })),
+  };
+}

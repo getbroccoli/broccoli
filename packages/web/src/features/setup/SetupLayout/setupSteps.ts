@@ -9,6 +9,7 @@ export type SetupPath =
   | "/setup/ai"
   | "/setup/import"
   | "/setup/import/review"
+  | "/setup/leave"
   | "/setup/who"
   | "/setup"
   | "/setup/ready"
@@ -62,7 +63,14 @@ const REVIEW = {
   path: "/setup/import/review",
   step: "IMPORT",
 } as const satisfies PageDefinition;
-// After Approve, so it belongs to the server step of setup's last page.
+// Leave and Who come after Approve, so they belong to the server step of setup's last page.
+const LEAVE_SELF_HOSTED = {
+  id: "leave",
+  title: "setup.leave.step",
+  path: "/setup/leave",
+  step: "OWNER",
+} as const satisfies PageDefinition;
+const LEAVE_MANAGED = { ...LEAVE_SELF_HOSTED, step: "READY" } as const satisfies PageDefinition;
 const WHO_SELF_HOSTED = {
   id: "who",
   title: "setup.who.step",
@@ -71,14 +79,10 @@ const WHO_SELF_HOSTED = {
 } as const satisfies PageDefinition;
 const WHO_MANAGED = { ...WHO_SELF_HOSTED, step: "READY" } as const satisfies PageDefinition;
 // Gathering and review, and Setup AI before them, belong to the server's `import` step, until Approve.
-const PEOPLE_SELF_HOSTED = {
+const PEOPLE = {
   id: "people",
   title: "setup.import.title",
-  pages: [IMPORT, REVIEW, WHO_SELF_HOSTED],
-} as const satisfies StepDefinition;
-const PEOPLE_MANAGED = {
-  ...PEOPLE_SELF_HOSTED,
-  pages: [IMPORT, REVIEW, WHO_MANAGED],
+  pages: [IMPORT, REVIEW],
 } as const satisfies StepDefinition;
 const READY = {
   id: "ready",
@@ -92,13 +96,13 @@ const FINISHED: SetupPath = "/people";
 
 /**
  * The setup flow: the steps in order, each with the copy key of its title. The owner may go
- * back to the company until Approve, then chooses who uses Broccoli. A self-hosted owner picks
+ * back to the company until Approve, then sets up leave and chooses who uses Broccoli. A self-hosted owner picks
  * how files are read with AI and creates their account last; a managed one keeps its provided
  * key, signed up before setup and sees what it will add last.
  */
 const SETUP_STEPS = {
-  SELF_HOSTED: [COMPANY, AI, PEOPLE_SELF_HOSTED, OWNER],
-  MANAGED: [COMPANY, PEOPLE_MANAGED, READY],
+  SELF_HOSTED: [COMPANY, AI, PEOPLE, LEAVE_SELF_HOSTED, WHO_SELF_HOSTED, OWNER],
+  MANAGED: [COMPANY, PEOPLE, LEAVE_MANAGED, WHO_MANAGED, READY],
 } as const satisfies Record<Mode, readonly (PageDefinition | StepDefinition)[]>;
 
 type Page =
@@ -107,6 +111,7 @@ type Page =
   | typeof AI
   | typeof IMPORT
   | typeof REVIEW
+  | typeof LEAVE_SELF_HOSTED
   | typeof WHO_SELF_HOSTED
   | typeof READY;
 

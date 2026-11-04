@@ -1,12 +1,13 @@
 import { useQuery } from "@apollo/client/react";
 import {
+  ArrowLeft,
   ArrowRight,
   PaperPlaneTilt,
   ShieldCheck,
   UserCircleGear,
   UsersThree,
 } from "@phosphor-icons/react";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
@@ -14,7 +15,7 @@ import {
   SetupOwnerPersonDocument,
   SetupAudiencesDocument,
 } from "@/__generated__/graphql";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { personName } from "@/features/employees";
 import {
   type SetupInviteSearch,
@@ -23,8 +24,8 @@ import {
   useSetupPages,
 } from "@/features/setup";
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 
-import { BackToReview } from "../BackToReview";
 import { ImportPersonSearch } from "../ImportReview/ImportPersonSearch";
 import { AudienceOption } from "./AudienceOption";
 import { PeopleNames } from "./PeopleNames";
@@ -50,7 +51,7 @@ export function WhoStep({ search }: Props) {
     fetchPolicy: "cache-and-network",
   });
   const navigate = useNavigate();
-  const { next } = useSetupPages("who");
+  const { previous, next } = useSetupPages("who");
 
   const earlier = search.me === undefined ? data?.import.ownerCandidate : data?.import.chosen;
   const me =
@@ -85,7 +86,15 @@ export function WhoStep({ search }: Props) {
         onSubmit={choose}
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <BackToReview />
+            {previous && (
+              <Link
+                to={previous}
+                className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
+              >
+                <ArrowLeft aria-hidden />
+                {t("setup.back")}
+              </Link>
+            )}
             <Button
               type="submit"
               size="lg"
