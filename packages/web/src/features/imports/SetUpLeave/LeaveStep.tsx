@@ -11,7 +11,7 @@ import {
 } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
-  DEFAULT_SETUP_INVITE_SEARCH,
+  type SetupInviteSearch,
   SetupLayout,
   SetupStepForm,
   useSetupPages,
@@ -19,7 +19,7 @@ import {
 import { t } from "@/i18n";
 
 import { BackToReview } from "../BackToReview";
-import { readLeaveChoice, saveLeaveChoice } from "./leaveChoice";
+import { type LeaveSetupState, readLeaveSetup, saveLeaveSetup } from "./leaveChoice";
 
 /** England and Wales first: new people start on its terms, so its card always shows. */
 const NATIONS = [
@@ -35,36 +35,29 @@ const WEEKS = [
   "MONDAY_TO_THURSDAY_8_HOURS",
 ] as const satisfies readonly StandardWorkingWeek[];
 
-type Choices<Value> = Partial<Record<BankHolidayCalendar, Value>>;
-
 const SELECT_CLASS =
   "h-9 w-full max-w-xs rounded-md border border-input bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
+
+type Props = {
+  /** Who uses Broccoli's answers, carried through when the owner came back from it. */
+  search: SetupInviteSearch;
+};
 
 /**
  * "Set up leave", after Approve: one card per nation's terms the owner's people will be on, each
  * with its working week and Annual leave, and which terms each location gets, Broccoli's AI
- * suggesting them from the names. Nothing is saved here: the choice goes with setup's last page.
+ * suggesting them from the names. Nothing is saved on the server here: the choice goes with
+ * setup's last page.
  */
-export function LeaveStep() {
-  // The owner's earlier choice, when they come back to the page.
-  const [saved] = useState(readLeaveChoice);
-  const earlier = saved?.terms ?? [];
-  const [weeks, setWeeks] = useState<Choices<StandardWorkingWeek>>(() =>
-    Object.fromEntries(earlier.map((terms) => [terms.bankHolidayCalendar, terms.workingWeek])),
-  );
-  const [policies, setPolicies] = useState<Choices<string>>(() =>
-    Object.fromEntries(
-      earlier.map((terms) => [terms.bankHolidayCalendar, terms.annualLeavePolicyId]),
-    ),
-  );
-  const [picked, setPicked] = useState<Record<string, BankHolidayCalendar>>(() =>
-    Object.fromEntries(
-      (saved?.locationTerms ?? []).map((location) => [
-        location.locationName,
-        location.bankHolidayCalendar,
-      ]),
-    ),
-  );
+export function LeaveStep({ search }: Props) {
+  // Kept in the tab on every change, so a reload or Back to the review keeps the owner's choices.
+  const [state, setState] = useState(readLeaveSetup);
+  const { weeks, policies, picked } = state;
+  const change = (next: Partial<LeaveSetupState>) => {
+    const changed = { ...state, ...next };
+    setState(changed);
+    saveLeaveSetup(changed);
+  };
   const { data, error } = useQuery(LeaveStepDocument, { fetchPolicy: "cache-and-network" });
   const navigate = useNavigate();
   const { next } = useSetupPages("leave");
@@ -76,11 +69,14 @@ export function LeaveStep() {
   });
   const suggestions = suggested.data?.locationCalendarSuggestions ?? [];
   const suggestionOf = (name: string) => suggestions.find((s) => s.locationName === name);
+  // Own keys only: a location may be named like an object's built-in property, such as "constructor".
+  const isPicked = (name: string) => Object.hasOwn(picked, name);
   const nationOf = (name: string): BankHolidayCalendar =>
-    picked[name] ?? suggestionOf(name)?.bankHolidayCalendar ?? "ENGLAND_AND_WALES";
+    (isPicked(name) ? picked[name] : suggestionOf(name)?.bankHolidayCalendar) ??
+    "ENGLAND_AND_WALES";
   // Without the model's answer, a location is England and Wales until the owner says otherwise.
   const unsure = (name: string) =>
-    !(name in picked) && !suggested.loading && (suggestionOf(name)?.unsure ?? true);
+    !isPicked(name) && !suggested.loading && (suggestionOf(name)?.unsure ?? true);
 
   const policyOptions = data?.leaveSetup.annualLeavePolicies ?? [];
   const nations = NATIONS.filter(
@@ -93,9 +89,9 @@ export function LeaveStep() {
     (data?.import.readyEmployeeCount ?? 0) -
     locations.reduce((sum, { peopleCount }) => sum + peopleCount, 0);
 
-  const go = (choice: Parameters<typeof saveLeaveChoice>[0]) => {
-    saveLeaveChoice(choice);
-    void navigate({ to: next, search: DEFAULT_SETUP_INVITE_SEARCH });
+  const go = (leave: LeaveSetupState["leave"]) => {
+    change({ leave });
+    void navigate({ to: next, search });
   };
   const turnOn = () =>
     go({
@@ -177,7 +173,9 @@ export function LeaveStep() {
                     className={SELECT_CLASS}
                     value={weekOf(nation)}
                     onChange={(event) =>
-                      setWeeks({ ...weeks, [nation]: event.target.value as StandardWorkingWeek })
+                      change({
+                        weeks: { ...weeks, [nation]: event.target.value as StandardWorkingWeek },
+                      })
                     }
                   >
                     {WEEKS.map((week) => (
@@ -205,7 +203,9 @@ export function LeaveStep() {
                     id={`policy-${nation}`}
                     className={SELECT_CLASS}
                     value={policyOf(nation)}
-                    onChange={(event) => setPolicies({ ...policies, [nation]: event.target.value })}
+                    onChange={(event) =>
+                      change({ policies: { ...policies, [nation]: event.target.value } })
+                    }
                   >
                     {policyOptions.map(({ id, name }) => (
                       <option key={id} value={id}>
@@ -213,6 +213,9 @@ export function LeaveStep() {
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("setup.leave.annualLeaveHint")}
+                  </p>
                 </dd>
                 <dt className="text-muted-foreground">{t("setup.leave.alsoRecorded")}</dt>
                 <dd>{t("setup.leave.alsoRecordedTypes")}</dd>
@@ -240,7 +243,9 @@ export function LeaveStep() {
                     className={SELECT_CLASS}
                     value={nationOf(name)}
                     onChange={(event) =>
-                      setPicked({ ...picked, [name]: event.target.value as BankHolidayCalendar })
+                      change({
+                        picked: { ...picked, [name]: event.target.value as BankHolidayCalendar },
+                      })
                     }
                   >
                     {NATIONS.map((nation) => (

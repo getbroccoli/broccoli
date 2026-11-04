@@ -89,6 +89,7 @@ export function WhoStep({ search }: Props) {
             {previous && (
               <Link
                 to={previous}
+                search={{ audience, me: me?.id ?? null }}
                 className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "h-10 gap-2 px-3")}
               >
                 <ArrowLeft aria-hidden />

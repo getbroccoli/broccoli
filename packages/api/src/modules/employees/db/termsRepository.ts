@@ -34,8 +34,8 @@ export interface TermsRepository {
   exists(termsId: string): Promise<boolean>;
   /** Each employee's terms over time, by employee id. */
   findMemberships(employeeIds: readonly string[]): Promise<Map<string, TermsMembership[]>>;
-  /** The employees on the terms on any date. */
-  findMemberIds(termsId: string): Promise<string[]>;
+  /** The employees on each of the terms on any date, by terms id; terms without any are left out. */
+  findMemberIds(termsIds: readonly string[]): Promise<Map<string, string[]>>;
 }
 
 export function termsRepository(db: Orm | Tx): TermsRepository {
@@ -129,12 +129,16 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
       return memberships;
     },
 
-    async findMemberIds(termsId) {
+    async findMemberIds(termsIds) {
       const rows = await orm()
-        .selectDistinct({ employeeId: employeeTerms.employeeId })
+        .selectDistinct({ termsId: employeeTerms.termsId, employeeId: employeeTerms.employeeId })
         .from(employeeTerms)
-        .where(eq(employeeTerms.termsId, termsId));
-      return rows.map(({ employeeId }) => employeeId);
+        .where(inArray(employeeTerms.termsId, [...termsIds]));
+      const members = new Map<string, string[]>();
+      for (const { termsId, employeeId } of rows) {
+        members.set(termsId, [...(members.get(termsId) ?? []), employeeId]);
+      }
+      return members;
     },
   };
 }

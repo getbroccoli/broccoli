@@ -100,7 +100,7 @@ export interface EmployeeSetupService {
    * Gives each nation's entry terms on its working week, joining `tx`: England and Wales are the
    * default terms, the others are created; points each named location at its nation's terms and
    * moves the people still on the untouched default terms onto their location's. Returns the
-   * terms ids in the order of `input.terms`.
+   * terms ids, and their people, in the order of `input.terms`.
    */
   setUpTerms: (ctx: SecurityContext, tx: Tx, input: TermsSetup) => Promise<SetUpTerms>;
 }
@@ -114,6 +114,8 @@ export interface TermsSetup {
 /** What setting up terms did. */
 export interface SetUpTerms {
   termsIds: string[];
+  /** The employees on each terms afterwards, in the order of `termsIds`. */
+  memberIds: string[][];
   createdPatternIds: string[];
   movedEmployeeIds: string[];
 }
@@ -260,7 +262,13 @@ export function createEmployeeSetupService(): EmployeeSetupService {
         })),
       );
       const movedEmployeeIds = await terms.moveToLocationDefaults();
-      return { termsIds, createdPatternIds, movedEmployeeIds };
+      const members = await terms.findMemberIds(termsIds);
+      return {
+        termsIds,
+        memberIds: termsIds.map((termsId) => members.get(termsId) ?? []),
+        createdPatternIds,
+        movedEmployeeIds,
+      };
     },
   };
 }

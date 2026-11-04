@@ -14,6 +14,7 @@ export const setupLeaveEn = {
   "setup.leave.bankHolidays": "Bank holidays",
   "setup.leave.bankHolidaysCount": "{nation} · {count} in {year}",
   "setup.leave.annualLeave": "Annual leave",
+  "setup.leave.annualLeaveHint": "Days for a five-day week; a shorter week gets its share.",
   "setup.leave.alsoRecorded": "Also recorded",
   "setup.leave.alsoRecordedTypes": "Sickness · Family leave · Other",
   "setup.leave.newPeople": "New people start on these terms",

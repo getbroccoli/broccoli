@@ -88,40 +88,6 @@ export function createTimeOffService({
   const employeeReads = engine.employeeReads;
   const ensureAllowances: TimeOffService["ensureAllowances"] = (_ctx, tx, input) =>
     ensureAllowancesOf(engine, tx, input);
-  /** Links the policies to the terms, under the caller's lock on the links, and ensures allowances. */
-  const linkPolicies = async (
-    tx: Tx,
-    termsId: string,
-    employeeIds: readonly string[],
-    chosen: readonly TimeOffPolicy[],
-  ) => {
-    const repository = timeOffPolicyRepository(tx);
-    const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
-    const typeIds = [
-      ...linked.map(({ timeOffTypeId }) => timeOffTypeId),
-      ...chosen.map(({ timeOffType }) => timeOffType.id),
-    ];
-    const conflict = chosen.find(
-      ({ timeOffType }) => typeIds.indexOf(timeOffType.id) < typeIds.lastIndexOf(timeOffType.id),
-    );
-    if (conflict) {
-      throw new ApplicationError(
-        "CONFLICT",
-        `The terms already have a policy for ${conflict.timeOffType.name}.`,
-      );
-    }
-    await repository.insertTermsLinks(
-      termsId,
-      chosen.map(({ id, timeOffType }) => ({
-        timeOffTypeId: timeOffType.id,
-        timeOffPolicyId: id,
-      })),
-    );
-    return ensureAllowancesOf(engine, tx, {
-      employeeIds,
-      cause: { kind: "POLICY_LINKED_TO_TERMS", ref: termsId },
-    });
-  };
   return {
     ensureAllowances,
     async linkTermsPolicies(ctx, tx, input) {
@@ -141,7 +107,7 @@ export function createTimeOffService({
         }
         return policy;
       });
-      const ensured = await linkPolicies(tx, termsId, employeeIds, chosen);
+      const ensured = await linkPolicies(engine, tx, termsId, employeeIds, chosen);
       return { employeeCount: employeeIds.length, ...ensured };
     },
     async turnOnLeave(ctx, tx, input) {
@@ -163,8 +129,7 @@ export function createTimeOffService({
       const setUp = await employeeSetup.setUpTerms(ctx, tx, input);
       const totals = { allowancesCreated: 0, linesAppended: 0 };
       for (const [index, termsId] of setUp.termsIds.entries()) {
-        const employeeIds = (await employeeReads.readTermsMemberIds(tx, termsId)) ?? [];
-        const ensured = await linkPolicies(tx, termsId, employeeIds, [
+        const ensured = await linkPolicies(engine, tx, termsId, setUp.memberIds[index]!, [
           annualLeave[index]!,
           ...recordOnly,
         ]);
@@ -204,6 +169,39 @@ export function createTimeOffService({
       await timeOffPolicyRepository(tx).deleteAllTermsLinks();
     },
   };
+}
+
+/** Links the policies to the terms, under the caller's lock on the links, and ensures allowances. */
+async function linkPolicies(
+  engine: Parameters<typeof ensureAllowancesOf>[0],
+  tx: Tx,
+  termsId: string,
+  employeeIds: readonly string[],
+  chosen: readonly TimeOffPolicy[],
+): Promise<EnsuredAllowances> {
+  const repository = timeOffPolicyRepository(tx);
+  const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
+  const typeIds = [
+    ...linked.map(({ timeOffTypeId }) => timeOffTypeId),
+    ...chosen.map(({ timeOffType }) => timeOffType.id),
+  ];
+  const conflict = chosen.find(
+    ({ timeOffType }) => typeIds.indexOf(timeOffType.id) < typeIds.lastIndexOf(timeOffType.id),
+  );
+  if (conflict) {
+    throw new ApplicationError(
+      "CONFLICT",
+      `The terms already have a policy for ${conflict.timeOffType.name}.`,
+    );
+  }
+  await repository.insertTermsLinks(
+    termsId,
+    chosen.map(({ id, timeOffType }) => ({ timeOffTypeId: timeOffType.id, timeOffPolicyId: id })),
+  );
+  return ensureAllowancesOf(engine, tx, {
+    employeeIds,
+    cause: { kind: "POLICY_LINKED_TO_TERMS", ref: termsId },
+  });
 }
 
 function toSummary({ id, name, key, balance, timeOffType }: TimeOffPolicy): TimeOffPolicySummary {

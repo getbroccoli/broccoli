@@ -119,7 +119,9 @@ export function createEmployeeReadService({
     readTermsMemberships: (tx, employeeIds) => termsRepository(tx).findMemberships(employeeIds),
     async readTermsMemberIds(tx, termsId) {
       const repository = termsRepository(tx);
-      return (await repository.exists(termsId)) ? repository.findMemberIds(termsId) : null;
+      return (await repository.exists(termsId))
+        ? ((await repository.findMemberIds([termsId])).get(termsId) ?? [])
+        : null;
     },
     readEmployeeHistory: (ctx, employeeId, args) =>
       history.readHistory(ctx, "employee", employeeId, args),
