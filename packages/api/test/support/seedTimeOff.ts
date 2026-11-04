@@ -1,9 +1,18 @@
-import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import type { Orm } from "../../src/core/db";
-import { timeOffAllowanceRules, timeOffTypes } from "../../src/modules/timeOff/db";
+import { employments } from "../../src/modules/employees/db";
+import {
+  timeOff,
+  timeOffAllowanceRules,
+  timeOffDays,
+  timeOffPolicies,
+  timeOffPolicyAssignments,
+  timeOffTypes,
+} from "../../src/modules/timeOff/db";
+import type { CalendarDate } from "../../src/utils";
 
-// These fixture writes use SQL because the tables have no exported write operations yet.
+/** A company's own time off type with one policy, its leave year from 1 January. */
 export async function seedTimeOffPolicy(
   orm: Orm,
   input: {
@@ -14,53 +23,55 @@ export async function seedTimeOffPolicy(
 ): Promise<{ id: string; timeOffTypeId: string }> {
   const [type] = await orm
     .insert(timeOffTypes)
-    .values({
-      name: input.name,
-      needsApproval: true,
-      private: false,
-    })
+    .values({ name: input.name, needsApproval: true, private: false })
     .returning({ id: timeOffTypes.id });
-  const policy = await orm.execute<{ id: string }>(sql`
-    insert into time_off_policies
-      (time_off_type_id, name, balance, bank_holidays, leave_year_start, leave_year_start_month, leave_year_start_day)
-    values (${type!.id}, ${input.name}, ${input.balance},
-      ${input.balance === "balance_from_allowance" ? "bank_holidays_on_top_of_allowance" : null},
-      'leave_year_from_fixed_date', 1, 1)
-    returning id
-  `);
-  const id = policy.rows[0]!.id;
+  const [policy] = await orm
+    .insert(timeOffPolicies)
+    .values({
+      timeOffTypeId: type!.id,
+      name: input.name,
+      balance: input.balance,
+      bankHolidays:
+        input.balance === "balance_from_allowance" ? "bank_holidays_on_top_of_allowance" : null,
+      leaveYearStart: "leave_year_from_fixed_date",
+      leaveYearStartMonth: 1,
+      leaveYearStartDay: 1,
+    })
+    .returning({ id: timeOffPolicies.id });
   if (input.entitlementDays !== undefined) {
     await orm.insert(timeOffAllowanceRules).values({
-      timeOffPolicyId: id,
+      timeOffPolicyId: policy!.id,
       kind: "yearly_entitlement",
       entitlementDays: String(input.entitlementDays),
       entitlementDaysPerWeek: 5,
     });
   }
-  return { id, timeOffTypeId: type!.id };
+  return { id: policy!.id, timeOffTypeId: type!.id };
 }
 
+/** Puts one person on a policy from 1 January 2025, open-ended. */
 export async function seedTimeOffAssignment(
   orm: Orm,
   input: { employeeId: string; timeOffTypeId: string; timeOffPolicyId: string },
 ): Promise<void> {
-  await orm.execute(sql`
-    insert into time_off_policy_assignments
-      (employee_id, time_off_type_id, time_off_policy_id, effective_from)
-    values (${input.employeeId}, ${input.timeOffTypeId}, ${input.timeOffPolicyId}, '2025-01-01')
-  `);
+  await orm
+    .insert(timeOffPolicyAssignments)
+    .values({ ...input, effectiveFrom: "2025-01-01" as CalendarDate });
 }
 
+/** Ends the person's employment on `endDate`. */
 export async function seedEmploymentEnd(
   orm: Orm,
   employeeId: string,
   endDate: string,
 ): Promise<void> {
-  await orm.execute(
-    sql`update employments set end_date = ${endDate} where employee_id = ${employeeId}`,
-  );
+  await orm
+    .update(employments)
+    .set({ endDate: endDate as CalendarDate })
+    .where(eq(employments.employeeId, employeeId));
 }
 
+/** A person's time off with its days. */
 export async function seedTimeOff(
   orm: Orm,
   input: {
@@ -70,14 +81,19 @@ export async function seedTimeOff(
     days: { date: string; dayPart: "full_day" | "morning" | "afternoon" }[];
   },
 ): Promise<void> {
-  const saved = await orm.execute<{ id: string }>(sql`
-    insert into time_off (employee_id, time_off_type_id, status)
-    values (${input.employeeId}, ${input.timeOffTypeId}, ${input.status}) returning id
-  `);
-  for (const day of input.days) {
-    await orm.execute(sql`
-      insert into time_off_days (time_off_id, date, day_part)
-      values (${saved.rows[0]!.id}, ${day.date}, ${day.dayPart})
-    `);
-  }
+  const [saved] = await orm
+    .insert(timeOff)
+    .values({
+      employeeId: input.employeeId,
+      timeOffTypeId: input.timeOffTypeId,
+      status: input.status,
+    })
+    .returning({ id: timeOff.id });
+  await orm.insert(timeOffDays).values(
+    input.days.map((day) => ({
+      timeOffId: saved!.id,
+      date: day.date as CalendarDate,
+      dayPart: day.dayPart,
+    })),
+  );
 }

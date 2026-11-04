@@ -5,3 +5,7 @@ export { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
 export { allowances } from "./allowancesTable";
 export { timeOffTypes } from "./timeOffTypesTable";
 export { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
+export { timeOff } from "./timeOffTable";
+export { timeOffDays } from "./timeOffDaysTable";
+export { timeOffPolicies } from "./timeOffPoliciesTable";
+export { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";

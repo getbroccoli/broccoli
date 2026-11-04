@@ -2,6 +2,8 @@ import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
+import { TimeOffFigure } from "./TimeOffFigure";
+
 type TimeOffType = NonNullable<EmployeePanel_EmployeeFragment["timeOffTypes"]>[number];
 
 type Props = {
@@ -42,10 +44,23 @@ export function TimeOffSection({ timeOffTypes }: Props) {
           </h3>
           {type.balance === "BALANCE_FROM_ALLOWANCE" ? (
             <dl className="grid grid-cols-2 gap-x-2 gap-y-3 px-3 py-2.5 sm:grid-cols-4">
-              <Figure label={t("people.panel.timeOff.entitlement")} days={type.entitlement} />
-              <Figure label={t("people.panel.timeOff.bankHolidays")} days={type.bankHolidays} />
-              <Figure label={t("people.panel.timeOff.used")} days={type.used} />
-              <Figure label={t("people.panel.timeOff.remaining")} days={type.remaining} emphasis />
+              <TimeOffFigure
+                label={t("people.panel.timeOff.entitlement")}
+                value={dayCount.format(type.entitlement ?? 0)}
+              />
+              <TimeOffFigure
+                label={t("people.panel.timeOff.bankHolidays")}
+                value={dayCount.format(type.bankHolidays ?? 0)}
+              />
+              <TimeOffFigure
+                label={t("people.panel.timeOff.used")}
+                value={dayCount.format(type.used)}
+              />
+              <TimeOffFigure
+                label={t("people.panel.timeOff.remaining")}
+                value={dayCount.format(type.remaining ?? 0)}
+                emphasis
+              />
             </dl>
           ) : (
             <p className="px-3 py-2.5 text-sm">
@@ -61,7 +76,12 @@ export function TimeOffSection({ timeOffTypes }: Props) {
               key={type.timeOffType.id}
               className="flex justify-between gap-2 border-b border-border/60 px-3 py-2 last:border-b-0"
             >
-              <dt>{type.timeOffType.name}</dt>
+              <dt>
+                {type.timeOffType.name}
+                {differsFrom(type, first) && (
+                  <span className="ml-2 text-muted-foreground">{periodOf(type)}</span>
+                )}
+              </dt>
               <dd className="text-muted-foreground">
                 {t("people.panel.timeOff.recorded", { days: daysText(type.used) })}
               </dd>
@@ -70,25 +90,6 @@ export function TimeOffSection({ timeOffTypes }: Props) {
         </dl>
       )}
     </section>
-  );
-}
-
-function Figure({
-  label,
-  days,
-  emphasis = false,
-}: {
-  label: string;
-  days: number | null | undefined;
-  emphasis?: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={emphasis ? "text-lg font-semibold" : "text-lg"}>
-        {dayCount.format(days ?? 0)}
-      </dd>
-    </div>
   );
 }
 

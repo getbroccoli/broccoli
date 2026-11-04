@@ -93,7 +93,7 @@ export const peopleEn = {
   "people.panel.timeOff.used": "Used",
   "people.panel.timeOff.remaining": "Remaining",
   "people.panel.timeOff.unlimited": "Unlimited · {days} used",
-  "people.panel.timeOff.recorded": "{days} recorded this year",
+  "people.panel.timeOff.recorded": "{days} recorded",
   "people.panel.timeOff.day": "{count} day",
   "people.panel.timeOff.days": "{count} days",
 } as const;
