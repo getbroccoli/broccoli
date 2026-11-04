@@ -1301,7 +1301,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "terms_name_unique": {
+          "name": "terms_name_unique",
+          "columns": [
+            {
+              "expression": "lower(btrim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
