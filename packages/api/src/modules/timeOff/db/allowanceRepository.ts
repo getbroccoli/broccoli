@@ -2,7 +2,7 @@ import { and, inArray, notInArray, sql } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
-import type { LedgerSum, NewLedgerLine } from "../domain";
+import type { LedgerLineKind, LedgerSum, NewLedgerLine } from "../domain";
 import { allowanceLedgerLines } from "./allowanceLedgerLinesTable";
 import { allowances } from "./allowancesTable";
 
@@ -21,6 +21,10 @@ export interface AllowanceRepository {
   insert(newAllowances: readonly Omit<Allowance, "id">[]): Promise<Allowance[]>;
   /** What the engine's lines of each identity add up to, by allowance id. */
   findEngineSums(allowanceIds: readonly string[]): Promise<Map<string, LedgerSum[]>>;
+  /** What each allowance's lines of each kind add up to, by allowance id. */
+  findSumsByKind(
+    allowanceIds: readonly string[],
+  ): Promise<Map<string, { kind: LedgerLineKind; amount: number }[]>>;
   /** Appends the lines, skipping those whose idempotency key is taken; returns how many it added. */
   insertLines(lines: readonly NewLedgerLine[]): Promise<number>;
 }
@@ -70,6 +74,20 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           bankHolidayDate,
         );
       const sums = rows.map((row) => ({ ...row, kind: row.kind as LedgerSum["kind"] }));
+      return Map.groupBy(sums, ({ allowanceId }) => allowanceId);
+    },
+
+    async findSumsByKind(allowanceIds) {
+      const rows = await orm()
+        .select({
+          allowanceId: allowanceLedgerLines.allowanceId,
+          kind: allowanceLedgerLines.kind,
+          amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
+        })
+        .from(allowanceLedgerLines)
+        .where(inArray(allowanceLedgerLines.allowanceId, [...allowanceIds]))
+        .groupBy(allowanceLedgerLines.allowanceId, allowanceLedgerLines.kind);
+      const sums = rows.map((row) => ({ ...row, amount: Number(row.amount) }));
       return Map.groupBy(sums, ({ allowanceId }) => allowanceId);
     },
 
