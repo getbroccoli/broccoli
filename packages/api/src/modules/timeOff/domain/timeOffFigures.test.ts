@@ -51,3 +51,12 @@ it("derives remaining days from the figures rounded to two decimals", () => {
 
   expect(figures).toEqual({ entitlement: 22.5, bankHolidays: 6.4, used: 1.33, remaining: 14.77 });
 });
+
+it("rounds a half-hundredth bank holiday amount up before deriving remaining days", () => {
+  const figures = timeOffFigures([
+    { kind: "entitlement_grant", amount: 28 },
+    { kind: "bank_holiday_taken", amount: -1.005 },
+  ]);
+
+  expect(figures).toEqual({ entitlement: 28, bankHolidays: 1.01, used: 0, remaining: 26.99 });
+});
