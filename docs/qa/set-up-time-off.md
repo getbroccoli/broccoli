@@ -11,9 +11,9 @@ A manual check of the "Set up time off" setup page and turning time off on as se
 ## The page
 
 - [ ] Approve lands on "Set up time off" under "Company defaults", listed as its own step "Time off" after "Add your people" in the step list; the description counts the 5 people; Back reopens the review.
-- [ ] 1 "How much holiday do people get?" offers 20 days ("Most common", selected, "Bank holidays on top · 28 days off in all"), 25 days ("… 33 days off in all") and 28 days ("Legal minimum · bank holidays booked from these").
+- [ ] 1 "How much holiday do people get?" offers 20 days ("Most common", selected), 25 days and 28 days ("Legal minimum · bank holidays booked from these"); with Glasgow on Scotland and the rest on England and Wales, 20 and 25 say "Bank holidays on top, by each person's calendar". On the run without locations they say "Bank holidays on top · 28 days off in all" and "… 33 days off in all" for England and Wales.
 - [ ] 2 "What is a usual working week?" offers four weeks with their hours a week and working days marked; Mon–Fri, 7.5 h a day is selected.
-- [ ] 3 "Which bank holidays are days off?" lists Glasgow (2 people), Leeds and Remote (1 person each). While the AI answers it says "Checking your locations…" and "Turn on time off" is disabled; then Glasgow is Scotland · 10, Leeds England and Wales · 8, and Remote England and Wales with "Please check".
+- [ ] 3 "Which bank holidays are days off?" lists Glasgow (2 people), Leeds and Remote (1 person each). While the AI answers it says "Checking your locations…" and "Turn on time off" is disabled; then Glasgow is Scotland · 10, Leeds England and Wales · 8, and Remote England and Wales with "Please check"; a "No location" row shows 1 person on England and Wales · 8.
 - [ ] "Also ready from day one" shows Sickness, Family leave and Other.
 - [ ] On another run, with the fallback source, every location starts on England and Wales with "Please check", and the page still works.
 - [ ] On another run, a staff file without locations says "Your file had no locations, so everyone gets one calendar." and offers England and Wales (selected), Scotland and Northern Ireland with this year's counts.
