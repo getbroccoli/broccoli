@@ -22,6 +22,7 @@ const tokenBody = z.object({ token: z.string().min(1).max(100) });
  * token, and `POST /api/auth/invite/accept` sets the person's password, joins them and signs them
  * in. `inviteRateLimit` limits both before they run.
  */
+// eslint-disable-next-line broccoli/max-lines-per-function -- an endpoint table; each handler is checked on its own.
 export function invitePlugin(
   invites: EmployeeInviteService,
   { transact, logger }: { transact: Transact; logger: Logger },

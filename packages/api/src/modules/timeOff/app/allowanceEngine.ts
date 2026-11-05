@@ -121,7 +121,7 @@ function missingAllowances(
 
 /** The lines that bring each open allowance to its target. */
 async function differenceLines(
-  { workingWeeks, bankHolidays }: AllowanceEngineDependencies,
+  dependencies: AllowanceEngineDependencies,
   tx: Tx,
   {
     people,
@@ -138,6 +138,34 @@ async function differenceLines(
   if (open.length === 0) {
     return [];
   }
+  const { weeks, holidayDates, sums } = await readFigures(dependencies, tx, open);
+  const personOf = new Map(people.map((person) => [person.employeeId, person]));
+  return open.flatMap((allowance) => {
+    const person = personOf.get(allowance.employeeId)!;
+    const inputs: AllowanceInputs = {
+      leaveYear: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
+      employments: person.periods,
+      serviceStart: person.serviceStart,
+      policies: datedPolicies(person.timeline, policies, allowance),
+      workingWeeks: weeks.get(allowance.employeeId)!,
+      bankHolidays: holidayDates,
+    };
+    return ledgerDifference(
+      allowance,
+      calculateAllowance(inputs),
+      sums.get(allowance.id) ?? [],
+      cause,
+      previousCalculation(inputs, cause),
+    );
+  });
+}
+
+/** The working weeks, bank holidays and ledger sums the open allowances' calculations need. */
+async function readFigures(
+  { workingWeeks, bankHolidays }: AllowanceEngineDependencies,
+  tx: Tx,
+  open: readonly Allowance[],
+) {
   const from = open.map(({ leaveYearStart }) => leaveYearStart).toSorted()[0]!;
   const until = open
     .map(({ leaveYearEnd }) => leaveYearEnd)
@@ -159,29 +187,20 @@ async function differenceLines(
   const holidayDates = new Map(
     [...holidays].map(([calendar, days]) => [calendar, days.map(({ date }) => date)]),
   );
-  const personOf = new Map(people.map((person) => [person.employeeId, person]));
-  return open.flatMap((allowance) => {
-    const person = personOf.get(allowance.employeeId)!;
-    const inputs: AllowanceInputs = {
-      leaveYear: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
-      employments: person.periods,
-      serviceStart: person.serviceStart,
-      policies: datedPolicies(person.timeline, policies, allowance),
-      workingWeeks: weeks.get(allowance.employeeId)!,
-      bankHolidays: holidayDates,
-    };
-    const target = calculateAllowance(inputs);
-    const previous =
-      cause.kind === "START_DATE_CHANGED"
-        ? calculateAllowance({
-            ...inputs,
-            serviceStart: cause.previousStartDate,
-            employments: inputs.employments.map((period, index) =>
-              index === 0 ? { ...period, startDate: cause.previousStartDate } : period,
-            ),
-          })
-        : [];
-    return ledgerDifference(allowance, target, sums.get(allowance.id) ?? [], cause, previous);
+  return { weeks, holidayDates, sums };
+}
+
+/** A start correction's calculation from the previous start, so grants change from the right date. */
+function previousCalculation(inputs: AllowanceInputs, cause: AllowanceCause) {
+  if (cause.kind !== "START_DATE_CHANGED") {
+    return [];
+  }
+  return calculateAllowance({
+    ...inputs,
+    serviceStart: cause.previousStartDate,
+    employments: inputs.employments.map((period, index) =>
+      index === 0 ? { ...period, startDate: cause.previousStartDate } : period,
+    ),
   });
 }
 

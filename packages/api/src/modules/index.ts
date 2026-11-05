@@ -37,6 +37,7 @@ export interface ModuleSettings {
 }
 
 /** Every module of the API, each given only the dependencies it uses. */
+// eslint-disable-next-line broccoli/max-lines-per-function -- the composition root: one line per module's wiring.
 export function createModules(
   core: ModuleDependencies,
   { deployment, brandLookupUrl, slack, openRouter, broccoliAiUrl, resendApiUrl }: ModuleSettings,

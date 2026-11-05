@@ -190,8 +190,8 @@ export function ImportReview() {
         sort={list.sort}
         onSortChange={list.changeSort}
         isLoading={loading}
-        notice={list.error ? errorNotice() : undefined}
-        emptyState={search.q ? noMatches(search.q) : noPeople()}
+        notice={list.error ? errorNotice(() => void refetch()) : undefined}
+        emptyState={search.q ? noMatches(search.q, () => list.changeQuery(undefined)) : noPeople()}
         pager={list.pager}
         density="comfortable"
         summary={peopleCount(totalCount, search.q ? list.rows : undefined, list.pager)}
@@ -203,39 +203,39 @@ export function ImportReview() {
       )}
     </SetupStepForm>
   );
+}
 
-  function noMatches(query: string) {
-    return (
-      <TableState
-        icon={MagnifyingGlass}
-        title={t("setup.review.noMatches", { query })}
-        action={
-          <Button variant="outline" size="sm" onClick={() => list.changeQuery(undefined)}>
-            {t("setup.review.clearSearch")}
-          </Button>
-        }
-      />
-    );
-  }
+function noMatches(query: string, onClear: () => void) {
+  return (
+    <TableState
+      icon={MagnifyingGlass}
+      title={t("setup.review.noMatches", { query })}
+      action={
+        <Button variant="outline" size="sm" onClick={onClear}>
+          {t("setup.review.clearSearch")}
+        </Button>
+      }
+    />
+  );
+}
 
-  function noPeople() {
-    return <TableState icon={UserCircle} title={t("setup.review.empty")} />;
-  }
+function noPeople() {
+  return <TableState icon={UserCircle} title={t("setup.review.empty")} />;
+}
 
-  function errorNotice() {
-    return (
-      <TableState
-        isError
-        icon={WarningCircle}
-        title={t("imports.loadFailed")}
-        action={
-          <Button variant="outline" size="sm" onClick={() => void refetch()}>
-            {t("imports.retry")}
-          </Button>
-        }
-      />
-    );
-  }
+function errorNotice(onRetry: () => void) {
+  return (
+    <TableState
+      isError
+      icon={WarningCircle}
+      title={t("imports.loadFailed")}
+      action={
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          {t("imports.retry")}
+        </Button>
+      }
+    />
+  );
 }
 
 function approveLabel({

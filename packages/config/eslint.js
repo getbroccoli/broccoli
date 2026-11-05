@@ -5,6 +5,7 @@ import tseslint from "typescript-eslint";
 
 import { importRulesConfig } from "./importRules.js";
 
+export { maxLinesPerFunctionConfig } from "./maxLinesPerFunction.js";
 export { mutationPayloadsConfig } from "./mutationPayloads.js";
 
 const MAX_LINES_PER_FILE = 300;

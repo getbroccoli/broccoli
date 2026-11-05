@@ -43,17 +43,7 @@ export function ledgerDifference(
   const targetOf = new Map(target.map((line) => [identityOf(line), line]));
   const previousOf = new Map(previous.map((line) => [identityOf(line), line]));
   const currentOf = new Map(current.map((sum) => [identityOf(sum), sum]));
-  const changedGrantsFrom = [...previous, ...target]
-    .filter(
-      (line) =>
-        line.kind !== "bank_holiday_taken" &&
-        line.kind !== "rounding_up_to_half_day" &&
-        !Big(targetOf.get(identityOf(line))?.amount ?? 0).eq(
-          previousOf.get(identityOf(line))?.amount ?? 0,
-        ),
-    )
-    .map(({ firstDate }) => firstDate)
-    .toSorted()[0];
+  const changedGrantsFrom = firstChangedGrantDate([...previous, ...target], targetOf, previousOf);
   return [...new Set([...targetOf.keys(), ...currentOf.keys()])].flatMap((identity) => {
     const line = targetOf.get(identity);
     const sum = currentOf.get(identity);
@@ -73,18 +63,12 @@ export function ledgerDifference(
       current.length > 0
         ? correctionDate(cause, contributedFrom, allowance.leaveYearStart)
         : line!.firstDate;
-    const effectiveDate = bankHolidayDate ?? changedFrom;
     return [
       {
         allowanceId: allowance.id,
         kind,
         allowanceRuleId,
-        effectiveDate:
-          effectiveDate < allowance.leaveYearStart
-            ? allowance.leaveYearStart
-            : effectiveDate > allowance.leaveYearEnd
-              ? allowance.leaveYearEnd
-              : effectiveDate,
+        effectiveDate: withinLeaveYear(bankHolidayDate ?? changedFrom, allowance),
         amount: difference.toString(),
         causeKind: cause.kind.toLowerCase() as NewLedgerLine["causeKind"],
         causeRef: cause.ref,
@@ -92,6 +76,32 @@ export function ledgerDifference(
       },
     ];
   });
+}
+
+/** The earliest first date of a grant whose amount differs between the two calculations. */
+function firstChangedGrantDate(
+  lines: readonly CalculatedAllowanceLine[],
+  targetOf: ReadonlyMap<string, CalculatedAllowanceLine>,
+  previousOf: ReadonlyMap<string, CalculatedAllowanceLine>,
+): CalendarDate | undefined {
+  return lines
+    .filter(
+      (line) =>
+        line.kind !== "bank_holiday_taken" &&
+        line.kind !== "rounding_up_to_half_day" &&
+        !Big(targetOf.get(identityOf(line))?.amount ?? 0).eq(
+          previousOf.get(identityOf(line))?.amount ?? 0,
+        ),
+    )
+    .map(({ firstDate }) => firstDate)
+    .toSorted()[0];
+}
+
+function withinLeaveYear(
+  date: CalendarDate,
+  { leaveYearStart, leaveYearEnd }: { leaveYearStart: CalendarDate; leaveYearEnd: CalendarDate },
+): CalendarDate {
+  return date < leaveYearStart ? leaveYearStart : date > leaveYearEnd ? leaveYearEnd : date;
 }
 
 function identityOf({

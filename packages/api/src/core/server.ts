@@ -39,6 +39,7 @@ export interface RunningServer {
  * Starts listening at once and migrates the database in the background, retrying
  * until it succeeds; `/readyz` reports ready when the migrations have succeeded.
  */
+// eslint-disable-next-line broccoli/max-lines-per-function -- the composition root: one line per part it starts, in order.
 export async function startServer(
   env: ServerEnv,
   logger: Logger,
