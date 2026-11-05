@@ -1,4 +1,12 @@
-import { expect, OWNER, test, TEST_OWNER, testTransactor, timeOffService } from "#test/support";
+import {
+  expect,
+  OWNER,
+  seedTimeOffPolicy,
+  test,
+  TEST_OWNER,
+  testTransactor,
+  timeOffService,
+} from "#test/support";
 
 import { connectDatabase } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
@@ -54,6 +62,61 @@ test("returns null time off for an employee querying a non-report", async ({ env
   const response = await browser.graphql(timeOffQuery, { id: coworker.id });
 
   expect(await response.json()).toEqual({ data: { employee: { timeOffTypes: null } } });
+});
+
+test("returns every time off type for Settings through GraphQL", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const database = connectDatabase(env.db.url, createLogger("silent"));
+  try {
+    await seedTimeOffPolicy(database.orm, {
+      name: "Moving day",
+      balance: "balance_from_allowance",
+    });
+  } finally {
+    await database.close();
+  }
+
+  const response = await browser.graphql(`query {
+    timeOffSettings {
+      peopleWithTimeOff
+      timeOffTypes { timeOffType { name icon colour } balance daysTakenThisYear }
+    }
+  }`);
+
+  expect(await response.json()).toEqual({
+    data: {
+      timeOffSettings: {
+        peopleWithTimeOff: 0,
+        timeOffTypes: [
+          {
+            timeOffType: { name: "Annual leave", icon: "SUN", colour: "GREEN" },
+            balance: "BALANCE_FROM_ALLOWANCE",
+            daysTakenThisYear: 0,
+          },
+          {
+            timeOffType: { name: "Sickness", icon: "THERMOMETER", colour: "CORAL" },
+            balance: "NO_BALANCE",
+            daysTakenThisYear: 0,
+          },
+          {
+            timeOffType: { name: "Family leave", icon: "BABY", colour: "PINK" },
+            balance: "NO_BALANCE",
+            daysTakenThisYear: 0,
+          },
+          {
+            timeOffType: { name: "Other", icon: "CONFETTI", colour: "YELLOW" },
+            balance: "NO_BALANCE",
+            daysTakenThisYear: 0,
+          },
+          {
+            timeOffType: { name: "Moving day", icon: "SUN", colour: "YELLOW" },
+            balance: "BALANCE_FROM_ALLOWANCE",
+            daysTakenThisYear: 0,
+          },
+        ],
+      },
+    },
+  });
 });
 
 const timeOffQuery = `query EmployeeTimeOff($id: ID!) {

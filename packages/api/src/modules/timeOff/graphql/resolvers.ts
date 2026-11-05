@@ -2,6 +2,7 @@ import DataLoader from "dataloader";
 
 import { perRequest, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import type { TimeOffSetupService, TimeOffService } from "../app";
+import { DEFAULT_TIME_OFF_TYPE_LOOK, type TimeOffPolicy, type TimeOffType } from "../domain";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
 
@@ -20,15 +21,27 @@ export function createResolvers(
       const read = await timeOff.readTimeOffTypes(context.getActor(), { employeeIds });
       return employeeIds.map(
         (id) =>
-          read.get(id)?.map((row) => ({ ...row, balance: BALANCE_KINDS[row.balance] })) ?? null,
+          read.get(id)?.map((row) => ({
+            ...row,
+            timeOffType: toGraphqlType(row.timeOffType),
+            balance: BALANCE_KINDS[row.balance],
+          })) ?? null,
       );
     }),
   }));
   return {
-    Employee: {
-      timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
-    },
     Query: {
+      timeOffSettings: async (_parent, _args, context) => {
+        const list = await timeOff.listTimeOffTypes(context.getActor());
+        return {
+          peopleWithTimeOff: list.peopleWithTimeOff,
+          timeOffTypes: list.timeOffTypes.map((row) => ({
+            ...row,
+            timeOffType: toGraphqlType(row.timeOffType),
+            balance: toBalanceKind(row.balance),
+          })),
+        };
+      },
       timeOffSetup: async (_parent, _args, context) => {
         const setup = await timeOffSetup.readTimeOffSetup(context.getActor());
         return {
@@ -47,10 +60,27 @@ export function createResolvers(
           }),
         ),
     },
+    Employee: {
+      timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
+    },
   };
 }
 
 /** A stored value as its GraphQL enum value, which is the same words in capitals. */
 function toEnum<Value extends string>(value: Value): Uppercase<Value> {
   return value.toUpperCase() as Uppercase<Value>;
+}
+
+/** A time off type with its icon and colour as GraphQL values, the defaults filling in for none. */
+function toGraphqlType(type: TimeOffType) {
+  return {
+    id: type.id,
+    name: type.name,
+    icon: toEnum(type.icon ?? DEFAULT_TIME_OFF_TYPE_LOOK.icon),
+    colour: toEnum(type.colour ?? DEFAULT_TIME_OFF_TYPE_LOOK.colour),
+  };
+}
+
+function toBalanceKind(balance: TimeOffPolicy["balance"] | null) {
+  return balance && BALANCE_KINDS[balance];
 }
