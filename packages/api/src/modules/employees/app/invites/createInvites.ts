@@ -34,7 +34,8 @@ export async function chooseDelivery(
   return mailer ? "sent_by_email" : "copied_by_owner";
 }
 
-export interface NewInvites {
+/** Who to invite, and how. */
+interface NewInvites {
   employeeIds: string[];
   /** None keeps an open invite's. */
   profiles: "ADMIN"[] | null;
