@@ -1,5 +1,6 @@
 import { addDays, addYears, type CalendarDate } from "../../../utils";
 import type { AllowanceRule, DatedPolicy } from "./allowanceCalculator";
+import type { TimeOffTypeColour, TimeOffTypeIcon } from "./timeOffTypeLook";
 
 /** The standard leave policies' keys, by which code finds them. */
 export type StandardLeavePolicyKey =
@@ -8,12 +9,21 @@ export type StandardLeavePolicyKey =
 /** The keys of the four seeded time off types. */
 export type TimeOffTypeKey = "annual_leave" | "sickness" | "family_leave" | "other";
 
+/** A kind of time off; null icon and colour mean the defaults. */
+export interface TimeOffType {
+  id: string;
+  name: string;
+  typeKey: TimeOffTypeKey | null;
+  icon: TimeOffTypeIcon | null;
+  colour: TimeOffTypeColour | null;
+}
+
 /** A policy with its type and allowance rules. */
 export interface TimeOffPolicy {
   id: string;
   name: string;
   key: StandardLeavePolicyKey | null;
-  timeOffType: { id: string; name: string; typeKey: TimeOffTypeKey | null };
+  timeOffType: TimeOffType;
   balance: DatedPolicy["balance"];
   bankHolidays: DatedPolicy["bankHolidays"];
   /** Null for a `no_balance` policy. */

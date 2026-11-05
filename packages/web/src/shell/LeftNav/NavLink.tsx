@@ -9,7 +9,7 @@ export function NavLink({ item: { to, label, icon: Icon } }: Props) {
   return (
     <Link
       to={to}
-      className="flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors"
+      className="flex h-8 items-center gap-2 rounded-md px-2 text-sm whitespace-nowrap transition-colors"
       activeProps={{ className: "bg-foreground text-background" }}
       inactiveProps={{ className: "text-foreground/80 hover:bg-foreground/5" }}
     >

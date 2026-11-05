@@ -115,6 +115,7 @@ export {
   seedTimeOff,
   seedTimeOffAssignment,
   seedTimeOffPolicy,
+  seedTimeOffType,
 } from "./seedTimeOff";
 export { testTransactor } from "./testTransactor";
 export {

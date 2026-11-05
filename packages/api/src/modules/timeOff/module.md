@@ -19,7 +19,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 
 ## Data model
 
-- **`time_off_types`:** a kind of time off: Annual leave, Sickness, Family leave, Other, or the company's own. `type_key` marks the four seeded types, so rules never depend on a name.
+- **`time_off_types`:** a kind of time off: Annual leave, Sickness, Family leave, Other, or the company's own. `type_key` marks the four seeded types, so rules never depend on a name. `icon` and `colour` are how lists show it; null means the default, a sun on yellow, which GraphQL returns in its place.
 - **`terms`** and **`employee_terms`** (employees module): named sets of people, such as "England and Wales" or "UK office", and who is on which terms from when to when. A new person starts on their location's default terms, else on the default terms ("England and Wales" unless setup gave them another nation); see the [employees module](../employees/module.md#terms).
 - **`time_off_policies`:** the rules for one type. This is where `balance` (`balance_from_allowance`, `unlimited_balance`, `no_balance`), bank holidays (included in the allowance or on top) and the leave year start (a fixed date or the employee's start date) are set. A policy is the terms' default for that type through `terms_time_off_policies`, or used only through assignments.
 - **`time_off_allowance_rules`:** the parts that add up to a policy's allowance:
@@ -70,6 +70,14 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - `unlimited_balance`: only the days booked on its allowance.
 - `no_balance`: no leave year exists, so the calendar year; the days of approved or pending time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
 - No allowance for the year (the person left before it) or no policy at all (time off is off) gives no row; while time off is off the list is empty for everyone.
+
+## Listing time off types for Settings
+
+`TimeOffService.listTimeOffTypes`, for admins (`MANAGE_WORKSPACE`), answers `Query.timeOffSettings`: every time off type in the order above, with or without a policy, and how many people have time off.
+
+- Each type's balance kind is the one most of its policies share, the oldest policy's on a tie, or none when it has no policy.
+- Days taken are everyone's approved or pending days of that type in the calendar year of today, a half day 0.5.
+- People are those with an allowance whose leave year has not ended, counted in one query; someone with only types that have no balance is not counted.
 
 ## Which policy applies
 

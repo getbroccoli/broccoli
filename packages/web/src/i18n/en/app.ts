@@ -1,6 +1,8 @@
 /** English copy under `app.*`. */
 export const appEn = {
   "app.name": "Broccoli",
+  "app.day": "{count} day",
+  "app.days": "{count} days",
   "app.unreachable.title": "Couldn’t reach Broccoli",
   "app.unreachable.detail": "Check your connection and try again.",
   "app.unreachable.retry": "Try again",

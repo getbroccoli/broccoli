@@ -17,6 +17,11 @@ export interface TimeOffRepository {
     from: CalendarDate;
     until: CalendarDate;
   }): Promise<{ employeeId: string; timeOffTypeId: string; year: number; days: number }[]>;
+  /** Everyone's days from `from` to `until` per type, counted as `sumRecordedDays` counts them. */
+  sumDaysByType(input: {
+    from: CalendarDate;
+    until: CalendarDate;
+  }): Promise<{ timeOffTypeId: string; days: number }[]>;
 }
 
 export function timeOffRepository(tx: Tx): TimeOffRepository {
@@ -28,20 +33,34 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
           employeeId: timeOff.employeeId,
           timeOffTypeId: timeOff.timeOffTypeId,
           year: yearOfDay,
-          days: sql<string>`sum(case when ${timeOffDays.dayPart} = 'full_day' then 1 else 0.5 end)`,
+          days: dayCount,
         })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
-        .where(
-          and(
-            inArray(timeOff.employeeId, [...employeeIds]),
-            inArray(timeOff.status, ["approved", "pending_approval"]),
-            isNull(timeOffDays.cancelledAt),
-            between(timeOffDays.date, from, until),
-          ),
-        )
+        .where(and(inArray(timeOff.employeeId, [...employeeIds]), counted(from, until)))
         .groupBy(timeOff.employeeId, timeOff.timeOffTypeId, yearOfDay);
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
     },
+    async sumDaysByType({ from, until }) {
+      const rows = await ormOf(tx)
+        .select({ timeOffTypeId: timeOff.timeOffTypeId, days: dayCount })
+        .from(timeOffDays)
+        .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
+        .where(counted(from, until))
+        .groupBy(timeOff.timeOffTypeId);
+      return rows.map((row) => ({ ...row, days: Number(row.days) }));
+    },
   };
+}
+
+/** A full day counts 1, a morning or an afternoon 0.5. */
+const dayCount = sql<string>`sum(case when ${timeOffDays.dayPart} = 'full_day' then 1 else 0.5 end)`;
+
+/** Days of approved or pending time off from `from` to `until`, not cancelled on their own. */
+function counted(from: CalendarDate, until: CalendarDate) {
+  return and(
+    inArray(timeOff.status, ["approved", "pending_approval"]),
+    isNull(timeOffDays.cancelledAt),
+    between(timeOffDays.date, from, until),
+  );
 }

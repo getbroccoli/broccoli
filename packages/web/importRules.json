@@ -64,6 +64,7 @@
       "src/lib/calendarDay",
       "src/lib/class-names",
       "src/lib/formatDate",
+      "src/lib/formatDays",
       "src/lib/initials",
       "src/lib/listPage",
       "src/lib/tenure",
@@ -118,7 +119,8 @@
       "src/apollo",
       "src/components/form",
       "src/components/ui",
-      "src/i18n"
+      "src/i18n",
+      "src/lib/formatDays"
     ],
     "src/features/setup": [
       "src/__generated__",
@@ -138,6 +140,7 @@
     "src/lib/listPage": ["src/apollo", "src/components/dataTable"],
     "src/lib/class-names": [],
     "src/lib/formatDate": ["src/lib/calendarDay"],
+    "src/lib/formatDays": ["src/i18n"],
     "src/lib/postJson": [],
     "src/lib/useCopyToClipboard": [],
     "src/lib/useDebouncedValue": [],

@@ -12,23 +12,21 @@ import {
 } from "../../src/modules/timeOff/db";
 import type { CalendarDate } from "../../src/utils";
 
-/** A company's own time off type with one policy, its leave year from 1 January. */
+/** A policy on a new or existing type, its leave year from 1 January. */
 export async function seedTimeOffPolicy(
   orm: Orm,
   input: {
     name: string;
+    timeOffTypeId?: string;
     balance: "balance_from_allowance" | "unlimited_balance";
     entitlementDays?: number;
   },
 ): Promise<{ id: string; timeOffTypeId: string }> {
-  const [type] = await orm
-    .insert(timeOffTypes)
-    .values({ name: input.name, needsApproval: true, private: false })
-    .returning({ id: timeOffTypes.id });
+  const timeOffTypeId = input.timeOffTypeId ?? (await seedTimeOffType(orm, input.name)).id;
   const [policy] = await orm
     .insert(timeOffPolicies)
     .values({
-      timeOffTypeId: type!.id,
+      timeOffTypeId,
       name: input.name,
       balance: input.balance,
       bankHolidays:
@@ -46,7 +44,16 @@ export async function seedTimeOffPolicy(
       entitlementDaysPerWeek: 5,
     });
   }
-  return { id: policy!.id, timeOffTypeId: type!.id };
+  return { id: policy!.id, timeOffTypeId };
+}
+
+/** A company's own time off type without a policy. */
+export async function seedTimeOffType(orm: Orm, name: string): Promise<{ id: string }> {
+  const [type] = await orm
+    .insert(timeOffTypes)
+    .values({ name, needsApproval: true, private: false })
+    .returning({ id: timeOffTypes.id });
+  return type!;
 }
 
 /** Puts one person on a policy from 1 January 2025, open-ended. */

@@ -121,6 +121,8 @@ CREATE TABLE "time_off_types" (
 	"needs_approval" boolean NOT NULL,
 	"private" boolean NOT NULL,
 	"type_key" text,
+	"icon" text,
+	"colour" text,
 	CONSTRAINT "time_off_types_type_key_unique" UNIQUE("type_key")
 );
 --> statement-breakpoint

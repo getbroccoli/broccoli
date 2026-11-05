@@ -21,10 +21,79 @@ type EmployeeTimeOffType {
   used: Float!
 }
 
+"Time off as Settings shows it."
+type TimeOffSettings {
+  "Every time off type: Annual leave, Sickness, Family leave and Other first, then the company's own by name."
+  timeOffTypes: [TimeOffTypeSummary!]!
+  "People with an allowance whose leave year has not ended."
+  peopleWithTimeOff: Int!
+}
+
+"A time off type as Settings lists it."
+type TimeOffTypeSummary {
+  timeOffType: TimeOffType!
+  "The balance kind most of its policies have, the oldest policy's on a tie, so one policy may differ; null when it has none."
+  balance: TimeOffBalanceKind
+  "Days everyone took this calendar year, approved or pending; a half day counts 0.5."
+  daysTakenThisYear: Float!
+}
+
 "A kind of time off, such as Annual leave or Sickness."
 type TimeOffType {
   id: ID!
   name: String!
+  "Its own icon, or SUN when it has none."
+  icon: TimeOffTypeIcon!
+  "Its own colour, or YELLOW when it has none."
+  colour: TimeOffTypeColour!
+}
+
+"The icon a time off type shows."
+enum TimeOffTypeIcon {
+  SUN
+  UMBRELLA
+  AIRPLANE
+  MOUNTAINS
+  TREE
+  LEAF
+  BICYCLE
+  CAR
+  COFFEE
+  MOON
+  THERMOMETER
+  FIRST_AID
+  HEARTBEAT
+  HEART
+  HAND_HEART
+  FLOWER
+  BABY
+  BACKPACK
+  HOUSE_LINE
+  USERS_THREE
+  GRADUATION_CAP
+  BOOK_OPEN
+  BRIEFCASE
+  TRUCK
+  SCALES
+  WALLET
+  LIFEBUOY
+  CONFETTI
+  STAR
+  SPARKLE
+}
+
+"The colour a time off type's icon sits on."
+enum TimeOffTypeColour {
+  GREEN
+  CORAL
+  YELLOW
+  LIME
+  TEAL
+  BLUE
+  INDIGO
+  PURPLE
+  PINK
+  RED
 }
 
 "How a time off type's days are counted."
@@ -85,6 +154,8 @@ type LocationCalendarSuggestion {
 }
 
 type Query {
+  "Time off as Settings shows it; admins only."
+  timeOffSettings: TimeOffSettings!
   "Admins, and the browser holding setup."
   timeOffSetup: TimeOffSetup!
   """
