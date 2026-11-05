@@ -1,10 +1,10 @@
 -- A fresh workspace runs UK leave with nothing to set up: everyone gets the statutory minimum.
 INSERT INTO "terms" ("name", "key") VALUES ('England and Wales', 'default_terms');--> statement-breakpoint
-INSERT INTO "time_off_types" ("name", "needs_approval", "private", "type_key") VALUES
-	('Annual leave', true, false, 'annual_leave'),
-	('Sickness', false, true, 'sickness'),
-	('Family leave', true, true, 'family_leave'),
-	('Other', true, false, 'other');--> statement-breakpoint
+INSERT INTO "time_off_types" ("name", "needs_approval", "private", "type_key", "icon", "colour") VALUES
+	('Annual leave', true, false, 'annual_leave', 'sun', 'green'),
+	('Sickness', false, true, 'sickness', 'thermometer', 'coral'),
+	('Family leave', true, true, 'family_leave', 'baby', 'pink'),
+	('Other', true, false, 'other', 'confetti', 'yellow');--> statement-breakpoint
 INSERT INTO "time_off_policies" ("time_off_type_id", "name", "terms_id", "balance", "bank_holidays", "leave_year_start", "leave_year_start_month", "leave_year_start_day")
 	SELECT t."id", t."name", g."id",
 		CASE WHEN t."type_key" = 'annual_leave' THEN 'balance_from_allowance' ELSE 'no_balance' END,
