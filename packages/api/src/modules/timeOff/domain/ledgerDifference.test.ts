@@ -172,43 +172,100 @@ it("clamps a correction after the leave year to its final day", () => {
 });
 
 it("a policy change corrects a grant from the leave year start", () => {
-  const target = [{ kind: "entitlement_grant", allowanceRuleId: "rule-a", bankHolidayDate: null,
-    amount: "22", firstDate: calendarDate("2026-01-01") }] as const;
-  const current = [{ kind: "entitlement_grant", allowanceRuleId: "rule-a", bankHolidayDate: null,
-    amount: "20", lineCount: 1 }] as const;
+  const target = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-a",
+      bankHolidayDate: null,
+      amount: "22",
+      firstDate: calendarDate("2026-01-01"),
+    },
+  ] as const;
+  const current = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-a",
+      bankHolidayDate: null,
+      amount: "20",
+      lineCount: 1,
+    },
+  ] as const;
 
-  const lines = ledgerDifference(allowance, target, current, { kind: "POLICY_CHANGED", ref: "policy-1" });
+  const lines = ledgerDifference(allowance, target, current, {
+    kind: "POLICY_CHANGED",
+    ref: "policy-1",
+  });
 
   expect(lines).toHaveLength(1);
-  expect(lines[0]).toMatchObject({ amount: "2", effectiveDate: "2026-01-01",
-    causeKind: "policy_changed", causeRef: "policy-1" });
+  expect(lines[0]).toMatchObject({
+    amount: "2",
+    effectiveDate: "2026-01-01",
+    causeKind: "policy_changed",
+    causeRef: "policy-1",
+  });
 });
 
 it("a policy change corrects a joiner's grant from their first contributing day", () => {
-  const target = [{ kind: "entitlement_grant", allowanceRuleId: "rule-a", bankHolidayDate: null,
-    amount: "22", firstDate: calendarDate("2026-10-12") }] as const;
-  const current = [{ kind: "entitlement_grant", allowanceRuleId: "rule-a", bankHolidayDate: null,
-    amount: "20", lineCount: 1 }] as const;
+  const target = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-a",
+      bankHolidayDate: null,
+      amount: "22",
+      firstDate: calendarDate("2026-10-12"),
+    },
+  ] as const;
+  const current = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-a",
+      bankHolidayDate: null,
+      amount: "20",
+      lineCount: 1,
+    },
+  ] as const;
 
-  const lines = ledgerDifference(allowance, target, current, { kind: "POLICY_CHANGED", ref: "policy-1" });
+  const lines = ledgerDifference(allowance, target, current, {
+    kind: "POLICY_CHANGED",
+    ref: "policy-1",
+  });
 
   expect(lines).toHaveLength(1);
   expect(lines[0]).toMatchObject({ amount: "2", effectiveDate: "2026-10-12" });
 });
 
 it("a removed rule's grant is brought to zero", () => {
-  const target = [{ kind: "entitlement_grant", allowanceRuleId: "rule-b", bankHolidayDate: null,
-    amount: "22", firstDate: calendarDate("2026-01-01") }] as const;
-  const current = [{ kind: "entitlement_grant", allowanceRuleId: "rule-a", bankHolidayDate: null,
-    amount: "20", lineCount: 1 }] as const;
+  const target = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-b",
+      bankHolidayDate: null,
+      amount: "22",
+      firstDate: calendarDate("2026-01-01"),
+    },
+  ] as const;
+  const current = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-a",
+      bankHolidayDate: null,
+      amount: "20",
+      lineCount: 1,
+    },
+  ] as const;
 
-  const lines = ledgerDifference(allowance, target, current, { kind: "POLICY_CHANGED", ref: "policy-1" });
+  const lines = ledgerDifference(allowance, target, current, {
+    kind: "POLICY_CHANGED",
+    ref: "policy-1",
+  });
 
   expect(lines).toHaveLength(2);
-  expect(lines).toEqual(expect.arrayContaining([
-    expect.objectContaining({ allowanceRuleId: "rule-a", amount: "-20" }),
-    expect.objectContaining({ allowanceRuleId: "rule-b", amount: "22" }),
-  ]));
+  expect(lines).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ allowanceRuleId: "rule-a", amount: "-20" }),
+      expect.objectContaining({ allowanceRuleId: "rule-b", amount: "22" }),
+    ]),
+  );
 });
 
 function rowsOf(lines: readonly NewLedgerLine[]) {

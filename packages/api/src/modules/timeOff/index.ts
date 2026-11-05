@@ -3,6 +3,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import {
   allowanceEventHandlers,
   ensureAllowancesJob,
+  timeOffTypeRecordType,
   type TimeOffSetupService,
   type TimeOffService,
 } from "./app";
@@ -38,7 +39,12 @@ export function timeOffModule({
       ...allowanceEventHandlers({ timeOff, ...dependencies }),
       "timeOff.time_off_turned_on": (turnedOn) =>
         Promise.resolve(dependencies.logger.info(turnedOn, "Turned time off on")),
+      "timeOff.time_off_type_saved": (saved) =>
+        Promise.resolve(dependencies.logger.info(saved, "Saved a time off type")),
+      "timeOff.time_off_type_deleted": (deleted) =>
+        Promise.resolve(dependencies.logger.info(deleted, "Deleted a time off type")),
     },
     jobs: ensureAllowancesJob({ timeOff, ...dependencies }),
+    recordTypes: { time_off_type: timeOffTypeRecordType(dependencies.orm) },
   };
 }

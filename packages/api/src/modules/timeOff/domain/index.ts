@@ -28,4 +28,15 @@ export {
   DEFAULT_TIME_OFF_TYPE_LOOK,
   TIME_OFF_TYPE_COLOURS,
   TIME_OFF_TYPE_ICONS,
+  type TimeOffTypeColour,
+  type TimeOffTypeIcon,
 } from "./timeOffTypeLook";
+export {
+  parseSaveTimeOffType,
+  timeOffPolicyChanges,
+  timeOffTypeChanges,
+  type ParsedSaveTimeOffType,
+  type SaveTimeOffTypeInput,
+  type TimeOffPolicyFields,
+  type TimeOffTypeFields,
+} from "./timeOffTypeChanges";

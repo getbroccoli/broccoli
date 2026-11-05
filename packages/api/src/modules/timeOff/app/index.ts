@@ -9,6 +9,7 @@ export {
 } from "./timeOffService";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
 export { ensureAllowancesJob } from "./ensureAllowancesJob";
+export { timeOffTypeRecordType } from "./timeOffTypeRecordType";
 export {
   createTimeOffSetupService,
   type TimeOffSetup,

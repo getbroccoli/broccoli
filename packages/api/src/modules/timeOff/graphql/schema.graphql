@@ -100,9 +100,15 @@ type TimeOffPolicyTerms {
 }
 
 "A kind of time off, such as Annual leave or Sickness."
-type TimeOffType {
+type TimeOffType implements AnyRecord {
   id: ID!
   name: String!
+  "False when colleagues see only that the person is off, not why."
+  reasonVisibleToColleagues: Boolean!
+  "Changes to this type and its policies, newest first; admins only."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "What the signed-in user may do to this type."
+  access: RecordAccess!
   "Its own icon, or SUN when it has none."
   icon: TimeOffTypeIcon!
   "Its own colour, or YELLOW when it has none."
@@ -248,3 +254,78 @@ input LocationTermsInput {
   locationName: String!
   bankHolidayCalendar: BankHolidayCalendar!
 }
+
+# Adds the time off type to the shared list of record types that keep history.
+enum RecordType {
+  TIME_OFF_TYPE
+}
+
+type Mutation {
+  timeOffType: TimeOffTypeMutations!
+}
+
+"Changes to time off types in Settings. Admins only."
+type TimeOffTypeMutations {
+  "Saves a time off type and its policies in one go; allowances follow for the leave years that have not ended."
+  save(input: TimeOffTypeSaveInput!): TimeOffTypeSavePayload!
+  "Deletes a company's own time off type that nobody has had, with its policies; refused with a conflict otherwise."
+  delete(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
+}
+
+"Only the fields sent change."
+input TimeOffTypeSaveInput {
+  id: ID!
+  name: String
+  icon: TimeOffTypeIcon
+  colour: TimeOffTypeColour
+  "Refused as invalid for Sickness, which stays private."
+  reasonVisibleToColleagues: Boolean
+  policies: [TimeOffPolicyChangeInput!]
+  addPolicies: [TimeOffPolicyAddInput!]
+  "Only policies nobody has ever been on."
+  deletePolicyIds: [ID!]
+}
+
+"A change to one of the type's policies; only the fields sent change."
+input TimeOffPolicyChangeInput {
+  id: ID!
+  "Required when a standard policy grants something else, so its name says so."
+  name: String
+  "Only on a policy nobody has ever been on."
+  balance: TimeOffBalanceKind
+  "Days a year for its working week, whole or half, 0 to 366."
+  allowanceDays: Float
+  bankHolidays: TimeOffBankHolidays
+}
+
+"A new policy nobody is on until terms pick it."
+input TimeOffPolicyAddInput {
+  name: String!
+  balance: TimeOffBalanceKind!
+  "Days a year for a five-day week, whole or half, 0 to 366; required for BALANCE_FROM_ALLOWANCE."
+  allowanceDays: Float
+  "Required for BALANCE_FROM_ALLOWANCE."
+  bankHolidays: TimeOffBankHolidays
+}
+
+"The saved type, or why it was refused."
+type TimeOffTypeSavePayload {
+  timeOffType: TimeOffTypeSummary
+  "Allowances that changed because a policy did."
+  allowancesUpdated: Int
+  error: TimeOffTypeSaveError
+}
+
+union TimeOffTypeSaveError = InvalidInputError | NotFoundError | ConflictError
+
+input TimeOffTypeDeleteInput {
+  id: ID!
+}
+
+"The deleted type's id, or why it was refused."
+type TimeOffTypeDeletePayload {
+  deletedTimeOffTypeId: ID
+  error: TimeOffTypeDeleteError
+}
+
+union TimeOffTypeDeleteError = NotFoundError | ConflictError

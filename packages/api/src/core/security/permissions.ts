@@ -13,6 +13,8 @@ export interface PermissionObjects {
   working_pattern: true;
   /** A person's time off and allowances; its subject is the person. */
   time_off: true;
+  /** A time off type and its policies, as Settings edits them; its subject is "public". */
+  time_off_type: true;
 }
 
 /** A kind of record permissions apply to. */
@@ -88,6 +90,13 @@ const ADMIN: ProfileDefinition = {
     {
       key: "time_off.manage.all",
       object: "time_off",
+      actions: ["create", "read", "update", "delete"],
+      scope: "all",
+      fields: "*",
+    },
+    {
+      key: "time_off_type.manage.all",
+      object: "time_off_type",
       actions: ["create", "read", "update", "delete"],
       scope: "all",
       fields: "*",

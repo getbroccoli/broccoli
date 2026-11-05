@@ -51,7 +51,10 @@ test("each type lists its policies", async ({ orm }) => {
 
   for (const { timeOffType, policies: listed } of result.timeOffTypes) {
     expect(listed.map(({ id }) => id).sort()).toEqual(
-      policies.filter(({ typeKey }) => typeKey === timeOffType.typeKey).map(({ id }) => id).sort(),
+      policies
+        .filter(({ typeKey }) => typeKey === timeOffType.typeKey)
+        .map(({ id }) => id)
+        .sort(),
     );
   }
 });

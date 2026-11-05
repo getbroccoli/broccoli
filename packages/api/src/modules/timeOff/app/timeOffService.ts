@@ -2,6 +2,8 @@ import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Orm, Tx } from "../../../core/db";
 import type { SetupTermsInput } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
+import type { Connection, PageArgs } from "../../../core/pagination";
+import { createRecordHistoryReaderService, type HistoryLine } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
@@ -12,7 +14,12 @@ import {
   parseTermsSetup,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
-import type { AllowanceCause, DatedPolicyRow, TimeOffPolicy } from "../domain";
+import type {
+  AllowanceCause,
+  DatedPolicyRow,
+  SaveTimeOffTypeInput,
+  TimeOffPolicy,
+} from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import {
   listTimeOffTypes,
@@ -20,6 +27,9 @@ import {
   type TimeOffTypeList,
   type TimeOffTypeSettings,
 } from "./timeOffTypeSettings";
+import { deleteTimeOffType } from "./deleteTimeOffType";
+import { type SavedTimeOffType, saveTimeOffType } from "./saveTimeOffType";
+import { timeOffTypeRecordType } from "./timeOffTypeRecordType";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 
 const employeeSetup = createEmployeeSetupService();
@@ -80,6 +90,19 @@ export interface TimeOffService {
     ctx: SecurityContext,
     input: { id: string },
   ) => Promise<TimeOffTypeSettings | null>;
+  /**
+   * Saves a time off type's panel in one transaction: its fields, changed, added and deleted
+   * policies and their history, then updates the allowances of everyone on a changed policy.
+   */
+  saveTimeOffType: (ctx: SecurityContext, input: SaveTimeOffTypeInput) => Promise<SavedTimeOffType>;
+  /** Deletes a company's own type nobody has ever had, with its policies. */
+  deleteTimeOffType: (ctx: SecurityContext, input: { id: string }) => Promise<{ id: string }>;
+  /** A time off type's history, newest first, also after it is deleted; admins only. */
+  readTimeOffTypeHistory: (
+    ctx: SecurityContext,
+    timeOffTypeId: string,
+    args: PageArgs,
+  ) => Promise<Connection<HistoryLine>>;
   /** Unlinks all terms' policies when setup or the demo goes back to its start. */
   deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
@@ -108,6 +131,10 @@ export function createTimeOffService({
     today,
   };
   const employeeReads = engine.employeeReads;
+  const settings = { transact, employeeReads, today };
+  const typeHistory = createRecordHistoryReaderService(orm, {
+    time_off_type: timeOffTypeRecordType(orm),
+  });
   const ensureAllowances: TimeOffService["ensureAllowances"] = (_ctx, tx, input) =>
     ensureAllowancesOf(engine, tx, input);
   return {
@@ -192,9 +219,12 @@ export function createTimeOffService({
     },
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
-    listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, employeeReads, today }, ctx),
-    readTimeOffTypeSettings: (ctx, input) =>
-      readTimeOffTypeSettings({ transact, employeeReads, today }, ctx, input),
+    listTimeOffTypes: (ctx) => listTimeOffTypes(settings, ctx),
+    readTimeOffTypeSettings: (ctx, input) => readTimeOffTypeSettings(settings, ctx, input),
+    saveTimeOffType: (ctx, input) => saveTimeOffType({ ...settings, engine }, ctx, input),
+    deleteTimeOffType: (ctx, input) => deleteTimeOffType(settings, ctx, input),
+    readTimeOffTypeHistory: (ctx, timeOffTypeId, args) =>
+      typeHistory.readHistory(ctx, "time_off_type", timeOffTypeId, args),
     async deleteAllTermsPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).deleteAllTermsLinks();
