@@ -20,7 +20,7 @@ test("renames the type, changes its icon and colour, and writes one history line
   const type = await seedTimeOffType(orm, "Holiday");
   const service = timeOffService(orm);
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: type.id,
     name: "Company leave",
     icon: "umbrella",
@@ -53,7 +53,7 @@ test("refuses Sickness's reason being shown", async ({ orm }) => {
     .where(eq(timeOffTypes.typeKey, "sickness"));
 
   await expect(
-    timeOffService(orm).saveTimeOffType(ADMIN, {
+    timeOffService(orm).updateTimeOffType(ADMIN, {
       id: sickness!.id,
       reasonVisibleToColleagues: true,
     }),
@@ -66,7 +66,7 @@ test("refuses Sickness's reason being shown", async ({ orm }) => {
 test("changes how an unused policy counts", async ({ orm }) => {
   const policy = await seedTimeOffPolicy(orm, { name: "Wellbeing", balance: "unlimited_balance" });
 
-  const result = await timeOffService(orm).saveTimeOffType(ADMIN, {
+  const result = await timeOffService(orm).updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [
       {
@@ -92,7 +92,7 @@ test("refuses changing how a used policy counts with CONFLICT", async ({ orm, se
   const { service, policy } = await seedLinkedTimeOffPolicy(orm, seed, transact);
 
   await expect(
-    service.saveTimeOffType(ADMIN, {
+    service.updateTimeOffType(ADMIN, {
       id: policy.timeOffTypeId,
       policies: [{ id: policy.id, balance: "unlimited_balance" }],
     }),
@@ -106,7 +106,7 @@ test("adds a policy nobody is on; appends no ledger lines", async ({ orm }) => {
   const type = await seedTimeOffType(orm, "Wellbeing");
   const before = await orm.select().from(allowanceLedgerLines);
 
-  const result = await timeOffService(orm).saveTimeOffType(ADMIN, {
+  const result = await timeOffService(orm).updateTimeOffType(ADMIN, {
     id: type.id,
     addPolicies: [
       {
@@ -144,7 +144,7 @@ test("deletes an unused policy and its rules", async ({ orm }) => {
     entitlementDays: 5,
   });
 
-  const result = await timeOffService(orm).saveTimeOffType(ADMIN, {
+  const result = await timeOffService(orm).updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     deletePolicyIds: [policy.id],
   });
@@ -171,7 +171,7 @@ test("refuses deleting a used policy with CONFLICT and changes nothing else in t
   const lines = await orm.select().from(allowanceLedgerLines);
 
   await expect(
-    service.saveTimeOffType(ADMIN, {
+    service.updateTimeOffType(ADMIN, {
       id: policy.timeOffTypeId,
       name: "Renamed",
       deletePolicyIds: [policy.id],
@@ -194,7 +194,7 @@ test("a duplicate type name ignoring case is a field error", async ({ orm }) => 
   const type = await seedTimeOffType(orm, "Wellbeing");
 
   await expect(
-    timeOffService(orm).saveTimeOffType(ADMIN, { id: type.id, name: "ANNUAL LEAVE" }),
+    timeOffService(orm).updateTimeOffType(ADMIN, { id: type.id, name: "ANNUAL LEAVE" }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "name", code: "taken" }],
@@ -215,7 +215,7 @@ test("a duplicate policy name ignoring case is a field error", async ({ orm }) =
   });
 
   await expect(
-    timeOffService(orm).saveTimeOffType(ADMIN, {
+    timeOffService(orm).updateTimeOffType(ADMIN, {
       id: policy.timeOffTypeId,
       policies: [{ id: second.id, name: "FIVE DAYS" }],
     }),
@@ -228,6 +228,6 @@ test("a duplicate policy name ignoring case is a field error", async ({ orm }) =
 test("refuses someone without MANAGE_WORKSPACE", async ({ orm }) => {
   const type = await seedTimeOffType(orm, "Wellbeing");
   await expect(
-    timeOffService(orm).saveTimeOffType(EMPLOYEE, { id: type.id, name: "Renamed" }),
+    timeOffService(orm).updateTimeOffType(EMPLOYEE, { id: type.id, name: "Renamed" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });

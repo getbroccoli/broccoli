@@ -19,7 +19,7 @@ test("editing a standard policy keeps its id and links, drops its key and takes 
   const { service, policy } = await linkedStandard(orm, seed, transact);
   const links = await orm.select().from(termsTimeOffPolicies);
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffType.id,
     policies: [{ id: policy.id, name: "22 days plus bank holidays", allowanceDays: 22 }],
   });
@@ -43,7 +43,7 @@ test("a fresh standard copy with the original key is linked to nobody", async ({
 }) => {
   const { service, policy } = await linkedStandard(orm, seed, transact);
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffType.id,
     policies: [{ id: policy.id, name: "22 days plus bank holidays", allowanceDays: 22 }],
   });
@@ -77,7 +77,7 @@ test("turning time off on after a reset finds the standard by key", async ({
   transact,
 }) => {
   const { service, policy } = await linkedStandard(orm, seed, transact);
-  await service.saveTimeOffType(ADMIN, {
+  await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffType.id,
     policies: [{ id: policy.id, name: "22 days plus bank holidays", allowanceDays: 22 }],
   });
@@ -108,14 +108,14 @@ test("turning time off on after a reset finds the standard by key", async ({
 
 test("editing it again creates no second copy", async ({ orm, seed, transact }) => {
   const { service, policy } = await linkedStandard(orm, seed, transact);
-  await service.saveTimeOffType(ADMIN, {
+  await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffType.id,
     policies: [{ id: policy.id, name: "22 days plus bank holidays", allowanceDays: 22 }],
   });
   const standard = (await service.listPolicies(ADMIN, orm)).find(({ key }) => key === policy.key)!;
   const before = await orm.select().from(timeOffPolicies);
 
-  await service.saveTimeOffType(ADMIN, {
+  await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffType.id,
     policies: [{ id: policy.id, name: "23 days plus bank holidays", allowanceDays: 23 }],
   });
@@ -135,7 +135,7 @@ test("renaming a standard policy without changing its values keeps it standard",
   const before = await orm.select().from(timeOffPolicies);
   const rules = await orm.select().from(timeOffAllowanceRules);
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffType.id,
     policies: [{ id: policy.id, name: "Company standard" }],
   });

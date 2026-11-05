@@ -3,7 +3,7 @@ import type {
   TimeOffTypeColour,
   TimeOffTypeIcon,
   TimeOffTypePanel_TypeFragment,
-  TimeOffTypeSaveInput,
+  TimeOffTypeUpdateInput,
 } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
@@ -35,7 +35,7 @@ export interface TypeDraft {
 
 /** A save to send, and which draft policy each input entry came from, to place field errors. */
 export interface PreparedSave {
-  input: TimeOffTypeSaveInput;
+  input: TimeOffTypeUpdateInput;
   policyKeys: string[];
   addedKeys: string[];
 }
@@ -153,10 +153,10 @@ export function prepareSave(id: string, saved: TypeDraft, draft: TypeDraft): Pre
     return before && policy.id && !policy.deleted
       ? [policyChange(before, policy)].filter(Boolean)
       : [];
-  }) as { key: string; change: NonNullable<TimeOffTypeSaveInput["policies"]>[number] }[];
+  }) as { key: string; change: NonNullable<TimeOffTypeUpdateInput["policies"]>[number] }[];
   const added = draft.policies.filter(({ id: policyId, deleted }) => policyId === null && !deleted);
   const deleted = draft.policies.filter(({ id: policyId, deleted: gone }) => policyId && gone);
-  const input: TimeOffTypeSaveInput = {
+  const input: TimeOffTypeUpdateInput = {
     id,
     ...(saved.name !== draft.name && { name: draft.name }),
     ...(saved.icon !== draft.icon && { icon: draft.icon }),

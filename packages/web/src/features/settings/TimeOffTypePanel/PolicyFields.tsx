@@ -6,7 +6,9 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { countsText, reachText } from "../TimeOffSettings/policyText";
-import { Hint, Row, Tag } from "./PanelParts";
+import { FieldHint } from "./FieldHint";
+import { FieldRow } from "./FieldRow";
+import { PolicyTag } from "./PolicyTag";
 import { grantChanged, type PolicyDraft } from "./timeOffTypeDraft";
 import type { FieldErrors } from "./useTimeOffTypeDraft";
 
@@ -23,12 +25,6 @@ type Props = {
   onEdit: (fields: Partial<PolicyDraft>) => void;
   onRemove: () => void;
 };
-
-const BALANCES: TimeOffBalanceKind[] = [
-  "BALANCE_FROM_ALLOWANCE",
-  "UNLIMITED_BALANCE",
-  "NO_BALANCE",
-];
 
 /** One policy's rules, always open: how it counts, its allowance, bank holidays and who it reaches. */
 export function PolicyFields({
@@ -63,9 +59,9 @@ export function PolicyFields({
           <h3 id={`${id}-name`} className="text-sm font-semibold [overflow-wrap:anywhere]">
             {policy.name || t("settings.timeOffType.newPolicy")}
           </h3>
-          {policy.standard && <Tag>{t("settings.timeOffType.standard")}</Tag>}
-          {saved === null && <Tag tone="brand">{t("settings.timeOffType.new")}</Tag>}
-          {changed && <Tag tone="brand">{t("settings.timeOffType.changed")}</Tag>}
+          {policy.standard && <PolicyTag>{t("settings.timeOffType.standard")}</PolicyTag>}
+          {saved === null && <PolicyTag tone="brand">{t("settings.timeOffType.new")}</PolicyTag>}
+          {changed && <PolicyTag tone="brand">{t("settings.timeOffType.changed")}</PolicyTag>}
           <span className="ml-auto text-xs text-muted-foreground">
             {summary ? reachText(summary) : t("settings.timeOffType.nobodyYet")}
           </span>
@@ -75,7 +71,7 @@ export function PolicyFields({
         className={cn("grid gap-x-8 gap-y-4 sm:grid-cols-[13rem_minmax(0,1fr)]", !only && "p-4")}
       >
         {showName && (
-          <Row
+          <FieldRow
             label={t("settings.timeOffType.policyName")}
             htmlFor={`${id}-name-input`}
             error={error("name")}
@@ -89,10 +85,10 @@ export function PolicyFields({
               className="max-w-80"
               onChange={(event) => onEdit({ name: event.target.value })}
             />
-            {policy.standard && <Hint>{t("settings.timeOffType.becomesOwn")}</Hint>}
-          </Row>
+            {policy.standard && <FieldHint>{t("settings.timeOffType.becomesOwn")}</FieldHint>}
+          </FieldRow>
         )}
-        <Row label={t("settings.timeOffType.counts")}>
+        <FieldRow label={t("settings.timeOffType.counts")}>
           {policy.everUsed ? (
             <span className="pt-1.5 text-sm">{countsText(toSummary(policy))}</span>
           ) : (
@@ -121,10 +117,10 @@ export function PolicyFields({
               ))}
             </span>
           )}
-        </Row>
+        </FieldRow>
         {policy.balance === "BALANCE_FROM_ALLOWANCE" && (
           <>
-            <Row
+            <FieldRow
               label={t("settings.timeOffType.allowance")}
               htmlFor={`${id}-days`}
               error={error("allowanceDays")}
@@ -141,9 +137,9 @@ export function PolicyFields({
                 />
                 <span className="text-sm">{allowanceUnit(summary, dropsCap)}</span>
               </span>
-              <Hint>{t("settings.timeOffType.allowanceHint")}</Hint>
-            </Row>
-            <Row
+              <FieldHint>{t("settings.timeOffType.allowanceHint")}</FieldHint>
+            </FieldRow>
+            <FieldRow
               label={t("settings.timeOffType.bankHolidaysOnTop")}
               htmlFor={`${id}-bank-holidays`}
             >
@@ -154,26 +150,26 @@ export function PolicyFields({
                   disabled={disabled}
                   onCheckedChange={(checked) => onEdit({ bankHolidaysOnTop: checked })}
                 />
-                <Hint>
+                <FieldHint>
                   {t(
                     policy.bankHolidaysOnTop
                       ? "settings.timeOffType.onTopHint"
                       : "settings.timeOffType.includedHint",
                   )}
-                </Hint>
+                </FieldHint>
               </span>
-            </Row>
+            </FieldRow>
           </>
         )}
         {policy.balance !== "NO_BALANCE" && (
-          <Row label={t("settings.timeOffType.leaveYear")}>
+          <FieldRow label={t("settings.timeOffType.leaveYear")}>
             <span className="text-sm">{leaveYearText(summary)}</span>
-          </Row>
+          </FieldRow>
         )}
         {only && summary && (
-          <Row label={t("settings.timeOffType.appliesTo")}>
+          <FieldRow label={t("settings.timeOffType.appliesTo")}>
             <span className="text-sm">{reachText(summary)}</span>
-          </Row>
+          </FieldRow>
         )}
       </div>
       {!policy.everUsed && !only && (
@@ -234,3 +230,9 @@ const BALANCE_LABELS = {
   UNLIMITED_BALANCE: "settings.timeOff.unlimited",
   NO_BALANCE: "settings.timeOff.doesNotCount",
 } as const satisfies Record<TimeOffBalanceKind, string>;
+
+const BALANCES: TimeOffBalanceKind[] = [
+  "BALANCE_FROM_ALLOWANCE",
+  "UNLIMITED_BALANCE",
+  "NO_BALANCE",
+];

@@ -2,14 +2,11 @@ import { ApplicationError, type FieldError, invalidInput } from "../../../core/a
 import type { PolicyValues } from "../db";
 import {
   isReasonAlwaysPrivate,
-  type ParsedSaveTimeOffType,
+  type ParsedTimeOffTypeUpdate,
   type TimeOffPolicy,
   type TimeOffType,
 } from "../domain";
 import type { TimeOffPolicySettings, TimeOffTypeSettings } from "./timeOffTypeSettings";
-
-/** The start of a new policy's leave year, as the standard policies have it. */
-const FIRST_OF_JANUARY = { kind: "leave_year_from_fixed_date", month: 1, day: 1 } as const;
 
 /** The type as it is before the save, with its policies and the other types' names. */
 export interface CurrentTimeOffType {
@@ -26,7 +23,7 @@ export interface PolicyEdit {
   grantChanged: boolean;
 }
 
-export interface SavePlan {
+export interface UpdatePlan {
   typeFields: Partial<{
     name: string;
     icon: TimeOffType["icon"] & string;
@@ -39,7 +36,7 @@ export interface SavePlan {
 }
 
 /** Checks the save against what exists and works out each write; refuses before anything is written. */
-export function planSave(current: CurrentTimeOffType, save: ParsedSaveTimeOffType): SavePlan {
+export function planUpdate(current: CurrentTimeOffType, save: ParsedTimeOffTypeUpdate): UpdatePlan {
   const errors: FieldError[] = [];
   const typeFields = planTypeFields(current, save, errors);
   const deletes = save.deletePolicyIds.map((id) => deletablePolicy(current, id));
@@ -61,9 +58,9 @@ export function planSave(current: CurrentTimeOffType, save: ParsedSaveTimeOffTyp
 
 function planTypeFields(
   current: CurrentTimeOffType,
-  save: ParsedSaveTimeOffType,
+  save: ParsedTimeOffTypeUpdate,
   errors: FieldError[],
-): SavePlan["typeFields"] {
+): UpdatePlan["typeFields"] {
   if (save.name !== undefined && sameName(current.otherTypeNames, save.name)) {
     errors.push({ field: "name", code: "taken" });
   }
@@ -92,7 +89,7 @@ function deletablePolicy(current: CurrentTimeOffType, id: string | null): TimeOf
 
 function planEdit(
   current: CurrentTimeOffType,
-  change: ParsedSaveTimeOffType["policies"][number],
+  change: ParsedTimeOffTypeUpdate["policies"][number],
   index: number,
   errors: FieldError[],
 ): PolicyEdit {
@@ -156,8 +153,8 @@ function nextValues(
 /** Policy names stay unique within the type, ignoring case, after the save. */
 function checkPolicyNames(
   current: CurrentTimeOffType,
-  { edits, adds, deletes }: Pick<SavePlan, "edits" | "adds" | "deletes">,
-  save: ParsedSaveTimeOffType,
+  { edits, adds, deletes }: Pick<UpdatePlan, "edits" | "adds" | "deletes">,
+  save: ParsedTimeOffTypeUpdate,
   errors: FieldError[],
 ): void {
   const touched = new Set(
@@ -187,3 +184,6 @@ function sameName(names: readonly string[], name: string): boolean {
   const key = name.trim().toLowerCase();
   return names.some((other) => other.trim().toLowerCase() === key);
 }
+
+/** The start of a new policy's leave year, as the standard policies have it. */
+const FIRST_OF_JANUARY = { kind: "leave_year_from_fixed_date", month: 1, day: 1 } as const;

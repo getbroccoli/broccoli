@@ -39,8 +39,8 @@ export function timeOffModule({
       ...allowanceEventHandlers({ timeOff, ...dependencies }),
       "timeOff.time_off_turned_on": (turnedOn) =>
         Promise.resolve(dependencies.logger.info(turnedOn, "Turned time off on")),
-      "timeOff.time_off_type_saved": (saved) =>
-        Promise.resolve(dependencies.logger.info(saved, "Saved a time off type")),
+      "timeOff.time_off_type_updated": (saved) =>
+        Promise.resolve(dependencies.logger.info(saved, "Updated a time off type")),
       "timeOff.time_off_type_deleted": (deleted) =>
         Promise.resolve(dependencies.logger.info(deleted, "Deleted a time off type")),
     },

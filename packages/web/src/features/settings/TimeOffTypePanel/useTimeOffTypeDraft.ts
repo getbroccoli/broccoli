@@ -3,8 +3,8 @@ import { toast } from "sonner";
 
 import {
   RecordHistoryDocument,
-  SaveTimeOffTypeDocument,
-  type SaveTimeOffTypeMutation,
+  UpdateTimeOffTypeDocument,
+  type UpdateTimeOffTypeMutation,
   TimeOffSettingsDocument,
   type TimeOffTypePanel_TypeFragment,
 } from "@/__generated__/graphql";
@@ -23,7 +23,7 @@ import {
   withPolicyRemoved,
 } from "./timeOffTypeDraft";
 
-type SaveError = NonNullable<SaveTimeOffTypeMutation["timeOffType"]["save"]["error"]>;
+type SaveError = NonNullable<UpdateTimeOffTypeMutation["timeOffType"]["update"]["error"]>;
 
 /** A field's error: the type's own (`name`) or a policy's (`<policy key>.<field>`), by its code. */
 export type FieldErrors = Record<string, string>;
@@ -68,15 +68,20 @@ export function useTimeOffTypeDraft(type: TimeOffTypePanel_TypeFragment) {
 
 /** Sends one save; resolves with the field errors to show, none after a success. */
 function useSave(onSaved: (next: TypeDraft) => void) {
-  const [failure, setFailure] = useState<string | null>(null);
-  // The list and the history show what the save changed.
-  const [mutate, { loading }] = usePayloadMutation(SaveTimeOffTypeDocument, {
-    refetch: [TimeOffSettingsDocument, RecordHistoryDocument],
-  });
+  // The list and the history show what only the server works out: people, order, the standard copy.
+  const [mutate, { loading, error, payloadError, reset }] = usePayloadMutation(
+    UpdateTimeOffTypeDocument,
+    { refetch: [TimeOffSettingsDocument, RecordHistoryDocument] },
+  );
+  const failure =
+    payloadError && payloadError.__typename !== "InvalidInputError"
+      ? payloadError.message
+      : error
+        ? t("settings.timeOffType.saveFailed")
+        : null;
 
   const run = async (prepared: PreparedSave | null): Promise<FieldErrors> => {
     if (!prepared) return {};
-    setFailure(null);
     try {
       const payload = await mutate({ variables: { input: prepared.input } });
       const next = draftOf(payload.timeOffType!);
@@ -84,17 +89,17 @@ function useSave(onSaved: (next: TypeDraft) => void) {
       toast(savedMessage(next.name, payload.allowancesUpdated ?? 0));
       return {};
     } catch (failed) {
-      const error =
+      const refused =
         failed instanceof PayloadFailure
           ? (failed as PayloadFailure<SaveError>).payloadError
           : null;
-      if (error?.__typename === "InvalidInputError") return placeErrors(prepared, error.fields);
-      setFailure(error?.message ?? t("settings.timeOffType.saveFailed"));
-      return {};
+      return refused?.__typename === "InvalidInputError"
+        ? placeErrors(prepared, refused.fields)
+        : {};
     }
   };
 
-  return { run, saving: loading, failure, reset: () => setFailure(null) };
+  return { run, saving: loading, failure, reset };
 }
 
 /** Puts each refused input field on the draft field it came from. */

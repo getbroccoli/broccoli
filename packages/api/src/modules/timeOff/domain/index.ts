@@ -33,11 +33,11 @@ export {
   type TimeOffTypeIcon,
 } from "./timeOffTypeLook";
 export {
-  parseSaveTimeOffType,
+  parseTimeOffTypeUpdate,
   timeOffPolicyChanges,
   timeOffTypeChanges,
-  type ParsedSaveTimeOffType,
-  type SaveTimeOffTypeInput,
+  type ParsedTimeOffTypeUpdate,
+  type UpdateTimeOffTypeInput,
   type TimeOffPolicyFields,
   type TimeOffTypeFields,
 } from "./timeOffTypeChanges";

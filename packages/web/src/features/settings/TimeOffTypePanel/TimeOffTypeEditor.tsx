@@ -15,7 +15,9 @@ import { DiscardChangesDialog } from "@/features/records";
 import { t } from "@/i18n";
 
 import { DeleteTimeOffTypeDialog } from "./DeleteTimeOffTypeDialog";
-import { PanelAside, PoliciesSection, TypeSection } from "./EditorSections";
+import { PanelAside } from "./PanelAside";
+import { PoliciesSection } from "./PoliciesSection";
+import { TypeSection } from "./TypeSection";
 import { IconPicker } from "./IconPicker";
 import { grantChanged } from "./timeOffTypeDraft";
 import { useTimeOffTypeDraft } from "./useTimeOffTypeDraft";

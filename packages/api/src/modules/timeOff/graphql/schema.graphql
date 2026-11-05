@@ -269,13 +269,13 @@ type Mutation {
 "Changes to time off types in Settings. Admins only."
 type TimeOffTypeMutations {
   "Saves a time off type and its policies in one go; allowances follow for the leave years that have not ended."
-  save(input: TimeOffTypeSaveInput!): TimeOffTypeSavePayload!
+  update(input: TimeOffTypeUpdateInput!): TimeOffTypeUpdatePayload!
   "Deletes a company's own time off type that nobody has had, with its policies; refused with a conflict otherwise."
   delete(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
 }
 
 "Only the fields sent change."
-input TimeOffTypeSaveInput {
+input TimeOffTypeUpdateInput {
   id: ID!
   name: String
   icon: TimeOffTypeIcon
@@ -311,14 +311,14 @@ input TimeOffPolicyAddInput {
 }
 
 "The saved type, or why it was refused."
-type TimeOffTypeSavePayload {
+type TimeOffTypeUpdatePayload {
   timeOffType: TimeOffTypeSummary
   "Allowances that changed because a policy did."
   allowancesUpdated: Int
-  error: TimeOffTypeSaveError
+  error: TimeOffTypeUpdateError
 }
 
-union TimeOffTypeSaveError = InvalidInputError | NotFoundError | ConflictError
+union TimeOffTypeUpdateError = InvalidInputError | NotFoundError | ConflictError
 
 input TimeOffTypeDeleteInput {
   id: ID!

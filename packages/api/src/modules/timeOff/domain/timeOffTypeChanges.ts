@@ -13,7 +13,7 @@ type Balance = DatedPolicy["balance"];
 type BankHolidays = NonNullable<DatedPolicy["bankHolidays"]>;
 
 /** One save of a time off type's panel: only the fields sent change. */
-export interface SaveTimeOffTypeInput {
+export interface UpdateTimeOffTypeInput {
   id: string;
   name?: string | null;
   icon?: string | null;
@@ -40,7 +40,7 @@ export interface NewPolicyInput {
 }
 
 /** A save with its ids parsed, names trimmed and amounts checked; a bad id is null. */
-export interface ParsedSaveTimeOffType {
+export interface ParsedTimeOffTypeUpdate {
   id: string | null;
   name?: string;
   icon?: TimeOffTypeIcon;
@@ -67,11 +67,8 @@ export interface TimeOffPolicyFields {
   bankHolidays: BankHolidays | null;
 }
 
-/** The most days a year an allowance can grant. */
-const MAX_ALLOWANCE_DAYS = 366;
-
 /** Checks a save's shape; refuses with every field error at once. */
-export function parseSaveTimeOffType(input: SaveTimeOffTypeInput): ParsedSaveTimeOffType {
+export function parseTimeOffTypeUpdate(input: UpdateTimeOffTypeInput): ParsedTimeOffTypeUpdate {
   const errors: FieldError[] = [];
   const name = optionalName(input.name, "name", errors);
   const icon = optionalOf(input.icon, TIME_OFF_TYPE_ICONS, "icon", errors);
@@ -176,3 +173,6 @@ function definedOnly<Fields extends object>(fields: Fields): Partial<Fields> {
     Object.entries(fields).filter(([, value]) => value !== undefined),
   ) as Partial<Fields>;
 }
+
+/** The most days a year an allowance can grant. */
+const MAX_ALLOWANCE_DAYS = 366;

@@ -7,7 +7,7 @@ import {
   type ResolversTypes,
 } from "../../../core/graphql";
 import type { TimeOffSetupService, TimeOffService, TimeOffTypeSettings } from "../app";
-import { DEFAULT_TIME_OFF_TYPE_LOOK, type SaveTimeOffTypeInput } from "../domain";
+import { DEFAULT_TIME_OFF_TYPE_LOOK, type UpdateTimeOffTypeInput } from "../domain";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
 
@@ -59,9 +59,9 @@ export function createResolvers(
       timeOffType: () => ({}),
     },
     TimeOffTypeMutations: {
-      save: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffTypeSavePayload"]>(async () => {
-          const saved = await timeOff.saveTimeOffType(context.getActor(), toSaveInput(input));
+      update: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffTypeUpdatePayload"]>(async () => {
+          const saved = await timeOff.updateTimeOffType(context.getActor(), toSaveInput(input));
           return { ...saved, timeOffType: toGraphqlSummary(saved.timeOffType) };
         }, ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"]),
       delete: (_parent, { input }, context) =>
@@ -125,7 +125,7 @@ function toSaveInput({
   policies,
   addPolicies,
   ...input
-}: ResolversTypes["TimeOffTypeSaveInput"]): SaveTimeOffTypeInput {
+}: ResolversTypes["TimeOffTypeUpdateInput"]): UpdateTimeOffTypeInput {
   return {
     ...input,
     icon: icon && toStored(icon),

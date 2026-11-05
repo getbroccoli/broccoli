@@ -165,7 +165,7 @@ test("refuses a type whose policy was linked to terms meanwhile", async ({
 test("its history stays readable with a deleted line", async ({ orm }) => {
   const type = await seedTimeOffType(orm, "Wellbeing");
   const service = timeOffService(orm);
-  await service.saveTimeOffType(ADMIN, { id: type.id, name: "Company leave" });
+  await service.updateTimeOffType(ADMIN, { id: type.id, name: "Company leave" });
   const history = createRecordHistoryReaderService(orm, {
     time_off_type: timeOffTypeRecordType(orm),
   });

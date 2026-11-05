@@ -17,7 +17,7 @@ import { timeOffPolicyRepository } from "../db";
 import type {
   AllowanceCause,
   DatedPolicyRow,
-  SaveTimeOffTypeInput,
+  UpdateTimeOffTypeInput,
   TimeOffPolicy,
 } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
@@ -28,7 +28,7 @@ import {
   type TimeOffTypeSettings,
 } from "./timeOffTypeSettings";
 import { deleteTimeOffType } from "./deleteTimeOffType";
-import { type SavedTimeOffType, saveTimeOffType } from "./saveTimeOffType";
+import { type UpdatedTimeOffType, updateTimeOffType } from "./updateTimeOffType";
 import { timeOffTypeRecordType } from "./timeOffTypeRecordType";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 
@@ -94,7 +94,10 @@ export interface TimeOffService {
    * Saves a time off type's panel in one transaction: its fields, changed, added and deleted
    * policies and their history, then updates the allowances of everyone on a changed policy.
    */
-  saveTimeOffType: (ctx: SecurityContext, input: SaveTimeOffTypeInput) => Promise<SavedTimeOffType>;
+  updateTimeOffType: (
+    ctx: SecurityContext,
+    input: UpdateTimeOffTypeInput,
+  ) => Promise<UpdatedTimeOffType>;
   /** Deletes a company's own type nobody has ever had, with its policies. */
   deleteTimeOffType: (ctx: SecurityContext, input: { id: string }) => Promise<{ id: string }>;
   /** A time off type's history, newest first, also after it is deleted; admins only. */
@@ -221,7 +224,7 @@ export function createTimeOffService({
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
     listTimeOffTypes: (ctx) => listTimeOffTypes(settings, ctx),
     readTimeOffTypeSettings: (ctx, input) => readTimeOffTypeSettings(settings, ctx, input),
-    saveTimeOffType: (ctx, input) => saveTimeOffType({ ...settings, engine }, ctx, input),
+    updateTimeOffType: (ctx, input) => updateTimeOffType({ ...settings, engine }, ctx, input),
     deleteTimeOffType: (ctx, input) => deleteTimeOffType(settings, ctx, input),
     readTimeOffTypeHistory: (ctx, timeOffTypeId, args) =>
       typeHistory.readHistory(ctx, "time_off_type", timeOffTypeId, args),

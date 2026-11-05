@@ -70,7 +70,7 @@ test("raising 20 to 22 days moves this year's allowances of everyone on the poli
     .from(timeOffAllowanceRules)
     .where(eq(timeOffAllowanceRules.timeOffPolicyId, policy.id));
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [
       { id: policy.id, allowanceDays: 22, bankHolidays: "bank_holidays_on_top_of_allowance" },
@@ -118,7 +118,7 @@ test("a closed leave year keeps its lines", async ({ orm, seed, transact }) => {
   )!;
   expect(before.lines.length).toBeGreaterThan(0);
 
-  await service.saveTimeOffType(ADMIN, {
+  await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [{ id: policy.id, allowanceDays: 22 }],
   });
@@ -151,7 +151,7 @@ test("someone who left before this leave year gets no new lines", async ({
   );
   const before = await allowanceSnapshot(orm, employee.id);
 
-  const result = await timeOffService(orm, { today: "2026-11-05" }).saveTimeOffType(ADMIN, {
+  const result = await timeOffService(orm, { today: "2026-11-05" }).updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [{ id: policy.id, allowanceDays: 22 }],
   });
@@ -177,7 +177,7 @@ test("members of a terms link that ended this year are recalculated for their pa
     }),
   );
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [{ id: policy.id, allowanceDays: 22 }],
   });
@@ -205,7 +205,7 @@ test("someone starting next year receives the changed allowance in their first l
     service.linkTermsPolicies(ADMIN, tx, { termsId, timeOffPolicyIds: [policy.id] }),
   );
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [{ id: policy.id, allowanceDays: 22 }],
   });
@@ -222,13 +222,13 @@ test("two saves of the same policy in a row append each difference once", async 
   transact,
 }) => {
   const { service, policy, employee } = await seedLinkedTimeOffPolicy(orm, seed, transact);
-  await service.saveTimeOffType(ADMIN, {
+  await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [{ id: policy.id, allowanceDays: 22 }],
   });
   const [before] = await allowanceSnapshot(orm, employee.id);
 
-  const result = await service.saveTimeOffType(ADMIN, {
+  const result = await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [{ id: policy.id, allowanceDays: 23 }],
   });
@@ -257,11 +257,11 @@ test("two admins saving the same type keep both changes without duplicate allowa
   const before = await orm.select().from(allowanceLedgerLines);
 
   await Promise.all([
-    service.saveTimeOffType(ADMIN, {
+    service.updateTimeOffType(ADMIN, {
       id: policy.timeOffTypeId,
       policies: [{ id: policy.id, allowanceDays: 22 }],
     }),
-    service.saveTimeOffType(ADMIN, { id: policy.timeOffTypeId, name: "Company leave" }),
+    service.updateTimeOffType(ADMIN, { id: policy.timeOffTypeId, name: "Company leave" }),
   ]);
 
   const saved = await service.readTimeOffTypeSettings(ADMIN, { id: policy.timeOffTypeId });

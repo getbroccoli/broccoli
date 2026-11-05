@@ -22,9 +22,9 @@ fragment TimeOffTypePanel_type on TimeOffTypeSummary {
   reasonAlwaysPrivate
 }
 
-mutation SaveTimeOffType($input: TimeOffTypeSaveInput!) {
+mutation UpdateTimeOffType($input: TimeOffTypeUpdateInput!) {
   timeOffType {
-    save(input: $input) {
+    update(input: $input) {
       timeOffType {
         ...TimeOffTypePanel_type @unmask
       }

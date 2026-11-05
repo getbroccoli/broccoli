@@ -1,10 +1,10 @@
 import { expect, it } from "vitest";
 
-import { parseSaveTimeOffType, timeOffTypeChanges } from "./timeOffTypeChanges";
+import { parseTimeOffTypeUpdate, timeOffTypeChanges } from "./timeOffTypeChanges";
 
 it.each([366.5, 20.25])("refuses an allowance of %s days", (allowanceDays) => {
   expect(() =>
-    parseSaveTimeOffType({
+    parseTimeOffTypeUpdate({
       id: "019b76da-a800-7000-8000-000000000001",
       policies: [{ id: "019b76da-a800-7000-8000-000000000002", allowanceDays }],
     }),
@@ -18,7 +18,7 @@ it.each([366.5, 20.25])("refuses an allowance of %s days", (allowanceDays) => {
 
 it("refuses a blank name", () => {
   expect(() =>
-    parseSaveTimeOffType({
+    parseTimeOffTypeUpdate({
       id: "019b76da-a800-7000-8000-000000000001",
       name: "   ",
     }),

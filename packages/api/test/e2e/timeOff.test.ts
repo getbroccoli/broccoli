@@ -156,8 +156,8 @@ test("an owner raises Annual leave to 22 days over GraphQL and the person's pane
   });
 
   const saved = await browser.graphql(
-    `mutation($input: TimeOffTypeSaveInput!) {
-    timeOffType { save(input: $input) {
+    `mutation($input: TimeOffTypeUpdateInput!) {
+    timeOffType { update(input: $input) {
       timeOffType { timeOffType { id } policies { id allowance { days bankHolidays } } }
       allowancesUpdated error { __typename }
     } }
@@ -180,7 +180,7 @@ test("an owner raises Annual leave to 22 days over GraphQL and the person's pane
   expect(await saved.json()).toMatchObject({
     data: {
       timeOffType: {
-        save: {
+        update: {
           error: null,
           allowancesUpdated: 1,
           timeOffType: {

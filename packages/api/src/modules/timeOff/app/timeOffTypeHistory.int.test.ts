@@ -18,8 +18,8 @@ test("an admin reads a type's history newest first, with policy lines", async ({
     entitlementDays: 20,
   });
   const service = timeOffService(orm, { today: "2026-11-05" });
-  await service.saveTimeOffType(ADMIN, { id: policy.timeOffTypeId, name: "Company leave" });
-  await service.saveTimeOffType(ADMIN, {
+  await service.updateTimeOffType(ADMIN, { id: policy.timeOffTypeId, name: "Company leave" });
+  await service.updateTimeOffType(ADMIN, {
     id: policy.timeOffTypeId,
     policies: [{ id: policy.id, name: "More wellbeing", allowanceDays: 22 }],
   });
@@ -57,7 +57,7 @@ test("an admin reads a type's history newest first, with policy lines", async ({
 
 test("someone without MANAGE_WORKSPACE cannot read a type's history", async ({ orm }) => {
   const type = await seedTimeOffType(orm, "Wellbeing");
-  await timeOffService(orm).saveTimeOffType(ADMIN, { id: type.id, name: "Company leave" });
+  await timeOffService(orm).updateTimeOffType(ADMIN, { id: type.id, name: "Company leave" });
   const history = createRecordHistoryReaderService(orm, {
     time_off_type: timeOffTypeRecordType(orm),
   });

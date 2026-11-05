@@ -15,7 +15,7 @@ declare module "../../../core/events" {
       locationCount: number;
     };
     /** A time off type was saved from Settings: what changed and how many allowances moved. */
-    "timeOff.time_off_type_saved": {
+    "timeOff.time_off_type_updated": {
       timeOffTypeId: string;
       fields: string[];
       changedPolicyIds: string[];

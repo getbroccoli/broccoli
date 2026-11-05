@@ -1,10 +1,9 @@
 import type { ReactNode } from "react";
 
 import { t } from "@/i18n";
-import { cn } from "@/lib/class-names";
 
 /** A labelled field of the panel, in its two-column grid, with its error beneath. */
-export function Row({
+export function FieldRow({
   label,
   htmlFor,
   error,
@@ -30,23 +29,6 @@ export function Row({
         )}
       </div>
     </>
-  );
-}
-
-export function Hint({ children }: { children: ReactNode }) {
-  return <p className="text-xs text-muted-foreground">{children}</p>;
-}
-
-export function Tag({ tone, children }: { tone?: "brand"; children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-        tone ? "bg-brand-soft text-brand-deep" : "bg-muted text-muted-foreground",
-      )}
-    >
-      {children}
-    </span>
   );
 }
 

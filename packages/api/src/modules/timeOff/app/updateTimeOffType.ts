@@ -8,8 +8,8 @@ import {
   type TimeOffSettingsRepository,
 } from "../db";
 import {
-  parseSaveTimeOffType,
-  type SaveTimeOffTypeInput,
+  parseTimeOffTypeUpdate,
+  type UpdateTimeOffTypeInput,
   timeOffPolicyChanges,
   type TimeOffPolicy,
   type TimeOffPolicyFields,
@@ -25,47 +25,44 @@ import {
 import {
   type CurrentTimeOffType,
   type PolicyEdit,
-  planSave,
-  type SavePlan,
-} from "./planTimeOffTypeSave";
+  planUpdate,
+  type UpdatePlan,
+} from "./planTimeOffTypeUpdate";
 
 /** What a save left: the type as Settings now shows it, and how many allowances moved. */
-export interface SavedTimeOffType {
+export interface UpdatedTimeOffType {
   timeOffType: TimeOffTypeSettings;
   /** Allowances that got lines because a policy changed. */
   allowancesUpdated: number;
 }
 
-export type SaveTimeOffTypeDependencies = TimeOffTypeSettingsDependencies & {
+export type UpdateTimeOffTypeDependencies = TimeOffTypeSettingsDependencies & {
   engine: AllowanceEngineDependencies;
 };
 
 const history = createRecordHistoryService();
 
-/** The working week a new allowance is stated for. */
-const FIVE_DAY_WEEK = 5;
-
 /**
  * Saves a time off type's panel in one transaction: its fields, changed, added and deleted
  * policies, their history, and the allowances of everyone on a changed policy.
  */
-export async function saveTimeOffType(
-  dependencies: SaveTimeOffTypeDependencies,
+export async function updateTimeOffType(
+  dependencies: UpdateTimeOffTypeDependencies,
   ctx: SecurityContext,
-  input: SaveTimeOffTypeInput,
-): Promise<SavedTimeOffType> {
+  input: UpdateTimeOffTypeInput,
+): Promise<UpdatedTimeOffType> {
   ctx.require("MANAGE_WORKSPACE");
-  const save = parseSaveTimeOffType(input);
+  const save = parseTimeOffTypeUpdate(input);
   return dependencies.transact(async (tx) => {
     await timeOffPolicyRepository(tx).lockTermsLinks();
     const current = await readCurrent(dependencies, tx, save.id);
-    const plan = planSave(current, save);
+    const plan = planUpdate(current, save);
     const changes = await writeSave(tx, current, plan);
     await appendHistory(ctx, tx, current.type.id, changes);
     await updateAllowances(dependencies, tx, plan.edits);
     const allowancesUpdated =
       await timeOffSettingsRepository(tx).countAllowancesChangedInTransaction();
-    tx.publish("timeOff.time_off_type_saved", {
+    tx.publish("timeOff.time_off_type_updated", {
       timeOffTypeId: current.type.id,
       fields: changes.type.map(({ field }) => field),
       changedPolicyIds: plan.edits.map(({ policy }) => policy.id),
@@ -107,7 +104,7 @@ interface SaveChanges {
 async function writeSave(
   tx: Tx,
   current: CurrentTimeOffType,
-  plan: SavePlan,
+  plan: UpdatePlan,
 ): Promise<SaveChanges> {
   const repository = timeOffSettingsRepository(tx);
   await repository.updateType(current.type.id, plan.typeFields);
@@ -180,7 +177,7 @@ async function writeEdit(
   }
 }
 
-function typeChanges(type: TimeOffType, fields: SavePlan["typeFields"]): FieldChange[] {
+function typeChanges(type: TimeOffType, fields: UpdatePlan["typeFields"]): FieldChange[] {
   const before = {
     name: type.name,
     icon: type.icon,
@@ -256,7 +253,7 @@ async function appendHistory(
 
 /** Runs the engine for everyone ever on a policy whose grant changed. */
 async function updateAllowances(
-  dependencies: SaveTimeOffTypeDependencies,
+  dependencies: UpdateTimeOffTypeDependencies,
   tx: Tx,
   edits: readonly PolicyEdit[],
 ): Promise<void> {
@@ -290,3 +287,6 @@ async function employeesEverOn(
     ]),
   ];
 }
+
+/** The working week a new allowance is stated for. */
+const FIVE_DAY_WEEK = 5;
