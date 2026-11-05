@@ -1,4 +1,4 @@
-import { and, inArray, notInArray, sql } from "drizzle-orm";
+import { and, countDistinct, gte, inArray, notInArray, sql } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -18,6 +18,8 @@ export interface Allowance {
 /** Allowances and their ledger lines, inside a transaction. */
 export interface AllowanceRepository {
   findByEmployees(employeeIds: readonly string[]): Promise<Allowance[]>;
+  /** How many people have an allowance whose leave year ends on `date` or later. */
+  countEmployeesWithAllowanceUntil(date: CalendarDate): Promise<number>;
   insert(newAllowances: readonly Omit<Allowance, "id">[]): Promise<Allowance[]>;
   /** What the engine's lines of each identity add up to, by allowance id. */
   findEngineSums(allowanceIds: readonly string[]): Promise<Map<string, LedgerSum[]>>;
@@ -38,6 +40,14 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .from(allowances)
         .where(inArray(allowances.employeeId, [...employeeIds]))
         .orderBy(allowances.leaveYearStart);
+    },
+
+    async countEmployeesWithAllowanceUntil(date) {
+      const [row] = await orm()
+        .select({ count: countDistinct(allowances.employeeId) })
+        .from(allowances)
+        .where(gte(allowances.leaveYearEnd, date));
+      return row!.count;
     },
 
     async insert(newAllowances) {

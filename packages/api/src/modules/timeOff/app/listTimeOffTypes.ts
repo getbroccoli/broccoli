@@ -1,12 +1,11 @@
 import type { Transact } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
-import type { EmployeeReadService } from "../../employees";
-import { timeOffPolicyRepository, timeOffRepository } from "../db";
+import type { CalendarDate } from "../../../utils";
+import { allowanceRepository, timeOffPolicyRepository, timeOffRepository } from "../db";
 import { sharedBalance, type TimeOffPolicy, type TimeOffType } from "../domain";
-import type { AllowanceEngineDependencies } from "./allowanceEngine";
-import { byTypeOrder, calendarYearOf, countPeopleWithTimeOff } from "./readTimeOffTypes";
+import { byTypeOrder, calendarYearOf } from "./readTimeOffTypes";
 
-/** Every time off type as Settings lists it, and how many people have one today. */
+/** Every time off type as Settings lists it, and how many people have time off. */
 export interface TimeOffTypeList {
   timeOffTypes: {
     timeOffType: TimeOffType;
@@ -15,30 +14,26 @@ export interface TimeOffTypeList {
     /** Everyone's approved or pending days in the calendar year of today; a half day is 0.5. */
     daysTakenThisYear: number;
   }[];
-  /** People whose panel shows at least one time off type today. */
+  /** People with an allowance whose leave year has not ended. */
   peopleWithTimeOff: number;
 }
 
-type Dependencies = {
-  transact: Transact;
-  employeeReads: AllowanceEngineDependencies["employeeReads"] &
-    Pick<EmployeeReadService, "listEmployees">;
-  today: AllowanceEngineDependencies["today"];
-};
+type Dependencies = { transact: Transact; today: () => CalendarDate };
 
 /** Every time off type in list order, with how it counts and the days taken this year. */
 export async function listTimeOffTypes(
-  dependencies: Dependencies,
+  { transact, today }: Dependencies,
   ctx: SecurityContext,
 ): Promise<TimeOffTypeList> {
   ctx.require("MANAGE_WORKSPACE");
-  const year = calendarYearOf(dependencies.today());
-  const { types, policies, takenDays } = await dependencies.transact(async (tx) => {
+  const year = calendarYearOf(today());
+  const { types, policies, takenDays, peopleWithTimeOff } = await transact(async (tx) => {
     const policyRepository = timeOffPolicyRepository(tx);
     return {
       types: await policyRepository.findAllTypes(),
       policies: await policyRepository.findAll(),
       takenDays: await timeOffRepository(tx).sumDaysByType({ from: year.start, until: year.end }),
+      peopleWithTimeOff: await allowanceRepository(tx).countEmployeesWithAllowanceUntil(today()),
     };
   });
   return {
@@ -48,26 +43,6 @@ export async function listTimeOffTypes(
       daysTakenThisYear:
         takenDays.find(({ timeOffTypeId }) => timeOffTypeId === timeOffType.id)?.days ?? 0,
     })),
-    peopleWithTimeOff: await countAllPeopleWithTimeOff(dependencies, ctx),
+    peopleWithTimeOff,
   };
 }
-
-// shortcut: reads every employee's policies page by page; fine for SMB sizes, add a counting query if it gets slow.
-async function countAllPeopleWithTimeOff(
-  dependencies: Dependencies,
-  ctx: SecurityContext,
-): Promise<number> {
-  let count = 0;
-  let after: string | null = null;
-  let hasNextPage = true;
-  while (hasNextPage) {
-    const page = await dependencies.employeeReads.listEmployees(ctx, { first: PAGE_SIZE, after });
-    const employeeIds = page.edges.map(({ node }) => node.id);
-    count += await countPeopleWithTimeOff(dependencies, ctx, employeeIds);
-    ({ endCursor: after, hasNextPage } = page.pageInfo);
-  }
-  return count;
-}
-
-/** Employees read per page while counting, the daily allowance job's batch size. */
-const PAGE_SIZE = 100;

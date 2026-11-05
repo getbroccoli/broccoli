@@ -73,22 +73,6 @@ export async function readTimeOffTypes(
   });
 }
 
-/** How many of these employees have at least one time off type today, as `readTimeOffTypes` decides. */
-export async function countPeopleWithTimeOff(
-  { transact, employeeReads, today }: Dependencies,
-  ctx: SecurityContext,
-  employeeIds: readonly string[],
-): Promise<number> {
-  const ids = await readableIds(ctx, employeeIds);
-  if (ids.length === 0) {
-    return 0;
-  }
-  return transact(async (tx) => {
-    const { people, policies } = await readPeople(employeeReads, tx, ids);
-    return people.filter((person) => shownTypes(person, policies, today()).length > 0).length;
-  });
-}
-
 /** Annual leave, Sickness, Family leave, Other, then the company's own types by name. */
 export function byTypeOrder(
   a: { name: string; typeKey: TimeOffTypeKey | null },
