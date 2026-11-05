@@ -1,8 +1,7 @@
 /** English copy under `setup.timeOff.*`, the "Set up time off" setup page. */
 export const setupTimeOffEn = {
-  "setup.timeOff.step": "Time off",
-  "setup.timeOff.eyebrow": "Company defaults",
-  "setup.timeOff.title": "Set up time off",
+  "setup.timeOff.step": "Company defaults",
+  "setup.timeOff.title": "Company defaults",
   "setup.timeOff.description":
     "Choose the holiday and working week most of your people have. All {count} people start on these defaults; you can change them for anyone later.",
   "setup.timeOff.descriptionOne":
