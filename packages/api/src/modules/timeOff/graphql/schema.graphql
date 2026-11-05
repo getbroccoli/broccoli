@@ -32,7 +32,7 @@ type TimeOffSettings {
 "A time off type as Settings lists it."
 type TimeOffTypeSummary {
   timeOffType: TimeOffType!
-  "How its days are counted, read from its policies; null when it has none."
+  "The balance kind most of its policies have, the oldest policy's on a tie, so one policy may differ; null when it has none."
   balance: TimeOffBalanceKind
   "Days everyone took this calendar year, approved or pending; a half day counts 0.5."
   daysTakenThisYear: Float!
