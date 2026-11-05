@@ -21,11 +21,6 @@ type EmployeeTimeOffType {
   used: Float!
 }
 
-type Query {
-  "Time off as Settings shows it; admins only."
-  timeOffSettings: TimeOffSettings!
-}
-
 "Time off as Settings shows it."
 type TimeOffSettings {
   "Every time off type: Annual leave, Sickness, Family leave and Other first, then the company's own by name."
@@ -159,6 +154,8 @@ type LocationCalendarSuggestion {
 }
 
 type Query {
+  "Time off as Settings shows it; admins only."
+  timeOffSettings: TimeOffSettings!
   "Admins, and the browser holding setup."
   timeOffSetup: TimeOffSetup!
   """
