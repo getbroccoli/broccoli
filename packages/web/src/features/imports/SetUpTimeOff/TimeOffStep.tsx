@@ -149,12 +149,12 @@ export function TimeOffStep({ search }: Props) {
           </div>
         }
       >
-        <div className="flex flex-col gap-7 lg:flex-row-reverse lg:items-start">
-          <p className="flex items-start gap-2 self-start rounded-lg bg-brand-soft px-3 py-2 text-[13px] leading-snug text-brand-deep lg:w-64 lg:shrink-0">
+        <div className="flex flex-col gap-7 xl:flex-row-reverse xl:items-start">
+          <p className="flex items-start gap-2 self-start rounded-lg bg-brand-soft px-3 py-2 text-[13px] leading-snug text-brand-deep xl:w-64 xl:shrink-0">
             <Lightbulb size={16} aria-hidden className="mt-px shrink-0" />
             {t("setup.timeOff.tip")}
           </p>
-          <div className="flex min-w-0 flex-1 flex-col gap-7">
+          <div className="@container flex min-w-0 flex-1 flex-col gap-7">
             <Question
               number={1}
               title={t("setup.timeOff.allowanceTitle")}
