@@ -6,7 +6,7 @@ import {
   calendarDate,
   employeeServices,
   expect,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   OWNER,
   test,
 } from "#test/support";
@@ -18,7 +18,7 @@ test("invariant: reversing a start-date correction restores each dated ledger id
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employees = employeeServices(orm);
 
   await fc.assert(

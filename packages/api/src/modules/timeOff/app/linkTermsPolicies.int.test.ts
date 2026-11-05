@@ -7,7 +7,7 @@ test("linking terms of 700 people gives each of them an allowance", async ({
 }) => {
   await seed.employees(700);
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
@@ -40,7 +40,7 @@ test("linking the statutory minimum grants a full-timer 20 days after bank holid
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
@@ -95,7 +95,7 @@ test("an October starter receives prorated leave and only the remaining bank hol
 }) => {
   const employee = await seed.employee({ firstName: "Sam", startDate: "2026-10-12" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
@@ -134,7 +134,7 @@ test("linking 25 days plus bank holidays leaves a full-timer 25 days to book", a
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_25_days_plus_bank_holidays",
   )!;
@@ -159,7 +159,7 @@ test("refuses a second Annual leave policy without changing the terms' policies 
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policies = await service.listPolicies(OWNER, orm);
   const statutory = policies.find((p) => p.key === "uk_statutory_minimum")!;
   const twentyDays = policies.find((p) => p.key === "uk_20_days_plus_bank_holidays")!;
@@ -183,7 +183,7 @@ test("refuses a second Annual leave policy without changing the terms' policies 
 
 test("refuses an employee linking a policy to terms", async ({ orm, seed, transact }) => {
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
@@ -200,7 +200,7 @@ test("refuses an employee linking a policy to terms", async ({ orm, seed, transa
 test("linking record-only policies creates no allowances", async ({ orm, seed, transact }) => {
   const employee = await seed.employee();
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policies = await service.listPolicies(OWNER, orm);
   const recordOnly = ["sickness", "family_leave", "other"].map((typeKey) =>
     policies.find((p) => p.typeKey === typeKey)!,
@@ -220,7 +220,7 @@ test("linking record-only policies creates no allowances", async ({ orm, seed, t
 
 test("reads the terms' linked policies with their keys", async ({ orm, seed, transact }) => {
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policies = await service.listPolicies(OWNER, orm);
   const statutory = policies.find((p) => p.key === "uk_statutory_minimum")!;
   const recordOnly = ["sickness", "family_leave", "other"].map((typeKey) =>

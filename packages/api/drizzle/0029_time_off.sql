@@ -156,4 +156,5 @@ ALTER TABLE "time_off" ADD CONSTRAINT "time_off_employee_id_employees_id_fk" FOR
 -- A null bound is unbounded, as on employments.
 ALTER TABLE "employee_terms" ADD CONSTRAINT "employee_terms_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, daterange("effective_from", "effective_until", '[]') WITH &&);--> statement-breakpoint
 ALTER TABLE "time_off_policy_assignments" ADD CONSTRAINT "time_off_policy_assignments_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("effective_from", "effective_until", '[]') WITH &&);--> statement-breakpoint
-ALTER TABLE "allowances" ADD CONSTRAINT "allowances_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("leave_year_start", "leave_year_end", '[]') WITH &&);
+ALTER TABLE "allowances" ADD CONSTRAINT "allowances_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("leave_year_start", "leave_year_end", '[]') WITH &&);--> statement-breakpoint
+CREATE UNIQUE INDEX "terms_name_unique" ON "terms" USING btree (lower(btrim("name")));

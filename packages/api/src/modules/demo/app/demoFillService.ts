@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import type { Tx } from "../../../core/db";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseRasterImage, type RasterImage, todayInUtc } from "../../../utils";
-import { createEmployeeSetupService, type EmployeeReadService } from "../../employees";
+import { createEmployeeSetupService } from "../../employees";
 import type { TimeOffService } from "../../timeOff";
 import { demoPeople } from "../domain";
 
@@ -12,30 +12,33 @@ const employeeSetup = createEmployeeSetupService();
 /** Writes the demo company inside the caller's transaction. */
 export type DemoFill = (tx: Tx) => Promise<void>;
 
-/** The demo company's people and the time off "England and Wales" terms get, prepared for a demo start. */
+/** The demo company's people, with time off on, prepared for a demo start. */
 export interface DemoFillService {
   /**
    * Reads the demo company's avatars, so no file I/O runs while a transaction holds locks, and
-   * returns its fill: for an instance without employees, the demo company, with "England and Wales" terms given
-   * the UK statutory minimum and the record-only policies; otherwise nothing.
+   * returns its fill: for an instance without employees, the demo company, with time off turned on
+   * as an owner would: everyone on "England and Wales" terms, Standard's week and the UK statutory
+   * minimum; otherwise nothing.
    */
   prepareDemoFill: (today?: CalendarDate) => Promise<DemoFill>;
 }
 
 export function createDemoFillService({
   timeOff,
-  employeeReads,
 }: {
-  timeOff: Pick<TimeOffService, "listPolicies" | "linkTermsPolicies">;
-  employeeReads: Pick<EmployeeReadService, "readEnglandAndWalesTermsId">;
+  timeOff: Pick<TimeOffService, "listPolicies" | "turnOnTimeOff">;
 }): DemoFillService {
-  async function linkDemoPolicies(ctx: SecurityContext, tx: Tx) {
+  async function turnOnDemoTimeOff(ctx: SecurityContext, tx: Tx) {
     const policies = await timeOff.listPolicies(ctx, tx);
-    await timeOff.linkTermsPolicies(ctx, tx, {
-      termsId: await employeeReads.readEnglandAndWalesTermsId(tx),
-      timeOffPolicyIds: policies
-        .filter(({ key, balance }) => key === "uk_statutory_minimum" || balance === "no_balance")
-        .map(({ id }) => id),
+    await timeOff.turnOnTimeOff(ctx, tx, {
+      terms: [
+        {
+          bankHolidayCalendar: "england_and_wales",
+          workingWeek: "monday_to_friday_7_5_hours",
+          annualLeavePolicyId: policies.find(({ key }) => key === "uk_statutory_minimum")!.id,
+        },
+      ],
+      locationTerms: [],
     });
   }
   return {
@@ -57,7 +60,7 @@ export function createDemoFillService({
           { kind: "ADDED_WITH_DEMO" },
         );
         if (added) {
-          await linkDemoPolicies(ctx, tx);
+          await turnOnDemoTimeOff(ctx, tx);
         }
       };
     },

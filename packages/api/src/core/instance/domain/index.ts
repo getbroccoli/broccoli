@@ -26,3 +26,4 @@ export {
   type SetupInvite,
   type SetupInviteAudience,
 } from "./setupInvites";
+export type { SetupTermsInput } from "./setupTermsInput";

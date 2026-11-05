@@ -1,7 +1,7 @@
 import {
   ADMIN,
   expect,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   OWNER,
   seedEmploymentEnd,
   seedTimeOff,
@@ -21,7 +21,7 @@ test("returns statutory figures followed by the three recorded-only types", asyn
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policies = await service.listPolicies(OWNER, orm);
   const statutory = policies.find(({ key }) => key === "uk_statutory_minimum")!;
   const recorded = policies.filter(({ balance }) => balance === "no_balance");
@@ -65,7 +65,7 @@ test("includes bank holidays on top of a 25-day allowance in entitlement", async
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     ({ key }) => key === "uk_25_days_plus_bank_holidays",
   )!;
@@ -88,7 +88,7 @@ test("includes bank holidays on top of a 25-day allowance in entitlement", async
 
 test("returns prorated figures for an October joiner", async ({ orm, seed, transact }) => {
   const employee = await seed.employee({ startDate: "2026-10-12" });
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
 
   const rows = await timeOffService(orm).readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -107,7 +107,7 @@ test("returns an empty list while no policies are linked", async ({ orm, seed })
 
 test("uses the first leave year of a future starter", async ({ orm, seed, transact }) => {
   const employee = await seed.employee({ startDate: "2027-01-05" });
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
 
   const rows = await timeOffService(orm).readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -124,7 +124,7 @@ test("omits allowance and recorded-only rows for someone who left last year", as
   const employee = await seed.employee({ startDate: "2025-01-01" });
   await seedEmploymentEnd(orm, employee.id, "2025-09-30");
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policies = (await service.listPolicies(OWNER, orm)).filter(
     ({ key, balance }) => key === "uk_statutory_minimum" || balance === "no_balance",
   );
@@ -186,7 +186,7 @@ test("counts approved full and half sickness days but excludes declined days", a
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     ({ balance, typeKey }) => balance === "no_balance" && typeKey === "sickness",
   )!;
@@ -231,7 +231,7 @@ test("returns every allowance type with Annual leave before company types", asyn
     entitlementDays: 5,
   });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const statutory = (await service.listPolicies(OWNER, orm)).find(
     ({ key }) => key === "uk_statutory_minimum",
   )!;
@@ -273,7 +273,7 @@ test.for(["self", "manager two levels up", "admin", "peer"] as const)(
     const peer = await seed.employee();
     await seed.manager(employee.id, manager.id);
     await seed.manager(manager.id, director.id);
-    await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+    await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
     const contexts = {
       self: signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] }),
       "manager two levels up": signedIn(orm, { employeeId: director.id, profiles: ["EMPLOYEE"] }),

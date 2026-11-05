@@ -6,6 +6,14 @@ export { withPlaceholders } from "./sanitize";
 export { createResolvedDecisions } from "./resolvedDecisions";
 
 // Public types.
-export type { Answer, Answers, Decisions, Json, JsonObject, Question } from "./decisions";
+export type {
+  Answer,
+  Answers,
+  DecideOptions,
+  Decisions,
+  Json,
+  JsonObject,
+  Question,
+} from "./decisions";
 export type { OriginalFileRead, OriginalFileReader } from "./originalFileRead";
 export type { DecisionsSource } from "./resolvedDecisions";

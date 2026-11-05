@@ -1374,6 +1374,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "default_terms_id": {
+          "name": "default_terms_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -1393,7 +1399,17 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "locations_default_terms_id_terms_id_fk": {
+          "name": "locations_default_terms_id_terms_id_fk",
+          "tableFrom": "locations",
+          "tableTo": "terms",
+          "columnsFrom": ["default_terms_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1429,7 +1445,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "terms_name_unique": {
+          "name": "terms_name_unique",
+          "columns": [
+            {
+              "expression": "lower(btrim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {

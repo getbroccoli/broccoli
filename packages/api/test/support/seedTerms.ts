@@ -4,12 +4,12 @@ import type { Orm } from "../../src/core/db";
 import { employeeTerms, terms } from "../../src/modules/employees/db";
 import { parseCalendarDate } from "../../src/utils";
 
-export async function englandAndWalesTermsId(orm: Orm): Promise<string> {
-  const [englandAndWales] = await orm
+export async function defaultTermsId(orm: Orm): Promise<string> {
+  const [defaultTerms] = await orm
     .select({ id: terms.id })
     .from(terms)
-    .where(eq(terms.key, "england_and_wales"));
-  return englandAndWales!.id;
+    .where(eq(terms.key, "default_terms"));
+  return defaultTerms!.id;
 }
 
 export async function insertTerms(orm: Orm, name: string): Promise<string> {

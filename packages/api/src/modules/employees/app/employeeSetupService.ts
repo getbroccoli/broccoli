@@ -3,12 +3,22 @@ import { createOwnerService } from "../../../core/instance";
 import { createRecordHistoryService, type HistoryAppend } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import type { RasterImage } from "../../../utils";
-import { employeeRepository, employmentRepository, locationRepository } from "../db";
+import type { BankHolidayCalendar } from "../../bankHolidays";
+import {
+  employeeRepository,
+  employmentRepository,
+  locationRepository,
+  termsRepository,
+  workingPatternRepository,
+} from "../db";
 import {
   type Employee,
   type NewEmployeeInput,
   parseLocationName,
   parseNewEmployee,
+  STANDARD_WEEKS,
+  type StandardWorkingWeek,
+  type TermsSetup,
   tryParseNewEmployee,
 } from "../domain";
 import { setNewEmployeeManagers } from "./employeeManagerService";
@@ -86,6 +96,21 @@ export interface EmployeeSetupService {
    * removal.
    */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /**
+   * Gives each nation's entry terms on its working week, joining `tx`: the default nation's are
+   * the default terms, renamed after it, the others are created; creates missing named locations and points each at
+   * its nation's terms, ready for new employees to join. Returns the terms ids, and their people,
+   * in the order of `input.terms`.
+   */
+  setUpTerms: (ctx: SecurityContext, tx: Tx, input: TermsSetup) => Promise<SetUpTerms>;
+}
+
+/** What setting up terms did. */
+export interface SetUpTerms {
+  termsIds: string[];
+  /** The employees on each terms afterwards, in the order of `termsIds`. */
+  memberIds: string[][];
+  createdPatternIds: string[];
 }
 
 export function createEmployeeSetupService(): EmployeeSetupService {
@@ -171,8 +196,87 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       await recordHistory.purge(tx, "employee");
       await recordHistory.purge(tx, "working_pattern");
       await locationRepository(tx).deleteAll();
+      await termsRepository(tx).resetToDefault();
+    },
+    async setUpTerms(ctx, tx, input) {
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
+      await workingPatternRepository(tx).lockForWrites();
+      const terms = termsRepository(tx);
+      const defaultTermsId = await terms.findDefaultTermsId();
+      // Before any new terms, so "England and Wales" is free when another nation is the default.
+      await terms.rename(defaultTermsId, TERMS_NAMES[input.defaultBankHolidayCalendar]);
+      const setUp: { termsId: string; patternId: string | null }[] = [];
+      for (const { bankHolidayCalendar, workingWeek } of input.terms) {
+        const isDefault = bankHolidayCalendar === input.defaultBankHolidayCalendar;
+        setUp.push(
+          await termsOnWeek(
+            tx,
+            isDefault ? defaultTermsId : null,
+            bankHolidayCalendar,
+            workingWeek,
+          ),
+        );
+      }
+      const termsIds = setUp.map(({ termsId }) => termsId);
+      const termsIdOf = (calendar: BankHolidayCalendar) =>
+        termsIds[input.terms.findIndex((entry) => entry.bankHolidayCalendar === calendar)]!;
+      const locations = locationRepository(tx);
+      await locations.findOrCreate(input.locationTerms.map(({ locationName }) => locationName));
+      await locations.setDefaultTerms(
+        input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
+          locationName,
+          termsId: termsIdOf(bankHolidayCalendar),
+        })),
+      );
+      const members = await terms.findMemberIds(termsIds);
+      return {
+        termsIds,
+        memberIds: termsIds.map((termsId) => members.get(termsId) ?? []),
+        createdPatternIds: setUp.flatMap(({ patternId }) => patternId ?? []),
+      };
     },
   };
+}
+
+/** The terms each nation's people are on, named after it. */
+const TERMS_NAMES: Record<BankHolidayCalendar, string> = {
+  england_and_wales: "England and Wales",
+  scotland: "Scotland",
+  northern_ireland: "Northern Ireland",
+};
+
+/**
+ * A nation's terms on `week`: the default terms, when `defaultTermsId` is given, stay on Standard
+ * for England and Wales on Standard's week; otherwise a new pattern on the nation's bank holidays
+ * becomes the terms' only one.
+ */
+async function termsOnWeek(
+  tx: Tx,
+  defaultTermsId: string | null,
+  calendar: BankHolidayCalendar,
+  week: StandardWorkingWeek,
+): Promise<{ termsId: string; patternId: string | null }> {
+  // England and Wales on Standard's week is what Standard already is.
+  if (defaultTermsId && calendar === "england_and_wales" && week === "monday_to_friday_7_5_hours") {
+    return { termsId: defaultTermsId, patternId: null };
+  }
+  const patterns = workingPatternRepository(tx);
+  const { label, ...days } = STANDARD_WEEKS[week];
+  const patternId = await patterns.insertPattern(`${TERMS_NAMES[calendar]} · ${label}`, {
+    ...days,
+    bankHolidayCalendar: calendar,
+  });
+  const termsId = defaultTermsId ?? (await termsRepository(tx).insert(TERMS_NAMES[calendar]));
+  // Only the default terms has a pattern yet: Standard, which the new one replaces.
+  for (const link of (await patterns.findTermsLinks([termsId])).get(termsId) ?? []) {
+    await patterns.deleteTermsLink(link.id);
+  }
+  await patterns.insertTermsLink(termsId, {
+    workingPatternId: patternId,
+    effectiveFrom: null,
+    effectiveUntil: null,
+  });
+  return { termsId, patternId };
 }
 
 /** Each employee with the id of the location its name matches, adding the locations no one has yet. */

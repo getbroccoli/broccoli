@@ -8,6 +8,29 @@ import es from "./words/es.json" with { type: "json" };
 import fr from "./words/fr.json" with { type: "json" };
 import nl from "./words/nl.json" with { type: "json" };
 
+it("passes values under an unmasked top-level key unchanged", () => {
+  const locations = ["Glasgow", "Leeds", "Belfast"];
+
+  expect(withPlaceholders({ locations }, ["locations"])).toEqual({ locations });
+});
+
+it("still masks other strings and nested keys with the same name", () => {
+  expect(
+    withPlaceholders(
+      {
+        locations: ["Glasgow"],
+        name: "Lena Vogel",
+        employee: { locations: ["Glasgow"], email: "lena@mail.example" },
+      },
+      ["locations"],
+    ),
+  ).toEqual({
+    locations: ["Glasgow"],
+    name: "Xxxx Xxxxx",
+    employee: { locations: ["Xxxxxxx"], email: "person1@company1.example" },
+  });
+});
+
 it("allows no word that is a common name", () => {
   const names = new Set(commonNames);
   const allowedWords = [de, en, es, fr, nl].flatMap(({ booleans, headings, jobTitles }) => [

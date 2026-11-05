@@ -56,7 +56,7 @@ A manual check of opening a person from People, editing them in place, their his
 
 - [ ] A demo person who started before this year shows "Time off · <this year>" between Details and History: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded".
 - [ ] A demo person who started this year shows their pro-rated figures, and entitlement − bank holidays − used equals remaining.
-- [ ] After Reset setup, a person added without turning leave on shows "Time off" with "No time off this year."
+- [ ] After Reset setup, a person added without turning time off on shows "Time off" with "No time off this year."
 - [ ] Invite a person (see [Invites](invites.md)) and sign in as them: their own panel shows the section; a colleague's panel who is not their report shows no Time off section; once they manage that colleague (Manager above), it shows.
 
 ## Remove

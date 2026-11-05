@@ -1,7 +1,7 @@
 import {
   type AllowanceLine,
   employeeServices,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   expect,
   OWNER,
   readAllowances,
@@ -36,7 +36,7 @@ test("ensuring allowances grants leave to a person added after the policy was li
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2025-01-01" });
 
   const result = await transact((tx) =>
@@ -75,7 +75,7 @@ test("a start date change corrects the allowance by appending lines", async ({
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const [before] = await readAllowances(orm, employee.id);
   expect(rowsOf(before!.lines)).toEqual([
     ["entitlement_grant", "yearly_entitlement", 28, "2026-01-01", "policy_linked_to_terms"],
@@ -121,7 +121,7 @@ test("a September switch to Tuesday through Thursday cuts the grant and restores
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const [before] = await readAllowances(orm, employee.id);
   const patterns = workingPatternService(orm);
   const pattern = await patterns.createPattern(OWNER, {
@@ -181,7 +181,7 @@ test("a Scottish working pattern charges Scotland's ten weekday bank holidays", 
     effectiveFrom: "2026-01-01",
   });
 
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
 
   const allowances = await readAllowances(orm, employee.id);
   expect(allowances).toMatchObject([{ total: 18 }]);
@@ -206,7 +206,7 @@ test("ensuring the same allowance twice appends nothing the second time", async 
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2025-01-01" });
   await transact((tx) =>
     service.ensureAllowances(SYSTEM, tx, {
@@ -233,7 +233,7 @@ test("concurrent runs create one allowance and append its lines only once", asyn
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2025-01-01" });
 
   const results = await Promise.all([
@@ -271,7 +271,7 @@ test("a future starter gets an allowance for the leave year they join", async ({
   transact,
 }) => {
   const service = timeOffService(orm);
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employee = await seed.employee({ startDate: "2027-02-01" });
 
   await transact((tx) =>

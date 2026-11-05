@@ -6,6 +6,7 @@ import {
   createSetupStepService,
   type SetupFinish,
   type SetupInvite,
+  type SetupTermsInput,
 } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
@@ -35,6 +36,13 @@ export interface AddedPeople extends ImportedEmployees {
 /** Invites the people the owner chose as setup finishes; the employees module provides it. */
 export type SetupInvites = Pick<EmployeeInviteService, "sendAtSetup">;
 
+/** Turns time off on as setup finishes, joining its transaction; the time off module provides it. */
+export type TurnOnTimeOff = (
+  ctx: SecurityContext,
+  tx: Tx,
+  input: SetupTermsInput,
+) => Promise<unknown>;
+
 /** The owner's approval of the reviewed import, the people it adds, and reopening the review. */
 export interface ImportApprovalService {
   /**
@@ -62,9 +70,11 @@ export function createImportApprovalService({
   transact,
   logger,
   invites,
+  turnOnTimeOff,
   deleteAllEmployees,
 }: Pick<ModuleDependencies, "transact" | "logger"> & {
   invites: SetupInvites;
+  turnOnTimeOff: TurnOnTimeOff;
   /** Deletes every employee and what goes with them, such as the terms' time off policies. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): ImportApprovalService {
@@ -86,7 +96,7 @@ export function createImportApprovalService({
         }
         // A self-hosted instance whose owner has an account has no last step to add them at.
         if ((await instances.readInstance(tx)).step === "done") {
-          await addApprovedPeople(invites, ctx, tx);
+          await addApprovedPeople({ invites, turnOnTimeOff }, ctx, tx);
         }
         return true;
       });
@@ -94,7 +104,8 @@ export function createImportApprovalService({
         logger.info("Approved the import");
       }
     },
-    addApprovedPeople: (ctx, tx, finish) => addApprovedPeople(invites, ctx, tx, finish),
+    addApprovedPeople: (ctx, tx, finish) =>
+      addApprovedPeople({ invites, turnOnTimeOff }, ctx, tx, finish),
     reportAddedPeople({ selected, ownerEmployeeId, invitedEmployeeIds, ...counts }) {
       logger.info(counts, "Added the approved people");
       for (const employee of selected) {
@@ -127,10 +138,11 @@ export function createImportApprovalService({
 
 /**
  * Adds the approved people joining `tx`; with `finish`, links the owner's user to the person they
- * said they are and invites the people they chose, returning those invites.
+ * said they are, turns time off on as they chose and invites the people they chose, returning those
+ * invites.
  */
 async function addApprovedPeople(
-  invites: SetupInvites,
+  { invites, turnOnTimeOff }: { invites: SetupInvites; turnOnTimeOff: TurnOnTimeOff },
   ctx: SecurityContext,
   tx: Tx,
   finish?: SetupFinish,
@@ -140,22 +152,23 @@ async function addApprovedPeople(
   const review = await readImportReview(ctx, tx);
   const { readyEmployees, managers } = review;
   const ownerKey = finish?.ownerEmployeeKey ?? null;
+  if (finish?.timeOff) {
+    // Locations already have their terms when the new people join them.
+    await turnOnTimeOff(ctx, tx, finish.timeOff);
+  }
   const { idsByEmail, ...counts } = await createApprovedEmployees(ctx, tx, review, finish);
   const idOf = (employee: { values: { email: { value: string | null } } }) =>
     idsByEmail.get(employee.values.email.value?.toLowerCase() ?? "");
   const owner = readyEmployees.find(({ key }) => key === ownerKey);
+  const invitees = finish
+    ? setupInvitees(readyEmployees, managers, finish.inviteAudience, ownerKey, finish.ownerEmail)
+    : [];
   const sent = finish
     ? await invites.sendAtSetup(
         ctx,
         tx,
         {
-          employeeIds: setupInvitees(
-            readyEmployees,
-            managers,
-            finish.inviteAudience,
-            ownerKey,
-            finish.ownerEmail,
-          ).flatMap((employee) => idOf(employee) ?? []),
+          employeeIds: invitees.flatMap((employee) => idOf(employee) ?? []),
           note: finish.inviteNote,
           invitedByUserId: finish.ownerUserId,
         },

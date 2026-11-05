@@ -6,6 +6,7 @@ export {
   type CalculatedAllowanceLine,
   type DatedPolicy,
   type DatedWorkingWeek,
+  yearlyDays,
 } from "./allowanceCalculator";
 export { ledgerDifference, type LedgerSum, type NewLedgerLine } from "./ledgerDifference";
 export {

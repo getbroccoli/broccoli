@@ -1,0 +1,30 @@
+query TimeOffStep {
+  timeOffSetup {
+    annualLeavePolicies {
+      id
+      name
+      daysForFiveDayWeek
+      bankHolidaysOnTop
+    }
+    bankHolidayCalendars {
+      calendar
+      countThisYear
+    }
+  }
+  import {
+    id
+    readyEmployeeCount
+    readyLocations {
+      name
+      peopleCount
+    }
+  }
+}
+
+query LocationCalendarSuggestions($locationNames: [String!]!) {
+  locationCalendarSuggestions(locationNames: $locationNames) {
+    locationName
+    bankHolidayCalendar
+    unsure
+  }
+}

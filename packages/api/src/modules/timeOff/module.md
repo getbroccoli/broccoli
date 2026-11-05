@@ -1,6 +1,6 @@
 # Time off
 
-Time off lets a UK company run its leave from one choice. A fresh workspace has Annual leave, Sickness, Family leave and Other, the three standard leave policies for Annual leave and one record-only policy for each other type, but links no policy to any terms: nobody has a time off type until an admin, or the demo, links policies to "England and Wales". A company can then add its own types, policies, terms with different rules and one person's own policy without new code.
+Time off lets a UK company run its leave from one choice. A fresh workspace has Annual leave, Sickness, Family leave and Other, the three standard leave policies for Annual leave and one record-only policy for each other type, but links no policy to any terms: time off is off, and nobody has a time off type until the owner turns time off on in setup, or the demo does. A company can then add its own types, policies, terms with different rules and one person's own policy without new code.
 
 Hours, accrual, carry-over and other countries arrive later as new columns, values or tables, without rewriting stored rows.
 
@@ -11,10 +11,16 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 - Changes over time are dated rows (who is on which terms, policy assignments, employments, working patterns), never edits of the past.
 - Time off reads employments, terms, working patterns and bank holidays through other modules' public operations, never their tables. Whose bank holidays apply comes with each working week; the dates come from the bank holidays module's `BankHolidayService`.
 
+## Turning time off on
+
+`TimeOffService.turnOnTimeOff` is how time off goes on, in the caller's transaction: as setup finishes (before the approved people are added and invited), and in the demo fill. It takes one entry per nation's terms (bank holiday calendar, standard working week, one of the standard Annual leave policies), which nation's terms each location gets, and the default terms' nation (England and Wales unless sent; its entry is required). The Set up time off page sends the same week and policy for every nation. It refuses with CONFLICT ("Time off is already on.") once any terms have a policy, sets the terms up through the employees module (see [terms](../employees/module.md#terms)), links each its Annual leave policy and the three record-only policies, and ensures any existing members' allowances. The imported people join their locations' terms directly; `employees.added` ensures their allowances after commit. `timeOff.time_off_turned_on` logs the outcome after commit. "Skip, turn on later" calls nothing.
+
+`TimeOffSetupService` serves the Set up time off page: the standard Annual leave policies, each nation's bank holidays this year, and a suggestion of whose bank holidays apply per location. The suggestion is one decisions request with the location names only, unmasked (`unmaskedKeys`), at most 100; an unsure or unclear answer, or no answer at all (an external agent, no key, a failed request), is England and Wales, marked for the owner to check.
+
 ## Data model
 
 - **`time_off_types`:** a kind of time off: Annual leave, Sickness, Family leave, Other, or the company's own. `type_key` marks the four seeded types, so rules never depend on a name.
-- **`terms`** and **`employee_terms`** (employees module): named sets of people, such as "England and Wales" or "UK office", and who is on which terms from when to when. Every new person starts on "England and Wales"; see the [employees module](../employees/module.md#terms).
+- **`terms`** and **`employee_terms`** (employees module): named sets of people, such as "England and Wales" or "UK office", and who is on which terms from when to when. A new person starts on their location's default terms, else on the default terms ("England and Wales" unless setup gave them another nation); see the [employees module](../employees/module.md#terms).
 - **`time_off_policies`:** the rules for one type. This is where `balance` (`balance_from_allowance`, `unlimited_balance`, `no_balance`), bank holidays (included in the allowance or on top) and the leave year start (a fixed date or the employee's start date) are set. A policy is the terms' default for that type through `terms_time_off_policies`, or used only through assignments.
 - **`time_off_allowance_rules`:** the parts that add up to a policy's allowance:
   - `yearly_entitlement`: days for a working week, as contracts state them (28 for 5), with an optional `max_days`;
@@ -50,7 +56,7 @@ What runs the engine; none writes lines itself, and while no policy is linked ea
 - linking policies to terms, for their people, in the same transaction;
 - `employees.added` (one person, import approval or the demo), `employees.start_date_changed` and `employees.working_pattern_changed`: after commit, time off runs the engine for the event's people in its own transaction as the system. Handlers are awaited, but a failure does not undo the employee change. Events can be lost in a crash; the daily job repairs that.
 - the daily job `timeOff.ensureAllowances`, at 00:10 London time, for every employee as the system, 100 per transaction: it starts the new leave year (cause `leave_year_started` on 1 January, else `daily_check`), repairs lost events and picks up changed bank holidays. A failed batch is logged and left to the next run.
-- The demo fill links "England and Wales" to `uk_statutory_minimum` and the three record-only policies after adding the demo people.
+- The demo fill turns time off on after adding the demo people: the default terms on Standard's week and `uk_statutory_minimum`, with the three record-only policies.
 
 Full-timer in England and Wales employed all of 2026 on the statutory minimum: grant 28, bank holidays −8, remaining 20. On 25 days plus bank holidays: 25 + 8 − 8 = 25.
 
@@ -63,7 +69,7 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - `balance_from_allowance`: the allowance whose leave year holds the date, summed by line kind over the whole year. Entitlement is the grants, rounding and manual adjustments; bank holidays are those taken; used is the days booked; remaining is entitlement − bank holidays − used. Each is rounded to two decimals and remaining is worked out from the rounded figures, so a row adds up.
 - `unlimited_balance`: only the days booked on its allowance.
 - `no_balance`: no leave year exists, so the calendar year; the days of approved or pending time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
-- No allowance for the year (the person left before it) or no policy at all (leave is off) gives no row; while leave is off the list is empty for everyone.
+- No allowance for the year (the person left before it) or no policy at all (time off is off) gives no row; while time off is off the list is empty for everyone.
 
 ## Which policy applies
 

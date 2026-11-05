@@ -11,23 +11,47 @@ import {
   setupSteps,
   demoFillService,
   timeOffService,
+  readTimeOffTerms,
+  scotlandTimeOffSetup,
+  workingPatternService,
 } from "#test/support";
 
 import { parseCalendarDate } from "../../../utils";
 
-test("exiting the demo removes the terms' time off policies", async ({ orm, seed, transact }) => {
+test("exiting the demo restores only the default terms on Standard with time off turned off", async ({
+  orm,
+  seed,
+  transact,
+}) => {
   await seed.assignment();
   const owner = await seed.owner();
   await companyService(orm).update(owner, { name: "Acme Corp" });
   await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   expect(await service.readTermsPolicies(owner, { termsId })).toHaveLength(4);
+  const standard = (await workingPatternService(orm).listPatterns(owner)).find(
+    ({ isStandard }) => isStandard,
+  )!;
+  await transact((tx) => service.deleteAllTermsPolicies(owner, tx));
+  const input = await scotlandTimeOffSetup(orm);
+  input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
+  await transact((tx) => service.turnOnTimeOff(owner, tx, input));
+  expect(await readTimeOffTerms(orm)).toHaveLength(2);
+  expect(await workingPatternService(orm).listPatterns(owner)).toHaveLength(3);
 
   await demoService(orm).exitDemo(owner);
 
   expect(await service.readTermsPolicies(owner, { termsId })).toEqual([]);
+  expect(await readTimeOffTerms(orm)).toMatchObject([
+    {
+      id: termsId,
+      key: "default_terms",
+      patterns: [{ workingPatternId: standard.id, effectiveFrom: null, effectiveUntil: null }],
+    },
+  ]);
+  expect(await workingPatternService(orm).listPatterns(owner)).toEqual([standard]);
 });
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({

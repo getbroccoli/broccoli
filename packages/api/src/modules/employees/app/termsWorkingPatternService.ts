@@ -118,7 +118,7 @@ async function changeTermsPatterns(
     await repository.lockForWrites();
     const id = await existingTerms(tx, termsId);
     await change(tx, id, (await repository.findTermsLinks([id])).get(id) ?? []);
-    const members = await termsRepository(tx).findMemberIds(id);
+    const members = (await termsRepository(tx).findMemberIds([id])).get(id) ?? [];
     publishWorkingPatternChange(tx, members, changedFrom);
     return id;
   });

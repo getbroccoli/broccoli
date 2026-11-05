@@ -133,7 +133,7 @@ test("an employee cannot read or manage workspace patterns", async ({ orm }) => 
 test("an employee cannot change the pattern of terms", async ({ orm, seed }) => {
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
 
   await expect(
     patterns.setTermsPattern(EMPLOYEE, {

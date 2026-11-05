@@ -21,6 +21,8 @@ export interface TimeOffPolicyRepository {
     termsId: string,
     policies: readonly { timeOffTypeId: string; timeOffPolicyId: string }[],
   ): Promise<void>;
+  /** Whether any terms have a time off policy: whether time off is on. */
+  hasAnyTermsLinks(): Promise<boolean>;
   deleteAllTermsLinks(): Promise<void>;
   /** Each employee's own policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, DatedPolicyRow[]>>;
@@ -74,6 +76,14 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       await orm()
         .insert(termsTimeOffPolicies)
         .values(policies.map((policy) => ({ termsId, ...policy })));
+    },
+
+    async hasAnyTermsLinks() {
+      const [link] = await orm()
+        .select({ id: termsTimeOffPolicies.id })
+        .from(termsTimeOffPolicies)
+        .limit(1);
+      return link !== undefined;
     },
 
     async deleteAllTermsLinks() {

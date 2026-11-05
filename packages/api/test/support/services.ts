@@ -43,7 +43,7 @@ import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
 import { TEST_SECRET_BOX } from "./testSecretBox";
-import { demoFillService, transactWithTimeOffEvents } from "./timeOffService";
+import { demoFillService, timeOffService, transactWithTimeOffEvents } from "./timeOffService";
 import { testTransactor } from "./testTransactor";
 import { deleteAllEmployees } from "./timeOffService";
 
@@ -240,6 +240,7 @@ export function importServices(
     originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
     invites,
+    turnOnTimeOff: timeOffService(orm).turnOnTimeOff,
     deleteAllEmployees: deleteAllEmployees(orm),
     jobs: jobs ?? {
       send: (_tx, name, payload) => {

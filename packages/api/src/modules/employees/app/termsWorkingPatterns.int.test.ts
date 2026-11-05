@@ -62,7 +62,7 @@ test("a dated terms switch changes only their people without their own assignmen
 
 test("correcting a terms link keeps the later link and its boundary", async ({ orm, seed }) => {
   const employee = await seed.employee();
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const patterns = workingPatternService(orm);
   const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
   const monday = await patterns.createPattern(OWNER, {
@@ -127,7 +127,7 @@ test("ending a terms pattern leaves their people without a pattern from the next
   const patterns = workingPatternService(orm);
 
   await patterns.endTermsPattern(OWNER, {
-    termsId: await seed.englandAndWalesTermsId(),
+    termsId: await seed.defaultTermsId(),
     effectiveUntil: "2026-09-30",
   });
 
@@ -155,7 +155,7 @@ test("removing a dated terms link leaves a gap without reopening the earlier lin
   seed,
 }) => {
   const employee = await seed.employee();
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const patterns = workingPatternService(orm);
   const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
@@ -196,7 +196,7 @@ test("a terms link requires an existing pattern and terms", async ({ orm, seed }
 
   await expect(
     patterns.setTermsPattern(OWNER, {
-      termsId: await seed.englandAndWalesTermsId(),
+      termsId: await seed.defaultTermsId(),
       workingPatternId: missingId,
       effectiveFrom: "2026-09-01",
     }),

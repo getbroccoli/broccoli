@@ -30,7 +30,7 @@ export {
   createLocationService,
   employeeDirectory,
 } from "./app";
-export { employeeFieldErrors, parseEmployeeField } from "./domain";
+export { employeeFieldErrors, parseEmployeeField, parseTermsSetup } from "./domain";
 
 // Public types.
 export type {

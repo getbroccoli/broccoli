@@ -5,8 +5,11 @@ import { createEventBus } from "../../src/core/events";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
-import { createEmployeeReadService } from "../../src/modules/employees";
-import { createTimeOffService, timeOffModule } from "../../src/modules/timeOff";
+import {
+  createTimeOffSetupService,
+  createTimeOffService,
+  timeOffModule,
+} from "../../src/modules/timeOff";
 import {
   allowanceLedgerLines,
   allowances,
@@ -32,13 +35,13 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
 }
 
 /** Links the UK statutory minimum to "England and Wales" terms, as an admin would. */
-export async function linkStatutoryMinimumToEnglandAndWales(
+export async function linkStatutoryMinimumToDefaultTerms(
   orm: Orm,
   seed: TestSeed,
   transact: Transact,
 ) {
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     ({ key }) => key === "uk_statutory_minimum",
   )!;
@@ -49,11 +52,7 @@ export async function linkStatutoryMinimumToEnglandAndWales(
 
 /** The demo fill on `orm`, linking "England and Wales" terms to the demo's time off policies. */
 export function demoFillService(orm: Orm) {
-  const dependencies = { orm, transact: testTransactor(orm), logger: createLogger("silent") };
-  return createDemoFillService({
-    timeOff: timeOffService(orm),
-    employeeReads: createEmployeeReadService(dependencies),
-  });
+  return createDemoFillService({ timeOff: timeOffService(orm) });
 }
 
 /** Transactions on `orm` whose committed events reach time off's handlers, and no one else's. */
@@ -63,6 +62,12 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
     timeOffModule({
       orm,
       timeOff: timeOffService(orm),
+      timeOffSetup: createTimeOffSetupService({
+        orm,
+        logger: createLogger("silent"),
+        decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },
+        bankHolidays: bankHolidayService(),
+      }),
       transact: testTransactor(orm),
       logger: createLogger("silent"),
     }).events!,

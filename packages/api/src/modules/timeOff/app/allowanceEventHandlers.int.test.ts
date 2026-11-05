@@ -5,7 +5,7 @@ import {
   employeeServices,
   employeeSetup,
   expect,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   OWNER,
   readAllowances,
   test,
@@ -23,7 +23,7 @@ test("an imported batch gets allowances and replaying its event appends no dupli
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const dispatching = transactWithTimeOffEvents(orm);
 
   const { idsByEmail } = await dispatching((tx) =>
@@ -77,7 +77,7 @@ test("adding a person grants Annual leave before returning when England and Wale
   transact,
 }) => {
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
@@ -114,7 +114,7 @@ test(
     const employee = await seed.employee({ startDate: "2025-01-01" });
     const startDate = parseCalendarDate("2026-10-12")!;
     const service = timeOffService(orm);
-    const termsId = await seed.englandAndWalesTermsId();
+    const termsId = await seed.defaultTermsId();
     const policy = (await service.listPolicies(OWNER, orm)).find(
       (p) => p.key === "uk_statutory_minimum",
     )!;
@@ -177,7 +177,7 @@ test("moving a start date to October appends corrections and keeps the earlier a
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;
@@ -209,7 +209,7 @@ test("a September working pattern change reduces the grant and restores December
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
+  const termsId = await seed.defaultTermsId();
   const policy = (await service.listPolicies(OWNER, orm)).find(
     (p) => p.key === "uk_statutory_minimum",
   )!;

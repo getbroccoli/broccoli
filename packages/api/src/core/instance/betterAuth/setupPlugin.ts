@@ -50,6 +50,22 @@ const setupBody = credentialsBody.extend({
   ownerEmployeeKey: z.string().nullish(),
   inviteAudience: z.enum(SETUP_INVITE_AUDIENCES).optional(),
   inviteNote: z.string().nullish(),
+  // Shapes only: turning time off on checks the values.
+  timeOff: z
+    .object({
+      terms: z.array(
+        z.object({
+          bankHolidayCalendar: z.string(),
+          workingWeek: z.string(),
+          annualLeavePolicyId: z.string(),
+        }),
+      ),
+      locationTerms: z.array(
+        z.object({ locationName: z.string(), bankHolidayCalendar: z.string() }),
+      ),
+      defaultBankHolidayCalendar: z.string().optional(),
+    })
+    .nullish(),
 });
 
 const NOT_AT_IMPORT_STEP = {
@@ -111,6 +127,7 @@ export function setupPlugin(
                 ownerEmployeeKey: ctx.body.ownerEmployeeKey ?? null,
                 inviteAudience: ctx.body.inviteAudience ?? "only_admins",
                 inviteNote: ctx.body.inviteNote ?? null,
+                timeOff: ctx.body.timeOff ?? null,
                 linkOrigin: new URL(publicUrl ?? ctx.request?.url ?? ctx.context.baseURL).origin,
               },
             }),

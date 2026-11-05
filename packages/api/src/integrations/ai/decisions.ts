@@ -20,20 +20,28 @@ export interface Answer {
 /** Per question, the answer, or null when its confidence is under the caller's minimum. */
 export type Answers<Q extends Record<string, Question>> = { [Id in keyof Q]: Answer | null };
 
+/** How one request is asked. */
+export interface DecideOptions {
+  /** Under this an answer is null; default `DEFAULT_MIN_CONFIDENCE`. */
+  minConfidence?: number;
+  /**
+   * Top-level keys of `state` whose values leave as they are, for values that identify no one,
+   * such as place names; everything else is masked.
+   */
+  unmaskedKeys?: readonly string[];
+}
+
 /**
  * Asks the model multiple-choice questions; the only way a request reaches it. Every
- * string in `state` leaves as a placeholder unless it cannot identify anyone; keys,
- * `instructions` and `options` are sent as they are and must never carry data.
+ * string in `state` leaves as a placeholder unless it cannot identify anyone or its key is
+ * unmasked; keys, `instructions` and `options` are sent as they are and must never carry data.
  */
 export interface Decisions {
-  /**
-   * Asks every question about `state` in one request; an answer under `minConfidence`
-   * (default `DEFAULT_MIN_CONFIDENCE`) is null. Rejects with `DecisionsError`.
-   */
+  /** Asks every question about `state` in one request. Rejects with `DecisionsError`. */
   decide<Q extends Record<string, Question>>(
     state: JsonObject,
     questions: Q,
-    minConfidence?: number,
+    options?: DecideOptions,
   ): Promise<Answers<Q>>;
 }
 
@@ -81,7 +89,7 @@ export function createDecisions({
     decide: async <Q extends Record<string, Question>>(
       state: JsonObject,
       questions: Q,
-      minConfidence = DEFAULT_MIN_CONFIDENCE,
+      { minConfidence = DEFAULT_MIN_CONFIDENCE, unmaskedKeys = [] }: DecideOptions = {},
     ): Promise<Answers<Q>> => {
       const response = await postJson(
         endpoint,
@@ -90,7 +98,7 @@ export function createDecisions({
         {
           model: DECISIONS_MODEL,
           provider: NO_RETENTION,
-          state: withPlaceholders(state),
+          state: withPlaceholders(state, unmaskedKeys),
           questions: Object.fromEntries(
             Object.entries(questions).map(([id, { instructions, options }]) => [
               id,

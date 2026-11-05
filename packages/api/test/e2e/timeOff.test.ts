@@ -9,7 +9,7 @@ test("returns an owner's employee time off figures through GraphQL", async ({ en
   const database = connectDatabase(env.db.url, createLogger("silent"));
   try {
     const service = timeOffService(database.orm, { today: new Date().toISOString().slice(0, 10) });
-    const termsId = await env.seed.englandAndWalesTermsId();
+    const termsId = await env.seed.defaultTermsId();
     const policy = (await service.listPolicies(OWNER, database.orm)).find(
       ({ key }) => key === "uk_statutory_minimum",
     )!;

@@ -28,6 +28,8 @@ export interface LocationRepository {
    * location has yet with the first spelling given.
    */
   findOrCreate(names: readonly string[]): Promise<Map<string, Location>>;
+  /** Gives each location named, ignoring case and surrounding spaces, its default terms. */
+  setDefaultTerms(entries: readonly { locationName: string; termsId: string }[]): Promise<void>;
   deleteAll(): Promise<void>;
 }
 
@@ -45,13 +47,13 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
 
     findByIds: (ids) =>
       orm()
-        .select()
+        .select(LOCATION)
         .from(locations)
         .where(sql`${locations.id} = any(${sql.param([...ids])}::uuid[])`),
 
     findAndHold: async (id) => {
       const [location] = await orm()
-        .select()
+        .select(LOCATION)
         .from(locations)
         .where(eq(locations.id, id))
         .for("share");
@@ -60,7 +62,7 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
 
     insert: async (name) => {
       try {
-        const [location] = await orm().insert(locations).values({ name }).returning();
+        const [location] = await orm().insert(locations).values({ name }).returning(LOCATION);
         return location!;
       } catch (error) {
         throw nameTakenOr(error);
@@ -73,7 +75,7 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
           .update(locations)
           .set({ name })
           .where(eq(locations.id, id))
-          .returning();
+          .returning(LOCATION);
         return location ?? null;
       } catch (error) {
         throw nameTakenOr(error);
@@ -82,7 +84,7 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
 
     lockWithPeopleCount: async (id) => {
       const [location] = await orm()
-        .select()
+        .select(LOCATION)
         .from(locations)
         .where(eq(locations.id, id))
         .for("update");
@@ -120,11 +122,28 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
       return new Map(rows.map(({ given, id, name }) => [given, { id, name }]));
     },
 
+    setDefaultTerms: async (entries) => {
+      if (entries.length === 0) {
+        return;
+      }
+      await orm().execute(sql`
+        update ${locations} set default_terms_id = chosen.terms_id
+        from unnest(
+          ${sql.param(entries.map(({ locationName }) => locationName))}::text[],
+          ${sql.param(entries.map(({ termsId }) => termsId))}::uuid[]
+        ) as chosen (name, terms_id)
+        where lower(btrim(${locations.name})) = lower(btrim(chosen.name))
+      `);
+    },
+
     deleteAll: async () => {
       await orm().delete(locations);
     },
   };
 }
+
+/** A location's own columns; its default terms are read only when people join. */
+const LOCATION = { id: locations.id, name: locations.name };
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */
 const INSERT_BATCH_SIZE = 1_000;

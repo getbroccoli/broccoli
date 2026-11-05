@@ -29,7 +29,7 @@ export function createBankHolidayService({
       if (!ctx.user) {
         ctx.requireSystem();
       }
-      const calendars = input.calendars.map(parseBankHolidayCalendar);
+      const calendars = input.calendars.map((calendar) => parseBankHolidayCalendar(calendar));
       const from = parsePeriodDate("from", input.from);
       const until = parsePeriodDate("until", input.until);
       return await bankHolidaySource.getCalendars(calendars, from, until);

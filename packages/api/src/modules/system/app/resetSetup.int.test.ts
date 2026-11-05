@@ -15,12 +15,15 @@ import {
   owners,
   OWNER,
   timeOffService,
+  readTimeOffTerms,
+  scotlandTimeOffSetup,
+  workingPatternService,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
 import { NO_SETUP_INVITES } from "../../../core/instance";
 
-test("resetting a finished setup removes the terms' time off policies", async ({
+test("resetting setup restores only the default terms on Standard with time off turned off", async ({
   orm,
   seed,
   transact,
@@ -29,17 +32,31 @@ test("resetting a finished setup removes the terms' time off policies", async ({
   await seed.setupStep("done");
   await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.englandAndWalesTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
+  const termsId = await seed.defaultTermsId();
+  const standard = (await workingPatternService(orm).listPatterns(OWNER)).find(
+    ({ isStandard }) => isStandard,
   )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
-  expect(await service.readTermsPolicies(OWNER, { termsId })).toEqual([policy]);
+  const input = await scotlandTimeOffSetup(orm);
+  input.defaultBankHolidayCalendar = "scotland";
+  input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
+  await transact((tx) => service.turnOnTimeOff(OWNER, tx, input));
+  expect(await readTimeOffTerms(orm)).toMatchObject([
+    { name: "England and Wales" },
+    { id: termsId, name: "Scotland" },
+  ]);
+  expect(await workingPatternService(orm).listPatterns(OWNER)).toHaveLength(3);
 
   await systemService(orm).resetSetup(owner);
 
+  expect(await readTimeOffTerms(orm)).toMatchObject([
+    {
+      id: termsId,
+      key: "default_terms",
+      name: "England and Wales",
+      patterns: [{ workingPatternId: standard.id, effectiveFrom: null, effectiveUntil: null }],
+    },
+  ]);
+  expect(await workingPatternService(orm).listPatterns(OWNER)).toEqual([standard]);
   expect(await service.readTermsPolicies(OWNER, { termsId })).toEqual([]);
 });
 

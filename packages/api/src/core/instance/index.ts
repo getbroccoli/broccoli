@@ -45,4 +45,5 @@ export type {
   SetupFinish,
   SetupInvite,
   SetupInviteAudience,
+  SetupTermsInput,
 } from "./domain";

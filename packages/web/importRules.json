@@ -79,6 +79,7 @@
       "src/__generated__",
       "src/apollo",
       "src/components/dataTable",
+      "src/components/form",
       "src/components/ui",
       "src/features/demo",
       "src/features/employees",

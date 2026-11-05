@@ -103,7 +103,7 @@ export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
 export {
   type AllowanceLine,
   demoFillService,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   readAllowances,
   timeOffService,
   transactWithTimeOffEvents,
@@ -117,3 +117,11 @@ export {
   seedTimeOffPolicy,
 } from "./seedTimeOff";
 export { testTransactor } from "./testTransactor";
+export {
+  timeOffSetupService,
+  scotlandTimeOffSetup,
+  readTimeOffTerms,
+  readOwnPatternAssignments,
+} from "./timeOffSetup";
+
+export { DecisionsError, type Answers, type Decisions } from "../../src/integrations/ai";

@@ -8,9 +8,13 @@ import nl from "./words/nl.json" with { type: "json" };
 /**
  * A copy of `state` where every string that could identify someone is replaced by a
  * placeholder of the same form; keys and structure stay. Deny by default: a string
- * passes as itself only when it is blank or a boolean; inside one, heading and job words stay.
+ * passes as itself only when it is blank or a boolean, or under one of `unmaskedKeys` at the
+ * top of `state`; inside one, heading and job words stay.
  */
-export function withPlaceholders(state: JsonObject): JsonObject {
+export function withPlaceholders(
+  state: JsonObject,
+  unmaskedKeys: readonly string[] = [],
+): JsonObject {
   const emailNumbers = new Map<string, number>();
   const domainNumbers = new Map<string, number>();
   const rewrite = (value: string): string => {
@@ -25,7 +29,12 @@ export function withPlaceholders(state: JsonObject): JsonObject {
       )
       .join("");
   };
-  return mapStrings(state, rewrite) as JsonObject;
+  return Object.fromEntries(
+    Object.entries(state).map(([key, value]) => [
+      key,
+      unmaskedKeys.includes(key) ? value : mapStrings(value, rewrite),
+    ]),
+  );
 }
 
 /**

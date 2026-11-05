@@ -11,7 +11,6 @@ import { companyModule, createCompany } from "./company";
 import { createDemoFillService, demoModule } from "./demo";
 import {
   createEmployeeInviteService,
-  createEmployeeReadService,
   createEmployeeSetupService,
   employeeDirectory,
   employeesModule,
@@ -20,7 +19,7 @@ import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
-import { createTimeOffService, timeOffModule } from "./timeOff";
+import { createTimeOffSetupService, createTimeOffService, timeOffModule } from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -48,10 +47,10 @@ export function createModules(
   const mailSettings = createMailSettingsService({ ...core, deployment, resendApiUrl });
   const passwordResetEmail = createPasswordResetEmailService({ ...core, mailSettings });
   const company = createCompany({ ...core, brandLookupUrl });
-  const timeOff = createTimeOffService({
-    ...core,
-    bankHolidays: createBankHolidayService({ bankHolidaySource: createStaticBankHolidaySource() }),
+  const bankHolidays = createBankHolidayService({
+    bankHolidaySource: createStaticBankHolidaySource(),
   });
+  const timeOff = createTimeOffService({ ...core, bankHolidays });
   // Every path that clears the people unlinks the terms' time off policies too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // Links first: linking holds their lock while its allowances wait on employee rows.
@@ -70,11 +69,9 @@ export function createModules(
     slack: slackConnection,
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
-    prepareDemoFill: createDemoFillService({
-      timeOff,
-      employeeReads: createEmployeeReadService(core),
-    }).prepareDemoFill,
+    prepareDemoFill: createDemoFillService({ timeOff }).prepareDemoFill,
     invites,
+    turnOnTimeOff: timeOff.turnOnTimeOff,
     deleteAllEmployees,
   });
   const manifests = [
@@ -94,7 +91,15 @@ export function createModules(
     slackModule(slackConnection),
     importsModule(importServices),
     externalAgentsModule({ ...core, mode: deployment.mode, imports: importServices }),
-    timeOffModule({ ...core, timeOff }),
+    timeOffModule({
+      ...core,
+      timeOff,
+      timeOffSetup: createTimeOffSetupService({
+        ...core,
+        decisions: aiSettings.decisions,
+        bankHolidays,
+      }),
+    }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core.orm, manifests)],

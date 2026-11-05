@@ -3,7 +3,7 @@ import {
   allowanceSnapshot,
   employeeServices,
   expect,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   OWNER,
   readAllowances,
   test,
@@ -15,7 +15,7 @@ test("restoring a January start after a December correction restores every dated
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2026-01-01" });
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const [before] = await allowanceSnapshot(orm, employee.id);
   const employees = employeeServices(orm);
 
@@ -40,7 +40,7 @@ test("a second start correction takes effect from the previous start rather than
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2026-01-01" });
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employees = employeeServices(orm);
   await employees.updateEmployee(OWNER, { id: employee.id, startDate: "2026-07-01" });
   const [before] = await readAllowances(orm, employee.id);
@@ -63,7 +63,7 @@ test("moving a start into another year keeps corrections within their retained a
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2026-07-01" });
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const employees = employeeServices(orm);
 
   await employees.updateEmployee(OWNER, { id: employee.id, startDate: "2027-02-01" });

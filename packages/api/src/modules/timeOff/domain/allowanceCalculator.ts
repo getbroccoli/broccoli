@@ -106,6 +106,15 @@ export function calculateAllowance(inputs: AllowanceInputs): CalculatedAllowance
   return rounding === null ? target : [...target, { ...rounding, firstDate: parts[0]!.from }];
 }
 
+/** A full year's entitlement for `daysPerWeek` working days, pro-rated and capped. */
+export function yearlyDays(
+  rule: Extract<AllowanceRule, { kind: "yearly_entitlement" }>,
+  daysPerWeek: Big,
+): Big {
+  const days = daysPerWeek.times(rule.entitlementDays).div(rule.entitlementDaysPerWeek);
+  return rule.maxDays === null || days.lte(rule.maxDays) ? days : Big(rule.maxDays);
+}
+
 /** A stretch of the leave year in which nothing the target depends on changes. */
 interface Part {
   from: CalendarDate;
@@ -191,9 +200,7 @@ function addPart(lines: Lines, inputs: AllowanceInputs, part: Part): void {
   const step = serviceStepOn(part.policy, inputs.serviceStart, part.from);
   for (const rule of part.policy.rules) {
     if (rule.kind === "yearly_entitlement") {
-      const days = daysPerWeek.times(rule.entitlementDays).div(rule.entitlementDaysPerWeek);
-      const capped = rule.maxDays === null || days.lte(rule.maxDays) ? days : Big(rule.maxDays);
-      addAmount(lines, grantOf(rule.id), part, capped.times(share));
+      addAmount(lines, grantOf(rule.id), part, yearlyDays(rule, daysPerWeek).times(share));
     } else if (rule === step) {
       addAmount(
         lines,

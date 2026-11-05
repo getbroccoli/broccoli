@@ -103,6 +103,7 @@ export function createResolvers(
             ownerEmployeeKey: input?.ownerEmployeeKey ?? null,
             inviteAudience: SETUP_INVITE_AUDIENCE_INPUTS[input?.inviteAudience ?? "ONLY_ADMINS"],
             inviteNote: input?.inviteNote ?? null,
+            timeOff: input?.timeOff ? setupTermsInput(input.timeOff) : null,
             linkOrigin: await context.publicOrigin(),
           });
           return { setup: await readSetup(actor), invites };
@@ -175,4 +176,24 @@ function toGraphql(ai: AiConfig | null) {
 
 function toMailGraphql(mail: MailConfig | null) {
   return mail && { id: "mail", ...mail, source: MAIL_SOURCES[mail.source] };
+}
+
+/** The time off choice as turning time off on takes it: enum values are its values in capitals. */
+function setupTermsInput({
+  terms,
+  locationTerms,
+  defaultBankHolidayCalendar,
+}: ResolversTypes["TurnOnTimeOffInput"]) {
+  return {
+    terms: terms.map(({ bankHolidayCalendar, workingWeek, annualLeavePolicyId }) => ({
+      bankHolidayCalendar: bankHolidayCalendar.toLowerCase(),
+      workingWeek: workingWeek.toLowerCase(),
+      annualLeavePolicyId,
+    })),
+    locationTerms: locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
+      locationName,
+      bankHolidayCalendar: bankHolidayCalendar.toLowerCase(),
+    })),
+    defaultBankHolidayCalendar: defaultBankHolidayCalendar?.toLowerCase(),
+  };
 }
