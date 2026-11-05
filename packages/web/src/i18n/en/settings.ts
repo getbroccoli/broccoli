@@ -91,7 +91,7 @@ export const settingsEn = {
   "settings.timeOffType.savedMany": "{name} saved. {count} allowances updated.",
   "settings.timeOffType.savedOne": "{name} saved. 1 allowance updated.",
   "settings.timeOffType.savesAllowances":
-    "Saving updates this year's allowances for the {count} people on {policies}. Earlier years stay as they were.",
+    "Saving updates the allowances of everyone on {policies} for leave years that haven't ended. Earlier years stay as they were.",
   "settings.timeOffType.savesTypeOnly": "Saving updates {name}.",
   "settings.timeOffType.showReason": "Show the reason to colleagues",
   "settings.timeOffType.standard": "Standard",

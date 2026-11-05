@@ -13,6 +13,7 @@ import { t } from "@/i18n";
 
 import {
   changeCount,
+  draftErrors,
   draftOf,
   newPolicyDraft,
   type PolicyDraft,
@@ -61,8 +62,14 @@ export function useTimeOffTypeDraft(type: TimeOffTypePanel_TypeFragment) {
       setFieldErrors({});
       save.reset();
     },
-    submit: async () =>
-      setFieldErrors(await save.run(prepareSave(type.timeOffType.id, saved, draft))),
+    submit: async () => {
+      const refused = draftErrors(draft);
+      setFieldErrors(
+        Object.keys(refused).length > 0
+          ? refused
+          : await save.run(prepareSave(type.timeOffType.id, saved, draft)),
+      );
+    },
   };
 }
 

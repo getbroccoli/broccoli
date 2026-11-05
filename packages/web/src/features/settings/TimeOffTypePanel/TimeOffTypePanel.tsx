@@ -21,7 +21,8 @@ type Props = {
 export function TimeOffTypePanel({ timeOffTypeId, policyId, onClose }: Props) {
   const { data, error, loading, refetch } = useQuery(TimeOffTypePanelDocument, {
     variables: { id: timeOffTypeId },
-    fetchPolicy: "cache-and-network",
+    // The draft starts from what this load returns, so it must be current, not a cached copy.
+    fetchPolicy: "network-only",
   });
   const type = data?.timeOffSettings.timeOffType;
 

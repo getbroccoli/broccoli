@@ -231,3 +231,39 @@ test("refuses someone without MANAGE_WORKSPACE", async ({ orm }) => {
     timeOffService(orm).updateTimeOffType(EMPLOYEE, { id: type.id, name: "Renamed" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
+
+test("policies can swap names in one save", async ({ orm }) => {
+  const a = await seedTimeOffPolicy(orm, { name: "A", balance: "unlimited_balance" });
+  const b = await seedTimeOffPolicy(orm, {
+    name: "B",
+    timeOffTypeId: a.timeOffTypeId,
+    balance: "unlimited_balance",
+  });
+
+  const result = await timeOffService(orm).updateTimeOffType(ADMIN, {
+    id: a.timeOffTypeId,
+    policies: [
+      { id: a.id, name: "B" },
+      { id: b.id, name: "C" },
+    ],
+  });
+
+  expect(result.timeOffType.policies.map(({ name }) => name).sort()).toEqual(["B", "C"]);
+});
+
+test("the same policy twice in one save is refused", async ({ orm }) => {
+  const policy = await seedTimeOffPolicy(orm, { name: "A", balance: "unlimited_balance" });
+
+  await expect(
+    timeOffService(orm).updateTimeOffType(ADMIN, {
+      id: policy.timeOffTypeId,
+      policies: [
+        { id: policy.id, name: "X" },
+        { id: policy.id, name: "Y" },
+      ],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "policies.1.id", code: "invalid" }],
+  });
+});

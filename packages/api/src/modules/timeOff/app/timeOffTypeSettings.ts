@@ -4,7 +4,7 @@ import { type CalendarDate, parseUuid } from "../../../utils";
 import { allowanceRepository, timeOffPolicyRepository, timeOffRepository } from "../db";
 import { isReasonAlwaysPrivate, policyIdOn, type TimeOffPolicy, type TimeOffType } from "../domain";
 import type { EmployeeReadService } from "../../employees";
-import { readPeople } from "./allowanceEngine";
+import { readTimelines } from "./allowanceEngine";
 import { byTypeOrder, calendarYearOf, overlaps } from "./readTimeOffTypes";
 
 /** A policy as Settings shows it: its rules and who it applies to today. */
@@ -158,7 +158,7 @@ async function readPolicySettings(
     ...assignments.map(({ employeeId }) => employeeId),
   ]);
   const date = today();
-  const { people } = await readPeople(employeeReads, tx, [...candidateIds]);
+  const people = await readTimelines(employeeReads, tx, [...candidateIds]);
   const employedToday = people.filter(({ periods }) =>
     periods.some((period) => overlaps(period, { start: date, end: date })),
   );

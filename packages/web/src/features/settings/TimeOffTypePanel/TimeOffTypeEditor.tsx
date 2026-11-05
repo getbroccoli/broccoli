@@ -98,7 +98,7 @@ export function TimeOffTypeEditor({ type, focusPolicyId, onClose }: Props) {
 
       <footer className="flex flex-wrap items-center gap-3 border-t border-border px-6 py-4">
         <p role="status" className="min-w-0 flex-[1_1_18rem] text-sm text-muted-foreground">
-          {edit.failure ?? footerLine(type, edit)}
+          {edit.failure ?? footerLine(edit)}
         </p>
         <Button
           type="button"
@@ -143,20 +143,17 @@ function subtitle({ policies }: TimeOffTypePanel_TypeFragment): string {
   });
 }
 
-/** What saving reaches: everyone on a policy whose grant changed, or only the type. */
-function footerLine(
-  type: TimeOffTypePanel_TypeFragment,
-  { changes, draft, saved }: ReturnType<typeof useTimeOffTypeDraft>,
-): string {
+/** What saving reaches: everyone ever on a policy whose grant changed, or only the type. */
+function footerLine({ changes, draft, saved }: ReturnType<typeof useTimeOffTypeDraft>): string {
   if (changes === 0) return t("settings.timeOffType.noChanges");
-  const reached = draft.policies.flatMap((policy) => {
+  const changed = draft.policies.filter((policy) => {
     const before = saved.policies.find(({ key }) => key === policy.key);
-    const summary = type.policies.find(({ id }) => id === policy.id);
-    return before && summary && !policy.deleted && grantChanged(before, policy) ? [summary] : [];
+    return before?.id && !policy.deleted && grantChanged(before, policy);
   });
-  if (reached.length === 0) return t("settings.timeOffType.savesTypeOnly", { name: saved.name });
+  if (changed.length === 0) return t("settings.timeOffType.savesTypeOnly", { name: saved.name });
   return t("settings.timeOffType.savesAllowances", {
-    count: String(reached.reduce((sum, { peopleCount }) => sum + peopleCount, 0)),
-    policies: reached.map(({ name }) => name).join(", "),
+    policies: changed
+      .map(({ key }) => saved.policies.find((policy) => policy.key === key)!.name)
+      .join(", "),
   });
 }

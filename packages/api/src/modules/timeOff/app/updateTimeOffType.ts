@@ -57,9 +57,8 @@ export async function updateTimeOffType(
     await timeOffPolicyRepository(tx).lockTermsLinks();
     const current = await readCurrent(dependencies, tx, save.id);
     const plan = planUpdate(current, save);
-    const changes = await writeSave(tx, current, plan);
+    const changes = await writeSave(dependencies, tx, current, plan);
     await appendHistory(ctx, tx, current.type.id, changes);
-    await updateAllowances(dependencies, tx, plan.edits);
     const allowancesUpdated =
       await timeOffSettingsRepository(tx).countAllowancesChangedInTransaction();
     tx.publish("timeOff.time_off_type_updated", {
@@ -101,7 +100,12 @@ interface SaveChanges {
   addedPolicyIds: string[];
 }
 
+/**
+ * Writes the save. Each changed policy's allowances follow before the next policy changes, so
+ * every correction names the policy it comes from.
+ */
 async function writeSave(
+  dependencies: UpdateTimeOffTypeDependencies,
   tx: Tx,
   current: CurrentTimeOffType,
   plan: UpdatePlan,
@@ -113,8 +117,10 @@ async function writeSave(
     await repository.deletePolicy(policy.id);
     policies.push(policyLine(policy.id, fieldsOf(policy), null));
   }
+  await freeNamesOfRenamed(repository, plan.edits);
   for (const edit of plan.edits) {
     await writeEdit(repository, edit);
+    await updateAllowances(dependencies, tx, edit);
     policies.push(policyLine(edit.policy.id, fieldsOf(edit.policy), fieldsOfValues(edit.next)));
   }
   const addedPolicyIds: string[] = [];
@@ -251,18 +257,32 @@ async function appendHistory(
   }
 }
 
-/** Runs the engine for everyone ever on a policy whose grant changed. */
+/** Runs the engine for everyone ever on the policy, when its grant changed. */
 async function updateAllowances(
   dependencies: UpdateTimeOffTypeDependencies,
   tx: Tx,
+  { policy, grantChanged }: PolicyEdit,
+): Promise<void> {
+  if (!grantChanged) {
+    return;
+  }
+  const employeeIds = await employeesEverOn(dependencies, tx, policy.id);
+  await ensureAllowancesOf(dependencies.engine, tx, {
+    employeeIds,
+    cause: { kind: "POLICY_CHANGED", ref: policy.id },
+  });
+}
+
+/**
+ * Gives each renamed policy its id as a name first, so policies can take each other's names in
+ * one save without tripping the unique name index on the way.
+ */
+async function freeNamesOfRenamed(
+  repository: TimeOffSettingsRepository,
   edits: readonly PolicyEdit[],
 ): Promise<void> {
-  for (const { policy } of edits.filter(({ grantChanged }) => grantChanged)) {
-    const employeeIds = await employeesEverOn(dependencies, tx, policy.id);
-    await ensureAllowancesOf(dependencies.engine, tx, {
-      employeeIds,
-      cause: { kind: "POLICY_CHANGED", ref: policy.id },
-    });
+  for (const { policy } of edits.filter(({ policy, next }) => policy.name !== next.name)) {
+    await repository.updatePolicy(policy.id, { name: policy.id });
   }
 }
 

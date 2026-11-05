@@ -20,8 +20,8 @@ A manual check of the time off types list and a type's panel in Settings, agains
 ## A type's panel
 
 - [ ] Annual leave shows Type (name, "Show the reason to colleagues" on), then Policies with each policy open, "What changes" marked "Coming soon", and History.
-- [ ] Change UK statutory minimum to 22 days with bank holidays on top: "Policy name" appears with "22 days plus bank holidays", the note about becoming your own, and the footer "Saving updates this year's allowances for the 38 people on UK statutory minimum."
-- [ ] Save: the toast reads "Annual leave saved. 40 allowances updated.", History gains the line, and a person's panel shows Annual leave 30 days with 8 bank holidays, 22 remaining.
+- [ ] Change UK statutory minimum to 22 days with bank holidays on top: "Policy name" appears with "22 days plus bank holidays", the note about becoming your own, and the footer "Saving updates the allowances of everyone on UK statutory minimum for leave years that haven't ended."
+- [ ] Save: the toast reads "Annual leave saved. 40 allowances updated.", History gains the line, and the panel of a full-time person who joined before this year and booked no Annual leave shows an entitlement of 30 days, 8 bank holidays and 22 days remaining.
 - [ ] Back on the list, "22 days plus bank holidays" has the 38 people, and "UK statutory minimum" is there again, unused.
 - [ ] Add policy on Annual leave, name it, save: it appears with "No terms use it"; "Delete policy" on it, save: it is gone.
 - [ ] A used policy has no "Delete policy" and shows how it counts as text.

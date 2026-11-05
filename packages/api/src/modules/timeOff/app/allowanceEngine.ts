@@ -73,25 +73,38 @@ export interface Person {
 
 /** Every policy, and what decides each person's allowances. */
 export async function readPeople(
-  employeeReads: Pick<
-    AllowanceEngineDependencies["employeeReads"],
-    "readEmploymentPeriods" | "readTermsMemberships"
-  >,
+  employeeReads: TimelineReads,
   tx: Tx,
   ids: readonly string[],
 ): Promise<{ people: Person[]; policies: TimeOffPolicy[] }> {
+  const [policies, timelines, existing] = await Promise.all([
+    timeOffPolicyRepository(tx).findAll(),
+    readTimelines(employeeReads, tx, ids),
+    allowanceRepository(tx).findByEmployees(ids),
+  ]);
+  const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
+  const people = timelines.map((person) => ({
+    ...person,
+    allowances: existingOf.get(person.employeeId) ?? [],
+  }));
+  return { people, policies };
+}
+
+/** Each person's employments and which policies apply to them when, without their allowances. */
+export async function readTimelines(
+  employeeReads: TimelineReads,
+  tx: Tx,
+  ids: readonly string[],
+): Promise<Omit<Person, "allowances">[]> {
   const policyRepository = timeOffPolicyRepository(tx);
-  const [policies, employments, memberships, assignments, existing] = await Promise.all([
-    policyRepository.findAll(),
+  const [employments, memberships, assignments] = await Promise.all([
     employeeReads.readEmploymentPeriods(tx, ids),
     employeeReads.readTermsMemberships(tx, ids),
     policyRepository.findAssignments(ids),
-    allowanceRepository(tx).findByEmployees(ids),
   ]);
   const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
   const termsLinks = await policyRepository.findTermsLinks([...new Set(termsIds)]);
-  const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
-  const people = ids.map((employeeId) => {
+  return ids.map((employeeId) => {
     const periods = employments.get(employeeId) ?? [];
     return {
       employeeId,
@@ -102,11 +115,14 @@ export async function readPeople(
         memberships: memberships.get(employeeId) ?? [],
         termsLinks,
       },
-      allowances: existingOf.get(employeeId) ?? [],
     };
   });
-  return { people, policies };
 }
+
+type TimelineReads = Pick<
+  AllowanceEngineDependencies["employeeReads"],
+  "readEmploymentPeriods" | "readTermsMemberships"
+>;
 
 /** The allowances to create: one per person and type that has none for the year needed. */
 function missingAllowances(

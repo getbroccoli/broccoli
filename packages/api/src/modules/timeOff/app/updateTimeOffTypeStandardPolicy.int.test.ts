@@ -163,3 +163,40 @@ async function linkedStandard(orm: Orm, seed: TestSeed, transact: Transact) {
   );
   return { service, policy };
 }
+
+test("renaming an edited standard policy to its own name in other case is a field error", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const { service, policy } = await linkedStandard(orm, seed, transact);
+
+  await expect(
+    service.updateTimeOffType(ADMIN, {
+      id: policy.timeOffType.id,
+      policies: [{ id: policy.id, name: "20 DAYS PLUS BANK HOLIDAYS", allowanceDays: 22 }],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "policies.0.name", code: "taken" }],
+  });
+});
+
+test("a new policy cannot take the name the standard copy keeps", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const { service, policy } = await linkedStandard(orm, seed, transact);
+
+  await expect(
+    service.updateTimeOffType(ADMIN, {
+      id: policy.timeOffType.id,
+      policies: [{ id: policy.id, name: "22 days plus bank holidays", allowanceDays: 22 }],
+      addPolicies: [{ name: "20 days plus bank holidays", balance: "unlimited_balance" }],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "addPolicies.0.name", code: "taken" }],
+  });
+});

@@ -40,6 +40,7 @@ export function planUpdate(current: CurrentTimeOffType, save: ParsedTimeOffTypeU
   const errors: FieldError[] = [];
   const typeFields = planTypeFields(current, save, errors);
   const deletes = save.deletePolicyIds.map((id) => deletablePolicy(current, id));
+  checkEachPolicyOnce(save, errors);
   const edits = save.policies.map((change, index) => planEdit(current, change, index, errors));
   const adds = save.addPolicies.map((policy, index) =>
     nextValues(
@@ -160,7 +161,13 @@ function checkPolicyNames(
   const touched = new Set(
     [...edits, ...deletes.map((policy) => ({ policy }))].map(({ policy }) => policy.id),
   );
-  const kept = current.policies.filter(({ id }) => !touched.has(id)).map(({ name }) => name);
+  const kept = [
+    ...current.policies.filter(({ id }) => !touched.has(id)).map(({ name }) => name),
+    // A standard policy that grants something else leaves a copy under its old name.
+    ...edits
+      .filter(({ policy, grantChanged }) => policy.key && grantChanged)
+      .map(({ policy }) => policy.name),
+  ];
   const named = [
     ...edits.map(({ next }, index) => ({
       name: next.name,
@@ -176,6 +183,15 @@ function checkPolicyNames(
     ];
     if (sent !== undefined && sameName(others, name)) {
       errors.push({ field, code: "taken" });
+    }
+  });
+}
+
+/** One save changes a policy at most once. */
+function checkEachPolicyOnce(save: ParsedTimeOffTypeUpdate, errors: FieldError[]): void {
+  save.policies.forEach(({ id }, index) => {
+    if (save.policies.findIndex((other) => other.id === id) < index) {
+      errors.push({ field: `policies.${index}.id`, code: "invalid" });
     }
   });
 }

@@ -288,3 +288,34 @@ function sumsOf(lines: readonly NewLedgerLine[]): LedgerSum[] {
     lineCount: 1,
   }));
 }
+
+it("a removed rule's grant is reversed from the first contributing day", () => {
+  const target = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-b",
+      bankHolidayDate: null,
+      amount: "4.88",
+      firstDate: calendarDate("2026-10-12"),
+    },
+  ] as const;
+  const current = [
+    {
+      kind: "entitlement_grant",
+      allowanceRuleId: "rule-a",
+      bankHolidayDate: null,
+      amount: "4.44",
+      lineCount: 1,
+    },
+  ] as const;
+
+  const lines = ledgerDifference(allowance, target, current, {
+    kind: "POLICY_CHANGED",
+    ref: "policy-1",
+  });
+
+  expect(lines.find(({ allowanceRuleId }) => allowanceRuleId === "rule-a")).toMatchObject({
+    amount: "-4.44",
+    effectiveDate: "2026-10-12",
+  });
+});

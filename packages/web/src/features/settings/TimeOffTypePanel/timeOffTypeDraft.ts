@@ -146,6 +146,24 @@ export function changeCount(saved: TypeDraft, draft: TypeDraft): number {
   return typeFields + policies;
 }
 
+/** What the panel refuses before sending: a blank or non-numeric allowance, a new policy without a name. */
+export function draftErrors(draft: TypeDraft): Record<string, string> {
+  const errors: Record<string, string> = {};
+  for (const policy of draft.policies.filter(({ deleted }) => !deleted)) {
+    if (policy.balance === "BALANCE_FROM_ALLOWANCE" && !isDays(policy.days)) {
+      errors[`${policy.key}.allowanceDays`] = policy.days.trim() === "" ? "required" : "invalid";
+    }
+    if (policy.id === null && policy.name.trim() === "") {
+      errors[`${policy.key}.name`] = "required";
+    }
+  }
+  return errors;
+}
+
+function isDays(text: string): boolean {
+  return text.trim() !== "" && Number.isFinite(Number(text));
+}
+
 /** Only what changed, as the API takes it; null when nothing did. */
 export function prepareSave(id: string, saved: TypeDraft, draft: TypeDraft): PreparedSave | null {
   const changed = draft.policies.flatMap((policy) => {
@@ -176,13 +194,22 @@ export function prepareSave(id: string, saved: TypeDraft, draft: TypeDraft): Pre
 function policyChange(before: PolicyDraft, draft: PolicyDraft) {
   const grant = grantChanged(before, draft);
   if (!grant && before.name === draft.name) return null;
+  const nowCounts = draft.balance === "BALANCE_FROM_ALLOWANCE";
+  const { allowanceDays, bankHolidays } = allowanceOf(draft);
+  // Only what changed is sent, so a save never overwrites another admin's change to another field.
+  const startsCounting = nowCounts && before.balance !== draft.balance;
   return {
     key: draft.key,
     change: {
       id: draft.id!,
       ...(before.name !== draft.name && { name: draft.name }),
       ...(before.balance !== draft.balance && { balance: draft.balance }),
-      ...(grant && draft.balance === "BALANCE_FROM_ALLOWANCE" && allowanceOf(draft)),
+      ...(nowCounts &&
+        (startsCounting || Number(before.days) !== allowanceDays) && { allowanceDays }),
+      ...(nowCounts &&
+        (startsCounting || before.bankHolidaysOnTop !== draft.bankHolidaysOnTop) && {
+          bankHolidays,
+        }),
     },
   };
 }
