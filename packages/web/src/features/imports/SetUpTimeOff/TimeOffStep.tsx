@@ -33,7 +33,7 @@ type Props = {
 };
 
 /**
- * "Set up time off", after Approve: the company's defaults, one holiday allowance and working week
+ * "Company defaults", after Approve: the company's defaults, one holiday allowance and working week
  * for everyone, and whose bank holidays apply: one nation for everyone when the staff file has no
  * locations, else each location's, Broccoli's AI suggesting them from the names. Nothing is saved
  * on the server here: the choice goes with setup's last page.

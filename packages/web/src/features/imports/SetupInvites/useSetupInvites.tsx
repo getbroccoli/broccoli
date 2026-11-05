@@ -35,7 +35,7 @@ export interface SetupInvites {
   failed: boolean;
   note: string;
   setNote: (note: string) => void;
-  /** What the finish sends; the note only when invites go by email, leave as Set up time off left it. */
+  /** What the finish sends; the note only when invites go by email, leave as Company defaults left it. */
   choices: {
     ownerEmployeeKey: string | null;
     inviteAudience: SetupInviteAudience;

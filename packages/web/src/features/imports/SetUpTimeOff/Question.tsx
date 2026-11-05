@@ -7,7 +7,7 @@ type Props = {
   children: ReactNode;
 };
 
-/** One numbered question of the Set up time off page, a fieldset so its options carry its title. */
+/** One numbered question of the Company defaults page, a fieldset so its options carry its title. */
 export function Question({ number, title, hint, children }: Props) {
   return (
     <fieldset className="min-w-0">

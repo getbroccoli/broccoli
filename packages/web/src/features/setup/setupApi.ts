@@ -26,7 +26,7 @@ export async function startSetup(): Promise<boolean> {
   }
 }
 
-/** What the owner chose on "Set up time off" and "Who uses Broccoli", sent with their account. */
+/** What the owner chose on "Company defaults" and "Who uses Broccoli", sent with their account. */
 export interface OwnerSetupChoices {
   ownerEmployeeKey: string | null;
   inviteAudience: SetupInviteAudience;

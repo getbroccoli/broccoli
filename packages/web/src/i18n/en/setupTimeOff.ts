@@ -1,4 +1,4 @@
-/** English copy under `setup.timeOff.*`, the "Set up time off" setup page. */
+/** English copy under `setup.timeOff.*`, the "Company defaults" setup page. */
 export const setupTimeOffEn = {
   "setup.timeOff.step": "Company defaults",
   "setup.timeOff.title": "Company defaults",

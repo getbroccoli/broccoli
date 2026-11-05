@@ -5,7 +5,7 @@ export const SETUP_INVITE_AUDIENCES = ["only_admins", "admins_and_managers", "ev
 
 export type SetupInviteAudience = (typeof SETUP_INVITE_AUDIENCES)[number];
 
-/** What the owner chose on "Set up time off" and "Who uses Broccoli", sent with setup's last step. */
+/** What the owner chose on "Company defaults" and "Who uses Broccoli", sent with setup's last step. */
 export interface SetupChoices {
   /** The import employee the owner is, whose employee their user is linked to; null for none. */
   ownerEmployeeKey: string | null;

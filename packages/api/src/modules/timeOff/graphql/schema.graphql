@@ -54,7 +54,7 @@ enum StandardWorkingWeek {
   MONDAY_TO_THURSDAY_8_HOURS
 }
 
-"What Set up time off offers."
+"What Company defaults offers."
 type TimeOffSetup {
   "The standard Annual leave policies, most common first."
   annualLeavePolicies: [AnnualLeavePolicy!]!

@@ -1,6 +1,6 @@
-# QA: Set up time off
+# QA: Company defaults (setting up time off)
 
-A manual check of the "Set up time off" setup page and turning time off on as setup finishes, on both modes, against a development stack.
+A manual check of the "Company defaults" setup page and turning time off on as setup finishes, on both modes, against a development stack.
 
 ## Setup
 
