@@ -49,11 +49,12 @@ Each is `balance_from_allowance` with a leave year from 1 January, found by `tim
 3. The target (`domain/allowanceCalculator.ts`) splits the leave year wherever the employment, policy, working week or service step changes, and pro-rates each rule by the part's days per week and share of the year. On-top policies add the year's bank holidays for the days per week; each bank holiday on a working day is taken by that day's minutes ÷ the full day. The grants are rounded up once to the half day.
 4. Each line identity (a rule's grant, the bank holiday grant, one bank holiday, the rounding) whose lines add up to something else gets one line with the difference, author Broccoli itself, cause and ref from the call. A bank holiday's line takes effect on its date. Initial grants take effect on their first contributing day. Start-date corrections use the earlier of the previous and new starts (the year start if either is unknown), but never before the grant's first contributing day in either calculation; rounding follows the earliest changed grant. Working-pattern corrections use the later of the change date and the first contributing day. All dates stay within the allowance year. The idempotency key is `allowanceId:identity:n`, `n` the identity's existing lines: a repeat appends nothing.
 
-Causes (`cause_kind`, with `cause_ref`): `policy_linked_to_terms` (terms id), `employee_added`, `start_date_changed` (new date), `working_pattern_changed` (from date), `leave_year_started` and `daily_check` (the run's date). Amounts carry six decimal places.
+Causes (`cause_kind`, with `cause_ref`): `policy_linked_to_terms` (terms id), `policy_changed` (policy id), `employee_added`, `start_date_changed` (new date), `working_pattern_changed` (from date), `leave_year_started` and `daily_check` (the run's date). Amounts carry six decimal places.
 
 What runs the engine; none writes lines itself, and while no policy is linked each run writes nothing:
 
 - linking policies to terms, for their people, in the same transaction;
+- saving a policy whose grant changed in Settings, for everyone ever on it (any terms ever linked to it, and its assignment holders), in the same transaction;
 - `employees.added` (one person, import approval or the demo), `employees.start_date_changed` and `employees.working_pattern_changed`: after commit, time off runs the engine for the event's people in its own transaction as the system. Handlers are awaited, but a failure does not undo the employee change. Events can be lost in a crash; the daily job repairs that.
 - the daily job `timeOff.ensureAllowances`, at 00:10 London time, for every employee as the system, 100 per transaction: it starts the new leave year (cause `leave_year_started` on 1 January, else `daily_check`), repairs lost events and picks up changed bank holidays. A failed batch is logged and left to the next run.
 - The demo fill turns time off on after adding the demo people: the default terms on Standard's week and `uk_statutory_minimum`, with the three record-only policies.
@@ -71,13 +72,15 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - `no_balance`: no leave year exists, so the calendar year; the days of approved or pending time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
 - No allowance for the year (the person left before it) or no policy at all (time off is off) gives no row; while time off is off the list is empty for everyone.
 
-## Listing time off types for Settings
+## Time off types in Settings
 
-`TimeOffService.listTimeOffTypes`, for admins (`MANAGE_WORKSPACE`), answers `Query.timeOffSettings`: every time off type in the order above, with or without a policy, and how many people have time off.
+Admins (`MANAGE_WORKSPACE`) read and change time off types in Settings through `TimeOffService`. Every change is a line in the `time_off_type` record history, policy changes included, readable by admins only.
 
-- Each type's balance kind is the one most of its policies share, the oldest policy's on a tie, or none when it has no policy.
-- Days taken are everyone's approved or pending days of that type in the calendar year of today, a half day 0.5.
-- People are those with an allowance whose leave year has not ended, counted in one query; someone with only types that have no balance is not counted.
+- **Reading:** `listTimeOffTypes` answers `Query.timeOffSettings`: every type in the order above, each with its policies (in use by people count, then unused by name), days taken this year (approved or pending, a half day 0.5) and whether it can be deleted; and how many people have an allowance whose leave year has not ended. `readTimeOffTypeSettings` reads one type for its panel. A policy shows its rules, the terms linked to it today, the people it applies to today ("Which policy applies" below, employed today), those on it only through their own assignment, and whether it was ever linked or assigned.
+- **Saving:** `saveTimeOffType` changes a type and its policies in one transaction, under the terms-links lock: the type's name, icon, colour and privacy (Sickness stays private); a policy's name, days and bank holidays; how a policy counts, only while nobody was ever on it; added policies, which nobody is on until terms pick them; and deleted policies nobody was ever on. A changed amount stops the yearly rule (`removed_at`) and adds a new one, and the engine runs for everyone ever on the policy with cause `policy_changed`: the removed rule's grant goes to 0 and the new one's to its target, from the start of each open leave year (or the first contributing day), and closed years never change.
+- **Standard policies:** a standard policy whose grant changes becomes the company's own: it keeps its id, links and lines, loses its key and takes a new name, and a fresh copy with the key, its name and rules is added, linked to nobody, so turning time off on finds the standard by key. A standard policy that grants something else drops `max_days`.
+- **Deleting:** `deleteTimeOffType` deletes a company's own type nobody ever had (no policy ever linked or assigned, no allowance, no time off), with its policies and rules. Broccoli's four types are never deleted.
+- Type names are unique ignoring case and surrounding spaces, and so are policy names within a type.
 
 ## Which policy applies
 

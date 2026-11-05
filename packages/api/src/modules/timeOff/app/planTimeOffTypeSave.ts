@@ -1,6 +1,11 @@
 import { ApplicationError, type FieldError, invalidInput } from "../../../core/applicationError";
 import type { PolicyValues } from "../db";
-import type { ParsedSaveTimeOffType, TimeOffPolicy, TimeOffType } from "../domain";
+import {
+  isReasonAlwaysPrivate,
+  type ParsedSaveTimeOffType,
+  type TimeOffPolicy,
+  type TimeOffType,
+} from "../domain";
 import type { TimeOffPolicySettings, TimeOffTypeSettings } from "./timeOffTypeSettings";
 
 /** The start of a new policy's leave year, as the standard policies have it. */
@@ -62,7 +67,7 @@ function planTypeFields(
   if (save.name !== undefined && sameName(current.otherTypeNames, save.name)) {
     errors.push({ field: "name", code: "taken" });
   }
-  if (save.reasonVisibleToColleagues && current.type.typeKey === "sickness") {
+  if (save.reasonVisibleToColleagues && isReasonAlwaysPrivate(current.type)) {
     errors.push({ field: "reasonVisibleToColleagues", code: "invalid" });
   }
   return Object.fromEntries(

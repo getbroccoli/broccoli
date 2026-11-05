@@ -71,11 +71,6 @@ export const peopleEn = {
   "people.panel.error.managerSelf": "A person can’t be their own manager.",
   "people.panel.error.managerLoop":
     "The person you chose already reports to them, so they can’t be their manager.",
-  "people.panel.discard.title": "Discard {count} unsaved changes?",
-  "people.panel.discard.titleOne": "Discard 1 unsaved change?",
-  "people.panel.discard.detail": "Your changes to {name} won’t be saved.",
-  "people.panel.discard.confirm": "Discard",
-  "people.panel.discard.cancel": "Keep editing",
   "people.panel.remove.menu": "Remove {name}",
   "people.panel.remove.title": "Remove {name}?",
   "people.panel.remove.detail": "They leave People. Their history is kept.",

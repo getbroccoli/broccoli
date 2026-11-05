@@ -20,6 +20,11 @@ export interface TimeOffType {
   colour: TimeOffTypeColour | null;
 }
 
+/** Sickness stays private by law: colleagues never see the reason. */
+export function isReasonAlwaysPrivate(type: Pick<TimeOffType, "typeKey">): boolean {
+  return type.typeKey === "sickness";
+}
+
 /** A policy with its type and allowance rules. */
 export interface TimeOffPolicy {
   id: string;

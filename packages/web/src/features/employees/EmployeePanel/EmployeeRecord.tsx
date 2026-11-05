@@ -17,11 +17,10 @@ import {
   InviteDialog,
   InviteMenuItems,
 } from "@/features/invites";
-import { EditBar, FieldValue, RecordHistory } from "@/features/records";
+import { DiscardChangesDialog, EditBar, FieldValue, RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
 import { Avatar } from "../Avatar";
-import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import { EmployeeDetails } from "./EmployeeDetails";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";

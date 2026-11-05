@@ -8,8 +8,36 @@ query TimeOffSettings {
         icon
         colour
       }
-      balance
+      policies {
+        ...TimeOffPolicySummary @unmask
+      }
       daysTakenThisYear
     }
   }
+}
+
+# A policy as the list and the panel describe it: what it grants and who it applies to.
+fragment TimeOffPolicySummary on TimeOffPolicySettings {
+  id
+  name
+  standard
+  balance
+  allowance {
+    days
+    daysPerWeek
+    maxDays
+    bankHolidays
+  }
+  leaveYear {
+    kind
+    month
+    day
+  }
+  terms {
+    id
+    name
+  }
+  peopleCount
+  ownAssignmentCount
+  everUsed
 }

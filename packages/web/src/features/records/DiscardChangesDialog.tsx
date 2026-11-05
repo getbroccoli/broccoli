@@ -26,17 +26,15 @@ export function DiscardChangesDialog({ open, count, name, onDiscard, onKeepEditi
         <AlertDialogHeader>
           <AlertDialogTitle>
             {count === 1
-              ? t("people.panel.discard.titleOne")
-              : t("people.panel.discard.title", { count: String(count) })}
+              ? t("records.discard.titleOne")
+              : t("records.discard.title", { count: String(count) })}
           </AlertDialogTitle>
-          <AlertDialogDescription>
-            {t("people.panel.discard.detail", { name })}
-          </AlertDialogDescription>
+          <AlertDialogDescription>{t("records.discard.detail", { name })}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t("people.panel.discard.cancel")}</AlertDialogCancel>
+          <AlertDialogCancel>{t("records.discard.cancel")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={onDiscard}>
-            {t("people.panel.discard.confirm")}
+            {t("records.discard.confirm")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

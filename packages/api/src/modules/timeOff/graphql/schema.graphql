@@ -40,6 +40,8 @@ type TimeOffTypeSummary {
   daysTakenThisYear: Float!
   "True when it is the company's own and nobody has ever had it."
   canDelete: Boolean!
+  "True for Sickness: colleagues never see the reason, so it can't be shown."
+  reasonAlwaysPrivate: Boolean!
 }
 
 "A time off policy as Settings shows it: its rules and who it applies to today."

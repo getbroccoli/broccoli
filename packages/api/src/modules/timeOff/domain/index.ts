@@ -17,6 +17,7 @@ export {
   type PolicyTimeline,
 } from "./policyTimeline";
 export {
+  isReasonAlwaysPrivate,
   leaveYearContaining,
   type StandardLeavePolicyKey,
   type TimeOffPolicy,

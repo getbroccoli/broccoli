@@ -2,7 +2,7 @@ import type { Transact, Tx } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
 import { allowanceRepository, timeOffPolicyRepository, timeOffRepository } from "../db";
-import { policyIdOn, type TimeOffPolicy, type TimeOffType } from "../domain";
+import { isReasonAlwaysPrivate, policyIdOn, type TimeOffPolicy, type TimeOffType } from "../domain";
 import type { EmployeeReadService } from "../../employees";
 import { readPeople } from "./allowanceEngine";
 import { byTypeOrder, calendarYearOf, overlaps } from "./readTimeOffTypes";
@@ -41,6 +41,8 @@ export interface TimeOffTypeSettings {
   daysTakenThisYear: number;
   /** Not seeded, and nobody has ever had it. */
   canDelete: boolean;
+  /** Colleagues never see the reason, whatever the type's setting: Sickness. */
+  reasonAlwaysPrivate: boolean;
 }
 
 /** Every time off type as Settings lists it, and how many people have time off. */
@@ -126,6 +128,7 @@ async function readTypeSettings(
       policies: byUse(ofType),
       daysTakenThisYear:
         takenDays.find(({ timeOffTypeId }) => timeOffTypeId === timeOffType.id)?.days ?? 0,
+      reasonAlwaysPrivate: isReasonAlwaysPrivate(timeOffType),
       canDelete:
         timeOffType.typeKey === null &&
         !ofType.some(({ everUsed }) => everUsed) &&

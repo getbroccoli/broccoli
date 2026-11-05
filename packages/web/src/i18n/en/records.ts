@@ -1,5 +1,10 @@
 /** English copy under `records.*`, shared by every record type. */
 export const recordsEn = {
+  "records.discard.title": "Discard {count} unsaved changes?",
+  "records.discard.titleOne": "Discard 1 unsaved change?",
+  "records.discard.detail": "Your changes to {name} won’t be saved.",
+  "records.discard.confirm": "Discard",
+  "records.discard.cancel": "Keep editing",
   "records.field.empty": "—",
   "records.field.edit": "Edit {field}",
   "records.edit.unsaved": "{count} unsaved changes",
