@@ -1,6 +1,6 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Orm, Tx } from "../../../core/db";
-import type { TurnOnLeaveInput } from "../../../core/instance";
+import type { SetupTermsInput } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
@@ -9,6 +9,7 @@ import {
   createEmployeeReadService,
   createEmployeeSetupService,
   createEmployeeWorkingPatternService,
+  parseTermsSetup,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import type { AllowanceCause, DatedPolicyRow, TimeOffPolicy } from "../domain";
@@ -50,7 +51,7 @@ export interface TimeOffService {
    * standard ones, and the record-only policies, and ensures their people's allowances. Refuses
    * with CONFLICT once any terms have a time off policy.
    */
-  turnOnLeave: (ctx: SecurityContext, tx: Tx, input: TurnOnLeaveInput) => Promise<TurnedOnLeave>;
+  turnOnLeave: (ctx: SecurityContext, tx: Tx, input: SetupTermsInput) => Promise<TurnedOnLeave>;
   /** The policies linked to terms, on any date. */
   readTermsPolicies: (
     ctx: SecurityContext,
@@ -122,6 +123,7 @@ export function createTimeOffService({
     },
     async turnOnLeave(ctx, tx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
+      const setup = parseTermsSetup(input);
       const repository = timeOffPolicyRepository(tx);
       await repository.lockTermsLinks();
       if (await repository.hasAnyTermsLinks()) {
@@ -136,7 +138,7 @@ export function createTimeOffService({
         return policy;
       });
       const recordOnly = policies.filter(({ balance }) => balance === "no_balance");
-      const setUp = await employeeSetup.setUpTerms(ctx, tx, input);
+      const setUp = await employeeSetup.setUpTerms(ctx, tx, setup);
       const totals = { allowancesCreated: 0, linesAppended: 0 };
       for (const [index, termsId] of setUp.termsIds.entries()) {
         // No terms had a policy when the lock was taken, so none has links to check against.

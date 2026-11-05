@@ -1,7 +1,7 @@
 import { asc } from "drizzle-orm";
 
 import type { Orm } from "../../src/core/db";
-import type { TurnOnLeaveInput } from "../../src/core/instance";
+import type { SetupTermsInput } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";
 import type { Decisions } from "../../src/integrations/ai";
 import { terms, workingPatternRepository } from "../../src/modules/employees/db";
@@ -23,7 +23,7 @@ export function leaveSetupService(orm: Orm, decisions: Decisions) {
 }
 
 /** The setup choice for Glasgow on four days and Leeds on the Standard week. */
-export async function scotlandLeaveSetup(orm: Orm): Promise<TurnOnLeaveInput> {
+export async function scotlandLeaveSetup(orm: Orm): Promise<SetupTermsInput> {
   const policies = await timeOffService(orm).listPolicies(OWNER, orm);
   return {
     terms: [

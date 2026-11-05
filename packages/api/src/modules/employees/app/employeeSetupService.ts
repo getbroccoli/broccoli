@@ -1,10 +1,9 @@
-import { invalidInput } from "../../../core/applicationError";
 import type { Orm, Tx } from "../../../core/db";
 import { createOwnerService } from "../../../core/instance";
 import { createRecordHistoryService, type HistoryAppend } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import type { RasterImage } from "../../../utils";
-import { type BankHolidayCalendar, parseBankHolidayCalendar } from "../../bankHolidays";
+import type { BankHolidayCalendar } from "../../bankHolidays";
 import {
   employeeRepository,
   employmentRepository,
@@ -17,8 +16,8 @@ import {
   type NewEmployeeInput,
   parseLocationName,
   parseNewEmployee,
-  parseStandardWorkingWeek,
   STANDARD_WEEKS,
+  type TermsSetup,
   tryParseNewEmployee,
 } from "../domain";
 import { setNewEmployeeManagers } from "./employeeManagerService";
@@ -103,12 +102,6 @@ export interface EmployeeSetupService {
    * terms ids, and their people, in the order of `input.terms`.
    */
   setUpTerms: (ctx: SecurityContext, tx: Tx, input: TermsSetup) => Promise<SetUpTerms>;
-}
-
-/** One entry per nation's terms, and which nation's terms each location's people get. */
-export interface TermsSetup {
-  terms: readonly { bankHolidayCalendar: string; workingWeek: string }[];
-  locationTerms: readonly { locationName: string; bankHolidayCalendar: string }[];
 }
 
 /** What setting up terms did. */
@@ -207,14 +200,14 @@ export function createEmployeeSetupService(): EmployeeSetupService {
     },
     async setUpTerms(ctx, tx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
-      const { entries, calendars, locationTerms } = parseTermsSetup(input);
+      const calendars = input.terms.map(({ bankHolidayCalendar }) => bankHolidayCalendar);
       const terms = termsRepository(tx);
       const patterns = workingPatternRepository(tx);
       await patterns.lockForWrites();
       const defaultTermsId = await terms.findDefaultTermsId();
       const termsIds: string[] = [];
       const createdPatternIds: string[] = [];
-      for (const { calendar, week } of entries) {
+      for (const { bankHolidayCalendar: calendar, workingWeek: week } of input.terms) {
         const isDefault = calendar === "england_and_wales";
         // The default terms on Standard's week stay on Standard, which keeps that week.
         if (isDefault && week === "monday_to_friday_7_5_hours") {
@@ -239,9 +232,9 @@ export function createEmployeeSetupService(): EmployeeSetupService {
         createdPatternIds.push(patternId);
       }
       await locationRepository(tx).setDefaultTerms(
-        locationTerms.map(({ locationName, calendar }) => ({
+        input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
           locationName,
-          termsId: termsIds[calendars.indexOf(calendar)]!,
+          termsId: termsIds[calendars.indexOf(bankHolidayCalendar)]!,
         })),
       );
       const movedEmployeeIds = await terms.moveToLocationDefaults();
@@ -254,29 +247,6 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       };
     },
   };
-}
-
-/** The owner's terms per nation and location nations, refused unless England and Wales is among them once. */
-function parseTermsSetup(input: TermsSetup) {
-  const entries = input.terms.map(({ bankHolidayCalendar, workingWeek }) => ({
-    calendar: parseBankHolidayCalendar(bankHolidayCalendar),
-    week: parseStandardWorkingWeek(workingWeek),
-  }));
-  const calendars = entries.map(({ calendar }) => calendar);
-  if (!calendars.includes("england_and_wales")) {
-    throw invalidInput([{ field: "terms", code: "required" }]);
-  }
-  if (new Set(calendars).size !== calendars.length) {
-    throw invalidInput([{ field: "terms", code: "duplicate" }]);
-  }
-  const locationTerms = input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
-    locationName,
-    calendar: parseBankHolidayCalendar(bankHolidayCalendar),
-  }));
-  if (locationTerms.some(({ calendar }) => !calendars.includes(calendar))) {
-    throw invalidInput([{ field: "locationTerms", code: "invalid" }]);
-  }
-  return { entries, calendars, locationTerms };
 }
 
 /** The terms each nation's people are on, named after it. */

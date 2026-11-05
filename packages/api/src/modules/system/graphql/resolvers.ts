@@ -103,7 +103,7 @@ export function createResolvers(
             ownerEmployeeKey: input?.ownerEmployeeKey ?? null,
             inviteAudience: SETUP_INVITE_AUDIENCE_INPUTS[input?.inviteAudience ?? "ONLY_ADMINS"],
             inviteNote: input?.inviteNote ?? null,
-            leave: input?.leave ? turnOnLeaveInput(input.leave) : null,
+            leave: input?.leave ? setupTermsInput(input.leave) : null,
             linkOrigin: await context.publicOrigin(),
           });
           return { setup: await readSetup(actor), invites };
@@ -179,7 +179,7 @@ function toMailGraphql(mail: MailConfig | null) {
 }
 
 /** The leave choice as turning leave on takes it: enum values are its values in capitals. */
-function turnOnLeaveInput({ terms, locationTerms }: ResolversTypes["TurnOnLeaveInput"]) {
+function setupTermsInput({ terms, locationTerms }: ResolversTypes["TurnOnLeaveInput"]) {
   return {
     terms: terms.map(({ bankHolidayCalendar, workingWeek, annualLeavePolicyId }) => ({
       bankHolidayCalendar: bankHolidayCalendar.toLowerCase(),
