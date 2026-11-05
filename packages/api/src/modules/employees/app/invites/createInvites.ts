@@ -97,33 +97,6 @@ export async function createInvites(
   return made;
 }
 
-/**
- * Locks the people, as sends, cancels and accepts of one person take turns, and reads those who
- * can be invited, whole for the answer, with their open invites. Refuses an id of nobody.
- */
-async function readInvitees(tx: Tx, employeeIds: string[]) {
-  await employeeRepository(tx).lockByIds(employeeIds);
-  const [invitees, open] = await Promise.all([
-    inviteRepository(tx).findInvitees(employeeIds),
-    inviteRepository(tx).findOpen(employeeIds),
-  ]);
-  if (invitees.length < employeeIds.length) {
-    throw employeeNotFound();
-  }
-  const invited = invitees.filter(canBeInvited).map(({ employee }) => employee);
-  const employeesById = new Map(
-    (await employeeRepository(tx).findByIds(invited.map(({ id }) => id))).map((employee) => [
-      employee.id,
-      employee,
-    ]),
-  );
-  return {
-    invited,
-    openOf: new Map(open.map((invite) => [invite.employeeId, invite])),
-    employeesById,
-  };
-}
-
 /** Writes the line that changes the person's `signIn` field. */
 export async function appendSignInLine(
   ctx: SecurityContext,
@@ -150,4 +123,31 @@ export async function appendSignInLine(
     ],
   });
   return line!;
+}
+
+/**
+ * Locks the people, as sends, cancels and accepts of one person take turns, and reads those who
+ * can be invited, whole for the answer, with their open invites. Refuses an id of nobody.
+ */
+async function readInvitees(tx: Tx, employeeIds: string[]) {
+  await employeeRepository(tx).lockByIds(employeeIds);
+  const [invitees, open] = await Promise.all([
+    inviteRepository(tx).findInvitees(employeeIds),
+    inviteRepository(tx).findOpen(employeeIds),
+  ]);
+  if (invitees.length < employeeIds.length) {
+    throw employeeNotFound();
+  }
+  const invited = invitees.filter(canBeInvited).map(({ employee }) => employee);
+  const employeesById = new Map(
+    (await employeeRepository(tx).findByIds(invited.map(({ id }) => id))).map((employee) => [
+      employee.id,
+      employee,
+    ]),
+  );
+  return {
+    invited,
+    openOf: new Map(open.map((invite) => [invite.employeeId, invite])),
+    employeesById,
+  };
 }

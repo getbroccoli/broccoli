@@ -8,12 +8,8 @@ import { defineConfig, globalIgnores } from "eslint/config";
 export default defineConfig(
   eslintConfig(import.meta.dirname),
   globalIgnores(["src/__generated__/"]),
-  maxLinesPerFunctionConfig(50),
-  {
-    // A component's markup is one level of abstraction, so it may run longer (RULE73).
-    files: ["src/**/*.tsx"],
-    rules: { "broccoli/max-lines-per-function": ["error", 170] },
-  },
+  // A component's markup is one level of abstraction, so it may run longer (RULE73).
+  maxLinesPerFunctionConfig(50, 170),
   {
     files: ["**/*.{js,ts,tsx}"],
     extends: [

@@ -1,7 +1,6 @@
 import { useQuery } from "@apollo/client/react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import {
   InviteDeliveryDocument,
@@ -26,6 +25,7 @@ import { groupInvitees, type SkipReason } from "../signInStatus";
 import { type CopiedLink, CopyLinks } from "./CopyLinks";
 import { PeopleList } from "./PeopleList";
 import { PermissionsField } from "./PermissionsField";
+import { toastSentInvites } from "./toastSentInvites";
 
 /** A person the dialog may invite. */
 export interface Invitee {
@@ -102,11 +102,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
       setLinks(copied);
       return;
     }
-    toast(
-      sent.length === 1
-        ? t("invites.dialog.sentOne")
-        : t("invites.dialog.sent", { count: String(sent.length) }),
-    );
+    toastSentInvites(sent.length);
     close();
   };
 
