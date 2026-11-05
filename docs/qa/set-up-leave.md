@@ -11,19 +11,20 @@ A manual check of the "Set up leave" setup page and turning leave on as setup fi
 ## The page
 
 - [ ] Approve lands on "Set up leave", listed as its own step "Leave" after "Add your people" in the step list; Back reopens the review.
-- [ ] The "England and Wales terms" card always shows, with "New people start on these terms", Mon–Fri 7.5 hours, England and Wales bank holidays with this year's count, the UK statutory minimum and "Sickness · Family leave · Other".
-- [ ] "Which terms each location gets" lists Glasgow, Leeds and Remote. While the AI answers it says "Checking your locations…"; then Glasgow is Scotland, Leeds England and Wales, and Remote England and Wales with "Please check".
-- [ ] A "Scotland terms" card shows with Glasgow and 2 people; England and Wales shows Leeds, Remote, "No location (1)" and 3 people.
-- [ ] Moving Glasgow to England and Wales removes the Scotland card; moving it back shows the card with the choices it had.
-- [ ] Moving Leeds to Northern Ireland shows a "Northern Ireland terms" card; move it back to England and Wales.
+- [ ] Step 1 "Where do your people work?" lists Glasgow, Leeds and Remote. While the AI answers it says "Checking your locations…" and Turn on is disabled; then Glasgow is Scotland, Leeds England and Wales, and Remote England and Wales with "Please check".
+- [ ] Step 2 "How much holiday do people get?" shows a row of cards per nation, "England and Wales terms · 3 people" and "Scotland terms · 2 people": 28 days to book with "Bank holidays are booked from these" (selected), then 20 and 25 days with "+ 8 bank holidays, 28 days off in all" and "+ 8 bank holidays, 33 days off in all" (Scotland: 10 bank holidays in 2026, 30 and 35).
+- [ ] Step 3 "What's their working week?" shows four cards per nation, Mon–Fri 7.5 hours a day selected.
+- [ ] The footer reads "Days off a year: England and Wales 28 · Scotland 28" and follows each choice.
+- [ ] Moving Glasgow to England and Wales removes Scotland's rows and the nation names, and the footer reads "28 days off a year"; moving it back shows Scotland's rows with the choices they had.
+- [ ] Moving Leeds to Northern Ireland adds "Northern Ireland terms" rows; move it back to England and Wales.
 - [ ] On another run, with the fallback source, every location starts on England and Wales with "Please check", and the page still works.
-- [ ] On another run, a staff file without locations shows only the England and Wales card and no location list.
-- [ ] Below 768px wide the cards and the location list stack.
+- [ ] On another run, a staff file without locations starts at Step 1 "How much holiday do people get?" with one row and no nation name.
+- [ ] Below 640px wide the cards and the location list stack, the footer hides the days summary, and nothing scrolls sideways.
 - [ ] Reloading the page, going to "Who uses Broccoli" and back, or Back to the review and Approve again, keeps the choices, including accepted suggestions after Turn on.
 
 ## Turning leave on
 
-- [ ] Set Scotland to "25 days plus bank holidays" and "Mon–Thu, 8 hours a day", press Turn on, choose "Only admins" and finish setup.
+- [ ] Set Scotland to 25 days and Mon–Thu 8 hours a day, press Turn on, choose "Only admins" and finish setup.
 - [ ] `select e.email, t.name as terms from employee_terms m join employees e on e.id = m.employee_id join terms t on t.id = m.terms_id;` puts the Glasgow people on Scotland and the others on England and Wales.
 - [ ] `select p.name, w.monday_minutes, w.friday_minutes, w.bank_holiday_calendar from working_patterns p join working_pattern_weeks w on w.working_pattern_id = p.id;` lists Standard and "Scotland · Mon–Thu, 8 hours" (480, 0, scotland).
 - [ ] `select e.email, sum(l.amount) from allowance_ledger_lines l join allowances a on a.id = l.allowance_id join employees e on e.id = a.employee_id group by e.email;` gives every person an allowance; a full-time Glasgow person has 21 days in 2026.

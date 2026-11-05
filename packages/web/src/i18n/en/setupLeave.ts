@@ -17,7 +17,7 @@ export const setupLeaveEn = {
   "setup.leave.holidayHint":
     "For a five-day week; a shorter week gets its share. Sickness, family leave and other time off are recorded too.",
   "setup.leave.daysToBook": "days to book",
-  "setup.leave.bankHolidaysOnTop": "+ {count} bank holidays off, {total} days off in all",
+  "setup.leave.bankHolidaysOnTop": "+ {count} bank holidays, {total} days off in all",
   "setup.leave.bankHolidaysIncluded": "Bank holidays are booked from these",
   "setup.leave.weekTitle": "What’s their working week?",
   "setup.leave.weekHint": "Broccoli counts leave in days of this week.",

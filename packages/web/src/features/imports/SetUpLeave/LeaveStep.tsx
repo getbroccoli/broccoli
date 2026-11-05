@@ -119,7 +119,7 @@ export function LeaveStep({ search }: Props) {
             <BackToReview />
             <div className="ml-auto flex flex-wrap items-center gap-3">
               {data && (
-                <span className="text-sm text-muted-foreground">
+                <span className="hidden text-sm text-muted-foreground sm:inline">
                   {daysOffSummary(
                     nations.map((nation) => ({
                       nation,
