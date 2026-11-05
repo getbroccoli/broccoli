@@ -15,8 +15,8 @@ A manual check of the left menu, the workspace menu, Settings and the profile me
 ## Settings
 
 - [ ] "Settings" in the workspace menu opens `/settings/email`: the left menu slides to the settings menu, the backdrop turns a shade darker and the page card takes a deeper shadow.
-- [ ] The settings menu shows "Back to app", "Settings", "Workspace", "Email" and "Locations", with the profile button at the bottom; the open section is highlighted.
-- [ ] `/settings` opens `/settings/email`; "Locations" opens `/settings/locations`.
+- [ ] The settings menu shows "Back to app", "Settings", "Workspace", "Email" and "Locations", then "Areas" and "Time off", with the profile button at the bottom; the open section is highlighted.
+- [ ] `/settings` opens `/settings/email`; "Locations" opens `/settings/locations`; "Time off" opens `/settings/time-off`.
 - [ ] "Back to app" slides back and opens People.
 - [ ] With the system's reduce motion setting on, the menus swap without sliding.
 - [ ] Tab never reaches the menu that is out of view.
@@ -30,4 +30,4 @@ A manual check of the left menu, the workspace menu, Settings and the profile me
 
 ## Narrow screens
 
-- [ ] At 390 px wide, the menu sits above the page in one row with the profile button as an avatar only; Settings swaps the row to "Back to app", "Email" and "Locations".
+- [ ] At 390 px wide, the menu sits above the page in one row with the profile button as an avatar only; Settings swaps the row to "Back to app", "Email", "Locations" and "Time off", which scrolls sideways when it does not fit.
