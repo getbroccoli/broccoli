@@ -1,4 +1,5 @@
 import { Linter } from "eslint";
+import tseslint from "typescript-eslint";
 import { expect, it } from "vitest";
 
 import { maxLinesPerFunctionConfig } from "./maxLinesPerFunction.js";
@@ -56,6 +57,53 @@ it("accepts a factory whose methods are each within the limit", () => {
   const messages = new Linter().verify(code, { plugins, rules }, "src/a.js");
 
   expect(messages).toEqual([]);
+});
+
+it("accepts a factory whose methods wrapped in satisfies are each within the limit", () => {
+  const config = maxLinesPerFunctionConfig(3);
+  const code = `
+    const createCounter = () => ({
+      readCount: (() => {
+        return 1;
+      }) satisfies () => number,
+      readTotal: (() => {
+        return 2;
+      }) satisfies () => number,
+    });
+  `;
+
+  const messages = new Linter().verify(
+    code,
+    { ...config, languageOptions: { parser: tseslint.parser } },
+    "src/a.ts",
+  );
+
+  expect(messages).toEqual([]);
+});
+
+it("counts a multi-line computed method key towards the enclosing function", () => {
+  const { plugins, rules } = maxLinesPerFunctionConfig(3);
+  const code = `
+    const createCounter = () => ({
+      [keyOf(
+        a,
+        b
+      )]() {
+        return 1;
+      },
+    });
+  `;
+
+  const messages = new Linter().verify(code, { plugins, rules }, "src/a.js");
+
+  expect(messages).toMatchObject([
+    {
+      ruleId: "broccoli/max-lines-per-function",
+      line: 2,
+      message:
+        "This function has 6 lines of code; the most is 3. Extract its steps into named functions.",
+    },
+  ]);
 });
 
 it("reports a long method inside a factory", () => {

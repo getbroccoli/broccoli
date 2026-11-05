@@ -45,9 +45,12 @@ const maxLinesPerFunctionRule = {
           }
         }
       }
-      if (isMember(node)) {
+      const member = memberOf(node);
+      if (member) {
+        // A computed key is code of the enclosing function, not of the member.
+        const range = [member.computed ? member.key.range[1] : member.range[0], member.range[1]];
         for (const outer of enclosingFunctions(node)) {
-          memberRanges.set(outer, [...(memberRanges.get(outer) ?? []), node.parent.range]);
+          memberRanges.set(outer, [...(memberRanges.get(outer) ?? []), range]);
         }
       }
       const most = isComponent(node) ? componentMax : max;
@@ -66,9 +69,21 @@ const maxLinesPerFunctionRule = {
   },
 };
 
-function isMember({ parent }) {
-  return ["MethodDefinition", "Property", "PropertyDefinition"].includes(parent.type);
+/** The property or method whose value the function is, through any type assertion around it. */
+function memberOf(node) {
+  let { parent } = node;
+  while (TYPE_ASSERTIONS.includes(parent.type)) parent = parent.parent;
+  return ["MethodDefinition", "Property", "PropertyDefinition"].includes(parent.type)
+    ? parent
+    : undefined;
 }
+
+const TYPE_ASSERTIONS = [
+  "TSAsExpression",
+  "TSSatisfiesExpression",
+  "TSNonNullExpression",
+  "TSTypeAssertion",
+];
 
 function isComponent(node) {
   const name =
