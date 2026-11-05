@@ -12,17 +12,23 @@ type Props = {
   unsure: (name: string) => boolean;
   holidaysOf: (nation: BankHolidayCalendar) => number;
   onPick: (name: string, nation: BankHolidayCalendar) => void;
+  /** People without a location, who get England and Wales. */
+  withoutLocation: number;
 };
 
 /** Each location's bank holidays, a row per location with its nation. */
-export function LocationCalendars({ locations, nationOf, unsure, holidaysOf, onPick }: Props) {
+export function LocationCalendars({
+  locations,
+  nationOf,
+  unsure,
+  holidaysOf,
+  onPick,
+  withoutLocation,
+}: Props) {
   return (
     <ul className="grid overflow-hidden rounded-xl border border-border lg:grid-cols-2">
       {locations.map(({ name, peopleCount }) => (
-        <li
-          key={name}
-          className="-mt-px -ml-px flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-l border-border px-3.5 py-2.5"
-        >
+        <li key={name} className={ROW}>
           <MapPin size={16} aria-hidden className="shrink-0 text-muted-foreground" />
           <span className="flex min-w-0 flex-[1_1_120px] flex-col">
             <span className="flex flex-wrap items-center gap-1.5 text-sm font-semibold">
@@ -33,11 +39,7 @@ export function LocationCalendars({ locations, nationOf, unsure, holidaysOf, onP
                 </span>
               )}
             </span>
-            <span className="text-[13px] text-muted-foreground">
-              {peopleCount === 1
-                ? t("setup.timeOff.peopleOne")
-                : t("setup.timeOff.people", { count: String(peopleCount) })}
-            </span>
+            <span className="text-[13px] text-muted-foreground">{peopleOf(peopleCount)}</span>
           </span>
           <select
             aria-label={t("setup.timeOff.locationCalendar", { location: name })}
@@ -56,6 +58,30 @@ export function LocationCalendars({ locations, nationOf, unsure, holidaysOf, onP
           </select>
         </li>
       ))}
+      {withoutLocation > 0 && (
+        <li className={ROW}>
+          <MapPin size={16} aria-hidden className="shrink-0 text-muted-foreground" />
+          <span className="flex min-w-0 flex-[1_1_120px] flex-col">
+            <span className="text-sm font-semibold">{t("setup.timeOff.noLocation")}</span>
+            <span className="text-[13px] text-muted-foreground">{peopleOf(withoutLocation)}</span>
+          </span>
+          <span className="text-sm">
+            {t("setup.timeOff.nationOption", {
+              nation: t("setup.timeOff.nation.ENGLAND_AND_WALES"),
+              count: String(holidaysOf("ENGLAND_AND_WALES")),
+            })}
+          </span>
+        </li>
+      )}
     </ul>
   );
+}
+
+const ROW =
+  "-mt-px -ml-px flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-l border-border px-3.5 py-2.5";
+
+function peopleOf(count: number): string {
+  return count === 1
+    ? t("setup.timeOff.peopleOne")
+    : t("setup.timeOff.people", { count: String(count) });
 }

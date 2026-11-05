@@ -97,8 +97,8 @@ export interface EmployeeSetupService {
    */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /**
-   * Gives each nation's entry terms on its working week, joining `tx`: England and Wales are the
-   * default terms, the others are created; creates missing named locations and points each at
+   * Gives each nation's entry terms on its working week, joining `tx`: the default nation's are
+   * the default terms, renamed after it, the others are created; creates missing named locations and points each at
    * its nation's terms, ready for new employees to join. Returns the terms ids, and their people,
    * in the order of `input.terms`.
    */

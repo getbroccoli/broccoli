@@ -10,8 +10,6 @@ type Props = {
   onSelect: (week: StandardWorkingWeek) => void;
 };
 
-const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
-
 /** Everyone's working week, a card per standard week with its working days marked. */
 export function WeekCards({ selected, onSelect }: Props) {
   return (
@@ -49,3 +47,5 @@ export function WeekCards({ selected, onSelect }: Props) {
     </div>
   );
 }
+
+const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;

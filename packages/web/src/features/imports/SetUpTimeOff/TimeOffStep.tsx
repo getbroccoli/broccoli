@@ -85,9 +85,9 @@ export function TimeOffStep({ search }: Props) {
     (calendar === "ENGLAND_AND_WALES" ? withoutLocation : 0);
   // People without a location start on England and Wales whenever the file has locations.
   const defaultNation = hasLocations ? "ENGLAND_AND_WALES" : nation;
-  const mostPeopleNation = hasLocations
-    ? NATIONS.reduce((most, next) => (peopleIn(next) > peopleIn(most) ? next : most))
-    : nation;
+  const calendarsInUse = hasLocations
+    ? NATIONS.filter((calendar) => peopleIn(calendar) > 0)
+    : [nation];
 
   const go = (next: Partial<TimeOffSetupState>) => {
     change(next);
@@ -163,7 +163,7 @@ export function TimeOffStep({ search }: Props) {
             <AllowanceCards
               policies={policies}
               selectedId={policyId}
-              bankHolidays={holidaysOf(mostPeopleNation)}
+              bankHolidays={calendarsInUse.length === 1 ? holidaysOf(calendarsInUse[0]!) : null}
               onSelect={(id) => change({ policyId: id })}
             />
           </Question>
@@ -192,6 +192,7 @@ export function TimeOffStep({ search }: Props) {
                 unsure={unsure}
                 holidaysOf={holidaysOf}
                 onPick={(name, next) => change({ picked: { ...picked, [name]: next } })}
+                withoutLocation={withoutLocation}
               />
             ) : (
               <NationCards

@@ -7,8 +7,8 @@ type Props = {
   /** Most common first. */
   policies: readonly Policy[];
   selectedId: string;
-  /** Bank holidays this year where most people work, for "days off in all". */
-  bankHolidays: number;
+  /** This year's bank holidays when everyone has one calendar, for "days off in all"; else null. */
+  bankHolidays: number | null;
   onSelect: (policyId: string) => void;
 };
 
@@ -40,11 +40,13 @@ export function AllowanceCards({ policies, selectedId, bankHolidays, onSelect }:
           }
           hint={
             // The one standard policy without bank holidays on top is the statutory minimum.
-            policy.bankHolidaysOnTop
-              ? t("setup.timeOff.bankHolidaysOnTop", {
-                  total: String(policy.daysForFiveDayWeek + bankHolidays),
-                })
-              : t("setup.timeOff.bankHolidaysIncluded")
+            !policy.bankHolidaysOnTop
+              ? t("setup.timeOff.bankHolidaysIncluded")
+              : bankHolidays === null
+                ? t("setup.timeOff.bankHolidaysOnTopByCalendar")
+                : t("setup.timeOff.bankHolidaysOnTop", {
+                    total: String(policy.daysForFiveDayWeek + bankHolidays),
+                  })
           }
         />
       ))}

@@ -20,7 +20,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 ## Data model
 
 - **`time_off_types`:** a kind of time off: Annual leave, Sickness, Family leave, Other, or the company's own. `type_key` marks the four seeded types, so rules never depend on a name.
-- **`terms`** and **`employee_terms`** (employees module): named sets of people, such as "England and Wales" or "UK office", and who is on which terms from when to when. A new person starts on their location's default terms, else on "England and Wales"; see the [employees module](../employees/module.md#terms).
+- **`terms`** and **`employee_terms`** (employees module): named sets of people, such as "England and Wales" or "UK office", and who is on which terms from when to when. A new person starts on their location's default terms, else on the default terms ("England and Wales" unless setup gave them another nation); see the [employees module](../employees/module.md#terms).
 - **`time_off_policies`:** the rules for one type. This is where `balance` (`balance_from_allowance`, `unlimited_balance`, `no_balance`), bank holidays (included in the allowance or on top) and the leave year start (a fixed date or the employee's start date) are set. A policy is the terms' default for that type through `terms_time_off_policies`, or used only through assignments.
 - **`time_off_allowance_rules`:** the parts that add up to a policy's allowance:
   - `yearly_entitlement`: days for a working week, as contracts state them (28 for 5), with an optional `max_days`;

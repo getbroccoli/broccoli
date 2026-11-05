@@ -1,10 +1,6 @@
 import { invalidInput } from "../../../core/applicationError";
 import type { SetupTermsInput } from "../../../core/instance";
-import {
-  BANK_HOLIDAY_CALENDARS,
-  type BankHolidayCalendar,
-  parseBankHolidayCalendar,
-} from "../../bankHolidays";
+import { type BankHolidayCalendar, parseBankHolidayCalendar } from "../../bankHolidays";
 import { parseLocationName } from "./location";
 import { parseStandardWorkingWeek, type StandardWorkingWeek } from "./standardWorkingWeek";
 
@@ -26,7 +22,10 @@ export function parseTermsSetup(input: SetupTermsInput): TermsSetup {
     workingWeek: parseStandardWorkingWeek(workingWeek),
   }));
   const calendars = terms.map(({ bankHolidayCalendar }) => bankHolidayCalendar);
-  const defaultBankHolidayCalendar = parseDefaultCalendar(input.defaultBankHolidayCalendar);
+  const defaultBankHolidayCalendar = parseBankHolidayCalendar(
+    input.defaultBankHolidayCalendar ?? "england_and_wales",
+    "defaultBankHolidayCalendar",
+  );
   if (!calendars.includes(defaultBankHolidayCalendar)) {
     throw invalidInput([{ field: "terms", code: "required" }]);
   }
@@ -41,12 +40,4 @@ export function parseTermsSetup(input: SetupTermsInput): TermsSetup {
     throw invalidInput([{ field: "locationTerms", code: "invalid" }]);
   }
   return { terms, locationTerms, defaultBankHolidayCalendar };
-}
-
-function parseDefaultCalendar(value = "england_and_wales"): BankHolidayCalendar {
-  const calendar = BANK_HOLIDAY_CALENDARS.find((known) => known === value);
-  if (!calendar) {
-    throw invalidInput([{ field: "defaultBankHolidayCalendar", code: "invalid" }]);
-  }
-  return calendar;
 }

@@ -16,10 +16,13 @@ export interface BankHolidayDay {
 }
 
 /** A calendar sent as `bankHolidayCalendar`; refuses one that is not known. */
-export function parseBankHolidayCalendar(value: string): BankHolidayCalendar {
+export function parseBankHolidayCalendar(
+  value: string,
+  field = "bankHolidayCalendar",
+): BankHolidayCalendar {
   const calendar = BANK_HOLIDAY_CALENDARS.find((known) => known === value);
   if (!calendar) {
-    throw invalidInput([{ field: "bankHolidayCalendar", code: "invalid" }]);
+    throw invalidInput([{ field, code: "invalid" }]);
   }
   return calendar;
 }

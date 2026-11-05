@@ -1,7 +1,5 @@
 import { t } from "@/i18n";
 
-const RECORD_ONLY_TYPES = ["sickness", "familyLeave", "other"] as const;
-
 /** The record-only time off types turning time off on adds next to Annual leave. */
 export function AlsoReady() {
   return (
@@ -23,3 +21,5 @@ export function AlsoReady() {
     </section>
   );
 }
+
+const RECORD_ONLY_TYPES = ["sickness", "familyLeave", "other"] as const;

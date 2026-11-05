@@ -11,10 +11,11 @@ export const setupTimeOffEn = {
     "Part-timers, someone on a different contract or a whole team can get their own terms once you are in.",
   "setup.timeOff.allowanceTitle": "How much holiday do people get?",
   "setup.timeOff.allowanceHint":
-    "A year, for a five-day week. Part-timers and new starters get their share automatically.",
+    "A year, for a five-day week. New starters get their share automatically; part-timers get theirs once their own working week is set.",
   "setup.timeOff.days": "days",
   "setup.timeOff.mostCommon": "Most common",
   "setup.timeOff.bankHolidaysOnTop": "Bank holidays on top · {total} days off in all",
+  "setup.timeOff.bankHolidaysOnTopByCalendar": "Bank holidays on top, by each person’s calendar",
   "setup.timeOff.bankHolidaysIncluded": "Legal minimum · bank holidays booked from these",
   "setup.timeOff.weekTitle": "What is a usual working week?",
   "setup.timeOff.weekHint":
@@ -30,6 +31,7 @@ export const setupTimeOffEn = {
   "setup.timeOff.people": "{count} people",
   "setup.timeOff.peopleOne": "1 person",
   "setup.timeOff.pleaseCheck": "Please check",
+  "setup.timeOff.noLocation": "No location",
   "setup.timeOff.alsoReady": "Also ready from day one:",
   "setup.timeOff.recordedWithoutBalance": "Recorded without a balance.",
   "setup.timeOff.type.sickness": "Sickness",

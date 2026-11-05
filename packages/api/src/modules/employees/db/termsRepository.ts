@@ -11,8 +11,8 @@ import { workingPatterns } from "./workingPatternsTable";
 /** Terms and who is on them, through the pool or inside a transaction. */
 export interface TermsRepository {
   /**
-   * Puts new employees on their location's default terms, or the default terms ("England and
-   * Wales") without one, since their employment started.
+   * Puts new employees on their location's default terms, or the default terms without one,
+   * since their employment started.
    */
   joinDefaultTerms(employees: readonly { id: string; locationId: string | null }[]): Promise<void>;
   /** New terms with this name; returns their id. */
