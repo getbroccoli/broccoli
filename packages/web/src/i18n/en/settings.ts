@@ -6,6 +6,8 @@ export const settingsEn = {
   "settings.timeOff.title": "Time off",
   "settings.timeOff.types": "{count} time off types",
   "settings.timeOff.typeOne": "1 time off type",
+  "settings.timeOff.people": "{count} people",
+  "settings.timeOff.personOne": "1 person",
   "settings.timeOff.summary": "{types}.",
   "settings.timeOff.summaryWithPeople": "{types}, for {people}.",
   "settings.timeOff.typeColumn": "Time off type",

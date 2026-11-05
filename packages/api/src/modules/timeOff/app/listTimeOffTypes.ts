@@ -2,7 +2,7 @@ import type { Transact } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
 import type { EmployeeReadService } from "../../employees";
 import { timeOffPolicyRepository, timeOffRepository } from "../db";
-import type { TimeOffPolicy, TimeOffType } from "../domain";
+import { sharedBalance, type TimeOffPolicy, type TimeOffType } from "../domain";
 import type { AllowanceEngineDependencies } from "./allowanceEngine";
 import { byTypeOrder, calendarYearOf, readTimeOffTypes } from "./readTimeOffTypes";
 
@@ -25,8 +25,6 @@ type Dependencies = {
     Pick<EmployeeReadService, "listEmployees">;
   today: AllowanceEngineDependencies["today"];
 };
-
-const PAGE_SIZE = 100;
 
 /** Every time off type in list order, with how it counts and the days taken this year. */
 export async function listTimeOffTypes(
@@ -54,17 +52,6 @@ export async function listTimeOffTypes(
   };
 }
 
-/** The balance kind most policies share; ties go to the oldest policy, whose uuidv7 id sorts first. */
-function sharedBalance(policies: readonly TimeOffPolicy[]): TimeOffPolicy["balance"] | null {
-  const oldestFirst = [...policies].sort((a, b) => a.id.localeCompare(b.id));
-  const countOf = (balance: TimeOffPolicy["balance"]) =>
-    policies.filter((policy) => policy.balance === balance).length;
-  return oldestFirst.reduce<TimeOffPolicy["balance"] | null>(
-    (best, { balance }) => (best === null || countOf(balance) > countOf(best) ? balance : best),
-    null,
-  );
-}
-
 // shortcut: reads every employee's figures page by page; fine for SMB sizes, add a counting query if it gets slow.
 async function countPeopleWithTimeOff(
   dependencies: Dependencies,
@@ -83,3 +70,6 @@ async function countPeopleWithTimeOff(
   }
   return count;
 }
+
+/** Employees read per page while counting, the daily allowance job's batch size. */
+const PAGE_SIZE = 100;
