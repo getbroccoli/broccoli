@@ -22,6 +22,8 @@ export interface TimeOffRepository {
     from: CalendarDate;
     until: CalendarDate;
   }): Promise<{ timeOffTypeId: string; days: number }[]>;
+  /** The types anyone has time off of, in any state. */
+  findTypeIdsWithTimeOff(): Promise<Set<string>>;
 }
 
 export function timeOffRepository(tx: Tx): TimeOffRepository {
@@ -49,6 +51,12 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .where(counted(from, until))
         .groupBy(timeOff.timeOffTypeId);
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
+    },
+    async findTypeIdsWithTimeOff() {
+      const rows = await ormOf(tx)
+        .selectDistinct({ timeOffTypeId: timeOff.timeOffTypeId })
+        .from(timeOff);
+      return new Set(rows.map(({ timeOffTypeId }) => timeOffTypeId));
     },
   };
 }

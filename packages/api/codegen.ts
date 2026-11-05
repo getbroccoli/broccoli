@@ -6,6 +6,7 @@ import { codegenMappers as demoMappers } from "./src/modules/demo/codegen";
 import { codegenMappers as employeeMappers } from "./src/modules/employees/codegen";
 import { codegenMappers as importMappers } from "./src/modules/imports/codegen";
 import { codegenMappers as systemMappers } from "./src/modules/system/codegen";
+import { codegenMappers as timeOffMappers } from "./src/modules/timeOff/codegen";
 
 const config: CodegenConfig = {
   schema: "src/**/*.graphql",
@@ -25,6 +26,7 @@ const config: CodegenConfig = {
           ...employeeMappers,
           ...importMappers,
           ...systemMappers,
+          ...timeOffMappers,
           ...recordMappers,
         },
       },

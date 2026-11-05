@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, integer, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { check, integer, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { timeOffTypes } from "./timeOffTypesTable";
 
@@ -41,6 +41,10 @@ export const timeOffPolicies = pgTable(
   (table) => [
     // The target of the assignments' foreign key, which keeps a policy on its own type.
     unique("time_off_policies_id_type_unique").on(table.id, table.timeOffTypeId),
+    uniqueIndex("time_off_policies_type_name_unique").on(
+      table.timeOffTypeId,
+      sql`lower(btrim(${table.name}))`,
+    ),
     check(
       "time_off_policies_bank_holidays_with_allowance",
       sql`(${table.bankHolidays} is not null) = (${table.balance} = 'balance_from_allowance')`,

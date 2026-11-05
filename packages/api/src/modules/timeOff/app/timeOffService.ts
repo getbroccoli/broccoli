@@ -14,7 +14,12 @@ import {
 import { timeOffPolicyRepository } from "../db";
 import type { AllowanceCause, DatedPolicyRow, TimeOffPolicy } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
-import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
+import {
+  listTimeOffTypes,
+  readTimeOffTypeSettings,
+  type TimeOffTypeList,
+  type TimeOffTypeSettings,
+} from "./timeOffTypeSettings";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 
 const employeeSetup = createEmployeeSetupService();
@@ -70,6 +75,11 @@ export interface TimeOffService {
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
+  /** One time off type for Settings, with its policies; null when there is none. */
+  readTimeOffTypeSettings: (
+    ctx: SecurityContext,
+    input: { id: string },
+  ) => Promise<TimeOffTypeSettings | null>;
   /** Unlinks all terms' policies when setup or the demo goes back to its start. */
   deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
@@ -182,7 +192,9 @@ export function createTimeOffService({
     },
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
-    listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, today }, ctx),
+    listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, employeeReads, today }, ctx),
+    readTimeOffTypeSettings: (ctx, input) =>
+      readTimeOffTypeSettings({ transact, employeeReads, today }, ctx, input),
     async deleteAllTermsPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).deleteAllTermsLinks();

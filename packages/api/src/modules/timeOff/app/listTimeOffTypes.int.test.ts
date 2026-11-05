@@ -5,7 +5,6 @@ import {
   linkStatutoryMinimumToDefaultTerms,
   seedTimeOff,
   seedTimeOffPolicy,
-  seedTimeOffType,
   test,
   timeOffService,
 } from "#test/support";
@@ -44,48 +43,17 @@ test("lists a company's own type after the seeded ones, with no icon or colour",
   });
 });
 
-test("reads how a type counts from its policies", async ({ orm }) => {
+test("each type lists its policies", async ({ orm }) => {
   const service = timeOffService(orm, { today: "2026-11-05" });
+  const policies = await service.listPolicies(ADMIN, orm);
 
   const result = await service.listTimeOffTypes(ADMIN);
 
-  expect(
-    result.timeOffTypes.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave"),
-  ).toMatchObject({ balance: "balance_from_allowance" });
-  expect(
-    result.timeOffTypes.find(({ timeOffType }) => timeOffType.typeKey === "sickness"),
-  ).toMatchObject({ balance: "no_balance" });
-});
-
-test("takes the oldest policy's balance kind on a tie", async ({ orm }) => {
-  const oldest = await seedTimeOffPolicy(orm, {
-    name: "Moving day",
-    balance: "balance_from_allowance",
-  });
-  await seedTimeOffPolicy(orm, {
-    name: "Unlimited moving days",
-    timeOffTypeId: oldest.timeOffTypeId,
-    balance: "unlimited_balance",
-  });
-  const service = timeOffService(orm, { today: "2026-11-05" });
-
-  const result = await service.listTimeOffTypes(ADMIN);
-
-  expect(
-    result.timeOffTypes.find(({ timeOffType }) => timeOffType.id === oldest.timeOffTypeId),
-  ).toMatchObject({ balance: "balance_from_allowance" });
-});
-
-test("returns no balance kind for a type without a policy", async ({ orm }) => {
-  const type = await seedTimeOffType(orm, "Moving day");
-  const service = timeOffService(orm, { today: "2026-11-05" });
-
-  const result = await service.listTimeOffTypes(ADMIN);
-
-  expect(result.timeOffTypes.find(({ timeOffType }) => timeOffType.id === type.id)).toMatchObject({
-    balance: null,
-    daysTakenThisYear: 0,
-  });
+  for (const { timeOffType, policies: listed } of result.timeOffTypes) {
+    expect(listed.map(({ id }) => id).sort()).toEqual(
+      policies.filter(({ typeKey }) => typeKey === timeOffType.typeKey).map(({ id }) => id).sort(),
+    );
+  }
 });
 
 test("sums the days everyone took this calendar year", async ({ orm, seed }) => {

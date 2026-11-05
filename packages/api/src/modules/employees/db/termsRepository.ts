@@ -28,6 +28,8 @@ export interface TermsRepository {
   findDefaultTermsId(): Promise<string>;
   /** Whether terms have this id. */
   exists(termsId: string): Promise<boolean>;
+  /** The name of each of the terms that exist, by id. */
+  findNames(termsIds: readonly string[]): Promise<Map<string, string>>;
   /** Each employee's terms over time, by employee id. */
   findMemberships(employeeIds: readonly string[]): Promise<Map<string, TermsMembership[]>>;
   /** The employees on each of the terms on any date, by terms id; terms without any are left out. */
@@ -97,6 +99,14 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
     async exists(termsId) {
       const [found] = await orm().select({ id: terms.id }).from(terms).where(eq(terms.id, termsId));
       return found !== undefined;
+    },
+
+    async findNames(termsIds) {
+      const rows = await orm()
+        .select({ id: terms.id, name: terms.name })
+        .from(terms)
+        .where(inArray(terms.id, [...termsIds]));
+      return new Map(rows.map(({ id, name }) => [id, name]));
     },
 
     async findMemberships(employeeIds) {

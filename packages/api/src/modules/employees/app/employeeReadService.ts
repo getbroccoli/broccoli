@@ -63,6 +63,14 @@ export interface EmployeeReadService {
    * have this id.
    */
   readTermsMemberIds: (tx: Tx, termsId: string) => Promise<string[] | null>;
+  /**
+   * Trusted, for time off: the terms that exist among these ids, with their names and the employees
+   * on them on any date, in the caller's transaction.
+   */
+  readTerms: (
+    tx: Tx,
+    termsIds: readonly string[],
+  ) => Promise<{ id: string; name: string; memberIds: string[] }[]>;
   /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -122,6 +130,14 @@ export function createEmployeeReadService({
       return (await repository.exists(termsId))
         ? ((await repository.findMemberIds([termsId])).get(termsId) ?? [])
         : null;
+    },
+    async readTerms(tx, termsIds) {
+      const repository = termsRepository(tx);
+      const [names, members] = await Promise.all([
+        repository.findNames(termsIds),
+        repository.findMemberIds(termsIds),
+      ]);
+      return [...names].map(([id, name]) => ({ id, name, memberIds: members.get(id) ?? [] }));
     },
     readEmployeeHistory: (ctx, employeeId, args) =>
       history.readHistory(ctx, "employee", employeeId, args),

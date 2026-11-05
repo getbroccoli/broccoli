@@ -180,7 +180,7 @@ function toEmployeeTimeOffType(
     : { ...row, ...noFigures, used: figures.used };
 }
 
-function overlaps(
+export function overlaps(
   period: { startDate: CalendarDate | null; endDate: CalendarDate | null },
   range: { start: CalendarDate; end: CalendarDate },
 ): boolean {

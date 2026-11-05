@@ -126,3 +126,4 @@ export {
 } from "./timeOffSetup";
 
 export { DecisionsError, type Answers, type Decisions } from "../../src/integrations/ai";
+export { seedLinkedTimeOffPolicy } from "./seedLinkedTimeOffPolicy";

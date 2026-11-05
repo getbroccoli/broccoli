@@ -1,5 +1,6 @@
 export type { EnsuredAllowances } from "./allowanceEngine";
 export type { EmployeeTimeOffType } from "./readTimeOffTypes";
+export type { TimeOffTypeList, TimeOffTypeSettings } from "./timeOffTypeSettings";
 export {
   createTimeOffService,
   type TimeOffPolicySummary,

@@ -2859,7 +2859,29 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "time_off_policies_type_name_unique": {
+          "name": "time_off_policies_type_name_unique",
+          "columns": [
+            {
+              "expression": "time_off_type_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lower(btrim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "time_off_policies_time_off_type_id_time_off_types_id_fk": {
           "name": "time_off_policies_time_off_type_id_time_off_types_id_fk",
@@ -3132,7 +3154,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "time_off_types_name_unique": {
+          "name": "time_off_types_name_unique",
+          "columns": [
+            {
+              "expression": "lower(btrim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {

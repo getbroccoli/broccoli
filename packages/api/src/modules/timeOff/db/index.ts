@@ -9,3 +9,4 @@ export { timeOff } from "./timeOffTable";
 export { timeOffDays } from "./timeOffDaysTable";
 export { timeOffPolicies } from "./timeOffPoliciesTable";
 export { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
+export { termsTimeOffPolicies } from "./termsTimeOffPoliciesTable";

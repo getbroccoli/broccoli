@@ -11,10 +11,11 @@ export type AllowanceCause =
   | {
       kind:
         | "POLICY_LINKED_TO_TERMS"
+        | "POLICY_CHANGED"
         | "EMPLOYEE_ADDED"
         | "WORKING_PATTERN_CHANGED"
         | "LEAVE_YEAR_STARTED"
         | "DAILY_CHECK";
-      /** The terms id, employee id or date the cause names; null when it names none. */
+      /** The terms id, policy id, employee id or date the cause names; null when it names none. */
       ref: string | null;
     };

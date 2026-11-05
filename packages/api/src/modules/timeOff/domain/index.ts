@@ -23,7 +23,6 @@ export {
   type TimeOffType,
   type TimeOffTypeKey,
 } from "./timeOffPolicy";
-export { sharedBalance } from "./sharedBalance";
 export { timeOffFigures, type LedgerLineKind, type TimeOffFigures } from "./timeOffFigures";
 export {
   DEFAULT_TIME_OFF_TYPE_LOOK,

@@ -13,6 +13,8 @@ export type TimeOffTypeKey = "annual_leave" | "sickness" | "family_leave" | "oth
 export interface TimeOffType {
   id: string;
   name: string;
+  /** Colleagues see that the person is off, not why. */
+  private: boolean;
   typeKey: TimeOffTypeKey | null;
   icon: TimeOffTypeIcon | null;
   colour: TimeOffTypeColour | null;

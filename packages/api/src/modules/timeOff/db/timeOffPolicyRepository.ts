@@ -28,6 +28,14 @@ export interface TimeOffPolicyRepository {
   deleteAllTermsLinks(): Promise<void>;
   /** Each employee's own policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, DatedPolicyRow[]>>;
+  /** Every terms link of these policies, on any date. */
+  findLinksOfPolicies(
+    policyIds: readonly string[],
+  ): Promise<(DatedPolicyRow & { termsId: string })[]>;
+  /** Every assignment of these policies, on any date. */
+  findAssignmentsOfPolicies(
+    policyIds: readonly string[],
+  ): Promise<(DatedPolicyRow & { employeeId: string })[]>;
 }
 
 export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
@@ -102,6 +110,20 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .where(inArray(timeOffPolicyAssignments.employeeId, [...employeeIds]));
       return Map.groupBy(rows, ({ employeeId }) => employeeId);
     },
+
+    findLinksOfPolicies(policyIds) {
+      return orm()
+        .select()
+        .from(termsTimeOffPolicies)
+        .where(inArray(termsTimeOffPolicies.timeOffPolicyId, [...policyIds]));
+    },
+
+    findAssignmentsOfPolicies(policyIds) {
+      return orm()
+        .select()
+        .from(timeOffPolicyAssignments)
+        .where(inArray(timeOffPolicyAssignments.timeOffPolicyId, [...policyIds]));
+    },
   };
 }
 
@@ -122,6 +144,13 @@ function toRule(row: typeof timeOffAllowanceRules.$inferSelect): AllowanceRule {
       };
 }
 
-function toTimeOffType({ id, name, typeKey, icon, colour }: typeof timeOffTypes.$inferSelect) {
-  return { id, name, typeKey, icon, colour };
+function toTimeOffType({
+  id,
+  name,
+  private: isPrivate,
+  typeKey,
+  icon,
+  colour,
+}: typeof timeOffTypes.$inferSelect): TimeOffType {
+  return { id, name, private: isPrivate, typeKey, icon, colour };
 }
