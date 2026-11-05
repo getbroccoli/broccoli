@@ -31,6 +31,7 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);
   --color-app-backdrop: var(--app-backdrop);
+  --color-settings-backdrop: var(--settings-backdrop);
   --font-sans: "Hanken Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-sans);
   --radius-sm: calc(var(--radius) * 0.6);
@@ -74,6 +75,8 @@
   --brand-foreground: oklch(0.985 0 0);
   --brand-soft: oklch(0.93 0.04 150);
   --app-backdrop: oklch(0.975 0.005 95);
+  /* A shade darker, so Settings reads as its own place. */
+  --settings-backdrop: oklch(0.935 0.009 88);
   --avatar-fill-l: 0.55;
   --avatar-fill-c: 0.13;
 }

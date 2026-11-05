@@ -7,6 +7,7 @@ query Session {
     operations
     employee {
       id
+      ...ProfileMenu_employee
     }
   }
   setup {

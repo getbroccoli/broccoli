@@ -1,0 +1,7 @@
+fragment ProfileMenu_employee on Employee {
+  id
+  firstName
+  lastName
+  jobTitle
+  avatarUrl
+}

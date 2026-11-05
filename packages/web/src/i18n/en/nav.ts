@@ -2,6 +2,6 @@
 export const navEn = {
   "nav.label": "Main",
   "nav.people": "People",
-  "nav.profile": "Your profile",
-  "nav.settings": "Settings",
+  "nav.myProfile": "My profile",
+  "nav.backToApp": "Back to app",
 } as const;

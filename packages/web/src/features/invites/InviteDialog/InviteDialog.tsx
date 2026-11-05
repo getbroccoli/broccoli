@@ -170,7 +170,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
                 <p id="invite-note-hint" className="text-sm text-muted-foreground">
                   {t("invites.dialog.noteHint")}{" "}
                   {data?.setup.mail?.from ? (
-                    <Link to="/settings" className="underline underline-offset-2">
+                    <Link to="/settings/email" className="underline underline-offset-2">
                       {t("invites.dialog.emailedFrom", { from: data.setup.mail.from })}
                     </Link>
                   ) : (

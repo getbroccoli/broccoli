@@ -1,13 +1,10 @@
-import { createFileRoute, redirect, stripSearchParams } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
-import { DEFAULT_SETTINGS_SEARCH, settingsSearch, SettingsTabs } from "@/features/settings";
 import { t } from "@/i18n";
 import { PageHeader } from "@/shell";
 
-/** The instance settings, for admins. */
+/** The instance settings, for admins, one section per page. */
 export const Route = createFileRoute("/_authenticated/settings")({
-  validateSearch: settingsSearch,
-  search: { middlewares: [stripSearchParams(DEFAULT_SETTINGS_SEARCH)] },
   beforeLoad: ({ context: { me } }) => {
     if (!me.operations.includes("MANAGE_WORKSPACE")) {
       throw redirect({ to: "/", replace: true });
@@ -16,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
   component: () => (
     <>
       <PageHeader title={t("settings.title")} />
-      <SettingsTabs />
+      <Outlet />
     </>
   ),
 });
