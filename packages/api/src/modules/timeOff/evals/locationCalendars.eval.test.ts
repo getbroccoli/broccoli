@@ -1,4 +1,4 @@
-import { expect, leaveSetupService, OWNER, startLiveDecisions, test } from "#test/support";
+import { expect, timeOffSetupService, OWNER, startLiveDecisions, test } from "#test/support";
 
 /**
  * Whose bank holidays apply at each location, written by hand from the rules: a UK place is its
@@ -28,7 +28,7 @@ test("suggests each UK location's nation and leaves the others to the owner", as
     await model.stop();
   });
 
-  const suggestions = await leaveSetupService(orm, model.decisions).suggestLocationCalendars(
+  const suggestions = await timeOffSetupService(orm, model.decisions).suggestLocationCalendars(
     OWNER,
     { locationNames: LOCATIONS.map(({ locationName }) => locationName) },
   );

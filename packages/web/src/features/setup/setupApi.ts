@@ -1,4 +1,4 @@
-import type { SetupInviteAudience, TurnOnLeaveInput } from "@/__generated__/graphql";
+import type { SetupInviteAudience, TurnOnTimeOffInput } from "@/__generated__/graphql";
 import { postJson } from "@/lib/postJson";
 
 /** How an attempt to create the owner ended, as the setup form reports it. */
@@ -26,12 +26,12 @@ export async function startSetup(): Promise<boolean> {
   }
 }
 
-/** What the owner chose on "Set up leave" and "Who uses Broccoli", sent with their account. */
+/** What the owner chose on "Set up time off" and "Who uses Broccoli", sent with their account. */
 export interface OwnerSetupChoices {
   ownerEmployeeKey: string | null;
   inviteAudience: SetupInviteAudience;
   inviteNote: string | null;
-  leave: TurnOnLeaveInput | null;
+  timeOff: TurnOnTimeOffInput | null;
 }
 
 /** An invite setup sent; the link only when the owner copies it. */
@@ -64,7 +64,7 @@ export async function setUpOwner(
       password,
       ...choices,
       inviteAudience: AUDIENCES[choices.inviteAudience],
-      leave: choices.leave && lowerCaseLeave(choices.leave),
+      timeOff: choices.timeOff && lowerCaseTimeOff(choices.timeOff),
     });
     const body = (await response.json().catch(() => ({}))) as Partial<{
       invites: OwnerSetupInvite[];
@@ -86,8 +86,8 @@ const AUDIENCES = {
   EVERYONE: "everyone",
 } as const satisfies Record<SetupInviteAudience, string>;
 
-/** The API takes the leave choice's values in lower case, as it stores them. */
-function lowerCaseLeave({ terms, locationTerms }: TurnOnLeaveInput) {
+/** The API takes the time off choice's values in lower case, as it stores them. */
+function lowerCaseTimeOff({ terms, locationTerms }: TurnOnTimeOffInput) {
   return {
     terms: terms.map((entry) => ({
       ...entry,

@@ -5,15 +5,15 @@ import type { SetupTermsInput } from "../../src/core/instance";
 import { createLogger } from "../../src/core/logger";
 import type { Decisions } from "../../src/integrations/ai";
 import { terms, workingPatternRepository } from "../../src/modules/employees/db";
-import { createLeaveSetupService } from "../../src/modules/timeOff";
+import { createTimeOffSetupService } from "../../src/modules/timeOff";
 import { parseCalendarDate } from "../../src/utils";
 import { bankHolidayService } from "./bankHolidayService";
 import { OWNER } from "./testSecurityContext";
 import { timeOffService } from "./timeOffService";
 
-/** Leave suggestions with the supplied decision boundary and shipped bank holidays. */
-export function leaveSetupService(orm: Orm, decisions: Decisions) {
-  return createLeaveSetupService({
+/** Time off setup with the supplied decision boundary and shipped bank holidays. */
+export function timeOffSetupService(orm: Orm, decisions: Decisions) {
+  return createTimeOffSetupService({
     orm,
     decisions,
     logger: createLogger("silent"),
@@ -23,7 +23,7 @@ export function leaveSetupService(orm: Orm, decisions: Decisions) {
 }
 
 /** The setup choice for Glasgow on four days and Leeds on the Standard week. */
-export async function scotlandLeaveSetup(orm: Orm): Promise<SetupTermsInput> {
+export async function scotlandTimeOffSetup(orm: Orm): Promise<SetupTermsInput> {
   const policies = await timeOffService(orm).listPolicies(OWNER, orm);
   return {
     terms: [
@@ -47,7 +47,7 @@ export async function scotlandLeaveSetup(orm: Orm): Promise<SetupTermsInput> {
 }
 
 /** Terms and their dated pattern links have no public setup read yet. */
-export async function readLeaveTerms(orm: Orm) {
+export async function readTimeOffTerms(orm: Orm) {
   const rows = await orm.select().from(terms).orderBy(asc(terms.name));
   const links = await workingPatternRepository(orm).findTermsLinks(rows.map(({ id }) => id));
   return rows.map((row) => ({ ...row, patterns: links.get(row.id) ?? [] }));

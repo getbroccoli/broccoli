@@ -7,8 +7,8 @@ import {
   instances,
   OWNER,
   readAllowances,
-  readLeaveTerms,
-  scotlandLeaveSetup,
+  readTimeOffTerms,
+  scotlandTimeOffSetup,
   SETUP_HOLDER,
   test,
   timeOffService,
@@ -28,16 +28,16 @@ test("finishing setup gives Glasgow and Leeds their chosen terms and Annual leav
   ]);
   const imports = importServices(orm);
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  const leave = await scotlandLeaveSetup(orm);
+  const timeOff = await scotlandTimeOffSetup(orm);
 
-  await finishSelfHostedSetup(orm, { leave });
+  await finishSelfHostedSetup(orm, { timeOff });
 
   const employees = employeeServices(orm);
   const { edges } = await employees.listEmployees(OWNER, {});
   expect(edges).toHaveLength(2);
   const glasgow = edges.find(({ node }) => node.email === "glasgow@example.com")!.node;
   const leeds = edges.find(({ node }) => node.email === "leeds@example.com")!.node;
-  const terms = await readLeaveTerms(orm);
+  const terms = await readTimeOffTerms(orm);
   const scotland = terms.find(({ name }) => name === "Scotland")!;
   expect(terms).toHaveLength(2);
   const memberships = await transact((tx) =>
@@ -84,7 +84,7 @@ test("finishing setup gives Glasgow and Leeds their chosen terms and Annual leav
     expect(policies).toHaveLength(4);
     expect(policies).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: leave.terms[index]!.annualLeavePolicyId }),
+        expect.objectContaining({ id: timeOff.terms[index]!.annualLeavePolicyId }),
         expect.objectContaining({ typeKey: "sickness", balance: "no_balance" }),
         expect.objectContaining({ typeKey: "family_leave", balance: "no_balance" }),
         expect.objectContaining({ typeKey: "other", balance: "no_balance" }),
@@ -93,7 +93,7 @@ test("finishing setup gives Glasgow and Leeds their chosen terms and Annual leav
   }
 });
 
-test("skipping leave finishes setup without policies, new terms or allowances", async ({
+test("skipping time off finishes setup without policies, new terms or allowances", async ({
   orm,
   seed,
 }) => {
@@ -102,12 +102,12 @@ test("skipping leave finishes setup without policies, new terms or allowances", 
   await seed.importEmployees(source.id, [{ startDate: calendarDate("2025-01-01") }]);
   const imports = importServices(orm);
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  const termsBefore = await readLeaveTerms(orm);
+  const termsBefore = await readTimeOffTerms(orm);
 
-  await finishSelfHostedSetup(orm, { leave: null });
+  await finishSelfHostedSetup(orm, { timeOff: null });
 
   expect((await instances.readInstance(orm)).step).toBe("done");
-  expect(await readLeaveTerms(orm)).toEqual(termsBefore);
+  expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
   expect(
     await timeOffService(orm).readTermsPolicies(OWNER, { termsId: await seed.defaultTermsId() }),
   ).toEqual([]);
@@ -116,7 +116,7 @@ test("skipping leave finishes setup without policies, new terms or allowances", 
   expect(await readAllowances(orm, edges[0]!.node.id)).toEqual([]);
 });
 
-test("a refused leave choice rolls back the people and keeps setup unfinished", async ({
+test("a refused time off choice rolls back the people and keeps setup unfinished", async ({
   orm,
   seed,
 }) => {
@@ -127,18 +127,18 @@ test("a refused leave choice rolls back the people and keeps setup unfinished", 
   ]);
   const imports = importServices(orm);
   await imports.approveImport(SETUP_HOLDER, (await imports.reads.readReview(SETUP_HOLDER)).version);
-  const leave = await scotlandLeaveSetup(orm);
-  leave.terms[1]!.annualLeavePolicyId = "00000000-0000-4000-8000-000000000001";
-  const termsBefore = await readLeaveTerms(orm);
+  const timeOff = await scotlandTimeOffSetup(orm);
+  timeOff.terms[1]!.annualLeavePolicyId = "00000000-0000-4000-8000-000000000001";
+  const termsBefore = await readTimeOffTerms(orm);
 
-  await expect(finishSelfHostedSetup(orm, { leave })).rejects.toMatchObject({
+  await expect(finishSelfHostedSetup(orm, { timeOff })).rejects.toMatchObject({
     code: "INVALID_INPUT",
     fieldErrors: [{ field: "annualLeavePolicyId", code: "invalid" }],
   });
 
   expect((await employeeServices(orm).listEmployees(OWNER, {})).edges).toEqual([]);
   expect((await instances.readInstance(orm)).step).toBe("owner");
-  expect(await readLeaveTerms(orm)).toEqual(termsBefore);
+  expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
   expect(
     await timeOffService(orm).readTermsPolicies(OWNER, { termsId: await seed.defaultTermsId() }),
   ).toEqual([]);

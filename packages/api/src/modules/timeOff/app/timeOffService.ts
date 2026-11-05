@@ -46,12 +46,12 @@ export interface TimeOffService {
     input: { termsId: string; timeOffPolicyIds: readonly string[] },
   ) => Promise<EnsuredAllowances & { employeeCount: number }>;
   /**
-   * Turns leave on, joining the caller's transaction: sets up each nation's terms on its working
+   * Turns time off on, joining the caller's transaction: sets up each nation's terms on its working
    * week (`EmployeeSetupService.setUpTerms`), links each its Annual leave policy, one of the
    * standard ones, and the record-only policies, and ensures their people's allowances. Refuses
    * with CONFLICT once any terms have a time off policy.
    */
-  turnOnLeave: (ctx: SecurityContext, tx: Tx, input: SetupTermsInput) => Promise<TurnedOnLeave>;
+  turnOnTimeOff: (ctx: SecurityContext, tx: Tx, input: SetupTermsInput) => Promise<TurnedOnTimeOff>;
   /** The policies linked to terms, on any date. */
   readTermsPolicies: (
     ctx: SecurityContext,
@@ -71,11 +71,10 @@ export interface TimeOffService {
   deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
-/** What turning leave on did; the terms ids are in the order of the input's terms. */
-export interface TurnedOnLeave extends EnsuredAllowances {
+/** What turning time off on did; the terms ids are in the order of the input's terms. */
+export interface TurnedOnTimeOff extends EnsuredAllowances {
   termsIds: string[];
   createdPatternIds: string[];
-  movedEmployeeCount: number;
 }
 
 export function createTimeOffService({
@@ -121,13 +120,13 @@ export function createTimeOffService({
       const ensured = await linkPolicies(engine, tx, { termsId, employeeIds, chosen, linked });
       return { employeeCount: employeeIds.length, ...ensured };
     },
-    async turnOnLeave(ctx, tx, input) {
+    async turnOnTimeOff(ctx, tx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const setup = parseTermsSetup(input);
       const repository = timeOffPolicyRepository(tx);
       await repository.lockTermsLinks();
       if (await repository.hasAnyTermsLinks()) {
-        throw new ApplicationError("CONFLICT", "Leave is already on.");
+        throw new ApplicationError("CONFLICT", "Time off is already on.");
       }
       const policies = await repository.findAll();
       const annualLeave = input.terms.map(({ annualLeavePolicyId }) => {
@@ -154,10 +153,9 @@ export function createTimeOffService({
       const turnedOn = {
         termsIds: setUp.termsIds,
         createdPatternIds: setUp.createdPatternIds,
-        movedEmployeeCount: setUp.movedEmployeeIds.length,
         ...totals,
       };
-      tx.publish("timeOff.leave_turned_on", {
+      tx.publish("timeOff.time_off_turned_on", {
         ...turnedOn,
         timeOffPolicyIds: annualLeave.map(({ id }) => id),
         locationCount: input.locationTerms.length,

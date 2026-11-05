@@ -2,24 +2,24 @@ import {
   expect,
   OWNER,
   readAllowances,
-  readLeaveTerms,
-  scotlandLeaveSetup,
+  readTimeOffTerms,
+  scotlandTimeOffSetup,
   SETUP_HOLDER,
   test,
   timeOffService,
   workingPatternService,
 } from "#test/support";
 
-test("turning leave on twice refuses the second choice and keeps the first", async ({
+test("turning time off on twice refuses the second choice and keeps the first", async ({
   orm,
   seed,
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const input = await scotlandLeaveSetup(orm);
-  await transact((tx) => service.turnOnLeave(OWNER, tx, input));
-  const termsBefore = await readLeaveTerms(orm);
+  const input = await scotlandTimeOffSetup(orm);
+  await transact((tx) => service.turnOnTimeOff(OWNER, tx, input));
+  const termsBefore = await readTimeOffTerms(orm);
   const patternsBefore = await workingPatternService(orm).listPatterns(OWNER);
   const policiesBefore = await Promise.all(
     termsBefore.map(({ id }) => service.readTermsPolicies(OWNER, { termsId: id })),
@@ -27,12 +27,12 @@ test("turning leave on twice refuses the second choice and keeps the first", asy
   const allowancesBefore = await readAllowances(orm, employee.id);
   input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
 
-  await expect(transact((tx) => service.turnOnLeave(OWNER, tx, input))).rejects.toMatchObject({
+  await expect(transact((tx) => service.turnOnTimeOff(OWNER, tx, input))).rejects.toMatchObject({
     code: "CONFLICT",
-    message: "Leave is already on.",
+    message: "Time off is already on.",
   });
 
-  expect(await readLeaveTerms(orm)).toEqual(termsBefore);
+  expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
   expect(await workingPatternService(orm).listPatterns(OWNER)).toEqual(patternsBefore);
   expect(
     await Promise.all(
@@ -50,11 +50,11 @@ test.for([
   async ([workingWeek, minutes], { orm, seed, transact }) => {
     const patterns = workingPatternService(orm);
     const standard = (await patterns.listPatterns(OWNER)).find(({ isStandard }) => isStandard)!;
-    const input = await scotlandLeaveSetup(orm);
+    const input = await scotlandTimeOffSetup(orm);
     input.terms = [{ ...input.terms[0]!, workingWeek }];
     input.locationTerms = [];
 
-    const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+    const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
     expect(result.termsIds).toEqual([await seed.defaultTermsId()]);
     expect(result.createdPatternIds).toHaveLength(1);
@@ -72,7 +72,7 @@ test.for([
         },
       ],
     });
-    expect(await readLeaveTerms(orm)).toMatchObject([
+    expect(await readTimeOffTerms(orm)).toMatchObject([
       {
         id: await seed.defaultTermsId(),
         patterns: [
@@ -87,23 +87,22 @@ test.for([
   },
 );
 
-test("the setup holder can turn leave on with the Standard week", async ({
+test("the setup holder can turn time off on with the Standard week", async ({
   orm,
   seed,
   transact,
 }) => {
   await seed.setupStep("owner");
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
   input.terms = [input.terms[0]!];
   input.locationTerms = [];
   const patternsBefore = await workingPatternService(orm).listPatterns(OWNER);
 
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(SETUP_HOLDER, tx, input));
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(SETUP_HOLDER, tx, input));
 
   expect(result).toEqual({
     termsIds: [await seed.defaultTermsId()],
     createdPatternIds: [],
-    movedEmployeeCount: 0,
     allowancesCreated: 0,
     linesAppended: 0,
   });
@@ -118,13 +117,13 @@ test("Northern Ireland gets its calendar and terms in the requested order", asyn
   seed,
   transact,
 }) => {
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
   input.terms = [{ ...input.terms[0]!, bankHolidayCalendar: "northern_ireland" }, input.terms[0]!];
   input.locationTerms = [];
 
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
-  const terms = await readLeaveTerms(orm);
+  const terms = await readTimeOffTerms(orm);
   const northernIreland = terms.find(({ name }) => name === "Northern Ireland")!;
   expect(result.termsIds).toEqual([northernIreland.id, await seed.defaultTermsId()]);
   expect(northernIreland.patterns).toMatchObject([

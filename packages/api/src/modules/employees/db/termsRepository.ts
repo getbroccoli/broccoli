@@ -1,8 +1,7 @@
-import { eq, inArray, isNull, sql } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { TermsMembership } from "../domain";
-import { employees } from "./employeesTable";
 import { employeeTerms } from "./employeeTermsTable";
 import { locations } from "./locationsTable";
 import { terms } from "./termsTable";
@@ -18,11 +17,6 @@ export interface TermsRepository {
   joinDefaultTerms(employees: readonly { id: string; locationId: string | null }[]): Promise<void>;
   /** New terms with this name; returns their id. */
   insert(name: string): Promise<string>;
-  /**
-   * Moves each employee whose only terms are the default ones, undated, onto their location's
-   * default terms from the beginning; returns their ids.
-   */
-  moveToLocationDefaults(): Promise<string[]>;
   /**
    * Deletes every terms but the default ones and every working pattern but Standard, and puts the
    * default terms back on Standard from the beginning; the terms must have no members.
@@ -70,27 +64,6 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
     async insert(name) {
       const [inserted] = await orm().insert(terms).values({ name }).returning({ id: terms.id });
       return inserted!.id;
-    },
-
-    async moveToLocationDefaults() {
-      const { rows } = await orm().execute<{ employee_id: string }>(sql`
-        update ${employeeTerms} as membership
-        set terms_id = location.default_terms_id
-        from ${employees} as employee
-        join ${locations} as location on location.id = employee.location_id
-        join ${terms} as current on current.key = 'default_terms'
-        where membership.employee_id = employee.id
-          and membership.terms_id = current.id
-          and membership.effective_from is null
-          and membership.effective_until is null
-          and location.default_terms_id <> current.id
-          and not exists (
-            select 1 from ${employeeTerms} as other
-            where other.employee_id = membership.employee_id and other.id <> membership.id
-          )
-        returning membership.employee_id
-      `);
-      return rows.map(({ employee_id }) => employee_id);
     },
 
     async resetToDefault() {

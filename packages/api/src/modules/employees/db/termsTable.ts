@@ -16,7 +16,7 @@ export const terms = pgTable(
     key: text("key", { enum: ["default_terms"] }).unique("terms_key_unique"),
   },
   (table) => [
-    // "Scotland" and " scotland" are one set of terms, so turning leave on never makes a second.
+    // "Scotland" and " scotland" are one set of terms, so turning time off on never makes a second.
     uniqueIndex("terms_name_unique").on(sql`lower(btrim(${table.name}))`),
   ],
 );

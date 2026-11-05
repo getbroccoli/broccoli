@@ -21,7 +21,7 @@ export interface TimeOffPolicyRepository {
     termsId: string,
     policies: readonly { timeOffTypeId: string; timeOffPolicyId: string }[],
   ): Promise<void>;
-  /** Whether any terms have a time off policy: whether leave is on. */
+  /** Whether any terms have a time off policy: whether time off is on. */
   hasAnyTermsLinks(): Promise<boolean>;
   deleteAllTermsLinks(): Promise<void>;
   /** Each employee's own policies, by employee id. */

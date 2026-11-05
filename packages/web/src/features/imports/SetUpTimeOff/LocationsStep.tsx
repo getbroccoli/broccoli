@@ -3,7 +3,7 @@ import { Warning } from "@phosphor-icons/react";
 import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
-import { NATIONS } from "./leaveOptions";
+import { NATIONS } from "./timeOffOptions";
 import { Step } from "./Step";
 
 const SELECT_CLASS =
@@ -23,8 +23,8 @@ export function LocationsStep({ names, nationOf, unsure, checking, onPick }: Pro
   return (
     <Step
       number={1}
-      title={t("setup.leave.locationTerms")}
-      hint={checking ? t("setup.leave.checking") : t("setup.leave.locationTermsHint")}
+      title={t("setup.timeOff.locationTerms")}
+      hint={checking ? t("setup.timeOff.checking") : t("setup.timeOff.locationTermsHint")}
     >
       <ul className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
         {names.map((name) => (
@@ -40,14 +40,14 @@ export function LocationsStep({ names, nationOf, unsure, checking, onPick }: Pro
             >
               {NATIONS.map((option) => (
                 <option key={option} value={option}>
-                  {t(`setup.leave.nation.${option}`)}
+                  {t(`setup.timeOff.nation.${option}`)}
                 </option>
               ))}
             </select>
             {unsure(name) && (
               <span className="flex items-center gap-1 text-xs text-amber-800">
                 <Warning aria-hidden />
-                {t("setup.leave.pleaseCheck")}
+                {t("setup.timeOff.pleaseCheck")}
               </span>
             )}
           </li>

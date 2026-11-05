@@ -12,9 +12,9 @@ import {
 import { timeOffPolicyRepository } from "../db";
 import { type StandardLeavePolicyKey, yearlyDays } from "../domain";
 
-/** The choices of the Set up leave page, and the model's suggestion for each location. Admins only. */
-export interface LeaveSetupService {
-  readLeaveSetup: (ctx: SecurityContext) => Promise<LeaveSetup>;
+/** The choices of the Set up time off page, and the model's suggestion for each location. Admins only. */
+export interface TimeOffSetupService {
+  readTimeOffSetup: (ctx: SecurityContext) => Promise<TimeOffSetup>;
   /**
    * Asks the model, with the location names only, whose bank holidays apply at each location, in the
    * order given. Never fails: without an answer a location is England and Wales, unsure.
@@ -25,8 +25,8 @@ export interface LeaveSetupService {
   ) => Promise<LocationCalendarSuggestion[]>;
 }
 
-/** What the Set up leave page offers. */
-export interface LeaveSetup {
+/** What the Set up time off page offers. */
+export interface TimeOffSetup {
   /** The standard Annual leave policies, the UK statutory minimum first. */
   annualLeavePolicies: {
     id: string;
@@ -45,7 +45,7 @@ export interface LocationCalendarSuggestion {
   unsure: boolean;
 }
 
-export function createLeaveSetupService({
+export function createTimeOffSetupService({
   orm,
   logger,
   decisions,
@@ -57,9 +57,9 @@ export function createLeaveSetupService({
   decisions: Decisions;
   bankHolidays: BankHolidayService;
   today?: () => CalendarDate;
-}): LeaveSetupService {
+}): TimeOffSetupService {
   return {
-    async readLeaveSetup(ctx) {
+    async readTimeOffSetup(ctx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const policies = await timeOffPolicyRepository(orm).findAll();
       const year = today().slice(0, 4);

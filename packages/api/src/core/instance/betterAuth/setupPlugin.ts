@@ -50,8 +50,8 @@ const setupBody = credentialsBody.extend({
   ownerEmployeeKey: z.string().nullish(),
   inviteAudience: z.enum(SETUP_INVITE_AUDIENCES).optional(),
   inviteNote: z.string().nullish(),
-  // Shapes only: turning leave on checks the values.
-  leave: z
+  // Shapes only: turning time off on checks the values.
+  timeOff: z
     .object({
       terms: z.array(
         z.object({
@@ -126,7 +126,7 @@ export function setupPlugin(
                 ownerEmployeeKey: ctx.body.ownerEmployeeKey ?? null,
                 inviteAudience: ctx.body.inviteAudience ?? "only_admins",
                 inviteNote: ctx.body.inviteNote ?? null,
-                leave: ctx.body.leave ?? null,
+                timeOff: ctx.body.timeOff ?? null,
                 linkOrigin: new URL(publicUrl ?? ctx.request?.url ?? ctx.context.baseURL).origin,
               },
             }),

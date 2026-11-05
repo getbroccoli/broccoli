@@ -1,6 +1,6 @@
 import type {
   BankHolidayCalendar,
-  LeaveStepQuery,
+  TimeOffStepQuery,
   StandardWorkingWeek,
 } from "@/__generated__/graphql";
 import { t } from "@/i18n";
@@ -19,7 +19,7 @@ export const WEEKS = [
   "MONDAY_TO_THURSDAY_8_HOURS",
 ] as const satisfies readonly StandardWorkingWeek[];
 
-export type Policy = LeaveStepQuery["leaveSetup"]["annualLeavePolicies"][number];
+export type Policy = TimeOffStepQuery["timeOffSetup"]["annualLeavePolicies"][number];
 
 /** Days off a year for a five-day week: the days to book, plus bank holidays when on top. */
 export function daysOffInAll(policy: Policy | undefined, bankHolidays: number): number {
@@ -32,11 +32,11 @@ export function daysOffSummary(
   perNation: { nation: BankHolidayCalendar; daysOff: number }[],
 ): string {
   if (perNation.length === 1) {
-    return t("setup.leave.daysOffSummary", { count: String(perNation[0]!.daysOff) });
+    return t("setup.timeOff.daysOffSummary", { count: String(perNation[0]!.daysOff) });
   }
-  return t("setup.leave.daysOffSummaryNations", {
+  return t("setup.timeOff.daysOffSummaryNations", {
     nations: perNation
-      .map(({ nation, daysOff }) => `${t(`setup.leave.nation.${nation}`)} ${daysOff}`)
+      .map(({ nation, daysOff }) => `${t(`setup.timeOff.nation.${nation}`)} ${daysOff}`)
       .join(" · "),
   });
 }

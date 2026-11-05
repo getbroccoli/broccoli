@@ -168,15 +168,15 @@ enum SetupInviteAudience {
   EVERYONE
 }
 
-"What the owner chose on \"Set up leave\" and \"Who uses Broccoli\"."
+"What the owner chose on \"Set up time off\" and \"Who uses Broccoli\"."
 input SetupCompleteInput {
   "The import employee the owner is; their user is linked to the employee it becomes. None links nobody."
   ownerEmployeeKey: ID
   inviteAudience: SetupInviteAudience = ONLY_ADMINS
   "Goes into every invite; plain text, up to 1,000 characters."
   inviteNote: String
-  "How to turn leave on as setup finishes; none leaves it off."
-  leave: TurnOnLeaveInput
+  "How to turn time off on as setup finishes; none leaves it off."
+  timeOff: TurnOnTimeOffInput
 }
 
 "An invite setup sent."

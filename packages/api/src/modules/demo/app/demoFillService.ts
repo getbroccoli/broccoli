@@ -12,11 +12,11 @@ const employeeSetup = createEmployeeSetupService();
 /** Writes the demo company inside the caller's transaction. */
 export type DemoFill = (tx: Tx) => Promise<void>;
 
-/** The demo company's people, with leave on, prepared for a demo start. */
+/** The demo company's people, with time off on, prepared for a demo start. */
 export interface DemoFillService {
   /**
    * Reads the demo company's avatars, so no file I/O runs while a transaction holds locks, and
-   * returns its fill: for an instance without employees, the demo company, with leave turned on
+   * returns its fill: for an instance without employees, the demo company, with time off turned on
    * as an owner would: everyone on "England and Wales" terms, Standard's week and the UK statutory
    * minimum; otherwise nothing.
    */
@@ -26,11 +26,11 @@ export interface DemoFillService {
 export function createDemoFillService({
   timeOff,
 }: {
-  timeOff: Pick<TimeOffService, "listPolicies" | "turnOnLeave">;
+  timeOff: Pick<TimeOffService, "listPolicies" | "turnOnTimeOff">;
 }): DemoFillService {
-  async function turnOnDemoLeave(ctx: SecurityContext, tx: Tx) {
+  async function turnOnDemoTimeOff(ctx: SecurityContext, tx: Tx) {
     const policies = await timeOff.listPolicies(ctx, tx);
-    await timeOff.turnOnLeave(ctx, tx, {
+    await timeOff.turnOnTimeOff(ctx, tx, {
       terms: [
         {
           bankHolidayCalendar: "england_and_wales",
@@ -60,7 +60,7 @@ export function createDemoFillService({
           { kind: "ADDED_WITH_DEMO" },
         );
         if (added) {
-          await turnOnDemoLeave(ctx, tx);
+          await turnOnDemoTimeOff(ctx, tx);
         }
       };
     },

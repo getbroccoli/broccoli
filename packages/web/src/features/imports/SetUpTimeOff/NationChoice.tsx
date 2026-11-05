@@ -13,19 +13,19 @@ type Props = {
   children: ReactNode;
 };
 
-/** One nation's answer to a question of the Set up leave page. */
+/** One nation's answer to a question of the Set up time off page. */
 export function NationChoice({ nation, question, people, showName, children }: Props) {
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className={showName ? "mb-2 text-sm font-medium" : "sr-only"}>
         <span className="sr-only">{question} </span>
-        {t("setup.leave.termsTitle", { name: t(`setup.leave.nation.${nation}`) })}
+        {t("setup.timeOff.termsTitle", { name: t(`setup.timeOff.nation.${nation}`) })}
         {people !== undefined && (
           <span className="font-normal text-muted-foreground">
             {" · "}
             {people === 1
-              ? t("setup.leave.peopleOne")
-              : t("setup.leave.people", { count: String(people) })}
+              ? t("setup.timeOff.peopleOne")
+              : t("setup.timeOff.people", { count: String(people) })}
           </span>
         )}
       </legend>

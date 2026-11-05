@@ -2,7 +2,7 @@ import type { BankHolidayCalendar, StandardWorkingWeek } from "@/__generated__/g
 import { OptionCard } from "@/components/form";
 import { t } from "@/i18n";
 
-import { WEEKS } from "./leaveOptions";
+import { WEEKS } from "./timeOffOptions";
 
 type Props = {
   nation: BankHolidayCalendar;
@@ -21,8 +21,8 @@ export function WeekCards({ nation, selected, onSelect }: Props) {
           value={week}
           selected={selected}
           onSelect={onSelect}
-          title={t(`setup.leave.weekDays.${week}`)}
-          hint={t(`setup.leave.weekHours.${week}`)}
+          title={t(`setup.timeOff.weekDays.${week}`)}
+          hint={t(`setup.timeOff.weekHours.${week}`)}
         />
       ))}
     </div>

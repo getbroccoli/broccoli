@@ -17,6 +17,7 @@ import {
   parseLocationName,
   parseNewEmployee,
   STANDARD_WEEKS,
+  type StandardWorkingWeek,
   type TermsSetup,
   tryParseNewEmployee,
 } from "../domain";
@@ -97,9 +98,9 @@ export interface EmployeeSetupService {
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /**
    * Gives each nation's entry terms on its working week, joining `tx`: England and Wales are the
-   * default terms, the others are created; points each named location at its nation's terms and
-   * moves the people still on the untouched default terms onto their location's. Returns the
-   * terms ids, and their people, in the order of `input.terms`.
+   * default terms, the others are created; creates missing named locations and points each at
+   * its nation's terms, ready for new employees to join. Returns the terms ids, and their people,
+   * in the order of `input.terms`.
    */
   setUpTerms: (ctx: SecurityContext, tx: Tx, input: TermsSetup) => Promise<SetUpTerms>;
 }
@@ -110,7 +111,6 @@ export interface SetUpTerms {
   /** The employees on each terms afterwards, in the order of `termsIds`. */
   memberIds: string[][];
   createdPatternIds: string[];
-  movedEmployeeIds: string[];
 }
 
 export function createEmployeeSetupService(): EmployeeSetupService {
@@ -200,50 +200,29 @@ export function createEmployeeSetupService(): EmployeeSetupService {
     },
     async setUpTerms(ctx, tx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
-      const calendars = input.terms.map(({ bankHolidayCalendar }) => bankHolidayCalendar);
+      await workingPatternRepository(tx).lockForWrites();
       const terms = termsRepository(tx);
-      const patterns = workingPatternRepository(tx);
-      await patterns.lockForWrites();
       const defaultTermsId = await terms.findDefaultTermsId();
-      const termsIds: string[] = [];
-      const createdPatternIds: string[] = [];
-      for (const { bankHolidayCalendar: calendar, workingWeek: week } of input.terms) {
-        const isDefault = calendar === "england_and_wales";
-        // The default terms on Standard's week stay on Standard, which keeps that week.
-        if (isDefault && week === "monday_to_friday_7_5_hours") {
-          termsIds.push(defaultTermsId);
-          continue;
-        }
-        const { label, ...days } = STANDARD_WEEKS[week];
-        const patternId = await patterns.insertPattern(`${TERMS_NAMES[calendar]} · ${label}`, {
-          ...days,
-          bankHolidayCalendar: calendar,
-        });
-        const termsId = isDefault ? defaultTermsId : await terms.insert(TERMS_NAMES[calendar]);
-        for (const link of (await patterns.findTermsLinks([termsId])).get(termsId) ?? []) {
-          await patterns.deleteTermsLink(link.id);
-        }
-        await patterns.insertTermsLink(termsId, {
-          workingPatternId: patternId,
-          effectiveFrom: null,
-          effectiveUntil: null,
-        });
-        termsIds.push(termsId);
-        createdPatternIds.push(patternId);
+      const setUp: { termsId: string; patternId: string | null }[] = [];
+      for (const { bankHolidayCalendar, workingWeek } of input.terms) {
+        setUp.push(await termsOnWeek(tx, defaultTermsId, bankHolidayCalendar, workingWeek));
       }
-      await locationRepository(tx).setDefaultTerms(
+      const termsIds = setUp.map(({ termsId }) => termsId);
+      const termsIdOf = (calendar: BankHolidayCalendar) =>
+        termsIds[input.terms.findIndex((entry) => entry.bankHolidayCalendar === calendar)]!;
+      const locations = locationRepository(tx);
+      await locations.findOrCreate(input.locationTerms.map(({ locationName }) => locationName));
+      await locations.setDefaultTerms(
         input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
           locationName,
-          termsId: termsIds[calendars.indexOf(bankHolidayCalendar)]!,
+          termsId: termsIdOf(bankHolidayCalendar),
         })),
       );
-      const movedEmployeeIds = await terms.moveToLocationDefaults();
       const members = await terms.findMemberIds(termsIds);
       return {
         termsIds,
         memberIds: termsIds.map((termsId) => members.get(termsId) ?? []),
-        createdPatternIds,
-        movedEmployeeIds,
+        createdPatternIds: setUp.flatMap(({ patternId }) => patternId ?? []),
       };
     },
   };
@@ -255,6 +234,41 @@ const TERMS_NAMES: Record<BankHolidayCalendar, string> = {
   scotland: "Scotland",
   northern_ireland: "Northern Ireland",
 };
+
+/**
+ * A nation's terms on `week`: the default terms on Standard's week stay on Standard, which keeps
+ * that week; otherwise a new pattern becomes the terms' only one.
+ */
+async function termsOnWeek(
+  tx: Tx,
+  defaultTermsId: string,
+  calendar: BankHolidayCalendar,
+  week: StandardWorkingWeek,
+): Promise<{ termsId: string; patternId: string | null }> {
+  const isDefault = calendar === "england_and_wales";
+  if (isDefault && week === "monday_to_friday_7_5_hours") {
+    return { termsId: defaultTermsId, patternId: null };
+  }
+  const patterns = workingPatternRepository(tx);
+  const { label, ...days } = STANDARD_WEEKS[week];
+  const patternId = await patterns.insertPattern(`${TERMS_NAMES[calendar]} · ${label}`, {
+    ...days,
+    bankHolidayCalendar: calendar,
+  });
+  const termsId = isDefault
+    ? defaultTermsId
+    : await termsRepository(tx).insert(TERMS_NAMES[calendar]);
+  // Only the default terms has a pattern yet: Standard, which the new one replaces.
+  for (const link of (await patterns.findTermsLinks([termsId])).get(termsId) ?? []) {
+    await patterns.deleteTermsLink(link.id);
+  }
+  await patterns.insertTermsLink(termsId, {
+    workingPatternId: patternId,
+    effectiveFrom: null,
+    effectiveUntil: null,
+  });
+  return { termsId, patternId };
+}
 
 /** Each employee with the id of the location its name matches, adding the locations no one has yet. */
 async function placeInLocations<T extends object>(

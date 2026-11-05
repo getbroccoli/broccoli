@@ -6,7 +6,7 @@ import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import {
-  createLeaveSetupService,
+  createTimeOffSetupService,
   createTimeOffService,
   timeOffModule,
 } from "../../src/modules/timeOff";
@@ -62,7 +62,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
     timeOffModule({
       orm,
       timeOff: timeOffService(orm),
-      leaveSetup: createLeaveSetupService({
+      timeOffSetup: createTimeOffSetupService({
         orm,
         logger: createLogger("silent"),
         decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },

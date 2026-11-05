@@ -10,7 +10,7 @@ test("the setup holder can read leave choices and ask for a location's calendar"
   await env.seed.aiSource("openrouter");
 
   const response = await browser.graphql(`query {
-    leaveSetup {
+    timeOffSetup {
       annualLeavePolicies { id name daysForFiveDayWeek bankHolidaysOnTop }
       bankHolidayCalendars { calendar countThisYear }
     }
@@ -20,7 +20,7 @@ test("the setup holder can read leave choices and ask for a location's calendar"
   expect(response.status).toBe(200);
   const body = (await response.json()) as {
     data: {
-      leaveSetup: {
+      timeOffSetup: {
         annualLeavePolicies: {
           id: string;
           name: string;
@@ -32,8 +32,8 @@ test("the setup holder can read leave choices and ask for a location's calendar"
     };
   };
   expect(body).not.toHaveProperty("errors");
-  expect(body.data.leaveSetup.annualLeavePolicies).toHaveLength(3);
-  expect(body.data.leaveSetup.annualLeavePolicies).toEqual(
+  expect(body.data.timeOffSetup.annualLeavePolicies).toHaveLength(3);
+  expect(body.data.timeOffSetup.annualLeavePolicies).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
         id: expect.any(String) as unknown,
@@ -55,8 +55,8 @@ test("the setup holder can read leave choices and ask for a location's calendar"
       }),
     ]),
   );
-  expect(body.data.leaveSetup.bankHolidayCalendars).toHaveLength(3);
-  expect(body.data.leaveSetup.bankHolidayCalendars).toEqual(
+  expect(body.data.timeOffSetup.bankHolidayCalendars).toHaveLength(3);
+  expect(body.data.timeOffSetup.bankHolidayCalendars).toEqual(
     expect.arrayContaining([
       { calendar: "ENGLAND_AND_WALES", countThisYear: expect.any(Number) as unknown },
       { calendar: "SCOTLAND", countThisYear: expect.any(Number) as unknown },

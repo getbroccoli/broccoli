@@ -1,7 +1,7 @@
 import {
   EMPLOYEE,
   expect,
-  leaveSetupService,
+  timeOffSetupService,
   SETUP_HOLDER,
   test,
   type Answers,
@@ -12,7 +12,7 @@ import {
 test("suggests confident calendars in the order the locations were given", async ({ orm }) => {
   const decisions = scriptedDecisions(["scotland", "england_and_wales", "northern_ireland"]);
 
-  const suggestions = await leaveSetupService(orm, decisions).suggestLocationCalendars(
+  const suggestions = await timeOffSetupService(orm, decisions).suggestLocationCalendars(
     SETUP_HOLDER,
     { locationNames: ["Glasgow", "Leeds", "Belfast"] },
   );
@@ -27,7 +27,7 @@ test("suggests confident calendars in the order the locations were given", async
 test("uses unsure England and Wales for low-confidence and unclear answers", async ({ orm }) => {
   const decisions = scriptedDecisions([null, "not_a_uk_place_or_unclear"]);
 
-  const suggestions = await leaveSetupService(orm, decisions).suggestLocationCalendars(
+  const suggestions = await timeOffSetupService(orm, decisions).suggestLocationCalendars(
     SETUP_HOLDER,
     { locationNames: ["Remote", "Berlin"] },
   );
@@ -45,7 +45,7 @@ test.for([
 ])("returns every location as unsure after a decision refusal: %s", async (error, { orm }) => {
   const decisions: Decisions = { decide: () => Promise.reject(error) };
 
-  const suggestions = await leaveSetupService(orm, decisions).suggestLocationCalendars(
+  const suggestions = await timeOffSetupService(orm, decisions).suggestLocationCalendars(
     SETUP_HOLDER,
     { locationNames: ["Glasgow", "Leeds"] },
   );
@@ -59,7 +59,7 @@ test.for([
 test("asks once with only unmasked location names and positional question ids", async ({ orm }) => {
   const decisions = scriptedDecisions(["scotland", "england_and_wales"]);
 
-  await leaveSetupService(orm, decisions).suggestLocationCalendars(SETUP_HOLDER, {
+  await timeOffSetupService(orm, decisions).suggestLocationCalendars(SETUP_HOLDER, {
     locationNames: ["Glasgow", "Leeds"],
   });
 
@@ -82,7 +82,7 @@ test("an empty location list needs no decision request", async ({ orm }) => {
   const decisions = scriptedDecisions([]);
 
   expect(
-    await leaveSetupService(orm, decisions).suggestLocationCalendars(SETUP_HOLDER, {
+    await timeOffSetupService(orm, decisions).suggestLocationCalendars(SETUP_HOLDER, {
       locationNames: [],
     }),
   ).toEqual([]);
@@ -93,7 +93,7 @@ test("asks for only the first hundred locations and marks the rest unsure", asyn
   const locationNames = Array.from({ length: 102 }, (_, index) => `Office ${index + 1}`);
   const decisions = scriptedDecisions(Array.from({ length: 100 }, () => "scotland"));
 
-  const suggestions = await leaveSetupService(orm, decisions).suggestLocationCalendars(
+  const suggestions = await timeOffSetupService(orm, decisions).suggestLocationCalendars(
     SETUP_HOLDER,
     { locationNames },
   );
@@ -114,7 +114,7 @@ test("refuses an employee before asking for suggestions", async ({ orm }) => {
   const decisions = scriptedDecisions(["scotland"]);
 
   await expect(
-    leaveSetupService(orm, decisions).suggestLocationCalendars(EMPLOYEE, {
+    timeOffSetupService(orm, decisions).suggestLocationCalendars(EMPLOYEE, {
       locationNames: ["Glasgow"],
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });

@@ -5,21 +5,20 @@ import {
   OWNER,
   readAllowances,
   readOwnPatternAssignments,
-  scotlandLeaveSetup,
+  scotlandTimeOffSetup,
   test,
   timeOffService,
   transactWithTimeOffEvents,
   workingPatternService,
 } from "#test/support";
 
-test("a new person at a mapped location starts on its terms", async ({ orm, seed, transact }) => {
-  const glasgow = await seed.location("Glasgow");
-  const input = await scotlandLeaveSetup(orm);
-  input.locationTerms = [
-    { locationName: "  gLaSgOw  ", bankHolidayCalendar: "scotland" },
-    { locationName: "Removed office", bankHolidayCalendar: "england_and_wales" },
-  ];
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+test("a new person starts on terms configured before their location existed", async ({
+  orm,
+  transact,
+}) => {
+  const input = await scotlandTimeOffSetup(orm);
+  input.locationTerms = [{ locationName: "  gLaSgOw  ", bankHolidayCalendar: "scotland" }];
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
   const employees = employeeServices(orm);
 
   const { idsByEmail } = await transactWithTimeOffEvents(orm)((tx) =>
@@ -40,7 +39,9 @@ test("a new person at a mapped location starts on its terms", async ({ orm, seed
   );
   const employee = await employees.readEmployee(OWNER, idsByEmail.get("avery@example.com")!);
 
-  expect(employee).toMatchObject({ locationId: glasgow.id });
+  const locations = await employees.listLocations(OWNER);
+  expect(locations).toHaveLength(1);
+  expect(employee).toMatchObject({ locationId: locations[0]!.id });
   const memberships = await transact((tx) => employees.readTermsMemberships(tx, [employee!.id]));
   expect(memberships.get(employee!.id)).toEqual([
     { termsId: result.termsIds[1], effectiveFrom: null, effectiveUntil: null },
@@ -53,9 +54,9 @@ test("a new person at a mapped location starts on its terms", async ({ orm, seed
 test("changing a person's location keeps their terms", async ({ orm, seed, transact }) => {
   const glasgow = await seed.location("Glasgow");
   const leeds = await seed.location("Leeds");
+  const input = await scotlandTimeOffSetup(orm);
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
   const employee = await seed.employee({ locationId: glasgow.id });
-  const input = await scotlandLeaveSetup(orm);
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
   const employees = employeeServices(orm);
 
   const updated = await employees.updateEmployee(OWNER, { id: employee.id, locationId: leeds.id });
@@ -67,7 +68,7 @@ test("changing a person's location keeps their terms", async ({ orm, seed, trans
   ]);
 });
 
-test("turning leave on preserves deliberately changed terms memberships", async ({
+test("turning time off on preserves deliberately changed terms memberships", async ({
   orm,
   seed,
   transact,
@@ -81,15 +82,14 @@ test("turning leave on preserves deliberately changed terms memberships", async 
   const employees = employeeServices(orm);
   const ids = [moved.id, datedDefault.id];
   const before = await transact((tx) => employees.readTermsMemberships(tx, ids));
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
 
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+  await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
-  expect(result.movedEmployeeCount).toBe(0);
   expect(await transact((tx) => employees.readTermsMemberships(tx, ids))).toEqual(before);
 });
 
-test("moving an untouched default membership keeps the person's own pattern assignment", async ({
+test("turning time off on preserves existing default memberships and own pattern assignments", async ({
   orm,
   seed,
   transact,
@@ -108,16 +108,15 @@ test("moving an untouched default membership keeps the person's own pattern assi
     effectiveFrom: "2025-01-01",
   });
   const before = await readOwnPatternAssignments(orm, [employee.id]);
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
 
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+  await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
-  expect(result.movedEmployeeCount).toBe(1);
   const memberships = await transact((tx) =>
     employeeServices(orm).readTermsMemberships(tx, [employee.id]),
   );
   expect(memberships.get(employee.id)).toEqual([
-    { termsId: result.termsIds[1], effectiveFrom: null, effectiveUntil: null },
+    { termsId: await seed.defaultTermsId(), effectiveFrom: null, effectiveUntil: null },
   ]);
   expect(await readOwnPatternAssignments(orm, [employee.id])).toEqual(before);
   expect(

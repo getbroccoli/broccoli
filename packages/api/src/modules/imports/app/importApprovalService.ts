@@ -36,8 +36,8 @@ export interface AddedPeople extends ImportedEmployees {
 /** Invites the people the owner chose as setup finishes; the employees module provides it. */
 export type SetupInvites = Pick<EmployeeInviteService, "sendAtSetup">;
 
-/** Turns leave on as setup finishes, joining its transaction; the time off module provides it. */
-export type TurnOnLeave = (
+/** Turns time off on as setup finishes, joining its transaction; the time off module provides it. */
+export type TurnOnTimeOff = (
   ctx: SecurityContext,
   tx: Tx,
   input: SetupTermsInput,
@@ -70,11 +70,11 @@ export function createImportApprovalService({
   transact,
   logger,
   invites,
-  turnOnLeave,
+  turnOnTimeOff,
   deleteAllEmployees,
 }: Pick<ModuleDependencies, "transact" | "logger"> & {
   invites: SetupInvites;
-  turnOnLeave: TurnOnLeave;
+  turnOnTimeOff: TurnOnTimeOff;
   /** Deletes every employee and what goes with them, such as the terms' time off policies. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }): ImportApprovalService {
@@ -96,7 +96,7 @@ export function createImportApprovalService({
         }
         // A self-hosted instance whose owner has an account has no last step to add them at.
         if ((await instances.readInstance(tx)).step === "done") {
-          await addApprovedPeople({ invites, turnOnLeave }, ctx, tx);
+          await addApprovedPeople({ invites, turnOnTimeOff }, ctx, tx);
         }
         return true;
       });
@@ -105,7 +105,7 @@ export function createImportApprovalService({
       }
     },
     addApprovedPeople: (ctx, tx, finish) =>
-      addApprovedPeople({ invites, turnOnLeave }, ctx, tx, finish),
+      addApprovedPeople({ invites, turnOnTimeOff }, ctx, tx, finish),
     reportAddedPeople({ selected, ownerEmployeeId, invitedEmployeeIds, ...counts }) {
       logger.info(counts, "Added the approved people");
       for (const employee of selected) {
@@ -138,11 +138,11 @@ export function createImportApprovalService({
 
 /**
  * Adds the approved people joining `tx`; with `finish`, links the owner's user to the person they
- * said they are, turns leave on as they chose and invites the people they chose, returning those
+ * said they are, turns time off on as they chose and invites the people they chose, returning those
  * invites.
  */
 async function addApprovedPeople(
-  { invites, turnOnLeave }: { invites: SetupInvites; turnOnLeave: TurnOnLeave },
+  { invites, turnOnTimeOff }: { invites: SetupInvites; turnOnTimeOff: TurnOnTimeOff },
   ctx: SecurityContext,
   tx: Tx,
   finish?: SetupFinish,
@@ -152,13 +152,13 @@ async function addApprovedPeople(
   const review = await readImportReview(ctx, tx);
   const { readyEmployees, managers } = review;
   const ownerKey = finish?.ownerEmployeeKey ?? null;
+  if (finish?.timeOff) {
+    // Locations already have their terms when the new people join them.
+    await turnOnTimeOff(ctx, tx, finish.timeOff);
+  }
   const { idsByEmail, ...counts } = await createApprovedEmployees(ctx, tx, review, finish);
   const idOf = (employee: { values: { email: { value: string | null } } }) =>
     idsByEmail.get(employee.values.email.value?.toLowerCase() ?? "");
-  if (finish?.leave) {
-    // After the people exist, so their locations point them at their terms.
-    await turnOnLeave(ctx, tx, finish.leave);
-  }
   const owner = readyEmployees.find(({ key }) => key === ownerKey);
   const invitees = finish
     ? setupInvitees(readyEmployees, managers, finish.inviteAudience, ownerKey, finish.ownerEmail)

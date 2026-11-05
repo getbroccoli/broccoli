@@ -2,7 +2,7 @@ import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { OptionCard } from "@/components/form";
 import { t } from "@/i18n";
 
-import { daysOffInAll, type Policy } from "./leaveOptions";
+import { daysOffInAll, type Policy } from "./timeOffOptions";
 
 type Props = {
   nation: BankHolidayCalendar;
@@ -34,18 +34,18 @@ export function PolicyCards({ nation, policies, selectedId, bankHolidays, onSele
               </span>{" "}
               <span className="text-sm font-normal text-muted-foreground">
                 {policy.bankHolidaysOnTop
-                  ? t("setup.leave.daysToBook")
-                  : t("setup.leave.daysOffInAll")}
+                  ? t("setup.timeOff.daysToBook")
+                  : t("setup.timeOff.daysOffInAll")}
               </span>
             </>
           }
           hint={
             policy.bankHolidaysOnTop
-              ? t("setup.leave.bankHolidaysOnTop", {
+              ? t("setup.timeOff.bankHolidaysOnTop", {
                   count: String(bankHolidays),
                   total: String(daysOffInAll(policy, bankHolidays)),
                 })
-              : t("setup.leave.bankHolidaysIncluded", {
+              : t("setup.timeOff.bankHolidaysIncluded", {
                   count: String(bankHolidays),
                   left: String(policy.daysForFiveDayWeek - bankHolidays),
                 })

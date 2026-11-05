@@ -4,7 +4,7 @@ import { NO_SETUP_INVITES, type SetupChoices, type SetupInvite } from "../../src
 import { type AddApprovedPeople } from "../../src/core/instance/app";
 import { TestSeed } from "./testSeed";
 import { SYSTEM } from "./testSecurityContext";
-import { testTransactor } from "./testTransactor";
+import { transactWithTimeOffEvents } from "./timeOffService";
 import { importServices } from "./services";
 import { owners } from "./statelessServices";
 
@@ -14,7 +14,7 @@ export async function finishSelfHostedSetup(
   choices: Partial<SetupChoices> = {},
 ): Promise<SetupInvite[]> {
   await new TestSeed(orm).setupSession({ expiresAt: new Date("2026-01-04T12:00:00Z") });
-  const { invites } = await testTransactor(orm)((tx) =>
+  const { invites } = await transactWithTimeOffEvents(orm)((tx) =>
     createSetupOwner(tx, importServices(orm).addApprovedPeople, choices),
   );
   return invites;

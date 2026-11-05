@@ -5,14 +5,14 @@ import {
   type SetupInviteAudience,
   SetupInviteesDocument,
   type SetupPersonFragment,
-  type TurnOnLeaveInput,
+  type TurnOnTimeOffInput,
 } from "@/__generated__/graphql";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { type CopiedLink, CopyLinks, toastSentInvites } from "@/features/invites";
 import type { SetupInviteSearch } from "@/features/setup";
 import { t } from "@/i18n";
 
-import { clearLeaveSetup, readLeaveSetup } from "../SetUpLeave/leaveChoice";
+import { clearTimeOffSetup, readTimeOffSetup } from "../SetUpTimeOff/timeOffChoice";
 
 /** An invite setup's last step sent, as the API answers. */
 export interface SentSetupInvite {
@@ -35,12 +35,12 @@ export interface SetupInvites {
   failed: boolean;
   note: string;
   setNote: (note: string) => void;
-  /** What the finish sends; the note only when invites go by email, leave as Set up leave left it. */
+  /** What the finish sends; the note only when invites go by email, leave as Set up time off left it. */
   choices: {
     ownerEmployeeKey: string | null;
     inviteAudience: SetupInviteAudience;
     inviteNote: string | null;
-    leave: TurnOnLeaveInput | null;
+    timeOff: TurnOnTimeOffInput | null;
   };
   /** Waits until the owner has copied the links, or toasts how many emails went. */
   finish: (invites: readonly SentSetupInvite[]) => Promise<void>;
@@ -68,7 +68,7 @@ export function useSetupInvites(
   const byEmail = data?.setup.inviteDelivery === "SENT_BY_EMAIL";
 
   const finish = async (invites: readonly SentSetupInvite[]) => {
-    clearLeaveSetup();
+    clearTimeOffSetup();
     const copied = invites.flatMap(({ employeeId, name, expiresAt, link }) =>
       link ? [{ id: employeeId, name, link, expiresAt }] : [],
     );
@@ -100,7 +100,7 @@ export function useSetupInvites(
       ownerEmployeeKey: search.me ?? null,
       inviteAudience: search.audience,
       inviteNote: byEmail ? note.trim() || null : null,
-      leave: readLeaveSetup().leave ?? null,
+      timeOff: readTimeOffSetup().timeOff ?? null,
     },
     finish,
     linksDialog,

@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import {
   type BankHolidayCalendar,
-  LeaveStepDocument,
+  TimeOffStepDocument,
   LocationCalendarSuggestionsDocument,
 } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
@@ -18,8 +18,8 @@ import {
 import { t } from "@/i18n";
 
 import { BackToReview } from "../BackToReview";
-import { daysOffInAll, daysOffSummary, NATIONS, WEEKS } from "./leaveOptions";
-import { type LeaveSetupState, readLeaveSetup, saveLeaveSetup } from "./leaveChoice";
+import { daysOffInAll, daysOffSummary, NATIONS, WEEKS } from "./timeOffOptions";
+import { type TimeOffSetupState, readTimeOffSetup, saveTimeOffSetup } from "./timeOffChoice";
 import { LocationsStep } from "./LocationsStep";
 import { NationChoice } from "./NationChoice";
 import { PolicyCards } from "./PolicyCards";
@@ -32,22 +32,22 @@ type Props = {
 };
 
 /**
- * "Set up leave", after Approve: which nation's terms each location gets, Broccoli's AI
+ * "Set up time off", after Approve: which nation's terms each location gets, Broccoli's AI
  * suggesting them from the names, then each nation's Annual leave and working week. Nothing is
  * saved on the server here: the choice goes with setup's last page.
  */
-export function LeaveStep({ search }: Props) {
+export function TimeOffStep({ search }: Props) {
   // Kept in the tab on every change, so a reload or Back to the review keeps the owner's choices.
-  const [state, setState] = useState(readLeaveSetup);
+  const [state, setState] = useState(readTimeOffSetup);
   const { weeks, policies, picked } = state;
-  const change = (next: Partial<LeaveSetupState>) => {
+  const change = (next: Partial<TimeOffSetupState>) => {
     const changed = { ...state, ...next };
     setState(changed);
-    saveLeaveSetup(changed);
+    saveTimeOffSetup(changed);
   };
-  const { data, error } = useQuery(LeaveStepDocument, { fetchPolicy: "cache-and-network" });
+  const { data, error } = useQuery(TimeOffStepDocument, { fetchPolicy: "cache-and-network" });
   const navigate = useNavigate();
-  const { next: nextPath } = useSetupPages("leave");
+  const { next: nextPath } = useSetupPages("timeOff");
 
   const locations = data?.import.readyLocations ?? [];
   const suggested = useQuery(LocationCalendarSuggestionsDocument, {
@@ -65,7 +65,7 @@ export function LeaveStep({ search }: Props) {
   const unsure = (name: string) =>
     !isPicked(name) && !suggested.loading && (suggestionOf(name)?.unsure ?? true);
 
-  const policyOptions = data?.leaveSetup.annualLeavePolicies ?? [];
+  const policyOptions = data?.timeOffSetup.annualLeavePolicies ?? [];
   const nations = NATIONS.filter(
     (nation) =>
       nation === "ENGLAND_AND_WALES" || locations.some(({ name }) => nationOf(name) === nation),
@@ -74,7 +74,7 @@ export function LeaveStep({ search }: Props) {
   const policyOf = (nation: BankHolidayCalendar) =>
     policyOptions.find(({ id }) => id === policies[nation]) ?? policyOptions[0];
   const holidaysOf = (nation: BankHolidayCalendar) =>
-    data?.leaveSetup.bankHolidayCalendars.find(({ calendar }) => calendar === nation)
+    data?.timeOffSetup.bankHolidayCalendars.find(({ calendar }) => calendar === nation)
       ?.countThisYear ?? 0;
   const withoutLocation =
     (data?.import.readyEmployeeCount ?? 0) -
@@ -87,7 +87,7 @@ export function LeaveStep({ search }: Props) {
   // Location cards come first when there are locations, so the steps count from there.
   const firstStep = locations.length > 0 ? 2 : 1;
 
-  const go = (next: Partial<LeaveSetupState>) => {
+  const go = (next: Partial<TimeOffSetupState>) => {
     change(next);
     void navigate({ to: nextPath, search });
   };
@@ -95,7 +95,7 @@ export function LeaveStep({ search }: Props) {
     go({
       // The nations on screen become the owner's, so a later visit keeps them whatever the model says then.
       picked: Object.fromEntries(locations.map(({ name }) => [name, nationOf(name)])),
-      leave: {
+      timeOff: {
         terms: nations.map((nation) => ({
           bankHolidayCalendar: nation,
           workingWeek: weekOf(nation),
@@ -110,9 +110,9 @@ export function LeaveStep({ search }: Props) {
 
   return (
     <SetupLayout
-      step="leave"
-      title={t("setup.leave.title")}
-      description={t("setup.leave.description")}
+      step="timeOff"
+      title={t("setup.timeOff.title")}
+      description={t("setup.timeOff.description")}
       width="wide"
     >
       <SetupStepForm
@@ -132,8 +132,8 @@ export function LeaveStep({ search }: Props) {
                   )}
                 </span>
               )}
-              <Button type="button" variant="ghost" size="lg" onClick={() => go({ leave: null })}>
-                {t("setup.leave.skip")}
+              <Button type="button" variant="ghost" size="lg" onClick={() => go({ timeOff: null })}>
+                {t("setup.timeOff.skip")}
               </Button>
               {/* Not before the suggestions arrive, so it never saves a nation the owner hasn't seen. */}
               <Button
@@ -142,7 +142,7 @@ export function LeaveStep({ search }: Props) {
                 className="h-10 gap-2 px-4"
                 disabled={!data || suggested.loading}
               >
-                {t("setup.leave.turnOn")}
+                {t("setup.timeOff.turnOn")}
                 <ArrowRight weight="bold" aria-hidden />
               </Button>
             </div>
@@ -160,14 +160,14 @@ export function LeaveStep({ search }: Props) {
         )}
         <Step
           number={firstStep}
-          title={t("setup.leave.holidayTitle")}
-          hint={t("setup.leave.holidayHint")}
+          title={t("setup.timeOff.holidayTitle")}
+          hint={t("setup.timeOff.holidayHint")}
         >
           {nations.map((nation) => (
             <NationChoice
               key={nation}
               nation={nation}
-              question={t("setup.leave.holidayTitle")}
+              question={t("setup.timeOff.holidayTitle")}
               people={peopleOf(nation)}
               showName={nations.length > 1}
             >
@@ -183,14 +183,14 @@ export function LeaveStep({ search }: Props) {
         </Step>
         <Step
           number={firstStep + 1}
-          title={t("setup.leave.weekTitle")}
-          hint={t("setup.leave.weekHint")}
+          title={t("setup.timeOff.weekTitle")}
+          hint={t("setup.timeOff.weekHint")}
         >
           {nations.map((nation) => (
             <NationChoice
               key={nation}
               nation={nation}
-              question={t("setup.leave.weekTitle")}
+              question={t("setup.timeOff.weekTitle")}
               showName={nations.length > 1}
             >
               <WeekCards
@@ -203,7 +203,7 @@ export function LeaveStep({ search }: Props) {
         </Step>
         {error && (
           <p role="alert" className="text-sm text-destructive">
-            {t("setup.leave.loadFailed")}
+            {t("setup.timeOff.loadFailed")}
           </p>
         )}
       </SetupStepForm>

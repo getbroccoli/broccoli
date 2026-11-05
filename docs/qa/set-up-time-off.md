@@ -1,6 +1,6 @@
-# QA: Set up leave
+# QA: Set up time off
 
-A manual check of the "Set up leave" setup page and turning leave on as setup finishes, on both modes, against a development stack.
+A manual check of the "Set up time off" setup page and turning time off on as setup finishes, on both modes, against a development stack.
 
 ## Setup
 
@@ -10,7 +10,7 @@ A manual check of the "Set up leave" setup page and turning leave on as setup fi
 
 ## The page
 
-- [ ] Approve lands on "Set up leave", listed as its own step "Leave" after "Add your people" in the step list; Back reopens the review.
+- [ ] Approve lands on "Set up time off", listed as its own step "Time off" after "Add your people" in the step list; Back reopens the review.
 - [ ] Step 1 "Where do your people work?" lists Glasgow, Leeds and Remote. While the AI answers it says "Checking your locations…" and Turn on is disabled; then Glasgow is Scotland, Leeds England and Wales, and Remote England and Wales with "Please check".
 - [ ] Step 2 "How much holiday do people get?" shows a row of cards per nation, "England and Wales terms · 3 people" and "Scotland terms · 2 people": "28 days off in all" with "Includes 8 bank holidays, 20 to book" (selected), then 20 and 25 days with "+ 8 bank holidays, 28 days off in all" and "+ 8 bank holidays, 33 days off in all" (Scotland: 10 bank holidays in 2026, 30 and 35).
 - [ ] Step 3 "What's their working week?" shows four cards per nation, Mon–Fri 7.5 hours a day selected. A screen reader names each group with its question and nation.
@@ -22,7 +22,7 @@ A manual check of the "Set up leave" setup page and turning leave on as setup fi
 - [ ] Below 640px wide the cards and the location list stack, the footer hides the days summary, and nothing scrolls sideways.
 - [ ] Reloading the page, going to "Who uses Broccoli" and back, or Back to the review and Approve again, keeps the choices, including accepted suggestions after Turn on.
 
-## Turning leave on
+## Turning time off on
 
 - [ ] Set Scotland to 25 days and Mon–Thu 8 hours a day, press Turn on, choose "Only admins" and finish setup.
 - [ ] `select e.email, t.name as terms from employee_terms m join employees e on e.id = m.employee_id join terms t on t.id = m.terms_id;` puts the Glasgow people on Scotland and the others on England and Wales.
@@ -30,5 +30,5 @@ A manual check of the "Set up leave" setup page and turning leave on as setup fi
 - [ ] `select e.email, sum(l.amount) from allowance_ledger_lines l join allowances a on a.id = l.allowance_id join employees e on e.id = a.employee_id group by e.email;` gives every person an allowance; a full-time Glasgow person has 21 days in 2026.
 - [ ] Settings → Locations still lists Glasgow, Leeds and Remote.
 - [ ] Adding a person at Glasgow through an import after setup puts them on Scotland terms (the first query).
-- [ ] On another run, Skip for now, then finishing setup, leaves leave off: `select count(*) from allowances;` is 0 and `select name from terms;` lists only England and Wales.
-- [ ] Reset setup after turning leave on, then going through setup again, offers the same page with nothing left from before.
+- [ ] On another run, Skip for now, then finishing setup, leaves time off off: `select count(*) from allowances;` is 0 and `select name from terms;` lists only England and Wales.
+- [ ] Reset setup after turning time off on, then going through setup again, offers the same page with nothing left from before.
