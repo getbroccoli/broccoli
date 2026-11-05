@@ -118,10 +118,10 @@ export {
 } from "./seedTimeOff";
 export { testTransactor } from "./testTransactor";
 export {
-  leaveSetupService,
-  scotlandLeaveSetup,
-  readLeaveTerms,
+  timeOffSetupService,
+  scotlandTimeOffSetup,
+  readTimeOffTerms,
   readOwnPatternAssignments,
-} from "./leaveSetup";
+} from "./timeOffSetup";
 
 export { DecisionsError, type Answers, type Decisions } from "../../src/integrations/ai";

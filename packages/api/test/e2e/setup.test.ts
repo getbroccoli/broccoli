@@ -10,7 +10,7 @@ import {
 import { connectDatabase } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 
-test("the self-hosted setup request turns leave on", async ({ env }) => {
+test("the self-hosted setup request turns time off on", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
     data: { import: { approve: { error: null } } },
@@ -24,7 +24,7 @@ test("the self-hosted setup request turns leave on", async ({ env }) => {
 
     const response = await browser.post("/api/auth/setup", {
       ...TEST_OWNER,
-      leave: {
+      timeOff: {
         terms: [
           {
             bankHolidayCalendar: "england_and_wales",

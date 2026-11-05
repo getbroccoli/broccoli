@@ -19,7 +19,7 @@ import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
-import { createLeaveSetupService, createTimeOffService, timeOffModule } from "./timeOff";
+import { createTimeOffSetupService, createTimeOffService, timeOffModule } from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -71,7 +71,7 @@ export function createModules(
     originalFileReader: aiSettings.originalFileReader,
     prepareDemoFill: createDemoFillService({ timeOff }).prepareDemoFill,
     invites,
-    turnOnLeave: timeOff.turnOnLeave,
+    turnOnTimeOff: timeOff.turnOnTimeOff,
     deleteAllEmployees,
   });
   const manifests = [
@@ -94,7 +94,7 @@ export function createModules(
     timeOffModule({
       ...core,
       timeOff,
-      leaveSetup: createLeaveSetupService({
+      timeOffSetup: createTimeOffSetupService({
         ...core,
         decisions: aiSettings.decisions,
         bankHolidays,

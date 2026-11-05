@@ -15,15 +15,15 @@ import {
   owners,
   OWNER,
   timeOffService,
-  readLeaveTerms,
-  scotlandLeaveSetup,
+  readTimeOffTerms,
+  scotlandTimeOffSetup,
   workingPatternService,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
 import { NO_SETUP_INVITES } from "../../../core/instance";
 
-test("resetting setup restores only the default terms on Standard with leave off", async ({
+test("resetting setup restores only the default terms on Standard with time off turned off", async ({
   orm,
   seed,
   transact,
@@ -36,15 +36,15 @@ test("resetting setup restores only the default terms on Standard with leave off
   const standard = (await workingPatternService(orm).listPatterns(OWNER)).find(
     ({ isStandard }) => isStandard,
   )!;
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
   input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
-  await transact((tx) => service.turnOnLeave(OWNER, tx, input));
-  expect(await readLeaveTerms(orm)).toHaveLength(2);
+  await transact((tx) => service.turnOnTimeOff(OWNER, tx, input));
+  expect(await readTimeOffTerms(orm)).toHaveLength(2);
   expect(await workingPatternService(orm).listPatterns(OWNER)).toHaveLength(3);
 
   await systemService(orm).resetSetup(owner);
 
-  expect(await readLeaveTerms(orm)).toMatchObject([
+  expect(await readTimeOffTerms(orm)).toMatchObject([
     {
       id: termsId,
       key: "default_terms",

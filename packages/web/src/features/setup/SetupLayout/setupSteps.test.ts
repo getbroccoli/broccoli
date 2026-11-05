@@ -13,11 +13,11 @@ import {
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
-  ["OWNER", "SELF_HOSTED", "/setup/leave"],
+  ["OWNER", "SELF_HOSTED", "/setup/time-off"],
   ["DONE", "SELF_HOSTED", "/people"],
   ["COMPANY", "MANAGED", "/setup/company"],
   ["IMPORT", "MANAGED", "/setup/import"],
-  ["READY", "MANAGED", "/setup/leave"],
+  ["READY", "MANAGED", "/setup/time-off"],
   ["DONE", "MANAGED", "/people"],
 ] as const)("enters %s in %s through %s", (step, mode, expected) => {
   expect(setupStepPage(step, mode)).toBe(expected);
@@ -28,14 +28,14 @@ it.each([
   ["ai", "SELF_HOSTED", "/setup/company"],
   ["import", "SELF_HOSTED", "/setup/ai"],
   ["review", "SELF_HOSTED", "/setup/import"],
-  ["leave", "SELF_HOSTED", undefined],
-  ["who", "SELF_HOSTED", "/setup/leave"],
+  ["timeOff", "SELF_HOSTED", undefined],
+  ["who", "SELF_HOSTED", "/setup/time-off"],
   ["owner", "SELF_HOSTED", "/setup/who"],
   ["company", "MANAGED", undefined],
   ["import", "MANAGED", "/setup/company"],
   ["review", "MANAGED", "/setup/import"],
-  ["leave", "MANAGED", undefined],
-  ["who", "MANAGED", "/setup/leave"],
+  ["timeOff", "MANAGED", undefined],
+  ["who", "MANAGED", "/setup/time-off"],
   ["ready", "MANAGED", "/setup/who"],
 ] as const)("gives %s in %s the Back destination %s", (page, mode, expected) => {
   expect(previousPage(page, mode)).toBe(expected);
@@ -45,14 +45,14 @@ it.each([
   ["company", "SELF_HOSTED", "/setup/ai"],
   ["ai", "SELF_HOSTED", "/setup/import"],
   ["import", "SELF_HOSTED", "/setup/import/review"],
-  ["review", "SELF_HOSTED", "/setup/leave"],
-  ["leave", "SELF_HOSTED", "/setup/who"],
+  ["review", "SELF_HOSTED", "/setup/time-off"],
+  ["timeOff", "SELF_HOSTED", "/setup/who"],
   ["who", "SELF_HOSTED", "/setup"],
   ["owner", "SELF_HOSTED", "/people"],
   ["company", "MANAGED", "/setup/import"],
   ["import", "MANAGED", "/setup/import/review"],
-  ["review", "MANAGED", "/setup/leave"],
-  ["leave", "MANAGED", "/setup/who"],
+  ["review", "MANAGED", "/setup/time-off"],
+  ["timeOff", "MANAGED", "/setup/who"],
   ["who", "MANAGED", "/setup/ready"],
   ["ready", "MANAGED", "/people"],
 ] as const)("continues from %s in %s to %s", (page, mode, expected) => {
@@ -86,14 +86,14 @@ it.each([
   ["ai", "IMPORT", "SELF_HOSTED", null, true],
   ["import", "IMPORT", "SELF_HOSTED", null, true],
   ["review", "IMPORT", "SELF_HOSTED", null, true],
-  ["leave", "OWNER", "SELF_HOSTED", null, true],
+  ["timeOff", "OWNER", "SELF_HOSTED", null, true],
   ["who", "OWNER", "SELF_HOSTED", null, true],
   ["owner", "OWNER", "SELF_HOSTED", null, true],
   ["company", "COMPANY", "MANAGED", { id: "owner" }, false],
   ["company", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["import", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["review", "IMPORT", "MANAGED", { id: "owner" }, false],
-  ["leave", "READY", "MANAGED", { id: "owner" }, false],
+  ["timeOff", "READY", "MANAGED", { id: "owner" }, false],
   ["who", "READY", "MANAGED", { id: "owner" }, false],
   ["ready", "READY", "MANAGED", { id: "owner" }, false],
 ] as const)(
@@ -112,8 +112,8 @@ it.each([
   ["ai", "IMPORT", "MANAGED", { id: "owner" }, false, "/setup/import"],
   ["company", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
   ["import", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
-  ["import", "OWNER", "SELF_HOSTED", null, true, "/setup/leave"],
-  ["company", "OWNER", "SELF_HOSTED", { id: "owner" }, false, "/setup/leave"],
+  ["import", "OWNER", "SELF_HOSTED", null, true, "/setup/time-off"],
+  ["company", "OWNER", "SELF_HOSTED", { id: "owner" }, false, "/setup/time-off"],
 ] as const)(
   "sends a visitor opening %s at %s in %s to the current setup page",
   (page, setupStep, mode, me, holdsSetup, to) => {
@@ -147,9 +147,9 @@ it("returns the signed-in user when setup is done", () => {
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
-  ["OWNER", "SELF_HOSTED", "/setup/leave"],
+  ["OWNER", "SELF_HOSTED", "/setup/time-off"],
   ["IMPORT", "MANAGED", "/setup/import"],
-  ["READY", "MANAGED", "/setup/leave"],
+  ["READY", "MANAGED", "/setup/time-off"],
 ] as const)(
   "sends a signed-in user at %s in %s to %s before entering the app",
   (setupStep, mode, to) => {
@@ -225,8 +225,8 @@ it.each([
 
     expect(steps.map(({ id }) => id)).toEqual(
       mode === "SELF_HOSTED"
-        ? ["company", "ai", "people", "leave", "who", "owner"]
-        : ["company", "people", "leave", "who", "ready"],
+        ? ["company", "ai", "people", "timeOff", "who", "owner"]
+        : ["company", "people", "timeOff", "who", "ready"],
     );
     expect(steps.map(({ state }) => state)).toEqual(states);
     const people = steps.find(({ id }) => id === "people")!;
@@ -236,29 +236,29 @@ it.each([
 );
 
 it.each(["SELF_HOSTED", "MANAGED"] as const)(
-  "gives Leave and Who their own steps in %s",
+  "gives Time off and Who their own steps in %s",
   (mode) => {
-    const leave = stepViews("leave", mode);
-    expect(leave.map(({ id }) => id)).toEqual(
+    const timeOff = stepViews("timeOff", mode);
+    expect(timeOff.map(({ id }) => id)).toEqual(
       mode === "SELF_HOSTED"
-        ? ["company", "ai", "people", "leave", "who", "owner"]
-        : ["company", "people", "leave", "who", "ready"],
+        ? ["company", "ai", "people", "timeOff", "who", "owner"]
+        : ["company", "people", "timeOff", "who", "ready"],
     );
-    expect(leave.find(({ id }) => id === "people")).toMatchObject({ state: "done" });
-    expect(leave.find(({ id }) => id === "leave")).toMatchObject({
-      id: "leave",
+    expect(timeOff.find(({ id }) => id === "people")).toMatchObject({ state: "done" });
+    expect(timeOff.find(({ id }) => id === "timeOff")).toMatchObject({
+      id: "timeOff",
       state: "current",
       pages: [],
     });
-    expect(leave.find(({ id }) => id === "who")).toMatchObject({
+    expect(timeOff.find(({ id }) => id === "who")).toMatchObject({
       id: "who",
       state: "later",
       pages: [],
     });
 
     const who = stepViews("who", mode);
-    expect(who.find(({ id }) => id === "leave")).toMatchObject({
-      id: "leave",
+    expect(who.find(({ id }) => id === "timeOff")).toMatchObject({
+      id: "timeOff",
       state: "done",
       pages: [],
     });

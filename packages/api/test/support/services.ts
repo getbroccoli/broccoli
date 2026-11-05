@@ -240,7 +240,7 @@ export function importServices(
     originalFileReader: { ...aiSettings(orm).originalFileReader, ...originalFileReader },
     prepareDemoFill: prepareFill,
     invites,
-    turnOnLeave: timeOffService(orm).turnOnLeave,
+    turnOnTimeOff: timeOffService(orm).turnOnTimeOff,
     deleteAllEmployees: deleteAllEmployees(orm),
     jobs: jobs ?? {
       send: (_tx, name, payload) => {

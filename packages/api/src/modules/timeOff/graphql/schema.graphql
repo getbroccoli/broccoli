@@ -1,5 +1,5 @@
 extend type Employee {
-  "One per time off type with a policy for this person, in the leave year containing today (or their start, when later), Annual leave first; empty when there is none, such as while leave is off; null for callers who may not read this person's time off."
+  "One per time off type with a policy for this person, in the leave year containing today (or their start, when later), Annual leave first; empty when there is none, such as while time off is off; null for callers who may not read this person's time off."
   timeOffTypes: [EmployeeTimeOffType!]
 }
 
@@ -44,7 +44,7 @@ enum BankHolidayCalendar {
   NORTHERN_IRELAND
 }
 
-"A UK working week an owner picks for terms when turning leave on."
+"A UK working week an owner picks for terms when turning time off on."
 enum StandardWorkingWeek {
   "Monday to Friday, 7.5 hours a day: the Standard working pattern's week."
   MONDAY_TO_FRIDAY_7_5_HOURS
@@ -54,15 +54,15 @@ enum StandardWorkingWeek {
   MONDAY_TO_THURSDAY_8_HOURS
 }
 
-"What Set up leave offers."
-type LeaveSetup {
+"What Set up time off offers."
+type TimeOffSetup {
   "The standard Annual leave policies, the UK statutory minimum first."
-  annualLeavePolicies: [LeavePolicy!]!
+  annualLeavePolicies: [AnnualLeavePolicy!]!
   bankHolidayCalendars: [BankHolidayCalendarYear!]!
 }
 
 "A time off policy terms can get."
-type LeavePolicy {
+type AnnualLeavePolicy {
   id: ID!
   name: String!
 }
@@ -82,7 +82,7 @@ type LocationCalendarSuggestion {
 
 type Query {
   "Admins, and the browser holding setup."
-  leaveSetup: LeaveSetup!
+  timeOffSetup: TimeOffSetup!
   """
   Whose bank holidays apply at each location, in the order given; only the names reach the AI.
   Without an answer a location is England and Wales, unsure. Admins, and the browser holding setup.
@@ -90,8 +90,8 @@ type Query {
   locationCalendarSuggestions(locationNames: [String!]!): [LocationCalendarSuggestion!]!
 }
 
-"How leave is turned on."
-input TurnOnLeaveInput {
+"How time off is turned on."
+input TurnOnTimeOffInput {
   "One per nation's terms; England and Wales, the terms new people start on, is required."
   terms: [TermsSetupInput!]!
   "Which nation's terms each location's people get; any other location's get England and Wales."
@@ -102,7 +102,7 @@ input TurnOnLeaveInput {
 input TermsSetupInput {
   bankHolidayCalendar: BankHolidayCalendar!
   workingWeek: StandardWorkingWeek!
-  "One of `leaveSetup.annualLeavePolicies`."
+  "One of `timeOffSetup.annualLeavePolicies`."
   annualLeavePolicyId: ID!
 }
 

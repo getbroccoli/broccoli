@@ -3,13 +3,13 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import {
   allowanceEventHandlers,
   ensureAllowancesJob,
-  type LeaveSetupService,
+  type TimeOffSetupService,
   type TimeOffService,
 } from "./app";
 import { createResolvers } from "./graphql";
 
 // Public values.
-export { createLeaveSetupService, createTimeOffService } from "./app";
+export { createTimeOffSetupService, createTimeOffService } from "./app";
 
 // Public types.
 export type {
@@ -17,27 +17,27 @@ export type {
   EnsuredAllowances,
   TimeOffPolicySummary,
   TimeOffService,
-  TurnedOnLeave,
+  TurnedOnTimeOff,
 } from "./app";
 export type { AllowanceCause, StandardLeavePolicyKey } from "./domain";
 
-/** Time off: turning leave on, which policies terms get, and keeping each person's allowances as they change and every day. */
+/** Time off: turning time off on, which policies terms get, and keeping each person's allowances as they change and every day. */
 export function timeOffModule({
   timeOff,
-  leaveSetup,
+  timeOffSetup,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   timeOff: TimeOffService;
-  leaveSetup: LeaveSetupService;
+  timeOffSetup: TimeOffSetupService;
 }): ModuleManifest {
   return {
     name: "timeOff",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(timeOff, leaveSetup),
+    resolvers: createResolvers(timeOff, timeOffSetup),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),
-      "timeOff.leave_turned_on": (turnedOn) =>
-        Promise.resolve(dependencies.logger.info(turnedOn, "Turned leave on")),
+      "timeOff.time_off_turned_on": (turnedOn) =>
+        Promise.resolve(dependencies.logger.info(turnedOn, "Turned time off on")),
     },
     jobs: ensureAllowancesJob({ timeOff, ...dependencies }),
   };

@@ -1,7 +1,7 @@
 import { invalidInput } from "../../../core/applicationError";
 import type { WeekdayMinutes } from "./workingPattern";
 
-/** The UK working weeks an owner picks from when turning leave on; the first is Standard's. */
+/** The UK working weeks an owner picks from when turning time off on; the first is Standard's. */
 export const STANDARD_WORKING_WEEKS = [
   "monday_to_friday_7_5_hours",
   "monday_to_friday_8_hours",

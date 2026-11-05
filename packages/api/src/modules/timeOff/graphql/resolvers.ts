@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 
 import { perRequest, type Resolvers, type ResolversTypes } from "../../../core/graphql";
-import type { LeaveSetupService, TimeOffService } from "../app";
+import type { TimeOffSetupService, TimeOffService } from "../app";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
 
@@ -11,7 +11,10 @@ const BALANCE_KINDS = {
   no_balance: "NO_BALANCE",
 } as const;
 
-export function createResolvers(timeOff: TimeOffService, leaveSetup: LeaveSetupService): Resolvers {
+export function createResolvers(
+  timeOff: TimeOffService,
+  timeOffSetup: TimeOffSetupService,
+): Resolvers {
   const loaders = perRequest((context) => ({
     timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
       const read = await timeOff.readTimeOffTypes(context.getActor(), { employeeIds });
@@ -26,8 +29,8 @@ export function createResolvers(timeOff: TimeOffService, leaveSetup: LeaveSetupS
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
     Query: {
-      leaveSetup: async (_parent, _args, context) => {
-        const setup = await leaveSetup.readLeaveSetup(context.getActor());
+      timeOffSetup: async (_parent, _args, context) => {
+        const setup = await timeOffSetup.readTimeOffSetup(context.getActor());
         return {
           ...setup,
           bankHolidayCalendars: setup.bankHolidayCalendars.map(({ calendar, countThisYear }) => ({
@@ -37,7 +40,7 @@ export function createResolvers(timeOff: TimeOffService, leaveSetup: LeaveSetupS
         };
       },
       locationCalendarSuggestions: async (_parent, { locationNames }, context) =>
-        (await leaveSetup.suggestLocationCalendars(context.getActor(), { locationNames })).map(
+        (await timeOffSetup.suggestLocationCalendars(context.getActor(), { locationNames })).map(
           (suggestion) => ({
             ...suggestion,
             bankHolidayCalendar: toEnum(suggestion.bankHolidayCalendar),

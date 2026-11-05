@@ -1,33 +1,33 @@
 import type {
   BankHolidayCalendar,
   StandardWorkingWeek,
-  TurnOnLeaveInput,
+  TurnOnTimeOffInput,
 } from "@/__generated__/graphql";
 
 /**
- * The owner's Set up leave page as they left it, kept for this tab until setup finishes or is
+ * The owner's Set up time off page as they left it, kept for this tab until setup finishes or is
  * reset: never in the URL, since location names can be long or personal. Where storage fails,
  * such as in some private windows, it lasts until a reload.
  */
-export interface LeaveSetupState {
+export interface TimeOffSetupState {
   weeks: Partial<Record<BankHolidayCalendar, StandardWorkingWeek>>;
   policies: Partial<Record<BankHolidayCalendar, string>>;
   /** The nation the owner picked per location name. */
   picked: Record<string, BankHolidayCalendar>;
   /** What setup's last page sends: the choice on Turn on, null on Skip for now, absent before either. */
-  leave?: TurnOnLeaveInput | null;
+  timeOff?: TurnOnTimeOffInput | null;
 }
 
-export function readLeaveSetup(): LeaveSetupState {
+export function readTimeOffSetup(): TimeOffSetupState {
   try {
     const stored = sessionStorage.getItem(KEY);
-    return stored === null ? inMemory : (JSON.parse(stored) as LeaveSetupState);
+    return stored === null ? inMemory : (JSON.parse(stored) as TimeOffSetupState);
   } catch {
     return inMemory;
   }
 }
 
-export function saveLeaveSetup(state: LeaveSetupState): void {
+export function saveTimeOffSetup(state: TimeOffSetupState): void {
   inMemory = state;
   try {
     sessionStorage.setItem(KEY, JSON.stringify(state));
@@ -37,7 +37,7 @@ export function saveLeaveSetup(state: LeaveSetupState): void {
 }
 
 /** Forgets the page once setup finishes or starts over, so the next setup begins fresh. */
-export function clearLeaveSetup(): void {
+export function clearTimeOffSetup(): void {
   inMemory = EMPTY;
   try {
     sessionStorage.removeItem(KEY);
@@ -46,8 +46,8 @@ export function clearLeaveSetup(): void {
   }
 }
 
-const KEY = "broccoli.setup.leave";
+const KEY = "broccoli.setup.timeOff";
 
-const EMPTY: LeaveSetupState = { weeks: {}, policies: {}, picked: {} };
+const EMPTY: TimeOffSetupState = { weeks: {}, policies: {}, picked: {} };
 
 let inMemory = EMPTY;

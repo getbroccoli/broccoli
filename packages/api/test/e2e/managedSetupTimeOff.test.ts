@@ -11,7 +11,7 @@ import {
 import { connectDatabase } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 
-test("a managed owner completes setup with leave over GraphQL", async () => {
+test("a managed owner completes setup with time off over GraphQL", async () => {
   const { env, accounts } = await startManagedEnv();
   const browser = await signInAsManagedOwner(env, accounts);
   await browser.graphql(`mutation {
@@ -29,7 +29,7 @@ test("a managed owner completes setup with leave over GraphQL", async () => {
 
     const response = await browser.graphql(
       `mutation Complete($policyId: ID!) {
-      setup { complete(input: { leave: {
+      setup { complete(input: { timeOff: {
         terms: [{ bankHolidayCalendar: ENGLAND_AND_WALES workingWeek: MONDAY_TO_FRIDAY_7_5_HOURS annualLeavePolicyId: $policyId }]
         locationTerms: []
       } }) { setup { id step } error { __typename ... on Error { message } } } }

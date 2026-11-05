@@ -5,7 +5,7 @@ import {
   OWNER,
   readAllowances,
   readOwnPatternAssignments,
-  scotlandLeaveSetup,
+  scotlandTimeOffSetup,
   test,
   timeOffService,
   transactWithTimeOffEvents,
@@ -14,12 +14,12 @@ import {
 
 test("a new person at a mapped location starts on its terms", async ({ orm, seed, transact }) => {
   const glasgow = await seed.location("Glasgow");
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
   input.locationTerms = [
     { locationName: "  gLaSgOw  ", bankHolidayCalendar: "scotland" },
     { locationName: "Removed office", bankHolidayCalendar: "england_and_wales" },
   ];
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
   const employees = employeeServices(orm);
 
   const { idsByEmail } = await transactWithTimeOffEvents(orm)((tx) =>
@@ -54,8 +54,8 @@ test("changing a person's location keeps their terms", async ({ orm, seed, trans
   const glasgow = await seed.location("Glasgow");
   const leeds = await seed.location("Leeds");
   const employee = await seed.employee({ locationId: glasgow.id });
-  const input = await scotlandLeaveSetup(orm);
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+  const input = await scotlandTimeOffSetup(orm);
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
   const employees = employeeServices(orm);
 
   const updated = await employees.updateEmployee(OWNER, { id: employee.id, locationId: leeds.id });
@@ -67,7 +67,7 @@ test("changing a person's location keeps their terms", async ({ orm, seed, trans
   ]);
 });
 
-test("turning leave on preserves deliberately changed terms memberships", async ({
+test("turning time off on preserves deliberately changed terms memberships", async ({
   orm,
   seed,
   transact,
@@ -81,9 +81,9 @@ test("turning leave on preserves deliberately changed terms memberships", async 
   const employees = employeeServices(orm);
   const ids = [moved.id, datedDefault.id];
   const before = await transact((tx) => employees.readTermsMemberships(tx, ids));
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
 
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
   expect(result.movedEmployeeCount).toBe(0);
   expect(await transact((tx) => employees.readTermsMemberships(tx, ids))).toEqual(before);
@@ -108,9 +108,9 @@ test("moving an untouched default membership keeps the person's own pattern assi
     effectiveFrom: "2025-01-01",
   });
   const before = await readOwnPatternAssignments(orm, [employee.id]);
-  const input = await scotlandLeaveSetup(orm);
+  const input = await scotlandTimeOffSetup(orm);
 
-  const result = await transact((tx) => timeOffService(orm).turnOnLeave(OWNER, tx, input));
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
   expect(result.movedEmployeeCount).toBe(1);
   const memberships = await transact((tx) =>

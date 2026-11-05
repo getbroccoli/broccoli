@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import {
   type BankHolidayCalendar,
-  LeaveStepDocument,
+  TimeOffStepDocument,
   LocationCalendarSuggestionsDocument,
   type StandardWorkingWeek,
 } from "@/__generated__/graphql";
@@ -19,7 +19,7 @@ import {
 import { t } from "@/i18n";
 
 import { BackToReview } from "../BackToReview";
-import { type LeaveSetupState, readLeaveSetup, saveLeaveSetup } from "./leaveChoice";
+import { type TimeOffSetupState, readTimeOffSetup, saveTimeOffSetup } from "./timeOffChoice";
 
 /** England and Wales first: new people start on its terms, so its card always shows. */
 const NATIONS = [
@@ -44,23 +44,23 @@ type Props = {
 };
 
 /**
- * "Set up leave", after Approve: one card per nation's terms the owner's people will be on, each
+ * "Set up time off", after Approve: one card per nation's terms the owner's people will be on, each
  * with its working week and Annual leave, and which terms each location gets, Broccoli's AI
  * suggesting them from the names. Nothing is saved on the server here: the choice goes with
  * setup's last page.
  */
-export function LeaveStep({ search }: Props) {
+export function TimeOffStep({ search }: Props) {
   // Kept in the tab on every change, so a reload or Back to the review keeps the owner's choices.
-  const [state, setState] = useState(readLeaveSetup);
+  const [state, setState] = useState(readTimeOffSetup);
   const { weeks, policies, picked } = state;
-  const change = (next: Partial<LeaveSetupState>) => {
+  const change = (next: Partial<TimeOffSetupState>) => {
     const changed = { ...state, ...next };
     setState(changed);
-    saveLeaveSetup(changed);
+    saveTimeOffSetup(changed);
   };
-  const { data, error } = useQuery(LeaveStepDocument, { fetchPolicy: "cache-and-network" });
+  const { data, error } = useQuery(TimeOffStepDocument, { fetchPolicy: "cache-and-network" });
   const navigate = useNavigate();
-  const { next: nextPath } = useSetupPages("leave");
+  const { next: nextPath } = useSetupPages("timeOff");
 
   const locations = data?.import.readyLocations ?? [];
   const suggested = useQuery(LocationCalendarSuggestionsDocument, {
@@ -78,7 +78,7 @@ export function LeaveStep({ search }: Props) {
   const unsure = (name: string) =>
     !isPicked(name) && !suggested.loading && (suggestionOf(name)?.unsure ?? true);
 
-  const policyOptions = data?.leaveSetup.annualLeavePolicies ?? [];
+  const policyOptions = data?.timeOffSetup.annualLeavePolicies ?? [];
   const nations = NATIONS.filter(
     (nation) =>
       nation === "ENGLAND_AND_WALES" || locations.some(({ name }) => nationOf(name) === nation),
@@ -89,7 +89,7 @@ export function LeaveStep({ search }: Props) {
     (data?.import.readyEmployeeCount ?? 0) -
     locations.reduce((sum, { peopleCount }) => sum + peopleCount, 0);
 
-  const go = (next: Partial<LeaveSetupState>) => {
+  const go = (next: Partial<TimeOffSetupState>) => {
     change(next);
     void navigate({ to: nextPath, search });
   };
@@ -97,7 +97,7 @@ export function LeaveStep({ search }: Props) {
     go({
       // The nations on screen become the owner's, so a later visit keeps them whatever the model says then.
       picked: Object.fromEntries(locations.map(({ name }) => [name, nationOf(name)])),
-      leave: {
+      timeOff: {
         terms: nations.map((nation) => ({
           bankHolidayCalendar: nation,
           workingWeek: weekOf(nation),
@@ -112,9 +112,9 @@ export function LeaveStep({ search }: Props) {
 
   return (
     <SetupLayout
-      step="leave"
-      title={t("setup.leave.title")}
-      description={t("setup.leave.description")}
+      step="timeOff"
+      title={t("setup.timeOff.title")}
+      description={t("setup.timeOff.description")}
       width="wide"
     >
       <SetupStepForm
@@ -124,11 +124,11 @@ export function LeaveStep({ search }: Props) {
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <BackToReview />
             <div className="ml-auto flex flex-wrap items-center gap-3">
-              <Button type="button" variant="ghost" size="lg" onClick={() => go({ leave: null })}>
-                {t("setup.leave.skip")}
+              <Button type="button" variant="ghost" size="lg" onClick={() => go({ timeOff: null })}>
+                {t("setup.timeOff.skip")}
               </Button>
               <Button type="submit" size="lg" className="h-10 gap-2 px-4" disabled={!data}>
-                {t("setup.leave.turnOn")}
+                {t("setup.timeOff.turnOn")}
                 <ArrowRight weight="bold" aria-hidden />
               </Button>
             </div>
@@ -145,7 +145,7 @@ export function LeaveStep({ search }: Props) {
               locationNames={[
                 ...here.map(({ name }) => name),
                 ...(isDefault && withoutLocation > 0
-                  ? [t("setup.leave.noLocation", { count: String(withoutLocation) })]
+                  ? [t("setup.timeOff.noLocation", { count: String(withoutLocation) })]
                   : []),
               ]}
               people={
@@ -153,7 +153,7 @@ export function LeaveStep({ search }: Props) {
                 (isDefault ? withoutLocation : 0)
               }
               holidaysThisYear={
-                data?.leaveSetup.bankHolidayCalendars.find(({ calendar }) => calendar === nation)
+                data?.timeOffSetup.bankHolidayCalendars.find(({ calendar }) => calendar === nation)
                   ?.countThisYear ?? 0
               }
               week={weekOf(nation)}
@@ -166,9 +166,11 @@ export function LeaveStep({ search }: Props) {
         })}
         {locations.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium">{t("setup.leave.locationTerms")}</h2>
+            <h2 className="text-sm font-medium">{t("setup.timeOff.locationTerms")}</h2>
             <p className="text-sm text-muted-foreground">
-              {suggested.loading ? t("setup.leave.checking") : t("setup.leave.locationTermsHint")}
+              {suggested.loading
+                ? t("setup.timeOff.checking")
+                : t("setup.timeOff.locationTermsHint")}
             </p>
             <ul className="grid gap-3 sm:grid-cols-2">
               {locations.map(({ name }) => (
@@ -188,14 +190,14 @@ export function LeaveStep({ search }: Props) {
                   >
                     {NATIONS.map((nation) => (
                       <option key={nation} value={nation}>
-                        {t(`setup.leave.nation.${nation}`)}
+                        {t(`setup.timeOff.nation.${nation}`)}
                       </option>
                     ))}
                   </select>
                   {unsure(name) && (
                     <span className="flex items-center gap-1 text-xs text-amber-800">
                       <Warning aria-hidden />
-                      {t("setup.leave.pleaseCheck")}
+                      {t("setup.timeOff.pleaseCheck")}
                     </span>
                   )}
                 </li>
@@ -205,7 +207,7 @@ export function LeaveStep({ search }: Props) {
         )}
         {error && (
           <p role="alert" className="text-sm text-destructive">
-            {t("setup.leave.loadFailed")}
+            {t("setup.timeOff.loadFailed")}
           </p>
         )}
       </SetupStepForm>
@@ -238,24 +240,24 @@ function TermsCard({
   policyOptions,
   onPolicyChange,
 }: TermsCardProps) {
-  const nationName = t(`setup.leave.nation.${nation}`);
+  const nationName = t(`setup.timeOff.nation.${nation}`);
   return (
     <section className="flex flex-col gap-4 rounded-xl border p-5">
       <h2 className="text-base font-semibold">
-        {t("setup.leave.termsTitle", { name: nationName })}
+        {t("setup.timeOff.termsTitle", { name: nationName })}
         <span className="font-normal text-muted-foreground">
           {" · "}
           {people === 1
-            ? t("setup.leave.peopleOne")
-            : t("setup.leave.people", { count: String(people) })}
+            ? t("setup.timeOff.peopleOne")
+            : t("setup.timeOff.people", { count: String(people) })}
         </span>
       </h2>
       <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr] sm:items-center">
-        <dt className="text-muted-foreground">{t("setup.leave.locations")}</dt>
-        <dd>{locationNames.join(", ") || t("setup.leave.noLocations")}</dd>
+        <dt className="text-muted-foreground">{t("setup.timeOff.locations")}</dt>
+        <dd>{locationNames.join(", ") || t("setup.timeOff.noLocations")}</dd>
         <dt>
           <label htmlFor={`week-${nation}`} className="text-muted-foreground">
-            {t("setup.leave.workingWeek")}
+            {t("setup.timeOff.workingWeek")}
           </label>
         </dt>
         <dd>
@@ -267,14 +269,14 @@ function TermsCard({
           >
             {WEEKS.map((option) => (
               <option key={option} value={option}>
-                {t(`setup.leave.week.${option}`)}
+                {t(`setup.timeOff.week.${option}`)}
               </option>
             ))}
           </select>
         </dd>
-        <dt className="text-muted-foreground">{t("setup.leave.bankHolidays")}</dt>
+        <dt className="text-muted-foreground">{t("setup.timeOff.bankHolidays")}</dt>
         <dd>
-          {t("setup.leave.bankHolidaysCount", {
+          {t("setup.timeOff.bankHolidaysCount", {
             nation: nationName,
             count: String(holidaysThisYear),
             year: String(new Date().getFullYear()),
@@ -282,7 +284,7 @@ function TermsCard({
         </dd>
         <dt>
           <label htmlFor={`policy-${nation}`} className="text-muted-foreground">
-            {t("setup.leave.annualLeave")}
+            {t("setup.timeOff.annualLeave")}
           </label>
         </dt>
         <dd>
@@ -298,13 +300,13 @@ function TermsCard({
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-muted-foreground">{t("setup.leave.annualLeaveHint")}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{t("setup.timeOff.annualLeaveHint")}</p>
         </dd>
-        <dt className="text-muted-foreground">{t("setup.leave.alsoRecorded")}</dt>
-        <dd>{t("setup.leave.alsoRecordedTypes")}</dd>
+        <dt className="text-muted-foreground">{t("setup.timeOff.alsoRecorded")}</dt>
+        <dd>{t("setup.timeOff.alsoRecordedTypes")}</dd>
       </dl>
       {nation === "ENGLAND_AND_WALES" && (
-        <p className="text-sm text-muted-foreground">{t("setup.leave.newPeople")}</p>
+        <p className="text-sm text-muted-foreground">{t("setup.timeOff.newPeople")}</p>
       )}
     </section>
   );
