@@ -10,8 +10,11 @@ import type {
  * such as in some private windows, it lasts until a reload.
  */
 export interface TimeOffSetupState {
-  weeks: Partial<Record<BankHolidayCalendar, StandardWorkingWeek>>;
-  policies: Partial<Record<BankHolidayCalendar, string>>;
+  /** The Annual leave policy everyone gets. */
+  policyId?: string;
+  week?: StandardWorkingWeek;
+  /** Everyone's bank holidays when the staff file has no locations. */
+  nation?: BankHolidayCalendar;
   /** The nation the owner picked per location name. */
   picked: Record<string, BankHolidayCalendar>;
   /** What setup's last page sends: the choice on Turn on, null on Skip for now, absent before either. */
@@ -48,6 +51,6 @@ export function clearTimeOffSetup(): void {
 
 const KEY = "broccoli.setup.timeOff";
 
-const EMPTY: TimeOffSetupState = { weeks: {}, policies: {}, picked: {} };
+const EMPTY: TimeOffSetupState = { picked: {} };
 
 let inMemory = EMPTY;

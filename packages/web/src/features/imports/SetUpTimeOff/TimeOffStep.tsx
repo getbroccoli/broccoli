@@ -1,13 +1,12 @@
 import { useQuery } from "@apollo/client/react";
-import { ArrowRight, Warning } from "@phosphor-icons/react";
+import { ArrowRight, Lightbulb } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
   type BankHolidayCalendar,
-  TimeOffStepDocument,
   LocationCalendarSuggestionsDocument,
-  type StandardWorkingWeek,
+  TimeOffStepDocument,
 } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,24 +18,14 @@ import {
 import { t } from "@/i18n";
 
 import { BackToReview } from "../BackToReview";
-import { type TimeOffSetupState, readTimeOffSetup, saveTimeOffSetup } from "./timeOffChoice";
-
-/** England and Wales first: new people start on its terms, so its card always shows. */
-const NATIONS = [
-  "ENGLAND_AND_WALES",
-  "SCOTLAND",
-  "NORTHERN_IRELAND",
-] as const satisfies readonly BankHolidayCalendar[];
-
-const WEEKS = [
-  "MONDAY_TO_FRIDAY_7_5_HOURS",
-  "MONDAY_TO_FRIDAY_8_HOURS",
-  "MONDAY_TO_FRIDAY_7_HOURS",
-  "MONDAY_TO_THURSDAY_8_HOURS",
-] as const satisfies readonly StandardWorkingWeek[];
-
-const SELECT_CLASS =
-  "h-9 w-full max-w-xs rounded-md border border-input bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
+import { AllowanceCards } from "./AllowanceCards";
+import { AlsoReady } from "./AlsoReady";
+import { LocationCalendars } from "./LocationCalendars";
+import { NationCards } from "./NationCards";
+import { Question } from "./Question";
+import { readTimeOffSetup, saveTimeOffSetup, type TimeOffSetupState } from "./timeOffChoice";
+import { NATIONS, WEEKS } from "./timeOffOptions";
+import { WeekCards } from "./WeekCards";
 
 type Props = {
   /** Who uses Broccoli's answers, carried through when the owner came back from it. */
@@ -44,15 +33,15 @@ type Props = {
 };
 
 /**
- * "Set up time off", after Approve: one card per nation's terms the owner's people will be on, each
- * with its working week and Annual leave, and which terms each location gets, Broccoli's AI
- * suggesting them from the names. Nothing is saved on the server here: the choice goes with
- * setup's last page.
+ * "Set up time off", after Approve: the company's defaults, one holiday allowance and working week
+ * for everyone, and whose bank holidays apply: one nation for everyone when the staff file has no
+ * locations, else each location's, Broccoli's AI suggesting them from the names. Nothing is saved
+ * on the server here: the choice goes with setup's last page.
  */
 export function TimeOffStep({ search }: Props) {
   // Kept in the tab on every change, so a reload or Back to the review keeps the owner's choices.
   const [state, setState] = useState(readTimeOffSetup);
-  const { weeks, policies, picked } = state;
+  const { picked } = state;
   const change = (next: Partial<TimeOffSetupState>) => {
     const changed = { ...state, ...next };
     setState(changed);
@@ -63,9 +52,10 @@ export function TimeOffStep({ search }: Props) {
   const { next: nextPath } = useSetupPages("timeOff");
 
   const locations = data?.import.readyLocations ?? [];
+  const hasLocations = locations.length > 0;
   const suggested = useQuery(LocationCalendarSuggestionsDocument, {
     variables: { locationNames: locations.map(({ name }) => name) },
-    skip: locations.length === 0,
+    skip: !hasLocations,
   });
   const suggestions = suggested.data?.locationCalendarSuggestions ?? [];
   const suggestionOf = (name: string) => suggestions.find((s) => s.locationName === name);
@@ -78,16 +68,26 @@ export function TimeOffStep({ search }: Props) {
   const unsure = (name: string) =>
     !isPicked(name) && !suggested.loading && (suggestionOf(name)?.unsure ?? true);
 
-  const policyOptions = data?.timeOffSetup.annualLeavePolicies ?? [];
-  const nations = NATIONS.filter(
-    (nation) =>
-      nation === "ENGLAND_AND_WALES" || locations.some(({ name }) => nationOf(name) === nation),
-  );
-  const weekOf = (nation: BankHolidayCalendar) => weeks[nation] ?? WEEKS[0];
-  const policyOf = (nation: BankHolidayCalendar) => policies[nation] ?? policyOptions[0]?.id ?? "";
+  const policies = data?.timeOffSetup.annualLeavePolicies ?? [];
+  const policyId = policies.find(({ id }) => id === state.policyId)?.id ?? policies[0]?.id ?? "";
+  const week = state.week ?? WEEKS[0].week;
+  const nation = state.nation ?? "ENGLAND_AND_WALES";
+  const holidaysOf = (calendar: BankHolidayCalendar) =>
+    data?.timeOffSetup.bankHolidayCalendars.find((entry) => entry.calendar === calendar)
+      ?.countThisYear ?? 0;
+  const peopleCount = data?.import.readyEmployeeCount ?? 0;
   const withoutLocation =
-    (data?.import.readyEmployeeCount ?? 0) -
-    locations.reduce((sum, { peopleCount }) => sum + peopleCount, 0);
+    peopleCount - locations.reduce((sum, { peopleCount: count }) => sum + count, 0);
+  const peopleIn = (calendar: BankHolidayCalendar) =>
+    locations
+      .filter(({ name }) => nationOf(name) === calendar)
+      .reduce((sum, { peopleCount: count }) => sum + count, 0) +
+    (calendar === "ENGLAND_AND_WALES" ? withoutLocation : 0);
+  // People without a location start on England and Wales whenever the file has locations.
+  const defaultNation = hasLocations ? "ENGLAND_AND_WALES" : nation;
+  const mostPeopleNation = hasLocations
+    ? NATIONS.reduce((most, next) => (peopleIn(next) > peopleIn(most) ? next : most))
+    : nation;
 
   const go = (next: Partial<TimeOffSetupState>) => {
     change(next);
@@ -98,23 +98,32 @@ export function TimeOffStep({ search }: Props) {
       // The nations on screen become the owner's, so a later visit keeps them whatever the model says then.
       picked: Object.fromEntries(locations.map(({ name }) => [name, nationOf(name)])),
       timeOff: {
-        terms: nations.map((nation) => ({
-          bankHolidayCalendar: nation,
-          workingWeek: weekOf(nation),
-          annualLeavePolicyId: policyOf(nation),
+        terms: NATIONS.filter(
+          (calendar) =>
+            calendar === defaultNation || locations.some(({ name }) => nationOf(name) === calendar),
+        ).map((calendar) => ({
+          bankHolidayCalendar: calendar,
+          workingWeek: week,
+          annualLeavePolicyId: policyId,
         })),
         locationTerms: locations.map(({ name }) => ({
           locationName: name,
           bankHolidayCalendar: nationOf(name),
         })),
+        defaultBankHolidayCalendar: defaultNation,
       },
     });
 
   return (
     <SetupLayout
       step="timeOff"
+      eyebrow={t("setup.timeOff.eyebrow")}
       title={t("setup.timeOff.title")}
-      description={t("setup.timeOff.description")}
+      description={
+        peopleCount === 1
+          ? t("setup.timeOff.descriptionOne")
+          : t("setup.timeOff.description", { count: String(peopleCount) })
+      }
       width="wide"
     >
       <SetupStepForm
@@ -127,7 +136,13 @@ export function TimeOffStep({ search }: Props) {
               <Button type="button" variant="ghost" size="lg" onClick={() => go({ timeOff: null })}>
                 {t("setup.timeOff.skip")}
               </Button>
-              <Button type="submit" size="lg" className="h-10 gap-2 px-4" disabled={!data}>
+              {/* Not before the suggestions arrive, so it never saves a nation the owner hasn't seen. */}
+              <Button
+                type="submit"
+                size="lg"
+                className="h-10 gap-2 px-4"
+                disabled={!data || suggested.loading}
+              >
                 {t("setup.timeOff.turnOn")}
                 <ArrowRight weight="bold" aria-hidden />
               </Button>
@@ -135,179 +150,65 @@ export function TimeOffStep({ search }: Props) {
           </div>
         }
       >
-        {nations.map((nation) => {
-          const here = locations.filter(({ name }) => nationOf(name) === nation);
-          const isDefault = nation === "ENGLAND_AND_WALES";
-          return (
-            <TermsCard
-              key={nation}
-              nation={nation}
-              locationNames={[
-                ...here.map(({ name }) => name),
-                ...(isDefault && withoutLocation > 0
-                  ? [t("setup.timeOff.noLocation", { count: String(withoutLocation) })]
-                  : []),
-              ]}
-              people={
-                here.reduce((sum, { peopleCount }) => sum + peopleCount, 0) +
-                (isDefault ? withoutLocation : 0)
-              }
-              holidaysThisYear={
-                data?.timeOffSetup.bankHolidayCalendars.find(({ calendar }) => calendar === nation)
-                  ?.countThisYear ?? 0
-              }
-              week={weekOf(nation)}
-              onWeekChange={(week) => change({ weeks: { ...weeks, [nation]: week } })}
-              policyId={policyOf(nation)}
-              policyOptions={policyOptions}
-              onPolicyChange={(id) => change({ policies: { ...policies, [nation]: id } })}
-            />
-          );
-        })}
-        {locations.length > 0 && (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-medium">{t("setup.timeOff.locationTerms")}</h2>
-            <p className="text-sm text-muted-foreground">
-              {suggested.loading
-                ? t("setup.timeOff.checking")
-                : t("setup.timeOff.locationTermsHint")}
-            </p>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {locations.map(({ name }) => (
-                <li key={name} className="flex flex-col gap-1">
-                  <label htmlFor={`location-${name}`} className="text-sm">
-                    {name}
-                  </label>
-                  <select
-                    id={`location-${name}`}
-                    className={SELECT_CLASS}
-                    value={nationOf(name)}
-                    onChange={(event) =>
-                      change({
-                        picked: { ...picked, [name]: event.target.value as BankHolidayCalendar },
-                      })
-                    }
-                  >
-                    {NATIONS.map((nation) => (
-                      <option key={nation} value={nation}>
-                        {t(`setup.timeOff.nation.${nation}`)}
-                      </option>
-                    ))}
-                  </select>
-                  {unsure(name) && (
-                    <span className="flex items-center gap-1 text-xs text-amber-800">
-                      <Warning aria-hidden />
-                      {t("setup.timeOff.pleaseCheck")}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {t("setup.timeOff.loadFailed")}
+        <div className="flex flex-col gap-7">
+          <p className="flex items-start gap-2 self-start rounded-lg bg-brand-soft px-3 py-2 text-[13px] leading-snug text-brand-deep">
+            <Lightbulb size={16} aria-hidden className="mt-px shrink-0" />
+            {t("setup.timeOff.tip")}
           </p>
-        )}
+          <Question
+            number={1}
+            title={t("setup.timeOff.allowanceTitle")}
+            hint={t("setup.timeOff.allowanceHint")}
+          >
+            <AllowanceCards
+              policies={policies}
+              selectedId={policyId}
+              bankHolidays={holidaysOf(mostPeopleNation)}
+              onSelect={(id) => change({ policyId: id })}
+            />
+          </Question>
+          <Question
+            number={2}
+            title={t("setup.timeOff.weekTitle")}
+            hint={t("setup.timeOff.weekHint")}
+          >
+            <WeekCards selected={week} onSelect={(next) => change({ week: next })} />
+          </Question>
+          <Question
+            number={3}
+            title={t("setup.timeOff.bankHolidaysTitle")}
+            hint={
+              !hasLocations
+                ? t("setup.timeOff.oneCalendarHint")
+                : suggested.loading
+                  ? t("setup.timeOff.checking")
+                  : t("setup.timeOff.locationsHint")
+            }
+          >
+            {hasLocations ? (
+              <LocationCalendars
+                locations={locations}
+                nationOf={nationOf}
+                unsure={unsure}
+                holidaysOf={holidaysOf}
+                onPick={(name, next) => change({ picked: { ...picked, [name]: next } })}
+              />
+            ) : (
+              <NationCards
+                selected={nation}
+                holidaysOf={holidaysOf}
+                onSelect={(next) => change({ nation: next })}
+              />
+            )}
+          </Question>
+          <AlsoReady />
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("setup.timeOff.loadFailed")}
+            </p>
+          )}
+        </div>
       </SetupStepForm>
     </SetupLayout>
-  );
-}
-
-type TermsCardProps = {
-  nation: BankHolidayCalendar;
-  /** The locations on these terms, then how many people have none when they are the default. */
-  locationNames: string[];
-  people: number;
-  holidaysThisYear: number;
-  week: StandardWorkingWeek;
-  onWeekChange: (week: StandardWorkingWeek) => void;
-  policyId: string;
-  policyOptions: readonly { id: string; name: string }[];
-  onPolicyChange: (policyId: string) => void;
-};
-
-/** One nation's terms: its locations and people, working week, bank holidays and Annual leave. */
-function TermsCard({
-  nation,
-  locationNames,
-  people,
-  holidaysThisYear,
-  week,
-  onWeekChange,
-  policyId,
-  policyOptions,
-  onPolicyChange,
-}: TermsCardProps) {
-  const nationName = t(`setup.timeOff.nation.${nation}`);
-  return (
-    <section className="flex flex-col gap-4 rounded-xl border p-5">
-      <h2 className="text-base font-semibold">
-        {t("setup.timeOff.termsTitle", { name: nationName })}
-        <span className="font-normal text-muted-foreground">
-          {" · "}
-          {people === 1
-            ? t("setup.timeOff.peopleOne")
-            : t("setup.timeOff.people", { count: String(people) })}
-        </span>
-      </h2>
-      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr] sm:items-center">
-        <dt className="text-muted-foreground">{t("setup.timeOff.locations")}</dt>
-        <dd>{locationNames.join(", ") || t("setup.timeOff.noLocations")}</dd>
-        <dt>
-          <label htmlFor={`week-${nation}`} className="text-muted-foreground">
-            {t("setup.timeOff.workingWeek")}
-          </label>
-        </dt>
-        <dd>
-          <select
-            id={`week-${nation}`}
-            className={SELECT_CLASS}
-            value={week}
-            onChange={(event) => onWeekChange(event.target.value as StandardWorkingWeek)}
-          >
-            {WEEKS.map((option) => (
-              <option key={option} value={option}>
-                {t(`setup.timeOff.week.${option}`)}
-              </option>
-            ))}
-          </select>
-        </dd>
-        <dt className="text-muted-foreground">{t("setup.timeOff.bankHolidays")}</dt>
-        <dd>
-          {t("setup.timeOff.bankHolidaysCount", {
-            nation: nationName,
-            count: String(holidaysThisYear),
-            year: String(new Date().getFullYear()),
-          })}
-        </dd>
-        <dt>
-          <label htmlFor={`policy-${nation}`} className="text-muted-foreground">
-            {t("setup.timeOff.annualLeave")}
-          </label>
-        </dt>
-        <dd>
-          <select
-            id={`policy-${nation}`}
-            className={SELECT_CLASS}
-            value={policyId}
-            onChange={(event) => onPolicyChange(event.target.value)}
-          >
-            {policyOptions.map(({ id, name }) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-xs text-muted-foreground">{t("setup.timeOff.annualLeaveHint")}</p>
-        </dd>
-        <dt className="text-muted-foreground">{t("setup.timeOff.alsoRecorded")}</dt>
-        <dd>{t("setup.timeOff.alsoRecordedTypes")}</dd>
-      </dl>
-      {nation === "ENGLAND_AND_WALES" && (
-        <p className="text-sm text-muted-foreground">{t("setup.timeOff.newPeople")}</p>
-      )}
-    </section>
   );
 }

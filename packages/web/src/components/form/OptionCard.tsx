@@ -8,8 +8,8 @@ type Props<Value extends string> = {
   value: Value;
   selected: Value;
   onSelect: (value: Value) => void;
-  title: string;
-  hint: string;
+  title: ReactNode;
+  hint: ReactNode;
   /** Shown under the hint while this option is selected. */
   children?: ReactNode;
 };

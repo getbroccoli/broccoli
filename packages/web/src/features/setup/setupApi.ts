@@ -87,7 +87,11 @@ const AUDIENCES = {
 } as const satisfies Record<SetupInviteAudience, string>;
 
 /** The API takes the time off choice's values in lower case, as it stores them. */
-function lowerCaseTimeOff({ terms, locationTerms }: TurnOnTimeOffInput) {
+function lowerCaseTimeOff({
+  terms,
+  locationTerms,
+  defaultBankHolidayCalendar,
+}: TurnOnTimeOffInput) {
   return {
     terms: terms.map((entry) => ({
       ...entry,
@@ -98,5 +102,6 @@ function lowerCaseTimeOff({ terms, locationTerms }: TurnOnTimeOffInput) {
       ...entry,
       bankHolidayCalendar: entry.bankHolidayCalendar.toLowerCase(),
     })),
+    defaultBankHolidayCalendar: defaultBankHolidayCalendar?.toLowerCase(),
   };
 }

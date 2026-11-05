@@ -3,6 +3,8 @@ query TimeOffStep {
     annualLeavePolicies {
       id
       name
+      daysForFiveDayWeek
+      bankHolidaysOnTop
     }
     bankHolidayCalendars {
       calendar
