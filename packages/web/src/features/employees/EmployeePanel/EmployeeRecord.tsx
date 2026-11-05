@@ -3,7 +3,6 @@ import { DotsThree, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
-import { useCache } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,12 +17,12 @@ import {
   InviteDialog,
   InviteMenuItems,
 } from "@/features/invites";
-import { EditableField, EditBar, FieldValue, RecordHistory } from "@/features/records";
+import { EditBar, FieldValue, RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
 import { Avatar } from "../Avatar";
-import { cachedEmployeeName, cachedLocationName } from "../cache";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
+import { EmployeeDetails } from "./EmployeeDetails";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
 import { KeyFacts } from "./KeyFacts";
@@ -55,27 +54,13 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   useEffect(() => {
     if (blocker.status === "blocked" && draft.changed.length === 0) blocker.proceed();
   }, [blocker, draft.changed.length]);
-  const cache = useCache();
   const fullName = `${employee.firstName} ${employee.lastName}`;
-  // The draft holds the manager's id; the panel shows their name.
-  // Permissions show only for someone who signs in.
-  const fields = EMPLOYEE_DESCRIPTION.fields
-    .filter((field) => !("historyOnly" in field))
-    .filter((field) => field.key !== "permissionProfiles" || employee.permissionProfiles)
-    .map((field) =>
-      field.key === "manager"
-        ? { ...field, format: (id: string) => cachedEmployeeName(cache, id) ?? id }
-        : field.key === "location"
-          ? { ...field, format: (id: string) => cachedLocationName(cache, id) ?? id }
-          : field,
-    );
   const { operations } = useRouteContext({ from: "/_authenticated" }).me;
   const editable = new Set(employee.access.editableFields);
   const canEdit = (key: EmployeeFieldKey) =>
     key === "permissionProfiles"
       ? operations.includes("MANAGE_WORKSPACE") && !employee.permissionProfiles?.includes("OWNER")
       : editable.has(INPUT_KEYS[key as keyof typeof INPUT_KEYS] ?? key);
-  const sections = Map.groupBy(fields, (field) => field.section);
   // In panel order, as the person reads the fields.
   const changedLabels = EMPLOYEE_DESCRIPTION.fields
     .filter((field) => draft.changed.includes(field.key as EmployeeFieldKey))
@@ -154,44 +139,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
           }
         />
 
-        <section aria-labelledby="employee-details" className="flex flex-col gap-2">
-          <h2
-            id="employee-details"
-            className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
-          >
-            {t("people.panel.section.details")}
-          </h2>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] items-start gap-4">
-            {[...sections].map(([section, fields]) => (
-              <section
-                key={section}
-                aria-label={section}
-                className="overflow-hidden rounded-xl border border-border"
-              >
-                <h3 className="border-b border-border/60 bg-sidebar px-3 py-2 text-[13px] font-medium">
-                  {section}
-                </h3>
-                {fields.map((field) => {
-                  const key = field.key as EmployeeFieldKey;
-                  return (
-                    <EditableField
-                      key={key}
-                      field={field}
-                      recordId={employee.id}
-                      saved={draft.saved[key]}
-                      draft={draft.draft[key]}
-                      error={draft.fieldErrors[key]}
-                      disabled={draft.saving}
-                      readOnly={!canEdit(key)}
-                      onEdit={(value) => draft.edit(key, value)}
-                      onRevert={() => draft.revert(key)}
-                    />
-                  );
-                })}
-              </section>
-            ))}
-          </div>
-        </section>
+        <EmployeeDetails employee={employee} draft={draft} canEdit={canEdit} />
 
         <RecordHistory
           recordType="EMPLOYEE"

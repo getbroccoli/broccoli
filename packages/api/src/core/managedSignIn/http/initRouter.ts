@@ -34,6 +34,7 @@ export interface InitRouterOptions {
  * `POST /api/init`: orchestration assigns this managed instance to a company with a
  * signed request. Repeating the same assignment is harmless, so it keeps no `jti`.
  */
+// eslint-disable-next-line broccoli/max-lines-per-function -- a route table; each handler is checked on its own.
 export function initRouter({
   transact,
   tokenCheck,

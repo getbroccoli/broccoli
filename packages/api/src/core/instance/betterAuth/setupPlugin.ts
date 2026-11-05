@@ -82,6 +82,7 @@ const NOT_AT_IMPORT_STEP = {
  * provisional owner without credentials (see `demoPlugin`). `setupRouter` limits and
  * origin-checks all of them before they run.
  */
+// eslint-disable-next-line broccoli/max-lines-per-function -- an endpoint table; each handler is checked on its own.
 export function setupPlugin(
   orm: Orm,
   transact: Transact,

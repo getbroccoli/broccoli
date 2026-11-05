@@ -5,7 +5,9 @@ import { useState } from "react";
 
 import {
   SetPermissionProfilesDocument,
+  type SetPermissionProfilesMutation,
   UpdateEmployeeDocument,
+  type UpdateEmployeeMutation,
   type EmployeePanel_EmployeeFragment,
   type PermissionProfile,
 } from "@/__generated__/graphql";
@@ -29,37 +31,13 @@ export type SaveFailure = "removed" | "failed";
  * all of them. A refused or failed save keeps every edit.
  */
 export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
-  const apolloClient = useApolloClient();
-  const router = useRouter();
   const saved = valuesOf(employee);
   const [edits, setEdits] = useState<Edits>({});
   const [reason, setReason] = useState("");
-  const [updateEmployee, update] = usePayloadMutation(UpdateEmployeeDocument, {
-    // The saved employee updates in the cache by itself; its new line joins its history.
-    update: (cache, { data }) => {
-      const line = data?.employee.update.historyLine;
-      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
-    },
-  });
-  const [setPermissionProfiles, profileChange] = usePayloadMutation(SetPermissionProfilesDocument, {
-    update: (cache, { data }) => {
-      const line = data?.employee.setPermissionProfiles.historyLine;
-      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employee.id, line });
-    },
-  });
-  const saving = update.loading || profileChange.loading;
-  const error = update.error ?? profileChange.error;
-  const payloadError = update.payloadError ?? profileChange.payloadError;
+  const { saving, failure, reset, saveChanges } = useSaveEmployee(employee.id);
   const draft = mapEdits(edits, ({ value }) => value);
   const fieldErrors = mapEdits(edits, ({ error }) => error);
   const changed = changedFields(saved, draft);
-  // Refused fields show beside themselves; any other failed save shows in the edit bar.
-  const failure: SaveFailure | null =
-    payloadError?.__typename === "NotFoundError"
-      ? "removed"
-      : error || (payloadError && payloadError.__typename !== "InvalidInputError")
-        ? "failed"
-        : null;
 
   // A new value replaces the field's edit, and with it the error the last save gave it.
   const edit = (key: EmployeeFieldKey, value: string) =>
@@ -75,8 +53,7 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const cancel = () => {
     setEdits({});
     setReason("");
-    update.reset();
-    profileChange.reset();
+    reset();
   };
 
   const save = async () => {
@@ -84,31 +61,11 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
     if (saving) return;
     setEdits((current) => mapEdits(current, ({ value }) => ({ value })));
     try {
-      // The profile saves second, so a refused field leaves it unsaved with the rest.
-      if (changed.some((key) => key !== "permissionProfiles")) {
-        await updateEmployee({
-          variables: { input: toUpdateInput(employee.id, saved, draft, reason) },
-        });
-      }
-      if (changed.includes("permissionProfiles")) {
-        const changeReason = reason.trim() || null;
-        const profiles = (draft.permissionProfiles ?? "").split(",") as PermissionProfile[];
-        await setPermissionProfiles({
-          variables: { input: { id: employee.id, profiles, changeReason } },
-        });
-        // The change may be the caller's own, so what they may do is read again, the route
-        // first: a query they may no longer run is refused while the cache refetches.
-        await router.invalidate();
-        await apolloClient.resetStore().catch(() => undefined);
-      }
+      await saveChanges(saved, draft, reason);
       cancel();
     } catch (failed) {
-      const refused =
-        failed instanceof PayloadFailure ? (failed.payloadError as typeof payloadError) : null;
-      if (refused?.__typename !== "InvalidInputError") return;
-      const messages = new Map(
-        refused.fields.map(({ field, code }) => [draftKey(field), fieldMessage(field, code)]),
-      );
+      const messages = refusedFieldMessages(failed);
+      if (!messages) return;
       setEdits((current) =>
         mapEdits(current, ({ value }, key) => ({ value, error: messages.get(key) })),
       );
@@ -128,6 +85,64 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
     revert,
     cancel,
     save,
+  };
+}
+
+/**
+ * Saves an employee's changed fields, then their permission profile, so a refused field leaves
+ * the profile unsaved with the rest. A refused save rejects with a `PayloadFailure`.
+ */
+function useSaveEmployee(employeeId: string) {
+  const apolloClient = useApolloClient();
+  const router = useRouter();
+  const [updateEmployee, update] = usePayloadMutation(UpdateEmployeeDocument, {
+    // The saved employee updates in the cache by itself; its new line joins its history.
+    update: (cache, { data }) => {
+      const line = data?.employee.update.historyLine;
+      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employeeId, line });
+    },
+  });
+  const [setPermissionProfiles, profileChange] = usePayloadMutation(SetPermissionProfilesDocument, {
+    update: (cache, { data }) => {
+      const line = data?.employee.setPermissionProfiles.historyLine;
+      if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employeeId, line });
+    },
+  });
+  const error = update.error ?? profileChange.error;
+  const payloadError = update.payloadError ?? profileChange.payloadError;
+  // Refused fields show beside themselves; any other failed save shows in the edit bar.
+  const failure: SaveFailure | null =
+    payloadError?.__typename === "NotFoundError"
+      ? "removed"
+      : error || (payloadError && payloadError.__typename !== "InvalidInputError")
+        ? "failed"
+        : null;
+  return {
+    saving: update.loading || profileChange.loading,
+    failure,
+    reset: () => {
+      update.reset();
+      profileChange.reset();
+    },
+    saveChanges: async (saved: EmployeeValues, draft: Partial<EmployeeValues>, reason: string) => {
+      const changed = changedFields(saved, draft);
+      if (changed.some((key) => key !== "permissionProfiles")) {
+        await updateEmployee({
+          variables: { input: toUpdateInput(employeeId, saved, draft, reason) },
+        });
+      }
+      if (changed.includes("permissionProfiles")) {
+        const changeReason = reason.trim() || null;
+        const profiles = (draft.permissionProfiles ?? "").split(",") as PermissionProfile[];
+        await setPermissionProfiles({
+          variables: { input: { id: employeeId, profiles, changeReason } },
+        });
+        // The change may be the caller's own, so what they may do is read again, the route
+        // first: a query they may no longer run is refused while the cache refetches.
+        await router.invalidate();
+        await apolloClient.resetStore().catch(() => undefined);
+      }
+    },
   };
 }
 
@@ -165,6 +180,19 @@ function valuesOf(employee: EmployeePanel_EmployeeFragment): EmployeeValues {
     permissionProfiles: permissionProfiles?.join(",") ?? null,
   };
 }
+
+/** Each refused field's message by its draft field, or null when the save failed otherwise. */
+function refusedFieldMessages(failed: unknown): Map<string, string> | null {
+  const refused = failed instanceof PayloadFailure ? (failed.payloadError as SaveError) : null;
+  if (refused?.__typename !== "InvalidInputError") return null;
+  return new Map(
+    refused.fields.map(({ field, code }) => [draftKey(field), fieldMessage(field, code)]),
+  );
+}
+
+type SaveError =
+  | UpdateEmployeeMutation["employee"]["update"]["error"]
+  | SetPermissionProfilesMutation["employee"]["setPermissionProfiles"]["error"];
 
 /** The draft field an input field's error belongs to. */
 function draftKey(field: string): string {

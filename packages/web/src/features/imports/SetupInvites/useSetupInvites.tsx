@@ -1,6 +1,5 @@
 import { useQuery } from "@apollo/client/react";
 import { type ReactNode, useState } from "react";
-import { toast } from "sonner";
 
 import {
   type SetupInviteAudience,
@@ -9,7 +8,7 @@ import {
   type TurnOnLeaveInput,
 } from "@/__generated__/graphql";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { type CopiedLink, CopyLinks } from "@/features/invites";
+import { type CopiedLink, CopyLinks, toastSentInvites } from "@/features/invites";
 import type { SetupInviteSearch } from "@/features/setup";
 import { t } from "@/i18n";
 
@@ -76,11 +75,7 @@ export function useSetupInvites(
     if (copied.length > 0) {
       await new Promise<void>((done) => setLinks({ links: copied, done }));
     } else if (invites.length > 0) {
-      toast(
-        invites.length === 1
-          ? t("invites.dialog.sentOne")
-          : t("invites.dialog.sent", { count: String(invites.length) }),
-      );
+      toastSentInvites(invites.length);
     }
   };
 

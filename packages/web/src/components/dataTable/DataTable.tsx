@@ -84,7 +84,7 @@ export function DataTable<Row, SortKey extends string>({
   // The pager shows only when there is another page to move to.
   const showPager = pager && !notice && (pager.hasNextPage || !pager.isFirstPage);
   const selecting = selection && selection.selectedIds.size > 0;
-  const pageRows = selection && rows ? rows : [];
+  const pageRows = selection && rows && !placeholder ? rows : [];
   const pageSelected =
     pageRows.length > 0 && pageRows.every((row) => selection!.selectedIds.has(getRowId(row)));
   const toggle = (ids: string[], checked: boolean) => {

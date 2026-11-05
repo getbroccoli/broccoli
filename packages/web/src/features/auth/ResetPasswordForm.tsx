@@ -35,6 +35,11 @@ export function ResetPasswordForm() {
   );
   useEffect(() => {
     window.history.replaceState(window.history.state, "", window.location.pathname);
+    const reopen = () => {
+      if (window.location.hash) window.location.reload();
+    };
+    window.addEventListener("hashchange", reopen);
+    return () => window.removeEventListener("hashchange", reopen);
   }, []);
 
   const form = useForm({

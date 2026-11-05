@@ -48,52 +48,10 @@ export function callbackOnlyTrust({ websiteOrigin }: ManagedAssignment) {
  * fresh state; `POST /api/auth/managed/callback` takes the ticket the website posts
  * back and signs its user in. Both answer with redirects, never JSON.
  */
-export function managedSignInPlugin({ transact, assignment, tokenCheck }: ManagedSignInOptions) {
-  const { companyId, publicOrigin, websiteOrigin } = assignment;
+// eslint-disable-next-line broccoli/max-lines-per-function -- an endpoint table; each handler is checked on its own.
+export function managedSignInPlugin(options: ManagedSignInOptions) {
+  const { companyId, publicOrigin, websiteOrigin } = options.assignment;
   const signInFailed = (error: SignInError) => redirect(`${publicOrigin}/login?error=${error}`);
-
-  /** The posted ticket, when it comes from the website with this browser's state. */
-  async function readTicket(
-    ctx: GenericEndpointContext,
-    ticket: unknown,
-  ): Promise<ManagedTicket | null> {
-    const state = ctx.getCookie(STATE_COOKIE);
-    if (
-      ctx.request?.headers.get("origin") !== websiteOrigin ||
-      !state ||
-      !STATE_PATTERN.test(state) ||
-      typeof ticket !== "string" ||
-      ticket.length > MAX_TICKET_LENGTH
-    ) {
-      return null;
-    }
-    const claims = parseTicketClaims(
-      await verifyToken(ticket, { ...tokenCheck, audience: publicOrigin }),
-    );
-    return claims.company === companyId && claims.state === state ? claims : null;
-  }
-
-  /** Uses the ticket and creates the session in one transaction. */
-  function signIn(ctx: GenericEndpointContext, ticket: ManagedTicket) {
-    const { internalAdapter, options } = ctx.context;
-    return transact((tx) =>
-      // Better Auth's writes join the transaction that uses the ticket.
-      runWithAdapter(authDatabase(ormOf(tx))(options), async () => {
-        const { userId } = await managedSignIn.signInWithTicket(
-          PrincipalSecurityContext.system(),
-          tx,
-          ticket,
-          () => new Date(),
-        );
-        const session = await internalAdapter.createSession(userId);
-        const user = await internalAdapter.findUserById(userId);
-        if (!user) {
-          throw new Error("The signed-in user is missing");
-        }
-        return { session, user };
-      }),
-    );
-  }
 
   return {
     id: "managed-sign-in",
@@ -128,11 +86,11 @@ export function managedSignInPlugin({ transact, assignment, tokenCheck }: Manage
           // The state is single-use: cleared whatever the outcome.
           ctx.setCookie(STATE_COOKIE, "", { ...STATE_COOKIE_OPTIONS, maxAge: 0 });
           try {
-            const ticket = await readTicket(ctx, ctx.body.ticket);
+            const ticket = await readTicket(ctx, ctx.body.ticket, options);
             if (!ticket) {
               return signInFailed("sign_in_required");
             }
-            await setSessionCookie(ctx, await signIn(ctx, ticket));
+            await setSessionCookie(ctx, await signIn(ctx, ticket, options.transact));
             return redirect(`${publicOrigin}/`);
           } catch (error) {
             if (error instanceof InvalidTokenError || error instanceof SignInRefusedError) {
@@ -146,6 +104,51 @@ export function managedSignInPlugin({ transact, assignment, tokenCheck }: Manage
       ),
     },
   } satisfies BetterAuthPlugin;
+}
+
+/** The posted ticket, when it comes from the website with this browser's state. */
+async function readTicket(
+  ctx: GenericEndpointContext,
+  ticket: unknown,
+  { assignment, tokenCheck }: ManagedSignInOptions,
+): Promise<ManagedTicket | null> {
+  const { companyId, publicOrigin, websiteOrigin } = assignment;
+  const state = ctx.getCookie(STATE_COOKIE);
+  if (
+    ctx.request?.headers.get("origin") !== websiteOrigin ||
+    !state ||
+    !STATE_PATTERN.test(state) ||
+    typeof ticket !== "string" ||
+    ticket.length > MAX_TICKET_LENGTH
+  ) {
+    return null;
+  }
+  const claims = parseTicketClaims(
+    await verifyToken(ticket, { ...tokenCheck, audience: publicOrigin }),
+  );
+  return claims.company === companyId && claims.state === state ? claims : null;
+}
+
+/** Uses the ticket and creates the session in one transaction. */
+function signIn(ctx: GenericEndpointContext, ticket: ManagedTicket, transact: Transact) {
+  const { internalAdapter, options } = ctx.context;
+  return transact((tx) =>
+    // Better Auth's writes join the transaction that uses the ticket.
+    runWithAdapter(authDatabase(ormOf(tx))(options), async () => {
+      const { userId } = await managedSignIn.signInWithTicket(
+        PrincipalSecurityContext.system(),
+        tx,
+        ticket,
+        () => new Date(),
+      );
+      const session = await internalAdapter.createSession(userId);
+      const user = await internalAdapter.findUserById(userId);
+      if (!user) {
+        throw new Error("The signed-in user is missing");
+      }
+      return { session, user };
+    }),
+  );
 }
 
 /** A 303, so the browser follows a form POST with a GET; Better Auth adds the cookies. */

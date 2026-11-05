@@ -20,23 +20,10 @@ export function createResolvers(
         return userIds.map((userId) => emails.get(userId) ?? null);
       }),
   );
-  // One query per record type a request's lines are about, not one per line.
   const records = perRequest(
     (context) =>
       new DataLoader<HistoryLine, LoadedRecord | null, string>(
-        async (lines) => {
-          const idsByType = Map.groupBy(lines, (line) => line.recordType);
-          const loaded = new Map<string, LoadedRecord>();
-          for (const [recordType, ofType] of idsByType) {
-            const found = await reader.readRecords(
-              context.getActor(),
-              recordType,
-              ofType.map((line) => line.recordId),
-            );
-            for (const [id, record] of found) loaded.set(`${recordType}:${id}`, record);
-          }
-          return lines.map((line) => loaded.get(keyOf(line)) ?? null);
-        },
+        (lines) => loadRecords(reader, context, lines),
         { cacheKeyFn: keyOf },
       ),
   );
@@ -51,32 +38,8 @@ export function createResolvers(
         { cacheKeyFn: (line) => line.id },
       ),
   );
-  // `AnyRecord.access` on each registered type, one read per type and request however many
-  // records a list holds; core cannot name the types statically.
-  const accessResolvers = Object.fromEntries(
-    Object.entries(registry).map(([recordType, registration]) => {
-      const access = perRequest(
-        (context) =>
-          new DataLoader(async (ids: readonly string[]) => {
-            const found = await reader.readAccess(
-              context.getActor(),
-              recordType as RecordType,
-              ids,
-            );
-            return ids.map((id) => found.get(id)!);
-          }),
-      );
-      return [
-        registration.graphqlType,
-        {
-          access: (record: { id: string }, _args: unknown, context: GraphqlContext) =>
-            access(context).load(record.id),
-        },
-      ];
-    }),
-  ) as Resolvers;
   return {
-    ...accessResolvers,
+    ...accessResolvers(registry, reader),
     Query: {
       recordHistory: (_parent, { recordType, recordId, first, after }, context) =>
         reader.readHistory(context.getActor(), recordType.toLowerCase() as RecordType, recordId, {
@@ -100,6 +63,57 @@ export function createResolvers(
           : null,
     },
   };
+}
+
+/**
+ * `AnyRecord.access` on each registered type, one read per type and request however many
+ * records a list holds; core cannot name the types statically.
+ */
+function accessResolvers(
+  registry: RecordTypeRegistry,
+  reader: RecordHistoryReaderService,
+): Resolvers {
+  return Object.fromEntries(
+    Object.entries(registry).map(([recordType, registration]) => {
+      const access = perRequest(
+        (context) =>
+          new DataLoader(async (ids: readonly string[]) => {
+            const found = await reader.readAccess(
+              context.getActor(),
+              recordType as RecordType,
+              ids,
+            );
+            return ids.map((id) => found.get(id)!);
+          }),
+      );
+      return [
+        registration.graphqlType,
+        {
+          access: (record: { id: string }, _args: unknown, context: GraphqlContext) =>
+            access(context).load(record.id),
+        },
+      ];
+    }),
+  );
+}
+
+/** The records the lines are about, in their order: one query per record type, not one per line. */
+async function loadRecords(
+  reader: RecordHistoryReaderService,
+  context: GraphqlContext,
+  lines: readonly HistoryLine[],
+): Promise<(LoadedRecord | null)[]> {
+  const idsByType = Map.groupBy(lines, (line) => line.recordType);
+  const loaded = new Map<string, LoadedRecord>();
+  for (const [recordType, ofType] of idsByType) {
+    const found = await reader.readRecords(
+      context.getActor(),
+      recordType,
+      ofType.map((line) => line.recordId),
+    );
+    for (const [id, record] of found) loaded.set(`${recordType}:${id}`, record);
+  }
+  return lines.map((line) => loaded.get(keyOf(line)) ?? null);
 }
 
 function keyOf({ recordType, recordId }: Pick<HistoryLine, "recordType" | "recordId">): string {
