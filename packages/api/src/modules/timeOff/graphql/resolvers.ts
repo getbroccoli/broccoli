@@ -1,8 +1,30 @@
-import type { Resolvers } from "../../../core/graphql";
-import type { LeaveSetupService } from "../app";
+import DataLoader from "dataloader";
 
-export function createResolvers(leaveSetup: LeaveSetupService): Resolvers {
+import { perRequest, type Resolvers, type ResolversTypes } from "../../../core/graphql";
+import type { LeaveSetupService, TimeOffService } from "../app";
+
+type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
+
+const BALANCE_KINDS = {
+  balance_from_allowance: "BALANCE_FROM_ALLOWANCE",
+  unlimited_balance: "UNLIMITED_BALANCE",
+  no_balance: "NO_BALANCE",
+} as const;
+
+export function createResolvers(timeOff: TimeOffService, leaveSetup: LeaveSetupService): Resolvers {
+  const loaders = perRequest((context) => ({
+    timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
+      const read = await timeOff.readTimeOffTypes(context.getActor(), { employeeIds });
+      return employeeIds.map(
+        (id) =>
+          read.get(id)?.map((row) => ({ ...row, balance: BALANCE_KINDS[row.balance] })) ?? null,
+      );
+    }),
+  }));
   return {
+    Employee: {
+      timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
+    },
     Query: {
       leaveSetup: async (_parent, _args, context) => {
         const setup = await leaveSetup.readLeaveSetup(context.getActor());

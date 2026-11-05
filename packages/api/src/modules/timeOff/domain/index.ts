@@ -21,3 +21,4 @@ export {
   type TimeOffPolicy,
   type TimeOffTypeKey,
 } from "./timeOffPolicy";
+export { timeOffFigures, type LedgerLineKind, type TimeOffFigures } from "./timeOffFigures";

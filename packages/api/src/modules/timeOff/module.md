@@ -60,6 +60,17 @@ What runs the engine; none writes lines itself, and while no policy is linked ea
 
 Full-timer in England and Wales employed all of 2026 on the statutory minimum: grant 28, bank holidays −8, remaining 20. On 25 days plus bank holidays: 25 + 8 − 8 = 25.
 
+## Reading a person's time off
+
+`TimeOffService.readTimeOffTypes` gives each person the time off types they have, with their figures, as `Employee.timeOffTypes` and the person's panel show them. It follows the `time_off` permission: the person, everyone above them in the reporting line and admins read it; anyone else gets nothing (`null` in GraphQL).
+
+- The date read is today, or the person's start when it is later, so a future starter sees their first leave year.
+- A type shows when a policy applies to the person on that date (see below), Annual leave first, then Sickness, Family leave, Other and the company's own types by name.
+- `balance_from_allowance`: the allowance whose leave year holds the date, summed by line kind over the whole year. Entitlement is the grants, rounding and manual adjustments; bank holidays are those taken; used is the days booked; remaining is entitlement − bank holidays − used. Each is rounded to two decimals and remaining is worked out from the rounded figures, so a row adds up.
+- `unlimited_balance`: only the days booked on its allowance.
+- `no_balance`: no leave year exists, so the calendar year; the days of approved or pending time off of that type, a half day 0.5; shown only when the person is employed on some day of that year.
+- No allowance for the year (the person left before it) or no policy at all (leave is off) gives no row; while leave is off the list is empty for everyone.
+
 ## Which policy applies
 
 For one employee, type and date:

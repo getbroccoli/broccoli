@@ -12,7 +12,13 @@ import { createResolvers } from "./graphql";
 export { createLeaveSetupService, createTimeOffService } from "./app";
 
 // Public types.
-export type { EnsuredAllowances, TimeOffPolicySummary, TimeOffService, TurnedOnLeave } from "./app";
+export type {
+  EmployeeTimeOffType,
+  EnsuredAllowances,
+  TimeOffPolicySummary,
+  TimeOffService,
+  TurnedOnLeave,
+} from "./app";
 export type { AllowanceCause, StandardLeavePolicyKey } from "./domain";
 
 /** Time off: turning leave on, which policies terms get, and keeping each person's allowances as they change and every day. */
@@ -27,7 +33,7 @@ export function timeOffModule({
   return {
     name: "timeOff",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(leaveSetup),
+    resolvers: createResolvers(timeOff, leaveSetup),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),
       "timeOff.leave_turned_on": (turnedOn) =>

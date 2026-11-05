@@ -1,3 +1,42 @@
+extend type Employee {
+  "One per time off type with a policy for this person, in the leave year containing today (or their start, when later), Annual leave first; empty when there is none, such as while leave is off; null for callers who may not read this person's time off."
+  timeOffTypes: [EmployeeTimeOffType!]
+}
+
+"A time off type a person has in their current leave year, with its figures in days."
+type EmployeeTimeOffType {
+  timeOffType: TimeOffType!
+  balance: TimeOffBalanceKind!
+  "The first day of the leave year, or of the calendar year for NO_BALANCE."
+  periodStart: Date!
+  "The last day of the leave year, or of the calendar year for NO_BALANCE."
+  periodEnd: Date!
+  "Everything granted for the leave year, bank holidays on top and adjustments included; BALANCE_FROM_ALLOWANCE only."
+  entitlement: Float
+  "Bank holidays the leave year takes from the allowance; BALANCE_FROM_ALLOWANCE only."
+  bankHolidays: Float
+  "Entitlement less bank holidays and days used; BALANCE_FROM_ALLOWANCE only."
+  remaining: Float
+  "Days used from the allowance, or recorded for NO_BALANCE, in the period."
+  used: Float!
+}
+
+"A kind of time off, such as Annual leave or Sickness."
+type TimeOffType {
+  id: ID!
+  name: String!
+}
+
+"How a time off type's days are counted."
+enum TimeOffBalanceKind {
+  "A yearly allowance that days are taken from."
+  BALANCE_FROM_ALLOWANCE
+  "No limit; days used are counted per leave year."
+  UNLIMITED_BALANCE
+  "No allowance; days are only recorded."
+  NO_BALANCE
+}
+
 "Whose bank holidays apply: one nation's, as GOV.UK publishes them."
 enum BankHolidayCalendar {
   ENGLAND_AND_WALES
