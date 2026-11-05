@@ -37,6 +37,9 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Pattern week**: a working pattern's minutes for each weekday and its full day, from a date until its next week.
 - **Bank holiday calendar**: one nation's bank holidays (England and Wales, Scotland or Northern Ireland), chosen on a pattern week.
 - **Standard leave policy**: one of the three Annual leave policies Broccoli ships, which code finds by key: the UK statutory minimum (28 days for a five-day week, at most 28, bank holidays included), 20 days plus bank holidays, and 25 days plus bank holidays; each leave year starts on 1 January.
+- **Time off**: everything a person is away from work for, of any time off type (Annual leave, Sickness, Family leave, Other or the company's own). Not "PTO", "vacation", "holiday" or "absence".
+- **Allowance figures**: what a person's panel shows for a time off type with an allowance, in days for one leave year: **entitlement** (everything granted, bank holidays on top and adjustments included), **bank holidays** (those the year takes from it), **used** and **remaining** (entitlement less bank holidays and used).
+- **Days recorded**: the days of a time off type with no balance, such as Sickness, a person has in a calendar year; a half day counts 0.5.
 - **Full day**: the minutes one day of leave stands for in a pattern week; at least its longest weekday.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.

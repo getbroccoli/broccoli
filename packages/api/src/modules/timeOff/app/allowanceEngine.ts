@@ -62,7 +62,8 @@ export async function ensureAllowancesOf(
   return { allowancesCreated: created.length, linesAppended: await allowances.insertLines(lines) };
 }
 
-interface Person {
+/** What decides one person's allowances. */
+export interface Person {
   employeeId: string;
   periods: readonly { startDate: CalendarDate | null; endDate: CalendarDate | null }[];
   serviceStart: CalendarDate | null;
@@ -71,8 +72,11 @@ interface Person {
 }
 
 /** Every policy, and what decides each person's allowances. */
-async function readPeople(
-  employeeReads: AllowanceEngineDependencies["employeeReads"],
+export async function readPeople(
+  employeeReads: Pick<
+    AllowanceEngineDependencies["employeeReads"],
+    "readEmploymentPeriods" | "readTermsMemberships"
+  >,
   tx: Tx,
   ids: readonly string[],
 ): Promise<{ people: Person[]; policies: TimeOffPolicy[] }> {
