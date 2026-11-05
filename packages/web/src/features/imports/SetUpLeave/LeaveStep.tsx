@@ -138,96 +138,30 @@ export function LeaveStep({ search }: Props) {
         {nations.map((nation) => {
           const here = locations.filter(({ name }) => nationOf(name) === nation);
           const isDefault = nation === "ENGLAND_AND_WALES";
-          const people =
-            here.reduce((sum, { peopleCount }) => sum + peopleCount, 0) +
-            (isDefault ? withoutLocation : 0);
-          const holidays = data?.leaveSetup.bankHolidayCalendars.find(
-            ({ calendar }) => calendar === nation,
-          );
-          const nationName = t(`setup.leave.nation.${nation}`);
           return (
-            <section key={nation} className="flex flex-col gap-4 rounded-xl border p-5">
-              <h2 className="text-base font-semibold">
-                {t("setup.leave.termsTitle", { name: nationName })}
-                <span className="font-normal text-muted-foreground">
-                  {" · "}
-                  {people === 1
-                    ? t("setup.leave.peopleOne")
-                    : t("setup.leave.people", { count: String(people) })}
-                </span>
-              </h2>
-              <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr] sm:items-center">
-                <dt className="text-muted-foreground">{t("setup.leave.locations")}</dt>
-                <dd>
-                  {[
-                    ...here.map(({ name }) => name),
-                    ...(isDefault && withoutLocation > 0
-                      ? [t("setup.leave.noLocation", { count: String(withoutLocation) })]
-                      : []),
-                  ].join(", ") || t("setup.leave.noLocations")}
-                </dd>
-                <dt>
-                  <label htmlFor={`week-${nation}`} className="text-muted-foreground">
-                    {t("setup.leave.workingWeek")}
-                  </label>
-                </dt>
-                <dd>
-                  <select
-                    id={`week-${nation}`}
-                    className={SELECT_CLASS}
-                    value={weekOf(nation)}
-                    onChange={(event) =>
-                      change({
-                        weeks: { ...weeks, [nation]: event.target.value as StandardWorkingWeek },
-                      })
-                    }
-                  >
-                    {WEEKS.map((week) => (
-                      <option key={week} value={week}>
-                        {t(`setup.leave.week.${week}`)}
-                      </option>
-                    ))}
-                  </select>
-                </dd>
-                <dt className="text-muted-foreground">{t("setup.leave.bankHolidays")}</dt>
-                <dd>
-                  {t("setup.leave.bankHolidaysCount", {
-                    nation: nationName,
-                    count: String(holidays?.countThisYear ?? 0),
-                    year: String(new Date().getFullYear()),
-                  })}
-                </dd>
-                <dt>
-                  <label htmlFor={`policy-${nation}`} className="text-muted-foreground">
-                    {t("setup.leave.annualLeave")}
-                  </label>
-                </dt>
-                <dd>
-                  <select
-                    id={`policy-${nation}`}
-                    className={SELECT_CLASS}
-                    value={policyOf(nation)}
-                    onChange={(event) =>
-                      change({ policies: { ...policies, [nation]: event.target.value } })
-                    }
-                  >
-                    {policyOptions.map(({ id, name }) => (
-                      <option key={id} value={id}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t("setup.leave.annualLeaveHint")}
-                  </p>
-                </dd>
-                <dt className="text-muted-foreground">{t("setup.leave.alsoRecorded")}</dt>
-                <dd>{t("setup.leave.alsoRecordedTypes")}</dd>
-              </dl>
-              {isDefault && (
-                <p className="text-sm text-muted-foreground">{t("setup.leave.newPeople")}</p>
-              )}
-            </section>
+            <TermsCard
+              key={nation}
+              nation={nation}
+              locationNames={[
+                ...here.map(({ name }) => name),
+                ...(isDefault && withoutLocation > 0
+                  ? [t("setup.leave.noLocation", { count: String(withoutLocation) })]
+                  : []),
+              ]}
+              people={
+                here.reduce((sum, { peopleCount }) => sum + peopleCount, 0) +
+                (isDefault ? withoutLocation : 0)
+              }
+              holidaysThisYear={
+                data?.leaveSetup.bankHolidayCalendars.find(({ calendar }) => calendar === nation)
+                  ?.countThisYear ?? 0
+              }
+              week={weekOf(nation)}
+              onWeekChange={(week) => change({ weeks: { ...weeks, [nation]: week } })}
+              policyId={policyOf(nation)}
+              policyOptions={policyOptions}
+              onPolicyChange={(id) => change({ policies: { ...policies, [nation]: id } })}
+            />
           );
         })}
         {locations.length > 0 && (
@@ -276,5 +210,102 @@ export function LeaveStep({ search }: Props) {
         )}
       </SetupStepForm>
     </SetupLayout>
+  );
+}
+
+type TermsCardProps = {
+  nation: BankHolidayCalendar;
+  /** The locations on these terms, then how many people have none when they are the default. */
+  locationNames: string[];
+  people: number;
+  holidaysThisYear: number;
+  week: StandardWorkingWeek;
+  onWeekChange: (week: StandardWorkingWeek) => void;
+  policyId: string;
+  policyOptions: readonly { id: string; name: string }[];
+  onPolicyChange: (policyId: string) => void;
+};
+
+/** One nation's terms: its locations and people, working week, bank holidays and Annual leave. */
+function TermsCard({
+  nation,
+  locationNames,
+  people,
+  holidaysThisYear,
+  week,
+  onWeekChange,
+  policyId,
+  policyOptions,
+  onPolicyChange,
+}: TermsCardProps) {
+  const nationName = t(`setup.leave.nation.${nation}`);
+  return (
+    <section className="flex flex-col gap-4 rounded-xl border p-5">
+      <h2 className="text-base font-semibold">
+        {t("setup.leave.termsTitle", { name: nationName })}
+        <span className="font-normal text-muted-foreground">
+          {" · "}
+          {people === 1
+            ? t("setup.leave.peopleOne")
+            : t("setup.leave.people", { count: String(people) })}
+        </span>
+      </h2>
+      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-[10rem_1fr] sm:items-center">
+        <dt className="text-muted-foreground">{t("setup.leave.locations")}</dt>
+        <dd>{locationNames.join(", ") || t("setup.leave.noLocations")}</dd>
+        <dt>
+          <label htmlFor={`week-${nation}`} className="text-muted-foreground">
+            {t("setup.leave.workingWeek")}
+          </label>
+        </dt>
+        <dd>
+          <select
+            id={`week-${nation}`}
+            className={SELECT_CLASS}
+            value={week}
+            onChange={(event) => onWeekChange(event.target.value as StandardWorkingWeek)}
+          >
+            {WEEKS.map((option) => (
+              <option key={option} value={option}>
+                {t(`setup.leave.week.${option}`)}
+              </option>
+            ))}
+          </select>
+        </dd>
+        <dt className="text-muted-foreground">{t("setup.leave.bankHolidays")}</dt>
+        <dd>
+          {t("setup.leave.bankHolidaysCount", {
+            nation: nationName,
+            count: String(holidaysThisYear),
+            year: String(new Date().getFullYear()),
+          })}
+        </dd>
+        <dt>
+          <label htmlFor={`policy-${nation}`} className="text-muted-foreground">
+            {t("setup.leave.annualLeave")}
+          </label>
+        </dt>
+        <dd>
+          <select
+            id={`policy-${nation}`}
+            className={SELECT_CLASS}
+            value={policyId}
+            onChange={(event) => onPolicyChange(event.target.value)}
+          >
+            {policyOptions.map(({ id, name }) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">{t("setup.leave.annualLeaveHint")}</p>
+        </dd>
+        <dt className="text-muted-foreground">{t("setup.leave.alsoRecorded")}</dt>
+        <dd>{t("setup.leave.alsoRecordedTypes")}</dd>
+      </dl>
+      {nation === "ENGLAND_AND_WALES" && (
+        <p className="text-sm text-muted-foreground">{t("setup.leave.newPeople")}</p>
+      )}
+    </section>
   );
 }

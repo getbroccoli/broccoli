@@ -160,18 +160,15 @@ async function addApprovedPeople(
     await turnOnLeave(ctx, tx, finish.leave);
   }
   const owner = readyEmployees.find(({ key }) => key === ownerKey);
+  const invitees = finish
+    ? setupInvitees(readyEmployees, managers, finish.inviteAudience, ownerKey, finish.ownerEmail)
+    : [];
   const sent = finish
     ? await invites.sendAtSetup(
         ctx,
         tx,
         {
-          employeeIds: setupInvitees(
-            readyEmployees,
-            managers,
-            finish.inviteAudience,
-            ownerKey,
-            finish.ownerEmail,
-          ).flatMap((employee) => idOf(employee) ?? []),
+          employeeIds: invitees.flatMap((employee) => idOf(employee) ?? []),
           note: finish.inviteNote,
           invitedByUserId: finish.ownerUserId,
         },

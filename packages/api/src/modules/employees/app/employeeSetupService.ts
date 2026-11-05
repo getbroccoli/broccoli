@@ -207,24 +207,7 @@ export function createEmployeeSetupService(): EmployeeSetupService {
     },
     async setUpTerms(ctx, tx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
-      const entries = input.terms.map(({ bankHolidayCalendar, workingWeek }) => ({
-        calendar: parseBankHolidayCalendar(bankHolidayCalendar),
-        week: parseStandardWorkingWeek(workingWeek),
-      }));
-      const calendars = entries.map(({ calendar }) => calendar);
-      if (!calendars.includes("england_and_wales")) {
-        throw invalidInput([{ field: "terms", code: "required" }]);
-      }
-      if (new Set(calendars).size !== calendars.length) {
-        throw invalidInput([{ field: "terms", code: "duplicate" }]);
-      }
-      const locationTerms = input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
-        locationName,
-        calendar: parseBankHolidayCalendar(bankHolidayCalendar),
-      }));
-      if (locationTerms.some(({ calendar }) => !calendars.includes(calendar))) {
-        throw invalidInput([{ field: "locationTerms", code: "invalid" }]);
-      }
+      const { entries, calendars, locationTerms } = parseTermsSetup(input);
       const terms = termsRepository(tx);
       const patterns = workingPatternRepository(tx);
       await patterns.lockForWrites();
@@ -271,6 +254,29 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       };
     },
   };
+}
+
+/** The owner's terms per nation and location nations, refused unless England and Wales is among them once. */
+function parseTermsSetup(input: TermsSetup) {
+  const entries = input.terms.map(({ bankHolidayCalendar, workingWeek }) => ({
+    calendar: parseBankHolidayCalendar(bankHolidayCalendar),
+    week: parseStandardWorkingWeek(workingWeek),
+  }));
+  const calendars = entries.map(({ calendar }) => calendar);
+  if (!calendars.includes("england_and_wales")) {
+    throw invalidInput([{ field: "terms", code: "required" }]);
+  }
+  if (new Set(calendars).size !== calendars.length) {
+    throw invalidInput([{ field: "terms", code: "duplicate" }]);
+  }
+  const locationTerms = input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
+    locationName,
+    calendar: parseBankHolidayCalendar(bankHolidayCalendar),
+  }));
+  if (locationTerms.some(({ calendar }) => !calendars.includes(calendar))) {
+    throw invalidInput([{ field: "locationTerms", code: "invalid" }]);
+  }
+  return { entries, calendars, locationTerms };
 }
 
 /** The terms each nation's people are on, named after it. */
