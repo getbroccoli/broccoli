@@ -1,6 +1,7 @@
 /** English copy under `settings.*`. */
 export const settingsEn = {
   "settings.title": "Settings",
+  "settings.workspace": "Workspace",
   "settings.locations.title": "Locations",
   "settings.locations.description":
     "Where people work, such as an office or Remote. Pick a person's location on their panel.",

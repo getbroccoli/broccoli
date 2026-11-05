@@ -1,7 +1,7 @@
 import { useQuery } from "@apollo/client/react";
-import { ArrowCounterClockwise, Buildings, CaretDown, Plant, SignOut } from "@phosphor-icons/react";
-import { Link, useRouteContext, useRouter } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { ArrowCounterClockwise, CaretDown, GearSix, Plant } from "@phosphor-icons/react";
+import { Link, useRouteContext } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { WorkspaceMenuDocument } from "@/__generated__/graphql";
 import {
@@ -13,64 +13,40 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/features/auth";
 import { ExitDemoDialog, useDemoPresent } from "@/features/demo";
 import { ResetSetupDialog } from "@/features/setup";
 import { t } from "@/i18n";
-import { useSessionChange } from "@/lib/useSessionChange";
 
+import { useMenuFinalFocus } from "./useMenuFinalFocus";
+
+/** The company menu: the company's name and logo, and the actions on the whole workspace. */
 export function WorkspaceMenu() {
-  const router = useRouter();
-  const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
+  const { me } = useRouteContext({ from: "/_authenticated" });
   const demoPresent = useDemoPresent();
   const company = useQuery(WorkspaceMenuDocument).data?.company;
-  const openedOnPath = useRef<string | null>(null);
+  const { onOpenChange, finalFocus } = useMenuFinalFocus();
   // Outside the menu, which closes when an item is chosen.
   const [exitingDemo, setExitingDemo] = useState(false);
   const [resettingSetup, setResettingSetup] = useState(false);
-  const [signOutFailed, setSignOutFailed] = useState(false);
-  // The gate then sends the signed-out user to the login page.
-  const [signOutAndReload, signingOut] = useSessionChange(async () => {
-    setSignOutFailed(false);
-    const signedOut = await signOut();
-    setSignOutFailed(!signedOut);
-    return signedOut;
-  });
-  // Return focus to the trigger unless the page changed, in which case the new page's
-  // heading takes it (see `useFocusHeadingOnNavigation`).
-  const isStillOnOpeningPage = () => router.state.location.pathname === openedOnPath.current;
+  const name = company?.name ?? t("workspace.name");
+  const canManage = me.operations.includes("MANAGE_WORKSPACE");
+  const canReset = me.operations.includes("RESET_WORKSPACE");
 
   return (
     <>
-      <DropdownMenu
-        onOpenChange={(open) => {
-          if (open) {
-            openedOnPath.current = router.state.location.pathname;
-          }
-        }}
-      >
+      <DropdownMenu onOpenChange={onOpenChange}>
         <DropdownMenuTrigger
           render={
             <button
               type="button"
               className="group/workspace flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/5"
             >
-              {company?.logoUrl ? (
-                <img
-                  src={company.logoUrl}
-                  alt=""
-                  className="size-7 shrink-0 rounded-md bg-card object-contain"
-                />
-              ) : (
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
-                  <Plant size={16} weight="fill" aria-hidden />
-                </span>
-              )}
+              <CompanyLogo url={company?.logoUrl} />
               <span
-                title={company?.name ?? undefined}
+                title={name}
                 className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight"
               >
-                {company?.name ?? t("workspace.name")}
+                {name}
               </span>
               <CaretDown
                 size={11}
@@ -80,23 +56,29 @@ export function WorkspaceMenu() {
             </button>
           }
         />
-        <DropdownMenuContent align="start" className="w-60" finalFocus={isStillOnOpeningPage}>
-          {me.operations.includes("MANAGE_WORKSPACE") && (
-            <DropdownMenuItem render={<Link to="/company" />}>
-              <Buildings size={14} />
-              {t("workspace.company")}
+        <DropdownMenuContent align="start" className="w-60" finalFocus={finalFocus}>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="flex items-center gap-2 px-2 py-2">
+              <CompanyLogo url={company?.logoUrl} />
+              <span className="truncate text-[13px] font-semibold text-foreground">{name}</span>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
+          {canManage && (
+            <DropdownMenuItem render={<Link to="/settings" />}>
+              <GearSix size={14} />
+              {t("settings.title")}
             </DropdownMenuItem>
           )}
           {/* The demo's owner exits the demo instead. */}
-          {demoPresent === false && me.operations.includes("RESET_WORKSPACE") && (
+          {demoPresent === false && canReset && (
             <DropdownMenuItem variant="destructive" onClick={() => setResettingSetup(true)}>
               <ArrowCounterClockwise size={14} />
               {t("setup.reset.open")}
             </DropdownMenuItem>
           )}
-          <DropdownMenuSeparator />
-          {demoPresent && me.operations.includes("RESET_WORKSPACE") && (
+          {demoPresent && canReset && (
             <DropdownMenuGroup>
+              <DropdownMenuSeparator />
               <DropdownMenuLabel>{t("demo.menu.label")}</DropdownMenuLabel>
               <DropdownMenuItem variant="destructive" onClick={() => setExitingDemo(true)}>
                 <ArrowCounterClockwise size={14} />
@@ -104,27 +86,20 @@ export function WorkspaceMenu() {
               </DropdownMenuItem>
             </DropdownMenuGroup>
           )}
-          {/* The demo's provisional owner has no password, so signing out would lock them out. */}
-          {!demoExpiresAt && (
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="truncate">
-                {t("auth.signedInAs", { email: me.email })}
-              </DropdownMenuLabel>
-              <DropdownMenuItem disabled={signingOut} onClick={() => signOutAndReload()}>
-                <SignOut size={14} />
-                {t("auth.signOut")}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
-      {signOutFailed && (
-        <p role="alert" className="px-2 text-sm text-destructive">
-          {t("auth.signOutFailed")}
-        </p>
-      )}
       <ExitDemoDialog open={exitingDemo} onOpenChange={setExitingDemo} />
       <ResetSetupDialog open={resettingSetup} onOpenChange={setResettingSetup} />
     </>
+  );
+}
+
+function CompanyLogo({ url }: { url: string | null | undefined }) {
+  return url ? (
+    <img src={url} alt="" className="size-7 shrink-0 rounded-md bg-card object-contain" />
+  ) : (
+    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
+      <Plant size={16} weight="fill" aria-hidden />
+    </span>
   );
 }

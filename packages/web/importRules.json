@@ -18,8 +18,10 @@
       "src/components/ui",
       "src/features/auth",
       "src/features/demo",
+      "src/features/employees",
       "src/features/setup",
       "src/i18n",
+      "src/lib/class-names",
       "src/lib/useSessionChange"
     ],
     "src/features/auth": [

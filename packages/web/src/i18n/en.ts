@@ -1,6 +1,5 @@
 import { appEn } from "./en/app";
 import { authEn } from "./en/auth";
-import { companyEn } from "./en/company";
 import { demoEn } from "./en/demo";
 import { externalAgentsEn } from "./en/externalAgents";
 import { importsEn } from "./en/imports";
@@ -30,7 +29,6 @@ export const en = {
   ...invitesEn,
   ...recordsEn,
   ...tableEn,
-  ...companyEn,
   ...notFoundEn,
   ...settingsEn,
 } as const;
