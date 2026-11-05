@@ -1,18 +1,13 @@
-import { CaretLeft, Users, type Icon } from "@phosphor-icons/react";
-import { Link, type LinkProps } from "@tanstack/react-router";
+import { CaretLeft, Users } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { ProfileMenu } from "./ProfileMenu";
-import { useInSettings } from "./useInSettings";
-import { WorkspaceMenu } from "./WorkspaceMenu";
-
-interface NavItem {
-  to: LinkProps["to"];
-  label: string;
-  icon?: Icon;
-}
+import { ProfileMenu } from "../ProfileMenu";
+import { useInSettings } from "../useInSettings";
+import { WorkspaceMenu } from "../WorkspaceMenu";
+import { NavList, type NavItem } from "./NavList";
 
 const APP_ITEMS: NavItem[] = [{ to: "/people", label: t("nav.people"), icon: Users }];
 const SETTINGS_ITEMS: NavItem[] = [
@@ -40,7 +35,7 @@ export function LeftNav() {
             <WorkspaceMenu />
           </div>
           <NavList label={t("nav.label")} items={APP_ITEMS} />
-          <ProfileFooter />
+          <ProfileMenu />
         </div>
         <div inert={!inSettings} className={cn(menuClass, !inSettings && "max-md:hidden")}>
           <Link
@@ -57,7 +52,7 @@ export function LeftNav() {
             {t("settings.workspace")}
           </span>
           <NavList label={t("settings.title")} items={SETTINGS_ITEMS} />
-          <ProfileFooter />
+          <ProfileMenu />
         </div>
       </div>
     </aside>
@@ -66,39 +61,3 @@ export function LeftNav() {
 
 const menuClass =
   "flex items-center gap-3 px-3 py-2 md:h-full md:w-56 md:flex-col md:items-stretch md:gap-1 md:py-4";
-
-function NavList({ label, items }: { label: string; items: NavItem[] }) {
-  return (
-    <nav aria-label={label} className="flex gap-0.5 md:flex-col">
-      {items.map((item) => (
-        <NavLink key={item.label} item={item} />
-      ))}
-    </nav>
-  );
-}
-
-function ProfileFooter() {
-  return (
-    <div className="shrink-0 md:mt-auto">
-      <ProfileMenu />
-    </div>
-  );
-}
-
-function NavLink({ item: { to, label, icon: Icon } }: { item: NavItem }) {
-  return (
-    <Link
-      to={to}
-      className="flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors"
-      activeProps={{ className: "bg-foreground text-background" }}
-      inactiveProps={{ className: "text-foreground/80 hover:bg-foreground/5" }}
-    >
-      {({ isActive }) => (
-        <>
-          {Icon && <Icon size={16} weight={isActive ? "bold" : "regular"} />}
-          <span className="flex-1 font-medium">{label}</span>
-        </>
-      )}
-    </Link>
-  );
-}

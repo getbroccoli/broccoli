@@ -19,7 +19,7 @@ import { t } from "@/i18n";
 
 import { useMenuFinalFocus } from "./useMenuFinalFocus";
 
-/** The company menu: the company's name and logo, and the actions on the whole workspace. */
+/** The workspace menu: the company's name and logo, and the actions on the whole workspace. */
 export function WorkspaceMenu() {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const demoPresent = useDemoPresent();
@@ -29,6 +29,17 @@ export function WorkspaceMenu() {
   const [exitingDemo, setExitingDemo] = useState(false);
   const [resettingSetup, setResettingSetup] = useState(false);
   const name = company?.name ?? t("workspace.name");
+  const logo = company?.logoUrl ? (
+    <img
+      src={company.logoUrl}
+      alt=""
+      className="size-7 shrink-0 rounded-md bg-card object-contain"
+    />
+  ) : (
+    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
+      <Plant size={16} weight="fill" aria-hidden />
+    </span>
+  );
   const canManage = me.operations.includes("MANAGE_WORKSPACE");
   const canReset = me.operations.includes("RESET_WORKSPACE");
 
@@ -41,7 +52,7 @@ export function WorkspaceMenu() {
               type="button"
               className="group/workspace flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/5"
             >
-              <CompanyLogo url={company?.logoUrl} />
+              {logo}
               <span
                 title={name}
                 className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight"
@@ -59,7 +70,7 @@ export function WorkspaceMenu() {
         <DropdownMenuContent align="start" className="w-60" finalFocus={finalFocus}>
           <DropdownMenuGroup>
             <DropdownMenuLabel className="flex items-center gap-2 px-2 py-2">
-              <CompanyLogo url={company?.logoUrl} />
+              {logo}
               <span className="truncate text-[13px] font-semibold text-foreground">{name}</span>
             </DropdownMenuLabel>
           </DropdownMenuGroup>
@@ -92,15 +103,5 @@ export function WorkspaceMenu() {
       <ExitDemoDialog open={exitingDemo} onOpenChange={setExitingDemo} />
       <ResetSetupDialog open={resettingSetup} onOpenChange={setResettingSetup} />
     </>
-  );
-}
-
-function CompanyLogo({ url }: { url: string | null | undefined }) {
-  return url ? (
-    <img src={url} alt="" className="size-7 shrink-0 rounded-md bg-card object-contain" />
-  ) : (
-    <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-brand text-brand-foreground">
-      <Plant size={16} weight="fill" aria-hidden />
-    </span>
   );
 }

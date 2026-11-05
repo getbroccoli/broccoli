@@ -9,7 +9,7 @@ A manual check of how a self-hosted instance sends email, and of resetting a for
 
 ## Settings page
 
-- [ ] Settings in the company menu opens `/settings/email`, with the saved mail choice selected.
+- [ ] Settings in the workspace menu opens `/settings/email`, with the saved mail choice selected.
 - [ ] "Your mail server (SMTP)" shows the SMTP URL and From address fields; "Resend" shows the API key and From address fields; "No email" shows none.
 - [ ] Under `pnpm dev`, a fresh instance opens with SMTP selected, `people@example.com`, and its URL shown as "Saved" with Replace. "Send me a test email" is available immediately, without saving first.
 - [ ] After Replace, entering `smtp://mailpit:1025` and choosing "Check and save" shows "Checking…", then "Email settings saved"; the URL field becomes "Saved" with Replace.

@@ -18,7 +18,7 @@ import { useSessionChange } from "@/lib/useSessionChange";
 
 import { useMenuFinalFocus } from "./useMenuFinalFocus";
 
-/** The signed-in user's button and menu: their profile and signing out. */
+/** The signed-in user's button and menu at the bottom of the left menu: their profile and signing out. */
 export function ProfileMenu() {
   const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
   const { onOpenChange, finalFocus } = useMenuFinalFocus();
@@ -43,7 +43,7 @@ export function ProfileMenu() {
   );
 
   return (
-    <>
+    <div className="shrink-0 md:mt-auto">
       {signOutFailed && (
         <p role="alert" className="px-2 text-sm text-destructive">
           {t("auth.signOutFailed")}
@@ -106,6 +106,6 @@ export function ProfileMenu() {
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-    </>
+    </div>
   );
 }
