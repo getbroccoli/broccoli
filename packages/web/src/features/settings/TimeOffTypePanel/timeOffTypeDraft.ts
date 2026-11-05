@@ -115,7 +115,9 @@ function withSuggestedName(saved: TypeDraft, before: PolicyDraft, after: PolicyD
 }
 
 /** The name a standard policy is offered once it grants something else. */
-export function suggestedName({ days, bankHolidaysOnTop }: PolicyDraft): string {
+export function suggestedName({ balance, days, bankHolidaysOnTop }: PolicyDraft): string {
+  if (balance === "UNLIMITED_BALANCE") return t("settings.timeOff.unlimited");
+  if (balance === "NO_BALANCE") return t("settings.timeOff.doesNotCount");
   return t(
     bankHolidaysOnTop ? "settings.timeOffType.nameOnTop" : "settings.timeOffType.nameIncluded",
     {

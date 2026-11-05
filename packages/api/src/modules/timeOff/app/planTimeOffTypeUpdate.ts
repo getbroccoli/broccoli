@@ -104,8 +104,8 @@ function planEdit(
     next.days !== (settings.allowance?.days ?? null) ||
     next.bankHolidays !== policy.bankHolidays;
   if (policy.key && grantChanged && next.name === policy.name) {
-    // A standard policy that grants something else needs a name that says so.
-    errors.push({ field: `policies.${index}.name`, code: "required" });
+    // The standard copy keeps the name, so a standard policy that grants something else needs another.
+    errors.push({ field: `policies.${index}.name`, code: "taken" });
   }
   return { policy, next, grantChanged };
 }

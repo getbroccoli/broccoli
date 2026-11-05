@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { draftErrors, prepareSave, type TypeDraft } from "./timeOffTypeDraft";
+import { draftErrors, prepareSave, type TypeDraft, withPolicyEdited } from "./timeOffTypeDraft";
 
 const policy = {
   key: "p1",
@@ -52,5 +52,19 @@ describe("prepareSave", () => {
 
   it("sends nothing when nothing changed", () => {
     expect(prepareSave("t1", saved, saved)).toBeNull();
+  });
+});
+
+describe("withPolicyEdited", () => {
+  const standard = { ...policy, standard: true, everUsed: false };
+  const savedStandard: TypeDraft = { ...saved, policies: [standard] };
+
+  it.each([
+    ["UNLIMITED_BALANCE", "Unlimited"],
+    ["NO_BALANCE", "Doesn't count"],
+  ] as const)("names a standard policy that becomes %s after how it counts", (balance, name) => {
+    const edited = withPolicyEdited(savedStandard, savedStandard, "p1", { balance });
+
+    expect(edited.policies[0]!.name).toBe(name);
   });
 });

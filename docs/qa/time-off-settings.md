@@ -24,6 +24,7 @@ A manual check of the time off types list and a type's panel in Settings, agains
 - [ ] Save: the toast reads "Annual leave saved. 40 allowances updated.", History gains the line, and the panel of a full-time person who joined before this year and booked no Annual leave shows an entitlement of 30 days, 8 bank holidays and 22 days remaining.
 - [ ] Back on the list, "22 days plus bank holidays" has the 38 people, and "UK statutory minimum" is there again, unused.
 - [ ] Add policy on Annual leave, name it, save: it appears with "No terms use it"; "Delete policy" on it, save: it is gone.
+- [ ] Set "Counts" of the unused 20 days plus bank holidays to Unlimited: its name becomes "Unlimited"; save, and the standard 20 days plus bank holidays is there again. Typing its old name instead shows "That name is already used."
 - [ ] A used policy has no "Delete policy" and shows how it counts as text.
 - [ ] Sickness shows Rules with "Applies to"; "Show the reason to colleagues" is off and locked, with "Sickness is private by law."
 - [ ] Renaming Sickness to "annual leave" shows "That name is already used."
