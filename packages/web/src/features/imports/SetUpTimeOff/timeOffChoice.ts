@@ -17,7 +17,7 @@ export interface TimeOffSetupState {
   nation?: BankHolidayCalendar;
   /** The nation the owner picked per location name. */
   picked: Record<string, BankHolidayCalendar>;
-  /** What setup's last page sends: the choice on Turn on, null on Skip for now, absent before either. */
+  /** What setup's last page sends: the choice on "Turn on time off", null on "Skip, turn on later", absent before either. */
   timeOff?: TurnOnTimeOffInput | null;
 }
 
