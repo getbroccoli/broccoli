@@ -18,9 +18,13 @@ import {
 import { t } from "@/i18n";
 
 import { BackToReview } from "../BackToReview";
-import { LocationsStep, NationChoice, PolicyCards, Step, WeekCards } from "./LeaveChoices";
 import { daysOffInAll, daysOffSummary, NATIONS, WEEKS } from "./leaveOptions";
 import { type LeaveSetupState, readLeaveSetup, saveLeaveSetup } from "./leaveChoice";
+import { LocationsStep } from "./LocationsStep";
+import { NationChoice } from "./NationChoice";
+import { PolicyCards } from "./PolicyCards";
+import { Step } from "./Step";
+import { WeekCards } from "./WeekCards";
 
 type Props = {
   /** Who uses Broccoli's answers, carried through when the owner came back from it. */
@@ -163,6 +167,7 @@ export function LeaveStep({ search }: Props) {
             <NationChoice
               key={nation}
               nation={nation}
+              question={t("setup.leave.holidayTitle")}
               people={peopleOf(nation)}
               showName={nations.length > 1}
             >
@@ -182,7 +187,12 @@ export function LeaveStep({ search }: Props) {
           hint={t("setup.leave.weekHint")}
         >
           {nations.map((nation) => (
-            <NationChoice key={nation} nation={nation} showName={nations.length > 1}>
+            <NationChoice
+              key={nation}
+              nation={nation}
+              question={t("setup.leave.weekTitle")}
+              showName={nations.length > 1}
+            >
               <WeekCards
                 nation={nation}
                 selected={weekOf(nation)}

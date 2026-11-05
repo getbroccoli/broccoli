@@ -12,10 +12,10 @@ A manual check of the "Set up leave" setup page and turning leave on as setup fi
 
 - [ ] Approve lands on "Set up leave", listed as its own step "Leave" after "Add your people" in the step list; Back reopens the review.
 - [ ] Step 1 "Where do your people work?" lists Glasgow, Leeds and Remote. While the AI answers it says "Checking your locations…" and Turn on is disabled; then Glasgow is Scotland, Leeds England and Wales, and Remote England and Wales with "Please check".
-- [ ] Step 2 "How much holiday do people get?" shows a row of cards per nation, "England and Wales terms · 3 people" and "Scotland terms · 2 people": 28 days to book with "Bank holidays are booked from these" (selected), then 20 and 25 days with "+ 8 bank holidays, 28 days off in all" and "+ 8 bank holidays, 33 days off in all" (Scotland: 10 bank holidays in 2026, 30 and 35).
-- [ ] Step 3 "What's their working week?" shows four cards per nation, Mon–Fri 7.5 hours a day selected.
-- [ ] The footer reads "Days off a year: England and Wales 28 · Scotland 28" and follows each choice.
-- [ ] Moving Glasgow to England and Wales removes Scotland's rows and the nation names, and the footer reads "28 days off a year"; moving it back shows Scotland's rows with the choices they had.
+- [ ] Step 2 "How much holiday do people get?" shows a row of cards per nation, "England and Wales terms · 3 people" and "Scotland terms · 2 people": "28 days off in all" with "Includes 8 bank holidays, 20 to book" (selected), then 20 and 25 days with "+ 8 bank holidays, 28 days off in all" and "+ 8 bank holidays, 33 days off in all" (Scotland: 10 bank holidays in 2026, 30 and 35).
+- [ ] Step 3 "What's their working week?" shows four cards per nation, Mon–Fri 7.5 hours a day selected. A screen reader names each group with its question and nation.
+- [ ] The footer reads "Days off a year for a five-day week: England and Wales 28 · Scotland 28" and follows each choice.
+- [ ] Moving Glasgow to England and Wales removes Scotland's rows and the nation names, and the footer reads "28 days off a year for a five-day week"; moving it back shows Scotland's rows with the choices they had.
 - [ ] Moving Leeds to Northern Ireland adds "Northern Ireland terms" rows; move it back to England and Wales.
 - [ ] On another run, with the fallback source, every location starts on England and Wales with "Please check", and the page still works.
 - [ ] On another run, a staff file without locations starts at Step 1 "How much holiday do people get?" with one row and no nation name.
