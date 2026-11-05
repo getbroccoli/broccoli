@@ -140,39 +140,9 @@ export function createEmployeeService({
         throw employeeNotFound();
       }
       await ctx.requireInScope("employee", "delete", employeeId);
-      const { historyId, reportHistoryLines } = await transact(async (tx) => {
-        const employments = employmentRepository(tx);
-        // First, as a manager change takes it, so the manager read below is the one being removed.
-        await employments.lockForWrites();
-        const manager = await findManagerOf(tx, employeeId);
-        const startDate = (await employments.findStartDates([employeeId])).get(employeeId) ?? null;
-        // Before the delete: its foreign key would clear them too, but without saying whose.
-        const reportIds = await employments.clearManager(employeeId);
-        const deleted = await employeeRepository(tx).delete(employeeId);
-        if (!deleted) {
-          throw employeeNotFound();
-        }
-        const [line] = await recordHistory.append(ctx, tx, {
-          recordType: "employee",
-          operation: "DELETED",
-          cause: { kind: "EDITED_DIRECTLY" },
-          reason,
-          records: [
-            {
-              recordId: employeeId,
-              changes: [
-                ...employeeChanges({ ...deleted, startDate }, null),
-                ...(await movedLocation(tx, deleted.locationId, null)),
-                ...managerChanges(manager, null),
-              ],
-            },
-          ],
-        });
-        return {
-          historyId: line!.id,
-          reportHistoryLines: await updateReportHistory(ctx, tx, deleted, reportIds),
-        };
-      });
+      const { historyId, reportHistoryLines } = await transact((tx) =>
+        deleteWithHistory(ctx, tx, employeeId, reason),
+      );
       logger.info({ employeeId, historyId }, "Deleted an employee");
       if (reportHistoryLines.length > 0) {
         const reportCount = reportHistoryLines.length;
@@ -186,6 +156,49 @@ export function createEmployeeService({
         ),
       };
     },
+  };
+}
+
+/**
+ * Deletes the employee, recording what they held as a deletion line, and clears their reports'
+ * manager with a line each; refuses an employee deleted meanwhile.
+ */
+async function deleteWithHistory(
+  ctx: SecurityContext,
+  tx: Tx,
+  employeeId: string,
+  reason: string | null,
+): Promise<{ historyId: string; reportHistoryLines: HistoryLine[] }> {
+  const employments = employmentRepository(tx);
+  // First, as a manager change takes it, so the manager read below is the one being removed.
+  await employments.lockForWrites();
+  const manager = await findManagerOf(tx, employeeId);
+  const startDate = (await employments.findStartDates([employeeId])).get(employeeId) ?? null;
+  // Before the delete: its foreign key would clear them too, but without saying whose.
+  const reportIds = await employments.clearManager(employeeId);
+  const deleted = await employeeRepository(tx).delete(employeeId);
+  if (!deleted) {
+    throw employeeNotFound();
+  }
+  const [line] = await recordHistory.append(ctx, tx, {
+    recordType: "employee",
+    operation: "DELETED",
+    cause: { kind: "EDITED_DIRECTLY" },
+    reason,
+    records: [
+      {
+        recordId: employeeId,
+        changes: [
+          ...employeeChanges({ ...deleted, startDate }, null),
+          ...(await movedLocation(tx, deleted.locationId, null)),
+          ...managerChanges(manager, null),
+        ],
+      },
+    ],
+  });
+  return {
+    historyId: line!.id,
+    reportHistoryLines: await updateReportHistory(ctx, tx, deleted, reportIds),
   };
 }
 

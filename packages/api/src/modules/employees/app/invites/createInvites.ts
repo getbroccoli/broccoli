@@ -34,6 +34,16 @@ export async function chooseDelivery(
   return mailer ? "sent_by_email" : "copied_by_owner";
 }
 
+export interface NewInvites {
+  employeeIds: string[];
+  /** None keeps an open invite's. */
+  profiles: "ADMIN"[] | null;
+  note: string | null;
+  invitedByUserId: string | null;
+  delivery: InviteDelivery;
+  linkOrigin: string;
+}
+
 /**
  * Makes one invite for each of these people who can be invited, replacing any open one, joining
  * `tx`; queues its email or returns its link. Refuses with NOT_FOUND for an id of nobody.
@@ -42,42 +52,10 @@ export async function createInvites(
   ctx: SecurityContext,
   tx: Tx,
   { jobs, secretBox }: { jobs: JobQueue; secretBox: SecretBox },
-  {
-    employeeIds,
-    profiles,
-    note,
-    invitedByUserId,
-    delivery,
-    linkOrigin,
-  }: {
-    employeeIds: string[];
-    /** None keeps an open invite's. */
-    profiles: "ADMIN"[] | null;
-    note: string | null;
-    invitedByUserId: string | null;
-    delivery: InviteDelivery;
-    linkOrigin: string;
-  },
+  { employeeIds, profiles, note, invitedByUserId, delivery, linkOrigin }: NewInvites,
 ): Promise<SentInvite[]> {
   const now = new Date();
-  // Sends, cancels and accepts of one person take turns.
-  await employeeRepository(tx).lockByIds(employeeIds);
-  const [invitees, open] = await Promise.all([
-    inviteRepository(tx).findInvitees(employeeIds),
-    inviteRepository(tx).findOpen(employeeIds),
-  ]);
-  if (invitees.length < employeeIds.length) {
-    throw employeeNotFound();
-  }
-  const openOf = new Map(open.map((invite) => [invite.employeeId, invite]));
-  const invited = invitees.filter(canBeInvited).map(({ employee }) => employee);
-  // Whole, for the answer, which returns them.
-  const employeesById = new Map(
-    (await employeeRepository(tx).findByIds(invited.map(({ id }) => id))).map((employee) => [
-      employee.id,
-      employee,
-    ]),
-  );
+  const { invited, openOf, employeesById } = await readInvitees(tx, employeeIds);
   const made: SentInvite[] = [];
   for (const employee of invited) {
     const replaced = openOf.get(employee.id);
@@ -116,6 +94,33 @@ export async function createInvites(
     });
   }
   return made;
+}
+
+/**
+ * Locks the people, as sends, cancels and accepts of one person take turns, and reads those who
+ * can be invited, whole for the answer, with their open invites. Refuses an id of nobody.
+ */
+async function readInvitees(tx: Tx, employeeIds: string[]) {
+  await employeeRepository(tx).lockByIds(employeeIds);
+  const [invitees, open] = await Promise.all([
+    inviteRepository(tx).findInvitees(employeeIds),
+    inviteRepository(tx).findOpen(employeeIds),
+  ]);
+  if (invitees.length < employeeIds.length) {
+    throw employeeNotFound();
+  }
+  const invited = invitees.filter(canBeInvited).map(({ employee }) => employee);
+  const employeesById = new Map(
+    (await employeeRepository(tx).findByIds(invited.map(({ id }) => id))).map((employee) => [
+      employee.id,
+      employee,
+    ]),
+  );
+  return {
+    invited,
+    openOf: new Map(open.map((invite) => [invite.employeeId, invite])),
+    employeesById,
+  };
 }
 
 /** Writes the line that changes the person's `signIn` field. */

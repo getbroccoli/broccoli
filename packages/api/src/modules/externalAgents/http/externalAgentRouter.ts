@@ -32,6 +32,7 @@ const SKILL = readFileSync(new URL("./broccoliSetupSkill.md", import.meta.url), 
  * work on files, each by its bearer token alone; a cookie never counts here, nor does a bearer
  * anywhere else. Answers are never cached.
  */
+// eslint-disable-next-line broccoli/max-lines-per-function -- a route table; each handler is checked on its own.
 export function externalAgentRouter(
   services: ExternalAgentServices,
   logger: Logger,

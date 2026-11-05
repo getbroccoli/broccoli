@@ -16,7 +16,7 @@ import {
 } from "../../employees";
 import { lockImport } from "../db";
 import { isReading, setupInvitees, toNewEmployeeInput } from "../domain";
-import { readImportReview } from "./importReview";
+import { type ImportReview, readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
 
 const setupSteps = createSetupStepService();
@@ -137,20 +137,10 @@ async function addApprovedPeople(
 ): Promise<SetupInvite[]> {
   requireImportAccess(ctx);
   await lockImport(tx);
-  const { readyEmployees, managers } = await readImportReview(ctx, tx);
+  const review = await readImportReview(ctx, tx);
+  const { readyEmployees, managers } = review;
   const ownerKey = finish?.ownerEmployeeKey ?? null;
-  const { idsByEmail, ...counts } = await employeeSetup.createImportedEmployees(
-    ctx,
-    tx,
-    readyEmployees.map((employee) => ({
-      ...toNewEmployeeInput(employee),
-      avatarFileId: employee.photoFileId ?? undefined,
-      managerEmail: managers.get(employee.key)?.manager?.values.email.value,
-      locationName: employee.values.location.value,
-      userId: employee.key === ownerKey ? finish?.ownerUserId : undefined,
-    })),
-    { kind: "ADDED_FROM_IMPORT" },
-  );
+  const { idsByEmail, ...counts } = await createApprovedEmployees(ctx, tx, review, finish);
   const idOf = (employee: { values: { email: { value: string | null } } }) =>
     idsByEmail.get(employee.values.email.value?.toLowerCase() ?? "");
   const owner = readyEmployees.find(({ key }) => key === ownerKey);
@@ -187,4 +177,28 @@ async function addApprovedPeople(
     expiresAt,
     link,
   }));
+}
+
+/**
+ * Turns the ready import employees into employees, with the photo, manager and location review
+ * shows; the owner's user is linked to the one they said they are.
+ */
+function createApprovedEmployees(
+  ctx: SecurityContext,
+  tx: Tx,
+  { readyEmployees, managers }: Pick<ImportReview, "readyEmployees" | "managers">,
+  finish: SetupFinish | undefined,
+) {
+  return employeeSetup.createImportedEmployees(
+    ctx,
+    tx,
+    readyEmployees.map((employee) => ({
+      ...toNewEmployeeInput(employee),
+      avatarFileId: employee.photoFileId ?? undefined,
+      managerEmail: managers.get(employee.key)?.manager?.values.email.value,
+      locationName: employee.values.location.value,
+      userId: employee.key === finish?.ownerEmployeeKey ? finish.ownerUserId : undefined,
+    })),
+    { kind: "ADDED_FROM_IMPORT" },
+  );
 }

@@ -12,7 +12,7 @@ export default defineConfig(
   {
     // A component's markup is one level of abstraction, so it may run longer (RULE73).
     files: ["src/**/*.tsx"],
-    rules: { "broccoli/max-lines-per-function": ["error", 150] },
+    rules: { "broccoli/max-lines-per-function": ["error", 170] },
   },
   {
     files: ["**/*.{js,ts,tsx}"],

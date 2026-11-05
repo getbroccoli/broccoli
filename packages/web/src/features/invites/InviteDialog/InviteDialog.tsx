@@ -11,7 +11,6 @@ import {
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +25,7 @@ import { addInviteHistoryLines } from "../cache";
 import { groupInvitees, type SkipReason } from "../signInStatus";
 import { type CopiedLink, CopyLinks } from "./CopyLinks";
 import { PeopleList } from "./PeopleList";
+import { PermissionsField } from "./PermissionsField";
 
 /** A person the dialog may invite. */
 export interface Invitee {
@@ -157,23 +157,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
                 <p className="text-sm text-muted-foreground">{t("invites.dialog.nobody")}</p>
               )}
             </div>
-            {invited.length > 0 && (
-              <fieldset className="flex flex-col gap-2">
-                <legend className="mb-1 text-sm font-medium">
-                  {t("invites.dialog.permissions")}
-                </legend>
-                <Label className="font-normal">
-                  <Checkbox checked disabled />
-                  {t("invites.dialog.employee")}
-                  <span className="text-muted-foreground">{t("invites.dialog.employeeHint")}</span>
-                </Label>
-                <Label className="font-normal">
-                  <Checkbox checked={admin} onCheckedChange={setAdmin} />
-                  {t("invites.dialog.admin")}
-                  <span className="text-muted-foreground">{t("invites.dialog.adminHint")}</span>
-                </Label>
-              </fieldset>
-            )}
+            {invited.length > 0 && <PermissionsField admin={admin} onAdminChange={setAdmin} />}
             {invited.length > 0 && byEmail && (
               <div className="flex flex-col gap-2">
                 <Label htmlFor="invite-note">{t("invites.dialog.note")}</Label>
