@@ -1,0 +1,82 @@
+import { Linter } from "eslint";
+import { expect, it } from "vitest";
+
+import { maxLinesPerFunctionConfig } from "./maxLinesPerFunction.js";
+
+it("reports a function with more lines of code than the limit", () => {
+  const { plugins, rules } = maxLinesPerFunctionConfig(3);
+  const code = `
+    function readCount() {
+      const count = 1;
+      return count;
+    }
+  `;
+
+  const messages = new Linter().verify(code, { plugins, rules }, "src/a.js");
+
+  expect(messages).toMatchObject([
+    {
+      ruleId: "broccoli/max-lines-per-function",
+      message:
+        "This function has 4 lines of code; the most is 3. Extract its steps into named functions.",
+    },
+  ]);
+});
+
+it("does not count blank and comment lines", () => {
+  const { plugins, rules } = maxLinesPerFunctionConfig(3);
+  const code = `
+    function readCount() {
+
+      // The initial count.
+      /* This comment
+         spans two lines. */
+      return 1; // Count this line once.
+    }
+  `;
+
+  const messages = new Linter().verify(code, { plugins, rules }, "src/a.js");
+
+  expect(messages).toEqual([]);
+});
+
+it("accepts a factory whose methods are each within the limit", () => {
+  const { plugins, rules } = maxLinesPerFunctionConfig(3);
+  const code = `
+    const createCounter = () => ({
+      readCount() {
+        return 1;
+      },
+      readTotal: () => {
+        return 2;
+      },
+    });
+  `;
+
+  const messages = new Linter().verify(code, { plugins, rules }, "src/a.js");
+
+  expect(messages).toEqual([]);
+});
+
+it("reports a long method inside a factory", () => {
+  const { plugins, rules } = maxLinesPerFunctionConfig(3);
+  const code = `
+    const createCounter = () => ({
+      readCount() {
+        const count = 1;
+        return count;
+      },
+    });
+  `;
+
+  const messages = new Linter().verify(code, { plugins, rules }, "src/a.js");
+
+  expect(messages).toMatchObject([
+    {
+      ruleId: "broccoli/max-lines-per-function",
+      line: 3,
+      message:
+        "This function has 4 lines of code; the most is 3. Extract its steps into named functions.",
+    },
+  ]);
+});
