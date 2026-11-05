@@ -26,4 +26,4 @@ export {
   type SetupInvite,
   type SetupInviteAudience,
 } from "./setupInvites";
-export type { TurnOnLeaveInput } from "./setupLeave";
+export type { SetupTermsInput } from "./setupTermsInput";

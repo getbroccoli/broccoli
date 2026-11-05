@@ -1,4 +1,4 @@
-import type { TurnOnLeaveInput } from "./setupLeave";
+import type { SetupTermsInput } from "./setupTermsInput";
 
 /** Who the owner invites when setup finishes; a one-time choice, never stored. */
 export const SETUP_INVITE_AUDIENCES = ["only_admins", "admins_and_managers", "everyone"] as const;
@@ -12,7 +12,7 @@ export interface SetupChoices {
   inviteAudience: SetupInviteAudience;
   inviteNote: string | null;
   /** How to turn leave on as setup finishes; null when the owner skipped it. */
-  leave: TurnOnLeaveInput | null;
+  leave: SetupTermsInput | null;
 }
 
 /** Finishing setup without inviting anyone or linking the owner. */

@@ -6,7 +6,7 @@ import {
   createSetupStepService,
   type SetupFinish,
   type SetupInvite,
-  type TurnOnLeaveInput,
+  type SetupTermsInput,
 } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
@@ -40,7 +40,7 @@ export type SetupInvites = Pick<EmployeeInviteService, "sendAtSetup">;
 export type TurnOnLeave = (
   ctx: SecurityContext,
   tx: Tx,
-  input: TurnOnLeaveInput,
+  input: SetupTermsInput,
 ) => Promise<unknown>;
 
 /** The owner's approval of the reviewed import, the people it adds, and reopening the review. */

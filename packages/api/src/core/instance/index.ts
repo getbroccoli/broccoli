@@ -45,5 +45,5 @@ export type {
   SetupFinish,
   SetupInvite,
   SetupInviteAudience,
-  TurnOnLeaveInput,
+  SetupTermsInput,
 } from "./domain";
