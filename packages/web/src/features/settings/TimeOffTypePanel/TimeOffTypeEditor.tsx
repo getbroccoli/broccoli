@@ -1,6 +1,6 @@
 import { DotsThree, X } from "@phosphor-icons/react";
 import { useBlocker } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { TimeOffTypePanel_TypeFragment } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,11 @@ export function TimeOffTypeEditor({ type, focusPolicyId, onClose }: Props) {
   const edit = useTimeOffTypeDraft(type);
   const { draft, saved, saving } = edit;
   const [deleting, setDeleting] = useState(false);
+  // Set once the type is deleted, so closing its panel asks nothing.
+  const deleted = useRef(false);
   const blocker = useBlocker({
-    shouldBlockFn: () => edit.changes > 0,
-    enableBeforeUnload: () => edit.changes > 0,
+    shouldBlockFn: () => !deleted.current && edit.changes > 0,
+    enableBeforeUnload: () => !deleted.current && edit.changes > 0,
     withResolver: true,
   });
   useEffect(() => {
@@ -110,7 +112,7 @@ export function TimeOffTypeEditor({ type, focusPolicyId, onClose }: Props) {
         </Button>
         <Button
           type="button"
-          disabled={saving || edit.changes === 0}
+          disabled={saving || edit.changes === 0 || edit.invalid}
           onClick={() => void edit.submit()}
         >
           {t("settings.timeOffType.save")}
@@ -128,7 +130,10 @@ export function TimeOffTypeEditor({ type, focusPolicyId, onClose }: Props) {
         open={deleting}
         onOpenChange={setDeleting}
         timeOffType={type.timeOffType}
-        onDeleted={onClose}
+        onDeleted={() => {
+          deleted.current = true;
+          onClose();
+        }}
       />
     </>
   );

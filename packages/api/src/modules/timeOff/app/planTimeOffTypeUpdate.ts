@@ -187,10 +187,18 @@ function checkPolicyNames(
   });
 }
 
-/** One save changes a policy at most once. */
+/** One save changes or deletes a policy at most once, and never changes one it deletes. */
 function checkEachPolicyOnce(save: ParsedTimeOffTypeUpdate, errors: FieldError[]): void {
+  save.deletePolicyIds.forEach((id, index) => {
+    if (save.deletePolicyIds.indexOf(id) < index) {
+      errors.push({ field: `deletePolicyIds.${index}`, code: "invalid" });
+    }
+  });
   save.policies.forEach(({ id }, index) => {
-    if (save.policies.findIndex((other) => other.id === id) < index) {
+    if (
+      save.policies.findIndex((other) => other.id === id) < index ||
+      save.deletePolicyIds.includes(id)
+    ) {
       errors.push({ field: `policies.${index}.id`, code: "invalid" });
     }
   });

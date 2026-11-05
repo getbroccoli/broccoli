@@ -2,8 +2,14 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/class-names";
 
+type Props = {
+  /** "brand" for New and Changed. */
+  tone?: "brand";
+  children: ReactNode;
+};
+
 /** A small label beside a policy's name, such as Standard or Changed. */
-export function PolicyTag({ tone, children }: { tone?: "brand"; children: ReactNode }) {
+export function PolicyTag({ tone, children }: Props) {
   return (
     <span
       className={cn(

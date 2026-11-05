@@ -16,7 +16,7 @@ import {
   type TimeOffType,
   timeOffTypeChanges,
 } from "../domain";
-import { type AllowanceEngineDependencies, ensureAllowancesOf } from "./allowanceEngine";
+import type { AllowanceEngineDependencies } from "./allowanceEngine";
 import {
   readOneTypeSettings,
   type TimeOffTypeSettings,
@@ -28,6 +28,7 @@ import {
   planUpdate,
   type UpdatePlan,
 } from "./planTimeOffTypeUpdate";
+import { lockReach, updateAllowances } from "./updatePolicyAllowances";
 
 /** What a save left: the type as Settings now shows it, and how many allowances moved. */
 export interface UpdatedTimeOffType {
@@ -59,8 +60,9 @@ export async function updateTimeOffType(
     const plan = planUpdate(current, save);
     const changes = await writeSave(dependencies, tx, current, plan);
     await appendHistory(ctx, tx, current.type.id, changes);
-    const allowancesUpdated =
-      await timeOffSettingsRepository(tx).countAllowancesChangedInTransaction();
+    const allowancesUpdated = await timeOffSettingsRepository(
+      tx,
+    ).countAllowancesChangedInTransaction(changes.reachedEmployeeIds);
     tx.publish("timeOff.time_off_type_updated", {
       timeOffTypeId: current.type.id,
       fields: changes.type.map(({ field }) => field),
@@ -98,6 +100,8 @@ interface SaveChanges {
   type: FieldChange[];
   policies: FieldChange[][];
   addedPolicyIds: string[];
+  /** Everyone whose allowances the engine ran for. */
+  reachedEmployeeIds: string[];
 }
 
 /**
@@ -118,9 +122,10 @@ async function writeSave(
     policies.push(policyLine(policy.id, fieldsOf(policy), null));
   }
   await freeNamesOfRenamed(repository, plan.edits);
+  const reach = await lockReach(dependencies, tx, plan.edits);
   for (const edit of plan.edits) {
     await writeEdit(repository, edit);
-    await updateAllowances(dependencies, tx, edit);
+    await updateAllowances(dependencies, tx, edit, reach.get(edit.policy.id) ?? []);
     policies.push(policyLine(edit.policy.id, fieldsOf(edit.policy), fieldsOfValues(edit.next)));
   }
   const addedPolicyIds: string[] = [];
@@ -142,7 +147,12 @@ async function writeSave(
     addedPolicyIds.push(id);
     policies.push(policyLine(id, null, fieldsOfValues(values)));
   }
-  return { type: typeChanges(current.type, plan.typeFields), policies, addedPolicyIds };
+  return {
+    type: typeChanges(current.type, plan.typeFields),
+    policies,
+    addedPolicyIds,
+    reachedEmployeeIds: [...new Set([...reach.values()].flat())],
+  };
 }
 
 /**
@@ -257,22 +267,6 @@ async function appendHistory(
   }
 }
 
-/** Runs the engine for everyone ever on the policy, when its grant changed. */
-async function updateAllowances(
-  dependencies: UpdateTimeOffTypeDependencies,
-  tx: Tx,
-  { policy, grantChanged }: PolicyEdit,
-): Promise<void> {
-  if (!grantChanged) {
-    return;
-  }
-  const employeeIds = await employeesEverOn(dependencies, tx, policy.id);
-  await ensureAllowancesOf(dependencies.engine, tx, {
-    employeeIds,
-    cause: { kind: "POLICY_CHANGED", ref: policy.id },
-  });
-}
-
 /**
  * Gives each renamed policy its id as a name first, so policies can take each other's names in
  * one save without tripping the unique name index on the way.
@@ -284,28 +278,6 @@ async function freeNamesOfRenamed(
   for (const { policy } of edits.filter(({ policy, next }) => policy.name !== next.name)) {
     await repository.updatePolicy(policy.id, { name: policy.id });
   }
-}
-
-/** Everyone on any terms ever linked to the policy, or ever assigned it. */
-async function employeesEverOn(
-  { employeeReads }: TimeOffTypeSettingsDependencies,
-  tx: Tx,
-  policyId: string,
-): Promise<string[]> {
-  const repository = timeOffPolicyRepository(tx);
-  const [links, assignments] = await Promise.all([
-    repository.findLinksOfPolicies([policyId]),
-    repository.findAssignmentsOfPolicies([policyId]),
-  ]);
-  const terms = await employeeReads.readTerms(tx, [
-    ...new Set(links.map(({ termsId }) => termsId)),
-  ]);
-  return [
-    ...new Set([
-      ...terms.flatMap(({ memberIds }) => memberIds),
-      ...assignments.map(({ employeeId }) => employeeId),
-    ]),
-  ];
 }
 
 /** The working week a new allowance is stated for. */

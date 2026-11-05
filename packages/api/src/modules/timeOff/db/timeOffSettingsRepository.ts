@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
 import type { TimeOffPolicy, TimeOffTypeColour, TimeOffTypeIcon } from "../domain";
@@ -50,8 +50,8 @@ export interface TimeOffSettingsRepository {
   deletePolicy(policyId: string): Promise<void>;
   /** Deletes a type nobody has used, with its policies and their rules. */
   deleteType(timeOffTypeId: string): Promise<void>;
-  /** The allowances that got policy-changed lines in this transaction. */
-  countAllowancesChangedInTransaction(): Promise<number>;
+  /** These employees' allowances that got policy-changed lines in this transaction. */
+  countAllowancesChangedInTransaction(employeeIds: readonly string[]): Promise<number>;
 }
 
 export function timeOffSettingsRepository(tx: Tx): TimeOffSettingsRepository {
@@ -139,7 +139,10 @@ export function timeOffSettingsRepository(tx: Tx): TimeOffSettingsRepository {
       await orm().delete(timeOffTypes).where(eq(timeOffTypes.id, timeOffTypeId));
     },
 
-    async countAllowancesChangedInTransaction() {
+    async countAllowancesChangedInTransaction(employeeIds) {
+      if (employeeIds.length === 0) {
+        return 0;
+      }
       // Rows written in this transaction share its start time, which `now()` returns.
       const [row] = await orm()
         .select({ count: sql<number>`count(distinct ${allowances.id})::int` })
@@ -147,6 +150,7 @@ export function timeOffSettingsRepository(tx: Tx): TimeOffSettingsRepository {
         .innerJoin(allowances, eq(allowances.id, allowanceLedgerLines.allowanceId))
         .where(
           and(
+            inArray(allowances.employeeId, [...employeeIds]),
             eq(allowanceLedgerLines.causeKind, "policy_changed"),
             eq(allowanceLedgerLines.createdAt, sql`now()`),
           ),

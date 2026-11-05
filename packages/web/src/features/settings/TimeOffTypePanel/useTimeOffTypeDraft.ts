@@ -11,6 +11,8 @@ import {
 import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
+import { rememberTimeOffType } from "../cache";
+
 import {
   changeCount,
   draftErrors,
@@ -34,7 +36,8 @@ export function useTimeOffTypeDraft(type: TimeOffTypePanel_TypeFragment) {
   const [saved, setSaved] = useState(() => draftOf(type));
   const [draft, setDraft] = useState(saved);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const save = useSave((next) => {
+  const save = useSave((savedType) => {
+    const next = draftOf(savedType);
     setSaved(next);
     setDraft(next);
     setFieldErrors({});
@@ -44,7 +47,9 @@ export function useTimeOffTypeDraft(type: TimeOffTypePanel_TypeFragment) {
     saved,
     draft,
     changes: changeCount(saved, draft),
-    fieldErrors,
+    // What the draft breaks shows as it is typed; the server's refusals wait for the next save.
+    fieldErrors: { ...fieldErrors, ...draftErrors(draft) },
+    invalid: Object.keys(draftErrors(draft)).length > 0,
     failure: save.failure,
     saving: save.saving,
     editType: (fields: Partial<Omit<TypeDraft, "policies">>) =>
@@ -62,23 +67,23 @@ export function useTimeOffTypeDraft(type: TimeOffTypePanel_TypeFragment) {
       setFieldErrors({});
       save.reset();
     },
-    submit: async () => {
-      const refused = draftErrors(draft);
-      setFieldErrors(
-        Object.keys(refused).length > 0
-          ? refused
-          : await save.run(prepareSave(type.timeOffType.id, saved, draft)),
-      );
-    },
+    submit: async () =>
+      setFieldErrors(await save.run(prepareSave(type.timeOffType.id, saved, draft))),
   };
 }
 
 /** Sends one save; resolves with the field errors to show, none after a success. */
-function useSave(onSaved: (next: TypeDraft) => void) {
+function useSave(onSaved: (savedType: TimeOffTypePanel_TypeFragment) => void) {
   // The list and the history show what only the server works out: people, order, the standard copy.
   const [mutate, { loading, error, payloadError, reset }] = usePayloadMutation(
     UpdateTimeOffTypeDocument,
-    { refetch: [TimeOffSettingsDocument, RecordHistoryDocument] },
+    {
+      update: (cache, { data }) => {
+        const savedType = data?.timeOffType.update.timeOffType;
+        if (savedType) rememberTimeOffType(cache, savedType);
+      },
+      refetch: [TimeOffSettingsDocument, RecordHistoryDocument],
+    },
   );
   const failure =
     payloadError && payloadError.__typename !== "InvalidInputError"
@@ -91,9 +96,8 @@ function useSave(onSaved: (next: TypeDraft) => void) {
     if (!prepared) return {};
     try {
       const payload = await mutate({ variables: { input: prepared.input } });
-      const next = draftOf(payload.timeOffType!);
-      onSaved(next);
-      toast(savedMessage(next.name, payload.allowancesUpdated ?? 0));
+      onSaved(payload.timeOffType!);
+      toast(savedMessage(payload.timeOffType!.timeOffType.name, payload.allowancesUpdated ?? 0));
       return {};
     } catch (failed) {
       const refused =

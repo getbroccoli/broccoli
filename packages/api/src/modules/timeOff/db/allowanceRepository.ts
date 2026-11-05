@@ -1,4 +1,4 @@
-import { and, countDistinct, gte, inArray, notInArray, sql } from "drizzle-orm";
+import { and, countDistinct, gte, inArray, notInArray, sql, min } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -78,6 +78,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           bankHolidayDate,
           amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
           lineCount: sql<number>`count(*)::int`,
+          firstEffectiveDate: min(allowanceLedgerLines.effectiveDate),
         })
         .from(allowanceLedgerLines)
         .where(
@@ -92,7 +93,12 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           allowanceLedgerLines.allowanceRuleId,
           bankHolidayDate,
         );
-      const sums = rows.map((row) => ({ ...row, kind: row.kind as LedgerSum["kind"] }));
+      // Every group has a line, so its earliest date is never null.
+      const sums = rows.map((row) => ({
+        ...row,
+        kind: row.kind as LedgerSum["kind"],
+        firstEffectiveDate: row.firstEffectiveDate!,
+      }));
       return Map.groupBy(sums, ({ allowanceId }) => allowanceId);
     },
 

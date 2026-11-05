@@ -146,11 +146,11 @@ export function changeCount(saved: TypeDraft, draft: TypeDraft): number {
   return typeFields + policies;
 }
 
-/** What the panel refuses before sending: a blank or non-numeric allowance, a new policy without a name. */
+/** What the panel refuses before sending: an allowance that is blank, not a whole or half day from 0 to 366, or a new policy without a name. */
 export function draftErrors(draft: TypeDraft): Record<string, string> {
   const errors: Record<string, string> = {};
   for (const policy of draft.policies.filter(({ deleted }) => !deleted)) {
-    if (policy.balance === "BALANCE_FROM_ALLOWANCE" && !isDays(policy.days)) {
+    if (policy.balance === "BALANCE_FROM_ALLOWANCE" && parseDays(policy.days) === null) {
       errors[`${policy.key}.allowanceDays`] = policy.days.trim() === "" ? "required" : "invalid";
     }
     if (policy.id === null && policy.name.trim() === "") {
@@ -160,8 +160,12 @@ export function draftErrors(draft: TypeDraft): Record<string, string> {
   return errors;
 }
 
-function isDays(text: string): boolean {
-  return text.trim() !== "" && Number.isFinite(Number(text));
+/** Typed days as a number: whole or half days from 0 to 366; null for anything else. */
+function parseDays(text: string): number | null {
+  const days = Number(text);
+  return text.trim() !== "" && days >= 0 && days <= MAX_ALLOWANCE_DAYS && Number.isInteger(days * 2)
+    ? days
+    : null;
 }
 
 /** Only what changed, as the API takes it; null when nothing did. */
@@ -222,11 +226,15 @@ function newPolicyInput(draft: PolicyDraft) {
   };
 }
 
+/** A valid draft's allowance; `draftErrors` refuses the save before an invalid one gets here. */
 function allowanceOf({ days, bankHolidaysOnTop }: PolicyDraft) {
   return {
-    allowanceDays: Number(days),
+    allowanceDays: parseDays(days) ?? 0,
     bankHolidays: bankHolidaysOnTop
       ? ("BANK_HOLIDAYS_ON_TOP_OF_ALLOWANCE" as const)
       : ("BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE" as const),
   };
 }
+
+/** The most days a year an allowance can grant, as the API allows. */
+const MAX_ALLOWANCE_DAYS = 366;

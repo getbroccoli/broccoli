@@ -9,6 +9,7 @@ import { countsText, reachText } from "../TimeOffSettings/policyText";
 import { FieldHint } from "./FieldHint";
 import { FieldRow } from "./FieldRow";
 import { PolicyTag } from "./PolicyTag";
+import { SegmentedChoice } from "./SegmentedChoice";
 import { grantChanged, type PolicyDraft } from "./timeOffTypeDraft";
 import type { FieldErrors } from "./useTimeOffTypeDraft";
 
@@ -43,7 +44,7 @@ export function PolicyFields({
   const becomesOwn = policy.standard && saved !== null && grantChanged(saved, policy);
   const showName = !policy.standard || becomesOwn;
   // A standard policy that becomes the company's own drops the statutory cap.
-  const dropsCap = becomesOwn;
+  const dropsCap = becomesOwn && Number(saved?.days) !== Number(policy.days);
   return (
     <article
       id={id}
@@ -92,30 +93,17 @@ export function PolicyFields({
           {policy.everUsed ? (
             <span className="pt-1.5 text-sm">{countsText(toSummary(policy))}</span>
           ) : (
-            <span
-              role="radiogroup"
-              aria-label={t("settings.timeOffType.counts")}
-              className="flex w-fit flex-wrap gap-1 rounded-lg bg-muted p-1"
-            >
-              {BALANCES.map((balance) => (
-                <button
-                  key={balance}
-                  type="button"
-                  role="radio"
-                  aria-checked={policy.balance === balance}
-                  disabled={disabled}
-                  onClick={() => onEdit({ balance, days: policy.days || "20" })}
-                  className={cn(
-                    "rounded-md px-3 py-1 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                    policy.balance === balance
-                      ? "bg-card font-semibold shadow-sm"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {t(BALANCE_LABELS[balance])}
-                </button>
-              ))}
-            </span>
+            <SegmentedChoice
+              label={t("settings.timeOffType.counts")}
+              name={`${id}-counts`}
+              options={BALANCES.map((balance) => ({
+                value: balance,
+                label: BALANCE_LABELS[balance],
+              }))}
+              value={policy.balance}
+              disabled={disabled}
+              onChange={(balance) => onEdit({ balance, days: policy.days || "20" })}
+            />
           )}
         </FieldRow>
         {policy.balance === "BALANCE_FROM_ALLOWANCE" && (
@@ -172,7 +160,7 @@ export function PolicyFields({
           </FieldRow>
         )}
       </div>
-      {!policy.everUsed && !only && (
+      {!policy.everUsed && (
         <div className="flex justify-end px-4 pb-3">
           <Button
             type="button"

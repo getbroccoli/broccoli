@@ -12,6 +12,8 @@ export interface LedgerSum {
   /** Days as the database's decimal text. */
   amount: string;
   lineCount: number;
+  /** The earliest line's date: when the identity first counted. */
+  firstEffectiveDate: CalendarDate;
 }
 
 /** A line the engine appends. */
@@ -44,7 +46,6 @@ export function ledgerDifference(
   const previousOf = new Map(previous.map((line) => [identityOf(line), line]));
   const currentOf = new Map(current.map((sum) => [identityOf(sum), sum]));
   const changedGrantsFrom = firstChangedGrantDate([...previous, ...target], targetOf, previousOf);
-  const earliestFirstDate = target.map((line) => line.firstDate).toSorted()[0];
   return [...new Set([...targetOf.keys(), ...currentOf.keys()])].flatMap((identity) => {
     const line = targetOf.get(identity);
     const sum = currentOf.get(identity);
@@ -54,13 +55,13 @@ export function ledgerDifference(
     }
     const { kind, allowanceRuleId, bankHolidayDate } = (line ?? sum)!;
     const previousLine = previousOf.get(identity);
-    // An identity the target no longer has, such as a removed rule, goes from the earliest day
-    // anything contributes, so a joiner's reversal is not dated before they start.
+    // An identity the target no longer has, such as a removed rule, is reversed from when its
+    // lines first counted, so a joiner's or a later policy's reversal is not dated too early.
     const firstDate =
       [line?.firstDate, previousLine?.firstDate]
         .filter((date): date is CalendarDate => date !== undefined)
         .toSorted()[0] ??
-      earliestFirstDate ??
+      sum?.firstEffectiveDate ??
       allowance.leaveYearStart;
     const contributedFrom =
       kind === "rounding_up_to_half_day" ? (changedGrantsFrom ?? firstDate) : firstDate;

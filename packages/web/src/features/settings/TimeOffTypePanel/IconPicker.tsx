@@ -25,54 +25,55 @@ export function IconPicker({ icon, colour, disabled, onChange }: Props) {
         <TimeOffTypeIcon icon={icon} colour={colour} size="large" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72">
-        <div
-          role="radiogroup"
-          aria-label={t("settings.timeOffType.colour")}
-          className="flex flex-wrap gap-2"
-        >
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="sr-only">{t("settings.timeOffType.colour")}</legend>
           {(Object.keys(TIME_OFF_TYPE_HUES) as TimeOffTypeColour[]).map((option) => (
-            <button
+            <label
               key={option}
-              type="button"
-              role="radio"
-              aria-checked={option === colour}
-              aria-label={t(`settings.timeOffType.colours.${option}`)}
-              onClick={() => onChange({ colour: option })}
               className={cn(
-                "size-6 rounded-full ring-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "size-6 cursor-pointer rounded-full ring-offset-2 has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                 option === colour && "ring-2 ring-foreground",
               )}
               style={{ background: `oklch(0.80 0.07 ${TIME_OFF_TYPE_HUES[option]})` }}
-            />
+            >
+              <input
+                type="radio"
+                className="sr-only"
+                name="time-off-type-colour"
+                aria-label={t(`settings.timeOffType.colours.${option}`)}
+                checked={option === colour}
+                onChange={() => onChange({ colour: option })}
+              />
+            </label>
           ))}
-        </div>
-        <div
-          role="radiogroup"
-          aria-label={t("settings.timeOffType.icon")}
-          className="mt-3 grid grid-cols-6 gap-1"
-        >
+        </fieldset>
+        <fieldset className="mt-3 grid grid-cols-6 gap-1">
+          <legend className="sr-only">{t("settings.timeOffType.icon")}</legend>
           {(
             Object.entries(TIME_OFF_TYPE_ICONS) as [
               IconName,
               (typeof TIME_OFF_TYPE_ICONS)[IconName],
             ][]
           ).map(([option, Glyph]) => (
-            <button
+            <label
               key={option}
-              type="button"
-              role="radio"
-              aria-checked={option === icon}
-              aria-label={t(`settings.timeOffType.icons.${option}`)}
-              onClick={() => onChange({ icon: option })}
               className={cn(
-                "grid size-10 place-items-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "grid size-10 cursor-pointer place-items-center rounded-md has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                 option === icon ? "bg-foreground text-background" : "hover:bg-muted",
               )}
             >
-              <Glyph size={20} />
-            </button>
+              <input
+                type="radio"
+                className="sr-only"
+                name="time-off-type-icon"
+                aria-label={t(`settings.timeOffType.icons.${option}`)}
+                checked={option === icon}
+                onChange={() => onChange({ icon: option })}
+              />
+              <Glyph size={20} aria-hidden />
+            </label>
           ))}
-        </div>
+        </fieldset>
       </PopoverContent>
     </Popover>
   );

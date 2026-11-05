@@ -2,18 +2,15 @@ import type { ReactNode } from "react";
 
 import { t } from "@/i18n";
 
-/** A labelled field of the panel, in its two-column grid, with its error beneath. */
-export function FieldRow({
-  label,
-  htmlFor,
-  error,
-  children,
-}: {
+type Props = {
   label: string;
   htmlFor?: string;
   error?: string;
   children: ReactNode;
-}) {
+};
+
+/** A labelled field of the panel, in its two-column grid, with its error beneath. */
+export function FieldRow({ label, htmlFor, error, children }: Props) {
   const Label = htmlFor ? "label" : "span";
   return (
     <>

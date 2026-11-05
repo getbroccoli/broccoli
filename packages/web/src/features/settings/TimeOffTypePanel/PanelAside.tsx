@@ -3,8 +3,10 @@ import { t } from "@/i18n";
 
 import { TIME_OFF_TYPE_DESCRIPTION } from "./timeOffTypeDescription";
 
+type Props = { timeOffTypeId: string };
+
 /** What saving changes, coming soon, and the type's history. */
-export function PanelAside({ timeOffTypeId }: { timeOffTypeId: string }) {
+export function PanelAside({ timeOffTypeId }: Props) {
   return (
     <aside
       aria-label={t("settings.timeOffType.asideLabel")}

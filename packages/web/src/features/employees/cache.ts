@@ -8,8 +8,7 @@ import {
 import { evictRecord } from "@/apollo";
 import { addHistoryLine } from "@/features/records";
 
-/** A history line a change returned, with the employee it is about. */
-/** A history line whose record, when it is an employee, carries its id. */
+/** A history line a change returned, with the employee it is about; only an employee carries an id. */
 type EmployeeHistoryLine = Parameters<typeof addHistoryLine>[1]["line"] & {
   record?: { id?: string } | null;
 };

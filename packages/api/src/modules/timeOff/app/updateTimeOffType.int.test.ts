@@ -267,3 +267,32 @@ test("the same policy twice in one save is refused", async ({ orm }) => {
     fieldErrors: [{ field: "policies.1.id", code: "invalid" }],
   });
 });
+
+test("a policy cannot be changed and deleted in one save", async ({ orm }) => {
+  const policy = await seedTimeOffPolicy(orm, { name: "A", balance: "unlimited_balance" });
+
+  await expect(
+    timeOffService(orm).updateTimeOffType(ADMIN, {
+      id: policy.timeOffTypeId,
+      policies: [{ id: policy.id, name: "X" }],
+      deletePolicyIds: [policy.id],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "policies.0.id", code: "invalid" }],
+  });
+});
+
+test("the same policy twice in deletions is refused", async ({ orm }) => {
+  const policy = await seedTimeOffPolicy(orm, { name: "A", balance: "unlimited_balance" });
+
+  await expect(
+    timeOffService(orm).updateTimeOffType(ADMIN, {
+      id: policy.timeOffTypeId,
+      deletePolicyIds: [policy.id, policy.id],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "deletePolicyIds.1", code: "invalid" }],
+  });
+});
