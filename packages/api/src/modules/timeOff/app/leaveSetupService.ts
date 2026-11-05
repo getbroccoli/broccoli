@@ -1,3 +1,4 @@
+import Big from "big.js";
 import type { Orm } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
@@ -9,7 +10,7 @@ import {
   type BankHolidayService,
 } from "../../bankHolidays";
 import { timeOffPolicyRepository } from "../db";
-import type { AllowanceRule, StandardLeavePolicyKey } from "../domain";
+import { type StandardLeavePolicyKey, yearlyDays } from "../domain";
 
 /** The choices of the Set up leave page, and the model's suggestion for each location. Admins only. */
 export interface LeaveSetupService {
@@ -74,7 +75,11 @@ export function createLeaveSetupService({
           return {
             id,
             name,
-            daysForFiveDayWeek: daysForFiveDayWeek(rules),
+            daysForFiveDayWeek: yearlyDays(
+              // Every Annual leave policy has one.
+              rules.find((rule) => rule.kind === "yearly_entitlement")!,
+              Big(5),
+            ).toNumber(),
             bankHolidaysOnTop: bankHolidays === "bank_holidays_on_top_of_allowance",
           };
         }),
@@ -105,14 +110,6 @@ export function createLeaveSetupService({
       return suggestions;
     },
   };
-}
-
-/** A yearly entitlement pro-rated to five days a week and capped, as the allowance engine does. */
-function daysForFiveDayWeek(rules: readonly AllowanceRule[]): number {
-  // Every Annual leave policy has one.
-  const yearly = rules.find((rule) => rule.kind === "yearly_entitlement")!;
-  const days = (yearly.entitlementDays * 5) / yearly.entitlementDaysPerWeek;
-  return yearly.maxDays === null ? days : Math.min(days, yearly.maxDays);
 }
 
 /** One request covers a large company's offices; any beyond are left to the owner. */

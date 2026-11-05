@@ -5,7 +5,10 @@ import type { BankHolidayCalendar, StandardWorkingWeek } from "@/__generated__/g
 import { OptionCard } from "@/components/form";
 import { t } from "@/i18n";
 
-import { daysOffInAll, NATIONS, type Policy, SELECT_CLASS, WEEKS } from "./leaveOptions";
+import { daysOffInAll, NATIONS, type Policy, WEEKS } from "./leaveOptions";
+
+const SELECT_CLASS =
+  "h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
 
 /** One numbered question of the page. */
 export function Step({

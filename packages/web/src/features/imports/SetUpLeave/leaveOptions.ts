@@ -19,9 +19,6 @@ export const WEEKS = [
   "MONDAY_TO_THURSDAY_8_HOURS",
 ] as const satisfies readonly StandardWorkingWeek[];
 
-export const SELECT_CLASS =
-  "h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
-
 export type Policy = LeaveStepQuery["leaveSetup"]["annualLeavePolicies"][number];
 
 /** Days off a year for a five-day week: the days to book, plus bank holidays when on top. */
