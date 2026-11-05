@@ -6,10 +6,13 @@ import type { TimeOffPolicy } from "./timeOffPolicy";
  */
 export function sharedBalance(policies: readonly TimeOffPolicy[]): TimeOffPolicy["balance"] | null {
   const oldestFirst = [...policies].sort((a, b) => a.id.localeCompare(b.id));
-  const countOf = (balance: TimeOffPolicy["balance"]) =>
-    policies.filter((policy) => policy.balance === balance).length;
   return oldestFirst.reduce<TimeOffPolicy["balance"] | null>(
-    (best, { balance }) => (best === null || countOf(balance) > countOf(best) ? balance : best),
+    (best, { balance }) =>
+      best === null || countOf(policies, balance) > countOf(policies, best) ? balance : best,
     null,
   );
+}
+
+function countOf(policies: readonly TimeOffPolicy[], balance: TimeOffPolicy["balance"]): number {
+  return policies.filter((policy) => policy.balance === balance).length;
 }

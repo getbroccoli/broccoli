@@ -20,10 +20,10 @@ export function TimeOffTypeTable({ timeOffTypes }: Props) {
   }
   return (
     <div className="overflow-hidden rounded-xl border border-border">
-      <table className="w-full text-sm">
+      <table className="w-full table-fixed text-sm">
         <thead className="text-left text-[11px] tracking-wide text-muted-foreground uppercase">
           <tr className="border-b border-border">
-            <th scope="col" className="px-4 py-3 font-medium">
+            <th scope="col" className="w-[45%] px-4 py-3 font-medium">
               {t("settings.timeOff.typeColumn")}
             </th>
             <th scope="col" className="px-4 py-3 font-medium">
@@ -40,11 +40,13 @@ export function TimeOffTypeTable({ timeOffTypes }: Props) {
               <th scope="row" className="px-4 py-3 text-left font-semibold">
                 <span className="flex items-center gap-3">
                   <TimeOffTypeIcon icon={timeOffType.icon} colour={timeOffType.colour} />
-                  {timeOffType.name}
+                  <span className="min-w-0 [overflow-wrap:anywhere]">{timeOffType.name}</span>
                 </span>
               </th>
               <td className="px-4 py-3 text-muted-foreground">{countsText(balance)}</td>
-              <td className="px-4 py-3 text-right tabular-nums">{formatDays(daysTakenThisYear)}</td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {daysTakenThisYear === 0 ? "0" : formatDays(daysTakenThisYear)}
+              </td>
             </tr>
           ))}
         </tbody>

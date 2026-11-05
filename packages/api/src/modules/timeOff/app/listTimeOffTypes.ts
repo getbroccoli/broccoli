@@ -4,7 +4,7 @@ import type { EmployeeReadService } from "../../employees";
 import { timeOffPolicyRepository, timeOffRepository } from "../db";
 import { sharedBalance, type TimeOffPolicy, type TimeOffType } from "../domain";
 import type { AllowanceEngineDependencies } from "./allowanceEngine";
-import { byTypeOrder, calendarYearOf, readTimeOffTypes } from "./readTimeOffTypes";
+import { byTypeOrder, calendarYearOf, countPeopleWithTimeOff } from "./readTimeOffTypes";
 
 /** Every time off type as Settings lists it, and how many people have one today. */
 export interface TimeOffTypeList {
@@ -48,12 +48,12 @@ export async function listTimeOffTypes(
       daysTakenThisYear:
         takenDays.find(({ timeOffTypeId }) => timeOffTypeId === timeOffType.id)?.days ?? 0,
     })),
-    peopleWithTimeOff: await countPeopleWithTimeOff(dependencies, ctx),
+    peopleWithTimeOff: await countAllPeopleWithTimeOff(dependencies, ctx),
   };
 }
 
-// shortcut: reads every employee's figures page by page; fine for SMB sizes, add a counting query if it gets slow.
-async function countPeopleWithTimeOff(
+// shortcut: reads every employee's policies page by page; fine for SMB sizes, add a counting query if it gets slow.
+async function countAllPeopleWithTimeOff(
   dependencies: Dependencies,
   ctx: SecurityContext,
 ): Promise<number> {
@@ -62,10 +62,8 @@ async function countPeopleWithTimeOff(
   let hasNextPage = true;
   while (hasNextPage) {
     const page = await dependencies.employeeReads.listEmployees(ctx, { first: PAGE_SIZE, after });
-    const types = await readTimeOffTypes(dependencies, ctx, {
-      employeeIds: page.edges.map(({ node }) => node.id),
-    });
-    count += [...types.values()].filter((rows) => rows.length > 0).length;
+    const employeeIds = page.edges.map(({ node }) => node.id);
+    count += await countPeopleWithTimeOff(dependencies, ctx, employeeIds);
     ({ endCursor: after, hasNextPage } = page.pageInfo);
   }
   return count;

@@ -26,13 +26,6 @@ export interface TimeOffRepository {
 
 export function timeOffRepository(tx: Tx): TimeOffRepository {
   const yearOfDay = sql<number>`extract(year from ${timeOffDays.date})::int`;
-  const days = sql<string>`sum(case when ${timeOffDays.dayPart} = 'full_day' then 1 else 0.5 end)`;
-  const counted = (from: CalendarDate, until: CalendarDate) =>
-    and(
-      inArray(timeOff.status, ["approved", "pending_approval"]),
-      isNull(timeOffDays.cancelledAt),
-      between(timeOffDays.date, from, until),
-    );
   return {
     async sumRecordedDays({ employeeIds, from, until }) {
       const rows = await ormOf(tx)
@@ -40,7 +33,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
           employeeId: timeOff.employeeId,
           timeOffTypeId: timeOff.timeOffTypeId,
           year: yearOfDay,
-          days,
+          days: dayCount,
         })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
@@ -50,7 +43,7 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
     },
     async sumDaysByType({ from, until }) {
       const rows = await ormOf(tx)
-        .select({ timeOffTypeId: timeOff.timeOffTypeId, days })
+        .select({ timeOffTypeId: timeOff.timeOffTypeId, days: dayCount })
         .from(timeOffDays)
         .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
         .where(counted(from, until))
@@ -58,4 +51,16 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
     },
   };
+}
+
+/** A full day counts 1, a morning or an afternoon 0.5. */
+const dayCount = sql<string>`sum(case when ${timeOffDays.dayPart} = 'full_day' then 1 else 0.5 end)`;
+
+/** Days of approved or pending time off from `from` to `until`, not cancelled on their own. */
+function counted(from: CalendarDate, until: CalendarDate) {
+  return and(
+    inArray(timeOff.status, ["approved", "pending_approval"]),
+    isNull(timeOffDays.cancelledAt),
+    between(timeOffDays.date, from, until),
+  );
 }
