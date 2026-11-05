@@ -1,9 +1,15 @@
-import type { Transact } from "../../../core/db";
+import type { Transact, Tx } from "../../../core/db";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
 import { type Allowance, allowanceRepository, timeOffRepository } from "../db";
-import { policyIdOn, type TimeOffPolicy, timeOffFigures, type TimeOffTypeKey } from "../domain";
-import { type AllowanceEngineDependencies, readPeople } from "./allowanceEngine";
+import {
+  type LedgerLineKind,
+  policyIdOn,
+  type TimeOffPolicy,
+  timeOffFigures,
+  type TimeOffTypeKey,
+} from "../domain";
+import { type AllowanceEngineDependencies, type Person, readPeople } from "./allowanceEngine";
 
 /** One time off type a person has in their current leave year, with its figures in days. */
 export interface EmployeeTimeOffType {
@@ -26,9 +32,16 @@ type Dependencies = Pick<AllowanceEngineDependencies, "employeeReads" | "today">
 
 /** A type to show for one person: its policy, the period read and, unless it has no balance, the allowance. */
 interface ShownType {
+  employeeId: string;
   policy: TimeOffPolicy;
   period: { start: CalendarDate; end: CalendarDate };
   allowance: Allowance | null;
+}
+
+/** What the shown types' figures are made of: ledger sums by allowance, and days recorded. */
+interface Figures {
+  sums: Map<string, { kind: LedgerLineKind; amount: number }[]>;
+  recorded: { employeeId: string; timeOffTypeId: string; year: number; days: number }[];
 }
 
 const TYPE_ORDER: readonly TimeOffTypeKey[] = ["annual_leave", "sickness", "family_leave", "other"];
@@ -42,103 +55,113 @@ export async function readTimeOffTypes(
   ctx: SecurityContext,
   input: { employeeIds: readonly string[] },
 ): Promise<Map<string, EmployeeTimeOffType[]>> {
-  const scope = await ctx.recordScope("time_off", "read");
-  const ids = [
-    ...new Set(input.employeeIds.map(parseUuid).filter((id): id is string => id !== null)),
-  ].filter((id) => isInRecordScope(scope, id));
+  const ids = await readableIds(ctx, input.employeeIds);
   if (ids.length === 0) {
     return new Map();
   }
   return transact(async (tx) => {
     const { people, policies } = await readPeople(employeeReads, tx, ids);
-    const types = [
-      ...new Map(policies.map(({ timeOffType }) => [timeOffType.id, timeOffType])).values(),
-    ].sort(byTypeOrder);
-    const rows = people.map((person) => {
-      const date =
-        person.serviceStart && person.serviceStart > today() ? person.serviceStart : today();
-      return types.flatMap((type): ShownType[] => {
-        const policy = policies.find(({ id }) => id === policyIdOn(person.timeline, type.id, date));
-        if (!policy) {
-          return [];
-        }
-        if (policy.balance === "no_balance") {
-          const year = calendarYearOf(date);
-          return person.periods.some((period) => overlaps(period, year))
-            ? [{ policy, period: year, allowance: null }]
-            : [];
-        }
-        const allowance = person.allowances.find(
-          ({ timeOffTypeId, leaveYearStart, leaveYearEnd }) =>
-            timeOffTypeId === type.id && leaveYearStart <= date && date <= leaveYearEnd,
-        );
-        return allowance
-          ? [
-              {
-                policy,
-                period: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
-                allowance,
-              },
-            ]
-          : [];
-      });
-    });
-
-    const shown = rows.flat();
-    const sums = await allowanceRepository(tx).findSumsByKind(
-      shown.flatMap(({ allowance }) => (allowance ? [allowance.id] : [])),
-    );
-    const years = shown.flatMap(({ period, allowance }) => (allowance ? [] : [period]));
-    const recorded =
-      years.length === 0
-        ? []
-        : await timeOffRepository(tx).sumRecordedDays({
-            employeeIds: ids,
-            from: years.map(({ start }) => start).sort()[0]!,
-            until: years
-              .map(({ end }) => end)
-              .sort()
-              .at(-1)!,
-          });
-
+    const shown = people.map((person) => shownTypes(person, policies, today()));
+    const figures = await readFigures(tx, ids, shown.flat());
     return new Map(
       people.map(({ employeeId }, index) => [
         employeeId,
-        rows[index]!.map(({ policy, period, allowance }): EmployeeTimeOffType => {
-          const { timeOffType, balance } = policy;
-          const dates = { periodStart: period.start, periodEnd: period.end };
-          if (!allowance) {
-            const days = recorded.find(
-              (row) =>
-                row.employeeId === employeeId &&
-                row.timeOffTypeId === timeOffType.id &&
-                row.year === Number(period.start.slice(0, 4)),
-            );
-            return {
-              timeOffType,
-              balance,
-              ...dates,
-              entitlement: null,
-              bankHolidays: null,
-              remaining: null,
-              used: days?.days ?? 0,
-            };
-          }
-          const figures = timeOffFigures(sums.get(allowance.id) ?? []);
-          const fromAllowance = balance === "balance_from_allowance";
-          return {
-            timeOffType,
-            balance,
-            ...dates,
-            entitlement: fromAllowance ? figures.entitlement : null,
-            bankHolidays: fromAllowance ? figures.bankHolidays : null,
-            remaining: fromAllowance ? figures.remaining : null,
-            used: figures.used,
-          };
-        }),
+        shown[index]!.map((type) => toEmployeeTimeOffType(type, figures)),
       ]),
     );
   });
+}
+
+async function readableIds(
+  ctx: SecurityContext,
+  employeeIds: readonly string[],
+): Promise<string[]> {
+  const scope = await ctx.recordScope("time_off", "read");
+  return [...new Set(employeeIds.map(parseUuid).filter((id): id is string => id !== null))].filter(
+    (id) => isInRecordScope(scope, id),
+  );
+}
+
+/** The person's types on today, or on their start when it is later, Annual leave first. */
+function shownTypes(
+  person: Person,
+  policies: readonly TimeOffPolicy[],
+  today: CalendarDate,
+): ShownType[] {
+  const date = person.serviceStart && person.serviceStart > today ? person.serviceStart : today;
+  const types = new Map(policies.map(({ timeOffType }) => [timeOffType.id, timeOffType]));
+  return [...types.values()].sort(byTypeOrder).flatMap((type) => {
+    const policy = policies.find(({ id }) => id === policyIdOn(person.timeline, type.id, date));
+    const shown = policy && shownType(person, policy, date);
+    return shown ? [shown] : [];
+  });
+}
+
+/** The type under `policy` on `date`, or null when the person has no period to show for it. */
+function shownType(person: Person, policy: TimeOffPolicy, date: CalendarDate): ShownType | null {
+  const { employeeId } = person;
+  if (policy.balance === "no_balance") {
+    const year = calendarYearOf(date);
+    return person.periods.some((period) => overlaps(period, year))
+      ? { employeeId, policy, period: year, allowance: null }
+      : null;
+  }
+  const allowance = person.allowances.find(
+    ({ timeOffTypeId, leaveYearStart, leaveYearEnd }) =>
+      timeOffTypeId === policy.timeOffType.id && leaveYearStart <= date && date <= leaveYearEnd,
+  );
+  return allowance
+    ? {
+        employeeId,
+        policy,
+        period: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
+        allowance,
+      }
+    : null;
+}
+
+async function readFigures(
+  tx: Tx,
+  employeeIds: readonly string[],
+  shown: readonly ShownType[],
+): Promise<Figures> {
+  const allowanceIds = shown.flatMap(({ allowance }) => (allowance ? [allowance.id] : []));
+  const years = shown.flatMap(({ period, allowance }) => (allowance ? [] : [period]));
+  const sums = await allowanceRepository(tx).findSumsByKind(allowanceIds);
+  const recorded =
+    years.length === 0
+      ? []
+      : await timeOffRepository(tx).sumRecordedDays({
+          employeeIds,
+          from: years.map(({ start }) => start).sort()[0]!,
+          until: years
+            .map(({ end }) => end)
+            .sort()
+            .at(-1)!,
+        });
+  return { sums, recorded };
+}
+
+function toEmployeeTimeOffType(
+  { employeeId, policy, period, allowance }: ShownType,
+  { sums, recorded }: Figures,
+): EmployeeTimeOffType {
+  const { timeOffType, balance } = policy;
+  const row = { timeOffType, balance, periodStart: period.start, periodEnd: period.end };
+  const noFigures = { entitlement: null, bankHolidays: null, remaining: null };
+  if (!allowance) {
+    const days = recorded.find(
+      (line) =>
+        line.employeeId === employeeId &&
+        line.timeOffTypeId === timeOffType.id &&
+        line.year === Number(period.start.slice(0, 4)),
+    );
+    return { ...row, ...noFigures, used: days?.days ?? 0 };
+  }
+  const figures = timeOffFigures(sums.get(allowance.id) ?? []);
+  return balance === "balance_from_allowance"
+    ? { ...row, ...figures }
+    : { ...row, ...noFigures, used: figures.used };
 }
 
 function byTypeOrder(
