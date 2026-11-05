@@ -1,4 +1,4 @@
-import { eslintConfig } from "@broccoli/config/eslint";
+import { eslintConfig, maxLinesPerFunctionConfig } from "@broccoli/config/eslint";
 import graphql from "@graphql-eslint/eslint-plugin";
 import checkFile from "eslint-plugin-check-file";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -8,6 +8,12 @@ import { defineConfig, globalIgnores } from "eslint/config";
 export default defineConfig(
   eslintConfig(import.meta.dirname),
   globalIgnores(["src/__generated__/"]),
+  maxLinesPerFunctionConfig(50),
+  {
+    // A component's markup is one level of abstraction, so it may run longer (RULE73).
+    files: ["src/**/*.tsx"],
+    rules: { "broccoli/max-lines-per-function": ["error", 150] },
+  },
   {
     files: ["**/*.{js,ts,tsx}"],
     extends: [

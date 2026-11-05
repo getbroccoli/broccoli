@@ -19,6 +19,9 @@ A rule that lint enforces ends with its lint rule, and `pnpm check` fails when i
 ## Code shape
 
 - **RULE9.** Exported code comes first. Private helpers sit below their callers at module level, never at the top of a file, nor at the top of a factory or class body.
+- **RULE73.** A function does one thing at one level of abstraction: a function with several steps calls a named function for each (`ensureAllowancesOf` reads the people, creates the missing allowances and appends the differences). A function has at most 50 lines of code and a React component 150; an object's methods count on their own, not towards the factory around them. A route or endpoint table may run longer, with an `eslint-disable` that says so. `lint: broccoli/max-lines-per-function`
+- **RULE74.** Keep the main path flat: guard clauses return early, and a condition that needs reading becomes a named predicate (`canBeInvited`, `noteHasLink`).
+- **RULE75.** A literal whose meaning is not obvious becomes a named constant with a doc comment saying why it is that value (`MAX_BODY_BYTES`, `FILE_REQUESTS_PER_MINUTE`).
 - **RULE71.** Types read top-down: the types in the main exported function's signature come first, then each type they reference, in the order they are first referenced.
 - **RULE10.** A service or repository opens its file with its contract: an exported interface carrying the doc comments. Its factory returns that interface, not `ReturnType<typeof …>`. A repository's factory takes the caller's `Orm` or `Tx`, per operation. A service's factory, `createXService`, takes only the dependencies it needs; its members are declared as functions (`readOwner: (db: Orm | Tx) => …`), so callers may pass them on as callbacks. A service file exports no instance: each caller calls the factory once, at the top of its file, or inside its own factory when it needs that factory's dependencies or an import cycle requires it. Only `#test/support` shares instances, of services without dependencies. An `app` folder's `index.ts` exports services, ports, registrations, constants and types, never a loose business function. `lint: no-restricted-syntax` (the `ReturnType` part)
 - **RULE11.** Parse, don't validate: turn raw input into a typed value once, at the boundary (`parseCalendarDate`, `parseNewEmployee`, `parseSearch`), and pass that value on. Never check with an `isX` function and then keep using the raw input.
@@ -66,6 +69,7 @@ Layer responsibilities, reasons and examples are in [Module layers](architecture
 - **RULE29.** A calendar `Date` is a `YYYY-MM-DD` string end to end and never becomes a JS `Date`. In the web app a `DateTime` stays a string too, and becomes a JS `Date` only inside display formatting; the API turns it into one at the scalar ([architecture §2](architecture.md#2-api), [§8](architecture.md#8-frontend)).
 - **RULE30.** Configuration is environment variables parsed with Zod in the package's `env.ts`. A variable for one mode only carries that mode as its prefix (`MANAGED_…`, `SELF_HOSTED_…`).
 - **RULE31.** Logs carry identifiers, never contents. A model request goes through `integrations/ai` and carries only what the question needs.
+- **RULE76.** A `catch` never swallows an error: it handles the failures it expects by name and rethrows or logs the rest (`managedCallback` redirects on an invalid ticket and logs any other error by its name).
 - **RULE32.** Nothing internal: no secrets, no `.env` files, no internal URLs.
 
 ## Frontend
@@ -102,5 +106,6 @@ How to write each kind of test is in [`testing.md`](testing.md).
 - **RULE47.** A doc holds only what a reader needs: nothing obvious, generic, deferred or restated from the code. A change edits no doc outside its task.
 - **RULE61.** `architecture.md` records system boundaries, technology choices, constraints and trade-offs, with their reasons. Class and function details, algorithms, endpoint walkthroughs and tuning values belong in code or the relevant guide. A refactor that changes only implementation does not change the architecture document.
 - **RULE48.** A doc comment is one or two sentences: what it is and the non-obvious why.
+- **RULE77.** A code comment says why, never what the next lines do; code that is no longer used is deleted, not commented out.
 - **RULE49.** `thesaurus.md` gets a term only when it is Broccoli's own, not a well-known one such as job, model or mapping. A term names its context, so it reads alone (`Change author`, not `Author`).
 - **RULE50.** A change that needs a new architecture decision changes `architecture.md` in the same pull request.
