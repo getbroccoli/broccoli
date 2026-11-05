@@ -1,6 +1,6 @@
 # Time off
 
-Time off lets a UK company run its time off from one choice. A fresh workspace has Annual leave, Sickness, Family leave and Other, the three standard leave policies for Annual leave and one record-only policy for each other type, but links no policy to any terms: time off is off, and nobody has a time off type until the owner turns time off on in setup, or the demo does. A company can then add its own types, policies, terms with different rules and one person's own policy without new code.
+Time off lets a UK company run its leave from one choice. A fresh workspace has Annual leave, Sickness, Family leave and Other, the three standard leave policies for Annual leave and one record-only policy for each other type, but links no policy to any terms: time off is off, and nobody has a time off type until the owner turns time off on in setup, or the demo does. A company can then add its own types, policies, terms with different rules and one person's own policy without new code.
 
 Hours, accrual, carry-over and other countries arrive later as new columns, values or tables, without rewriting stored rows.
 
@@ -13,7 +13,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 
 ## Turning time off on
 
-`TimeOffService.turnOnTimeOff` is how time off goes on, in the caller's transaction: as setup finishes (after the approved people are added, before the invites), and in the demo fill. It takes one entry per nation's terms (bank holiday calendar, standard working week, one of the standard Annual leave policies; England and Wales required) and which nation's terms each location gets. It refuses with CONFLICT ("Time off is already on.") once any terms have a policy, sets the terms up through the employees module (see [terms](../employees/module.md#terms)), links each its Annual leave policy and the three record-only policies, and ensures their people's allowances. `timeOff.time_off_turned_on` logs the outcome after commit. Skip for now calls nothing.
+`TimeOffService.turnOnTimeOff` is how time off goes on, in the caller's transaction: as setup finishes (before the approved people are added and invited), and in the demo fill. It takes one entry per nation's terms (bank holiday calendar, standard working week, one of the standard Annual leave policies; England and Wales required) and which nation's terms each location gets. It refuses with CONFLICT ("Time off is already on.") once any terms have a policy, sets the terms up through the employees module (see [terms](../employees/module.md#terms)), links each its Annual leave policy and the three record-only policies, and ensures any existing members' allowances. The imported people join their locations' terms directly; `employees.added` ensures their allowances after commit. `timeOff.time_off_turned_on` logs the outcome after commit. Skip for now calls nothing.
 
 `TimeOffSetupService` serves the Set up time off page: the standard Annual leave policies, each nation's bank holidays this year, and a suggestion of whose bank holidays apply per location. The suggestion is one decisions request with the location names only, unmasked (`unmaskedKeys`), at most 100; an unsure or unclear answer, or no answer at all (an external agent, no key, a failed request), is England and Wales, marked for the owner to check.
 

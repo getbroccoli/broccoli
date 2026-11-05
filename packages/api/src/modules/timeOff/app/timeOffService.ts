@@ -75,7 +75,6 @@ export interface TimeOffService {
 export interface TurnedOnTimeOff extends EnsuredAllowances {
   termsIds: string[];
   createdPatternIds: string[];
-  movedEmployeeCount: number;
 }
 
 export function createTimeOffService({
@@ -154,7 +153,6 @@ export function createTimeOffService({
       const turnedOn = {
         termsIds: setUp.termsIds,
         createdPatternIds: setUp.createdPatternIds,
-        movedEmployeeCount: setUp.movedEmployeeIds.length,
         ...totals,
       };
       tx.publish("timeOff.time_off_turned_on", {
