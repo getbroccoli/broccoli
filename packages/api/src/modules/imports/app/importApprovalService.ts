@@ -152,13 +152,13 @@ async function addApprovedPeople(
   const review = await readImportReview(ctx, tx);
   const { readyEmployees, managers } = review;
   const ownerKey = finish?.ownerEmployeeKey ?? null;
+  if (finish?.leave) {
+    // Locations already have their terms when the new people join them.
+    await turnOnLeave(ctx, tx, finish.leave);
+  }
   const { idsByEmail, ...counts } = await createApprovedEmployees(ctx, tx, review, finish);
   const idOf = (employee: { values: { email: { value: string | null } } }) =>
     idsByEmail.get(employee.values.email.value?.toLowerCase() ?? "");
-  if (finish?.leave) {
-    // After the people exist, so their locations point them at their terms.
-    await turnOnLeave(ctx, tx, finish.leave);
-  }
   const owner = readyEmployees.find(({ key }) => key === ownerKey);
   const invitees = finish
     ? setupInvitees(readyEmployees, managers, finish.inviteAudience, ownerKey, finish.ownerEmail)

@@ -97,9 +97,9 @@ export interface EmployeeSetupService {
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /**
    * Gives each nation's entry terms on its working week, joining `tx`: England and Wales are the
-   * default terms, the others are created; points each named location at its nation's terms and
-   * moves the people still on the untouched default terms onto their location's. Returns the
-   * terms ids, and their people, in the order of `input.terms`.
+   * default terms, the others are created; creates missing named locations and points each at
+   * its nation's terms, ready for new employees to join. Returns the terms ids, and their people,
+   * in the order of `input.terms`.
    */
   setUpTerms: (ctx: SecurityContext, tx: Tx, input: TermsSetup) => Promise<SetUpTerms>;
 }
@@ -110,7 +110,6 @@ export interface SetUpTerms {
   /** The employees on each terms afterwards, in the order of `termsIds`. */
   memberIds: string[][];
   createdPatternIds: string[];
-  movedEmployeeIds: string[];
 }
 
 export function createEmployeeSetupService(): EmployeeSetupService {
@@ -231,19 +230,19 @@ export function createEmployeeSetupService(): EmployeeSetupService {
         termsIds.push(termsId);
         createdPatternIds.push(patternId);
       }
-      await locationRepository(tx).setDefaultTerms(
+      const locations = locationRepository(tx);
+      await locations.findOrCreate(input.locationTerms.map(({ locationName }) => locationName));
+      await locations.setDefaultTerms(
         input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
           locationName,
           termsId: termsIds[calendars.indexOf(bankHolidayCalendar)]!,
         })),
       );
-      const movedEmployeeIds = await terms.moveToLocationDefaults();
       const members = await terms.findMemberIds(termsIds);
       return {
         termsIds,
         memberIds: termsIds.map((termsId) => members.get(termsId) ?? []),
         createdPatternIds,
-        movedEmployeeIds,
       };
     },
   };

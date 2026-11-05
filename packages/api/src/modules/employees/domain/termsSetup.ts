@@ -1,6 +1,7 @@
 import { invalidInput } from "../../../core/applicationError";
 import type { SetupTermsInput } from "../../../core/instance";
 import { type BankHolidayCalendar, parseBankHolidayCalendar } from "../../bankHolidays";
+import { parseLocationName } from "./location";
 import { parseStandardWorkingWeek, type StandardWorkingWeek } from "./standardWorkingWeek";
 
 /** One entry per nation's terms, England and Wales among them once, and which nation's terms each location's people get. */
@@ -26,7 +27,7 @@ export function parseTermsSetup(input: SetupTermsInput): TermsSetup {
     throw invalidInput([{ field: "terms", code: "duplicate" }]);
   }
   const locationTerms = input.locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
-    locationName,
+    locationName: parseLocationName(locationName),
     bankHolidayCalendar: parseBankHolidayCalendar(bankHolidayCalendar),
   }));
   if (locationTerms.some(({ bankHolidayCalendar }) => !calendars.includes(bankHolidayCalendar))) {

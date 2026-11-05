@@ -103,7 +103,6 @@ test("the setup holder can turn leave on with the Standard week", async ({
   expect(result).toEqual({
     termsIds: [await seed.defaultTermsId()],
     createdPatternIds: [],
-    movedEmployeeCount: 0,
     allowancesCreated: 0,
     linesAppended: 0,
   });
