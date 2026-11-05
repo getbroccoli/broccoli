@@ -33,7 +33,7 @@ type Props = {
 };
 
 /**
- * "Set up time off", after Approve: the company's defaults, one holiday allowance and working week
+ * "Company defaults", after Approve: the company's defaults, one holiday allowance and working week
  * for everyone, and whose bank holidays apply: one nation for everyone when the staff file has no
  * locations, else each location's, Broccoli's AI suggesting them from the names. Nothing is saved
  * on the server here: the choice goes with setup's last page.
@@ -117,7 +117,6 @@ export function TimeOffStep({ search }: Props) {
   return (
     <SetupLayout
       step="timeOff"
-      eyebrow={t("setup.timeOff.eyebrow")}
       title={t("setup.timeOff.title")}
       description={
         peopleCount === 1
@@ -150,64 +149,66 @@ export function TimeOffStep({ search }: Props) {
           </div>
         }
       >
-        <div className="flex flex-col gap-7">
-          <p className="flex items-start gap-2 self-start rounded-lg bg-brand-soft px-3 py-2 text-[13px] leading-snug text-brand-deep">
+        <div className="flex flex-col gap-7 xl:flex-row-reverse xl:items-start">
+          <p className="flex items-start gap-2 self-start rounded-lg bg-brand-soft px-3 py-2 text-[13px] leading-snug text-brand-deep xl:w-64 xl:shrink-0">
             <Lightbulb size={16} aria-hidden className="mt-px shrink-0" />
             {t("setup.timeOff.tip")}
           </p>
-          <Question
-            number={1}
-            title={t("setup.timeOff.allowanceTitle")}
-            hint={t("setup.timeOff.allowanceHint")}
-          >
-            <AllowanceCards
-              policies={policies}
-              selectedId={policyId}
-              bankHolidays={calendarsInUse.length === 1 ? holidaysOf(calendarsInUse[0]!) : null}
-              onSelect={(id) => change({ policyId: id })}
-            />
-          </Question>
-          <Question
-            number={2}
-            title={t("setup.timeOff.weekTitle")}
-            hint={t("setup.timeOff.weekHint")}
-          >
-            <WeekCards selected={week} onSelect={(next) => change({ week: next })} />
-          </Question>
-          <Question
-            number={3}
-            title={t("setup.timeOff.bankHolidaysTitle")}
-            hint={
-              !hasLocations
-                ? t("setup.timeOff.oneCalendarHint")
-                : suggested.loading
-                  ? t("setup.timeOff.checking")
-                  : t("setup.timeOff.locationsHint")
-            }
-          >
-            {hasLocations ? (
-              <LocationCalendars
-                locations={locations}
-                nationOf={nationOf}
-                unsure={unsure}
-                holidaysOf={holidaysOf}
-                onPick={(name, next) => change({ picked: { ...picked, [name]: next } })}
-                withoutLocation={withoutLocation}
+          <div className="@container flex min-w-0 flex-1 flex-col gap-7">
+            <Question
+              number={1}
+              title={t("setup.timeOff.allowanceTitle")}
+              hint={t("setup.timeOff.allowanceHint")}
+            >
+              <AllowanceCards
+                policies={policies}
+                selectedId={policyId}
+                bankHolidays={calendarsInUse.length === 1 ? holidaysOf(calendarsInUse[0]!) : null}
+                onSelect={(id) => change({ policyId: id })}
               />
-            ) : (
-              <NationCards
-                selected={nation}
-                holidaysOf={holidaysOf}
-                onSelect={(next) => change({ nation: next })}
-              />
+            </Question>
+            <Question
+              number={2}
+              title={t("setup.timeOff.weekTitle")}
+              hint={t("setup.timeOff.weekHint")}
+            >
+              <WeekCards selected={week} onSelect={(next) => change({ week: next })} />
+            </Question>
+            <Question
+              number={3}
+              title={t("setup.timeOff.bankHolidaysTitle")}
+              hint={
+                !hasLocations
+                  ? t("setup.timeOff.oneCalendarHint")
+                  : suggested.loading
+                    ? t("setup.timeOff.checking")
+                    : t("setup.timeOff.locationsHint")
+              }
+            >
+              {hasLocations ? (
+                <LocationCalendars
+                  locations={locations}
+                  nationOf={nationOf}
+                  unsure={unsure}
+                  holidaysOf={holidaysOf}
+                  onPick={(name, next) => change({ picked: { ...picked, [name]: next } })}
+                  withoutLocation={withoutLocation}
+                />
+              ) : (
+                <NationCards
+                  selected={nation}
+                  holidaysOf={holidaysOf}
+                  onSelect={(next) => change({ nation: next })}
+                />
+              )}
+            </Question>
+            <AlsoReady />
+            {error && (
+              <p role="alert" className="text-sm text-destructive">
+                {t("setup.timeOff.loadFailed")}
+              </p>
             )}
-          </Question>
-          <AlsoReady />
-          {error && (
-            <p role="alert" className="text-sm text-destructive">
-              {t("setup.timeOff.loadFailed")}
-            </p>
-          )}
+          </div>
         </div>
       </SetupStepForm>
     </SetupLayout>

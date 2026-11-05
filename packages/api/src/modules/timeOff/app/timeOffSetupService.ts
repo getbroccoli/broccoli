@@ -12,7 +12,7 @@ import {
 import { timeOffPolicyRepository } from "../db";
 import { type StandardLeavePolicyKey, yearlyDays } from "../domain";
 
-/** The choices of the Set up time off page, and the model's suggestion for each location. Admins only. */
+/** The choices of the Company defaults page, and the model's suggestion for each location. Admins only. */
 export interface TimeOffSetupService {
   readTimeOffSetup: (ctx: SecurityContext) => Promise<TimeOffSetup>;
   /**
@@ -25,7 +25,7 @@ export interface TimeOffSetupService {
   ) => Promise<LocationCalendarSuggestion[]>;
 }
 
-/** What the Set up time off page offers. */
+/** What the Company defaults page offers. */
 export interface TimeOffSetup {
   /** The standard Annual leave policies, most common first. */
   annualLeavePolicies: {

@@ -19,8 +19,6 @@ export type SetupWidth = "narrow" | "default" | "wide";
 
 interface SetupLayoutProps {
   step: SetupStepId;
-  /** A short line above the title naming what the step sets. */
-  eyebrow?: string;
   title: string;
   description?: string;
   width?: SetupWidth;
@@ -33,7 +31,6 @@ interface SetupLayoutProps {
  */
 export function SetupLayout({
   step,
-  eyebrow,
   title,
   description,
   width = "default",
@@ -80,11 +77,6 @@ export function SetupLayout({
       <main className="m-2 mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300 md:my-3 md:mr-3 md:ml-0">
         <header className="shrink-0 px-6 pt-8 sm:px-10 sm:pt-12">
           <div className={cn("mx-auto", HEADER_WIDTHS[width])}>
-            {eyebrow && (
-              <p className="mb-2 text-xs font-semibold tracking-[0.1em] text-brand-deep uppercase">
-                {eyebrow}
-              </p>
-            )}
             <h1
               ref={heading}
               tabIndex={-1}

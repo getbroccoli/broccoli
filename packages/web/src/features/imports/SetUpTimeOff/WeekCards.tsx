@@ -13,7 +13,7 @@ type Props = {
 /** Everyone's working week, a card per standard week with its working days marked. */
 export function WeekCards({ selected, onSelect }: Props) {
   return (
-    <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-2.5 @lg:grid-cols-2 @3xl:grid-cols-4">
       {WEEKS.map(({ week, days }) => (
         <OptionCard
           key={week}

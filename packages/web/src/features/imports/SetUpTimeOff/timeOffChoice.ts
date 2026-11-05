@@ -5,7 +5,7 @@ import type {
 } from "@/__generated__/graphql";
 
 /**
- * The owner's Set up time off page as they left it, kept for this tab until setup finishes or is
+ * The owner's Company defaults page as they left it, kept for this tab until setup finishes or is
  * reset: never in the URL, since location names can be long or personal. Where storage fails,
  * such as in some private windows, it lasts until a reload.
  */
