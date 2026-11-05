@@ -45,7 +45,7 @@ export function LeftNav() {
         <div inert={!inSettings} className={cn(menuClass, !inSettings && "max-md:hidden")}>
           <Link
             to="/people"
-            className="flex h-8 items-center gap-2 rounded-md px-2 text-sm font-medium text-foreground/80 transition-colors hover:bg-foreground/5"
+            className="flex h-8 items-center gap-2 rounded-md px-2 text-sm font-medium whitespace-nowrap text-foreground/80 transition-colors hover:bg-foreground/5"
           >
             <CaretLeft size={14} weight="bold" />
             {t("nav.backToApp")}
@@ -79,7 +79,7 @@ function NavList({ label, items }: { label: string; items: NavItem[] }) {
 
 function ProfileFooter() {
   return (
-    <div className="w-44 shrink-0 md:mt-auto md:w-auto">
+    <div className="shrink-0 md:mt-auto">
       <ProfileMenu />
     </div>
   );

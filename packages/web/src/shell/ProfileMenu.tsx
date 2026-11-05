@@ -57,7 +57,8 @@ export function ProfileMenu() {
               className="group/profile flex w-full items-center gap-2 rounded-md px-1 py-2 text-left transition-colors hover:bg-foreground/5 aria-expanded:bg-foreground/5"
             >
               {avatar}
-              <span className="flex min-w-0 flex-1 flex-col">
+              {/* Narrow screens show the avatar only. */}
+              <span className="flex min-w-0 flex-1 flex-col max-md:sr-only">
                 <span className="truncate text-xs font-medium">{name}</span>
                 {person.jobTitle && (
                   <span className="truncate text-[11px] text-muted-foreground">
@@ -68,7 +69,7 @@ export function ProfileMenu() {
               <CaretUp
                 size={11}
                 weight="bold"
-                className="text-muted-foreground transition-transform group-aria-expanded/profile:rotate-180"
+                className="text-muted-foreground transition-transform group-aria-expanded/profile:rotate-180 max-md:hidden"
               />
             </button>
           }
@@ -85,7 +86,9 @@ export function ProfileMenu() {
               {avatar}
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-[13px] font-semibold text-foreground">{name}</span>
-                <span className="truncate text-[11px] text-muted-foreground">{me.email}</span>
+                {me.employee && (
+                  <span className="truncate text-[11px] text-muted-foreground">{me.email}</span>
+                )}
               </span>
             </DropdownMenuLabel>
           </DropdownMenuGroup>

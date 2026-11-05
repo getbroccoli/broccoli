@@ -63,6 +63,7 @@ export function WorkspaceMenu() {
               <span className="truncate text-[13px] font-semibold text-foreground">{name}</span>
             </DropdownMenuLabel>
           </DropdownMenuGroup>
+          {(canManage || canReset) && <DropdownMenuSeparator />}
           {canManage && (
             <DropdownMenuItem render={<Link to="/settings" />}>
               <GearSix size={14} />

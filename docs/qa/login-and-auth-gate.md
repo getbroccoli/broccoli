@@ -25,7 +25,7 @@ On a managed workspace created through the website (with the QA mock providers):
 
 ## Logout
 
-- [ ] The workspace menu shows "Signed in as …" and "Sign out".
+- [ ] The profile menu at the bottom left shows "Sign out".
 - [ ] "Sign out" lands on `/login?redirect=…` for the current page; Back does not show the previous page.
 
 ## Session ends elsewhere
