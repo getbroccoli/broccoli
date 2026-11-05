@@ -17,9 +17,11 @@ export interface TermsRepository {
   joinDefaultTerms(employees: readonly { id: string; locationId: string | null }[]): Promise<void>;
   /** New terms with this name; returns their id. */
   insert(name: string): Promise<string>;
+  rename(termsId: string, name: string): Promise<void>;
   /**
    * Deletes every terms but the default ones and every working pattern but Standard, and puts the
-   * default terms back on Standard from the beginning; the terms must have no members.
+   * default terms back on Standard from the beginning, named "England and Wales"; the terms must
+   * have no members.
    */
   resetToDefault(): Promise<void>;
   /** The id of the default terms, the seeded "England and Wales". */
@@ -66,9 +68,17 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
       return inserted!.id;
     },
 
+    async rename(termsId, name) {
+      await orm().update(terms).set({ name }).where(eq(terms.id, termsId));
+    },
+
     async resetToDefault() {
       const defaultTermsId = await findDefaultTermsId(orm());
       await orm().delete(terms).where(isNull(terms.key));
+      await orm()
+        .update(terms)
+        .set({ name: DEFAULT_TERMS_NAME })
+        .where(eq(terms.id, defaultTermsId));
       await orm()
         .delete(termsWorkingPatterns)
         .where(eq(termsWorkingPatterns.termsId, defaultTermsId));
@@ -116,6 +126,9 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
     },
   };
 }
+
+/** The seeded name of the default terms, which Reset setup and Exit demo give back. */
+const DEFAULT_TERMS_NAME = "England and Wales";
 
 async function findDefaultTermsId(orm: ReturnType<typeof ormOf>): Promise<string> {
   const [defaultTerms] = await orm

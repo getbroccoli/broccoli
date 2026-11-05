@@ -37,9 +37,13 @@ test("resetting setup restores only the default terms on Standard with time off 
     ({ isStandard }) => isStandard,
   )!;
   const input = await scotlandTimeOffSetup(orm);
+  input.defaultBankHolidayCalendar = "scotland";
   input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
   await transact((tx) => service.turnOnTimeOff(OWNER, tx, input));
-  expect(await readTimeOffTerms(orm)).toHaveLength(2);
+  expect(await readTimeOffTerms(orm)).toMatchObject([
+    { name: "England and Wales" },
+    { id: termsId, name: "Scotland" },
+  ]);
   expect(await workingPatternService(orm).listPatterns(OWNER)).toHaveLength(3);
 
   await systemService(orm).resetSetup(owner);
@@ -48,6 +52,7 @@ test("resetting setup restores only the default terms on Standard with time off 
     {
       id: termsId,
       key: "default_terms",
+      name: "England and Wales",
       patterns: [{ workingPatternId: standard.id, effectiveFrom: null, effectiveUntil: null }],
     },
   ]);

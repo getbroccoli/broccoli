@@ -1,18 +1,24 @@
 import { invalidInput } from "../../../core/applicationError";
 import type { SetupTermsInput } from "../../../core/instance";
-import { type BankHolidayCalendar, parseBankHolidayCalendar } from "../../bankHolidays";
+import {
+  BANK_HOLIDAY_CALENDARS,
+  type BankHolidayCalendar,
+  parseBankHolidayCalendar,
+} from "../../bankHolidays";
 import { parseLocationName } from "./location";
 import { parseStandardWorkingWeek, type StandardWorkingWeek } from "./standardWorkingWeek";
 
-/** One entry per nation's terms, England and Wales among them once, and which nation's terms each location's people get. */
+/** One entry per nation's terms, the default nation's among them, and which nation's terms each location's people get. */
 export interface TermsSetup {
   terms: readonly { bankHolidayCalendar: BankHolidayCalendar; workingWeek: StandardWorkingWeek }[];
   locationTerms: readonly { locationName: string; bankHolidayCalendar: BankHolidayCalendar }[];
+  /** The nation of the default terms, which people without a location start on. */
+  defaultBankHolidayCalendar: BankHolidayCalendar;
 }
 
 /**
- * The owner's terms as sent, refused unless each nation and week is known, England and Wales is
- * among them exactly once, and every location gets one of their nations.
+ * The owner's terms as sent, refused unless each nation and week is known, the default nation
+ * (England and Wales unless sent) is among them, each once, and every location gets one of them.
  */
 export function parseTermsSetup(input: SetupTermsInput): TermsSetup {
   const terms = input.terms.map(({ bankHolidayCalendar, workingWeek }) => ({
@@ -20,7 +26,8 @@ export function parseTermsSetup(input: SetupTermsInput): TermsSetup {
     workingWeek: parseStandardWorkingWeek(workingWeek),
   }));
   const calendars = terms.map(({ bankHolidayCalendar }) => bankHolidayCalendar);
-  if (!calendars.includes("england_and_wales")) {
+  const defaultBankHolidayCalendar = parseDefaultCalendar(input.defaultBankHolidayCalendar);
+  if (!calendars.includes(defaultBankHolidayCalendar)) {
     throw invalidInput([{ field: "terms", code: "required" }]);
   }
   if (new Set(calendars).size !== calendars.length) {
@@ -33,5 +40,13 @@ export function parseTermsSetup(input: SetupTermsInput): TermsSetup {
   if (locationTerms.some(({ bankHolidayCalendar }) => !calendars.includes(bankHolidayCalendar))) {
     throw invalidInput([{ field: "locationTerms", code: "invalid" }]);
   }
-  return { terms, locationTerms };
+  return { terms, locationTerms, defaultBankHolidayCalendar };
+}
+
+function parseDefaultCalendar(value = "england_and_wales"): BankHolidayCalendar {
+  const calendar = BANK_HOLIDAY_CALENDARS.find((known) => known === value);
+  if (!calendar) {
+    throw invalidInput([{ field: "defaultBankHolidayCalendar", code: "invalid" }]);
+  }
+  return calendar;
 }

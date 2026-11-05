@@ -1,3 +1,4 @@
+import Big from "big.js";
 import type { Orm } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
@@ -9,7 +10,7 @@ import {
   type BankHolidayService,
 } from "../../bankHolidays";
 import { timeOffPolicyRepository } from "../db";
-import type { StandardLeavePolicyKey } from "../domain";
+import { type StandardLeavePolicyKey, yearlyDays } from "../domain";
 
 /** The choices of the Set up time off page, and the model's suggestion for each location. Admins only. */
 export interface TimeOffSetupService {
@@ -26,8 +27,13 @@ export interface TimeOffSetupService {
 
 /** What the Set up time off page offers. */
 export interface TimeOffSetup {
-  /** The standard Annual leave policies, the UK statutory minimum first. */
-  annualLeavePolicies: { id: string; name: string }[];
+  /** The standard Annual leave policies, most common first. */
+  annualLeavePolicies: {
+    id: string;
+    name: string;
+    daysForFiveDayWeek: number;
+    bankHolidaysOnTop: boolean;
+  }[];
   /** Each nation's bank holidays this year (London). */
   bankHolidayCalendars: { calendar: BankHolidayCalendar; countThisYear: number }[];
 }
@@ -65,8 +71,17 @@ export function createTimeOffSetupService({
       });
       return {
         annualLeavePolicies: STANDARD_LEAVE_POLICY_KEYS.map((key) => {
-          const { id, name } = policies.find((policy) => policy.key === key)!;
-          return { id, name };
+          const { id, name, rules, bankHolidays } = policies.find((policy) => policy.key === key)!;
+          return {
+            id,
+            name,
+            daysForFiveDayWeek: yearlyDays(
+              // Every Annual leave policy has one.
+              rules.find((rule) => rule.kind === "yearly_entitlement")!,
+              Big(5),
+            ).toNumber(),
+            bankHolidaysOnTop: bankHolidays === "bank_holidays_on_top_of_allowance",
+          };
         }),
         bankHolidayCalendars: BANK_HOLIDAY_CALENDARS.map((calendar) => ({
           calendar,
@@ -100,10 +115,11 @@ export function createTimeOffSetupService({
 /** One request covers a large company's offices; any beyond are left to the owner. */
 const MAX_LOCATIONS_ASKED = 100;
 
+/** Most common first. */
 const STANDARD_LEAVE_POLICY_KEYS: readonly StandardLeavePolicyKey[] = [
-  "uk_statutory_minimum",
   "uk_20_days_plus_bank_holidays",
   "uk_25_days_plus_bank_holidays",
+  "uk_statutory_minimum",
 ];
 
 const NATION_OPTIONS = {

@@ -63,6 +63,7 @@ const setupBody = credentialsBody.extend({
       locationTerms: z.array(
         z.object({ locationName: z.string(), bankHolidayCalendar: z.string() }),
       ),
+      defaultBankHolidayCalendar: z.string().optional(),
     })
     .nullish(),
 });

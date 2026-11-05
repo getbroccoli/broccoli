@@ -56,7 +56,7 @@ enum StandardWorkingWeek {
 
 "What Set up time off offers."
 type TimeOffSetup {
-  "The standard Annual leave policies, the UK statutory minimum first."
+  "The standard Annual leave policies, most common first."
   annualLeavePolicies: [AnnualLeavePolicy!]!
   bankHolidayCalendars: [BankHolidayCalendarYear!]!
 }
@@ -65,6 +65,10 @@ type TimeOffSetup {
 type AnnualLeavePolicy {
   id: ID!
   name: String!
+  "The yearly allowance for a Monday-to-Friday week."
+  daysForFiveDayWeek: Float!
+  "True when bank holidays come on top of those days, false when they are taken from them."
+  bankHolidaysOnTop: Boolean!
 }
 
 "How many bank holidays a nation has this year."
@@ -92,10 +96,12 @@ type Query {
 
 "How time off is turned on."
 input TurnOnTimeOffInput {
-  "One per nation's terms; England and Wales, the terms new people start on, is required."
+  "One per nation's terms; the default nation's is required."
   terms: [TermsSetupInput!]!
-  "Which nation's terms each location's people get; any other location's get England and Wales."
+  "Which nation's terms each location's people get; any other location's get the default nation's."
   locationTerms: [LocationTermsInput!]!
+  "The nation of the default terms, which people without a location start on; England and Wales when left out."
+  defaultBankHolidayCalendar: BankHolidayCalendar
 }
 
 "One nation's terms: its working week and Annual leave policy."

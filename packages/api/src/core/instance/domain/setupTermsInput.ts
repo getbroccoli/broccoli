@@ -5,4 +5,6 @@
 export interface SetupTermsInput {
   terms: { bankHolidayCalendar: string; workingWeek: string; annualLeavePolicyId: string }[];
   locationTerms: { locationName: string; bankHolidayCalendar: string }[];
+  /** The nation of the default terms, which people without a location start on; England and Wales when left out. */
+  defaultBankHolidayCalendar?: string;
 }

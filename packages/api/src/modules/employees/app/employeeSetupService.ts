@@ -203,9 +203,19 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       await workingPatternRepository(tx).lockForWrites();
       const terms = termsRepository(tx);
       const defaultTermsId = await terms.findDefaultTermsId();
+      // Before any new terms, so "England and Wales" is free when another nation is the default.
+      await terms.rename(defaultTermsId, TERMS_NAMES[input.defaultBankHolidayCalendar]);
       const setUp: { termsId: string; patternId: string | null }[] = [];
       for (const { bankHolidayCalendar, workingWeek } of input.terms) {
-        setUp.push(await termsOnWeek(tx, defaultTermsId, bankHolidayCalendar, workingWeek));
+        const isDefault = bankHolidayCalendar === input.defaultBankHolidayCalendar;
+        setUp.push(
+          await termsOnWeek(
+            tx,
+            isDefault ? defaultTermsId : null,
+            bankHolidayCalendar,
+            workingWeek,
+          ),
+        );
       }
       const termsIds = setUp.map(({ termsId }) => termsId);
       const termsIdOf = (calendar: BankHolidayCalendar) =>
@@ -236,17 +246,18 @@ const TERMS_NAMES: Record<BankHolidayCalendar, string> = {
 };
 
 /**
- * A nation's terms on `week`: the default terms on Standard's week stay on Standard, which keeps
- * that week; otherwise a new pattern becomes the terms' only one.
+ * A nation's terms on `week`: the default terms, when `defaultTermsId` is given, stay on Standard
+ * for England and Wales on Standard's week; otherwise a new pattern on the nation's bank holidays
+ * becomes the terms' only one.
  */
 async function termsOnWeek(
   tx: Tx,
-  defaultTermsId: string,
+  defaultTermsId: string | null,
   calendar: BankHolidayCalendar,
   week: StandardWorkingWeek,
 ): Promise<{ termsId: string; patternId: string | null }> {
-  const isDefault = calendar === "england_and_wales";
-  if (isDefault && week === "monday_to_friday_7_5_hours") {
+  // England and Wales on Standard's week is what Standard already is.
+  if (defaultTermsId && calendar === "england_and_wales" && week === "monday_to_friday_7_5_hours") {
     return { termsId: defaultTermsId, patternId: null };
   }
   const patterns = workingPatternRepository(tx);
@@ -255,9 +266,7 @@ async function termsOnWeek(
     ...days,
     bankHolidayCalendar: calendar,
   });
-  const termsId = isDefault
-    ? defaultTermsId
-    : await termsRepository(tx).insert(TERMS_NAMES[calendar]);
+  const termsId = defaultTermsId ?? (await termsRepository(tx).insert(TERMS_NAMES[calendar]));
   // Only the default terms has a pattern yet: Standard, which the new one replaces.
   for (const link of (await patterns.findTermsLinks([termsId])).get(termsId) ?? []) {
     await patterns.deleteTermsLink(link.id);

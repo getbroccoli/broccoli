@@ -9,6 +9,41 @@ import {
   workingPatternService,
 } from "#test/support";
 
+test("requires terms for the chosen default nation without changing terms", async ({
+  orm,
+  transact,
+}) => {
+  const input = await scotlandTimeOffSetup(orm);
+  input.defaultBankHolidayCalendar = "scotland";
+  input.terms = [input.terms[0]!];
+  input.locationTerms = [];
+  const termsBefore = await readTimeOffTerms(orm);
+
+  await expect(
+    transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input)),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "terms", code: "required" }],
+  });
+
+  expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
+});
+
+test("refuses an unknown default nation without changing terms", async ({ orm, transact }) => {
+  const input = await scotlandTimeOffSetup(orm);
+  input.defaultBankHolidayCalendar = "unknown";
+  const termsBefore = await readTimeOffTerms(orm);
+
+  await expect(
+    transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input)),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "defaultBankHolidayCalendar", code: "invalid" }],
+  });
+
+  expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
+});
+
 test.for([
   ["bankHolidayCalendar", "unknown"],
   ["workingWeek", "unknown"],

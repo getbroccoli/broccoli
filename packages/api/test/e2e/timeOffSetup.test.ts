@@ -11,7 +11,7 @@ test("the setup holder can read time off choices and ask for a location's calend
 
   const response = await browser.graphql(`query {
     timeOffSetup {
-      annualLeavePolicies { id name }
+      annualLeavePolicies { id name daysForFiveDayWeek bankHolidaysOnTop }
       bankHolidayCalendars { calendar countThisYear }
     }
     locationCalendarSuggestions(locationNames: ["Glasgow"]) { locationName bankHolidayCalendar unsure }
@@ -21,26 +21,37 @@ test("the setup holder can read time off choices and ask for a location's calend
   const body = (await response.json()) as {
     data: {
       timeOffSetup: {
-        annualLeavePolicies: { id: string; name: string }[];
+        annualLeavePolicies: {
+          id: string;
+          name: string;
+          daysForFiveDayWeek: number;
+          bankHolidaysOnTop: boolean;
+        }[];
         bankHolidayCalendars: { calendar: string; countThisYear: number }[];
       };
     };
   };
   expect(body).not.toHaveProperty("errors");
-  expect(body.data.timeOffSetup.annualLeavePolicies).toHaveLength(3);
-  expect(body.data.timeOffSetup.annualLeavePolicies).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({ id: expect.any(String) as unknown, name: "UK statutory minimum" }),
-      expect.objectContaining({
-        id: expect.any(String) as unknown,
-        name: "20 days plus bank holidays",
-      }),
-      expect.objectContaining({
-        id: expect.any(String) as unknown,
-        name: "25 days plus bank holidays",
-      }),
-    ]),
-  );
+  expect(body.data.timeOffSetup.annualLeavePolicies).toEqual([
+    {
+      id: expect.any(String) as unknown,
+      name: "20 days plus bank holidays",
+      daysForFiveDayWeek: 20,
+      bankHolidaysOnTop: true,
+    },
+    {
+      id: expect.any(String) as unknown,
+      name: "25 days plus bank holidays",
+      daysForFiveDayWeek: 25,
+      bankHolidaysOnTop: true,
+    },
+    {
+      id: expect.any(String) as unknown,
+      name: "UK statutory minimum",
+      daysForFiveDayWeek: 28,
+      bankHolidaysOnTop: false,
+    },
+  ]);
   expect(body.data.timeOffSetup.bankHolidayCalendars).toHaveLength(3);
   expect(body.data.timeOffSetup.bankHolidayCalendars).toEqual(
     expect.arrayContaining([

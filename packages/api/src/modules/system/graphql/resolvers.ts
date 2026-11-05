@@ -179,7 +179,11 @@ function toMailGraphql(mail: MailConfig | null) {
 }
 
 /** The time off choice as turning time off on takes it: enum values are its values in capitals. */
-function setupTermsInput({ terms, locationTerms }: ResolversTypes["TurnOnTimeOffInput"]) {
+function setupTermsInput({
+  terms,
+  locationTerms,
+  defaultBankHolidayCalendar,
+}: ResolversTypes["TurnOnTimeOffInput"]) {
   return {
     terms: terms.map(({ bankHolidayCalendar, workingWeek, annualLeavePolicyId }) => ({
       bankHolidayCalendar: bankHolidayCalendar.toLowerCase(),
@@ -190,5 +194,6 @@ function setupTermsInput({ terms, locationTerms }: ResolversTypes["TurnOnTimeOff
       locationName,
       bankHolidayCalendar: bankHolidayCalendar.toLowerCase(),
     })),
+    defaultBankHolidayCalendar: defaultBankHolidayCalendar?.toLowerCase(),
   };
 }

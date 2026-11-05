@@ -10,6 +10,56 @@ import {
   workingPatternService,
 } from "#test/support";
 
+test("a Scotland default gives people without a location Scotland's calendar on the Standard week", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  const patterns = workingPatternService(orm);
+  const input = await scotlandTimeOffSetup(orm);
+  input.defaultBankHolidayCalendar = "scotland";
+  input.terms = [{ ...input.terms[1]!, workingWeek: "monday_to_friday_7_5_hours" }];
+  input.locationTerms = [];
+
+  const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
+
+  expect(result.createdPatternIds).toHaveLength(1);
+  expect(await readTimeOffTerms(orm)).toMatchObject([
+    {
+      id: await seed.defaultTermsId(),
+      key: "default_terms",
+      name: "Scotland",
+      patterns: [
+        {
+          workingPatternId: result.createdPatternIds[0],
+          effectiveFrom: null,
+          effectiveUntil: null,
+        },
+      ],
+    },
+  ]);
+  const saved = await patterns.listPatterns(OWNER);
+  expect(saved).toHaveLength(2);
+  expect(saved.find(({ id }) => id === result.createdPatternIds[0])).toMatchObject({
+    isStandard: false,
+    weeks: [
+      {
+        effectiveFrom: null,
+        minutes: [450, 450, 450, 450, 450, 0, 0],
+        fullDayMinutes: 450,
+        bankHolidayCalendar: "scotland",
+      },
+    ],
+  });
+  const weeks = await patterns.readWorkingWeeks(OWNER, {
+    employeeIds: [employee.id],
+    from: "2026-01-01",
+    until: "2026-12-31",
+  });
+  expect(weeks.get(employee.id)).toMatchObject([{ bankHolidayCalendar: "scotland" }]);
+});
+
 test("turning time off on twice refuses the second choice and keeps the first", async ({
   orm,
   seed,
