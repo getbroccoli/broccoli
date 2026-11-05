@@ -65,6 +65,10 @@ type LeaveSetup {
 type LeavePolicy {
   id: ID!
   name: String!
+  "The yearly allowance for a Monday-to-Friday week."
+  daysForFiveDayWeek: Float!
+  "True when bank holidays come on top of those days, false when they are taken from them."
+  bankHolidaysOnTop: Boolean!
 }
 
 "How many bank holidays a nation has this year."

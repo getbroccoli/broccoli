@@ -9,7 +9,7 @@ import {
   type BankHolidayService,
 } from "../../bankHolidays";
 import { timeOffPolicyRepository } from "../db";
-import type { StandardLeavePolicyKey } from "../domain";
+import type { AllowanceRule, StandardLeavePolicyKey } from "../domain";
 
 /** The choices of the Set up leave page, and the model's suggestion for each location. Admins only. */
 export interface LeaveSetupService {
@@ -27,7 +27,12 @@ export interface LeaveSetupService {
 /** What the Set up leave page offers. */
 export interface LeaveSetup {
   /** The standard Annual leave policies, the UK statutory minimum first. */
-  annualLeavePolicies: { id: string; name: string }[];
+  annualLeavePolicies: {
+    id: string;
+    name: string;
+    daysForFiveDayWeek: number;
+    bankHolidaysOnTop: boolean;
+  }[];
   /** Each nation's bank holidays this year (London). */
   bankHolidayCalendars: { calendar: BankHolidayCalendar; countThisYear: number }[];
 }
@@ -65,8 +70,13 @@ export function createLeaveSetupService({
       });
       return {
         annualLeavePolicies: STANDARD_LEAVE_POLICY_KEYS.map((key) => {
-          const { id, name } = policies.find((policy) => policy.key === key)!;
-          return { id, name };
+          const { id, name, rules, bankHolidays } = policies.find((policy) => policy.key === key)!;
+          return {
+            id,
+            name,
+            daysForFiveDayWeek: daysForFiveDayWeek(rules),
+            bankHolidaysOnTop: bankHolidays === "bank_holidays_on_top_of_allowance",
+          };
         }),
         bankHolidayCalendars: BANK_HOLIDAY_CALENDARS.map((calendar) => ({
           calendar,
@@ -95,6 +105,14 @@ export function createLeaveSetupService({
       return suggestions;
     },
   };
+}
+
+/** A yearly entitlement pro-rated to five days a week and capped, as the allowance engine does. */
+function daysForFiveDayWeek(rules: readonly AllowanceRule[]): number {
+  // Every Annual leave policy has one.
+  const yearly = rules.find((rule) => rule.kind === "yearly_entitlement")!;
+  const days = (yearly.entitlementDays * 5) / yearly.entitlementDaysPerWeek;
+  return yearly.maxDays === null ? days : Math.min(days, yearly.maxDays);
 }
 
 /** One request covers a large company's offices; any beyond are left to the owner. */

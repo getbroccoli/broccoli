@@ -11,7 +11,7 @@ test("the setup holder can read leave choices and ask for a location's calendar"
 
   const response = await browser.graphql(`query {
     leaveSetup {
-      annualLeavePolicies { id name }
+      annualLeavePolicies { id name daysForFiveDayWeek bankHolidaysOnTop }
       bankHolidayCalendars { calendar countThisYear }
     }
     locationCalendarSuggestions(locationNames: ["Glasgow"]) { locationName bankHolidayCalendar unsure }
@@ -21,7 +21,12 @@ test("the setup holder can read leave choices and ask for a location's calendar"
   const body = (await response.json()) as {
     data: {
       leaveSetup: {
-        annualLeavePolicies: { id: string; name: string }[];
+        annualLeavePolicies: {
+          id: string;
+          name: string;
+          daysForFiveDayWeek: number;
+          bankHolidaysOnTop: boolean;
+        }[];
         bankHolidayCalendars: { calendar: string; countThisYear: number }[];
       };
     };
@@ -30,14 +35,23 @@ test("the setup holder can read leave choices and ask for a location's calendar"
   expect(body.data.leaveSetup.annualLeavePolicies).toHaveLength(3);
   expect(body.data.leaveSetup.annualLeavePolicies).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ id: expect.any(String) as unknown, name: "UK statutory minimum" }),
+      expect.objectContaining({
+        id: expect.any(String) as unknown,
+        name: "UK statutory minimum",
+        daysForFiveDayWeek: 28,
+        bankHolidaysOnTop: false,
+      }),
       expect.objectContaining({
         id: expect.any(String) as unknown,
         name: "20 days plus bank holidays",
+        daysForFiveDayWeek: 20,
+        bankHolidaysOnTop: true,
       }),
       expect.objectContaining({
         id: expect.any(String) as unknown,
         name: "25 days plus bank holidays",
+        daysForFiveDayWeek: 25,
+        bankHolidaysOnTop: true,
       }),
     ]),
   );
