@@ -1,7 +1,9 @@
+import { useFragment } from "@apollo/client/react";
 import { CaretUp, SignOut, User } from "@phosphor-icons/react";
 import { Link, useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { ProfileMenu_EmployeeFragmentDoc } from "@/__generated__/graphql";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +32,10 @@ export function ProfileMenu() {
     setSignOutFailed(!signedOut);
     return signedOut;
   });
+  // From the cache, so edits to your own panel show here at once.
+  const employee = useFragment({ fragment: ProfileMenu_EmployeeFragmentDoc, from: me.employee });
   // A user without a person record, such as the owner, goes by their email.
-  const person = me.employee ?? {
+  const person = (employee.complete && employee.data) || {
     firstName: me.email,
     lastName: "",
     jobTitle: null,
