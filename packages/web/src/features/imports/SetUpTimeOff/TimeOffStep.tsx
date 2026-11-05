@@ -142,7 +142,7 @@ export function TimeOffStep({ search }: Props) {
                 className="h-10 gap-2 px-4"
                 disabled={!data || suggested.loading}
               >
-                {t("setup.timeOff.turnOn")}
+                {t("setup.timeOff.useDefaults")}
                 <ArrowRight weight="bold" aria-hidden />
               </Button>
             </div>

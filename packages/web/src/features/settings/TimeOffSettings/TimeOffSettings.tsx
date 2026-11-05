@@ -17,7 +17,7 @@ export function TimeOffSettings() {
   });
 
   return (
-    <section aria-labelledby="time-off-settings-title" className="flex max-w-3xl flex-col gap-4">
+    <section aria-labelledby="time-off-settings-title" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h2 id="time-off-settings-title" className="text-lg font-semibold">
           {t("settings.timeOff.title")}
