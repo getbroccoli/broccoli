@@ -2,7 +2,7 @@ import {
   ADMIN,
   EMPLOYEE,
   expect,
-  linkStatutoryMinimumToEnglandAndWales,
+  linkStatutoryMinimumToDefaultTerms,
   seedTimeOff,
   seedTimeOffPolicy,
   seedTimeOffType,
@@ -135,7 +135,7 @@ test("counts the people who have a time off type today", async ({ orm, seed, tra
   await seed.employee({ startDate: "2025-01-01" });
   const withoutTerms = await seed.employee({ startDate: "2025-01-01" });
   await seed.leaveTerms(withoutTerms.id);
-  await linkStatutoryMinimumToEnglandAndWales(orm, seed, transact);
+  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
   const service = timeOffService(orm, { today: "2026-11-05" });
 
   const result = await service.listTimeOffTypes(ADMIN);
