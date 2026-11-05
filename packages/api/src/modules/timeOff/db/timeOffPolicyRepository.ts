@@ -1,15 +1,17 @@
 import { eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
-import type { AllowanceRule, DatedPolicyRow, TimeOffPolicy } from "../domain";
+import type { AllowanceRule, DatedPolicyRow, TimeOffPolicy, TimeOffType } from "../domain";
 import { termsTimeOffPolicies } from "./termsTimeOffPoliciesTable";
 import { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
 import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
 import { timeOffTypes } from "./timeOffTypesTable";
 
-/** Time off policies, who gets them and when, through the pool or inside a transaction. */
+/** Time off types and policies, who gets them and when, through the pool or inside a transaction. */
 export interface TimeOffPolicyRepository {
+  /** Every time off type, with or without a policy. */
+  findAllTypes(): Promise<TimeOffType[]>;
   /** Every policy with its type and current rules, by type and name. */
   findAll(): Promise<TimeOffPolicy[]>;
   /** Serializes changes to terms' links until the transaction ends. */
@@ -31,6 +33,9 @@ export interface TimeOffPolicyRepository {
 export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
   const orm = () => ormOf(db);
   return {
+    async findAllTypes() {
+      return (await orm().select().from(timeOffTypes)).map(toTimeOffType);
+    },
     async findAll() {
       const policies = await orm()
         .select({ policy: timeOffPolicies, type: timeOffTypes })
@@ -45,7 +50,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         id: policy.id,
         name: policy.name,
         key: policy.key,
-        timeOffType: { id: type.id, name: type.name, typeKey: type.typeKey },
+        timeOffType: toTimeOffType(type),
         balance: policy.balance,
         bankHolidays: policy.bankHolidays,
         leaveYear:
@@ -115,4 +120,8 @@ function toRule(row: typeof timeOffAllowanceRules.$inferSelect): AllowanceRule {
         afterYears: row.afterYears!,
         extraDays: Number(row.extraDays),
       };
+}
+
+function toTimeOffType({ id, name, typeKey, icon, colour }: typeof timeOffTypes.$inferSelect) {
+  return { id, name, typeKey, icon, colour };
 }

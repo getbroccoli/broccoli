@@ -167,7 +167,13 @@ test("returns used days and null figures for a person's unlimited policy", async
 
   expect(rows.get(employee.id)).toEqual([
     {
-      timeOffType: { id: policy.timeOffTypeId, name: "Wellbeing days", typeKey: null },
+      timeOffType: {
+        id: policy.timeOffTypeId,
+        name: "Wellbeing days",
+        typeKey: null,
+        icon: null,
+        colour: null,
+      },
       balance: "unlimited_balance",
       periodStart: "2026-01-01",
       periodEnd: "2026-12-31",

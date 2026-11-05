@@ -20,6 +20,7 @@ export {
   leaveYearContaining,
   type StandardLeavePolicyKey,
   type TimeOffPolicy,
+  type TimeOffType,
   type TimeOffTypeKey,
 } from "./timeOffPolicy";
 export { timeOffFigures, type LedgerLineKind, type TimeOffFigures } from "./timeOffFigures";

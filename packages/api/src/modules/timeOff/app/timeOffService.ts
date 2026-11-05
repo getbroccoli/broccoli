@@ -14,6 +14,7 @@ import {
 import { timeOffPolicyRepository } from "../db";
 import type { AllowanceCause, DatedPolicyRow, TimeOffPolicy } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
+import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 
 const employeeSetup = createEmployeeSetupService();
@@ -67,6 +68,8 @@ export interface TimeOffService {
     ctx: SecurityContext,
     input: { employeeIds: readonly string[] },
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
+  /** Every time off type for Settings, in list order, and how many people have one today. */
+  listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
   /** Unlinks all terms' policies when setup or the demo goes back to its start. */
   deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
@@ -179,6 +182,7 @@ export function createTimeOffService({
     },
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
+    listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, employeeReads, today }, ctx),
     async deleteAllTermsPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).deleteAllTermsLinks();
