@@ -1,6 +1,7 @@
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
+import { formatDays } from "@/lib/formatDays";
 
 import { TimeOffFigure } from "./TimeOffFigure";
 
@@ -64,7 +65,7 @@ export function TimeOffSection({ timeOffTypes }: Props) {
             </dl>
           ) : (
             <p className="px-3 py-2.5 text-sm">
-              {t("people.panel.timeOff.unlimited", { days: daysText(type.used) })}
+              {t("people.panel.timeOff.unlimited", { days: formatDays(type.used) })}
             </p>
           )}
         </section>
@@ -83,7 +84,7 @@ export function TimeOffSection({ timeOffTypes }: Props) {
                 )}
               </dt>
               <dd className="text-muted-foreground">
-                {t("people.panel.timeOff.recorded", { days: daysText(type.used) })}
+                {t("people.panel.timeOff.recorded", { days: formatDays(type.used) })}
               </dd>
             </div>
           ))}
@@ -91,12 +92,6 @@ export function TimeOffSection({ timeOffTypes }: Props) {
       )}
     </section>
   );
-}
-
-function daysText(days: number): string {
-  return t(days === 1 ? "people.panel.timeOff.day" : "people.panel.timeOff.days", {
-    count: dayCount.format(days),
-  });
 }
 
 /** "2026" for a calendar year, else the date range. */

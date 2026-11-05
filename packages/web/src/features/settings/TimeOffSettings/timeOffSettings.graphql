@@ -1,0 +1,15 @@
+query TimeOffSettings {
+  timeOffSettings {
+    peopleWithTimeOff
+    timeOffTypes {
+      timeOffType {
+        id
+        name
+        icon
+        colour
+      }
+      balance
+      daysTakenThisYear
+    }
+  }
+}
