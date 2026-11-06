@@ -6,6 +6,7 @@ import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import {
+  createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
   timeOffModule,
@@ -39,6 +40,17 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The time off policy service on `orm`, with the engine of `timeOffService`; `today` is its date. */
+export function timeOffPolicyService(orm: Orm, { today = "2026-06-01" }: { today?: string } = {}) {
+  return createTimeOffPolicyService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+    timeOff: timeOffService(orm, { today }),
     today: () => today as CalendarDate,
   });
 }

@@ -4,5 +4,6 @@ export const codegenMappers = {
   EmployeesMutations: "Record<PropertyKey, never>",
   Employee: "../../modules/employees/domain#Employee as EmployeeModel",
   Terms: "../../modules/employees/app#TermsOverview as TermsModel",
+  WorkingPattern: "../../modules/employees/domain#WorkingPattern as WorkingPatternModel",
   WorkingWeekVersion: "../../modules/employees/domain#PatternVersion as WorkingWeekVersionModel",
 };

@@ -45,7 +45,7 @@ CREATE TABLE "allowances" (
 --> statement-breakpoint
 CREATE TABLE "time_off_allowance_rules" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
-	"time_off_policy_version_id" uuid NOT NULL,
+	"time_off_policy_version_id" uuid,
 	"kind" text NOT NULL,
 	"entitlement_days" numeric,
 	"entitlement_days_per_week" integer,
@@ -142,7 +142,7 @@ ALTER TABLE "allowance_ledger_lines" ADD CONSTRAINT "allowance_ledger_lines_allo
 ALTER TABLE "allowance_ledger_lines" ADD CONSTRAINT "allowance_ledger_lines_time_off_day_id_time_off_days_id_fk" FOREIGN KEY ("time_off_day_id") REFERENCES "public"."time_off_days"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "allowance_ledger_lines" ADD CONSTRAINT "allowance_ledger_lines_allowance_rule_fk" FOREIGN KEY ("allowance_rule_id") REFERENCES "public"."time_off_allowance_rules"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "allowances" ADD CONSTRAINT "allowances_time_off_type_id_time_off_types_id_fk" FOREIGN KEY ("time_off_type_id") REFERENCES "public"."time_off_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_off_allowance_rules" ADD CONSTRAINT "time_off_allowance_rules_version_fk" FOREIGN KEY ("time_off_policy_version_id") REFERENCES "public"."time_off_policy_versions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "time_off_allowance_rules" ADD CONSTRAINT "time_off_allowance_rules_version_fk" FOREIGN KEY ("time_off_policy_version_id") REFERENCES "public"."time_off_policy_versions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_days" ADD CONSTRAINT "time_off_days_time_off_id_time_off_id_fk" FOREIGN KEY ("time_off_id") REFERENCES "public"."time_off"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_policies" ADD CONSTRAINT "time_off_policies_time_off_type_id_time_off_types_id_fk" FOREIGN KEY ("time_off_type_id") REFERENCES "public"."time_off_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_policy_versions" ADD CONSTRAINT "time_off_policy_versions_policy_fk" FOREIGN KEY ("time_off_policy_id") REFERENCES "public"."time_off_policies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

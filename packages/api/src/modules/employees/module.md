@@ -34,12 +34,13 @@ That pattern's version on that date gives the minutes, the full day and whose ba
 
 ### Rules
 
-- Every change is dated, and earlier dates keep what they had. A change with a past date is a correction; replacing a row on the same date or removing one is a correction too.
-- A version is never edited: a change ends the version covering its date the day before and adds one from it; removing a version extends the one before it to its end. A person's own assignment changes the same way.
+- Every change is dated, and earlier dates keep what they had. A change with a past date is a correction; replacing a row on the same date is a correction too.
+- A version is never edited: a change ends the version covering its date the day before and adds one from it, and a later planned version stays. A person's own assignment changes the same way.
+- A pattern changes from no earlier than 1 January of the current year, the start of the current leave year: a closed leave year's allowances are never worked out again. Cancelling removes only a version that has not started (CONFLICT otherwise), and extends the one before it to its end (`domain/datedChange.ts`, shared with time off policies).
 - A terms' own pattern changes only through its versions and goes with its terms; it cannot be renamed, deleted or assigned on its own.
 - The **full day** is the minutes one day of leave stands for. It is at least the longest weekday, so a day of leave never costs more than 1. Time off costs a day as that day's minutes ÷ the full day.
 - Only admins change working patterns and assignments. A person's working pattern is readable by them, everyone above them in the reporting line, and admins.
-- Changes to a person's own assignment are written to history as the `working_pattern` record type, apart from the employee's own history, since not everyone who reads a person may read their working pattern; a terms' own pattern appears under the terms' name. Resetting all employees purges both.
+- Changes to a person's own assignment are written to history as the `working_pattern` record type, apart from the employee's own history, since not everyone who reads a person may read their working pattern; a terms' own pattern appears under the terms' name. A change or cancel of a terms' own pattern adds one `terms` line, field `workingWeek`, with the week before and after as JSON with its start date. Resetting all employees purges both.
 - Every change that can move someone's working weeks publishes `employees.working_pattern_changed` with the people concerned and the first date that changed. Other modules read working weeks through `WorkingPatternService.readWorkingWeeks`, never these tables.
 
 ### Bank holidays

@@ -12,6 +12,8 @@ type Props = {
   onChange: (value: string) => void;
   placeholder: string;
   autoFocus?: boolean;
+  /** The earliest `YYYY-MM-DD` date that can be picked. */
+  fromDate?: string;
   "aria-label"?: string;
   "aria-invalid"?: boolean;
 };
@@ -25,6 +27,7 @@ export function DatePicker({
   onChange,
   placeholder,
   autoFocus,
+  fromDate,
   "aria-label": label,
   "aria-invalid": invalid,
 }: Props) {
@@ -57,6 +60,7 @@ export function DatePicker({
           mode="single"
           selected={selected}
           defaultMonth={selected}
+          disabled={fromDate ? { before: toDate(fromDate)! } : undefined}
           onSelect={(date) => {
             onChange(date ? toCalendarDate(date) : "");
             setOpen(false);

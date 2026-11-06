@@ -1031,7 +1031,7 @@
           "name": "time_off_policy_version_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "kind": {
           "name": "kind",
@@ -1110,7 +1110,7 @@
           "tableTo": "time_off_policy_versions",
           "columnsFrom": ["time_off_policy_version_id"],
           "columnsTo": ["id"],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },

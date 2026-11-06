@@ -8,7 +8,12 @@ import {
   type PersonTimeline,
   createPersonTimeline,
 } from "../../employees";
-import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
+import {
+  type Allowance,
+  allowanceRepository,
+  type PolicyAssignment,
+  timeOffPolicyRepository,
+} from "../db";
 import {
   type AllowanceCause,
   type AllowanceInputs,
@@ -107,13 +112,7 @@ export async function readPeople(
       serviceStart: periods[0]?.startDate ?? null,
       timelineOf: (timeOffTypeId: string) =>
         createPersonTimeline({
-          direct: (assignments.get(employeeId) ?? [])
-            .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
-            .map(({ timeOffPolicyId, startDate, endDate }) => ({
-              id: timeOffPolicyId,
-              startDate,
-              endDate,
-            })),
+          direct: ownPoliciesOf(assignments.get(employeeId) ?? [], timeOffTypeId),
           terms: memberships.get(employeeId) ?? [],
           idOfTerms: (termsId: string) => termsPolicyIds.get(`${termsId}:${timeOffTypeId}`) ?? null,
           versions: (policyId: string) => byId.get(policyId)?.versions ?? [],
@@ -122,6 +121,17 @@ export async function readPeople(
     };
   });
   return { people, policies };
+}
+
+/** A person's own policies for one type, dated, as their timeline reads them. */
+export function ownPoliciesOf(assignments: readonly PolicyAssignment[], timeOffTypeId: string) {
+  return assignments
+    .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
+    .map(({ timeOffPolicyId, startDate, endDate }) => ({
+      id: timeOffPolicyId,
+      startDate,
+      endDate,
+    }));
 }
 
 /** The allowances to create: one per person and type that has none for the year needed. */

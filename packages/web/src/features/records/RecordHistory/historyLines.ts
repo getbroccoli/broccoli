@@ -18,7 +18,7 @@ export type Summary =
   | { kind: "changed"; label: string; oldValue: string | null; newValue: string | null }
   | { kind: "updatedMany"; labels: string[] }
   | { kind: "created"; title: string | null; labels: string[] }
-  | { kind: "createdAs"; text: string }
+  | { kind: "sentence"; text: string }
   | { kind: "deleted"; title: string | null };
 
 /** Lines in their order, grouped by calendar day in `timeZone`: "Today", "Yesterday", "21 Oct". */
@@ -53,7 +53,7 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
     case "CREATED":
       return description.createdAs
         ? {
-            kind: "createdAs",
+            kind: "sentence",
             text: t(description.createdAs, { title: titleChange?.newValue ?? "" }),
           }
         : { kind: "created", title: titleChange?.newValue ?? null, labels };
@@ -64,6 +64,10 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
         return { kind: "updatedMany", labels };
       }
       const [change] = line.changes as [FieldChange];
+      const sentence = description.changedAs?.(change);
+      if (sentence) {
+        return { kind: "sentence", text: sentence };
+      }
       return { kind: "changed", label: labelOf(change.field), ...shownValues(change, description) };
     }
   }
