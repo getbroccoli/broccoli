@@ -77,6 +77,7 @@ query EmploymentTermsStack($id: ID!) {
         name
         icon
         colour
+        private
       }
       versions {
         id

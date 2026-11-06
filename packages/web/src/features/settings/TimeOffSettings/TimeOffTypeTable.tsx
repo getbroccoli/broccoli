@@ -2,15 +2,18 @@ import type { TimeOffBalanceKind, TimeOffSettingsQuery } from "@/__generated__/g
 import { t } from "@/i18n";
 import { formatDays } from "@/lib/formatDays";
 
+import type { ListedTimeOffType } from "./TimeOffTypeDialog";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 
 type Props = {
   /** Every time off type, in the server's order. */
   timeOffTypes: TimeOffSettingsQuery["timeOffSettings"]["timeOffTypes"];
+  /** Opens a type to change its name, look and privacy. */
+  onEdit: (timeOffType: ListedTimeOffType) => void;
 };
 
 /** The time off types as a table of name, how each counts and the days taken this year. */
-export function TimeOffTypeTable({ timeOffTypes }: Props) {
+export function TimeOffTypeTable({ timeOffTypes, onEdit }: Props) {
   if (timeOffTypes.length === 0) {
     return (
       <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground">
@@ -36,12 +39,25 @@ export function TimeOffTypeTable({ timeOffTypes }: Props) {
         </thead>
         <tbody>
           {timeOffTypes.map(({ timeOffType, balance, daysTakenThisYear }) => (
-            <tr key={timeOffType.id} className="border-b border-border last:border-0">
+            <tr
+              key={timeOffType.id}
+              className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
+              // The name's button is the keyboard way in; the whole row is a larger target.
+              onClick={() => onEdit(timeOffType)}
+            >
               <th scope="row" className="px-4 py-3 text-left font-semibold">
-                <span className="flex items-center gap-3">
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  className="flex items-center gap-3 rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEdit(timeOffType);
+                  }}
+                >
                   <TimeOffTypeIcon icon={timeOffType.icon} colour={timeOffType.colour} />
                   <span className="min-w-0 [overflow-wrap:anywhere]">{timeOffType.name}</span>
-                </span>
+                </button>
               </th>
               <td className="px-4 py-3 text-muted-foreground">{countsText(balance)}</td>
               <td className="px-4 py-3 text-right tabular-nums">

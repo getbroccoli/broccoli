@@ -38,6 +38,7 @@ export const termsEn = {
   "terms.timeOff.title": "Time off",
   "terms.timeOff.description": "What people on these terms can book, and how much.",
   "terms.timeOff.notOffered": "Not offered here. People on {terms} can't book it.",
+  "terms.timeOff.private": "Private",
   "terms.locations.title": "Locations",
   "terms.locations.description": "New people in these locations start on these terms.",
   "terms.locations.defaultDescription":
