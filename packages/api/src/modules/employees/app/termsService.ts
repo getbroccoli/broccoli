@@ -54,8 +54,6 @@ export function createTermsService({
   today?: () => CalendarDate;
 }): TermsService {
   const history = createRecordHistoryReaderService(orm, { terms: termsRecordType(orm) });
-  const readOverview = async (db: Orm | Tx, termsId: string) =>
-    (await readTermsOverviews(db, today(), [termsId]))[0];
   return {
     async listTerms(ctx) {
       ctx.require("MANAGE_WORKSPACE");
@@ -64,7 +62,7 @@ export function createTermsService({
     async readTerms(ctx, id) {
       ctx.require("MANAGE_WORKSPACE");
       const termsId = parseUuid(id);
-      return termsId ? ((await readOverview(orm, termsId)) ?? null) : null;
+      return termsId ? ((await readOverview(orm, today(), termsId)) ?? null) : null;
     },
     readTermsHistory: (ctx, termsId, args) => history.readHistory(ctx, "terms", termsId, args),
 
@@ -83,7 +81,7 @@ export function createTermsService({
         }),
       );
       logger.info({ termsId, bankHolidayCalendar }, "Created terms");
-      return (await readOverview(orm, termsId))!;
+      return (await readOverview(orm, today(), termsId))!;
     },
 
     async updateTerms(ctx, input) {
@@ -107,7 +105,7 @@ export function createTermsService({
       if (renamed) {
         logger.info({ termsId }, "Renamed terms");
       }
-      return (await readOverview(orm, termsId))!;
+      return (await readOverview(orm, today(), termsId))!;
     },
 
     async deleteTerms(ctx, input) {
@@ -118,7 +116,7 @@ export function createTermsService({
         if (!terms) {
           throw termsNotFound();
         }
-        const { deleteBlocker, locations } = (await readOverview(tx, termsId))!;
+        const { deleteBlocker, locations } = (await readOverview(tx, today(), termsId))!;
         if (deleteBlocker) {
           const names = locations.map(({ name }) => name);
           throw new ApplicationError("CONFLICT", deleteRefusal(deleteBlocker, names));
@@ -133,6 +131,15 @@ export function createTermsService({
 }
 
 const recordHistory = createRecordHistoryService();
+
+/** One set of terms as Settings shows it; undefined when none has the id. */
+async function readOverview(
+  db: Orm | Tx,
+  date: CalendarDate,
+  termsId: string,
+): Promise<TermsOverview | undefined> {
+  return (await readTermsOverviews(db, date, [termsId]))[0];
+}
 
 /** One history line on the terms naming them: created (from null), renamed, or deleted (to null). */
 async function recordNameChange(

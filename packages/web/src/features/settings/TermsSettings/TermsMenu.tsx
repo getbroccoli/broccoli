@@ -53,7 +53,9 @@ export function TermsMenu({ terms }: Props) {
       return;
     }
     toast(t("terms.delete.done", { name: terms.name }));
-    void navigate({ to: "/settings/terms" });
+    // Closed first, so the open stack does not fetch the deleted terms again.
+    await navigate({ to: "/settings/terms" });
+    forgetTerms(cache, terms.id);
   };
 
   return (

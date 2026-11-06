@@ -38,6 +38,8 @@ export interface TermsRepository {
   findMemberships(employeeIds: readonly string[]): Promise<Map<string, TermsMembership[]>>;
   /** The employees on each of the terms on any date, by terms id; terms without any are left out. */
   findMemberIds(termsIds: readonly string[]): Promise<Map<string, string[]>>;
+  /** The terms among `termsIds` that anyone was ever on, on any date. */
+  findEverJoined(termsIds: readonly string[]): Promise<Set<string>>;
   /** Every set of terms, the default first, then by name ignoring case. */
   findAll(): Promise<Terms[]>;
   /**
@@ -149,6 +151,14 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
           members.map(({ employeeId }) => employeeId),
         ]),
       );
+    },
+
+    async findEverJoined(termsIds) {
+      const rows = await orm()
+        .selectDistinct({ termsId: employeeTerms.termsId })
+        .from(employeeTerms)
+        .where(inArray(employeeTerms.termsId, [...termsIds]));
+      return new Set(rows.map(({ termsId }) => termsId));
     },
 
     async findAll() {

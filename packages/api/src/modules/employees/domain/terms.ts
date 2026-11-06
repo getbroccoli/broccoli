@@ -13,9 +13,7 @@ export interface Terms {
 
 /** Why terms cannot be deleted; deleting them would change where people start or rewrite history. */
 export type TermsDeleteBlocker =
-  | "default_terms"
-  | "terms_had_people"
-  | "location_starts_people_on_terms";
+  "default_terms" | "terms_had_people" | "location_starts_people_on_terms";
 
 /** Other terms already have this name, ignoring case and surrounding spaces. */
 export class TermsNameTakenError extends Error {
@@ -46,7 +44,10 @@ export function deleteBlockerOf(
 }
 
 /** The sentence a refused delete gives, naming the locations that start people on the terms. */
-export function deleteRefusal(blocker: TermsDeleteBlocker, locationNames: readonly string[]): string {
+export function deleteRefusal(
+  blocker: TermsDeleteBlocker,
+  locationNames: readonly string[],
+): string {
   switch (blocker) {
     case "default_terms":
       return "The default terms stay, because people without a location start on them.";
@@ -64,4 +65,7 @@ function listed(names: readonly string[]): string {
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 }
 
-const termsSchema = z.object({ name: z.string().trim().min(1).max(100) });
+/** As long as a location's name, so either fits the same columns in Settings. */
+const NAME_MAX_LENGTH = 100;
+
+const termsSchema = z.object({ name: z.string().trim().min(1).max(NAME_MAX_LENGTH) });

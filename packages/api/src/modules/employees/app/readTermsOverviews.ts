@@ -30,7 +30,7 @@ export async function readTermsOverviews(
   const allTerms = await termsRepository(db).findAll();
   const shown = allTerms.filter(({ id }) => !termsIds || termsIds.includes(id));
   const peopleCounts = await termsRepository(db).countMembersOn(date);
-  const memberIds = await termsRepository(db).findMemberIds(shown.map(({ id }) => id));
+  const everJoined = await termsRepository(db).findEverJoined(shown.map(({ id }) => id));
   const locations = await locationRepository(db).findWithStartingTerms();
   const patterns = await workingPatternRepository(db).findPatterns();
   const defaultTermsId = allTerms.find(({ isDefault }) => isDefault)?.id;
@@ -46,7 +46,7 @@ export async function readTermsOverviews(
         ({ endDate }) => endDate === null || endDate >= date,
       ),
       deleteBlocker: deleteBlockerOf(terms, {
-        hadPeople: memberIds.has(terms.id),
+        hadPeople: everJoined.has(terms.id),
         locationCount: termsLocations.length,
       }),
     };
