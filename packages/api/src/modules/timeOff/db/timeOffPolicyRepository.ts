@@ -153,6 +153,11 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
     async deleteAll() {
       await orm().delete(timeOffPolicies);
       await orm().delete(timeOffTypes).where(isNull(timeOffTypes.typeKey));
+      // Seeded types may hold each other's names; free them all before restoring any.
+      await orm()
+        .update(timeOffTypes)
+        .set({ name: sql`${timeOffTypes.id}::text` })
+        .where(isNotNull(timeOffTypes.typeKey));
       for (const [typeKey, identity] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
         await orm()
           .update(timeOffTypes)

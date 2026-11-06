@@ -300,6 +300,38 @@ test("starting over removes added types and restores the standard types", async 
   expect(await service.listTimeOffTypes(ADMIN)).toEqual(before);
 });
 
+test("starting over restores standard names that other standard types took", async ({
+  orm,
+  transact,
+}) => {
+  const service = timeOffService(orm);
+  const before = await service.listTimeOffTypes(ADMIN);
+  const annualLeave = before.timeOffTypes.find(
+    ({ timeOffType }) => timeOffType.typeKey === "annual_leave",
+  )!.timeOffType;
+  const other = before.timeOffTypes.find(
+    ({ timeOffType }) => timeOffType.typeKey === "other",
+  )!.timeOffType;
+  await service.changeType(ADMIN, {
+    id: annualLeave.id,
+    name: "Holiday",
+    icon: "sun",
+    colour: "green",
+    private: false,
+  });
+  await service.changeType(ADMIN, {
+    id: other.id,
+    name: "Annual leave",
+    icon: "confetti",
+    colour: "yellow",
+    private: false,
+  });
+
+  await transact((tx) => deleteAllEmployees(orm)(OWNER, tx));
+
+  expect(await service.listTimeOffTypes(ADMIN)).toEqual(before);
+});
+
 const studyLeave = {
   name: "Study leave",
   icon: "graduation_cap",
