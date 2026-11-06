@@ -57,4 +57,9 @@ export const termsEn = {
   "terms.rule.leaveYearFromStart": "Leave year from each person's start date",
   "terms.planned": "From {date}: {rule}",
   "terms.history.name": "Name",
+  "terms.history.weekChanged": "changed the working week to {week}, from {date}",
+  "terms.history.weekCancelled": "cancelled the change to the working week from {date}",
+  "terms.history.rulesChanged": "changed {type} to {rule}, from {date}",
+  "terms.history.offered": "offered {type} from {date}: {rule}",
+  "terms.history.rulesCancelled": "cancelled the change to {type} from {date}",
 } as const;
