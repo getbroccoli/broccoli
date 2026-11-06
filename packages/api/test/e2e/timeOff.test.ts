@@ -83,22 +83,22 @@ test("returns every time off type for Settings through GraphQL", async ({ env })
         timeOffTypes: [
           {
             timeOffType: { name: "Annual leave", icon: "SUN", colour: "GREEN" },
-            balance: "BALANCE_FROM_ALLOWANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {
             timeOffType: { name: "Sickness", icon: "THERMOMETER", colour: "CORAL" },
-            balance: "NO_BALANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {
             timeOffType: { name: "Family leave", icon: "BABY", colour: "PINK" },
-            balance: "NO_BALANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {
             timeOffType: { name: "Other", icon: "CONFETTI", colour: "YELLOW" },
-            balance: "NO_BALANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {

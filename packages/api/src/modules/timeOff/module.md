@@ -75,7 +75,7 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 
 `TimeOffService.listTimeOffTypes`, for admins (`MANAGE_WORKSPACE`), answers `Query.timeOffSettings`: every time off type in the order above, with or without a policy, and how many people have time off.
 
-- Each type's balance kind is the one most of its policies share by their version in force today, the oldest policy's on a tie, or none when no policy applies today.
+- Each type's balance kind is the one most of its policies share, each by its version in force today or else its latest version, the oldest policy's on a tie; none when the type has no policy.
 - Days taken are everyone's approved or pending days of that type in the calendar year of today, a half day 0.5.
 - People are those with an allowance whose leave year has not ended, counted in one query; someone with only types that have no balance is not counted.
 
