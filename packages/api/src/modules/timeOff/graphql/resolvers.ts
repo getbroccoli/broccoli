@@ -1,7 +1,8 @@
 import DataLoader from "dataloader";
 
-import { perRequest, type Resolvers, type ResolversTypes } from "../../../core/graphql";
+import { perRequest, type Resolvers, type ResolversTypes, toEnum } from "../../../core/graphql";
 import type { TimeOffSetupService, TimeOffService } from "../app";
+import type { TermsTimeOff } from "../app";
 import { DEFAULT_TIME_OFF_TYPE_LOOK, type PolicyVersion, type TimeOffType } from "../domain";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
@@ -27,6 +28,10 @@ export function createResolvers(
             balance: BALANCE_KINDS[row.balance],
           })) ?? null,
       );
+    }),
+    termsTimeOff: new DataLoader<string, TermsTimeOff[]>(async (termsIds) => {
+      const read = await timeOff.readTermsTimeOff(context.getActor(), termsIds);
+      return termsIds.map((id) => read.get(id)!);
     }),
   }));
   return {
@@ -66,12 +71,14 @@ export function createResolvers(
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
+    Terms: {
+      timeOff: async (terms, _args, context) =>
+        (await loaders(context).termsTimeOff.load(terms.id)).map(({ timeOffType, versions }) => ({
+          timeOffType: toGraphqlType(timeOffType),
+          versions: versions.map(toGraphqlVersion),
+        })),
+    },
   };
-}
-
-/** A stored value as its GraphQL enum value, which is the same words in capitals. */
-function toEnum<Value extends string>(value: Value): Uppercase<Value> {
-  return value.toUpperCase() as Uppercase<Value>;
 }
 
 /** A time off type with its icon and colour as GraphQL values, the defaults filling in for none. */
@@ -81,6 +88,29 @@ function toGraphqlType(type: TimeOffType) {
     name: type.name,
     icon: toEnum(type.icon ?? DEFAULT_TIME_OFF_TYPE_LOOK.icon),
     colour: toEnum(type.colour ?? DEFAULT_TIME_OFF_TYPE_LOOK.colour),
+    typeKey: type.typeKey && toEnum(type.typeKey),
+  };
+}
+
+/** A policy version as GraphQL shows it: its yearly allowance from its rules, enums in capitals. */
+function toGraphqlVersion(version: PolicyVersion) {
+  const yearly = version.rules.find((rule) => rule.kind === "yearly_entitlement");
+  return {
+    id: version.id,
+    startDate: version.startDate,
+    endDate: version.endDate,
+    balance: BALANCE_KINDS[version.balance],
+    bankHolidays: version.bankHolidays && toEnum(version.bankHolidays),
+    leaveYearStart: version.leaveYear && {
+      kind: toEnum(version.leaveYear.kind),
+      month:
+        version.leaveYear.kind === "leave_year_from_fixed_date" ? version.leaveYear.month : null,
+      day: version.leaveYear.kind === "leave_year_from_fixed_date" ? version.leaveYear.day : null,
+    },
+    yearlyEntitlement: yearly && {
+      days: yearly.entitlementDays,
+      daysPerWeek: yearly.entitlementDaysPerWeek,
+    },
   };
 }
 

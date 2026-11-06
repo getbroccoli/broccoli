@@ -20,6 +20,7 @@ import {
 } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
+import { readTermsTimeOff, type TermsTimeOff } from "./readTermsTimeOff";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 
 const employeeSetup = createEmployeeSetupService();
@@ -54,6 +55,14 @@ export interface TimeOffService {
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
+  /**
+   * For each terms id asked: every time off type in list order with the terms' policy versions
+   * covering today or later, oldest first; no versions: not offered. Admins only.
+   */
+  readTermsTimeOff: (
+    ctx: SecurityContext,
+    termsIds: readonly string[],
+  ) => Promise<Map<string, TermsTimeOff[]>>;
   /**
    * Holds back turning time off on until the caller's transaction ends. Going back to the start
    * takes it before deleting the employees, as turning time off on takes it before their rows.
@@ -132,6 +141,7 @@ export function createTimeOffService({
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
     listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, today }, ctx),
+    readTermsTimeOff: (ctx, termsIds) => readTermsTimeOff({ orm, today }, ctx, termsIds),
     async lockPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).lockPolicies();

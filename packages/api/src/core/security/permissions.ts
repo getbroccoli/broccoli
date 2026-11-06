@@ -13,6 +13,8 @@ export interface PermissionObjects {
   working_pattern: true;
   /** A person's time off and allowances; its subject is the person. */
   time_off: true;
+  /** A set of terms; about nobody, so public, and only admins have a grant on it. */
+  terms: true;
 }
 
 /** A kind of record permissions apply to. */
@@ -88,6 +90,13 @@ const ADMIN: ProfileDefinition = {
     {
       key: "time_off.manage.all",
       object: "time_off",
+      actions: ["create", "read", "update", "delete"],
+      scope: "all",
+      fields: "*",
+    },
+    {
+      key: "terms.manage.all",
+      object: "terms",
       actions: ["create", "read", "update", "delete"],
       scope: "all",
       fields: "*",

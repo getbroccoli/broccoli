@@ -1,7 +1,8 @@
-import { eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
-import type { TermsMembership } from "../domain";
+import type { CalendarDate } from "../../../utils";
+import type { Terms, TermsMembership } from "../domain";
 import { employeeTerms } from "./employeeTermsTable";
 import { locations } from "./locationsTable";
 import { terms } from "./termsTable";
@@ -31,6 +32,10 @@ export interface TermsRepository {
   findMemberships(employeeIds: readonly string[]): Promise<Map<string, TermsMembership[]>>;
   /** The employees on each of the terms on any date, by terms id; terms without any are left out. */
   findMemberIds(termsIds: readonly string[]): Promise<Map<string, string[]>>;
+  /** Every set of terms, the default first, then by name ignoring case. */
+  findAll(): Promise<Terms[]>;
+  /** How many people are on each of the terms on `date`, by terms id; terms without any are left out. */
+  countMembersOn(date: CalendarDate): Promise<Map<string, number>>;
 }
 
 export function termsRepository(db: Orm | Tx): TermsRepository {
@@ -118,6 +123,28 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
           members.map(({ employeeId }) => employeeId),
         ]),
       );
+    },
+
+    async findAll() {
+      const rows = await orm()
+        .select({ id: terms.id, name: terms.name, key: terms.key })
+        .from(terms)
+        .orderBy(desc(sql`${terms.key} is not null`), asc(sql`lower(${terms.name})`));
+      return rows.map(({ id, name, key }) => ({ id, name, isDefault: key === "default_terms" }));
+    },
+
+    async countMembersOn(date) {
+      const rows = await orm()
+        .select({ termsId: employeeTerms.termsId, members: count() })
+        .from(employeeTerms)
+        .where(
+          and(
+            or(isNull(employeeTerms.startDate), lte(employeeTerms.startDate, date)),
+            or(isNull(employeeTerms.endDate), gte(employeeTerms.endDate, date)),
+          ),
+        )
+        .groupBy(employeeTerms.termsId);
+      return new Map(rows.map(({ termsId, members }) => [termsId, members]));
     },
   };
 }

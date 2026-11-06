@@ -66,3 +66,4 @@ export {
   type StandardWorkingWeek,
 } from "./standardWorkingWeek";
 export { parseTermsSetup, type TermsSetup } from "./termsSetup";
+export { type Terms } from "./terms";

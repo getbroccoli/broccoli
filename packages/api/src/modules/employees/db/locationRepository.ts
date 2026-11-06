@@ -9,6 +9,8 @@ import { LOCATION_NAME_UNIQUE, locations } from "./locationsTable";
 export interface LocationRepository {
   /** Every location with how many people are in it, by name ignoring case. */
   findAllWithPeopleCounts(): Promise<(Location & { peopleCount: number })[]>;
+  /** Every location with the terms its new people start on, null: the default terms; by name ignoring case. */
+  findWithStartingTerms(): Promise<(Location & { termsId: string | null })[]>;
   /** The locations among these ids that exist. */
   findByIds(ids: readonly string[]): Promise<Location[]>;
   /** The location, held until the caller commits so nobody deletes it meanwhile; null when there is none. */
@@ -43,6 +45,12 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
         .from(locations)
         .leftJoin(employees, eq(employees.locationId, locations.id))
         .groupBy(locations.id)
+        .orderBy(asc(sql`lower(${locations.name})`), asc(locations.id)),
+
+    findWithStartingTerms: () =>
+      orm()
+        .select({ ...LOCATION, termsId: locations.defaultTermsId })
+        .from(locations)
         .orderBy(asc(sql`lower(${locations.name})`), asc(locations.id)),
 
     findByIds: (ids) =>

@@ -26,6 +26,9 @@ export {
   type EmployeeWorkingPatternService,
 } from "./employeeWorkingPatternService";
 export { employeeRecordType } from "./employeeRecordType";
+export { createTermsService, type TermsService } from "./termsService";
+export { termsRecordType } from "./termsRecordType";
+export type { TermsOverview } from "./termsOverviews";
 export {
   createEmployeeInviteService,
   type EmployeeInviteService,
