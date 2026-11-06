@@ -1,4 +1,4 @@
-import { asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -39,7 +39,7 @@ export interface TimeOffPolicyRepository {
     policy: { timeOffTypeId: string } & ({ termsId: string } | { name: string }),
     version: NewPolicyVersion,
   ): Promise<string>;
-  /** Deletes every policy with its versions and rules; no ledger line or assignment may point at one. */
+  /** Deletes every policy with its versions and rules, also removed versions' rules; no ledger line or assignment may point at one. */
   deleteAll(): Promise<void>;
   /** Each employee's named policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, PolicyAssignment[]>>;
@@ -115,6 +115,9 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
 
     async deleteAll() {
       await orm().delete(timeOffPolicies);
+      await orm()
+        .delete(timeOffAllowanceRules)
+        .where(isNull(timeOffAllowanceRules.timeOffPolicyVersionId));
     },
 
     async findAssignments(employeeIds) {

@@ -16,7 +16,7 @@ import { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
 
 /**
  * The parts of a policy version's allowance, which add up into one balance. Never edited, like
- * its version.
+ * its version. A rule outlives a removed version, so the ledger lines granted from it stay.
  */
 export const timeOffAllowanceRules = pgTable(
   "time_off_allowance_rules",
@@ -24,7 +24,8 @@ export const timeOffAllowanceRules = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
-    timeOffPolicyVersionId: uuid("time_off_policy_version_id").notNull(),
+    /** Null once its version was removed. */
+    timeOffPolicyVersionId: uuid("time_off_policy_version_id"),
     kind: text("kind", { enum: ["yearly_entitlement", "service_extra"] }).notNull(),
     /**
      * Entitlement as contracts state it: `entitlementDays` for a working week of
@@ -48,7 +49,7 @@ export const timeOffAllowanceRules = pgTable(
       name: "time_off_allowance_rules_version_fk",
       columns: [table.timeOffPolicyVersionId],
       foreignColumns: [timeOffPolicyVersions.id],
-    }).onDelete("cascade"),
+    }).onDelete("set null"),
     index("time_off_allowance_rules_version_idx").on(table.timeOffPolicyVersionId),
     uniqueIndex("time_off_allowance_rules_one_yearly_entitlement")
       .on(table.timeOffPolicyVersionId)
