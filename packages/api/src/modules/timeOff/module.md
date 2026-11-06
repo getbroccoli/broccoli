@@ -86,7 +86,7 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - `createPolicy` offers a type the terms don't have; `changePolicy` adds new rules from a date; `cancelPolicyChange` removes a planned version, and the policy too when it was a planned offer.
 - How a type counts (`balance`) changes only from the start of a leave year; an offer may count any way.
 - The new version keeps what Settings does not show from the one it replaces: leave year, days per week, service steps, and `max_days` while the new days stay at or under it.
-- Each runs the engine for the people it reaches in its own transaction (cause `time_off_rules_changed`) and adds one `terms` history line, field `timeOff.<type id>`, with the rules before and after as JSON and the type's name as the label.
+- Each runs the engine for the people it reaches in the same transaction (cause `time_off_rules_changed`) and adds one `terms` history line, field `timeOff.<type id>`, with the rules before and after as JSON and the type's name as the label.
 - `readPolicyReach` and `readOfferReach` list who a change reaches: everyone the policy applies to, or would apply to, on some employed day from the date on, through the shared resolver.
 
 ## Which policy applies
