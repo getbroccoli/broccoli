@@ -40,7 +40,7 @@ test("connecting saves the workspace and an explicit read imports all Slack page
     },
   });
   expect(await (await browser.graphql(READ_SLACK)).json()).toEqual({
-    data: { import: { readSlack: { import: { id: "import" }, error: null } } },
+    data: { imports: { readSlack: { import: { id: "import" }, error: null } } },
   });
   const reads = slack.requests.filter(({ path }) => path.startsWith("/users.list"));
   expect(reads).toHaveLength(2);
@@ -138,12 +138,12 @@ test("refresh returns the updated import and skipping completes setup", async ({
   ];
 
   const refreshed = await browser.graphql(`mutation {
-    import { readSlack { import { id sources { employeeCount } employees { edges { node { email { value } } } } } error { __typename ... on Error { message } } } }
+    imports { readSlack { import { id sources { employeeCount } employees { edges { node { email { value } } } } } error { __typename ... on Error { message } } } }
   }`);
 
   expect(await refreshed.json()).toEqual({
     data: {
-      import: {
+      imports: {
         readSlack: {
           import: {
             id: "import",
@@ -156,10 +156,10 @@ test("refresh returns the updated import and skipping completes setup", async ({
     },
   });
 
-  const skipped = await browser.graphql("mutation { import { startDemo { import { id } } } }");
+  const skipped = await browser.graphql("mutation { imports { startDemo { import { id } } } }");
 
   expect(await skipped.json()).toEqual({
-    data: { import: { startDemo: { import: { id: "import" } } } },
+    data: { imports: { startDemo: { import: { id: "import" } } } },
   });
   const setup = await browser.graphql("query { setup { step } }");
   expect(await setup.json()).toEqual({ data: { setup: { step: "DONE" } } });
@@ -180,7 +180,7 @@ test("a malformed Slack response refuses refresh and preserves the imported empl
 
   const error = { __typename: "UnavailableError", message: "Could not read Slack." };
   expect(await refreshed.json()).toEqual({
-    data: { import: { readSlack: { import: null, error } } },
+    data: { imports: { readSlack: { import: null, error } } },
   });
   const employees = await browser.graphql(
     "query { import { employees { edges { node { firstName { value } email { value } } } } } }",
@@ -304,9 +304,9 @@ test("review counts only complete Slack members and Approve adds exactly those m
   });
 });
 
-const APPROVED = { data: { import: { approve: { import: { id: "import" }, error: null } } } };
+const APPROVED = { data: { imports: { approve: { import: { id: "import" }, error: null } } } };
 
 const READ_SLACK =
-  "mutation { import { readSlack { import { id } error { __typename ... on Error { message } } } } }";
+  "mutation { imports { readSlack { import { id } error { __typename ... on Error { message } } } } }";
 const SAVE_COMPANY =
   'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }';

@@ -11,7 +11,7 @@ query EmailSettings {
 }
 
 mutation SaveMailSettings($input: MailSettingsInput!) {
-  setup {
+  system {
     saveMailSettings(input: $input) {
       setup {
         id
@@ -40,7 +40,7 @@ mutation SaveMailSettings($input: MailSettingsInput!) {
 }
 
 mutation SendTestEmail {
-  setup {
+  system {
     sendTestEmail {
       setup {
         id

@@ -122,7 +122,7 @@ enum AiSource {
   BROCCOLI_AI
   "OpenRouter with the instance's own key."
   OPENROUTER
-  "The owner's own coding agent answers instead of a model; chosen with `chooseExternalAgent`, never `saveAiSource`."
+  "The owner's own coding agent answers instead of a model; chosen with `externalAgents.choose`, never `system.saveAiSource`."
   EXTERNAL_AGENT
 }
 
@@ -140,7 +140,7 @@ input AiSourceInput {
   openRouterKey: String
 }
 
-type SetupMutations {
+type SystemMutations {
   "Checks that the source works, then reads files with it from now on. Self-hosted only; admins or the setup holder. A refused key is `openRouterKey` / `rejected`; a used free period is `source` / `free_period_used`."
   saveAiSource(input: AiSourceInput!): SetupSaveAiSourcePayload!
   "Checks the mail choice, then sends email with it from now on. Self-hosted only; admins only. A malformed or refused SMTP URL is `secret` / `invalid` or `rejected`; a missing one `secret` / `required`; a bad From `from` / `required` or `invalid`."
@@ -148,9 +148,9 @@ type SetupMutations {
   "Sends the caller a test email with the saved mail choice; refused with a ConflictError without one, and an UnavailableError carries the provider's reason. Admins only."
   sendTestEmail: SetupSendTestEmailPayload!
   "Completes setup from the ready step: adds the people the owner approved, links the owner to the person they are and invites the people they chose. Refused with a ConflictError at any other step, such as after another tab went back to the review, and with an InvalidInputError for a note that is too long (`note` / `too_long`) or holds a link Broccoli would email (`note` / `has_link`). Admins only."
-  complete(input: SetupCompleteInput): SetupCompletePayload!
+  completeSetup(input: SetupCompleteInput): SetupCompletePayload!
   "Starts a finished setup over: deletes every person and takes setup back to the company step; the company and the AI choice stay. Refused with a ConflictError before setup is done, and during the self-hosted demo. Owner only."
-  reset: SetupResetPayload!
+  resetSetup: SetupResetPayload!
 }
 
 "Setup after a change."
@@ -230,5 +230,5 @@ type SetupSendTestEmailPayload {
 union SetupSendTestEmailError = UnavailableError | ConflictError
 
 type Mutation {
-  setup: SetupMutations!
+  system: SystemMutations!
 }

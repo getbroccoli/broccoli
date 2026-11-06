@@ -17,7 +17,7 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   expect(await saved.json()).toEqual({
     data: { company: { update: { company: { id: "company" }, error: null } } },
   });
-  await browser.graphql("mutation { import { startDemo { import { id } } } }");
+  await browser.graphql("mutation { imports { startDemo { import { id } } } }");
   expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
   const response = await browser.graphql(demoQuery);
   const body = (await response.json()) as DemoDataResponse;
@@ -40,7 +40,7 @@ test("a managed owner exits the demo through the API and returns to company setu
   const { env, accounts } = await startManagedEnv();
   const browser = await signInAsManagedOwner(env, accounts);
   await browser.graphql(saveCompany);
-  await browser.graphql("mutation { import { startDemo { import { id } } } }");
+  await browser.graphql("mutation { imports { startDemo { import { id } } } }");
   await env.seed.employee();
   const setup = await browser.graphql("query { me { id } setup { id step } }");
   const signedIn = (await setup.json()) as { data: { me: { id: string } } };
@@ -111,7 +111,7 @@ test("finishing setup by approving an empty import leaves the directory without 
 
   const approved = await approveReviewedImport(browser);
   expect(await approved.json()).toEqual({
-    data: { import: { approve: { import: { id: "import" }, error: null } } },
+    data: { imports: { approve: { import: { id: "import" }, error: null } } },
   });
   expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
 

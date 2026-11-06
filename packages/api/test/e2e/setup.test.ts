@@ -6,7 +6,7 @@ import { createLogger } from "../../src/core/logger";
 test("the self-hosted setup request turns time off on", async ({ env }) => {
   const browser = await env.startSetupAtImport();
   expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
-    data: { import: { approve: { error: null } } },
+    data: { imports: { approve: { error: null } } },
   });
   const database = connectDatabase(env.db.url, createLogger("silent"));
   try {
@@ -254,7 +254,7 @@ test("creating the self-hosted owner returns invite links for the other people",
     { firstName: "Taylor", lastName: "Brook", email: "taylor@example.com" },
   ]);
   expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
-    data: { import: { approve: { error: null } } },
+    data: { imports: { approve: { error: null } } },
   });
 
   const response = await browser.post("/api/auth/setup", {

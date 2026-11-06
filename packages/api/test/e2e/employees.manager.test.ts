@@ -8,7 +8,7 @@ test("sets several employees' manager through the API", async ({ env }) => {
 
   const response = await browser.graphql(
     `mutation SetManagers($input: EmployeeSetManagersInput!) {
-    employee { setManagers(input: $input) {
+    employees { setManagers(input: $input) {
       employees { id manager { id } }
       error { __typename ... on Error { message } }
     } }
@@ -20,7 +20,7 @@ test("sets several employees' manager through the API", async ({ env }) => {
   expect(body).not.toHaveProperty("errors");
   expect(body).toMatchObject({
     data: {
-      employee: {
+      employees: {
         setManagers: {
           error: null,
           employees: expect.arrayContaining([
@@ -40,7 +40,7 @@ test("sets a person's manager through the API", async ({ env }) => {
 
   const updated = await browser.graphql(
     `mutation UpdateEmployee($input: EmployeeUpdateInput!) {
-      employee { update(input: $input) {
+      employees { update(input: $input) {
         employee { id }
         error { __typename ... on Error { message } }
       } }
@@ -49,7 +49,7 @@ test("sets a person's manager through the API", async ({ env }) => {
   );
 
   expect(await updated.json()).toEqual({
-    data: { employee: { update: { employee: { id: employee.id }, error: null } } },
+    data: { employees: { update: { employee: { id: employee.id }, error: null } } },
   });
   const response = await browser.graphql(
     `query Employee($id: ID!) {

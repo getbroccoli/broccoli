@@ -98,13 +98,13 @@ function useSaveEmployee(employeeId: string) {
   const [updateEmployee, update] = usePayloadMutation(UpdateEmployeeDocument, {
     // The saved employee updates in the cache by itself; its new line joins its history.
     update: (cache, { data }) => {
-      const line = data?.employee.update.historyLine;
+      const line = data?.employees.update.historyLine;
       if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employeeId, line });
     },
   });
   const [setPermissionProfiles, profileChange] = usePayloadMutation(SetPermissionProfilesDocument, {
     update: (cache, { data }) => {
-      const line = data?.employee.setPermissionProfiles.historyLine;
+      const line = data?.employees.setPermissionProfiles.historyLine;
       if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: employeeId, line });
     },
   });
@@ -191,8 +191,8 @@ function refusedFieldMessages(failed: unknown): Map<string, string> | null {
 }
 
 type SaveError =
-  | UpdateEmployeeMutation["employee"]["update"]["error"]
-  | SetPermissionProfilesMutation["employee"]["setPermissionProfiles"]["error"];
+  | UpdateEmployeeMutation["employees"]["update"]["error"]
+  | SetPermissionProfilesMutation["employees"]["setPermissionProfiles"]["error"];
 
 /** The draft field an input field's error belongs to. */
 function draftKey(field: string): string {

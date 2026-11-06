@@ -284,7 +284,7 @@ type Query {
   import: Import!
 }
 
-type ImportMutations {
+type ImportsMutations {
   "Reads the connected Slack workspace into the import, the first time and on every refresh; its source then holds the current members."
   readSlack: ImportReadSlackPayload!
   "Leaves the import step of setup with the demo company instead of the import, which fills only an instance without employees; the import is deleted."
@@ -391,7 +391,7 @@ type ImportSetEmployeeLeftOutPayload {
 union ImportSetEmployeeLeftOutError = InvalidInputError
 
 type Mutation {
-  import: ImportMutations!
+  imports: ImportsMutations!
 }
 
 # Adds this module's cause of record changes to the shared enum; the server merges them.

@@ -14,8 +14,8 @@ query AiStep {
 }
 
 mutation ChooseExternalAgent {
-  setup {
-    chooseExternalAgent {
+  externalAgents {
+    choose {
       setup {
         id
         ai {
@@ -37,7 +37,7 @@ mutation ChooseExternalAgent {
 }
 
 mutation SaveAiSource($input: AiSourceInput!) {
-  setup {
+  system {
     saveAiSource(input: $input) {
       setup {
         id

@@ -10,7 +10,7 @@ test("returns visible manager references and their hidden flags through record h
   await env.seed.manager(employee.id, previousManager.id);
   const updated = await browser.graphql(
     `mutation UpdateEmployee($input: EmployeeUpdateInput!) {
-      employee { update(input: $input) {
+      employees { update(input: $input) {
         employee { id }
         error { __typename ... on Error { message } }
       } }
@@ -18,7 +18,7 @@ test("returns visible manager references and their hidden flags through record h
     { input: { id: employee.id, managerId: nextManager.id } },
   );
   expect(await updated.json()).toEqual({
-    data: { employee: { update: { employee: { id: employee.id }, error: null } } },
+    data: { employees: { update: { employee: { id: employee.id }, error: null } } },
   });
 
   const response = await browser.graphql(

@@ -14,7 +14,7 @@ test("an emailed invite signs the person in as their employee and records who jo
   const { env, owner, resend } = await startMailTestEnv();
   expect(
     await (await owner.graphql(SAVE_MAIL_SETTINGS, { input: RESEND_CHOICE })).json(),
-  ).toMatchObject({ data: { setup: { saveMailSettings: { error: null } } } });
+  ).toMatchObject({ data: { system: { saveMailSettings: { error: null } } } });
   await env.changeUserName(TEST_OWNER.email, "Robin Reed");
   const employee = await env.seed.employee({ firstName: "Avery", email: "avery@example.com" });
   const browser = env.browser();
@@ -26,7 +26,7 @@ test("an emailed invite signs the person in as their employee and records who jo
 
   expect(await response.json()).toMatchObject({
     data: {
-      employee: {
+      employees: {
         invite: {
           error: null,
           invites: [
@@ -168,7 +168,7 @@ test("used, cancelled, replaced and unknown tokens have the same lookup and acce
   });
   expect(await cancelledResponse.json()).toEqual({
     data: {
-      employee: {
+      employees: {
         cancelInvite: {
           employee: { id: cancelled!.id, signInStatus: { state: "NOT_INVITED" } },
           error: null,
@@ -203,12 +203,12 @@ test("a person deleted after being invited cannot accept the link", async ({ env
   const token = await copyInvite(owner, employee.id);
   const removed = await owner.graphql(
     `mutation Delete($input: EmployeeDeleteInput!) {
-    employee { delete(input: $input) { deletedEmployeeId error { __typename } } }
+    employees { delete(input: $input) { deletedEmployeeId error { __typename } } }
   }`,
     { input: { id: employee.id } },
   );
   expect(await removed.json()).toEqual({
-    data: { employee: { delete: { deletedEmployeeId: employee.id, error: null } } },
+    data: { employees: { delete: { deletedEmployeeId: employee.id, error: null } } },
   });
 
   const response = await env
@@ -228,13 +228,13 @@ test("an invite sent before the person's email changed answers the invalid-link 
   const token = await copyInvite(owner, employee.id);
   const updated = await owner.graphql(
     `mutation UpdateEmployee($input: EmployeeUpdateInput!) {
-    employee { update(input: $input) { employee { id email } error { __typename } } }
+    employees { update(input: $input) { employee { id email } error { __typename } } }
   }`,
     { input: { id: employee.id, email: "new@example.com" } },
   );
   expect(await updated.json()).toEqual({
     data: {
-      employee: {
+      employees: {
         update: { employee: { id: employee.id, email: "new@example.com" }, error: null },
       },
     },

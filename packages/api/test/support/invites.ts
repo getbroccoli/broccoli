@@ -13,11 +13,11 @@ export async function copyInvite(
   });
   const body = (await response.json()) as {
     data: {
-      employee: { invite: { error: unknown; invites: { link: string; delivery: string }[] } };
+      employees: { invite: { error: unknown; invites: { link: string; delivery: string }[] } };
     };
   };
-  assert.equal(body.data.employee.invite.error, null);
-  const sent = body.data.employee.invite.invites;
+  assert.equal(body.data.employees.invite.error, null);
+  const sent = body.data.employees.invite.invites;
   assert.equal(sent.length, 1);
   assert.equal(sent[0]!.delivery, "COPIED_BY_OWNER");
   const link = new URL(sent[0]!.link);
@@ -27,14 +27,14 @@ export async function copyInvite(
 }
 
 export const INVITE_EMPLOYEES = `mutation Invite($input: InviteSendInput!) {
-  employee { invite(input: $input) {
+  employees { invite(input: $input) {
     invites { employee { id signInStatus { state expiresAt notSent emailHasAccount } } expiresAt delivery link }
     error { __typename ... on InvalidInputError { fields { field code } } }
   } }
 }`;
 
 export const CANCEL_INVITE = `mutation CancelInvite($input: InviteCancelInput!) {
-  employee { cancelInvite(input: $input) {
+  employees { cancelInvite(input: $input) {
     employee { id signInStatus { state } }
     error { __typename }
   } }

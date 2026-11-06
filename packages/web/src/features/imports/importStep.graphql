@@ -33,7 +33,7 @@ query ImportStep {
 }
 
 mutation ReadSlack {
-  import {
+  imports {
     readSlack {
       import {
         id
@@ -57,7 +57,7 @@ mutation ReadSlack {
 }
 
 mutation RetryFile($sourceId: ID!) {
-  import {
+  imports {
     retryFile(sourceId: $sourceId) {
       import {
         id
@@ -81,7 +81,7 @@ mutation RetryFile($sourceId: ID!) {
 }
 
 mutation RemoveSource($sourceId: ID!) {
-  import {
+  imports {
     removeSource(sourceId: $sourceId) {
       import {
         id
@@ -99,7 +99,7 @@ mutation RemoveSource($sourceId: ID!) {
 }
 
 mutation AllowOriginalFileRead($sourceId: ID!, $aiSource: AiSource) {
-  import {
+  imports {
     allowOriginalFileRead(sourceId: $sourceId, aiSource: $aiSource) {
       import {
         id

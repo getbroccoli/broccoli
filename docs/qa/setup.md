@@ -46,7 +46,7 @@ For an owner with an account and the demo company, start the demo from a termina
 
 ```sh
 curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-  -d '{"query":"mutation { import { startDemo { import { id } } } }"}'
+  -d '{"query":"mutation { imports { startDemo { import { id } } } }"}'
 ```
 
 ## Create the owner
@@ -70,9 +70,9 @@ Once the owner exists, setup answers `OWNER_EXISTS`. Sign in with the same body 
 
 ## Add employees
 
-With the session, call the `employee { create(input: …) }` mutation:
+With the session, call the `employees { create(input: …) }` mutation:
 
 ```sh
 curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-  -d '{"query":"mutation { employee { create(input: { firstName: \"Avery\", lastName: \"Abbott\", email: \"avery@example.com\", jobTitle: \"Designer\", startDate: \"2024-03-04\" }) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }"}'
+  -d '{"query":"mutation { employees { create(input: { firstName: \"Avery\", lastName: \"Abbott\", email: \"avery@example.com\", jobTitle: \"Designer\", startDate: \"2024-03-04\" }) { employee { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }"}'
 ```

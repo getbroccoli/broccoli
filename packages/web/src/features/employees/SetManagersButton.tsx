@@ -22,7 +22,7 @@ export function SetManagersButton({ employeeIds, onSet }: Props) {
   const [open, setOpen] = useState(false);
   const [setManagers, { loading }] = usePayloadMutation(SetManagersDocument, {
     update: (cache, { data }) =>
-      addEmployeeHistoryLines(cache, data?.employee.setManagers.historyLines ?? []),
+      addEmployeeHistoryLines(cache, data?.employees.setManagers.historyLines ?? []),
   });
 
   const pick = (manager: PersonOption | null) => {
@@ -56,7 +56,7 @@ export function SetManagersButton({ employeeIds, onSet }: Props) {
   );
 }
 
-type SetManagersError = SetManagersMutation["employee"]["setManagers"]["error"];
+type SetManagersError = SetManagersMutation["employees"]["setManagers"]["error"];
 
 /** A loop is the one refusal the person can act on: they picked someone below the selected people. */
 function errorMessage(failure: unknown): string {

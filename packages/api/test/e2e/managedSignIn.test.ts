@@ -93,18 +93,20 @@ test("a managed owner completes setup from the ready step over GraphQL", async (
   }`);
   const approval = await approveReviewedImport(browser);
   expect(await approval.json()).toEqual({
-    data: { import: { approve: { import: { id: "import" }, error: null } } },
+    data: { imports: { approve: { import: { id: "import" }, error: null } } },
   });
   const ready = await browser.graphql("query { setup { id step } }");
   expect(await ready.json()).toEqual({
     data: { setup: { id: "instance", step: "READY" } },
   });
 
-  const response = await browser.graphql("mutation { setup { complete { setup { id step } } } }");
+  const response = await browser.graphql(
+    "mutation { system { completeSetup { setup { id step } } } }",
+  );
 
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    data: { setup: { complete: { setup: { id: "instance", step: "DONE" } } } },
+    data: { system: { completeSetup: { setup: { id: "instance", step: "DONE" } } } },
   });
   const setup = await browser.graphql("query { setup { id step } }");
   expect(await setup.json()).toEqual({
@@ -123,11 +125,11 @@ test("completing managed setup returns the invites for everyone", async () => {
     { firstName: "Robin", lastName: "Reed", email: "robin@example.com" },
   ]);
   expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
-    data: { import: { approve: { error: null } } },
+    data: { imports: { approve: { error: null } } },
   });
 
   const response = await browser.graphql(`mutation {
-    setup { complete(input: { inviteAudience: EVERYONE }) {
+    system { completeSetup(input: { inviteAudience: EVERYONE }) {
       setup { id step }
       invites { employeeId name link }
       error { __typename ... on Error { message } }
@@ -137,8 +139,8 @@ test("completing managed setup returns the invites for everyone", async () => {
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
     data: {
-      setup: {
-        complete: {
+      system: {
+        completeSetup: {
           setup: { id: "instance", step: "DONE" },
           invites: [{ employeeId: expect.any(String) as unknown, name: "Robin Reed", link: null }],
           error: null,

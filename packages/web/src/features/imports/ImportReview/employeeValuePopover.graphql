@@ -1,5 +1,5 @@
 mutation ChooseEmployeeValue($input: ImportChooseEmployeeValueInput!) {
-  import {
+  imports {
     chooseEmployeeValue(input: $input) {
       import {
         id

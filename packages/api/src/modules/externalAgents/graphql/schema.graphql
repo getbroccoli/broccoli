@@ -23,13 +23,17 @@ type ExternalAgentCode {
   expiresAt: DateTime!
 }
 
-type SetupMutations {
+type Mutation {
+  externalAgents: ExternalAgentsMutations!
+}
+
+type ExternalAgentsMutations {
   "Reads files with the owner's own external agent from now on, ending any agent session. Self-hosted, at the import step, before the owner exists; admins or the setup holder."
-  chooseExternalAgent: SetupChooseExternalAgentPayload!
+  choose: SetupChooseExternalAgentPayload!
   "A new agent one-time code, valid once for two hours, ending any agent session and earlier code. Refused with a ConflictError unless the agent is chosen."
-  createExternalAgentCode: SetupCreateExternalAgentCodePayload!
+  createCode: SetupCreateExternalAgentCodePayload!
   "Ends the agent's session and any unused code; its next call is refused."
-  disconnectExternalAgent: SetupMutationPayload!
+  disconnect: SetupMutationPayload!
 }
 
 "Setup after choosing the external agent, or why it was refused."

@@ -11,7 +11,7 @@ test("a person resets their password by email, ending old sessions and signing i
   const { env, owner, resend } = await startMailTestEnv();
   const saved = await owner.graphql(SAVE_MAIL_SETTINGS, { input: RESEND_CHOICE });
   expect(await saved.json()).toMatchObject({
-    data: { setup: { saveMailSettings: { error: null } } },
+    data: { system: { saveMailSettings: { error: null } } },
   });
   const browser = env.browser();
 
@@ -58,7 +58,7 @@ test("asking for an unknown address answers the same and emails nothing", async 
   const { env, owner, resend } = await startMailTestEnv();
   const saved = await owner.graphql(SAVE_MAIL_SETTINGS, { input: RESEND_CHOICE });
   expect(await saved.json()).toMatchObject({
-    data: { setup: { saveMailSettings: { error: null } } },
+    data: { system: { saveMailSettings: { error: null } } },
   });
   const browser = env.browser();
 

@@ -1,6 +1,6 @@
 mutation CreateExternalAgentCode {
-  setup {
-    createExternalAgentCode {
+  externalAgents {
+    createCode {
       externalAgentCode {
         code
         expiresAt

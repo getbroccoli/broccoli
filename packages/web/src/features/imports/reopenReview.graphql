@@ -1,5 +1,5 @@
 mutation ReopenReview {
-  import {
+  imports {
     reopenReview {
       import {
         id

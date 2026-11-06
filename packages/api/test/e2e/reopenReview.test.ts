@@ -31,27 +31,29 @@ test.for(["managed", "self-hosted"] as const)(
     expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
 
     const response = await browser.graphql(
-      "mutation { import { reopenReview { import { id } } } }",
+      "mutation { imports { reopenReview { import { id } } } }",
     );
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      data: { import: { reopenReview: { import: { id: "import" } } } },
+      data: { imports: { reopenReview: { import: { id: "import" } } } },
     });
     expect(await (await browser.graphql("{ setup { step } }")).json()).toEqual({
       data: { setup: { step: "IMPORT" } },
     });
     const leftOut = await browser.graphql(
-      'mutation { import { setEmployeeLeftOut(employeeId: "robin@example.com", leftOut: true) { import { id } } } }',
+      'mutation { imports { setEmployeeLeftOut(employeeId: "robin@example.com", leftOut: true) { import { id } } } }',
     );
     expect(await leftOut.json()).toEqual({
-      data: { import: { setEmployeeLeftOut: { import: { id: "import" } } } },
+      data: { imports: { setEmployeeLeftOut: { import: { id: "import" } } } },
     });
     expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
     if (managed) {
-      const finished = await browser.graphql("mutation { setup { complete { setup { step } } } }");
+      const finished = await browser.graphql(
+        "mutation { system { completeSetup { setup { step } } } }",
+      );
       expect(await finished.json()).toEqual({
-        data: { setup: { complete: { setup: { step: "DONE" } } } },
+        data: { system: { completeSetup: { setup: { step: "DONE" } } } },
       });
     } else {
       expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
@@ -78,19 +80,19 @@ test("managed finish after Back returns a ConflictError and leaves the directory
   const source = await env.seed.importSource();
   await env.seed.importEmployees(source.id, [{ email: "avery@example.com" }]);
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
-  const back = await browser.graphql("mutation { import { reopenReview { import { id } } } }");
+  const back = await browser.graphql("mutation { imports { reopenReview { import { id } } } }");
   expect(await back.json()).toEqual({
-    data: { import: { reopenReview: { import: { id: "import" } } } },
+    data: { imports: { reopenReview: { import: { id: "import" } } } },
   });
 
   const response = await browser.graphql(`mutation {
-    setup { complete { setup { step } error { __typename ... on Error { message } } } }
+    system { completeSetup { setup { step } error { __typename ... on Error { message } } } }
   }`);
 
   expect(await response.json()).toEqual({
     data: {
-      setup: {
-        complete: {
+      system: {
+        completeSetup: {
           setup: null,
           error: { __typename: "ConflictError", message: "Setup is not at the ready step." },
         },
@@ -101,4 +103,4 @@ test("managed finish after Back returns a ConflictError and leaves the directory
   expect(await directory.json()).toEqual({ data: { employees: { edges: [] } } });
 });
 
-const APPROVED = { data: { import: { approve: { import: { id: "import" }, error: null } } } };
+const APPROVED = { data: { imports: { approve: { import: { id: "import" }, error: null } } } };

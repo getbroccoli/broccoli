@@ -5,7 +5,7 @@ import type { ValueChoice } from "../domain";
 import { AI_SOURCES, FIELDS, IMPORT, INCOMPLETE_REASONS, keyOf } from "./graphqlValues";
 
 /** The import's mutations; each answers with the import, or a payload error it expects. */
-export function importMutationResolvers(services: ImportServices): Resolvers["ImportMutations"] {
+export function importMutationResolvers(services: ImportServices): Resolvers["ImportsMutations"] {
   return {
     readSlack: (_parent, _args, context) =>
       mutationPayload<ResolversTypes["ImportReadSlackPayload"]>(

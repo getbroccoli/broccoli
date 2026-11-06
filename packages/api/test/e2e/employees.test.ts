@@ -11,7 +11,7 @@ interface EmployeeListResponse {
 
 const createMutation = `
   mutation CreateEmployee($input: EmployeeCreateInput!) {
-    employee { create(input: $input) { employee { id firstName lastName email jobTitle startDate createdAt } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }
+    employees { create(input: $input) { employee { id firstName lastName email jobTitle startDate createdAt } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } }
   }
 `;
 
@@ -36,13 +36,13 @@ test("creates an employee through the API", async ({ env }) => {
 
   const response = await browser.graphql(createMutation, { input });
   const body = (await response.json()) as {
-    data: { employee: { create: { employee: { id: string; createdAt: string }; error: null } } };
+    data: { employees: { create: { employee: { id: string; createdAt: string }; error: null } } };
   };
 
   expect(response.status).toBe(200);
   expect(body).not.toHaveProperty("errors");
-  expect(body.data.employee.create.error).toBeNull();
-  const employee = body.data.employee.create.employee;
+  expect(body.data.employees.create.error).toBeNull();
+  const employee = body.data.employees.create.employee;
   expect(employee).toMatchObject(input);
   expect(employee.id).toMatch(/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/);
   expect(employee.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
@@ -58,7 +58,7 @@ test("returns a taken employee email in the mutation payload", async ({ env }) =
 
   expect(await response.json()).toEqual({
     data: {
-      employee: {
+      employees: {
         create: {
           employee: null,
           error: {
@@ -131,7 +131,7 @@ test("employee history resolves the session author, cause and UTC time", async (
   const updated = await browser.graphql(
     `
     mutation UpdateEmployee($input: EmployeeUpdateInput!) {
-      employee { update(input: $input) {
+      employees { update(input: $input) {
         employee { id }
         historyLine { id operation changes { field oldValue newValue oldLabel newLabel } }
         error { __typename ... on Error { message } }
@@ -142,11 +142,11 @@ test("employee history resolves the session author, cause and UTC time", async (
   );
 
   const body = (await updated.json()) as {
-    data: { employee: { update: { historyLine: { id: string } } } };
+    data: { employees: { update: { historyLine: { id: string } } } };
   };
   expect(body).toEqual({
     data: {
-      employee: {
+      employees: {
         update: {
           employee: { id: employee.id },
           historyLine: {
@@ -187,7 +187,7 @@ test("employee history resolves the session author, cause and UTC time", async (
           edges: [
             {
               node: {
-                id: body.data.employee.update.historyLine.id,
+                id: body.data.employees.update.historyLine.id,
                 occurredAt: expect.stringMatching(
                   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
                 ) as unknown,
@@ -208,9 +208,9 @@ test("record history links each line to its employee", async ({ env }) => {
     input: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
   });
   const body = (await created.json()) as {
-    data: { employee: { create: { employee: { id: string } } } };
+    data: { employees: { create: { employee: { id: string } } } };
   };
-  const { id } = body.data.employee.create.employee;
+  const { id } = body.data.employees.create.employee;
 
   const response = await browser.graphql(
     `
@@ -238,13 +238,13 @@ test("deleting an employee keeps history with no linked record", async ({ env })
     input: { firstName: "Avery", lastName: "Stone", email: "avery@example.com" },
   });
   const body = (await created.json()) as {
-    data: { employee: { create: { employee: { id: string } } } };
+    data: { employees: { create: { employee: { id: string } } } };
   };
-  const { id } = body.data.employee.create.employee;
+  const { id } = body.data.employees.create.employee;
   await browser.graphql(
     `
     mutation DeleteEmployee($input: EmployeeDeleteInput!) {
-      employee { delete(input: $input) {
+      employees { delete(input: $input) {
         deletedEmployeeId error { __typename ... on Error { message } }
       } }
     }
@@ -282,22 +282,24 @@ test("creates a location and assigns a person to it through the API", async ({ e
   const employee = await env.seed.employee();
 
   const created = await browser.graphql(`mutation CreateLocation {
-    location { create(input: { name: "Leeds" }) {
+    employees { createLocation(input: { name: "Leeds" }) {
       location { id name }
       error { __typename ... on Error { message } }
     } }
   }`);
   const body = (await created.json()) as {
-    data: { location: { create: { location: { id: string; name: string }; error: null } } };
+    data: {
+      employees: { createLocation: { location: { id: string; name: string }; error: null } };
+    };
   };
   expect(body).not.toHaveProperty("errors");
-  expect(body.data.location.create.error).toBeNull();
-  const location = body.data.location.create.location;
+  expect(body.data.employees.createLocation.error).toBeNull();
+  const location = body.data.employees.createLocation.location;
   expect(location.name).toBe("Leeds");
 
   const updated = await browser.graphql(
     `mutation SetLocation($input: EmployeeUpdateInput!) {
-    employee { update(input: $input) {
+    employees { update(input: $input) {
       employee { id location { id name } }
       error { __typename ... on Error { message } }
     } }
@@ -305,7 +307,7 @@ test("creates a location and assigns a person to it through the API", async ({ e
     { input: { id: employee.id, locationId: location.id } },
   );
   expect(await updated.json()).toEqual({
-    data: { employee: { update: { employee: { id: employee.id, location }, error: null } } },
+    data: { employees: { update: { employee: { id: employee.id, location }, error: null } } },
   });
 
   const listed = await browser.graphql(`query Locations { locations { id name peopleCount } }`);

@@ -15,23 +15,23 @@ test("inviting during the demo answers a ConflictError in the payload", async ({
   const { browser } = await env.startDemo();
   const created = await browser.graphql(
     `mutation CreateEmployee($input: EmployeeCreateInput!) {
-    employee { create(input: $input) { employee { id } error { __typename } } }
+    employees { create(input: $input) { employee { id } error { __typename } } }
   }`,
     { input: { firstName: "Avery", lastName: "Stone", email: "avery.new@example.com" } },
   );
   const body = (await created.json()) as {
-    data: { employee: { create: { employee: { id: string }; error: unknown } } };
+    data: { employees: { create: { employee: { id: string }; error: unknown } } };
   };
   expect(body).not.toHaveProperty("errors");
-  expect(body.data.employee.create.error).toBeNull();
-  const { id } = body.data.employee.create.employee;
+  expect(body.data.employees.create.error).toBeNull();
+  const { id } = body.data.employees.create.employee;
 
   const response = await browser.graphql(INVITE_EMPLOYEES, {
     input: { employeeIds: [id], delivery: "COPIED_BY_OWNER" },
   });
 
   expect(await response.json()).toEqual({
-    data: { employee: { invite: { invites: null, error: { __typename: "ConflictError" } } } },
+    data: { employees: { invite: { invites: null, error: { __typename: "ConflictError" } } } },
   });
 });
 
@@ -46,11 +46,11 @@ test("a managed invitee can sign out and sign in again with their password", asy
     ).json(),
   ).toMatchObject({ data: { company: { update: { error: null } } } });
   expect(await (await approveReviewedImport(owner)).json()).toMatchObject({
-    data: { import: { approve: { error: null } } },
+    data: { imports: { approve: { error: null } } },
   });
   expect(
-    await (await owner.graphql("mutation { setup { complete { setup { step } } } }")).json(),
-  ).toMatchObject({ data: { setup: { complete: { setup: { step: "DONE" } } } } });
+    await (await owner.graphql("mutation { system { completeSetup { setup { step } } } }")).json(),
+  ).toMatchObject({ data: { system: { completeSetup: { setup: { step: "DONE" } } } } });
   const employee = await env.seed.employee();
   const token = await copyInvite(owner, employee.id);
   const browser = createBrowser(env.url, MANAGED_ASSIGNMENT.publicOrigin);

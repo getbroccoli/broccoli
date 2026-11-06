@@ -14,7 +14,7 @@ test("the owner saves Resend, reads the choice without its key and receives a te
 
   expect(await saved.json()).toEqual({
     data: {
-      setup: {
+      system: {
         saveMailSettings: {
           setup: {
             id: "instance",
@@ -47,10 +47,10 @@ test("the owner saves Resend, reads the choice without its key and receives a te
     data: { setup: { id: "instance", passwordResetByEmail: true } },
   });
   const sent = await owner.graphql(`mutation {
-    setup { sendTestEmail { setup { id } error { __typename ... on Error { message } } } }
+    system { sendTestEmail { setup { id } error { __typename ... on Error { message } } } }
   }`);
   expect(await sent.json()).toEqual({
-    data: { setup: { sendTestEmail: { setup: { id: "instance" }, error: null } } },
+    data: { system: { sendTestEmail: { setup: { id: "instance" }, error: null } } },
   });
   expect(resend.emails).toHaveLength(1);
   expect(resend.emails[0]).toMatchObject({

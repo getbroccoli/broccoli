@@ -14,14 +14,14 @@ export async function startMailTestEnv() {
   onTestFinished(() => env.stop());
   const owner = await env.startSetupAtImport();
   assert.deepEqual(await (await approveReviewedImport(owner)).json(), {
-    data: { import: { approve: { import: { id: "import" }, error: null } } },
+    data: { imports: { approve: { import: { id: "import" }, error: null } } },
   });
   assert.equal((await owner.post("/api/auth/setup", TEST_OWNER)).status, 200);
   return { env, owner, resend };
 }
 
 export const SAVE_MAIL_SETTINGS = `mutation SaveMailSettings($input: MailSettingsInput!) {
-  setup {
+  system {
     saveMailSettings(input: $input) {
       setup { id mail { id source from hasSecret } passwordResetByEmail }
       error { __typename ... on Error { message } }

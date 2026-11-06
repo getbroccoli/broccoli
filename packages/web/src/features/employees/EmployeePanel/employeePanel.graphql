@@ -5,7 +5,7 @@ query EmployeePanel($id: ID!) {
 }
 
 mutation UpdateEmployee($input: EmployeeUpdateInput!) {
-  employee {
+  employees {
     update(input: $input) {
       employee {
         ...EmployeePanel_employee @unmask
@@ -30,7 +30,7 @@ mutation UpdateEmployee($input: EmployeeUpdateInput!) {
 }
 
 mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
-  employee {
+  employees {
     setPermissionProfiles(input: $input) {
       employee {
         ...EmployeePanel_employee @unmask
@@ -55,7 +55,7 @@ mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
 }
 
 mutation DeleteEmployee($input: EmployeeDeleteInput!) {
-  employee {
+  employees {
     delete(input: $input) {
       deletedEmployeeId
       reportHistoryLines {

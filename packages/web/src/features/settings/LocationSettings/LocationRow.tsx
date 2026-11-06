@@ -23,7 +23,7 @@ export function LocationRow({ location }: Props) {
   const [updateLocation, update] = usePayloadMutation(UpdateLocationDocument);
   const [deleteLocation, deletion] = usePayloadMutation(DeleteLocationDocument, {
     update: (cache, { data }) => {
-      if (data?.location.delete.deletedLocationId) forgetLocation(cache, location.id);
+      if (data?.employees.deleteLocation.deletedLocationId) forgetLocation(cache, location.id);
     },
   });
   const failure = nameFailure(update.payloadError, update.error);

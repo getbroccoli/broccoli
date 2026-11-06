@@ -7,8 +7,8 @@ query LocationSettings {
 }
 
 mutation CreateLocation($input: LocationCreateInput!) {
-  location {
-    create(input: $input) {
+  employees {
+    createLocation(input: $input) {
       location {
         id
         name
@@ -31,8 +31,8 @@ mutation CreateLocation($input: LocationCreateInput!) {
 }
 
 mutation UpdateLocation($input: LocationUpdateInput!) {
-  location {
-    update(input: $input) {
+  employees {
+    updateLocation(input: $input) {
       location {
         id
         name
@@ -55,8 +55,8 @@ mutation UpdateLocation($input: LocationUpdateInput!) {
 }
 
 mutation DeleteLocation($input: LocationDeleteInput!) {
-  location {
-    delete(input: $input) {
+  employees {
+    deleteLocation(input: $input) {
       deletedLocationId
       error {
         __typename

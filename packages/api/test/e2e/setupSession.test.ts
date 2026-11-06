@@ -108,9 +108,9 @@ test("completes setup and replaces setup access with the owner's signed-in sessi
   expect(await named.json()).toEqual({
     data: { company: { update: { company: { id: "company" }, error: null } } },
   });
-  const skipped = await browser.graphql("mutation { import { startDemo { import { id } } } }");
+  const skipped = await browser.graphql("mutation { imports { startDemo { import { id } } } }");
   expect(await skipped.json()).toEqual({
-    data: { import: { startDemo: { import: { id: "import" } } } },
+    data: { imports: { startDemo: { import: { id: "import" } } } },
   });
 
   const response = await browser.post("/api/auth/setup", {
