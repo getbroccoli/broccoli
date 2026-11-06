@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { DefaultPill } from "../TermsSettings/DefaultPill";
+import { DefaultPill } from "../TermsSettings";
 
 /** Settings › Locations: where people work, the terms each starts new people on, and who is there. */
 export function LocationSettings() {
@@ -59,12 +59,14 @@ export function LocationSettings() {
                   <tr
                     key={location.id}
                     className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
-                    onClick={() =>
+                    onClick={(event) => {
+                      // The name's link navigates itself, and leaves Ctrl-click to the browser.
+                      if ((event.target as Element).closest("a")) return;
                       void navigate({
                         to: "/settings/locations/$locationId",
                         params: { locationId: location.id },
-                      })
-                    }
+                      });
+                    }}
                   >
                     <th scope="row" className="px-4 py-3 text-left font-semibold">
                       {/* The row opens the location too; the link gives keyboards and screen readers the way in. */}
