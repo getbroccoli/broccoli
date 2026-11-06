@@ -1,7 +1,7 @@
 import { invalidInput } from "../../../core/applicationError";
 import { type CalendarDate, parseCalendarDate } from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
-import type { Dated } from "./personTimeline";
+import type { Dated } from "./dated";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];

@@ -31,15 +31,8 @@ export {
   type WorkingPattern,
   type WorkingWeek,
 } from "./workingPattern";
-export {
-  coversDate,
-  idOn,
-  makeRoomForDatedRow,
-  versionOn,
-  versionStretches,
-  type Dated,
-  type PersonTimeline,
-} from "./personTimeline";
+export { coversDate, makeRoomForDatedRow, type Dated } from "./dated";
+export { personTimeline, type PersonTimeline } from "./personTimeline";
 export {
   workingWeeksOf,
   type DatedPattern,

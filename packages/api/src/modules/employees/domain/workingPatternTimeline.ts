@@ -1,5 +1,6 @@
 import { addDays, type CalendarDate } from "../../../utils";
-import { type Dated, type PersonTimeline, versionStretches } from "./personTimeline";
+import type { Dated } from "./dated";
+import type { PersonTimeline } from "./personTimeline";
 import type { PatternVersion, WorkingWeek } from "./workingPattern";
 
 /** A person's own pattern from a date to a date. */
@@ -39,7 +40,7 @@ export function workingWeeksOf(
     }
   };
   let next = from;
-  for (const { version, startDate, endDate } of versionStretches(timeline, from, until)) {
+  for (const { version, startDate, endDate } of timeline.stretches(from, until)) {
     if (startDate > next) {
       add(next, null);
     }

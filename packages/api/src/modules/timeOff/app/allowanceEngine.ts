@@ -6,8 +6,7 @@ import {
   type EmployeeReadService,
   type EmployeeWorkingPatternService,
   type PersonTimeline,
-  versionOn,
-  versionStretches,
+  personTimeline,
 } from "../../employees";
 import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
 import {
@@ -106,18 +105,19 @@ export async function readPeople(
       employeeId,
       periods,
       serviceStart: periods[0]?.startDate ?? null,
-      timelineOf: (timeOffTypeId: string) => ({
-        direct: (assignments.get(employeeId) ?? [])
-          .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
-          .map(({ timeOffPolicyId, startDate, endDate }) => ({
-            id: timeOffPolicyId,
-            startDate,
-            endDate,
-          })),
-        terms: memberships.get(employeeId) ?? [],
-        idOfTerms: (termsId: string) => termsPolicyIds.get(`${termsId}:${timeOffTypeId}`) ?? null,
-        versions: (policyId: string) => byId.get(policyId)?.versions ?? [],
-      }),
+      timelineOf: (timeOffTypeId: string) =>
+        personTimeline({
+          direct: (assignments.get(employeeId) ?? [])
+            .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
+            .map(({ timeOffPolicyId, startDate, endDate }) => ({
+              id: timeOffPolicyId,
+              startDate,
+              endDate,
+            })),
+          terms: memberships.get(employeeId) ?? [],
+          idOfTerms: (termsId: string) => termsPolicyIds.get(`${termsId}:${timeOffTypeId}`) ?? null,
+          versions: (policyId: string) => byId.get(policyId)?.versions ?? [],
+        }),
       allowances: existingOf.get(employeeId) ?? [],
     };
   });
@@ -232,7 +232,7 @@ function newAllowance(
   today: CalendarDate,
 ): Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd"> | null {
   const anchor = person.serviceStart && person.serviceStart > today ? person.serviceStart : today;
-  const version = versionOn(person.timelineOf(timeOffTypeId), anchor);
+  const version = person.timelineOf(timeOffTypeId).versionOn(anchor);
   if (!version?.leaveYear) {
     return null;
   }
@@ -252,15 +252,14 @@ function newAllowance(
 
 /** The policy versions that apply to the person over the allowance's leave year. */
 function datedPolicies(person: Person, allowance: Allowance): DatedPolicy[] {
-  return versionStretches(
-    person.timelineOf(allowance.timeOffTypeId),
-    allowance.leaveYearStart,
-    allowance.leaveYearEnd,
-  ).map(({ version, startDate, endDate }) => ({
-    startDate,
-    endDate,
-    balance: version.balance,
-    bankHolidays: version.bankHolidays,
-    rules: version.rules,
-  }));
+  return person
+    .timelineOf(allowance.timeOffTypeId)
+    .stretches(allowance.leaveYearStart, allowance.leaveYearEnd)
+    .map(({ version, startDate, endDate }) => ({
+      startDate,
+      endDate,
+      balance: version.balance,
+      bankHolidays: version.bankHolidays,
+      rules: version.rules,
+    }));
 }

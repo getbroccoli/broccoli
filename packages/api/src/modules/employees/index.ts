@@ -34,8 +34,7 @@ export {
   employeeFieldErrors,
   parseEmployeeField,
   parseTermsSetup,
-  versionOn,
-  versionStretches,
+  personTimeline,
 } from "./domain";
 
 // Public types.

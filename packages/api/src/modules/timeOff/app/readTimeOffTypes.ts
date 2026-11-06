@@ -10,7 +10,6 @@ import {
   type TimeOffType,
   type TimeOffTypeKey,
 } from "../domain";
-import { versionOn } from "../../employees";
 import { type AllowanceEngineDependencies, type Person, readPeople } from "./allowanceEngine";
 
 /** One time off type a person has in their current leave year, with its figures in days. */
@@ -108,7 +107,7 @@ function shownTypes(
   const date = person.serviceStart && person.serviceStart > today ? person.serviceStart : today;
   const types = new Map(policies.map(({ timeOffType }) => [timeOffType.id, timeOffType]));
   return [...types.values()].sort(byTypeOrder).flatMap((type) => {
-    const version = versionOn(person.timelineOf(type.id), date);
+    const version = person.timelineOf(type.id).versionOn(date);
     const shown =
       version && shownType(person, { timeOffType: type, balance: version.balance }, date);
     return shown ? [shown] : [];

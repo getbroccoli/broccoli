@@ -14,10 +14,10 @@ import {
 import {
   coversDate,
   type DatedPattern,
-  idOn,
   makeRoomForDatedRow,
   parseDateField,
   parseEmployeeIds,
+  personTimeline,
   type WorkingPattern,
   type WorkingPatternTimeline,
   type WorkingWeek,
@@ -247,12 +247,12 @@ async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Ti
   const timelines = new Map(
     employeeIds.map((id): [string, WorkingPatternTimeline] => [
       id,
-      {
+      personTimeline({
         direct: (assignments.get(id) ?? []).map((row) => ({ ...row, id: row.workingPatternId })),
         terms: memberships.get(id) ?? [],
         idOfTerms: (termsId) => byTerms.get(termsId) ?? null,
         versions: (patternId) => byId.get(patternId)?.versions ?? [],
-      },
+      }),
     ]),
   );
   return { timelines, assignments, patterns };
@@ -265,7 +265,7 @@ async function patternNameOn(
   employeeId: string,
   date: CalendarDate,
 ): Promise<string | null> {
-  const pattern = patterns.find(({ id }) => id === idOn(timelines.get(employeeId)!, date));
+  const pattern = patterns.find(({ id }) => id === timelines.get(employeeId)!.idOn(date));
   if (!pattern?.termsId) {
     return pattern?.name ?? null;
   }
