@@ -75,11 +75,14 @@ enum RecordChangeCauseKind {
   INVITE_CANCELLED
   "The person accepted their invite and signed in for the first time; the ref is the invite."
   INVITE_ACCEPTED
+  "Turning time off on set up the terms, in setup or the demo. No ref."
+  TIME_OFF_TURNED_ON
 }
 
 # Adds the employee to the shared list of record types that keep history; the server merges them.
 enum RecordType {
   EMPLOYEE
+  TERMS
 }
 
 type EmployeeEdge {
@@ -281,6 +284,47 @@ type Query {
     orderBy: EmployeeOrder = { field: NAME, direction: ASC }
     filter: EmployeeFilter
   ): EmployeeConnection!
+  "Every set of terms, the default first, then by name. Admins only."
+  allTerms: [Terms!]!
+  "One set of terms; null when none has this id. Admins only."
+  terms(id: ID!): Terms
+}
+
+"A named set of people who share a working week and time off rules; new people start on their location's terms."
+type Terms implements AnyRecord {
+  id: ID!
+  name: String!
+  "People without a location, or at a location without terms, start on the default terms."
+  isDefault: Boolean!
+  "People on these terms today."
+  peopleCount: Int!
+  "Locations whose new people start here, by name; the default terms also take locations without terms."
+  locations: [Location!]!
+  "The version covering today first, if any, then planned ones; past versions stay out."
+  workingWeek: [WorkingWeekVersion!]!
+  "Changes to these terms, newest first."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "What the signed-in user may do to these terms."
+  access: RecordAccess!
+}
+
+"A working week from a date to a date: minutes worked each day, a full day of leave and whose bank holidays apply."
+type WorkingWeekVersion {
+  id: ID!
+  "Null: from the beginning."
+  startDate: Date
+  "The last day; null: open-ended."
+  endDate: Date
+  mondayMinutes: Int!
+  tuesdayMinutes: Int!
+  wednesdayMinutes: Int!
+  thursdayMinutes: Int!
+  fridayMinutes: Int!
+  saturdayMinutes: Int!
+  sundayMinutes: Int!
+  "The minutes one day of leave stands for."
+  fullDayMinutes: Int!
+  bankHolidayCalendar: BankHolidayCalendar!
 }
 
 type Mutation {

@@ -32,6 +32,8 @@ declare module "../../../core/records" {
     employee: true;
     /** A person's own working pattern changes; the record id is the employee's. */
     working_pattern: true;
+    /** A set of terms; the record id is the terms'. */
+    terms: true;
   }
   interface CauseKinds {
     /** The person's manager was removed, so they have none; the line's `manager` change names them. No ref. */
@@ -42,5 +44,7 @@ declare module "../../../core/records" {
     INVITE_CANCELLED: true;
     /** The person accepted their invite and signed in for the first time; the ref is the invite. */
     INVITE_ACCEPTED: true;
+    /** Turning time off on set up the terms, in setup or the demo. No ref. */
+    TIME_OFF_TURNED_ON: true;
   }
 }

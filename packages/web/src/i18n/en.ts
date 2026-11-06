@@ -13,6 +13,7 @@ import { setupEn } from "./en/setup";
 import { setupTimeOffEn } from "./en/setupTimeOff";
 import { setupWhoEn } from "./en/setupWho";
 import { tableEn } from "./en/table";
+import { termsEn } from "./en/terms";
 import { workspaceEn } from "./en/workspace";
 
 /** English copy, one file per key prefix under `en/`. Every user-facing string is read through `t()`. */
@@ -33,4 +34,5 @@ export const en = {
   ...tableEn,
   ...notFoundEn,
   ...settingsEn,
+  ...termsEn,
 } as const;

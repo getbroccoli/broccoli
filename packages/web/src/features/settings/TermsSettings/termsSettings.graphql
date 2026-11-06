@@ -1,0 +1,99 @@
+query EmploymentTerms {
+  allTerms {
+    id
+    name
+    isDefault
+    peopleCount
+    locations {
+      id
+      name
+    }
+    workingWeek {
+      id
+      startDate
+      endDate
+      mondayMinutes
+      tuesdayMinutes
+      wednesdayMinutes
+      thursdayMinutes
+      fridayMinutes
+      saturdayMinutes
+      sundayMinutes
+      fullDayMinutes
+      bankHolidayCalendar
+    }
+    timeOff {
+      timeOffType {
+        id
+        typeKey
+      }
+      versions {
+        id
+        startDate
+        endDate
+        balance
+        bankHolidays
+        leaveYearStart {
+          kind
+          month
+          day
+        }
+        yearlyEntitlement {
+          days
+          daysPerWeek
+        }
+      }
+    }
+  }
+}
+
+query EmploymentTermsStack($id: ID!) {
+  terms(id: $id) {
+    id
+    name
+    isDefault
+    peopleCount
+    locations {
+      id
+      name
+    }
+    workingWeek {
+      id
+      startDate
+      endDate
+      mondayMinutes
+      tuesdayMinutes
+      wednesdayMinutes
+      thursdayMinutes
+      fridayMinutes
+      saturdayMinutes
+      sundayMinutes
+      fullDayMinutes
+      bankHolidayCalendar
+    }
+    timeOff {
+      timeOffType {
+        id
+        name
+        icon
+        colour
+      }
+      versions {
+        id
+        startDate
+        endDate
+        balance
+        bankHolidays
+        leaveYearStart {
+          kind
+          month
+          day
+        }
+        yearlyEntitlement {
+          days
+          daysPerWeek
+        }
+      }
+    }
+  }
+}

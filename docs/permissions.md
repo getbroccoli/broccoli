@@ -5,7 +5,7 @@ Who may do what in Broccoli. Use cases ask their security context; nothing else 
 ## Primitives
 
 - **Permission profile** (`EMPLOYEE`, `ADMIN`, `OWNER`): a named list of grants and operations. Every signed-in user has `EMPLOYEE` and any number of others; their rights are the union.
-- **Object** (`employee`, `working_pattern`): a kind of record permissions apply to. A working pattern's subject is the person who works it.
+- **Object** (`employee`, `working_pattern`, `terms`): a kind of record permissions apply to. A working pattern's subject is the person who works it; terms are about nobody.
 - **Action** (`create`, `read`, `update`, `delete`): what can be done to one record of an object.
 - **Subject**: whom a record is about, which scopes are measured against. An employee is their own subject; a time off request's subject is the requester. A record about nobody is **public**: every read grant on its object reaches it, whatever its scope, and only grants on `all` write it. Subjects are employees today; a later kind, such as a legal entity, is fixed in core and resolved where scopes resolve, without changing a contract.
 - **Scope** (`self`, `direct_reports`, `all_reports`, `managers`, `all`): which subjects a grant reaches, relative to the caller's employee: the caller, people they manage directly, everyone below them in the reporting line, everyone above them in it, or everyone. Neither report scope includes the caller.

@@ -15,6 +15,7 @@ const SETTINGS_ITEMS: NavItem[] = [
   { to: "/settings/locations", label: t("settings.locations.title") },
 ];
 const SETTINGS_AREA_ITEMS: NavItem[] = [
+  { to: "/settings/terms", label: t("terms.title") },
   { to: "/settings/time-off", label: t("settings.timeOff.title") },
 ];
 

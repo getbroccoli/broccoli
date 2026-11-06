@@ -197,6 +197,7 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       // After the delete, which waits for any update holding an employee row, so its line goes too.
       await recordHistory.purge(tx, "employee");
       await recordHistory.purge(tx, "working_pattern");
+      await recordHistory.purge(tx, "terms");
       await locationRepository(tx).deleteAll();
       await termsRepository(tx).resetToDefault();
       await resetDefaultPattern(tx);
@@ -231,6 +232,7 @@ export function createEmployeeSetupService(): EmployeeSetupService {
           termsId: termsIdOf(bankHolidayCalendar),
         })),
       );
+      await recordTermsSetUp(ctx, tx, termsIds);
       const members = await terms.findMemberIds(termsIds);
       return {
         termsIds,
@@ -269,6 +271,20 @@ async function termsOnWeek(
   }
   const termsId = await termsRepository(tx).insert(TERMS_NAMES[calendar]);
   return { termsId, patternId: await patterns.insertPattern({ termsId }, patternWeek) };
+}
+
+/** One "set up" history line per terms, naming them. */
+async function recordTermsSetUp(ctx: SecurityContext, tx: Tx, termsIds: string[]): Promise<void> {
+  const names = await termsRepository(tx).findNames(termsIds);
+  await recordHistory.append(ctx, tx, {
+    recordType: "terms",
+    operation: "CREATED",
+    cause: { kind: "TIME_OFF_TURNED_ON" },
+    records: termsIds.map((termsId) => ({
+      recordId: termsId,
+      changes: [{ field: "name", oldValue: null, newValue: names.get(termsId)! }],
+    })),
+  });
 }
 
 /** Puts the default terms' pattern back on the seeded week: Monday to Friday, England and Wales. */

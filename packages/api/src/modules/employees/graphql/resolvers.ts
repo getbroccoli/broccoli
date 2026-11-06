@@ -1,4 +1,9 @@
-import { mutationPayload, type Resolvers, type ResolversTypes } from "../../../core/graphql";
+import {
+  mutationPayload,
+  type Resolvers,
+  type ResolversTypes,
+  toEnum,
+} from "../../../core/graphql";
 import type {
   EmployeeInviteService,
   EmployeeManagerService,
@@ -6,6 +11,7 @@ import type {
   EmployeeReadService,
   EmployeeService,
   LocationService,
+  TermsService,
 } from "../app";
 import { avatarUrl } from "../http";
 import { employeeLoaders } from "./loaders";
@@ -15,7 +21,8 @@ export function createResolvers(
     EmployeeReadService &
     EmployeeManagerService &
     EmployeePermissionService &
-    LocationService,
+    LocationService &
+    TermsService,
   invites: EmployeeInviteService,
 ): Resolvers {
   const loaders = employeeLoaders(services, invites);
@@ -30,6 +37,33 @@ export function createResolvers(
           orderBy,
           filter,
         }),
+      allTerms: (_parent, _args, context) => services.listTerms(context.getActor()),
+      terms: (_parent, { id }, context) => services.readTerms(context.getActor(), id),
+    },
+    Terms: {
+      locations: async ({ locations }, _args, context) => {
+        const loaded = await Promise.all(
+          locations.map(({ id }) => loaders(context).location.load(id)),
+        );
+        // A location deleted since the terms were read is left out.
+        return loaded.filter((location) => location !== null);
+      },
+      // shortcut: one query per terms; batch it when a list selects history.
+      history: (terms, { first, after }, context) =>
+        services.readTermsHistory(context.getActor(), terms.id, {
+          first: first ?? undefined,
+          after,
+        }),
+    },
+    WorkingWeekVersion: {
+      mondayMinutes: ({ minutes }) => minutes[0],
+      tuesdayMinutes: ({ minutes }) => minutes[1],
+      wednesdayMinutes: ({ minutes }) => minutes[2],
+      thursdayMinutes: ({ minutes }) => minutes[3],
+      fridayMinutes: ({ minutes }) => minutes[4],
+      saturdayMinutes: ({ minutes }) => minutes[5],
+      sundayMinutes: ({ minutes }) => minutes[6],
+      bankHolidayCalendar: ({ bankHolidayCalendar }) => toEnum(bankHolidayCalendar),
     },
     Mutation: {
       employees: () => ({}),

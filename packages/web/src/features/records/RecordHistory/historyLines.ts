@@ -18,6 +18,7 @@ export type Summary =
   | { kind: "changed"; label: string; oldValue: string | null; newValue: string | null }
   | { kind: "updatedMany"; labels: string[] }
   | { kind: "created"; title: string | null; labels: string[] }
+  | { kind: "createdAs"; text: string }
   | { kind: "deleted"; title: string | null };
 
 /** Lines in their order, grouped by calendar day in `timeZone`: "Today", "Yesterday", "21 Oct". */
@@ -50,7 +51,12 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
   const titleChange = line.changes.find(({ field }) => field === description.titleField);
   switch (line.operation) {
     case "CREATED":
-      return { kind: "created", title: titleChange?.newValue ?? null, labels };
+      return description.createdAs
+        ? {
+            kind: "createdAs",
+            text: t(description.createdAs, { title: titleChange?.newValue ?? "" }),
+          }
+        : { kind: "created", title: titleChange?.newValue ?? null, labels };
     case "DELETED":
       return { kind: "deleted", title: titleChange?.oldValue ?? null };
     case "UPDATED": {
@@ -108,6 +114,7 @@ const KNOWN_CAUSES: Partial<Record<string, MessageKey>> = {
   INVITE_SENT: "records.history.cause.inviteSent",
   INVITE_CANCELLED: "records.history.cause.inviteCancelled",
   INVITE_ACCEPTED: "records.history.cause.inviteAccepted",
+  TIME_OFF_TURNED_ON: "records.history.cause.timeOffTurnedOn",
 };
 
 function dayLabel(day: string, today: string, yesterday: string): string {

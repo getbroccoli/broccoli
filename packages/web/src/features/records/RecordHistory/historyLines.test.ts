@@ -207,6 +207,19 @@ it("names a created record from its title field's new value", () => {
   });
 });
 
+it("uses a record type's own wording for its created line", () => {
+  const termsDescription: RecordDescription = {
+    titleField: "name",
+    fields: [],
+    createdAs: "records.history.setUp",
+  };
+  const changes = [change({ field: "name", newValue: "England and Wales" })];
+
+  const summary = summaryOf({ ...line, operation: "CREATED", changes }, termsDescription);
+
+  expect(summary).toEqual({ kind: "createdAs", text: "set up England and Wales" });
+});
+
 it("leaves a created record's title null when its title field is missing", () => {
   const summary = summaryOf({ ...line, operation: "CREATED" }, description);
 
