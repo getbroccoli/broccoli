@@ -120,7 +120,7 @@ const defaultTerms = {
       {
         node: {
           operation: "CREATED",
-          cause: { kind: "SET_UP_IN_COMPANY_DEFAULTS" },
+          cause: { kind: "TIME_OFF_TURNED_ON" },
           changes: [{ field: "name", oldValue: null, newValue: "England and Wales" }],
         },
       },

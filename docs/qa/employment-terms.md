@@ -22,7 +22,7 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 - [ ] Working week shows Mon to Fri at "7.5", Sat and Sun "Off", "Hours a week 37.5", "A full day of leave 7.5 hours", "Bank holidays England and Wales".
 - [ ] Time off lists Annual leave "From a balance · 28 days a year, bank holidays included · Leave year from 1 January", then Sickness, Family leave and Other "Recorded, doesn't count", each with its icon.
 - [ ] Locations shows London, Manchester and Remote as chips without ×, with the line about the default terms.
-- [ ] History, on the right, reads "Broccoli added England and Wales with 1 field: Name" with "Company defaults"; a set up by the owner names the owner.
+- [ ] History, on the right, reads "Broccoli added England and Wales with 1 field: Name" with "Time off turned on"; a set up by the owner names the owner.
 - [ ] No Edit, Add or Offer buttons, no ⋯ menu and no "What changes".
 - [ ] An unknown id, such as `/settings/terms/00000000-0000-4000-8000-000000000001`, reads "These terms could not be found."
 

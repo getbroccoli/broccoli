@@ -29,7 +29,7 @@ test("turning time off on writes one set-up history line for each terms, includi
         recordType: "terms",
         recordId: id,
         operation: "CREATED",
-        cause: { kind: "SET_UP_IN_COMPANY_DEFAULTS" },
+        cause: { kind: "TIME_OFF_TURNED_ON" },
         changes: [{ field: "name", oldValue: null, newValue: name }],
       },
     ]);

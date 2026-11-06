@@ -24,7 +24,7 @@ export const recordsEn = {
   "records.history.cause.inviteSent": "Invited",
   "records.history.cause.inviteCancelled": "Invite cancelled",
   "records.history.cause.inviteAccepted": "Joined",
-  "records.history.cause.companyDefaults": "Company defaults",
+  "records.history.cause.timeOffTurnedOn": "Time off turned on",
   "records.history.changed": "changed {field}",
   "records.history.set": "set {field} to",
   "records.history.cleared": "cleared {field}",

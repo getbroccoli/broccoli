@@ -43,18 +43,12 @@ export function WorkingWeekSection({ versions }: Props) {
             ))}
           </ol>
           <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-            <Fact
-              label={t("terms.week.weeklyHours")}
-              value={hoursOf(DAY_FIELDS.reduce((sum, field) => sum + current[field], 0))}
-            />
-            <Fact
-              label={t("terms.week.fullDay")}
-              value={t("terms.week.hours", { hours: hoursOf(current.fullDayMinutes) })}
-            />
-            <Fact
-              label={t("terms.week.bankHolidays")}
-              value={calendarName(current.bankHolidayCalendar)}
-            />
+            {weekFacts(current).map(({ label, value }) => (
+              <div key={label} className="flex gap-1.5">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
           </dl>
         </>
       ) : (
@@ -72,11 +66,17 @@ export function WorkingWeekSection({ versions }: Props) {
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-1.5">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  );
+/** The facts under the day cells: weekly hours, a full day of leave and whose bank holidays. */
+function weekFacts(week: Props["versions"][number]): { label: string; value: string }[] {
+  return [
+    {
+      label: t("terms.week.weeklyHours"),
+      value: hoursOf(DAY_FIELDS.reduce((sum, field) => sum + week[field], 0)),
+    },
+    {
+      label: t("terms.week.fullDay"),
+      value: t("terms.week.hours", { hours: hoursOf(week.fullDayMinutes) }),
+    },
+    { label: t("terms.week.bankHolidays"), value: calendarName(week.bankHolidayCalendar) },
+  ];
 }

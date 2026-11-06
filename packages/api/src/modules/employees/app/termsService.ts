@@ -3,7 +3,7 @@ import type { Connection, PageArgs } from "../../../core/pagination";
 import { createRecordHistoryReaderService, type HistoryLine } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
-import { readTermsOverviews, type TermsOverview } from "./termsOverviews";
+import { readTermsOverviews, type TermsOverview } from "./readTermsOverviews";
 import { termsRecordType } from "./termsRecordType";
 
 /** The terms admins see in Settings: each set with its people, locations and working week today. */

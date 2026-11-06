@@ -75,8 +75,8 @@ enum RecordChangeCauseKind {
   INVITE_CANCELLED
   "The person accepted their invite and signed in for the first time; the ref is the invite."
   INVITE_ACCEPTED
-  "The owner set up the terms on the Company defaults page. No ref."
-  SET_UP_IN_COMPANY_DEFAULTS
+  "Turning time off on set up the terms, in setup or the demo. No ref."
+  TIME_OFF_TURNED_ON
 }
 
 # Adds the employee to the shared list of record types that keep history; the server merges them.

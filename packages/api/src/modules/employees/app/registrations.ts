@@ -44,7 +44,7 @@ declare module "../../../core/records" {
     INVITE_CANCELLED: true;
     /** The person accepted their invite and signed in for the first time; the ref is the invite. */
     INVITE_ACCEPTED: true;
-    /** The owner set up the terms on the Company defaults page. No ref. */
-    SET_UP_IN_COMPANY_DEFAULTS: true;
+    /** Turning time off on set up the terms, in setup or the demo. No ref. */
+    TIME_OFF_TURNED_ON: true;
   }
 }

@@ -279,7 +279,7 @@ async function recordTermsSetUp(ctx: SecurityContext, tx: Tx, termsIds: string[]
   await recordHistory.append(ctx, tx, {
     recordType: "terms",
     operation: "CREATED",
-    cause: { kind: "SET_UP_IN_COMPANY_DEFAULTS" },
+    cause: { kind: "TIME_OFF_TURNED_ON" },
     records: termsIds.map((termsId) => ({
       recordId: termsId,
       changes: [{ field: "name", oldValue: null, newValue: names.get(termsId)! }],
