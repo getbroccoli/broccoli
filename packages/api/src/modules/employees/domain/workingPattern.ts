@@ -1,13 +1,17 @@
 import { invalidInput } from "../../../core/applicationError";
-import { type CalendarDate, parseCalendarDate } from "../../../utils";
+import {
+  type CalendarDate,
+  type CalendarDateRange,
+  coversDate,
+  parseCalendarDate,
+} from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
-import type { Dated } from "./dated";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
 
 /** A pattern's minutes from a date to a date; never edited, only ended. */
-export interface PatternVersion extends Dated {
+export interface PatternVersion extends CalendarDateRange {
   id: string;
   minutes: WeekdayMinutes;
   /** The minutes one day of leave stands for. */
@@ -87,3 +91,31 @@ function isMinutesInADay(value: number, least: number): boolean {
 }
 
 const MINUTES_IN_A_DAY = 1440;
+
+/**
+ * How dated rows make room for a new one from `from` to `until`: the one that started earlier and
+ * covers `from` ends the day before, one starting on `from` goes; a later one it would overlap
+ * refuses the new one.
+ */
+export function makeRoomForDatedRow<R extends CalendarDateRange>(
+  rows: readonly R[],
+  from: CalendarDate,
+  until: CalendarDate | null,
+): { ended: R | null; replaced: R | null } {
+  const overlapsLater = rows.some(
+    ({ startDate }) =>
+      startDate !== null && startDate > from && (until === null || startDate <= until),
+  );
+  if (overlapsLater) {
+    throw invalidInput([{ field: "endDate", code: "overlaps" }]);
+  }
+  const replaced = rows.find((row) => row.startDate === from) ?? null;
+  const ended =
+    rows.find(
+      (row) =>
+        row !== replaced &&
+        (row.startDate === null || row.startDate < from) &&
+        coversDate(row, from),
+    ) ?? null;
+  return { ended, replaced };
+}

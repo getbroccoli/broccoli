@@ -29,13 +29,7 @@ export {
   createLocationService,
   employeeDirectory,
 } from "./app";
-export {
-  coversDate,
-  employeeFieldErrors,
-  parseEmployeeField,
-  parseTermsSetup,
-  personTimeline,
-} from "./domain";
+export { employeeFieldErrors, parseEmployeeField, parseTermsSetup, personTimeline } from "./domain";
 
 // Public types.
 export type {

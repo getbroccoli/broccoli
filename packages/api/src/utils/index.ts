@@ -2,6 +2,7 @@
 export {
   addDays,
   addYears,
+  coversDate,
   daysBetween,
   isWithin,
   parseCalendarDate,
@@ -22,5 +23,5 @@ export { urlUnder } from "./urlUnder";
 export { parseUuid } from "./uuid";
 
 // Public types.
-export type { CalendarDate } from "./calendarDate";
+export type { CalendarDate, CalendarDateRange } from "./calendarDate";
 export type { RasterImage } from "./rasterImage";

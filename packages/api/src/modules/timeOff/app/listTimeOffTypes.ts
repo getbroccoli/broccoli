@@ -1,7 +1,6 @@
 import type { Transact } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
-import type { CalendarDate } from "../../../utils";
-import { coversDate } from "../../employees";
+import { type CalendarDate, coversDate } from "../../../utils";
 import { allowanceRepository, timeOffPolicyRepository, timeOffRepository } from "../db";
 import { type PolicyVersion, sharedBalance, type TimeOffPolicy, type TimeOffType } from "../domain";
 import { byTypeOrder, calendarYearOf } from "./readTimeOffTypes";

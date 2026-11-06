@@ -2,11 +2,10 @@ import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Orm, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, parseUuid } from "../../../utils";
+import { addDays, type CalendarDate, coversDate, parseUuid } from "../../../utils";
 import { type BankHolidayCalendar, parseBankHolidayCalendar } from "../../bankHolidays";
 import { workingPatternRepository } from "../db";
 import {
-  coversDate,
   makeRoomForDatedRow,
   parseDateField,
   parsePatternName,

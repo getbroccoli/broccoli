@@ -4,7 +4,7 @@ import type { Logger } from "../../../core/logger";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { createRecordHistoryService, type HistoryLine } from "../../../core/records";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, parseUuid } from "../../../utils";
+import { addDays, type CalendarDate, coversDate, parseUuid } from "../../../utils";
 import {
   employeeRepository,
   employmentRepository,
@@ -12,7 +12,6 @@ import {
   workingPatternRepository,
 } from "../db";
 import {
-  coversDate,
   type DatedPattern,
   makeRoomForDatedRow,
   parseDateField,

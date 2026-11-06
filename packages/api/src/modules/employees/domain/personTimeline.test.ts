@@ -1,13 +1,12 @@
 import { expect, it } from "vitest";
 
-import type { CalendarDate } from "../../../utils";
-import type { Dated } from "./dated";
+import type { CalendarDate, CalendarDateRange } from "../../../utils";
 import { personTimeline } from "./personTimeline";
 
 it("uses a direct row over the terms on a date it covers", () => {
   const personal = { startDate: null, endDate: null, days: 25 };
   const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [
       {
         id: "personal",
@@ -27,7 +26,7 @@ it("uses a direct row over the terms on a date it covers", () => {
 
 it("uses the terms' version without a direct row", () => {
   const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [],
     terms: [{ termsId: "terms", startDate: "2026-01-01" as CalendarDate, endDate: null }],
     idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
@@ -41,7 +40,7 @@ it("uses the terms' version without a direct row", () => {
 
 it("returns null after the terms' policy ends", () => {
   const standard = { startDate: null, endDate: "2026-12-31" as CalendarDate, days: 20 };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
     idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
@@ -55,7 +54,7 @@ it("returns null after the terms' policy ends", () => {
 
 it("returns null for a person with no terms or direct row", () => {
   const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [],
     terms: [],
     idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
@@ -70,7 +69,7 @@ it("returns null for a person with no terms or direct row", () => {
 it("splits stretches where one version ends and the next starts", () => {
   const previous = { startDate: null, endDate: "2026-12-31" as CalendarDate, days: 20 };
   const next = { startDate: "2027-01-01" as CalendarDate, endDate: null, days: 22 };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
     idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
@@ -88,7 +87,7 @@ it("splits stretches where one version ends and the next starts", () => {
 it("returns to the terms' version after a direct row ends", () => {
   const personal = { startDate: null, endDate: null, days: 25 };
   const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [
       {
         id: "personal",
@@ -112,7 +111,7 @@ it("returns to the terms' version after a direct row ends", () => {
 
 it("merges consecutive rows of the same terms into one stretch", () => {
   const standard = { startDate: null, endDate: null, days: 20 };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [],
     terms: [
       { termsId: "terms", startDate: null, endDate: "2026-06-15" as CalendarDate },
@@ -140,7 +139,7 @@ it("leaves days without a version out of the stretches", () => {
     endDate: "2026-06-25" as CalendarDate,
     days: 22,
   };
-  const timeline = personTimeline<Dated & { days: number }>({
+  const timeline = personTimeline<CalendarDateRange & { days: number }>({
     direct: [],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
     idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
