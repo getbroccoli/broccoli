@@ -11,7 +11,7 @@ import {
   createEmployeeWorkingPatternService,
   parseTermsSetup,
 } from "../../employees";
-import { allowanceRepository, timeOffPolicyRepository } from "../db";
+import { timeOffPolicyRepository } from "../db";
 import {
   type AllowanceCause,
   parseStandardLeavePolicyKey,
@@ -55,9 +55,11 @@ export interface TimeOffService {
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
   /**
-   * Deletes every time off policy and allowance when setup or the demo goes back to its start,
-   * before the employees, as turning time off on takes the policies before their rows.
+   * Holds back turning time off on until the caller's transaction ends. Going back to the start
+   * takes it before deleting the employees, as turning time off on takes it before their rows.
    */
+  lockPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /** Deletes every time off policy when setup or the demo goes back to its start, after the employees. */
   deleteAllPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
@@ -130,13 +132,13 @@ export function createTimeOffService({
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
     listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, today }, ctx),
+    async lockPolicies(ctx, tx) {
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
+      await timeOffPolicyRepository(tx).lockPolicies();
+    },
     async deleteAllPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
-      const repository = timeOffPolicyRepository(tx);
-      await repository.lockPolicies();
-      // Ledger lines point at the policies' rules, so the allowances go first.
-      await allowanceRepository(tx).deleteAll();
-      await repository.deleteAll();
+      await timeOffPolicyRepository(tx).deleteAll();
     },
   };
 }

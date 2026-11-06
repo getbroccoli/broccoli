@@ -9,11 +9,9 @@ import {
   instances,
   readTermsPolicies,
   readTimeOffTerms,
-  scotlandTimeOffSetup,
   setupSteps,
   storedFileIds,
   test,
-  timeOffService,
   workingPatternService,
 } from "#test/support";
 
@@ -29,18 +27,24 @@ test("exiting the demo restores only the default terms on their seeded week with
   await companyService(orm).update(owner, { name: "Acme Corp" });
   await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
-  const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
   expect(await readTermsPolicies(orm, termsId)).toHaveLength(4);
-  const standard = (await workingPatternService(orm).listPatterns(owner)).find(
+  const patterns = workingPatternService(orm);
+  const standard = (await patterns.listPatterns(owner)).find(
     (pattern) => pattern.termsId === termsId,
   )!;
-  await transact((tx) => service.deleteAllPolicies(owner, tx));
-  const input = scotlandTimeOffSetup();
-  input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
-  await transact((tx) => service.turnOnTimeOff(owner, tx, input));
-  expect(await readTimeOffTerms(orm)).toHaveLength(2);
-  expect(await workingPatternService(orm).listPatterns(owner)).toHaveLength(2);
+  await patterns.changePattern(owner, {
+    workingPatternId: standard.id,
+    startDate: "2026-11-01",
+    minutes: [480, 480, 480, 480, 480, 0, 0],
+    fullDayMinutes: 480,
+  });
+  await patterns.createPattern(owner, {
+    name: "Part-time",
+    minutes: [0, 450, 450, 450, 0, 0, 0],
+    fullDayMinutes: 450,
+  });
+  await seed.terms("Scotland");
 
   await demoService(orm).exitDemo(owner);
 

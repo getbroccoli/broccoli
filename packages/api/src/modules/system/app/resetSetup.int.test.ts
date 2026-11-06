@@ -12,6 +12,8 @@ import {
   readTermsPolicies,
   readTimeOffTerms,
   scotlandTimeOffSetup,
+  seedTimeOffAssignment,
+  seedTimeOffPolicy,
   SLACK_PHOTO_URL,
   storedFileIds,
   systemService,
@@ -73,6 +75,38 @@ test("resetting setup restores only the default terms on their seeded week with 
       ],
     },
   ]);
+  expect(await readTermsPolicies(orm, termsId)).toEqual([]);
+});
+
+test("resetting setup clears time off when a person has a named policy assignment", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner({ password: TEST_OWNER.password });
+  await seed.setupStep("done");
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  const termsId = await seed.defaultTermsId();
+  const service = timeOffService(orm);
+  await transact((tx) => service.turnOnTimeOff(owner, tx, scotlandTimeOffSetup()));
+  const { timeOffTypes } = await service.listTimeOffTypes(owner);
+  const annualLeave = timeOffTypes.find(
+    ({ timeOffType }) => timeOffType.typeKey === "annual_leave",
+  )!;
+  const policy = await seedTimeOffPolicy(orm, {
+    name: "Personal Annual leave",
+    timeOffTypeId: annualLeave.timeOffType.id,
+    balance: "balance_from_allowance",
+    entitlementDays: 25,
+  });
+  await seedTimeOffAssignment(orm, {
+    employeeId: employee.id,
+    timeOffTypeId: policy.timeOffTypeId,
+    timeOffPolicyId: policy.id,
+  });
+
+  await systemService(orm).resetSetup(owner);
+
   expect(await readTermsPolicies(orm, termsId)).toEqual([]);
 });
 

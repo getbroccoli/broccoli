@@ -39,7 +39,7 @@ export interface TimeOffPolicyRepository {
     policy: { timeOffTypeId: string } & ({ termsId: string } | { name: string }),
     version: NewPolicyVersion,
   ): Promise<string>;
-  /** Deletes every policy with its versions and rules; no allowance may point at a rule. */
+  /** Deletes every policy with its versions and rules; no ledger line or assignment may point at one. */
   deleteAll(): Promise<void>;
   /** Each employee's named policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, PolicyAssignment[]>>;

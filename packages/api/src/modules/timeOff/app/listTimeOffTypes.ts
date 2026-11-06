@@ -11,8 +11,8 @@ export interface TimeOffTypeList {
   timeOffTypes: {
     timeOffType: TimeOffType;
     /**
-     * The kind most of its policies share today, the oldest policy's on a tie; null when no policy
-     * applies today.
+     * The kind most of its policies share today, else by their latest version, the oldest policy's
+     * on a tie; null with no policy.
      */
     balance: PolicyVersion["balance"] | null;
     /** Everyone's approved or pending days in the calendar year of today; a half day is 0.5. */
@@ -51,7 +51,7 @@ export async function listTimeOffTypes(
   };
 }
 
-/** The type's policies as each counts today; a policy with no version today is left out. */
+/** The type's policies as each counts today, or as its latest version did; one without versions is left out. */
 function countingToday(
   policies: readonly TimeOffPolicy[],
   timeOffTypeId: string,
@@ -60,7 +60,7 @@ function countingToday(
   return policies
     .filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
     .flatMap(({ id, versions }) => {
-      const version = versions.find((candidate) => coversDate(candidate, date));
+      const version = versions.find((candidate) => coversDate(candidate, date)) ?? versions.at(-1);
       return version ? [{ id, balance: version.balance }] : [];
     });
 }

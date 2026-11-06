@@ -140,9 +140,9 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
-    // Policies first: turning time off on holds their lock while its allowances wait on employee rows.
-    await timeOff.deleteAllPolicies(ctx, tx);
+    await timeOff.lockPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
+    await timeOff.deleteAllPolicies(ctx, tx);
   };
 }
 

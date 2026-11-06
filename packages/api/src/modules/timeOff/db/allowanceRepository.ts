@@ -29,8 +29,6 @@ export interface AllowanceRepository {
   ): Promise<Map<string, { kind: LedgerLineKind; amount: number }[]>>;
   /** Appends the lines, skipping those whose idempotency key is taken; returns how many it added. */
   insertLines(lines: readonly NewLedgerLine[]): Promise<number>;
-  /** Deletes every allowance with its lines. */
-  deleteAll(): Promise<void>;
 }
 
 export function allowanceRepository(tx: Tx): AllowanceRepository {
@@ -122,10 +120,6 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         added += rows.length;
       }
       return added;
-    },
-
-    async deleteAll() {
-      await orm().delete(allowances);
     },
   };
 }

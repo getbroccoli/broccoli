@@ -1,5 +1,6 @@
 import {
   ADMIN,
+  calendarDate,
   EMPLOYEE,
   expect,
   giveDefaultTermsStatutoryMinimum,
@@ -11,7 +12,7 @@ import {
   timeOffService,
 } from "#test/support";
 
-import { timeOffTypes } from "../db";
+import { timeOffPolicyVersions, timeOffTypes } from "../db";
 
 test("lists the four seeded types in order with their icons and colours", async ({ orm }) => {
   const service = timeOffService(orm, { today: "2026-11-05" });
@@ -60,6 +61,36 @@ test("reads how a type counts from its policies", async ({ orm, seed, transact }
   expect(
     result.timeOffTypes.find(({ timeOffType }) => timeOffType.typeKey === "sickness"),
   ).toMatchObject({ balance: "no_balance" });
+});
+
+test("uses the latest version's balance kind when a terms' policy has ended", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const type = await seedTimeOffType(orm, "Moving day");
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [
+      {
+        timeOffTypeId: type.id,
+        version: {
+          balance: "unlimited_balance",
+          bankHolidays: null,
+          leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+          rules: [],
+        },
+      },
+    ],
+  });
+  await orm.update(timeOffPolicyVersions).set({ endDate: calendarDate("2026-10-31") });
+  const service = timeOffService(orm, { today: "2026-11-05" });
+
+  const result = await service.listTimeOffTypes(ADMIN);
+
+  expect(result.timeOffTypes.find(({ timeOffType }) => timeOffType.id === type.id)).toMatchObject({
+    balance: "unlimited_balance",
+  });
 });
 
 test("takes the oldest policy's balance kind on a tie", async ({ orm }) => {
