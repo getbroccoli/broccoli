@@ -5,7 +5,7 @@ test("an admin can list and open the default terms with their week, time off and
 }) => {
   const browser = await env.startSetupAtImport();
   expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
-    data: { import: { approve: { error: null } } },
+    data: { imports: { approve: { error: null } } },
   });
   const setup = await browser.post("/api/auth/setup", {
     ...TEST_OWNER,
