@@ -57,4 +57,33 @@ export const termsEn = {
   "terms.rule.leaveYearFromStart": "Leave year from each person's start date",
   "terms.planned": "From {date}: {rule}",
   "terms.history.name": "Name",
+  "terms.new": "New terms",
+  "terms.new.title": "New terms",
+  "terms.new.note":
+    "Starts with a Mon–Fri week and no time off. Nobody is on it until a location starts people on it.",
+  "terms.new.create": "Create terms",
+  "terms.name": "Name",
+  "terms.name.hint": "Such as an office, a nation, or a group with its own contract.",
+  "terms.name.required": "Enter a name.",
+  "terms.name.tooLong": "Use 100 characters or fewer.",
+  "terms.name.taken": "There are already terms called {name}.",
+  "terms.name.takenUnknown": "There are already terms with this name.",
+  "terms.new.bankHolidays": "Bank holidays",
+  "terms.saveFailed": "The terms could not be saved. Try again.",
+  "terms.cancel": "Cancel",
+  "terms.more": "More: rename or delete",
+  "terms.rename": "Rename",
+  "terms.rename.title": "Rename terms",
+  "terms.rename.save": "Save",
+  "terms.delete": "Delete {name}",
+  "terms.delete.allowed": "Nobody was ever on these terms.",
+  "terms.delete.default":
+    "The default terms stay, because people without a location start on them.",
+  "terms.delete.hadPeople": "Terms people were on stay, so their history stays true.",
+  "terms.delete.location":
+    "{locations} starts new people here. Choose other terms for it in Settings › Locations first.",
+  "terms.delete.locations":
+    "{locations} start new people here. Choose other terms for them in Settings › Locations first.",
+  "terms.delete.done": "{name} deleted.",
+  "terms.delete.failed": "The terms could not be deleted. Try again.",
 } as const;

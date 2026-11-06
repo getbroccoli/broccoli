@@ -53,6 +53,7 @@ query EmploymentTermsStack($id: ID!) {
     name
     isDefault
     peopleCount
+    deleteBlocker
     locations {
       id
       name
@@ -92,6 +93,65 @@ query EmploymentTermsStack($id: ID!) {
         yearlyEntitlement {
           days
           daysPerWeek
+        }
+      }
+    }
+  }
+}
+
+mutation CreateTerms($input: TermsCreateInput!) {
+  employees {
+    createTerms(input: $input) {
+      terms {
+        id
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation RenameTerms($input: TermsUpdateInput!) {
+  employees {
+    updateTerms(input: $input) {
+      terms {
+        id
+        name
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation DeleteTerms($input: TermsDeleteInput!) {
+  employees {
+    deleteTerms(input: $input) {
+      deletedTermsId
+      error {
+        __typename
+        ... on Error {
+          message
         }
       }
     }

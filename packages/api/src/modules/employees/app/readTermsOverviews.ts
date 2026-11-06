@@ -1,7 +1,13 @@
-import type { Orm } from "../../../core/db";
+import type { Orm, Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import { locationRepository, termsRepository, workingPatternRepository } from "../db";
-import type { Location, PatternVersion, Terms } from "../domain";
+import {
+  deleteBlockerOf,
+  type Location,
+  type PatternVersion,
+  type Terms,
+  type TermsDeleteBlocker,
+} from "../domain";
 
 /** A set of terms as Settings shows it on a date. */
 export interface TermsOverview extends Terms {
@@ -11,29 +17,38 @@ export interface TermsOverview extends Terms {
   locations: Location[];
   /** The terms' pattern versions covering that day or later, oldest first: the day's, then planned ones. */
   workingWeek: PatternVersion[];
+  /** Why the terms cannot be deleted; null: they can. */
+  deleteBlocker: TermsDeleteBlocker | null;
 }
 
 /** The terms among `termsIds`, or every set without, as they are on `date`; the default first, then by name. */
 export async function readTermsOverviews(
-  orm: Orm,
+  db: Orm | Tx,
   date: CalendarDate,
   termsIds?: readonly string[],
 ): Promise<TermsOverview[]> {
-  const allTerms = await termsRepository(orm).findAll();
-  const peopleCounts = await termsRepository(orm).countMembersOn(date);
-  const locations = await locationRepository(orm).findWithStartingTerms();
-  const patterns = await workingPatternRepository(orm).findPatterns();
+  const allTerms = await termsRepository(db).findAll();
+  const shown = allTerms.filter(({ id }) => !termsIds || termsIds.includes(id));
+  const peopleCounts = await termsRepository(db).countMembersOn(date);
+  const everJoined = await termsRepository(db).findEverJoined(shown.map(({ id }) => id));
+  const locations = await locationRepository(db).findWithStartingTerms();
+  const patterns = await workingPatternRepository(db).findPatterns();
   const defaultTermsId = allTerms.find(({ isDefault }) => isDefault)?.id;
-  return allTerms
-    .filter(({ id }) => !termsIds || termsIds.includes(id))
-    .map((terms) => ({
+  return shown.map((terms) => {
+    const termsLocations = locations
+      .filter(({ termsId }) => (termsId ?? defaultTermsId) === terms.id)
+      .map(({ id, name }) => ({ id, name }));
+    return {
       ...terms,
       peopleCount: peopleCounts.get(terms.id) ?? 0,
-      locations: locations
-        .filter(({ termsId }) => (termsId ?? defaultTermsId) === terms.id)
-        .map(({ id, name }) => ({ id, name })),
+      locations: termsLocations,
       workingWeek: (patterns.find(({ termsId }) => termsId === terms.id)?.versions ?? []).filter(
         ({ endDate }) => endDate === null || endDate >= date,
       ),
-    }));
+      deleteBlocker: deleteBlockerOf(terms, {
+        hadPeople: everJoined.has(terms.id),
+        locationCount: termsLocations.length,
+      }),
+    };
+  });
 }

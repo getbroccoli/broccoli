@@ -7,6 +7,7 @@ import { RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
 import { DefaultPill } from "./DefaultPill";
+import { TermsMenu } from "./TermsMenu";
 import { TermsTimeOffSection } from "./TermsTimeOffSection";
 import { TERMS_DESCRIPTION } from "./termsDescription";
 import { WorkingWeekSection } from "./WorkingWeekSection";
@@ -40,6 +41,7 @@ export function TermsRecord({ terms }: Props) {
           </div>
           <p className="truncate text-[13px] text-muted-foreground">{meta}</p>
         </div>
+        <TermsMenu terms={terms} />
         <SheetClose render={<Button variant="ghost" size="icon" aria-label={t("terms.close")} />}>
           <X />
         </SheetClose>

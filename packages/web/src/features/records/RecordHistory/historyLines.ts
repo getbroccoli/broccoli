@@ -50,13 +50,12 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
   const labels = line.changes.map(({ field }) => labelOf(field));
   const titleChange = line.changes.find(({ field }) => field === description.titleField);
   switch (line.operation) {
-    case "CREATED":
-      return description.createdAs
-        ? {
-            kind: "createdAs",
-            text: t(description.createdAs, { title: titleChange?.newValue ?? "" }),
-          }
+    case "CREATED": {
+      const createdAs = description.createdAs?.[line.cause.kind];
+      return createdAs
+        ? { kind: "createdAs", text: t(createdAs, { title: titleChange?.newValue ?? "" }) }
         : { kind: "created", title: titleChange?.newValue ?? null, labels };
+    }
     case "DELETED":
       return { kind: "deleted", title: titleChange?.oldValue ?? null };
     case "UPDATED": {

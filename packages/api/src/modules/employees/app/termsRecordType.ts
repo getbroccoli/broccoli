@@ -4,7 +4,7 @@ import { parseUuid, todayInLondon } from "../../../utils";
 import { termsRepository } from "../db";
 import { readTermsOverviews } from "./readTermsOverviews";
 
-/** Terms as a record type that keeps history: about nobody, so only admins, who hold the grant, read them. */
+/** Terms as a record type that keeps history: about nobody, so only admins, who hold the grant, read and rename them. */
 export function termsRecordType(orm: Orm): RecordTypeRegistration {
   return {
     graphqlType: "Terms",
@@ -19,6 +19,6 @@ export function termsRecordType(orm: Orm): RecordTypeRegistration {
       new Map(
         (await readTermsOverviews(orm, todayInLondon(), ids)).map((terms) => [terms.id, terms]),
       ),
-    permissions: { object: "terms", editableFields: [] },
+    permissions: { object: "terms", editableFields: ["name"] },
   };
 }
