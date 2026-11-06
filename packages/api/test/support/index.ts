@@ -109,6 +109,7 @@ export {
   readAllowances,
   readTermsPolicies,
   type TermsPolicy,
+  timeOffPolicyService,
   timeOffService,
   transactWithTimeOffEvents,
 } from "./timeOffService";

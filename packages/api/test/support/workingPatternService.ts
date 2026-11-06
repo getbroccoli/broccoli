@@ -4,18 +4,25 @@ import {
   createWorkingPatternService,
   createEmployeeWorkingPatternService,
 } from "../../src/modules/employees";
+import { calendarDate } from "./calendarDate";
 import { OWNER } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
 
-/** Every working pattern service on `orm`, with silent logs; pass `transact` to receive their events. */
+/**
+ * Every working pattern service on `orm`, with silent logs; pass `transact` to receive their
+ * events, and `today` to fix the date changes are checked against.
+ */
 export function workingPatternService(
   orm: Orm,
-  { transact = testTransactor(orm) }: { transact?: Transact } = {},
+  { transact = testTransactor(orm), today }: { transact?: Transact; today?: string } = {},
 ) {
   const dependencies = { orm, transact, logger: createLogger("silent") };
   return {
     ...createEmployeeWorkingPatternService(dependencies),
-    ...createWorkingPatternService(dependencies),
+    ...createWorkingPatternService({
+      ...dependencies,
+      ...(today && { today: () => calendarDate(today) }),
+    }),
   };
 }
 

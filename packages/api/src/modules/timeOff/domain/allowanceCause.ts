@@ -9,6 +9,13 @@ export type AllowanceCause =
       previousStartDate: CalendarDate | null;
     }
   | {
+      kind: "TIME_OFF_RULES_CHANGED";
+      /** `<policy id>:<date>`: the policy and the date its change applies from. */
+      ref: string;
+      /** The date the change applies from; allowances change from then on. */
+      from: CalendarDate;
+    }
+  | {
       kind:
         | "TIME_OFF_TURNED_ON"
         | "EMPLOYEE_ADDED"

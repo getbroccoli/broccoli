@@ -34,11 +34,23 @@ export interface TimeOffPolicyRepository {
   lockPolicies(): Promise<void>;
   /** Whether any terms have a time off policy: whether time off is on. */
   hasAnyTermsPolicies(): Promise<boolean>;
-  /** A new policy, one set of terms' or named, with one open version from the beginning. */
+  /** A new policy, one set of terms' or named, with one open version from `version.startDate`, or the beginning. */
   insertPolicy(
     policy: { timeOffTypeId: string } & ({ termsId: string } | { name: string }),
-    version: NewPolicyVersion,
+    version: NewPolicyVersion & { startDate?: CalendarDate },
   ): Promise<string>;
+  /** Deletes a policy with its versions; their rules stay for the ledger lines granted from them. */
+  deletePolicy(id: string): Promise<void>;
+  insertVersion(
+    timeOffPolicyId: string,
+    version: NewPolicyVersion & { startDate: CalendarDate; endDate: CalendarDate | null },
+  ): Promise<void>;
+  /** Sets the last day of a version; null makes it open-ended. */
+  endVersion(id: string, endDate: CalendarDate | null): Promise<void>;
+  /** Deletes a version; its rules stay for the ledger lines granted from them. */
+  deleteVersion(id: string): Promise<void>;
+  /** The employees put on the policy on any date. */
+  findAssignedEmployees(timeOffPolicyId: string): Promise<string[]>;
   /** Deletes every policy with its versions and rules, also removed versions' rules; no ledger line or assignment may point at one. */
   deleteAll(): Promise<void>;
   /** Each employee's named policies, by employee id. */
@@ -87,30 +99,38 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       return policy !== undefined;
     },
 
-    async insertPolicy(policy, { balance, bankHolidays, leaveYear, rules }) {
+    async insertPolicy(policy, { startDate = null, ...version }) {
       const [inserted] = await orm()
         .insert(timeOffPolicies)
         .values(policy)
         .returning({ id: timeOffPolicies.id });
-      const [version] = await orm()
-        .insert(timeOffPolicyVersions)
-        .values({
-          timeOffPolicyId: inserted!.id,
-          balance,
-          bankHolidays,
-          leaveYearStart: leaveYear?.kind ?? null,
-          leaveYearStartMonth:
-            leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.month : null,
-          leaveYearStartDay:
-            leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.day : null,
-        })
-        .returning({ id: timeOffPolicyVersions.id });
-      if (rules.length > 0) {
-        await orm()
-          .insert(timeOffAllowanceRules)
-          .values(rules.map((rule) => ruleRow(version!.id, rule)));
-      }
+      await insertVersionRows(db, inserted!.id, { ...version, startDate, endDate: null });
       return inserted!.id;
+    },
+
+    async deletePolicy(id) {
+      await orm().delete(timeOffPolicies).where(eq(timeOffPolicies.id, id));
+    },
+
+    insertVersion: (timeOffPolicyId, version) => insertVersionRows(db, timeOffPolicyId, version),
+
+    async endVersion(id, endDate) {
+      await orm()
+        .update(timeOffPolicyVersions)
+        .set({ endDate })
+        .where(eq(timeOffPolicyVersions.id, id));
+    },
+
+    async deleteVersion(id) {
+      await orm().delete(timeOffPolicyVersions).where(eq(timeOffPolicyVersions.id, id));
+    },
+
+    async findAssignedEmployees(timeOffPolicyId) {
+      const rows = await orm()
+        .selectDistinct({ employeeId: timeOffPolicyAssignments.employeeId })
+        .from(timeOffPolicyAssignments)
+        .where(eq(timeOffPolicyAssignments.timeOffPolicyId, timeOffPolicyId));
+      return rows.map(({ employeeId }) => employeeId);
     },
 
     async deleteAll() {
@@ -138,6 +158,39 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       );
     },
   };
+}
+
+async function insertVersionRows(
+  db: Orm | Tx,
+  timeOffPolicyId: string,
+  {
+    startDate,
+    endDate,
+    balance,
+    bankHolidays,
+    leaveYear,
+    rules,
+  }: NewPolicyVersion & { startDate: CalendarDate | null; endDate: CalendarDate | null },
+) {
+  const [version] = await ormOf(db)
+    .insert(timeOffPolicyVersions)
+    .values({
+      timeOffPolicyId,
+      startDate,
+      endDate,
+      balance,
+      bankHolidays,
+      leaveYearStart: leaveYear?.kind ?? null,
+      leaveYearStartMonth:
+        leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.month : null,
+      leaveYearStartDay: leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.day : null,
+    })
+    .returning({ id: timeOffPolicyVersions.id });
+  if (rules.length > 0) {
+    await ormOf(db)
+      .insert(timeOffAllowanceRules)
+      .values(rules.map((rule) => ruleRow(version!.id, rule)));
+  }
 }
 
 function toVersion(
