@@ -107,7 +107,7 @@ function shownTypes(
   const date = person.serviceStart && person.serviceStart > today ? person.serviceStart : today;
   const types = new Map(policies.map(({ timeOffType }) => [timeOffType.id, timeOffType]));
   return [...types.values()].sort(byTypeOrder).flatMap((type) => {
-    const version = person.timelineOf(type.id).versionOn(date);
+    const version = person.timelineOf(type.id).getVersionOnDate(date);
     const shown =
       version && shownType(person, { timeOffType: type, balance: version.balance }, date);
     return shown ? [shown] : [];

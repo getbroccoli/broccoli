@@ -6,7 +6,7 @@ import {
   type EmployeeReadService,
   type EmployeeWorkingPatternService,
   type PersonTimeline,
-  personTimeline,
+  createPersonTimeline,
 } from "../../employees";
 import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
 import {
@@ -106,7 +106,7 @@ export async function readPeople(
       periods,
       serviceStart: periods[0]?.startDate ?? null,
       timelineOf: (timeOffTypeId: string) =>
-        personTimeline({
+        createPersonTimeline({
           direct: (assignments.get(employeeId) ?? [])
             .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
             .map(({ timeOffPolicyId, startDate, endDate }) => ({
@@ -232,7 +232,7 @@ function newAllowance(
   today: CalendarDate,
 ): Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd"> | null {
   const anchor = person.serviceStart && person.serviceStart > today ? person.serviceStart : today;
-  const version = person.timelineOf(timeOffTypeId).versionOn(anchor);
+  const version = person.timelineOf(timeOffTypeId).getVersionOnDate(anchor);
   if (!version?.leaveYear) {
     return null;
   }
@@ -254,7 +254,7 @@ function newAllowance(
 function datedPolicies(person: Person, allowance: Allowance): DatedPolicy[] {
   return person
     .timelineOf(allowance.timeOffTypeId)
-    .stretches(allowance.leaveYearStart, allowance.leaveYearEnd)
+    .getVersions(allowance.leaveYearStart, allowance.leaveYearEnd)
     .map(({ version, startDate, endDate }) => ({
       startDate,
       endDate,

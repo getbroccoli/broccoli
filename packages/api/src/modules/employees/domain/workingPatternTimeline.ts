@@ -39,7 +39,7 @@ export function workingWeeksOf(
     }
   };
   let next = from;
-  for (const { version, startDate, endDate } of timeline.stretches(from, until)) {
+  for (const { version, startDate, endDate } of timeline.getVersions(from, until)) {
     if (startDate > next) {
       add(next, null);
     }

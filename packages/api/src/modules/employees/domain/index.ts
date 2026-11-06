@@ -32,7 +32,7 @@ export {
   type WorkingPattern,
   type WorkingWeek,
 } from "./workingPattern";
-export { personTimeline, type PersonTimeline } from "./personTimeline";
+export { createPersonTimeline, type PersonTimeline } from "./personTimeline";
 export {
   workingWeeksOf,
   type DatedPattern,

@@ -16,7 +16,7 @@ import {
   makeRoomForDatedRow,
   parseDateField,
   parseEmployeeIds,
-  personTimeline,
+  createPersonTimeline,
   type WorkingPattern,
   type WorkingPatternTimeline,
   type WorkingWeek,
@@ -246,7 +246,7 @@ async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Ti
   const timelines = new Map(
     employeeIds.map((id): [string, WorkingPatternTimeline] => [
       id,
-      personTimeline({
+      createPersonTimeline({
         direct: (assignments.get(id) ?? []).map((row) => ({ ...row, id: row.workingPatternId })),
         terms: memberships.get(id) ?? [],
         idOfTerms: (termsId) => byTerms.get(termsId) ?? null,
@@ -264,7 +264,7 @@ async function patternNameOn(
   employeeId: string,
   date: CalendarDate,
 ): Promise<string | null> {
-  const pattern = patterns.find(({ id }) => id === timelines.get(employeeId)!.idOn(date));
+  const pattern = patterns.find(({ id }) => id === timelines.get(employeeId)!.getIdOnDate(date));
   if (!pattern?.termsId) {
     return pattern?.name ?? null;
   }

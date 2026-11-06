@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 
 import type { CalendarDate } from "../../../utils";
 import type { PatternVersion, WeekdayMinutes } from "./workingPattern";
-import { personTimeline, type TimelineSources } from "./personTimeline";
+import { createPersonTimeline, type TimelineCreateInputArgs } from "./personTimeline";
 import { workingWeeksOf } from "./workingPatternTimeline";
 
 it("has no working week before and after a person's own pattern", () => {
@@ -85,12 +85,12 @@ function timelineOf({
   termsPattern = null,
   versions = {},
 }: {
-  direct?: TimelineSources<PatternVersion>["direct"];
-  terms?: TimelineSources<PatternVersion>["terms"];
+  direct?: TimelineCreateInputArgs<PatternVersion>["direct"];
+  terms?: TimelineCreateInputArgs<PatternVersion>["terms"];
   termsPattern?: string | null;
   versions?: Record<string, PatternVersion[]>;
 }) {
-  return personTimeline({
+  return createPersonTimeline({
     direct,
     terms,
     idOfTerms: () => termsPattern,
