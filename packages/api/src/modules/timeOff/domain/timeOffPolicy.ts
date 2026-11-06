@@ -12,6 +12,8 @@ export interface TimeOffType {
   typeKey: TimeOffTypeKey | null;
   icon: TimeOffTypeIcon | null;
   colour: TimeOffTypeColour | null;
+  /** Colleagues see that the person is off, not why. Always true for Sickness. */
+  private: boolean;
 }
 
 /** A policy for one type: one set of terms' own, or a named one people are put on one by one. */

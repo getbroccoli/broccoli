@@ -17,11 +17,14 @@ import {
   parseStandardLeavePolicyKey,
   RECORD_ONLY_POLICY,
   STANDARD_LEAVE_POLICIES,
+  type TimeOffType,
+  type TimeOffTypeIdentity,
 } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
 import { readTermsTimeOff, type TimeOffWithPolicies } from "./readTermsTimeOff";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
+import { changeType, createType } from "./timeOffTypeIdentity";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -53,6 +56,16 @@ export interface TimeOffService {
     ctx: SecurityContext,
     input: { employeeIds: readonly string[] },
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
+  /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
+  createType: (ctx: SecurityContext, input: TimeOffTypeIdentity) => Promise<TimeOffType>;
+  /**
+   * Changes a type's name, icon, colour and privacy, the same in every set of terms; refuses a
+   * name another type has, ignoring case, and showing Sickness's reason. Admins only.
+   */
+  changeType: (
+    ctx: SecurityContext,
+    input: TimeOffTypeIdentity & { id: string },
+  ) => Promise<TimeOffType>;
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
   /**
@@ -140,6 +153,8 @@ export function createTimeOffService({
     },
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
+    createType: (ctx, input) => createType(dependencies, ctx, input),
+    changeType: (ctx, input) => changeType(dependencies, ctx, input),
     listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, today }, ctx),
     readTermsTimeOff: (ctx, termsIds) => readTermsTimeOff({ orm, today }, ctx, termsIds),
     async lockPolicies(ctx, tx) {
