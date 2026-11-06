@@ -1,7 +1,11 @@
 import { useQuery } from "@apollo/client/react";
 import { type FormEvent, useState } from "react";
 
-import { EmploymentTermsDocument, RenameTermsDocument } from "@/__generated__/graphql";
+import {
+  EmploymentTermsDocument,
+  RecordHistoryDocument,
+  RenameTermsDocument,
+} from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,8 +31,9 @@ export function RenameTermsDialog({ open, onOpenChange, terms }: Props) {
   const [name, setName] = useState(terms.name);
   // The list under the stack already holds every name, to say which terms a taken name belongs to.
   const { data } = useQuery(EmploymentTermsDocument, { fetchPolicy: "cache-only" });
+  // The list orders by name, and the open history gains the rename's line.
   const [renameTerms, renaming] = usePayloadMutation(RenameTermsDocument, {
-    refetch: [EmploymentTermsDocument],
+    refetch: [EmploymentTermsDocument, RecordHistoryDocument],
   });
   const failed = Boolean(renaming.payloadError || renaming.error);
   const refusal = renaming.payloadError;
