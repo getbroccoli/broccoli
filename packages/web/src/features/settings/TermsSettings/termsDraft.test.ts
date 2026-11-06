@@ -127,7 +127,7 @@ it.each(["366", "20.5"])("accepts %s days of yearly entitlement", (days) => {
 
 it.each(["367", "20.3", "", "-1"])("refuses invalid yearly entitlement %j", (days) => {
   expect(rulesErrors({ ...rules, days }, "2026-01-01")).toEqual({
-    days: "Enter a number of days from 0 to 366.",
+    days: "Enter days from 0 to 366, in half days.",
   });
 });
 

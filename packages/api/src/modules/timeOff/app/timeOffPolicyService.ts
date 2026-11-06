@@ -278,8 +278,10 @@ async function addVersionFrom(
 ) {
   const repository = timeOffPolicyRepository(tx);
   const before = policy.versions.find((version) => coversDate(version, startDate)) ?? null;
-  refuseCountsChangeMidYear(before, rules, startDate);
-  const endDate = before ? before.endDate : dayBeforeNext(policy.versions, startDate);
+  const next =
+    policy.versions.find(({ startDate: from }) => from !== null && from > startDate) ?? null;
+  refuseCountsChangeMidYear(rules, startDate, { before, next });
+  const endDate = before ? before.endDate : next && addDays(next.startDate!, -1);
   const { ended, replaced } = makeRoomForDatedRow(policy.versions, startDate, endDate);
   if (replaced) {
     await repository.deleteVersion(replaced.id);
@@ -294,15 +296,6 @@ async function addVersionFrom(
 
 function rulesChanged(timeOffPolicyId: string, from: CalendarDate) {
   return { kind: "TIME_OFF_RULES_CHANGED" as const, ref: `${timeOffPolicyId}:${from}`, from };
-}
-
-/** The day before the first version after `date`; null when none follows. */
-function dayBeforeNext(
-  versions: readonly PolicyVersion[],
-  date: CalendarDate,
-): CalendarDate | null {
-  const next = versions.find(({ startDate }) => startDate !== null && startDate > date);
-  return next ? addDays(next.startDate!, -1) : null;
 }
 
 function isTermsPolicy(policy: TimeOffPolicy, termsId: string, timeOffTypeId: string): boolean {

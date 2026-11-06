@@ -9,7 +9,7 @@ import { usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
 import { TERMS_REFETCH, type Terms, type TimeOffRow } from "./termsQueries";
-import { companyToday, ruleSummary, splitVersions, weekSummary } from "./termsText";
+import { ruleSummary, versionBefore, weekSummary } from "./termsText";
 
 /** A planned change waiting for "Cancel change" to be confirmed, with what stays once it goes. */
 type PlannedChange =
@@ -52,13 +52,13 @@ export function usePlannedChanges(terms: Terms) {
 }
 
 function weekChange(terms: Terms, version: Terms["workingWeek"][number]): PlannedChange | null {
-  const { current } = splitVersions(terms.workingWeek, companyToday());
+  const before = versionBefore(terms.workingWeek, version.startDate!);
   return (
-    current && {
+    before && {
       kind: "week",
       startDate: version.startDate!,
       body: t("terms.edit.weekStays", {
-        week: weekSummary(current),
+        week: weekSummary(before),
         people: peopleOf(terms.peopleCount),
         terms: terms.name,
       }),
@@ -72,21 +72,21 @@ function rulesChange(
   version: TimeOffRow["versions"][number],
 ): PlannedChange {
   const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
-  const { current } = splitVersions(row.versions, companyToday());
+  const before = versionBefore(row.versions, version.startDate!);
   const values = {
     type: row.timeOffType.name,
     people: peopleOf(terms.peopleCount),
     terms: terms.name,
   };
-  const fromAllowance = current?.balance === "BALANCE_FROM_ALLOWANCE";
+  const fromAllowance = before?.balance === "BALANCE_FROM_ALLOWANCE";
   return {
     kind: "rules",
     timeOffPolicyId: row.policy!.id,
     startDate: version.startDate!,
-    body: current
+    body: before
       ? t(fromAllowance ? "terms.edit.rulesStaysAt" : "terms.edit.rulesStays", {
           ...values,
-          rule: ruleSummary(current),
+          rule: ruleSummary(before),
         })
       : t("terms.edit.offerStays", values),
   };

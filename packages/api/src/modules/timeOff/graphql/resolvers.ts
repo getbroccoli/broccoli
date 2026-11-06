@@ -85,7 +85,12 @@ export function createResolvers(
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
     Terms: {
-      timeOff: (terms, _args, context) => loaders(context).termsTimeOff.load(terms.id),
+      timeOff: async (terms, { timeOffTypeId }, context) => {
+        const rows = await loaders(context).termsTimeOff.load(terms.id);
+        return timeOffTypeId
+          ? rows.filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
+          : rows;
+      },
     },
     TimeOffWithPolicies: {
       timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),

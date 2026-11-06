@@ -10,19 +10,19 @@ import { testTransactor } from "./testTransactor";
 
 /**
  * Every working pattern service on `orm`, with silent logs; pass `transact` to receive their
- * events, and `today` to fix the date changes are checked against.
+ * events. `today` is the date changes are checked against, fixed so tests never depend on the clock.
  */
 export function workingPatternService(
   orm: Orm,
-  { transact = testTransactor(orm), today }: { transact?: Transact; today?: string } = {},
+  {
+    transact = testTransactor(orm),
+    today = "2026-06-01",
+  }: { transact?: Transact; today?: string } = {},
 ) {
   const dependencies = { orm, transact, logger: createLogger("silent") };
   return {
     ...createEmployeeWorkingPatternService(dependencies),
-    ...createWorkingPatternService({
-      ...dependencies,
-      ...(today && { today: () => calendarDate(today) }),
-    }),
+    ...createWorkingPatternService({ ...dependencies, today: () => calendarDate(today) }),
   };
 }
 

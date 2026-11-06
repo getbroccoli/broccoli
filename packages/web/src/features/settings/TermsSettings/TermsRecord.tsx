@@ -70,7 +70,11 @@ export function TermsRecord({ terms }: Props) {
       </header>
 
       <div className="subtle-scrollbar flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
-        <div className="flex flex-col gap-8 px-6 py-6 md:flex-[2] md:overflow-y-auto">
+        {/* Nothing changes while a save is on its way, so it never closes over newer edits. */}
+        <fieldset
+          disabled={editing.saving}
+          className="flex min-w-0 flex-col gap-8 px-6 py-6 md:flex-[2] md:overflow-y-auto"
+        >
           <WorkingWeekSection
             versions={terms.workingWeek}
             editor={
@@ -99,7 +103,7 @@ export function TermsRecord({ terms }: Props) {
                     editor: (
                       <RulesEditor
                         draft={open.draft}
-                        current={editing.rowCurrent}
+                        current={editing.rowBase}
                         earliest={editing.earliest}
                         onChange={(draft) =>
                           editing.change({
@@ -136,7 +140,7 @@ export function TermsRecord({ terms }: Props) {
               </ul>
             )}
           </section>
-        </div>
+        </fieldset>
         <aside className="flex flex-col gap-8 border-t border-border bg-muted/40 px-6 py-6 md:flex-1 md:overflow-y-auto md:border-t-0 md:border-l">
           {open && <WhatChanges box={editing.box} people={editing.people} termsName={terms.name} />}
           <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />
@@ -190,7 +194,7 @@ export function TermsRecord({ terms }: Props) {
 
   /** The line under an open type's name: "Changed: 20 → 22 days" while only its days change. */
   function openRowSummary(): string {
-    const current = editing.rowCurrent;
+    const current = editing.rowBase;
     if (open?.kind !== "rules") return "";
     if (editing.dirty && changesOnlyDays(open.draft, current) && open.draft.days.trim() !== "") {
       return t("terms.edit.rules.changedDays", {

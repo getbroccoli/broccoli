@@ -43,18 +43,25 @@ export function parseRules(input: TimeOffRulesInput): TimeOffRules {
 }
 
 /**
- * Refuses a change of how a type counts from `startDate` unless a leave year starts then; an offer
- * has no version before it, so it may count any way.
+ * Refuses rules from `startDate` that change how a type counts mid leave year: against the version
+ * before them from `startDate`, and against the next version from its start. An offer has no
+ * version before it, so it may count any way.
  * shortcut: every leave year starts on 1 January; take the version's own leave year once they can differ.
  */
 export function refuseCountsChangeMidYear(
-  before: PolicyVersion | null,
   rules: TimeOffRules,
   startDate: CalendarDate,
+  { before, next }: { before: PolicyVersion | null; next: PolicyVersion | null },
 ) {
-  if (before && before.balance !== rules.balance && !startDate.endsWith("-01-01")) {
+  const changesMidYear = (other: PolicyVersion | null, from: CalendarDate) =>
+    other !== null && other.balance !== rules.balance && !isLeaveYearStart(from);
+  if (changesMidYear(before, startDate) || (next && changesMidYear(next, next.startDate!))) {
     throw invalidInput([{ field: "rules.balance", code: "not_leave_year_start" }]);
   }
+}
+
+function isLeaveYearStart(date: CalendarDate): boolean {
+  return date.endsWith("-01-01");
 }
 
 /**

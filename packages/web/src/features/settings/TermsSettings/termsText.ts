@@ -88,6 +88,16 @@ export function splitVersions<V extends { startDate?: string | null; endDate?: s
   };
 }
 
+/** The version a cancel of the one from `startDate` extends: the one ending the day before; null for none. */
+export function versionBefore<V extends { endDate?: string | null }>(
+  versions: readonly V[],
+  startDate: string,
+): V | null {
+  const [year, month, date] = calendarDayParts(startDate);
+  const dayBefore = new Date(Date.UTC(year, month, date - 1)).toISOString().slice(0, 10);
+  return versions.find(({ endDate }) => endDate === dayBefore) ?? null;
+}
+
 /** The company's today, in London, as the API decides which versions are from today on. */
 export function companyToday(): string {
   return calendarDayOf(new Date(), "Europe/London");

@@ -65,6 +65,44 @@ test("how leave counts cannot change partway through a leave year", async ({
   });
 });
 
+test("changing January's balance refuses a kept July version that would change it mid-year", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+    today: "2026-11-06",
+  });
+  const [policy] = await readTermsPolicies(orm, termsId);
+  const service = timeOffPolicyService(orm, { today: "2026-11-06" });
+  await service.changePolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2026-07-01",
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 22,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+  const before = await timeOffPolicyRepository(orm).findAll();
+
+  await expect(
+    service.changePolicy(OWNER, {
+      timeOffPolicyId: policy!.id,
+      startDate: "2026-01-01",
+      rules: { balance: "unlimited_balance" },
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "rules.balance", code: "not_leave_year_start" }],
+  });
+
+  expect(await timeOffPolicyRepository(orm).findAll()).toEqual(before);
+});
+
 test("an allowance requires a bank holiday choice", async ({ orm, seed, transact }) => {
   const termsId = await seed.defaultTermsId();
   await giveTermsPolicies(orm, transact, {

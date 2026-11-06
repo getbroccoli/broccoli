@@ -105,7 +105,7 @@ export const termsEn = {
   "terms.edit.rules.nextYearDaysHint": "This year stays at {days} days.",
   "terms.edit.rules.nextYearHint": "This year stays as it is.",
   "terms.edit.rules.anotherDateHint": "This year's allowance splits at that date.",
-  "terms.edit.rules.daysInvalid": "Enter a number of days from 0 to 366.",
+  "terms.edit.rules.daysInvalid": "Enter days from 0 to 366, in half days.",
   "terms.edit.rules.changedDays": "Changed: {before} → {after} days",
   "terms.edit.rules.daysTitle": "{type}: {before} → {after} days",
   "terms.edit.rules.ruleTitle": "{type}: {rule}",

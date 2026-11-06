@@ -121,14 +121,14 @@ query TermsWeekReach($id: ID!, $from: Date!) {
   }
 }
 
-query TermsTimeOffReach($id: ID!, $from: Date!) {
+query TermsTimeOffReach($id: ID!, $timeOffTypeId: ID!, $from: Date!, $offer: Boolean!) {
   terms(id: $id) {
     id
-    timeOff {
+    timeOff(timeOffTypeId: $timeOffTypeId) {
       timeOffType {
         id
       }
-      policy {
+      policy @skip(if: $offer) {
         id
         reach(from: $from) {
           id
@@ -136,7 +136,7 @@ query TermsTimeOffReach($id: ID!, $from: Date!) {
           lastName
         }
       }
-      offerReach(from: $from) {
+      offerReach(from: $from) @include(if: $offer) {
         id
         firstName
         lastName
@@ -147,6 +147,7 @@ query TermsTimeOffReach($id: ID!, $from: Date!) {
 
 fragment TermsChangeError on Error {
   __typename
+  message
   ... on InvalidInputError {
     fields {
       field

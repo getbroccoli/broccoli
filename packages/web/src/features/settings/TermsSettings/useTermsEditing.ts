@@ -30,15 +30,17 @@ export type OpenSection =
  */
 export function useTermsEditing(terms: Terms) {
   const [open, setOpen] = useState<OpenSection | null>(null);
-  const [dirty, setDirty] = useState(false);
+  const [opened, setOpened] = useState<OpenSection | null>(null);
   const [waiting, setWaiting] = useState<OpenSection | null>(null);
   const { save, saving } = useSaveSection(terms);
   const facts = sectionFacts(terms, open);
   const people = useReach(terms.id, open, facts);
+  // Changed from what the section opened with; typing a value back is no change.
+  const dirty = open !== null && JSON.stringify(open.draft) !== JSON.stringify(opened?.draft);
 
   const show = (section: OpenSection | null) => {
     setOpen(section);
-    setDirty(false);
+    setOpened(section);
     setWaiting(null);
   };
   const ask = (section: OpenSection) => (open && dirty ? setWaiting(section) : show(section));
@@ -58,10 +60,7 @@ export function useTermsEditing(terms: Terms) {
       facts.week && ask({ kind: "week", draft: weekDraftOf(facts.week, companyToday()) }),
     editRules: (timeOffTypeId: string) =>
       ask({ kind: "rules", timeOffTypeId, draft: rulesDraftOf(currentOf(terms, timeOffTypeId)) }),
-    change: (section: OpenSection) => {
-      setOpen(section);
-      setDirty(true);
-    },
+    change: setOpen,
     close: () => show(null),
     discard: () => show(waiting),
     keepEditing: () => setWaiting(null),
@@ -78,7 +77,7 @@ function sectionFacts(terms: Terms, open: OpenSection | null) {
   const today = companyToday();
   const week = splitVersions(terms.workingWeek, today).current;
   const row = open?.kind === "rules" ? rowOf(terms, open.timeOffTypeId) : null;
-  const rowCurrent = row ? splitVersions(row.versions, today).current : null;
+  const rowToday = row ? splitVersions(row.versions, today).current : null;
   const earliest =
     open?.kind === "week"
       ? terms.workingPattern.earliestChange
@@ -92,34 +91,42 @@ function sectionFacts(terms: Terms, open: OpenSection | null) {
         ? rulesErrors(open.draft, earliest)
         : null;
   const valid = errors !== null && Object.keys(errors).length === 0;
-  return { week, row, rowCurrent, earliest, startDate, valid };
+  // The rules the new ones follow on their date, which is today's unless a plan starts earlier.
+  const rowBase = row ? (versionOn(row.versions, startDate) ?? rowToday) : null;
+  return { week, row, rowBase, earliest, startDate, valid };
 }
 
 /** The people saving the open section reaches from its date, by name; null while they load. */
-function useReach(termsId: string, open: OpenSection | null, { startDate, valid }: SectionFacts) {
-  const variables = { id: termsId, from: startDate };
+function useReach(
+  termsId: string,
+  open: OpenSection | null,
+  { row, startDate, valid }: SectionFacts,
+) {
   const week = useQuery(TermsWeekReachDocument, {
-    variables,
+    variables: { id: termsId, from: startDate },
     skip: open?.kind !== "week" || !valid,
     fetchPolicy: "no-cache",
   });
   const timeOff = useQuery(TermsTimeOffReachDocument, {
-    variables,
+    variables: {
+      id: termsId,
+      from: startDate,
+      timeOffTypeId: row?.timeOffType.id ?? "",
+      offer: !row?.policy,
+    },
     skip: open?.kind !== "rules" || !valid,
     fetchPolicy: "no-cache",
   });
   if (open?.kind === "week") return week.data?.terms?.workingPattern.reach ?? null;
-  const row = timeOff.data?.terms?.timeOff.find(
+  const reached = timeOff.data?.terms?.timeOff.find(
     ({ timeOffType }) => open?.kind === "rules" && timeOffType.id === open.timeOffTypeId,
   );
-  return row ? (row.policy?.reach ?? row.offerReach) : null;
+  return reached ? (reached.policy?.reach ?? reached.offerReach ?? null) : null;
 }
 
-function changeBox(open: OpenSection | null, { row, rowCurrent, startDate }: SectionFacts) {
+function changeBox(open: OpenSection | null, { row, rowBase, startDate }: SectionFacts) {
   if (open?.kind === "week") return weekChangeBox(open.draft);
-  return open && row
-    ? rulesChangeBox(row.timeOffType.name, open.draft, rowCurrent, startDate)
-    : null;
+  return open && row ? rulesChangeBox(row.timeOffType.name, open.draft, rowBase, startDate) : null;
 }
 
 function saveLineOf(
@@ -132,6 +139,17 @@ function saveLineOf(
   return open.kind === "week"
     ? weekSaveLine(count, terms.name, startDate)
     : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, startDate);
+}
+
+function versionOn<V extends { startDate?: string | null; endDate?: string | null }>(
+  versions: readonly V[],
+  date: string,
+): V | null {
+  return (
+    versions.find(
+      ({ startDate, endDate }) => (startDate ?? "") <= date && (endDate == null || endDate >= date),
+    ) ?? null
+  );
 }
 
 function rowOf(terms: Terms, timeOffTypeId: string): TimeOffRow {
