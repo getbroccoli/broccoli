@@ -17,7 +17,7 @@ export function TermsSettings() {
   const navigate = useNavigate();
 
   return (
-    <section aria-labelledby="terms-settings-title" className="flex max-w-5xl flex-col gap-4">
+    <section aria-labelledby="terms-settings-title" className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h2 id="terms-settings-title" className="text-lg font-semibold">
           {t("terms.title")}
