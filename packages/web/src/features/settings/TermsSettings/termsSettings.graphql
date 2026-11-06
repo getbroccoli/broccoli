@@ -11,6 +11,7 @@ query EmploymentTerms {
     workingWeek {
       id
       startDate
+      endDate
       mondayMinutes
       tuesdayMinutes
       wednesdayMinutes
@@ -29,6 +30,7 @@ query EmploymentTerms {
       versions {
         id
         startDate
+        endDate
         balance
         bankHolidays
         leaveYearStart {
@@ -58,6 +60,7 @@ query EmploymentTermsStack($id: ID!) {
     workingWeek {
       id
       startDate
+      endDate
       mondayMinutes
       tuesdayMinutes
       wednesdayMinutes
@@ -78,6 +81,7 @@ query EmploymentTermsStack($id: ID!) {
       versions {
         id
         startDate
+        endDate
         balance
         bankHolidays
         leaveYearStart {

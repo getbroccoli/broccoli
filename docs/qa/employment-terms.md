@@ -39,7 +39,7 @@ Change the dev database by hand, since no screen changes terms yet: end Annual l
 Exit the demo, then finish setup with the owner but without the Company defaults step's time off choice (`POST /api/auth/setup` without `timeOff`).
 
 - [ ] The list's Annual leave reads "Not offered".
-- [ ] The terms show every type as "Not offered here. People on England and Wales can't book it." and History reads "No changes yet."
+- [ ] The terms show every type as "Not offered here. People on England and Wales can't book it." and History reads "No changes recorded yet."
 
 ## States
 

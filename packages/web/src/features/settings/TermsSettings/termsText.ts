@@ -72,11 +72,15 @@ export function plannedWeekLine(version: WeekMinutes & { startDate?: string | nu
   });
 }
 
-/** Versions from today on, as the API sends them, split into the one covering `today`, if any, and the planned ones. */
-export function splitVersions<V extends { startDate?: string | null }>(
-  versions: readonly V[],
+/**
+ * Versions from today on, as the API sends them, split into the one covering `today`, if any, and
+ * the planned ones; one that ended since they were read, such as a page left open overnight, goes.
+ */
+export function splitVersions<V extends { startDate?: string | null; endDate?: string | null }>(
+  allVersions: readonly V[],
   today: string,
 ): { current: V | null; planned: V[] } {
+  const versions = allVersions.filter(({ endDate }) => endDate == null || endDate >= today);
   const first = versions[0];
   const firstIsCurrent = first !== undefined && (first.startDate ?? "") <= today;
   return {

@@ -153,6 +153,15 @@ it("treats a version starting today as current and the rest as planned", () => {
   expect(result).toEqual({ current, planned });
 });
 
+it("leaves out a version that ended before today", () => {
+  const ended = { id: "ended", startDate: null, endDate: "2030-05-31" };
+  const current = { id: "current", startDate: "2030-06-01", endDate: null };
+
+  const result = splitVersions([ended, current], "2030-06-01");
+
+  expect(result).toEqual({ current, planned: [] });
+});
+
 it("has no current version when every version starts after today", () => {
   const planned = [
     { id: "next", startDate: "2030-06-02" },
