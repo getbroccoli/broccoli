@@ -1,5 +1,6 @@
 import { Info, MapPin, X } from "@phosphor-icons/react";
-import { type FormEvent, useState } from "react";
+import { useBlocker } from "@tanstack/react-router";
+import { type FormEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -40,11 +41,12 @@ type Props = {
 export function LocationEditor({ location, allTerms, onClose }: Props) {
   const defaultTermsId = allTerms.find(({ isDefault }) => isDefault)!.id;
   const saved = location && { id: location.id, name: location.name, termsId: location.terms.id };
-  const [draft, setDraft] = useState<LocationDraft>({
-    name: location?.name ?? "",
-    termsId: location?.terms.id ?? defaultTermsId,
-  });
-  const [discarding, setDiscarding] = useState(false);
+  // Only the fields edited; the others follow the saved location, so a reload never turns into a change.
+  const [edits, setEdits] = useState<Partial<LocationDraft>>({});
+  const draft: LocationDraft = {
+    name: edits.name ?? location?.name ?? "",
+    termsId: edits.termsId ?? location?.terms.id ?? defaultTermsId,
+  };
   // The table is in the server's order, so it reloads with a new location in its place.
   const [createLocation, creation] = usePayloadMutation(CreateLocationDocument, {
     refetch: [LocationSettingsDocument],
@@ -60,7 +62,19 @@ export function LocationEditor({ location, allTerms, onClose }: Props) {
     draft.termsId !== (saved?.termsId ?? defaultTermsId),
   ].filter(Boolean).length;
 
-  const close = () => (changes > 0 && !busy ? setDiscarding(true) : onClose());
+  // Set once saved or deleted, so leaving afterwards asks nothing.
+  const done = useRef(false);
+  const blocker = useBlocker({
+    shouldBlockFn: () => !done.current && changes > 0,
+    enableBeforeUnload: () => !done.current && changes > 0,
+    withResolver: true,
+  });
+  const finish = () => {
+    done.current = true;
+    onClose();
+  };
+  // A save in flight keeps the stack open, so its refusal still shows.
+  const close = () => !busy && onClose();
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
@@ -75,7 +89,7 @@ export function LocationEditor({ location, allTerms, onClose }: Props) {
         await createLocation({ variables: { input: locationCreateInput(draft, defaultTermsId) } });
         toast(t("settings.locations.added", { name }));
       }
-      onClose();
+      finish();
     } catch {
       // The refusal shows under the form.
     }
@@ -121,7 +135,7 @@ export function LocationEditor({ location, allTerms, onClose }: Props) {
                 value={draft.name}
                 autoFocus={!location}
                 readOnly={busy}
-                onChange={(event) => setDraft({ ...draft, name: event.target.value })}
+                onChange={(event) => setEdits({ ...edits, name: event.target.value })}
               />
             </div>
 
@@ -133,7 +147,7 @@ export function LocationEditor({ location, allTerms, onClose }: Props) {
                 className="h-9 rounded-lg border border-input bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 value={draft.termsId}
                 disabled={busy}
-                onChange={(event) => setDraft({ ...draft, termsId: event.target.value })}
+                onChange={(event) => setEdits({ ...edits, termsId: event.target.value })}
               >
                 {allTerms.map(({ id, name, isDefault }) => (
                   <option key={id} value={id}>
@@ -167,7 +181,7 @@ export function LocationEditor({ location, allTerms, onClose }: Props) {
             )}
 
             {location && (
-              <DeleteLocation location={location} disabled={saving.loading} onDeleted={onClose} />
+              <DeleteLocation location={location} disabled={saving.loading} onDeleted={finish} />
             )}
           </div>
 
@@ -184,11 +198,11 @@ export function LocationEditor({ location, allTerms, onClose }: Props) {
           </footer>
         </form>
         <DiscardChangesDialog
-          open={discarding}
+          open={blocker.status === "blocked"}
           count={changes}
           name={location?.name ?? t("settings.locations.new")}
-          onDiscard={onClose}
-          onKeepEditing={() => setDiscarding(false)}
+          onDiscard={() => blocker.proceed?.()}
+          onKeepEditing={() => blocker.reset?.()}
         />
       </SheetContent>
     </Sheet>
