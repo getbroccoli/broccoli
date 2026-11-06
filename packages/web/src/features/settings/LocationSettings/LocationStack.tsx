@@ -224,12 +224,14 @@ function LocationEditor({
 
           <footer className="flex flex-wrap items-center gap-3 border-t border-border px-6 py-3 max-md:sticky max-md:bottom-0 max-md:bg-background">
             <p className="min-w-0 flex-[1_1_16rem] text-sm text-muted-foreground">{line}</p>
-            <Button type="button" variant="outline" disabled={busy} onClick={close}>
-              {t("settings.locations.cancel")}
-            </Button>
-            <Button type="submit" disabled={busy || line === null}>
-              {t("settings.locations.save")}
-            </Button>
+            <div className="ml-auto flex gap-3">
+              <Button type="button" variant="outline" disabled={busy} onClick={close}>
+                {t("settings.locations.cancel")}
+              </Button>
+              <Button type="submit" disabled={busy || line === null}>
+                {t("settings.locations.save")}
+              </Button>
+            </div>
           </footer>
         </form>
         <DiscardChangesDialog

@@ -5,6 +5,7 @@ import { LocationSettingsDocument } from "@/__generated__/graphql";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 
 import { DefaultPill } from "../TermsSettings/DefaultPill";
 
@@ -27,7 +28,8 @@ export function LocationSettings() {
             {t("settings.locations.description")}
           </p>
         </div>
-        <Link to="/settings/locations/new" className={buttonVariants({ variant: "outline" })}>
+        {/* cn lets the outline border win over the base transparent one, as Button does. */}
+        <Link to="/settings/locations/new" className={cn(buttonVariants({ variant: "outline" }))}>
           {t("settings.locations.new")}
         </Link>
       </div>
