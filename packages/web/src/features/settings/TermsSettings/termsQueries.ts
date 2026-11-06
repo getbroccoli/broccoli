@@ -11,7 +11,10 @@ export type Terms = NonNullable<EmploymentTermsStackQuery["terms"]>;
 /** One time off type on the terms, with its rules. */
 export type TimeOffRow = Terms["timeOff"][number];
 
-/** What a change to terms refreshes: the stack, the list and history. */
+/**
+ * What a change to terms refreshes: the stack, the list and history. The server works out all three
+ * (versions from today on, the list's cells, the history line), so a refetch stays (RULE62).
+ */
 export const TERMS_REFETCH = [
   EmploymentTermsStackDocument,
   EmploymentTermsDocument,
