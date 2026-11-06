@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/i18n";
 import type { ComponentType } from "react";
 
 /** One field of a record type, as its panel and its history show it. */
@@ -23,6 +24,8 @@ export interface RecordDescription {
   fields: RecordField[];
   /** The field whose value names the record in "added …" and "removed …". */
   titleField: string;
+  /** How a created line reads instead of "added … with N fields", with `{title}`, such as "set up {title}". */
+  createdAs?: MessageKey;
 }
 
 /** What a field's editor gets from the panel. */

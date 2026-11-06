@@ -4,6 +4,7 @@ import { t } from "@/i18n";
 /** The terms' fields as their history shows them; only the name so far. */
 export const TERMS_DESCRIPTION: RecordDescription = {
   titleField: "name",
+  createdAs: "records.history.setUp",
   fields: [
     {
       key: "name",

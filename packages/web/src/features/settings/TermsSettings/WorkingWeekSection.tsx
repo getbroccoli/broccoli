@@ -5,7 +5,14 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { calendarName } from "./calendarName";
-import { DAY_FIELDS, DAY_NAMES, hoursOf, plannedWeekLine, splitVersions } from "./termsText";
+import {
+  companyToday,
+  DAY_FIELDS,
+  DAY_NAMES,
+  hoursOf,
+  plannedWeekLine,
+  splitVersions,
+} from "./termsText";
 
 type Props = {
   versions: NonNullable<EmploymentTermsStackQuery["terms"]>["workingWeek"];
@@ -13,7 +20,7 @@ type Props = {
 
 /** The terms' working week today, day by day, with any planned week under it. */
 export function WorkingWeekSection({ versions }: Props) {
-  const { current, planned } = splitVersions(versions);
+  const { current, planned } = splitVersions(versions, companyToday());
   return (
     <section aria-labelledby="terms-week" className="flex flex-col gap-3">
       <h3 id="terms-week" className="text-[17px] font-semibold">

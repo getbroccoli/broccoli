@@ -72,20 +72,22 @@ export function plannedWeekLine(version: WeekMinutes & { startDate?: string | nu
   });
 }
 
-/**
- * Versions from today on, as the API sends them, split into the one covering today, if any, and
- * the planned ones; today is the company's, in London, as on the server.
- */
+/** Versions from today on, as the API sends them, split into the one covering `today`, if any, and the planned ones. */
 export function splitVersions<V extends { startDate?: string | null }>(
   versions: readonly V[],
+  today: string,
 ): { current: V | null; planned: V[] } {
-  const today = calendarDayOf(new Date(), "Europe/London");
   const first = versions[0];
   const firstIsCurrent = first !== undefined && (first.startDate ?? "") <= today;
   return {
     current: firstIsCurrent ? first : null,
     planned: versions.slice(firstIsCurrent ? 1 : 0),
   };
+}
+
+/** The company's today, in London, as the API decides which versions are from today on. */
+export function companyToday(): string {
+  return calendarDayOf(new Date(), "Europe/London");
 }
 
 /** Minutes as hours without a trailing ".0": 450 as "7.5", 480 as "8". */

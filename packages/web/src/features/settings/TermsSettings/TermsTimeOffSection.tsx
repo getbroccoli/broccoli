@@ -4,7 +4,7 @@ import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
 import { TimeOffTypeIcon } from "../TimeOffSettings";
-import { plannedLine, ruleLine, splitVersions } from "./termsText";
+import { companyToday, plannedLine, ruleLine, splitVersions } from "./termsText";
 
 type Props = {
   termsName: string;
@@ -13,6 +13,7 @@ type Props = {
 
 /** Each time off type's rules on the terms today, or "Not offered here", with planned rules under them. */
 export function TermsTimeOffSection({ termsName, timeOff }: Props) {
+  const today = companyToday();
   return (
     <section aria-labelledby="terms-time-off" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -23,7 +24,7 @@ export function TermsTimeOffSection({ termsName, timeOff }: Props) {
       </div>
       <ul className="flex flex-col gap-2.5">
         {timeOff.map(({ timeOffType, versions }) => {
-          const { current, planned } = splitVersions(versions);
+          const { current, planned } = splitVersions(versions, today);
           return (
             <li
               key={timeOffType.id}

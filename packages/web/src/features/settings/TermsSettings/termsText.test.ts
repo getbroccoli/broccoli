@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { annualLeaveSummary, plannedLine, ruleLine, weekSummary } from "./termsText";
+import { annualLeaveSummary, plannedLine, ruleLine, splitVersions, weekSummary } from "./termsText";
 
 it("summarises consecutive working days with equal hours as a run", () => {
   expect(weekSummary(week)).toBe("Mon–Fri, 7.5 hours");
@@ -124,6 +124,44 @@ it("describes planned unlimited leave with its start date", () => {
 
 it("describes planned recorded leave with its start date", () => {
   expect(plannedLine(recorded)).toBe("From 1 Jan 2027: recorded, doesn't count");
+});
+
+it("has no current or planned version when there are no versions", () => {
+  const result = splitVersions([], "2030-06-01");
+
+  expect(result).toEqual({ current: null, planned: [] });
+});
+
+it("treats a first version with no start date as current", () => {
+  const current = { id: "current", startDate: null };
+  const planned = { id: "planned", startDate: "2030-07-01" };
+
+  const result = splitVersions([current, planned], "2030-06-01");
+
+  expect(result).toEqual({ current, planned: [planned] });
+});
+
+it("treats a version starting today as current and the rest as planned", () => {
+  const current = { id: "current", startDate: "2030-06-01" };
+  const planned = [
+    { id: "next", startDate: "2030-07-01" },
+    { id: "later", startDate: "2030-08-01" },
+  ];
+
+  const result = splitVersions([current, ...planned], "2030-06-01");
+
+  expect(result).toEqual({ current, planned });
+});
+
+it("has no current version when every version starts after today", () => {
+  const planned = [
+    { id: "next", startDate: "2030-06-02" },
+    { id: "later", startDate: "2030-07-01" },
+  ];
+
+  const result = splitVersions(planned, "2030-06-01");
+
+  expect(result).toEqual({ current: null, planned });
 });
 
 const week = {

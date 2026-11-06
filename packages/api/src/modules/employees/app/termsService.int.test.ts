@@ -27,15 +27,11 @@ test("lists the default terms first, then others by name ignoring case", async (
   ]);
 });
 
-test("counts people on each terms today, excluding future memberships and people who left", async ({
-  orm,
-  seed,
-}) => {
+test("counts people on each terms today, excluding future memberships", async ({ orm, seed }) => {
   const defaultId = await seed.defaultTermsId();
   const otherId = await seed.terms("Scotland");
   const moving = await seed.employee({ startDate: "2025-01-01" });
   const moved = await seed.employee({ startDate: "2025-01-01" });
-  const left = await seed.employee({ startDate: "2025-01-01" });
   await seed.moveToTerms(moved.id, otherId, "2026-11-06");
   await orm
     .update(employeeTerms)
@@ -46,11 +42,6 @@ test("counts people on each terms today, excluding future memberships and people
     termsId: otherId,
     startDate: calendarDate("2026-11-07"),
   });
-  await seedEmploymentEnd(orm, left.id, "2026-11-05");
-  await orm
-    .update(employeeTerms)
-    .set({ endDate: calendarDate("2026-11-05") })
-    .where(eq(employeeTerms.employeeId, left.id));
   const service = termsService(orm, { today: "2026-11-06" });
 
   const result = await service.listTerms(ADMIN);
@@ -59,6 +50,27 @@ test("counts people on each terms today, excluding future memberships and people
     { id: defaultId, peopleCount: 1 },
     { id: otherId, peopleCount: 1 },
   ]);
+});
+
+test("does not count a person whose employment starts after today", async ({ orm, seed }) => {
+  const id = await seed.defaultTermsId();
+  await seed.employee({ startDate: "2026-11-07" });
+  const service = termsService(orm, { today: "2026-11-06" });
+
+  const result = await service.listTerms(ADMIN);
+
+  expect(result).toMatchObject([{ id, peopleCount: 0 }]);
+});
+
+test("does not count a person whose employment ended before today", async ({ orm, seed }) => {
+  const id = await seed.defaultTermsId();
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  await seedEmploymentEnd(orm, employee.id, "2026-11-05");
+  const service = termsService(orm, { today: "2026-11-06" });
+
+  const result = await service.listTerms(ADMIN);
+
+  expect(result).toMatchObject([{ id, peopleCount: 0 }]);
 });
 
 test("gives the default terms unassigned locations and each other terms only their own", async ({

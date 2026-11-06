@@ -22,7 +22,11 @@ export function TermsStack({ termsId, onClose }: Props) {
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent aria-describedby={undefined}>
+      {/* Full screen on a phone, as the person's panel is inset everywhere. */}
+      <SheetContent
+        aria-describedby={undefined}
+        className="max-md:inset-0 max-md:w-full max-md:rounded-none max-md:border-0"
+      >
         {data?.terms ? (
           <TermsRecord terms={data.terms} />
         ) : (
