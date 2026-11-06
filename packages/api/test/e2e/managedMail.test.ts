@@ -29,7 +29,7 @@ test("a managed person receives an invite and a password reset through Broccoli'
 
   expect(await invited.json()).toMatchObject({
     data: {
-      employee: {
+      employees: {
         invite: {
           error: null,
           invites: [{ employee: { id: employee.id }, delivery: "SENT_BY_EMAIL", link: null }],
@@ -106,7 +106,7 @@ test("a managed invite reaches the relay when the inviter's name has quotes and 
   });
 
   expect(await invited.json()).toMatchObject({
-    data: { employee: { invite: { error: null, invites: [{ delivery: "SENT_BY_EMAIL" }] } } },
+    data: { employees: { invite: { error: null, invites: [{ delivery: "SENT_BY_EMAIL" }] } } },
   });
   await expect.poll(() => relay.emails.length, { timeout: 15_000 }).toBe(1);
   const { body } = relay.emails[0]!;
@@ -138,7 +138,7 @@ test("an unreadable relay answer is retried, not taken as sent", async () => {
   });
 
   expect(await invited.json()).toMatchObject({
-    data: { employee: { invite: { error: null, invites: [{ delivery: "SENT_BY_EMAIL" }] } } },
+    data: { employees: { invite: { error: null, invites: [{ delivery: "SENT_BY_EMAIL" }] } } },
   });
   await expect.poll(() => relay.emails.length, { timeout: 20_000 }).toBe(2);
   expect(relay.emails[0]!.body.to).toBe(employee.email);
@@ -167,10 +167,10 @@ async function startManagedMailEnv() {
     ).json(),
   ).toMatchObject({ data: { company: { update: { error: null } } } });
   expect(await (await approveReviewedImport(owner)).json()).toMatchObject({
-    data: { import: { approve: { error: null } } },
+    data: { imports: { approve: { error: null } } },
   });
   expect(
-    await (await owner.graphql("mutation { setup { complete { setup { step } } } }")).json(),
-  ).toMatchObject({ data: { setup: { complete: { setup: { step: "DONE" } } } } });
+    await (await owner.graphql("mutation { system { completeSetup { setup { step } } } }")).json(),
+  ).toMatchObject({ data: { system: { completeSetup: { setup: { step: "DONE" } } } } });
   return { env, owner, relay };
 }

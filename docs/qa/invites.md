@@ -10,7 +10,7 @@ A manual check of inviting people from People, by email and by copied link, and 
 
    ```sh
    curl -b cookies -H 'content-type: application/json' "$URL/api/graphql" \
-     -d '{"query":"mutation { employee { invite(input: { employeeIds: [\"<employee id>\"], delivery: COPIED_BY_OWNER }) { invites { link } error { __typename } } } }"}'
+     -d '{"query":"mutation { employees { invite(input: { employeeIds: [\"<employee id>\"], delivery: COPIED_BY_OWNER }) { invites { link } error { __typename } } } }"}'
    ```
 
 ## People

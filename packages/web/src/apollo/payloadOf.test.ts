@@ -5,7 +5,7 @@ import { payloadOf } from "./payloadOf";
 it("reads a payload without an error field", () => {
   const payload = { import: { id: "import" } };
 
-  const outcome = payloadOf({ import: { skip: payload } });
+  const outcome = payloadOf({ imports: { skip: payload } });
 
   expect(outcome).toEqual({ payload, error: null });
 });
@@ -26,7 +26,7 @@ it("returns the payload error object", () => {
   };
   const payload = { employee: null, error };
 
-  const outcome = payloadOf({ employee: { create: payload } });
+  const outcome = payloadOf({ employees: { create: payload } });
 
   expect(outcome).toEqual({ payload, error });
 });
@@ -36,9 +36,9 @@ it("rejects missing or null payload data", () => {
     undefined,
     null,
     {},
-    { import: null },
-    { import: {} },
-    { import: { skip: null } },
+    { imports: null },
+    { imports: {} },
+    { imports: { skip: null } },
   ];
 
   for (const data of results) {
@@ -50,7 +50,7 @@ it("finds an aliased namespace and operation while skipping typenames", () => {
   const payload = { import: { id: "import" } };
   const data = {
     __typename: "Mutation",
-    peopleImport: { __typename: "ImportMutations", finish: payload },
+    peopleImport: { __typename: "ImportsMutations", finish: payload },
   };
 
   const outcome = payloadOf(data);

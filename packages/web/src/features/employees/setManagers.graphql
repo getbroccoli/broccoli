@@ -1,5 +1,5 @@
 mutation SetManagers($input: EmployeeSetManagersInput!) {
-  employee {
+  employees {
     setManagers(input: $input) {
       employees {
         id

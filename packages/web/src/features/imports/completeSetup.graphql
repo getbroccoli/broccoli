@@ -1,6 +1,6 @@
 mutation CompleteSetup($input: SetupCompleteInput) {
-  setup {
-    complete(input: $input) {
+  system {
+    completeSetup(input: $input) {
       setup {
         id
         step

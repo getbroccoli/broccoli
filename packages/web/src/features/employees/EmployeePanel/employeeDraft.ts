@@ -14,7 +14,7 @@ export const EMPLOYEE_FIELD_KEYS = [
 
 export type EmployeeFieldKey = (typeof EMPLOYEE_FIELD_KEYS)[number];
 
-/** The fields `employee.update` changes; the permission profile has its own mutation. */
+/** The fields `employees.update` changes; the permission profile has its own mutation. */
 type UpdatedFieldKey = Exclude<EmployeeFieldKey, "permissionProfiles">;
 
 /** An employee's saved values, the manager and location as their ids; null is empty. */
@@ -29,7 +29,7 @@ export function changedFields(
 }
 
 /**
- * One `employee.update` for every changed field but the permission profiles, which save on their
+ * One `employees.update` for every changed field but the permission profiles, which save on their
  * own, an emptied one as null and the manager and location by id, with the trimmed reason.
  */
 export function toUpdateInput(

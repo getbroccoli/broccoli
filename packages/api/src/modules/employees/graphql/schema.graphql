@@ -150,7 +150,7 @@ input EmployeeDeleteInput {
   changeReason: String
 }
 
-type EmployeeMutations {
+type EmployeesMutations {
   "Adds an employee. Admins only."
   create(input: EmployeeCreateInput!): EmployeeCreatePayload!
   "Changes an employee's fields and records the change in their history. Refused, naming each field, for a field the caller may not change; see `access`."
@@ -165,6 +165,12 @@ type EmployeeMutations {
   invite(input: InviteSendInput!): InviteSendPayload!
   "Cancels a person's open invite; its link stops working. Admins only."
   cancelInvite(input: InviteCancelInput!): InviteCancelPayload!
+  "Adds a location. Admins only."
+  createLocation(input: LocationCreateInput!): LocationCreatePayload!
+  "Renames a location. Admins only."
+  updateLocation(input: LocationUpdateInput!): LocationUpdatePayload!
+  "Deletes a location nobody is in; refused with a conflict while someone is. Admins only."
+  deleteLocation(input: LocationDeleteInput!): LocationDeletePayload!
 }
 
 input InviteSendInput {
@@ -278,8 +284,7 @@ type Query {
 }
 
 type Mutation {
-  employee: EmployeeMutations!
-  location: LocationMutations!
+  employees: EmployeesMutations!
 }
 
 "A place where people work, such as an office or Remote; a person is in one at a time."
@@ -304,15 +309,6 @@ input LocationUpdateInput {
 
 input LocationDeleteInput {
   id: ID!
-}
-
-type LocationMutations {
-  "Adds a location. Admins only."
-  create(input: LocationCreateInput!): LocationCreatePayload!
-  "Renames a location. Admins only."
-  update(input: LocationUpdateInput!): LocationUpdatePayload!
-  "Deletes a location nobody is in; refused with a conflict while someone is. Admins only."
-  delete(input: LocationDeleteInput!): LocationDeletePayload!
 }
 
 "The new location, or why it was refused."

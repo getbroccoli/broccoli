@@ -16,7 +16,7 @@ fragment ManagerCell_manager on ImportEmployeeManager {
 }
 
 mutation ChooseEmployeeManager($input: ImportChooseEmployeeManagerInput!) {
-  import {
+  imports {
     chooseEmployeeManager(input: $input) {
       import {
         id

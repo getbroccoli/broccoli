@@ -23,11 +23,11 @@ type Props = {
  */
 export function InviteMenuItems({ person, onInvite, onLinkCreated }: Props) {
   const [invite] = usePayloadMutation(InviteEmployeesDocument, {
-    update: (cache, { data }) => addInviteHistoryLines(cache, data?.employee.invite.invites ?? []),
+    update: (cache, { data }) => addInviteHistoryLines(cache, data?.employees.invite.invites ?? []),
   });
   const [cancel] = usePayloadMutation(CancelInviteDocument, {
     update: (cache, { data }) => {
-      const line = data?.employee.cancelInvite.historyLine;
+      const line = data?.employees.cancelInvite.historyLine;
       if (line) addHistoryLine(cache, { recordType: "EMPLOYEE", recordId: person.id, line });
     },
   });

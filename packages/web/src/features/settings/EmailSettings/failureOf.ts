@@ -28,7 +28,7 @@ export function failureOf(
 }
 
 type SaveMailSettingsError = NonNullable<
-  SaveMailSettingsMutation["setup"]["saveMailSettings"]["error"]
+  SaveMailSettingsMutation["system"]["saveMailSettings"]["error"]
 >;
 
 function secretMessage(code: string, source: MailSource): MessageKey {

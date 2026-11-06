@@ -62,7 +62,7 @@ export function InviteDialog({ people, open, onOpenChange, onInvited }: Props) {
   const [note, setNote] = useState("");
   const [links, setLinks] = useState<CopiedLink[] | null>(null);
   const [invite, { loading, error, payloadError }] = usePayloadMutation(InviteEmployeesDocument, {
-    update: (cache, { data }) => addInviteHistoryLines(cache, data?.employee.invite.invites ?? []),
+    update: (cache, { data }) => addInviteHistoryLines(cache, data?.employees.invite.invites ?? []),
   });
   const { invited, skipped } = groupInvitees(people);
   const tooMany = invited.length > MAX_PEOPLE;

@@ -1,6 +1,6 @@
 mutation ResetSetup {
-  setup {
-    reset {
+  system {
+    resetSetup {
       setup {
         id
         step

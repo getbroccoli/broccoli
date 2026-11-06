@@ -23,9 +23,9 @@ export function createResolvers(services: ImportServices): Resolvers {
       import: () => IMPORT,
     },
     Mutation: {
-      import: () => ({}),
+      imports: () => ({}),
     },
-    ImportMutations: importMutationResolvers(services),
+    ImportsMutations: importMutationResolvers(services),
     Import: {
       id: () => "import",
       sources: (_parent, _args, context) => services.reads.listSources(context.getActor()),

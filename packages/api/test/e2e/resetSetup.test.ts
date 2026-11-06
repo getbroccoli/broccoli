@@ -14,7 +14,7 @@ test("a managed owner resets setup through the API and stays signed in", async (
 
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({
-    data: { setup: { reset: { setup: { id: "instance", step: "COMPANY" }, error: null } } },
+    data: { system: { resetSetup: { setup: { id: "instance", step: "COMPANY" }, error: null } } },
   });
   const after = await browser.graphql("query { me { id isOwner } }");
   expect(await after.json()).toEqual({ data: { me: signedIn.data.me } });
@@ -29,8 +29,8 @@ test("refuses resetting setup without a session", async ({ env }) => {
 });
 
 const resetSetup = `mutation {
-  setup {
-    reset {
+  system {
+    resetSetup {
       setup { id step }
       error { __typename ... on Error { message } }
     }

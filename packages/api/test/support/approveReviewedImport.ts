@@ -10,7 +10,7 @@ export async function approveReviewedImport(browser: Browser): Promise<Response>
   };
   return browser.graphql(
     `mutation Approve($version: String!) {
-      import { approve(version: $version) { import { id } error { __typename ... on Error { message } } } }
+      imports { approve(version: $version) { import { id } error { __typename ... on Error { message } } } }
     }`,
     { version: read.data.import.version },
   );

@@ -32,33 +32,9 @@ export function createResolvers(
         }),
     },
     Mutation: {
-      employee: () => ({}),
-      location: () => ({}),
+      employees: () => ({}),
     },
-    LocationMutations: {
-      create: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["LocationCreatePayload"]>(
-          async () => ({
-            // A new location has nobody in it yet.
-            location: {
-              ...(await services.createLocation(context.getActor(), input)),
-              peopleCount: 0,
-            },
-          }),
-          ["INVALID_INPUT"],
-        ),
-      update: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["LocationUpdatePayload"]>(async () => {
-          const { id } = await services.updateLocation(context.getActor(), input);
-          return { location: await loaders(context).location.load(id) };
-        }, ["INVALID_INPUT", "NOT_FOUND"]),
-      delete: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["LocationDeletePayload"]>(
-          () => services.deleteLocation(context.getActor(), input),
-          ["NOT_FOUND", "CONFLICT"],
-        ),
-    },
-    EmployeeMutations: {
+    EmployeesMutations: {
       create: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeCreatePayload"]>(
           async () => ({ employee: await services.createEmployee(context.getActor(), input) }),
@@ -103,6 +79,27 @@ export function createResolvers(
         mutationPayload<ResolversTypes["InviteCancelPayload"]>(
           () => invites.cancel(context.getActor(), input),
           ["NOT_FOUND"],
+        ),
+      createLocation: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["LocationCreatePayload"]>(
+          async () => ({
+            // A new location has nobody in it yet.
+            location: {
+              ...(await services.createLocation(context.getActor(), input)),
+              peopleCount: 0,
+            },
+          }),
+          ["INVALID_INPUT"],
+        ),
+      updateLocation: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["LocationUpdatePayload"]>(async () => {
+          const { id } = await services.updateLocation(context.getActor(), input);
+          return { location: await loaders(context).location.load(id) };
+        }, ["INVALID_INPUT", "NOT_FOUND"]),
+      deleteLocation: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["LocationDeletePayload"]>(
+          () => services.deleteLocation(context.getActor(), input),
+          ["NOT_FOUND", "CONFLICT"],
         ),
     },
     Setup: {

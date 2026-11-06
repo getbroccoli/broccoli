@@ -1,5 +1,5 @@
 mutation SetEmployeeLeftOut($employeeId: ID!, $leftOut: Boolean!) {
-  import {
+  imports {
     setEmployeeLeftOut(employeeId: $employeeId, leftOut: $leftOut) {
       import {
         id

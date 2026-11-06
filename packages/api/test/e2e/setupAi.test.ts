@@ -27,7 +27,7 @@ test("choosing Broccoli AI prepares one token and maps a CSV with it despite an 
 
   expect(await chosen.json()).toEqual({
     data: {
-      setup: {
+      system: {
         saveAiSource: {
           setup: {
             id: "instance",
@@ -72,7 +72,7 @@ test("choosing a pasted OpenRouter key checks it and maps a CSV with it instead 
 
   expect(await chosen.json()).toEqual({
     data: {
-      setup: {
+      system: {
         saveAiSource: {
           setup: { id: "instance", ai: { id: "ai", source: "OPENROUTER", openRouterKey: "SAVED" } },
           error: null,
@@ -131,7 +131,7 @@ test("returns a field error when OpenRouter rejects the pasted key", async ({
 
   expect(await response.json()).toMatchObject({
     data: {
-      setup: {
+      system: {
         saveAiSource: {
           setup: null,
           error: {
@@ -154,7 +154,7 @@ test("returns a source error when the relay refuses an already used free period"
 
   expect(await response.json()).toMatchObject({
     data: {
-      setup: {
+      system: {
         saveAiSource: {
           setup: null,
           error: {
@@ -181,14 +181,14 @@ test("refuses an AI choice on a managed instance without contacting either provi
   const response = await browser.graphql(SAVE_AI_SOURCE, { input: { source: "BROCCOLI_AI" } });
 
   expect(await response.json()).toMatchObject({
-    data: { setup: { saveAiSource: { setup: null, error: { __typename: "ConflictError" } } } },
+    data: { system: { saveAiSource: { setup: null, error: { __typename: "ConflictError" } } } },
   });
   expect(openRouter.httpRequests()).toEqual([]);
   expect(relay.httpRequests()).toEqual([]);
 });
 
 const SAVE_AI_SOURCE = `mutation SaveAiSource($input: AiSourceInput!) {
-  setup {
+  system {
     saveAiSource(input: $input) {
       setup { id ai { id source openRouterKey } }
       error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } }

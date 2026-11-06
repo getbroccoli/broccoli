@@ -23,7 +23,7 @@ mutation ExitDemo {
 }
 
 mutation StartDemo {
-  import {
+  imports {
     startDemo {
       import {
         id

@@ -4,15 +4,13 @@ import type { Browser } from "./browser";
 
 /** Chooses the agent and issues a code through the setup holder's GraphQL session. */
 export async function createExternalAgentCode(browser: Browser): Promise<string> {
-  const chosen = await browser.graphql(
-    "mutation { setup { chooseExternalAgent { setup { id } } } }",
-  );
+  const chosen = await browser.graphql("mutation { externalAgents { choose { setup { id } } } }");
   expect(await chosen.json()).toEqual({
-    data: { setup: { chooseExternalAgent: { setup: { id: "instance" } } } },
+    data: { externalAgents: { choose: { setup: { id: "instance" } } } },
   });
   const response = await browser.graphql(
     `mutation {
-    setup { createExternalAgentCode {
+    externalAgents { createCode {
       externalAgentCode { code expiresAt }
       error { __typename ... on ConflictError { message } }
     } }
@@ -20,18 +18,18 @@ export async function createExternalAgentCode(browser: Browser): Promise<string>
   );
   const body = (await response.json()) as {
     data: {
-      setup: {
-        createExternalAgentCode: {
+      externalAgents: {
+        createCode: {
           externalAgentCode: { code: string; expiresAt: string };
           error: unknown;
         };
       };
     };
   };
-  expect(body.data.setup.createExternalAgentCode.error).toBeNull();
-  expect(body.data.setup.createExternalAgentCode.externalAgentCode.code).toMatch(/^[\w-]{43}$/);
-  expect(body.data.setup.createExternalAgentCode.externalAgentCode.expiresAt).toBeTypeOf("string");
-  return body.data.setup.createExternalAgentCode.externalAgentCode.code;
+  expect(body.data.externalAgents.createCode.error).toBeNull();
+  expect(body.data.externalAgents.createCode.externalAgentCode.code).toMatch(/^[\w-]{43}$/);
+  expect(body.data.externalAgents.createCode.externalAgentCode.expiresAt).toBeTypeOf("string");
+  return body.data.externalAgents.createCode.externalAgentCode.code;
 }
 
 /** Exchanges the code over HTTP and returns the token for subsequent agent requests. */

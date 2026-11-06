@@ -12,21 +12,24 @@ export function createResolvers(orm: Orm, mode: Mode, services: ExternalAgentSer
         return connection && { id: "external-agent", ...connection };
       },
     },
-    SetupMutations: {
-      chooseExternalAgent: (_parent, _args, context) =>
+    Mutation: {
+      externalAgents: () => ({}),
+    },
+    ExternalAgentsMutations: {
+      choose: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupChooseExternalAgentPayload"]>(async () => {
           const actor = context.getActor();
           await services.sessions.chooseExternalAgent(actor);
           return { setup: await readSetupView(orm, mode, actor) };
         }, ["CONFLICT"]),
-      createExternalAgentCode: (_parent, _args, context) =>
+      createCode: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupCreateExternalAgentCodePayload"]>(
           async () => ({
             externalAgentCode: await services.sessions.createExternalAgentCode(context.getActor()),
           }),
           ["CONFLICT"],
         ),
-      disconnectExternalAgent: async (_parent, _args, context) => {
+      disconnect: async (_parent, _args, context) => {
         const actor = context.getActor();
         await services.sessions.disconnectExternalAgent(actor);
         return { setup: await readSetupView(orm, mode, actor) };

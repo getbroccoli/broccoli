@@ -115,17 +115,19 @@ test("merges Slack and a CSV and approves one employee with the bulk-picked Slac
 
   const picked = await browser.graphql(
     `mutation($sourceId: ID!) {
-    import { chooseSourceForAll(field: JOB_TITLE, sourceId: $sourceId) { import { id } } }
+    imports { chooseSourceForAll(field: JOB_TITLE, sourceId: $sourceId) { import { id } } }
   }`,
     { sourceId: slackId },
   );
   expect(await picked.json()).toEqual({
-    data: { import: { chooseSourceForAll: { import: { id: "import" } } } },
+    data: { imports: { chooseSourceForAll: { import: { id: "import" } } } },
   });
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
-  const finished = await browser.graphql("mutation { setup { complete { setup { step } } } }");
+  const finished = await browser.graphql(
+    "mutation { system { completeSetup { setup { step } } } }",
+  );
   expect(await finished.json()).toEqual({
-    data: { setup: { complete: { setup: { step: "DONE" } } } },
+    data: { system: { completeSetup: { setup: { step: "DONE" } } } },
   });
   expect(await (await browser.graphql(DIRECTORY)).json()).toEqual({
     data: {
@@ -173,26 +175,28 @@ test("fixes a CSV row’s last name, leaves another row out and approves only th
   )!.node.id;
 
   const fixed = await browser.graphql(`mutation {
-    import { chooseEmployeeValue(input: { employeeId: "avery@example.com", field: LAST_NAME, value: "Stone" }) {
+    imports { chooseEmployeeValue(input: { employeeId: "avery@example.com", field: LAST_NAME, value: "Stone" }) {
       import { id } error { __typename ... on InvalidInputError { fields { field code } } }
     } }
   }`);
   expect(await fixed.json()).toEqual({
-    data: { import: { chooseEmployeeValue: { import: { id: "import" }, error: null } } },
+    data: { imports: { chooseEmployeeValue: { import: { id: "import" }, error: null } } },
   });
   const leftOut = await browser.graphql(
     `mutation($employeeId: ID!) {
-    import { setEmployeeLeftOut(employeeId: $employeeId, leftOut: true) { import { id } } }
+    imports { setEmployeeLeftOut(employeeId: $employeeId, leftOut: true) { import { id } } }
   }`,
     { employeeId: missingEmail },
   );
   expect(await leftOut.json()).toEqual({
-    data: { import: { setEmployeeLeftOut: { import: { id: "import" } } } },
+    data: { imports: { setEmployeeLeftOut: { import: { id: "import" } } } },
   });
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
-  const finished = await browser.graphql("mutation { setup { complete { setup { step } } } }");
+  const finished = await browser.graphql(
+    "mutation { system { completeSetup { setup { step } } } }",
+  );
   expect(await finished.json()).toEqual({
-    data: { setup: { complete: { setup: { step: "DONE" } } } },
+    data: { system: { completeSetup: { setup: { step: "DONE" } } } },
   });
 
   expect(await (await browser.graphql(DIRECTORY)).json()).toEqual({
@@ -221,14 +225,14 @@ test("returns a typed bad email as an InvalidInputError naming value", async ({ 
   await connectAndReadSlack(browser);
 
   const response = await browser.graphql(`mutation {
-    import { chooseEmployeeValue(input: { employeeId: "avery@example.com", field: EMAIL, value: "avery@" }) {
+    imports { chooseEmployeeValue(input: { employeeId: "avery@example.com", field: EMAIL, value: "avery@" }) {
       import { id } error { __typename ... on InvalidInputError { fields { field code } } }
     } }
   }`);
 
   expect(await response.json()).toEqual({
     data: {
-      import: {
+      imports: {
         chooseEmployeeValue: {
           import: null,
           error: { __typename: "InvalidInputError", fields: [{ field: "value", code: "invalid" }] },
@@ -247,13 +251,13 @@ test("chooses an import employee's manager through the API", async ({ env, slack
   await connectAndReadSlack(browser);
 
   const chosen = await browser.graphql(`mutation {
-    import { chooseEmployeeManager(input: { employeeIds: ["avery@example.com"], managerId: "robin@example.com" }) {
+    imports { chooseEmployeeManager(input: { employeeIds: ["avery@example.com"], managerId: "robin@example.com" }) {
       import { id } error { __typename ... on Error { message } }
     } }
   }`);
 
   expect(await chosen.json()).toEqual({
-    data: { import: { chooseEmployeeManager: { import: { id: "import" }, error: null } } },
+    data: { imports: { chooseEmployeeManager: { import: { id: "import" }, error: null } } },
   });
   const response = await browser.graphql(`query {
     import { id employees(filter: { search: "avery@example.com" }) { edges { node {
@@ -286,7 +290,7 @@ test("chooses an import employee's manager through the API", async ({ env, slack
 
 const SAVE_COMPANY =
   'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename } } } }';
-const APPROVED = { data: { import: { approve: { import: { id: "import" }, error: null } } } };
+const APPROVED = { data: { imports: { approve: { import: { id: "import" }, error: null } } } };
 const DIRECTORY =
   "query { employees(orderBy: { field: EMAIL, direction: ASC }) { edges { node { firstName lastName email jobTitle } } } }";
 

@@ -10,7 +10,7 @@ query InviteDelivery {
 }
 
 mutation InviteEmployees($input: InviteSendInput!) {
-  employee {
+  employees {
     invite(input: $input) {
       invites {
         employee {
@@ -43,7 +43,7 @@ mutation InviteEmployees($input: InviteSendInput!) {
 }
 
 mutation CancelInvite($input: InviteCancelInput!) {
-  employee {
+  employees {
     cancelInvite(input: $input) {
       employee {
         id

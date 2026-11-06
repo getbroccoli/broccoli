@@ -193,7 +193,7 @@ test("Broccoli AI reads a consented PDF through the relay without sending its na
 
   const allowed = await browser.graphql(
     `mutation AllowOriginalFileRead($sourceId: ID!) {
-    import { allowOriginalFileRead(sourceId: $sourceId, aiSource: BROCCOLI_AI) {
+    imports { allowOriginalFileRead(sourceId: $sourceId, aiSource: BROCCOLI_AI) {
       import { id } error { __typename ... on Error { message } }
     } }
   }`,
@@ -201,7 +201,7 @@ test("Broccoli AI reads a consented PDF through the relay without sending its na
   );
 
   expect(await allowed.json()).toEqual({
-    data: { import: { allowOriginalFileRead: { import: { id: "import" }, error: null } } },
+    data: { imports: { allowOriginalFileRead: { import: { id: "import" }, error: null } } },
   });
   await expect
     .poll(async () => (await browser.graphql(query)).json(), { timeout: 15_000 })

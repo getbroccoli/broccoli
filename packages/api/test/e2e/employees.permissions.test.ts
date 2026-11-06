@@ -10,7 +10,7 @@ test("sets a joined employee's permission profiles through the API with its hist
   const response = await browser.graphql(
     `
     mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
-      employee { setPermissionProfiles(input: $input) {
+      employees { setPermissionProfiles(input: $input) {
         employee { id permissionProfiles }
         historyLine { id changes { field oldValue newValue } }
         error { __typename ... on Error { message } }
@@ -22,7 +22,7 @@ test("sets a joined employee's permission profiles through the API with its hist
 
   expect(await response.json()).toEqual({
     data: {
-      employee: {
+      employees: {
         setPermissionProfiles: {
           employee: { id: employee.id, permissionProfiles: ["EMPLOYEE", "ADMIN"] },
           historyLine: {
@@ -46,7 +46,7 @@ test("refuses assigning OWNER through the permission profiles mutation", async (
   const response = await browser.graphql(
     `
     mutation SetPermissionProfiles($input: EmployeeSetPermissionProfilesInput!) {
-      employee { setPermissionProfiles(input: $input) {
+      employees { setPermissionProfiles(input: $input) {
         employee { id }
         error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } }
       } }
@@ -57,7 +57,7 @@ test("refuses assigning OWNER through the permission profiles mutation", async (
 
   expect(await response.json()).toEqual({
     data: {
-      employee: {
+      employees: {
         setPermissionProfiles: {
           employee: null,
           error: {
@@ -201,7 +201,7 @@ test("refuses an employee updating a coworker's job title through GraphQL", asyn
   const response = await browser.graphql(
     `
     mutation UpdateEmployee($input: EmployeeUpdateInput!) {
-      employee { update(input: $input) {
+      employees { update(input: $input) {
         employee { id }
         error { __typename ... on Error { message } }
       } }

@@ -93,10 +93,10 @@ export function createResolvers(
         toMailGraphql(await mailSettings.read(context.getActor())),
     },
     Mutation: {
-      setup: () => ({}),
+      system: () => ({}),
     },
-    SetupMutations: {
-      complete: (_parent, { input }, context) =>
+    SystemMutations: {
+      completeSetup: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["SetupCompletePayload"]>(async () => {
           const actor = context.getActor();
           const invites = await system.completeSetup(actor, {
@@ -108,7 +108,7 @@ export function createResolvers(
           });
           return { setup: await readSetup(actor), invites };
         }, ["CONFLICT", "INVALID_INPUT"]),
-      reset: (_parent, _args, context) =>
+      resetSetup: (_parent, _args, context) =>
         mutationPayload<ResolversTypes["SetupResetPayload"]>(async () => {
           const actor = context.getActor();
           await system.resetSetup(actor);

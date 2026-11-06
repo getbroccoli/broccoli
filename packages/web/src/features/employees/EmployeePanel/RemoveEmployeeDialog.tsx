@@ -33,7 +33,7 @@ export function RemoveEmployeeDialog({ open, onOpenChange, employee, onRemoved }
     DeleteEmployeeDocument,
     {
       update: (cache, { data }) =>
-        addEmployeeHistoryLines(cache, data?.employee.delete.reportHistoryLines ?? []),
+        addEmployeeHistoryLines(cache, data?.employees.delete.reportHistoryLines ?? []),
     },
   );
   const failed = Boolean(error || payloadError);
