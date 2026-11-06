@@ -185,10 +185,10 @@ function setupTermsInput({
   defaultBankHolidayCalendar,
 }: ResolversTypes["TurnOnTimeOffInput"]) {
   return {
-    terms: terms.map(({ bankHolidayCalendar, workingWeek, annualLeavePolicyId }) => ({
+    terms: terms.map(({ bankHolidayCalendar, workingWeek, annualLeavePolicyKey }) => ({
       bankHolidayCalendar: bankHolidayCalendar.toLowerCase(),
       workingWeek: workingWeek.toLowerCase(),
-      annualLeavePolicyId,
+      annualLeavePolicyKey: annualLeavePolicyKey.toLowerCase(),
     })),
     locationTerms: locationTerms.map(({ locationName, bankHolidayCalendar }) => ({
       locationName,

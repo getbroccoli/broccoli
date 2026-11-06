@@ -1,10 +1,10 @@
 import type { Orm, Transact } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
 import {
-  createTermsWorkingPatternService,
   createWorkingPatternService,
   createEmployeeWorkingPatternService,
 } from "../../src/modules/employees";
+import { OWNER } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
 
 /** Every working pattern service on `orm`, with silent logs; pass `transact` to receive their events. */
@@ -16,6 +16,18 @@ export function workingPatternService(
   return {
     ...createEmployeeWorkingPatternService(dependencies),
     ...createWorkingPatternService(dependencies),
-    ...createTermsWorkingPatternService(dependencies),
   };
+}
+
+/** A named Monday-to-Friday pattern of 7.5-hour days, called Standard, that people can be put on. */
+export function createStandardPattern(orm: Orm) {
+  return createWorkingPatternService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+  }).createPattern(OWNER, {
+    name: "Standard",
+    minutes: [450, 450, 450, 450, 450, 0, 0],
+    fullDayMinutes: 450,
+  });
 }

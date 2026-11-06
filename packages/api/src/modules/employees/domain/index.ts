@@ -25,6 +25,7 @@ export {
   parseDateField,
   parsePatternName,
   parseWeek,
+  type PatternVersion,
   type PatternWeek,
   type WeekdayMinutes,
   type WorkingPattern,
@@ -32,9 +33,14 @@ export {
 } from "./workingPattern";
 export {
   coversDate,
-  makeRoomForDatedPattern,
-  patternOn,
-  weekInForce,
+  idOn,
+  makeRoomForDatedRow,
+  versionOn,
+  versionStretches,
+  type Dated,
+  type PersonTimeline,
+} from "./personTimeline";
+export {
   workingWeeksOf,
   type DatedPattern,
   type TermsMembership,

@@ -10,7 +10,7 @@ export type AllowanceCause =
     }
   | {
       kind:
-        | "POLICY_LINKED_TO_TERMS"
+        | "TIME_OFF_TURNED_ON"
         | "EMPLOYEE_ADDED"
         | "WORKING_PATTERN_CHANGED"
         | "LEAVE_YEAR_STARTED"

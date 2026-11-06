@@ -6,6 +6,7 @@ import {
   signedIn,
   test,
   workingPatternService,
+  createStandardPattern,
 } from "#test/support";
 
 test("an employee can read their own working weeks", async ({ orm, seed }) => {
@@ -20,7 +21,7 @@ test("an employee can read their own working weeks", async ({ orm, seed }) => {
 
   expect(weeks.get(employee.id)).toEqual([
     {
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
@@ -47,7 +48,7 @@ test("a manager above the direct manager can read the employee's working weeks",
 
   expect(weeks.get(employee.id)).toEqual([
     {
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
@@ -66,7 +67,7 @@ test("an admin can read an unrelated employee's working weeks", async ({ orm, se
 
   expect(weeks.get(employee.id)).toEqual([
     {
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
@@ -93,7 +94,7 @@ test("a read refuses the whole selection when it includes another employee", asy
 
 test("an employee cannot read or manage workspace patterns", async ({ orm }) => {
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
 
   await expect(patterns.listPatterns(EMPLOYEE)).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
@@ -112,15 +113,15 @@ test("an employee cannot read or manage workspace patterns", async ({ orm }) => 
   await expect(
     patterns.changePattern(EMPLOYEE, {
       workingPatternId: standard.id,
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
       minutes: [480, 480, 480, 480, 480, 0, 0],
       fullDayMinutes: 480,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
-    patterns.removePatternWeek(EMPLOYEE, {
+    patterns.removePatternVersion(EMPLOYEE, {
       workingPatternId: standard.id,
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
@@ -128,32 +129,6 @@ test("an employee cannot read or manage workspace patterns", async ({ orm }) => 
   ).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
-});
-
-test("an employee cannot change the pattern of terms", async ({ orm, seed }) => {
-  const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
-  const termsId = await seed.defaultTermsId();
-
-  await expect(
-    patterns.setTermsPattern(EMPLOYEE, {
-      termsId,
-      workingPatternId: standard.id,
-      effectiveFrom: "2026-09-01",
-    }),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  await expect(
-    patterns.endTermsPattern(EMPLOYEE, {
-      termsId,
-      effectiveUntil: "2026-09-30",
-    }),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
-  await expect(
-    patterns.removeTermsPattern(EMPLOYEE, {
-      termsId,
-      effectiveFrom: null,
-    }),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });
 
 test("a manager without admin permission cannot change a report's assignment", async ({
@@ -165,30 +140,30 @@ test("a manager without admin permission cannot change a report's assignment", a
   await seed.manager(employee.id, manager.id);
   const caller = signedIn(orm, { profiles: ["EMPLOYEE"], employeeId: manager.id });
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   });
 
   await expect(
     patterns.assignPattern(caller, {
       employeeId: employee.id,
       workingPatternId: standard.id,
-      effectiveFrom: "2026-10-01",
+      startDate: "2026-10-01",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
     patterns.endAssignment(caller, {
       employeeId: employee.id,
-      effectiveUntil: "2026-09-30",
+      endDate: "2026-09-30",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
     patterns.removeAssignment(caller, {
       employeeId: employee.id,
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 });

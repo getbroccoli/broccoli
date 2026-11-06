@@ -6,7 +6,7 @@ import {
   calendarDate,
   employeeServices,
   expect,
-  linkStatutoryMinimumToDefaultTerms,
+  giveDefaultTermsStatutoryMinimum,
   OWNER,
   test,
 } from "#test/support";
@@ -30,7 +30,7 @@ for (const scenario of [
     seed,
     transact,
   }) => {
-    await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+    await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
     const employees = employeeServices(orm);
     const a = calendarDate("2026-01-01");
 

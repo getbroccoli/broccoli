@@ -24,13 +24,19 @@ export {
   createEmployeeReadService,
   createEmployeeService,
   createEmployeeSetupService,
-  createTermsWorkingPatternService,
   createWorkingPatternService,
   createEmployeeWorkingPatternService,
   createLocationService,
   employeeDirectory,
 } from "./app";
-export { employeeFieldErrors, parseEmployeeField, parseTermsSetup } from "./domain";
+export {
+  coversDate,
+  employeeFieldErrors,
+  parseEmployeeField,
+  parseTermsSetup,
+  versionOn,
+  versionStretches,
+} from "./domain";
 
 // Public types.
 export type {
@@ -42,7 +48,6 @@ export type {
   EmployeeSetupService,
   ImportedEmployees,
   InviteDetails,
-  TermsWorkingPatternService,
   WorkingPatternService,
   EmployeeWorkingPatternService,
   LocationService,
@@ -53,6 +58,8 @@ export type {
   EmployeeOrderField,
   NewEmployee,
   NewEmployeeInput,
+  PersonTimeline,
+  TermsMembership,
   WeekdayMinutes,
   WorkingWeek,
 } from "./domain";

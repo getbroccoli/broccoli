@@ -1,4 +1,4 @@
-import { expect, OWNER, test, workingPatternService } from "#test/support";
+import { expect, OWNER, test, workingPatternService, createStandardPattern } from "#test/support";
 import { type Orm, transactor } from "../../../core/db";
 import { createEventBus, type DomainEvents } from "../../../core/events";
 import { createLogger } from "../../../core/logger";
@@ -11,11 +11,13 @@ test("a Standard change publishes its affected employees and earliest changed da
   const second = await seed.employee();
   const { events, transact } = workingPatternChangedEvents(orm);
   const patterns = workingPatternService(orm, { transact });
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find(
+    (pattern) => pattern.termsId !== null,
+  )!;
 
   await patterns.changePattern(OWNER, {
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
     fullDayMinutes: 480,
   });
@@ -50,12 +52,12 @@ test("assigning a pattern publishes the employee and assignment start date", asy
   await seed.leaveTerms(employee.id);
   const { events, transact } = workingPatternChangedEvents(orm);
   const patterns = workingPatternService(orm, { transact });
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
 
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   });
 
   expect(events).toHaveLength(1);
@@ -70,11 +72,13 @@ test("changing only a calendar publishes its affected employees and change date"
   const employee = await seed.employee();
   const { events, transact } = workingPatternChangedEvents(orm);
   const patterns = workingPatternService(orm, { transact });
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find(
+    (pattern) => pattern.termsId !== null,
+  )!;
 
   await patterns.changePattern(OWNER, {
     workingPatternId: standard.id,
-    effectiveFrom: "2026-07-01",
+    startDate: "2026-07-01",
     minutes: [450, 450, 450, 450, 450, 0, 0],
     fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",

@@ -4,7 +4,7 @@ import {
   calendarDate,
   employeeServices,
   expect,
-  linkStatutoryMinimumToDefaultTerms,
+  giveDefaultTermsStatutoryMinimum,
   OWNER,
   readAllowances,
   test,
@@ -16,7 +16,7 @@ import {
 import { addDays } from "../../../utils";
 
 test("invariant: ensuring unchanged inputs appends nothing", async ({ orm, seed, transact }) => {
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const service = timeOffService(orm);
   await fc.assert(
     fc.asyncProperty(startDate(), async (startDate) => {
@@ -41,7 +41,7 @@ test("invariant: start-date corrections preserve every earlier ledger line", asy
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const employees = employeeServices(orm);
   await fc.assert(
     fc.asyncProperty(fc.array(startDate(), { minLength: 2, maxLength: 5 }), async (dates) => {
@@ -69,7 +69,7 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const employees = employeeServices(orm);
   const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
   await fc.assert(
@@ -102,8 +102,8 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
           await patterns.assignPattern(OWNER, {
             employeeId: employee.id,
             workingPatternId: pattern.id,
-            effectiveFrom: calendarDate("2025-01-01"),
-            effectiveUntil: null,
+            startDate: calendarDate("2025-01-01"),
+            endDate: null,
           });
         }
         const final = changes.at(-1)!;
@@ -111,8 +111,8 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
         await patterns.assignPattern(OWNER, {
           employeeId: fresh.id,
           workingPatternId: finalPatternId,
-          effectiveFrom: calendarDate("2025-01-01"),
-          effectiveUntil: null,
+          startDate: calendarDate("2025-01-01"),
+          endDate: null,
         });
         const expected = await readAllowances(orm, fresh.id);
         const actual = await readAllowances(orm, employee.id);
@@ -133,7 +133,7 @@ test("invariant: concurrent ensures write the same ledger as one ensure", async 
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const service = timeOffService(orm);
   await fc.assert(
     fc.asyncProperty(startDate(), fc.integer({ min: 2, max: 4 }), async (startDate, contenders) => {

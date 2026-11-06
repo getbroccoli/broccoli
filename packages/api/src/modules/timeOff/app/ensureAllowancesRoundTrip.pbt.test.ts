@@ -1,41 +1,31 @@
 import fc from "fast-check";
 
 import {
-  allowanceSnapshot,
   allowanceIdentitySums,
+  allowanceSnapshot,
   calendarDate,
   employeeServices,
   expect,
+  giveTermsPolicies,
   OWNER,
   test,
-  timeOffService,
-  workingPatternService,
   transactWithTimeOffEvents,
+  workingPatternService,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
+import { STANDARD_LEAVE_POLICY_KEYS } from "../domain";
 
-for (const policyKey of [
-  "uk_statutory_minimum",
-  "uk_20_days_plus_bank_holidays",
-  "uk_25_days_plus_bank_holidays",
-]) {
+for (const policyKey of STANDARD_LEAVE_POLICY_KEYS) {
   test(`invariant: A to B to A restores every original ledger identity (${policyKey})`, async ({
     orm,
     seed,
     transact,
   }) => {
-    const timeOff = timeOffService(orm);
     const employees = employeeServices(orm);
     const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
     const termsId = await seed.defaultTermsId();
-    const policy = (await timeOff.listPolicies(OWNER, orm)).find(({ key }) => key === policyKey)!;
-    await transact((tx) =>
-      timeOff.linkTermsPolicies(OWNER, tx, {
-        termsId,
-        timeOffPolicyIds: [policy.id],
-      }),
-    );
+    await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: policyKey }] });
 
     await fc.assert(
       fc.asyncProperty(employmentAndPattern(), employmentAndPattern(), async (a, b) => {
@@ -61,8 +51,8 @@ for (const policyKey of [
           await patterns.assignPattern(OWNER, {
             employeeId: employee.id,
             workingPatternId: state.patternId,
-            effectiveFrom: calendarDate("2025-01-01"),
-            effectiveUntil: null,
+            startDate: calendarDate("2025-01-01"),
+            endDate: null,
           });
           const current = await allowanceSnapshot(orm, employee.id);
           expect(current.length).toBeGreaterThan(0);
@@ -85,8 +75,8 @@ for (const policyKey of [
             await patterns.assignPattern(OWNER, {
               employeeId: fresh.id,
               workingPatternId: patternB.id,
-              effectiveFrom: calendarDate("2025-01-01"),
-              effectiveUntil: null,
+              startDate: calendarDate("2025-01-01"),
+              endDate: null,
             });
             const freshB = await allowanceSnapshot(orm, fresh.id);
             expect(freshB).toHaveLength(1);

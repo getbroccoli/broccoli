@@ -2,7 +2,13 @@ import type { Tx } from "../../../core/db";
 import { PrincipalSecurityContext } from "../../../core/security";
 import type { CalendarDate } from "../../../utils";
 import { BANK_HOLIDAY_CALENDARS, type BankHolidayService } from "../../bankHolidays";
-import type { EmployeeReadService, EmployeeWorkingPatternService } from "../../employees";
+import {
+  type EmployeeReadService,
+  type EmployeeWorkingPatternService,
+  type PersonTimeline,
+  versionOn,
+  versionStretches,
+} from "../../employees";
 import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
 import {
   type AllowanceCause,
@@ -12,9 +18,7 @@ import {
   leaveYearContaining,
   ledgerDifference,
   type NewLedgerLine,
-  type PolicyTimeline,
-  policyIdOn,
-  policyStretches,
+  type PolicyVersion,
   type TimeOffPolicy,
 } from "../domain";
 
@@ -58,7 +62,7 @@ export async function ensureAllowancesOf(
     ),
     ...created,
   ];
-  const lines = await differenceLines(dependencies, tx, { people, policies, open, cause });
+  const lines = await differenceLines(dependencies, tx, { people, open, cause });
   return { allowancesCreated: created.length, linesAppended: await allowances.insertLines(lines) };
 }
 
@@ -67,7 +71,8 @@ export interface Person {
   employeeId: string;
   periods: readonly { startDate: CalendarDate | null; endDate: CalendarDate | null }[];
   serviceStart: CalendarDate | null;
-  timeline: PolicyTimeline;
+  /** What decides the person's policy for one type. */
+  timelineOf: (timeOffTypeId: string) => PersonTimeline<PolicyVersion>;
   allowances: readonly Allowance[];
 }
 
@@ -88,8 +93,12 @@ export async function readPeople(
     policyRepository.findAssignments(ids),
     allowanceRepository(tx).findByEmployees(ids),
   ]);
-  const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
-  const termsLinks = await policyRepository.findTermsLinks([...new Set(termsIds)]);
+  const byId = new Map(policies.map((policy) => [policy.id, policy]));
+  const termsPolicyIds = new Map(
+    policies.flatMap(({ id, termsId, timeOffType }) =>
+      termsId ? [[`${termsId}:${timeOffType.id}`, id] as const] : [],
+    ),
+  );
   const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
   const people = ids.map((employeeId) => {
     const periods = employments.get(employeeId) ?? [];
@@ -97,11 +106,18 @@ export async function readPeople(
       employeeId,
       periods,
       serviceStart: periods[0]?.startDate ?? null,
-      timeline: {
-        assignments: assignments.get(employeeId) ?? [],
-        memberships: memberships.get(employeeId) ?? [],
-        termsLinks,
-      },
+      timelineOf: (timeOffTypeId: string) => ({
+        direct: (assignments.get(employeeId) ?? [])
+          .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
+          .map(({ timeOffPolicyId, startDate, endDate }) => ({
+            id: timeOffPolicyId,
+            startDate,
+            endDate,
+          })),
+        terms: memberships.get(employeeId) ?? [],
+        idOfTerms: (termsId: string) => termsPolicyIds.get(`${termsId}:${timeOffTypeId}`) ?? null,
+        versions: (policyId: string) => byId.get(policyId)?.versions ?? [],
+      }),
       allowances: existingOf.get(employeeId) ?? [],
     };
   });
@@ -117,7 +133,7 @@ function missingAllowances(
   const typeIds = [...new Set(policies.map(({ timeOffType }) => timeOffType.id))];
   return people.flatMap((person) =>
     typeIds.flatMap((typeId) => {
-      const allowance = newAllowance(person, policies, typeId, today);
+      const allowance = newAllowance(person, typeId, today);
       return allowance ? [{ employeeId: person.employeeId, ...allowance }] : [];
     }),
   );
@@ -129,12 +145,10 @@ async function differenceLines(
   tx: Tx,
   {
     people,
-    policies,
     open,
     cause,
   }: {
     people: readonly Person[];
-    policies: readonly TimeOffPolicy[];
     open: readonly Allowance[];
     cause: AllowanceCause;
   },
@@ -150,7 +164,7 @@ async function differenceLines(
       leaveYear: { start: allowance.leaveYearStart, end: allowance.leaveYearEnd },
       employments: person.periods,
       serviceStart: person.serviceStart,
-      policies: datedPolicies(person.timeline, policies, allowance),
+      policies: datedPolicies(person, allowance),
       workingWeeks: weeks.get(allowance.employeeId)!,
       bankHolidays: holidayDates,
     };
@@ -214,17 +228,15 @@ function previousCalculation(inputs: AllowanceInputs, cause: AllowanceCause) {
  */
 function newAllowance(
   person: Person,
-  policies: readonly TimeOffPolicy[],
   timeOffTypeId: string,
   today: CalendarDate,
 ): Pick<Allowance, "timeOffTypeId" | "leaveYearStart" | "leaveYearEnd"> | null {
   const anchor = person.serviceStart && person.serviceStart > today ? person.serviceStart : today;
-  const policyId = policyIdOn(person.timeline, timeOffTypeId, anchor);
-  const policy = policies.find(({ id }) => id === policyId);
-  if (!policy?.leaveYear) {
+  const version = versionOn(person.timelineOf(timeOffTypeId), anchor);
+  if (!version?.leaveYear) {
     return null;
   }
-  const { start, end } = leaveYearContaining(policy.leaveYear, person.serviceStart, anchor);
+  const { start, end } = leaveYearContaining(version.leaveYear, person.serviceStart, anchor);
   const overlaps = person.allowances.some(
     (allowance) =>
       allowance.timeOffTypeId === timeOffTypeId &&
@@ -238,24 +250,17 @@ function newAllowance(
   return overlaps || !employed ? null : { timeOffTypeId, leaveYearStart: start, leaveYearEnd: end };
 }
 
-function datedPolicies(
-  timeline: PolicyTimeline,
-  policies: readonly TimeOffPolicy[],
-  allowance: Allowance,
-): DatedPolicy[] {
-  return policyStretches(
-    timeline,
-    allowance.timeOffTypeId,
+/** The policy versions that apply to the person over the allowance's leave year. */
+function datedPolicies(person: Person, allowance: Allowance): DatedPolicy[] {
+  return versionStretches(
+    person.timelineOf(allowance.timeOffTypeId),
     allowance.leaveYearStart,
     allowance.leaveYearEnd,
-  ).map(({ timeOffPolicyId, effectiveFrom, effectiveUntil }) => {
-    const policy = policies.find(({ id }) => id === timeOffPolicyId)!;
-    return {
-      effectiveFrom,
-      effectiveUntil,
-      balance: policy.balance,
-      bankHolidays: policy.bankHolidays,
-      rules: policy.rules,
-    };
-  });
+  ).map(({ version, startDate, endDate }) => ({
+    startDate,
+    endDate,
+    balance: version.balance,
+    bankHolidays: version.bankHolidays,
+    rules: version.rules,
+  }));
 }

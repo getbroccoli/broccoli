@@ -89,7 +89,7 @@ export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";
 export { signedIn } from "./signedIn";
 export { bankHolidayService } from "./bankHolidayService";
-export { workingPatternService } from "./workingPatternService";
+export { createStandardPattern, workingPatternService } from "./workingPatternService";
 
 export { fakeMail } from "./fakeMail";
 export { startFakeResend } from "./fakeResend";
@@ -103,8 +103,11 @@ export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
 export {
   type AllowanceLine,
   demoFillService,
-  linkStatutoryMinimumToDefaultTerms,
+  giveDefaultTermsStatutoryMinimum,
+  giveTermsPolicies,
   readAllowances,
+  readTermsPolicies,
+  type TermsPolicy,
   timeOffService,
   transactWithTimeOffEvents,
 } from "./timeOffService";

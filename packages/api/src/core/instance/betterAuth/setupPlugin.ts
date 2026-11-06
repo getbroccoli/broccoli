@@ -57,7 +57,7 @@ const setupBody = credentialsBody.extend({
         z.object({
           bankHolidayCalendar: z.string(),
           workingWeek: z.string(),
-          annualLeavePolicyId: z.string(),
+          annualLeavePolicyKey: z.string(),
         }),
       ),
       locationTerms: z.array(

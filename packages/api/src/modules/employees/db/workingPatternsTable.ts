@@ -1,9 +1,11 @@
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { check, foreignKey, pgTable, text, uuid } from "drizzle-orm/pg-core";
+
+import { terms } from "./termsTable";
 
 /**
- * A named way of working that terms and people are put on; its minutes are its weeks. The
- * migration inserts Standard; code finds it by its key, never its name.
+ * A way of working: one set of terms' own, or a named one that people are put on one by one. Its
+ * minutes over time are its versions.
  */
 export const workingPatterns = pgTable(
   "working_patterns",
@@ -11,9 +13,21 @@ export const workingPatterns = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
-    name: text("name").notNull().unique("working_patterns_name_unique"),
-    /** Set only on Standard, which cannot be deleted. */
-    key: text("key", { enum: ["standard_working_pattern"] }).unique("working_patterns_key_unique"),
+    /** Null: a named pattern for one person at a time. */
+    termsId: uuid("terms_id").unique("working_patterns_terms_unique"),
+    /** Null on a terms' pattern, which their terms name. */
+    name: text("name").unique("working_patterns_name_unique"),
   },
-  (table) => [check("working_patterns_name_not_blank", sql`btrim(${table.name}) <> ''`)],
+  (table) => [
+    foreignKey({
+      name: "working_patterns_terms_fk",
+      columns: [table.termsId],
+      foreignColumns: [terms.id],
+    }).onDelete("cascade"),
+    check(
+      "working_patterns_named_unless_terms",
+      sql`(${table.termsId} is null) = (${table.name} is not null)`,
+    ),
+    check("working_patterns_name_not_blank", sql`btrim(${table.name}) <> ''`),
+  ],
 );

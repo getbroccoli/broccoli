@@ -2,10 +2,6 @@ import { addDays, addYears, type CalendarDate } from "../../../utils";
 import type { AllowanceRule, DatedPolicy } from "./allowanceCalculator";
 import type { TimeOffTypeColour, TimeOffTypeIcon } from "./timeOffTypeLook";
 
-/** The standard leave policies' keys, by which code finds them. */
-export type StandardLeavePolicyKey =
-  "uk_statutory_minimum" | "uk_20_days_plus_bank_holidays" | "uk_25_days_plus_bank_holidays";
-
 /** The keys of the four seeded time off types. */
 export type TimeOffTypeKey = "annual_leave" | "sickness" | "family_leave" | "other";
 
@@ -18,12 +14,25 @@ export interface TimeOffType {
   colour: TimeOffTypeColour | null;
 }
 
-/** A policy with its type and allowance rules. */
+/** A policy for one type: one set of terms' own, or a named one people are put on one by one. */
 export interface TimeOffPolicy {
   id: string;
-  name: string;
-  key: StandardLeavePolicyKey | null;
   timeOffType: TimeOffType;
+  /** Null: a named policy for one person at a time. */
+  termsId: string | null;
+  /** Null on a terms' policy. */
+  name: string | null;
+  /** Oldest first, never overlapping. */
+  versions: PolicyVersion[];
+}
+
+/** A policy's rules from a date to a date; never edited, only ended. */
+export interface PolicyVersion {
+  id: string;
+  /** Null: from the beginning. */
+  startDate: CalendarDate | null;
+  /** The last day it applies; null: open-ended. */
+  endDate: CalendarDate | null;
   balance: DatedPolicy["balance"];
   bankHolidays: DatedPolicy["bankHolidays"];
   /** Null for a `no_balance` policy. */
@@ -39,7 +48,7 @@ export interface TimeOffPolicy {
  * `serviceStart`, falling back to 1 January when the start is unknown.
  */
 export function leaveYearContaining(
-  leaveYear: NonNullable<TimeOffPolicy["leaveYear"]>,
+  leaveYear: NonNullable<PolicyVersion["leaveYear"]>,
   serviceStart: CalendarDate | null,
   date: CalendarDate,
 ): { start: CalendarDate; end: CalendarDate } {

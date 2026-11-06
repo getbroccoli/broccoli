@@ -1,13 +1,16 @@
 import {
   ADMIN,
   expect,
-  linkStatutoryMinimumToDefaultTerms,
+  giveDefaultTermsStatutoryMinimum,
+  giveTermsPolicies,
   OWNER,
   seedEmploymentEnd,
   seedTimeOff,
   seedTimeOffAssignment,
   seedTimeOffPolicy,
+  seedTimeOffType,
   signedIn,
+  type TermsPolicy,
   test,
   timeOffService,
 } from "#test/support";
@@ -21,16 +24,10 @@ test("returns statutory figures followed by the three recorded-only types", asyn
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.defaultTermsId();
-  const policies = await service.listPolicies(OWNER, orm);
-  const statutory = policies.find(({ key }) => key === "uk_statutory_minimum")!;
-  const recorded = policies.filter(({ balance }) => balance === "no_balance");
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, {
-      termsId,
-      timeOffPolicyIds: [statutory.id, ...recorded.map(({ id }) => id)],
-    }),
-  );
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: STATUTORY_AND_RECORD_ONLY,
+  });
 
   const rows = await service.readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -66,12 +63,10 @@ test("includes bank holidays on top of a 25-day allowance in entitlement", async
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    ({ key }) => key === "uk_25_days_plus_bank_holidays",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ key: "uk_25_days_plus_bank_holidays" }],
+  });
 
   const rows = await service.readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -88,7 +83,7 @@ test("includes bank holidays on top of a 25-day allowance in entitlement", async
 
 test("returns prorated figures for an October joiner", async ({ orm, seed, transact }) => {
   const employee = await seed.employee({ startDate: "2026-10-12" });
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
 
   const rows = await timeOffService(orm).readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -107,7 +102,7 @@ test("returns an empty list while no policies are linked", async ({ orm, seed })
 
 test("uses the first leave year of a future starter", async ({ orm, seed, transact }) => {
   const employee = await seed.employee({ startDate: "2027-01-05" });
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
 
   const rows = await timeOffService(orm).readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -124,16 +119,10 @@ test("omits allowance and recorded-only rows for someone who left last year", as
   const employee = await seed.employee({ startDate: "2025-01-01" });
   await seedEmploymentEnd(orm, employee.id, "2025-09-30");
   const service = timeOffService(orm);
-  const termsId = await seed.defaultTermsId();
-  const policies = (await service.listPolicies(OWNER, orm)).filter(
-    ({ key, balance }) => key === "uk_statutory_minimum" || balance === "no_balance",
-  );
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, {
-      termsId,
-      timeOffPolicyIds: policies.map(({ id }) => id),
-    }),
-  );
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: STATUTORY_AND_RECORD_ONLY,
+  });
 
   const rows = await service.readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -192,13 +181,10 @@ test("counts approved full and half sickness days but excludes declined days", a
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
   const service = timeOffService(orm);
-  const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    ({ balance, typeKey }) => balance === "no_balance" && typeKey === "sickness",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [{ recordOnly: "sickness" }],
+  });
   const sickness = (await orm.select().from(timeOffTypes)).find(
     ({ typeKey }) => typeKey === "sickness",
   )!;
@@ -231,22 +217,30 @@ test("returns every allowance type with Annual leave before company types", asyn
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  const custom = await seedTimeOffPolicy(orm, {
-    name: "Additional leave",
-    balance: "balance_from_allowance",
-    entitlementDays: 5,
-  });
+  const custom = await seedTimeOffType(orm, "Additional leave");
   const service = timeOffService(orm);
-  const termsId = await seed.defaultTermsId();
-  const statutory = (await service.listPolicies(OWNER, orm)).find(
-    ({ key }) => key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, {
-      termsId,
-      timeOffPolicyIds: [custom.id, statutory.id],
-    }),
-  );
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [
+      {
+        timeOffTypeId: custom.id,
+        version: {
+          balance: "balance_from_allowance",
+          bankHolidays: "bank_holidays_on_top_of_allowance",
+          leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+          rules: [
+            {
+              kind: "yearly_entitlement",
+              entitlementDays: 5,
+              entitlementDaysPerWeek: 5,
+              maxDays: null,
+            },
+          ],
+        },
+      },
+      { key: "uk_statutory_minimum" },
+    ],
+  });
 
   const rows = await service.readTimeOffTypes(OWNER, { employeeIds: [employee.id] });
 
@@ -260,7 +254,7 @@ test("returns every allowance type with Annual leave before company types", asyn
       remaining: 20,
     },
     {
-      timeOffType: { id: custom.timeOffTypeId, name: "Additional leave", typeKey: null },
+      timeOffType: { id: custom.id, name: "Additional leave", typeKey: null },
       balance: "balance_from_allowance",
       entitlement: 13,
       bankHolidays: 8,
@@ -279,7 +273,7 @@ test.for(["self", "manager two levels up", "admin", "peer"] as const)(
     const peer = await seed.employee();
     await seed.manager(employee.id, manager.id);
     await seed.manager(manager.id, director.id);
-    await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+    await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
     const contexts = {
       self: signedIn(orm, { employeeId: employee.id, profiles: ["EMPLOYEE"] }),
       "manager two levels up": signedIn(orm, { employeeId: director.id, profiles: ["EMPLOYEE"] }),
@@ -300,3 +294,10 @@ test.for(["self", "manager two levels up", "admin", "peer"] as const)(
     }
   },
 );
+
+const STATUTORY_AND_RECORD_ONLY: TermsPolicy[] = [
+  { key: "uk_statutory_minimum" },
+  { recordOnly: "sickness" },
+  { recordOnly: "family_leave" },
+  { recordOnly: "other" },
+];

@@ -1,7 +1,7 @@
 import {
   employeeServices,
   expect,
-  linkStatutoryMinimumToDefaultTerms,
+  giveDefaultTermsStatutoryMinimum,
   OWNER,
   readAllowances,
   SYSTEM,
@@ -14,7 +14,7 @@ test("ensuring allowances skips a deleted employee and commits allowances for th
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const deleted = await seed.employee({ startDate: "2025-01-01" });
   const remaining = await seed.employee({ startDate: "2025-01-01" });
   await employeeServices(orm).deleteEmployee(OWNER, { id: deleted.id });
@@ -38,7 +38,7 @@ test("ensuring allowances writes nothing when every employee was deleted", async
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const deleted = await seed.employee({ startDate: "2025-01-01" });
   await employeeServices(orm).deleteEmployee(OWNER, { id: deleted.id });
 

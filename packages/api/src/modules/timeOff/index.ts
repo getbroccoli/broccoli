@@ -15,7 +15,6 @@ export { createTimeOffSetupService, createTimeOffService } from "./app";
 export type {
   EmployeeTimeOffType,
   EnsuredAllowances,
-  TimeOffPolicySummary,
   TimeOffService,
   TurnedOnTimeOff,
 } from "./app";

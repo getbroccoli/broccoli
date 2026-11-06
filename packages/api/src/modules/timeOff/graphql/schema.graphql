@@ -115,7 +115,7 @@ enum BankHolidayCalendar {
 
 "A UK working week an owner picks for terms when turning time off on."
 enum StandardWorkingWeek {
-  "Monday to Friday, 7.5 hours a day: the Standard working pattern's week."
+  "Monday to Friday, 7.5 hours a day: the week a fresh workspace starts with."
   MONDAY_TO_FRIDAY_7_5_HOURS
   MONDAY_TO_FRIDAY_8_HOURS
   MONDAY_TO_FRIDAY_7_HOURS
@@ -130,14 +130,24 @@ type TimeOffSetup {
   bankHolidayCalendars: [BankHolidayCalendarYear!]!
 }
 
-"A time off policy terms can get."
+"A standard Annual leave policy, which turning time off on copies into terms."
 type AnnualLeavePolicy {
-  id: ID!
+  key: StandardLeavePolicyKey!
   name: String!
   "The yearly allowance for a Monday-to-Friday week."
   daysForFiveDayWeek: Float!
   "True when bank holidays come on top of those days, false when they are taken from them."
   bankHolidaysOnTop: Boolean!
+}
+
+"A standard Annual leave policy Broccoli ships."
+enum StandardLeavePolicyKey {
+  "20 days plus bank holidays for a five-day week."
+  UK_20_DAYS_PLUS_BANK_HOLIDAYS
+  "25 days plus bank holidays for a five-day week."
+  UK_25_DAYS_PLUS_BANK_HOLIDAYS
+  "The UK statutory minimum: 28 days for a five-day week, at most 28, bank holidays included."
+  UK_STATUTORY_MINIMUM
 }
 
 "How many bank holidays a nation has this year."
@@ -179,8 +189,7 @@ input TurnOnTimeOffInput {
 input TermsSetupInput {
   bankHolidayCalendar: BankHolidayCalendar!
   workingWeek: StandardWorkingWeek!
-  "One of `timeOffSetup.annualLeavePolicies`."
-  annualLeavePolicyId: ID!
+  annualLeavePolicyKey: StandardLeavePolicyKey!
 }
 
 input LocationTermsInput {

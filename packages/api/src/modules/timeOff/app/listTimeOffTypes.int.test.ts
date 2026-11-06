@@ -2,7 +2,8 @@ import {
   ADMIN,
   EMPLOYEE,
   expect,
-  linkStatutoryMinimumToDefaultTerms,
+  giveDefaultTermsStatutoryMinimum,
+  giveTermsPolicies,
   seedTimeOff,
   seedTimeOffPolicy,
   seedTimeOffType,
@@ -44,7 +45,11 @@ test("lists a company's own type after the seeded ones, with no icon or colour",
   });
 });
 
-test("reads how a type counts from its policies", async ({ orm }) => {
+test("reads how a type counts from its policies", async ({ orm, seed, transact }) => {
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [{ key: "uk_statutory_minimum" }, { recordOnly: "sickness" }],
+  });
   const service = timeOffService(orm, { today: "2026-11-05" });
 
   const result = await service.listTimeOffTypes(ADMIN);
@@ -135,7 +140,7 @@ test("counts the people who have a time off type today", async ({ orm, seed, tra
   await seed.employee({ startDate: "2025-01-01" });
   const withoutTerms = await seed.employee({ startDate: "2025-01-01" });
   await seed.leaveTerms(withoutTerms.id);
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const service = timeOffService(orm, { today: "2026-11-05" });
 
   const result = await service.listTimeOffTypes(ADMIN);

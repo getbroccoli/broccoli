@@ -113,23 +113,23 @@ it("refuses a full day shorter than the longest weekday", () => {
 });
 
 it("accepts an existing calendar date", () => {
-  expect(parseDateField("effectiveFrom", "2024-02-29")).toBe("2024-02-29");
+  expect(parseDateField("startDate", "2024-02-29")).toBe("2024-02-29");
 });
 
 it("refuses a date in the wrong format", () => {
-  expect(() => parseDateField("effectiveFrom", "01/09/2026")).toThrowError(
+  expect(() => parseDateField("startDate", "01/09/2026")).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
-      fieldErrors: [{ field: "effectiveFrom", code: "invalid" }],
+      fieldErrors: [{ field: "startDate", code: "invalid" }],
     }),
   );
 });
 
 it("refuses an impossible date on the supplied field", () => {
-  expect(() => parseDateField("effectiveUntil", "2026-02-30")).toThrowError(
+  expect(() => parseDateField("endDate", "2026-02-30")).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
-      fieldErrors: [{ field: "effectiveUntil", code: "invalid" }],
+      fieldErrors: [{ field: "endDate", code: "invalid" }],
     }),
   );
 });

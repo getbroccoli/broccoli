@@ -1,16 +1,20 @@
 import type { Transact } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
 import type { CalendarDate } from "../../../utils";
+import { coversDate } from "../../employees";
 import { allowanceRepository, timeOffPolicyRepository, timeOffRepository } from "../db";
-import { sharedBalance, type TimeOffPolicy, type TimeOffType } from "../domain";
+import { type PolicyVersion, sharedBalance, type TimeOffPolicy, type TimeOffType } from "../domain";
 import { byTypeOrder, calendarYearOf } from "./readTimeOffTypes";
 
 /** Every time off type as Settings lists it, and how many people have time off. */
 export interface TimeOffTypeList {
   timeOffTypes: {
     timeOffType: TimeOffType;
-    /** The kind most of its policies share, the oldest policy's on a tie; null with no policy. */
-    balance: TimeOffPolicy["balance"] | null;
+    /**
+     * The kind most of its policies share today, the oldest policy's on a tie; null when no policy
+     * applies today.
+     */
+    balance: PolicyVersion["balance"] | null;
     /** Everyone's approved or pending days in the calendar year of today; a half day is 0.5. */
     daysTakenThisYear: number;
   }[];
@@ -39,10 +43,24 @@ export async function listTimeOffTypes(
   return {
     timeOffTypes: types.sort(byTypeOrder).map((timeOffType) => ({
       timeOffType,
-      balance: sharedBalance(policies.filter((policy) => policy.timeOffType.id === timeOffType.id)),
+      balance: sharedBalance(countingToday(policies, timeOffType.id, today())),
       daysTakenThisYear:
         takenDays.find(({ timeOffTypeId }) => timeOffTypeId === timeOffType.id)?.days ?? 0,
     })),
     peopleWithTimeOff,
   };
+}
+
+/** The type's policies as each counts today; a policy with no version today is left out. */
+function countingToday(
+  policies: readonly TimeOffPolicy[],
+  timeOffTypeId: string,
+  date: CalendarDate,
+): { id: string; balance: PolicyVersion["balance"] }[] {
+  return policies
+    .filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
+    .flatMap(({ id, versions }) => {
+      const version = versions.find((candidate) => coversDate(candidate, date));
+      return version ? [{ id, balance: version.balance }] : [];
+    });
 }

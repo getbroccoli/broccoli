@@ -1,29 +1,30 @@
 import {
+  ADMIN,
   companyService,
+  EMPLOYEE,
   employeeServices,
   expect,
   importServices,
-  ADMIN,
-  EMPLOYEE,
+  instances,
+  OWNER,
+  owners,
   PNG,
+  readTermsPolicies,
+  readTimeOffTerms,
+  scotlandTimeOffSetup,
   SLACK_PHOTO_URL,
   storedFileIds,
   systemService,
   test,
   TEST_OWNER,
-  instances,
-  owners,
-  OWNER,
   timeOffService,
-  readTimeOffTerms,
-  scotlandTimeOffSetup,
   workingPatternService,
 } from "#test/support";
 
 import { user } from "../../../core/auth";
 import { NO_SETUP_INVITES } from "../../../core/instance";
 
-test("resetting setup restores only the default terms on Standard with time off turned off", async ({
+test("resetting setup restores only the default terms on their seeded week with time off turned off", async ({
   orm,
   seed,
   transact,
@@ -34,9 +35,9 @@ test("resetting setup restores only the default terms on Standard with time off 
   const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
   const standard = (await workingPatternService(orm).listPatterns(OWNER)).find(
-    ({ isStandard }) => isStandard,
+    (pattern) => pattern.termsId === termsId,
   )!;
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   input.defaultBankHolidayCalendar = "scotland";
   input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
   await transact((tx) => service.turnOnTimeOff(OWNER, tx, input));
@@ -44,7 +45,7 @@ test("resetting setup restores only the default terms on Standard with time off 
     { name: "England and Wales" },
     { id: termsId, name: "Scotland" },
   ]);
-  expect(await workingPatternService(orm).listPatterns(OWNER)).toHaveLength(3);
+  expect(await workingPatternService(orm).listPatterns(OWNER)).toHaveLength(2);
 
   await systemService(orm).resetSetup(owner);
 
@@ -53,11 +54,26 @@ test("resetting setup restores only the default terms on Standard with time off 
       id: termsId,
       key: "default_terms",
       name: "England and Wales",
-      patterns: [{ workingPatternId: standard.id, effectiveFrom: null, effectiveUntil: null }],
+      pattern: { id: standard.id },
     },
   ]);
-  expect(await workingPatternService(orm).listPatterns(OWNER)).toEqual([standard]);
-  expect(await service.readTermsPolicies(OWNER, { termsId })).toEqual([]);
+  expect(await workingPatternService(orm).listPatterns(OWNER)).toMatchObject([
+    {
+      id: standard.id,
+      termsId,
+      name: null,
+      versions: [
+        {
+          startDate: null,
+          endDate: null,
+          minutes: [450, 450, 450, 450, 450, 0, 0],
+          fullDayMinutes: 450,
+          bankHolidayCalendar: "england_and_wales",
+        },
+      ],
+    },
+  ]);
+  expect(await readTermsPolicies(orm, termsId)).toEqual([]);
 });
 
 test("resetting a finished setup deletes every employee and avatar and keeps the company, AI choice and owner", async ({

@@ -253,27 +253,6 @@
       "when": 1793631320766,
       "tag": "0035_locations",
       "breakpoints": true
-    },
-    {
-      "idx": 36,
-      "version": "7",
-      "when": 1793631895933,
-      "tag": "0036_bank_holiday_calendars",
-      "breakpoints": true
-    },
-    {
-      "idx": 37,
-      "version": "7",
-      "when": 1793633199653,
-      "tag": "0037_time_off_policy_keys",
-      "breakpoints": true
-    },
-    {
-      "idx": 38,
-      "version": "7",
-      "when": 1793633200653,
-      "tag": "0038_seed_standard_leave_policies",
-      "breakpoints": true
     }
   ]
 }

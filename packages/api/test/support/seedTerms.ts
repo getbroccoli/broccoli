@@ -29,6 +29,6 @@ export async function moveToTerms(
   await orm.insert(employeeTerms).values({
     employeeId,
     termsId,
-    effectiveFrom: from === null ? null : parseCalendarDate(from)!,
+    startDate: from === null ? null : parseCalendarDate(from)!,
   });
 }

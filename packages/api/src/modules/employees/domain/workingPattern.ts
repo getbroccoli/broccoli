@@ -1,27 +1,32 @@
 import { invalidInput } from "../../../core/applicationError";
 import { type CalendarDate, parseCalendarDate } from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
+import type { Dated } from "./personTimeline";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
 
-/** A pattern's minutes from a date until its next week starts; null from the beginning. */
-export interface PatternWeek {
-  effectiveFrom: CalendarDate | null;
+/** A pattern's minutes from a date to a date; never edited, only ended. */
+export interface PatternVersion extends Dated {
+  id: string;
   minutes: WeekdayMinutes;
   /** The minutes one day of leave stands for. */
   fullDayMinutes: number;
   bankHolidayCalendar: BankHolidayCalendar;
 }
 
-/** A named way of working that terms and people are put on. */
+/** A pattern's minutes, full day and bank holidays: what a version holds besides its dates. */
+export type PatternWeek = Omit<PatternVersion, "id" | "startDate" | "endDate">;
+
+/** A way of working: one set of terms' own, or a named one people are put on one by one. */
 export interface WorkingPattern {
   id: string;
-  name: string;
-  /** The seeded Standard pattern, which cannot be deleted. */
-  isStandard: boolean;
+  /** Null: a named pattern for one person at a time. */
+  termsId: string | null;
+  /** Null on a terms' pattern. */
+  name: string | null;
   /** Oldest first; the first starts from the beginning. */
-  weeks: PatternWeek[];
+  versions: PatternVersion[];
 }
 
 /**
@@ -29,7 +34,7 @@ export interface WorkingPattern {
  * apply; all null while they have no working pattern.
  */
 export interface WorkingWeek {
-  effectiveFrom: CalendarDate;
+  startDate: CalendarDate;
   minutes: WeekdayMinutes | null;
   fullDayMinutes: number | null;
   bankHolidayCalendar: BankHolidayCalendar | null;

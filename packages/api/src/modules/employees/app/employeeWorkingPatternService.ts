@@ -14,10 +14,10 @@ import {
 import {
   coversDate,
   type DatedPattern,
-  makeRoomForDatedPattern,
+  idOn,
+  makeRoomForDatedRow,
   parseDateField,
   parseEmployeeIds,
-  patternOn,
   type WorkingPattern,
   type WorkingPatternTimeline,
   type WorkingWeek,
@@ -52,27 +52,28 @@ export interface EmployeeWorkingPatternService {
     input: { employeeIds: readonly string[]; from: CalendarDate; until: CalendarDate },
   ) => Promise<Map<string, WorkingWeek[]>>;
   /**
-   * Puts a person on their own pattern from a date, until a date or open-ended, ahead of their
-   * terms'; an earlier one of theirs ends the day before. Returns the history line it added.
+   * Puts a person on a named pattern from a date, until a date or open-ended, ahead of their
+   * terms'; an earlier one of theirs ends the day before. Refuses a terms' own pattern as invalid
+   * input. Returns the history line it added.
    */
   assignPattern: (
     ctx: SecurityContext,
     input: {
       employeeId: string;
       workingPatternId: string;
-      effectiveFrom: string;
-      effectiveUntil?: string | null;
+      startDate: string;
+      endDate?: string | null;
     },
   ) => Promise<HistoryLine>;
   /** Ends a person's own pattern on a date; their terms' applies from the next day. */
   endAssignment: (
     ctx: SecurityContext,
-    input: { employeeId: string; effectiveUntil: string },
+    input: { employeeId: string; endDate: string },
   ) => Promise<HistoryLine>;
   /** Removes a person's own pattern that starts on a date, as a correction. */
   removeAssignment: (
     ctx: SecurityContext,
-    input: { employeeId: string; effectiveFrom: string },
+    input: { employeeId: string; startDate: string },
   ) => Promise<HistoryLine>;
 }
 
@@ -101,56 +102,54 @@ export function createEmployeeWorkingPatternService({
 
     async assignPattern(ctx, input) {
       const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
-      const effectiveFrom = parseDateField("effectiveFrom", input.effectiveFrom);
-      const effectiveUntil =
-        input.effectiveUntil == null
-          ? null
-          : parseUntil(effectiveFrom, input.effectiveUntil, "effectiveUntil");
-      const change = { ctx, employeeId, changedFrom: effectiveFrom };
+      const startDate = parseDateField("startDate", input.startDate);
+      const endDate =
+        input.endDate == null ? null : parseUntil(startDate, input.endDate, "endDate");
+      const change = { ctx, employeeId, changedFrom: startDate };
       return changeAssignments({ transact, logger }, change, async (tx, rows, patterns) => {
         const repository = workingPatternRepository(tx);
         const pattern = referencedPattern(patterns, input.workingPatternId);
-        const { ended, replaced } = makeRoomForDatedPattern(rows, effectiveFrom, effectiveUntil);
+        const { ended, replaced } = makeRoomForDatedRow(rows, startDate, endDate);
         if (replaced) {
           await repository.deleteAssignment(replaced.id);
         }
         if (ended) {
-          await repository.endAssignment(ended.id, addDays(effectiveFrom, -1));
+          await repository.endAssignment(ended.id, addDays(startDate, -1));
         }
         await repository.insertAssignment(employeeId, {
           workingPatternId: pattern.id,
-          effectiveFrom,
-          effectiveUntil,
+          startDate,
+          endDate,
         });
-        return { before: replaced?.effectiveUntil ?? null, after: effectiveUntil };
+        return { before: replaced?.endDate ?? null, after: endDate };
       });
     },
 
     async endAssignment(ctx, input) {
       const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
-      const effectiveUntil = parseDateField("effectiveUntil", input.effectiveUntil);
-      const change = { ctx, employeeId, changedFrom: addDays(effectiveUntil, 1) };
+      const endDate = parseDateField("endDate", input.endDate);
+      const change = { ctx, employeeId, changedFrom: addDays(endDate, 1) };
       return changeAssignments({ transact, logger }, change, async (tx, rows) => {
-        const row = rows.find((candidate) => coversDate(candidate, effectiveUntil));
+        const row = rows.find((candidate) => coversDate(candidate, endDate));
         if (!row) {
           throw noOwnPattern();
         }
-        await workingPatternRepository(tx).endAssignment(row.id, effectiveUntil);
-        return { before: row.effectiveUntil, after: effectiveUntil };
+        await workingPatternRepository(tx).endAssignment(row.id, endDate);
+        return { before: row.endDate, after: endDate };
       });
     },
 
     async removeAssignment(ctx, input) {
       const employeeId = await requireAssignmentWrite(ctx, input.employeeId);
-      const effectiveFrom = parseDateField("effectiveFrom", input.effectiveFrom);
-      const change = { ctx, employeeId, changedFrom: effectiveFrom };
+      const startDate = parseDateField("startDate", input.startDate);
+      const change = { ctx, employeeId, changedFrom: startDate };
       return changeAssignments({ transact, logger }, change, async (tx, rows) => {
-        const row = rows.find((candidate) => candidate.effectiveFrom === effectiveFrom);
+        const row = rows.find((candidate) => candidate.startDate === startDate);
         if (!row) {
           throw noOwnPattern();
         }
         await workingPatternRepository(tx).deleteAssignment(row.id);
-        return { before: row.effectiveUntil, after: null };
+        return { before: row.endDate, after: null };
       });
     },
   };
@@ -187,11 +186,7 @@ async function changeAssignments(
       throw employeeNotFound();
     }
     const before = await readTimelines(tx, [employeeId]);
-    const end = await change(
-      tx,
-      before.timelines.get(employeeId)!.assignments.slice(),
-      before.patterns,
-    );
+    const end = await change(tx, before.assignments.get(employeeId) ?? [], before.patterns);
     const after = await readTimelines(tx, [employeeId]);
     publishWorkingPatternChange(tx, [employeeId], changedFrom);
     const [added] = await recordHistory.append(ctx, tx, {
@@ -204,18 +199,18 @@ async function changeAssignments(
           changes: [
             {
               field: "workingPattern",
-              oldValue: patternNameOn(before, employeeId, changedFrom),
-              newValue: patternNameOn(after, employeeId, changedFrom),
+              oldValue: await patternNameOn(tx, before, employeeId, changedFrom),
+              newValue: await patternNameOn(tx, after, employeeId, changedFrom),
             },
-            { field: "effectiveFrom", oldValue: null, newValue: changedFrom },
-            { field: "effectiveUntil", oldValue: end.before, newValue: end.after },
+            { field: "startDate", oldValue: null, newValue: changedFrom },
+            { field: "endDate", oldValue: end.before, newValue: end.after },
           ],
         },
       ],
     });
     return added!;
   });
-  logger.info({ employeeId, effectiveFrom: changedFrom }, "Changed a person's working pattern");
+  logger.info({ employeeId, startDate: changedFrom }, "Changed a person's working pattern");
   return line;
 }
 
@@ -234,49 +229,47 @@ interface EndChange {
 
 interface Timelines {
   timelines: Map<string, WorkingPatternTimeline>;
+  assignments: Map<string, DatedPattern[]>;
   patterns: WorkingPattern[];
 }
 
-/**
- * Each employee's working pattern: their own patterns, their terms with those terms' patterns,
- * and the weeks of the patterns these name; with every pattern.
- */
+/** Each employee's own patterns and their terms, with every pattern and its versions. */
 async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
   const repository = workingPatternRepository(tx);
   // One after another: they share the transaction's connection.
   const assignments = await repository.findAssignments(employeeIds);
   const memberships = await termsRepository(tx).findMemberships(employeeIds);
   const patterns = await repository.findPatterns();
-  const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
-  const termsPatterns = await repository.findTermsLinks([...new Set(termsIds)]);
-  const weeksOf = new Map(patterns.map(({ id, weeks }) => [id, weeks]));
-  const timelines = new Map(
-    employeeIds.map((id) => {
-      const own = memberships.get(id) ?? [];
-      const theirTerms = new Map(
-        own.map(({ termsId }) => [termsId, termsPatterns.get(termsId) ?? []]),
-      );
-      const rows = [...(assignments.get(id) ?? []), ...[...theirTerms.values()].flat()];
-      const patternWeeks = new Map(
-        rows.map(({ workingPatternId }) => [workingPatternId, weeksOf.get(workingPatternId)!]),
-      );
-      return [
-        id,
-        {
-          assignments: assignments.get(id) ?? [],
-          memberships: own,
-          termsPatterns: theirTerms,
-          patternWeeks,
-        },
-      ];
-    }),
+  const byId = new Map(patterns.map((pattern) => [pattern.id, pattern]));
+  const byTerms = new Map(
+    patterns.flatMap(({ id, termsId }) => (termsId ? [[termsId, id] as const] : [])),
   );
-  return { timelines, patterns };
+  const timelines = new Map(
+    employeeIds.map((id): [string, WorkingPatternTimeline] => [
+      id,
+      {
+        direct: (assignments.get(id) ?? []).map((row) => ({ ...row, id: row.workingPatternId })),
+        terms: memberships.get(id) ?? [],
+        idOfTerms: (termsId) => byTerms.get(termsId) ?? null,
+        versions: (patternId) => byId.get(patternId)?.versions ?? [],
+      },
+    ]),
+  );
+  return { timelines, assignments, patterns };
 }
 
-function patternNameOn({ timelines, patterns }: Timelines, employeeId: string, date: CalendarDate) {
-  const workingPatternId = patternOn(timelines.get(employeeId)!, date);
-  return patterns.find(({ id }) => id === workingPatternId)?.name ?? null;
+/** The pattern's name on `date`; a terms' own pattern goes by the terms' name. */
+async function patternNameOn(
+  tx: Tx,
+  { timelines, patterns }: Timelines,
+  employeeId: string,
+  date: CalendarDate,
+): Promise<string | null> {
+  const pattern = patterns.find(({ id }) => id === idOn(timelines.get(employeeId)!, date));
+  if (!pattern?.termsId) {
+    return pattern?.name ?? null;
+  }
+  return (await termsRepository(tx).findNames([pattern.termsId])).get(pattern.termsId) ?? null;
 }
 
 async function requireAssignmentWrite(ctx: SecurityContext, employeeId: string) {

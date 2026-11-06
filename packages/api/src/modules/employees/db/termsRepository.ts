@@ -5,8 +5,6 @@ import type { TermsMembership } from "../domain";
 import { employeeTerms } from "./employeeTermsTable";
 import { locations } from "./locationsTable";
 import { terms } from "./termsTable";
-import { termsWorkingPatterns } from "./termsWorkingPatternsTable";
-import { workingPatterns } from "./workingPatternsTable";
 
 /** Terms and who is on them, through the pool or inside a transaction. */
 export interface TermsRepository {
@@ -19,13 +17,14 @@ export interface TermsRepository {
   insert(name: string): Promise<string>;
   rename(termsId: string, name: string): Promise<void>;
   /**
-   * Deletes every terms but the default ones and every working pattern but Standard, and puts the
-   * default terms back on Standard from the beginning, named "England and Wales"; the terms must
-   * have no members.
+   * Deletes every terms but the default ones, with their working patterns and time off policies,
+   * and names the default terms "England and Wales" again; the terms must have no members.
    */
   resetToDefault(): Promise<void>;
   /** The id of the default terms, the seeded "England and Wales". */
   findDefaultTermsId(): Promise<string>;
+  /** Each of the terms' name, by id. */
+  findNames(termsIds: readonly string[]): Promise<Map<string, string>>;
   /** Whether terms have this id. */
   exists(termsId: string): Promise<boolean>;
   /** Each employee's terms over time, by employee id. */
@@ -73,26 +72,22 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
     },
 
     async resetToDefault() {
-      const defaultTermsId = await findDefaultTermsId(orm());
       await orm().delete(terms).where(isNull(terms.key));
       await orm()
         .update(terms)
         .set({ name: DEFAULT_TERMS_NAME })
-        .where(eq(terms.id, defaultTermsId));
-      await orm()
-        .delete(termsWorkingPatterns)
-        .where(eq(termsWorkingPatterns.termsId, defaultTermsId));
-      await orm().delete(workingPatterns).where(isNull(workingPatterns.key));
-      const [standard] = await orm()
-        .select({ id: workingPatterns.id })
-        .from(workingPatterns)
-        .where(eq(workingPatterns.key, "standard_working_pattern"));
-      await orm()
-        .insert(termsWorkingPatterns)
-        .values({ termsId: defaultTermsId, workingPatternId: standard!.id });
+        .where(eq(terms.key, "default_terms"));
     },
 
     findDefaultTermsId: () => findDefaultTermsId(orm()),
+
+    async findNames(termsIds) {
+      const rows = await orm()
+        .select({ id: terms.id, name: terms.name })
+        .from(terms)
+        .where(inArray(terms.id, [...termsIds]));
+      return new Map(rows.map(({ id, name }) => [id, name]));
+    },
 
     async exists(termsId) {
       const [found] = await orm().select({ id: terms.id }).from(terms).where(eq(terms.id, termsId));
@@ -105,8 +100,8 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
         .from(employeeTerms)
         .where(inArray(employeeTerms.employeeId, [...employeeIds]));
       const memberships = new Map<string, TermsMembership[]>();
-      for (const { employeeId, termsId, effectiveFrom, effectiveUntil } of rows) {
-        const membership = { termsId, effectiveFrom, effectiveUntil };
+      for (const { employeeId, termsId, startDate, endDate } of rows) {
+        const membership = { termsId, startDate, endDate };
         memberships.set(employeeId, [...(memberships.get(employeeId) ?? []), membership]);
       }
       return memberships;

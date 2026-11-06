@@ -17,9 +17,9 @@ export const employeeWorkingPatternAssignments = pgTable(
       .default(sql`uuidv7()`),
     employeeId: uuid("employee_id").notNull(),
     workingPatternId: uuid("working_pattern_id").notNull(),
-    effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>().notNull(),
+    startDate: date("start_date", { mode: "string" }).$type<CalendarDate>().notNull(),
     /** The last day the row applies; null: open-ended. */
-    effectiveUntil: date("effective_until", { mode: "string" }).$type<CalendarDate>(),
+    endDate: date("end_date", { mode: "string" }).$type<CalendarDate>(),
   },
   (table) => [
     // Named here: the generated names would pass Postgres's 63-character limit.
@@ -36,7 +36,7 @@ export const employeeWorkingPatternAssignments = pgTable(
     index("employee_working_pattern_assignments_pattern_idx").on(table.workingPatternId),
     check(
       "employee_working_pattern_assignments_dates_in_order",
-      sql`${table.effectiveUntil} >= ${table.effectiveFrom}`,
+      sql`${table.endDate} >= ${table.startDate}`,
     ),
   ],
 );

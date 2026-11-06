@@ -8,13 +8,10 @@ import { terms, workingPatternRepository } from "../../src/modules/employees/db"
 import { createTimeOffSetupService } from "../../src/modules/timeOff";
 import { parseCalendarDate } from "../../src/utils";
 import { bankHolidayService } from "./bankHolidayService";
-import { OWNER } from "./testSecurityContext";
-import { timeOffService } from "./timeOffService";
 
 /** Time off setup with the supplied decision boundary and shipped bank holidays. */
 export function timeOffSetupService(orm: Orm, decisions: Decisions) {
   return createTimeOffSetupService({
-    orm,
     decisions,
     logger: createLogger("silent"),
     bankHolidays: bankHolidayService(),
@@ -23,20 +20,18 @@ export function timeOffSetupService(orm: Orm, decisions: Decisions) {
 }
 
 /** The setup choice for Glasgow on four days and Leeds on the Standard week. */
-export async function scotlandTimeOffSetup(orm: Orm): Promise<SetupTermsInput> {
-  const policies = await timeOffService(orm).listPolicies(OWNER, orm);
+export function scotlandTimeOffSetup(): SetupTermsInput {
   return {
     terms: [
       {
         bankHolidayCalendar: "england_and_wales",
         workingWeek: "monday_to_friday_7_5_hours",
-        annualLeavePolicyId: policies.find(({ key }) => key === "uk_statutory_minimum")!.id,
+        annualLeavePolicyKey: "uk_statutory_minimum",
       },
       {
         bankHolidayCalendar: "scotland",
         workingWeek: "monday_to_thursday_8_hours",
-        annualLeavePolicyId: policies.find(({ key }) => key === "uk_25_days_plus_bank_holidays")!
-          .id,
+        annualLeavePolicyKey: "uk_25_days_plus_bank_holidays",
       },
     ],
     locationTerms: [
@@ -46,11 +41,14 @@ export async function scotlandTimeOffSetup(orm: Orm): Promise<SetupTermsInput> {
   };
 }
 
-/** Terms and their dated pattern links have no public setup read yet. */
+/** Terms and their own working pattern have no public setup read yet. */
 export async function readTimeOffTerms(orm: Orm) {
   const rows = await orm.select().from(terms).orderBy(asc(terms.name));
-  const links = await workingPatternRepository(orm).findTermsLinks(rows.map(({ id }) => id));
-  return rows.map((row) => ({ ...row, patterns: links.get(row.id) ?? [] }));
+  const patterns = await workingPatternRepository(orm).findPatterns();
+  return rows.map((row) => ({
+    ...row,
+    pattern: patterns.find((pattern) => pattern.termsId === row.id) ?? null,
+  }));
 }
 
 /** Own assignments have no public read separate from the resolved working week. */

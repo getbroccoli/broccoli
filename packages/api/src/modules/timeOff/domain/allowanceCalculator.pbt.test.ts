@@ -22,7 +22,7 @@ test("invariant: grants round up once to a half day across working-week changes"
           { ...inputs.workingWeeks[0]!, minutes: before, fullDayMinutes: 480 },
           {
             ...inputs.workingWeeks[0]!,
-            effectiveFrom: dayOf2026(changeDay),
+            startDate: dayOf2026(changeDay),
             minutes: after,
             fullDayMinutes: 480,
           },

@@ -15,7 +15,7 @@ test("assigning a Scotland pattern changes the calendar from its date despite id
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: pattern.id,
-    effectiveFrom: "2026-07-01",
+    startDate: "2026-07-01",
   });
 
   const weeks = await patterns.readWorkingWeeks(OWNER, {
@@ -26,13 +26,13 @@ test("assigning a Scotland pattern changes the calendar from its date despite id
 
   expect(weeks.get(employee.id)).toEqual([
     {
-      effectiveFrom: "2026-01-01",
+      startDate: "2026-01-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
-      effectiveFrom: "2026-07-01",
+      startDate: "2026-07-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",
@@ -46,10 +46,12 @@ test("changing only a pattern's calendar starts a new working week from its date
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find(
+    (pattern) => pattern.termsId !== null,
+  )!;
   await patterns.changePattern(OWNER, {
     workingPatternId: standard.id,
-    effectiveFrom: "2026-07-01",
+    startDate: "2026-07-01",
     minutes: [450, 450, 450, 450, 450, 0, 0],
     fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",
@@ -63,13 +65,13 @@ test("changing only a pattern's calendar starts a new working week from its date
 
   expect(weeks.get(employee.id)).toEqual([
     {
-      effectiveFrom: "2026-01-01",
+      startDate: "2026-01-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
-      effectiveFrom: "2026-07-01",
+      startDate: "2026-07-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",

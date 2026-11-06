@@ -1,11 +1,4 @@
-import {
-  approveReviewedImport,
-  expect,
-  OWNER,
-  test,
-  TEST_OWNER,
-  timeOffService,
-} from "#test/support";
+import { approveReviewedImport, expect, readTermsPolicies, test, TEST_OWNER } from "#test/support";
 
 import { connectDatabase } from "../../src/core/db";
 import { createLogger } from "../../src/core/logger";
@@ -17,11 +10,6 @@ test("the self-hosted setup request turns time off on", async ({ env }) => {
   });
   const database = connectDatabase(env.db.url, createLogger("silent"));
   try {
-    const service = timeOffService(database.orm);
-    const policy = (await service.listPolicies(OWNER, database.orm)).find(
-      ({ key }) => key === "uk_statutory_minimum",
-    )!;
-
     const response = await browser.post("/api/auth/setup", {
       ...TEST_OWNER,
       timeOff: {
@@ -29,7 +17,7 @@ test("the self-hosted setup request turns time off on", async ({ env }) => {
           {
             bankHolidayCalendar: "england_and_wales",
             workingWeek: "monday_to_friday_7_5_hours",
-            annualLeavePolicyId: policy.id,
+            annualLeavePolicyKey: "uk_statutory_minimum",
           },
         ],
         locationTerms: [],
@@ -37,9 +25,11 @@ test("the self-hosted setup request turns time off on", async ({ env }) => {
     });
 
     expect(response.status).toBe(200);
-    expect(
-      await service.readTermsPolicies(OWNER, { termsId: await env.seed.defaultTermsId() }),
-    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: policy.id })]));
+    expect(await readTermsPolicies(database.orm, await env.seed.defaultTermsId())).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ typeKey: "annual_leave", entitlementDays: 28 }),
+      ]),
+    );
   } finally {
     await database.close();
   }

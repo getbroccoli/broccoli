@@ -1,3 +1,0 @@
-ALTER TABLE "working_pattern_weeks" ADD COLUMN "bank_holiday_calendar" text DEFAULT 'england_and_wales' NOT NULL;--> statement-breakpoint
-ALTER TABLE "company" DROP COLUMN "bank_holiday_calendar";--> statement-breakpoint
-ALTER TABLE "working_pattern_weeks" ADD CONSTRAINT "working_pattern_weeks_bank_holiday_calendar_known" CHECK ("working_pattern_weeks"."bank_holiday_calendar" in ('england_and_wales', 'scotland', 'northern_ireland'));
