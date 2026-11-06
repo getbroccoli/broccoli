@@ -97,6 +97,7 @@ function lowerCaseTimeOff({
       ...entry,
       bankHolidayCalendar: entry.bankHolidayCalendar.toLowerCase(),
       workingWeek: entry.workingWeek.toLowerCase(),
+      annualLeavePolicyKey: entry.annualLeavePolicyKey.toLowerCase(),
     })),
     locationTerms: locationTerms.map((entry) => ({
       ...entry,
