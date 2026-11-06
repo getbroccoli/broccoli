@@ -21,13 +21,12 @@ import { nameError } from "./termsText";
 import { TermsNameField } from "./TermsNameField";
 
 type Props = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
   terms: { id: string; name: string };
 };
 
 /** Renames terms; the stack's header and the list show the new name once saved. */
-export function RenameTermsDialog({ open, onOpenChange, terms }: Props) {
+export function RenameTermsDialog({ onClose, terms }: Props) {
   const [name, setName] = useState(terms.name);
   // The list under the stack already holds every name, to say which terms a taken name belongs to.
   const { data } = useQuery(EmploymentTermsDocument, { fetchPolicy: "cache-only" });
@@ -48,19 +47,11 @@ export function RenameTermsDialog({ open, onOpenChange, terms }: Props) {
     const renamed = await renameTerms({ variables: { input: { id: terms.id, name } } }).catch(
       () => null,
     );
-    if (renamed?.terms) onOpenChange(false);
+    if (renamed?.terms) onClose();
   };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (renaming.loading) return;
-        setName(terms.name);
-        renaming.reset();
-        onOpenChange(nextOpen);
-      }}
-    >
+    <Dialog open onOpenChange={(open) => !open && !renaming.loading && onClose()}>
       <DialogContent className="sm:max-w-lg" closeLabel={t("terms.close")}>
         <form onSubmit={(event) => void save(event)} className="flex flex-col gap-5">
           <DialogTitle className="text-lg">{t("terms.rename.title")}</DialogTitle>

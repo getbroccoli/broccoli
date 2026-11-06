@@ -81,7 +81,8 @@ export function TermsMenu({ terms }: Props) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <RenameTermsDialog open={renaming} onOpenChange={setRenaming} terms={terms} />
+      {/* Mounted per opening, so each starts from the saved name. */}
+      {renaming && <RenameTermsDialog onClose={() => setRenaming(false)} terms={terms} />}
     </>
   );
 }
