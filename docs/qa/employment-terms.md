@@ -30,12 +30,14 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 - [ ] "New terms" opens a dialog with Name, its hint, and "Bank holidays" set to the default terms' ones; the footer says it starts with a Mon–Fri week and no time off.
 - [ ] Creating with an empty name says "Enter a name."; with 101 characters "Use 100 characters or fewer."; with " england and wales " "There are already terms called England and Wales."
-- [ ] Creating "Senior staff" on Scotland bank holidays opens its stack: "0 people", Mon to Fri at "7.5", "Bank holidays Scotland", every type "Not offered here", "No location starts people here yet." and History "Owner set up Senior staff" with "Edited". The list shows it after England and Wales.
+- [ ] Creating "Senior staff" on Scotland bank holidays opens its stack: "0 people", Mon to Fri at "7.5", "Bank holidays Scotland", every type "Not offered here", "No location starts people here yet." and History "owner@example.com created Senior staff" with "Edited". The list shows it after England and Wales. Opening "New terms" again shows an empty name and the default terms' bank holidays.
 - [ ] ⋯ › Rename to "Senior team" updates the header, the list and History; a taken name shows the same error as creating.
 - [ ] ⋯ › "Delete Senior team" reads "Nobody was ever on these terms."; choosing it closes the stack, shows "Senior team deleted." and the list no longer shows it.
-- [ ] Terms a location starts people on (pick them for London in Settings › Locations) show Delete disabled with "London starts new people here. Choose other terms for it in Settings › Locations first."
+      Settings › Locations cannot choose a location's terms yet, so point a location at terms in the dev database: `update locations set default_terms_id = '<terms id>' where name = 'London';`, and `null` to undo.
+
+- [ ] Terms London starts people on show Delete disabled with "London starts new people here. Choose other terms for it in Settings › Locations first."
 - [ ] Terms a person was ever on show Delete disabled with "Terms people were on stay, so their history stays true."
-- [ ] With the stack open in one tab, pointing a location at the terms in another tab, then choosing Delete in the first shows the server's reason as a toast and the menu then shows it too.
+- [ ] With the menu open on deletable terms, point London at them in the database, then choose Delete: the server's reason shows as a toast and the menu then shows it too.
 - [ ] At 390 px wide, the dialogs fit the screen with a gutter and the ⋯ menu opens inside it.
 
 ## Planned and not offered

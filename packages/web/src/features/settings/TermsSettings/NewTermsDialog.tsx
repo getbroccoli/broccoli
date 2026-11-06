@@ -53,7 +53,16 @@ export function NewTermsDialog({
     const created = await createTerms({
       variables: { input: { name, bankHolidayCalendar: calendar } },
     }).catch(() => null);
-    if (created?.terms) onCreated(created.terms.id);
+    if (!created?.terms) return;
+    clear();
+    onCreated(created.terms.id);
+  };
+
+  // The dialog stays mounted under the list, so each opening starts empty.
+  const clear = () => {
+    setName("");
+    setCalendar(defaultCalendar);
+    creation.reset();
   };
 
   return (
@@ -61,11 +70,7 @@ export function NewTermsDialog({
       open={open}
       onOpenChange={(nextOpen) => {
         if (creation.loading) return;
-        if (!nextOpen) {
-          setName("");
-          setCalendar(defaultCalendar);
-          creation.reset();
-        }
+        if (!nextOpen) clear();
         onOpenChange(nextOpen);
       }}
     >

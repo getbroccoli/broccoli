@@ -114,23 +114,6 @@ export const DAY_NAMES: MessageKey[] = [
   "terms.day.sun",
 ];
 
-function daysText(worked: number[]): string {
-  const isRun = worked.every((day, index) => index === 0 || day === worked[index - 1]! + 1);
-  if (isRun && worked.length > 1) {
-    return `${t(DAY_NAMES[worked[0]!]!)}–${t(DAY_NAMES[worked.at(-1)!]!)}`;
-  }
-  return worked.map((day) => t(DAY_NAMES[day]!)).join(", ");
-}
-
-function allowanceText(version: PolicyVersionText): string {
-  return t(
-    version.bankHolidays === "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE"
-      ? "terms.rule.daysIncluded"
-      : "terms.rule.daysOnTop",
-    { days: daysOf(version) },
-  );
-}
-
 /** The disabled Delete item's reason, naming the locations that start people on the terms. */
 export function deleteReason(
   blocker: TermsDeleteBlocker,
@@ -164,6 +147,23 @@ export function nameError(
   if (code === "required") return t("terms.name.required");
   if (code === "too_long") return t("terms.name.tooLong");
   return t("terms.saveFailed");
+}
+
+function daysText(worked: number[]): string {
+  const isRun = worked.every((day, index) => index === 0 || day === worked[index - 1]! + 1);
+  if (isRun && worked.length > 1) {
+    return `${t(DAY_NAMES[worked[0]!]!)}–${t(DAY_NAMES[worked.at(-1)!]!)}`;
+  }
+  return worked.map((day) => t(DAY_NAMES[day]!)).join(", ");
+}
+
+function allowanceText(version: PolicyVersionText): string {
+  return t(
+    version.bankHolidays === "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE"
+      ? "terms.rule.daysIncluded"
+      : "terms.rule.daysOnTop",
+    { days: daysOf(version) },
+  );
 }
 
 function sameName(one: string, other: string): boolean {

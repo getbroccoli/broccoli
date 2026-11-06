@@ -3,11 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  DeleteTermsDocument,
-  EmploymentTermsDocument,
-  type EmploymentTermsStackQuery,
-} from "@/__generated__/graphql";
+import { DeleteTermsDocument, type EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import { PayloadFailure, useCache, usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,9 +31,7 @@ export function TermsMenu({ terms }: Props) {
   const [renaming, setRenaming] = useState(false);
   const navigate = useNavigate();
   const cache = useCache();
-  const [deleteTerms, deletion] = usePayloadMutation(DeleteTermsDocument, {
-    refetch: [EmploymentTermsDocument],
-  });
+  const [deleteTerms, deletion] = usePayloadMutation(DeleteTermsDocument);
 
   const remove = async () => {
     try {
@@ -53,7 +47,7 @@ export function TermsMenu({ terms }: Props) {
       return;
     }
     toast(t("terms.delete.done", { name: terms.name }));
-    // Closed first, so the open stack does not fetch the deleted terms again.
+    // Closed first, so the open stack does not fetch the deleted terms again; the list drops them.
     await navigate({ to: "/settings/terms" });
     forgetTerms(cache, terms.id);
   };
