@@ -1,8 +1,4 @@
-import type {
-  LeaveYearStartKind,
-  TimeOffBalanceKind,
-  TimeOffBankHolidays,
-} from "@/__generated__/graphql";
+import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import { type MessageKey, t } from "@/i18n";
 import { calendarDayOf, calendarDayParts } from "@/lib/calendarDay";
 
@@ -10,13 +6,10 @@ import { calendarDayOf, calendarDayParts } from "@/lib/calendarDay";
 export type WeekMinutes = Record<(typeof DAY_FIELDS)[number], number>;
 
 /** A time off policy version's rules, as the terms' rows describe them. */
-export interface PolicyVersionText {
-  startDate?: string | null;
-  balance: TimeOffBalanceKind;
-  bankHolidays?: TimeOffBankHolidays | null;
-  leaveYearStart?: { kind: LeaveYearStartKind; month?: number | null; day?: number | null } | null;
-  yearlyEntitlement?: { days: number; daysPerWeek: number } | null;
-}
+export type PolicyVersionText = Pick<
+  NonNullable<EmploymentTermsStackQuery["terms"]>["timeOff"][number]["versions"][number],
+  "startDate" | "balance" | "bankHolidays" | "leaveYearStart" | "yearlyEntitlement"
+>;
 
 /** "Mon–Fri, 7.5 hours"; days that are not a run are listed; unequal hours read as a weekly total. */
 export function weekSummary(week: WeekMinutes): string {

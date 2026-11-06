@@ -52,7 +52,6 @@ export type {
   WorkingPatternService,
   EmployeeWorkingPatternService,
   LocationService,
-  TermsService,
 } from "./app";
 export type {
   Employee,
