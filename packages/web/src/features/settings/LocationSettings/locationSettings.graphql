@@ -3,6 +3,16 @@ query LocationSettings {
     id
     name
     peopleCount
+    terms {
+      id
+      name
+      isDefault
+    }
+  }
+  allTerms {
+    id
+    name
+    isDefault
   }
 }
 
@@ -13,6 +23,11 @@ mutation CreateLocation($input: LocationCreateInput!) {
         id
         name
         peopleCount
+        terms {
+          id
+          name
+          isDefault
+        }
       }
       error {
         __typename
@@ -37,6 +52,11 @@ mutation UpdateLocation($input: LocationUpdateInput!) {
         id
         name
         peopleCount
+        terms {
+          id
+          name
+          isDefault
+        }
       }
       error {
         __typename

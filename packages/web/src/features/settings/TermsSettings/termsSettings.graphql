@@ -4,10 +4,6 @@ query EmploymentTerms {
     name
     isDefault
     peopleCount
-    locations {
-      id
-      name
-    }
     workingWeek {
       id
       startDate
@@ -53,10 +49,6 @@ query EmploymentTermsStack($id: ID!) {
     name
     isDefault
     peopleCount
-    locations {
-      id
-      name
-    }
     workingWeek {
       id
       startDate

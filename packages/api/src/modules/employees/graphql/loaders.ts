@@ -10,6 +10,8 @@ import type {
   EmployeeReadService,
   LocationService,
   LocationWithPeopleCount,
+  TermsOverview,
+  TermsService,
 } from "../app";
 import type { Employee, SignInStatus } from "../domain";
 
@@ -25,14 +27,23 @@ export interface EmployeeLoaders {
   signInStatus: DataLoader<string, SignInStatus | null>;
   /** A location by id; every location is read once per request, since a company has few. */
   location: DataLoader<string, LocationWithPeopleCount | null>;
+  /**
+   * A set of terms by id, or the default terms by `DEFAULT_TERMS`; every set is read once per
+   * request, since a company has few. Admins only.
+   */
+  terms: DataLoader<string, TermsOverview | null>;
 }
+
+/** The `terms` loader's key for the default terms, which a location without terms starts people on. */
+export const DEFAULT_TERMS = "default";
 
 /** One request's loaders: related data in one query per list, not one per item. Create once, in `createResolvers`. */
 export function employeeLoaders(
   services: EmployeeReadService &
     EmployeeManagerService &
     EmployeePermissionService &
-    LocationService,
+    LocationService &
+    TermsService,
   invites: EmployeeInviteService,
 ): (context: GraphqlContext) => EmployeeLoaders {
   return perRequest((context) => ({
@@ -55,6 +66,14 @@ export function employeeLoaders(
     location: new DataLoader<string, LocationWithPeopleCount | null>(async (locationIds) => {
       const locations = await services.listLocations(context.getActor());
       return locationIds.map((id) => locations.find((location) => location.id === id) ?? null);
+    }),
+    terms: new DataLoader<string, TermsOverview | null>(async (keys) => {
+      const allTerms = await services.listTerms(context.getActor());
+      return keys.map(
+        (key) =>
+          allTerms.find((terms) => (key === DEFAULT_TERMS ? terms.isDefault : terms.id === key)) ??
+          null,
+      );
     }),
   }));
 }

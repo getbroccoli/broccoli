@@ -7,23 +7,26 @@ import { LOCATION_NAME_UNIQUE, locations } from "./locationsTable";
 
 /** Locations stored in Postgres, through the pool or inside a transaction. */
 export interface LocationRepository {
-  /** Every location with how many people are in it, by name ignoring case. */
-  findAllWithPeopleCounts(): Promise<(Location & { peopleCount: number })[]>;
-  /** Every location with the terms its new people start on, null: the default terms; by name ignoring case. */
-  findWithStartingTerms(): Promise<(Location & { termsId: string | null })[]>;
+  /** Every location with how many people are in it and its terms (null: the default terms), by name ignoring case. */
+  findAllWithPeopleCounts(): Promise<
+    (Location & { peopleCount: number; termsId: string | null })[]
+  >;
   /** The locations among these ids that exist. */
   findByIds(ids: readonly string[]): Promise<Location[]>;
   /** The location, held until the caller commits so nobody deletes it meanwhile; null when there is none. */
   findAndHold(id: string): Promise<Location | null>;
-  /** Throws `LocationNameTakenError` when another location has the name. */
-  insert(name: string): Promise<Location>;
-  /** The renamed location, or null when no location has the id; throws `LocationNameTakenError` like `insert`. */
-  rename(id: string, name: string): Promise<Location | null>;
+  /** Throws `LocationNameTakenError` when another location has the name; `termsId` null: the default terms. */
+  insert(name: string, termsId?: string | null): Promise<Location>;
+  /** Writes the changes given; throws `LocationNameTakenError` like `insert`. */
+  update(id: string, changes: { name?: string; termsId?: string | null }): Promise<void>;
   /**
    * Holds the location's row until the caller commits, so nobody moves into it while it is
-   * deleted, and returns it with how many people are in it; null when no location has the id.
+   * deleted or changed, and returns it with how many people are in it and its terms; null when no
+   * location has the id.
    */
-  lockWithPeopleCount(id: string): Promise<(Location & { peopleCount: number }) | null>;
+  lockWithPeopleCount(
+    id: string,
+  ): Promise<(Location & { peopleCount: number; termsId: string | null }) | null>;
   delete(id: string): Promise<void>;
   /**
    * The location of each trimmed name, by that name, matching ignoring case and creating the ones no
@@ -41,16 +44,14 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
   return {
     findAllWithPeopleCounts: () =>
       orm()
-        .select({ id: locations.id, name: locations.name, peopleCount: count(employees.id) })
+        .select({
+          ...LOCATION,
+          peopleCount: count(employees.id),
+          termsId: locations.defaultTermsId,
+        })
         .from(locations)
         .leftJoin(employees, eq(employees.locationId, locations.id))
         .groupBy(locations.id)
-        .orderBy(asc(sql`lower(${locations.name})`), asc(locations.id)),
-
-    findWithStartingTerms: () =>
-      orm()
-        .select({ ...LOCATION, termsId: locations.defaultTermsId })
-        .from(locations)
         .orderBy(asc(sql`lower(${locations.name})`), asc(locations.id)),
 
     findByIds: (ids) =>
@@ -68,23 +69,24 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
       return location ?? null;
     },
 
-    insert: async (name) => {
+    insert: async (name, termsId = null) => {
       try {
-        const [location] = await orm().insert(locations).values({ name }).returning(LOCATION);
+        const [location] = await orm()
+          .insert(locations)
+          .values({ name, defaultTermsId: termsId })
+          .returning(LOCATION);
         return location!;
       } catch (error) {
         throw nameTakenOr(error);
       }
     },
 
-    rename: async (id, name) => {
+    update: async (id, { name, termsId }) => {
       try {
-        const [location] = await orm()
+        await orm()
           .update(locations)
-          .set({ name })
-          .where(eq(locations.id, id))
-          .returning(LOCATION);
-        return location ?? null;
+          .set({ name, defaultTermsId: termsId })
+          .where(eq(locations.id, id));
       } catch (error) {
         throw nameTakenOr(error);
       }
@@ -92,7 +94,7 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
 
     lockWithPeopleCount: async (id) => {
       const [location] = await orm()
-        .select(LOCATION)
+        .select({ ...LOCATION, termsId: locations.defaultTermsId })
         .from(locations)
         .where(eq(locations.id, id))
         .for("update");
@@ -150,7 +152,7 @@ export function locationRepository(db: Orm | Tx): LocationRepository {
   };
 }
 
-/** A location's own columns; its default terms are read only when people join. */
+/** A location's own columns. */
 const LOCATION = { id: locations.id, name: locations.name };
 
 /** Rows per insert, well below Postgres's limit of 65,535 parameters. */

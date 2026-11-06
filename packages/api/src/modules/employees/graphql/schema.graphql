@@ -298,8 +298,6 @@ type Terms implements AnyRecord {
   isDefault: Boolean!
   "People on these terms today."
   peopleCount: Int!
-  "Locations whose new people start here, by name; the default terms also take locations without terms."
-  locations: [Location!]!
   "The version covering today first, if any, then planned ones; past versions stay out."
   workingWeek: [WorkingWeekVersion!]!
   "Changes to these terms, newest first."
@@ -338,17 +336,24 @@ type Location {
   name: String!
   "How many people are in this location now."
   peopleCount: Int!
+  "The terms new people here start on; the default terms when none were chosen. Admins only."
+  terms: Terms!
 }
 
 input LocationCreateInput {
   "1 to 100 characters; unique, ignoring case and surrounding spaces."
   name: String!
+  "The terms new people here start on; left out or null: the default terms."
+  termsId: ID
 }
 
+"The fields to change; a field left out stays as it is, and null clears a field that may be empty."
 input LocationUpdateInput {
   id: ID!
   "1 to 100 characters; unique, ignoring case and surrounding spaces. People's history keeps the old name."
-  name: String!
+  name: String
+  "The terms new people here start on from now on; null: the default terms. Nobody already here moves."
+  termsId: ID
 }
 
 input LocationDeleteInput {

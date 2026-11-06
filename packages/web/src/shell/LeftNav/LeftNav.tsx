@@ -10,13 +10,11 @@ import { WorkspaceMenu } from "../WorkspaceMenu";
 import { NavList, type NavItem } from "./NavList";
 
 const APP_ITEMS: NavItem[] = [{ to: "/people", label: t("nav.people"), icon: Users }];
-const SETTINGS_ITEMS: NavItem[] = [
-  { to: "/settings/email", label: t("settings.email.title") },
-  { to: "/settings/locations", label: t("settings.locations.title") },
-];
+const SETTINGS_ITEMS: NavItem[] = [{ to: "/settings/email", label: t("settings.email.title") }];
 const SETTINGS_AREA_ITEMS: NavItem[] = [
   { to: "/settings/terms", label: t("terms.title") },
   { to: "/settings/time-off", label: t("settings.timeOff.title") },
+  { to: "/settings/locations", label: t("settings.locations.title") },
 ];
 
 /**
