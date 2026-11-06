@@ -5,18 +5,16 @@ import {
   allowanceSnapshot,
   calendarDate,
   expect,
+  giveTermsPolicies,
   OWNER,
   test,
   timeOffService,
 } from "#test/support";
 
 import { addDays } from "../../../utils";
+import { STANDARD_LEAVE_POLICY_KEYS } from "../domain";
 
-for (const policyKey of [
-  "uk_statutory_minimum",
-  "uk_20_days_plus_bank_holidays",
-  "uk_25_days_plus_bank_holidays",
-]) {
+for (const policyKey of STANDARD_LEAVE_POLICY_KEYS) {
   test(`invariant: leaving and rejoining the terms reverses and restores grants (${policyKey})`, async ({
     orm,
     seed,
@@ -24,13 +22,7 @@ for (const policyKey of [
   }) => {
     const timeOff = timeOffService(orm);
     const termsId = await seed.defaultTermsId();
-    const policy = (await timeOff.listPolicies(OWNER, orm)).find(({ key }) => key === policyKey)!;
-    await transact((tx) =>
-      timeOff.linkTermsPolicies(OWNER, tx, {
-        termsId,
-        timeOffPolicyIds: [policy.id],
-      }),
-    );
+    await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: policyKey }] });
 
     await fc.assert(
       fc.asyncProperty(startDate(), async (startDate) => {

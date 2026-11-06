@@ -4,7 +4,7 @@ import { type CalendarDate, parseUuid } from "../../../utils";
 import { type Allowance, allowanceRepository, timeOffRepository } from "../db";
 import {
   type LedgerLineKind,
-  policyIdOn,
+  type PolicyVersion,
   type TimeOffPolicy,
   timeOffFigures,
   type TimeOffType,
@@ -15,7 +15,7 @@ import { type AllowanceEngineDependencies, type Person, readPeople } from "./all
 /** One time off type a person has in their current leave year, with its figures in days. */
 export interface EmployeeTimeOffType {
   timeOffType: TimeOffType;
-  balance: TimeOffPolicy["balance"];
+  balance: PolicyVersion["balance"];
   /** The leave year, or the calendar year for a type with no balance. */
   periodStart: CalendarDate;
   periodEnd: CalendarDate;
@@ -31,10 +31,10 @@ type Dependencies = Pick<AllowanceEngineDependencies, "employeeReads" | "today">
   transact: Transact;
 };
 
-/** A type to show for one person: its policy, the period read and, unless it has no balance, the allowance. */
+/** A type to show for one person: how it counts, the period read and, unless it has no balance, the allowance. */
 interface ShownType {
   employeeId: string;
-  policy: TimeOffPolicy;
+  policy: { timeOffType: TimeOffType; balance: PolicyVersion["balance"] };
   period: { start: CalendarDate; end: CalendarDate };
   allowance: Allowance | null;
 }
@@ -107,14 +107,19 @@ function shownTypes(
   const date = person.serviceStart && person.serviceStart > today ? person.serviceStart : today;
   const types = new Map(policies.map(({ timeOffType }) => [timeOffType.id, timeOffType]));
   return [...types.values()].sort(byTypeOrder).flatMap((type) => {
-    const policy = policies.find(({ id }) => id === policyIdOn(person.timeline, type.id, date));
-    const shown = policy && shownType(person, policy, date);
+    const version = person.timelineOf(type.id).getVersionOnDate(date);
+    const shown =
+      version && shownType(person, { timeOffType: type, balance: version.balance }, date);
     return shown ? [shown] : [];
   });
 }
 
 /** The type under `policy` on `date`, or null when the person has no period to show for it. */
-function shownType(person: Person, policy: TimeOffPolicy, date: CalendarDate): ShownType | null {
+function shownType(
+  person: Person,
+  policy: ShownType["policy"],
+  date: CalendarDate,
+): ShownType | null {
   const { employeeId } = person;
   if (policy.balance === "no_balance") {
     const year = calendarYearOf(date);

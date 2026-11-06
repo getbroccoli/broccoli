@@ -5,7 +5,8 @@ import {
   employeeServices,
   employeeSetup,
   expect,
-  linkStatutoryMinimumToDefaultTerms,
+  giveDefaultTermsStatutoryMinimum,
+  giveTermsPolicies,
   OWNER,
   readAllowances,
   test,
@@ -23,7 +24,7 @@ test("an imported batch gets allowances and replaying its event appends no dupli
   seed,
   transact,
 }) => {
-  await linkStatutoryMinimumToDefaultTerms(orm, seed, transact);
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
   const dispatching = transactWithTimeOffEvents(orm);
 
   const { idsByEmail } = await dispatching((tx) =>
@@ -76,14 +77,8 @@ test("adding a person grants Annual leave before returning when England and Wale
   seed,
   transact,
 }) => {
-  const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: "uk_statutory_minimum" }] });
 
   const employee = await employeeServices(orm).createEmployee(OWNER, {
     firstName: "Sam",
@@ -108,16 +103,12 @@ test("adding a person grants Annual leave before returning when England and Wale
 });
 
 test(
-  "a change to a person's email and start date and a policy link that overlap both complete",
+  "a change to a person's email and start date and turning time off on that overlap both complete",
   { timeout: 10_000 },
   async ({ orm, seed, transact, signal }) => {
     const employee = await seed.employee({ startDate: "2025-01-01" });
     const startDate = parseCalendarDate("2026-10-12")!;
     const service = timeOffService(orm);
-    const termsId = await seed.defaultTermsId();
-    const policy = (await service.listPolicies(OWNER, orm)).find(
-      (p) => p.key === "uk_statutory_minimum",
-    )!;
     const locked = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
     const releaseLock = () => release.resolve();
@@ -141,7 +132,16 @@ test(
         sql`select pg_backend_pid() as pid`,
       );
       linkPid.resolve(rows[0]!.pid);
-      return service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] });
+      return service.turnOnTimeOff(OWNER, tx, {
+        terms: [
+          {
+            bankHolidayCalendar: "england_and_wales",
+            workingWeek: "monday_to_friday_7_5_hours",
+            annualLeavePolicyKey: "uk_statutory_minimum",
+          },
+        ],
+        locationTerms: [],
+      });
     });
     const results = Promise.allSettled([changing, linking]);
 
@@ -176,14 +176,8 @@ test("moving a start date to October appends corrections and keeps the earlier a
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: "uk_statutory_minimum" }] });
   const [before] = await readAllowances(orm, employee.id);
   expect(before!.total).toBe(20);
 
@@ -208,22 +202,18 @@ test("a September working pattern change reduces the grant and restores December
   transact,
 }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: "uk_statutory_minimum" }] });
   const [before] = await readAllowances(orm, employee.id);
   expect(before!.total).toBe(20);
   const patterns = workingPatternService(orm, { transact: transactWithTimeOffEvents(orm) });
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = (await patterns.listPatterns(OWNER)).find(
+    (pattern) => pattern.termsId !== null,
+  )!;
 
   await patterns.changePattern(OWNER, {
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
     minutes: [0, 450, 450, 450, 0, 0, 0],
     fullDayMinutes: 450,
   });

@@ -15,8 +15,8 @@ export function allowanceInputs(): AllowanceInputs {
     serviceStart: null,
     policies: [
       {
-        effectiveFrom: null,
-        effectiveUntil: null,
+        startDate: null,
+        endDate: null,
         balance: "balance_from_allowance",
         bankHolidays: "bank_holidays_included_in_allowance",
         rules: [
@@ -32,7 +32,7 @@ export function allowanceInputs(): AllowanceInputs {
     ],
     workingWeeks: [
       {
-        effectiveFrom: calendarDate("2026-01-01"),
+        startDate: calendarDate("2026-01-01"),
         minutes: [450, 450, 450, 450, 450, 0, 0],
         fullDayMinutes: 450,
         bankHolidayCalendar: "england_and_wales",
@@ -73,8 +73,8 @@ export function allowanceInputs(): AllowanceInputs {
 /** "25 days plus bank holidays". */
 export function onTopPolicy(): DatedPolicy {
   return {
-    effectiveFrom: null,
-    effectiveUntil: null,
+    startDate: null,
+    endDate: null,
     balance: "balance_from_allowance",
     bankHolidays: "bank_holidays_on_top_of_allowance",
     rules: [

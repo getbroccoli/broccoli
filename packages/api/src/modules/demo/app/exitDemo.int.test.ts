@@ -1,24 +1,23 @@
 import {
-  employeeServices,
-  companyService,
-  demoService,
-  expect,
   ADMIN,
+  companyService,
+  demoFillService,
+  demoService,
   EMPLOYEE,
+  employeeServices,
+  expect,
+  instances,
+  readTermsPolicies,
+  readTimeOffTerms,
+  setupSteps,
   storedFileIds,
   test,
-  instances,
-  setupSteps,
-  demoFillService,
-  timeOffService,
-  readTimeOffTerms,
-  scotlandTimeOffSetup,
   workingPatternService,
 } from "#test/support";
 
 import { parseCalendarDate } from "../../../utils";
 
-test("exiting the demo restores only the default terms on Standard with time off turned off", async ({
+test("exiting the demo restores only the default terms on their seeded week with time off turned off", async ({
   orm,
   seed,
   transact,
@@ -28,30 +27,47 @@ test("exiting the demo restores only the default terms on Standard with time off
   await companyService(orm).update(owner, { name: "Acme Corp" });
   await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
   await transact((tx) => setupSteps.completeImportStep(owner, tx));
-  const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
-  expect(await service.readTermsPolicies(owner, { termsId })).toHaveLength(4);
-  const standard = (await workingPatternService(orm).listPatterns(owner)).find(
-    ({ isStandard }) => isStandard,
+  expect(await readTermsPolicies(orm, termsId)).toHaveLength(4);
+  const patterns = workingPatternService(orm);
+  const standard = (await patterns.listPatterns(owner)).find(
+    (pattern) => pattern.termsId === termsId,
   )!;
-  await transact((tx) => service.deleteAllTermsPolicies(owner, tx));
-  const input = await scotlandTimeOffSetup(orm);
-  input.terms[0]!.workingWeek = "monday_to_friday_8_hours";
-  await transact((tx) => service.turnOnTimeOff(owner, tx, input));
-  expect(await readTimeOffTerms(orm)).toHaveLength(2);
-  expect(await workingPatternService(orm).listPatterns(owner)).toHaveLength(3);
+  await patterns.changePattern(owner, {
+    workingPatternId: standard.id,
+    startDate: "2026-11-01",
+    minutes: [480, 480, 480, 480, 480, 0, 0],
+    fullDayMinutes: 480,
+  });
+  await patterns.createPattern(owner, {
+    name: "Part-time",
+    minutes: [0, 450, 450, 450, 0, 0, 0],
+    fullDayMinutes: 450,
+  });
+  await seed.terms("Scotland");
 
   await demoService(orm).exitDemo(owner);
 
-  expect(await service.readTermsPolicies(owner, { termsId })).toEqual([]);
+  expect(await readTermsPolicies(orm, termsId)).toEqual([]);
   expect(await readTimeOffTerms(orm)).toMatchObject([
+    { id: termsId, key: "default_terms", pattern: { id: standard.id } },
+  ]);
+  expect(await workingPatternService(orm).listPatterns(owner)).toMatchObject([
     {
-      id: termsId,
-      key: "default_terms",
-      patterns: [{ workingPatternId: standard.id, effectiveFrom: null, effectiveUntil: null }],
+      id: standard.id,
+      termsId,
+      name: null,
+      versions: [
+        {
+          startDate: null,
+          endDate: null,
+          minutes: [450, 450, 450, 450, 450, 0, 0],
+          fullDayMinutes: 450,
+          bankHolidayCalendar: "england_and_wales",
+        },
+      ],
     },
   ]);
-  expect(await workingPatternService(orm).listPatterns(owner)).toEqual([standard]);
 });
 
 test("exiting the demo deletes every employee and their avatars and returns to company setup", async ({

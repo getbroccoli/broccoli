@@ -1,284 +1,127 @@
 import { expect, it } from "vitest";
 
 import type { CalendarDate } from "../../../utils";
-import type { PatternWeek, WeekdayMinutes } from "./workingPattern";
-import {
-  coversDate,
-  makeRoomForDatedPattern,
-  patternOn,
-  workingWeeksOf,
-  type DatedPattern,
-  type WorkingPatternTimeline,
-} from "./workingPatternTimeline";
+import type { PatternVersion, WeekdayMinutes } from "./workingPattern";
+import { createPersonTimeline, type TimelineCreateInputArgs } from "./personTimeline";
+import { workingWeeksOf } from "./workingPatternTimeline";
 
-it("uses an own assignment on its dates, otherwise the terms link on that date", () => {
-  const timeline: WorkingPatternTimeline = {
-    assignments: [
-      {
-        id: "own",
-        workingPatternId: "own",
-        effectiveFrom: "2026-09-10" as CalendarDate,
-        effectiveUntil: "2026-09-20" as CalendarDate,
-      },
-    ],
-    memberships: [
-      {
-        termsId: "terms",
-        effectiveFrom: "2026-08-01" as CalendarDate,
-        effectiveUntil: "2026-09-30" as CalendarDate,
-      },
-    ],
-    termsPatterns: new Map([
-      [
-        "terms",
-        [
-          {
-            id: "old",
-            workingPatternId: "standard",
-            effectiveFrom: null,
-            effectiveUntil: "2026-09-14" as CalendarDate,
-          },
-          {
-            id: "new",
-            workingPatternId: "short",
-            effectiveFrom: "2026-09-15" as CalendarDate,
-            effectiveUntil: null,
-          },
-        ],
-      ],
-    ]),
-    patternWeeks: new Map(),
-  };
-  expect(patternOn(timeline, "2026-07-31" as CalendarDate)).toBeNull();
-  expect(patternOn(timeline, "2026-09-09" as CalendarDate)).toBe("standard");
-  expect(patternOn(timeline, "2026-09-15" as CalendarDate)).toBe("own");
-  expect(patternOn(timeline, "2026-09-21" as CalendarDate)).toBe("short");
-  expect(patternOn(timeline, "2026-10-01" as CalendarDate)).toBeNull();
+it("has no working week before and after a person's own pattern", () => {
+  const short = version([240, 0, 0, 0, 0, 0, 0], 240);
+  const timeline = timelineOf({
+    direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
+    versions: { short: [short] },
+  });
+  expect(workingWeeksOf(timeline, day("2026-08-01"), day("2026-10-31"))).toEqual([
+    noWeek("2026-08-01"),
+    week(short, "2026-09-01"),
+    noWeek("2026-10-01"),
+  ]);
 });
 
-it("splits at an assignment start and the day after its inclusive end", () => {
-  const timeline: WorkingPatternTimeline = {
-    assignments: [
-      {
-        id: "own",
-        workingPatternId: "short",
-        effectiveFrom: "2026-09-01" as CalendarDate,
-        effectiveUntil: "2026-09-30" as CalendarDate,
-      },
-    ],
-    memberships: [],
-    termsPatterns: new Map(),
-    patternWeeks: new Map([["short", [patternWeek([240, 0, 0, 0, 0, 0, 0], 240)]]]),
-  };
-  expect(
-    workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
-  ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
-    patternWeek([240, 0, 0, 0, 0, 0, 0], 240, "2026-09-01" as CalendarDate),
-    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
+it("has no working week outside a person's terms", () => {
+  const standard = version([450, 0, 0, 0, 0, 0, 0], 450);
+  const timeline = timelineOf({
+    terms: [{ termsId: "terms", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
+    termsPattern: "standard",
+    versions: { standard: [standard] },
+  });
+  expect(workingWeeksOf(timeline, day("2026-08-01"), day("2026-10-31"))).toEqual([
+    noWeek("2026-08-01"),
+    week(standard, "2026-09-01"),
+    noWeek("2026-10-01"),
   ]);
 });
-it("splits at a terms link's start and end", () => {
-  const timeline: WorkingPatternTimeline = {
-    assignments: [],
-    memberships: [{ termsId: "terms", effectiveFrom: null, effectiveUntil: null }],
-    termsPatterns: new Map([
-      [
-        "terms",
-        [
-          {
-            id: "link",
-            workingPatternId: "standard",
-            effectiveFrom: "2026-09-01" as CalendarDate,
-            effectiveUntil: "2026-09-30" as CalendarDate,
-          },
-        ],
+
+it("merges identical weeks across an own pattern and a pattern change", () => {
+  const standard = version([450, 0, 0, 0, 0, 0, 0], 450);
+  const timeline = timelineOf({
+    direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    termsPattern: "standard",
+    versions: {
+      standard: [standard],
+      short: [
+        version([450, 0, 0, 0, 0, 0, 0], 450, null, day("2026-09-14")),
+        version([450, 0, 0, 0, 0, 0, 0], 450, day("2026-09-15")),
       ],
-    ]),
-    patternWeeks: new Map([["standard", [patternWeek([450, 0, 0, 0, 0, 0, 0], 450)]]]),
-  };
-  expect(
-    workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
-  ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
-    patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-01" as CalendarDate),
-    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
+    },
+  });
+  expect(workingWeeksOf(timeline, day("2026-08-01"), day("2026-10-31"))).toEqual([
+    week(standard, "2026-08-01"),
   ]);
 });
-it("splits at a membership's start and end", () => {
-  const timeline: WorkingPatternTimeline = {
-    assignments: [],
-    memberships: [
-      {
-        termsId: "terms",
-        effectiveFrom: "2026-09-01" as CalendarDate,
-        effectiveUntil: "2026-09-30" as CalendarDate,
-      },
-    ],
-    termsPatterns: new Map([
-      [
-        "terms",
-        [{ id: "link", workingPatternId: "standard", effectiveFrom: null, effectiveUntil: null }],
-      ],
-    ]),
-    patternWeeks: new Map([["standard", [patternWeek([450, 0, 0, 0, 0, 0, 0], 450)]]]),
-  };
-  expect(
-    workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
-  ).toEqual([
-    { effectiveFrom: "2026-08-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
-    patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-01" as CalendarDate),
-    { effectiveFrom: "2026-10-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
-  ]);
-});
-it("merges identical weeks across assignment and pattern changes", () => {
-  const timeline: WorkingPatternTimeline = {
-    assignments: [
-      {
-        id: "own",
-        workingPatternId: "short",
-        effectiveFrom: "2026-09-01" as CalendarDate,
-        effectiveUntil: "2026-09-30" as CalendarDate,
-      },
-    ],
-    memberships: [{ termsId: "terms", effectiveFrom: null, effectiveUntil: null }],
-    termsPatterns: new Map([
-      [
-        "terms",
-        [{ id: "link", workingPatternId: "standard", effectiveFrom: null, effectiveUntil: null }],
-      ],
-    ]),
-    patternWeeks: new Map([
-      ["standard", [patternWeek([450, 0, 0, 0, 0, 0, 0], 450)]],
-      [
-        "short",
-        [
-          patternWeek([450, 0, 0, 0, 0, 0, 0], 450),
-          patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-15" as CalendarDate),
-        ],
-      ],
-    ]),
-  };
-  expect(
-    workingWeeksOf(timeline, "2026-08-01" as CalendarDate, "2026-10-31" as CalendarDate),
-  ).toEqual([patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-08-01" as CalendarDate)]);
-});
+
 it("splits when weekday minutes or full day minutes change within the requested period", () => {
-  const timeline: WorkingPatternTimeline = {
-    assignments: [
-      {
-        id: "own",
-        workingPatternId: "short",
-        effectiveFrom: "2026-09-01" as CalendarDate,
-        effectiveUntil: "2026-09-30" as CalendarDate,
-      },
-    ],
-    memberships: [],
-    termsPatterns: new Map(),
-    patternWeeks: new Map([
-      [
-        "short",
-        [
-          patternWeek([450, 0, 0, 0, 0, 0, 0], 450),
-          patternWeek([240, 0, 0, 0, 0, 0, 0], 450, "2026-09-05" as CalendarDate),
-          patternWeek([240, 0, 0, 0, 0, 0, 0], 480, "2026-09-15" as CalendarDate),
-          patternWeek([480, 0, 0, 0, 0, 0, 0], 480, "2026-09-21" as CalendarDate),
-        ],
-      ],
-    ]),
-  };
-  expect(
-    workingWeeksOf(timeline, "2026-09-01" as CalendarDate, "2026-09-15" as CalendarDate),
-  ).toEqual([
-    patternWeek([450, 0, 0, 0, 0, 0, 0], 450, "2026-09-01" as CalendarDate),
-    patternWeek([240, 0, 0, 0, 0, 0, 0], 450, "2026-09-05" as CalendarDate),
-    patternWeek([240, 0, 0, 0, 0, 0, 0], 480, "2026-09-15" as CalendarDate),
-  ]);
-  expect(
-    workingWeeksOf(timeline, "2026-09-10" as CalendarDate, "2026-09-20" as CalendarDate),
-  ).toEqual([
-    patternWeek([240, 0, 0, 0, 0, 0, 0], 450, "2026-09-10" as CalendarDate),
-    patternWeek([240, 0, 0, 0, 0, 0, 0], 480, "2026-09-15" as CalendarDate),
-  ]);
-});
-
-it("has no pattern without an assignment or linked terms", () => {
-  const timeline: WorkingPatternTimeline = {
-    assignments: [],
-    memberships: [],
-    termsPatterns: new Map(),
-    patternWeeks: new Map(),
-  };
-  expect(
-    workingWeeksOf(timeline, "2026-09-01" as CalendarDate, "2026-09-30" as CalendarDate),
-  ).toEqual([
-    { effectiveFrom: "2026-09-01", minutes: null, fullDayMinutes: null, bankHolidayCalendar: null },
-  ]);
-  const unlinkedTerms: WorkingPatternTimeline = {
-    ...timeline,
-    memberships: [{ termsId: "terms", effectiveFrom: null, effectiveUntil: null }],
-  };
-  expect(patternOn(unlinkedTerms, "2026-09-01" as CalendarDate)).toBeNull();
-});
-
-it("ends an earlier covering row, replaces a same-date row and leaves an expired row alone", () => {
-  const row: DatedPattern = {
-    id: "row",
-    workingPatternId: "standard",
-    effectiveFrom: null,
-    effectiveUntil: null,
-  };
-  const from = "2026-09-01" as CalendarDate;
-  expect(makeRoomForDatedPattern([row], from, null)).toEqual({ ended: row, replaced: null });
-  const sameDate = { ...row, effectiveFrom: from };
-  expect(makeRoomForDatedPattern([sameDate], from, null)).toEqual({
-    ended: null,
-    replaced: sameDate,
+  const versions = [
+    version([450, 0, 0, 0, 0, 0, 0], 450, null, day("2026-09-04")),
+    version([240, 0, 0, 0, 0, 0, 0], 450, day("2026-09-05"), day("2026-09-14")),
+    version([240, 0, 0, 0, 0, 0, 0], 480, day("2026-09-15"), day("2026-09-20")),
+    version([480, 0, 0, 0, 0, 0, 0], 480, day("2026-09-21")),
+  ];
+  const timeline = timelineOf({
+    direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
+    versions: { short: versions },
   });
-  const expired = { ...row, effectiveUntil: "2026-08-31" as CalendarDate };
-  expect(makeRoomForDatedPattern([expired], from, null)).toEqual({ ended: null, replaced: null });
+  expect(workingWeeksOf(timeline, day("2026-09-01"), day("2026-09-15"))).toEqual([
+    week(versions[0]!, "2026-09-01"),
+    week(versions[1]!, "2026-09-05"),
+    week(versions[2]!, "2026-09-15"),
+  ]);
+  expect(workingWeeksOf(timeline, day("2026-09-10"), day("2026-09-20"))).toEqual([
+    week(versions[1]!, "2026-09-10"),
+    week(versions[2]!, "2026-09-15"),
+  ]);
 });
 
-it("allows a new row only when it ends before a later row starts", () => {
-  const row: DatedPattern = {
-    id: "later",
-    workingPatternId: "standard",
-    effectiveFrom: "2026-10-01" as CalendarDate,
-    effectiveUntil: null,
-  };
-  const from = "2026-09-01" as CalendarDate;
-  const error = {
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "effectiveUntil", code: "overlaps" }],
-  };
-  expect(() => makeRoomForDatedPattern([row], from, "2026-10-01" as CalendarDate)).toThrow(
-    expect.objectContaining(error),
-  );
-  expect(() => makeRoomForDatedPattern([row], from, null)).toThrow(expect.objectContaining(error));
-  expect(makeRoomForDatedPattern([row], from, "2026-09-30" as CalendarDate)).toEqual({
-    ended: null,
-    replaced: null,
+it("has no working week without an own pattern or terms", () => {
+  expect(workingWeeksOf(timelineOf({}), day("2026-09-01"), day("2026-09-30"))).toEqual([
+    noWeek("2026-09-01"),
+  ]);
+});
+
+function timelineOf({
+  direct = [],
+  terms = [],
+  termsPattern = null,
+  versions = {},
+}: {
+  direct?: TimelineCreateInputArgs<PatternVersion>["direct"];
+  terms?: TimelineCreateInputArgs<PatternVersion>["terms"];
+  termsPattern?: string | null;
+  versions?: Record<string, PatternVersion[]>;
+}) {
+  return createPersonTimeline({
+    direct,
+    terms,
+    idOfTerms: () => termsPattern,
+    versions: (id) => versions[id] ?? [],
   });
-});
+}
 
-it("covers inclusive boundaries and treats null boundaries as open", () => {
-  const row = {
-    effectiveFrom: "2026-09-01" as CalendarDate,
-    effectiveUntil: "2026-09-30" as CalendarDate,
-  };
-  expect(coversDate(row, "2026-08-31" as CalendarDate)).toBe(false);
-  expect(coversDate(row, "2026-09-01" as CalendarDate)).toBe(true);
-  expect(coversDate(row, "2026-09-30" as CalendarDate)).toBe(true);
-  expect(coversDate(row, "2026-10-01" as CalendarDate)).toBe(false);
-  expect(
-    coversDate({ effectiveFrom: null, effectiveUntil: null }, "2026-09-01" as CalendarDate),
-  ).toBe(true);
-});
-
-function patternWeek(
+function version(
   minutes: WeekdayMinutes,
   fullDayMinutes: number,
-  effectiveFrom: CalendarDate | null = null,
-): PatternWeek {
-  return { effectiveFrom, minutes, fullDayMinutes, bankHolidayCalendar: "england_and_wales" };
+  startDate: CalendarDate | null = null,
+  endDate: CalendarDate | null = null,
+): PatternVersion {
+  return {
+    id: `${startDate}`,
+    startDate,
+    endDate,
+    minutes,
+    fullDayMinutes,
+    bankHolidayCalendar: "england_and_wales",
+  };
+}
+
+function week({ minutes, fullDayMinutes, bankHolidayCalendar }: PatternVersion, startDate: string) {
+  return { startDate, minutes, fullDayMinutes, bankHolidayCalendar };
+}
+
+function noWeek(startDate: string) {
+  return { startDate, minutes: null, fullDayMinutes: null, bankHolidayCalendar: null };
+}
+
+function day(value: string): CalendarDate {
+  return value as CalendarDate;
 }

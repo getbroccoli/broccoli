@@ -1,20 +1,20 @@
-import { expect, OWNER, test, workingPatternService } from "#test/support";
+import { expect, OWNER, test, workingPatternService, createStandardPattern } from "#test/support";
 
 test("an assignment end cannot precede its start", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
   const input = {
     employeeId: employee.id,
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   };
 
   await expect(
-    patterns.assignPattern(OWNER, { ...input, effectiveUntil: "2026-08-31" }),
+    patterns.assignPattern(OWNER, { ...input, endDate: "2026-08-31" }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
-    fieldErrors: [{ field: "effectiveUntil", code: "before_start" }],
+    fieldErrors: [{ field: "endDate", code: "before_start" }],
   });
 });
 
@@ -25,7 +25,7 @@ test("an assignment requires an existing pattern", async ({ orm, seed }) => {
     workingPatternService(orm).assignPattern(OWNER, {
       employeeId: employee.id,
       workingPatternId: "00000000-0000-4000-8000-000000000001",
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
     }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
@@ -35,7 +35,7 @@ test("an assignment requires an existing pattern", async ({ orm, seed }) => {
 
 test("working pattern operations refuse an unknown employee", async ({ orm }) => {
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
   const employeeId = "00000000-0000-4000-8000-000000000001";
 
   await expect(
@@ -49,19 +49,19 @@ test("working pattern operations refuse an unknown employee", async ({ orm }) =>
     patterns.assignPattern(OWNER, {
       employeeId,
       workingPatternId: standard.id,
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
   await expect(
     patterns.endAssignment(OWNER, {
       employeeId,
-      effectiveUntil: "2026-09-30",
+      endDate: "2026-09-30",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
   await expect(
     patterns.removeAssignment(OWNER, {
       employeeId,
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
@@ -72,18 +72,18 @@ test("ending an assignment requires an own assignment covering that date", async
 }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
-    effectiveUntil: "2026-09-30",
+    startDate: "2026-09-01",
+    endDate: "2026-09-30",
   });
 
   await expect(
     patterns.endAssignment(OWNER, {
       employeeId: employee.id,
-      effectiveUntil: "2026-10-31",
+      endDate: "2026-10-31",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
 });
@@ -91,17 +91,37 @@ test("ending an assignment requires an own assignment covering that date", async
 test("removing an assignment requires its exact start date", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   });
 
   await expect(
     patterns.removeAssignment(OWNER, {
       employeeId: employee.id,
-      effectiveFrom: "2026-09-15",
+      startDate: "2026-09-15",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+test("a terms' pattern cannot be assigned to a person", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+  const termsId = await seed.defaultTermsId();
+  const patterns = workingPatternService(orm);
+  const pattern = (await patterns.listPatterns(OWNER)).find(
+    (pattern) => pattern.termsId === termsId,
+  )!;
+
+  await expect(
+    patterns.assignPattern(OWNER, {
+      employeeId: employee.id,
+      workingPatternId: pattern.id,
+      startDate: "2026-09-01",
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "workingPatternId", code: "belongs_to_terms" }],
+  });
 });

@@ -4,15 +4,14 @@ import type { Orm } from "../../src/core/db";
 import { employments } from "../../src/modules/employees/db";
 import {
   timeOff,
-  timeOffAllowanceRules,
   timeOffDays,
-  timeOffPolicies,
   timeOffPolicyAssignments,
+  timeOffPolicyRepository,
   timeOffTypes,
 } from "../../src/modules/timeOff/db";
 import type { CalendarDate } from "../../src/utils";
 
-/** A policy on a new or existing type, its leave year from 1 January. */
+/** A named policy on a new or existing type, from the beginning, its leave year from 1 January. */
 export async function seedTimeOffPolicy(
   orm: Orm,
   input: {
@@ -23,28 +22,27 @@ export async function seedTimeOffPolicy(
   },
 ): Promise<{ id: string; timeOffTypeId: string }> {
   const timeOffTypeId = input.timeOffTypeId ?? (await seedTimeOffType(orm, input.name)).id;
-  const [policy] = await orm
-    .insert(timeOffPolicies)
-    .values({
-      timeOffTypeId,
-      name: input.name,
+  const id = await timeOffPolicyRepository(orm).insertPolicy(
+    { timeOffTypeId, name: input.name },
+    {
       balance: input.balance,
       bankHolidays:
         input.balance === "balance_from_allowance" ? "bank_holidays_on_top_of_allowance" : null,
-      leaveYearStart: "leave_year_from_fixed_date",
-      leaveYearStartMonth: 1,
-      leaveYearStartDay: 1,
-    })
-    .returning({ id: timeOffPolicies.id });
-  if (input.entitlementDays !== undefined) {
-    await orm.insert(timeOffAllowanceRules).values({
-      timeOffPolicyId: policy!.id,
-      kind: "yearly_entitlement",
-      entitlementDays: String(input.entitlementDays),
-      entitlementDaysPerWeek: 5,
-    });
-  }
-  return { id: policy!.id, timeOffTypeId };
+      leaveYear: { kind: "leave_year_from_fixed_date", month: 1, day: 1 },
+      rules:
+        input.entitlementDays === undefined
+          ? []
+          : [
+              {
+                kind: "yearly_entitlement",
+                entitlementDays: input.entitlementDays,
+                entitlementDaysPerWeek: 5,
+                maxDays: null,
+              },
+            ],
+    },
+  );
+  return { id, timeOffTypeId };
 }
 
 /** A company's own time off type without a policy. */
@@ -63,7 +61,7 @@ export async function seedTimeOffAssignment(
 ): Promise<void> {
   await orm
     .insert(timeOffPolicyAssignments)
-    .values({ ...input, effectiveFrom: "2025-01-01" as CalendarDate });
+    .values({ ...input, startDate: "2025-01-01" as CalendarDate });
 }
 
 /** Ends the person's employment on `endDate`. */

@@ -1,4 +1,11 @@
-import { ADMIN, expect, OWNER, test, workingPatternService } from "#test/support";
+import {
+  ADMIN,
+  expect,
+  OWNER,
+  test,
+  workingPatternService,
+  createStandardPattern,
+} from "#test/support";
 
 test("assigning a pattern returns the employee's history line with the previous terms pattern", async ({
   orm,
@@ -15,7 +22,7 @@ test("assigning a pattern returns the employee's history line with the previous 
   const history = await patterns.assignPattern(ADMIN, {
     employeeId: employee.id,
     workingPatternId: pattern.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   });
 
   expect(history).toMatchObject({
@@ -23,9 +30,9 @@ test("assigning a pattern returns the employee's history line with the previous 
     recordId: employee.id,
     operation: "UPDATED",
     changes: [
-      { field: "workingPattern", oldValue: "Standard", newValue: "Tuesday to Thursday" },
-      { field: "effectiveFrom", oldValue: null, newValue: "2026-09-01" },
-      { field: "effectiveUntil", oldValue: null, newValue: null },
+      { field: "workingPattern", oldValue: "England and Wales", newValue: "Tuesday to Thursday" },
+      { field: "startDate", oldValue: null, newValue: "2026-09-01" },
+      { field: "endDate", oldValue: null, newValue: null },
     ],
   });
 });
@@ -33,18 +40,18 @@ test("assigning a pattern returns the employee's history line with the previous 
 test("replacing an assignment records its previous and new end dates", async ({ orm, seed }) => {
   const employee = await seed.employee();
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
   const input = {
     employeeId: employee.id,
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   };
-  await patterns.assignPattern(OWNER, { ...input, effectiveUntil: "2026-09-30" });
+  await patterns.assignPattern(OWNER, { ...input, endDate: "2026-09-30" });
 
-  const history = await patterns.assignPattern(OWNER, { ...input, effectiveUntil: "2026-10-31" });
+  const history = await patterns.assignPattern(OWNER, { ...input, endDate: "2026-10-31" });
 
   expect(history.changes).toContainEqual({
-    field: "effectiveUntil",
+    field: "endDate",
     oldValue: "2026-09-30",
     newValue: "2026-10-31",
   });
@@ -64,12 +71,12 @@ test("ending an assignment returns to the terms on the next day and records that
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: pattern.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   });
 
   const history = await patterns.endAssignment(OWNER, {
     employeeId: employee.id,
-    effectiveUntil: "2026-09-30",
+    endDate: "2026-09-30",
   });
 
   expect(history).toMatchObject({
@@ -77,9 +84,9 @@ test("ending an assignment returns to the terms on the next day and records that
     recordId: employee.id,
     operation: "UPDATED",
     changes: [
-      { field: "workingPattern", oldValue: "Tuesday to Thursday", newValue: "Standard" },
-      { field: "effectiveFrom", oldValue: null, newValue: "2026-10-01" },
-      { field: "effectiveUntil", oldValue: null, newValue: "2026-09-30" },
+      { field: "workingPattern", oldValue: "Tuesday to Thursday", newValue: "England and Wales" },
+      { field: "startDate", oldValue: null, newValue: "2026-10-01" },
+      { field: "endDate", oldValue: null, newValue: "2026-09-30" },
     ],
   });
   expect(
@@ -92,13 +99,13 @@ test("ending an assignment returns to the terms on the next day and records that
     ).get(employee.id),
   ).toEqual([
     {
-      effectiveFrom: "2026-09-01",
+      startDate: "2026-09-01",
       minutes: [0, 450, 450, 450, 0, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
-      effectiveFrom: "2026-10-01",
+      startDate: "2026-10-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
@@ -120,13 +127,13 @@ test("removing an assignment restores the terms over its dates and records the c
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: pattern.id,
-    effectiveFrom: "2026-09-01",
-    effectiveUntil: "2026-09-30",
+    startDate: "2026-09-01",
+    endDate: "2026-09-30",
   });
 
   const history = await patterns.removeAssignment(OWNER, {
     employeeId: employee.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   });
 
   expect(history).toMatchObject({
@@ -134,9 +141,9 @@ test("removing an assignment restores the terms over its dates and records the c
     recordId: employee.id,
     operation: "UPDATED",
     changes: [
-      { field: "workingPattern", oldValue: "Tuesday to Thursday", newValue: "Standard" },
-      { field: "effectiveFrom", oldValue: null, newValue: "2026-09-01" },
-      { field: "effectiveUntil", oldValue: "2026-09-30", newValue: null },
+      { field: "workingPattern", oldValue: "Tuesday to Thursday", newValue: "England and Wales" },
+      { field: "startDate", oldValue: null, newValue: "2026-09-01" },
+      { field: "endDate", oldValue: "2026-09-30", newValue: null },
     ],
   });
   expect(
@@ -149,7 +156,7 @@ test("removing an assignment restores the terms over its dates and records the c
     ).get(employee.id),
   ).toEqual([
     {
-      effectiveFrom: "2026-08-01",
+      startDate: "2026-08-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
@@ -164,17 +171,17 @@ test("assignment history uses null when the employee had no working pattern", as
   const employee = await seed.employee();
   await seed.leaveTerms(employee.id);
   const patterns = workingPatternService(orm);
-  const standard = (await patterns.listPatterns(OWNER)).find((pattern) => pattern.isStandard)!;
+  const standard = await createStandardPattern(orm);
 
   const history = await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: standard.id,
-    effectiveFrom: "2026-09-01",
+    startDate: "2026-09-01",
   });
 
   expect(history.changes).toMatchObject([
     { field: "workingPattern", oldValue: null, newValue: "Standard" },
-    { field: "effectiveFrom", oldValue: null, newValue: "2026-09-01" },
-    { field: "effectiveUntil", oldValue: null, newValue: null },
+    { field: "startDate", oldValue: null, newValue: "2026-09-01" },
+    { field: "endDate", oldValue: null, newValue: null },
   ]);
 });

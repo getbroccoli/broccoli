@@ -7,16 +7,16 @@ import {
   numeric,
   pgTable,
   text,
-  timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { timeOffPolicies } from "./timeOffPoliciesTable";
+import { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
 
 /**
- * The parts of a policy's allowance, which add up into one balance. A rule a ledger line points
- * at is never deleted: removing it sets `removed_at` and stops it from the current leave year.
+ * The parts of a policy version's allowance, which add up into one balance. Never edited, like
+ * its version.
  */
 export const timeOffAllowanceRules = pgTable(
   "time_off_allowance_rules",
@@ -24,7 +24,7 @@ export const timeOffAllowanceRules = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`uuidv7()`),
-    timeOffPolicyId: uuid("time_off_policy_id").notNull(),
+    timeOffPolicyVersionId: uuid("time_off_policy_version_id").notNull(),
     kind: text("kind", { enum: ["yearly_entitlement", "service_extra"] }).notNull(),
     /**
      * Entitlement as contracts state it: `entitlementDays` for a working week of
@@ -40,23 +40,23 @@ export const timeOffAllowanceRules = pgTable(
     /** Each step is the total extra from that anniversary; the highest step reached applies. */
     afterYears: integer("after_years"),
     extraDays: numeric("extra_days"),
-    removedAt: timestamp("removed_at", { withTimezone: true }),
   },
   // A check passes when its result is null, so required values are tested for null first.
   (table) => [
     // Named here: the generated name would pass Postgres's 63-character limit.
     foreignKey({
-      name: "time_off_allowance_rules_policy_fk",
-      columns: [table.timeOffPolicyId],
-      foreignColumns: [timeOffPolicies.id],
-    }),
-    index("time_off_allowance_rules_policy_idx").on(table.timeOffPolicyId),
+      name: "time_off_allowance_rules_version_fk",
+      columns: [table.timeOffPolicyVersionId],
+      foreignColumns: [timeOffPolicyVersions.id],
+    }).onDelete("cascade"),
+    index("time_off_allowance_rules_version_idx").on(table.timeOffPolicyVersionId),
     uniqueIndex("time_off_allowance_rules_one_yearly_entitlement")
-      .on(table.timeOffPolicyId)
-      .where(sql`${table.kind} = 'yearly_entitlement' and ${table.removedAt} is null`),
-    uniqueIndex("time_off_allowance_rules_one_service_step")
-      .on(table.timeOffPolicyId, table.afterYears)
-      .where(sql`${table.kind} = 'service_extra' and ${table.removedAt} is null`),
+      .on(table.timeOffPolicyVersionId)
+      .where(sql`${table.kind} = 'yearly_entitlement'`),
+    unique("time_off_allowance_rules_one_service_step").on(
+      table.timeOffPolicyVersionId,
+      table.afterYears,
+    ),
     check(
       "time_off_allowance_rules_yearly_entitlement_columns",
       sql`${table.kind} <> 'yearly_entitlement' or (

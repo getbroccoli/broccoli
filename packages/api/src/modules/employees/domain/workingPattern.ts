@@ -1,27 +1,36 @@
 import { invalidInput } from "../../../core/applicationError";
-import { type CalendarDate, parseCalendarDate } from "../../../utils";
+import {
+  type CalendarDate,
+  type CalendarDateRange,
+  coversDate,
+  parseCalendarDate,
+} from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
 
 /** Minutes worked on each weekday, Monday to Sunday; 0 is not working. */
 export type WeekdayMinutes = readonly [number, number, number, number, number, number, number];
 
-/** A pattern's minutes from a date until its next week starts; null from the beginning. */
-export interface PatternWeek {
-  effectiveFrom: CalendarDate | null;
+/** A pattern's minutes from a date to a date; never edited, only ended. */
+export interface PatternVersion extends CalendarDateRange {
+  id: string;
   minutes: WeekdayMinutes;
   /** The minutes one day of leave stands for. */
   fullDayMinutes: number;
   bankHolidayCalendar: BankHolidayCalendar;
 }
 
-/** A named way of working that terms and people are put on. */
+/** A pattern's minutes, full day and bank holidays: what a version holds besides its dates. */
+export type PatternWeek = Omit<PatternVersion, "id" | "startDate" | "endDate">;
+
+/** A way of working: one set of terms' own, or a named one people are put on one by one. */
 export interface WorkingPattern {
   id: string;
-  name: string;
-  /** The seeded Standard pattern, which cannot be deleted. */
-  isStandard: boolean;
+  /** Null: a named pattern for one person at a time. */
+  termsId: string | null;
+  /** Null on a terms' pattern. */
+  name: string | null;
   /** Oldest first; the first starts from the beginning. */
-  weeks: PatternWeek[];
+  versions: PatternVersion[];
 }
 
 /**
@@ -29,7 +38,7 @@ export interface WorkingPattern {
  * apply; all null while they have no working pattern.
  */
 export interface WorkingWeek {
-  effectiveFrom: CalendarDate;
+  startDate: CalendarDate;
   minutes: WeekdayMinutes | null;
   fullDayMinutes: number | null;
   bankHolidayCalendar: BankHolidayCalendar | null;
@@ -82,3 +91,31 @@ function isMinutesInADay(value: number, least: number): boolean {
 }
 
 const MINUTES_IN_A_DAY = 1440;
+
+/**
+ * How dated rows make room for a new one from `from` to `until`: the one that started earlier and
+ * covers `from` ends the day before, one starting on `from` goes; a later one it would overlap
+ * refuses the new one.
+ */
+export function makeRoomForDatedRow<R extends CalendarDateRange>(
+  rows: readonly R[],
+  from: CalendarDate,
+  until: CalendarDate | null,
+): { ended: R | null; replaced: R | null } {
+  const overlapsLater = rows.some(
+    ({ startDate }) =>
+      startDate !== null && startDate > from && (until === null || startDate <= until),
+  );
+  if (overlapsLater) {
+    throw invalidInput([{ field: "endDate", code: "overlaps" }]);
+  }
+  const replaced = rows.find((row) => row.startDate === from) ?? null;
+  const ended =
+    rows.find(
+      (row) =>
+        row !== replaced &&
+        (row.startDate === null || row.startDate < from) &&
+        coversDate(row, from),
+    ) ?? null;
+  return { ended, replaced };
+}

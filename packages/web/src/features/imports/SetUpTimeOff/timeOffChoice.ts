@@ -1,5 +1,6 @@
 import type {
   BankHolidayCalendar,
+  StandardLeavePolicyKey,
   StandardWorkingWeek,
   TurnOnTimeOffInput,
 } from "@/__generated__/graphql";
@@ -10,8 +11,8 @@ import type {
  * such as in some private windows, it lasts until a reload.
  */
 export interface TimeOffSetupState {
-  /** The Annual leave policy everyone gets. */
-  policyId?: string;
+  /** The standard Annual leave policy everyone gets. */
+  policyKey?: StandardLeavePolicyKey;
   week?: StandardWorkingWeek;
   /** Everyone's bank holidays when the staff file has no locations. */
   nation?: BankHolidayCalendar;

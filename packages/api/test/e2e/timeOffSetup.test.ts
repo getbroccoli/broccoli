@@ -11,7 +11,7 @@ test("the setup holder can read time off choices and ask for a location's calend
 
   const response = await browser.graphql(`query {
     timeOffSetup {
-      annualLeavePolicies { id name daysForFiveDayWeek bankHolidaysOnTop }
+      annualLeavePolicies { key name daysForFiveDayWeek bankHolidaysOnTop }
       bankHolidayCalendars { calendar countThisYear }
     }
     locationCalendarSuggestions(locationNames: ["Glasgow"]) { locationName bankHolidayCalendar unsure }
@@ -22,7 +22,7 @@ test("the setup holder can read time off choices and ask for a location's calend
     data: {
       timeOffSetup: {
         annualLeavePolicies: {
-          id: string;
+          key: string;
           name: string;
           daysForFiveDayWeek: number;
           bankHolidaysOnTop: boolean;
@@ -34,19 +34,19 @@ test("the setup holder can read time off choices and ask for a location's calend
   expect(body).not.toHaveProperty("errors");
   expect(body.data.timeOffSetup.annualLeavePolicies).toEqual([
     {
-      id: expect.any(String) as unknown,
+      key: "UK_20_DAYS_PLUS_BANK_HOLIDAYS",
       name: "20 days plus bank holidays",
       daysForFiveDayWeek: 20,
       bankHolidaysOnTop: true,
     },
     {
-      id: expect.any(String) as unknown,
+      key: "UK_25_DAYS_PLUS_BANK_HOLIDAYS",
       name: "25 days plus bank holidays",
       daysForFiveDayWeek: 25,
       bankHolidaysOnTop: true,
     },
     {
-      id: expect.any(String) as unknown,
+      key: "UK_STATUTORY_MINIMUM",
       name: "UK statutory minimum",
       daysForFiveDayWeek: 28,
       bankHolidaysOnTop: false,

@@ -1,7 +1,9 @@
 import {
   EMPLOYEE,
   expect,
+  giveTermsPolicies,
   OWNER,
+  readTermsPolicies,
   readTimeOffTerms,
   scotlandTimeOffSetup,
   test,
@@ -13,7 +15,7 @@ test("requires terms for the chosen default nation without changing terms", asyn
   orm,
   transact,
 }) => {
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   input.defaultBankHolidayCalendar = "scotland";
   input.terms = [input.terms[0]!];
   input.locationTerms = [];
@@ -30,7 +32,7 @@ test("requires terms for the chosen default nation without changing terms", asyn
 });
 
 test("refuses an unknown default nation without changing terms", async ({ orm, transact }) => {
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   input.defaultBankHolidayCalendar = "unknown";
   const termsBefore = await readTimeOffTerms(orm);
 
@@ -47,11 +49,11 @@ test("refuses an unknown default nation without changing terms", async ({ orm, t
 test.for([
   ["bankHolidayCalendar", "unknown"],
   ["workingWeek", "unknown"],
-  ["annualLeavePolicyId", "00000000-0000-4000-8000-000000000001"],
+  ["annualLeavePolicyKey", "unknown"],
 ] as const)(
   "refuses an unknown %s without changing terms or patterns",
   async ([field, value], { orm, transact }) => {
-    const input = await scotlandTimeOffSetup(orm);
+    const input = scotlandTimeOffSetup();
     input.terms[1]![field] = value;
     const termsBefore = await readTimeOffTerms(orm);
     const patternsBefore = await workingPatternService(orm).listPatterns(OWNER);
@@ -68,24 +70,11 @@ test.for([
   },
 );
 
-test("refuses a record-only policy as Annual leave", async ({ orm, transact }) => {
-  const service = timeOffService(orm);
-  const input = await scotlandTimeOffSetup(orm);
-  input.terms[0]!.annualLeavePolicyId = (await service.listPolicies(OWNER, orm)).find(
-    ({ typeKey }) => typeKey === "sickness",
-  )!.id;
-
-  await expect(transact((tx) => service.turnOnTimeOff(OWNER, tx, input))).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "annualLeavePolicyId", code: "invalid" }],
-  });
-});
-
 test("requires England and Wales even when another calendar is chosen", async ({
   orm,
   transact,
 }) => {
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   input.terms = [input.terms[1]!];
   input.locationTerms = [];
 
@@ -98,7 +87,7 @@ test("requires England and Wales even when another calendar is chosen", async ({
 });
 
 test("refuses two entries for one calendar", async ({ orm, transact }) => {
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   input.terms.push({ ...input.terms[0]! });
 
   await expect(
@@ -110,7 +99,7 @@ test("refuses two entries for one calendar", async ({ orm, transact }) => {
 });
 
 test("refuses a location's calendar without corresponding terms", async ({ orm, transact }) => {
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   input.locationTerms = [{ locationName: "Belfast", bankHolidayCalendar: "northern_ireland" }];
 
   await expect(
@@ -122,15 +111,13 @@ test("refuses a location's calendar without corresponding terms", async ({ orm, 
 });
 
 test("refuses an employee turning time off on", async ({ orm, seed, transact }) => {
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
 
   await expect(
     transact((tx) => timeOffService(orm).turnOnTimeOff(EMPLOYEE, tx, input)),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(
-    await timeOffService(orm).readTermsPolicies(OWNER, { termsId: await seed.defaultTermsId() }),
-  ).toEqual([]);
+  expect(await readTermsPolicies(orm, await seed.defaultTermsId())).toEqual([]);
 });
 
 test("a record-only policy on other terms already prevents turning time off on", async ({
@@ -140,16 +127,12 @@ test("a record-only policy on other terms already prevents turning time off on",
 }) => {
   const service = timeOffService(orm);
   const otherTermsId = await seed.terms("Other terms");
-  const sickness = (await service.listPolicies(OWNER, orm)).find(
-    ({ typeKey }) => typeKey === "sickness",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, {
-      termsId: otherTermsId,
-      timeOffPolicyIds: [sickness.id],
-    }),
-  );
-  const input = await scotlandTimeOffSetup(orm);
+  await giveTermsPolicies(orm, transact, {
+    termsId: otherTermsId,
+    policies: [{ recordOnly: "sickness" }],
+  });
+  const otherPolicies = await readTermsPolicies(orm, otherTermsId);
+  const input = scotlandTimeOffSetup();
   const termsBefore = await readTimeOffTerms(orm);
 
   await expect(transact((tx) => service.turnOnTimeOff(OWNER, tx, input))).rejects.toMatchObject({
@@ -158,8 +141,6 @@ test("a record-only policy on other terms already prevents turning time off on",
   });
 
   expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
-  expect(await service.readTermsPolicies(OWNER, { termsId: otherTermsId })).toEqual([sickness]);
-  expect(await service.readTermsPolicies(OWNER, { termsId: await seed.defaultTermsId() })).toEqual(
-    [],
-  );
+  expect(await readTermsPolicies(orm, otherTermsId)).toEqual(otherPolicies);
+  expect(await readTermsPolicies(orm, await seed.defaultTermsId())).toEqual([]);
 });

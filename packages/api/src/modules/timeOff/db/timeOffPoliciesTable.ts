@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { check, integer, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
+import { check, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { timeOffTypes } from "./timeOffTypesTable";
 
 /**
- * The rules for one time off type: how leave is counted, bank holidays and the leave year. The
- * amounts are its allowance rules; the terms it applies to, and when, are in
- * `terms_time_off_policies`.
+ * A policy for one time off type: one set of terms' for it, or a named one that people are put on
+ * one by one. Its rules over time are its versions; the migration adds the foreign key to terms,
+ * which another module owns.
  */
 export const timeOffPolicies = pgTable(
   "time_off_policies",
@@ -17,54 +17,23 @@ export const timeOffPolicies = pgTable(
     timeOffTypeId: uuid("time_off_type_id")
       .notNull()
       .references(() => timeOffTypes.id),
-    name: text("name").notNull(),
-    /** Marks the standard leave policies, so code finds them by key, never by name. */
-    key: text("key", {
-      enum: [
-        "uk_statutory_minimum",
-        "uk_20_days_plus_bank_holidays",
-        "uk_25_days_plus_bank_holidays",
-      ],
-    }).unique("time_off_policies_key_unique"),
-    balance: text("balance", {
-      enum: ["balance_from_allowance", "unlimited_balance", "no_balance"],
-    }).notNull(),
-    bankHolidays: text("bank_holidays", {
-      enum: ["bank_holidays_included_in_allowance", "bank_holidays_on_top_of_allowance"],
-    }),
-    leaveYearStart: text("leave_year_start", {
-      enum: ["leave_year_from_fixed_date", "leave_year_from_employee_start_date"],
-    }),
-    leaveYearStartMonth: integer("leave_year_start_month"),
-    leaveYearStartDay: integer("leave_year_start_day"),
+    /** Null: a named policy for one person at a time. */
+    termsId: uuid("terms_id"),
+    /** Null on a terms' policy, which their terms and type name. */
+    name: text("name"),
   },
   (table) => [
     // The target of the assignments' foreign key, which keeps a policy on its own type.
     unique("time_off_policies_id_type_unique").on(table.id, table.timeOffTypeId),
-    check(
-      "time_off_policies_bank_holidays_with_allowance",
-      sql`(${table.bankHolidays} is not null) = (${table.balance} = 'balance_from_allowance')`,
+    unique("time_off_policies_terms_type_unique").on(table.termsId, table.timeOffTypeId),
+    uniqueIndex("time_off_policies_type_name_unique").on(
+      table.timeOffTypeId,
+      sql`lower(btrim(${table.name}))`,
     ),
     check(
-      "time_off_policies_leave_year_with_balance",
-      sql`(${table.leaveYearStart} is not null) = (${table.balance} <> 'no_balance')`,
+      "time_off_policies_named_unless_terms",
+      sql`(${table.termsId} is null) = (${table.name} is not null)`,
     ),
-    check(
-      "time_off_policies_fixed_date_month_set",
-      sql`(${table.leaveYearStartMonth} is not null)
-        = (${table.leaveYearStart} is not distinct from 'leave_year_from_fixed_date')`,
-    ),
-    check(
-      "time_off_policies_fixed_date_day_set",
-      sql`(${table.leaveYearStartDay} is not null)
-        = (${table.leaveYearStart} is not distinct from 'leave_year_from_fixed_date')`,
-    ),
-    // A day that exists in every year: never 29 February, never 31 April.
-    check(
-      "time_off_policies_fixed_date_valid",
-      sql`${table.leaveYearStartMonth} between 1 and 12 and ${table.leaveYearStartDay} between 1 and
-        case when ${table.leaveYearStartMonth} = 2 then 28
-          when ${table.leaveYearStartMonth} in (4, 6, 9, 11) then 30 else 31 end`,
-    ),
+    check("time_off_policies_name_not_blank", sql`btrim(${table.name}) <> ''`),
   ],
 );

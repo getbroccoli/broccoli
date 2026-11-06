@@ -16,10 +16,12 @@ import {
   type NewEmployeeInput,
   parseLocationName,
   parseNewEmployee,
+  type PatternWeek,
   STANDARD_WEEKS,
   type StandardWorkingWeek,
   type TermsSetup,
   tryParseNewEmployee,
+  type WorkingPattern,
 } from "../domain";
 import { setNewEmployeeManagers } from "./employeeManagerService";
 import { recordCreatedEmployees } from "./recordCreatedEmployees";
@@ -197,6 +199,7 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       await recordHistory.purge(tx, "working_pattern");
       await locationRepository(tx).deleteAll();
       await termsRepository(tx).resetToDefault();
+      await resetDefaultPattern(tx);
     },
     async setUpTerms(ctx, tx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
@@ -246,9 +249,8 @@ const TERMS_NAMES: Record<BankHolidayCalendar, string> = {
 };
 
 /**
- * A nation's terms on `week`: the default terms, when `defaultTermsId` is given, stay on Standard
- * for England and Wales on Standard's week; otherwise a new pattern on the nation's bank holidays
- * becomes the terms' only one.
+ * A nation's terms on `week` and its bank holidays: the default terms, when `defaultTermsId` is
+ * given, keep their own pattern on the new week; otherwise new terms get a new pattern of their own.
  */
 async function termsOnWeek(
   tx: Tx,
@@ -256,27 +258,47 @@ async function termsOnWeek(
   calendar: BankHolidayCalendar,
   week: StandardWorkingWeek,
 ): Promise<{ termsId: string; patternId: string | null }> {
-  // England and Wales on Standard's week is what Standard already is.
-  if (defaultTermsId && calendar === "england_and_wales" && week === "monday_to_friday_7_5_hours") {
+  const patterns = workingPatternRepository(tx);
+  const patternWeek = { ...STANDARD_WEEKS[week], bankHolidayCalendar: calendar };
+  if (defaultTermsId) {
+    const pattern = await termsPattern(tx, defaultTermsId);
+    if (!isOnlyWeek(pattern, patternWeek)) {
+      await patterns.replaceVersions(pattern.id, patternWeek);
+    }
     return { termsId: defaultTermsId, patternId: null };
   }
+  const termsId = await termsRepository(tx).insert(TERMS_NAMES[calendar]);
+  return { termsId, patternId: await patterns.insertPattern({ termsId }, patternWeek) };
+}
+
+/** Puts the default terms' pattern back on the seeded week: Monday to Friday, England and Wales. */
+async function resetDefaultPattern(tx: Tx): Promise<void> {
   const patterns = workingPatternRepository(tx);
-  const { label, ...days } = STANDARD_WEEKS[week];
-  const patternId = await patterns.insertPattern(`${TERMS_NAMES[calendar]} · ${label}`, {
-    ...days,
-    bankHolidayCalendar: calendar,
+  await patterns.deleteNamedPatterns();
+  const defaultTermsId = await termsRepository(tx).findDefaultTermsId();
+  await patterns.replaceVersions((await termsPattern(tx, defaultTermsId)).id, {
+    ...STANDARD_WEEKS.monday_to_friday_7_5_hours,
+    bankHolidayCalendar: "england_and_wales",
   });
-  const termsId = defaultTermsId ?? (await termsRepository(tx).insert(TERMS_NAMES[calendar]));
-  // Only the default terms has a pattern yet: Standard, which the new one replaces.
-  for (const link of (await patterns.findTermsLinks([termsId])).get(termsId) ?? []) {
-    await patterns.deleteTermsLink(link.id);
-  }
-  await patterns.insertTermsLink(termsId, {
-    workingPatternId: patternId,
-    effectiveFrom: null,
-    effectiveUntil: null,
-  });
-  return { termsId, patternId };
+}
+
+async function termsPattern(tx: Tx, termsId: string): Promise<WorkingPattern> {
+  const patterns = await workingPatternRepository(tx).findPatterns();
+  // Every set of terms gets its pattern as it is created, the default terms in the migration.
+  return patterns.find((pattern) => pattern.termsId === termsId)!;
+}
+
+/** Whether the pattern has one version, from the beginning, on `week`. */
+function isOnlyWeek({ versions }: WorkingPattern, week: PatternWeek): boolean {
+  const [only] = versions;
+  return (
+    versions.length === 1 &&
+    only!.startDate === null &&
+    only!.endDate === null &&
+    only!.fullDayMinutes === week.fullDayMinutes &&
+    only!.bankHolidayCalendar === week.bankHolidayCalendar &&
+    only!.minutes.join() === week.minutes.join()
+  );
 }
 
 /** Each employee with the id of the location its name matches, adding the locations no one has yet. */

@@ -51,7 +51,7 @@ it("combines the year's full-time and three-day weeks before rounding once", () 
     ...inputs.workingWeeks,
     {
       ...inputs.workingWeeks[0]!,
-      effectiveFrom: calendarDate("2026-09-01"),
+      startDate: calendarDate("2026-09-01"),
       minutes: [0, 450, 450, 450, 0, 0, 0],
     },
   ];
@@ -119,12 +119,12 @@ it("grants and takes nothing during a gap without a working week", () => {
   inputs.workingWeeks = [
     ...inputs.workingWeeks,
     {
-      effectiveFrom: calendarDate("2026-07-01"),
+      startDate: calendarDate("2026-07-01"),
       minutes: null,
       fullDayMinutes: null,
       bankHolidayCalendar: null,
     },
-    { ...inputs.workingWeeks[0]!, effectiveFrom: calendarDate("2026-10-01") },
+    { ...inputs.workingWeeks[0]!, startDate: calendarDate("2026-10-01") },
   ];
 
   const lines = calculateAllowance(inputs);
@@ -201,18 +201,18 @@ it("keeps 28 days across three equivalent policies without adding half a day", (
   inputs.policies = [
     {
       ...policy,
-      effectiveUntil: calendarDate("2026-03-31"),
+      endDate: calendarDate("2026-03-31"),
       rules: [{ ...yearly, id: "first-yearly" }],
     },
     {
       ...policy,
-      effectiveFrom: calendarDate("2026-04-01"),
-      effectiveUntil: calendarDate("2026-06-29"),
+      startDate: calendarDate("2026-04-01"),
+      endDate: calendarDate("2026-06-29"),
       rules: [{ ...yearly, id: "second-yearly" }],
     },
     {
       ...policy,
-      effectiveFrom: calendarDate("2026-06-30"),
+      startDate: calendarDate("2026-06-30"),
       rules: [{ ...yearly, id: "third-yearly" }],
     },
   ];

@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 
-import { type Orm, type Transact, transactor, type Tx } from "../../src/core/db";
+import { type Orm, ormOf, type Transact, transactor, type Tx } from "../../src/core/db";
 import { createEventBus } from "../../src/core/events";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
@@ -10,12 +10,21 @@ import {
   createTimeOffService,
   timeOffModule,
 } from "../../src/modules/timeOff";
+import { employeeTerms } from "../../src/modules/employees/db";
 import {
   allowanceLedgerLines,
   allowances,
   timeOffAllowanceRules,
+  timeOffPolicyRepository,
   timeOffTypes,
 } from "../../src/modules/timeOff/db";
+import {
+  type NewPolicyVersion,
+  RECORD_ONLY_POLICY,
+  STANDARD_LEAVE_POLICIES,
+  type StandardLeavePolicyKey,
+  type TimeOffTypeKey,
+} from "../../src/modules/timeOff/domain";
 import { type CalendarDate } from "../../src/utils";
 import { bankHolidayService } from "./bankHolidayService";
 import { employeeSetup } from "./statelessServices";
@@ -34,23 +43,76 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
   });
 }
 
-/** Links the UK statutory minimum to "England and Wales" terms, as an admin would. */
-export async function linkStatutoryMinimumToDefaultTerms(
+/** A policy terms get: a standard Annual leave policy, a record-only one for a type, or any rules for a type. */
+export type TermsPolicy =
+  | { key: StandardLeavePolicyKey }
+  | { recordOnly: TimeOffTypeKey }
+  | { timeOffTypeId: string; version: NewPolicyVersion };
+
+/**
+ * Gives terms copies of policies from the beginning and ensures their people's allowances, as
+ * turning time off on does; `today` is the engine's date.
+ */
+export async function giveTermsPolicies(
+  orm: Orm,
+  transact: Transact,
+  {
+    termsId,
+    policies,
+    today,
+  }: { termsId: string; policies: readonly TermsPolicy[]; today?: string },
+) {
+  const types = await orm.select().from(timeOffTypes);
+  const typeId = (typeKey: TimeOffTypeKey) => types.find((type) => type.typeKey === typeKey)!.id;
+  await transact(async (tx) => {
+    for (const policy of policies) {
+      const [timeOffTypeId, version] =
+        "key" in policy
+          ? [typeId("annual_leave"), STANDARD_LEAVE_POLICIES[policy.key]]
+          : "recordOnly" in policy
+            ? [typeId(policy.recordOnly), RECORD_ONLY_POLICY]
+            : [policy.timeOffTypeId, policy.version];
+      await timeOffPolicyRepository(tx).insertPolicy({ timeOffTypeId, termsId }, version);
+    }
+    const members = await ormOf(tx)
+      .select({ employeeId: employeeTerms.employeeId })
+      .from(employeeTerms)
+      .where(eq(employeeTerms.termsId, termsId));
+    await timeOffService(orm, { today }).ensureAllowances(OWNER, tx, {
+      employeeIds: members.map(({ employeeId }) => employeeId),
+      cause: { kind: "TIME_OFF_TURNED_ON", ref: null },
+    });
+  });
+}
+
+/** Gives "England and Wales" terms a copy of the UK statutory minimum, as turning time off on does. */
+export async function giveDefaultTermsStatutoryMinimum(
   orm: Orm,
   seed: TestSeed,
   transact: Transact,
 ) {
-  const service = timeOffService(orm);
-  const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    ({ key }) => key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [{ key: "uk_statutory_minimum" }],
+  });
 }
 
-/** The demo fill on `orm`, linking "England and Wales" terms to the demo's time off policies. */
+/** Terms' policies have no public read yet: each with its type and how its first version counts. */
+export async function readTermsPolicies(orm: Orm, termsId: string) {
+  const policies = await timeOffPolicyRepository(orm).findAll();
+  return policies
+    .filter((policy) => policy.termsId === termsId)
+    .map(({ id, timeOffType, versions: [version] }) => ({
+      id,
+      typeKey: timeOffType.typeKey,
+      balance: version!.balance,
+      bankHolidays: version!.bankHolidays,
+      entitlementDays:
+        version!.rules.find((rule) => rule.kind === "yearly_entitlement")?.entitlementDays ?? null,
+    }));
+}
+
+/** The demo fill on `orm`, turning time off on for "England and Wales" terms. */
 export function demoFillService(orm: Orm) {
   return createDemoFillService({ timeOff: timeOffService(orm) });
 }
@@ -63,7 +125,6 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
       orm,
       timeOff: timeOffService(orm),
       timeOffSetup: createTimeOffSetupService({
-        orm,
         logger: createLogger("silent"),
         decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },
         bankHolidays: bankHolidayService(),
@@ -75,13 +136,13 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
   return transactor(orm, eventBus);
 }
 
-/** Deletes every employee and the terms' time off policies, as startup composes it. */
+/** Deletes every employee and time off policy, as startup composes it. */
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
-    // Links first: linking holds their lock while its allowances wait on employee rows.
-    await timeOff.deleteAllTermsPolicies(ctx, tx);
+    await timeOff.lockPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
+    await timeOff.deleteAllPolicies(ctx, tx);
   };
 }
 

@@ -1,11 +1,10 @@
 import {
   expect,
-  OWNER,
+  giveTermsPolicies,
   seedTimeOffPolicy,
   test,
   TEST_OWNER,
   testTransactor,
-  timeOffService,
 } from "#test/support";
 
 import { connectDatabase } from "../../src/core/db";
@@ -16,17 +15,11 @@ test("returns an owner's employee time off figures through GraphQL", async ({ en
   const employee = await env.seed.employee({ startDate: "2025-01-01" });
   const database = connectDatabase(env.db.url, createLogger("silent"));
   try {
-    const service = timeOffService(database.orm, { today: new Date().toISOString().slice(0, 10) });
-    const termsId = await env.seed.defaultTermsId();
-    const policy = (await service.listPolicies(OWNER, database.orm)).find(
-      ({ key }) => key === "uk_statutory_minimum",
-    )!;
-    await testTransactor(database.orm)((tx) =>
-      service.linkTermsPolicies(OWNER, tx, {
-        termsId,
-        timeOffPolicyIds: [policy.id],
-      }),
-    );
+    await giveTermsPolicies(database.orm, testTransactor(database.orm), {
+      termsId: await env.seed.defaultTermsId(),
+      policies: [{ key: "uk_statutory_minimum" }],
+      today: new Date().toISOString().slice(0, 10),
+    });
   } finally {
     await database.close();
   }
@@ -90,22 +83,22 @@ test("returns every time off type for Settings through GraphQL", async ({ env })
         timeOffTypes: [
           {
             timeOffType: { name: "Annual leave", icon: "SUN", colour: "GREEN" },
-            balance: "BALANCE_FROM_ALLOWANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {
             timeOffType: { name: "Sickness", icon: "THERMOMETER", colour: "CORAL" },
-            balance: "NO_BALANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {
             timeOffType: { name: "Family leave", icon: "BABY", colour: "PINK" },
-            balance: "NO_BALANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {
             timeOffType: { name: "Other", icon: "CONFETTI", colour: "YELLOW" },
-            balance: "NO_BALANCE",
+            balance: null,
             daysTakenThisYear: 0,
           },
           {

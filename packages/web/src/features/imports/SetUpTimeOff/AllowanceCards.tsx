@@ -6,22 +6,22 @@ import type { Policy } from "./timeOffOptions";
 type Props = {
   /** Most common first. */
   policies: readonly Policy[];
-  selectedId: string;
+  selectedKey: Policy["key"];
   /** This year's bank holidays when everyone has one calendar, for "days off in all"; else null. */
   bankHolidays: number | null;
-  onSelect: (policyId: string) => void;
+  onSelect: (policyKey: Policy["key"]) => void;
 };
 
 /** The Annual leave everyone gets, a card per standard policy: "**20** days". */
-export function AllowanceCards({ policies, selectedId, bankHolidays, onSelect }: Props) {
+export function AllowanceCards({ policies, selectedKey, bankHolidays, onSelect }: Props) {
   return (
     <div className="grid gap-2.5 sm:grid-cols-3">
       {policies.map((policy, index) => (
         <OptionCard
-          key={policy.id}
+          key={policy.key}
           name="allowance"
-          value={policy.id}
-          selected={selectedId}
+          value={policy.key}
+          selected={selectedKey}
           onSelect={onSelect}
           title={
             <span className="flex flex-wrap items-baseline gap-x-1.5">

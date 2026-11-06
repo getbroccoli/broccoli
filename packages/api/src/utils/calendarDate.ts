@@ -61,6 +61,19 @@ export function isWithin(
   return (from === null || from <= date) && (until === null || date <= until);
 }
 
+/** The days from a start date to an end date, both included; null dates are open. */
+export interface CalendarDateRange {
+  /** Null: from the beginning. */
+  startDate: CalendarDate | null;
+  /** The last day; null: open-ended. */
+  endDate: CalendarDate | null;
+}
+
+/** Whether `range` includes `date`. */
+export function coversDate(range: CalendarDateRange, date: CalendarDate): boolean {
+  return isWithin(date, range.startDate, range.endDate);
+}
+
 /** Today as a calendar day in UTC. */
 export function todayInUtc(): CalendarDate {
   return new Date().toISOString().slice(0, 10) as CalendarDate;

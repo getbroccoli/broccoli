@@ -1,9 +1,9 @@
-import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Orm, Tx } from "../../../core/db";
+import { ApplicationError } from "../../../core/applicationError";
+import type { Tx } from "../../../core/db";
 import type { SetupTermsInput } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
+import { type CalendarDate, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
 import {
   createEmployeeReadService,
@@ -12,19 +12,19 @@ import {
   parseTermsSetup,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
-import type { AllowanceCause, DatedPolicyRow, TimeOffPolicy } from "../domain";
+import {
+  type AllowanceCause,
+  parseStandardLeavePolicyKey,
+  RECORD_ONLY_POLICY,
+  STANDARD_LEAVE_POLICIES,
+} from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 
 const employeeSetup = createEmployeeSetupService();
 
-/** A policy as a list shows it. */
-export type TimeOffPolicySummary = Pick<TimeOffPolicy, "id" | "name" | "key" | "balance"> & {
-  typeKey: TimeOffPolicy["timeOffType"]["typeKey"];
-};
-
-/** Which time off policies terms get, and the engine that keeps each person's allowances. */
+/** Turning time off on for terms, what people have, and the engine that keeps their allowances. */
 export interface TimeOffService {
   /**
    * Trusted, for operations that checked their caller, events and jobs: creates each employee's
@@ -38,28 +38,12 @@ export interface TimeOffService {
     input: { employeeIds: readonly string[]; cause: AllowanceCause },
   ) => Promise<EnsuredAllowances>;
   /**
-   * Gives terms each policy for its type from the beginning, then ensures their people's
-   * allowances, in the caller's transaction. Refuses with CONFLICT a type the terms already have.
-   */
-  linkTermsPolicies: (
-    ctx: SecurityContext,
-    tx: Tx,
-    input: { termsId: string; timeOffPolicyIds: readonly string[] },
-  ) => Promise<EnsuredAllowances & { employeeCount: number }>;
-  /**
    * Turns time off on, joining the caller's transaction: sets up each nation's terms on its working
-   * week (`EmployeeSetupService.setUpTerms`), links each its Annual leave policy, one of the
-   * standard ones, and the record-only policies, and ensures their people's allowances. Refuses
+   * week (`EmployeeSetupService.setUpTerms`), gives each a copy of its standard Annual leave policy
+   * and a record-only policy for every other type, and ensures their people's allowances. Refuses
    * with CONFLICT once any terms have a time off policy.
    */
   turnOnTimeOff: (ctx: SecurityContext, tx: Tx, input: SetupTermsInput) => Promise<TurnedOnTimeOff>;
-  /** The policies linked to terms, on any date. */
-  readTermsPolicies: (
-    ctx: SecurityContext,
-    input: { termsId: string },
-  ) => Promise<TimeOffPolicySummary[]>;
-  /** Every policy, such as for finding a standard one by its key. */
-  listPolicies: (ctx: SecurityContext, db: Orm | Tx) => Promise<TimeOffPolicySummary[]>;
   /**
    * Each employee's time off types for the leave year containing today, or their start when it
    * is later, by id, with their figures; ids outside the caller's time off scope are left out.
@@ -70,8 +54,13 @@ export interface TimeOffService {
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
-  /** Unlinks all terms' policies when setup or the demo goes back to its start. */
-  deleteAllTermsPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /**
+   * Holds back turning time off on until the caller's transaction ends. Going back to the start
+   * takes it before deleting the employees, as turning time off on takes it before their rows.
+   */
+  lockPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /** Deletes every time off policy when setup or the demo goes back to its start, after the employees. */
+  deleteAllPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
 /** What turning time off on did; the terms ids are in the order of the input's terms. */
@@ -102,137 +91,54 @@ export function createTimeOffService({
     ensureAllowancesOf(engine, tx, input);
   return {
     ensureAllowances,
-    async linkTermsPolicies(ctx, tx, input) {
-      ctx.require("MANAGE_WORKSPACE");
-      const repository = timeOffPolicyRepository(tx);
-      await repository.lockTermsLinks();
-      const termsId = parseUuid(input.termsId);
-      const employeeIds = termsId && (await employeeReads.readTermsMemberIds(tx, termsId));
-      if (!termsId || !employeeIds) {
-        throw new ApplicationError("NOT_FOUND", "The terms do not exist.");
-      }
-      const policies = await repository.findAll();
-      const chosen = input.timeOffPolicyIds.map((id) => {
-        const policy = policies.find((candidate) => candidate.id === parseUuid(id));
-        if (!policy) {
-          throw new ApplicationError("NOT_FOUND", "The time off policy does not exist.");
-        }
-        return policy;
-      });
-      const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
-      const ensured = await linkPolicies(engine, tx, { termsId, employeeIds, chosen, linked });
-      return { employeeCount: employeeIds.length, ...ensured };
-    },
     async turnOnTimeOff(ctx, tx, input) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       const setup = parseTermsSetup(input);
+      const annualLeaveKeys = input.terms.map(({ annualLeavePolicyKey }) =>
+        parseStandardLeavePolicyKey(annualLeavePolicyKey),
+      );
       const repository = timeOffPolicyRepository(tx);
-      await repository.lockTermsLinks();
-      if (await repository.hasAnyTermsLinks()) {
+      await repository.lockPolicies();
+      if (await repository.hasAnyTermsPolicies()) {
         throw new ApplicationError("CONFLICT", "Time off is already on.");
       }
-      const policies = await repository.findAll();
-      const annualLeave = input.terms.map(({ annualLeavePolicyId }) => {
-        const policy = policies.find(({ id }) => id === parseUuid(annualLeavePolicyId));
-        if (!policy?.key) {
-          throw invalidInput([{ field: "annualLeavePolicyId", code: "invalid" }]);
-        }
-        return policy;
-      });
-      const recordOnly = policies.filter(({ balance }) => balance === "no_balance");
+      const types = await repository.findAllTypes();
       const setUp = await employeeSetup.setUpTerms(ctx, tx, setup);
-      const totals = { allowancesCreated: 0, linesAppended: 0 };
       for (const [index, termsId] of setUp.termsIds.entries()) {
-        // No terms had a policy when the lock was taken, so none has links to check against.
-        const ensured = await linkPolicies(engine, tx, {
-          termsId,
-          employeeIds: setUp.memberIds[index]!,
-          chosen: [annualLeave[index]!, ...recordOnly],
-          linked: [],
-        });
-        totals.allowancesCreated += ensured.allowancesCreated;
-        totals.linesAppended += ensured.linesAppended;
+        for (const { id: timeOffTypeId, typeKey } of types) {
+          const version =
+            typeKey === "annual_leave"
+              ? STANDARD_LEAVE_POLICIES[annualLeaveKeys[index]!]
+              : RECORD_ONLY_POLICY;
+          await repository.insertPolicy({ timeOffTypeId, termsId }, version);
+        }
       }
+      const ensured = await ensureAllowancesOf(engine, tx, {
+        employeeIds: setUp.memberIds.flat(),
+        cause: { kind: "TIME_OFF_TURNED_ON", ref: null },
+      });
       const turnedOn = {
         termsIds: setUp.termsIds,
         createdPatternIds: setUp.createdPatternIds,
-        ...totals,
+        ...ensured,
       };
       tx.publish("timeOff.time_off_turned_on", {
         ...turnedOn,
-        timeOffPolicyIds: annualLeave.map(({ id }) => id),
+        annualLeavePolicyKeys: annualLeaveKeys,
         locationCount: input.locationTerms.length,
       });
       return turnedOn;
     },
-    async readTermsPolicies(ctx, input) {
-      ctx.require("MANAGE_WORKSPACE");
-      const termsId = parseUuid(input.termsId);
-      if (!termsId) {
-        return [];
-      }
-      const repository = timeOffPolicyRepository(orm);
-      const linked = (await repository.findTermsLinks([termsId])).get(termsId) ?? [];
-      const ids = new Set(linked.map(({ timeOffPolicyId }) => timeOffPolicyId));
-      return (await repository.findAll()).filter(({ id }) => ids.has(id)).map(toSummary);
-    },
-    async listPolicies(ctx, db) {
-      ctx.require("MANAGE_WORKSPACE");
-      return (await timeOffPolicyRepository(db).findAll()).map(toSummary);
-    },
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
     listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, today }, ctx),
-    async deleteAllTermsPolicies(ctx, tx) {
+    async lockPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
-      await timeOffPolicyRepository(tx).deleteAllTermsLinks();
+      await timeOffPolicyRepository(tx).lockPolicies();
+    },
+    async deleteAllPolicies(ctx, tx) {
+      ctx.requireSetupAccess("MANAGE_WORKSPACE");
+      await timeOffPolicyRepository(tx).deleteAll();
     },
   };
-}
-
-/**
- * Links the chosen policies to the terms, which already have `linked`, under the caller's lock on
- * the links, and ensures their people's allowances.
- */
-async function linkPolicies(
-  engine: Parameters<typeof ensureAllowancesOf>[0],
-  tx: Tx,
-  {
-    termsId,
-    employeeIds,
-    chosen,
-    linked,
-  }: {
-    termsId: string;
-    employeeIds: readonly string[];
-    chosen: readonly TimeOffPolicy[];
-    linked: readonly DatedPolicyRow[];
-  },
-): Promise<EnsuredAllowances> {
-  const repository = timeOffPolicyRepository(tx);
-  const typeIds = [
-    ...linked.map(({ timeOffTypeId }) => timeOffTypeId),
-    ...chosen.map(({ timeOffType }) => timeOffType.id),
-  ];
-  const conflict = chosen.find(
-    ({ timeOffType }) => typeIds.indexOf(timeOffType.id) < typeIds.lastIndexOf(timeOffType.id),
-  );
-  if (conflict) {
-    throw new ApplicationError(
-      "CONFLICT",
-      `The terms already have a policy for ${conflict.timeOffType.name}.`,
-    );
-  }
-  await repository.insertTermsLinks(
-    termsId,
-    chosen.map(({ id, timeOffType }) => ({ timeOffTypeId: timeOffType.id, timeOffPolicyId: id })),
-  );
-  return ensureAllowancesOf(engine, tx, {
-    employeeIds,
-    cause: { kind: "POLICY_LINKED_TO_TERMS", ref: termsId },
-  });
-}
-
-function toSummary({ id, name, key, balance, timeOffType }: TimeOffPolicy): TimeOffPolicySummary {
-  return { id, name, key, balance, typeKey: timeOffType.typeKey };
 }

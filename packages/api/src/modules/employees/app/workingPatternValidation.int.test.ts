@@ -1,4 +1,4 @@
-import { expect, OWNER, test, workingPatternService } from "#test/support";
+import { expect, OWNER, test, workingPatternService, createStandardPattern } from "#test/support";
 
 test("creating a pattern refuses an unknown bank holiday calendar", async ({ orm }) => {
   await expect(
@@ -27,6 +27,7 @@ test("creating a pattern refuses a name already taken", async ({ orm }) => {
 
 test("renaming a pattern refuses a name already taken", async ({ orm }) => {
   const patterns = workingPatternService(orm);
+  await createStandardPattern(orm);
   const pattern = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],

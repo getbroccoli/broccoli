@@ -1,4 +1,4 @@
-import { expect, OWNER, readAllowances, test, timeOffService } from "#test/support";
+import { expect, giveTermsPolicies, readAllowances, test, timeOffService } from "#test/support";
 
 import { createLogger } from "../../../core/logger";
 import type { CalendarDate } from "../../../utils";
@@ -6,14 +6,8 @@ import { ensureAllowancesJob } from "./ensureAllowancesJob";
 
 test("a run on 1 January creates the new year's allowances", async ({ orm, seed, transact }) => {
   const employee = await seed.employee({ startDate: "2025-01-01" });
-  const service = timeOffService(orm, { today: "2026-06-01" });
   const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: "uk_statutory_minimum" }] });
   const [before] = await readAllowances(orm, employee.id);
   expect(before).toMatchObject({ leaveYearStart: "2026-01-01", total: 20 });
   const job = ensureAllowancesJob({
@@ -47,12 +41,7 @@ test("a run on 1 January creates the new year's allowances", async ({ orm, seed,
 test("a run repairs a missing allowance", async ({ orm, seed, transact }) => {
   const service = timeOffService(orm, { today: "2026-06-01" });
   const termsId = await seed.defaultTermsId();
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    (p) => p.key === "uk_statutory_minimum",
-  )!;
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, { termsId, policies: [{ key: "uk_statutory_minimum" }] });
   const employee = await seed.employee({ startDate: "2025-01-01" });
   expect(await readAllowances(orm, employee.id)).toEqual([]);
   const job = ensureAllowancesJob({

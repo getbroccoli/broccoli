@@ -49,9 +49,9 @@ export interface EmploymentPeriod {
 
 /** The policy that applies to the person for this type from a date to a date; null is open. */
 export interface DatedPolicy {
-  effectiveFrom: CalendarDate | null;
+  startDate: CalendarDate | null;
   /** The last day it applies. */
-  effectiveUntil: CalendarDate | null;
+  endDate: CalendarDate | null;
   balance: "balance_from_allowance" | "unlimited_balance" | "no_balance";
   /** Null unless the balance is `balance_from_allowance`. */
   bankHolidays: "bank_holidays_included_in_allowance" | "bank_holidays_on_top_of_allowance" | null;
@@ -60,7 +60,7 @@ export interface DatedPolicy {
 
 /** What a person works from a date until the next week; minutes null while they have no pattern. */
 export interface DatedWorkingWeek {
-  effectiveFrom: CalendarDate;
+  startDate: CalendarDate;
   minutes: WeekdayMinutes | null;
   fullDayMinutes: number | null;
   bankHolidayCalendar: BankHolidayCalendar | null;
@@ -108,7 +108,7 @@ export function calculateAllowance(inputs: AllowanceInputs): CalculatedAllowance
 
 /** A full year's entitlement for `daysPerWeek` working days, pro-rated and capped. */
 export function yearlyDays(
-  rule: Extract<AllowanceRule, { kind: "yearly_entitlement" }>,
+  rule: Omit<Extract<AllowanceRule, { kind: "yearly_entitlement" }>, "id">,
   daysPerWeek: Big,
 ): Big {
   const days = daysPerWeek.times(rule.entitlementDays).div(rule.entitlementDaysPerWeek);
@@ -141,10 +141,10 @@ function keptParts(inputs: AllowanceInputs): Part[] {
     const employed = inputs.employments.some(({ startDate, endDate }) =>
       isWithin(from, startDate, endDate),
     );
-    const policy = inputs.policies.find(({ effectiveFrom, effectiveUntil }) =>
-      isWithin(from, effectiveFrom, effectiveUntil),
+    const policy = inputs.policies.find(({ startDate, endDate }) =>
+      isWithin(from, startDate, endDate),
     );
-    const week = inputs.workingWeeks.findLast(({ effectiveFrom }) => effectiveFrom <= from);
+    const week = inputs.workingWeeks.findLast(({ startDate }) => startDate <= from);
     const { minutes, fullDayMinutes, bankHolidayCalendar } = week ?? {};
     if (!employed || policy?.balance !== "balance_from_allowance" || !minutes || !fullDayMinutes) {
       return [];
@@ -168,11 +168,8 @@ function partStarts(inputs: AllowanceInputs): CalendarDate[] {
   const { leaveYear, employments, policies, workingWeeks, serviceStart } = inputs;
   const changes = [
     ...employments.flatMap(({ startDate, endDate }) => [startDate, endDate && addDays(endDate, 1)]),
-    ...policies.flatMap(({ effectiveFrom, effectiveUntil }) => [
-      effectiveFrom,
-      effectiveUntil && addDays(effectiveUntil, 1),
-    ]),
-    ...workingWeeks.map(({ effectiveFrom }) => effectiveFrom),
+    ...policies.flatMap(({ startDate, endDate }) => [startDate, endDate && addDays(endDate, 1)]),
+    ...workingWeeks.map(({ startDate }) => startDate),
     ...policies.flatMap(({ rules }) =>
       rules.map((rule) =>
         rule.kind === "service_extra" && serviceStart

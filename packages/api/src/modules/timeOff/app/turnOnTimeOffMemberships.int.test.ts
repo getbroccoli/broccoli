@@ -16,7 +16,7 @@ test("a new person starts on terms configured before their location existed", as
   orm,
   transact,
 }) => {
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   input.locationTerms = [{ locationName: "  gLaSgOw  ", bankHolidayCalendar: "scotland" }];
   const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
   const employees = employeeServices(orm);
@@ -44,7 +44,7 @@ test("a new person starts on terms configured before their location existed", as
   expect(employee).toMatchObject({ locationId: locations[0]!.id });
   const memberships = await transact((tx) => employees.readTermsMemberships(tx, [employee!.id]));
   expect(memberships.get(employee!.id)).toEqual([
-    { termsId: result.termsIds[1], effectiveFrom: null, effectiveUntil: null },
+    { termsId: result.termsIds[1], startDate: null, endDate: null },
   ]);
   expect(await readAllowances(orm, employee!.id)).toMatchObject([
     { typeKey: "annual_leave", total: 21 },
@@ -54,7 +54,7 @@ test("a new person starts on terms configured before their location existed", as
 test("changing a person's location keeps their terms", async ({ orm, seed, transact }) => {
   const glasgow = await seed.location("Glasgow");
   const leeds = await seed.location("Leeds");
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
   const result = await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
   const employee = await seed.employee({ locationId: glasgow.id });
   const employees = employeeServices(orm);
@@ -64,7 +64,7 @@ test("changing a person's location keeps their terms", async ({ orm, seed, trans
   expect(updated.employee).toMatchObject({ locationId: leeds.id });
   const memberships = await transact((tx) => employees.readTermsMemberships(tx, [employee.id]));
   expect(memberships.get(employee.id)).toEqual([
-    { termsId: result.termsIds[1], effectiveFrom: null, effectiveUntil: null },
+    { termsId: result.termsIds[1], startDate: null, endDate: null },
   ]);
 });
 
@@ -82,7 +82,7 @@ test("turning time off on preserves deliberately changed terms memberships", asy
   const employees = employeeServices(orm);
   const ids = [moved.id, datedDefault.id];
   const before = await transact((tx) => employees.readTermsMemberships(tx, ids));
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
 
   await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
@@ -105,10 +105,10 @@ test("turning time off on preserves existing default memberships and own pattern
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
     workingPatternId: own.id,
-    effectiveFrom: "2025-01-01",
+    startDate: "2025-01-01",
   });
   const before = await readOwnPatternAssignments(orm, [employee.id]);
-  const input = await scotlandTimeOffSetup(orm);
+  const input = scotlandTimeOffSetup();
 
   await transact((tx) => timeOffService(orm).turnOnTimeOff(OWNER, tx, input));
 
@@ -116,7 +116,7 @@ test("turning time off on preserves existing default memberships and own pattern
     employeeServices(orm).readTermsMemberships(tx, [employee.id]),
   );
   expect(memberships.get(employee.id)).toEqual([
-    { termsId: await seed.defaultTermsId(), effectiveFrom: null, effectiveUntil: null },
+    { termsId: await seed.defaultTermsId(), startDate: null, endDate: null },
   ]);
   expect(await readOwnPatternAssignments(orm, [employee.id])).toEqual(before);
   expect(
@@ -129,7 +129,7 @@ test("turning time off on preserves existing default memberships and own pattern
     ).get(employee.id),
   ).toEqual([
     {
-      effectiveFrom: "2026-01-01",
+      startDate: "2026-01-01",
       minutes: [450, 0, 0, 0, 0, 0, 0],
       fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",

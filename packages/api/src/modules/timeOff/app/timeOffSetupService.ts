@@ -1,5 +1,4 @@
 import Big from "big.js";
-import type { Orm } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
 import { type Decisions, DecisionsError } from "../../../integrations/ai";
@@ -9,8 +8,12 @@ import {
   type BankHolidayCalendar,
   type BankHolidayService,
 } from "../../bankHolidays";
-import { timeOffPolicyRepository } from "../db";
-import { type StandardLeavePolicyKey, yearlyDays } from "../domain";
+import {
+  STANDARD_LEAVE_POLICIES,
+  STANDARD_LEAVE_POLICY_KEYS,
+  type StandardLeavePolicyKey,
+  yearlyDays,
+} from "../domain";
 
 /** The choices of the Company defaults page, and the model's suggestion for each location. Admins only. */
 export interface TimeOffSetupService {
@@ -29,7 +32,7 @@ export interface TimeOffSetupService {
 export interface TimeOffSetup {
   /** The standard Annual leave policies, most common first. */
   annualLeavePolicies: {
-    id: string;
+    key: StandardLeavePolicyKey;
     name: string;
     daysForFiveDayWeek: number;
     bankHolidaysOnTop: boolean;
@@ -46,13 +49,11 @@ export interface LocationCalendarSuggestion {
 }
 
 export function createTimeOffSetupService({
-  orm,
   logger,
   decisions,
   bankHolidays,
   today = todayInLondon,
 }: {
-  orm: Orm;
   logger: Logger;
   decisions: Decisions;
   bankHolidays: BankHolidayService;
@@ -61,7 +62,6 @@ export function createTimeOffSetupService({
   return {
     async readTimeOffSetup(ctx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
-      const policies = await timeOffPolicyRepository(orm).findAll();
       const year = today().slice(0, 4);
       // The setup holder is no signed-in user; bank holidays are public facts, so Broccoli reads them.
       const holidays = await bankHolidays.readBankHolidays(PrincipalSecurityContext.system(), {
@@ -71,9 +71,9 @@ export function createTimeOffSetupService({
       });
       return {
         annualLeavePolicies: STANDARD_LEAVE_POLICY_KEYS.map((key) => {
-          const { id, name, rules, bankHolidays } = policies.find((policy) => policy.key === key)!;
+          const { name, rules, bankHolidays } = STANDARD_LEAVE_POLICIES[key];
           return {
-            id,
+            key,
             name,
             daysForFiveDayWeek: yearlyDays(
               // Every Annual leave policy has one.
@@ -114,13 +114,6 @@ export function createTimeOffSetupService({
 
 /** One request covers a large company's offices; any beyond are left to the owner. */
 const MAX_LOCATIONS_ASKED = 100;
-
-/** Most common first. */
-const STANDARD_LEAVE_POLICY_KEYS: readonly StandardLeavePolicyKey[] = [
-  "uk_20_days_plus_bank_holidays",
-  "uk_25_days_plus_bank_holidays",
-  "uk_statutory_minimum",
-];
 
 const NATION_OPTIONS = {
   england_and_wales: "A place in England or Wales, such as Manchester office or Swansea site.",

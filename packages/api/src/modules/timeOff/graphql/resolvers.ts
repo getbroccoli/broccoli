@@ -2,7 +2,7 @@ import DataLoader from "dataloader";
 
 import { perRequest, type Resolvers, type ResolversTypes } from "../../../core/graphql";
 import type { TimeOffSetupService, TimeOffService } from "../app";
-import { DEFAULT_TIME_OFF_TYPE_LOOK, type TimeOffPolicy, type TimeOffType } from "../domain";
+import { DEFAULT_TIME_OFF_TYPE_LOOK, type PolicyVersion, type TimeOffType } from "../domain";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
 
@@ -45,7 +45,10 @@ export function createResolvers(
       timeOffSetup: async (_parent, _args, context) => {
         const setup = await timeOffSetup.readTimeOffSetup(context.getActor());
         return {
-          ...setup,
+          annualLeavePolicies: setup.annualLeavePolicies.map(({ key, ...policy }) => ({
+            ...policy,
+            key: toEnum(key),
+          })),
           bankHolidayCalendars: setup.bankHolidayCalendars.map(({ calendar, countThisYear }) => ({
             calendar: toEnum(calendar),
             countThisYear,
@@ -81,6 +84,6 @@ function toGraphqlType(type: TimeOffType) {
   };
 }
 
-function toBalanceKind(balance: TimeOffPolicy["balance"] | null) {
+function toBalanceKind(balance: PolicyVersion["balance"] | null) {
   return balance && BALANCE_KINDS[balance];
 }

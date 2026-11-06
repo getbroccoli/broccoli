@@ -24,7 +24,7 @@ A manual check of the "Company defaults" setup page and turning time off on as s
 
 - [ ] Choose 25 days and Mon–Thu, 8 h a day, press "Turn on time off", choose "Only admins" and finish setup.
 - [ ] `select e.email, t.name as terms from employee_terms m join employees e on e.id = m.employee_id join terms t on t.id = m.terms_id;` puts the Glasgow people on Scotland and the others on England and Wales.
-- [ ] `select p.name, w.monday_minutes, w.friday_minutes, w.bank_holiday_calendar from working_patterns p join working_pattern_weeks w on w.working_pattern_id = p.id;` lists Standard, "England and Wales · Mon–Thu, 8 hours" (480, 0, england_and_wales) and "Scotland · Mon–Thu, 8 hours" (480, 0, scotland).
+- [ ] `select t.name, v.monday_minutes, v.friday_minutes, v.bank_holiday_calendar from working_patterns p join terms t on t.id = p.terms_id join working_pattern_versions v on v.working_pattern_id = p.id;` lists England and Wales (480, 0, england_and_wales) and Scotland (480, 0, scotland), one row each.
 - [ ] `select e.email, sum(l.amount) from allowance_ledger_lines l join allowances a on a.id = l.allowance_id join employees e on e.id = a.employee_id group by e.email;` gives every person an allowance; a full-time Glasgow person has 21 days in 2026.
 - [ ] Settings → Locations still lists Glasgow, Leeds and Remote.
 - [ ] Adding a person at Glasgow through an import after setup puts them on Scotland terms (the first query).

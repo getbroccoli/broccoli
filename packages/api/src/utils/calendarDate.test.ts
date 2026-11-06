@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { addDays, parseCalendarDate, parseDateColumn } from ".";
+import { addDays, type CalendarDate, coversDate, parseCalendarDate, parseDateColumn } from ".";
 
 it("returns a real date unchanged", () => {
   expect(parseCalendarDate("2026-02-28")).toBe("2026-02-28");
@@ -95,4 +95,16 @@ it("leaves a cell that is not a date empty", () => {
     null,
     null,
   ]);
+});
+
+it("covers inclusive boundaries and treats null boundaries as open", () => {
+  const range = {
+    startDate: "2026-09-01" as CalendarDate,
+    endDate: "2026-09-30" as CalendarDate,
+  };
+  expect(coversDate(range, "2026-08-31" as CalendarDate)).toBe(false);
+  expect(coversDate(range, "2026-09-01" as CalendarDate)).toBe(true);
+  expect(coversDate(range, "2026-09-30" as CalendarDate)).toBe(true);
+  expect(coversDate(range, "2026-10-01" as CalendarDate)).toBe(false);
+  expect(coversDate({ startDate: null, endDate: null }, "2026-09-01" as CalendarDate)).toBe(true);
 });

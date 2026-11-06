@@ -17,7 +17,7 @@ export interface DemoFillService {
   /**
    * Reads the demo company's avatars, so no file I/O runs while a transaction holds locks, and
    * returns its fill: for an instance without employees, the demo company, with time off turned on
-   * as an owner would: everyone on "England and Wales" terms, Standard's week and the UK statutory
+   * as an owner would: everyone on "England and Wales" terms, Monday to Friday and the UK statutory
    * minimum; otherwise nothing.
    */
   prepareDemoFill: (today?: CalendarDate) => Promise<DemoFill>;
@@ -26,16 +26,15 @@ export interface DemoFillService {
 export function createDemoFillService({
   timeOff,
 }: {
-  timeOff: Pick<TimeOffService, "listPolicies" | "turnOnTimeOff">;
+  timeOff: Pick<TimeOffService, "turnOnTimeOff">;
 }): DemoFillService {
   async function turnOnDemoTimeOff(ctx: SecurityContext, tx: Tx) {
-    const policies = await timeOff.listPolicies(ctx, tx);
     await timeOff.turnOnTimeOff(ctx, tx, {
       terms: [
         {
           bankHolidayCalendar: "england_and_wales",
           workingWeek: "monday_to_friday_7_5_hours",
-          annualLeavePolicyId: policies.find(({ key }) => key === "uk_statutory_minimum")!.id,
+          annualLeavePolicyKey: "uk_statutory_minimum",
         },
       ],
       locationTerms: [],

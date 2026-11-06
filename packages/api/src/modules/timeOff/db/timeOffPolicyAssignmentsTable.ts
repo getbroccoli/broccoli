@@ -7,7 +7,7 @@ import { timeOffTypes } from "./timeOffTypesTable";
 
 /**
  * An exception: one person on a policy for one type between two dates, ahead of their terms'
- * policy. A person's rows for one type never overlap; the migration adds that exclusion
+ * policy; never a terms' policy. A person's rows for one type never overlap; the migration adds that exclusion
  * constraint and the foreign key to employees, which another module owns.
  */
 export const timeOffPolicyAssignments = pgTable(
@@ -19,9 +19,9 @@ export const timeOffPolicyAssignments = pgTable(
     employeeId: uuid("employee_id").notNull(),
     timeOffTypeId: uuid("time_off_type_id").notNull(),
     timeOffPolicyId: uuid("time_off_policy_id").notNull(),
-    effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>().notNull(),
+    startDate: date("start_date", { mode: "string" }).$type<CalendarDate>().notNull(),
     /** The last day the row applies; null: open-ended. */
-    effectiveUntil: date("effective_until", { mode: "string" }).$type<CalendarDate>(),
+    endDate: date("end_date", { mode: "string" }).$type<CalendarDate>(),
   },
   (table) => [
     // Named here: the generated name would pass Postgres's 63-character limit.
@@ -39,7 +39,7 @@ export const timeOffPolicyAssignments = pgTable(
     index("time_off_policy_assignments_policy_idx").on(table.timeOffPolicyId),
     check(
       "time_off_policy_assignments_dates_in_order",
-      sql`${table.effectiveUntil} >= ${table.effectiveFrom}`,
+      sql`${table.endDate} >= ${table.startDate}`,
     ),
   ],
 );

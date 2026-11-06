@@ -20,10 +20,6 @@ export {
   type LocationWithPeopleCount,
 } from "./locationService";
 export { employeeDirectory } from "./employeeDirectory";
-export {
-  createTermsWorkingPatternService,
-  type TermsWorkingPatternService,
-} from "./termsWorkingPatternService";
 export { createWorkingPatternService, type WorkingPatternService } from "./workingPatternService";
 export {
   createEmployeeWorkingPatternService,

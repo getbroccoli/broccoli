@@ -69,7 +69,10 @@ export function TimeOffStep({ search }: Props) {
     !isPicked(name) && !suggested.loading && (suggestionOf(name)?.unsure ?? true);
 
   const policies = data?.timeOffSetup.annualLeavePolicies ?? [];
-  const policyId = policies.find(({ id }) => id === state.policyId)?.id ?? policies[0]?.id ?? "";
+  const policyKey =
+    policies.find(({ key }) => key === state.policyKey)?.key ??
+    policies[0]?.key ??
+    "UK_20_DAYS_PLUS_BANK_HOLIDAYS";
   const week = state.week ?? WEEKS[0].week;
   const nation = state.nation ?? "ENGLAND_AND_WALES";
   const holidaysOf = (calendar: BankHolidayCalendar) =>
@@ -104,7 +107,7 @@ export function TimeOffStep({ search }: Props) {
         ).map((calendar) => ({
           bankHolidayCalendar: calendar,
           workingWeek: week,
-          annualLeavePolicyId: policyId,
+          annualLeavePolicyKey: policyKey,
         })),
         locationTerms: locations.map(({ name }) => ({
           locationName: name,
@@ -162,9 +165,9 @@ export function TimeOffStep({ search }: Props) {
             >
               <AllowanceCards
                 policies={policies}
-                selectedId={policyId}
+                selectedKey={policyKey}
                 bankHolidays={calendarsInUse.length === 1 ? holidaysOf(calendarsInUse[0]!) : null}
-                onSelect={(id) => change({ policyId: id })}
+                onSelect={(key) => change({ policyKey: key })}
               />
             </Question>
             <Question

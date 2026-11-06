@@ -10,7 +10,7 @@ const allowance = {
   leaveYearStart: calendarDate("2026-01-01"),
   leaveYearEnd: calendarDate("2026-12-31"),
 };
-const linked = { kind: "POLICY_LINKED_TO_TERMS", ref: "terms" } as const;
+const linked = { kind: "TIME_OFF_TURNED_ON", ref: "terms" } as const;
 
 it("writes every calculated line except a zero rounding for a new allowance", () => {
   const lines = ledgerDifference(allowance, calculateAllowance(allowanceInputs()), [], linked);
@@ -36,7 +36,7 @@ it("writes every calculated line except a zero rounding for a new allowance", ()
   ]);
   expect(
     lines.every(
-      ({ causeKind, causeRef }) => causeKind === "policy_linked_to_terms" && causeRef === "terms",
+      ({ causeKind, causeRef }) => causeKind === "time_off_turned_on" && causeRef === "terms",
     ),
   ).toEqual(true);
 });
@@ -48,7 +48,7 @@ it("appends only the differences of a September switch to Tuesday through Thursd
     ...inputs.workingWeeks,
     {
       ...inputs.workingWeeks[0]!,
-      effectiveFrom: calendarDate("2026-09-01"),
+      startDate: calendarDate("2026-09-01"),
       minutes: [0, 450, 450, 450, 0, 0, 0],
     },
   ];

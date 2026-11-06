@@ -1,13 +1,13 @@
 import {
-  employeeServices,
+  demoFillService,
   demoService,
+  employeeServices,
   expect,
   OWNER,
   readAllowances,
+  readTermsPolicies,
   storedFileIds,
   test,
-  timeOffService,
-  demoFillService,
 } from "#test/support";
 
 import { parseCalendarDate } from "../../../utils";
@@ -40,16 +40,15 @@ test("filling the demo links England and Wales terms' time off policies and gran
   seed,
   transact,
 }) => {
-  const service = timeOffService(orm);
   const termsId = await seed.defaultTermsId();
 
   await transact(await demoFillService(orm).prepareDemoFill(today));
 
-  const policies = await service.readTermsPolicies(OWNER, { termsId });
+  const policies = await readTermsPolicies(orm, termsId);
   expect(policies).toHaveLength(4);
   expect(policies).toEqual(
     expect.arrayContaining([
-      expect.objectContaining({ key: "uk_statutory_minimum", typeKey: "annual_leave" }),
+      expect.objectContaining({ typeKey: "annual_leave", entitlementDays: 28 }),
       expect.objectContaining({ typeKey: "sickness", balance: "no_balance" }),
       expect.objectContaining({ typeKey: "family_leave", balance: "no_balance" }),
       expect.objectContaining({ typeKey: "other", balance: "no_balance" }),

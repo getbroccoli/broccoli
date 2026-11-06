@@ -22,12 +22,12 @@ export const employeeTerms = pgTable(
       .notNull()
       .references(() => terms.id),
     /** Null: since the employment started, for a person whose start date is unknown. */
-    effectiveFrom: date("effective_from", { mode: "string" }).$type<CalendarDate>(),
+    startDate: date("start_date", { mode: "string" }).$type<CalendarDate>(),
     /** The last day the row applies; null: still on the terms. */
-    effectiveUntil: date("effective_until", { mode: "string" }).$type<CalendarDate>(),
+    endDate: date("end_date", { mode: "string" }).$type<CalendarDate>(),
   },
   (table) => [
     index("employee_terms_terms_idx").on(table.termsId),
-    check("employee_terms_dates_in_order", sql`${table.effectiveUntil} >= ${table.effectiveFrom}`),
+    check("employee_terms_dates_in_order", sql`${table.endDate} >= ${table.startDate}`),
   ],
 );

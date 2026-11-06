@@ -8,4 +8,5 @@ export { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
 export { timeOff } from "./timeOffTable";
 export { timeOffDays } from "./timeOffDaysTable";
 export { timeOffPolicies } from "./timeOffPoliciesTable";
+export { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
 export { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";

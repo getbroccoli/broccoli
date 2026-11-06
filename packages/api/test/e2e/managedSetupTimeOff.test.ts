@@ -1,11 +1,10 @@
 import {
   approveReviewedImport,
   expect,
-  OWNER,
-  startManagedEnv,
+  readTermsPolicies,
   signInAsManagedOwner,
+  startManagedEnv,
   test,
-  timeOffService,
 } from "#test/support";
 
 import { connectDatabase } from "../../src/core/db";
@@ -22,28 +21,22 @@ test("a managed owner completes setup with time off over GraphQL", async () => {
   });
   const database = connectDatabase(env.db.url, createLogger("silent"));
   try {
-    const service = timeOffService(database.orm);
-    const policy = (await service.listPolicies(OWNER, database.orm)).find(
-      ({ key }) => key === "uk_statutory_minimum",
-    )!;
-
-    const response = await browser.graphql(
-      `mutation Complete($policyId: ID!) {
+    const response = await browser.graphql(`mutation {
       setup { complete(input: { timeOff: {
-        terms: [{ bankHolidayCalendar: ENGLAND_AND_WALES workingWeek: MONDAY_TO_FRIDAY_7_5_HOURS annualLeavePolicyId: $policyId }]
+        terms: [{ bankHolidayCalendar: ENGLAND_AND_WALES workingWeek: MONDAY_TO_FRIDAY_7_5_HOURS annualLeavePolicyKey: UK_STATUTORY_MINIMUM }]
         locationTerms: []
       } }) { setup { id step } error { __typename ... on Error { message } } } }
-    }`,
-      { policyId: policy.id },
-    );
+    }`);
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       data: { setup: { complete: { setup: { id: "instance", step: "DONE" }, error: null } } },
     });
-    expect(
-      await service.readTermsPolicies(OWNER, { termsId: await env.seed.defaultTermsId() }),
-    ).toEqual(expect.arrayContaining([expect.objectContaining({ id: policy.id })]));
+    expect(await readTermsPolicies(database.orm, await env.seed.defaultTermsId())).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ typeKey: "annual_leave", entitlementDays: 28 }),
+      ]),
+    );
   } finally {
     await database.close();
   }

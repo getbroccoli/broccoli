@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { expect, OWNER, test, timeOffService } from "#test/support";
+import { expect, giveTermsPolicies, test, timeOffService } from "#test/support";
 
 import type { Orm, Transact } from "../../../core/db";
 import { createLogger } from "../../../core/logger";
@@ -19,14 +19,11 @@ test("the daily job runs within a minute for 10,000 people with five years of le
   for (let added = 0; added < EMPLOYEES; added += 1_000) {
     await seed.employees(1_000);
   }
-  const service = timeOffService(orm, { today: "2022-06-01" });
-  const policy = (await service.listPolicies(OWNER, orm)).find(
-    ({ key }) => key === "uk_statutory_minimum",
-  )!;
-  const termsId = await seed.defaultTermsId();
-  await transact((tx) =>
-    service.linkTermsPolicies(OWNER, tx, { termsId, timeOffPolicyIds: [policy.id] }),
-  );
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [{ key: "uk_statutory_minimum" }],
+    today: "2022-06-01",
+  });
   for (const year of [2023, 2024, 2025, 2026]) {
     await runJobOn(orm, transact, `${year}-01-01`);
   }
