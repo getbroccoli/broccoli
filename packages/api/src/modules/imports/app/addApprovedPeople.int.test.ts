@@ -224,8 +224,8 @@ test("adds approved people to their chosen locations without creating left-out l
   const employees = employeeServices(orm);
   const locations = await employees.listLocations(OWNER);
   expect(locations).toEqual([
-    { id: expect.any(String) as unknown, name: "Leeds", peopleCount: 2 },
-    { id: expect.any(String) as unknown, name: "York", peopleCount: 1 },
+    { id: expect.any(String) as unknown, name: "Leeds", peopleCount: 2, termsId: null },
+    { id: expect.any(String) as unknown, name: "York", peopleCount: 1, termsId: null },
   ]);
   const { edges } = await employees.listEmployees(OWNER, {});
   expect(edges.map(({ node }) => ({ email: node.email, locationId: node.locationId }))).toEqual(

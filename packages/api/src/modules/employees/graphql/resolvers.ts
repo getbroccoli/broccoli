@@ -14,7 +14,7 @@ import type {
   TermsService,
 } from "../app";
 import { avatarUrl } from "../http";
-import { employeeLoaders } from "./loaders";
+import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
 export function createResolvers(
   services: EmployeeService &
@@ -40,14 +40,12 @@ export function createResolvers(
       allTerms: (_parent, _args, context) => services.listTerms(context.getActor()),
       terms: (_parent, { id }, context) => services.readTerms(context.getActor(), id),
     },
+    Location: {
+      // Never null: deleting terms gives their locations none, which reads as the default terms.
+      terms: async ({ termsId }, _args, context) =>
+        (await loaders(context).terms.load(termsId ?? DEFAULT_TERMS))!,
+    },
     Terms: {
-      locations: async ({ locations }, _args, context) => {
-        const loaded = await Promise.all(
-          locations.map(({ id }) => loaders(context).location.load(id)),
-        );
-        // A location deleted since the terms were read is left out.
-        return loaded.filter((location) => location !== null);
-      },
       // shortcut: one query per terms; batch it when a list selects history.
       history: (terms, { first, after }, context) =>
         services.readTermsHistory(context.getActor(), terms.id, {
@@ -115,16 +113,10 @@ export function createResolvers(
           ["NOT_FOUND"],
         ),
       createLocation: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["LocationCreatePayload"]>(
-          async () => ({
-            // A new location has nobody in it yet.
-            location: {
-              ...(await services.createLocation(context.getActor(), input)),
-              peopleCount: 0,
-            },
-          }),
-          ["INVALID_INPUT"],
-        ),
+        mutationPayload<ResolversTypes["LocationCreatePayload"]>(async () => {
+          const { id } = await services.createLocation(context.getActor(), input);
+          return { location: await loaders(context).location.load(id) };
+        }, ["INVALID_INPUT"]),
       updateLocation: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["LocationUpdatePayload"]>(async () => {
           const { id } = await services.updateLocation(context.getActor(), input);

@@ -1,13 +1,16 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
+import type { Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
 import { parseUuid } from "../../../utils";
-import { locationRepository } from "../db";
+import { locationRepository, termsRepository } from "../db";
 import { type Location, LocationNameTakenError, parseLocationName } from "../domain";
 
-/** A location with how many people are in it now. */
+/** A location with how many people are in it now, and the terms its new people start on. */
 export interface LocationWithPeopleCount extends Location {
   peopleCount: number;
+  /** Null: the default terms. */
+  termsId: string | null;
 }
 
 /**
@@ -17,10 +20,23 @@ export interface LocationWithPeopleCount extends Location {
 export interface LocationService {
   /** Every location, by name ignoring case, with how many people are in each. */
   listLocations: (ctx: SecurityContext) => Promise<LocationWithPeopleCount[]>;
-  /** Adds a location; refuses a name another location has, ignoring case. Admins only. */
-  createLocation: (ctx: SecurityContext, input: { name: string }) => Promise<Location>;
-  /** Renames a location; its people's history keeps the old name. Admins only. */
-  updateLocation: (ctx: SecurityContext, input: { id: string; name: string }) => Promise<Location>;
+  /**
+   * Adds a location whose new people start on `termsId`, or on the default terms when it is left
+   * out or null; refuses a name another location has, ignoring case. Admins only.
+   */
+  createLocation: (
+    ctx: SecurityContext,
+    input: { name: string; termsId?: string | null },
+  ) => Promise<Location>;
+  /**
+   * Changes the fields given: a field left out stays, a null `termsId` gives the location the
+   * default terms. A rename keeps the old name in people's history; new terms reach only people
+   * added from now on. Admins only.
+   */
+  updateLocation: (
+    ctx: SecurityContext,
+    input: { id: string; name?: string | null; termsId?: string | null },
+  ) => Promise<Location>;
   /** Deletes a location nobody is in; refuses one someone is in with CONFLICT. Admins only. */
   deleteLocation: (
     ctx: SecurityContext,
@@ -42,24 +58,53 @@ export function createLocationService({
     async createLocation(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const name = parseLocationName(input.name);
-      const location = await refuseTakenName(() =>
-        transact((tx) => locationRepository(tx).insert(name)),
+      const { location, termsId } = await refuseTakenName(() =>
+        transact(async (tx) => {
+          const termsId = await requireTerms(tx, input.termsId ?? null);
+          return { location: await locationRepository(tx).insert(name, termsId), termsId };
+        }),
       );
-      logger.info({ locationId: location.id }, "Added a location");
+      logger.info({ locationId: location.id, termsId }, "Added a location");
       return location;
     },
     async updateLocation(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const id = parseLocationId(input.id);
-      const name = parseLocationName(input.name);
-      const location = await refuseTakenName(() =>
-        transact((tx) => locationRepository(tx).rename(id, name)),
+      // A location always has a name, so null is refused as a blank one.
+      const name = input.name === undefined ? undefined : parseLocationName(input.name ?? "");
+      const { before, changes } = await refuseTakenName(() =>
+        transact(async (tx) => {
+          const before = await locationRepository(tx).lockWithPeopleCount(id);
+          if (!before) {
+            throw locationNotFound();
+          }
+          const termsId =
+            input.termsId === undefined ? undefined : await requireTerms(tx, input.termsId);
+          const changes = {
+            ...(name !== undefined && name !== before.name && { name }),
+            ...(termsId !== undefined && termsId !== before.termsId && { termsId }),
+          };
+          if (Object.keys(changes).length > 0) {
+            await locationRepository(tx).update(id, changes);
+          }
+          return { before, changes };
+        }),
       );
-      if (!location) {
-        throw locationNotFound();
+      if (changes.name !== undefined) {
+        logger.info({ locationId: id }, "Renamed a location");
       }
-      logger.info({ locationId: id }, "Renamed a location");
-      return location;
+      if (changes.termsId !== undefined) {
+        logger.info(
+          {
+            locationId: id,
+            fromTermsId: before.termsId,
+            toTermsId: changes.termsId,
+            peopleCount: before.peopleCount,
+          },
+          "Changed a location's terms",
+        );
+      }
+      return { id, name: changes.name ?? before.name };
     },
     async deleteLocation(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
@@ -85,6 +130,18 @@ async function requireEmployeeRead(ctx: SecurityContext): Promise<void> {
   if ((await ctx.recordScope("employee", "read")) === "none") {
     throw new ApplicationError("FORBIDDEN", "You are not allowed to do this.");
   }
+}
+
+/** The terms id, checked to exist; null stays null, the default terms. */
+async function requireTerms(tx: Tx, termsId: string | null): Promise<string | null> {
+  if (termsId === null) {
+    return null;
+  }
+  const parsed = parseUuid(termsId);
+  if (!parsed || !(await termsRepository(tx).exists(parsed))) {
+    throw invalidInput([{ field: "termsId", code: "not_found" }]);
+  }
+  return parsed;
 }
 
 function parseLocationId(id: string): string {
