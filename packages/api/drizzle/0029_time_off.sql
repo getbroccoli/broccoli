@@ -11,7 +11,8 @@ CREATE TABLE "terms" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"name" text NOT NULL,
 	"key" text,
-	CONSTRAINT "terms_key_unique" UNIQUE("key")
+	CONSTRAINT "terms_key_unique" UNIQUE("key"),
+	CONSTRAINT "terms_name_not_blank" CHECK (btrim("terms"."name") <> '')
 );
 --> statement-breakpoint
 CREATE TABLE "allowance_ledger_lines" (

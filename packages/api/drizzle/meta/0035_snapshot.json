@@ -2821,7 +2821,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "terms_name_not_blank": {
+          "name": "terms_name_not_blank",
+          "value": "btrim(\"terms\".\"name\") <> ''"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.working_pattern_versions": {

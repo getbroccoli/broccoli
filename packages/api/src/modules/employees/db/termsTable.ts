@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 /**
  * A named set of people who share the same working pattern and time off policies. The migration
@@ -17,6 +17,9 @@ export const terms = pgTable(
   },
   (table) => [
     // "Scotland" and " scotland" are one set of terms, so turning time off on never makes a second.
-    uniqueIndex("terms_name_unique").on(sql`lower(btrim(${table.name}))`),
+    uniqueIndex(TERMS_NAME_UNIQUE).on(sql`lower(btrim(${table.name}))`),
+    check("terms_name_not_blank", sql`btrim(${table.name}) <> ''`),
   ],
 );
+
+export const TERMS_NAME_UNIQUE = "terms_name_unique";

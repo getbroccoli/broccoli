@@ -1,12 +1,12 @@
 import { and, asc, countDistinct, desc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 
-import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
-import type { Terms, TermsMembership } from "../domain";
+import { type Terms, type TermsMembership, TermsNameTakenError } from "../domain";
 import { employeeTerms } from "./employeeTermsTable";
 import { employments } from "./employmentsTable";
 import { locations } from "./locationsTable";
-import { terms } from "./termsTable";
+import { TERMS_NAME_UNIQUE, terms } from "./termsTable";
 
 /** Terms and who is on them, through the pool or inside a transaction. */
 export interface TermsRepository {
@@ -15,9 +15,14 @@ export interface TermsRepository {
    * since their employment started.
    */
   joinDefaultTerms(employees: readonly { id: string; locationId: string | null }[]): Promise<void>;
-  /** New terms with this name; returns their id. */
+  /** New terms with this name; returns their id. Throws `TermsNameTakenError` when other terms have the name. */
   insert(name: string): Promise<string>;
+  /** Throws `TermsNameTakenError` like `insert`. */
   rename(termsId: string, name: string): Promise<void>;
+  /** Holds the terms' row until the caller commits, so nobody joins them meanwhile; null when no terms have the id. */
+  lock(termsId: string): Promise<Terms | null>;
+  /** Deletes the terms with their working pattern and time off policies; nobody may ever have been on them. */
+  delete(termsId: string): Promise<void>;
   /**
    * Deletes every terms but the default ones, with their working patterns and time off policies,
    * and names the default terms "England and Wales" again; the terms must have no members.
@@ -72,12 +77,29 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
     },
 
     async insert(name) {
-      const [inserted] = await orm().insert(terms).values({ name }).returning({ id: terms.id });
+      const [inserted] = await orm()
+        .insert(terms)
+        .values({ name })
+        .returning({ id: terms.id })
+        .catch(throwNameTaken);
       return inserted!.id;
     },
 
     async rename(termsId, name) {
-      await orm().update(terms).set({ name }).where(eq(terms.id, termsId));
+      await orm().update(terms).set({ name }).where(eq(terms.id, termsId)).catch(throwNameTaken);
+    },
+
+    async lock(termsId) {
+      const [locked] = await orm()
+        .select({ id: terms.id, name: terms.name, key: terms.key })
+        .from(terms)
+        .where(eq(terms.id, termsId))
+        .for("update");
+      return locked ? termsOf(locked) : null;
+    },
+
+    async delete(termsId) {
+      await orm().delete(terms).where(eq(terms.id, termsId));
     },
 
     async resetToDefault() {
@@ -134,7 +156,7 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
         .select({ id: terms.id, name: terms.name, key: terms.key })
         .from(terms)
         .orderBy(desc(sql`${terms.key} is not null`), asc(sql`lower(${terms.name})`));
-      return rows.map(({ id, name, key }) => ({ id, name, isDefault: key === "default_terms" }));
+      return rows.map(termsOf);
     },
 
     async countMembersOn(date) {
@@ -168,4 +190,12 @@ async function findDefaultTermsId(orm: ReturnType<typeof ormOf>): Promise<string
     .from(terms)
     .where(eq(terms.key, "default_terms"));
   return defaultTerms!.id;
+}
+
+function termsOf({ id, name, key }: { id: string; name: string; key: string | null }): Terms {
+  return { id, name, isDefault: key === "default_terms" };
+}
+
+function throwNameTaken(error: unknown): never {
+  throw isUniqueViolation(error, TERMS_NAME_UNIQUE) ? new TermsNameTakenError() : error;
 }
