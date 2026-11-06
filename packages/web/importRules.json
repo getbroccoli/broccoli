@@ -119,7 +119,10 @@
       "src/apollo",
       "src/components/form",
       "src/components/ui",
+      "src/features/records",
       "src/i18n",
+      "src/lib/calendarDay",
+      "src/lib/class-names",
       "src/lib/formatDays"
     ],
     "src/features/setup": [

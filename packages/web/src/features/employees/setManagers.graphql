@@ -11,9 +11,7 @@ mutation SetManagers($input: EmployeeSetManagersInput!) {
       historyLines {
         ...RecordHistory_line @unmask
         record {
-          ... on Employee {
-            id
-          }
+          id
         }
       }
       error {

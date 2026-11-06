@@ -108,6 +108,7 @@ const KNOWN_CAUSES: Partial<Record<string, MessageKey>> = {
   INVITE_SENT: "records.history.cause.inviteSent",
   INVITE_CANCELLED: "records.history.cause.inviteCancelled",
   INVITE_ACCEPTED: "records.history.cause.inviteAccepted",
+  SET_UP_IN_COMPANY_DEFAULTS: "records.history.cause.companyDefaults",
 };
 
 function dayLabel(day: string, today: string, yesterday: string): string {
