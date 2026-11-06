@@ -11,7 +11,7 @@ type Props = {
   terms: EmploymentTermsQuery["allTerms"][number];
 };
 
-/** One set of terms' cells in the list: name, week, Annual leave today, locations and people. */
+/** One set of terms' cells in the list: name, week, Annual leave today and people. */
 export function TermsRowCells({ terms }: Props) {
   const week = splitVersions(terms.workingWeek, companyToday()).current;
   const annualLeave = terms.timeOff.find(
@@ -41,7 +41,6 @@ export function TermsRowCells({ terms }: Props) {
       <td className="px-4 py-3">
         {annualLeaveSummary(splitVersions(annualLeave?.versions ?? [], companyToday()).current)}
       </td>
-      <td className="px-4 py-3">{terms.locations.map(({ name }) => name).join(", ")}</td>
       <td className="px-4 py-3 text-right tabular-nums">{terms.peopleCount}</td>
     </>
   );
