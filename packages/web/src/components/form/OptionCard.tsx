@@ -10,6 +10,7 @@ type Props<Value extends string> = {
   onSelect: (value: Value) => void;
   title: ReactNode;
   hint: ReactNode;
+  disabled?: boolean;
   /** Shown under the hint while this option is selected. */
   children?: ReactNode;
 };
@@ -22,6 +23,7 @@ export function OptionCard<Value extends string>({
   onSelect,
   title,
   hint,
+  disabled = false,
   children,
 }: Props<Value>) {
   const isSelected = value === selected;
@@ -31,15 +33,23 @@ export function OptionCard<Value extends string>({
       className={cn(
         "rounded-xl border bg-card px-4 py-3.5 transition-colors",
         isSelected ? "border-foreground ring-1 ring-foreground" : "border-border",
+        disabled && "opacity-50",
       )}
     >
-      <label htmlFor={id} className="flex cursor-pointer items-center gap-3.5">
+      <label
+        htmlFor={id}
+        className={cn(
+          "flex items-center gap-3.5",
+          disabled ? "cursor-not-allowed" : "cursor-pointer",
+        )}
+      >
         <input
           id={id}
           type="radio"
           name={name}
           value={value}
           checked={isSelected}
+          disabled={disabled}
           onChange={() => onSelect(value)}
           className="size-4 shrink-0 accent-foreground"
         />

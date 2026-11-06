@@ -1,22 +1,46 @@
 import { Briefcase, X } from "@phosphor-icons/react";
 
 import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
+import { CancelChangeDialog } from "./CancelChangeDialog";
 import { DefaultPill } from "./DefaultPill";
+import { RulesEditor } from "./RulesEditor";
 import { TermsTimeOffSection } from "./TermsTimeOffSection";
 import { TERMS_DESCRIPTION } from "./termsDescription";
+import { changesOnlyDays } from "./termsDraft";
+import { ruleLine } from "./termsText";
+import { usePlannedChanges } from "./usePlannedChanges";
+import { useTermsEditing } from "./useTermsEditing";
+import { WeekEditor } from "./WeekEditor";
+import { WhatChanges } from "./WhatChanges";
 import { WorkingWeekSection } from "./WorkingWeekSection";
 
 type Props = {
   terms: NonNullable<EmploymentTermsStackQuery["terms"]>;
 };
 
-/** One loaded set of terms: header, working week, time off and locations, with history beside them. */
+/**
+ * One loaded set of terms: header, working week, time off and locations, with history beside them.
+ * One section at a time opens in place; the footer then saves it.
+ */
 export function TermsRecord({ terms }: Props) {
+  const editing = useTermsEditing(terms);
+  const planned = usePlannedChanges(terms);
+  const { open } = editing;
   const meta = [
     t(terms.peopleCount === 1 ? "terms.peopleOne" : "terms.people", {
       count: String(terms.peopleCount),
@@ -47,8 +71,51 @@ export function TermsRecord({ terms }: Props) {
 
       <div className="subtle-scrollbar flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
         <div className="flex flex-col gap-8 px-6 py-6 md:flex-[2] md:overflow-y-auto">
-          <WorkingWeekSection versions={terms.workingWeek} />
-          <TermsTimeOffSection termsName={terms.name} timeOff={terms.timeOff} />
+          <WorkingWeekSection
+            versions={terms.workingWeek}
+            editor={
+              open?.kind === "week" &&
+              editing.week && (
+                <WeekEditor
+                  draft={open.draft}
+                  current={editing.week}
+                  earliest={editing.earliest}
+                  onChange={(draft) => editing.change({ kind: "week", draft })}
+                />
+              )
+            }
+            onEdit={editing.editWeek}
+            onCancelPlanned={planned.askWeek}
+          />
+          <TermsTimeOffSection
+            termsName={terms.name}
+            timeOff={terms.timeOff}
+            open={
+              open?.kind === "rules"
+                ? {
+                    timeOffTypeId: open.timeOffTypeId,
+                    dirty: editing.dirty,
+                    summary: openRowSummary(),
+                    editor: (
+                      <RulesEditor
+                        draft={open.draft}
+                        current={editing.rowCurrent}
+                        earliest={editing.earliest}
+                        onChange={(draft) =>
+                          editing.change({
+                            kind: "rules",
+                            timeOffTypeId: open.timeOffTypeId,
+                            draft,
+                          })
+                        }
+                      />
+                    ),
+                  }
+                : null
+            }
+            onEdit={editing.editRules}
+            onCancelPlanned={planned.askRules}
+          />
           <section aria-labelledby="terms-locations" className="flex flex-col gap-3">
             <h3 id="terms-locations" className="text-[17px] font-semibold">
               {t("terms.locations.title")}
@@ -70,14 +137,67 @@ export function TermsRecord({ terms }: Props) {
             )}
           </section>
         </div>
-        <aside className="border-t border-border bg-muted/40 px-6 py-6 md:flex-1 md:overflow-y-auto md:border-t-0 md:border-l">
+        <aside className="flex flex-col gap-8 border-t border-border bg-muted/40 px-6 py-6 md:flex-1 md:overflow-y-auto md:border-t-0 md:border-l">
+          {open && <WhatChanges box={editing.box} people={editing.people} termsName={terms.name} />}
           <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />
         </aside>
       </div>
 
-      <footer className="flex justify-end border-t border-border px-6 py-3">
-        <SheetClose render={<Button variant="outline" />}>{t("terms.close")}</SheetClose>
+      <footer className="flex items-center justify-end gap-2 border-t border-border px-6 py-3">
+        {open ? (
+          <>
+            <p className="mr-auto text-[13px] text-muted-foreground">{editing.saveLine}</p>
+            <Button variant="outline" onClick={editing.close} disabled={editing.saving}>
+              {t("terms.edit.cancel")}
+            </Button>
+            <Button
+              onClick={() => void editing.save()}
+              disabled={!editing.canSave || editing.saving}
+            >
+              {t("terms.edit.save")}
+            </Button>
+          </>
+        ) : (
+          <SheetClose render={<Button variant="outline" />}>{t("terms.close")}</SheetClose>
+        )}
       </footer>
+
+      <AlertDialog
+        open={editing.waiting !== null}
+        onOpenChange={(isOpen) => !isOpen && editing.keepEditing()}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("terms.edit.discardTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("terms.edit.discardDetail")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("terms.edit.keepEditing")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={editing.discard}>
+              {t("terms.edit.discard")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <CancelChangeDialog
+        body={planned.body}
+        pending={planned.pending}
+        onConfirm={planned.confirm}
+        onClose={planned.close}
+      />
     </>
   );
+
+  /** The line under an open type's name: "Changed: 20 → 22 days" while only its days change. */
+  function openRowSummary(): string {
+    const current = editing.rowCurrent;
+    if (open?.kind !== "rules") return "";
+    if (editing.dirty && changesOnlyDays(open.draft, current) && open.draft.days.trim() !== "") {
+      return t("terms.edit.rules.changedDays", {
+        before: String(current!.yearlyEntitlement?.days ?? 0),
+        after: open.draft.days,
+      });
+    }
+    return current ? ruleLine(current) : t("terms.timeOff.notOffered", { terms: terms.name });
+  }
 }

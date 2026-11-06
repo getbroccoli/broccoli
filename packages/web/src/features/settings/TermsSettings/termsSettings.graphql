@@ -57,6 +57,10 @@ query EmploymentTermsStack($id: ID!) {
       id
       name
     }
+    workingPattern {
+      id
+      earliestChange
+    }
     workingWeek {
       id
       startDate
@@ -78,6 +82,11 @@ query EmploymentTermsStack($id: ID!) {
         icon
         colour
       }
+      policy {
+        id
+        earliestChange
+      }
+      earliestOffer
       versions {
         id
         startDate
@@ -93,6 +102,119 @@ query EmploymentTermsStack($id: ID!) {
           days
           daysPerWeek
         }
+      }
+    }
+  }
+}
+
+query TermsWeekReach($id: ID!, $from: Date!) {
+  terms(id: $id) {
+    id
+    workingPattern {
+      id
+      reach(from: $from) {
+        id
+        firstName
+        lastName
+      }
+    }
+  }
+}
+
+query TermsTimeOffReach($id: ID!, $from: Date!) {
+  terms(id: $id) {
+    id
+    timeOff {
+      timeOffType {
+        id
+      }
+      policy {
+        id
+        reach(from: $from) {
+          id
+          firstName
+          lastName
+        }
+      }
+      offerReach(from: $from) {
+        id
+        firstName
+        lastName
+      }
+    }
+  }
+}
+
+fragment TermsChangeError on Error {
+  __typename
+  ... on InvalidInputError {
+    fields {
+      field
+      code
+    }
+  }
+}
+
+mutation ChangeTermsWorkingWeek($input: WorkingPatternChangeInput!) {
+  employees {
+    changeWorkingPattern(input: $input) {
+      workingPattern {
+        id
+      }
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation CancelTermsWorkingWeekChange($input: WorkingPatternCancelChangeInput!) {
+  employees {
+    cancelWorkingPatternChange(input: $input) {
+      workingPattern {
+        id
+      }
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation OfferTermsTimeOff($input: TimeOffPolicyCreateInput!) {
+  timeOff {
+    createPolicy(input: $input) {
+      timeOffPolicy {
+        id
+      }
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation ChangeTermsTimeOffRules($input: TimeOffPolicyChangeInput!) {
+  timeOff {
+    changePolicy(input: $input) {
+      timeOffPolicy {
+        id
+      }
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation CancelTermsTimeOffChange($input: TimeOffPolicyCancelChangeInput!) {
+  timeOff {
+    cancelPolicyChange(input: $input) {
+      timeOffPolicy {
+        id
+      }
+      error {
+        ...TermsChangeError
       }
     }
   }

@@ -46,13 +46,18 @@ export function ruleLine(version: PolicyVersionText): string {
 
 /** A planned version's line: "From 1 Jan 2027: 22 days a year, bank holidays on top". */
 export function plannedLine(version: PolicyVersionText): string {
-  return t("terms.planned", { date: shortDate(version.startDate ?? ""), rule: ruleSummary(version) });
+  return t("terms.planned", {
+    date: shortDate(version.startDate ?? ""),
+    rule: ruleSummary(version),
+  });
 }
 
 /** How a version counts in a few words: "22 days a year, bank holidays on top", "Unlimited". */
 export function ruleSummary(version: RuleText): string {
   if (version.balance === "NO_BALANCE") return t("terms.rule.recordedLower");
-  return version.balance === "UNLIMITED_BALANCE" ? t("terms.rule.unlimited") : allowanceText(version);
+  return version.balance === "UNLIMITED_BALANCE"
+    ? t("terms.rule.unlimited")
+    : allowanceText(version);
 }
 
 /** What `ruleSummary` reads of a version. */
