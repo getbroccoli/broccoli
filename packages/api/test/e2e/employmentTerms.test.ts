@@ -111,13 +111,15 @@ test("an admin can plan Annual leave rules, read them on terms with history, and
 
   const cancelled = await browser.graphql(
     `mutation CancelPolicy($input: TimeOffPolicyCancelChangeInput!) {
-    timeOff { cancelPolicyChange(input: $input) { timeOffPolicy { id } terms { id } error { __typename } } }
+    timeOff { cancelPolicyChange(input: $input) { timeOffPolicy { id } error { __typename } } }
   }`,
     { input: { timeOffPolicyId: annual.policy!.id, startDate: nextYearStart } },
   );
 
   expect(await cancelled.json()).toMatchObject({
-    data: { timeOff: { cancelPolicyChange: { error: null, terms: { id } } } },
+    data: {
+      timeOff: { cancelPolicyChange: { error: null, timeOffPolicy: { id: annual.policy!.id } } },
+    },
   });
   const restored = await browser.graphql(termsPolicyQuery, { id });
   expect(await restored.json()).toMatchObject({
