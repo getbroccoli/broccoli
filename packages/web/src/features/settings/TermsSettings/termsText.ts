@@ -88,14 +88,28 @@ export function splitVersions<V extends { startDate?: string | null; endDate?: s
   };
 }
 
-/** The version a cancel of the one from `startDate` extends: the one ending the day before; null for none. */
-export function versionBefore<V extends { endDate?: string | null }>(
+/**
+ * The version a cancel of the one from `startDate` extends: the one before it in date order, as a
+ * terms' versions follow each other without gaps; null for the first.
+ */
+export function versionBefore<V extends { startDate?: string | null }>(
   versions: readonly V[],
   startDate: string,
 ): V | null {
-  const [year, month, date] = calendarDayParts(startDate);
-  const dayBefore = new Date(Date.UTC(year, month, date - 1)).toISOString().slice(0, 10);
-  return versions.find(({ endDate }) => endDate === dayBefore) ?? null;
+  const index = versions.findIndex((version) => version.startDate === startDate);
+  return index > 0 ? versions[index - 1]! : null;
+}
+
+/** The version covering `date`; null when none does. */
+export function versionOn<V extends { startDate?: string | null; endDate?: string | null }>(
+  versions: readonly V[],
+  date: string,
+): V | null {
+  return (
+    versions.find(
+      ({ startDate, endDate }) => (startDate ?? "") <= date && (endDate == null || endDate >= date),
+    ) ?? null
+  );
 }
 
 /** The company's today, in London, as the API decides which versions are from today on. */

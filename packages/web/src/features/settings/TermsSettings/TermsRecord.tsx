@@ -103,7 +103,7 @@ export function TermsRecord({ terms }: Props) {
                     editor: (
                       <RulesEditor
                         draft={open.draft}
-                        current={editing.rowBase}
+                        versions={editing.row!.versions}
                         earliest={editing.earliest}
                         onChange={(draft) =>
                           editing.change({

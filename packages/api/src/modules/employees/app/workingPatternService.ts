@@ -139,7 +139,7 @@ export function createWorkingPatternService({
       const startDate = parseChangeDate(input.startDate, today());
       const week = parseWeek(input);
       const calendar = optionalCalendar(input.bankHolidayCalendar);
-      const { saved, reached } = await transact(async (tx) => {
+      const { saved, employeeIds } = await transact(async (tx) => {
         const repository = workingPatternRepository(tx);
         await repository.lockForWrites();
         const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
@@ -152,15 +152,9 @@ export function createWorkingPatternService({
         };
         await addVersion(tx, pattern, version);
         await appendWorkingWeekHistory(ctx, tx, pattern, inForce, version);
-        publishWorkingPatternChange(
-          tx,
-          await repository.findEmployeesOnPattern(pattern.id),
-          startDate,
-        );
-        return {
-          saved: await findPattern(tx, pattern.id),
-          reached: await readReach(tx, pattern.id, startDate),
-        };
+        const onPattern = await repository.findEmployeesOnPattern(pattern.id);
+        publishWorkingPatternChange(tx, onPattern, startDate);
+        return { saved: await findPattern(tx, pattern.id), employeeIds: onPattern };
       });
       logger.info(
         {
@@ -168,7 +162,7 @@ export function createWorkingPatternService({
           termsId: saved.termsId,
           startDate,
           bankHolidayCalendar: versionInForce(saved.versions, startDate).bankHolidayCalendar,
-          reachedCount: reached.length,
+          employeeCount: employeeIds.length,
         },
         "Changed a working pattern",
       );

@@ -11,26 +11,35 @@ import {
   nextLeaveYear,
   type RulesDraft,
   rulesErrors,
+  rulesStartDate,
 } from "./termsDraft";
-import { type PolicyVersionText, shortDate } from "./termsText";
+import {
+  companyToday,
+  type PolicyVersionText,
+  shortDate,
+  splitVersions,
+  versionOn,
+} from "./termsText";
 
 type Props = {
   draft: RulesDraft;
-  current: PolicyVersionText | null;
+  /** The type's versions from today on: today's first, then planned ones. */
+  versions: PolicyVersionText[];
   earliest: string;
   onChange: (draft: RulesDraft) => void;
 };
 
 /** A time off type's rules opened in place: how it counts, the allowance, and from when. */
-export function RulesEditor({ draft, current, earliest, onChange }: Props) {
+export function RulesEditor({ draft, versions, earliest, onChange }: Props) {
+  const today = splitVersions(versions, companyToday()).current;
   const errors = rulesErrors(draft, earliest);
   const countsOpen = canChangeCounts(draft, earliest);
-  const hints = appliesFromHints(draft, current);
-  // A date off a leave year's start keeps how the type counts now.
-  const changeDate = (next: RulesDraft) =>
-    onChange(
-      current && !canChangeCounts(next, earliest) ? { ...next, balance: current.balance } : next,
-    );
+  const hints = appliesFromHints(draft, today);
+  // A date off a leave year's start keeps how the type counts on that date.
+  const changeDate = (next: RulesDraft) => {
+    const base = versionOn(versions, rulesStartDate(next, earliest)) ?? today;
+    onChange(base && !canChangeCounts(next, earliest) ? { ...next, balance: base.balance } : next);
+  };
   const appliesFromTitles: Record<RulesDraft["appliesFrom"], string> = {
     THIS_LEAVE_YEAR: t("terms.edit.rules.thisYear", { date: shortDate(earliest) }),
     NEXT_LEAVE_YEAR: t("terms.edit.rules.nextYear", { date: shortDate(nextLeaveYear(earliest)) }),

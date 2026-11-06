@@ -8,6 +8,7 @@ import {
   type RulesDraft,
   rulesDraftOf,
   rulesErrors,
+  rulesInputOf,
   rulesSaveLine,
   rulesStartDate,
   weekChangeBox,
@@ -17,7 +18,7 @@ import {
   weekSaveLine,
 } from "./termsDraft";
 import type { Terms, TimeOffRow } from "./termsQueries";
-import { companyToday, splitVersions } from "./termsText";
+import { companyToday, splitVersions, versionOn } from "./termsText";
 import { useSaveSection } from "./useSaveSection";
 
 /** The section open for editing, with its form. */
@@ -35,8 +36,10 @@ export function useTermsEditing(terms: Terms) {
   const { save, saving } = useSaveSection(terms);
   const facts = sectionFacts(terms, open);
   const people = useReach(terms.id, open, facts);
-  // Changed from what the section opened with; typing a value back is no change.
-  const dirty = open !== null && JSON.stringify(open.draft) !== JSON.stringify(opened?.draft);
+  // Changed from what the section opened with: only what saving sends, so typing a value back,
+  // or a date left under an unpicked "Another date", is no change.
+  const dirty =
+    open !== null && savedValues(open, facts.earliest) !== savedValues(opened, facts.earliest);
 
   const show = (section: OpenSection | null) => {
     setOpen(section);
@@ -141,15 +144,12 @@ function saveLineOf(
     : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, startDate);
 }
 
-function versionOn<V extends { startDate?: string | null; endDate?: string | null }>(
-  versions: readonly V[],
-  date: string,
-): V | null {
-  return (
-    versions.find(
-      ({ startDate, endDate }) => (startDate ?? "") <= date && (endDate == null || endDate >= date),
-    ) ?? null
-  );
+/** What saving the section would send, as one comparable string. */
+function savedValues(section: OpenSection | null, earliest: string): string {
+  if (!section) return "";
+  return section.kind === "week"
+    ? JSON.stringify(section.draft)
+    : JSON.stringify([rulesInputOf(section.draft), rulesStartDate(section.draft, earliest)]);
 }
 
 function rowOf(terms: Terms, timeOffTypeId: string): TimeOffRow {

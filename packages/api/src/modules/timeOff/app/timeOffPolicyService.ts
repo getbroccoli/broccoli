@@ -14,6 +14,7 @@ import {
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import {
+  changesCountsMidYear,
   type NewPolicyVersion,
   parseRules,
   type PolicyVersion,
@@ -181,6 +182,13 @@ export function createTimeOffPolicyService({
           input.startDate,
           today(),
         );
+        const next = policy.versions.find(({ startDate }) => startDate! > removed.startDate!);
+        if (extended && next && changesCountsMidYear(extended, next)) {
+          throw new ApplicationError(
+            "CONFLICT",
+            "Cancelling this change would change how the type counts partway through a leave year.",
+          );
+        }
         const reached = await reachOf(tx, policy, removed.startDate!);
         await repository.deleteVersion(removed.id);
         if (extended) {

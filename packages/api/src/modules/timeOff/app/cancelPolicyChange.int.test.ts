@@ -8,6 +8,7 @@ import {
   timeOffPolicyService,
   timeOffService,
 } from "#test/support";
+import { ApplicationError } from "../../../core/applicationError";
 import { timeOffPolicyRepository } from "../db";
 
 test("cancelling a planned policy change extends the earlier version to the cancelled version's end", async ({
@@ -55,6 +56,53 @@ test("cancelling a planned policy change extends the earlier version to the canc
     ],
   });
   expect(await timeOffPolicyRepository(orm).findAll()).toContainEqual(result);
+});
+
+test("cancelling January's change refuses a kept July version that would change how leave counts mid-year", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ recordOnly: "family_leave" }],
+    today: "2026-11-06",
+  });
+  const [policy] = await readTermsPolicies(orm, termsId);
+  const service = timeOffPolicyService(orm, { today: "2026-11-06" });
+  await service.changePolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2027-01-01",
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 10,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+  await service.changePolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2027-07-01",
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 12,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+  const before = await timeOffPolicyRepository(orm).findAll();
+
+  const cancellation = service.cancelPolicyChange(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2027-01-01",
+  });
+
+  await expect(cancellation).rejects.toBeInstanceOf(ApplicationError);
+  await expect(cancellation).rejects.toMatchObject({
+    code: "CONFLICT",
+    message:
+      "Cancelling this change would change how the type counts partway through a leave year.",
+  });
+  expect(await timeOffPolicyRepository(orm).findAll()).toEqual(before);
 });
 
 test("cancelling a planned offer removes its policy and leaves the type not offered", async ({
