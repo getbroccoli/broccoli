@@ -60,11 +60,11 @@ enum TimeOffTypeKey {
 
 extend type Terms {
   "Every time off type in list order, with these terms' rules for it from today on."
-  timeOff: [TermsTimeOff!]!
+  timeOff: [TimeOffWithPolicies!]!
 }
 
-"A time off type as one set of terms gives it."
-type TermsTimeOff {
+"A time off type with its policy versions."
+type TimeOffWithPolicies {
   timeOffType: TimeOffType!
   "The version covering today first, if any, then planned ones; empty: not offered on these terms."
   versions: [TimeOffPolicyVersion!]!

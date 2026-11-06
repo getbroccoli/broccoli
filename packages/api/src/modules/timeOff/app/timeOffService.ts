@@ -20,7 +20,7 @@ import {
 } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
-import { readTermsTimeOff, type TermsTimeOff } from "./readTermsTimeOff";
+import { readTermsTimeOff, type TimeOffWithPolicies } from "./readTermsTimeOff";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 
 const employeeSetup = createEmployeeSetupService();
@@ -62,7 +62,7 @@ export interface TimeOffService {
   readTermsTimeOff: (
     ctx: SecurityContext,
     termsIds: readonly string[],
-  ) => Promise<Map<string, TermsTimeOff[]>>;
+  ) => Promise<Map<string, TimeOffWithPolicies[]>>;
   /**
    * Holds back turning time off on until the caller's transaction ends. Going back to the start
    * takes it before deleting the employees, as turning time off on takes it before their rows.

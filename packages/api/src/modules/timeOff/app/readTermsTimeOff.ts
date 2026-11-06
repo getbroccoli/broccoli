@@ -5,8 +5,8 @@ import { timeOffPolicyRepository } from "../db";
 import type { PolicyVersion, TimeOffType } from "../domain";
 import { byTypeOrder } from "./readTimeOffTypes";
 
-/** A time off type as one set of terms gives it: no versions means not offered there. */
-export interface TermsTimeOff {
+/** A time off type with its policy versions; none means it is not offered. */
+export interface TimeOffWithPolicies {
   timeOffType: TimeOffType;
   /** The terms' policy versions covering today or later, oldest first: today's, then planned ones. */
   versions: PolicyVersion[];
@@ -19,7 +19,7 @@ export async function readTermsTimeOff(
   { orm, today }: Dependencies,
   ctx: SecurityContext,
   termsIds: readonly string[],
-): Promise<Map<string, TermsTimeOff[]>> {
+): Promise<Map<string, TimeOffWithPolicies[]>> {
   ctx.require("MANAGE_WORKSPACE");
   const repository = timeOffPolicyRepository(orm);
   const types = (await repository.findAllTypes()).sort(byTypeOrder);

@@ -2,7 +2,7 @@ import DataLoader from "dataloader";
 
 import { perRequest, type Resolvers, type ResolversTypes, toEnum } from "../../../core/graphql";
 import type { TimeOffSetupService, TimeOffService } from "../app";
-import type { TermsTimeOff } from "../app";
+import type { TimeOffWithPolicies } from "../app";
 import { DEFAULT_TIME_OFF_TYPE_LOOK, type PolicyVersion, type TimeOffType } from "../domain";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
@@ -29,7 +29,7 @@ export function createResolvers(
           })) ?? null,
       );
     }),
-    termsTimeOff: new DataLoader<string, TermsTimeOff[]>(async (termsIds) => {
+    termsTimeOff: new DataLoader<string, TimeOffWithPolicies[]>(async (termsIds) => {
       const read = await timeOff.readTermsTimeOff(context.getActor(), termsIds);
       return termsIds.map((id) => read.get(id)!);
     }),
