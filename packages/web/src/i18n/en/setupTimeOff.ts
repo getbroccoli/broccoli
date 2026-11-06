@@ -38,7 +38,7 @@ export const setupTimeOffEn = {
   "setup.timeOff.type.other": "Other",
   "setup.timeOff.loadFailed": "Couldn’t load the time off choices. Reload the page to try again.",
   "setup.timeOff.skip": "Skip, turn on later",
-  "setup.timeOff.turnOn": "Turn on time off",
+  "setup.timeOff.useDefaults": "Use these defaults",
   "setup.timeOff.nation.ENGLAND_AND_WALES": "England and Wales",
   "setup.timeOff.nation.SCOTLAND": "Scotland",
   "setup.timeOff.nation.NORTHERN_IRELAND": "Northern Ireland",
