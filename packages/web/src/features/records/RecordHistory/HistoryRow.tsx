@@ -24,7 +24,8 @@ export function HistoryRow({ line, description }: Props) {
 
   return (
     <li className="border-b border-border/60 last:border-b-0">
-      <div className="flex items-center gap-3 px-3 py-2.5 text-[13px]">
+      {/* Wraps in a narrow column, such as beside a terms' sections, so the sentence keeps its width. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-[13px]">
         <span
           aria-hidden
           className={cn(
@@ -38,7 +39,7 @@ export function HistoryRow({ line, description }: Props) {
             ? author.slice(0, 2).toUpperCase()
             : author.charAt(0)}
         </span>
-        <p className="min-w-0 flex-1 break-words">
+        <p className="min-w-48 flex-1 break-words">
           <span className="font-medium">{author}</span> <SummaryText summary={summary} />
           {line.reason && <span className="text-muted-foreground"> · “{line.reason}”</span>}
         </p>

@@ -28,10 +28,15 @@ export function SummaryText({ summary }: Props) {
       return (
         <>
           {summary.title
-            ? t("records.history.created", {
-                title: summary.title,
-                count: String(summary.labels.length),
-              })
+            ? t(
+                summary.labels.length === 1
+                  ? "records.history.createdOne"
+                  : "records.history.created",
+                {
+                  title: summary.title,
+                  count: String(summary.labels.length),
+                },
+              )
             : t("records.history.createdUntitled", { count: String(summary.labels.length) })}{" "}
           <span className="text-muted-foreground">{summary.labels.join(", ")}</span>
         </>

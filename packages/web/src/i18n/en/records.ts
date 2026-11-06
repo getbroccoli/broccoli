@@ -30,6 +30,7 @@ export const recordsEn = {
   "records.history.cleared": "cleared {field}",
   "records.history.updatedMany": "updated {count} fields:",
   "records.history.created": "added {title} with {count} fields:",
+  "records.history.createdOne": "added {title} with 1 field:",
   "records.history.createdUntitled": "added this record with {count} fields:",
   "records.history.deleted": "removed {title}",
   "records.history.deletedUntitled": "removed this record",
