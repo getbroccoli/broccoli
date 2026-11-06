@@ -17,9 +17,3 @@ export function TimeOffTypeIcon({ icon, colour }: Props) {
     </span>
   );
 }
-
-/** A type's icon alone, in the current text colour. */
-export function TimeOffTypeGlyph({ icon }: { icon: IconName }) {
-  const Glyph = ICONS[icon];
-  return <Glyph aria-hidden size={17} />;
-}

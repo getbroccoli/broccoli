@@ -81,8 +81,11 @@ export interface TimeOffService {
    * takes it before deleting the employees, as turning time off on takes it before their rows.
    */
   lockPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
-  /** Deletes every time off policy when setup or the demo goes back to its start, after the employees. */
-  deleteAllPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /**
+   * Back to a fresh workspace's time off when setup or the demo goes back to its start, after the
+   * employees: deletes every policy and the company's own types, and restores the seeded types.
+   */
+  resetTimeOff: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
 /** What turning time off on did; the terms ids are in the order of the input's terms. */
@@ -161,7 +164,7 @@ export function createTimeOffService({
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).lockPolicies();
     },
-    async deleteAllPolicies(ctx, tx) {
+    async resetTimeOff(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).deleteAll();
     },

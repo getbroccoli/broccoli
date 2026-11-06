@@ -12,6 +12,14 @@ export interface TimeOffTypeIdentity {
   private: boolean;
 }
 
+/** The four seeded types as the migration inserts them, which starting over restores. */
+export const STANDARD_TIME_OFF_TYPES: Record<TimeOffTypeKey, TimeOffTypeIdentity> = {
+  annual_leave: { name: "Annual leave", icon: "sun", colour: "green", private: false },
+  sickness: { name: "Sickness", icon: "thermometer", colour: "coral", private: true },
+  family_leave: { name: "Family leave", icon: "baby", colour: "pink", private: true },
+  other: { name: "Other", icon: "confetti", colour: "yellow", private: false },
+};
+
 /** Another type already has this name, ignoring case and surrounding spaces. */
 export class TimeOffTypeNameTakenError extends Error {
   constructor() {

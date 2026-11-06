@@ -24,8 +24,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { t, type MessageKey } from "@/i18n";
 
-import { TimeOffTypeGlyph, TimeOffTypeIcon } from "./TimeOffTypeIcon";
-import { TIME_OFF_TYPE_COLOURS, TIME_OFF_TYPE_ICONS, tileStyle } from "./timeOffTypeLook";
+import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
+import { ICONS, TIME_OFF_TYPE_COLOURS, TIME_OFF_TYPE_ICONS, tileStyle } from "./timeOffTypeLook";
 
 /** A time off type as Settings › Time off lists it. */
 export type ListedTimeOffType =
@@ -74,7 +74,11 @@ export function TimeOffTypeDialog({ type, onClose }: Props) {
 
   return (
     <Dialog open onOpenChange={(open) => !open && !loading && onClose()}>
-      <DialogContent className="sm:max-w-lg" closeLabel={t("settings.timeOff.close")}>
+      <DialogContent
+        // A short or zoomed screen scrolls the form rather than cutting off its actions.
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg"
+        closeLabel={t("settings.timeOff.close")}
+      >
         <form onSubmit={(event) => void save(event)} className="flex flex-col gap-5">
           <DialogHeader>
             {type ? (
@@ -114,22 +118,25 @@ export function TimeOffTypeDialog({ type, onClose }: Props) {
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-2 text-sm font-medium">{t("settings.timeOff.icon")}</legend>
             <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-10">
-              {TIME_OFF_TYPE_ICONS.map((option) => (
-                <label
-                  key={option}
-                  className="relative grid h-9 cursor-pointer place-items-center rounded-lg border border-transparent bg-muted/60 text-muted-foreground has-checked:border-foreground has-checked:bg-background has-checked:text-foreground has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
-                >
-                  <input
-                    type="radio"
-                    name="time-off-type-icon"
-                    className="sr-only"
-                    aria-label={inWords(option)}
-                    checked={icon === option}
-                    onChange={() => setIcon(option)}
-                  />
-                  <TimeOffTypeGlyph icon={option} />
-                </label>
-              ))}
+              {TIME_OFF_TYPE_ICONS.map((option) => {
+                const Glyph = ICONS[option];
+                return (
+                  <label
+                    key={option}
+                    className="relative grid h-9 cursor-pointer place-items-center rounded-lg border border-transparent bg-muted/60 text-muted-foreground has-checked:border-foreground has-checked:bg-background has-checked:text-foreground has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+                  >
+                    <input
+                      type="radio"
+                      name="time-off-type-icon"
+                      className="sr-only"
+                      aria-label={t(ICON_LABELS[option])}
+                      checked={icon === option}
+                      onChange={() => setIcon(option)}
+                    />
+                    <Glyph aria-hidden size={17} />
+                  </label>
+                );
+              })}
             </div>
           </fieldset>
           <fieldset className="flex flex-col gap-2">
@@ -145,7 +152,7 @@ export function TimeOffTypeDialog({ type, onClose }: Props) {
                     type="radio"
                     name="time-off-type-colour"
                     className="sr-only"
-                    aria-label={inWords(option)}
+                    aria-label={t(COLOUR_LABELS[option])}
                     checked={colour === option}
                     onChange={() => setColour(option)}
                   />
@@ -215,8 +222,48 @@ const NAME_MESSAGES: Partial<Record<string, MessageKey>> = {
   taken: "settings.timeOff.nameTaken",
 };
 
-/** An enum value as words for a screen reader: GRADUATION_CAP → "Graduation cap". */
-function inWords(value: string): string {
-  const words = value.toLowerCase().replaceAll("_", " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
+const ICON_LABELS = {
+  SUN: "settings.timeOff.iconSun",
+  UMBRELLA: "settings.timeOff.iconUmbrella",
+  AIRPLANE: "settings.timeOff.iconAeroplane",
+  MOUNTAINS: "settings.timeOff.iconMountains",
+  TREE: "settings.timeOff.iconTree",
+  LEAF: "settings.timeOff.iconLeaf",
+  BICYCLE: "settings.timeOff.iconBicycle",
+  CAR: "settings.timeOff.iconCar",
+  COFFEE: "settings.timeOff.iconCoffee",
+  MOON: "settings.timeOff.iconMoon",
+  THERMOMETER: "settings.timeOff.iconThermometer",
+  FIRST_AID: "settings.timeOff.iconFirstAid",
+  HEARTBEAT: "settings.timeOff.iconHeartbeat",
+  HEART: "settings.timeOff.iconHeart",
+  HAND_HEART: "settings.timeOff.iconCare",
+  FLOWER: "settings.timeOff.iconFlower",
+  BABY: "settings.timeOff.iconBaby",
+  BACKPACK: "settings.timeOff.iconBackpack",
+  HOUSE_LINE: "settings.timeOff.iconHouse",
+  USERS_THREE: "settings.timeOff.iconPeople",
+  GRADUATION_CAP: "settings.timeOff.iconGraduationCap",
+  BOOK_OPEN: "settings.timeOff.iconBook",
+  BRIEFCASE: "settings.timeOff.iconBriefcase",
+  TRUCK: "settings.timeOff.iconLorry",
+  SCALES: "settings.timeOff.iconScales",
+  WALLET: "settings.timeOff.iconWallet",
+  LIFEBUOY: "settings.timeOff.iconLifebuoy",
+  CONFETTI: "settings.timeOff.iconConfetti",
+  STAR: "settings.timeOff.iconStar",
+  SPARKLE: "settings.timeOff.iconSparkle",
+} as const satisfies Record<IconName, MessageKey>;
+
+const COLOUR_LABELS = {
+  GREEN: "settings.timeOff.colourGreen",
+  CORAL: "settings.timeOff.colourCoral",
+  YELLOW: "settings.timeOff.colourYellow",
+  LIME: "settings.timeOff.colourLime",
+  TEAL: "settings.timeOff.colourTeal",
+  BLUE: "settings.timeOff.colourBlue",
+  INDIGO: "settings.timeOff.colourIndigo",
+  PURPLE: "settings.timeOff.colourPurple",
+  PINK: "settings.timeOff.colourPink",
+  RED: "settings.timeOff.colourRed",
+} as const satisfies Record<TimeOffTypeColour, MessageKey>;

@@ -1,8 +1,10 @@
 import {
   ADMIN,
+  deleteAllEmployees,
   EMPLOYEE,
   expect,
   giveTermsPolicies,
+  OWNER,
   seedTimeOffType,
   test,
   timeOffService,
@@ -271,6 +273,29 @@ test("refuses an employee changing a type", async ({ orm }) => {
   ).rejects.toMatchObject({
     code: "FORBIDDEN",
   });
+
+  expect(await service.listTimeOffTypes(ADMIN)).toEqual(before);
+});
+
+test("starting over removes added types and restores the standard types", async ({
+  orm,
+  transact,
+}) => {
+  const service = timeOffService(orm);
+  const before = await service.listTimeOffTypes(ADMIN);
+  const annualLeave = before.timeOffTypes.find(
+    ({ timeOffType }) => timeOffType.typeKey === "annual_leave",
+  )!.timeOffType;
+  await service.createType(ADMIN, studyLeave);
+  await service.changeType(ADMIN, {
+    id: annualLeave.id,
+    name: "Paid leave",
+    icon: "airplane",
+    colour: "blue",
+    private: true,
+  });
+
+  await transact((tx) => deleteAllEmployees(orm)(OWNER, tx));
 
   expect(await service.listTimeOffTypes(ADMIN)).toEqual(before);
 });

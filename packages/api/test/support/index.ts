@@ -103,6 +103,7 @@ export { createGraphqlContext } from "./graphqlContext";
 export { copyInvite, INVITE_EMPLOYEES, CANCEL_INVITE } from "./invites";
 export {
   type AllowanceLine,
+  deleteAllEmployees,
   demoFillService,
   giveDefaultTermsStatutoryMinimum,
   giveTermsPolicies,

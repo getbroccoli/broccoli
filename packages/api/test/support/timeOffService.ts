@@ -136,13 +136,13 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
   return transactor(orm, eventBus);
 }
 
-/** Deletes every employee and time off policy, as startup composes it. */
+/** Deletes every employee and resets time off, as startup composes it. */
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
     await timeOff.lockPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
-    await timeOff.deleteAllPolicies(ctx, tx);
+    await timeOff.resetTimeOff(ctx, tx);
   };
 }
 

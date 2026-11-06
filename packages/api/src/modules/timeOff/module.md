@@ -26,7 +26,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 - **`time_off_allowance_rules`:** the parts that add up to a version's allowance, never edited either:
   - `yearly_entitlement`: days for a working week, as contracts state them (28 for 5), with an optional `max_days`;
   - `service_extra`: extra days after a number of years of service.
-- **`time_off_policy_assignments`:** exceptions, meaning one person on a named policy between two dates; never a terms' own. Reset setup and Exit demo delete every policy and allowance.
+- **`time_off_policy_assignments`:** exceptions, meaning one person on a named policy between two dates; never a terms' own. Reset setup and Exit demo delete every policy and allowance, and the company's own types, and give the seeded types back their names, looks and privacy.
 - **`allowances`:** one person's allowance for one type and one leave year. It has no amount column; its dates are fixed when it is created and never change.
 - **`allowance_ledger_lines`:** every change to an allowance (grants, bank holidays, booked days, manual adjustments, rounding), with its effective date, cause and author.
 - **`time_off`:** a person's time off and its approval status (`pending_approval`, `approved`, `declined`, `cancelled`).

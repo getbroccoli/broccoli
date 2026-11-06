@@ -1,4 +1,4 @@
-import { asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -8,7 +8,9 @@ import {
   type PolicyVersion,
   type TimeOffPolicy,
   type TimeOffType,
+  STANDARD_TIME_OFF_TYPES,
   type TimeOffTypeIdentity,
+  type TimeOffTypeKey,
   TimeOffTypeNameTakenError,
 } from "../domain";
 import { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
@@ -45,7 +47,10 @@ export interface TimeOffPolicyRepository {
     policy: { timeOffTypeId: string } & ({ termsId: string } | { name: string }),
     version: NewPolicyVersion,
   ): Promise<string>;
-  /** Deletes every policy with its versions and rules; no ledger line or assignment may point at one. */
+  /**
+   * Deletes every policy with its versions and rules, and the company's own types, and gives the
+   * seeded types back their name, look and privacy; nothing may point at a policy or own type.
+   */
   deleteAll(): Promise<void>;
   /** Each employee's named policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, PolicyAssignment[]>>;
@@ -147,6 +152,13 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
 
     async deleteAll() {
       await orm().delete(timeOffPolicies);
+      await orm().delete(timeOffTypes).where(isNull(timeOffTypes.typeKey));
+      for (const [typeKey, identity] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
+        await orm()
+          .update(timeOffTypes)
+          .set(identity)
+          .where(eq(timeOffTypes.typeKey, typeKey as TimeOffTypeKey));
+      }
     },
 
     async findAssignments(employeeIds) {
