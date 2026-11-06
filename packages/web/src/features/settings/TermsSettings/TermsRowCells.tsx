@@ -25,6 +25,7 @@ export function TermsRowCells({ terms }: Props) {
           <Link
             to="/settings/terms/$termsId"
             params={{ termsId: terms.id }}
+            onClick={(event) => event.stopPropagation()}
             className="[overflow-wrap:anywhere] hover:underline"
           >
             {terms.name}
