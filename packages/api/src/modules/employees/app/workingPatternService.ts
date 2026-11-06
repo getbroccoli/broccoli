@@ -1,7 +1,6 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Orm, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
-import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
 import { addDays, type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../utils";
 import { type BankHolidayCalendar, parseBankHolidayCalendar } from "../../bankHolidays";
@@ -21,8 +20,7 @@ import {
 import { readEmployeesByName } from "./employeeReadService";
 import { readTimelines } from "./employeeWorkingPatternService";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
-
-const recordHistory = createRecordHistoryService();
+import { appendWorkingWeekHistory } from "./workingWeekHistory";
 
 /**
  * The working patterns admins keep: each set of terms' own and the named ones people are put on,
@@ -146,25 +144,14 @@ export function createWorkingPatternService({
         await repository.lockForWrites();
         const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
         const inForce = versionInForce(pattern.versions, startDate);
-        const { ended, replaced } = makeRoomForDatedRow(
-          pattern.versions,
-          startDate,
-          inForce.endDate,
-        );
-        if (replaced) {
-          await repository.deleteVersion(replaced.id);
-        }
-        if (ended) {
-          await repository.endVersion(ended.id, addDays(startDate, -1));
-        }
         const version = {
           ...week,
           startDate,
           endDate: inForce.endDate,
           bankHolidayCalendar: calendar ?? inForce.bankHolidayCalendar,
         };
-        await repository.insertVersion(pattern.id, version);
-        await appendTermsHistory(ctx, tx, pattern, inForce, version);
+        await addVersion(tx, pattern, version);
+        await appendWorkingWeekHistory(ctx, tx, pattern, inForce, version);
         publishWorkingPatternChange(
           tx,
           await repository.findEmployeesOnPattern(pattern.id),
@@ -202,7 +189,7 @@ export function createWorkingPatternService({
         );
         await repository.deleteVersion(removed.id);
         await repository.endVersion(extended!.id, removed.endDate);
-        await appendTermsHistory(ctx, tx, pattern, removed, null);
+        await appendWorkingWeekHistory(ctx, tx, pattern, removed, null);
         publishWorkingPatternChange(
           tx,
           await repository.findEmployeesOnPattern(pattern.id),
@@ -263,6 +250,27 @@ export function referencedPattern(patterns: readonly WorkingPattern[], workingPa
   return pattern;
 }
 
+/**
+ * Adds a version from its start date: the one covering that date ends the day before, one starting
+ * on it goes.
+ */
+async function addVersion(
+  tx: Tx,
+  pattern: WorkingPattern,
+  version: Omit<PatternVersion, "id"> & { startDate: CalendarDate },
+) {
+  const repository = workingPatternRepository(tx);
+  const { startDate, endDate } = version;
+  const { ended, replaced } = makeRoomForDatedRow(pattern.versions, startDate, endDate);
+  if (replaced) {
+    await repository.deleteVersion(replaced.id);
+  }
+  if (ended) {
+    await repository.endVersion(ended.id, addDays(startDate, -1));
+  }
+  await repository.insertVersion(pattern.id, version);
+}
+
 /** The people the pattern applies to on some day from `from` on that they are employed, by name. */
 async function readReach(
   tx: Tx,
@@ -278,46 +286,6 @@ async function readReach(
       timelines.get(id)!.appliesFrom(workingPatternId, from, periods.get(id) ?? []),
     ),
   );
-}
-
-/** On a terms' pattern, the line in the terms' history: the week before and after, or null when cancelled. */
-async function appendTermsHistory(
-  ctx: SecurityContext,
-  tx: Tx,
-  pattern: WorkingPattern,
-  before: Omit<PatternVersion, "id">,
-  after: Omit<PatternVersion, "id"> | null,
-) {
-  if (!pattern.termsId) {
-    return;
-  }
-  await recordHistory.append(ctx, tx, {
-    recordType: "terms",
-    operation: "UPDATED",
-    cause: { kind: "EDITED_DIRECTLY" },
-    records: [
-      {
-        recordId: pattern.termsId,
-        changes: [
-          {
-            field: "workingWeek",
-            oldValue: weekValue(before),
-            newValue: after && weekValue(after),
-          },
-        ],
-      },
-    ],
-  });
-}
-
-/** A version's week as history keeps it: a JSON object with its start date. */
-function weekValue({
-  startDate,
-  minutes,
-  fullDayMinutes,
-  bankHolidayCalendar,
-}: Omit<PatternVersion, "id">): string {
-  return JSON.stringify({ startDate, minutes, fullDayMinutes, bankHolidayCalendar });
 }
 
 async function findPattern(db: Orm | Tx, workingPatternId: string): Promise<WorkingPattern> {

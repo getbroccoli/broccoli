@@ -7,9 +7,7 @@ import { addDays, type CalendarDate, coversDate, parseUuid, todayInLondon } from
 import {
   cancelPlannedVersion,
   createEmployeeReadService,
-  createPersonTimeline,
   type Employee,
-  type EmployeeReadService,
   makeRoomForDatedRow,
   parseChangeDate,
   parseDateField,
@@ -22,11 +20,12 @@ import {
   refuseCountsChangeMidYear,
   rulesValue,
   type TimeOffPolicy,
+  type TimeOffRules,
   type TimeOffRulesInput,
   type TimeOffType,
   versionFromRules,
 } from "../domain";
-import { readPeople } from "./allowanceEngine";
+import { readOfferReach, readPolicyReach } from "./policyReach";
 import type { TimeOffService } from "./timeOffService";
 
 const recordHistory = createRecordHistoryService();
@@ -145,18 +144,7 @@ export function createTimeOffPolicyService({
         const repository = timeOffPolicyRepository(tx);
         await repository.lockPolicies();
         const policy = existingPolicy(await repository.findAll(), input.timeOffPolicyId);
-        const before = policy.versions.find((version) => coversDate(version, startDate)) ?? null;
-        refuseCountsChangeMidYear(before, rules, startDate);
-        const endDate = before ? before.endDate : dayBeforeNext(policy.versions, startDate);
-        const { ended, replaced } = makeRoomForDatedRow(policy.versions, startDate, endDate);
-        if (replaced) {
-          await repository.deleteVersion(replaced.id);
-        }
-        if (ended) {
-          await repository.endVersion(ended.id, addDays(startDate, -1));
-        }
-        const version = { ...versionFromRules(rules, before), startDate, endDate };
-        await repository.insertVersion(policy.id, version);
+        const { before, version } = await addVersionFrom(tx, policy, startDate, rules);
         await appendTermsHistory(ctx, tx, policy, before, version);
         const reached = await reachOf(tx, await findPolicy(tx, policy.id), startDate);
         const ensured = await timeOff.ensureAllowances(ctx, tx, {
@@ -247,66 +235,6 @@ export function createTimeOffPolicyService({
   };
 }
 
-/** The people the policy applies to on some day from `from` on that they are employed, by name. */
-async function readPolicyReach(
-  employeeReads: EmployeeReadService,
-  tx: Tx,
-  policy: TimeOffPolicy,
-  from: CalendarDate,
-): Promise<Employee[]> {
-  const repository = timeOffPolicyRepository(tx);
-  const candidates = new Set(await repository.findAssignedEmployees(policy.id));
-  for (const id of policy.termsId
-    ? ((await employeeReads.readTermsMemberIds(tx, policy.termsId)) ?? [])
-    : []) {
-    candidates.add(id);
-  }
-  const { people } = await readPeople(employeeReads, tx, [...candidates]);
-  return employeeReads.readEmployeesByName(
-    tx,
-    people
-      .filter((person) =>
-        person.timelineOf(policy.timeOffType.id).appliesFrom(policy.id, from, person.periods),
-      )
-      .map(({ employeeId }) => employeeId),
-  );
-}
-
-/**
- * The people an offer of the type to the terms from `from` would reach: on the terms on some day
- * from then on that they are employed and have no policy of their own for the type.
- */
-async function readOfferReach(
-  employeeReads: EmployeeReadService,
-  tx: Tx,
-  termsId: string,
-  timeOffTypeId: string,
-  from: CalendarDate,
-): Promise<Employee[]> {
-  const memberIds = (await employeeReads.readTermsMemberIds(tx, termsId)) ?? [];
-  const memberships = await employeeReads.readTermsMemberships(tx, memberIds);
-  const periods = await employeeReads.readEmploymentPeriods(tx, memberIds);
-  const assignments = await timeOffPolicyRepository(tx).findAssignments(memberIds);
-  const reached = memberIds.filter((employeeId) =>
-    createPersonTimeline({
-      direct: (assignments.get(employeeId) ?? [])
-        .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
-        .map(({ timeOffPolicyId, startDate, endDate }) => ({
-          id: timeOffPolicyId,
-          startDate,
-          endDate,
-        })),
-      terms: memberships.get(employeeId) ?? [],
-      idOfTerms: (id) => (id === termsId ? OFFER : null),
-      versions: () => [],
-    }).appliesFrom(OFFER, from, periods.get(employeeId) ?? []),
-  );
-  return employeeReads.readEmployeesByName(tx, reached);
-}
-
-/** Stands for the policy an offer would create, which has no id yet. */
-const OFFER = "offer";
-
 /** On a terms' policy, the line in the terms' history: the rules before and after; null for none. */
 async function appendTermsHistory(
   ctx: SecurityContext,
@@ -336,6 +264,32 @@ async function appendTermsHistory(
       },
     ],
   });
+}
+
+/**
+ * Adds the rules' version from `startDate`: the version covering it ends the day before and the new
+ * one runs to that version's end, or to the next version; one starting on the date is replaced.
+ */
+async function addVersionFrom(
+  tx: Tx,
+  policy: TimeOffPolicy,
+  startDate: CalendarDate,
+  rules: TimeOffRules,
+) {
+  const repository = timeOffPolicyRepository(tx);
+  const before = policy.versions.find((version) => coversDate(version, startDate)) ?? null;
+  refuseCountsChangeMidYear(before, rules, startDate);
+  const endDate = before ? before.endDate : dayBeforeNext(policy.versions, startDate);
+  const { ended, replaced } = makeRoomForDatedRow(policy.versions, startDate, endDate);
+  if (replaced) {
+    await repository.deleteVersion(replaced.id);
+  }
+  if (ended) {
+    await repository.endVersion(ended.id, addDays(startDate, -1));
+  }
+  const version = { ...versionFromRules(rules, before), startDate, endDate };
+  await repository.insertVersion(policy.id, version);
+  return { before, version };
 }
 
 function rulesChanged(timeOffPolicyId: string, from: CalendarDate) {
