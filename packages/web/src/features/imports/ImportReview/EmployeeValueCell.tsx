@@ -58,13 +58,15 @@ export function EmployeeValueCell({
         sideOffset={8}
         className="w-[380px] max-w-[calc(100vw-2rem)] gap-4 rounded-xl p-5"
       >
-        <EmployeeValuePopover
-          employeeId={employeeId}
-          employeeName={employeeName}
-          field={field}
-          value={value}
-          onDone={() => setOpen(false)}
-        />
+        {open && (
+          <EmployeeValuePopover
+            employeeId={employeeId}
+            employeeName={employeeName}
+            field={field}
+            value={value}
+            onDone={() => setOpen(false)}
+          />
+        )}
       </PopoverContent>
     </Popover>
   );
