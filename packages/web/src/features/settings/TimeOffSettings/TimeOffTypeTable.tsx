@@ -1,8 +1,9 @@
-import type { TimeOffBalanceKind, TimeOffSettingsQuery } from "@/__generated__/graphql";
+import type { TimeOffSettingsQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { formatDays } from "@/lib/formatDays";
 
 import type { ListedTimeOffType } from "./TimeOffTypeDialog";
+import { BuiltInPill } from "./BuiltInPill";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 
 type Props = {
@@ -12,7 +13,7 @@ type Props = {
   onEdit: (timeOffType: ListedTimeOffType) => void;
 };
 
-/** The time off types as a table of name, how each counts and the days taken this year. */
+/** The time off types as a table of name and the days taken this year. */
 export function TimeOffTypeTable({ timeOffTypes, onEdit }: Props) {
   if (timeOffTypes.length === 0) {
     return (
@@ -26,19 +27,16 @@ export function TimeOffTypeTable({ timeOffTypes, onEdit }: Props) {
       <table className="w-full table-fixed text-sm">
         <thead className="text-left text-[11px] tracking-wide text-muted-foreground uppercase">
           <tr className="border-b border-border">
-            <th scope="col" className="w-[45%] px-4 py-3 font-medium">
+            <th scope="col" className="px-4 py-3 font-medium">
               {t("settings.timeOff.typeColumn")}
             </th>
-            <th scope="col" className="px-4 py-3 font-medium">
-              {t("settings.timeOff.countsColumn")}
-            </th>
-            <th scope="col" className="px-4 py-3 text-right font-medium">
+            <th scope="col" className="w-40 px-4 py-3 text-right font-medium">
               {t("settings.timeOff.takenColumn")}
             </th>
           </tr>
         </thead>
         <tbody>
-          {timeOffTypes.map(({ timeOffType, balance, daysTakenThisYear }) => (
+          {timeOffTypes.map(({ timeOffType, daysTakenThisYear }) => (
             <tr
               key={timeOffType.id}
               className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
@@ -57,9 +55,9 @@ export function TimeOffTypeTable({ timeOffTypes, onEdit }: Props) {
                 >
                   <TimeOffTypeIcon icon={timeOffType.icon} colour={timeOffType.colour} />
                   <span className="min-w-0 [overflow-wrap:anywhere]">{timeOffType.name}</span>
+                  {timeOffType.typeKey && <BuiltInPill />}
                 </button>
               </th>
-              <td className="px-4 py-3 text-muted-foreground">{countsText(balance)}</td>
               <td className="px-4 py-3 text-right tabular-nums">
                 {daysTakenThisYear === 0 ? "0" : formatDays(daysTakenThisYear)}
               </td>
@@ -70,13 +68,3 @@ export function TimeOffTypeTable({ timeOffTypes, onEdit }: Props) {
     </div>
   );
 }
-
-function countsText(balance: TimeOffBalanceKind | null | undefined): string {
-  return t(balance ? COUNTS[balance] : "settings.timeOff.noPolicy");
-}
-
-const COUNTS = {
-  BALANCE_FROM_ALLOWANCE: "settings.timeOff.fromBalance",
-  UNLIMITED_BALANCE: "settings.timeOff.unlimited",
-  NO_BALANCE: "settings.timeOff.doesNotCount",
-} as const satisfies Record<TimeOffBalanceKind, string>;

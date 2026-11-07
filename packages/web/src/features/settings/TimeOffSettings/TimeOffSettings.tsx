@@ -13,8 +13,8 @@ import { TimeOffTypeTable } from "./TimeOffTypeTable";
 type Settings = TimeOffSettingsQuery["timeOffSettings"];
 
 /**
- * The Settings page's Time off section: every time off type, how it counts and how much was
- * taken; admins add types here and change their name, look and privacy.
+ * The Settings page's Time off section: every time off type and how much was taken; admins add
+ * types here and change their name, look and privacy.
  */
 export function TimeOffSettings() {
   // Days taken change whenever someone books, so the list reloads whenever shown.
@@ -25,7 +25,7 @@ export function TimeOffSettings() {
   const [dialog, setDialog] = useState<"new" | ListedTimeOffType | null>(null);
 
   return (
-    <section aria-labelledby="time-off-settings-title" className="flex flex-col gap-4">
+    <section aria-labelledby="time-off-settings-title" className="flex max-w-2xl flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 id="time-off-settings-title" className="text-lg font-semibold">

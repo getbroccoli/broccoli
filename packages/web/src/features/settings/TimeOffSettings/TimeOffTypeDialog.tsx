@@ -86,7 +86,13 @@ export function TimeOffTypeDialog({ type, onClose }: Props) {
                 <TimeOffTypeIcon icon={type.icon} colour={type.colour} />
                 <div>
                   <DialogTitle className="[overflow-wrap:anywhere]">{type.name}</DialogTitle>
-                  <DialogDescription>{t("settings.timeOff.editHint")}</DialogDescription>
+                  <DialogDescription>
+                    {t(
+                      type.typeKey
+                        ? "settings.timeOff.editHintBuiltIn"
+                        : "settings.timeOff.editHint",
+                    )}
+                  </DialogDescription>
                 </div>
               </div>
             ) : (
