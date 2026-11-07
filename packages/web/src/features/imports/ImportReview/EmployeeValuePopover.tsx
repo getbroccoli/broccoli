@@ -20,23 +20,19 @@ import { SourceIcon } from "./SourceIcon";
 
 type Choice = Pick<ImportChooseEmployeeValueInput, "recordId" | "value">;
 
-/**
- * Picks one source's value with one click, as the setup design does, or takes a typed one.
- * A pick shows a toast whose Undo puts the previous choice back.
- */
-export function EmployeeValuePopover({
-  employeeId,
-  employeeName,
-  field,
-  value,
-  onDone,
-}: {
+type Props = {
   employeeId: string;
   employeeName: string;
   field: EmployeeFieldKey;
   value: EmployeeValueCell_ValueFragment;
   onDone: () => void;
-}) {
+};
+
+/**
+ * Picks one source's value with one click, as the setup design does, or takes a typed one.
+ * A pick shows a toast whose Undo puts the previous choice back.
+ */
+export function EmployeeValuePopover({ employeeId, employeeName, field, value, onDone }: Props) {
   const [chooseValue, { loading, payloadError, error }] = usePayloadMutation(
     ChooseEmployeeValueDocument,
     { refetch: [ImportReviewDocument] },
