@@ -1,19 +1,23 @@
-import { asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
-import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
-import type {
-  AllowanceRule,
-  NewPolicyVersion,
-  PolicyVersion,
-  TimeOffPolicy,
-  TimeOffType,
+import {
+  type AllowanceRule,
+  type NewPolicyVersion,
+  type PolicyVersion,
+  type TimeOffPolicy,
+  type TimeOffType,
+  STANDARD_TIME_OFF_TYPES,
+  type TimeOffTypeIdentity,
+  type TimeOffTypeKey,
+  TimeOffTypeNameTakenError,
 } from "../domain";
 import { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
 import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
 import { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
-import { timeOffTypes } from "./timeOffTypesTable";
+import { TIME_OFF_TYPE_NAME_UNIQUE, timeOffTypes } from "./timeOffTypesTable";
 
 /** A person on a named policy for one type from a date to a date. */
 export interface PolicyAssignment {
@@ -28,6 +32,10 @@ export interface PolicyAssignment {
 export interface TimeOffPolicyRepository {
   /** Every time off type, with or without a policy. */
   findAllTypes(): Promise<TimeOffType[]>;
+  /** Adds a company type; throws `TimeOffTypeNameTakenError` when another type has the name. */
+  insertType(identity: TimeOffTypeIdentity): Promise<TimeOffType>;
+  /** The changed type, or null when no type has the id; throws `TimeOffTypeNameTakenError` like `insertType`. */
+  updateType(id: string, identity: TimeOffTypeIdentity): Promise<TimeOffType | null>;
   /** Every policy with its type and versions, oldest first, each with its rules. */
   findAll(): Promise<TimeOffPolicy[]>;
   /** Serializes changes to policies until the transaction ends. */
@@ -39,7 +47,10 @@ export interface TimeOffPolicyRepository {
     policy: { timeOffTypeId: string } & ({ termsId: string } | { name: string }),
     version: NewPolicyVersion,
   ): Promise<string>;
-  /** Deletes every policy with its versions and rules; no ledger line or assignment may point at one. */
+  /**
+   * Deletes every policy with its versions and rules, and the company's own types, and gives the
+   * seeded types back their name, look and privacy; nothing may point at a policy or own type.
+   */
   deleteAll(): Promise<void>;
   /** Each employee's named policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, PolicyAssignment[]>>;
@@ -50,6 +61,32 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
   return {
     async findAllTypes() {
       return (await orm().select().from(timeOffTypes)).map(toTimeOffType);
+    },
+
+    async insertType(identity) {
+      try {
+        // A company type asks for approval, as Annual leave does, until approvals are configurable.
+        const [type] = await orm()
+          .insert(timeOffTypes)
+          .values({ ...identity, needsApproval: true })
+          .returning();
+        return toTimeOffType(type!);
+      } catch (error) {
+        throw nameTakenOr(error);
+      }
+    },
+
+    async updateType(id, identity) {
+      try {
+        const [type] = await orm()
+          .update(timeOffTypes)
+          .set(identity)
+          .where(eq(timeOffTypes.id, id))
+          .returning();
+        return type ? toTimeOffType(type) : null;
+      } catch (error) {
+        throw nameTakenOr(error);
+      }
     },
 
     async findAll() {
@@ -115,6 +152,18 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
 
     async deleteAll() {
       await orm().delete(timeOffPolicies);
+      await orm().delete(timeOffTypes).where(isNull(timeOffTypes.typeKey));
+      // Seeded types may hold each other's names; free them all before restoring any.
+      await orm()
+        .update(timeOffTypes)
+        .set({ name: sql`${timeOffTypes.id}::text` })
+        .where(isNotNull(timeOffTypes.typeKey));
+      for (const [typeKey, identity] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
+        await orm()
+          .update(timeOffTypes)
+          .set(identity)
+          .where(eq(timeOffTypes.typeKey, typeKey as TimeOffTypeKey));
+      }
     },
 
     async findAssignments(employeeIds) {
@@ -189,6 +238,19 @@ function ruleRow(timeOffPolicyVersionId: string, rule: NewPolicyVersion["rules"]
       };
 }
 
-function toTimeOffType({ id, name, typeKey, icon, colour }: typeof timeOffTypes.$inferSelect) {
-  return { id, name, typeKey, icon, colour };
+function toTimeOffType({
+  id,
+  name,
+  typeKey,
+  icon,
+  colour,
+  private: isPrivate,
+}: typeof timeOffTypes.$inferSelect): TimeOffType {
+  return { id, name, typeKey, icon, colour, private: isPrivate };
+}
+
+function nameTakenOr(error: unknown): unknown {
+  return isUniqueViolation(error, TIME_OFF_TYPE_NAME_UNIQUE)
+    ? new TimeOffTypeNameTakenError()
+    : error;
 }

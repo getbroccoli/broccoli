@@ -2650,7 +2650,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "time_off_types_name_unique": {
+          "name": "time_off_types_name_unique",
+          "columns": [
+            {
+              "expression": "lower(btrim(\"name\"))",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {

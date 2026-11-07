@@ -39,7 +39,9 @@ export function TermsTimeOffSection({ termsName, timeOff }: Props) {
                 <p className="font-semibold [overflow-wrap:anywhere]">{timeOffType.name}</p>
                 <p className="text-[13px] text-muted-foreground">
                   {current
-                    ? ruleLine(current)
+                    ? [ruleLine(current), timeOffType.private && t("terms.timeOff.private")]
+                        .filter(Boolean)
+                        .join(" · ")
                     : t("terms.timeOff.notOffered", { terms: termsName })}
                 </p>
                 {planned.map((version) => (

@@ -7,9 +7,64 @@ query TimeOffSettings {
         name
         icon
         colour
+        private
+        typeKey
       }
-      balance
       daysTakenThisYear
+    }
+  }
+}
+
+mutation CreateTimeOffType($input: TimeOffTypeCreateInput!) {
+  timeOff {
+    createType(input: $input) {
+      timeOffType {
+        id
+        name
+        icon
+        colour
+        private
+        typeKey
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation ChangeTimeOffType($input: TimeOffTypeChangeInput!) {
+  timeOff {
+    changeType(input: $input) {
+      timeOffType {
+        id
+        name
+        icon
+        colour
+        private
+        typeKey
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
     }
   }
 }

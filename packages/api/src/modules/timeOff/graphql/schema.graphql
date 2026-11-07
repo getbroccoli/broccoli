@@ -48,6 +48,8 @@ type TimeOffType {
   colour: TimeOffTypeColour!
   "Which seeded type this is; null on the company's own types."
   typeKey: TimeOffTypeKey
+  "Colleagues see that the person is off, not why. Always true for Sickness."
+  private: Boolean!
 }
 
 "The four time off types every workspace starts with."
@@ -263,3 +265,50 @@ input LocationTermsInput {
   locationName: String!
   bankHolidayCalendar: BankHolidayCalendar!
 }
+
+type Mutation {
+  timeOff: TimeOffMutations!
+}
+
+type TimeOffMutations {
+  "Adds a company time off type. No terms offer it until they are given rules for it. Admins only."
+  createType(input: TimeOffTypeCreateInput!): TimeOffTypeCreatePayload!
+  "Changes a type's name, icon, colour and privacy, the same in every set of terms. Admins only."
+  changeType(input: TimeOffTypeChangeInput!): TimeOffTypeChangePayload!
+}
+
+input TimeOffTypeCreateInput {
+  "1 to 60 characters; unique, ignoring case and surrounding spaces."
+  name: String!
+  icon: TimeOffTypeIcon!
+  colour: TimeOffTypeColour!
+  "Colleagues see that the person is off, not why."
+  private: Boolean!
+}
+
+"Every field is sent; the dialog always has all four."
+input TimeOffTypeChangeInput {
+  timeOffTypeId: ID!
+  "1 to 60 characters; unique, ignoring case and surrounding spaces."
+  name: String!
+  icon: TimeOffTypeIcon!
+  colour: TimeOffTypeColour!
+  "Must stay true for Sickness."
+  private: Boolean!
+}
+
+"The new time off type, or why it was refused."
+type TimeOffTypeCreatePayload {
+  timeOffType: TimeOffType
+  error: TimeOffTypeCreateError
+}
+
+union TimeOffTypeCreateError = InvalidInputError
+
+"The changed time off type, or why it was refused."
+type TimeOffTypeChangePayload {
+  timeOffType: TimeOffType
+  error: TimeOffTypeChangeError
+}
+
+union TimeOffTypeChangeError = InvalidInputError | NotFoundError

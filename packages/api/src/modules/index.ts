@@ -51,13 +51,13 @@ export function createModules(
     bankHolidaySource: createStaticBankHolidaySource(),
   });
   const timeOff = createTimeOffService({ ...core, bankHolidays });
-  // Every path that clears the people deletes the time off policies too, back to a fresh workspace.
+  // Every path that clears the people resets time off too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // The policies' lock first: turning time off on holds it while its allowances wait on employee rows.
     await timeOff.lockPolicies(ctx, tx);
     // Employees next: their assignments, allowances and ledger lines point at the policies.
     await employeeSetup.deleteAllEmployees(ctx, tx);
-    await timeOff.deleteAllPolicies(ctx, tx);
+    await timeOff.resetTimeOff(ctx, tx);
   };
   // Built once: the employees module serves it and setup's last step invites through it.
   const invites = createEmployeeInviteService({

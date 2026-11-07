@@ -27,7 +27,15 @@ export {
 export { sharedBalance } from "./sharedBalance";
 export { timeOffFigures, type LedgerLineKind, type TimeOffFigures } from "./timeOffFigures";
 export {
+  parseTimeOffTypeIdentity,
+  STANDARD_TIME_OFF_TYPES,
+  type TimeOffTypeIdentity,
+  TimeOffTypeNameTakenError,
+} from "./timeOffTypeIdentity";
+export {
   DEFAULT_TIME_OFF_TYPE_LOOK,
   TIME_OFF_TYPE_COLOURS,
   TIME_OFF_TYPE_ICONS,
+  type TimeOffTypeColour,
+  type TimeOffTypeIcon,
 } from "./timeOffTypeLook";

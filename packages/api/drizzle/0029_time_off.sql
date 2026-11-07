@@ -171,4 +171,5 @@ ALTER TABLE "employee_terms" ADD CONSTRAINT "employee_terms_no_overlap" EXCLUDE 
 ALTER TABLE "time_off_policy_versions" ADD CONSTRAINT "time_off_policy_versions_no_overlap" EXCLUDE USING gist ("time_off_policy_id" WITH =, daterange("start_date", "end_date", '[]') WITH &&);--> statement-breakpoint
 ALTER TABLE "time_off_policy_assignments" ADD CONSTRAINT "time_off_policy_assignments_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("start_date", "end_date", '[]') WITH &&);--> statement-breakpoint
 ALTER TABLE "allowances" ADD CONSTRAINT "allowances_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("leave_year_start", "leave_year_end", '[]') WITH &&);--> statement-breakpoint
+CREATE UNIQUE INDEX "time_off_types_name_unique" ON "time_off_types" USING btree (lower(btrim("name")));--> statement-breakpoint
 CREATE UNIQUE INDEX "terms_name_unique" ON "terms" USING btree (lower(btrim("name")));
