@@ -74,7 +74,7 @@ Exit the demo, then finish setup with the owner but without the Company defaults
 
 - [ ] With the API stopped, reloading the list shows "Employment terms could not be loaded." and "Try again", which reloads it once the API is back.
 - [ ] At 390 px wide, the terms fill the screen edge to edge, History follows the sections and Close stays at the bottom; the list scrolls sideways inside its box.
-- [ ] With a section open, "What changes" sits inside it under the form; at 390 px wide the form stacks and the save line wraps beside Cancel and Save.
+- [ ] With a section open, "What changes" appears on the right; at 390 px wide it sits below History, the form stacks and the save line wraps beside Cancel and Save.
 
 ## Access
 

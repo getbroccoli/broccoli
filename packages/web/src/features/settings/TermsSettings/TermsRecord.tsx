@@ -35,18 +35,13 @@ type Props = {
 
 /**
  * One loaded set of terms: header, working week and time off, then their history, as a person's
- * panel reads. One section at a time opens in place with what saving changes; the footer saves it.
+ * panel reads. One section at a time opens in place, with what saving changes beside it; the
+ * footer saves it.
  */
 export function TermsRecord({ terms }: Props) {
   const editing = useTermsEditing(terms);
   const planned = usePlannedChanges(terms);
   const { open } = editing;
-  // Under the open form, inside its section: what saving changes and whom it reaches.
-  const whatChanges = (
-    <div className="border-t border-border pt-5">
-      <WhatChanges box={editing.box} people={editing.people} termsName={terms.name} />
-    </div>
-  );
   const meta = t(terms.peopleCount === 1 ? "terms.peopleOne" : "terms.people", {
     count: String(terms.peopleCount),
   });
@@ -72,39 +67,38 @@ export function TermsRecord({ terms }: Props) {
         </SheetClose>
       </header>
 
-      <div className="subtle-scrollbar flex flex-1 flex-col gap-8 overflow-y-auto px-6 py-6">
-        {/* Nothing changes while a save is on its way, so it never closes over newer edits. */}
-        <fieldset disabled={editing.saving} className="flex min-w-0 flex-col gap-8">
-          <WorkingWeekSection
-            versions={terms.workingWeek}
-            editor={
-              open?.kind === "week" &&
-              editing.week && (
-                <div className="flex flex-col gap-5 rounded-xl border border-foreground p-4">
-                  <WeekEditor
-                    draft={open.draft}
-                    current={editing.week}
-                    earliest={editing.earliest}
-                    onChange={(draft) => editing.change({ kind: "week", draft })}
-                  />
-                  {whatChanges}
-                </div>
-              )
-            }
-            onEdit={editing.editWeek}
-            onCancelPlanned={planned.askWeek}
-          />
-          <TermsTimeOffSection
-            termsName={terms.name}
-            timeOff={terms.timeOff}
-            open={
-              open?.kind === "rules"
-                ? {
-                    timeOffTypeId: open.timeOffTypeId,
-                    dirty: editing.dirty,
-                    summary: openRowSummary(),
-                    editor: (
-                      <>
+      <div className="subtle-scrollbar flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+        <div className="flex min-w-0 flex-col gap-8 px-6 py-6 md:flex-[2] md:overflow-y-auto">
+          {/* Nothing changes while a save is on its way, so it never closes over newer edits. */}
+          <fieldset disabled={editing.saving} className="flex min-w-0 flex-col gap-8">
+            <WorkingWeekSection
+              versions={terms.workingWeek}
+              editor={
+                open?.kind === "week" &&
+                editing.week && (
+                  <div className="flex flex-col gap-5 rounded-xl border border-foreground p-4">
+                    <WeekEditor
+                      draft={open.draft}
+                      current={editing.week}
+                      earliest={editing.earliest}
+                      onChange={(draft) => editing.change({ kind: "week", draft })}
+                    />
+                  </div>
+                )
+              }
+              onEdit={editing.editWeek}
+              onCancelPlanned={planned.askWeek}
+            />
+            <TermsTimeOffSection
+              termsName={terms.name}
+              timeOff={terms.timeOff}
+              open={
+                open?.kind === "rules"
+                  ? {
+                      timeOffTypeId: open.timeOffTypeId,
+                      dirty: editing.dirty,
+                      summary: openRowSummary(),
+                      editor: (
                         <RulesEditor
                           draft={open.draft}
                           versions={editing.row!.versions}
@@ -117,17 +111,21 @@ export function TermsRecord({ terms }: Props) {
                             })
                           }
                         />
-                        {whatChanges}
-                      </>
-                    ),
-                  }
-                : null
-            }
-            onEdit={editing.editRules}
-            onCancelPlanned={planned.askRules}
-          />
-        </fieldset>
-        <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />
+                      ),
+                    }
+                  : null
+              }
+              onEdit={editing.editRules}
+              onCancelPlanned={planned.askRules}
+            />
+          </fieldset>
+          <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />
+        </div>
+        {open && (
+          <aside className="border-t border-border bg-muted/40 px-6 py-6 md:flex-1 md:overflow-y-auto md:border-t-0 md:border-l">
+            <WhatChanges box={editing.box} people={editing.people} termsName={terms.name} />
+          </aside>
+        )}
       </div>
 
       <footer className="flex items-center justify-end gap-2 border-t border-border px-6 py-3">
