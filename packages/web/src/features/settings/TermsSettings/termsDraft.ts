@@ -42,14 +42,17 @@ export function weekDraftOf(version: WeekVersion, today: string): WeekDraft {
   };
 }
 
-/** The rules form filled from today's version, or empty for an offer; from this leave year's start. */
+/**
+ * The rules form filled from today's version, from next leave year so balances in use stay; or
+ * empty for an offer, from this leave year's start.
+ */
 export function rulesDraftOf(version: PolicyVersionText | null): RulesDraft {
   return {
     offer: version === null,
     balance: version?.balance ?? "BALANCE_FROM_ALLOWANCE",
     days: version?.yearlyEntitlement ? String(version.yearlyEntitlement.days) : "",
     onTop: version?.bankHolidays !== "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE",
-    appliesFrom: "THIS_LEAVE_YEAR",
+    appliesFrom: version === null ? "THIS_LEAVE_YEAR" : "NEXT_LEAVE_YEAR",
     otherDate: "",
   };
 }
@@ -240,22 +243,27 @@ export function rulesSaveLine(
   return t(offer ? "terms.edit.rules.offerSaveLine" : "terms.edit.rules.saveLine", values);
 }
 
-/** The hints under "Applies from", naming the type's days when it counts from a balance. */
-export function appliesFromHints(
-  draft: RulesDraft,
-  current: PolicyVersionText | null,
-): Record<RulesDraft["appliesFrom"], string> {
-  const withDays = draft.balance === "BALANCE_FROM_ALLOWANCE" && draft.days.trim() !== "";
-  const daysNow = current?.balance === "BALANCE_FROM_ALLOWANCE" && current.yearlyEntitlement;
-  return {
-    THIS_LEAVE_YEAR: withDays
-      ? t("terms.edit.rules.thisYearDaysHint", { days: draft.days })
-      : t("terms.edit.rules.thisYearHint"),
-    NEXT_LEAVE_YEAR: daysNow
-      ? t("terms.edit.rules.nextYearDaysHint", { days: String(daysNow.days) })
-      : t("terms.edit.rules.nextYearHint"),
-    ANOTHER_DATE: t("terms.edit.rules.anotherDateHint"),
-  };
+/** The line under "Applies from": what the choice does to the leave year it falls in. */
+export function appliesFromHint(draft: RulesDraft, earliest: string): string {
+  const year = earliest.slice(0, 4);
+  switch (draft.appliesFrom) {
+    case "THIS_LEAVE_YEAR":
+      return t(
+        draft.offer ? "terms.edit.rules.offerThisYearHint" : "terms.edit.rules.thisYearHint",
+        {
+          year,
+        },
+      );
+    case "NEXT_LEAVE_YEAR":
+      return t(
+        draft.offer ? "terms.edit.rules.offerNextYearHint" : "terms.edit.rules.nextYearHint",
+        {
+          year,
+        },
+      );
+    case "ANOTHER_DATE":
+      return t("terms.edit.rules.anotherDateHint", { year });
+  }
 }
 
 /** The toast after saving: "Working week saved for Scotland. It changes on 1 Dec 2026." */

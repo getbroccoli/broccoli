@@ -1,9 +1,11 @@
 import { expect, it } from "vitest";
 
 import {
+  appliesFromHint,
   canChangeCounts,
   rulesChangeBox,
   rulesErrors,
+  rulesDraftOf,
   rulesSaveLine,
   savedToast,
   weekChangeBox,
@@ -164,6 +166,30 @@ it("adds the start date when a saved working week is planned", () => {
 
 it("compares the new working week's hours and days with the old week", () => {
   expect(weekHint(week, currentWeek)).toBe("32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.");
+});
+
+it("starts a change of rules from next leave year, so balances in use stay", () => {
+  expect(rulesDraftOf(currentRules).appliesFrom).toBe("NEXT_LEAVE_YEAR");
+});
+
+it("starts an offer from this leave year", () => {
+  expect(rulesDraftOf(null).appliesFrom).toBe("THIS_LEAVE_YEAR");
+});
+
+it("says what each start does to the leave year", () => {
+  expect(appliesFromHint({ ...rules, appliesFrom: "THIS_LEAVE_YEAR" }, "2026-01-01")).toBe(
+    "This leave year, so 2026 allowances change now.",
+  );
+  expect(appliesFromHint(rules, "2026-01-01")).toBe("Next leave year. 2026 stays as it is.");
+  expect(appliesFromHint({ ...rules, appliesFrom: "ANOTHER_DATE" }, "2026-01-01")).toBe(
+    "Splits 2026 at that date.",
+  );
+});
+
+it("says an offer from next leave year waits until then", () => {
+  expect(appliesFromHint({ ...rules, offer: true }, "2026-01-01")).toBe(
+    "Not offered until next leave year.",
+  );
 });
 
 const week: WeekDraft = {

@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { type MessageKey, t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
+import { DateChoice } from "./DateChoice";
 import {
-  appliesFromHints,
+  appliesFromHint,
   canChangeCounts,
   nextLeaveYear,
   type RulesDraft,
@@ -34,16 +35,12 @@ export function RulesEditor({ draft, versions, earliest, onChange }: Props) {
   const today = splitVersions(versions, companyToday()).current;
   const errors = rulesErrors(draft, earliest);
   const countsOpen = canChangeCounts(draft, earliest);
-  const hints = appliesFromHints(draft, today);
+  // "Other date…" before a date is picked is no mistake yet; Save stays off until one is.
+  const pickingDate = draft.appliesFrom === "ANOTHER_DATE" && !draft.otherDate;
   // A date off a leave year's start keeps how the type counts on that date.
   const changeDate = (next: RulesDraft) => {
     const base = versionOn(versions, rulesStartDate(next, earliest)) ?? today;
     onChange(base && !canChangeCounts(next, earliest) ? { ...next, balance: base.balance } : next);
-  };
-  const appliesFromTitles: Record<RulesDraft["appliesFrom"], string> = {
-    THIS_LEAVE_YEAR: t("terms.edit.rules.thisYear", { date: shortDate(earliest) }),
-    NEXT_LEAVE_YEAR: t("terms.edit.rules.nextYear", { date: shortDate(nextLeaveYear(earliest)) }),
-    ANOTHER_DATE: t("terms.edit.rules.anotherDate"),
   };
   return (
     <div className="flex flex-col gap-5">
@@ -126,36 +123,28 @@ export function RulesEditor({ draft, versions, earliest, onChange }: Props) {
         </div>
       )}
 
-      <fieldset className="flex flex-col gap-2 border-t border-border pt-5">
-        <legend className="mb-2 float-left w-full text-sm font-semibold">
-          {t("terms.edit.appliesFrom")}
-        </legend>
-        {APPLIES_FROM.map((appliesFrom) => (
-          <OptionCard
-            key={appliesFrom}
-            name="applies-from"
-            value={appliesFrom}
-            selected={draft.appliesFrom}
-            onSelect={(value) => changeDate({ ...draft, appliesFrom: value })}
-            title={appliesFromTitles[appliesFrom]}
-            hint={hints[appliesFrom]}
-          >
-            {appliesFrom === "ANOTHER_DATE" && (
-              <div className="flex max-w-64">
-                <DatePicker
-                  value={draft.otherDate}
-                  fromDate={earliest}
-                  placeholder={t("terms.edit.rules.anotherDate")}
-                  aria-label={t("terms.edit.rules.anotherDate")}
-                  aria-invalid={Boolean(errors.startDate)}
-                  onChange={(otherDate) => changeDate({ ...draft, otherDate })}
-                />
-              </div>
-            )}
-          </OptionCard>
-        ))}
-        <FieldError id="rules-start-error" message={errors.startDate} />
-      </fieldset>
+      <DateChoice
+        name="rules-start"
+        options={[
+          { value: "THIS_LEAVE_YEAR", label: shortDate(earliest) },
+          { value: "NEXT_LEAVE_YEAR", label: shortDate(nextLeaveYear(earliest)) },
+          { value: "ANOTHER_DATE", label: t("terms.edit.otherDate") },
+        ]}
+        selected={draft.appliesFrom}
+        onSelect={(appliesFrom) => changeDate({ ...draft, appliesFrom })}
+        hint={appliesFromHint(draft, earliest)}
+        error={pickingDate ? undefined : errors.startDate}
+        picker={
+          <DatePicker
+            value={draft.otherDate}
+            fromDate={earliest}
+            placeholder={t("terms.edit.pickDate")}
+            aria-label={t("terms.edit.pickDate")}
+            aria-invalid={!pickingDate && Boolean(errors.startDate)}
+            onChange={(otherDate) => changeDate({ ...draft, otherDate })}
+          />
+        }
+      />
     </div>
   );
 }
@@ -176,10 +165,4 @@ const COUNTS: { balance: TimeOffBalanceKind; title: MessageKey; hint: MessageKey
     title: "terms.edit.rules.doesNotCount",
     hint: "terms.edit.rules.recordedHint",
   },
-];
-
-const APPLIES_FROM: RulesDraft["appliesFrom"][] = [
-  "THIS_LEAVE_YEAR",
-  "NEXT_LEAVE_YEAR",
-  "ANOTHER_DATE",
 ];

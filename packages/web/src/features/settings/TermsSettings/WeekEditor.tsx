@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { FieldError } from "@/components/form";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -6,8 +8,15 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { calendarName } from "./calendarName";
-import { type WeekDraft, weekErrors, weekHint, type WeekVersion } from "./termsDraft";
-import { DAY_NAMES } from "./termsText";
+import { DateChoice } from "./DateChoice";
+import {
+  nextLeaveYear,
+  type WeekDraft,
+  weekErrors,
+  weekHint,
+  type WeekVersion,
+} from "./termsDraft";
+import { companyToday, DAY_NAMES, shortDate } from "./termsText";
 
 type Props = {
   draft: WeekDraft;
@@ -18,6 +27,15 @@ type Props = {
 
 /** The working week section opened in place: hours each day, bank holidays, from when. */
 export function WeekEditor({ draft, current, earliest, onChange }: Props) {
+  const today = companyToday();
+  const nextYear = nextLeaveYear(earliest);
+  const [other, setOther] = useState(false);
+  const choice =
+    other || (draft.startDate !== today && draft.startDate !== nextYear)
+      ? "ANOTHER_DATE"
+      : draft.startDate === today
+        ? "TODAY"
+        : "NEXT_LEAVE_YEAR";
   const errors = weekErrors(draft, earliest);
   return (
     <div className="flex flex-col gap-5 rounded-xl border border-foreground p-4">
@@ -63,21 +81,33 @@ export function WeekEditor({ draft, current, earliest, onChange }: Props) {
         </select>
       </label>
 
-      <div className="flex flex-col gap-1.5 border-t border-border pt-4">
-        <span className="text-sm font-semibold">{t("terms.edit.appliesFrom")}</span>
-        <div className="flex max-w-64">
+      <DateChoice
+        name="week-start"
+        options={[
+          { value: "TODAY", label: t("terms.edit.today") },
+          { value: "NEXT_LEAVE_YEAR", label: shortDate(nextYear) },
+          { value: "ANOTHER_DATE", label: t("terms.edit.otherDate") },
+        ]}
+        selected={choice}
+        onSelect={(value) => {
+          setOther(value === "ANOTHER_DATE");
+          if (value !== "ANOTHER_DATE") {
+            onChange({ ...draft, startDate: value === "TODAY" ? today : nextYear });
+          }
+        }}
+        hint={t("terms.edit.week.startHint")}
+        error={errors.startDate}
+        picker={
           <DatePicker
             value={draft.startDate}
             fromDate={earliest}
-            placeholder={t("terms.edit.appliesFrom")}
-            aria-label={t("terms.edit.appliesFrom")}
+            placeholder={t("terms.edit.pickDate")}
+            aria-label={t("terms.edit.pickDate")}
             aria-invalid={Boolean(errors.startDate)}
             onChange={(startDate) => onChange({ ...draft, startDate })}
           />
-        </div>
-        <p className="text-[13px] text-muted-foreground">{t("terms.edit.week.startHint")}</p>
-        <FieldError id="week-start-error" message={errors.startDate} />
-      </div>
+        }
+      />
     </div>
   );
 }

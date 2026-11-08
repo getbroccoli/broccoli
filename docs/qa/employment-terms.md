@@ -27,7 +27,7 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 ## Change the working week
 
-- [ ] "Edit" on Working week opens it in place with a dark border: seven hour fields from today's week, "Bank holidays" and "Applies from" set to today.
+- [ ] "Edit" on Working week opens it in place with a dark border: seven hour fields from today's week, "Bank holidays" and "Applies from" as one row "Today", "1 Jan <next year>", "Other date…", on "Today".
 - [ ] Set Mon to Thu to 8 and Fri to 0: the hint reads "32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.", "What changes" shows "Working week: Mon–Thu, 8 hours" with "From <today>." and the people by name, five at first, then "Show all 40".
 - [ ] The footer reads "Saving changes the working week for the 40 people on England and Wales, from <today>. Their allowances are worked out again from that date." beside Cancel and Save.
 - [ ] 7.3 hours or all days 0 each show their message and keep Save off; days before 1 January this year can't be picked.
@@ -36,9 +36,9 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 ## Change a type's rules
 
-- [ ] "Edit" on Annual leave opens it with "Counts", "Allowance" 28, "Bank holidays on top" off, "Leave year From 1 January" and "Applies from" on "Start of this leave year, 1 Jan <this year>".
+- [ ] "Edit" on Annual leave opens it with "Counts", "Allowance" 28, "Bank holidays on top" off, "Leave year From 1 January" and "Applies from" as one row "1 Jan <this year>", "1 Jan <next year>", "Other date…", on "1 Jan <next year>" with "Next leave year. <this year> stays as it is."
 - [ ] Typing 30 shows "Changed: 28 → 30 days" and "Not saved" in the row, and "Annual leave: 28 → 30 days" with "From 1 Jan <year>, bank holidays still included" in "What changes".
-- [ ] "Another date" shows a date field; with a date off 1 January, Unlimited and Doesn't count are disabled and the counts keep today's.
+- [ ] "Other date…" shows a date field; with a date off 1 January, Unlimited and Doesn't count are disabled and the counts keep today's.
 - [ ] 367, 20.3 or an empty allowance shows "Enter a number of days from 0 to 366." and keeps Save off.
 - [ ] Saving from next leave year shows "Annual leave saved for England and Wales. It changes on 1 Jan <next year>.", the planned line with "Cancel change", and the History line "You changed Annual leave to 30 days a year from 1 Jan <next year>".
 - [ ] Saving from this leave year's start changes today's line, and the list's Annual leave cell.
