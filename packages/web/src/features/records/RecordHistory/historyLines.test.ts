@@ -208,14 +208,6 @@ it("names a created record from its title field's new value", () => {
 });
 
 it("describes terms created when time off was turned on as set up", () => {
-  const termsDescription: RecordDescription = {
-    titleField: "name",
-    fields: [],
-    createdAs: {
-      TIME_OFF_TURNED_ON: "records.history.setUp",
-      EDITED_DIRECTLY: "records.history.createdAs",
-    },
-  };
   const changes = [change({ field: "name", newValue: "England and Wales" })];
 
   const summary = summaryOf(
@@ -223,18 +215,10 @@ it("describes terms created when time off was turned on as set up", () => {
     termsDescription,
   );
 
-  expect(summary).toEqual({ kind: "createdAs", text: "set up England and Wales" });
+  expect(summary).toEqual({ kind: "sentence", text: "set up England and Wales" });
 });
 
 it("describes terms created directly as created", () => {
-  const termsDescription: RecordDescription = {
-    titleField: "name",
-    fields: [],
-    createdAs: {
-      TIME_OFF_TURNED_ON: "records.history.setUp",
-      EDITED_DIRECTLY: "records.history.createdAs",
-    },
-  };
   const changes = [change({ field: "name", newValue: "Senior staff" })];
 
   const summary = summaryOf(
@@ -242,7 +226,7 @@ it("describes terms created directly as created", () => {
     termsDescription,
   );
 
-  expect(summary).toEqual({ kind: "createdAs", text: "created Senior staff" });
+  expect(summary).toEqual({ kind: "sentence", text: "created Senior staff" });
 });
 
 it("leaves a created record's title null when its title field is missing", () => {
@@ -270,8 +254,8 @@ it("leaves a deleted record's title null when its title field is missing", () =>
   expect(summary).toEqual({ kind: "deleted", title: null });
 });
 
-it("labels a direct edit as Edited", () => {
-  expect(causeLabel("EDITED_DIRECTLY")).toBe("Edited");
+it("leaves a direct edit without a label", () => {
+  expect(causeLabel("EDITED_DIRECTLY")).toBeNull();
 });
 
 it("labels a file import as Import", () => {
@@ -286,33 +270,45 @@ it("labels an unknown cause in sentence case", () => {
   expect(causeLabel("APPLIED_SCHEDULED_CHANGE")).toBe("Applied scheduled change");
 });
 
-it("names a signed-in author by their email", () => {
-  expect(authorName({ kind: "SIGNED_IN_USER", email: "avery@example.com" })).toBe(
-    "avery@example.com",
-  );
+it("names the reader's own change You", () => {
+  expect(
+    authorName({ kind: "SIGNED_IN_USER", userId: "reader", email: "avery@example.com" }, "reader"),
+  ).toBe("You");
+});
+
+it("names another signed-in author by their email", () => {
+  expect(
+    authorName({ kind: "SIGNED_IN_USER", userId: "avery", email: "avery@example.com" }, "reader"),
+  ).toBe("avery@example.com");
 });
 
 it("names a deleted user Someone", () => {
-  expect(authorName({ kind: "SIGNED_IN_USER", email: null })).toBe("Someone");
+  expect(authorName({ kind: "SIGNED_IN_USER", userId: "gone", email: null }, "reader")).toBe(
+    "Someone",
+  );
 });
 
 it("names Broccoli's own changes Broccoli", () => {
-  expect(authorName({ kind: "BROCCOLI_ITSELF", email: null })).toBe("Broccoli");
+  expect(authorName({ kind: "BROCCOLI_ITSELF", userId: null, email: null }, "reader")).toBe(
+    "Broccoli",
+  );
 });
 
 it("names the setup holder Setup", () => {
-  expect(authorName({ kind: "SETUP_HOLDER", email: null })).toBe("Setup");
+  expect(authorName({ kind: "SETUP_HOLDER", userId: null, email: null }, "reader")).toBe("Setup");
 });
 
 it("names an external agent Your agent", () => {
-  expect(authorName({ kind: "EXTERNAL_AGENT", email: null })).toBe("Your agent");
+  expect(authorName({ kind: "EXTERNAL_AGENT", userId: null, email: null }, "reader")).toBe(
+    "Your agent",
+  );
 });
 
 const line: Parameters<typeof summaryOf>[0] = {
   id: "history-line",
   operation: "UPDATED",
   occurredAt: "2026-10-23T12:00:00Z",
-  author: { kind: "SIGNED_IN_USER", email: "avery@example.com" },
+  author: { kind: "SIGNED_IN_USER", userId: "avery", email: "avery@example.com" },
   cause: { kind: "EDITED_DIRECTLY" },
   reason: null,
   changes: [
@@ -363,4 +359,13 @@ const description: RecordDescription = {
       format: (value) => formatCalendarDate(value) ?? value,
     },
   ],
+};
+
+const termsDescription: RecordDescription = {
+  titleField: "name",
+  fields: [],
+  createdAs: {
+    TIME_OFF_TURNED_ON: "records.history.setUp",
+    EDITED_DIRECTLY: "records.history.createdAs",
+  },
 };

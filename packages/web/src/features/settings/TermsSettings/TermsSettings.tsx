@@ -14,7 +14,7 @@ import { t } from "@/i18n";
 import { NewTermsDialog } from "./NewTermsDialog";
 import { TermsRowCells } from "./TermsRowCells";
 
-/** Settings › Employment terms: every set of terms with its week, Annual leave, locations and people. */
+/** Settings › Employment terms: every set of terms with its week, Annual leave and people. */
 export function TermsSettings() {
   // People and versions change from elsewhere, so the list reloads whenever shown.
   const { data, error, refetch } = useQuery(EmploymentTermsDocument, {
@@ -43,7 +43,7 @@ export function TermsSettings() {
       {data ? (
         <>
           <div className="overflow-x-auto rounded-xl border border-border">
-            <table className="w-full min-w-[46rem] text-sm">
+            <table className="w-full min-w-[38rem] text-sm">
               <thead className="bg-muted/60 text-left">
                 <tr className="border-b border-border">
                   <th scope="col" className="px-4 py-3 font-medium">
@@ -54,9 +54,6 @@ export function TermsSettings() {
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
                     {t("terms.column.annualLeave")}
-                  </th>
-                  <th scope="col" className="px-4 py-3 font-medium">
-                    {t("terms.column.locations")}
                   </th>
                   <th scope="col" className="px-4 py-3 text-right font-medium">
                     {t("terms.column.people")}

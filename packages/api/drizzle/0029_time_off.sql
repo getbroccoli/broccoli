@@ -46,7 +46,7 @@ CREATE TABLE "allowances" (
 --> statement-breakpoint
 CREATE TABLE "time_off_allowance_rules" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
-	"time_off_policy_version_id" uuid NOT NULL,
+	"time_off_policy_version_id" uuid,
 	"kind" text NOT NULL,
 	"entitlement_days" numeric,
 	"entitlement_days_per_week" integer,
@@ -132,9 +132,11 @@ CREATE TABLE "time_off_types" (
 	"needs_approval" boolean NOT NULL,
 	"private" boolean NOT NULL,
 	"type_key" text,
+	"unit" text DEFAULT 'day' NOT NULL,
 	"icon" text,
 	"colour" text,
-	CONSTRAINT "time_off_types_type_key_unique" UNIQUE("type_key")
+	CONSTRAINT "time_off_types_type_key_unique" UNIQUE("type_key"),
+	CONSTRAINT "time_off_types_unit_known" CHECK ("time_off_types"."unit" in ('day', 'hour'))
 );
 --> statement-breakpoint
 ALTER TABLE "employee_terms" ADD CONSTRAINT "employee_terms_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -143,7 +145,7 @@ ALTER TABLE "allowance_ledger_lines" ADD CONSTRAINT "allowance_ledger_lines_allo
 ALTER TABLE "allowance_ledger_lines" ADD CONSTRAINT "allowance_ledger_lines_time_off_day_id_time_off_days_id_fk" FOREIGN KEY ("time_off_day_id") REFERENCES "public"."time_off_days"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "allowance_ledger_lines" ADD CONSTRAINT "allowance_ledger_lines_allowance_rule_fk" FOREIGN KEY ("allowance_rule_id") REFERENCES "public"."time_off_allowance_rules"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "allowances" ADD CONSTRAINT "allowances_time_off_type_id_time_off_types_id_fk" FOREIGN KEY ("time_off_type_id") REFERENCES "public"."time_off_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "time_off_allowance_rules" ADD CONSTRAINT "time_off_allowance_rules_version_fk" FOREIGN KEY ("time_off_policy_version_id") REFERENCES "public"."time_off_policy_versions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "time_off_allowance_rules" ADD CONSTRAINT "time_off_allowance_rules_version_fk" FOREIGN KEY ("time_off_policy_version_id") REFERENCES "public"."time_off_policy_versions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_days" ADD CONSTRAINT "time_off_days_time_off_id_time_off_id_fk" FOREIGN KEY ("time_off_id") REFERENCES "public"."time_off"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_policies" ADD CONSTRAINT "time_off_policies_time_off_type_id_time_off_types_id_fk" FOREIGN KEY ("time_off_type_id") REFERENCES "public"."time_off_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "time_off_policy_versions" ADD CONSTRAINT "time_off_policy_versions_policy_fk" FOREIGN KEY ("time_off_policy_id") REFERENCES "public"."time_off_policies"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -172,4 +174,5 @@ ALTER TABLE "employee_terms" ADD CONSTRAINT "employee_terms_no_overlap" EXCLUDE 
 ALTER TABLE "time_off_policy_versions" ADD CONSTRAINT "time_off_policy_versions_no_overlap" EXCLUDE USING gist ("time_off_policy_id" WITH =, daterange("start_date", "end_date", '[]') WITH &&);--> statement-breakpoint
 ALTER TABLE "time_off_policy_assignments" ADD CONSTRAINT "time_off_policy_assignments_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("start_date", "end_date", '[]') WITH &&);--> statement-breakpoint
 ALTER TABLE "allowances" ADD CONSTRAINT "allowances_no_overlap" EXCLUDE USING gist ("employee_id" WITH =, "time_off_type_id" WITH =, daterange("leave_year_start", "leave_year_end", '[]') WITH &&);--> statement-breakpoint
+CREATE UNIQUE INDEX "time_off_types_name_unique" ON "time_off_types" USING btree (lower(btrim("name")));--> statement-breakpoint
 CREATE UNIQUE INDEX "terms_name_unique" ON "terms" USING btree (lower(btrim("name")));

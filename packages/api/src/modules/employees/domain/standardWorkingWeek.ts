@@ -10,11 +10,8 @@ export const STANDARD_WORKING_WEEKS = [
 ] as const;
 export type StandardWorkingWeek = (typeof STANDARD_WORKING_WEEKS)[number];
 
-/** Each standard week's minutes and full day. */
-export const STANDARD_WEEKS: Record<
-  StandardWorkingWeek,
-  { minutes: WeekdayMinutes; fullDayMinutes: number }
-> = {
+/** Each standard week's minutes. */
+export const STANDARD_WEEKS: Record<StandardWorkingWeek, { minutes: WeekdayMinutes }> = {
   monday_to_friday_7_5_hours: weekOf([450, 450, 450, 450, 450]),
   monday_to_friday_8_hours: weekOf([480, 480, 480, 480, 480]),
   monday_to_friday_7_hours: weekOf([420, 420, 420, 420, 420]),
@@ -31,8 +28,5 @@ export function parseStandardWorkingWeek(value: string): StandardWorkingWeek {
 }
 
 function weekOf(weekdays: readonly number[]) {
-  return {
-    minutes: [...weekdays, 0, 0] as unknown as WeekdayMinutes,
-    fullDayMinutes: Math.max(...weekdays),
-  };
+  return { minutes: [...weekdays, 0, 0] as unknown as WeekdayMinutes };
 }

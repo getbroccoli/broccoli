@@ -1,5 +1,14 @@
 export type { AllowanceCause } from "./allowanceCause";
 export {
+  changesCountsMidYear,
+  parseRules,
+  refuseCountsChangeMidYear,
+  rulesValue,
+  type TimeOffRules,
+  type TimeOffRulesInput,
+  versionFromRules,
+} from "./policyChange";
+export {
   calculateAllowance,
   type AllowanceRule,
   type AllowanceInputs,
@@ -19,6 +28,7 @@ export {
 } from "./standardLeavePolicies";
 export {
   leaveYearContaining,
+  TIME_OFF_UNITS,
   type PolicyVersion,
   type TimeOffPolicy,
   type TimeOffType,
@@ -27,7 +37,16 @@ export {
 export { sharedBalance } from "./sharedBalance";
 export { timeOffFigures, type LedgerLineKind, type TimeOffFigures } from "./timeOffFigures";
 export {
+  parseTimeOffTypeIdentity,
+  STANDARD_TIME_OFF_TYPES,
+  type TimeOffTypeIdentity,
+  TimeOffTypeBookedError,
+  TimeOffTypeNameTakenError,
+} from "./timeOffTypeIdentity";
+export {
   DEFAULT_TIME_OFF_TYPE_LOOK,
   TIME_OFF_TYPE_COLOURS,
   TIME_OFF_TYPE_ICONS,
+  type TimeOffTypeColour,
+  type TimeOffTypeIcon,
 } from "./timeOffTypeLook";

@@ -180,7 +180,50 @@ type EmployeesMutations {
   updateTerms(input: TermsUpdateInput!): TermsUpdatePayload!
   "Deletes terms nobody was ever on and no location starts people on, never the default terms; refused with a conflict saying why otherwise. Admins only."
   deleteTerms(input: TermsDeleteInput!): TermsDeletePayload!
+  "Applies a new week from a date no earlier than the start of the current leave year; a later planned version stays. On terms, adds a line to their history. Admins only."
+  changeWorkingPattern(input: WorkingPatternChangeInput!): WorkingPatternChangePayload!
+  "Removes a version that has not started; the one before it runs on. Refused with a ConflictError once it has started. Admins only."
+  cancelWorkingPatternChange(
+    input: WorkingPatternCancelChangeInput!
+  ): WorkingPatternCancelChangePayload!
 }
+
+"A week from a date: minutes worked each day and whose bank holidays apply."
+input WorkingPatternChangeInput {
+  workingPatternId: ID!
+  startDate: Date!
+  "0 to 1,440 each day; at least one day above 0."
+  mondayMinutes: Int!
+  tuesdayMinutes: Int!
+  wednesdayMinutes: Int!
+  thursdayMinutes: Int!
+  fridayMinutes: Int!
+  saturdayMinutes: Int!
+  sundayMinutes: Int!
+  bankHolidayCalendar: BankHolidayCalendar!
+}
+
+input WorkingPatternCancelChangeInput {
+  workingPatternId: ID!
+  "The start of the version to remove."
+  startDate: Date!
+}
+
+"The changed working pattern, or why it was refused."
+type WorkingPatternChangePayload {
+  workingPattern: WorkingPattern
+  error: WorkingPatternChangeError
+}
+
+union WorkingPatternChangeError = InvalidInputError | NotFoundError
+
+"The working pattern without the cancelled version, or why it was refused."
+type WorkingPatternCancelChangePayload {
+  workingPattern: WorkingPattern
+  error: WorkingPatternCancelChangeError
+}
+
+union WorkingPatternCancelChangeError = NotFoundError | ConflictError
 
 input InviteSendInput {
   "1 to 1,000 employees."
@@ -308,6 +351,8 @@ type Terms implements AnyRecord {
   locations: [Location!]!
   "The version covering today first, if any, then planned ones; past versions stay out."
   workingWeek: [WorkingWeekVersion!]!
+  "The terms' own working pattern."
+  workingPattern: WorkingPattern!
   "Changes to these terms, newest first."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
   "What the signed-in user may do to these terms."
@@ -366,7 +411,18 @@ type TermsDeletePayload {
 
 union TermsDeleteError = NotFoundError | ConflictError
 
-"A working week from a date to a date: minutes worked each day, a full day of leave and whose bank holidays apply."
+"A way of working over time: one set of terms' own, or a named one people are put on one by one."
+type WorkingPattern {
+  id: ID!
+  "The version covering today first, if any, then planned ones; past versions stay out."
+  versions: [WorkingWeekVersion!]!
+  "People this pattern applies to on some day from `from` on, by name. Admins only."
+  reach(from: Date!): [Employee!]!
+  "The earliest date a change may apply from: the start of the current leave year."
+  earliestChange: Date!
+}
+
+"A working week from a date to a date: minutes worked each day and whose bank holidays apply."
 type WorkingWeekVersion {
   id: ID!
   "Null: from the beginning."
@@ -380,8 +436,6 @@ type WorkingWeekVersion {
   fridayMinutes: Int!
   saturdayMinutes: Int!
   sundayMinutes: Int!
-  "The minutes one day of leave stands for."
-  fullDayMinutes: Int!
   bankHolidayCalendar: BankHolidayCalendar!
 }
 
@@ -396,17 +450,24 @@ type Location {
   name: String!
   "How many people are in this location now."
   peopleCount: Int!
+  "The terms new people here start on; the default terms when none were chosen. Admins only."
+  terms: Terms!
 }
 
 input LocationCreateInput {
   "1 to 100 characters; unique, ignoring case and surrounding spaces."
   name: String!
+  "The terms new people here start on; left out or null: the default terms."
+  termsId: ID
 }
 
+"The fields to change; a field left out stays as it is, and null clears a field that may be empty."
 input LocationUpdateInput {
   id: ID!
   "1 to 100 characters; unique, ignoring case and surrounding spaces. People's history keeps the old name."
-  name: String!
+  name: String
+  "The terms new people here start on from now on; null: the default terms. Nobody already here moves."
+  termsId: ID
 }
 
 input LocationDeleteInput {

@@ -7,6 +7,7 @@ import {
   type PatternVersion,
   type Terms,
   type TermsDeleteBlocker,
+  type WorkingPattern,
 } from "../domain";
 
 /** A set of terms as Settings shows it on a date. */
@@ -17,6 +18,8 @@ export interface TermsOverview extends Terms {
   locations: Location[];
   /** The terms' pattern versions covering that day or later, oldest first: the day's, then planned ones. */
   workingWeek: PatternVersion[];
+  /** The terms' own pattern, with all its versions. */
+  workingPattern: WorkingPattern;
   /** Why the terms cannot be deleted; null: they can. */
   deleteBlocker: TermsDeleteBlocker | null;
 }
@@ -31,7 +34,7 @@ export async function readTermsOverviews(
   const shown = allTerms.filter(({ id }) => !termsIds || termsIds.includes(id));
   const peopleCounts = await termsRepository(db).countMembersOn(date);
   const everJoined = await termsRepository(db).findEverJoined(shown.map(({ id }) => id));
-  const locations = await locationRepository(db).findWithStartingTerms();
+  const locations = await locationRepository(db).findAllWithPeopleCounts();
   const patterns = await workingPatternRepository(db).findPatterns();
   const defaultTermsId = allTerms.find(({ isDefault }) => isDefault)?.id;
   return shown.map((terms) => {
@@ -40,6 +43,8 @@ export async function readTermsOverviews(
       .map(({ id, name }) => ({ id, name }));
     return {
       ...terms,
+      // Every set of terms gets its pattern when it is set up.
+      workingPattern: patterns.find(({ termsId }) => termsId === terms.id)!,
       peopleCount: peopleCounts.get(terms.id) ?? 0,
       locations: termsLocations,
       workingWeek: (patterns.find(({ termsId }) => termsId === terms.id)?.versions ?? []).filter(

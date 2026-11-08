@@ -37,12 +37,10 @@ test("exiting the demo restores only the default terms on their seeded week with
     workingPatternId: standard.id,
     startDate: "2026-11-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
-    fullDayMinutes: 480,
   });
   await patterns.createPattern(owner, {
     name: "Part-time",
     minutes: [0, 450, 450, 450, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   await seed.terms("Scotland");
 
@@ -62,7 +60,6 @@ test("exiting the demo restores only the default terms on their seeded week with
           startDate: null,
           endDate: null,
           minutes: [450, 450, 450, 450, 450, 0, 0],
-          fullDayMinutes: 450,
           bankHolidayCalendar: "england_and_wales",
         },
       ],

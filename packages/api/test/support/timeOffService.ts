@@ -6,6 +6,7 @@ import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import {
+  createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
   timeOffModule,
@@ -39,6 +40,17 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The time off policy service on `orm`, with the engine of `timeOffService`; `today` is its date. */
+export function timeOffPolicyService(orm: Orm, { today = "2026-06-01" }: { today?: string } = {}) {
+  return createTimeOffPolicyService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+    timeOff: timeOffService(orm, { today }),
     today: () => today as CalendarDate,
   });
 }
@@ -136,13 +148,13 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
   return transactor(orm, eventBus);
 }
 
-/** Deletes every employee and time off policy, as startup composes it. */
+/** Deletes every employee and resets time off, as startup composes it. */
 export function deleteAllEmployees(orm: Orm) {
   const timeOff = timeOffService(orm);
   return async (ctx: SecurityContext, tx: Tx) => {
     await timeOff.lockPolicies(ctx, tx);
     await employeeSetup.deleteAllEmployees(ctx, tx);
-    await timeOff.deleteAllPolicies(ctx, tx);
+    await timeOff.resetTimeOff(ctx, tx);
   };
 }
 

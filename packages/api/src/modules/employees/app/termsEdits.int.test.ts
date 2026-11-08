@@ -34,7 +34,6 @@ test("creates trimmed terms with the chosen bank holidays and an open Monday to 
         startDate: null,
         endDate: null,
         minutes: [450, 450, 450, 450, 450, 0, 0],
-        fullDayMinutes: 450,
         bankHolidayCalendar: "scotland",
       },
     ],

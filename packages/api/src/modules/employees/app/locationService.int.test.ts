@@ -1,4 +1,13 @@
-import { ADMIN, EMPLOYEE, employeeServices, expect, OWNER, test } from "#test/support";
+import {
+  ADMIN,
+  EMPLOYEE,
+  employeeServices,
+  employeeSetup,
+  expect,
+  OWNER,
+  termsService,
+  test,
+} from "#test/support";
 
 test("stores a trimmed location name with its original case", async ({ orm }) => {
   const locations = employeeServices(orm);
@@ -6,7 +15,9 @@ test("stores a trimmed location name with its original case", async ({ orm }) =>
   const location = await locations.createLocation(ADMIN, { name: "  Leeds  " });
 
   expect(location).toEqual({ id: expect.any(String) as unknown, name: "Leeds" });
-  expect(await locations.listLocations(OWNER)).toEqual([{ ...location, peopleCount: 0 }]);
+  expect(await locations.listLocations(OWNER)).toEqual([
+    { ...location, peopleCount: 0, termsId: null },
+  ]);
 });
 
 test.for([
@@ -35,7 +46,9 @@ test("refuses a name another location has, ignoring case and surrounding spaces"
     fieldErrors: [{ field: "name", code: "taken" }],
   });
 
-  expect(await locations.listLocations(OWNER)).toEqual([{ ...leeds, peopleCount: 0 }]);
+  expect(await locations.listLocations(OWNER)).toEqual([
+    { ...leeds, peopleCount: 0, termsId: null },
+  ]);
 });
 
 test("renames a location without changing its id", async ({ orm, seed }) => {
@@ -45,7 +58,9 @@ test("renames a location without changing its id", async ({ orm, seed }) => {
   const renamed = await locations.updateLocation(ADMIN, { id: location.id, name: "  York  " });
 
   expect(renamed).toEqual({ id: location.id, name: "York" });
-  expect(await locations.listLocations(OWNER)).toEqual([{ ...renamed, peopleCount: 0 }]);
+  expect(await locations.listLocations(OWNER)).toEqual([
+    { ...renamed, peopleCount: 0, termsId: null },
+  ]);
 });
 
 test("allows a location's own name in another case", async ({ orm, seed }) => {
@@ -72,8 +87,8 @@ test("refuses renaming a location to another location's name", async ({ orm, see
   });
 
   expect(await locations.listLocations(OWNER)).toEqual([
-    { ...leeds, peopleCount: 0 },
-    { ...york, peopleCount: 0 },
+    { ...leeds, peopleCount: 0, termsId: null },
+    { ...york, peopleCount: 0, termsId: null },
   ]);
 });
 
@@ -120,7 +135,9 @@ test("refuses deleting a location someone is in", async ({ orm, seed }) => {
     message: "Move everyone out of Leeds first.",
   });
 
-  expect(await locations.listLocations(OWNER)).toEqual([{ ...location, peopleCount: 1 }]);
+  expect(await locations.listLocations(OWNER)).toEqual([
+    { ...location, peopleCount: 1, termsId: null },
+  ]);
   expect(await locations.readEmployee(OWNER, employee.id)).toEqual(employee);
 });
 
@@ -137,8 +154,8 @@ test("lists locations by name ignoring case and counts only their current people
   await locations.updateEmployee(OWNER, { id: moved.id, locationId: york.id });
 
   expect(await locations.listLocations(OWNER)).toEqual([
-    { ...leeds, peopleCount: 1 },
-    { ...york, peopleCount: 1 },
+    { ...leeds, peopleCount: 1, termsId: null },
+    { ...york, peopleCount: 1, termsId: null },
   ]);
 });
 
@@ -170,7 +187,9 @@ test("refuses an employee renaming a location", async ({ orm, seed }) => {
     locations.updateLocation(EMPLOYEE, { id: location.id, name: "York" }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
 
-  expect(await locations.listLocations(OWNER)).toEqual([{ ...location, peopleCount: 0 }]);
+  expect(await locations.listLocations(OWNER)).toEqual([
+    { ...location, peopleCount: 0, termsId: null },
+  ]);
 });
 
 test("refuses an employee deleting a location", async ({ orm, seed }) => {
@@ -181,5 +200,166 @@ test("refuses an employee deleting a location", async ({ orm, seed }) => {
     code: "FORBIDDEN",
   });
 
-  expect(await locations.listLocations(OWNER)).toEqual([{ ...location, peopleCount: 0 }]);
+  expect(await locations.listLocations(OWNER)).toEqual([
+    { ...location, peopleCount: 0, termsId: null },
+  ]);
+});
+
+test("creates a location whose new people start on the chosen terms", async ({ orm, seed }) => {
+  const termsId = await seed.terms("Scotland");
+  const locations = employeeServices(orm);
+
+  const location = await locations.createLocation(ADMIN, { name: "Glasgow", termsId });
+
+  expect(await locations.listLocations(ADMIN)).toEqual([{ ...location, peopleCount: 0, termsId }]);
+});
+
+test.for([{ name: "Leeds" }, { name: "Leeds", termsId: null }])(
+  "creates a location on the default terms with termsId $termsId",
+  async (input, { orm }) => {
+    const locations = employeeServices(orm);
+
+    const location = await locations.createLocation(ADMIN, input);
+
+    expect(await locations.listLocations(ADMIN)).toEqual([
+      { ...location, peopleCount: 0, termsId: null },
+    ]);
+  },
+);
+
+test("changing only a location's terms keeps its name", async ({ orm, seed }) => {
+  const location = await seed.location("Glasgow");
+  const termsId = await seed.terms("Scotland");
+  const locations = employeeServices(orm);
+
+  const updated = await locations.updateLocation(ADMIN, { id: location.id, termsId });
+
+  expect(updated).toEqual(location);
+  expect(await locations.listLocations(ADMIN)).toEqual([{ ...location, peopleCount: 0, termsId }]);
+});
+
+test("renaming only a location keeps its terms", async ({ orm, seed }) => {
+  const termsId = await seed.terms("Scotland");
+  const locations = employeeServices(orm);
+  const location = await locations.createLocation(ADMIN, { name: "Glasgow", termsId });
+
+  const renamed = await locations.updateLocation(ADMIN, { id: location.id, name: "Glasgow West" });
+
+  expect(renamed).toEqual({ id: location.id, name: "Glasgow West" });
+  expect(await locations.listLocations(ADMIN)).toEqual([{ ...renamed, peopleCount: 0, termsId }]);
+});
+
+test("clears a location back to the default terms", async ({ orm, seed }) => {
+  const termsId = await seed.terms("Scotland");
+  const locations = employeeServices(orm);
+  const location = await locations.createLocation(ADMIN, { name: "Glasgow", termsId });
+
+  await locations.updateLocation(ADMIN, { id: location.id, termsId: null });
+
+  expect(await locations.listLocations(ADMIN)).toEqual([
+    { ...location, peopleCount: 0, termsId: null },
+  ]);
+});
+
+test("refuses a null location name", async ({ orm, seed }) => {
+  const location = await seed.location("Glasgow");
+  const locations = employeeServices(orm);
+
+  await expect(
+    locations.updateLocation(ADMIN, { id: location.id, name: null }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "name", code: "required" }],
+  });
+
+  expect(await locations.listLocations(ADMIN)).toEqual([
+    { ...location, peopleCount: 0, termsId: null },
+  ]);
+});
+
+test.for(["not-a-uuid", "00000000-0000-4000-8000-000000000001"])(
+  "refuses creating a location with unknown terms %s without writing it",
+  async (termsId, { orm }) => {
+    const locations = employeeServices(orm);
+
+    await expect(
+      locations.createLocation(ADMIN, { name: "Glasgow", termsId }),
+    ).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "termsId", code: "not_found" }],
+    });
+
+    expect(await locations.listLocations(ADMIN)).toEqual([]);
+  },
+);
+
+test.for(["not-a-uuid", "00000000-0000-4000-8000-000000000001"])(
+  "refuses updating a location with unknown terms %s without changing it",
+  async (termsId, { orm, seed }) => {
+    const originalTermsId = await seed.terms("Scotland");
+    const locations = employeeServices(orm);
+    const location = await locations.createLocation(ADMIN, {
+      name: "Glasgow",
+      termsId: originalTermsId,
+    });
+
+    await expect(
+      locations.updateLocation(ADMIN, { id: location.id, name: "Glasgow West", termsId }),
+    ).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+      fieldErrors: [{ field: "termsId", code: "not_found" }],
+    });
+
+    expect(await locations.listLocations(ADMIN)).toEqual([
+      { ...location, peopleCount: 0, termsId: originalTermsId },
+    ]);
+  },
+);
+
+test("a location's changed terms apply to new people and leave its existing people on their terms", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const defaultId = await seed.defaultTermsId();
+  const scotland = await seed.terms("Scotland");
+  const location = await seed.location("Glasgow");
+  await transact((tx) =>
+    employeeSetup.createImportedEmployees(
+      ADMIN,
+      tx,
+      [
+        {
+          firstName: "Avery",
+          lastName: "Stone",
+          email: "avery@example.com",
+          locationName: "Glasgow",
+        },
+      ],
+      { kind: "ADDED_FROM_IMPORT" },
+    ),
+  );
+
+  await employeeServices(orm).updateLocation(ADMIN, { id: location.id, termsId: scotland });
+  await transact((tx) =>
+    employeeSetup.createImportedEmployees(
+      ADMIN,
+      tx,
+      [
+        {
+          firstName: "Robin",
+          lastName: "Reed",
+          email: "robin@example.com",
+          locationName: "Glasgow",
+        },
+      ],
+      { kind: "ADDED_FROM_IMPORT" },
+    ),
+  );
+
+  const terms = await termsService(orm, { today: "2026-11-06" }).listTerms(ADMIN);
+  expect(terms.map(({ id, peopleCount }) => ({ id, peopleCount }))).toEqual([
+    { id: defaultId, peopleCount: 1 },
+    { id: scotland, peopleCount: 1 },
+  ]);
 });

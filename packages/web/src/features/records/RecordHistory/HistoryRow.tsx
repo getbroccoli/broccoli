@@ -1,4 +1,5 @@
 import { CaretDown, CaretUp } from "@phosphor-icons/react";
+import { useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,14 @@ type Props = {
   description: RecordDescription;
 };
 
-/** One history line: who, what, cause and time; a line of several changes expands to each of them. */
+/** One history line: who, what, any cause other than a direct edit, and time; a line of several changes expands to each of them. */
 export function HistoryRow({ line, description }: Props) {
   const [open, setOpen] = useState(false);
   const summary = summaryOf(line, description);
   const expandable = summary.kind === "updatedMany" || summary.kind === "created";
-  const author = authorName(line.author);
+  const { me } = useRouteContext({ from: "/_authenticated" });
+  const author = authorName(line.author, me.id);
+  const cause = causeLabel(line.cause.kind);
 
   return (
     <li className="border-b border-border/60 last:border-b-0">
@@ -36,16 +39,18 @@ export function HistoryRow({ line, description }: Props) {
           )}
         >
           {line.author.kind === "SIGNED_IN_USER"
-            ? author.slice(0, 2).toUpperCase()
+            ? (line.author.email ?? author).slice(0, 2).toUpperCase()
             : author.charAt(0)}
         </span>
         <p className="min-w-48 flex-1 break-words">
           <span className="font-medium">{author}</span> <SummaryText summary={summary} />
           {line.reason && <span className="text-muted-foreground"> · “{line.reason}”</span>}
         </p>
-        <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-          {causeLabel(line.cause.kind)}
-        </span>
+        {cause && (
+          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+            {cause}
+          </span>
+        )}
         <time
           dateTime={line.occurredAt}
           className="w-11 shrink-0 text-right text-xs text-muted-foreground tabular-nums"

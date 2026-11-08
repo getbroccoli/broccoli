@@ -127,7 +127,6 @@ test("a September switch to Tuesday through Thursday cuts the grant and restores
   const pattern = await patterns.createPattern(OWNER, {
     name: "Tuesday to Thursday",
     minutes: [0, 450, 450, 450, 0, 0, 0],
-    fullDayMinutes: 450,
   });
 
   await patterns.assignPattern(OWNER, {
@@ -172,7 +171,6 @@ test("a Scottish working pattern charges Scotland's ten weekday bank holidays", 
   const pattern = await patterns.createPattern(OWNER, {
     name: "Scotland",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",
   });
   await patterns.assignPattern(OWNER, {

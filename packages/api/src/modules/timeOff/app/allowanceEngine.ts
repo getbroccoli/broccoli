@@ -8,7 +8,12 @@ import {
   type PersonTimeline,
   createPersonTimeline,
 } from "../../employees";
-import { type Allowance, allowanceRepository, timeOffPolicyRepository } from "../db";
+import {
+  type Allowance,
+  allowanceRepository,
+  type PolicyAssignment,
+  timeOffPolicyRepository,
+} from "../db";
 import {
   type AllowanceCause,
   type AllowanceInputs,
@@ -47,6 +52,9 @@ export async function ensureAllowancesOf(
   tx: Tx,
   { employeeIds, cause }: { employeeIds: readonly string[]; cause: AllowanceCause },
 ): Promise<EnsuredAllowances> {
+  // Policies before people, as reset and turn-on lock them: rules must not change or go, as
+  // deleting a type does, between reading them and writing lines.
+  await timeOffPolicyRepository(tx).sharePolicies();
   const ids = await dependencies.employeeReads.lockEmployees(tx, employeeIds);
   if (ids.length === 0) {
     return { allowancesCreated: 0, linesAppended: 0 };
@@ -107,13 +115,7 @@ export async function readPeople(
       serviceStart: periods[0]?.startDate ?? null,
       timelineOf: (timeOffTypeId: string) =>
         createPersonTimeline({
-          direct: (assignments.get(employeeId) ?? [])
-            .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
-            .map(({ timeOffPolicyId, startDate, endDate }) => ({
-              id: timeOffPolicyId,
-              startDate,
-              endDate,
-            })),
+          direct: ownPoliciesOf(assignments.get(employeeId) ?? [], timeOffTypeId),
           terms: memberships.get(employeeId) ?? [],
           idOfTerms: (termsId: string) => termsPolicyIds.get(`${termsId}:${timeOffTypeId}`) ?? null,
           versions: (policyId: string) => byId.get(policyId)?.versions ?? [],
@@ -122,6 +124,17 @@ export async function readPeople(
     };
   });
   return { people, policies };
+}
+
+/** A person's own policies for one type, dated, as their timeline reads them. */
+export function ownPoliciesOf(assignments: readonly PolicyAssignment[], timeOffTypeId: string) {
+  return assignments
+    .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
+    .map(({ timeOffPolicyId, startDate, endDate }) => ({
+      id: timeOffPolicyId,
+      startDate,
+      endDate,
+    }));
 }
 
 /** The allowances to create: one per person and type that has none for the year needed. */

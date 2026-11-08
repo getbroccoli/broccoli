@@ -18,7 +18,7 @@ export type Summary =
   | { kind: "changed"; label: string; oldValue: string | null; newValue: string | null }
   | { kind: "updatedMany"; labels: string[] }
   | { kind: "created"; title: string | null; labels: string[] }
-  | { kind: "createdAs"; text: string }
+  | { kind: "sentence"; text: string }
   | { kind: "deleted"; title: string | null };
 
 /** Lines in their order, grouped by calendar day in `timeZone`: "Today", "Yesterday", "21 Oct". */
@@ -53,7 +53,7 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
     case "CREATED": {
       const createdAs = description.createdAs?.[line.cause.kind];
       return createdAs
-        ? { kind: "createdAs", text: t(createdAs, { title: titleChange?.newValue ?? "" }) }
+        ? { kind: "sentence", text: t(createdAs, { title: titleChange?.newValue ?? "" }) }
         : { kind: "created", title: titleChange?.newValue ?? null, labels };
     }
     case "DELETED":
@@ -63,6 +63,13 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
         return { kind: "updatedMany", labels };
       }
       const [change] = line.changes as [FieldChange];
+      const sentence = description.changedAs?.(
+        change,
+        calendarDayOf(new Date(line.occurredAt), "Europe/London"),
+      );
+      if (sentence) {
+        return { kind: "sentence", text: sentence };
+      }
       return { kind: "changed", label: labelOf(change.field), ...shownValues(change, description) };
     }
   }
@@ -86,16 +93,18 @@ export function shownValues(
   };
 }
 
-/** "Edited" for a direct edit; a cause the web app does not know reads as its words. */
-export function causeLabel(kind: string): string {
+/** Why a change happened, in words; null for a direct edit, the usual case. */
+export function causeLabel(kind: string): string | null {
+  if (kind === "EDITED_DIRECTLY") return null;
   const known = KNOWN_CAUSES[kind];
   return known ? t(known) : sentenceCase(kind);
 }
 
-/** Who made a change, in words. */
-export function authorName(author: HistoryLine["author"]): string {
+/** Who made a change, in words: "You" for the reader's own changes. */
+export function authorName(author: HistoryLine["author"], readerId: string): string {
   switch (author.kind) {
     case "SIGNED_IN_USER":
+      if (author.userId === readerId) return t("records.history.author.you");
       return author.email ?? t("records.history.author.someone");
     case "BROCCOLI_ITSELF":
       return t("records.history.author.broccoli");
@@ -107,7 +116,6 @@ export function authorName(author: HistoryLine["author"]): string {
 }
 
 const KNOWN_CAUSES: Partial<Record<string, MessageKey>> = {
-  EDITED_DIRECTLY: "records.history.cause.edited",
   ADDED_FROM_IMPORT: "records.history.cause.import",
   ADDED_WITH_DEMO: "records.history.cause.demo",
   INVITE_SENT: "records.history.cause.inviteSent",

@@ -29,6 +29,51 @@ it("grants 28 days and takes eight bank holidays for a full-time leave year", ()
   expect(lines.every((line) => line.firstDate === "2026-01-01")).toEqual(true);
 });
 
+it.each([
+  {
+    name: "eight-hour Mondays and seven-and-a-half-hour Tuesdays to Fridays",
+    minutes: [480, 450, 450, 450, 450, 0, 0] as const,
+  },
+  { name: "four-hour Mondays to Fridays", minutes: [240, 240, 240, 240, 240, 0, 0] as const },
+])("grants 28 days and takes one day per weekday bank holiday for $name", ({ minutes }) => {
+  const inputs = allowanceInputs();
+  inputs.workingWeeks = [{ ...inputs.workingWeeks[0]!, minutes }];
+  inputs.bankHolidays = new Map([
+    [
+      "england_and_wales",
+      ["2026-03-02", "2026-03-03", "2026-03-04", "2026-03-05", "2026-03-06"].map(calendarDate),
+    ],
+  ]);
+
+  const lines = calculateAllowance(inputs);
+
+  expect(calculatedRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "28"],
+    ["bank_holiday_taken", "2026-03-02", "-1"],
+    ["bank_holiday_taken", "2026-03-03", "-1"],
+    ["bank_holiday_taken", "2026-03-04", "-1"],
+    ["bank_holiday_taken", "2026-03-05", "-1"],
+    ["bank_holiday_taken", "2026-03-06", "-1"],
+    ["rounding_up_to_half_day", null, "0"],
+  ]);
+  expect(balanceOf(lines)).toEqual("23");
+});
+
+it("grants three fifths of entitlement for Monday, Wednesday and Friday and takes nothing on Tuesday", () => {
+  const inputs = allowanceInputs();
+  inputs.workingWeeks = [{ ...inputs.workingWeeks[0]!, minutes: [450, 0, 450, 0, 450, 0, 0] }];
+  inputs.bankHolidays = new Map([["england_and_wales", [calendarDate("2026-03-03")]]]);
+
+  const lines = calculateAllowance(inputs);
+
+  expect(calculatedRowsOf(lines)).toEqual([
+    ["entitlement_grant", "yearly", "16.8"],
+    ["bank_holiday_taken", "2026-03-03", "0"],
+    ["rounding_up_to_half_day", null, "0.2"],
+  ]);
+  expect(balanceOf(lines)).toEqual("17");
+});
+
 it("prorates from 12 October and takes only bank holidays after joining", () => {
   const inputs = allowanceInputs();
   inputs.employments = [{ startDate: calendarDate("2026-10-12"), endDate: null }];
@@ -121,7 +166,6 @@ it("grants and takes nothing during a gap without a working week", () => {
     {
       startDate: calendarDate("2026-07-01"),
       minutes: null,
-      fullDayMinutes: null,
       bankHolidayCalendar: null,
     },
     { ...inputs.workingWeeks[0]!, startDate: calendarDate("2026-10-01") },

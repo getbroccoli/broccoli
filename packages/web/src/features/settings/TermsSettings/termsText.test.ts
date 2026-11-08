@@ -7,6 +7,7 @@ import {
   ruleLine,
   splitVersions,
   takenNameError,
+  versionBefore,
   weekSummary,
 } from "./termsText";
 
@@ -215,6 +216,28 @@ it("explains a taken name when no matching terms are known", () => {
   expect(takenNameError("Scotland", ["England and Wales"])).toBe(
     "There are already terms with this name.",
   );
+});
+
+it("finds the earlier planned version that cancelling January would extend", () => {
+  const first = { startDate: null, endDate: "2026-11-30" };
+  const december = { startDate: "2026-12-01", endDate: "2026-12-31" };
+  const january = { startDate: "2027-01-01", endDate: null };
+
+  expect(versionBefore([first, december, january], "2027-01-01")).toBe(december);
+});
+
+it("finds the original version that cancelling December would extend", () => {
+  const first = { startDate: null, endDate: "2026-11-30" };
+  const december = { startDate: "2026-12-01", endDate: "2026-12-31" };
+  const january = { startDate: "2027-01-01", endDate: null };
+
+  expect(versionBefore([first, december, january], "2026-12-01")).toBe(first);
+});
+
+it("has no predecessor when cancelling the first offered version", () => {
+  const first = { startDate: "2026-01-01", endDate: null };
+
+  expect(versionBefore([first], "2026-01-01")).toBeNull();
 });
 
 const week = {

@@ -12,10 +12,13 @@ import type {
   EmployeeService,
   LocationService,
   TermsService,
+  WorkingPatternService,
 } from "../app";
 import type { BankHolidayCalendar } from "../../bankHolidays";
+import { todayInLondon } from "../../../utils";
+import { earliestChangeDate } from "../domain";
 import { avatarUrl } from "../http";
-import { employeeLoaders } from "./loaders";
+import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
 export function createResolvers(
   services: EmployeeService &
@@ -23,7 +26,8 @@ export function createResolvers(
     EmployeeManagerService &
     EmployeePermissionService &
     LocationService &
-    TermsService,
+    TermsService &
+    WorkingPatternService,
   invites: EmployeeInviteService,
 ): Resolvers {
   const loaders = employeeLoaders(services, invites);
@@ -41,6 +45,11 @@ export function createResolvers(
       allTerms: (_parent, _args, context) => services.listTerms(context.getActor()),
       terms: (_parent, { id }, context) => services.readTerms(context.getActor(), id),
     },
+    Location: {
+      // Never null: deleting terms gives their locations none, which reads as the default terms.
+      terms: async ({ termsId }, _args, context) =>
+        (await loaders(context).terms.load(termsId ?? DEFAULT_TERMS))!,
+    },
     Terms: {
       locations: async ({ locations }, _args, context) => {
         const loaded = await Promise.all(
@@ -56,6 +65,16 @@ export function createResolvers(
           first: first ?? undefined,
           after,
         }),
+      workingPattern: ({ workingPattern }) => workingPattern,
+    },
+    WorkingPattern: {
+      versions: ({ versions }) => {
+        const today = todayInLondon();
+        return versions.filter(({ endDate }) => endDate === null || endDate >= today);
+      },
+      reach: ({ id }, { from }, context) =>
+        services.readPatternReach(context.getActor(), { workingPatternId: id, from }),
+      earliestChange: () => earliestChangeDate(todayInLondon()),
     },
     WorkingWeekVersion: {
       mondayMinutes: ({ minutes }) => minutes[0],
@@ -117,16 +136,10 @@ export function createResolvers(
           ["NOT_FOUND"],
         ),
       createLocation: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["LocationCreatePayload"]>(
-          async () => ({
-            // A new location has nobody in it yet.
-            location: {
-              ...(await services.createLocation(context.getActor(), input)),
-              peopleCount: 0,
-            },
-          }),
-          ["INVALID_INPUT"],
-        ),
+        mutationPayload<ResolversTypes["LocationCreatePayload"]>(async () => {
+          const { id } = await services.createLocation(context.getActor(), input);
+          return { location: await loaders(context).location.load(id) };
+        }, ["INVALID_INPUT"]),
       updateLocation: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["LocationUpdatePayload"]>(async () => {
           const { id } = await services.updateLocation(context.getActor(), input);
@@ -155,6 +168,33 @@ export function createResolvers(
       deleteTerms: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TermsDeletePayload"]>(
           () => services.deleteTerms(context.getActor(), input),
+          ["NOT_FOUND", "CONFLICT"],
+        ),
+      changeWorkingPattern: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["WorkingPatternChangePayload"]>(
+          async () => ({
+            workingPattern: await services.changePattern(context.getActor(), {
+              workingPatternId: input.workingPatternId,
+              startDate: input.startDate,
+              minutes: [
+                input.mondayMinutes,
+                input.tuesdayMinutes,
+                input.wednesdayMinutes,
+                input.thursdayMinutes,
+                input.fridayMinutes,
+                input.saturdayMinutes,
+                input.sundayMinutes,
+              ],
+              bankHolidayCalendar: input.bankHolidayCalendar.toLowerCase(),
+            }),
+          }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+      cancelWorkingPatternChange: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["WorkingPatternCancelChangePayload"]>(
+          async () => ({
+            workingPattern: await services.cancelPatternChange(context.getActor(), input),
+          }),
           ["NOT_FOUND", "CONFLICT"],
         ),
     },

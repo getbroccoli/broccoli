@@ -165,3 +165,48 @@ it("leaves days without a version out of the stretches", () => {
     { version: next, startDate: "2026-06-20", endDate: "2026-06-25" },
   ]);
 });
+
+it("reaches a person who joins the terms after the change date while employed", () => {
+  const timeline = createPersonTimeline({
+    direct: [],
+    terms: [{ termsId: "terms", startDate: "2026-12-01" as CalendarDate, endDate: null }],
+    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
+    versions: () => [{ startDate: null, endDate: null }],
+  });
+
+  const reached = timeline.appliesFrom("standard", "2026-11-01" as CalendarDate, [
+    { startDate: "2026-01-01" as CalendarDate, endDate: null },
+  ]);
+
+  expect(reached).toBe(true);
+});
+
+it("does not reach a person whose employment ended before the change date", () => {
+  const timeline = createPersonTimeline({
+    direct: [],
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
+    versions: () => [{ startDate: null, endDate: null }],
+  });
+
+  const reached = timeline.appliesFrom("standard", "2026-11-01" as CalendarDate, [
+    { startDate: "2026-01-01" as CalendarDate, endDate: "2026-10-31" as CalendarDate },
+  ]);
+
+  expect(reached).toBe(false);
+});
+
+it("does not reach a person whose own row covers every day from the change date on", () => {
+  const timeline = createPersonTimeline({
+    direct: [{ id: "personal", startDate: "2026-11-01" as CalendarDate, endDate: null }],
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    idOfTerms: (termsId) => (termsId === "terms" ? "standard" : null),
+    versions: () => [{ startDate: null, endDate: null }],
+  });
+
+  const reached = timeline.appliesFrom("standard", "2026-11-01" as CalendarDate, [
+    { startDate: "2026-01-01" as CalendarDate, endDate: null },
+  ]);
+
+  expect(reached).toBe(false);
+});

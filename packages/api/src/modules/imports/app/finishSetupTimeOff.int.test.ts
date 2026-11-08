@@ -58,7 +58,6 @@ test("finishing setup gives Glasgow and Leeds their chosen terms and Annual leav
     {
       startDate: "2026-01-01",
       minutes: [480, 480, 480, 480, 0, 0, 0],
-      fullDayMinutes: 480,
       bankHolidayCalendar: "scotland",
     },
   ]);

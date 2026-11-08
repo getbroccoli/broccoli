@@ -1,12 +1,11 @@
 import { ADMIN, expect, OWNER, test, workingPatternService } from "#test/support";
 
 test("an admin creates a pattern with one version applying from the beginning", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
 
   const pattern = await patterns.createPattern(ADMIN, {
     name: "Tuesday to Thursday",
     minutes: [0, 450, 450, 450, 0, 0, 0],
-    fullDayMinutes: 450,
   });
 
   expect(pattern).toMatchObject({
@@ -17,7 +16,6 @@ test("an admin creates a pattern with one version applying from the beginning", 
         startDate: null,
         endDate: null,
         minutes: [0, 450, 450, 450, 0, 0, 0],
-        fullDayMinutes: 450,
         bankHolidayCalendar: "england_and_wales",
       },
     ],
@@ -26,12 +24,11 @@ test("an admin creates a pattern with one version applying from the beginning", 
 });
 
 test("creating a pattern keeps its chosen bank holiday calendar", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
 
   const pattern = await patterns.createPattern(OWNER, {
     name: "Standard Scotland",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",
   });
 
@@ -40,7 +37,6 @@ test("creating a pattern keeps its chosen bank holiday calendar", async ({ orm }
       startDate: null,
       endDate: null,
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",
     },
   ]);
@@ -48,7 +44,7 @@ test("creating a pattern keeps its chosen bank holiday calendar", async ({ orm }
 });
 
 test("changing minutes on an existing date preserves that week's calendar", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const standard = (await patterns.listPatterns(OWNER)).find(
     (pattern) => pattern.termsId !== null,
   )!;
@@ -56,7 +52,6 @@ test("changing minutes on an existing date preserves that week's calendar", asyn
     workingPatternId: standard.id,
     startDate: "2026-09-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
-    fullDayMinutes: 480,
     bankHolidayCalendar: "scotland",
   });
 
@@ -64,7 +59,6 @@ test("changing minutes on an existing date preserves that week's calendar", asyn
     workingPatternId: standard.id,
     startDate: "2026-09-01",
     minutes: [420, 420, 420, 420, 420, 0, 0],
-    fullDayMinutes: 450,
   });
 
   expect(changed.versions).toMatchObject([
@@ -72,35 +66,32 @@ test("changing minutes on an existing date preserves that week's calendar", asyn
       startDate: null,
       endDate: "2026-08-31",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
       startDate: "2026-09-01",
       endDate: null,
       minutes: [420, 420, 420, 420, 420, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",
     },
   ]);
   expect(await patterns.listPatterns(OWNER)).toContainEqual(changed);
 });
 
-test("removing a pattern version restores the one before it", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+test("cancelling a planned pattern change restores the one before it", async ({ orm }) => {
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const standard = (await patterns.listPatterns(OWNER)).find(
     (pattern) => pattern.termsId !== null,
   )!;
   await patterns.changePattern(OWNER, {
     workingPatternId: standard.id,
-    startDate: "2026-09-01",
+    startDate: "2026-12-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
-    fullDayMinutes: 480,
   });
 
-  const changed = await patterns.removePatternVersion(OWNER, {
+  const changed = await patterns.cancelPatternChange(OWNER, {
     workingPatternId: standard.id,
-    startDate: "2026-09-01",
+    startDate: "2026-12-01",
   });
 
   expect(changed.versions).toEqual(standard.versions);
@@ -108,7 +99,7 @@ test("removing a pattern version restores the one before it", async ({ orm }) =>
 });
 
 test("a terms' pattern can be neither renamed nor deleted on its own", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const standard = (await patterns.listPatterns(OWNER)).find(
     (pattern) => pattern.termsId !== null,
   )!;
@@ -123,11 +114,10 @@ test("a terms' pattern can be neither renamed nor deleted on its own", async ({ 
 });
 
 test("deleting an unused pattern removes it from the list", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const pattern = await patterns.createPattern(OWNER, {
     name: "Unused",
     minutes: [450, 0, 0, 0, 0, 0, 0],
-    fullDayMinutes: 450,
   });
 
   await patterns.deletePattern(OWNER, { workingPatternId: pattern.id });
@@ -137,11 +127,10 @@ test("deleting an unused pattern removes it from the list", async ({ orm }) => {
 
 test("a pattern assigned to an employee cannot be deleted", async ({ orm, seed }) => {
   const employee = await seed.employee();
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const pattern = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
@@ -158,7 +147,7 @@ test("a pattern assigned to an employee cannot be deleted", async ({ orm, seed }
 });
 
 test("pattern changes refuse an unknown pattern", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const workingPatternId = "00000000-0000-4000-8000-000000000001";
 
   await expect(
@@ -171,31 +160,30 @@ test("pattern changes refuse an unknown pattern", async ({ orm }) => {
       workingPatternId,
       startDate: "2026-09-01",
       minutes: [450, 0, 0, 0, 0, 0, 0],
-      fullDayMinutes: 450,
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
   await expect(
-    patterns.removePatternVersion(OWNER, { workingPatternId, startDate: "2026-09-01" }),
+    patterns.cancelPatternChange(OWNER, { workingPatternId, startDate: "2026-12-01" }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
   await expect(patterns.deletePattern(OWNER, { workingPatternId })).rejects.toMatchObject({
     code: "NOT_FOUND",
   });
 });
 
-test("removing a date without a pattern version leaves its first version intact", async ({
+test("cancelling a missing pattern change refuses it and keeps the first version", async ({
   orm,
 }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const standard = (await patterns.listPatterns(OWNER)).find(
     (pattern) => pattern.termsId !== null,
   )!;
 
   await expect(
-    patterns.removePatternVersion(OWNER, {
+    patterns.cancelPatternChange(OWNER, {
       workingPatternId: standard.id,
-      startDate: "2026-09-01",
+      startDate: "2026-12-01",
     }),
-  ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  ).rejects.toMatchObject({ code: "CONFLICT", message: "This change has already started." });
 
   expect(await patterns.listPatterns(OWNER)).toContainEqual(standard);
 });
@@ -203,18 +191,16 @@ test("removing a date without a pattern version leaves its first version intact"
 test("changing minutes keeps the calendar in effect on that date despite a later calendar change", async ({
   orm,
 }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const pattern = await patterns.createPattern(OWNER, {
     name: "Standard Scotland",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",
   });
   await patterns.changePattern(OWNER, {
     workingPatternId: pattern.id,
     startDate: "2026-10-01",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
     bankHolidayCalendar: "northern_ireland",
   });
 
@@ -222,7 +208,6 @@ test("changing minutes keeps the calendar in effect on that date despite a later
     workingPatternId: pattern.id,
     startDate: "2026-07-01",
     minutes: [420, 420, 420, 420, 420, 0, 0],
-    fullDayMinutes: 450,
   });
 
   expect(changed.versions).toMatchObject([
@@ -230,21 +215,18 @@ test("changing minutes keeps the calendar in effect on that date despite a later
       startDate: null,
       endDate: "2026-06-30",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",
     },
     {
       startDate: "2026-07-01",
       endDate: "2026-09-30",
       minutes: [420, 420, 420, 420, 420, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",
     },
     {
       startDate: "2026-10-01",
       endDate: null,
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "northern_ireland",
     },
   ]);
@@ -252,24 +234,21 @@ test("changing minutes keeps the calendar in effect on that date despite a later
 });
 
 test("a change before a later version ends the day before that version", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const pattern = await patterns.createPattern(OWNER, {
     name: "Changing week",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.changePattern(OWNER, {
     workingPatternId: pattern.id,
     startDate: "2027-01-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
-    fullDayMinutes: 480,
   });
 
   const changed = await patterns.changePattern(OWNER, {
     workingPatternId: pattern.id,
     startDate: "2026-06-01",
     minutes: [420, 420, 420, 420, 420, 0, 0],
-    fullDayMinutes: 420,
   });
 
   expect(changed.versions).toMatchObject([
@@ -280,29 +259,28 @@ test("a change before a later version ends the day before that version", async (
   expect(await patterns.listPatterns(OWNER)).toContainEqual(changed);
 });
 
-test("removing a version extends the one before it to the removed one's end", async ({ orm }) => {
-  const patterns = workingPatternService(orm);
+test("cancelling a planned change extends the one before it to the removed one's end", async ({
+  orm,
+}) => {
+  const patterns = workingPatternService(orm, { today: "2026-11-06" });
   const pattern = await patterns.createPattern(OWNER, {
     name: "Changing week",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.changePattern(OWNER, {
     workingPatternId: pattern.id,
-    startDate: "2026-06-01",
+    startDate: "2026-12-01",
     minutes: [420, 420, 420, 420, 420, 0, 0],
-    fullDayMinutes: 420,
   });
   await patterns.changePattern(OWNER, {
     workingPatternId: pattern.id,
     startDate: "2027-01-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
-    fullDayMinutes: 480,
   });
 
-  const changed = await patterns.removePatternVersion(OWNER, {
+  const changed = await patterns.cancelPatternChange(OWNER, {
     workingPatternId: pattern.id,
-    startDate: "2026-06-01",
+    startDate: "2026-12-01",
   });
 
   expect(changed.versions).toMatchObject([

@@ -48,6 +48,8 @@ type TimeOffType {
   colour: TimeOffTypeColour!
   "Which seeded type this is; null on the company's own types."
   typeKey: TimeOffTypeKey
+  "Colleagues see that the person is off, not why. Always true for Sickness."
+  private: Boolean!
 }
 
 "The four time off types every workspace starts with."
@@ -59,8 +61,8 @@ enum TimeOffTypeKey {
 }
 
 extend type Terms {
-  "Every time off type in list order, with these terms' rules for it from today on."
-  timeOff: [TimeOffWithPolicies!]!
+  "Every time off type in list order, with these terms' rules for it from today on; only that type when `timeOffTypeId` is given."
+  timeOff(timeOffTypeId: ID): [TimeOffWithPolicies!]!
 }
 
 "A time off type with its policy versions."
@@ -68,7 +70,79 @@ type TimeOffWithPolicies {
   timeOffType: TimeOffType!
   "The version covering today first, if any, then planned ones; empty: not offered on these terms."
   versions: [TimeOffPolicyVersion!]!
+  "The terms' own rules for this type; null: never offered."
+  policy: TimeOffPolicy
+  "People an offer from `from` would reach: on these terms on some day from then on, without their own rules for this type that day. By name. Admins only."
+  offerReach(from: Date!): [Employee!]!
+  "The earliest date an offer of this type may apply from: the start of the current leave year."
+  earliestOffer: Date!
 }
+
+"A time off type's rules over time: one set of terms' own, or a named one people are put on one by one."
+type TimeOffPolicy {
+  id: ID!
+  timeOffType: TimeOffType!
+  "The version covering today first, if any, then planned ones; past versions stay out."
+  versions: [TimeOffPolicyVersion!]!
+  "People this policy applies to on some day from `from` on, by name. Admins only."
+  reach(from: Date!): [Employee!]!
+  "The earliest date a change may apply from: the start of the current leave year."
+  earliestChange: Date!
+}
+
+"How a type counts, as one version sets it."
+input TimeOffRulesInput {
+  balance: TimeOffBalanceKind!
+  "0 to 366 days a year for a 5-day week, in half days; required when the balance is BALANCE_FROM_ALLOWANCE."
+  entitlementDays: Float
+  "Required when the balance is BALANCE_FROM_ALLOWANCE."
+  bankHolidays: TimeOffBankHolidays
+}
+
+"Terms' rules for a type they don't have. A named policy (later) takes a name instead of termsId."
+input TimeOffPolicyCreateInput {
+  termsId: ID!
+  timeOffTypeId: ID!
+  startDate: Date!
+  rules: TimeOffRulesInput!
+}
+
+input TimeOffPolicyChangeInput {
+  timeOffPolicyId: ID!
+  startDate: Date!
+  rules: TimeOffRulesInput!
+}
+
+input TimeOffPolicyCancelChangeInput {
+  timeOffPolicyId: ID!
+  "The start of the version to remove."
+  startDate: Date!
+}
+
+"The new policy, or why it was refused."
+type TimeOffPolicyCreatePayload {
+  timeOffPolicy: TimeOffPolicy
+  error: TimeOffPolicyCreateError
+}
+
+union TimeOffPolicyCreateError = InvalidInputError | ConflictError
+
+"The changed policy, or why it was refused."
+type TimeOffPolicyChangePayload {
+  timeOffPolicy: TimeOffPolicy
+  error: TimeOffPolicyChangeError
+}
+
+union TimeOffPolicyChangeError = InvalidInputError | NotFoundError
+
+"The policy without the cancelled version, or why it was refused."
+type TimeOffPolicyCancelChangePayload {
+  "Null when the cancelled version was a planned offer, so the policy went."
+  timeOffPolicy: TimeOffPolicy
+  error: TimeOffPolicyCancelChangeError
+}
+
+union TimeOffPolicyCancelChangeError = NotFoundError | ConflictError
 
 "A time off type's rules on one set of terms from a date to a date; never edited, only ended."
 type TimeOffPolicyVersion {
@@ -263,3 +337,70 @@ input LocationTermsInput {
   locationName: String!
   bankHolidayCalendar: BankHolidayCalendar!
 }
+
+type Mutation {
+  timeOff: TimeOffMutations!
+}
+
+type TimeOffMutations {
+  "Adds a company time off type. No terms offer it until they are given rules for it. Admins only."
+  createType(input: TimeOffTypeCreateInput!): TimeOffTypeCreatePayload!
+  "Changes a type's name, icon, colour and privacy, the same in every set of terms. Admins only."
+  changeType(input: TimeOffTypeChangeInput!): TimeOffTypeChangePayload!
+  "Deletes a type with its rules on every terms; refused while any time off of it is on record, whatever its status. Starting over brings a deleted standard type back. Admins only."
+  deleteType(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
+  "Gives terms their rules for a type they don't have, from a date no earlier than the start of the current leave year; adds a line to their history. Refused with a ConflictError when they have it. Admins only."
+  createPolicy(input: TimeOffPolicyCreateInput!): TimeOffPolicyCreatePayload!
+  "Applies new rules from a date no earlier than the start of the current leave year; a later planned version stays. How the type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Admins only."
+  changePolicy(input: TimeOffPolicyChangeInput!): TimeOffPolicyChangePayload!
+  "Removes a version that has not started; the one before it runs on. Removing a planned offer removes the policy, so the type is not offered. Refused with a ConflictError once it has started. Admins only."
+  cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
+}
+
+input TimeOffTypeCreateInput {
+  "1 to 60 characters; unique, ignoring case and surrounding spaces."
+  name: String!
+  icon: TimeOffTypeIcon!
+  colour: TimeOffTypeColour!
+  "Colleagues see that the person is off, not why."
+  private: Boolean!
+}
+
+"Every field is sent; the dialog always has all four."
+input TimeOffTypeChangeInput {
+  timeOffTypeId: ID!
+  "1 to 60 characters; unique, ignoring case and surrounding spaces."
+  name: String!
+  icon: TimeOffTypeIcon!
+  colour: TimeOffTypeColour!
+  "Must stay true for Sickness."
+  private: Boolean!
+}
+
+"The new time off type, or why it was refused."
+type TimeOffTypeCreatePayload {
+  timeOffType: TimeOffType
+  error: TimeOffTypeCreateError
+}
+
+union TimeOffTypeCreateError = InvalidInputError
+
+"The changed time off type, or why it was refused."
+type TimeOffTypeChangePayload {
+  timeOffType: TimeOffType
+  error: TimeOffTypeChangeError
+}
+
+union TimeOffTypeChangeError = InvalidInputError | NotFoundError
+
+input TimeOffTypeDeleteInput {
+  timeOffTypeId: ID!
+}
+
+"The deleted time off type's id, or why it was refused."
+type TimeOffTypeDeletePayload {
+  deletedTimeOffTypeId: ID
+  error: TimeOffTypeDeleteError
+}
+
+union TimeOffTypeDeleteError = NotFoundError | ConflictError

@@ -112,6 +112,147 @@ test("returns every time off type for Settings through GraphQL", async ({ env })
   });
 });
 
+test("creates and changes a time off type and returns duplicate names as payload errors", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+
+  const created = await browser.graphql(`mutation {
+    timeOff { createType(input: {
+      name: "Study leave", icon: GRADUATION_CAP, colour: BLUE, private: false
+    }) {
+      timeOffType { id name icon colour private typeKey }
+      error { __typename ... on Error { message } }
+    } }
+  }`);
+  const body = (await created.json()) as {
+    data: { timeOff: { createType: { timeOffType: { id: string }; error: null } } };
+  };
+  expect(body).toEqual({
+    data: {
+      timeOff: {
+        createType: {
+          timeOffType: {
+            id: expect.any(String) as unknown,
+            name: "Study leave",
+            icon: "GRADUATION_CAP",
+            colour: "BLUE",
+            private: false,
+            typeKey: null,
+          },
+          error: null,
+        },
+      },
+    },
+  });
+  const { id } = body.data.timeOff.createType.timeOffType;
+
+  const changed = await browser.graphql(
+    `mutation($input: TimeOffTypeChangeInput!) {
+    timeOff { changeType(input: $input) {
+      timeOffType { id name icon colour private typeKey }
+      error { __typename ... on Error { message } }
+    } }
+  }`,
+    {
+      input: {
+        timeOffTypeId: id,
+        name: "Training",
+        icon: "BOOK_OPEN",
+        colour: "PURPLE",
+        private: true,
+      },
+    },
+  );
+  expect(await changed.json()).toEqual({
+    data: {
+      timeOff: {
+        changeType: {
+          timeOffType: {
+            id,
+            name: "Training",
+            icon: "BOOK_OPEN",
+            colour: "PURPLE",
+            private: true,
+            typeKey: null,
+          },
+          error: null,
+        },
+      },
+    },
+  });
+
+  const duplicate = await browser.graphql(`mutation {
+    timeOff { createType(input: {
+      name: "Training", icon: GRADUATION_CAP, colour: BLUE, private: false
+    }) {
+      timeOffType { id }
+      error { __typename }
+    } }
+  }`);
+  expect(await duplicate.json()).toEqual({
+    data: {
+      timeOff: {
+        createType: {
+          timeOffType: null,
+          error: { __typename: "InvalidInputError" },
+        },
+      },
+    },
+  });
+});
+
+test("deletes an added time off type and returns not found when deleted again", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const created = await browser.graphql(`mutation {
+    timeOff { createType(input: {
+      name: "Study leave", icon: GRADUATION_CAP, colour: BLUE, private: false
+    }) {
+      timeOffType { id }
+      error { __typename ... on Error { message } }
+    } }
+  }`);
+  const body = (await created.json()) as {
+    data: { timeOff: { createType: { timeOffType: { id: string }; error: null } } };
+  };
+  expect(body).toEqual({
+    data: {
+      timeOff: {
+        createType: { timeOffType: { id: expect.any(String) as unknown }, error: null },
+      },
+    },
+  });
+  const { id } = body.data.timeOff.createType.timeOffType;
+
+  const deleted = await browser.graphql(deleteTypeMutation, { input: { timeOffTypeId: id } });
+
+  expect(await deleted.json()).toEqual({
+    data: { timeOff: { deleteType: { deletedTimeOffTypeId: id, error: null } } },
+  });
+
+  const refused = await browser.graphql(deleteTypeMutation, {
+    input: { timeOffTypeId: id },
+  });
+
+  expect(await refused.json()).toEqual({
+    data: {
+      timeOff: {
+        deleteType: {
+          deletedTimeOffTypeId: null,
+          error: { __typename: "NotFoundError", message: expect.any(String) as unknown },
+        },
+      },
+    },
+  });
+});
+
+const deleteTypeMutation = `mutation($input: TimeOffTypeDeleteInput!) {
+  timeOff { deleteType(input: $input) {
+    deletedTimeOffTypeId
+    error { __typename ... on Error { message } }
+  } }
+}`;
+
 const timeOffQuery = `query EmployeeTimeOff($id: ID!) {
   employee(id: $id) {
     timeOffTypes { timeOffType { name } balance entitlement bankHolidays used remaining }

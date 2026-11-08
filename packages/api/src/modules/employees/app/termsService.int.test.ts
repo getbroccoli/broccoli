@@ -10,7 +10,7 @@ import {
   test,
 } from "#test/support";
 
-import { employeeTerms, locationRepository, workingPatternRepository } from "../db";
+import { employeeTerms, workingPatternRepository } from "../db";
 
 test("lists the default terms first, then others by name ignoring case", async ({ orm, seed }) => {
   const defaultId = await seed.defaultTermsId();
@@ -73,35 +73,6 @@ test("does not count a person whose employment ended before today", async ({ orm
   expect(result).toMatchObject([{ id, peopleCount: 0 }]);
 });
 
-test("gives the default terms unassigned locations and each other terms only their own", async ({
-  orm,
-  seed,
-}) => {
-  const defaultId = await seed.defaultTermsId();
-  const scotland = await seed.terms("Scotland");
-  const york = await seed.location("York");
-  const glasgow = await seed.location("Glasgow");
-  const leeds = await seed.location("Leeds");
-  await locationRepository(orm).setDefaultTerms([
-    { locationName: "York", termsId: defaultId },
-    { locationName: "Glasgow", termsId: scotland },
-  ]);
-  const service = termsService(orm, { today: "2026-11-06" });
-
-  const result = await service.listTerms(ADMIN);
-
-  expect(result.map(({ id, locations }) => ({ id, locations }))).toMatchObject([
-    {
-      id: defaultId,
-      locations: [
-        { id: leeds.id, name: "Leeds" },
-        { id: york.id, name: "York" },
-      ],
-    },
-    { id: scotland, locations: [{ id: glasgow.id, name: "Glasgow" }] },
-  ]);
-});
-
 test("shows today's working week followed by planned versions, leaving past versions out", async ({
   orm,
   seed,
@@ -116,7 +87,6 @@ test("shows today's working week followed by planned versions, leaving past vers
     startDate: calendarDate("2027-01-01"),
     endDate: null,
     minutes: [480, 480, 480, 480, 0, 0, 0],
-    fullDayMinutes: 480,
   });
   await patterns.insertVersion(pattern.id, {
     ...week,

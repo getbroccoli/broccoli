@@ -4,18 +4,25 @@ import {
   createWorkingPatternService,
   createEmployeeWorkingPatternService,
 } from "../../src/modules/employees";
+import { calendarDate } from "./calendarDate";
 import { OWNER } from "./testSecurityContext";
 import { testTransactor } from "./testTransactor";
 
-/** Every working pattern service on `orm`, with silent logs; pass `transact` to receive their events. */
+/**
+ * Every working pattern service on `orm`, with silent logs; pass `transact` to receive their
+ * events. `today` is the date changes are checked against, fixed so tests never depend on the clock.
+ */
 export function workingPatternService(
   orm: Orm,
-  { transact = testTransactor(orm) }: { transact?: Transact } = {},
+  {
+    transact = testTransactor(orm),
+    today = "2026-06-01",
+  }: { transact?: Transact; today?: string } = {},
 ) {
   const dependencies = { orm, transact, logger: createLogger("silent") };
   return {
     ...createEmployeeWorkingPatternService(dependencies),
-    ...createWorkingPatternService(dependencies),
+    ...createWorkingPatternService({ ...dependencies, today: () => calendarDate(today) }),
   };
 }
 
@@ -28,6 +35,5 @@ export function createStandardPattern(orm: Orm) {
   }).createPattern(OWNER, {
     name: "Standard",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
   });
 }

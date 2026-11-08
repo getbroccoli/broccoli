@@ -35,7 +35,7 @@ const recordHistory = createRecordHistoryService();
 export interface EmployeeWorkingPatternService {
   /**
    * Each employee's working weeks from `from` to `until`, by id: the first starts on `from`, a new
-   * one wherever minutes or full day change. Refuses with FORBIDDEN an employee whose working
+   * one wherever minutes or calendar change. Refuses with FORBIDDEN an employee whose working
    * pattern the caller may not read, and with NOT_FOUND an id that names no employee.
    */
   readWorkingWeeks: (
@@ -233,7 +233,7 @@ interface Timelines {
 }
 
 /** Each employee's own patterns and their terms, with every pattern and its versions. */
-async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
+export async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
   const repository = workingPatternRepository(tx);
   // One after another: they share the transaction's connection.
   const assignments = await repository.findAssignments(employeeIds);

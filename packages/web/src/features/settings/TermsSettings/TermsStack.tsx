@@ -16,8 +16,10 @@ type Props = {
 
 /** One set of terms over the list: what its people work and get, read-only, with its history. */
 export function TermsStack({ termsId, onClose }: Props) {
+  // Types added in Settings › Time off join every terms, so a stack reloads whenever shown.
   const { data, error, loading, refetch } = useQuery(EmploymentTermsStackDocument, {
     variables: { id: termsId },
+    fetchPolicy: "cache-and-network",
   });
 
   return (

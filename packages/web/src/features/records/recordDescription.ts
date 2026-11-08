@@ -29,6 +29,19 @@ export interface RecordDescription {
    * such as "set up {title}" when time off was turned on; another cause reads the generic way.
    */
   createdAs?: Partial<Record<string, MessageKey>>;
+  /**
+   * How a one-field change reads instead of "changed … to …"; null keeps that wording. `madeOn` is
+   * the company day it was made, as `YYYY-MM-DD`.
+   */
+  changedAs?: (
+    change: {
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+      newLabel?: string | null;
+    },
+    madeOn: string,
+  ) => string | null;
 }
 
 /** What a field's editor gets from the panel. */

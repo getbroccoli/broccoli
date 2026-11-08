@@ -1,19 +1,26 @@
-import { asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
-import { type Orm, ormOf, type Tx } from "../../../core/db";
+import { isUniqueViolation, type Orm, ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
-import type {
-  AllowanceRule,
-  NewPolicyVersion,
-  PolicyVersion,
-  TimeOffPolicy,
-  TimeOffType,
+import {
+  type AllowanceRule,
+  type NewPolicyVersion,
+  type PolicyVersion,
+  type TimeOffPolicy,
+  type TimeOffType,
+  STANDARD_TIME_OFF_TYPES,
+  type TimeOffTypeIdentity,
+  type TimeOffTypeKey,
+  TimeOffTypeBookedError,
+  TimeOffTypeNameTakenError,
 } from "../domain";
+import { allowances } from "./allowancesTable";
 import { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
 import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
 import { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
-import { timeOffTypes } from "./timeOffTypesTable";
+import { timeOff } from "./timeOffTable";
+import { TIME_OFF_TYPE_NAME_UNIQUE, timeOffTypes } from "./timeOffTypesTable";
 
 /** A person on a named policy for one type from a date to a date. */
 export interface PolicyAssignment {
@@ -28,18 +35,45 @@ export interface PolicyAssignment {
 export interface TimeOffPolicyRepository {
   /** Every time off type, with or without a policy. */
   findAllTypes(): Promise<TimeOffType[]>;
+  /** Adds a company type; throws `TimeOffTypeNameTakenError` when another type has the name. */
+  insertType(identity: TimeOffTypeIdentity): Promise<TimeOffType>;
+  /** The changed type, or null when no type has the id; throws `TimeOffTypeNameTakenError` like `insertType`. */
+  updateType(id: string, identity: TimeOffTypeIdentity): Promise<TimeOffType | null>;
+  /**
+   * Deletes a type with its policies, exceptions and allowances: false when no type has the id.
+   * Throws `TimeOffTypeBookedError` when any time off of the type is on record.
+   */
+  deleteType(id: string): Promise<boolean>;
   /** Every policy with its type and versions, oldest first, each with its rules. */
   findAll(): Promise<TimeOffPolicy[]>;
   /** Serializes changes to policies until the transaction ends. */
   lockPolicies(): Promise<void>;
+  /** Keeps policies from changing until the transaction ends, while others may read them too. */
+  sharePolicies(): Promise<void>;
   /** Whether any terms have a time off policy: whether time off is on. */
   hasAnyTermsPolicies(): Promise<boolean>;
-  /** A new policy, one set of terms' or named, with one open version from the beginning. */
+  /** A new policy, one set of terms' or named, with one open version from `version.startDate`, or the beginning. */
   insertPolicy(
     policy: { timeOffTypeId: string } & ({ termsId: string } | { name: string }),
-    version: NewPolicyVersion,
+    version: NewPolicyVersion & { startDate?: CalendarDate },
   ): Promise<string>;
-  /** Deletes every policy with its versions and rules; no ledger line or assignment may point at one. */
+  /** Deletes a policy with its versions; their rules stay for the ledger lines granted from them. */
+  deletePolicy(id: string): Promise<void>;
+  insertVersion(
+    timeOffPolicyId: string,
+    version: NewPolicyVersion & { startDate: CalendarDate; endDate: CalendarDate | null },
+  ): Promise<void>;
+  /** Sets the last day of a version; null makes it open-ended. */
+  endVersion(id: string, endDate: CalendarDate | null): Promise<void>;
+  /** Deletes a version; its rules stay for the ledger lines granted from them. */
+  deleteVersion(id: string): Promise<void>;
+  /** The employees put on the policy on any date. */
+  findAssignedEmployees(timeOffPolicyId: string): Promise<string[]>;
+  /**
+   * Deletes every policy with its versions and rules, also removed versions' rules, and the
+   * company's own types, and gives the seeded types back, deleted or changed; nothing may point at
+   * a policy or own type.
+   */
   deleteAll(): Promise<void>;
   /** Each employee's named policies, by employee id. */
   findAssignments(employeeIds: readonly string[]): Promise<Map<string, PolicyAssignment[]>>;
@@ -50,6 +84,53 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
   return {
     async findAllTypes() {
       return (await orm().select().from(timeOffTypes)).map(toTimeOffType);
+    },
+
+    async insertType(identity) {
+      try {
+        // A company type asks for approval, as Annual leave does, until approvals are configurable.
+        const [type] = await orm()
+          .insert(timeOffTypes)
+          .values({ ...identity, needsApproval: true })
+          .returning();
+        return toTimeOffType(type!);
+      } catch (error) {
+        throw nameTakenOr(error);
+      }
+    },
+
+    async updateType(id, identity) {
+      try {
+        const [type] = await orm()
+          .update(timeOffTypes)
+          .set(identity)
+          .where(eq(timeOffTypes.id, id))
+          .returning();
+        return type ? toTimeOffType(type) : null;
+      } catch (error) {
+        throw nameTakenOr(error);
+      }
+    },
+
+    async deleteType(id) {
+      const [booked] = await orm()
+        .select({ id: timeOff.id })
+        .from(timeOff)
+        .where(eq(timeOff.timeOffTypeId, id))
+        .limit(1);
+      if (booked) {
+        throw new TimeOffTypeBookedError();
+      }
+      await orm().delete(allowances).where(eq(allowances.timeOffTypeId, id));
+      await orm()
+        .delete(timeOffPolicyAssignments)
+        .where(eq(timeOffPolicyAssignments.timeOffTypeId, id));
+      await orm().delete(timeOffPolicies).where(eq(timeOffPolicies.timeOffTypeId, id));
+      const deleted = await orm()
+        .delete(timeOffTypes)
+        .where(eq(timeOffTypes.id, id))
+        .returning({ id: timeOffTypes.id });
+      return deleted.length > 0;
     },
 
     async findAll() {
@@ -78,6 +159,10 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       await orm().execute(sql`lock table ${timeOffPolicies} in share row exclusive mode`);
     },
 
+    async sharePolicies() {
+      await orm().execute(sql`lock table ${timeOffPolicies} in share mode`);
+    },
+
     async hasAnyTermsPolicies() {
       const [policy] = await orm()
         .select({ id: timeOffPolicies.id })
@@ -87,34 +172,57 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       return policy !== undefined;
     },
 
-    async insertPolicy(policy, { balance, bankHolidays, leaveYear, rules }) {
+    async insertPolicy(policy, { startDate = null, ...version }) {
       const [inserted] = await orm()
         .insert(timeOffPolicies)
         .values(policy)
         .returning({ id: timeOffPolicies.id });
-      const [version] = await orm()
-        .insert(timeOffPolicyVersions)
-        .values({
-          timeOffPolicyId: inserted!.id,
-          balance,
-          bankHolidays,
-          leaveYearStart: leaveYear?.kind ?? null,
-          leaveYearStartMonth:
-            leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.month : null,
-          leaveYearStartDay:
-            leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.day : null,
-        })
-        .returning({ id: timeOffPolicyVersions.id });
-      if (rules.length > 0) {
-        await orm()
-          .insert(timeOffAllowanceRules)
-          .values(rules.map((rule) => ruleRow(version!.id, rule)));
-      }
+      await insertVersionRows(db, inserted!.id, { ...version, startDate, endDate: null });
       return inserted!.id;
+    },
+
+    async deletePolicy(id) {
+      await orm().delete(timeOffPolicies).where(eq(timeOffPolicies.id, id));
+    },
+
+    insertVersion: (timeOffPolicyId, version) => insertVersionRows(db, timeOffPolicyId, version),
+
+    async endVersion(id, endDate) {
+      await orm()
+        .update(timeOffPolicyVersions)
+        .set({ endDate })
+        .where(eq(timeOffPolicyVersions.id, id));
+    },
+
+    async deleteVersion(id) {
+      await orm().delete(timeOffPolicyVersions).where(eq(timeOffPolicyVersions.id, id));
+    },
+
+    async findAssignedEmployees(timeOffPolicyId) {
+      const rows = await orm()
+        .selectDistinct({ employeeId: timeOffPolicyAssignments.employeeId })
+        .from(timeOffPolicyAssignments)
+        .where(eq(timeOffPolicyAssignments.timeOffPolicyId, timeOffPolicyId));
+      return rows.map(({ employeeId }) => employeeId);
     },
 
     async deleteAll() {
       await orm().delete(timeOffPolicies);
+      await orm()
+        .delete(timeOffAllowanceRules)
+        .where(isNull(timeOffAllowanceRules.timeOffPolicyVersionId));
+      await orm().delete(timeOffTypes).where(isNull(timeOffTypes.typeKey));
+      // Seeded types may hold each other's names; free them all before restoring any.
+      await orm()
+        .update(timeOffTypes)
+        .set({ name: sql`${timeOffTypes.id}::text` })
+        .where(isNotNull(timeOffTypes.typeKey));
+      for (const [typeKey, standard] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
+        await orm()
+          .insert(timeOffTypes)
+          .values({ ...standard, typeKey: typeKey as TimeOffTypeKey })
+          .onConflictDoUpdate({ target: timeOffTypes.typeKey, set: standard });
+      }
     },
 
     async findAssignments(employeeIds) {
@@ -135,6 +243,39 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       );
     },
   };
+}
+
+async function insertVersionRows(
+  db: Orm | Tx,
+  timeOffPolicyId: string,
+  {
+    startDate,
+    endDate,
+    balance,
+    bankHolidays,
+    leaveYear,
+    rules,
+  }: NewPolicyVersion & { startDate: CalendarDate | null; endDate: CalendarDate | null },
+) {
+  const [version] = await ormOf(db)
+    .insert(timeOffPolicyVersions)
+    .values({
+      timeOffPolicyId,
+      startDate,
+      endDate,
+      balance,
+      bankHolidays,
+      leaveYearStart: leaveYear?.kind ?? null,
+      leaveYearStartMonth:
+        leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.month : null,
+      leaveYearStartDay: leaveYear?.kind === "leave_year_from_fixed_date" ? leaveYear.day : null,
+    })
+    .returning({ id: timeOffPolicyVersions.id });
+  if (rules.length > 0) {
+    await ormOf(db)
+      .insert(timeOffAllowanceRules)
+      .values(rules.map((rule) => ruleRow(version!.id, rule)));
+  }
 }
 
 function toVersion(
@@ -189,6 +330,20 @@ function ruleRow(timeOffPolicyVersionId: string, rule: NewPolicyVersion["rules"]
       };
 }
 
-function toTimeOffType({ id, name, typeKey, icon, colour }: typeof timeOffTypes.$inferSelect) {
-  return { id, name, typeKey, icon, colour };
+function toTimeOffType({
+  id,
+  name,
+  typeKey,
+  unit,
+  icon,
+  colour,
+  private: isPrivate,
+}: typeof timeOffTypes.$inferSelect): TimeOffType {
+  return { id, name, typeKey, unit, icon, colour, private: isPrivate };
+}
+
+function nameTakenOr(error: unknown): unknown {
+  return isUniqueViolation(error, TIME_OFF_TYPE_NAME_UNIQUE)
+    ? new TimeOffTypeNameTakenError()
+    : error;
 }

@@ -17,11 +17,14 @@ import {
   parseStandardLeavePolicyKey,
   RECORD_ONLY_POLICY,
   STANDARD_LEAVE_POLICIES,
+  type TimeOffType,
+  type TimeOffTypeIdentity,
 } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
 import { readTermsTimeOff, type TimeOffWithPolicies } from "./readTermsTimeOff";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
+import { changeType, createType, deleteType } from "./timeOffTypeIdentity";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -53,6 +56,21 @@ export interface TimeOffService {
     ctx: SecurityContext,
     input: { employeeIds: readonly string[] },
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
+  /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
+  createType: (ctx: SecurityContext, input: TimeOffTypeIdentity) => Promise<TimeOffType>;
+  /**
+   * Changes a type's name, icon, colour and privacy, the same in every set of terms; refuses a
+   * name another type has, ignoring case, and showing Sickness's reason. Admins only.
+   */
+  changeType: (
+    ctx: SecurityContext,
+    input: TimeOffTypeIdentity & { id: string },
+  ) => Promise<TimeOffType>;
+  /**
+   * Deletes a type with its rules on every terms, its exceptions and allowances; refuses one with
+   * time off on record, whatever its status. Admins only.
+   */
+  deleteType: (ctx: SecurityContext, input: { id: string }) => Promise<void>;
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
   /**
@@ -68,8 +86,11 @@ export interface TimeOffService {
    * takes it before deleting the employees, as turning time off on takes it before their rows.
    */
   lockPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
-  /** Deletes every time off policy when setup or the demo goes back to its start, after the employees. */
-  deleteAllPolicies: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /**
+   * Back to a fresh workspace's time off when setup or the demo goes back to its start, after the
+   * employees: deletes every policy and the company's own types, and restores the seeded types.
+   */
+  resetTimeOff: (ctx: SecurityContext, tx: Tx) => Promise<void>;
 }
 
 /** What turning time off on did; the terms ids are in the order of the input's terms. */
@@ -140,13 +161,16 @@ export function createTimeOffService({
     },
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
+    createType: (ctx, input) => createType(dependencies, ctx, input),
+    changeType: (ctx, input) => changeType(dependencies, ctx, input),
+    deleteType: (ctx, input) => deleteType(dependencies, ctx, input),
     listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, today }, ctx),
     readTermsTimeOff: (ctx, termsIds) => readTermsTimeOff({ orm, today }, ctx, termsIds),
     async lockPolicies(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).lockPolicies();
     },
-    async deleteAllPolicies(ctx, tx) {
+    async resetTimeOff(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).deleteAll();
     },
