@@ -118,6 +118,33 @@ export function createResolvers(
           await timeOff.deleteType(context.getActor(), { id: input.timeOffTypeId });
           return { deletedTimeOffTypeId: input.timeOffTypeId };
         }, ["NOT_FOUND", "CONFLICT"]),
+      createPolicy: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyCreatePayload"]>(
+          async () => ({
+            timeOffPolicy: await policies.createPolicy(context.getActor(), {
+              ...input,
+              rules: toStoredRules(input.rules),
+            }),
+          }),
+          ["INVALID_INPUT", "CONFLICT"],
+        ),
+      changePolicy: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyChangePayload"]>(
+          async () => ({
+            timeOffPolicy: await policies.changePolicy(context.getActor(), {
+              ...input,
+              rules: toStoredRules(input.rules),
+            }),
+          }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+      cancelPolicyChange: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyCancelChangePayload"]>(
+          async () => ({
+            timeOffPolicy: await policies.cancelPolicyChange(context.getActor(), input),
+          }),
+          ["NOT_FOUND", "CONFLICT"],
+        ),
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
@@ -152,38 +179,6 @@ export function createResolvers(
       reach: ({ id }, { from }, context) =>
         policies.readPolicyReach(context.getActor(), { timeOffPolicyId: id, from }),
       earliestChange: () => earliestChangeDate(todayInLondon()),
-    },
-    Mutation: {
-      timeOff: () => ({}),
-    },
-    TimeOffMutations: {
-      createPolicy: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyCreatePayload"]>(
-          async () => ({
-            timeOffPolicy: await policies.createPolicy(context.getActor(), {
-              ...input,
-              rules: toStoredRules(input.rules),
-            }),
-          }),
-          ["INVALID_INPUT", "CONFLICT"],
-        ),
-      changePolicy: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyChangePayload"]>(
-          async () => ({
-            timeOffPolicy: await policies.changePolicy(context.getActor(), {
-              ...input,
-              rules: toStoredRules(input.rules),
-            }),
-          }),
-          ["INVALID_INPUT", "NOT_FOUND"],
-        ),
-      cancelPolicyChange: (_parent, { input }, context) =>
-        mutationPayload<ResolversTypes["TimeOffPolicyCancelChangePayload"]>(
-          async () => ({
-            timeOffPolicy: await policies.cancelPolicyChange(context.getActor(), input),
-          }),
-          ["NOT_FOUND", "CONFLICT"],
-        ),
     },
   };
 }

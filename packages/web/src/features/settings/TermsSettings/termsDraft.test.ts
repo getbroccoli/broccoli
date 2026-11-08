@@ -90,10 +90,7 @@ it("describes offering a type to the person reached", () => {
 
 it("accepts working hours in quarter-hour steps", () => {
   expect(
-    weekErrors(
-      { ...week, hours: ["7.25", "0", "0", "0", "0", "0", "0"] },
-      "2026-01-01",
-    ),
+    weekErrors({ ...week, hours: ["7.25", "0", "0", "0", "0", "0", "0"] }, "2026-01-01"),
   ).toEqual({});
 });
 

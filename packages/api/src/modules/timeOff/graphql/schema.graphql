@@ -90,19 +90,6 @@ type TimeOffPolicy {
   earliestChange: Date!
 }
 
-type Mutation {
-  timeOff: TimeOffMutations!
-}
-
-type TimeOffMutations {
-  "Gives terms their rules for a type they don't have, from a date no earlier than the start of the current leave year; adds a line to their history. Refused with a ConflictError when they have it. Admins only."
-  createPolicy(input: TimeOffPolicyCreateInput!): TimeOffPolicyCreatePayload!
-  "Applies new rules from a date no earlier than the start of the current leave year; a later planned version stays. How the type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Admins only."
-  changePolicy(input: TimeOffPolicyChangeInput!): TimeOffPolicyChangePayload!
-  "Removes a version that has not started; the one before it runs on. Removing a planned offer removes the policy, so the type is not offered. Refused with a ConflictError once it has started. Admins only."
-  cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
-}
-
 "How a type counts, as one version sets it."
 input TimeOffRulesInput {
   balance: TimeOffBalanceKind!
@@ -362,6 +349,12 @@ type TimeOffMutations {
   changeType(input: TimeOffTypeChangeInput!): TimeOffTypeChangePayload!
   "Deletes a type with its rules on every terms; refused while any time off of it is on record, whatever its status. Starting over brings a deleted standard type back. Admins only."
   deleteType(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
+  "Gives terms their rules for a type they don't have, from a date no earlier than the start of the current leave year; adds a line to their history. Refused with a ConflictError when they have it. Admins only."
+  createPolicy(input: TimeOffPolicyCreateInput!): TimeOffPolicyCreatePayload!
+  "Applies new rules from a date no earlier than the start of the current leave year; a later planned version stays. How the type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Admins only."
+  changePolicy(input: TimeOffPolicyChangeInput!): TimeOffPolicyChangePayload!
+  "Removes a version that has not started; the one before it runs on. Removing a planned offer removes the policy, so the type is not offered. Refused with a ConflictError once it has started. Admins only."
+  cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
 }
 
 input TimeOffTypeCreateInput {

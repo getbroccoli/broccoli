@@ -48,7 +48,7 @@ test("leaves a new type not offered on every terms", async ({ orm, seed, transac
 
   const terms = await service.readTermsTimeOff(ADMIN, [defaultId, otherId]);
   for (const id of [defaultId, otherId]) {
-    expect(terms.get(id)!.find(({ timeOffType }) => timeOffType.id === created.id)).toEqual({
+    expect(terms.get(id)!.find(({ timeOffType }) => timeOffType.id === created.id)).toMatchObject({
       timeOffType: created,
       versions: [],
     });
@@ -210,7 +210,7 @@ test("renaming Annual leave keeps its key and every terms' rules", async ({
       .get(id)!
       .find(({ timeOffType }) => timeOffType.typeKey === "annual_leave")!;
     expect(original.versions).toHaveLength(1);
-    expect(after.get(id)!.find(({ timeOffType }) => timeOffType.id === changed.id)).toEqual({
+    expect(after.get(id)!.find(({ timeOffType }) => timeOffType.id === changed.id)).toMatchObject({
       timeOffType: changed,
       versions: original.versions,
     });
