@@ -1,6 +1,8 @@
 import type { TimeOffBalanceKind, TimeOffRulesInput } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
+import type { TimeOffTypeValues } from "./TimeOffTypeFields";
+
 /** How a type counts as a form holds it: the days as typed. */
 export interface RulesValues {
   balance: TimeOffBalanceKind;
@@ -29,6 +31,11 @@ export function rulesInputOf(values: RulesValues) {
         : ("BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE" as const)
       : null,
   };
+}
+
+/** A type's values as the API takes them, so days typed as 20 or 20.0 are no change. */
+export function typeInputOf(values: TimeOffTypeValues) {
+  return { ...values, defaultRules: rulesInputOf(values.defaultRules) };
 }
 
 /** What is wrong with the days: 0 to 366 in half days, required for an allowance. */

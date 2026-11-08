@@ -20,7 +20,7 @@ import { t } from "@/i18n";
 
 import { DeleteTimeOffTypeDialog } from "./DeleteTimeOffTypeDialog";
 import { nameErrorOf } from "./nameError";
-import { daysError, rulesInputOf, rulesValuesOf } from "./timeOffRules";
+import { daysError, rulesValuesOf, typeInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 
@@ -45,7 +45,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     ChangeTimeOffTypeDocument,
     { refetch: [TimeOffSettingsDocument] },
   );
-  const changed = JSON.stringify(inputOf(values)) !== JSON.stringify(inputOf(saved));
+  const changed = JSON.stringify(typeInputOf(values)) !== JSON.stringify(typeInputOf(saved));
   const nameError = nameErrorOf(payloadError);
   const failed = !nameError && (error || payloadError);
 
@@ -53,7 +53,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     event.preventDefault();
     try {
       const { timeOffType } = await changeType({
-        variables: { input: { timeOffTypeId: type.id, ...inputOf(values) } },
+        variables: { input: { timeOffTypeId: type.id, ...typeInputOf(values) } },
       });
       toast(t("settings.timeOff.saved", { name: timeOffType?.name ?? values.name.trim() }));
     } catch {
@@ -155,9 +155,4 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
       />
     </form>
   );
-}
-
-/** The values as the API takes them, so days typed as 20 or 20.0 are no change. */
-function inputOf(values: TimeOffTypeValues) {
-  return { ...values, defaultRules: rulesInputOf(values.defaultRules) };
 }

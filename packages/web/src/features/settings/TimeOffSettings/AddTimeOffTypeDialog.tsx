@@ -15,7 +15,7 @@ import {
 import { t } from "@/i18n";
 
 import { nameErrorOf } from "./nameError";
-import { daysError, rulesInputOf } from "./timeOffRules";
+import { daysError, typeInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 
 type Props = {
@@ -46,8 +46,7 @@ export function AddTimeOffTypeDialog({ onClose }: Props) {
   const save = async (event: FormEvent) => {
     event.preventDefault();
     try {
-      const input = { ...values, defaultRules: rulesInputOf(values.defaultRules) };
-      const { timeOffType } = await createType({ variables: { input } });
+      const { timeOffType } = await createType({ variables: { input: typeInputOf(values) } });
       toast(t("settings.timeOff.added", { name: timeOffType?.name ?? trimmed }));
       onClose();
     } catch {
