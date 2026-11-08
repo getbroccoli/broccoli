@@ -7,8 +7,14 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
-import type { TimeOffSetupService, TimeOffService } from "../app";
-import type { TimeOffWithPolicies } from "../app";
+import { todayInLondon } from "../../../utils";
+import { earliestChangeDate } from "../../employees";
+import type {
+  TimeOffPolicyService,
+  TimeOffSetupService,
+  TimeOffService,
+  TimeOffWithPolicies,
+} from "../app";
 import {
   DEFAULT_TIME_OFF_TYPE_LOOK,
   type PolicyVersion,
@@ -29,6 +35,7 @@ const BALANCE_KINDS = {
 export function createResolvers(
   timeOff: TimeOffService,
   timeOffSetup: TimeOffSetupService,
+  policies: TimeOffPolicyService,
 ): Resolvers {
   const loaders = perRequest((context) => ({
     timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
@@ -111,16 +118,67 @@ export function createResolvers(
           await timeOff.deleteType(context.getActor(), { id: input.timeOffTypeId });
           return { deletedTimeOffTypeId: input.timeOffTypeId };
         }, ["NOT_FOUND", "CONFLICT"]),
+      createPolicy: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyCreatePayload"]>(
+          async () => ({
+            timeOffPolicy: await policies.createPolicy(context.getActor(), {
+              ...input,
+              rules: toStoredRules(input.rules),
+            }),
+          }),
+          ["INVALID_INPUT", "CONFLICT"],
+        ),
+      changePolicy: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyChangePayload"]>(
+          async () => ({
+            timeOffPolicy: await policies.changePolicy(context.getActor(), {
+              ...input,
+              rules: toStoredRules(input.rules),
+            }),
+          }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+      cancelPolicyChange: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyCancelChangePayload"]>(
+          async () => ({
+            timeOffPolicy: await policies.cancelPolicyChange(context.getActor(), input),
+          }),
+          ["NOT_FOUND", "CONFLICT"],
+        ),
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
     Terms: {
-      timeOff: async (terms, _args, context) =>
-        (await loaders(context).termsTimeOff.load(terms.id)).map(({ timeOffType, versions }) => ({
-          timeOffType: toGraphqlType(timeOffType),
-          versions: versions.map(toGraphqlVersion),
-        })),
+      timeOff: async (terms, { timeOffTypeId }, context) => {
+        const rows = await loaders(context).termsTimeOff.load(terms.id);
+        return timeOffTypeId
+          ? rows.filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
+          : rows;
+      },
+    },
+    TimeOffWithPolicies: {
+      timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),
+      versions: ({ versions }) => versions.map(toGraphqlVersion),
+      offerReach: ({ termsId, timeOffType }, { from }, context) =>
+        policies.readOfferReach(context.getActor(), {
+          termsId,
+          timeOffTypeId: timeOffType.id,
+          from,
+        }),
+      earliestOffer: () => earliestChangeDate(todayInLondon()),
+    },
+    TimeOffPolicy: {
+      timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),
+      versions: ({ versions }) => {
+        const today = todayInLondon();
+        return versions
+          .filter(({ endDate }) => endDate === null || endDate >= today)
+          .map(toGraphqlVersion);
+      },
+      reach: ({ id }, { from }, context) =>
+        policies.readPolicyReach(context.getActor(), { timeOffPolicyId: id, from }),
+      earliestChange: () => earliestChangeDate(todayInLondon()),
     },
   };
 }
@@ -171,6 +229,19 @@ function toGraphqlVersion(version: PolicyVersion) {
       days: yearly.entitlementDays,
       daysPerWeek: yearly.entitlementDaysPerWeek,
     },
+  };
+}
+
+/** Rules sent through GraphQL as the service takes them: enum values in lower case. */
+function toStoredRules({
+  balance,
+  entitlementDays,
+  bankHolidays,
+}: ResolversTypes["TimeOffRulesInput"]) {
+  return {
+    balance: balance.toLowerCase(),
+    entitlementDays,
+    bankHolidays: bankHolidays?.toLowerCase(),
   };
 }
 

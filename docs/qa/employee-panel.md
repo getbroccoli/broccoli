@@ -21,7 +21,7 @@ A manual check of opening a person from People, editing them in place, their his
 - [ ] The work email is edited in the Work email card at the top, which keeps its sign-in status and Invite button; an employee viewing their own panel sees it without a pencil.
 - [ ] Editing two fields marks each with a green bar; the bar at the bottom says "2 unsaved changes · <fields in panel order> · saved as one history entry".
 - [ ] Changing a field back to its saved value removes its mark; Escape inside a field reverts only that field; Cancel reverts everything and hides the bar.
-- [ ] "Add reason" turns into one optional field; Save with a reason adds one history line "updated 2 fields: …" with the reason and "Edited"; expanding it shows each old → new value.
+- [ ] "Add reason" turns into one optional field; Save with a reason adds one history line "updated 2 fields: …" with the reason and no cause label; expanding it shows each old → new value.
 - [ ] Save of one field reads "changed job title <old> → <new>"; clearing a job title reads "cleared job title <old>" with the old value struck through.
 - [ ] The People row shows the new values after Save.
 - [ ] Clearing the first name, or entering an email another person has, keeps the field open with "Enter a value." or "Another person has this email." and saves nothing; typing a correction keeps the field open.
@@ -30,7 +30,7 @@ A manual check of opening a person from People, editing them in place, their his
 
 - [ ] Job shows Manager under Job title: "—" without one, else the manager's name.
 - [ ] Clicking it opens a popover with "Find a person…", "None" and up to 8 people with photo and job title, never the person themselves; the current choice has a tick. Typing filters by name or email, hides "None", and Enter picks the first match once results show (a search with no match picks nothing); arrow keys and Enter, or a click, pick one; Escape reverts; a click outside keeps the choice.
-- [ ] Save adds "set manager to <name>" with "Edited", then "changed manager <old> → <new>"; picking "None" and saving reads "cleared manager <old>".
+- [ ] Save adds "You set manager to <name>", then "changed manager <old> → <new>"; picking "None" and saving reads "cleared manager <old>".
 - [ ] Picking someone who reports to them (directly or through others) keeps the field open with "The person you chose already reports to them, so they can’t be their manager." and saves nothing.
 - [ ] Removing a manager clears Manager on each of their reports; opening a report (without reloading) shows "cleared manager <name>" with "Manager removed" in their history.
 

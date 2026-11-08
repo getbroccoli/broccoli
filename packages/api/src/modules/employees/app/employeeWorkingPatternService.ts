@@ -233,7 +233,7 @@ interface Timelines {
 }
 
 /** Each employee's own patterns and their terms, with every pattern and its versions. */
-async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
+export async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
   const repository = workingPatternRepository(tx);
   // One after another: they share the transaction's connection.
   const assignments = await repository.findAssignments(employeeIds);

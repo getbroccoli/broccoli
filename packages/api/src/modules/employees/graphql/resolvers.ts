@@ -12,7 +12,10 @@ import type {
   EmployeeService,
   LocationService,
   TermsService,
+  WorkingPatternService,
 } from "../app";
+import { todayInLondon } from "../../../utils";
+import { earliestChangeDate } from "../domain";
 import { avatarUrl } from "../http";
 import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
 
@@ -22,7 +25,8 @@ export function createResolvers(
     EmployeeManagerService &
     EmployeePermissionService &
     LocationService &
-    TermsService,
+    TermsService &
+    WorkingPatternService,
   invites: EmployeeInviteService,
 ): Resolvers {
   const loaders = employeeLoaders(services, invites);
@@ -52,6 +56,16 @@ export function createResolvers(
           first: first ?? undefined,
           after,
         }),
+      workingPattern: ({ workingPattern }) => workingPattern,
+    },
+    WorkingPattern: {
+      versions: ({ versions }) => {
+        const today = todayInLondon();
+        return versions.filter(({ endDate }) => endDate === null || endDate >= today);
+      },
+      reach: ({ id }, { from }, context) =>
+        services.readPatternReach(context.getActor(), { workingPatternId: id, from }),
+      earliestChange: () => earliestChangeDate(todayInLondon()),
     },
     WorkingWeekVersion: {
       mondayMinutes: ({ minutes }) => minutes[0],
@@ -125,6 +139,33 @@ export function createResolvers(
       deleteLocation: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["LocationDeletePayload"]>(
           () => services.deleteLocation(context.getActor(), input),
+          ["NOT_FOUND", "CONFLICT"],
+        ),
+      changeWorkingPattern: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["WorkingPatternChangePayload"]>(
+          async () => ({
+            workingPattern: await services.changePattern(context.getActor(), {
+              workingPatternId: input.workingPatternId,
+              startDate: input.startDate,
+              minutes: [
+                input.mondayMinutes,
+                input.tuesdayMinutes,
+                input.wednesdayMinutes,
+                input.thursdayMinutes,
+                input.fridayMinutes,
+                input.saturdayMinutes,
+                input.sundayMinutes,
+              ],
+              bankHolidayCalendar: input.bankHolidayCalendar.toLowerCase(),
+            }),
+          }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+      cancelWorkingPatternChange: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["WorkingPatternCancelChangePayload"]>(
+          async () => ({
+            workingPattern: await services.cancelPatternChange(context.getActor(), input),
+          }),
           ["NOT_FOUND", "CONFLICT"],
         ),
     },

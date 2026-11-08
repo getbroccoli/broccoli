@@ -23,7 +23,7 @@ Hours, accrual, carry-over and other countries arrive later as new columns, valu
 - **`terms`** and **`employee_terms`** (employees module): named sets of people, such as "England and Wales" or "UK office", and who is on which terms from when to when. A new person starts on their location's default terms, else on the default terms ("England and Wales" unless setup gave them another nation); see the [employees module](../employees/module.md#terms).
 - **`time_off_policies`:** a policy for one type: one set of terms' own (`terms_id`, no name; at most one per terms and type), or a named one that people are put on one by one through assignments.
 - **`time_off_policy_versions`:** a policy's rules from `start_date` to `end_date`: `balance` (`balance_from_allowance`, `unlimited_balance`, `no_balance`), bank holidays (included in the allowance or on top) and the leave year start (a fixed date or the employee's start date). A policy's versions never overlap and are never edited: a change ends one and adds the next. No version on a date: the policy does not apply that day, and for terms the type is not offered.
-- **`time_off_allowance_rules`:** the parts that add up to a version's allowance, never edited either:
+- **`time_off_allowance_rules`:** the parts that add up to a version's allowance, never edited either. A rule outlives a removed version (its version id becomes null), since ledger lines granted from it point at it; deleting every policy deletes these too:
   - `yearly_entitlement`: days for a working week, as contracts state them (28 for 5), with an optional `max_days`;
   - `service_extra`: extra days after a number of years of service.
 - **`time_off_policy_assignments`:** exceptions, meaning one person on a named policy between two dates; never a terms' own. Reset setup and Exit demo delete every policy and allowance, and the company's own types, and give the seeded types back their names, looks and privacy.
@@ -49,7 +49,7 @@ Code constants (`domain/standardLeavePolicies.ts`) that turning time off on copi
 3. The target (`domain/allowanceCalculator.ts`) splits the leave year wherever the employment, policy version, working week or service step changes, and pro-rates each rule by the part's days per week and share of the year. On-top policies add the year's bank holidays for the days per week; days per week is the number of weekdays with minutes above 0, and each bank holiday on such a working day is taken as 1 day. The grants are rounded up once to the half day.
 4. Each line identity (a rule's grant, the bank holiday grant, one bank holiday, the rounding) whose lines add up to something else gets one line with the difference, author Broccoli itself, cause and ref from the call. A bank holiday's line takes effect on its date. Initial grants take effect on their first contributing day. Start-date corrections use the earlier of the previous and new starts (the year start if either is unknown), but never before the grant's first contributing day in either calculation; rounding follows the earliest changed grant. Working-pattern corrections use the later of the change date and the first contributing day. All dates stay within the allowance year. The idempotency key is `allowanceId:identity:n`, `n` the identity's existing lines: a repeat appends nothing.
 
-Causes (`cause_kind`, with `cause_ref`): `time_off_turned_on` (no ref), `employee_added`, `start_date_changed` (new date), `working_pattern_changed` (from date), `leave_year_started` and `daily_check` (the run's date). Amounts carry six decimal places.
+Causes (`cause_kind`, with `cause_ref`): `time_off_turned_on` (no ref), `employee_added`, `start_date_changed` (new date), `working_pattern_changed` (from date), `time_off_rules_changed` (`<policy id>:<from date>`; corrections start from the later of that date and the first contributing day), `leave_year_started` and `daily_check` (the run's date). Amounts carry six decimal places.
 
 What runs the engine; none writes lines itself, and while no policy applies each run writes nothing:
 
@@ -78,6 +78,16 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 - Each type's balance kind is the one most of its policies share, each by its version in force today or else its latest version, the oldest policy's on a tie; none when the type has no policy.
 - Days taken are everyone's approved or pending days of that type in the calendar year of today, a half day 0.5.
 - People are those with an allowance whose leave year has not ended, counted in one query; someone with only types that have no balance is not counted.
+
+## Changing a policy from a date
+
+`TimeOffPolicyService`, for admins, changes terms' rules after time off is on, as the working week changes (see [working patterns](../employees/module.md#rules)): from no earlier than the start of the current leave year, a later planned version stays, and only a version that has not started can be cancelled.
+
+- `createPolicy` offers a type the terms don't have; `changePolicy` adds new rules from a date; `cancelPolicyChange` removes a planned version, and the policy too when it was a planned offer.
+- How a type counts (`balance`) changes only from the start of a leave year; an offer may count any way.
+- The new version keeps what Settings does not show from the one it replaces: leave year, days per week, service steps, and `max_days` while the new days stay at or under it.
+- Each runs the engine for the people it reaches in the same transaction (cause `time_off_rules_changed`) and adds one `terms` history line, field `timeOff.<type id>`, with the rules before and after as JSON and the type's name as the label.
+- `readPolicyReach` and `readOfferReach` list who a change reaches: everyone the policy applies to, or would apply to, on some employed day from the date on, through the shared resolver.
 
 ## Which policy applies
 

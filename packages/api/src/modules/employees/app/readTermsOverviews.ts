@@ -1,7 +1,7 @@
 import type { Orm } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import { termsRepository, workingPatternRepository } from "../db";
-import type { PatternVersion, Terms } from "../domain";
+import type { PatternVersion, Terms, WorkingPattern } from "../domain";
 
 /** A set of terms as Settings shows it on a date. */
 export interface TermsOverview extends Terms {
@@ -9,6 +9,8 @@ export interface TermsOverview extends Terms {
   peopleCount: number;
   /** The terms' pattern versions covering that day or later, oldest first: the day's, then planned ones. */
   workingWeek: PatternVersion[];
+  /** The terms' own pattern, with all its versions. */
+  workingPattern: WorkingPattern;
 }
 
 /** The terms among `termsIds`, or every set without, as they are on `date`; the default first, then by name. */
@@ -24,6 +26,8 @@ export async function readTermsOverviews(
     .filter(({ id }) => !termsIds || termsIds.includes(id))
     .map((terms) => ({
       ...terms,
+      // Every set of terms gets its pattern when it is set up.
+      workingPattern: patterns.find(({ termsId }) => termsId === terms.id)!,
       peopleCount: peopleCounts.get(terms.id) ?? 0,
       workingWeek: (patterns.find(({ termsId }) => termsId === terms.id)?.versions ?? []).filter(
         ({ endDate }) => endDate === null || endDate >= date,

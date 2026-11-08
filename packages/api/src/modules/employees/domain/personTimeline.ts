@@ -17,6 +17,8 @@ export interface PersonTimeline<V extends CalendarDateRange> {
     from: CalendarDate,
     until: CalendarDate,
   ): { version: V; startDate: CalendarDate; endDate: CalendarDate }[];
+  /** Whether `id` applies on some day from `from` on that one of `periods` covers. */
+  appliesFrom(id: string, from: CalendarDate, periods: readonly CalendarDateRange[]): boolean;
 }
 
 /** What a person's timeline is read from. */
@@ -57,7 +59,21 @@ export function createPersonTimeline<V extends CalendarDateRange>(
         : [];
     });
   };
-  return { getIdOnDate, getVersionOnDate, getVersions };
+  const appliesFrom = (id: string, from: CalendarDate, periods: readonly CalendarDateRange[]) =>
+    // The id and the periods only change on these dates, so checking them checks every day.
+    [...changeDates(args, from, LAST_DATE), ...startsAfter(periods, from)].some(
+      (date) => getIdOnDate(date) === id && periods.some((period) => coversDate(period, date)),
+    );
+  return { getIdOnDate, getVersionOnDate, getVersions, appliesFrom };
+}
+
+const LAST_DATE = "9999-12-31" as CalendarDate;
+
+/** Every date after `from` where one of `rows` starts, or the day after one ends. */
+function startsAfter(rows: readonly CalendarDateRange[], from: CalendarDate): CalendarDate[] {
+  return rows
+    .flatMap(({ startDate, endDate }) => [startDate, endDate && addDays(endDate, 1)])
+    .filter((date): date is CalendarDate => date !== null && date > from);
 }
 
 /** `from` and every later date up to `until` where a row or version starts, or one has ended. */
@@ -75,8 +91,6 @@ function changeDates<V extends CalendarDateRange>(
     ...args.terms,
     ...[...new Set(ids)].flatMap((id) => args.versions(id)),
   ];
-  const candidates = rows
-    .flatMap(({ startDate, endDate }) => [startDate, endDate && addDays(endDate, 1)])
-    .filter((date): date is CalendarDate => date !== null && date > from && date <= until);
+  const candidates = startsAfter(rows, from).filter((date) => date <= until);
   return [from, ...new Set(candidates)].toSorted();
 }

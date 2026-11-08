@@ -48,14 +48,20 @@ export function ruleLine(version: PolicyVersionText): string {
 export function plannedLine(version: PolicyVersionText): string {
   return t("terms.planned", {
     date: shortDate(version.startDate ?? ""),
-    rule:
-      version.balance === "NO_BALANCE"
-        ? t("terms.rule.recordedLower")
-        : version.balance === "UNLIMITED_BALANCE"
-          ? t("terms.rule.unlimited")
-          : allowanceText(version),
+    rule: ruleSummary(version),
   });
 }
+
+/** How a version counts in a few words: "22 days a year, bank holidays on top", "Unlimited". */
+export function ruleSummary(version: RuleText): string {
+  if (version.balance === "NO_BALANCE") return t("terms.rule.recordedLower");
+  return version.balance === "UNLIMITED_BALANCE"
+    ? t("terms.rule.unlimited")
+    : allowanceText(version);
+}
+
+/** What `ruleSummary` reads of a version. */
+export type RuleText = Pick<PolicyVersionText, "balance" | "bankHolidays" | "yearlyEntitlement">;
 
 /** A working week as its planned line: "From 1 Dec 2026: Mon–Thu, 8 hours". */
 export function plannedWeekLine(version: WeekMinutes & { startDate?: string | null }): string {
@@ -80,6 +86,30 @@ export function splitVersions<V extends { startDate?: string | null; endDate?: s
     current: firstIsCurrent ? first : null,
     planned: versions.slice(firstIsCurrent ? 1 : 0),
   };
+}
+
+/**
+ * The version a cancel of the one from `startDate` extends: the one before it in date order, as a
+ * terms' versions follow each other without gaps; null for the first.
+ */
+export function versionBefore<V extends { startDate?: string | null }>(
+  versions: readonly V[],
+  startDate: string,
+): V | null {
+  const index = versions.findIndex((version) => version.startDate === startDate);
+  return index > 0 ? versions[index - 1]! : null;
+}
+
+/** The version covering `date`; null when none does. */
+export function versionOn<V extends { startDate?: string | null; endDate?: string | null }>(
+  versions: readonly V[],
+  date: string,
+): V | null {
+  return (
+    versions.find(
+      ({ startDate, endDate }) => (startDate ?? "") <= date && (endDate == null || endDate >= date),
+    ) ?? null
+  );
 }
 
 /** The company's today, in London, as the API decides which versions are from today on. */
@@ -122,7 +152,7 @@ function daysText(worked: number[]): string {
   return worked.map((day) => t(DAY_NAMES[day]!)).join(", ");
 }
 
-function allowanceText(version: PolicyVersionText): string {
+function allowanceText(version: RuleText): string {
   return t(
     version.bankHolidays === "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE"
       ? "terms.rule.daysIncluded"
@@ -139,11 +169,12 @@ function leaveYearText({ leaveYearStart }: PolicyVersionText): string {
   return t("terms.rule.leaveYearFrom", { date: DAY_AND_MONTH.format(date) });
 }
 
-function daysOf(version: PolicyVersionText): string {
+function daysOf(version: RuleText): string {
   return String(version.yearlyEntitlement?.days ?? 0);
 }
 
-function shortDate(value: string): string {
+/** A `YYYY-MM-DD` day as "1 Dec 2026". */
+export function shortDate(value: string): string {
   return SHORT_DATE.format(Date.UTC(...calendarDayParts(value)));
 }
 

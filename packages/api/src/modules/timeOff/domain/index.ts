@@ -1,5 +1,14 @@
 export type { AllowanceCause } from "./allowanceCause";
 export {
+  changesCountsMidYear,
+  parseRules,
+  refuseCountsChangeMidYear,
+  rulesValue,
+  type TimeOffRules,
+  type TimeOffRulesInput,
+  versionFromRules,
+} from "./policyChange";
+export {
   calculateAllowance,
   type AllowanceRule,
   type AllowanceInputs,
