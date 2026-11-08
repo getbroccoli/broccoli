@@ -51,6 +51,8 @@ export async function ensureAllowancesOf(
   if (ids.length === 0) {
     return { allowancesCreated: 0, linesAppended: 0 };
   }
+  // Rules must not change or go, as deleting a type does, between reading them and writing lines.
+  await timeOffPolicyRepository(tx).sharePolicies();
   const allowances = allowanceRepository(tx);
   const { people, policies } = await readPeople(dependencies.employeeReads, tx, ids);
   const today = dependencies.today();

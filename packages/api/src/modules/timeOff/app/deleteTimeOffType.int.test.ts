@@ -6,6 +6,8 @@ import {
   giveTermsPolicies,
   OWNER,
   seedTimeOff,
+  seedTimeOffAssignment,
+  seedTimeOffPolicy,
   seedTimeOffType,
   test,
   timeOffService,
@@ -43,6 +45,43 @@ test("deletes an added type and its rules from every terms", async ({ orm, seed,
       before.get(termsId)!.filter(({ timeOffType }) => timeOffType.id !== type.id),
     );
   }
+});
+
+test("deletes a type with a person's exception and keeps an unrelated type", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  const policy = await seedTimeOffPolicy(orm, {
+    name: "Study leave",
+    balance: "unlimited_balance",
+  });
+  const unrelated = await seedTimeOffType(orm, "Volunteering");
+  await seedTimeOffAssignment(orm, {
+    employeeId: employee.id,
+    timeOffTypeId: policy.timeOffTypeId,
+    timeOffPolicyId: policy.id,
+  });
+  const service = timeOffService(orm);
+  await transact((tx) =>
+    service.ensureAllowances(OWNER, tx, {
+      employeeIds: [employee.id],
+      cause: { kind: "DAILY_CHECK", ref: null },
+    }),
+  );
+  const before = await service.readTimeOffTypes(ADMIN, { employeeIds: [employee.id] });
+  expect(before.get(employee.id)).toMatchObject([{ timeOffType: { id: policy.timeOffTypeId } }]);
+
+  await service.deleteType(ADMIN, { id: policy.timeOffTypeId });
+
+  const after = await service.readTimeOffTypes(ADMIN, { employeeIds: [employee.id] });
+  expect(after.get(employee.id)).toEqual([]);
+  expect(
+    (await service.listTimeOffTypes(ADMIN)).timeOffTypes.some(
+      ({ timeOffType }) => timeOffType.id === unrelated.id,
+    ),
+  ).toBe(true);
 });
 
 test("deletes Annual leave offered on terms from the list and every terms", async ({

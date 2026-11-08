@@ -55,6 +55,8 @@ export function TimeOffTypeTable({ timeOffTypes }: Props) {
                     to="/settings/time-off/$timeOffTypeId"
                     params={{ timeOffTypeId: timeOffType.id }}
                     className="min-w-0 [overflow-wrap:anywhere] hover:underline"
+                    // The link navigates itself, and a Ctrl or Cmd click opens a tab, not the row too.
+                    onClick={(event) => event.stopPropagation()}
                   >
                     {timeOffType.name}
                   </Link>

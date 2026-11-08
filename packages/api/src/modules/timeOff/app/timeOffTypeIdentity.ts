@@ -80,7 +80,12 @@ export async function deleteType(
     throw typeNotFound();
   }
   try {
-    const deleted = await transact((tx) => timeOffPolicyRepository(tx).deleteType(id));
+    const deleted = await transact(async (tx) => {
+      const repository = timeOffPolicyRepository(tx);
+      // Waits for allowance runs reading the type's rules, and holds new ones until it commits.
+      await repository.lockPolicies();
+      return repository.deleteType(id);
+    });
     if (!deleted) {
       throw typeNotFound();
     }

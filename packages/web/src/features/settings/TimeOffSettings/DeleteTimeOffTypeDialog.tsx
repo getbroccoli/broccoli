@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { t } from "@/i18n";
 
+import { forgetTimeOffType } from "../cache";
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,7 +28,14 @@ type Props = {
 export function DeleteTimeOffTypeDialog({ open, onOpenChange, type, onDeleted }: Props) {
   const [deleteType, { loading, error, payloadError, reset }] = usePayloadMutation(
     DeleteTimeOffTypeDocument,
-    { refetch: [TimeOffSettingsDocument] },
+    {
+      // People's panels keep their balances cached; dropping the type makes them reload.
+      update: (cache, { data }) => {
+        const id = data?.timeOff.deleteType.deletedTimeOffTypeId;
+        if (id) forgetTimeOffType(cache, id);
+      },
+      refetch: [TimeOffSettingsDocument],
+    },
   );
   const failed = Boolean(error || payloadError);
 

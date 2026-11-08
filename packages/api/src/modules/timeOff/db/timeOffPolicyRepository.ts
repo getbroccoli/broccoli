@@ -48,6 +48,8 @@ export interface TimeOffPolicyRepository {
   findAll(): Promise<TimeOffPolicy[]>;
   /** Serializes changes to policies until the transaction ends. */
   lockPolicies(): Promise<void>;
+  /** Keeps policies from changing until the transaction ends, while others may read them too. */
+  sharePolicies(): Promise<void>;
   /** Whether any terms have a time off policy: whether time off is on. */
   hasAnyTermsPolicies(): Promise<boolean>;
   /** A new policy, one set of terms' or named, with one open version from the beginning. */
@@ -142,6 +144,10 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
 
     async lockPolicies() {
       await orm().execute(sql`lock table ${timeOffPolicies} in share row exclusive mode`);
+    },
+
+    async sharePolicies() {
+      await orm().execute(sql`lock table ${timeOffPolicies} in share mode`);
     },
 
     async hasAnyTermsPolicies() {
