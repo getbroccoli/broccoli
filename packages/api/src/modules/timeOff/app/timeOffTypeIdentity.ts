@@ -52,7 +52,12 @@ export async function changeType(
         throw typeNotFound();
       }
       const identity = parseTimeOffTypeIdentity(input, before.typeKey);
-      return { before, after: (await repository.updateType(id, identity))! };
+      // A delete can land between the read and the update.
+      const after = await repository.updateType(id, identity);
+      if (!after) {
+        throw typeNotFound();
+      }
+      return { before, after };
     }),
   );
   logger.info(
