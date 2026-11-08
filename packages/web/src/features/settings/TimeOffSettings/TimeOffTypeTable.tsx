@@ -1,20 +1,20 @@
+import { Link, useNavigate } from "@tanstack/react-router";
+
 import type { TimeOffSettingsQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { formatDays } from "@/lib/formatDays";
 
-import type { ListedTimeOffType } from "./TimeOffTypeDialog";
 import { BuiltInPill } from "./BuiltInPill";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 
 type Props = {
   /** Every time off type, in the server's order. */
   timeOffTypes: TimeOffSettingsQuery["timeOffSettings"]["timeOffTypes"];
-  /** Opens a type to change its name, look and privacy. */
-  onEdit: (timeOffType: ListedTimeOffType) => void;
 };
 
 /** The time off types as a table of name and the days taken this year. */
-export function TimeOffTypeTable({ timeOffTypes, onEdit }: Props) {
+export function TimeOffTypeTable({ timeOffTypes }: Props) {
+  const navigate = useNavigate();
   if (timeOffTypes.length === 0) {
     return (
       <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground">
@@ -40,23 +40,26 @@ export function TimeOffTypeTable({ timeOffTypes, onEdit }: Props) {
             <tr
               key={timeOffType.id}
               className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
-              // The name's button is the keyboard way in; the whole row is a larger target.
-              onClick={() => onEdit(timeOffType)}
+              onClick={() =>
+                void navigate({
+                  to: "/settings/time-off/$timeOffTypeId",
+                  params: { timeOffTypeId: timeOffType.id },
+                })
+              }
             >
               <th scope="row" className="px-4 py-3 text-left font-semibold">
-                <button
-                  type="button"
-                  aria-haspopup="dialog"
-                  className="flex items-center gap-3 rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onEdit(timeOffType);
-                  }}
-                >
+                <span className="flex items-center gap-3">
                   <TimeOffTypeIcon icon={timeOffType.icon} colour={timeOffType.colour} />
-                  <span className="min-w-0 [overflow-wrap:anywhere]">{timeOffType.name}</span>
+                  {/* The row opens the type too; the link gives keyboards and screen readers the way in. */}
+                  <Link
+                    to="/settings/time-off/$timeOffTypeId"
+                    params={{ timeOffTypeId: timeOffType.id }}
+                    className="min-w-0 [overflow-wrap:anywhere] hover:underline"
+                  >
+                    {timeOffType.name}
+                  </Link>
                   {timeOffType.typeKey && <BuiltInPill />}
-                </button>
+                </span>
               </th>
               <td className="px-4 py-3 text-right tabular-nums">
                 {daysTakenThisYear === 0 ? "0" : formatDays(daysTakenThisYear)}

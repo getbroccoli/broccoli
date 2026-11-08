@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 
-import { type ListedTimeOffType, TimeOffTypeDialog } from "./TimeOffTypeDialog";
+import { AddTimeOffTypeDialog } from "./AddTimeOffTypeDialog";
 import { TimeOffTypeTable } from "./TimeOffTypeTable";
 
 type Settings = TimeOffSettingsQuery["timeOffSettings"];
@@ -21,8 +21,7 @@ export function TimeOffSettings() {
   const { data, error, refetch } = useQuery(TimeOffSettingsDocument, {
     fetchPolicy: "cache-and-network",
   });
-  // "new" adds a type; a type opens it to edit.
-  const [dialog, setDialog] = useState<"new" | ListedTimeOffType | null>(null);
+  const [adding, setAdding] = useState(false);
 
   return (
     <section aria-labelledby="time-off-settings-title" className="flex max-w-2xl flex-col gap-4">
@@ -34,14 +33,14 @@ export function TimeOffSettings() {
           {data && <p className="text-sm text-muted-foreground">{summary(data.timeOffSettings)}</p>}
         </div>
         {data && (
-          <Button type="button" variant="outline" onClick={() => setDialog("new")}>
+          <Button type="button" variant="outline" onClick={() => setAdding(true)}>
             <Plus aria-hidden />
             {t("settings.timeOff.add")}
           </Button>
         )}
       </div>
       {data ? (
-        <TimeOffTypeTable timeOffTypes={data.timeOffSettings.timeOffTypes} onEdit={setDialog} />
+        <TimeOffTypeTable timeOffTypes={data.timeOffSettings.timeOffTypes} />
       ) : error ? (
         <div role="alert" className="flex flex-col items-start gap-3">
           <p className="text-sm text-destructive">{t("settings.timeOff.loadFailed")}</p>
@@ -52,12 +51,7 @@ export function TimeOffSettings() {
       ) : (
         <Skeleton className="h-[200px] rounded-xl" />
       )}
-      {dialog && (
-        <TimeOffTypeDialog
-          type={dialog === "new" ? null : dialog}
-          onClose={() => setDialog(null)}
-        />
-      )}
+      {adding && <AddTimeOffTypeDialog onClose={() => setAdding(false)} />}
     </section>
   );
 }

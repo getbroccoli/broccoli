@@ -68,3 +68,17 @@ mutation ChangeTimeOffType($input: TimeOffTypeChangeInput!) {
     }
   }
 }
+
+mutation DeleteTimeOffType($input: TimeOffTypeDeleteInput!) {
+  timeOff {
+    deleteType(input: $input) {
+      deletedTimeOffTypeId
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}

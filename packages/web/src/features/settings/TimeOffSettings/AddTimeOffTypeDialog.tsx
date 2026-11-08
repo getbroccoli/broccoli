@@ -1,14 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
-import {
-  ChangeTimeOffTypeDocument,
-  CreateTimeOffTypeDocument,
-  type TimeOffTypeColour,
-  type TimeOffTypeIcon as IconName,
-  TimeOffSettingsDocument,
-  type TimeOffSettingsQuery,
-} from "@/__generated__/graphql";
+import { CreateTimeOffTypeDocument, TimeOffSettingsDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,53 +12,35 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { t, type MessageKey } from "@/i18n";
+import { t } from "@/i18n";
 
-import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
-import { ICONS, TIME_OFF_TYPE_COLOURS, TIME_OFF_TYPE_ICONS, tileStyle } from "./timeOffTypeLook";
-
-/** A time off type as Settings › Time off lists it. */
-export type ListedTimeOffType =
-  TimeOffSettingsQuery["timeOffSettings"]["timeOffTypes"][number]["timeOffType"];
+import { nameErrorOf } from "./nameError";
+import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 
 type Props = {
-  /** The type to edit; null adds one. */
-  type: ListedTimeOffType | null;
   onClose: () => void;
 };
 
 /** A new type starts with the default look, and colleagues see its name. */
-const NEW_TYPE = { name: "", icon: "SUN", colour: "YELLOW", private: false } as const;
+const NEW_TYPE: TimeOffTypeValues = { name: "", icon: "SUN", colour: "YELLOW", private: false };
 
-/** Adds a time off type, or changes one's name, icon, colour and privacy, for the whole company. */
-export function TimeOffTypeDialog({ type, onClose }: Props) {
-  const [name, setName] = useState<string>(type?.name ?? NEW_TYPE.name);
-  const [icon, setIcon] = useState<IconName>(type?.icon ?? NEW_TYPE.icon);
-  const [colour, setColour] = useState<TimeOffTypeColour>(type?.colour ?? NEW_TYPE.colour);
-  const [isPrivate, setPrivate] = useState(type?.private ?? NEW_TYPE.private);
-  // The list is ordered by name on the server, so it reloads after either save.
-  const options = { refetch: [TimeOffSettingsDocument] };
-  const [createType, creation] = usePayloadMutation(CreateTimeOffTypeDocument, options);
-  const [changeType, change] = usePayloadMutation(ChangeTimeOffTypeDocument, options);
-  const { loading, error, payloadError } = type ? change : creation;
-  const sickness = type?.typeKey === "SICKNESS";
-  const trimmed = name.trim();
+/** Adds a time off type for the whole company; no terms offer it yet. */
+export function AddTimeOffTypeDialog({ onClose }: Props) {
+  const [values, setValues] = useState(NEW_TYPE);
+  // The list is ordered by name on the server, so it reloads after adding.
+  const [createType, { loading, error, payloadError }] = usePayloadMutation(
+    CreateTimeOffTypeDocument,
+    { refetch: [TimeOffSettingsDocument] },
+  );
+  const trimmed = values.name.trim();
   const nameError = nameErrorOf(payloadError);
   const failed = !nameError && (error || payloadError);
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    const identity = { name, icon, colour, private: isPrivate };
     try {
-      const saved = type
-        ? (await changeType({ variables: { input: { timeOffTypeId: type.id, ...identity } } }))
-            .timeOffType
-        : (await createType({ variables: { input: identity } })).timeOffType;
-      const savedName = saved?.name ?? trimmed;
-      toast(t(type ? "settings.timeOff.saved" : "settings.timeOff.added", { name: savedName }));
+      const { timeOffType } = await createType({ variables: { input: values } });
+      toast(t("settings.timeOff.added", { name: timeOffType?.name ?? trimmed }));
       onClose();
     } catch {
       // The form shows the failure.
@@ -81,113 +56,15 @@ export function TimeOffTypeDialog({ type, onClose }: Props) {
       >
         <form onSubmit={(event) => void save(event)} className="flex flex-col gap-5">
           <DialogHeader>
-            {type ? (
-              <div className="flex items-center gap-3">
-                <TimeOffTypeIcon icon={type.icon} colour={type.colour} />
-                <div>
-                  <DialogTitle className="[overflow-wrap:anywhere]">{type.name}</DialogTitle>
-                  <DialogDescription>
-                    {t(
-                      type.typeKey
-                        ? "settings.timeOff.editHintBuiltIn"
-                        : "settings.timeOff.editHint",
-                    )}
-                  </DialogDescription>
-                </div>
-              </div>
-            ) : (
-              <>
-                <DialogTitle>{t("settings.timeOff.addTitle")}</DialogTitle>
-                <DialogDescription>{t("settings.timeOff.addHint")}</DialogDescription>
-              </>
-            )}
+            <DialogTitle>{t("settings.timeOff.addTitle")}</DialogTitle>
+            <DialogDescription>{t("settings.timeOff.addHint")}</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="time-off-type-name">{t("settings.timeOff.name")}</Label>
-            <div className="flex items-center gap-3">
-              <TimeOffTypeIcon icon={icon} colour={colour} />
-              <Input
-                id="time-off-type-name"
-                value={name}
-                maxLength={200}
-                aria-invalid={nameError !== null}
-                aria-describedby={nameError ? "time-off-type-name-error" : undefined}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </div>
-            {nameError && (
-              <p id="time-off-type-name-error" role="alert" className="text-sm text-destructive">
-                {t(nameError, { name: trimmed })}
-              </p>
-            )}
-          </div>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 text-sm font-medium">{t("settings.timeOff.icon")}</legend>
-            <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-10">
-              {TIME_OFF_TYPE_ICONS.map((option) => {
-                const Glyph = ICONS[option];
-                return (
-                  <label
-                    key={option}
-                    className="relative grid h-9 cursor-pointer place-items-center rounded-lg border border-transparent bg-muted/60 text-muted-foreground has-checked:border-foreground has-checked:bg-background has-checked:text-foreground has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
-                  >
-                    <input
-                      type="radio"
-                      name="time-off-type-icon"
-                      className="sr-only"
-                      aria-label={t(ICON_LABELS[option])}
-                      checked={icon === option}
-                      onChange={() => setIcon(option)}
-                    />
-                    <Glyph aria-hidden size={17} />
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 text-sm font-medium">{t("settings.timeOff.colour")}</legend>
-            <div className="flex flex-wrap gap-2">
-              {TIME_OFF_TYPE_COLOURS.map((option) => (
-                <label
-                  key={option}
-                  className="relative size-7 cursor-pointer rounded-full border-2 border-background shadow-[0_0_0_1px_var(--color-border)] has-checked:shadow-[0_0_0_2px_var(--color-foreground)] has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
-                  style={{ background: tileStyle(option).background }}
-                >
-                  <input
-                    type="radio"
-                    name="time-off-type-colour"
-                    className="sr-only"
-                    aria-label={t(COLOUR_LABELS[option])}
-                    checked={colour === option}
-                    onChange={() => setColour(option)}
-                  />
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <div className="flex items-start gap-3">
-            <Switch
-              id="time-off-type-show-reason"
-              className="mt-0.5"
-              checked={!isPrivate}
-              disabled={sickness}
-              aria-describedby="time-off-type-show-reason-hint"
-              onCheckedChange={(showReason) => setPrivate(!showReason)}
-            />
-            <div className="flex flex-col gap-0.5">
-              <Label htmlFor="time-off-type-show-reason">{t("settings.timeOff.showReason")}</Label>
-              <p id="time-off-type-show-reason-hint" className="text-sm text-muted-foreground">
-                {sickness
-                  ? t("settings.timeOff.sicknessPrivate")
-                  : isPrivate
-                    ? t("settings.timeOff.showReasonOff")
-                    : trimmed
-                      ? t("settings.timeOff.showReasonOn", { name: trimmed })
-                      : t("settings.timeOff.showReasonUnnamed")}
-              </p>
-            </div>
-          </div>
+          <TimeOffTypeFields
+            values={values}
+            onChange={setValues}
+            sickness={false}
+            nameError={nameError}
+          />
           {failed && (
             <p role="alert" className="text-sm text-destructive">
               {t("settings.timeOff.saveFailed")}
@@ -195,17 +72,15 @@ export function TimeOffTypeDialog({ type, onClose }: Props) {
           )}
           <DialogFooter className="sm:items-center">
             <p className="text-sm text-muted-foreground sm:mr-auto">
-              {type
-                ? t("settings.timeOff.sameEverywhere")
-                : trimmed
-                  ? t("settings.timeOff.addsNamed", { name: trimmed })
-                  : t("settings.timeOff.adds")}
+              {trimmed
+                ? t("settings.timeOff.addsNamed", { name: trimmed })
+                : t("settings.timeOff.adds")}
             </p>
             <Button type="button" variant="ghost" disabled={loading} onClick={onClose}>
               {t("settings.timeOff.cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
-              {type ? t("settings.timeOff.save") : t("settings.timeOff.add")}
+              {t("settings.timeOff.add")}
             </Button>
           </DialogFooter>
         </form>
@@ -213,63 +88,3 @@ export function TimeOffTypeDialog({ type, onClose }: Props) {
     </Dialog>
   );
 }
-
-/** The message for a refused name, by the `name` field's error code. */
-function nameErrorOf(
-  error: { __typename: string; fields?: readonly { field: string; code: string }[] } | null,
-): MessageKey | null {
-  const code = error?.fields?.find(({ field }) => field === "name")?.code;
-  return (code && NAME_MESSAGES[code]) || null;
-}
-
-const NAME_MESSAGES: Partial<Record<string, MessageKey>> = {
-  required: "settings.timeOff.nameRequired",
-  too_long: "settings.timeOff.nameTooLong",
-  taken: "settings.timeOff.nameTaken",
-};
-
-const ICON_LABELS = {
-  SUN: "settings.timeOff.iconSun",
-  UMBRELLA: "settings.timeOff.iconUmbrella",
-  AIRPLANE: "settings.timeOff.iconAeroplane",
-  MOUNTAINS: "settings.timeOff.iconMountains",
-  TREE: "settings.timeOff.iconTree",
-  LEAF: "settings.timeOff.iconLeaf",
-  BICYCLE: "settings.timeOff.iconBicycle",
-  CAR: "settings.timeOff.iconCar",
-  COFFEE: "settings.timeOff.iconCoffee",
-  MOON: "settings.timeOff.iconMoon",
-  THERMOMETER: "settings.timeOff.iconThermometer",
-  FIRST_AID: "settings.timeOff.iconFirstAid",
-  HEARTBEAT: "settings.timeOff.iconHeartbeat",
-  HEART: "settings.timeOff.iconHeart",
-  HAND_HEART: "settings.timeOff.iconCare",
-  FLOWER: "settings.timeOff.iconFlower",
-  BABY: "settings.timeOff.iconBaby",
-  BACKPACK: "settings.timeOff.iconBackpack",
-  HOUSE_LINE: "settings.timeOff.iconHouse",
-  USERS_THREE: "settings.timeOff.iconPeople",
-  GRADUATION_CAP: "settings.timeOff.iconGraduationCap",
-  BOOK_OPEN: "settings.timeOff.iconBook",
-  BRIEFCASE: "settings.timeOff.iconBriefcase",
-  TRUCK: "settings.timeOff.iconLorry",
-  SCALES: "settings.timeOff.iconScales",
-  WALLET: "settings.timeOff.iconWallet",
-  LIFEBUOY: "settings.timeOff.iconLifebuoy",
-  CONFETTI: "settings.timeOff.iconConfetti",
-  STAR: "settings.timeOff.iconStar",
-  SPARKLE: "settings.timeOff.iconSparkle",
-} as const satisfies Record<IconName, MessageKey>;
-
-const COLOUR_LABELS = {
-  GREEN: "settings.timeOff.colourGreen",
-  CORAL: "settings.timeOff.colourCoral",
-  YELLOW: "settings.timeOff.colourYellow",
-  LIME: "settings.timeOff.colourLime",
-  TEAL: "settings.timeOff.colourTeal",
-  BLUE: "settings.timeOff.colourBlue",
-  INDIGO: "settings.timeOff.colourIndigo",
-  PURPLE: "settings.timeOff.colourPurple",
-  PINK: "settings.timeOff.colourPink",
-  RED: "settings.timeOff.colourRed",
-} as const satisfies Record<TimeOffTypeColour, MessageKey>;
