@@ -26,7 +26,7 @@ A manual check of the People page against a development stack.
 
 As an admin with at least three people (outside the demo):
 
-- [ ] Ticking two people shows "Set manager" beside "Invite"; picking a person sets both, toasts "Set … as manager of 2 people", clears the selection, and each panel shows the manager and an "Edited" history line.
+- [ ] Ticking two people shows "Set manager" beside "Invite"; picking a person sets both, toasts "Set … as manager of 2 people", clears the selection, and each panel shows the manager and a "You set manager to …" history line.
 - [ ] Choosing "None" removes their manager.
 - [ ] Ticking someone and picking a person who reports to them toasts "That person reports to someone you selected, so they can’t be their manager." and changes nothing.
 

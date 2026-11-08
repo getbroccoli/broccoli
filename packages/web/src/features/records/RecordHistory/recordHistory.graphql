@@ -19,6 +19,7 @@ fragment RecordHistory_line on RecordChange {
   occurredAt
   author {
     kind
+    userId
     email
   }
   cause {

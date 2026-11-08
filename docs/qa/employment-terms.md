@@ -31,7 +31,7 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 - [ ] Set Mon to Thu to 8 and Fri to 0: the hint reads "32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.", "What changes" shows "Working week: Mon–Thu, 8 hours" with "From <today>." and the people by name, five at first, then "Show all 40".
 - [ ] The footer reads "Saving changes the working week for the 40 people on England and Wales, from <today>. Their allowances are worked out again from that date." beside Cancel and Save.
 - [ ] 7.3 hours or all days 0 each show their message and keep Save off; days before 1 January this year can't be picked.
-- [ ] Save shows "Working week saved for England and Wales." and the new week; History reads "<you> changed the working week to Mon–Thu, 8 hours, England and Wales bank holidays, from <today>".
+- [ ] Save shows "Working week saved for England and Wales." and the new week; History reads "You changed the working week to Mon–Thu, 8 hours", with no "Edited" label.
 - [ ] A week from a later date shows under today's as "From <date>: …" with "Cancel change"; the toast adds "It changes on <date>."
 
 ## Change a type's rules
@@ -40,14 +40,14 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 - [ ] Typing 30 shows "Changed: 28 → 30 days" and "Not saved" in the row, and "Annual leave: 28 → 30 days" with "From 1 Jan <year>, bank holidays still included" in "What changes".
 - [ ] "Another date" shows a date field; with a date off 1 January, Unlimited and Doesn't count are disabled and the counts keep today's.
 - [ ] 367, 20.3 or an empty allowance shows "Enter a number of days from 0 to 366." and keeps Save off.
-- [ ] Saving from next leave year shows "Annual leave saved for England and Wales. It changes on 1 Jan <next year>.", the planned line with "Cancel change", and the History line "<you> changed Annual leave to 30 days a year, bank holidays included, from 1 Jan <next year>".
+- [ ] Saving from next leave year shows "Annual leave saved for England and Wales. It changes on 1 Jan <next year>.", the planned line with "Cancel change", and the History line "You changed Annual leave to 30 days a year from 1 Jan <next year>".
 - [ ] Saving from this leave year's start changes today's line, and the list's Annual leave cell.
 - [ ] Changing Sickness to Unlimited from this leave year's start reads "Unlimited · Leave year from 1 January".
 
 ## Cancel a planned change
 
 - [ ] "Cancel change" asks "Cancel this change?" with "Annual leave stays at 28 days a year, bank holidays included, for the 38 people on England and Wales.", "Keep change" and "Cancel change".
-- [ ] "Keep change" closes it; "Cancel change" shows "Change cancelled.", removes the planned line and adds "<you> cancelled the change to Annual leave from 1 Jan <next year>" to History.
+- [ ] "Keep change" closes it; "Cancel change" shows "Change cancelled.", removes the planned line and adds "You cancelled the change to Annual leave from 1 Jan <next year>" to History.
 
 ## Offer a type
 
@@ -55,7 +55,7 @@ Every type is offered on the demo terms. For a type that is not, delete the term
 
 - [ ] A "Not offered here" row has "Offer", which opens an empty form: From a balance, every choice enabled, bank holidays on top.
 - [ ] Choosing "Doesn't count" shows "Other: offered, Recorded, doesn't count" and "Saving offers Other to the 38 people on England and Wales, from 1 January <this year>."
-- [ ] Saving shows the row as offered and History reads "<you> offered Other from 1 Jan <this year>: Recorded, doesn't count".
+- [ ] Saving shows the row as offered and History reads "You offered Other from 1 Jan <this year>: Recorded, doesn't count".
 - [ ] An offer from next leave year shows its planned line and no "Offer"; cancelling it brings "Not offered here" and "Offer" back.
 
 ## One section at a time

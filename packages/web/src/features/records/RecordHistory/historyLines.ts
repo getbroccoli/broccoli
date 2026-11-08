@@ -64,7 +64,10 @@ export function summaryOf(line: HistoryLine, description: RecordDescription): Su
         return { kind: "updatedMany", labels };
       }
       const [change] = line.changes as [FieldChange];
-      const sentence = description.changedAs?.(change);
+      const sentence = description.changedAs?.(
+        change,
+        calendarDayOf(new Date(line.occurredAt), "Europe/London"),
+      );
       if (sentence) {
         return { kind: "sentence", text: sentence };
       }
@@ -91,16 +94,18 @@ export function shownValues(
   };
 }
 
-/** "Edited" for a direct edit; a cause the web app does not know reads as its words. */
-export function causeLabel(kind: string): string {
+/** Why a change happened, in words; null for a direct edit, the usual case. */
+export function causeLabel(kind: string): string | null {
+  if (kind === "EDITED_DIRECTLY") return null;
   const known = KNOWN_CAUSES[kind];
   return known ? t(known) : sentenceCase(kind);
 }
 
-/** Who made a change, in words. */
-export function authorName(author: HistoryLine["author"]): string {
+/** Who made a change, in words: "You" for the reader's own changes. */
+export function authorName(author: HistoryLine["author"], readerId: string): string {
   switch (author.kind) {
     case "SIGNED_IN_USER":
+      if (author.userId === readerId) return t("records.history.author.you");
       return author.email ?? t("records.history.author.someone");
     case "BROCCOLI_ITSELF":
       return t("records.history.author.broccoli");
@@ -112,7 +117,6 @@ export function authorName(author: HistoryLine["author"]): string {
 }
 
 const KNOWN_CAUSES: Partial<Record<string, MessageKey>> = {
-  EDITED_DIRECTLY: "records.history.cause.edited",
   ADDED_FROM_IMPORT: "records.history.cause.import",
   ADDED_WITH_DEMO: "records.history.cause.demo",
   INVITE_SENT: "records.history.cause.inviteSent",
