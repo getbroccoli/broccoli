@@ -20,6 +20,7 @@ import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
 import { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
 import { timeOff } from "./timeOffTable";
+import { timeOffTypeColumns, toTimeOffType } from "./timeOffTypeColumns";
 import { TIME_OFF_TYPE_NAME_UNIQUE, timeOffTypes } from "./timeOffTypesTable";
 
 /** A person on a named policy for one type from a date to a date. */
@@ -91,7 +92,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         // A company type asks for approval, as Annual leave does, until approvals are configurable.
         const [type] = await orm()
           .insert(timeOffTypes)
-          .values({ ...typeColumns(identity), needsApproval: true })
+          .values({ ...timeOffTypeColumns(identity), needsApproval: true })
           .returning();
         return toTimeOffType(type!);
       } catch (error) {
@@ -103,7 +104,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       try {
         const [type] = await orm()
           .update(timeOffTypes)
-          .set(typeColumns(changes))
+          .set(timeOffTypeColumns(changes))
           .where(eq(timeOffTypes.id, id))
           .returning();
         return type ? toTimeOffType(type) : null;
@@ -218,7 +219,7 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .set({ name: sql`${timeOffTypes.id}::text` })
         .where(isNotNull(timeOffTypes.typeKey));
       for (const [typeKey, standard] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
-        const columns = { ...typeColumns(standard), needsApproval: standard.needsApproval };
+        const columns = { ...timeOffTypeColumns(standard), needsApproval: standard.needsApproval };
         await orm()
           .insert(timeOffTypes)
           .values({ ...columns, typeKey: typeKey as TimeOffTypeKey })
@@ -329,50 +330,6 @@ function ruleRow(timeOffPolicyVersionId: string, rule: NewPolicyVersion["rules"]
         afterYears: rule.afterYears,
         extraDays: String(rule.extraDays),
       };
-}
-
-function toTimeOffType({
-  id,
-  name,
-  typeKey,
-  unit,
-  icon,
-  colour,
-  private: isPrivate,
-  defaultBalance,
-  defaultEntitlementDays,
-  defaultBankHolidays,
-}: typeof timeOffTypes.$inferSelect): TimeOffType {
-  return {
-    id,
-    name,
-    typeKey,
-    unit,
-    icon,
-    colour,
-    private: isPrivate,
-    defaultRules: {
-      balance: defaultBalance,
-      entitlementDays: defaultEntitlementDays === null ? null : Number(defaultEntitlementDays),
-      bankHolidays: defaultBankHolidays,
-    },
-  };
-}
-
-/** The columns of a type's identity, its default rules spread over their own. */
-function typeColumns<Identity extends Partial<TimeOffTypeIdentity>>({
-  defaultRules,
-  ...identity
-}: Identity) {
-  return {
-    ...identity,
-    ...(defaultRules && {
-      defaultBalance: defaultRules.balance,
-      defaultEntitlementDays:
-        defaultRules.entitlementDays === null ? null : String(defaultRules.entitlementDays),
-      defaultBankHolidays: defaultRules.bankHolidays,
-    }),
-  };
 }
 
 function nameTakenOr(error: unknown): unknown {
