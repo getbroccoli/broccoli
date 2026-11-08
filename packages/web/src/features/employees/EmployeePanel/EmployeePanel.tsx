@@ -18,8 +18,10 @@ type Props = {
 
 /** A person's panel over People: their details, edited in place, and their history. */
 export function EmployeePanel({ employeeId, onClose }: Props) {
+  // Terms changes recalculate allowances outside this panel, so refresh whenever it opens.
   const { data, error, loading, refetch } = useQuery(EmployeePanelDocument, {
     variables: { id: employeeId },
+    fetchPolicy: "cache-and-network",
   });
 
   return (
