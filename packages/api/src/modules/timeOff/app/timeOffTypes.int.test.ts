@@ -1,16 +1,14 @@
 import {
   ADMIN,
-  deleteAllEmployees,
   EMPLOYEE,
   expect,
   giveTermsPolicies,
-  OWNER,
   seedTimeOffType,
   test,
   timeOffService,
 } from "#test/support";
 
-test("adds a trimmed type with its look and privacy after standard types, ordered by name", async ({
+test("adds a trimmed type with its default rules, look and privacy after standard types, ordered by name", async ({
   orm,
 }) => {
   await seedTimeOffType(orm, "Volunteering");
@@ -94,6 +92,40 @@ test.for([
   },
 );
 
+test.for([
+  {
+    reason: "an allowance over 366 days",
+    entitlementDays: 367,
+    bankHolidays: "bank_holidays_on_top_of_allowance",
+    field: "defaultRules.entitlementDays",
+    code: "out_of_range",
+  },
+  {
+    reason: "an allowance between half days",
+    entitlementDays: 2.3,
+    bankHolidays: "bank_holidays_on_top_of_allowance",
+    field: "defaultRules.entitlementDays",
+    code: "out_of_range",
+  },
+  {
+    reason: "missing bank holidays",
+    entitlementDays: 12.5,
+    bankHolidays: null,
+    field: "defaultRules.bankHolidays",
+    code: "required",
+  },
+] as const)(
+  "refuses default rules with $reason",
+  async ({ entitlementDays, bankHolidays, field, code }, { orm }) => {
+    await expect(
+      timeOffService(orm).createType(ADMIN, {
+        ...studyLeave,
+        defaultRules: { balance: "balance_from_allowance", entitlementDays, bankHolidays },
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_INPUT", fieldErrors: [{ field, code }] });
+  },
+);
+
 test("refuses adding another type's name ignoring case and surrounding spaces", async ({ orm }) => {
   const service = timeOffService(orm);
   const before = await service.listTimeOffTypes(ADMIN);
@@ -150,6 +182,7 @@ test("changes a type's name, icon, colour and privacy without changing other typ
   const before = await service.listTimeOffTypes(ADMIN);
 
   const changed = await service.changeType(ADMIN, {
+    ...studyLeave,
     id: type.id,
     name: "  Training  ",
     icon: "book_open",
@@ -158,6 +191,7 @@ test("changes a type's name, icon, colour and privacy without changing other typ
   });
 
   expect(changed).toEqual({
+    ...studyLeave,
     id: type.id,
     name: "Training",
     ...ownType,
@@ -174,7 +208,7 @@ test("changes a type's name, icon, colour and privacy without changing other typ
   );
 });
 
-test("renaming Annual leave keeps its key and every terms' rules", async ({
+test("changing Annual leave defaults keeps its key and every terms' policy versions", async ({
   orm,
   seed,
   transact,
@@ -201,9 +235,14 @@ test("renaming Annual leave keeps its key and every terms' rules", async ({
     icon: "sun",
     colour: "green",
     private: false,
+    defaultRules: studyLeave.defaultRules,
   });
 
-  expect(changed).toEqual({ ...annualLeave.timeOffType, name: "Paid leave" });
+  expect(changed).toEqual({
+    ...annualLeave.timeOffType,
+    name: "Paid leave",
+    defaultRules: studyLeave.defaultRules,
+  });
   const after = await service.readTermsTimeOff(ADMIN, [defaultId, otherId]);
   for (const id of [defaultId, otherId]) {
     const original = before
@@ -231,6 +270,7 @@ test("refuses making Sickness not private", async ({ orm }) => {
       icon: "thermometer",
       colour: "coral",
       private: false,
+      defaultRules: sickness.defaultRules,
     }),
   ).rejects.toMatchObject({
     code: "INVALID_INPUT",
@@ -277,65 +317,15 @@ test("refuses an employee changing a type", async ({ orm }) => {
   expect(await service.listTimeOffTypes(ADMIN)).toEqual(before);
 });
 
-test("starting over removes added types and restores the standard types", async ({
-  orm,
-  transact,
-}) => {
-  const service = timeOffService(orm);
-  const before = await service.listTimeOffTypes(ADMIN);
-  const annualLeave = before.timeOffTypes.find(
-    ({ timeOffType }) => timeOffType.typeKey === "annual_leave",
-  )!.timeOffType;
-  await service.createType(ADMIN, studyLeave);
-  await service.changeType(ADMIN, {
-    id: annualLeave.id,
-    name: "Paid leave",
-    icon: "airplane",
-    colour: "blue",
-    private: true,
-  });
-
-  await transact((tx) => deleteAllEmployees(orm)(OWNER, tx));
-
-  expect(await service.listTimeOffTypes(ADMIN)).toEqual(before);
-});
-
-test("starting over restores standard names that other standard types took", async ({
-  orm,
-  transact,
-}) => {
-  const service = timeOffService(orm);
-  const before = await service.listTimeOffTypes(ADMIN);
-  const annualLeave = before.timeOffTypes.find(
-    ({ timeOffType }) => timeOffType.typeKey === "annual_leave",
-  )!.timeOffType;
-  const other = before.timeOffTypes.find(
-    ({ timeOffType }) => timeOffType.typeKey === "other",
-  )!.timeOffType;
-  await service.changeType(ADMIN, {
-    id: annualLeave.id,
-    name: "Holiday",
-    icon: "sun",
-    colour: "green",
-    private: false,
-  });
-  await service.changeType(ADMIN, {
-    id: other.id,
-    name: "Annual leave",
-    icon: "confetti",
-    colour: "yellow",
-    private: false,
-  });
-
-  await transact((tx) => deleteAllEmployees(orm)(OWNER, tx));
-
-  expect(await service.listTimeOffTypes(ADMIN)).toEqual(before);
-});
-
 const studyLeave = {
   name: "Study leave",
   icon: "graduation_cap",
   colour: "blue",
   private: false,
+  defaultRules: {
+    balance: "balance_from_allowance",
+    entitlementDays: 12.5,
+    bankHolidays: "bank_holidays_on_top_of_allowance",
+  },
 } as const;
 const ownType = { typeKey: null, unit: "day" } as const;

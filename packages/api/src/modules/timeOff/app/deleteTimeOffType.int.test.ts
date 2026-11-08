@@ -191,5 +191,6 @@ test("starting over restores deleted Annual leave with its standard name, look, 
     private: false,
     typeKey: "annual_leave",
     unit: "day",
+    defaultRules: { balance: "no_balance", entitlementDays: null, bankHolidays: null },
   });
 });

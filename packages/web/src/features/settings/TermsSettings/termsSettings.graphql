@@ -72,6 +72,11 @@ query EmploymentTermsStack($id: ID!) {
         icon
         colour
         private
+        defaultRules {
+          balance
+          entitlementDays
+          bankHolidays
+        }
       }
       policy {
         id

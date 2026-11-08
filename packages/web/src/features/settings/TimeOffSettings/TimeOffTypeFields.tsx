@@ -4,15 +4,18 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { t, type MessageKey } from "@/i18n";
 
+import type { RulesValues } from "./timeOffRules";
+import { TimeOffRulesFields } from "./TimeOffRulesFields";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 import { ICONS, TIME_OFF_TYPE_COLOURS, TIME_OFF_TYPE_ICONS, tileStyle } from "./timeOffTypeLook";
 
-/** What an admin sets on a type, the same in every set of terms. */
+/** What an admin sets on a type: its identity, the same in every set of terms, and default rules. */
 export type TimeOffTypeValues = {
   name: string;
   icon: IconName;
   colour: TimeOffTypeColour;
   private: boolean;
+  defaultRules: RulesValues;
 };
 
 type Props = {
@@ -24,7 +27,10 @@ type Props = {
   nameError: MessageKey | null;
 };
 
-/** A type's name, icon, colour and privacy, as the Add dialog and the type's panel edit them. */
+/**
+ * A type's name, icon, colour, privacy and default rules, as the Add dialog and the type's panel
+ * edit them.
+ */
 export function TimeOffTypeFields({ values, onChange, sickness, nameError }: Props) {
   const { name, icon, colour } = values;
   const trimmed = name.trim();
@@ -118,6 +124,18 @@ export function TimeOffTypeFields({ values, onChange, sickness, nameError }: Pro
           </p>
         </div>
       </div>
+      <section aria-labelledby="time-off-type-default-rules" className="flex flex-col gap-5">
+        <div className="flex flex-col gap-0.5">
+          <h3 id="time-off-type-default-rules" className="text-sm font-medium">
+            {t("settings.timeOff.defaultRules")}
+          </h3>
+          <p className="text-sm text-muted-foreground">{t("settings.timeOff.defaultRulesHint")}</p>
+        </div>
+        <TimeOffRulesFields
+          values={values.defaultRules}
+          onChange={(defaultRules) => change({ defaultRules })}
+        />
+      </section>
     </>
   );
 }

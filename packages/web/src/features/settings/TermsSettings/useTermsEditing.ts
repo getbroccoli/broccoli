@@ -3,12 +3,12 @@ import { useState } from "react";
 
 import { TermsTimeOffReachDocument, TermsWeekReachDocument } from "@/__generated__/graphql";
 
+import { rulesInputOf } from "../TimeOffSettings";
 import {
   rulesChangeBox,
   type RulesDraft,
   rulesDraftOf,
   rulesErrors,
-  rulesInputOf,
   rulesSaveLine,
   rulesStartDate,
   weekChangeBox,
@@ -40,6 +40,8 @@ export function useTermsEditing(terms: Terms) {
   // or a date left under an unpicked "Another date", is no change.
   const dirty =
     open !== null && savedValues(open, facts.earliest) !== savedValues(opened, facts.earliest);
+  // An offer saves as it opened too: taking the type's default rules is the point of it.
+  const savable = facts.valid && (dirty || (open?.kind === "rules" && open.draft.offer));
 
   const show = (section: OpenSection | null) => {
     setOpen(section);
@@ -56,13 +58,13 @@ export function useTermsEditing(terms: Terms) {
     saving,
     ...facts,
     people,
-    box: dirty && facts.valid ? changeBox(open, facts) : null,
+    box: savable ? changeBox(open, facts) : null,
     saveLine: open && facts.valid ? saveLineOf(terms, open, facts, people) : null,
-    canSave: facts.valid && dirty,
+    canSave: savable,
     editWeek: () =>
       facts.week && ask({ kind: "week", draft: weekDraftOf(facts.week, companyToday()) }),
     editRules: (timeOffTypeId: string) =>
-      ask({ kind: "rules", timeOffTypeId, draft: rulesDraftOf(currentOf(terms, timeOffTypeId)) }),
+      ask({ kind: "rules", timeOffTypeId, draft: draftOf(terms, timeOffTypeId) }),
     change: setOpen,
     close: () => show(null),
     discard: () => show(waiting),
@@ -156,6 +158,11 @@ function rowOf(terms: Terms, timeOffTypeId: string): TimeOffRow {
   return terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
 }
 
-function currentOf(terms: Terms, timeOffTypeId: string) {
-  return splitVersions(rowOf(terms, timeOffTypeId).versions, companyToday()).current;
+/** The type's rules form: from today's version, or its default rules for an offer. */
+function draftOf(terms: Terms, timeOffTypeId: string) {
+  const row = rowOf(terms, timeOffTypeId);
+  return rulesDraftOf(
+    splitVersions(row.versions, companyToday()).current,
+    row.timeOffType.defaultRules,
+  );
 }

@@ -71,6 +71,9 @@ export const settingsEn = {
   "settings.timeOff.showReasonUnnamed":
     "Colleagues see the type's name. When off, they only see “Away”.",
   "settings.timeOff.showReasonOff": "Colleagues only see “Away”.",
+  "settings.timeOff.defaultRules": "When offered on terms",
+  "settings.timeOff.defaultRulesHint":
+    "Offering this type on terms starts from these rules. Terms that already offer it keep theirs.",
   "settings.timeOff.sicknessPrivate": "Sickness is private by law. Colleagues only see “Away”.",
   "settings.timeOff.addsNamed":
     "Adds {name} for the whole company. Every set of terms shows it as not offered until you offer it.",

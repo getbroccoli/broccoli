@@ -53,8 +53,9 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 Every type is offered on the demo terms. For a type that is not, delete the terms' policy for Other in the dev database, or use the terms from "Before time off is on" below.
 
-- [ ] A "Not offered here" row has "Offer", which opens an empty form: From a balance, every choice enabled, bank holidays on top.
-- [ ] Choosing "Doesn't count" shows "Other: offered, Recorded, doesn't count" and "Saving offers Other to the 38 people on England and Wales, from 1 January <this year>."
+- [ ] A "Not offered here" row has "Offer", which opens the form filled from the type's default rules in Settings › Time off, with every choice enabled; Other's is "Doesn't count".
+- [ ] The untouched offer already shows "What changes" and can be saved.
+- [ ] With "Doesn't count" chosen, "What changes" reads "Other: offered, Recorded, doesn't count" and "Saving offers Other to the 38 people on England and Wales, from 1 January <this year>."
 - [ ] Saving shows the row as offered and History reads "You offered Other from 1 Jan <this year>: Recorded, doesn't count".
 - [ ] An offer from next leave year shows its planned line and no "Offer"; cancelling it brings "Not offered here" and "Offer" back.
 

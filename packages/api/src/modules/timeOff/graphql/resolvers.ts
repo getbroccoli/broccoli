@@ -20,7 +20,7 @@ import {
   type PolicyVersion,
   type TimeOffType,
   type TimeOffTypeColour,
-  type TimeOffTypeIdentity,
+  type TimeOffTypeIdentityInput,
   type TimeOffTypeIcon,
 } from "../domain";
 
@@ -192,21 +192,24 @@ function toGraphqlType(type: TimeOffType) {
     colour: toEnum(type.colour ?? DEFAULT_TIME_OFF_TYPE_LOOK.colour),
     typeKey: type.typeKey && toEnum(type.typeKey),
     private: type.private,
+    defaultRules: {
+      balance: BALANCE_KINDS[type.defaultRules.balance],
+      entitlementDays: type.defaultRules.entitlementDays,
+      bankHolidays: type.defaultRules.bankHolidays && toEnum(type.defaultRules.bankHolidays),
+    },
   };
 }
 
 /** A type's identity from GraphQL input, its enums in the stored lower case. */
-function toIdentity(input: {
-  name: string;
-  icon: string;
-  colour: string;
-  private: boolean;
-}): TimeOffTypeIdentity {
+function toIdentity(
+  input: ResolversTypes["TimeOffTypeCreateInput"] | ResolversTypes["TimeOffTypeChangeInput"],
+): TimeOffTypeIdentityInput {
   return {
     name: input.name,
     icon: input.icon.toLowerCase() as TimeOffTypeIcon,
     colour: input.colour.toLowerCase() as TimeOffTypeColour,
     private: input.private,
+    defaultRules: toStoredRules(input.defaultRules),
   };
 }
 

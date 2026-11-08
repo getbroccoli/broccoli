@@ -50,6 +50,17 @@ type TimeOffType {
   typeKey: TimeOffTypeKey
   "Colleagues see that the person is off, not why. Always true for Sickness."
   private: Boolean!
+  "The rules offering the type on terms starts from; terms already offering it keep their own."
+  defaultRules: TimeOffRules!
+}
+
+"How a type counts, as an admin sets it in Settings."
+type TimeOffRules {
+  balance: TimeOffBalanceKind!
+  "Days a year for a 5-day week; BALANCE_FROM_ALLOWANCE only."
+  entitlementDays: Float
+  "BALANCE_FROM_ALLOWANCE only."
+  bankHolidays: TimeOffBankHolidays
 }
 
 "The four time off types every workspace starts with."
@@ -345,7 +356,7 @@ type Mutation {
 type TimeOffMutations {
   "Adds a company time off type. No terms offer it until they are given rules for it. Admins only."
   createType(input: TimeOffTypeCreateInput!): TimeOffTypeCreatePayload!
-  "Changes a type's name, icon, colour and privacy, the same in every set of terms. Admins only."
+  "Changes a type's name, icon, colour, privacy and default rules, the same in every set of terms; terms already offering it keep their rules. Admins only."
   changeType(input: TimeOffTypeChangeInput!): TimeOffTypeChangePayload!
   "Deletes a type with its rules on every terms; refused while any time off of it is on record, whatever its status. Starting over brings a deleted standard type back. Admins only."
   deleteType(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
@@ -364,9 +375,11 @@ input TimeOffTypeCreateInput {
   colour: TimeOffTypeColour!
   "Colleagues see that the person is off, not why."
   private: Boolean!
+  "The rules offering the type on terms starts from."
+  defaultRules: TimeOffRulesInput!
 }
 
-"Every field is sent; the dialog always has all four."
+"Every field is sent; the panel always has them all."
 input TimeOffTypeChangeInput {
   timeOffTypeId: ID!
   "1 to 60 characters; unique, ignoring case and surrounding spaces."
@@ -375,6 +388,8 @@ input TimeOffTypeChangeInput {
   colour: TimeOffTypeColour!
   "Must stay true for Sickness."
   private: Boolean!
+  "The rules offering the type on terms starts from; terms already offering it keep their rules."
+  defaultRules: TimeOffRulesInput!
 }
 
 "The new time off type, or why it was refused."

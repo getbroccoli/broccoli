@@ -52,6 +52,39 @@ test("a Scotland default gives people without a location Scotland's calendar on 
   expect(weeks.get(employee.id)).toMatchObject([{ bankHolidayCalendar: "scotland" }]);
 });
 
+test("turning time off on takes Annual leave defaults from the default nation and leaves other types not counting", async ({
+  orm,
+  transact,
+}) => {
+  const input = scotlandTimeOffSetup();
+  input.defaultBankHolidayCalendar = "scotland";
+  input.locationTerms = [];
+  const service = timeOffService(orm);
+
+  await transact((tx) => service.turnOnTimeOff(OWNER, tx, input));
+
+  const { timeOffTypes } = await service.listTimeOffTypes(OWNER);
+  expect(
+    timeOffTypes.map(({ timeOffType }) => ({
+      typeKey: timeOffType.typeKey,
+      defaultRules: timeOffType.defaultRules,
+    })),
+  ).toEqual([
+    {
+      typeKey: "annual_leave",
+      defaultRules: {
+        balance: "balance_from_allowance",
+        entitlementDays: 25,
+        bankHolidays: "bank_holidays_on_top_of_allowance",
+      },
+    },
+    ...["sickness", "family_leave", "other"].map((typeKey) => ({
+      typeKey,
+      defaultRules: { balance: "no_balance", entitlementDays: null, bankHolidays: null },
+    })),
+  ]);
+});
+
 test("turning time off on twice refuses the second choice and keeps the first", async ({
   orm,
   seed,
