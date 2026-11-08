@@ -15,14 +15,21 @@ import {
 import { t } from "@/i18n";
 
 import { nameErrorOf } from "./nameError";
+import { daysError, rulesInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 
 type Props = {
   onClose: () => void;
 };
 
-/** A new type starts with the default look, and colleagues see its name. */
-const NEW_TYPE: TimeOffTypeValues = { name: "", icon: "SUN", colour: "YELLOW", private: false };
+/** A new type starts with the default look, colleagues see its name, and it doesn't count. */
+const NEW_TYPE: TimeOffTypeValues = {
+  name: "",
+  icon: "SUN",
+  colour: "YELLOW",
+  private: false,
+  defaultRules: { balance: "NO_BALANCE", days: "", onTop: true },
+};
 
 /** Adds a time off type for the whole company; no terms offer it yet. */
 export function AddTimeOffTypeDialog({ onClose }: Props) {
@@ -39,7 +46,8 @@ export function AddTimeOffTypeDialog({ onClose }: Props) {
   const save = async (event: FormEvent) => {
     event.preventDefault();
     try {
-      const { timeOffType } = await createType({ variables: { input: values } });
+      const input = { ...values, defaultRules: rulesInputOf(values.defaultRules) };
+      const { timeOffType } = await createType({ variables: { input } });
       toast(t("settings.timeOff.added", { name: timeOffType?.name ?? trimmed }));
       onClose();
     } catch {
@@ -79,7 +87,7 @@ export function AddTimeOffTypeDialog({ onClose }: Props) {
             <Button type="button" variant="ghost" disabled={loading} onClick={onClose}>
               {t("settings.timeOff.cancel")}
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || Boolean(daysError(values.defaultRules))}>
               {t("settings.timeOff.add")}
             </Button>
           </DialogFooter>

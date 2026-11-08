@@ -20,6 +20,7 @@ import { t } from "@/i18n";
 
 import { DeleteTimeOffTypeDialog } from "./DeleteTimeOffTypeDialog";
 import { nameErrorOf } from "./nameError";
+import { daysError, rulesInputOf, rulesValuesOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 
@@ -35,6 +36,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     icon: type.icon,
     colour: type.colour,
     private: type.private,
+    defaultRules: rulesValuesOf(type.defaultRules),
   };
   const [values, setValues] = useState(saved);
   const [deleting, setDeleting] = useState(false);
@@ -43,9 +45,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     ChangeTimeOffTypeDocument,
     { refetch: [TimeOffSettingsDocument] },
   );
-  const changed = (Object.keys(saved) as (keyof TimeOffTypeValues)[]).some(
-    (field) => values[field] !== saved[field],
-  );
+  const changed = JSON.stringify(inputOf(values)) !== JSON.stringify(inputOf(saved));
   const nameError = nameErrorOf(payloadError);
   const failed = !nameError && (error || payloadError);
 
@@ -53,7 +53,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     event.preventDefault();
     try {
       const { timeOffType } = await changeType({
-        variables: { input: { timeOffTypeId: type.id, ...values } },
+        variables: { input: { timeOffTypeId: type.id, ...inputOf(values) } },
       });
       toast(t("settings.timeOff.saved", { name: timeOffType?.name ?? values.name.trim() }));
     } catch {
@@ -140,7 +140,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
             >
               {t("settings.timeOff.cancel")}
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || Boolean(daysError(values.defaultRules))}>
               {t("settings.timeOff.save")}
             </Button>
           </div>
@@ -155,4 +155,9 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
       />
     </form>
   );
+}
+
+/** The values as the API takes them, so days typed as 20 or 20.0 are no change. */
+function inputOf(values: TimeOffTypeValues) {
+  return { ...values, defaultRules: rulesInputOf(values.defaultRules) };
 }

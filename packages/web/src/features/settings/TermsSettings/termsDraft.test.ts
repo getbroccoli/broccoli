@@ -168,9 +168,62 @@ it("compares the new working week's hours and days with the old week", () => {
   expect(weekHint(week, currentWeek)).toBe("32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.");
 });
 
+it.each([
+  { balance: "NO_BALANCE", entitlementDays: null, bankHolidays: null, days: "", onTop: true },
+  {
+    balance: "UNLIMITED_BALANCE",
+    entitlementDays: null,
+    bankHolidays: null,
+    days: "",
+    onTop: true,
+  },
+  {
+    balance: "BALANCE_FROM_ALLOWANCE",
+    entitlementDays: 12.5,
+    bankHolidays: "BANK_HOLIDAYS_ON_TOP_OF_ALLOWANCE",
+    days: "12.5",
+    onTop: true,
+  },
+  {
+    balance: "BALANCE_FROM_ALLOWANCE",
+    entitlementDays: 28,
+    bankHolidays: "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE",
+    days: "28",
+    onTop: false,
+  },
+] as const)(
+  "starts an offer from the type defaults: $balance, $days days, on top $onTop",
+  ({ balance, entitlementDays, bankHolidays, days, onTop }) => {
+    expect(rulesDraftOf(null, { balance, entitlementDays, bankHolidays })).toEqual({
+      offer: true,
+      balance,
+      days,
+      onTop,
+      appliesFrom: "THIS_LEAVE_YEAR",
+      otherDate: "",
+    });
+  },
+);
+
+it("starts editing from today's policy version instead of the type defaults", () => {
+  expect(
+    rulesDraftOf(
+      { ...currentRules, bankHolidays: "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE" },
+      defaultRules,
+    ),
+  ).toEqual({
+    offer: false,
+    balance: "BALANCE_FROM_ALLOWANCE",
+    days: "20",
+    onTop: false,
+    appliesFrom: "THIS_LEAVE_YEAR",
+    otherDate: "",
+  });
+});
+
 it("starts a change of rules and an offer from this leave year", () => {
-  expect(rulesDraftOf(currentRules).appliesFrom).toBe("THIS_LEAVE_YEAR");
-  expect(rulesDraftOf(null).appliesFrom).toBe("THIS_LEAVE_YEAR");
+  expect(rulesDraftOf(currentRules, defaultRules).appliesFrom).toBe("THIS_LEAVE_YEAR");
+  expect(rulesDraftOf(null, defaultRules).appliesFrom).toBe("THIS_LEAVE_YEAR");
 });
 
 it("says what each start does to the leave year", () => {
@@ -221,3 +274,9 @@ const currentWeek = {
   saturdayMinutes: 0,
   sundayMinutes: 0,
 };
+
+const defaultRules = {
+  balance: "NO_BALANCE",
+  entitlementDays: null,
+  bankHolidays: null,
+} as const;
