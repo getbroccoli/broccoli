@@ -97,17 +97,6 @@ const READY = {
 /** Where setup ends: the directory. */
 const FINISHED: SetupPath = "/people";
 
-/**
- * The setup flow: the steps in order, each with the copy key of its title. The owner may go
- * back to the company until Approve, then sets up time off and chooses who uses Broccoli. A self-hosted owner picks
- * how files are read with AI and creates their account last; a managed one keeps its provided
- * key, signed up before setup and sees what it will add last.
- */
-const SETUP_STEPS = {
-  SELF_HOSTED: [COMPANY, AI, PEOPLE, TIME_OFF_WITHOUT_OWNER, WHO_WITHOUT_OWNER, OWNER],
-  MANAGED: [COMPANY, PEOPLE, TIME_OFF_WITH_OWNER, WHO_WITH_OWNER, READY],
-} as const satisfies Record<Mode, readonly (PageDefinition | StepDefinition)[]>;
-
 type Page =
   | typeof OWNER
   | typeof COMPANY
@@ -231,10 +220,14 @@ function pageOf(page: SetupStepId, mode: Mode, ownerExists: boolean): PageDefini
 }
 
 function stepsOf(mode: Mode, ownerExists: boolean): readonly (PageDefinition | StepDefinition)[] {
-  if (mode === "SELF_HOSTED" && ownerExists) {
-    return [COMPANY, AI, PEOPLE, TIME_OFF_WITH_OWNER, WHO_WITH_OWNER, READY];
-  }
-  return SETUP_STEPS[mode];
+  return [
+    COMPANY,
+    ...(mode === "SELF_HOSTED" ? [AI] : []),
+    PEOPLE,
+    ...(mode === "MANAGED" || ownerExists
+      ? [TIME_OFF_WITH_OWNER, WHO_WITH_OWNER, READY]
+      : [TIME_OFF_WITHOUT_OWNER, WHO_WITHOUT_OWNER, OWNER]),
+  ];
 }
 
 function isOpenAt(page: PageDefinition, step: SetupStep): boolean {
