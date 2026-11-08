@@ -1,9 +1,22 @@
 import DataLoader from "dataloader";
 
-import { perRequest, type Resolvers, type ResolversTypes, toEnum } from "../../../core/graphql";
+import {
+  mutationPayload,
+  perRequest,
+  type Resolvers,
+  type ResolversTypes,
+  toEnum,
+} from "../../../core/graphql";
 import type { TimeOffSetupService, TimeOffService } from "../app";
 import type { TimeOffWithPolicies } from "../app";
-import { DEFAULT_TIME_OFF_TYPE_LOOK, type PolicyVersion, type TimeOffType } from "../domain";
+import {
+  DEFAULT_TIME_OFF_TYPE_LOOK,
+  type PolicyVersion,
+  type TimeOffType,
+  type TimeOffTypeColour,
+  type TimeOffTypeIdentity,
+  type TimeOffTypeIcon,
+} from "../domain";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
 
@@ -68,6 +81,37 @@ export function createResolvers(
           }),
         ),
     },
+    Mutation: {
+      timeOff: () => ({}),
+    },
+    TimeOffMutations: {
+      createType: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffTypeCreatePayload"]>(
+          async () => ({
+            timeOffType: toGraphqlType(
+              await timeOff.createType(context.getActor(), toIdentity(input)),
+            ),
+          }),
+          ["INVALID_INPUT"],
+        ),
+      changeType: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffTypeChangePayload"]>(
+          async () => ({
+            timeOffType: toGraphqlType(
+              await timeOff.changeType(context.getActor(), {
+                id: input.timeOffTypeId,
+                ...toIdentity(input),
+              }),
+            ),
+          }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+      deleteType: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffTypeDeletePayload"]>(async () => {
+          await timeOff.deleteType(context.getActor(), { id: input.timeOffTypeId });
+          return { deletedTimeOffTypeId: input.timeOffTypeId };
+        }, ["NOT_FOUND", "CONFLICT"]),
+    },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
@@ -89,6 +133,22 @@ function toGraphqlType(type: TimeOffType) {
     icon: toEnum(type.icon ?? DEFAULT_TIME_OFF_TYPE_LOOK.icon),
     colour: toEnum(type.colour ?? DEFAULT_TIME_OFF_TYPE_LOOK.colour),
     typeKey: type.typeKey && toEnum(type.typeKey),
+    private: type.private,
+  };
+}
+
+/** A type's identity from GraphQL input, its enums in the stored lower case. */
+function toIdentity(input: {
+  name: string;
+  icon: string;
+  colour: string;
+  private: boolean;
+}): TimeOffTypeIdentity {
+  return {
+    name: input.name,
+    icon: input.icon.toLowerCase() as TimeOffTypeIcon,
+    colour: input.colour.toLowerCase() as TimeOffTypeColour,
+    private: input.private,
   };
 }
 

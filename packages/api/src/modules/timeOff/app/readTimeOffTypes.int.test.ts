@@ -162,6 +162,7 @@ test("returns used days and null figures for a person's unlimited policy", async
         typeKey: null,
         icon: null,
         colour: null,
+        private: false,
       },
       balance: "unlimited_balance",
       periodStart: "2026-01-01",

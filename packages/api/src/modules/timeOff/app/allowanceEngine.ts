@@ -47,6 +47,9 @@ export async function ensureAllowancesOf(
   tx: Tx,
   { employeeIds, cause }: { employeeIds: readonly string[]; cause: AllowanceCause },
 ): Promise<EnsuredAllowances> {
+  // Policies before people, as reset and turn-on lock them: rules must not change or go, as
+  // deleting a type does, between reading them and writing lines.
+  await timeOffPolicyRepository(tx).sharePolicies();
   const ids = await dependencies.employeeReads.lockEmployees(tx, employeeIds);
   if (ids.length === 0) {
     return { allowancesCreated: 0, linesAppended: 0 };
