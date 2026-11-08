@@ -1,4 +1,11 @@
 import { invalidInput } from "../../../core/applicationError";
+import {
+  parseRules,
+  rulesOfVersion,
+  type TimeOffRules,
+  type TimeOffRulesInput,
+} from "./policyChange";
+import { RECORD_ONLY_POLICY } from "./standardLeavePolicies";
 import type { TimeOffTypeColour, TimeOffTypeIcon } from "./timeOffTypeLook";
 import type { TimeOffTypeKey } from "./timeOffPolicy";
 
@@ -10,7 +17,17 @@ export interface TimeOffTypeIdentity {
   icon: TimeOffTypeIcon;
   colour: TimeOffTypeColour;
   private: boolean;
+  /** The rules offering the type on terms starts from. */
+  defaultRules: TimeOffRules;
 }
+
+/** What an admin sends for a type: its identity with the default rules as they came. */
+export type TimeOffTypeIdentityInput = Omit<TimeOffTypeIdentity, "defaultRules"> & {
+  defaultRules: TimeOffRulesInput;
+};
+
+/** Every seeded type starts with the rules setup gives all but Annual leave: recorded, not counted. */
+const RECORD_ONLY_RULES = rulesOfVersion(RECORD_ONLY_POLICY);
 
 /** The four seeded types as the migration inserts them, which starting over restores. */
 export const STANDARD_TIME_OFF_TYPES: Record<
@@ -22,6 +39,7 @@ export const STANDARD_TIME_OFF_TYPES: Record<
     icon: "sun",
     colour: "green",
     private: false,
+    defaultRules: RECORD_ONLY_RULES,
     needsApproval: true,
   },
   sickness: {
@@ -29,6 +47,7 @@ export const STANDARD_TIME_OFF_TYPES: Record<
     icon: "thermometer",
     colour: "coral",
     private: true,
+    defaultRules: RECORD_ONLY_RULES,
     needsApproval: false,
   },
   family_leave: {
@@ -36,9 +55,17 @@ export const STANDARD_TIME_OFF_TYPES: Record<
     icon: "baby",
     colour: "pink",
     private: true,
+    defaultRules: RECORD_ONLY_RULES,
     needsApproval: true,
   },
-  other: { name: "Other", icon: "confetti", colour: "yellow", private: false, needsApproval: true },
+  other: {
+    name: "Other",
+    icon: "confetti",
+    colour: "yellow",
+    private: false,
+    defaultRules: RECORD_ONLY_RULES,
+    needsApproval: true,
+  },
 };
 
 /** Time off of the type is on record, so deleting the type would lose it. */
@@ -58,11 +85,12 @@ export class TimeOffTypeNameTakenError extends Error {
 }
 
 /**
- * The identity with its name trimmed; throws `INVALID_INPUT` on `name` when blank or too long,
- * and on `private` when it would show Sickness's reason to colleagues.
+ * The identity with its name trimmed and its default rules parsed; throws `INVALID_INPUT` on
+ * `name` when blank or too long, on `private` when it would show Sickness's reason to colleagues,
+ * and on `defaultRules` as `parseRules` does.
  */
 export function parseTimeOffTypeIdentity(
-  identity: TimeOffTypeIdentity,
+  identity: TimeOffTypeIdentityInput,
   typeKey: TimeOffTypeKey | null,
 ): TimeOffTypeIdentity {
   const name = identity.name.trim();
@@ -76,5 +104,5 @@ export function parseTimeOffTypeIdentity(
   if (typeKey === "sickness" && !identity.private) {
     throw invalidInput([{ field: "private", code: "sickness_private" }]);
   }
-  return { ...identity, name };
+  return { ...identity, name, defaultRules: parseRules(identity.defaultRules, "defaultRules") };
 }

@@ -164,6 +164,7 @@ test("returns used days and null figures for a person's unlimited policy", async
         icon: null,
         colour: null,
         private: false,
+        defaultRules: { balance: "no_balance", entitlementDays: null, bankHolidays: null },
       },
       balance: "unlimited_balance",
       periodStart: "2026-01-01",

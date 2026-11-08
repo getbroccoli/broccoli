@@ -6,20 +6,20 @@ import { timeOffPolicyRepository } from "../db";
 import {
   parseTimeOffTypeIdentity,
   type TimeOffType,
-  type TimeOffTypeIdentity,
+  type TimeOffTypeIdentityInput,
   TimeOffTypeBookedError,
   TimeOffTypeNameTakenError,
 } from "../domain";
 
 type Dependencies = Pick<ModuleDependencies, "transact" | "logger">;
 
-const IDENTITY_FIELDS = ["name", "icon", "colour", "private"] as const;
+const IDENTITY_FIELDS = ["name", "icon", "colour", "private", "defaultRules"] as const;
 
 /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
 export async function createType(
   { transact, logger }: Dependencies,
   ctx: SecurityContext,
-  input: TimeOffTypeIdentity,
+  input: TimeOffTypeIdentityInput,
 ): Promise<TimeOffType> {
   ctx.require("MANAGE_WORKSPACE");
   const identity = parseTimeOffTypeIdentity(input, null);
@@ -27,17 +27,26 @@ export async function createType(
     transact((tx) => timeOffPolicyRepository(tx).insertType(identity)),
   );
   logger.info(
-    { timeOffTypeId: type.id, icon: type.icon, colour: type.colour, private: type.private },
+    {
+      timeOffTypeId: type.id,
+      icon: type.icon,
+      colour: type.colour,
+      private: type.private,
+      defaultBalance: type.defaultRules.balance,
+    },
     "Added a time off type",
   );
   return type;
 }
 
-/** Changes a type's name, icon, colour and privacy, the same in every set of terms. Admins only. */
+/**
+ * Changes a type's name, icon, colour, privacy and default rules, the same in every set of terms;
+ * terms already offering it keep their rules. Admins only.
+ */
 export async function changeType(
   { transact, logger }: Dependencies,
   ctx: SecurityContext,
-  input: TimeOffTypeIdentity & { id: string },
+  input: TimeOffTypeIdentityInput & { id: string },
 ): Promise<TimeOffType> {
   ctx.require("MANAGE_WORKSPACE");
   const id = parseUuid(input.id);
@@ -63,7 +72,9 @@ export async function changeType(
   logger.info(
     {
       timeOffTypeId: id,
-      changedFields: IDENTITY_FIELDS.filter((field) => before[field] !== after[field]),
+      changedFields: IDENTITY_FIELDS.filter(
+        (field) => JSON.stringify(before[field]) !== JSON.stringify(after[field]),
+      ),
     },
     "Changed a time off type",
   );

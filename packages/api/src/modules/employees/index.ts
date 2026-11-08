@@ -67,6 +67,7 @@ export type {
   NewEmployeeInput,
   PersonTimeline,
   TermsMembership,
+  TermsSetup,
   WeekdayMinutes,
   WorkingWeek,
 } from "./domain";

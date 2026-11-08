@@ -1,5 +1,6 @@
 import { addDays, addYears, type CalendarDate } from "../../../utils";
 import type { AllowanceRule, DatedPolicy } from "./allowanceCalculator";
+import type { TimeOffRules } from "./policyChange";
 import type { TimeOffTypeColour, TimeOffTypeIcon } from "./timeOffTypeLook";
 
 /** The keys of the four seeded time off types. */
@@ -19,6 +20,8 @@ export interface TimeOffType {
   colour: TimeOffTypeColour | null;
   /** Colleagues see that the person is off, not why. Always true for Sickness. */
   private: boolean;
+  /** The rules offering the type on terms starts from; the terms' policy holds the ones people get. */
+  defaultRules: TimeOffRules;
 }
 
 /** A policy for one type: one set of terms' own, or a named one people are put on one by one. */

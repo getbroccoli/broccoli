@@ -3,6 +3,7 @@ export {
   changesCountsMidYear,
   parseRules,
   refuseCountsChangeMidYear,
+  rulesOfVersion,
   rulesValue,
   type TimeOffRules,
   type TimeOffRulesInput,
@@ -40,6 +41,7 @@ export {
   parseTimeOffTypeIdentity,
   STANDARD_TIME_OFF_TYPES,
   type TimeOffTypeIdentity,
+  type TimeOffTypeIdentityInput,
   TimeOffTypeBookedError,
   TimeOffTypeNameTakenError,
 } from "./timeOffTypeIdentity";
