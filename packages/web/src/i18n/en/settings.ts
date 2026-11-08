@@ -30,7 +30,7 @@ export const settingsEn = {
   "settings.timeOff.delete.confirm": "Delete",
   "settings.timeOff.delete.pending": "Deleting…",
   "settings.timeOff.delete.failed": "The time off type could not be deleted. Try again.",
-  "settings.timeOff.delete.booked": "Time off of {name} is booked, so it can't be deleted.",
+  "settings.timeOff.delete.booked": "{name} has time off on record, so it can't be deleted.",
   "settings.timeOff.delete.done": "{name} deleted.",
   "settings.timeOff.name": "Name",
   "settings.timeOff.icon": "Icon",

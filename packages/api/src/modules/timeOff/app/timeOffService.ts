@@ -68,7 +68,7 @@ export interface TimeOffService {
   ) => Promise<TimeOffType>;
   /**
    * Deletes a type with its rules on every terms, its exceptions and allowances; refuses one with
-   * booked time off. Admins only.
+   * time off on record, whatever its status. Admins only.
    */
   deleteType: (ctx: SecurityContext, input: { id: string }) => Promise<void>;
   /** Every time off type for Settings, in list order, and how many people have time off. */

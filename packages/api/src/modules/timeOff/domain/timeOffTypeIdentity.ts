@@ -41,10 +41,10 @@ export const STANDARD_TIME_OFF_TYPES: Record<
   other: { name: "Other", icon: "confetti", colour: "yellow", private: false, needsApproval: true },
 };
 
-/** Time off of the type is booked, so deleting the type would lose it. */
+/** Time off of the type is on record, so deleting the type would lose it. */
 export class TimeOffTypeBookedError extends Error {
   constructor() {
-    super("Time off of this type is booked");
+    super("Time off of this type is on record");
     this.name = "TimeOffTypeBookedError";
   }
 }

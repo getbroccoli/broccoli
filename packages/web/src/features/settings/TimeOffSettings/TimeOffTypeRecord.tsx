@@ -111,12 +111,15 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
       </header>
 
       <div className="subtle-scrollbar flex flex-1 flex-col gap-5 overflow-y-auto px-6 py-6">
-        <TimeOffTypeFields
-          values={values}
-          onChange={setValues}
-          sickness={type.typeKey === "SICKNESS"}
-          nameError={nameError}
-        />
+        {/* Locked while saving: the saved values replace the form when the save is back. */}
+        <fieldset disabled={loading} className="flex flex-col gap-5">
+          <TimeOffTypeFields
+            values={values}
+            onChange={setValues}
+            sickness={type.typeKey === "SICKNESS"}
+            nameError={nameError}
+          />
+        </fieldset>
         {failed && (
           <p role="alert" className="text-sm text-destructive">
             {t("settings.timeOff.saveFailed")}

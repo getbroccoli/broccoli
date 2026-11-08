@@ -41,7 +41,7 @@ export interface TimeOffPolicyRepository {
   updateType(id: string, identity: TimeOffTypeIdentity): Promise<TimeOffType | null>;
   /**
    * Deletes a type with its policies, exceptions and allowances: false when no type has the id.
-   * Throws `TimeOffTypeBookedError` when time off of the type is booked.
+   * Throws `TimeOffTypeBookedError` when any time off of the type is on record.
    */
   deleteType(id: string): Promise<boolean>;
   /** Every policy with its type and versions, oldest first, each with its rules. */

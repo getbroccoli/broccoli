@@ -67,7 +67,7 @@ export async function changeType(
 
 /**
  * Deletes a type with its rules on every terms, its exceptions and allowances; refuses one with
- * booked time off. Starting over brings a deleted standard type back. Admins only.
+ * time off on record, whatever its status. Starting over brings a deleted standard type back. Admins only.
  */
 export async function deleteType(
   { transact, logger }: Dependencies,
@@ -91,7 +91,7 @@ export async function deleteType(
     }
   } catch (error) {
     if (error instanceof TimeOffTypeBookedError) {
-      throw new ApplicationError("CONFLICT", "Time off of this type is booked.");
+      throw new ApplicationError("CONFLICT", "This type has time off on record.");
     }
     throw error;
   }

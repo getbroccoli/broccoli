@@ -275,7 +275,7 @@ type TimeOffMutations {
   createType(input: TimeOffTypeCreateInput!): TimeOffTypeCreatePayload!
   "Changes a type's name, icon, colour and privacy, the same in every set of terms. Admins only."
   changeType(input: TimeOffTypeChangeInput!): TimeOffTypeChangePayload!
-  "Deletes a type with its rules on every terms; refused while time off of it is booked. Starting over brings a deleted standard type back. Admins only."
+  "Deletes a type with its rules on every terms; refused while any time off of it is on record, whatever its status. Starting over brings a deleted standard type back. Admins only."
   deleteType(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
 }
 
