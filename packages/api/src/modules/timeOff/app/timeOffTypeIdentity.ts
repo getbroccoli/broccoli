@@ -75,6 +75,7 @@ export async function changeType(
       changedFields: IDENTITY_FIELDS.filter(
         (field) => JSON.stringify(before[field]) !== JSON.stringify(after[field]),
       ),
+      defaultBalance: after.defaultRules.balance,
     },
     "Changed a time off type",
   );
