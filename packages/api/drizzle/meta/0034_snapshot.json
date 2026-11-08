@@ -3016,6 +3016,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'day'"
+        },
         "icon": {
           "name": "icon",
           "type": "text",
@@ -3056,7 +3063,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "time_off_types_unit_known": {
+          "name": "time_off_types_unit_known",
+          "value": "\"time_off_types\".\"unit\" in ('day', 'hour')"
+        }
+      },
       "isRLSEnabled": false
     }
   },

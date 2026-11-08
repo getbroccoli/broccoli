@@ -190,5 +190,6 @@ test("starting over restores deleted Annual leave with its standard name, look, 
     colour: "green",
     private: false,
     typeKey: "annual_leave",
+    unit: "day",
   });
 });

@@ -131,9 +131,11 @@ CREATE TABLE "time_off_types" (
 	"needs_approval" boolean NOT NULL,
 	"private" boolean NOT NULL,
 	"type_key" text,
+	"unit" text DEFAULT 'day' NOT NULL,
 	"icon" text,
 	"colour" text,
-	CONSTRAINT "time_off_types_type_key_unique" UNIQUE("type_key")
+	CONSTRAINT "time_off_types_type_key_unique" UNIQUE("type_key"),
+	CONSTRAINT "time_off_types_unit_known" CHECK ("time_off_types"."unit" in ('day', 'hour'))
 );
 --> statement-breakpoint
 ALTER TABLE "employee_terms" ADD CONSTRAINT "employee_terms_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

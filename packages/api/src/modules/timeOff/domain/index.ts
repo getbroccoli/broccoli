@@ -19,6 +19,7 @@ export {
 } from "./standardLeavePolicies";
 export {
   leaveYearContaining,
+  TIME_OFF_UNITS,
   type PolicyVersion,
   type TimeOffPolicy,
   type TimeOffType,

@@ -277,11 +277,12 @@ function toTimeOffType({
   id,
   name,
   typeKey,
+  unit,
   icon,
   colour,
   private: isPrivate,
 }: typeof timeOffTypes.$inferSelect): TimeOffType {
-  return { id, name, typeKey, icon, colour, private: isPrivate };
+  return { id, name, typeKey, unit, icon, colour, private: isPrivate };
 }
 
 function nameTakenOr(error: unknown): unknown {
