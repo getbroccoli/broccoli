@@ -2911,12 +2911,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "full_day_minutes": {
-          "name": "full_day_minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "bank_holiday_calendar": {
           "name": "bank_holiday_calendar",
           "type": "text",
@@ -2947,11 +2941,7 @@
         },
         "working_pattern_versions_minutes_in_a_day": {
           "name": "working_pattern_versions_minutes_in_a_day",
-          "value": "least(\"working_pattern_versions\".\"monday_minutes\", \"working_pattern_versions\".\"tuesday_minutes\", \"working_pattern_versions\".\"wednesday_minutes\",\n        \"working_pattern_versions\".\"thursday_minutes\", \"working_pattern_versions\".\"friday_minutes\", \"working_pattern_versions\".\"saturday_minutes\",\n        \"working_pattern_versions\".\"sunday_minutes\") >= 0\n        and greatest(\"working_pattern_versions\".\"monday_minutes\", \"working_pattern_versions\".\"tuesday_minutes\", \"working_pattern_versions\".\"wednesday_minutes\",\n        \"working_pattern_versions\".\"thursday_minutes\", \"working_pattern_versions\".\"friday_minutes\", \"working_pattern_versions\".\"saturday_minutes\",\n        \"working_pattern_versions\".\"sunday_minutes\") between 1 and \"working_pattern_versions\".\"full_day_minutes\""
-        },
-        "working_pattern_versions_full_day_in_a_day": {
-          "name": "working_pattern_versions_full_day_in_a_day",
-          "value": "\"working_pattern_versions\".\"full_day_minutes\" <= 1440"
+          "value": "least(\"working_pattern_versions\".\"monday_minutes\", \"working_pattern_versions\".\"tuesday_minutes\", \"working_pattern_versions\".\"wednesday_minutes\",\n        \"working_pattern_versions\".\"thursday_minutes\", \"working_pattern_versions\".\"friday_minutes\", \"working_pattern_versions\".\"saturday_minutes\",\n        \"working_pattern_versions\".\"sunday_minutes\") >= 0\n        and greatest(\"working_pattern_versions\".\"monday_minutes\", \"working_pattern_versions\".\"tuesday_minutes\", \"working_pattern_versions\".\"wednesday_minutes\",\n        \"working_pattern_versions\".\"thursday_minutes\", \"working_pattern_versions\".\"friday_minutes\", \"working_pattern_versions\".\"saturday_minutes\",\n        \"working_pattern_versions\".\"sunday_minutes\") between 1 and 1440"
         },
         "working_pattern_versions_bank_holiday_calendar_known": {
           "name": "working_pattern_versions_bank_holiday_calendar_known",

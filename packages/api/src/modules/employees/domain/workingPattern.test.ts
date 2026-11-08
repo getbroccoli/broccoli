@@ -17,12 +17,12 @@ it("refuses a blank pattern name", () => {
 });
 
 it("accepts zero and 1440 weekday minutes", () => {
-  const week = { minutes: [1440, 0, 0, 0, 0, 0, 0], fullDayMinutes: 1440 };
+  const week = { minutes: [1440, 0, 0, 0, 0, 0, 0] };
   expect(parseWeek(week)).toEqual(week);
 });
 
 it("refuses fewer than seven weekdays", () => {
-  expect(() => parseWeek({ minutes: [450, 0, 0, 0, 0, 0], fullDayMinutes: 450 })).toThrowError(
+  expect(() => parseWeek({ minutes: [450, 0, 0, 0, 0, 0] })).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "minutes", code: "out_of_range" }],
@@ -31,9 +31,7 @@ it("refuses fewer than seven weekdays", () => {
 });
 
 it("refuses more than seven weekdays", () => {
-  expect(() =>
-    parseWeek({ minutes: [450, 0, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 }),
-  ).toThrowError(
+  expect(() => parseWeek({ minutes: [450, 0, 0, 0, 0, 0, 0, 0] })).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "minutes", code: "out_of_range" }],
@@ -42,7 +40,7 @@ it("refuses more than seven weekdays", () => {
 });
 
 it("refuses negative weekday minutes", () => {
-  expect(() => parseWeek({ minutes: [-1, 450, 0, 0, 0, 0, 0], fullDayMinutes: 450 })).toThrowError(
+  expect(() => parseWeek({ minutes: [-1, 450, 0, 0, 0, 0, 0] })).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "minutes", code: "out_of_range" }],
@@ -51,7 +49,7 @@ it("refuses negative weekday minutes", () => {
 });
 
 it("refuses weekday minutes above 1440", () => {
-  expect(() => parseWeek({ minutes: [1441, 0, 0, 0, 0, 0, 0], fullDayMinutes: 1440 })).toThrowError(
+  expect(() => parseWeek({ minutes: [1441, 0, 0, 0, 0, 0, 0] })).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "minutes", code: "out_of_range" }],
@@ -60,7 +58,7 @@ it("refuses weekday minutes above 1440", () => {
 });
 
 it("refuses fractional weekday minutes", () => {
-  expect(() => parseWeek({ minutes: [450.5, 0, 0, 0, 0, 0, 0], fullDayMinutes: 480 })).toThrowError(
+  expect(() => parseWeek({ minutes: [450.5, 0, 0, 0, 0, 0, 0] })).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "minutes", code: "out_of_range" }],
@@ -69,46 +67,10 @@ it("refuses fractional weekday minutes", () => {
 });
 
 it("refuses a week with no working day", () => {
-  expect(() => parseWeek({ minutes: [0, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450 })).toThrowError(
+  expect(() => parseWeek({ minutes: [0, 0, 0, 0, 0, 0, 0] })).toThrowError(
     expect.objectContaining({
       code: "INVALID_INPUT",
       fieldErrors: [{ field: "minutes", code: "no_working_day" }],
-    }),
-  );
-});
-
-it("refuses a zero full day", () => {
-  expect(() => parseWeek({ minutes: [1, 0, 0, 0, 0, 0, 0], fullDayMinutes: 0 })).toThrowError(
-    expect.objectContaining({
-      code: "INVALID_INPUT",
-      fieldErrors: [{ field: "fullDayMinutes", code: "out_of_range" }],
-    }),
-  );
-});
-
-it("refuses a full day above 1440 minutes", () => {
-  expect(() => parseWeek({ minutes: [1, 0, 0, 0, 0, 0, 0], fullDayMinutes: 1441 })).toThrowError(
-    expect.objectContaining({
-      code: "INVALID_INPUT",
-      fieldErrors: [{ field: "fullDayMinutes", code: "out_of_range" }],
-    }),
-  );
-});
-
-it("refuses fractional full day minutes", () => {
-  expect(() => parseWeek({ minutes: [1, 0, 0, 0, 0, 0, 0], fullDayMinutes: 450.5 })).toThrowError(
-    expect.objectContaining({
-      code: "INVALID_INPUT",
-      fieldErrors: [{ field: "fullDayMinutes", code: "out_of_range" }],
-    }),
-  );
-});
-
-it("refuses a full day shorter than the longest weekday", () => {
-  expect(() => parseWeek({ minutes: [240, 0, 0, 0, 0, 0, 480], fullDayMinutes: 450 })).toThrowError(
-    expect.objectContaining({
-      code: "INVALID_INPUT",
-      fieldErrors: [{ field: "fullDayMinutes", code: "shorter_than_longest_day" }],
     }),
   );
 });

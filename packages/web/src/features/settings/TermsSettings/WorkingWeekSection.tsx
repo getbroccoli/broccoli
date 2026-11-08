@@ -73,16 +73,12 @@ export function WorkingWeekSection({ versions }: Props) {
   );
 }
 
-/** The facts under the day cells: weekly hours, a full day of leave and whose bank holidays. */
+/** The facts under the day cells: weekly hours and whose bank holidays. */
 function weekFacts(week: Props["versions"][number]): { label: string; value: string }[] {
   return [
     {
       label: t("terms.week.weeklyHours"),
       value: hoursOf(DAY_FIELDS.reduce((sum, field) => sum + week[field], 0)),
-    },
-    {
-      label: t("terms.week.fullDay"),
-      value: t("terms.week.hours", { hours: hoursOf(week.fullDayMinutes) }),
     },
     { label: t("terms.week.bankHolidays"), value: calendarName(week.bankHolidayCalendar) },
   ];

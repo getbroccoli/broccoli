@@ -23,7 +23,6 @@ test("an employee can read their own working weeks", async ({ orm, seed }) => {
     {
       startDate: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
   ]);
@@ -50,7 +49,6 @@ test("a manager above the direct manager can read the employee's working weeks",
     {
       startDate: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
   ]);
@@ -69,7 +67,6 @@ test("an admin can read an unrelated employee's working weeks", async ({ orm, se
     {
       startDate: "2026-09-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
   ]);
@@ -101,7 +98,6 @@ test("an employee cannot read or manage workspace patterns", async ({ orm }) => 
     patterns.createPattern(EMPLOYEE, {
       name: "Short days",
       minutes: [240, 240, 240, 240, 240, 0, 0],
-      fullDayMinutes: 240,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(
@@ -115,7 +111,6 @@ test("an employee cannot read or manage workspace patterns", async ({ orm }) => 
       workingPatternId: standard.id,
       startDate: "2026-09-01",
       minutes: [480, 480, 480, 480, 480, 0, 0],
-      fullDayMinutes: 480,
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" });
   await expect(

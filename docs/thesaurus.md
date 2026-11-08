@@ -44,7 +44,6 @@ The words Broccoli's code and docs use, and what each one means. Only Broccoli's
 - **Time off**: everything a person is away from work for, of any time off type (Annual leave, Sickness, Family leave, Other or the company's own). Not "PTO", "vacation", "holiday" or "absence".
 - **Allowance figures**: what a person's panel shows for a time off type with an allowance, in days for one leave year: **entitlement** (everything granted, bank holidays on top and adjustments included), **bank holidays** (those the year takes from it), **used** and **remaining** (entitlement less bank holidays and used).
 - **Days recorded**: the days of a time off type with no balance, such as Sickness, a person has in a calendar year; a half day counts 0.5.
-- **Full day**: the minutes one day of leave stands for in a pattern version; at least its longest weekday.
 - **Security context**: who is calling application code: a signed-in user, and whether they are the owner; the setup holder; or the system.
 - **System**: Broccoli acting on its own, such as creating the owner at setup or seeding the demo company after it.
 - **Company**: the business the instance belongs to; its name and logo. One per instance.

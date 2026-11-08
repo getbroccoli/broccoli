@@ -94,7 +94,6 @@ test("invariant: corrected starts and patterns converge with a fresh person's fi
               number,
               number,
             ],
-            fullDayMinutes: 450,
             bankHolidayCalendar: "england_and_wales",
           });
           finalPatternId = pattern.id;

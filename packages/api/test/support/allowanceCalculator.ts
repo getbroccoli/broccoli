@@ -34,7 +34,6 @@ export function allowanceInputs(): AllowanceInputs {
       {
         startDate: calendarDate("2026-01-01"),
         minutes: [450, 450, 450, 450, 450, 0, 0],
-        fullDayMinutes: 450,
         bankHolidayCalendar: "england_and_wales",
       },
     ],

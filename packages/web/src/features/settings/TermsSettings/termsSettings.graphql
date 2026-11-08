@@ -15,7 +15,6 @@ query EmploymentTerms {
       fridayMinutes
       saturdayMinutes
       sundayMinutes
-      fullDayMinutes
       bankHolidayCalendar
     }
     timeOff {
@@ -60,7 +59,6 @@ query EmploymentTermsStack($id: ID!) {
       fridayMinutes
       saturdayMinutes
       sundayMinutes
-      fullDayMinutes
       bankHolidayCalendar
     }
     timeOff {

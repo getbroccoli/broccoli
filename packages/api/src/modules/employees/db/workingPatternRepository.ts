@@ -216,7 +216,6 @@ function patternVersionOf(row: typeof workingPatternVersions.$inferSelect): Patt
       row.saturdayMinutes,
       row.sundayMinutes,
     ] as WeekdayMinutes,
-    fullDayMinutes: row.fullDayMinutes,
     bankHolidayCalendar: row.bankHolidayCalendar,
   };
 }
@@ -234,7 +233,6 @@ function versionRow(workingPatternId: string, version: Omit<PatternVersion, "id"
     fridayMinutes: friday,
     saturdayMinutes: saturday,
     sundayMinutes: sunday,
-    fullDayMinutes: version.fullDayMinutes,
     bankHolidayCalendar: version.bankHolidayCalendar,
   };
 }

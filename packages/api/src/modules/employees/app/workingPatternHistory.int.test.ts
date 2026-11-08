@@ -16,7 +16,6 @@ test("assigning a pattern returns the employee's history line with the previous 
   const pattern = await patterns.createPattern(OWNER, {
     name: "Tuesday to Thursday",
     minutes: [0, 450, 450, 450, 0, 0, 0],
-    fullDayMinutes: 450,
   });
 
   const history = await patterns.assignPattern(ADMIN, {
@@ -66,7 +65,6 @@ test("ending an assignment returns to the terms on the next day and records that
   const pattern = await patterns.createPattern(OWNER, {
     name: "Tuesday to Thursday",
     minutes: [0, 450, 450, 450, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
@@ -101,13 +99,11 @@ test("ending an assignment returns to the terms on the next day and records that
     {
       startDate: "2026-09-01",
       minutes: [0, 450, 450, 450, 0, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
       startDate: "2026-10-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
   ]);
@@ -122,7 +118,6 @@ test("removing an assignment restores the terms over its dates and records the c
   const pattern = await patterns.createPattern(OWNER, {
     name: "Tuesday to Thursday",
     minutes: [0, 450, 450, 450, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
@@ -158,7 +153,6 @@ test("removing an assignment restores the terms over its dates and records the c
     {
       startDate: "2026-08-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
   ]);

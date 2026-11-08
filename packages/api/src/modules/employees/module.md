@@ -20,7 +20,7 @@ A working pattern is the minutes a person works on each weekday, Monday to Sunda
 ### Data model
 
 - **`working_patterns`:** a way of working. Each set of terms has exactly one of its own (`terms_id`, no name); the others are named, such as "Part-time Tue–Thu", and put on people one by one.
-- **`working_pattern_versions`:** a pattern's minutes for each weekday, its full day and its bank holiday calendar, from `start_date` to `end_date`. A pattern's versions never overlap; its first has no start date: it applies from the beginning.
+- **`working_pattern_versions`:** a pattern's minutes for each weekday and its bank holiday calendar, from `start_date` to `end_date`. A pattern's versions never overlap; its first has no start date: it applies from the beginning.
 - **`employee_working_pattern_assignments`:** one person on a named pattern between two dates, ahead of their terms'. A terms' own pattern is never assigned to a person.
 
 ### Which working pattern applies
@@ -31,14 +31,14 @@ For one person on one date:
 2. otherwise their terms' own pattern on that date;
 3. otherwise none.
 
-That pattern's version on that date gives the minutes, the full day and whose bank holidays apply. The same rule picks a person's time off policy for a type, so one resolver serves both (`domain/personTimeline.ts`).
+That pattern's version on that date gives the minutes and whose bank holidays apply. The same rule picks a person's time off policy for a type, so one resolver serves both (`domain/personTimeline.ts`).
 
 ### Rules
 
 - Every change is dated, and earlier dates keep what they had. A change with a past date is a correction; replacing a row on the same date or removing one is a correction too.
 - A version is never edited: a change ends the version covering its date the day before and adds one from it; removing a version extends the one before it to its end. A person's own assignment changes the same way.
 - A terms' own pattern changes only through its versions and goes with its terms; it cannot be renamed, deleted or assigned on its own.
-- The **full day** is the minutes one day of leave stands for. It is at least the longest weekday, so a day of leave never costs more than 1. Time off costs a day as that day's minutes ÷ the full day.
+- Leave is counted in days: every weekday with minutes above 0 is a working day and costs 1 day of leave, however long it is. The minutes stay for showing hours.
 - Only admins change working patterns and assignments. A person's working pattern is readable by them, everyone above them in the reporting line, and admins.
 - Changes to a person's own assignment are written to history as the `working_pattern` record type, apart from the employee's own history, since not everyone who reads a person may read their working pattern; a terms' own pattern appears under the terms' name. Resetting all employees purges both.
 - Every change that can move someone's working weeks publishes `employees.working_pattern_changed` with the people concerned and the first date that changed. Other modules read working weeks through `WorkingPatternService.readWorkingWeeks`, never these tables.
@@ -70,8 +70,7 @@ Sam is on "England and Wales" and works their pattern. From 1 September Sam work
       "thursday_minutes": 450,
       "friday_minutes": 450,
       "saturday_minutes": 0,
-      "sunday_minutes": 0,
-      "full_day_minutes": 450
+      "sunday_minutes": 0
     },
     {
       "working_pattern_id": "wp_part_time",
@@ -83,8 +82,7 @@ Sam is on "England and Wales" and works their pattern. From 1 September Sam work
       "thursday_minutes": 450,
       "friday_minutes": 0,
       "saturday_minutes": 0,
-      "sunday_minutes": 0,
-      "full_day_minutes": 450
+      "sunday_minutes": 0
     }
   ],
   "employee_working_pattern_assignments": [
@@ -102,17 +100,9 @@ Reading Sam's working weeks for 2026 returns:
 
 ```json
 [
-  {
-    "startDate": "2026-01-01",
-    "minutes": [450, 450, 450, 450, 450, 0, 0],
-    "fullDayMinutes": 450
-  },
-  { "startDate": "2026-09-01", "minutes": [0, 450, 450, 450, 0, 0, 0], "fullDayMinutes": 450 },
-  {
-    "startDate": "2026-12-01",
-    "minutes": [450, 450, 450, 450, 450, 0, 0],
-    "fullDayMinutes": 450
-  }
+  { "startDate": "2026-01-01", "minutes": [450, 450, 450, 450, 450, 0, 0] },
+  { "startDate": "2026-09-01", "minutes": [0, 450, 450, 450, 0, 0, 0] },
+  { "startDate": "2026-12-01", "minutes": [450, 450, 450, 450, 450, 0, 0] }
 ]
 ```
 

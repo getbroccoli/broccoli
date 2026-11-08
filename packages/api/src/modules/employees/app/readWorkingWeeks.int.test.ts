@@ -17,7 +17,6 @@ test("a new employee works Standard throughout the requested period", async ({ o
           {
             startDate: "2026-08-01",
             minutes: [450, 450, 450, 450, 450, 0, 0],
-            fullDayMinutes: 450,
             bankHolidayCalendar: "england_and_wales",
           },
         ],

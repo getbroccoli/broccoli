@@ -62,7 +62,6 @@ export interface DatedPolicy {
 export interface DatedWorkingWeek {
   startDate: CalendarDate;
   minutes: WeekdayMinutes | null;
-  fullDayMinutes: number | null;
   bankHolidayCalendar: BankHolidayCalendar | null;
 }
 
@@ -121,7 +120,6 @@ interface Part {
   until: CalendarDate;
   policy: DatedPolicy;
   minutes: WeekdayMinutes;
-  fullDayMinutes: number;
   bankHolidays: readonly CalendarDate[];
 }
 
@@ -145,22 +143,13 @@ function keptParts(inputs: AllowanceInputs): Part[] {
       isWithin(from, startDate, endDate),
     );
     const week = inputs.workingWeeks.findLast(({ startDate }) => startDate <= from);
-    const { minutes, fullDayMinutes, bankHolidayCalendar } = week ?? {};
-    if (!employed || policy?.balance !== "balance_from_allowance" || !minutes || !fullDayMinutes) {
+    const { minutes, bankHolidayCalendar } = week ?? {};
+    if (!employed || policy?.balance !== "balance_from_allowance" || !minutes) {
       return [];
     }
     const bankHolidays =
       (bankHolidayCalendar && inputs.bankHolidays.get(bankHolidayCalendar)) || [];
-    return [
-      {
-        from,
-        until,
-        policy,
-        minutes,
-        fullDayMinutes,
-        bankHolidays,
-      },
-    ];
+    return [{ from, until, policy, minutes, bankHolidays }];
   });
 }
 
@@ -186,9 +175,7 @@ function partStarts(inputs: AllowanceInputs): CalendarDate[] {
 
 function addPart(lines: Lines, inputs: AllowanceInputs, part: Part): void {
   const { leaveYear } = inputs;
-  const daysPerWeek = Big(part.minutes.reduce((sum, minutes) => sum + minutes, 0)).div(
-    part.fullDayMinutes,
-  );
+  const daysPerWeek = Big(part.minutes.filter(isWorkingDay).length);
   const share = Big(daysBetween(part.from, part.until) + 1).div(
     daysBetween(leaveYear.start, leaveYear.end) + 1,
   );
@@ -229,8 +216,13 @@ function addPart(lines: Lines, inputs: AllowanceInputs, part: Part): void {
       allowanceRuleId: null,
       bankHolidayDate: date,
     } as const;
-    addAmount(lines, identity, part, Big(-part.minutes[weekdayOf(date)]!).div(part.fullDayMinutes));
+    addAmount(lines, identity, part, Big(isWorkingDay(part.minutes[weekdayOf(date)]!) ? -1 : 0));
   }
+}
+
+/** Every day with minutes worked costs one day of leave, however long it is. */
+function isWorkingDay(minutes: number): boolean {
+  return minutes > 0;
 }
 
 /** The highest service step reached on `date`, if any. */

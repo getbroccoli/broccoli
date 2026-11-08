@@ -6,7 +6,7 @@ import { createPersonTimeline, type TimelineCreateInputArgs } from "./personTime
 import { workingWeeksOf } from "./workingPatternTimeline";
 
 it("has no working week before and after a person's own pattern", () => {
-  const short = version([240, 0, 0, 0, 0, 0, 0], 240);
+  const short = version([240, 0, 0, 0, 0, 0, 0]);
   const timeline = timelineOf({
     direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
     versions: { short: [short] },
@@ -19,7 +19,7 @@ it("has no working week before and after a person's own pattern", () => {
 });
 
 it("has no working week outside a person's terms", () => {
-  const standard = version([450, 0, 0, 0, 0, 0, 0], 450);
+  const standard = version([450, 0, 0, 0, 0, 0, 0]);
   const timeline = timelineOf({
     terms: [{ termsId: "terms", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
     termsPattern: "standard",
@@ -33,7 +33,7 @@ it("has no working week outside a person's terms", () => {
 });
 
 it("merges identical weeks across an own pattern and a pattern change", () => {
-  const standard = version([450, 0, 0, 0, 0, 0, 0], 450);
+  const standard = version([450, 0, 0, 0, 0, 0, 0]);
   const timeline = timelineOf({
     direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
     terms: [{ termsId: "terms", startDate: null, endDate: null }],
@@ -41,8 +41,8 @@ it("merges identical weeks across an own pattern and a pattern change", () => {
     versions: {
       standard: [standard],
       short: [
-        version([450, 0, 0, 0, 0, 0, 0], 450, null, day("2026-09-14")),
-        version([450, 0, 0, 0, 0, 0, 0], 450, day("2026-09-15")),
+        version([450, 0, 0, 0, 0, 0, 0], null, day("2026-09-14")),
+        version([450, 0, 0, 0, 0, 0, 0], day("2026-09-15")),
       ],
     },
   });
@@ -51,12 +51,12 @@ it("merges identical weeks across an own pattern and a pattern change", () => {
   ]);
 });
 
-it("splits when weekday minutes or full day minutes change within the requested period", () => {
+it("splits when weekday minutes change within the requested period", () => {
   const versions = [
-    version([450, 0, 0, 0, 0, 0, 0], 450, null, day("2026-09-04")),
-    version([240, 0, 0, 0, 0, 0, 0], 450, day("2026-09-05"), day("2026-09-14")),
-    version([240, 0, 0, 0, 0, 0, 0], 480, day("2026-09-15"), day("2026-09-20")),
-    version([480, 0, 0, 0, 0, 0, 0], 480, day("2026-09-21")),
+    version([450, 0, 0, 0, 0, 0, 0], null, day("2026-09-04")),
+    version([240, 0, 0, 0, 0, 0, 0], day("2026-09-05"), day("2026-09-14")),
+    version([300, 0, 0, 0, 0, 0, 0], day("2026-09-15"), day("2026-09-20")),
+    version([480, 0, 0, 0, 0, 0, 0], day("2026-09-21")),
   ];
   const timeline = timelineOf({
     direct: [{ id: "short", startDate: day("2026-09-01"), endDate: day("2026-09-30") }],
@@ -100,7 +100,6 @@ function timelineOf({
 
 function version(
   minutes: WeekdayMinutes,
-  fullDayMinutes: number,
   startDate: CalendarDate | null = null,
   endDate: CalendarDate | null = null,
 ): PatternVersion {
@@ -109,17 +108,16 @@ function version(
     startDate,
     endDate,
     minutes,
-    fullDayMinutes,
     bankHolidayCalendar: "england_and_wales",
   };
 }
 
-function week({ minutes, fullDayMinutes, bankHolidayCalendar }: PatternVersion, startDate: string) {
-  return { startDate, minutes, fullDayMinutes, bankHolidayCalendar };
+function week({ minutes, bankHolidayCalendar }: PatternVersion, startDate: string) {
+  return { startDate, minutes, bankHolidayCalendar };
 }
 
 function noWeek(startDate: string) {
-  return { startDate, minutes: null, fullDayMinutes: null, bankHolidayCalendar: null };
+  return { startDate, minutes: null, bankHolidayCalendar: null };
 }
 
 function day(value: string): CalendarDate {

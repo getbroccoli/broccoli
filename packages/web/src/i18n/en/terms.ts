@@ -32,7 +32,6 @@ export const termsEn = {
   "terms.week.hours": "{hours} hours",
   "terms.week.hoursAWeek": "{hours} hours a week",
   "terms.week.weeklyHours": "Hours a week",
-  "terms.week.fullDay": "A full day of leave",
   "terms.week.bankHolidays": "Bank holidays",
   "terms.timeOff.title": "Time off",
   "terms.timeOff.description": "What people on these terms can book, and how much.",

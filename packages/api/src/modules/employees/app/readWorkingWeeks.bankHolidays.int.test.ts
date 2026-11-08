@@ -9,7 +9,6 @@ test("assigning a Scotland pattern changes the calendar from its date despite id
   const pattern = await patterns.createPattern(OWNER, {
     name: "Standard Scotland",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",
   });
   await patterns.assignPattern(OWNER, {
@@ -28,13 +27,11 @@ test("assigning a Scotland pattern changes the calendar from its date despite id
     {
       startDate: "2026-01-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
       startDate: "2026-07-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",
     },
   ]);
@@ -53,7 +50,6 @@ test("changing only a pattern's calendar starts a new working week from its date
     workingPatternId: standard.id,
     startDate: "2026-07-01",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",
   });
 
@@ -67,13 +63,11 @@ test("changing only a pattern's calendar starts a new working week from its date
     {
       startDate: "2026-01-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
       startDate: "2026-07-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "scotland",
     },
   ]);

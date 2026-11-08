@@ -17,8 +17,8 @@ export interface TermsMembership extends CalendarDateRange {
 export type WorkingPatternTimeline = PersonTimeline<PatternVersion>;
 
 /**
- * The working weeks from `from` to `until`: the first starts on `from`, a new one wherever minutes,
- * full day or calendar change; all null while no pattern applies.
+ * The working weeks from `from` to `until`: the first starts on `from`, a new one wherever minutes
+ * or calendar change; all null while no pattern applies.
  */
 export function workingWeeksOf(
   timeline: WorkingPatternTimeline,
@@ -30,7 +30,6 @@ export function workingWeeksOf(
     const week = {
       startDate,
       minutes: version?.minutes ?? null,
-      fullDayMinutes: version?.fullDayMinutes ?? null,
       bankHolidayCalendar: version?.bankHolidayCalendar ?? null,
     };
     const last = weeks.at(-1);
@@ -54,7 +53,6 @@ export function workingWeeksOf(
 
 function isSameWeek(a: WorkingWeek, b: WorkingWeek): boolean {
   return (
-    a.fullDayMinutes === b.fullDayMinutes &&
     a.bankHolidayCalendar === b.bankHolidayCalendar &&
     (a.minutes ?? []).join() === (b.minutes ?? []).join()
   );

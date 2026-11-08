@@ -117,15 +117,15 @@ function employmentAndPattern() {
         .integer({ min: -365, max: 1095 })
         .map((offset) => addDays(calendarDate("2026-01-01"), offset)),
     ),
-    week: fc.integer({ min: 1, max: 1440 }).chain((fullDayMinutes) =>
-      fc.record({
-        fullDayMinutes: fc.constant(fullDayMinutes),
-        minutes: fc
-          .array(fc.integer({ min: 0, max: fullDayMinutes }), { minLength: 7, maxLength: 7 })
-          .filter((minutes) => minutes.some((day) => day > 0))
-          .map((minutes) => minutes as [number, number, number, number, number, number, number]),
-        bankHolidayCalendar: fc.constantFrom("england_and_wales", "scotland", "northern_ireland"),
-      }),
-    ),
+    week: fc.record({
+      minutes: fc
+        .array(fc.oneof(fc.constant(0), fc.integer({ min: 1, max: 1440 })), {
+          minLength: 7,
+          maxLength: 7,
+        })
+        .filter((minutes) => minutes.some((day) => day > 0))
+        .map((minutes) => minutes as [number, number, number, number, number, number, number]),
+      bankHolidayCalendar: fc.constantFrom("england_and_wales", "scotland", "northern_ireland"),
+    }),
   });
 }

@@ -306,7 +306,7 @@ type Terms implements AnyRecord {
   access: RecordAccess!
 }
 
-"A working week from a date to a date: minutes worked each day, a full day of leave and whose bank holidays apply."
+"A working week from a date to a date: minutes worked each day and whose bank holidays apply."
 type WorkingWeekVersion {
   id: ID!
   "Null: from the beginning."
@@ -320,8 +320,6 @@ type WorkingWeekVersion {
   fridayMinutes: Int!
   saturdayMinutes: Int!
   sundayMinutes: Int!
-  "The minutes one day of leave stands for."
-  fullDayMinutes: Int!
   bankHolidayCalendar: BankHolidayCalendar!
 }
 

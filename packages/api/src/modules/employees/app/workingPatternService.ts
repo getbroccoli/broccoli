@@ -33,7 +33,6 @@ export interface WorkingPatternService {
     input: {
       name: string;
       minutes: WeekdayMinutes;
-      fullDayMinutes: number;
       bankHolidayCalendar?: string;
     },
   ) => Promise<WorkingPattern>;
@@ -53,7 +52,6 @@ export interface WorkingPatternService {
       workingPatternId: string;
       startDate: string;
       minutes: WeekdayMinutes;
-      fullDayMinutes: number;
       bankHolidayCalendar?: string;
     },
   ) => Promise<WorkingPattern>;

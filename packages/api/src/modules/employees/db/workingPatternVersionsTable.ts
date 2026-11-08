@@ -28,8 +28,6 @@ export const workingPatternVersions = pgTable(
     fridayMinutes: integer("friday_minutes").notNull(),
     saturdayMinutes: integer("saturday_minutes").notNull(),
     sundayMinutes: integer("sunday_minutes").notNull(),
-    /** The minutes one day of leave stands for. */
-    fullDayMinutes: integer("full_day_minutes").notNull(),
     /** Whose bank holidays apply. Text with a check, so a new region is no type migration. */
     bankHolidayCalendar: text("bank_holiday_calendar", { enum: BANK_HOLIDAY_CALENDARS })
       .notNull()
@@ -50,9 +48,8 @@ export const workingPatternVersions = pgTable(
         ${table.sundayMinutes}) >= 0
         and greatest(${table.mondayMinutes}, ${table.tuesdayMinutes}, ${table.wednesdayMinutes},
         ${table.thursdayMinutes}, ${table.fridayMinutes}, ${table.saturdayMinutes},
-        ${table.sundayMinutes}) between 1 and ${table.fullDayMinutes}`,
+        ${table.sundayMinutes}) between 1 and 1440`,
     ),
-    check("working_pattern_versions_full_day_in_a_day", sql`${table.fullDayMinutes} <= 1440`),
     check(
       "working_pattern_versions_bank_holiday_calendar_known",
       sql`${table.bankHolidayCalendar} in ('england_and_wales', 'scotland', 'northern_ireland')`,

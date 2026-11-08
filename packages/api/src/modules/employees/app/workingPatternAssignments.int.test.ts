@@ -9,12 +9,10 @@ test("a newer assignment ends the earlier one without resuming it afterwards", a
   const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   const friday = await patterns.createPattern(OWNER, {
     name: "Friday",
     minutes: [0, 0, 0, 0, 450, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
@@ -46,19 +44,16 @@ test("a newer assignment ends the earlier one without resuming it afterwards", a
     {
       startDate: "2026-08-01",
       minutes: [450, 0, 0, 0, 0, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
       startDate: "2026-09-01",
       minutes: [0, 0, 0, 0, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
     {
       startDate: "2026-10-01",
       minutes: [450, 450, 450, 450, 450, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
   ]);
@@ -73,7 +68,6 @@ test("an assignment cannot overlap a later assignment and a refusal preserves ex
   const monday = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   const standard = await createStandardPattern(orm);
   await patterns.assignPattern(OWNER, {
