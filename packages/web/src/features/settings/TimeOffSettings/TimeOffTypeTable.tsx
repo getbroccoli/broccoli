@@ -2,9 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 
 import type { TimeOffSettingsQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-import { formatDays } from "@/lib/formatDays";
 
-import { BuiltInPill } from "./BuiltInPill";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 
 type Props = {
@@ -12,7 +10,7 @@ type Props = {
   timeOffTypes: TimeOffSettingsQuery["timeOffSettings"]["timeOffTypes"];
 };
 
-/** The time off types as a table of name and the days taken this year. */
+/** The time off types as a table; each row opens the type's panel. */
 export function TimeOffTypeTable({ timeOffTypes }: Props) {
   const navigate = useNavigate();
   if (timeOffTypes.length === 0) {
@@ -30,13 +28,10 @@ export function TimeOffTypeTable({ timeOffTypes }: Props) {
             <th scope="col" className="px-4 py-3 font-medium">
               {t("settings.timeOff.typeColumn")}
             </th>
-            <th scope="col" className="w-40 px-4 py-3 text-right font-medium">
-              {t("settings.timeOff.takenColumn")}
-            </th>
           </tr>
         </thead>
         <tbody>
-          {timeOffTypes.map(({ timeOffType, daysTakenThisYear }) => (
+          {timeOffTypes.map(({ timeOffType }) => (
             <tr
               key={timeOffType.id}
               className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
@@ -60,12 +55,8 @@ export function TimeOffTypeTable({ timeOffTypes }: Props) {
                   >
                     {timeOffType.name}
                   </Link>
-                  {timeOffType.typeKey && <BuiltInPill />}
                 </span>
               </th>
-              <td className="px-4 py-3 text-right tabular-nums">
-                {daysTakenThisYear === 0 ? "0" : formatDays(daysTakenThisYear)}
-              </td>
             </tr>
           ))}
         </tbody>

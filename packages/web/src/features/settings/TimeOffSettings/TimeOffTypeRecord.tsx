@@ -18,7 +18,6 @@ import {
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { t } from "@/i18n";
 
-import { BuiltInPill } from "./BuiltInPill";
 import { DeleteTimeOffTypeDialog } from "./DeleteTimeOffTypeDialog";
 import { nameErrorOf } from "./nameError";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
@@ -67,12 +66,9 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
       <header className="flex items-center gap-4 border-b border-border px-6 py-5">
         <TimeOffTypeIcon icon={type.icon} colour={type.colour} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <SheetTitle className="truncate">{type.name}</SheetTitle>
-            {type.typeKey && <BuiltInPill />}
-          </div>
+          <SheetTitle className="truncate">{type.name}</SheetTitle>
           <p className="truncate text-[13px] text-muted-foreground">
-            {t(type.typeKey ? "settings.timeOff.editHintBuiltIn" : "settings.timeOff.editHint")}
+            {t("settings.timeOff.editHint")}
           </p>
         </div>
         <DropdownMenu>

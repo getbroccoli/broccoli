@@ -1,6 +1,5 @@
 query TimeOffSettings {
   timeOffSettings {
-    peopleWithTimeOff
     timeOffTypes {
       timeOffType {
         id
@@ -10,7 +9,6 @@ query TimeOffSettings {
         private
         typeKey
       }
-      daysTakenThisYear
     }
   }
 }

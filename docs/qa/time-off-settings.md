@@ -9,18 +9,16 @@ A manual check of the time off types list in Settings, adding a type, changing a
 
 ## The list
 
-- [ ] The page reads "Time off" and "4 time off types, for 40 people." (the demo's people with time off today).
+- [ ] The page reads "Time off", with no summary line under it.
 - [ ] The rows are Annual leave (a sun on green), Sickness (a thermometer on coral), Family leave (a baby on pink) and Other (confetti on yellow), in that order.
-- [ ] Annual leave, Sickness, Family leave and Other each carry a "Built in" pill; the list has no Counts column and does not stretch the full width.
-- [ ] Taken this year reads "0" for each, or the demo's booked days ("1 day", "2.5 days").
-- [ ] After Exit demo and a new owner without the demo, the summary reads "4 time off types." with no people.
+- [ ] The list has one column, Time off type, with no pill on any row, and does not stretch the full width.
 
 ## Add a type
 
 - [ ] "Add time off type" opens a dialog titled "Add time off type" with an empty name, the sun on yellow and "Show the reason to colleagues" on.
 - [ ] The footer reads "Adds the type for the whole company. Every set of terms shows it as not offered until you offer it.", and names the type once one is typed.
 - [ ] Picking an icon and a colour changes the tile beside the name at once; each of the 30 icons and 10 colours can be picked.
-- [ ] Saving " Study leave " closes the dialog, shows "Study leave added." and lists Study leave after Other, by name, without a "Built in" pill.
+- [ ] Saving " Study leave " closes the dialog, shows "Study leave added." and lists Study leave after Other, by name.
 - [ ] Settings › Employment terms › any terms shows Study leave as "Not offered here".
 - [ ] Saving an empty name shows "Enter a name."; "annual LEAVE" shows "There's already a time off type called annual LEAVE."; 61 characters show "Use at most 60 characters." The dialog stays open.
 
