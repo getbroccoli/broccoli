@@ -1,6 +1,6 @@
 # QA: Time off settings
 
-A manual check of the time off types list in Settings, adding a type and changing a type's name, look and privacy, against a development stack.
+A manual check of the time off types list in Settings, adding a type, changing a type's name, look and privacy in its panel, and deleting a type, against a development stack.
 
 ## Setup
 
@@ -26,18 +26,26 @@ A manual check of the time off types list in Settings, adding a type and changin
 
 ## Change a type
 
-- [ ] Clicking a row, or Tab to a type's name and Enter, opens its dialog with its icon, colour, name and privacy, and the footer "Name, look and privacy are the same in every terms."
+- [ ] Clicking a row, or Tab to a type's name and Enter, opens its panel over the list at `/settings/time-off/<id>` with its icon, colour, name and privacy, and the footer "Name, look and privacy are the same in every terms."
+- [ ] Cancel and Save show in the footer only once something changed; Cancel puts the saved values back.
 - [ ] Renaming Annual leave to "Holiday" with another icon and colour shows "Holiday saved."; the list and every terms stack show the new name and look, with the same rules.
 - [ ] Sickness's switch is off and disabled, with "Sickness is private by law. Colleagues only see “Away”."
 - [ ] Switching off "Show the reason to colleagues" on Annual leave changes the hint to "Colleagues only see “Away”.", and after saving its rule line on a terms stack ends with "· Private".
 - [ ] Sickness's rule line on a terms stack ends with "· Private".
-- [ ] Cancel, ×, Escape and a click outside close the dialog without saving.
+- [ ] ×, Escape and a click outside close the panel without saving.
 - [ ] Keyboard only: arrow keys move through the icons and the colours, and the focus ring shows on each.
+
+## Delete a type
+
+- [ ] The panel's "More actions" menu offers "Delete Study leave"; it asks "Delete Study leave?" with Cancel and Delete.
+- [ ] Delete shows "Study leave deleted.", closes the panel and drops it from the list and every terms stack.
+- [ ] Deleting Annual leave works the same; Settings › Employment terms then reads "Not offered" under Annual leave, and people's panels list no Annual leave.
+- [ ] Exit demo, or Reset setup, brings Annual leave back with its name, sun on green and rules on setup.
 
 ## States
 
 - [ ] With the API stopped, reloading shows "Time off types could not be loaded." and "Try again", which reloads the list once the API is back.
-- [ ] At 375 px wide, the list fits without scrolling sideways; long names and "Doesn't count" wrap. The dialog fits, with 6 icons a row.
+- [ ] At 375 px wide, the list fits without scrolling sideways; long names and "Doesn't count" wrap. The Add dialog fits with its icons wrapping; a type's panel fills the screen.
 
 ## Access
 
