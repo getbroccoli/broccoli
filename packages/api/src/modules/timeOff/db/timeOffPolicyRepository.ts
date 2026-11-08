@@ -11,12 +11,15 @@ import {
   STANDARD_TIME_OFF_TYPES,
   type TimeOffTypeIdentity,
   type TimeOffTypeKey,
+  TimeOffTypeBookedError,
   TimeOffTypeNameTakenError,
 } from "../domain";
+import { allowances } from "./allowancesTable";
 import { timeOffAllowanceRules } from "./timeOffAllowanceRulesTable";
 import { timeOffPolicies } from "./timeOffPoliciesTable";
 import { timeOffPolicyAssignments } from "./timeOffPolicyAssignmentsTable";
 import { timeOffPolicyVersions } from "./timeOffPolicyVersionsTable";
+import { timeOff } from "./timeOffTable";
 import { TIME_OFF_TYPE_NAME_UNIQUE, timeOffTypes } from "./timeOffTypesTable";
 
 /** A person on a named policy for one type from a date to a date. */
@@ -36,6 +39,11 @@ export interface TimeOffPolicyRepository {
   insertType(identity: TimeOffTypeIdentity): Promise<TimeOffType>;
   /** The changed type, or null when no type has the id; throws `TimeOffTypeNameTakenError` like `insertType`. */
   updateType(id: string, identity: TimeOffTypeIdentity): Promise<TimeOffType | null>;
+  /**
+   * Deletes a type with its policies, exceptions and allowances: false when no type has the id.
+   * Throws `TimeOffTypeBookedError` when time off of the type is booked.
+   */
+  deleteType(id: string): Promise<boolean>;
   /** Every policy with its type and versions, oldest first, each with its rules. */
   findAll(): Promise<TimeOffPolicy[]>;
   /** Serializes changes to policies until the transaction ends. */
@@ -49,7 +57,7 @@ export interface TimeOffPolicyRepository {
   ): Promise<string>;
   /**
    * Deletes every policy with its versions and rules, and the company's own types, and gives the
-   * seeded types back their name, look and privacy; nothing may point at a policy or own type.
+   * seeded types back, deleted or changed; nothing may point at a policy or own type.
    */
   deleteAll(): Promise<void>;
   /** Each employee's named policies, by employee id. */
@@ -87,6 +95,27 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       } catch (error) {
         throw nameTakenOr(error);
       }
+    },
+
+    async deleteType(id) {
+      const [booked] = await orm()
+        .select({ id: timeOff.id })
+        .from(timeOff)
+        .where(eq(timeOff.timeOffTypeId, id))
+        .limit(1);
+      if (booked) {
+        throw new TimeOffTypeBookedError();
+      }
+      await orm().delete(allowances).where(eq(allowances.timeOffTypeId, id));
+      await orm()
+        .delete(timeOffPolicyAssignments)
+        .where(eq(timeOffPolicyAssignments.timeOffTypeId, id));
+      await orm().delete(timeOffPolicies).where(eq(timeOffPolicies.timeOffTypeId, id));
+      const deleted = await orm()
+        .delete(timeOffTypes)
+        .where(eq(timeOffTypes.id, id))
+        .returning({ id: timeOffTypes.id });
+      return deleted.length > 0;
     },
 
     async findAll() {
@@ -158,11 +187,11 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
         .update(timeOffTypes)
         .set({ name: sql`${timeOffTypes.id}::text` })
         .where(isNotNull(timeOffTypes.typeKey));
-      for (const [typeKey, identity] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
+      for (const [typeKey, standard] of Object.entries(STANDARD_TIME_OFF_TYPES)) {
         await orm()
-          .update(timeOffTypes)
-          .set(identity)
-          .where(eq(timeOffTypes.typeKey, typeKey as TimeOffTypeKey));
+          .insert(timeOffTypes)
+          .values({ ...standard, typeKey: typeKey as TimeOffTypeKey })
+          .onConflictDoUpdate({ target: timeOffTypes.typeKey, set: standard });
       }
     },
 

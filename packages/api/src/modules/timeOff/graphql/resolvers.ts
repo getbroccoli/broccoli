@@ -106,6 +106,11 @@ export function createResolvers(
           }),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
+      deleteType: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffTypeDeletePayload"]>(async () => {
+          await timeOff.deleteType(context.getActor(), { id: input.timeOffTypeId });
+          return { deletedTimeOffTypeId: input.timeOffTypeId };
+        }, ["NOT_FOUND", "CONFLICT"]),
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),

@@ -202,6 +202,57 @@ test("creates and changes a time off type and returns duplicate names as payload
   });
 });
 
+test("deletes an added time off type and returns not found when deleted again", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const created = await browser.graphql(`mutation {
+    timeOff { createType(input: {
+      name: "Study leave", icon: GRADUATION_CAP, colour: BLUE, private: false
+    }) {
+      timeOffType { id }
+      error { __typename ... on Error { message } }
+    } }
+  }`);
+  const body = (await created.json()) as {
+    data: { timeOff: { createType: { timeOffType: { id: string }; error: null } } };
+  };
+  expect(body).toEqual({
+    data: {
+      timeOff: {
+        createType: { timeOffType: { id: expect.any(String) as unknown }, error: null },
+      },
+    },
+  });
+  const { id } = body.data.timeOff.createType.timeOffType;
+
+  const deleted = await browser.graphql(deleteTypeMutation, { input: { timeOffTypeId: id } });
+
+  expect(await deleted.json()).toEqual({
+    data: { timeOff: { deleteType: { deletedTimeOffTypeId: id, error: null } } },
+  });
+
+  const refused = await browser.graphql(deleteTypeMutation, {
+    input: { timeOffTypeId: id },
+  });
+
+  expect(await refused.json()).toEqual({
+    data: {
+      timeOff: {
+        deleteType: {
+          deletedTimeOffTypeId: null,
+          error: { __typename: "NotFoundError", message: expect.any(String) as unknown },
+        },
+      },
+    },
+  });
+});
+
+const deleteTypeMutation = `mutation($input: TimeOffTypeDeleteInput!) {
+  timeOff { deleteType(input: $input) {
+    deletedTimeOffTypeId
+    error { __typename ... on Error { message } }
+  } }
+}`;
+
 const timeOffQuery = `query EmployeeTimeOff($id: ID!) {
   employee(id: $id) {
     timeOffTypes { timeOffType { name } balance entitlement bankHolidays used remaining }

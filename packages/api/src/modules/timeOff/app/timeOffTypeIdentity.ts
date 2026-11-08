@@ -7,6 +7,7 @@ import {
   parseTimeOffTypeIdentity,
   type TimeOffType,
   type TimeOffTypeIdentity,
+  TimeOffTypeBookedError,
   TimeOffTypeNameTakenError,
 } from "../domain";
 
@@ -62,6 +63,34 @@ export async function changeType(
     "Changed a time off type",
   );
   return after;
+}
+
+/**
+ * Deletes a type with its rules on every terms, its exceptions and allowances; refuses one with
+ * booked time off. Starting over brings a deleted standard type back. Admins only.
+ */
+export async function deleteType(
+  { transact, logger }: Dependencies,
+  ctx: SecurityContext,
+  input: { id: string },
+): Promise<void> {
+  ctx.require("MANAGE_WORKSPACE");
+  const id = parseUuid(input.id);
+  if (!id) {
+    throw typeNotFound();
+  }
+  try {
+    const deleted = await transact((tx) => timeOffPolicyRepository(tx).deleteType(id));
+    if (!deleted) {
+      throw typeNotFound();
+    }
+  } catch (error) {
+    if (error instanceof TimeOffTypeBookedError) {
+      throw new ApplicationError("CONFLICT", "Time off of this type is booked.");
+    }
+    throw error;
+  }
+  logger.info({ timeOffTypeId: id }, "Deleted a time off type");
 }
 
 async function refuseTakenName<T>(write: () => Promise<T>): Promise<T> {

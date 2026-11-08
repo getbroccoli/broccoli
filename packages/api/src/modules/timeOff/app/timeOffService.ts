@@ -24,7 +24,7 @@ import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
 import { readTermsTimeOff, type TimeOffWithPolicies } from "./readTermsTimeOff";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
-import { changeType, createType } from "./timeOffTypeIdentity";
+import { changeType, createType, deleteType } from "./timeOffTypeIdentity";
 
 const employeeSetup = createEmployeeSetupService();
 
@@ -66,6 +66,11 @@ export interface TimeOffService {
     ctx: SecurityContext,
     input: TimeOffTypeIdentity & { id: string },
   ) => Promise<TimeOffType>;
+  /**
+   * Deletes a type with its rules on every terms, its exceptions and allowances; refuses one with
+   * booked time off. Admins only.
+   */
+  deleteType: (ctx: SecurityContext, input: { id: string }) => Promise<void>;
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
   /**
@@ -158,6 +163,7 @@ export function createTimeOffService({
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
     createType: (ctx, input) => createType(dependencies, ctx, input),
     changeType: (ctx, input) => changeType(dependencies, ctx, input),
+    deleteType: (ctx, input) => deleteType(dependencies, ctx, input),
     listTimeOffTypes: (ctx) => listTimeOffTypes({ transact, today }, ctx),
     readTermsTimeOff: (ctx, termsIds) => readTermsTimeOff({ orm, today }, ctx, termsIds),
     async lockPolicies(ctx, tx) {

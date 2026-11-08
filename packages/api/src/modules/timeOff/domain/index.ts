@@ -30,6 +30,7 @@ export {
   parseTimeOffTypeIdentity,
   STANDARD_TIME_OFF_TYPES,
   type TimeOffTypeIdentity,
+  TimeOffTypeBookedError,
   TimeOffTypeNameTakenError,
 } from "./timeOffTypeIdentity";
 export {

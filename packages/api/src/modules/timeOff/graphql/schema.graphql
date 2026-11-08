@@ -275,6 +275,8 @@ type TimeOffMutations {
   createType(input: TimeOffTypeCreateInput!): TimeOffTypeCreatePayload!
   "Changes a type's name, icon, colour and privacy, the same in every set of terms. Admins only."
   changeType(input: TimeOffTypeChangeInput!): TimeOffTypeChangePayload!
+  "Deletes a type with its rules on every terms; refused while time off of it is booked. Starting over brings a deleted standard type back. Admins only."
+  deleteType(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
 }
 
 input TimeOffTypeCreateInput {
@@ -312,3 +314,15 @@ type TimeOffTypeChangePayload {
 }
 
 union TimeOffTypeChangeError = InvalidInputError | NotFoundError
+
+input TimeOffTypeDeleteInput {
+  timeOffTypeId: ID!
+}
+
+"The deleted time off type's id, or why it was refused."
+type TimeOffTypeDeletePayload {
+  deletedTimeOffTypeId: ID
+  error: TimeOffTypeDeleteError
+}
+
+union TimeOffTypeDeleteError = NotFoundError | ConflictError
