@@ -87,7 +87,7 @@ export function systemService(orm: Orm, options: { mode?: Mode } = {}) {
   const invites = employeeInviteService(orm, options);
   const imports = importServices(orm, { invites });
   const service = createSystemService({
-    transact: testTransactor(orm),
+    transact: transactWithTimeOffEvents(orm),
     logger: createLogger("silent"),
     addApprovedPeople: imports.addApprovedPeople,
     deleteAllEmployees: deleteAllEmployees(orm),

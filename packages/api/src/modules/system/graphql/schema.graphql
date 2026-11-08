@@ -20,7 +20,7 @@ type User {
   operations: [Operation!]!
 }
 
-"Where a new instance is in its first-run flow: company, import, then owner on self-hosted instances or ready on managed ones."
+"Where a new instance is in its first-run flow: company, import, then owner to create an account or ready when an owner already exists."
 enum SetupStep {
   "The company has no name yet."
   COMPANY
@@ -28,7 +28,7 @@ enum SetupStep {
   IMPORT
   "Self-hosted only: the people are in; the owner account is created last."
   OWNER
-  "Managed only: the people are in; the owner sees what setup added before using Broccoli."
+  "An owner already exists; finishing setup adds the approved people and completes setup."
   READY
   "Setup is finished."
   DONE

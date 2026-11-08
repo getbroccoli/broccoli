@@ -156,7 +156,7 @@ export class Instance {
   }
 
   private leaveImportStep(withOwner: SetupStep): Instance | null {
-    const next = !this.ownerUserId ? "owner" : this.#state.assignment ? withOwner : "done";
+    const next = this.ownerUserId ? withOwner : "owner";
     return this.advanceStep("import", next);
   }
 

@@ -27,7 +27,7 @@ it.each([
 
 it.each([
   [null, null, "owner"],
-  ["owner", null, "done"],
+  ["owner", null, "ready"],
   [
     "owner",
     {

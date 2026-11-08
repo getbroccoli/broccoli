@@ -11,9 +11,13 @@ import {
   readTimeOffTerms,
   scotlandTimeOffSetup,
   SETUP_HOLDER,
+  setupSteps,
+  systemService,
   test,
   workingPatternService,
 } from "#test/support";
+
+import { NO_SETUP_INVITES } from "../../../core/instance";
 
 test("finishing setup gives Glasgow and Leeds their chosen terms and Annual leave", async ({
   orm,
@@ -142,4 +146,39 @@ test("a refused time off choice rolls back the people and keeps setup unfinished
   expect((await instances.readInstance(orm)).step).toBe("owner");
   expect(await readTimeOffTerms(orm)).toEqual(termsBefore);
   expect(await readTermsPolicies(orm, await seed.defaultTermsId())).toEqual([]);
+});
+
+test("finishing setup again applies time off and links the existing self-hosted owner", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const owner = await seed.owner();
+  await seed.setupStep("done");
+  const system = systemService(orm);
+  await system.resetSetup(owner);
+  await transact((tx) => setupSteps.completeCompanyStep(owner, tx));
+  const source = await seed.importSource();
+  await seed.importEmployees(source.id, [
+    { email: "avery@example.com", location: "Glasgow", startDate: calendarDate("2025-01-01") },
+  ]);
+  const imports = importServices(orm);
+  await imports.approveImport(owner, (await imports.reads.readReview(owner)).version);
+  expect((await instances.readInstance(orm)).step).toBe("ready");
+  expect((await employeeServices(orm).listEmployees(owner, {})).edges).toEqual([]);
+
+  await system.completeSetup(owner, {
+    ...NO_SETUP_INVITES,
+    ownerEmployeeKey: "avery@example.com",
+    linkOrigin: "https://broccoli.example.com",
+    timeOff: scotlandTimeOffSetup(),
+  });
+
+  expect((await instances.readInstance(orm)).step).toBe("done");
+  const { edges } = await employeeServices(orm).listEmployees(owner, {});
+  expect(edges).toHaveLength(1);
+  expect(edges[0]!.node.userId).toBe(owner.user!.userId);
+  expect(await readAllowances(orm, edges[0]!.node.id)).toMatchObject([
+    { typeKey: "annual_leave", total: 21 },
+  ]);
 });

@@ -1,7 +1,6 @@
 /**
  * Where a new instance is in its first-run flow. Every instance starts at `company`;
- * after the import a self-hosted one creates its owner at `owner`, and a managed owner
- * sees what setup added at `ready`.
+ * after the import it creates an owner at `owner`, or an existing owner finishes at `ready`.
  */
 export const SETUP_STEPS = ["company", "import", "owner", "ready", "done"] as const;
 

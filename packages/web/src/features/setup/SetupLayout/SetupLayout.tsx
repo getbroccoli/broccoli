@@ -37,8 +37,8 @@ export function SetupLayout({
   children,
 }: SetupLayoutProps) {
   const heading = useRef<HTMLHeadingElement>(null);
-  const { mode } = useRouteContext({ from: "__root__" });
-  const steps = stepViews(step, mode);
+  const { mode, me } = useRouteContext({ from: "__root__" });
+  const steps = stepViews(step, mode, me !== null);
   // Shares the company's cache entry, so a saved name or logo shows here at once.
   const company = useQuery(SetupWorkspaceDocument).data?.company;
 

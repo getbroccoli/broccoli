@@ -2,7 +2,6 @@ import { ApplicationError } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import {
   type AddApprovedPeople,
-  createInstanceService,
   createSetupStepService,
   type SetupFinish,
   type SetupInvite,
@@ -21,7 +20,6 @@ import { type ImportReview, readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
 
 const setupSteps = createSetupStepService();
-const instances = createInstanceService();
 const employeeSetup = createEmployeeSetupService();
 
 /** What adding the approved people did, published once it commits. */
@@ -46,9 +44,8 @@ export type TurnOnTimeOff = (
 /** The owner's approval of the reviewed import, the people it adds, and reopening the review. */
 export interface ImportApprovalService {
   /**
-   * Completes the import step, adding the people only when that completes setup; otherwise the
-   * last step adds them (`addApprovedPeople`). Refused while a file is being mapped, and when
-   * the import no longer matches `version`, the `version` of `reads.readReview` the owner reviewed.
+   * Completes the import step; the last step adds the people (`addApprovedPeople`). Refused while
+   * a file is being mapped or the import no longer matches the reviewed `version`.
    */
   approveImport: (ctx: SecurityContext, version: string) => Promise<void>;
   /**
@@ -94,11 +91,16 @@ export function createImportApprovalService({
         if ((await readImportReview(ctx, tx)).version !== version) {
           throw new ApplicationError("CONFLICT", "Your people changed while you were reviewing.");
         }
-        // A self-hosted instance whose owner has an account has no last step to add them at.
-        if ((await instances.readInstance(tx)).step === "done") {
-          await addApprovedPeople({ invites, turnOnTimeOff }, ctx, tx);
-        }
         return true;
+      }).catch((error: unknown) => {
+        logger.warn(
+          {
+            userId: ctx.user?.userId,
+            code: error instanceof ApplicationError ? error.code : "UNEXPECTED",
+          },
+          "Import approval failed",
+        );
+        throw error;
       });
       if (approved) {
         logger.info("Approved the import");
@@ -137,44 +139,43 @@ export function createImportApprovalService({
 }
 
 /**
- * Adds the approved people joining `tx`; with `finish`, links the owner's user to the person they
- * said they are, turns time off on as they chose and invites the people they chose, returning those
- * invites.
+ * Adds the approved people joining `tx`, links the owner and applies their time off and invite choices.
  */
 async function addApprovedPeople(
   { invites, turnOnTimeOff }: { invites: SetupInvites; turnOnTimeOff: TurnOnTimeOff },
   ctx: SecurityContext,
   tx: Tx,
-  finish?: SetupFinish,
+  finish: SetupFinish,
 ): Promise<SetupInvite[]> {
   requireImportAccess(ctx);
   await lockImport(tx);
   const review = await readImportReview(ctx, tx);
   const { readyEmployees, managers } = review;
-  const ownerKey = finish?.ownerEmployeeKey ?? null;
-  if (finish?.timeOff) {
+  if (finish.timeOff) {
     // Locations already have their terms when the new people join them.
     await turnOnTimeOff(ctx, tx, finish.timeOff);
   }
   const { idsByEmail, ...counts } = await createApprovedEmployees(ctx, tx, review, finish);
   const idOf = (employee: { values: { email: { value: string | null } } }) =>
     idsByEmail.get(employee.values.email.value?.toLowerCase() ?? "");
-  const owner = readyEmployees.find(({ key }) => key === ownerKey);
-  const invitees = finish
-    ? setupInvitees(readyEmployees, managers, finish.inviteAudience, ownerKey, finish.ownerEmail)
-    : [];
-  const sent = finish
-    ? await invites.sendAtSetup(
-        ctx,
-        tx,
-        {
-          employeeIds: invitees.flatMap((employee) => idOf(employee) ?? []),
-          note: finish.inviteNote,
-          invitedByUserId: finish.ownerUserId,
-        },
-        finish.linkOrigin,
-      )
-    : [];
+  const owner = readyEmployees.find(({ key }) => key === finish.ownerEmployeeKey);
+  const invitees = setupInvitees(
+    readyEmployees,
+    managers,
+    finish.inviteAudience,
+    finish.ownerEmployeeKey,
+    finish.ownerEmail,
+  );
+  const sent = await invites.sendAtSetup(
+    ctx,
+    tx,
+    {
+      employeeIds: invitees.flatMap((employee) => idOf(employee) ?? []),
+      note: finish.inviteNote,
+      invitedByUserId: finish.ownerUserId,
+    },
+    finish.linkOrigin,
+  );
   tx.publish("imports.people_added", {
     ...counts,
     selected: readyEmployees.map(({ records, photoFileId }) => ({
@@ -200,7 +201,7 @@ function createApprovedEmployees(
   ctx: SecurityContext,
   tx: Tx,
   { readyEmployees, managers }: Pick<ImportReview, "readyEmployees" | "managers">,
-  finish: SetupFinish | undefined,
+  finish: SetupFinish,
 ) {
   return employeeSetup.createImportedEmployees(
     ctx,
@@ -210,7 +211,7 @@ function createApprovedEmployees(
       avatarFileId: employee.photoFileId ?? undefined,
       managerEmail: managers.get(employee.key)?.manager?.values.email.value,
       locationName: employee.values.location.value,
-      userId: employee.key === finish?.ownerEmployeeKey ? finish.ownerUserId : undefined,
+      userId: employee.key === finish.ownerEmployeeKey ? finish.ownerUserId : undefined,
     })),
     { kind: "ADDED_FROM_IMPORT" },
   );

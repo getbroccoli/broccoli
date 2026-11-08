@@ -225,7 +225,7 @@ test("a callback after signing out redirects with state and clears the OAuth coo
   expect(slack.requests).toEqual([]);
 });
 
-test("approving creates the Slack members as employees once and completes self-hosted setup", async ({
+test("finishing self-hosted setup creates the approved Slack members once", async ({
   env,
   slack,
 }) => {
@@ -242,6 +242,10 @@ test("approving creates the Slack members as employees once and completes self-h
   }`;
 
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
+  expect(await (await browser.graphql(people)).json()).toEqual({
+    data: { employees: { edges: [] }, setup: { step: "READY" } },
+  });
+  await browser.graphql(COMPLETE_SETUP);
   const approved: unknown = await (await browser.graphql(people)).json();
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
 
@@ -259,7 +263,7 @@ test("approving creates the Slack members as employees once and completes self-h
   expect(await (await browser.graphql(people)).json()).toEqual(approved);
 });
 
-test("review counts only complete Slack members and Approve adds exactly those members", async ({
+test("review counts only complete Slack members and finishing adds exactly those members", async ({
   env,
   slack,
 }) => {
@@ -292,6 +296,7 @@ test("review counts only complete Slack members and Approve adds exactly those m
   });
 
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
+  await browser.graphql(COMPLETE_SETUP);
   const people = await browser.graphql(
     `query { employees(first: 100, orderBy: { field: EMAIL, direction: ASC }) { edges { node { email } } } }`,
   );
@@ -310,3 +315,6 @@ const READ_SLACK =
   "mutation { imports { readSlack { import { id } error { __typename ... on Error { message } } } } }";
 const SAVE_COMPANY =
   'mutation { company { update(input: { name: "Acme Corp" }) { company { id } error { __typename ... on Error { message } ... on InvalidInputError { fields { field code } } } } } }';
+
+const COMPLETE_SETUP =
+  "mutation { system { completeSetup { setup { step } error { __typename ... on Error { message } } } } }";

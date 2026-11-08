@@ -64,23 +64,23 @@ const REVIEW = {
   step: "IMPORT",
 } as const satisfies PageDefinition;
 // Time off and Who come after Approve, so they belong to the server step of setup's last page.
-const TIME_OFF_SELF_HOSTED = {
+const TIME_OFF_WITHOUT_OWNER = {
   id: "timeOff",
   title: "setup.timeOff.step",
   path: "/setup/time-off",
   step: "OWNER",
 } as const satisfies PageDefinition;
-const TIME_OFF_MANAGED = {
-  ...TIME_OFF_SELF_HOSTED,
+const TIME_OFF_WITH_OWNER = {
+  ...TIME_OFF_WITHOUT_OWNER,
   step: "READY",
 } as const satisfies PageDefinition;
-const WHO_SELF_HOSTED = {
+const WHO_WITHOUT_OWNER = {
   id: "who",
   title: "setup.who.step",
   path: "/setup/who",
   step: "OWNER",
 } as const satisfies PageDefinition;
-const WHO_MANAGED = { ...WHO_SELF_HOSTED, step: "READY" } as const satisfies PageDefinition;
+const WHO_WITH_OWNER = { ...WHO_WITHOUT_OWNER, step: "READY" } as const satisfies PageDefinition;
 // Gathering and review, and Setup AI before them, belong to the server's `import` step, until Approve.
 const PEOPLE = {
   id: "people",
@@ -104,8 +104,8 @@ const FINISHED: SetupPath = "/people";
  * key, signed up before setup and sees what it will add last.
  */
 const SETUP_STEPS = {
-  SELF_HOSTED: [COMPANY, AI, PEOPLE, TIME_OFF_SELF_HOSTED, WHO_SELF_HOSTED, OWNER],
-  MANAGED: [COMPANY, PEOPLE, TIME_OFF_MANAGED, WHO_MANAGED, READY],
+  SELF_HOSTED: [COMPANY, AI, PEOPLE, TIME_OFF_WITHOUT_OWNER, WHO_WITHOUT_OWNER, OWNER],
+  MANAGED: [COMPANY, PEOPLE, TIME_OFF_WITH_OWNER, WHO_WITH_OWNER, READY],
 } as const satisfies Record<Mode, readonly (PageDefinition | StepDefinition)[]>;
 
 type Page =
@@ -114,8 +114,8 @@ type Page =
   | typeof AI
   | typeof IMPORT
   | typeof REVIEW
-  | typeof TIME_OFF_SELF_HOSTED
-  | typeof WHO_SELF_HOSTED
+  | typeof TIME_OFF_WITHOUT_OWNER
+  | typeof WHO_WITHOUT_OWNER
   | typeof READY;
 
 /** A setup page: a step's own page, or one of its pages. */
@@ -135,9 +135,9 @@ export interface StepView extends PageView {
 }
 
 /** Each step and its pages with their state, seen from the current page. */
-export function stepViews(current: SetupStepId, mode: Mode): StepView[] {
-  const steps: readonly (PageDefinition | StepDefinition)[] = SETUP_STEPS[mode];
-  const order = pagesOf(mode).map(({ id }) => id);
+export function stepViews(current: SetupStepId, mode: Mode, ownerExists = false): StepView[] {
+  const steps: readonly (PageDefinition | StepDefinition)[] = stepsOf(mode, ownerExists);
+  const order = pagesOf(mode, ownerExists).map(({ id }) => id);
   const currentIndex = order.indexOf(current);
   const view = ({ id, title }: { id: string; title: MessageKey }, ids: string[]): PageView => ({
     id,
@@ -158,7 +158,7 @@ export function setupStepPage(step: SetupStep, mode: Mode): SetupPath {
   if (step === "DONE") {
     return FINISHED;
   }
-  const page = pagesOf(mode).find((candidate) => candidate.step === step);
+  const page = pagesOf(mode, step === "READY").find((candidate) => candidate.step === step);
   if (!page) {
     throw new Error(`${mode} setup has no page for the ${step} step`);
   }
@@ -166,17 +166,21 @@ export function setupStepPage(step: SetupStep, mode: Mode): SetupPath {
 }
 
 /** The page before `page`, when the owner may go back to it from there. */
-export function previousPage(page: SetupStepId, mode: Mode): SetupPath | undefined {
-  const pages = pagesOf(mode);
-  const current = pageOf(page, mode);
+export function previousPage(
+  page: SetupStepId,
+  mode: Mode,
+  ownerExists = false,
+): SetupPath | undefined {
+  const pages = pagesOf(mode, ownerExists);
+  const current = pageOf(page, mode, ownerExists);
   const previous = pages[pages.indexOf(current) - 1];
   return previous && isOpenAt(previous, current.step) ? previous.path : undefined;
 }
 
 /** The page after `page`, or the directory after the last one. */
-export function nextPage(page: SetupStepId, mode: Mode): SetupPath {
-  const pages = pagesOf(mode);
-  return pages[pages.indexOf(pageOf(page, mode)) + 1]?.path ?? FINISHED;
+export function nextPage(page: SetupStepId, mode: Mode, ownerExists = false): SetupPath {
+  const pages = pagesOf(mode, ownerExists);
+  return pages[pages.indexOf(pageOf(page, mode, ownerExists)) + 1]?.path ?? FINISHED;
 }
 
 /**
@@ -187,7 +191,7 @@ export function requireSetupPage<Me>(page: SetupStepId, { context, location }: G
   if (!context.me && !context.holdsSetup) {
     throw loginRedirect(location.href);
   }
-  const definition = pagesOf(context.mode).find(({ id }) => id === page);
+  const definition = pagesOf(context.mode, context.me !== null).find(({ id }) => id === page);
   if (!definition || !isOpenAt(definition, context.setupStep)) {
     throw redirect({ to: setupStepPage(context.setupStep, context.mode), replace: true });
   }
@@ -213,17 +217,24 @@ interface Gate<Me> {
   location: { href: string };
 }
 
-function pagesOf(mode: Mode): readonly PageDefinition[] {
-  const steps: readonly (PageDefinition | StepDefinition)[] = SETUP_STEPS[mode];
+function pagesOf(mode: Mode, ownerExists: boolean): readonly PageDefinition[] {
+  const steps: readonly (PageDefinition | StepDefinition)[] = stepsOf(mode, ownerExists);
   return steps.flatMap((step) => ("pages" in step ? step.pages : [step]));
 }
 
-function pageOf(page: SetupStepId, mode: Mode): PageDefinition {
-  const definition = pagesOf(mode).find(({ id }) => id === page);
+function pageOf(page: SetupStepId, mode: Mode, ownerExists: boolean): PageDefinition {
+  const definition = pagesOf(mode, ownerExists).find(({ id }) => id === page);
   if (!definition) {
     throw new Error(`${mode} setup has no ${page} page`);
   }
   return definition;
+}
+
+function stepsOf(mode: Mode, ownerExists: boolean): readonly (PageDefinition | StepDefinition)[] {
+  if (mode === "SELF_HOSTED" && ownerExists) {
+    return [COMPANY, AI, PEOPLE, TIME_OFF_WITH_OWNER, WHO_WITH_OWNER, READY];
+  }
+  return SETUP_STEPS[mode];
 }
 
 function isOpenAt(page: PageDefinition, step: SetupStep): boolean {

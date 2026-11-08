@@ -10,6 +10,29 @@ import {
   stepViews,
 } from "./setupSteps";
 
+it("keeps an existing self-hosted owner in setup through company defaults and the ready page", () => {
+  expect(setupStepPage("READY", "SELF_HOSTED")).toBe("/setup/time-off");
+  expect(nextPage("who", "SELF_HOSTED", true)).toBe("/setup/ready");
+  expect(previousPage("ready", "SELF_HOSTED", true)).toBe("/setup/who");
+  expect(stepViews("ready", "SELF_HOSTED", true).at(-1)).toMatchObject({
+    id: "ready",
+    state: "current",
+  });
+  for (const page of ["timeOff", "who", "ready"] as const) {
+    expect(() =>
+      requireSetupPage(page, {
+        context: {
+          me: { id: "owner" },
+          holdsSetup: false,
+          setupStep: "READY",
+          mode: "SELF_HOSTED",
+        },
+        location: { href: "/setup" },
+      }),
+    ).not.toThrow();
+  }
+});
+
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
