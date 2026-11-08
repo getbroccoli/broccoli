@@ -10,6 +10,7 @@ import {
   createEmployeeService,
   createLocationService,
   createTermsService,
+  createWorkingPatternService,
   type EmployeeInviteService,
   employeeRecordType,
   termsRecordType,
@@ -33,10 +34,15 @@ export {
   employeeDirectory,
 } from "./app";
 export {
+  cancelPlannedVersion,
+  createPersonTimeline,
+  earliestChangeDate,
   employeeFieldErrors,
+  makeRoomForDatedRow,
+  parseChangeDate,
+  parseDateField,
   parseEmployeeField,
   parseTermsSetup,
-  createPersonTimeline,
 } from "./domain";
 
 // Public types.
@@ -85,6 +91,7 @@ export function employeesModule({
     ...createEmployeePermissionService(dependencies),
     ...createLocationService(dependencies),
     ...createTermsService(dependencies),
+    ...createWorkingPatternService(dependencies),
   };
   return {
     name: "employees",

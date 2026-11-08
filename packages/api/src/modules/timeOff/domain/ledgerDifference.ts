@@ -128,7 +128,11 @@ function correctionDate(
           : previousStartDate;
     return changedFrom > firstDate ? changedFrom : firstDate;
   }
-  return cause.kind === "WORKING_PATTERN_CHANGED" && cause.ref && cause.ref > firstDate
-    ? (cause.ref as CalendarDate)
-    : firstDate;
+  const changedFrom =
+    cause.kind === "TIME_OFF_RULES_CHANGED"
+      ? cause.from
+      : cause.kind === "WORKING_PATTERN_CHANGED"
+        ? (cause.ref as CalendarDate | null)
+        : null;
+  return changedFrom && changedFrom > firstDate ? changedFrom : firstDate;
 }

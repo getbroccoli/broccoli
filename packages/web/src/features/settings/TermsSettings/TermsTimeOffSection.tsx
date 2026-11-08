@@ -1,19 +1,21 @@
-import { CalendarBlank } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 
-import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
-import { TimeOffTypeIcon } from "../TimeOffSettings";
-import { companyToday, plannedLine, ruleLine, splitVersions } from "./termsText";
+import type { TimeOffRow } from "./termsQueries";
+import { TimeOffRuleRow } from "./TimeOffRuleRow";
 
 type Props = {
   termsName: string;
-  timeOff: NonNullable<EmploymentTermsStackQuery["terms"]>["timeOff"];
+  timeOff: TimeOffRow[];
+  /** The type whose rules are open, with its form and the line under its name. */
+  open: { timeOffTypeId: string; editor: ReactNode; summary: string; dirty: boolean } | null;
+  onEdit: (timeOffTypeId: string) => void;
+  onCancelPlanned: (timeOffTypeId: string, version: TimeOffRow["versions"][number]) => void;
 };
 
 /** Each time off type's rules on the terms today, or "Not offered here", with planned rules under them. */
-export function TermsTimeOffSection({ termsName, timeOff }: Props) {
-  const today = companyToday();
+export function TermsTimeOffSection({ termsName, timeOff, open, onEdit, onCancelPlanned }: Props) {
   return (
     <section aria-labelledby="terms-time-off" className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -23,40 +25,16 @@ export function TermsTimeOffSection({ termsName, timeOff }: Props) {
         <p className="text-[13px] text-muted-foreground">{t("terms.timeOff.description")}</p>
       </div>
       <ul className="flex flex-col gap-2.5">
-        {timeOff.map(({ timeOffType, versions }) => {
-          const { current, planned } = splitVersions(versions, today);
-          return (
-            <li
-              key={timeOffType.id}
-              className={
-                current
-                  ? "flex items-start gap-3 rounded-xl border border-border p-3.5"
-                  : "flex items-start gap-3 rounded-xl border border-dashed border-border p-3.5"
-              }
-            >
-              <TimeOffTypeIcon icon={timeOffType.icon} colour={timeOffType.colour} />
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold [overflow-wrap:anywhere]">{timeOffType.name}</p>
-                <p className="text-[13px] text-muted-foreground">
-                  {current
-                    ? [ruleLine(current), timeOffType.private && t("terms.timeOff.private")]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : t("terms.timeOff.notOffered", { terms: termsName })}
-                </p>
-                {planned.map((version) => (
-                  <p
-                    key={version.id}
-                    className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground"
-                  >
-                    <CalendarBlank aria-hidden />
-                    {plannedLine(version)}
-                  </p>
-                ))}
-              </div>
-            </li>
-          );
-        })}
+        {timeOff.map((row) => (
+          <TimeOffRuleRow
+            key={row.timeOffType.id}
+            row={row}
+            termsName={termsName}
+            open={open?.timeOffTypeId === row.timeOffType.id ? open : null}
+            onEdit={() => onEdit(row.timeOffType.id)}
+            onCancelPlanned={(version) => onCancelPlanned(row.timeOffType.id, version)}
+          />
+        ))}
       </ul>
     </section>
   );

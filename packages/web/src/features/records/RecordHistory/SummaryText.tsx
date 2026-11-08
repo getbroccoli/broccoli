@@ -41,7 +41,7 @@ export function SummaryText({ summary }: Props) {
           <span className="text-muted-foreground">{summary.labels.join(", ")}</span>
         </>
       );
-    case "createdAs":
+    case "sentence":
       return <>{summary.text}</>;
     case "deleted":
       return (

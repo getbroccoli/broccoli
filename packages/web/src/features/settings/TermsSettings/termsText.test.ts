@@ -1,6 +1,13 @@
 import { expect, it } from "vitest";
 
-import { annualLeaveSummary, plannedLine, ruleLine, splitVersions, weekSummary } from "./termsText";
+import {
+  annualLeaveSummary,
+  plannedLine,
+  ruleLine,
+  splitVersions,
+  versionBefore,
+  weekSummary,
+} from "./termsText";
 
 it("summarises consecutive working days with equal hours as a run", () => {
   expect(weekSummary(week)).toBe("Mon–Fri, 7.5 hours");
@@ -171,6 +178,28 @@ it("has no current version when every version starts after today", () => {
   const result = splitVersions(planned, "2030-06-01");
 
   expect(result).toEqual({ current: null, planned });
+});
+
+it("finds the earlier planned version that cancelling January would extend", () => {
+  const first = { startDate: null, endDate: "2026-11-30" };
+  const december = { startDate: "2026-12-01", endDate: "2026-12-31" };
+  const january = { startDate: "2027-01-01", endDate: null };
+
+  expect(versionBefore([first, december, january], "2027-01-01")).toBe(december);
+});
+
+it("finds the original version that cancelling December would extend", () => {
+  const first = { startDate: null, endDate: "2026-11-30" };
+  const december = { startDate: "2026-12-01", endDate: "2026-12-31" };
+  const january = { startDate: "2027-01-01", endDate: null };
+
+  expect(versionBefore([first, december, january], "2026-12-01")).toBe(first);
+});
+
+it("has no predecessor when cancelling the first offered version", () => {
+  const first = { startDate: "2026-01-01", endDate: null };
+
+  expect(versionBefore([first], "2026-01-01")).toBeNull();
 });
 
 const week = {

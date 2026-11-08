@@ -53,6 +53,8 @@ export interface EmployeeReadService {
     tx: Tx,
     employeeIds: readonly string[],
   ) => Promise<Map<string, { startDate: CalendarDate | null; endDate: CalendarDate | null }[]>>;
+  /** Trusted: the employees among `employeeIds`, by first then last name, in the caller's transaction. */
+  readEmployeesByName: (tx: Tx, employeeIds: readonly string[]) => Promise<Employee[]>;
   /** Trusted, for time off: each employee's terms over time, by id, in the caller's transaction. */
   readTermsMemberships: (
     tx: Tx,
@@ -116,6 +118,7 @@ export function createEmployeeReadService({
     },
     lockEmployees: (tx, employeeIds) => employeeRepository(tx).lockByIds(employeeIds),
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
+    readEmployeesByName,
     readTermsMemberships: (tx, employeeIds) => termsRepository(tx).findMemberships(employeeIds),
     async readTermsMemberIds(tx, termsId) {
       const repository = termsRepository(tx);
@@ -143,3 +146,17 @@ export function createEmployeeReadService({
 }
 
 const DEFAULT_ORDER: EmployeeOrder = { field: "NAME", direction: "ASC" };
+
+/** The employees among `employeeIds`, by first then last name, ignoring case. */
+export async function readEmployeesByName(
+  tx: Tx,
+  employeeIds: readonly string[],
+): Promise<Employee[]> {
+  const found = await employeeRepository(tx).findByIds(employeeIds);
+  return found.toSorted(
+    (a, b) =>
+      a.firstName.toLowerCase().localeCompare(b.firstName.toLowerCase()) ||
+      a.lastName.toLowerCase().localeCompare(b.lastName.toLowerCase()) ||
+      a.id.localeCompare(b.id),
+  );
+}

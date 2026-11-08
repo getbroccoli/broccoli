@@ -26,6 +26,13 @@ export interface RecordDescription {
   titleField: string;
   /** How a created line reads instead of "added … with N fields", with `{title}`, such as "set up {title}". */
   createdAs?: MessageKey;
+  /** How a one-field change reads instead of "changed … to …"; null keeps that wording. */
+  changedAs?: (change: {
+    field: string;
+    oldValue: string | null;
+    newValue: string | null;
+    newLabel?: string | null;
+  }) => string | null;
 }
 
 /** What a field's editor gets from the panel. */

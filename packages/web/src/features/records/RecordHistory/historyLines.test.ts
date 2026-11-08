@@ -217,7 +217,7 @@ it("uses a record type's own wording for its created line", () => {
 
   const summary = summaryOf({ ...line, operation: "CREATED", changes }, termsDescription);
 
-  expect(summary).toEqual({ kind: "createdAs", text: "set up England and Wales" });
+  expect(summary).toEqual({ kind: "sentence", text: "set up England and Wales" });
 });
 
 it("leaves a created record's title null when its title field is missing", () => {

@@ -1,6 +1,8 @@
 import { CalendarBlank } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 
 import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
+import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
@@ -14,19 +16,34 @@ import {
   splitVersions,
 } from "./termsText";
 
+type Version = NonNullable<EmploymentTermsStackQuery["terms"]>["workingWeek"][number];
+
 type Props = {
-  versions: NonNullable<EmploymentTermsStackQuery["terms"]>["workingWeek"];
+  versions: Version[];
+  /** The open form in place of today's week; null while the section is closed. */
+  editor: ReactNode;
+  onEdit: () => void;
+  onCancelPlanned: (version: Version) => void;
 };
 
 /** The terms' working week today, day by day, with any planned week under it. */
-export function WorkingWeekSection({ versions }: Props) {
+export function WorkingWeekSection({ versions, editor, onEdit, onCancelPlanned }: Props) {
   const { current, planned } = splitVersions(versions, companyToday());
   return (
     <section aria-labelledby="terms-week" className="flex flex-col gap-3">
-      <h3 id="terms-week" className="text-[17px] font-semibold">
-        {t("terms.week.title")}
-      </h3>
-      {current ? (
+      <div className="flex items-center justify-between gap-2">
+        <h3 id="terms-week" className="text-[17px] font-semibold">
+          {t("terms.week.title")}
+        </h3>
+        {!editor && current && (
+          <Button variant="ghost" size="sm" onClick={onEdit}>
+            {t("terms.edit.edit")}
+          </Button>
+        )}
+      </div>
+      {editor ? (
+        editor
+      ) : current ? (
         <>
           <ol className="grid grid-cols-7 gap-1 sm:gap-2">
             {DAY_FIELDS.map((field, index) => (
@@ -62,19 +79,24 @@ export function WorkingWeekSection({ versions }: Props) {
         <p className="text-sm text-muted-foreground">{t("terms.week.none")}</p>
       )}
       {planned.map((version) => (
-        <p key={version.id} className="flex items-center gap-2 text-[13px] text-muted-foreground">
-          <CalendarBlank aria-hidden />
-          {`${plannedWeekLine(version)}, ${t("terms.bankHolidays", {
-            calendar: calendarName(version.bankHolidayCalendar),
-          })}`}
-        </p>
+        <div key={version.id} className="flex items-center gap-2 text-[13px] text-muted-foreground">
+          <CalendarBlank aria-hidden className="shrink-0" />
+          <span className="flex-1">
+            {`${plannedWeekLine(version)}, ${t("terms.bankHolidays", {
+              calendar: calendarName(version.bankHolidayCalendar),
+            })}`}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => onCancelPlanned(version)}>
+            {t("terms.edit.cancelChange")}
+          </Button>
+        </div>
       ))}
     </section>
   );
 }
 
 /** The facts under the day cells: weekly hours and whose bank holidays. */
-function weekFacts(week: Props["versions"][number]): { label: string; value: string }[] {
+function weekFacts(week: Version): { label: string; value: string }[] {
   return [
     {
       label: t("terms.week.weeklyHours"),
