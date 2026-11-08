@@ -135,8 +135,14 @@ CREATE TABLE "time_off_types" (
 	"unit" text DEFAULT 'day' NOT NULL,
 	"icon" text,
 	"colour" text,
+	"default_balance" text DEFAULT 'no_balance' NOT NULL,
+	"default_entitlement_days" numeric,
+	"default_bank_holidays" text,
 	CONSTRAINT "time_off_types_type_key_unique" UNIQUE("type_key"),
-	CONSTRAINT "time_off_types_unit_known" CHECK ("time_off_types"."unit" in ('day', 'hour'))
+	CONSTRAINT "time_off_types_unit_known" CHECK ("time_off_types"."unit" in ('day', 'hour')),
+	CONSTRAINT "time_off_types_default_allowance_with_balance" CHECK (("time_off_types"."default_entitlement_days" is not null and "time_off_types"."default_bank_holidays" is not null)
+        = ("time_off_types"."default_balance" = 'balance_from_allowance')),
+	CONSTRAINT "time_off_types_default_allowance_in_range" CHECK ("time_off_types"."default_entitlement_days" between 0 and 366)
 );
 --> statement-breakpoint
 ALTER TABLE "employee_terms" ADD CONSTRAINT "employee_terms_employee_id_employees_id_fk" FOREIGN KEY ("employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

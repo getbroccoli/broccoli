@@ -8,6 +8,11 @@ query TimeOffSettings {
         colour
         private
         typeKey
+        defaultRules {
+          balance
+          entitlementDays
+          bankHolidays
+        }
       }
     }
   }
@@ -23,6 +28,11 @@ mutation CreateTimeOffType($input: TimeOffTypeCreateInput!) {
         colour
         private
         typeKey
+        defaultRules {
+          balance
+          entitlementDays
+          bankHolidays
+        }
       }
       error {
         __typename
@@ -50,6 +60,11 @@ mutation ChangeTimeOffType($input: TimeOffTypeChangeInput!) {
         colour
         private
         typeKey
+        defaultRules {
+          balance
+          entitlementDays
+          bankHolidays
+        }
       }
       error {
         __typename

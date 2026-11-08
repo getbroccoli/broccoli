@@ -20,6 +20,7 @@ import { t } from "@/i18n";
 
 import { DeleteTimeOffTypeDialog } from "./DeleteTimeOffTypeDialog";
 import { nameErrorOf } from "./nameError";
+import { daysError, rulesValuesOf, typeInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 
@@ -35,6 +36,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     icon: type.icon,
     colour: type.colour,
     private: type.private,
+    defaultRules: rulesValuesOf(type.defaultRules),
   };
   const [values, setValues] = useState(saved);
   const [deleting, setDeleting] = useState(false);
@@ -43,9 +45,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     ChangeTimeOffTypeDocument,
     { refetch: [TimeOffSettingsDocument] },
   );
-  const changed = (Object.keys(saved) as (keyof TimeOffTypeValues)[]).some(
-    (field) => values[field] !== saved[field],
-  );
+  const changed = JSON.stringify(typeInputOf(values)) !== JSON.stringify(typeInputOf(saved));
   const nameError = nameErrorOf(payloadError);
   const failed = !nameError && (error || payloadError);
 
@@ -53,7 +53,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
     event.preventDefault();
     try {
       const { timeOffType } = await changeType({
-        variables: { input: { timeOffTypeId: type.id, ...values } },
+        variables: { input: { timeOffTypeId: type.id, ...typeInputOf(values) } },
       });
       toast(t("settings.timeOff.saved", { name: timeOffType?.name ?? values.name.trim() }));
     } catch {
@@ -140,7 +140,7 @@ export function TimeOffTypeRecord({ type, onDeleted }: Props) {
             >
               {t("settings.timeOff.cancel")}
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || Boolean(daysError(values.defaultRules))}>
               {t("settings.timeOff.save")}
             </Button>
           </div>

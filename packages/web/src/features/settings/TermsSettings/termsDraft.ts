@@ -1,7 +1,8 @@
-import type { BankHolidayCalendar, TimeOffBalanceKind } from "@/__generated__/graphql";
+import type { BankHolidayCalendar, TimeOffRulesInput } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { calendarDayParts } from "@/lib/calendarDay";
 
+import { daysError, rulesInputOf, type RulesValues, rulesValuesOf } from "../TimeOffSettings";
 import {
   DAY_FIELDS,
   hoursOf,
@@ -20,11 +21,8 @@ export interface WeekDraft {
 }
 
 /** A time off type's rules form; `offer` when the terms don't have the type yet. */
-export interface RulesDraft {
+export interface RulesDraft extends RulesValues {
   offer: boolean;
-  balance: TimeOffBalanceKind;
-  days: string;
-  onTop: boolean;
   appliesFrom: "THIS_LEAVE_YEAR" | "NEXT_LEAVE_YEAR" | "ANOTHER_DATE";
   /** The date picked under "Another date". */
   otherDate: string;
@@ -42,13 +40,20 @@ export function weekDraftOf(version: WeekVersion, today: string): WeekDraft {
   };
 }
 
-/** The rules form filled from today's version, or empty for an offer; from this leave year's start. */
-export function rulesDraftOf(version: PolicyVersionText | null): RulesDraft {
+/**
+ * The rules form filled from today's version, or from the type's default rules for an offer;
+ * from this leave year's start.
+ */
+export function rulesDraftOf(
+  version: PolicyVersionText | null,
+  defaultRules: TimeOffRulesInput,
+): RulesDraft {
+  const rules = version
+    ? { ...version, entitlementDays: version.yearlyEntitlement?.days ?? null }
+    : defaultRules;
   return {
     offer: version === null,
-    balance: version?.balance ?? "BALANCE_FROM_ALLOWANCE",
-    days: version?.yearlyEntitlement ? String(version.yearlyEntitlement.days) : "",
-    onTop: version?.bankHolidays !== "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE",
+    ...rulesValuesOf(rules),
     appliesFrom: "THIS_LEAVE_YEAR",
     otherDate: "",
   };
@@ -122,32 +127,15 @@ export function rulesErrors(
   earliest: string,
 ): Partial<Record<"days" | "startDate", string>> {
   const errors: Partial<Record<"days" | "startDate", string>> = {};
-  const days = Number(draft.days);
-  if (
-    draft.balance === "BALANCE_FROM_ALLOWANCE" &&
-    (draft.days.trim() === "" || !Number.isInteger(days * 2) || days < 0 || days > 366)
-  ) {
-    errors.days = t("terms.edit.rules.daysInvalid");
+  const days = daysError(draft);
+  if (days) {
+    errors.days = days;
   }
   const startDate = rulesStartDate(draft, earliest);
   if (!startDate || startDate < earliest) {
     errors.startDate = t("terms.edit.tooEarly", { date: shortDate(earliest) });
   }
   return errors;
-}
-
-/** The rules the form holds, as the API takes them. */
-export function rulesInputOf(draft: RulesDraft) {
-  const fromAllowance = draft.balance === "BALANCE_FROM_ALLOWANCE";
-  return {
-    balance: draft.balance,
-    entitlementDays: fromAllowance ? Number(draft.days) : null,
-    bankHolidays: fromAllowance
-      ? draft.onTop
-        ? ("BANK_HOLIDAYS_ON_TOP_OF_ALLOWANCE" as const)
-        : ("BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE" as const)
-      : null,
-  };
 }
 
 /** The rules the form holds as a version, for the lines that describe it. */

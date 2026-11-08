@@ -19,10 +19,16 @@ export interface TimeOffRulesInput {
   bankHolidays?: string | null;
 }
 
-/** The rules as stored; refuses an unknown balance, days out of range, or missing bank holidays. */
-export function parseRules(input: TimeOffRulesInput): TimeOffRules {
+/**
+ * The rules as stored; refuses an unknown balance, days out of range, or missing bank holidays,
+ * naming the input `field` they came in.
+ */
+export function parseRules(
+  input: TimeOffRulesInput,
+  field: "rules" | "defaultRules" = "rules",
+): TimeOffRules {
   if (!BALANCES.includes(input.balance as TimeOffRules["balance"])) {
-    throw invalidInput([{ field: "rules.balance", code: "invalid" }]);
+    throw invalidInput([{ field: `${field}.balance`, code: "invalid" }]);
   }
   const balance = input.balance as TimeOffRules["balance"];
   if (balance !== "balance_from_allowance") {
@@ -30,10 +36,10 @@ export function parseRules(input: TimeOffRulesInput): TimeOffRules {
   }
   const days = input.entitlementDays;
   if (days == null || days < 0 || days > MAX_DAYS || !Number.isInteger(days * 2)) {
-    throw invalidInput([{ field: "rules.entitlementDays", code: "out_of_range" }]);
+    throw invalidInput([{ field: `${field}.entitlementDays`, code: "out_of_range" }]);
   }
   if (!BANK_HOLIDAYS.includes(input.bankHolidays as never)) {
-    throw invalidInput([{ field: "rules.bankHolidays", code: "required" }]);
+    throw invalidInput([{ field: `${field}.bankHolidays`, code: "required" }]);
   }
   return {
     balance,
@@ -109,6 +115,16 @@ export function versionFromRules(
       },
       ...serviceSteps,
     ],
+  };
+}
+
+/** The rules a version holds, as the Settings form shows them. */
+export function rulesOfVersion(version: NewPolicyVersion): TimeOffRules {
+  const yearly = version.rules.find((rule) => rule.kind === "yearly_entitlement");
+  return {
+    balance: version.balance,
+    entitlementDays: yearly?.entitlementDays ?? null,
+    bankHolidays: version.bankHolidays,
   };
 }
 

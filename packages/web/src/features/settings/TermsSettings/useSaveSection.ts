@@ -8,7 +8,8 @@ import {
 import { usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
-import { rulesInputOf, savedToast, weekOfDraft } from "./termsDraft";
+import { rulesInputOf } from "../TimeOffSettings";
+import { savedToast, weekOfDraft } from "./termsDraft";
 import { TERMS_REFETCH, type Terms } from "./termsQueries";
 import { companyToday } from "./termsText";
 import type { OpenSection } from "./useTermsEditing";

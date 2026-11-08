@@ -2648,6 +2648,25 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "default_balance": {
+          "name": "default_balance",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'no_balance'"
+        },
+        "default_entitlement_days": {
+          "name": "default_entitlement_days",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_bank_holidays": {
+          "name": "default_bank_holidays",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -2681,6 +2700,14 @@
         "time_off_types_unit_known": {
           "name": "time_off_types_unit_known",
           "value": "\"time_off_types\".\"unit\" in ('day', 'hour')"
+        },
+        "time_off_types_default_allowance_with_balance": {
+          "name": "time_off_types_default_allowance_with_balance",
+          "value": "(\"time_off_types\".\"default_entitlement_days\" is not null and \"time_off_types\".\"default_bank_holidays\" is not null)\n        = (\"time_off_types\".\"default_balance\" = 'balance_from_allowance')"
+        },
+        "time_off_types_default_allowance_in_range": {
+          "name": "time_off_types_default_allowance_in_range",
+          "value": "\"time_off_types\".\"default_entitlement_days\" between 0 and 366"
         }
       },
       "isRLSEnabled": false

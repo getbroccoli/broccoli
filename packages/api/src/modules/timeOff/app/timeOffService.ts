@@ -10,15 +10,18 @@ import {
   createEmployeeSetupService,
   createEmployeeWorkingPatternService,
   parseTermsSetup,
+  type TermsSetup,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import {
   type AllowanceCause,
   parseStandardLeavePolicyKey,
   RECORD_ONLY_POLICY,
+  type StandardLeavePolicyKey,
+  rulesOfVersion,
   STANDARD_LEAVE_POLICIES,
   type TimeOffType,
-  type TimeOffTypeIdentity,
+  type TimeOffTypeIdentityInput,
 } from "../domain";
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
@@ -44,7 +47,8 @@ export interface TimeOffService {
   /**
    * Turns time off on, joining the caller's transaction: sets up each nation's terms on its working
    * week (`EmployeeSetupService.setUpTerms`), gives each a copy of its standard Annual leave policy
-   * and a record-only policy for every other type, and ensures their people's allowances. Refuses
+   * and a record-only policy for every other type, makes the default nation's Annual leave policy
+   * Annual leave's default rules, and ensures their people's allowances. Refuses
    * with CONFLICT once any terms have a time off policy.
    */
   turnOnTimeOff: (ctx: SecurityContext, tx: Tx, input: SetupTermsInput) => Promise<TurnedOnTimeOff>;
@@ -57,14 +61,15 @@ export interface TimeOffService {
     input: { employeeIds: readonly string[] },
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
   /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
-  createType: (ctx: SecurityContext, input: TimeOffTypeIdentity) => Promise<TimeOffType>;
+  createType: (ctx: SecurityContext, input: TimeOffTypeIdentityInput) => Promise<TimeOffType>;
   /**
-   * Changes a type's name, icon, colour and privacy, the same in every set of terms; refuses a
-   * name another type has, ignoring case, and showing Sickness's reason. Admins only.
+   * Changes a type's name, icon, colour, privacy and default rules, the same in every set of
+   * terms; refuses a name another type has, ignoring case, and showing Sickness's reason. Terms
+   * already offering the type keep their rules. Admins only.
    */
   changeType: (
     ctx: SecurityContext,
-    input: TimeOffTypeIdentity & { id: string },
+    input: TimeOffTypeIdentityInput & { id: string },
   ) => Promise<TimeOffType>;
   /**
    * Deletes a type with its rules on every terms, its exceptions and allowances; refuses one with
@@ -143,6 +148,7 @@ export function createTimeOffService({
           await repository.insertPolicy({ timeOffTypeId, termsId }, version);
         }
       }
+      await setAnnualLeaveDefault(tx, types, annualLeaveKeys[defaultTermsIndex(setup)]!);
       const ensured = await ensureAllowancesOf(engine, tx, {
         employeeIds: setUp.memberIds.flat(),
         cause: { kind: "TIME_OFF_TURNED_ON", ref: null },
@@ -175,4 +181,25 @@ export function createTimeOffService({
       await timeOffPolicyRepository(tx).deleteAll();
     },
   };
+}
+
+/** Annual leave, unless it was deleted, offers the default nation's standard policy from now on. */
+async function setAnnualLeaveDefault(
+  tx: Tx,
+  types: readonly TimeOffType[],
+  key: StandardLeavePolicyKey,
+): Promise<void> {
+  const annualLeave = types.find(({ typeKey }) => typeKey === "annual_leave");
+  if (annualLeave) {
+    await timeOffPolicyRepository(tx).updateType(annualLeave.id, {
+      defaultRules: rulesOfVersion(STANDARD_LEAVE_POLICIES[key]),
+    });
+  }
+}
+
+/** Where the default nation's terms are among the parsed setup's, which always has them. */
+function defaultTermsIndex({ terms, defaultBankHolidayCalendar }: TermsSetup): number {
+  return terms.findIndex(
+    ({ bankHolidayCalendar }) => bankHolidayCalendar === defaultBankHolidayCalendar,
+  );
 }
