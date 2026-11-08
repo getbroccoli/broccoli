@@ -119,6 +119,7 @@
       "src/apollo",
       "src/components/form",
       "src/components/ui",
+      "src/features/employees",
       "src/features/records",
       "src/i18n",
       "src/lib/calendarDay",

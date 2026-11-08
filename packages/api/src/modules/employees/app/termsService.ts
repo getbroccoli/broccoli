@@ -6,7 +6,7 @@ import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import { readTermsOverviews, type TermsOverview } from "./readTermsOverviews";
 import { termsRecordType } from "./termsRecordType";
 
-/** The terms admins see in Settings: each set with its people, locations and working week today. */
+/** The terms admins see in Settings: each set with its people and working week today. */
 export interface TermsService {
   /** Every set of terms, the default first, then by name ignoring case. Admins only. */
   listTerms: (ctx: SecurityContext) => Promise<TermsOverview[]>;
