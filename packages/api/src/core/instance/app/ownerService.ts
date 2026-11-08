@@ -1,6 +1,6 @@
 import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
-import type { SecurityContext } from "../../security";
+import { PrincipalSecurityContext, type SecurityContext } from "../../security";
 import { instanceRepository } from "../db";
 import type { Instance, SetupChoices, SetupFinish, SetupInvite } from "../domain";
 import { createSetupStepService } from "./setupStepService";
@@ -68,7 +68,7 @@ export function createOwnerService(): OwnerService {
         throw new ApplicationError("CONFLICT", "Finish the import before creating the owner.");
       }
       const owner = await saveOwner(tx, await createOwner(), current);
-      const invites = await addApprovedPeople(ctx, tx, {
+      const invites = await addApprovedPeople(PrincipalSecurityContext.setupOwner(owner.user), tx, {
         ...choices,
         ownerUserId: owner.user.id,
         ownerEmail: owner.user.email,
