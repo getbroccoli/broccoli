@@ -168,11 +168,8 @@ it("compares the new working week's hours and days with the old week", () => {
   expect(weekHint(week, currentWeek)).toBe("32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.");
 });
 
-it("starts a change of rules from next leave year, so balances in use stay", () => {
-  expect(rulesDraftOf(currentRules).appliesFrom).toBe("NEXT_LEAVE_YEAR");
-});
-
-it("starts an offer from this leave year", () => {
+it("starts a change of rules and an offer from this leave year", () => {
+  expect(rulesDraftOf(currentRules).appliesFrom).toBe("THIS_LEAVE_YEAR");
   expect(rulesDraftOf(null).appliesFrom).toBe("THIS_LEAVE_YEAR");
 });
 

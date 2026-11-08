@@ -21,7 +21,7 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 - [ ] The header reads "England and Wales", "Default", "38 people"; no locations show anywhere on the terms.
 - [ ] Working week shows Mon to Fri at "7.5", Sat and Sun "Off", "Hours a week 37.5", "Bank holidays England and Wales".
 - [ ] Time off lists Annual leave "From a balance · 28 days a year, bank holidays included · Leave year from 1 January", then Sickness, Family leave and Other "Recorded, doesn't count", each with its icon.
-- [ ] History, on the right, reads "Broccoli set up England and Wales" with "Time off turned on"; a setup the owner finished names the owner.
+- [ ] History, below the sections as on a person's panel, reads "Broccoli set up England and Wales" with "Time off turned on"; a setup the owner finished names the owner.
 - [ ] Working week and each offered type have "Edit"; no ⋯ menu, no "Add time off type", and no "What changes" until a section is open.
 - [ ] An unknown id, such as `/settings/terms/00000000-0000-4000-8000-000000000001`, reads "These terms could not be found."
 
@@ -36,7 +36,7 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 ## Change a type's rules
 
-- [ ] "Edit" on Annual leave opens it with "Counts", "Allowance" 28, "Bank holidays on top" off, "Leave year From 1 January" and "Applies from" as one row "1 Jan <this year>", "1 Jan <next year>", "Other date…", on "1 Jan <next year>" with "Next leave year. <this year> stays as it is."
+- [ ] "Edit" on Annual leave opens it with "Counts", "Allowance" 28, "Bank holidays on top" off, "Leave year From 1 January" and "Applies from" as one row "1 Jan <this year>", "1 Jan <next year>", "Other date…", on "1 Jan <this year>" with "This leave year, so <this year> allowances change now."
 - [ ] Typing 30 shows "Changed: 28 → 30 days" and "Not saved" in the row, and "Annual leave: 28 → 30 days" with "From 1 Jan <year>, bank holidays still included" in "What changes".
 - [ ] "Other date…" shows a date field; with a date off 1 January, Unlimited and Doesn't count are disabled and the counts keep today's.
 - [ ] 367, 20.3 or an empty allowance shows "Enter a number of days from 0 to 366." and keeps Save off.
@@ -73,8 +73,8 @@ Exit the demo, then finish setup with the owner but without the Company defaults
 ## States
 
 - [ ] With the API stopped, reloading the list shows "Employment terms could not be loaded." and "Try again", which reloads it once the API is back.
-- [ ] At 390 px wide, the terms fill the screen edge to edge, sections stack, History follows them and Close stays at the bottom; the list scrolls sideways inside its box.
-- [ ] At 390 px wide with a section open, the form stacks, "What changes" sits below the form above History, and the save line wraps beside Cancel and Save.
+- [ ] At 390 px wide, the terms fill the screen edge to edge, History follows the sections and Close stays at the bottom; the list scrolls sideways inside its box.
+- [ ] With a section open, "What changes" sits inside it under the form; at 390 px wide the form stacks and the save line wraps beside Cancel and Save.
 
 ## Access
 

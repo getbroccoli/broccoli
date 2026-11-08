@@ -42,17 +42,14 @@ export function weekDraftOf(version: WeekVersion, today: string): WeekDraft {
   };
 }
 
-/**
- * The rules form filled from today's version, from next leave year so balances in use stay; or
- * empty for an offer, from this leave year's start.
- */
+/** The rules form filled from today's version, or empty for an offer; from this leave year's start. */
 export function rulesDraftOf(version: PolicyVersionText | null): RulesDraft {
   return {
     offer: version === null,
     balance: version?.balance ?? "BALANCE_FROM_ALLOWANCE",
     days: version?.yearlyEntitlement ? String(version.yearlyEntitlement.days) : "",
     onTop: version?.bankHolidays !== "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE",
-    appliesFrom: version === null ? "THIS_LEAVE_YEAR" : "NEXT_LEAVE_YEAR",
+    appliesFrom: "THIS_LEAVE_YEAR",
     otherDate: "",
   };
 }

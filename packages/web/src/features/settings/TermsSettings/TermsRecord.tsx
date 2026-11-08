@@ -34,13 +34,19 @@ type Props = {
 };
 
 /**
- * One loaded set of terms: header, working week and time off, with history beside them.
- * One section at a time opens in place; the footer then saves it.
+ * One loaded set of terms: header, working week and time off, then their history, as a person's
+ * panel reads. One section at a time opens in place with what saving changes; the footer saves it.
  */
 export function TermsRecord({ terms }: Props) {
   const editing = useTermsEditing(terms);
   const planned = usePlannedChanges(terms);
   const { open } = editing;
+  // Under the open form, inside its section: what saving changes and whom it reaches.
+  const whatChanges = (
+    <div className="border-t border-border pt-5">
+      <WhatChanges box={editing.box} people={editing.people} termsName={terms.name} />
+    </div>
+  );
   const meta = t(terms.peopleCount === 1 ? "terms.peopleOne" : "terms.people", {
     count: String(terms.peopleCount),
   });
@@ -66,23 +72,23 @@ export function TermsRecord({ terms }: Props) {
         </SheetClose>
       </header>
 
-      <div className="subtle-scrollbar flex flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+      <div className="subtle-scrollbar flex flex-1 flex-col gap-8 overflow-y-auto px-6 py-6">
         {/* Nothing changes while a save is on its way, so it never closes over newer edits. */}
-        <fieldset
-          disabled={editing.saving}
-          className="flex min-w-0 flex-col gap-8 px-6 py-6 md:flex-[2] md:overflow-y-auto"
-        >
+        <fieldset disabled={editing.saving} className="flex min-w-0 flex-col gap-8">
           <WorkingWeekSection
             versions={terms.workingWeek}
             editor={
               open?.kind === "week" &&
               editing.week && (
-                <WeekEditor
-                  draft={open.draft}
-                  current={editing.week}
-                  earliest={editing.earliest}
-                  onChange={(draft) => editing.change({ kind: "week", draft })}
-                />
+                <div className="flex flex-col gap-5 rounded-xl border border-foreground p-4">
+                  <WeekEditor
+                    draft={open.draft}
+                    current={editing.week}
+                    earliest={editing.earliest}
+                    onChange={(draft) => editing.change({ kind: "week", draft })}
+                  />
+                  {whatChanges}
+                </div>
               )
             }
             onEdit={editing.editWeek}
@@ -98,18 +104,21 @@ export function TermsRecord({ terms }: Props) {
                     dirty: editing.dirty,
                     summary: openRowSummary(),
                     editor: (
-                      <RulesEditor
-                        draft={open.draft}
-                        versions={editing.row!.versions}
-                        earliest={editing.earliest}
-                        onChange={(draft) =>
-                          editing.change({
-                            kind: "rules",
-                            timeOffTypeId: open.timeOffTypeId,
-                            draft,
-                          })
-                        }
-                      />
+                      <>
+                        <RulesEditor
+                          draft={open.draft}
+                          versions={editing.row!.versions}
+                          earliest={editing.earliest}
+                          onChange={(draft) =>
+                            editing.change({
+                              kind: "rules",
+                              timeOffTypeId: open.timeOffTypeId,
+                              draft,
+                            })
+                          }
+                        />
+                        {whatChanges}
+                      </>
                     ),
                   }
                 : null
@@ -118,10 +127,7 @@ export function TermsRecord({ terms }: Props) {
             onCancelPlanned={planned.askRules}
           />
         </fieldset>
-        <aside className="flex flex-col gap-8 border-t border-border bg-muted/40 px-6 py-6 md:flex-1 md:overflow-y-auto md:border-t-0 md:border-l">
-          {open && <WhatChanges box={editing.box} people={editing.people} termsName={terms.name} />}
-          <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />
-        </aside>
+        <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />
       </div>
 
       <footer className="flex items-center justify-end gap-2 border-t border-border px-6 py-3">

@@ -38,7 +38,7 @@ export function WeekEditor({ draft, current, earliest, onChange }: Props) {
         : "NEXT_LEAVE_YEAR";
   const errors = weekErrors(draft, earliest);
   return (
-    <div className="flex flex-col gap-5 rounded-xl border border-foreground p-4">
+    <div className="flex flex-col gap-5">
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-semibold">{t("terms.edit.week.hoursEachDay")}</legend>
         <div className="grid grid-cols-7 gap-1 sm:gap-2">
