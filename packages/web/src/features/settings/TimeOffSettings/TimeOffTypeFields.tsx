@@ -1,10 +1,12 @@
+import { CaretRight } from "@phosphor-icons/react";
+
 import type { TimeOffTypeColour, TimeOffTypeIcon as IconName } from "@/__generated__/graphql";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { t, type MessageKey } from "@/i18n";
 
-import type { RulesValues } from "./timeOffRules";
+import { daysError, type RulesValues } from "./timeOffRules";
 import { TimeOffRulesFields } from "./TimeOffRulesFields";
 import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
 import { ICONS, TIME_OFF_TYPE_COLOURS, TIME_OFF_TYPE_ICONS, tileStyle } from "./timeOffTypeLook";
@@ -124,18 +126,35 @@ export function TimeOffTypeFields({ values, onChange, sickness, nameError }: Pro
           </p>
         </div>
       </div>
-      <section aria-labelledby="time-off-type-default-rules" className="flex flex-col gap-5">
-        <div className="flex flex-col gap-0.5">
-          <h3 id="time-off-type-default-rules" className="text-sm font-medium">
-            {t("settings.timeOff.defaultRules")}
-          </h3>
-          <p className="text-sm text-muted-foreground">{t("settings.timeOff.defaultRulesHint")}</p>
+      {/* Collapsed: the defaults only fill in an offer, so most edits never need them. */}
+      <details
+        className="group rounded-lg border"
+        onToggle={(event) => {
+          // Stays open while the days are wrong, so the message that keeps Save off stays visible.
+          if (!event.currentTarget.open && daysError(values.defaultRules)) {
+            event.currentTarget.open = true;
+          }
+        }}
+      >
+        <summary className="flex cursor-pointer list-none items-start gap-3 p-4 [&::-webkit-details-marker]:hidden">
+          <CaretRight
+            aria-hidden
+            className="mt-0.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90"
+          />
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">{t("settings.timeOff.defaultRules")}</span>
+            <span className="text-sm text-muted-foreground">
+              {t("settings.timeOff.defaultRulesHint")}
+            </span>
+          </span>
+        </summary>
+        <div className="flex flex-col gap-5 px-4 pb-4">
+          <TimeOffRulesFields
+            values={values.defaultRules}
+            onChange={(defaultRules) => change({ defaultRules })}
+          />
         </div>
-        <TimeOffRulesFields
-          values={values.defaultRules}
-          onChange={(defaultRules) => change({ defaultRules })}
-        />
-      </section>
+      </details>
     </>
   );
 }

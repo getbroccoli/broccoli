@@ -15,12 +15,12 @@ A manual check of the time off types list in Settings, adding a type, changing a
 
 ## Add a type
 
-- [ ] "Add time off type" opens a dialog titled "Add time off type" with an empty name, the sun on yellow, "Show the reason to colleagues" on, and under "When offered on terms" the counts choice at "Doesn't count".
+- [ ] "Add time off type" opens a dialog titled "Add time off type" with an empty name, the sun on yellow, "Show the reason to colleagues" on, and under "Default rules", collapsed, the counts choice at "Doesn't count" once opened.
 - [ ] The footer reads "Adds the type for the whole company. Every set of terms shows it as not offered until you offer it.", and names the type once one is typed.
 - [ ] Picking an icon and a colour changes the tile beside the name at once; each of the 30 icons and 10 colours can be picked.
 - [ ] Saving " Study leave " closes the dialog, shows "Study leave added." and lists Study leave after Other, by name.
 - [ ] Settings › Employment terms › any terms shows Study leave as "Not offered here".
-- [ ] Adding "Training" with "Unlimited" under "When offered on terms", then offering it on any terms, opens the form at "Unlimited".
+- [ ] Adding "Training" with "Unlimited" under "Default rules", then offering it on any terms, opens the form at "Unlimited".
 - [ ] Saving an empty name shows "Enter a name."; "annual LEAVE" shows "There's already a time off type called annual LEAVE."; 61 characters show "Use at most 60 characters." The dialog stays open.
 
 ## Change a type
@@ -28,7 +28,7 @@ A manual check of the time off types list in Settings, adding a type, changing a
 - [ ] Clicking a row, or Tab to a type's name and Enter, opens its panel over the list at `/settings/time-off/<id>` with its icon, colour, name and privacy, and the footer "Name, look and privacy are the same in every terms."
 - [ ] Cancel and Save show in the footer only once something changed; Cancel puts the saved values back.
 - [ ] Renaming Annual leave to "Holiday" with another icon and colour shows "Holiday saved."; the list and every terms stack show the new name and look, with the same rules.
-- [ ] On the demo, Annual leave's "When offered on terms" reads From a balance, 28 days, bank holidays not on top: the policy picked when time off was turned on. Sickness, Family leave and Other read "Doesn't count".
+- [ ] On the demo, Annual leave's "Default rules", collapsed until opened, read From a balance, 28 days, bank holidays not on top: the policy picked when time off was turned on. Sickness, Family leave and Other read "Doesn't count".
 - [ ] Changing Annual leave's default to 25 days with bank holidays on top shows "Annual leave saved."; every terms stack still shows its own Annual leave rules.
 - [ ] Days of 367, 2.3 or none under "From a balance" show "Enter days from 0 to 366, in half days." and Save stays off.
 - [ ] Sickness's switch is off and disabled, with "Sickness is private by law. Colleagues only see “Away”."
