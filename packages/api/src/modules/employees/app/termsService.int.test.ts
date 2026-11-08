@@ -87,7 +87,6 @@ test("shows today's working week followed by planned versions, leaving past vers
     startDate: calendarDate("2027-01-01"),
     endDate: null,
     minutes: [480, 480, 480, 480, 0, 0, 0],
-    fullDayMinutes: 480,
   });
   await patterns.insertVersion(pattern.id, {
     ...week,

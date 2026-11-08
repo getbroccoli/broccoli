@@ -100,7 +100,6 @@ test("turning time off on preserves existing default memberships and own pattern
   const own = await patterns.createPattern(OWNER, {
     name: "Monday only",
     minutes: [450, 0, 0, 0, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.assignPattern(OWNER, {
     employeeId: employee.id,
@@ -131,7 +130,6 @@ test("turning time off on preserves existing default memberships and own pattern
     {
       startDate: "2026-01-01",
       minutes: [450, 0, 0, 0, 0, 0, 0],
-      fullDayMinutes: 450,
       bankHolidayCalendar: "england_and_wales",
     },
   ]);

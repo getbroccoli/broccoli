@@ -69,7 +69,6 @@ test("resetting setup restores only the default terms on their seeded week with 
           startDate: null,
           endDate: null,
           minutes: [450, 450, 450, 450, 450, 0, 0],
-          fullDayMinutes: 450,
           bankHolidayCalendar: "england_and_wales",
         },
       ],

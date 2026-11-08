@@ -29,7 +29,6 @@ CREATE TABLE "working_pattern_versions" (
 	"friday_minutes" integer NOT NULL,
 	"saturday_minutes" integer NOT NULL,
 	"sunday_minutes" integer NOT NULL,
-	"full_day_minutes" integer NOT NULL,
 	"bank_holiday_calendar" text DEFAULT 'england_and_wales' NOT NULL,
 	CONSTRAINT "working_pattern_versions_dates_in_order" CHECK ("working_pattern_versions"."end_date" >= "working_pattern_versions"."start_date"),
 	CONSTRAINT "working_pattern_versions_minutes_in_a_day" CHECK (least("working_pattern_versions"."monday_minutes", "working_pattern_versions"."tuesday_minutes", "working_pattern_versions"."wednesday_minutes",
@@ -37,8 +36,7 @@ CREATE TABLE "working_pattern_versions" (
         "working_pattern_versions"."sunday_minutes") >= 0
         and greatest("working_pattern_versions"."monday_minutes", "working_pattern_versions"."tuesday_minutes", "working_pattern_versions"."wednesday_minutes",
         "working_pattern_versions"."thursday_minutes", "working_pattern_versions"."friday_minutes", "working_pattern_versions"."saturday_minutes",
-        "working_pattern_versions"."sunday_minutes") between 1 and "working_pattern_versions"."full_day_minutes"),
-	CONSTRAINT "working_pattern_versions_full_day_in_a_day" CHECK ("working_pattern_versions"."full_day_minutes" <= 1440),
+        "working_pattern_versions"."sunday_minutes") between 1 and 1440),
 	CONSTRAINT "working_pattern_versions_bank_holiday_calendar_known" CHECK ("working_pattern_versions"."bank_holiday_calendar" in ('england_and_wales', 'scotland', 'northern_ireland'))
 );
 --> statement-breakpoint

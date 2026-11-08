@@ -311,7 +311,6 @@ function isOnlyWeek({ versions }: WorkingPattern, week: PatternWeek): boolean {
     versions.length === 1 &&
     only!.startDate === null &&
     only!.endDate === null &&
-    only!.fullDayMinutes === week.fullDayMinutes &&
     only!.bankHolidayCalendar === week.bankHolidayCalendar &&
     only!.minutes.join() === week.minutes.join()
   );

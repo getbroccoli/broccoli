@@ -14,12 +14,10 @@ export type WeekdayMinutes = readonly [number, number, number, number, number, n
 export interface PatternVersion extends CalendarDateRange {
   id: string;
   minutes: WeekdayMinutes;
-  /** The minutes one day of leave stands for. */
-  fullDayMinutes: number;
   bankHolidayCalendar: BankHolidayCalendar;
 }
 
-/** A pattern's minutes, full day and bank holidays: what a version holds besides its dates. */
+/** A pattern's minutes and bank holidays: what a version holds besides its dates. */
 export type PatternWeek = Omit<PatternVersion, "id" | "startDate" | "endDate">;
 
 /** A way of working: one set of terms' own, or a named one people are put on one by one. */
@@ -40,7 +38,6 @@ export interface WorkingPattern {
 export interface WorkingWeek {
   startDate: CalendarDate;
   minutes: WeekdayMinutes | null;
-  fullDayMinutes: number | null;
   bankHolidayCalendar: BankHolidayCalendar | null;
 }
 
@@ -53,28 +50,16 @@ export function parsePatternName(name: string): string {
   return trimmed;
 }
 
-/**
- * Minutes on each weekday and a full day as they are stored: whole minutes in a day, at least one
- * working day, and a full day no shorter than the longest one.
- */
-export function parseWeek(week: { minutes: readonly number[]; fullDayMinutes: number }): {
-  minutes: WeekdayMinutes;
-  fullDayMinutes: number;
-} {
-  const { minutes, fullDayMinutes } = week;
-  if (minutes.length !== 7 || !minutes.every((day) => isMinutesInADay(day, 0))) {
+/** Minutes on each weekday as they are stored: whole minutes in a day, at least one working day. */
+export function parseWeek(week: { minutes: readonly number[] }): { minutes: WeekdayMinutes } {
+  const { minutes } = week;
+  if (minutes.length !== 7 || !minutes.every(isMinutesInADay)) {
     throw invalidInput([{ field: "minutes", code: "out_of_range" }]);
   }
   if (minutes.every((day) => day === 0)) {
     throw invalidInput([{ field: "minutes", code: "no_working_day" }]);
   }
-  if (!isMinutesInADay(fullDayMinutes, 1)) {
-    throw invalidInput([{ field: "fullDayMinutes", code: "out_of_range" }]);
-  }
-  if (fullDayMinutes < Math.max(...minutes)) {
-    throw invalidInput([{ field: "fullDayMinutes", code: "shorter_than_longest_day" }]);
-  }
-  return { minutes: [...minutes] as unknown as WeekdayMinutes, fullDayMinutes };
+  return { minutes: [...minutes] as unknown as WeekdayMinutes };
 }
 
 /** A `YYYY-MM-DD` date sent in `field`; refuses anything else. */
@@ -86,8 +71,8 @@ export function parseDateField(field: string, value: string): CalendarDate {
   return date;
 }
 
-function isMinutesInADay(value: number, least: number): boolean {
-  return Number.isInteger(value) && value >= least && value <= MINUTES_IN_A_DAY;
+function isMinutesInADay(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= MINUTES_IN_A_DAY;
 }
 
 const MINUTES_IN_A_DAY = 1440;

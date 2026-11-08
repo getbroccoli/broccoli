@@ -28,6 +28,5 @@ export function createStandardPattern(orm: Orm) {
   }).createPattern(OWNER, {
     name: "Standard",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
   });
 }

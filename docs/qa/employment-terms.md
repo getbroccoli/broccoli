@@ -19,7 +19,7 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 
 - [ ] Clicking the row, or its name with the keyboard, opens the terms over the list at `/settings/terms/<id>`; Close, × and Escape go back to `/settings/terms`.
 - [ ] The header reads "England and Wales", "Default", "38 people"; no locations show anywhere on the terms.
-- [ ] Working week shows Mon to Fri at "7.5", Sat and Sun "Off", "Hours a week 37.5", "A full day of leave 7.5 hours", "Bank holidays England and Wales".
+- [ ] Working week shows Mon to Fri at "7.5", Sat and Sun "Off", "Hours a week 37.5", "Bank holidays England and Wales".
 - [ ] Time off lists Annual leave "From a balance · 28 days a year, bank holidays included · Leave year from 1 January", then Sickness, Family leave and Other "Recorded, doesn't count", each with its icon.
 - [ ] History, on the right, reads "Broccoli set up England and Wales" with "Time off turned on"; a setup the owner finished names the owner.
 - [ ] No Edit, Add or Offer buttons, no ⋯ menu and no "What changes".

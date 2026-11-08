@@ -160,6 +160,7 @@ test("returns used days and null figures for a person's unlimited policy", async
         id: policy.timeOffTypeId,
         name: "Wellbeing days",
         typeKey: null,
+        unit: "day",
         icon: null,
         colour: null,
         private: false,

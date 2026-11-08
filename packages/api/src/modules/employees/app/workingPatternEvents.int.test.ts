@@ -19,7 +19,6 @@ test("a Standard change publishes its affected employees and earliest changed da
     workingPatternId: standard.id,
     startDate: "2026-09-01",
     minutes: [480, 480, 480, 480, 480, 0, 0],
-    fullDayMinutes: 480,
   });
 
   expect(events).toHaveLength(1);
@@ -36,7 +35,6 @@ test("creating, renaming and deleting an unused pattern publish no working patte
   const pattern = await patterns.createPattern(OWNER, {
     name: "Monday",
     minutes: [450, 0, 0, 0, 0, 0, 0],
-    fullDayMinutes: 450,
   });
   await patterns.renamePattern(OWNER, { workingPatternId: pattern.id, name: "Monday only" });
   await patterns.deletePattern(OWNER, { workingPatternId: pattern.id });
@@ -80,7 +78,6 @@ test("changing only a calendar publishes its affected employees and change date"
     workingPatternId: standard.id,
     startDate: "2026-07-01",
     minutes: [450, 450, 450, 450, 450, 0, 0],
-    fullDayMinutes: 450,
     bankHolidayCalendar: "scotland",
   });
 

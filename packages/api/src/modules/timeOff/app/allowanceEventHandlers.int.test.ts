@@ -215,7 +215,6 @@ test("a September working pattern change reduces the grant and restores December
     workingPatternId: standard.id,
     startDate: "2026-09-01",
     minutes: [0, 450, 450, 450, 0, 0, 0],
-    fullDayMinutes: 450,
   });
 
   const allowances = await readAllowances(orm, employee.id);

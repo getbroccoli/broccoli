@@ -5,11 +5,16 @@ import type { TimeOffTypeColour, TimeOffTypeIcon } from "./timeOffTypeLook";
 /** The keys of the four seeded time off types. */
 export type TimeOffTypeKey = "annual_leave" | "sickness" | "family_leave" | "other";
 
+/** What a type's time off is counted in; only days are counted so far. */
+export const TIME_OFF_UNITS = ["day", "hour"] as const;
+export type TimeOffUnit = (typeof TIME_OFF_UNITS)[number];
+
 /** A kind of time off; null icon and colour mean the defaults. */
 export interface TimeOffType {
   id: string;
   name: string;
   typeKey: TimeOffTypeKey | null;
+  unit: TimeOffUnit;
   icon: TimeOffTypeIcon | null;
   colour: TimeOffTypeColour | null;
   /** Colleagues see that the person is off, not why. Always true for Sickness. */

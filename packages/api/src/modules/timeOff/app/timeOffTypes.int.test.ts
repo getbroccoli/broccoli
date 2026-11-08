@@ -19,7 +19,7 @@ test("adds a trimmed type with its look and privacy after standard types, ordere
 
   const created = await service.createType(ADMIN, { ...studyLeave, name: "  Study leave  " });
 
-  expect(created).toEqual({ ...studyLeave, id: expect.any(String) as unknown, typeKey: null });
+  expect(created).toEqual({ ...studyLeave, ...ownType, id: expect.any(String) as unknown });
   const listed = await service.listTimeOffTypes(ADMIN);
   expect(listed.timeOffTypes.map(({ timeOffType }) => timeOffType.name)).toEqual([
     "Annual leave",
@@ -135,7 +135,7 @@ test("allows a type its own name in another case", async ({ orm }) => {
     name: "STUDY LEAVE",
   });
 
-  expect(changed).toEqual({ ...studyLeave, id: type.id, name: "STUDY LEAVE", typeKey: null });
+  expect(changed).toEqual({ ...studyLeave, ...ownType, id: type.id, name: "STUDY LEAVE" });
   const listed = await service.listTimeOffTypes(ADMIN);
   expect(
     listed.timeOffTypes.find(({ timeOffType }) => timeOffType.id === type.id)?.timeOffType,
@@ -160,7 +160,7 @@ test("changes a type's name, icon, colour and privacy without changing other typ
   expect(changed).toEqual({
     id: type.id,
     name: "Training",
-    typeKey: null,
+    ...ownType,
     icon: "book_open",
     colour: "purple",
     private: true,
@@ -338,3 +338,4 @@ const studyLeave = {
   colour: "blue",
   private: false,
 } as const;
+const ownType = { typeKey: null, unit: "day" } as const;

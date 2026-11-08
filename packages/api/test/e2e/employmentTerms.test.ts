@@ -32,7 +32,7 @@ test("an admin can list and open the default terms with their week, time off and
     id name isDefault
     workingWeek {
       mondayMinutes tuesdayMinutes wednesdayMinutes thursdayMinutes fridayMinutes
-      saturdayMinutes sundayMinutes fullDayMinutes bankHolidayCalendar
+      saturdayMinutes sundayMinutes bankHolidayCalendar
     }
     timeOff {
       timeOffType { name typeKey }
@@ -65,7 +65,6 @@ const defaultTerms = {
       fridayMinutes: 450,
       saturdayMinutes: 0,
       sundayMinutes: 0,
-      fullDayMinutes: 450,
       bankHolidayCalendar: "ENGLAND_AND_WALES",
     },
   ],

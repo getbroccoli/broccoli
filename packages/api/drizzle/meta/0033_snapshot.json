@@ -1600,12 +1600,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-        },
-        "full_day_minutes": {
-          "name": "full_day_minutes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
         }
       },
       "indexes": {},
@@ -1632,11 +1626,7 @@
       "checkConstraints": {
         "working_pattern_weeks_minutes_in_a_day": {
           "name": "working_pattern_weeks_minutes_in_a_day",
-          "value": "least(\"working_pattern_weeks\".\"monday_minutes\", \"working_pattern_weeks\".\"tuesday_minutes\", \"working_pattern_weeks\".\"wednesday_minutes\",\n        \"working_pattern_weeks\".\"thursday_minutes\", \"working_pattern_weeks\".\"friday_minutes\", \"working_pattern_weeks\".\"saturday_minutes\",\n        \"working_pattern_weeks\".\"sunday_minutes\") >= 0\n        and greatest(\"working_pattern_weeks\".\"monday_minutes\", \"working_pattern_weeks\".\"tuesday_minutes\", \"working_pattern_weeks\".\"wednesday_minutes\",\n        \"working_pattern_weeks\".\"thursday_minutes\", \"working_pattern_weeks\".\"friday_minutes\", \"working_pattern_weeks\".\"saturday_minutes\",\n        \"working_pattern_weeks\".\"sunday_minutes\") between 1 and \"working_pattern_weeks\".\"full_day_minutes\""
-        },
-        "working_pattern_weeks_full_day_in_a_day": {
-          "name": "working_pattern_weeks_full_day_in_a_day",
-          "value": "\"working_pattern_weeks\".\"full_day_minutes\" <= 1440"
+          "value": "least(\"working_pattern_weeks\".\"monday_minutes\", \"working_pattern_weeks\".\"tuesday_minutes\", \"working_pattern_weeks\".\"wednesday_minutes\",\n        \"working_pattern_weeks\".\"thursday_minutes\", \"working_pattern_weeks\".\"friday_minutes\", \"working_pattern_weeks\".\"saturday_minutes\",\n        \"working_pattern_weeks\".\"sunday_minutes\") >= 0\n        and greatest(\"working_pattern_weeks\".\"monday_minutes\", \"working_pattern_weeks\".\"tuesday_minutes\", \"working_pattern_weeks\".\"wednesday_minutes\",\n        \"working_pattern_weeks\".\"thursday_minutes\", \"working_pattern_weeks\".\"friday_minutes\", \"working_pattern_weeks\".\"saturday_minutes\",\n        \"working_pattern_weeks\".\"sunday_minutes\") between 1 and 1440"
         }
       },
       "isRLSEnabled": false
@@ -3026,6 +3016,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "unit": {
+          "name": "unit",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'day'"
+        },
         "icon": {
           "name": "icon",
           "type": "text",
@@ -3066,7 +3063,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "time_off_types_unit_known": {
+          "name": "time_off_types_unit_known",
+          "value": "\"time_off_types\".\"unit\" in ('day', 'hour')"
+        }
+      },
       "isRLSEnabled": false
     }
   },
