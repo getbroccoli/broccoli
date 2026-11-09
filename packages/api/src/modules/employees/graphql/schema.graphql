@@ -255,8 +255,10 @@ type EmployeeTermsChangePreview {
 type EmployeeTermsMovePreview {
   employee: Employee!
   startDate: Date!
-  "Their terms, working week and time off rules as they would be after the move."
+  "Their terms, working week and time off rules as they would be after the move, from its date on."
   employmentTerms: EmployeeEmploymentTerms!
+  "Their terms, working week and time off rules as they are, from the move's date on."
+  currentTerms: EmployeeEmploymentTerms!
 }
 
 "A week from a date: minutes worked each day and whose bank holidays apply."

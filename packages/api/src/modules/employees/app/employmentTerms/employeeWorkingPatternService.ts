@@ -56,12 +56,13 @@ export interface EmployeeWorkingPatternService {
    * transaction created; checks no caller and assumes every id names an employee.
    */
   /**
-   * Each person's terms, earlier, today and planned, and their working week from today on, marked
-   * as their terms' or their own, by id; people the caller may not read are left out.
+   * Each person's terms, earlier, today and planned, and their working week from today (or `from`)
+   * on, marked as their terms' or their own, by id; with `move`, as they would be after it. People
+   * the caller may not read are left out.
    */
   readEmploymentTerms: (
     ctx: SecurityContext,
-    input: { employeeIds: readonly string[]; move?: TermsMovePreview },
+    input: { employeeIds: readonly string[]; move?: TermsMovePreview; from?: CalendarDate },
   ) => Promise<Map<string, EmploymentTerms>>;
   readWorkingWeeksInTransaction: (
     tx: Tx,

@@ -21,8 +21,8 @@ type Props = {
   currentTermsName: string;
   firstName: string;
   viewerIsPerson: boolean;
-  /** A move being edited: the person's terms as they would be after it, and from when. */
-  change: { after: Terms; date: string } | null;
+  /** A move being edited: the person's terms before and after it, read from its date. */
+  change: { before: Terms; after: Terms; date: string } | null;
 };
 
 /** The working week row, then a row per company time off type, each with what a move changes. */
@@ -60,10 +60,9 @@ export function TermsRows({
         change={
           change &&
           changeLineOn(
-            workingWeek,
+            change.before.workingWeek,
             change.after.workingWeek,
             change.date,
-            today,
             describeWeek,
             t("people.panel.terms.noWeekLower"),
           )
@@ -71,7 +70,10 @@ export function TermsRows({
       />
       {timeOff?.map(({ timeOffType, versions }) => {
         const row = rowOf(versions, today, describeRules, sourceOf, notOffered);
-        const after = change?.after.timeOff?.find((type) => type.timeOffType.id === timeOffType.id);
+        const sameType = (type: { timeOffType: { id: string } }) =>
+          type.timeOffType.id === timeOffType.id;
+        const before = change?.before.timeOff?.find(sameType);
+        const after = change?.after.timeOff?.find(sameType);
         return (
           <TermsRuleRow
             key={timeOffType.id}
@@ -87,10 +89,9 @@ export function TermsRows({
             change={
               change &&
               changeLineOn(
-                versions,
+                before?.versions ?? [],
                 after?.versions ?? [],
                 change.date,
-                today,
                 describeRules,
                 notOffered,
               )

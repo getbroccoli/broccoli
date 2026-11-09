@@ -61,7 +61,8 @@ export function ChangeTermsForm({
             placeholder={t("changeTerms.appliesFrom")}
             aria-label={t("changeTerms.appliesFrom")}
             aria-invalid={Boolean(error)}
-            onChange={(startDate) => onChange({ ...value, startDate })}
+            // A move needs a date: picking the chosen day again keeps it.
+            onChange={(startDate) => startDate && onChange({ ...value, startDate })}
           />
         </div>
       </div>

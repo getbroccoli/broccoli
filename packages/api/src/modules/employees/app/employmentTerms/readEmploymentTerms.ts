@@ -22,6 +22,8 @@ export interface EmploymentTerms {
   earliestChange: CalendarDate;
   /** Set on a preview: the move these are read as if after, which other modules' parts follow too. */
   move?: TermsMovePreview;
+  /** Set on a preview: the date versions are read from, which other modules' parts follow too. */
+  from?: CalendarDate;
 }
 
 /** A working week as it applies to one person from a date until the next change. */
@@ -44,7 +46,7 @@ export interface TermsPeriod {
 export async function readEmploymentTerms(
   { transact, today }: { transact: Transact; today: () => CalendarDate },
   ctx: SecurityContext,
-  input: { employeeIds: readonly string[]; move?: TermsMovePreview },
+  input: { employeeIds: readonly string[]; move?: TermsMovePreview; from?: CalendarDate },
 ): Promise<Map<string, EmploymentTerms>> {
   const scope = await ctx.recordScope("working_pattern", "read");
   const ids = [...new Set(input.employeeIds.map(parseUuid))].filter(
@@ -72,7 +74,7 @@ export async function readEmploymentTerms(
               endDate,
             }))
             .toSorted(byStartDate),
-          workingWeek: personVersionsFrom(timelines.get(id)!, today(), (patternId) =>
+          workingWeek: personVersionsFrom(timelines.get(id)!, input.from ?? today(), (patternId) =>
             termsPatternIds.has(patternId),
           ),
           earliestChange: laterOf(leaveYearStart, startDates.get(id) ?? null),

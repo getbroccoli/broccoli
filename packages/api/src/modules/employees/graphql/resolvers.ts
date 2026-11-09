@@ -18,7 +18,7 @@ import type {
   WorkingPatternService,
 } from "../app";
 import type { BankHolidayCalendar } from "../../bankHolidays";
-import { todayInLondon } from "../../../utils";
+import { parseUuid, todayInLondon } from "../../../utils";
 import { earliestChangeDate, type Employee, parseDateField } from "../domain";
 import { avatarUrl } from "../http";
 import { DEFAULT_TERMS, employeeLoaders } from "./loaders";
@@ -52,13 +52,13 @@ export function createResolvers(
       async termsChangePreview(_parent, { input }, context) {
         const actor = context.getActor();
         const { moved, skipped } = await services.previewTermsChange(actor, input);
-        // Checked by the preview already.
-        const move = {
-          termsId: input.termsId,
-          startDate: parseDateField("startDate", input.startDate),
-        };
+        // Checked by the preview already; in their canonical form, as saving reads them.
+        const from = parseDateField("startDate", input.startDate);
+        const move = { termsId: parseUuid(input.termsId)!, startDate: from };
         const ids = moved.map(({ employeeId }) => employeeId);
-        const terms = await services.readEmploymentTerms(actor, { employeeIds: ids, move });
+        // Both read from the move's date, so a past one compares the rules on that date.
+        const after = await services.readEmploymentTerms(actor, { employeeIds: ids, move, from });
+        const now = await services.readEmploymentTerms(actor, { employeeIds: ids, from });
         const employees = await services.readEmployees(actor, [
           ...ids,
           ...skipped.map(({ employeeId }) => employeeId),
@@ -67,7 +67,8 @@ export function createResolvers(
           moves: moved.map(({ employeeId, startDate }) => ({
             employee: employees.get(employeeId)!,
             startDate,
-            employmentTerms: { ...terms.get(employeeId)!, move },
+            employmentTerms: { ...after.get(employeeId)!, move, from },
+            currentTerms: { ...now.get(employeeId)!, from },
           })),
           skipped: skippedOf(skipped, employees),
         };

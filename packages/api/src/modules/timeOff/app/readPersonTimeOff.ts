@@ -20,13 +20,13 @@ type Dependencies = Pick<AllowanceEngineDependencies, "employeeReads" | "today">
 
 /**
  * Each in-scope person's rules for every company time off type, in list order, marked as their
- * terms' or their own, by id; with `move`, as they would be after it. Ids the caller may not read
- * are left out.
+ * terms' or their own, from today (or `from`) on, by id; with `move`, as they would be after it.
+ * Ids the caller may not read are left out.
  */
 export async function readPersonTimeOff(
   { transact, employeeReads, today }: Dependencies,
   ctx: SecurityContext,
-  input: { employeeIds: readonly string[]; move?: TermsMovePreview },
+  input: { employeeIds: readonly string[]; move?: TermsMovePreview; from?: CalendarDate },
 ): Promise<Map<string, PersonTimeOff[]>> {
   const scope = await ctx.recordScope("time_off", "read");
   const ids = [...new Set(input.employeeIds.map(parseUuid))].filter(
@@ -42,7 +42,7 @@ export async function readPersonTimeOff(
     };
     const { people, policies } = await readPeople(reads, tx, ids);
     const termsPolicyIds = new Set(policies.filter((p) => p.termsId).map(({ id }) => id));
-    const date: CalendarDate = today();
+    const date: CalendarDate = input.from ?? today();
     return new Map(
       people.map((person) => [
         person.employeeId,

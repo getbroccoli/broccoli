@@ -40,8 +40,8 @@ test("the owner previews a person's new terms, moves them and cancels the move t
             employee: { id: employee.id },
             startDate,
             employmentTerms: {
+              // Read from the move's date on.
               workingWeek: [
-                { source: "FROM_THEIR_TERMS", week: { bankHolidayCalendar: "ENGLAND_AND_WALES" } },
                 {
                   source: "FROM_THEIR_TERMS",
                   startDate,
@@ -126,6 +126,37 @@ test("returns an invalid move date as a payload field error without top-level er
             fields: [{ field: "startDate", code: "too_early" }],
           },
         },
+      },
+    },
+  });
+});
+
+test("previews a move to terms named by an uppercase id", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const employee = await env.seed.employee({ startDate: "2024-03-01" });
+  const termsId = await env.seed.terms("Scotland");
+  const startDate = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+
+  const response = await browser.graphql(
+    `query Preview($input: EmployeeTermsChangeInput!) {
+    termsChangePreview(input: $input) {
+      moves { employee { id } employmentTerms { periods { termsName } } }
+    }
+  }`,
+    { input: { employeeIds: [employee.id], termsId: termsId.toUpperCase(), startDate } },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      termsChangePreview: {
+        moves: [
+          {
+            employee: { id: employee.id },
+            employmentTerms: {
+              periods: [{ termsName: "England and Wales" }, { termsName: "Scotland" }],
+            },
+          },
+        ],
       },
     },
   });

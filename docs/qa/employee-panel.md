@@ -68,7 +68,7 @@ A manual check of opening a person from People, their tabs, editing them in plac
 
 Add terms "Scotland" in Settings › Employment terms first, and a location "Glasgow" that starts people on Scotland.
 
-- [ ] As the owner, "Change terms" on the tab opens the card with a dark border and the form on top: Terms ("England and Wales (now)" can't be picked) and Applies from (today; days before 1 January this year, or before the person's start, can't be picked). The button greys out while the form is open.
+- [ ] As the owner, "Change terms" on the tab opens the card with a dark border and the form on top: Terms (today's marked "England and Wales (now)"; picking it reads "<first name> is already on England and Wales on <date>." unless a move is planned before that date) and Applies from (today; days before 1 January this year, or before the person's start, can't be picked). The button greys out while the form is open.
 - [ ] Picking Scotland from the 1st of next month adds "From 1 <month>: …" under each row that changes, such as "Mon–Fri, 7.5 hours · Scotland bank holidays", and "not offered" for a type Scotland doesn't offer; the hint ends "What changes on 1 <month> is marked below." The footer reads "Saving moves <first name> to Scotland from 1 <month>." with Cancel and Save.
 - [ ] Today or a past date adds "<first name>’s allowance is worked out again from that date." to the footer.
 - [ ] Save shows "<first name> moves to Scotland on 1 <month>."; the card still shows England and Wales, with "From 1 <month>: Scotland" and "Cancel change" under its name, and each row's planned line. A move from today shows "<first name> is on Scotland from <today>." and the card reads Scotland since today; Details › Job reads "Employment terms: Scotland".

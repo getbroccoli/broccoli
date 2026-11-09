@@ -28,7 +28,8 @@ export interface TermsChange {
   value: TermsChoice;
   earliest: string;
   termsName: string;
-  /** What the person would be on after the move, for the rows' change lines; null until known. */
+  /** The person's terms as they are and as they would be after the move, from its date; null until known. */
+  before: EmploymentTermsTab_TermsFragment | null;
   after: EmploymentTermsTab_TermsFragment | null;
   /** What of their own the person keeps on that date, for the save line. */
   keepsOwn: string[];
@@ -57,7 +58,7 @@ export function useTermsChange({
   const [value, setValue] = useState<TermsChoice>({ termsId: null, startDate: companyToday() });
   const [earliest, setEarliest] = useState(companyToday());
   const [error, setError] = useState<string | null>(null);
-  const { input, termsName, moves, skipped, loading } = usePreview(employeeId, value, open);
+  const { input, termsName, moves, skipped, loading, failed } = usePreview(employeeId, value, open);
   // The payload carries the person's new terms; History reads its new line when shown.
   const [changeTerms, mutation] = usePayloadMutation(ChangeTermsDocument, {
     update: forgetHistory,
@@ -84,9 +85,13 @@ export function useTermsChange({
     value,
     earliest,
     termsName,
+    before: moves[0]?.currentTerms ?? null,
     after: moves[0]?.employmentTerms ?? null,
-    keepsOwn: moves[0] ? keptOwn(moves[0].employmentTerms, laterOf(value.startDate)) : [],
-    error: error ?? (skipped[0] && value.termsId ? skipError({ ...texts, ...skipped[0] }) : null),
+    keepsOwn: moves[0] ? keptOwn(moves[0].employmentTerms, value.startDate) : [],
+    error:
+      error ??
+      (failed ? t("changeTerms.previewFailed") : null) ??
+      (skipped[0] && value.termsId ? skipError({ ...texts, ...skipped[0] }) : null),
     ready: moves.length > 0 && !loading,
     changed: open && value.termsId !== null,
     saving: mutation.loading,
@@ -130,13 +135,8 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
     // A skipped query keeps its last answer, which a closed edit must not show.
     ...((open && preview.data?.termsChangePreview) || { moves: [], skipped: [] }),
     loading: preview.loading,
+    failed: Boolean(preview.error),
   };
-}
-
-// The preview's versions start today, so a past date reads today's.
-function laterOf(date: string): string {
-  const today = companyToday();
-  return date > today ? date : today;
 }
 
 /** The week and each type the person has their own on `date`, by name. */

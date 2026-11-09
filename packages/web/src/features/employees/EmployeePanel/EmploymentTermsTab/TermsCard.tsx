@@ -124,7 +124,11 @@ export function TermsCard({
           currentTermsName={current?.termsName ?? ""}
           firstName={firstName}
           viewerIsPerson={viewerIsPerson}
-          change={change?.after ? { after: change.after, date: changeDate } : null}
+          change={
+            change?.before && change.after
+              ? { before: change.before, after: change.after, date: changeDate }
+              : null
+          }
         />
         {leaveYear && (
           <p className="border-t border-border/60 px-3 py-2 text-[13px] text-muted-foreground">

@@ -63,10 +63,9 @@ export function createEmployeeTermsService({
       const change = await transact(async (tx) => {
         await employmentRepository(tx).lockForWrites();
         const { moves, skipped, names } = await planMoves(tx, request);
-        const terms = termsRepository(tx);
-        for (const move of moves) {
-          await terms.replaceMemberships(move.employeeId, move.memberships);
-        }
+        await termsRepository(tx).replaceMemberships(
+          new Map(moves.map(({ employeeId, memberships }) => [employeeId, memberships])),
+        );
         await recordHistory.append(ctx, tx, {
           recordType: "employee",
           operation: "UPDATED",
@@ -129,7 +128,7 @@ export function createEmployeeTermsService({
         const terms = termsRepository(tx);
         const rows = (await terms.findMemberships([employeeId])).get(employeeId) ?? [];
         const { cancelled: row, memberships } = cancelTermsMove(rows, input.startDate, today());
-        await terms.replaceMemberships(employeeId, memberships);
+        await terms.replaceMemberships(new Map([[employeeId, memberships]]));
         const name = (await terms.findNames([row.termsId])).get(row.termsId) ?? null;
         await recordHistory.append(ctx, tx, {
           recordType: "employee",

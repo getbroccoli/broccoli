@@ -77,6 +77,7 @@ export const peopleEn = {
   "changeTerms.leftBefore": "{name} leaves before {date}. Pick an earlier date.",
   "changeTerms.tooEarly": "Pick a date from {date}.",
   "changeTerms.failed": "The terms could not be changed. Try again.",
+  "changeTerms.previewFailed": "Couldn’t check this change. Pick the terms or date again to retry.",
   "changeTerms.save": "Save",
   "changeTerms.cancel": "Cancel",
   "people.panel.field.employmentTerms": "Employment terms",

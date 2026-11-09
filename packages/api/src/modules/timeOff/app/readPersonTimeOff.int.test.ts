@@ -189,3 +189,26 @@ test("reads Annual leave rules after a previewed move without changing today's r
   ]);
   expect(await service.readPersonTimeOff(OWNER, { employeeIds: [employee.id] })).toEqual(before);
 });
+
+test("reads a type's rules from a past date when asked", async ({ orm, seed, transact }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+    today: "2026-11-09",
+  });
+  const service = timeOffService(orm, { today: "2026-11-09" });
+
+  const result = await service.readPersonTimeOff(OWNER, {
+    employeeIds: [employee.id],
+    from: calendarDate("2026-03-01"),
+  });
+
+  const annual = result
+    .get(employee.id)
+    ?.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave");
+  expect(annual?.versions[0]).toMatchObject({
+    startDate: "2026-03-01",
+    source: "from_their_terms",
+  });
+});

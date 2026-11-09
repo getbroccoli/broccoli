@@ -8,7 +8,7 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
-import { todayInLondon } from "../../../utils";
+import { type CalendarDate, todayInLondon } from "../../../utils";
 import { earliestChangeDate, type TermsMovePreview } from "../../employees";
 import type {
   PersonTimeOff,
@@ -55,7 +55,7 @@ export function createResolvers(
       const read = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds });
       return employeeIds.map((id) => read.get(id) ?? null);
     }),
-    movedTimeOff: movedTimeOffLoader(timeOff, context),
+    previewTimeOff: previewTimeOffLoader(timeOff, context),
     termsTimeOff: new DataLoader<string, TimeOffWithPolicies[]>(async (termsIds) => {
       const read = await timeOff.readTermsTimeOff(context.getActor(), termsIds);
       return termsIds.map((id) => read.get(id)!);
@@ -157,9 +157,9 @@ export function createResolvers(
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
     EmployeeEmploymentTerms: {
-      timeOff: ({ employeeId, move }, _args, context) =>
-        move
-          ? loaders(context).movedTimeOff.load({ employeeId, move })
+      timeOff: ({ employeeId, move, from }, _args, context) =>
+        from
+          ? loaders(context).previewTimeOff.load({ employeeId, move, from })
           : loaders(context).personTimeOff.load(employeeId),
     },
     PersonTimeOff: {
@@ -275,36 +275,42 @@ function toBalanceKind(balance: PolicyVersion["balance"] | null) {
   return balance && BALANCE_KINDS[balance];
 }
 
-/** A person as they would be after a move, as a preview reads them. */
-interface MovedPerson {
+/** A person as a preview reads them: from a date, and maybe as if after a move. */
+interface PreviewedPerson {
   employeeId: string;
-  move: TermsMovePreview;
+  move?: TermsMovePreview;
+  from: CalendarDate;
 }
 
-function moveKey({ termsId, startDate }: TermsMovePreview): string {
-  return `${termsId}:${startDate}`;
+function readKey({ move, from }: PreviewedPerson): string {
+  return `${move?.termsId ?? ""}:${move?.startDate ?? ""}:${from}`;
 }
 
-function movedKey({ employeeId, move }: MovedPerson): string {
-  return `${moveKey(move)}:${employeeId}`;
+function personKey(person: PreviewedPerson): string {
+  return `${readKey(person)}:${person.employeeId}`;
 }
 
 /**
- * Each person's rules as they would be after a move, for previews: every person after the same
- * move is one read.
+ * Each person's rules for a preview, from a date and maybe as if after a move: every person read
+ * the same way is one read.
  */
-function movedTimeOffLoader(timeOff: TimeOffService, context: GraphqlContext) {
-  return new DataLoader<MovedPerson, PersonTimeOff[] | null, string>(
+function previewTimeOffLoader(timeOff: TimeOffService, context: GraphqlContext) {
+  return new DataLoader<PreviewedPerson, PersonTimeOff[] | null, string>(
     async (keys) => {
       const read = new Map<string, PersonTimeOff[]>();
-      for (const people of Map.groupBy(keys, ({ move }) => moveKey(move)).values()) {
-        const { move } = people[0]!;
+      for (const people of Map.groupBy(keys, readKey).values()) {
+        const { move, from } = people[0]!;
         const employeeIds = people.map(({ employeeId }) => employeeId);
-        const moved = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds, move });
-        for (const [id, rows] of moved) read.set(movedKey({ employeeId: id, move }), rows);
+        const rules = await timeOff.readPersonTimeOff(context.getActor(), {
+          employeeIds,
+          move,
+          from,
+        });
+        for (const [employeeId, rows] of rules)
+          read.set(personKey({ employeeId, move, from }), rows);
       }
-      return keys.map((key) => read.get(movedKey(key)) ?? null);
+      return keys.map((key) => read.get(personKey(key)) ?? null);
     },
-    { cacheKeyFn: movedKey },
+    { cacheKeyFn: personKey },
   );
 }

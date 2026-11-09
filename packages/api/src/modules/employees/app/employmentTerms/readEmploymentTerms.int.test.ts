@@ -216,3 +216,18 @@ test.for([
     expect(terms.get(employee.id)?.earliestChange).toBe(earliestChange);
   },
 );
+
+test("reads the week from a past date when asked", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const service = workingPatternService(orm, { today: "2026-11-09" });
+
+  const terms = await service.readEmploymentTerms(OWNER, {
+    employeeIds: [employee.id],
+    from: calendarDate("2026-03-01"),
+  });
+
+  expect(terms.get(employee.id)?.workingWeek[0]).toMatchObject({
+    startDate: "2026-03-01",
+    source: "from_their_terms",
+  });
+});

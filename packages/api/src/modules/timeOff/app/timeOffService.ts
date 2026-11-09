@@ -72,7 +72,7 @@ export interface TimeOffService {
    */
   readPersonTimeOff: (
     ctx: SecurityContext,
-    input: { employeeIds: readonly string[]; move?: TermsMovePreview },
+    input: { employeeIds: readonly string[]; move?: TermsMovePreview; from?: CalendarDate },
   ) => Promise<Map<string, PersonTimeOff[]>>;
   /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
   createType: (ctx: SecurityContext, input: TimeOffTypeIdentityInput) => Promise<TimeOffType>;
