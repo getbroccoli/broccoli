@@ -273,8 +273,8 @@ export async function readTimelines(
   const memberships = await readMemberships(tx, employeeIds, move);
   // Only the patterns these people are on, themselves or through their terms.
   const patterns = await repository.findPatterns({
-    ids: [...assignments.values()].flat().map(({ workingPatternId }) => workingPatternId),
-    termsIds: [...memberships.values()].flat().map(({ termsId }) => termsId),
+    ids: unique([...assignments.values()].flat().map(({ workingPatternId }) => workingPatternId)),
+    termsIds: unique([...memberships.values()].flat().map(({ termsId }) => termsId)),
   });
   const byId = new Map(patterns.map((pattern) => [pattern.id, pattern]));
   const byTerms = new Map(
@@ -327,4 +327,8 @@ function parseUntil(from: CalendarDate, value: string, field: string): CalendarD
 
 function noOwnPattern(): ApplicationError {
   return new ApplicationError("NOT_FOUND", "The person has no working pattern of their own here.");
+}
+
+function unique(ids: readonly string[]): string[] {
+  return [...new Set(ids)];
 }
