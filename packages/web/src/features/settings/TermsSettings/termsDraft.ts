@@ -59,6 +59,20 @@ export function rulesDraftOf(
   };
 }
 
+/**
+ * Whether a section asks from when its change applies. Not while nobody was ever on the terms and
+ * no version starts after `earliest`, the leave year's start: then the change reaches nobody and
+ * applies from `earliest`.
+ */
+export function asksForDate(
+  hadPeople: boolean,
+  versions: readonly { startDate: string | null }[],
+  earliest: string,
+): boolean {
+  // A version from later in the year (left by someone since deleted) would outlast a change from `earliest`.
+  return hadPeople || versions.some(({ startDate }) => startDate !== null && startDate > earliest);
+}
+
 /** What is wrong with the week form, by field; empty when it can be saved. */
 export function weekErrors(
   draft: WeekDraft,

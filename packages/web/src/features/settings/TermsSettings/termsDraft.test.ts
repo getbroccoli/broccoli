@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import {
   appliesFromHint,
+  asksForDate,
   canChangeCounts,
   rulesChangeBox,
   rulesErrors,
@@ -16,6 +17,22 @@ import {
   type WeekDraft,
 } from "./termsDraft";
 import type { PolicyVersionText } from "./termsText";
+
+it("asks for no date when nobody was ever on terms whose versions predate the leave year", () => {
+  const versions = [{ startDate: null }, { startDate: "2025-03-01" }];
+
+  expect(asksForDate(false, versions, "2026-01-01")).toBe(false);
+});
+
+it("asks for a date when nobody was ever on terms with a version starting after the leave year starts", () => {
+  const versions = [{ startDate: "2026-07-01" }];
+
+  expect(asksForDate(false, versions, "2026-01-01")).toBe(true);
+});
+
+it("asks for a date once anyone was on the terms even with no versions", () => {
+  expect(asksForDate(true, [], "2026-01-01")).toBe(true);
+});
 
 it("summarises a days-only change and the bank holidays that stay on top", () => {
   expect(rulesChangeBox("Annual leave", rules, currentRules, "2027-01-01")).toEqual({
