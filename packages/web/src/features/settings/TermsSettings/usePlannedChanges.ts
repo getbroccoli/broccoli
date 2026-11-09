@@ -46,6 +46,15 @@ export function usePlannedChanges(terms: Terms) {
     askWeek: (version: Terms["workingWeek"][number]) => setPlanned(weekChange(terms, version)),
     askRules: (timeOffTypeId: string, version: TimeOffRow["versions"][number]) =>
       setPlanned(rulesChange(terms, timeOffTypeId, version)),
+    askStop: (timeOffTypeId: string, stopDate: string) => {
+      const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
+      setPlanned({
+        kind: "rules",
+        timeOffPolicyId: row.policy!.id,
+        startDate: stopDate,
+        body: t("terms.edit.stopStays", { type: row.timeOffType.name, terms: terms.name }),
+      });
+    },
     close: () => setPlanned(null),
     confirm: () => planned && void confirm(planned),
   };

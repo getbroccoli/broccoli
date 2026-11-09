@@ -11,6 +11,36 @@ import {
 import { ApplicationError } from "../../../core/applicationError";
 import { timeOffPolicyRepository } from "../db";
 
+test("cancelling a planned stop makes the last version open-ended again", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ recordOnly: "family_leave" }],
+    today: "2026-11-06",
+  });
+  const [policy] = await readTermsPolicies(orm, termsId);
+  const service = timeOffPolicyService(orm, { today: "2026-11-06" });
+  await service.stopPolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    stopDate: "2027-01-01",
+  });
+
+  const result = await service.cancelPolicyChange(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2027-01-01",
+  });
+
+  expect(result).toMatchObject({
+    id: policy!.id,
+    versions: [{ startDate: null, endDate: null, balance: "no_balance" }],
+  });
+  expect(await timeOffPolicyRepository(orm).findAll()).toEqual([result]);
+});
+
 test("cancelling a planned policy change extends the earlier version to the cancelled version's end", async ({
   orm,
   seed,

@@ -1,4 +1,5 @@
 import { Briefcase, X } from "@phosphor-icons/react";
+import { useState } from "react";
 
 import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import {
@@ -17,6 +18,7 @@ import { RecordHistory } from "@/features/records";
 import { CancelChangeDialog, ruleLine } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
+import { AddTimeOffTypeDialog } from "../TimeOffSettings";
 import { DefaultPill } from "./DefaultPill";
 import { RulesEditor } from "./RulesEditor";
 import { TermsMenu } from "./TermsMenu";
@@ -42,6 +44,7 @@ export function TermsRecord({ terms }: Props) {
   const editing = useTermsEditing(terms);
   const planned = usePlannedChanges(terms);
   const { open } = editing;
+  const [adding, setAdding] = useState(false);
   const meta = t(terms.peopleCount === 1 ? "terms.peopleOne" : "terms.people", {
     count: String(terms.peopleCount),
   });
@@ -103,23 +106,21 @@ export function TermsRecord({ terms }: Props) {
                       editor: (
                         <RulesEditor
                           draft={open.draft}
-                          versions={editing.row!.versions}
+                          versions={editing.row?.versions ?? []}
                           earliest={editing.earliest}
                           dated={editing.dated}
-                          onChange={(draft) =>
-                            editing.change({
-                              kind: "rules",
-                              timeOffTypeId: open.timeOffTypeId,
-                              draft,
-                            })
-                          }
+                          stopping={open.stop}
+                          onChange={(draft) => editing.change({ ...open, draft })}
                         />
                       ),
                     }
                   : null
               }
               onEdit={editing.editRules}
+              onStop={editing.stopRules}
               onCancelPlanned={planned.askRules}
+              onCancelStop={planned.askStop}
+              onAdd={() => setAdding(true)}
             />
           </fieldset>
           <RecordHistory recordType="TERMS" recordId={terms.id} description={TERMS_DESCRIPTION} />
@@ -167,6 +168,9 @@ export function TermsRecord({ terms }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {adding && (
+        <AddTimeOffTypeDialog onClose={() => setAdding(false)} onAdded={editing.offerType} />
+      )}
       <CancelChangeDialog
         body={planned.body}
         pending={planned.pending}

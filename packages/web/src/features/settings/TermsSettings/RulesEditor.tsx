@@ -26,11 +26,13 @@ type Props = {
   earliest: string;
   /** Whether "Applies from" shows; not while nobody was ever on the terms. */
   dated: boolean;
+  /** Only "Applies from", for stopping the type. */
+  stopping?: boolean;
   onChange: (draft: RulesDraft) => void;
 };
 
 /** A time off type's rules opened in place: how it counts, the allowance, and from when. */
-export function RulesEditor({ draft, versions, earliest, dated, onChange }: Props) {
+export function RulesEditor({ draft, versions, earliest, dated, stopping, onChange }: Props) {
   const today = splitVersions(versions, companyToday()).current;
   const errors = rulesErrors(draft, earliest);
   // "Other date…" before a date is picked is no mistake yet; Save stays off until one is.
@@ -42,19 +44,23 @@ export function RulesEditor({ draft, versions, earliest, dated, onChange }: Prop
   };
   return (
     <div className="flex flex-col gap-5">
-      <TimeOffRulesFields
-        values={draft}
-        onChange={onChange}
-        countsLocked={!canChangeCounts(draft, earliest)}
-        countsHint={
-          dated &&
-          !draft.offer && (
-            <p className="text-[13px] text-muted-foreground">{t("terms.edit.rules.countsHint")}</p>
-          )
-        }
-      />
+      {!stopping && (
+        <TimeOffRulesFields
+          values={draft}
+          onChange={onChange}
+          countsLocked={!canChangeCounts(draft, earliest)}
+          countsHint={
+            dated &&
+            !draft.offer && (
+              <p className="text-[13px] text-muted-foreground">
+                {t("terms.edit.rules.countsHint")}
+              </p>
+            )
+          }
+        />
+      )}
 
-      {draft.balance !== "NO_BALANCE" && (
+      {!stopping && draft.balance !== "NO_BALANCE" && (
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold">{t("terms.edit.rules.leaveYear")}</span>
           <span className="text-sm">{t("terms.edit.rules.leaveYearValue")}</span>
@@ -71,7 +77,7 @@ export function RulesEditor({ draft, versions, earliest, dated, onChange }: Prop
           ]}
           selected={draft.appliesFrom}
           onSelect={(appliesFrom) => changeDate({ ...draft, appliesFrom })}
-          hint={appliesFromHint(draft, earliest)}
+          hint={stopping ? t("terms.edit.stop.hint") : appliesFromHint(draft, earliest)}
           error={pickingDate ? undefined : errors.startDate}
           picker={
             <DatePicker

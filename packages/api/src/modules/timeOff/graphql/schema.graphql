@@ -124,9 +124,15 @@ input TimeOffPolicyChangeInput {
   rules: TimeOffRulesInput!
 }
 
+input TimeOffPolicyStopInput {
+  timeOffPolicyId: ID!
+  "The first day the type is not offered; no earlier than the start of the current leave year."
+  stopDate: Date!
+}
+
 input TimeOffPolicyCancelChangeInput {
   timeOffPolicyId: ID!
-  "The start of the version to remove."
+  "The start of the version to remove, or the date of the stop."
   startDate: Date!
 }
 
@@ -145,6 +151,14 @@ type TimeOffPolicyChangePayload {
 }
 
 union TimeOffPolicyChangeError = InvalidInputError | NotFoundError
+
+"The stopped policy, or why it was refused."
+type TimeOffPolicyStopPayload {
+  timeOffPolicy: TimeOffPolicy
+  error: TimeOffPolicyStopError
+}
+
+union TimeOffPolicyStopError = InvalidInputError | NotFoundError | ConflictError
 
 "The policy without the cancelled version, or why it was refused."
 type TimeOffPolicyCancelChangePayload {
@@ -364,7 +378,9 @@ type TimeOffMutations {
   createPolicy(input: TimeOffPolicyCreateInput!): TimeOffPolicyCreatePayload!
   "Applies new rules from a date no earlier than the start of the current leave year; a later planned version stays. How the type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Admins only."
   changePolicy(input: TimeOffPolicyChangeInput!): TimeOffPolicyChangePayload!
-  "Removes a version that has not started; the one before it runs on. Removing a planned offer removes the policy, so the type is not offered. Refused with a ConflictError once it has started. Admins only."
+  "Stops offering the type from a date no earlier than the start of the current leave year: the version covering the day before ends then, and later versions go. Refused with a ConflictError while anyone it reaches has time off of the type booked from that date. Admins only."
+  stopPolicy(input: TimeOffPolicyStopInput!): TimeOffPolicyStopPayload!
+  "Removes a change that has not started, new rules or a stop: the rules before it run on. Removing a planned offer removes the policy, so the type is not offered. Refused with a ConflictError once it has started. Admins only."
   cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
 }
 

@@ -1,4 +1,5 @@
-import { approveReviewedImport, expect, test, TEST_OWNER, type TestEnv } from "#test/support";
+import { approveReviewedImport, expect, test, TEST_OWNER } from "#test/support";
+import type { Browser, TestEnv } from "#test/support";
 
 test("an admin can list and open the default terms with their week, time off and setup history", async ({
   env,
@@ -42,22 +43,7 @@ test("an admin can plan Annual leave rules, read them on terms with history, and
   const browser = await setUpTerms(env);
   const id = await env.seed.defaultTermsId();
   const nextYearStart = `${new Date().getUTCFullYear() + 1}-01-01`;
-  const overview = await browser.graphql(
-    `query Terms($id: ID!) {
-    terms(id: $id) { timeOff { timeOffType { id typeKey } policy { id } } }
-  }`,
-    { id },
-  );
-  const { data } = (await overview.json()) as {
-    data: {
-      terms: {
-        timeOff: { timeOffType: { id: string; typeKey: string }; policy: { id: string } | null }[];
-      };
-    };
-  };
-  const annual = data.terms.timeOff.find(
-    ({ timeOffType }) => timeOffType.typeKey === "ANNUAL_LEAVE",
-  )!;
+  const annual = await readTermsPolicy(browser, id, "ANNUAL_LEAVE");
 
   const changed = await browser.graphql(
     `mutation ChangePolicy($input: TimeOffPolicyChangeInput!) {
@@ -139,6 +125,31 @@ test("an admin can plan Annual leave rules, read them on terms with history, and
   });
 });
 
+test("an admin can stop a policy through GraphQL", async ({ env }) => {
+  const browser = await setUpTerms(env);
+  const id = await env.seed.defaultTermsId();
+  const year = new Date().getUTCFullYear();
+  const family = await readTermsPolicy(browser, id, "FAMILY_LEAVE");
+
+  const stopped = await browser.graphql(
+    `mutation StopPolicy($input: TimeOffPolicyStopInput!) {
+    timeOff { stopPolicy(input: $input) {
+      timeOffPolicy { id versions { startDate endDate } }
+      error { __typename }
+    } }
+  }`,
+    { input: { timeOffPolicyId: family.policy!.id, stopDate: `${year + 1}-01-01` } },
+  );
+
+  const timeOffPolicy = {
+    id: family.policy!.id,
+    versions: [{ startDate: null, endDate: `${year}-12-31` }],
+  };
+  expect(await stopped.json()).toEqual({
+    data: { timeOff: { stopPolicy: { error: null, timeOffPolicy } } },
+  });
+});
+
 test("an admin can change the terms' working week from today through GraphQL", async ({ env }) => {
   const browser = await setUpTerms(env);
   const id = await env.seed.defaultTermsId();
@@ -205,6 +216,23 @@ test("an admin can change the terms' working week from today through GraphQL", a
   });
 });
 
+async function readTermsPolicy(browser: Browser, id: string, typeKey: string) {
+  const response = await browser.graphql(
+    `query Terms($id: ID!) {
+      terms(id: $id) { timeOff { timeOffType { id typeKey } policy { id } } }
+    }`,
+    { id },
+  );
+  const { data } = (await response.json()) as {
+    data: {
+      terms: {
+        timeOff: { timeOffType: { id: string; typeKey: string }; policy: { id: string } | null }[];
+      };
+    };
+  };
+  return data.terms.timeOff.find(({ timeOffType }) => timeOffType.typeKey === typeKey)!;
+}
+
 async function setUpTerms(env: TestEnv) {
   const browser = await env.startSetupAtImport();
   expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
@@ -261,39 +289,9 @@ const defaultTerms = {
         },
       ],
     },
-    {
-      timeOffType: { name: "Sickness", typeKey: "SICKNESS" },
-      versions: [
-        {
-          balance: "NO_BALANCE",
-          bankHolidays: null,
-          leaveYearStart: null,
-          yearlyEntitlement: null,
-        },
-      ],
-    },
-    {
-      timeOffType: { name: "Family leave", typeKey: "FAMILY_LEAVE" },
-      versions: [
-        {
-          balance: "NO_BALANCE",
-          bankHolidays: null,
-          leaveYearStart: null,
-          yearlyEntitlement: null,
-        },
-      ],
-    },
-    {
-      timeOffType: { name: "Other", typeKey: "OTHER" },
-      versions: [
-        {
-          balance: "NO_BALANCE",
-          bankHolidays: null,
-          leaveYearStart: null,
-          yearlyEntitlement: null,
-        },
-      ],
-    },
+    recordOnlyType("Sickness", "SICKNESS"),
+    recordOnlyType("Family leave", "FAMILY_LEAVE"),
+    recordOnlyType("Other", "OTHER"),
   ],
   history: {
     edges: [
@@ -307,3 +305,12 @@ const defaultTerms = {
     ],
   },
 };
+
+function recordOnlyType(name: string, typeKey: string) {
+  return {
+    timeOffType: { name, typeKey },
+    versions: [
+      { balance: "NO_BALANCE", bankHolidays: null, leaveYearStart: null, yearlyEntitlement: null },
+    ],
+  };
+}

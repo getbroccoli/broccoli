@@ -25,11 +25,15 @@ export function versionsFromToday<V extends CalendarDateRange>(
     .map((version) => (coversDate(version, today) ? { ...version, startDate: from } : version));
 }
 
-/** The date a change applies from, sent in `startDate`; refuses one before the earliest date. */
-export function parseChangeDate(value: string, today: CalendarDate): CalendarDate {
-  const startDate = parseDateField("startDate", value);
+/** The date a change applies from, sent in `field`; refuses one before the earliest date. */
+export function parseChangeDate(
+  value: string,
+  today: CalendarDate,
+  field: "startDate" | "stopDate" = "startDate",
+): CalendarDate {
+  const startDate = parseDateField(field, value);
   if (startDate < earliestChangeDate(today)) {
-    throw invalidInput([{ field: "startDate", code: "too_early" }]);
+    throw invalidInput([{ field, code: "too_early" }]);
   }
   return startDate;
 }

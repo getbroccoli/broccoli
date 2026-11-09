@@ -22,6 +22,12 @@ export interface TimeOffRepository {
     from: CalendarDate;
     until: CalendarDate;
   }): Promise<{ timeOffTypeId: string; days: number }[]>;
+  /** Of `employeeIds`, those with approved or pending time off of the type on a day from `from` on. */
+  findPeopleWithTimeOffFrom(input: {
+    employeeIds: readonly string[];
+    timeOffTypeId: string;
+    from: CalendarDate;
+  }): Promise<string[]>;
 }
 
 export function timeOffRepository(tx: Tx): TimeOffRepository {
@@ -50,8 +56,25 @@ export function timeOffRepository(tx: Tx): TimeOffRepository {
         .groupBy(timeOff.timeOffTypeId);
       return rows.map((row) => ({ ...row, days: Number(row.days) }));
     },
+    async findPeopleWithTimeOffFrom({ employeeIds, timeOffTypeId, from }) {
+      const rows = await ormOf(tx)
+        .selectDistinct({ employeeId: timeOff.employeeId })
+        .from(timeOffDays)
+        .innerJoin(timeOff, eq(timeOff.id, timeOffDays.timeOffId))
+        .where(
+          and(
+            inArray(timeOff.employeeId, [...employeeIds]),
+            eq(timeOff.timeOffTypeId, timeOffTypeId),
+            counted(from, LAST_DAY),
+          ),
+        );
+      return rows.map(({ employeeId }) => employeeId);
+    },
   };
 }
+
+/** A day after any time off, for "from a date on". */
+const LAST_DAY = "9999-12-31" as CalendarDate;
 
 /** A full day counts 1, a morning or an afternoon 0.5. */
 const dayCount = sql<string>`sum(case when ${timeOffDays.dayPart} = 'full_day' then 1 else 0.5 end)`;

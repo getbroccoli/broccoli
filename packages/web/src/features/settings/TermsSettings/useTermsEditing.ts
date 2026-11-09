@@ -1,7 +1,11 @@
 import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
 
-import { TermsTimeOffReachDocument, TermsWeekReachDocument } from "@/__generated__/graphql";
+import {
+  TermsTimeOffReachDocument,
+  TermsWeekReachDocument,
+  type TimeOffRulesInput,
+} from "@/__generated__/graphql";
 
 import { rulesInputOf } from "../TimeOffSettings";
 import {
@@ -12,6 +16,8 @@ import {
   rulesErrors,
   rulesSaveLine,
   rulesStartDate,
+  stopChangeBox,
+  stopSaveLine,
   weekChangeBox,
   type WeekDraft,
   weekDraftOf,
@@ -22,9 +28,10 @@ import type { Terms, TimeOffRow } from "./termsQueries";
 import { companyToday, splitVersions, versionOn } from "@/features/termsDisplay";
 import { useSaveSection } from "./useSaveSection";
 
-/** The section open for editing, with its form. */
+/** The section open for editing, with its form; `stop` when the form stops offering the type. */
 export type OpenSection =
-  { kind: "week"; draft: WeekDraft } | { kind: "rules"; timeOffTypeId: string; draft: RulesDraft };
+  | { kind: "week"; draft: WeekDraft }
+  | { kind: "rules"; timeOffTypeId: string; draft: RulesDraft; stop?: boolean };
 
 /**
  * Editing one set of terms in place: one section open at a time, opening another asks to discard
@@ -41,8 +48,9 @@ export function useTermsEditing(terms: Terms) {
   // or a date left under an unpicked "Another date", is no change.
   const dirty =
     open !== null && savedValues(open, facts.earliest) !== savedValues(opened, facts.earliest);
-  // An offer saves as it opened too: taking the type's default rules is the point of it.
-  const savable = facts.valid && (dirty || (open?.kind === "rules" && open.draft.offer));
+  // An offer or a stop saves as it opened too: taking the type's default rules, or stopping, is the point of it.
+  const savable =
+    facts.valid && (dirty || (open?.kind === "rules" && (open.draft.offer || open.stop === true)));
 
   const show = (section: OpenSection | null) => {
     setOpen(section);
@@ -75,6 +83,17 @@ export function useTermsEditing(terms: Terms) {
       }),
     editRules: (timeOffTypeId: string) =>
       ask({ kind: "rules", timeOffTypeId, draft: draftOf(terms, timeOffTypeId) }),
+    // The panel reloads before a type added from it opens, so its row is there.
+    offerType: ({ id, defaultRules }: { id: string; defaultRules: TimeOffRulesInput }) =>
+      ask({ kind: "rules", timeOffTypeId: id, draft: rulesDraftOf(null, defaultRules) }),
+    // A stop starts from the next leave year, so this year's booked time off stays.
+    stopRules: (timeOffTypeId: string) =>
+      ask({
+        kind: "rules",
+        timeOffTypeId,
+        stop: true,
+        draft: { ...draftOf(terms, timeOffTypeId), appliesFrom: "NEXT_LEAVE_YEAR" },
+      }),
     change: setOpen,
     close: () => show(null),
     discard: () => show(waiting),
@@ -111,7 +130,7 @@ function sectionFacts(terms: Terms, open: OpenSection | null) {
   const dated =
     open?.kind === "week"
       ? weekAsksForDate(terms)
-      : asksForDate(terms.hadPeople, row?.versions ?? [], earliest);
+      : open?.stop === true || asksForDate(terms.hadPeople, row?.versions ?? [], earliest);
   return { week, row, rowBase, earliest, startDate, valid, dated };
 }
 
@@ -135,7 +154,8 @@ function useReach(
       id: termsId,
       from: startDate,
       timeOffTypeId: row?.timeOffType.id ?? "",
-      offer: !row?.policy,
+      // A stopped type offered again reaches whoever its offer would.
+      offer: !row?.policy || (open?.kind === "rules" && open.draft.offer),
     },
     skip: open?.kind !== "rules" || !valid,
     fetchPolicy: "no-cache",
@@ -150,6 +170,7 @@ function useReach(
 function changeBox(open: OpenSection | null, { row, rowBase, startDate, dated }: SectionFacts) {
   const date = dated ? startDate : null;
   if (open?.kind === "week") return weekChangeBox(open.draft, date);
+  if (open?.stop && row) return stopChangeBox(row.timeOffType.name, startDate);
   return open && row ? rulesChangeBox(row.timeOffType.name, open.draft, rowBase, date) : null;
 }
 
@@ -161,8 +182,9 @@ function saveLineOf(
 ) {
   const count = people?.length ?? null;
   const date = dated ? startDate : null;
-  return open.kind === "week"
-    ? weekSaveLine(count, terms.name, date)
+  if (open.kind === "week") return weekSaveLine(count, terms.name, date);
+  return open.stop
+    ? stopSaveLine(row!.timeOffType.name, count, terms.name, startDate)
     : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, date);
 }
 

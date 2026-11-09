@@ -3,11 +3,13 @@ import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
+import { dayAfter } from "@/lib/calendarDay";
 import { cn } from "@/lib/class-names";
 import {
   companyToday,
   plannedLine,
   ruleLine,
+  shortDate,
   splitVersions,
   TimeOffTypeIcon,
 } from "@/features/termsDisplay";
@@ -20,13 +22,29 @@ type Props = {
   /** The open form with the line under the name; null while the row is closed. */
   open: { editor: ReactNode; summary: string; dirty: boolean } | null;
   onEdit: () => void;
+  onStop: () => void;
   onCancelPlanned: (version: TimeOffRow["versions"][number]) => void;
+  onCancelStop: (stopDate: string) => void;
 };
 
-/** One time off type on the terms: its rules today or "Not offered here", planned rules, or its form. */
-export function TimeOffRuleRow({ row, termsName, open, onEdit, onCancelPlanned }: Props) {
+/**
+ * One time off type on the terms: its rules today or "Not offered here", planned rules and a
+ * planned stop, or its form.
+ */
+export function TimeOffRuleRow({
+  row,
+  termsName,
+  open,
+  onEdit,
+  onStop,
+  onCancelPlanned,
+  onCancelStop,
+}: Props) {
   const { timeOffType } = row;
   const { current, planned } = splitVersions(row.versions, companyToday());
+  // The last version ending is a planned stop: the type is not offered from the day after.
+  const lastEnd = (planned.at(-1) ?? current)?.endDate;
+  const stopDate = lastEnd ? dayAfter(lastEnd) : null;
   return (
     <li
       className={cn(
@@ -60,14 +78,30 @@ export function TimeOffRuleRow({ row, termsName, open, onEdit, onCancelPlanned }
                 </Button>
               </div>
             ))}
+          {!open && stopDate && (
+            <div className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground">
+              <CalendarBlank aria-hidden className="shrink-0" />
+              <span className="flex-1">
+                {t("terms.timeOff.stops", { date: shortDate(stopDate) })}
+              </span>
+              <Button variant="ghost" size="sm" onClick={() => onCancelStop(stopDate)}>
+                {t("terms.edit.cancelChange")}
+              </Button>
+            </div>
+          )}
         </div>
         {open?.dirty && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
             {t("terms.edit.notSaved")}
           </span>
         )}
-        {/* A type with a planned offer shows its plan, and no Offer until that is cancelled. */}
-        {!open && (current || planned.length === 0) && (
+        {/* A type with a planned offer or stop shows its plan, and no Offer, Edit or Stop until that is cancelled. */}
+        {!open && !stopDate && current && planned.length === 0 && (
+          <Button variant="ghost" size="sm" onClick={onStop}>
+            {t("terms.edit.stop")}
+          </Button>
+        )}
+        {!open && !stopDate && (current || planned.length === 0) && (
           <Button variant={current ? "ghost" : "outline"} size="sm" onClick={onEdit}>
             {t(current ? "terms.edit.edit" : "terms.edit.offer")}
           </Button>

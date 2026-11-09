@@ -262,6 +262,26 @@ export function rulesSaveLine(
   return t(offer ? "terms.edit.rules.offerSaveLine" : "terms.edit.rules.saveLine", values);
 }
 
+/** The box at the top of "What changes" for a stop: "Family leave: not offered", and from when. */
+export function stopChangeBox(typeName: string, stopDate: string): ChangeBox {
+  return { title: t("terms.edit.stop.title", { type: typeName }), detail: fromDate(stopDate) };
+}
+
+/** The footer's line while a stop is open: who it reaches, and from when. */
+export function stopSaveLine(
+  typeName: string,
+  people: number | null,
+  termsName: string,
+  stopDate: string,
+): string {
+  return t("terms.edit.stop.saveLine", {
+    type: typeName,
+    people: peopleText(people),
+    terms: termsName,
+    date: longDate(stopDate),
+  });
+}
+
 /** The line under "Applies from": what the choice does to the leave year it falls in. */
 export function appliesFromHint(draft: RulesDraft, earliest: string): string {
   const year = earliest.slice(0, 4);

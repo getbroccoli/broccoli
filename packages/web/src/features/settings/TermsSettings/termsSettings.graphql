@@ -210,6 +210,19 @@ mutation ChangeTermsTimeOffRules($input: TimeOffPolicyChangeInput!) {
   }
 }
 
+mutation StopTermsTimeOff($input: TimeOffPolicyStopInput!) {
+  timeOff {
+    stopPolicy(input: $input) {
+      timeOffPolicy {
+        id
+      }
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
 mutation CancelTermsTimeOffChange($input: TimeOffPolicyCancelChangeInput!) {
   timeOff {
     cancelPolicyChange(input: $input) {

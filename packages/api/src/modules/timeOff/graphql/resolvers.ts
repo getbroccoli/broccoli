@@ -145,6 +145,11 @@ export function createResolvers(
           }),
           ["INVALID_INPUT", "NOT_FOUND"],
         ),
+      stopPolicy: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyStopPayload"]>(
+          async () => ({ timeOffPolicy: await policies.stopPolicy(context.getActor(), input) }),
+          ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"],
+        ),
       cancelPolicyChange: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TimeOffPolicyCancelChangePayload"]>(
           async () => ({

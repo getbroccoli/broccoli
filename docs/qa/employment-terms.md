@@ -73,6 +73,21 @@ Every type is offered on the demo terms. For a type that is not, delete the term
 - [ ] Saving shows the row as offered and History reads "You offered Other from 1 Jan <this year>: Recorded, doesn't count".
 - [ ] An offer from next leave year shows its planned line and no "Offer"; cancelling it brings "Not offered here" and "Offer" back.
 
+## Stop offering a type
+
+- [ ] An offered row without a planned change has "Stop" beside "Edit"; Stop opens "Applies from" alone, on next leave year, with "People keep the time off they take before this date."
+- [ ] "What changes" shows "Family leave: not offered" and "From 1 Jan <next year>."; the footer names the people it reaches.
+- [ ] Saving shows the row's line "Not offered from 1 Jan <next year>" with "Cancel change", no "Edit" or "Stop", and the History line "You stopped offering Family leave from 1 Jan <next year>".
+- [ ] "Cancel change" says "Family leave stays offered on <terms>."; confirming removes the line and adds "You cancelled stopping Family leave from 1 Jan <next year>".
+- [ ] With someone's approved or pending Family leave booked from the stop date, saving keeps the form open and says "1 person has this time off type booked from that date."
+- [ ] A stop from today shows "Not offered here" with "Offer" at once; Offer gives the type back from the date picked.
+
+## Add a type from the terms
+
+- [ ] "Add time off type" under the list opens the Settings › Time off Add dialog.
+- [ ] Adding "Study leave" shows its row with the Offer form open; closing the form leaves "Not offered here" and "Offer".
+- [ ] Settings › Time off lists Study leave.
+
 ## Terms nobody was ever on
 
 Use terms nobody was ever on, such as ones made with "New terms".
