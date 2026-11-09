@@ -160,27 +160,35 @@ export function changesOnlyDays(draft: RulesDraft, current: PolicyVersionText | 
   );
 }
 
-/** The box at the top of "What changes" for the week: the new week, and from when. */
-export function weekChangeBox(draft: WeekDraft): { title: string; detail: string } {
+/** The box at the top of "What changes" for a section: the new value, and from when. */
+export type ChangeBox = { title: string; detail: string | null };
+
+/**
+ * The box at the top of "What changes" for the week: the new week, and from when. `startDate` is
+ * null when nobody was ever on the terms, so no date is named.
+ */
+export function weekChangeBox(draft: WeekDraft, startDate: string | null): ChangeBox {
   return {
     title: t("terms.edit.week.changeTitle", { week: weekSummary(weekOfDraft(draft)) }),
-    detail: t("terms.edit.fromDate", { date: shortDate(draft.startDate) }),
+    detail: fromDate(startDate),
   };
 }
 
-/** The box at the top of "What changes" for a type: "Annual leave: 20 → 22 days", and from when. */
+/**
+ * The box at the top of "What changes" for a type: "Annual leave: 20 → 22 days", and from when.
+ * `startDate` is null when nobody was ever on the terms, so no date is named.
+ */
 export function rulesChangeBox(
   typeName: string,
   draft: RulesDraft,
   current: PolicyVersionText | null,
-  startDate: string,
-): { title: string; detail: string } {
+  startDate: string | null,
+): ChangeBox {
   const rule = ruleSummary(ruleTextOf(draft));
-  const date = shortDate(startDate);
   if (draft.offer || !current) {
     return {
       title: t("terms.edit.rules.offerTitle", { type: typeName, rule: upperFirst(rule) }),
-      detail: t("terms.edit.fromDate", { date }),
+      detail: fromDate(startDate),
     };
   }
   if (changesOnlyDays(draft, current)) {
@@ -190,35 +198,63 @@ export function rulesChangeBox(
         before: String(current.yearlyEntitlement?.days ?? 0),
         after: draft.days,
       }),
-      detail: t(
-        current.bankHolidays === "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE"
-          ? "terms.edit.rules.fromDateIncluded"
-          : "terms.edit.rules.fromDateOnTop",
-        { date },
-      ),
+      detail: bankHolidaysStay(current, startDate),
     };
   }
   return {
     title: t("terms.edit.rules.ruleTitle", { type: typeName, rule: upperFirst(rule) }),
-    detail: t("terms.edit.fromDate", { date }),
+    detail: fromDate(startDate),
   };
 }
 
-/** The footer's line while the week is open: who saving reaches, and from when. */
-export function weekSaveLine(people: number | null, termsName: string, startDate: string): string {
+/** "From 1 Jan 2027, bank holidays still on top", or without the date when there is none. */
+function bankHolidaysStay(current: PolicyVersionText, startDate: string | null): string {
+  const included = current.bankHolidays === "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE";
+  if (startDate === null) {
+    return t(included ? "terms.edit.rules.stillIncluded" : "terms.edit.rules.stillOnTop");
+  }
+  return t(included ? "terms.edit.rules.fromDateIncluded" : "terms.edit.rules.fromDateOnTop", {
+    date: shortDate(startDate),
+  });
+}
+
+/** "From 1 Dec 2026.", or null when there is no date. */
+function fromDate(startDate: string | null): string | null {
+  return startDate === null ? null : t("terms.edit.fromDate", { date: shortDate(startDate) });
+}
+
+/**
+ * The footer's line while the week is open: who saving reaches, and from when. `startDate` is null
+ * when nobody was ever on the terms, so no date is named.
+ */
+export function weekSaveLine(
+  people: number | null,
+  termsName: string,
+  startDate: string | null,
+): string {
+  if (startDate === null) return t("terms.edit.week.saveLineNobodyEver", { terms: termsName });
   const date = longDate(startDate);
   if (people === 0) return t("terms.edit.week.saveLineNobody", { terms: termsName, date });
   return t("terms.edit.week.saveLine", { people: peopleText(people), terms: termsName, date });
 }
 
-/** The footer's line while a type is open: who saving reaches, and from when. */
+/**
+ * The footer's line while a type is open: who saving reaches, and from when. `startDate` is null
+ * when nobody was ever on the terms, so no date is named.
+ */
 export function rulesSaveLine(
   offer: boolean,
   typeName: string,
   people: number | null,
   termsName: string,
-  startDate: string,
+  startDate: string | null,
 ): string {
+  if (startDate === null) {
+    return t(
+      offer ? "terms.edit.rules.offerSaveLineNobodyEver" : "terms.edit.rules.saveLineNobodyEver",
+      { type: typeName, terms: termsName },
+    );
+  }
   const values = {
     type: typeName,
     people: peopleText(people),

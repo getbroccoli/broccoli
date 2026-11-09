@@ -58,11 +58,20 @@ export function useTermsEditing(terms: Terms) {
     saving,
     ...facts,
     people,
-    box: savable ? changeBox(open, facts) : null,
+    box: savable ? changeBox(open, facts, terms.hadPeople) : null,
     saveLine: open && facts.valid ? saveLineOf(terms, open, facts, people) : null,
     canSave: savable,
     editWeek: () =>
-      facts.week && ask({ kind: "week", draft: weekDraftOf(facts.week, companyToday()) }),
+      facts.week &&
+      ask({
+        kind: "week",
+        // Nobody was ever on the terms: the week applies from the leave year's start, so anyone
+        // added later with an earlier start date has it.
+        draft: weekDraftOf(
+          facts.week,
+          terms.hadPeople ? companyToday() : terms.workingPattern.earliestChange,
+        ),
+      }),
     editRules: (timeOffTypeId: string) =>
       ask({ kind: "rules", timeOffTypeId, draft: draftOf(terms, timeOffTypeId) }),
     change: setOpen,
@@ -129,9 +138,14 @@ function useReach(
   return reached ? (reached.policy?.reach ?? reached.offerReach ?? null) : null;
 }
 
-function changeBox(open: OpenSection | null, { row, rowBase, startDate }: SectionFacts) {
-  if (open?.kind === "week") return weekChangeBox(open.draft);
-  return open && row ? rulesChangeBox(row.timeOffType.name, open.draft, rowBase, startDate) : null;
+function changeBox(
+  open: OpenSection | null,
+  { row, rowBase, startDate }: SectionFacts,
+  dated: boolean,
+) {
+  const date = dated ? startDate : null;
+  if (open?.kind === "week") return weekChangeBox(open.draft, date);
+  return open && row ? rulesChangeBox(row.timeOffType.name, open.draft, rowBase, date) : null;
 }
 
 function saveLineOf(
@@ -141,9 +155,10 @@ function saveLineOf(
   people: unknown[] | null,
 ) {
   const count = people?.length ?? null;
+  const date = terms.hadPeople ? startDate : null;
   return open.kind === "week"
-    ? weekSaveLine(count, terms.name, startDate)
-    : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, startDate);
+    ? weekSaveLine(count, terms.name, date)
+    : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, date);
 }
 
 /** What saving the section would send, as one comparable string. */

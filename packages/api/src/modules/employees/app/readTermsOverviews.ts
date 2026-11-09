@@ -11,6 +11,8 @@ export interface TermsOverview extends Terms {
   workingWeek: PatternVersion[];
   /** The terms' own pattern, with all its versions. */
   workingPattern: WorkingPattern;
+  /** Whether anyone was ever on the terms, on any dates. */
+  hadPeople: boolean;
 }
 
 /** The terms among `termsIds`, or every set without, as they are on `date`; the default first, then by name. */
@@ -22,15 +24,16 @@ export async function readTermsOverviews(
   const allTerms = await termsRepository(orm).findAll();
   const peopleCounts = await termsRepository(orm).countMembersOn(date);
   const patterns = await workingPatternRepository(orm).findPatterns();
-  return allTerms
-    .filter(({ id }) => !termsIds || termsIds.includes(id))
-    .map((terms) => ({
-      ...terms,
-      // Every set of terms gets its pattern when it is set up.
-      workingPattern: patterns.find(({ termsId }) => termsId === terms.id)!,
-      peopleCount: peopleCounts.get(terms.id) ?? 0,
-      workingWeek: (patterns.find(({ termsId }) => termsId === terms.id)?.versions ?? []).filter(
-        ({ endDate }) => endDate === null || endDate >= date,
-      ),
-    }));
+  const shown = allTerms.filter(({ id }) => !termsIds || termsIds.includes(id));
+  const everJoined = await termsRepository(orm).findEverJoined(shown.map(({ id }) => id));
+  return shown.map((terms) => ({
+    ...terms,
+    // Every set of terms gets its pattern when it is set up.
+    workingPattern: patterns.find(({ termsId }) => termsId === terms.id)!,
+    peopleCount: peopleCounts.get(terms.id) ?? 0,
+    workingWeek: (patterns.find(({ termsId }) => termsId === terms.id)?.versions ?? []).filter(
+      ({ endDate }) => endDate === null || endDate >= date,
+    ),
+    hadPeople: everJoined.has(terms.id),
+  }));
 }
