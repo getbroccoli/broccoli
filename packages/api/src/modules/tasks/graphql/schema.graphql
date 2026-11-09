@@ -10,7 +10,7 @@ enum TaskStatus {
   "It cannot be done until something else happens."
   WAITING
   DONE
-  "Withdrawn by the person who asked; kept, never deleted."
+  "Withdrawn by the person who asked; cancelling keeps the task and its reason."
   CANCELLED
 }
 

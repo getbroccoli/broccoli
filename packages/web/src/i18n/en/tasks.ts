@@ -22,7 +22,6 @@ export const tasksEn = {
   "tasks.status.CANCELLED": "Cancelled",
   "tasks.fact.due": "Due {date}",
   "tasks.fact.late": "Late, was {date}",
-  "tasks.fact.noDue": "No due date",
   "tasks.fact.waiting": "Waiting",
   "tasks.fact.heldBy": "With {name}",
   "tasks.fact.doneBy": "Done by {name} · {date}",

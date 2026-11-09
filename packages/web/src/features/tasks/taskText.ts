@@ -11,6 +11,19 @@ export function formatTaskDay(value: string): string {
   return DAY_FORMAT.format(Date.UTC(...calendarDayParts(day)));
 }
 
+/**
+ * The tasks to do the viewer holds, in whichever group the cache has them: a task reopened on this
+ * page still sits under Resolved recently until Tasks next loads.
+ */
+export function countTasksNeedingYou(
+  groups: { needsYou: TaskRow[]; waitingOnOthers: TaskRow[]; resolvedRecently: TaskRow[] },
+  viewerId: string | null,
+): number {
+  return [...groups.needsYou, ...groups.waitingOnOthers, ...groups.resolvedRecently].filter(
+    (task) => task.status === "TO_DO" && task.assignee.id === viewerId,
+  ).length;
+}
+
 /** Whether a task still open was due before `today`. */
 export function isLate(task: TaskRow, today: string): boolean {
   return isOpen(task) && task.dueDate !== null && task.dueDate < today;
@@ -35,10 +48,9 @@ export function taskFact(task: TaskRow, viewerId: string | null): string {
   return task.description ?? "";
 }
 
-/** "Due Fri 13 Nov", "Late, was Fri 6 Nov" or "No due date". */
+/** "Due Fri 13 Nov" or "Late, was Fri 6 Nov", for a task with a due date. */
 export function dueText(task: TaskRow, today: string): string {
-  if (!task.dueDate) return t("tasks.fact.noDue");
-  const date = formatTaskDay(task.dueDate);
+  const date = formatTaskDay(task.dueDate!);
   return isLate(task, today) ? t("tasks.fact.late", { date }) : t("tasks.fact.due", { date });
 }
 

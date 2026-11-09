@@ -1,6 +1,14 @@
 import { expect, it } from "vitest";
 
-import { dueText, formatTaskDay, isLate, taskFact, taskSource, type TaskRow } from "./taskText";
+import {
+  countTasksNeedingYou,
+  dueText,
+  formatTaskDay,
+  isLate,
+  taskFact,
+  taskSource,
+  type TaskRow,
+} from "./taskText";
 
 it("formats a calendar date as a weekday, day and month", () => {
   expect(formatTaskDay("2026-11-10")).toBe("Tue 10 Nov");
@@ -103,19 +111,15 @@ it("shows no fact for a task to do that you hold without a description", () => {
 });
 
 it("shows the due date of a task", () => {
-  const task = taskWith({ dueDate: "2026-11-13" });
+  const task = { ...taskWith(), dueDate: "2026-11-13" };
 
   expect(dueText(task, "2026-11-10")).toBe("Due Fri 13 Nov");
 });
 
 it("shows when a task became late", () => {
-  const task = taskWith({ dueDate: "2026-11-06" });
+  const task = { ...taskWith(), dueDate: "2026-11-06" };
 
   expect(dueText(task, "2026-11-10")).toBe("Late, was Fri 6 Nov");
-});
-
-it("says when a task has no due date", () => {
-  expect(dueText(taskWith(), "2026-11-10")).toBe("No due date");
 });
 
 it("names the person who asked for a task", () => {
@@ -133,6 +137,38 @@ it("shows the process and step when no person asked for a task", () => {
   });
 
   expect(taskSource(task, holder.id)).toBe("onboarding · read_handbook");
+});
+
+it("counts a task to do that you hold in needs you", () => {
+  const groups = { needsYou: [taskWith()], waitingOnOthers: [], resolvedRecently: [] };
+
+  expect(countTasksNeedingYou(groups, holder.id)).toBe(1);
+});
+
+it("does not count a task marked done in place in needs you", () => {
+  const task = taskWith({ status: "DONE", doneAt: completedAt, doneBy: holder });
+  const groups = { needsYou: [task], waitingOnOthers: [], resolvedRecently: [] };
+
+  expect(countTasksNeedingYou(groups, holder.id)).toBe(0);
+});
+
+it("counts a reopened task still sitting in resolved recently", () => {
+  const groups = { needsYou: [], waitingOnOthers: [], resolvedRecently: [taskWith()] };
+
+  expect(countTasksNeedingYou(groups, holder.id)).toBe(1);
+});
+
+it("does not count a task to do that someone else holds", () => {
+  const task = taskWith({ assignee: asker, requestedBy: holder });
+  const groups = { needsYou: [], waitingOnOthers: [task], resolvedRecently: [] };
+
+  expect(countTasksNeedingYou(groups, holder.id)).toBe(0);
+});
+
+it("counts no tasks for a viewer without an employee", () => {
+  const groups = { needsYou: [taskWith()], waitingOnOthers: [], resolvedRecently: [] };
+
+  expect(countTasksNeedingYou(groups, null)).toBe(0);
 });
 
 function taskWith(overrides: Partial<TaskRow> = {}): TaskRow {
