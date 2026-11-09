@@ -8,6 +8,8 @@ import type {
   EmployeeManagerService,
   EmployeePermissionService,
   EmployeeReadService,
+  EmployeeWorkingPatternService,
+  EmploymentTerms,
   LocationService,
   LocationWithPeopleCount,
   TermsOverview,
@@ -32,6 +34,8 @@ export interface EmployeeLoaders {
    * request, since a company has few. Admins only.
    */
   terms: DataLoader<string, TermsOverview | null>;
+  /** A person's terms and working week, or null for a caller who may not read them. */
+  employmentTerms: DataLoader<string, EmploymentTerms | null>;
 }
 
 /** The `terms` loader's key for the default terms, which a location without terms starts people on. */
@@ -43,7 +47,8 @@ export function employeeLoaders(
     EmployeeManagerService &
     EmployeePermissionService &
     LocationService &
-    TermsService,
+    TermsService &
+    EmployeeWorkingPatternService,
   invites: EmployeeInviteService,
 ): (context: GraphqlContext) => EmployeeLoaders {
   return perRequest((context) => ({
@@ -74,6 +79,10 @@ export function employeeLoaders(
           allTerms.find((terms) => (key === DEFAULT_TERMS ? terms.isDefault : terms.id === key)) ??
           null,
       );
+    }),
+    employmentTerms: new DataLoader<string, EmploymentTerms | null>(async (employeeIds) => {
+      const read = await services.readEmploymentTerms(context.getActor(), { employeeIds });
+      return employeeIds.map((id) => read.get(id) ?? null);
     }),
   }));
 }

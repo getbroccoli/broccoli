@@ -29,6 +29,7 @@ import {
 import { ensureAllowancesOf, type EnsuredAllowances } from "./allowanceEngine";
 import { listTimeOffTypes, type TimeOffTypeList } from "./listTimeOffTypes";
 import { readTermsTimeOff, type TimeOffWithPolicies } from "./readTermsTimeOff";
+import { type PersonTimeOff, readPersonTimeOff } from "./readPersonTimeOff";
 import { type EmployeeTimeOffType, readTimeOffTypes } from "./readTimeOffTypes";
 import { changeType, createType, deleteType } from "./timeOffTypeIdentity";
 
@@ -63,6 +64,14 @@ export interface TimeOffService {
     ctx: SecurityContext,
     input: { employeeIds: readonly string[] },
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
+  /**
+   * Each person's rules for every company time off type from today on, marked as their terms' or
+   * their own, by id; ids outside the caller's time off scope are left out.
+   */
+  readPersonTimeOff: (
+    ctx: SecurityContext,
+    input: { employeeIds: readonly string[] },
+  ) => Promise<Map<string, PersonTimeOff[]>>;
   /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
   createType: (ctx: SecurityContext, input: TimeOffTypeIdentityInput) => Promise<TimeOffType>;
   /**
@@ -125,7 +134,7 @@ export function createTimeOffService({
   const dependencies = { orm, transact, logger };
   const engine = {
     employeeReads: createEmployeeReadService(dependencies),
-    workingWeeks: createEmployeeWorkingPatternService(dependencies),
+    workingWeeks: createEmployeeWorkingPatternService({ ...dependencies, today }),
     bankHolidays,
     today,
   };
@@ -175,6 +184,8 @@ export function createTimeOffService({
     },
     readTimeOffTypes: (ctx, input) =>
       readTimeOffTypes({ transact, employeeReads, today }, ctx, input),
+    readPersonTimeOff: (ctx, input) =>
+      readPersonTimeOff({ transact, employeeReads, today }, ctx, input),
     createType: (ctx, input) => createType(dependencies, ctx, input),
     changeType: (ctx, input) => changeType(dependencies, ctx, input),
     deleteType: (ctx, input) => deleteType(dependencies, ctx, input),

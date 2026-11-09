@@ -38,7 +38,13 @@ export {
   parseChangeDate,
   versionsFromToday,
 } from "./datedChange";
-export { createPersonTimeline, type PersonTimeline } from "./personTimeline";
+export {
+  createPersonTimeline,
+  type PersonTimeline,
+  type PersonVersion,
+  type RuleSource,
+  personVersionsFrom,
+} from "./personTimeline";
 export {
   workingWeeksOf,
   type DatedPattern,

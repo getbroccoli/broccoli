@@ -419,3 +419,24 @@ type TimeOffTypeDeletePayload {
 }
 
 union TimeOffTypeDeleteError = NotFoundError | ConflictError
+
+extend type EmployeeEmploymentTerms {
+  "Every company time off type in list order, with the person's rules for it from today on; null for callers who may not read the person's time off."
+  timeOff: [PersonTimeOff!]
+}
+
+"A company time off type with a person's rules for it from today on."
+type PersonTimeOff {
+  timeOffType: TimeOffType!
+  "Today's rules first, if any, then each later change; empty: not offered to the person."
+  versions: [PersonTimeOffRules!]!
+}
+
+"Time off rules as they apply to one person from a date until the next change."
+type PersonTimeOffRules {
+  source: RuleSource!
+  startDate: Date!
+  "The last day; null: open-ended."
+  endDate: Date
+  rules: TimeOffPolicyVersion!
+}

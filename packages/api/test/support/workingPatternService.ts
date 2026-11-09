@@ -19,10 +19,15 @@ export function workingPatternService(
     today = "2026-06-01",
   }: { transact?: Transact; today?: string } = {},
 ) {
-  const dependencies = { orm, transact, logger: createLogger("silent") };
+  const dependencies = {
+    orm,
+    transact,
+    logger: createLogger("silent"),
+    today: () => calendarDate(today),
+  };
   return {
     ...createEmployeeWorkingPatternService(dependencies),
-    ...createWorkingPatternService({ ...dependencies, today: () => calendarDate(today) }),
+    ...createWorkingPatternService(dependencies),
   };
 }
 

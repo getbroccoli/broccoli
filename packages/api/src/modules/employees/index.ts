@@ -10,6 +10,7 @@ import {
   createEmployeePermissionService,
   createEmployeeReadService,
   createEmployeeService,
+  createEmployeeWorkingPatternService,
   createLocationService,
   createTermsService,
   createWorkingPatternService,
@@ -46,6 +47,7 @@ export {
   parseDateField,
   parseEmployeeField,
   parseTermsSetup,
+  personVersionsFrom,
   versionsFromToday,
 } from "./domain";
 
@@ -71,6 +73,8 @@ export type {
   NewEmployee,
   NewEmployeeInput,
   PersonTimeline,
+  PersonVersion,
+  RuleSource,
   TermsMembership,
   TermsSetup,
   WeekdayMinutes,
@@ -104,6 +108,7 @@ export function employeesModule({
     ...createLocationService(dependencies),
     ...createTermsService({ ...dependencies, copyTermsParts, lockTermsParts }),
     ...createWorkingPatternService(dependencies),
+    ...createEmployeeWorkingPatternService(dependencies),
   };
   return {
     name: "employees",

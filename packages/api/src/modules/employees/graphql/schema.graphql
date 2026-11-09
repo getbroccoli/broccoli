@@ -25,6 +25,8 @@ type Employee implements AnyRecord {
   permissionProfiles: [PermissionProfile!]
   "Whether this person can sign in, and their invite; null for callers who may not manage invites."
   signInStatus: SignInStatus
+  "The person's terms, earlier, today and planned, and their working week from today on; null for callers who may not read their working week. Admins, the person and their managers may."
+  employmentTerms: EmployeeEmploymentTerms
 }
 
 "Whether a person can sign in."
@@ -499,3 +501,38 @@ type LocationDeletePayload {
 }
 
 union LocationDeleteError = NotFoundError | ConflictError
+
+"A person's employment terms, earlier, today and planned, and their working week from today on."
+type EmployeeEmploymentTerms {
+  "Every stretch of the person on terms, oldest first."
+  periods: [EmployeeTermsPeriod!]!
+  "The week applying today first, then each later change."
+  workingWeek: [PersonWorkingWeek!]!
+}
+
+"One stretch of a person on one set of terms."
+type EmployeeTermsPeriod {
+  termsId: ID!
+  termsName: String!
+  "Null: since their employment started."
+  startDate: Date
+  "The last day; null: still on these terms."
+  endDate: Date
+}
+
+"A working week as it applies to one person from a date until the next change."
+type PersonWorkingWeek {
+  source: RuleSource!
+  startDate: Date!
+  "The last day; null: open-ended."
+  endDate: Date
+  week: WorkingWeekVersion!
+}
+
+"Where a person's working week or time off rules come from."
+enum RuleSource {
+  "The terms the person is on."
+  FROM_THEIR_TERMS
+  "Set for the person alone, on top of their terms."
+  THEIR_OWN
+}
