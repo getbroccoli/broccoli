@@ -1,18 +1,25 @@
-import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Transact, Tx } from "../../../core/db";
-import type { Logger } from "../../../core/logger";
-import type { ModuleDependencies } from "../../../core/moduleManifest";
-import { createRecordHistoryService, type HistoryLine } from "../../../core/records";
-import { isInRecordScope, type SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, coversDate, parseUuid } from "../../../utils";
+import { ApplicationError, invalidInput } from "../../../../core/applicationError";
+import type { Transact, Tx } from "../../../../core/db";
+import type { Logger } from "../../../../core/logger";
+import type { ModuleDependencies } from "../../../../core/moduleManifest";
+import { createRecordHistoryService, type HistoryLine } from "../../../../core/records";
+import { isInRecordScope, type SecurityContext } from "../../../../core/security";
+import {
+  addDays,
+  type CalendarDate,
+  coversDate,
+  parseUuid,
+  todayInLondon,
+} from "../../../../utils";
 import {
   employeeRepository,
   employmentRepository,
   termsRepository,
   workingPatternRepository,
-} from "../db";
+} from "../../db";
 import {
   type DatedPattern,
+  type TermsMembership,
   makeRoomForDatedRow,
   parseDateField,
   parseEmployeeIds,
@@ -21,9 +28,10 @@ import {
   type WorkingPatternTimeline,
   type WorkingWeek,
   workingWeeksOf,
-} from "../domain";
-import { employeeNotFound } from "./employeeNotFound";
+} from "../../domain";
+import { employeeNotFound } from "../employeeNotFound";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
+import { type EmploymentTerms, readEmploymentTerms } from "./readEmploymentTerms";
 import { referencedPattern } from "./workingPatternService";
 
 const recordHistory = createRecordHistoryService();
@@ -46,6 +54,14 @@ export interface EmployeeWorkingPatternService {
    * Trusted, for time off: `readWorkingWeeks` in the caller's transaction, so it sees people that
    * transaction created; checks no caller and assumes every id names an employee.
    */
+  /**
+   * Each person's terms, earlier, today and planned, and their working week from today on, marked
+   * as their terms' or their own, by id; people the caller may not read are left out.
+   */
+  readEmploymentTerms: (
+    ctx: SecurityContext,
+    input: { employeeIds: readonly string[] },
+  ) => Promise<Map<string, EmploymentTerms>>;
   readWorkingWeeksInTransaction: (
     tx: Tx,
     input: { employeeIds: readonly string[]; from: CalendarDate; until: CalendarDate },
@@ -79,7 +95,10 @@ export interface EmployeeWorkingPatternService {
 export function createEmployeeWorkingPatternService({
   transact,
   logger,
-}: Pick<ModuleDependencies, "transact" | "logger">): EmployeeWorkingPatternService {
+  today = todayInLondon,
+}: Pick<ModuleDependencies, "transact" | "logger"> & {
+  today?: () => CalendarDate;
+}): EmployeeWorkingPatternService {
   return {
     async readWorkingWeeks(ctx, input) {
       const from = parseDateField("from", input.from);
@@ -96,6 +115,8 @@ export function createEmployeeWorkingPatternService({
         return readWorkingWeeksIn(tx, { employeeIds, from, until });
       });
     },
+
+    readEmploymentTerms: (ctx, input) => readEmploymentTerms({ transact, today }, ctx, input),
 
     readWorkingWeeksInTransaction: readWorkingWeeksIn,
 
@@ -229,6 +250,7 @@ interface EndChange {
 interface Timelines {
   timelines: Map<string, WorkingPatternTimeline>;
   assignments: Map<string, DatedPattern[]>;
+  memberships: Map<string, TermsMembership[]>;
   patterns: WorkingPattern[];
 }
 
@@ -254,7 +276,7 @@ export async function readTimelines(tx: Tx, employeeIds: readonly string[]): Pro
       }),
     ]),
   );
-  return { timelines, assignments, patterns };
+  return { timelines, assignments, memberships, patterns };
 }
 
 /** The pattern's name on `date`; a terms' own pattern goes by the terms' name. */

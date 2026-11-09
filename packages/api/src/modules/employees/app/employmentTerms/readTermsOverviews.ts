@@ -1,6 +1,6 @@
-import type { Orm, Tx } from "../../../core/db";
-import type { CalendarDate } from "../../../utils";
-import { locationRepository, termsRepository, workingPatternRepository } from "../db";
+import type { Orm, Tx } from "../../../../core/db";
+import type { CalendarDate } from "../../../../utils";
+import { locationRepository, termsRepository, workingPatternRepository } from "../../db";
 import {
   deleteBlockerOf,
   type Location,
@@ -8,7 +8,7 @@ import {
   type Terms,
   type TermsDeleteBlocker,
   type WorkingPattern,
-} from "../domain";
+} from "../../domain";
 
 /** A set of terms as Settings shows it on a date. */
 export interface TermsOverview extends Terms {

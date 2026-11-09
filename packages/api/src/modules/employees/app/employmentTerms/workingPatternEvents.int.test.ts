@@ -1,7 +1,7 @@
 import { expect, OWNER, test, workingPatternService, createStandardPattern } from "#test/support";
-import { type Orm, transactor } from "../../../core/db";
-import { createEventBus, type DomainEvents } from "../../../core/events";
-import { createLogger } from "../../../core/logger";
+import { type Orm, transactor } from "../../../../core/db";
+import { createEventBus, type DomainEvents } from "../../../../core/events";
+import { createLogger } from "../../../../core/logger";
 
 test("a Standard change publishes its affected employees and earliest changed date", async ({
   orm,

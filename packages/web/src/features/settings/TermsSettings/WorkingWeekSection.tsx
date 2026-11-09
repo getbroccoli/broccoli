@@ -5,16 +5,15 @@ import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
-
-import { calendarName } from "./calendarName";
 import {
+  calendarName,
   companyToday,
   DAY_FIELDS,
   DAY_NAMES,
   hoursOf,
   plannedWeekLine,
   splitVersions,
-} from "./termsText";
+} from "@/features/termsDisplay";
 
 type Version = NonNullable<EmploymentTermsStackQuery["terms"]>["workingWeek"][number];
 

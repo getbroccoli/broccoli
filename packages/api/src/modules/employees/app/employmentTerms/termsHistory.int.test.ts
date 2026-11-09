@@ -8,8 +8,8 @@ import {
   timeOffService,
 } from "#test/support";
 
-import { createRecordHistoryReaderService } from "../../../core/records";
-import { termsRecordType } from ".";
+import { createRecordHistoryReaderService } from "../../../../core/records";
+import { termsRecordType } from "./termsRecordType";
 
 test("turning time off on writes one set-up history line for each terms, including the default", async ({
   orm,

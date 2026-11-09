@@ -17,7 +17,7 @@ import {
   shortDate,
   splitVersions,
   versionOn,
-} from "./termsText";
+} from "@/features/termsDisplay";
 
 type Props = {
   draft: RulesDraft;

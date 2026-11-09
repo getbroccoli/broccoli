@@ -17,7 +17,7 @@ import { t } from "@/i18n";
 
 import { forgetTerms } from "../cache";
 import { TermsNameDialog } from "./TermsNameDialog";
-import { deleteReason } from "./termsText";
+import { deleteReason } from "./termsNameText";
 
 type Props = {
   terms: Pick<

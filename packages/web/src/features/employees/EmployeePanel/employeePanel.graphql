@@ -117,4 +117,12 @@ fragment EmployeePanel_employee on Employee {
     remaining
     used
   }
+  employmentTerms {
+    periods {
+      termsId
+      termsName
+      startDate
+      endDate
+    }
+  }
 }

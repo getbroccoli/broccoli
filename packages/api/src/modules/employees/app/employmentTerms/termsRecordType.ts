@@ -1,7 +1,7 @@
-import type { Orm } from "../../../core/db";
-import type { RecordTypeRegistration } from "../../../core/records";
-import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
-import { termsRepository } from "../db";
+import type { Orm } from "../../../../core/db";
+import type { RecordTypeRegistration } from "../../../../core/records";
+import { type CalendarDate, parseUuid, todayInLondon } from "../../../../utils";
+import { termsRepository } from "../../db";
 import { readTermsOverviews } from "./readTermsOverviews";
 
 /** Terms as a record type that keeps history: about nobody, so only admins, who hold the grant, read and rename them. */

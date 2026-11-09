@@ -10,6 +10,7 @@ import {
 import { todayInLondon } from "../../../utils";
 import { earliestChangeDate } from "../../employees";
 import type {
+  PersonTimeOff,
   TimeOffPolicyService,
   TimeOffSetupService,
   TimeOffService,
@@ -48,6 +49,10 @@ export function createResolvers(
             balance: BALANCE_KINDS[row.balance],
           })) ?? null,
       );
+    }),
+    personTimeOff: new DataLoader<string, PersonTimeOff[] | null>(async (employeeIds) => {
+      const read = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds });
+      return employeeIds.map((id) => read.get(id) ?? null);
     }),
     termsTimeOff: new DataLoader<string, TimeOffWithPolicies[]>(async (termsIds) => {
       const read = await timeOff.readTermsTimeOff(context.getActor(), termsIds);
@@ -148,6 +153,19 @@ export function createResolvers(
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
+    },
+    EmployeeEmploymentTerms: {
+      timeOff: ({ employeeId }, _args, context) => loaders(context).personTimeOff.load(employeeId),
+    },
+    PersonTimeOff: {
+      timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),
+      versions: ({ versions }) =>
+        versions.map(({ source, startDate, endDate, version }) => ({
+          source: toEnum(source),
+          startDate,
+          endDate,
+          rules: toGraphqlVersion(version),
+        })),
     },
     Terms: {
       timeOff: async (terms, { timeOffTypeId }, context) => {

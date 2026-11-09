@@ -3,7 +3,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import type { TimeOffSettingsQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
-import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
+import { TimeOffTypeIcon } from "@/features/termsDisplay";
 
 type Props = {
   /** Every time off type, in the server's order. */

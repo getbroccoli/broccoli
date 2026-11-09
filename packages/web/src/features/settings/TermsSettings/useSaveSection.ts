@@ -11,7 +11,7 @@ import { t } from "@/i18n";
 import { rulesInputOf } from "../TimeOffSettings";
 import { savedToast, weekOfDraft } from "./termsDraft";
 import { TERMS_REFETCH, type Terms } from "./termsQueries";
-import { companyToday } from "./termsText";
+import { companyToday } from "@/features/termsDisplay";
 import type { OpenSection } from "./useTermsEditing";
 
 /** Saving the open section from its date: the week, a type's new rules, or an offer. */

@@ -1,0 +1,58 @@
+# The tab reads the person's week and rules on its own, refreshed each time it shows, since
+# Settings can plan changes to the terms behind them.
+query EmploymentTermsTab($id: ID!) {
+  employee(id: $id) {
+    id
+    employmentTerms {
+      periods {
+        termsId
+        termsName
+        startDate
+        endDate
+      }
+      workingWeek {
+        source
+        startDate
+        endDate
+        week {
+          id
+          mondayMinutes
+          tuesdayMinutes
+          wednesdayMinutes
+          thursdayMinutes
+          fridayMinutes
+          saturdayMinutes
+          sundayMinutes
+          bankHolidayCalendar
+        }
+      }
+      timeOff {
+        timeOffType {
+          id
+          name
+          icon
+          colour
+        }
+        versions {
+          source
+          startDate
+          endDate
+          rules {
+            id
+            balance
+            bankHolidays
+            leaveYearStart {
+              kind
+              month
+              day
+            }
+            yearlyEntitlement {
+              days
+              daysPerWeek
+            }
+          }
+        }
+      }
+    }
+  }
+}

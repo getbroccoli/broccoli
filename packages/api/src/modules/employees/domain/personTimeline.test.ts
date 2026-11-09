@@ -82,8 +82,8 @@ it("splits stretches where one version ends and the next starts", () => {
   );
 
   expect(stretches).toEqual([
-    { version: previous, startDate: "2026-12-01", endDate: "2026-12-31" },
-    { version: next, startDate: "2027-01-01", endDate: "2027-01-31" },
+    { id: "standard", version: previous, startDate: "2026-12-01", endDate: "2026-12-31" },
+    { id: "standard", version: next, startDate: "2027-01-01", endDate: "2027-01-31" },
   ]);
 });
 
@@ -109,9 +109,9 @@ it("returns to the terms' version after a direct row ends", () => {
   );
 
   expect(stretches).toEqual([
-    { version: standard, startDate: "2026-06-01", endDate: "2026-06-09" },
-    { version: personal, startDate: "2026-06-10", endDate: "2026-06-20" },
-    { version: standard, startDate: "2026-06-21", endDate: "2026-06-30" },
+    { id: "standard", version: standard, startDate: "2026-06-01", endDate: "2026-06-09" },
+    { id: "personal", version: personal, startDate: "2026-06-10", endDate: "2026-06-20" },
+    { id: "standard", version: standard, startDate: "2026-06-21", endDate: "2026-06-30" },
   ]);
 });
 
@@ -133,7 +133,7 @@ it("merges consecutive rows of the same terms into one stretch", () => {
   );
 
   expect(stretches).toEqual([
-    { version: standard, startDate: "2026-06-01", endDate: "2026-06-30" },
+    { id: "standard", version: standard, startDate: "2026-06-01", endDate: "2026-06-30" },
   ]);
 });
 
@@ -161,8 +161,8 @@ it("leaves days without a version out of the stretches", () => {
   );
 
   expect(stretches).toEqual([
-    { version: previous, startDate: "2026-06-05", endDate: "2026-06-10" },
-    { version: next, startDate: "2026-06-20", endDate: "2026-06-25" },
+    { id: "standard", version: previous, startDate: "2026-06-05", endDate: "2026-06-10" },
+    { id: "standard", version: next, startDate: "2026-06-20", endDate: "2026-06-25" },
   ]);
 });
 

@@ -1,8 +1,7 @@
 import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-
-import { calendarName } from "./calendarName";
 import {
+  calendarName,
   DAY_FIELDS,
   DAY_NAMES,
   hoursOf,
@@ -11,7 +10,7 @@ import {
   shortDate,
   type WeekMinutes,
   weekSummary,
-} from "./termsText";
+} from "@/features/termsDisplay";
 
 /**
  * A change to the terms' working week or a type's rules as the words after its author, naming only

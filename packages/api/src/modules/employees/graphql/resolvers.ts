@@ -10,6 +10,7 @@ import type {
   EmployeePermissionService,
   EmployeeReadService,
   EmployeeService,
+  EmployeeWorkingPatternService,
   LocationService,
   TermsService,
   WorkingPatternService,
@@ -27,7 +28,8 @@ export function createResolvers(
     EmployeePermissionService &
     LocationService &
     TermsService &
-    WorkingPatternService,
+    WorkingPatternService &
+    EmployeeWorkingPatternService,
   invites: EmployeeInviteService,
 ): Resolvers {
   const loaders = employeeLoaders(services, invites);
@@ -75,6 +77,10 @@ export function createResolvers(
       reach: ({ id }, { from }, context) =>
         services.readPatternReach(context.getActor(), { workingPatternId: id, from }),
       earliestChange: () => earliestChangeDate(todayInLondon()),
+    },
+    PersonWorkingWeek: {
+      source: ({ source }) => toEnum(source),
+      week: ({ version }) => version,
     },
     WorkingWeekVersion: {
       mondayMinutes: ({ minutes }) => minutes[0],
@@ -225,6 +231,8 @@ export function createResolvers(
         const status = await loaders(context).signInStatus.load(employee.id);
         return status && { ...status, state: SIGN_IN_STATES[status.state] };
       },
+      employmentTerms: (employee, _args, context) =>
+        loaders(context).employmentTerms.load(employee.id),
       // shortcut: one query per employee; batch it when a list selects history.
       history: (employee, { first, after }, context) =>
         services.readEmployeeHistory(context.getActor(), employee.id, {

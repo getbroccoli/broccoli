@@ -7,4 +7,7 @@ export const codegenMappers = {
   Terms: "../../modules/employees/app#TermsOverview as TermsModel",
   WorkingPattern: "../../modules/employees/domain#WorkingPattern as WorkingPatternModel",
   WorkingWeekVersion: "../../modules/employees/domain#PatternVersion as WorkingWeekVersionModel",
+  EmployeeEmploymentTerms:
+    "../../modules/employees/app#EmploymentTerms as EmployeeEmploymentTermsModel",
+  PersonWorkingWeek: "../../modules/employees/app#PersonWorkingWeek as PersonWorkingWeekModel",
 };

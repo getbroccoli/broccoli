@@ -19,7 +19,7 @@ import {
   weekSaveLine,
 } from "./termsDraft";
 import type { Terms, TimeOffRow } from "./termsQueries";
-import { companyToday, splitVersions, versionOn } from "./termsText";
+import { companyToday, splitVersions, versionOn } from "@/features/termsDisplay";
 import { useSaveSection } from "./useSaveSection";
 
 /** The section open for editing, with its form. */

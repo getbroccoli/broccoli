@@ -16,7 +16,7 @@ import {
   type RulesDraft,
   type WeekDraft,
 } from "./termsDraft";
-import type { PolicyVersionText } from "./termsText";
+import type { PolicyVersionText } from "@/features/termsDisplay";
 
 it("asks for no date when nobody was ever on terms whose versions predate the leave year", () => {
   const versions = [{ startDate: null }, { startDate: "2025-03-01" }];

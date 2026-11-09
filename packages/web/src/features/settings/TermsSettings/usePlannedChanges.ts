@@ -9,7 +9,7 @@ import { usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
 import { TERMS_REFETCH, type Terms, type TimeOffRow } from "./termsQueries";
-import { ruleSummary, versionBefore, weekSummary } from "./termsText";
+import { ruleSummary, versionBefore, weekSummary } from "@/features/termsDisplay";
 
 /** A planned change waiting for "Cancel change" to be confirmed, with what stays once it goes. */
 type PlannedChange =

@@ -2,10 +2,15 @@ import { Link } from "@tanstack/react-router";
 
 import type { EmploymentTermsQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
+import {
+  annualLeaveSummary,
+  calendarName,
+  companyToday,
+  splitVersions,
+  weekSummary,
+} from "@/features/termsDisplay";
 
-import { calendarName } from "./calendarName";
 import { DefaultPill } from "./DefaultPill";
-import { annualLeaveSummary, companyToday, splitVersions, weekSummary } from "./termsText";
 
 type Props = {
   terms: EmploymentTermsQuery["allTerms"][number];

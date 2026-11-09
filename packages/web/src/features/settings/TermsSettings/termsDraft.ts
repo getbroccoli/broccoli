@@ -11,7 +11,7 @@ import {
   shortDate,
   type WeekMinutes,
   weekSummary,
-} from "./termsText";
+} from "@/features/termsDisplay";
 
 /** The working week form: hours as typed, Monday first. */
 export interface WeekDraft {

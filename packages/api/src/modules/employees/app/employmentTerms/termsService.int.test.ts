@@ -12,13 +12,13 @@ import {
   timeOffService,
 } from "#test/support";
 
-import { ormOf } from "../../../core/db";
+import { ormOf } from "../../../../core/db";
 import {
   employeeTerms,
   locationRepository,
   termsRepository,
   workingPatternRepository,
-} from "../db";
+} from "../../db";
 
 test("lists the default terms first, then others by name ignoring case", async ({ orm, seed }) => {
   const defaultId = await seed.defaultTermsId();

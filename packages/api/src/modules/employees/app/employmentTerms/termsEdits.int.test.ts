@@ -11,7 +11,7 @@ import {
   timeOffService,
 } from "#test/support";
 
-import { employeeTerms, locationRepository } from "../db";
+import { employeeTerms, locationRepository } from "../../db";
 
 test("creates trimmed terms with the chosen bank holidays and an open Monday to Friday week", async ({
   orm,

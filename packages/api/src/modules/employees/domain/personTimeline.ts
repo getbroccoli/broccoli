@@ -11,12 +11,13 @@ export interface PersonTimeline<V extends CalendarDateRange> {
   getVersionOnDate(date: CalendarDate): V | null;
   /**
    * The versions from `from` to `until`, oldest first: split wherever a row or version starts or
-   * ends, neighbours with the same version merged, days without a version left out.
+   * ends, neighbours with the same version merged, days without a version left out. Each names
+   * the pattern or policy it belongs to.
    */
   getVersions(
     from: CalendarDate,
     until: CalendarDate,
-  ): { version: V; startDate: CalendarDate; endDate: CalendarDate }[];
+  ): { id: string; version: V; startDate: CalendarDate; endDate: CalendarDate }[];
   /** Whether `id` applies on some day from `from` on that one of `periods` covers. */
   appliesFrom(id: string, from: CalendarDate, periods: readonly CalendarDateRange[]): boolean;
 }
@@ -54,8 +55,9 @@ export function createPersonTimeline<V extends CalendarDateRange>(
       .filter((change, index, all) => change.version !== all[index - 1]?.version);
     return changes.flatMap(({ startDate, version }, index) => {
       const next = changes[index + 1];
-      return version
-        ? [{ version, startDate, endDate: next ? addDays(next.startDate, -1) : until }]
+      const id = getIdOnDate(startDate);
+      return version && id
+        ? [{ id, version, startDate, endDate: next ? addDays(next.startDate, -1) : until }]
         : [];
     });
   };
@@ -93,4 +95,33 @@ function changeDates<V extends CalendarDateRange>(
   ];
   const candidates = startsAfter(rows, from).filter((date) => date <= until);
   return [from, ...new Set(candidates)].toSorted();
+}
+
+/** Where a person's week or rules come from: their terms, or set for them alone. */
+export type RuleSource = "from_their_terms" | "their_own";
+
+/** A version as it applies to one person from one date, and where it comes from. */
+export interface PersonVersion<V> {
+  source: RuleSource;
+  startDate: CalendarDate;
+  /** Null: open-ended. */
+  endDate: CalendarDate | null;
+  version: V;
+}
+
+/**
+ * What applies to the person on `today`, then each later change: the person's own when
+ * `belongsToTerms` says the pattern or policy is not a terms' own.
+ */
+export function personVersionsFrom<V extends CalendarDateRange>(
+  timeline: PersonTimeline<V>,
+  today: CalendarDate,
+  belongsToTerms: (id: string) => boolean,
+): PersonVersion<V>[] {
+  return timeline.getVersions(today, LAST_DATE).map(({ id, version, startDate, endDate }) => ({
+    source: belongsToTerms(id) ? "from_their_terms" : "their_own",
+    startDate,
+    endDate: endDate === LAST_DATE ? null : endDate,
+    version,
+  }));
 }

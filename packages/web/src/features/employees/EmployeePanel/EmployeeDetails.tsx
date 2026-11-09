@@ -1,10 +1,14 @@
+import { useNavigate } from "@tanstack/react-router";
+
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
 import { useCache } from "@/apollo";
 import { EditableField } from "@/features/records";
+import { companyToday } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { cachedEmployeeName, cachedLocationName } from "../cache";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
+import { termsPeriodsOn } from "./EmploymentTermsTab";
 import type { EmployeeFieldKey } from "./employeeDraft";
 import type { useEmployeeDraft } from "./useEmployeeDraft";
 
@@ -30,6 +34,10 @@ export function EmployeeDetails({ employee, draft, canEdit }: Props) {
           : field,
     );
   const sections = Map.groupBy(fields, (field) => field.section);
+  const navigate = useNavigate({ from: "/people/$employeeId" });
+  const terms =
+    employee.employmentTerms &&
+    termsPeriodsOn(employee.employmentTerms.periods, companyToday()).current;
 
   return (
     <section aria-labelledby="employee-details" className="flex flex-col gap-2">
@@ -66,6 +74,22 @@ export function EmployeeDetails({ employee, draft, canEdit }: Props) {
                 />
               );
             })}
+            {section === t("people.panel.section.job") && terms && (
+              <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] items-center gap-3 px-3 py-2 text-[13px]">
+                <span className="text-muted-foreground">
+                  {t("people.panel.field.employmentTerms")}
+                </span>
+                <button
+                  type="button"
+                  className="ml-1.5 justify-self-start underline decoration-border underline-offset-3"
+                  onClick={() =>
+                    void navigate({ search: (previous) => ({ ...previous, tab: "terms" }) })
+                  }
+                >
+                  {terms.termsName}
+                </button>
+              </div>
+            )}
           </section>
         ))}
       </div>
