@@ -112,6 +112,45 @@ test("reads one terms by id", async ({ orm, seed }) => {
   expect(result).toMatchObject({ id, name: "Scotland", isDefault: false, peopleCount: 0 });
 });
 
+test("reports that nobody was ever on newly created terms", async ({ orm, seed }) => {
+  const id = await seed.terms("Senior staff");
+  const service = termsService(orm, { today: "2026-11-06" });
+
+  const terms = await service.readTerms(ADMIN, id);
+  const allTerms = await service.listTerms(ADMIN);
+
+  expect(terms).toMatchObject({ id, hadPeople: false });
+  expect(allTerms.find((terms) => terms.id === id)).toMatchObject({ hadPeople: false });
+});
+
+test("reports past membership after the only person moved to other terms", async ({
+  orm,
+  seed,
+}) => {
+  const id = await seed.defaultTermsId();
+  const otherId = await seed.terms("Senior staff");
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  await orm
+    .update(employeeTerms)
+    .set({ endDate: calendarDate("2026-11-04") })
+    .where(eq(employeeTerms.employeeId, employee.id));
+  await orm.insert(employeeTerms).values({
+    employeeId: employee.id,
+    termsId: otherId,
+    startDate: calendarDate("2026-11-05"),
+  });
+  const service = termsService(orm, { today: "2026-11-06" });
+
+  const terms = await service.readTerms(ADMIN, id);
+  const allTerms = await service.listTerms(ADMIN);
+
+  expect(terms).toMatchObject({ id, peopleCount: 0, hadPeople: true });
+  expect(allTerms.find((terms) => terms.id === id)).toMatchObject({
+    peopleCount: 0,
+    hadPeople: true,
+  });
+});
+
 test("returns null for an unknown terms id", async ({ orm }) => {
   const service = termsService(orm, { today: "2026-11-06" });
 

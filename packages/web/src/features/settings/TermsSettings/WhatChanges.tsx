@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 
+import type { ChangeBox } from "./termsDraft";
+
 type Props = {
   /** The new value and from when; null while nothing changed. */
-  box: { title: string; detail: string } | null;
+  box: ChangeBox | null;
   /** The people saving reaches, by name; null while they load. */
   people: { id: string; firstName: string; lastName: string }[] | null;
   termsName: string;
@@ -25,7 +27,7 @@ export function WhatChanges({ box, people, termsName }: Props) {
         <>
           <div className="rounded-xl border border-border bg-background p-3">
             <p className="font-semibold">{box.title}</p>
-            <p className="text-[13px] text-muted-foreground">{box.detail}</p>
+            {box.detail && <p className="text-[13px] text-muted-foreground">{box.detail}</p>}
           </div>
           {people === null ? (
             <Skeleton className="h-24 w-full" />

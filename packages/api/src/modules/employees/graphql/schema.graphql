@@ -345,6 +345,8 @@ type Terms implements AnyRecord {
   workingWeek: [WorkingWeekVersion!]!
   "The terms' own working pattern."
   workingPattern: WorkingPattern!
+  "Whether anyone was ever on these terms, even only in the past. While nobody was, a change reaches nobody."
+  hadPeople: Boolean!
   "Changes to these terms, newest first."
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
   "What the signed-in user may do to these terms."

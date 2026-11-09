@@ -22,11 +22,13 @@ type Props = {
   draft: WeekDraft;
   current: WeekVersion;
   earliest: string;
+  /** Whether "Applies from" shows; not while nobody was ever on the terms. */
+  dated: boolean;
   onChange: (draft: WeekDraft) => void;
 };
 
 /** The working week section opened in place: hours each day, bank holidays, from when. */
-export function WeekEditor({ draft, current, earliest, onChange }: Props) {
+export function WeekEditor({ draft, current, earliest, dated, onChange }: Props) {
   const today = companyToday();
   const nextYear = nextLeaveYear(earliest);
   const [other, setOther] = useState(false);
@@ -81,33 +83,35 @@ export function WeekEditor({ draft, current, earliest, onChange }: Props) {
         </select>
       </label>
 
-      <DateChoice
-        name="week-start"
-        options={[
-          { value: "TODAY", label: t("terms.edit.today") },
-          { value: "NEXT_LEAVE_YEAR", label: shortDate(nextYear) },
-          { value: "ANOTHER_DATE", label: t("terms.edit.otherDate") },
-        ]}
-        selected={choice}
-        onSelect={(value) => {
-          setOther(value === "ANOTHER_DATE");
-          if (value !== "ANOTHER_DATE") {
-            onChange({ ...draft, startDate: value === "TODAY" ? today : nextYear });
+      {dated && (
+        <DateChoice
+          name="week-start"
+          options={[
+            { value: "TODAY", label: t("terms.edit.today") },
+            { value: "NEXT_LEAVE_YEAR", label: shortDate(nextYear) },
+            { value: "ANOTHER_DATE", label: t("terms.edit.otherDate") },
+          ]}
+          selected={choice}
+          onSelect={(value) => {
+            setOther(value === "ANOTHER_DATE");
+            if (value !== "ANOTHER_DATE") {
+              onChange({ ...draft, startDate: value === "TODAY" ? today : nextYear });
+            }
+          }}
+          hint={t("terms.edit.week.startHint")}
+          error={errors.startDate}
+          picker={
+            <DatePicker
+              value={draft.startDate}
+              fromDate={earliest}
+              placeholder={t("terms.edit.pickDate")}
+              aria-label={t("terms.edit.pickDate")}
+              aria-invalid={Boolean(errors.startDate)}
+              onChange={(startDate) => onChange({ ...draft, startDate })}
+            />
           }
-        }}
-        hint={t("terms.edit.week.startHint")}
-        error={errors.startDate}
-        picker={
-          <DatePicker
-            value={draft.startDate}
-            fromDate={earliest}
-            placeholder={t("terms.edit.pickDate")}
-            aria-label={t("terms.edit.pickDate")}
-            aria-invalid={Boolean(errors.startDate)}
-            onChange={(startDate) => onChange({ ...draft, startDate })}
-          />
-        }
-      />
+        />
+      )}
     </div>
   );
 }

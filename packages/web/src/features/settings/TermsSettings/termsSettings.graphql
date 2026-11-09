@@ -48,6 +48,7 @@ query EmploymentTermsStack($id: ID!) {
     name
     isDefault
     peopleCount
+    hadPeople
     workingPattern {
       id
       earliestChange

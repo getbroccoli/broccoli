@@ -81,6 +81,7 @@ export function TermsRecord({ terms }: Props) {
                       draft={open.draft}
                       current={editing.week}
                       earliest={editing.earliest}
+                      dated={editing.dated}
                       onChange={(draft) => editing.change({ kind: "week", draft })}
                     />
                   </div>
@@ -103,6 +104,7 @@ export function TermsRecord({ terms }: Props) {
                           draft={open.draft}
                           versions={editing.row!.versions}
                           earliest={editing.earliest}
+                          dated={editing.dated}
                           onChange={(draft) =>
                             editing.change({
                               kind: "rules",

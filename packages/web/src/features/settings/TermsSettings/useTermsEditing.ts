@@ -5,6 +5,7 @@ import { TermsTimeOffReachDocument, TermsWeekReachDocument } from "@/__generated
 
 import { rulesInputOf } from "../TimeOffSettings";
 import {
+  asksForDate,
   rulesChangeBox,
   type RulesDraft,
   rulesDraftOf,
@@ -62,7 +63,16 @@ export function useTermsEditing(terms: Terms) {
     saveLine: open && facts.valid ? saveLineOf(terms, open, facts, people) : null,
     canSave: savable,
     editWeek: () =>
-      facts.week && ask({ kind: "week", draft: weekDraftOf(facts.week, companyToday()) }),
+      facts.week &&
+      ask({
+        kind: "week",
+        // Without a date the week applies from the leave year's start, so anyone added later
+        // with an earlier start date has it.
+        draft: weekDraftOf(
+          facts.week,
+          weekAsksForDate(terms) ? companyToday() : terms.workingPattern.earliestChange,
+        ),
+      }),
     editRules: (timeOffTypeId: string) =>
       ask({ kind: "rules", timeOffTypeId, draft: draftOf(terms, timeOffTypeId) }),
     change: setOpen,
@@ -98,7 +108,15 @@ function sectionFacts(terms: Terms, open: OpenSection | null) {
   const valid = errors !== null && Object.keys(errors).length === 0;
   // The rules the new ones follow on their date, which is today's unless a plan starts earlier.
   const rowBase = row ? (versionOn(row.versions, startDate) ?? rowToday) : null;
-  return { week, row, rowBase, earliest, startDate, valid };
+  const dated =
+    open?.kind === "week"
+      ? weekAsksForDate(terms)
+      : asksForDate(terms.hadPeople, row?.versions ?? [], earliest);
+  return { week, row, rowBase, earliest, startDate, valid, dated };
+}
+
+function weekAsksForDate(terms: Terms): boolean {
+  return asksForDate(terms.hadPeople, terms.workingWeek, terms.workingPattern.earliestChange);
 }
 
 /** The people saving the open section reaches from its date, by name; null while they load. */
@@ -129,21 +147,23 @@ function useReach(
   return reached ? (reached.policy?.reach ?? reached.offerReach ?? null) : null;
 }
 
-function changeBox(open: OpenSection | null, { row, rowBase, startDate }: SectionFacts) {
-  if (open?.kind === "week") return weekChangeBox(open.draft);
-  return open && row ? rulesChangeBox(row.timeOffType.name, open.draft, rowBase, startDate) : null;
+function changeBox(open: OpenSection | null, { row, rowBase, startDate, dated }: SectionFacts) {
+  const date = dated ? startDate : null;
+  if (open?.kind === "week") return weekChangeBox(open.draft, date);
+  return open && row ? rulesChangeBox(row.timeOffType.name, open.draft, rowBase, date) : null;
 }
 
 function saveLineOf(
   terms: Terms,
   open: OpenSection,
-  { row, startDate }: SectionFacts,
+  { row, startDate, dated }: SectionFacts,
   people: unknown[] | null,
 ) {
   const count = people?.length ?? null;
+  const date = dated ? startDate : null;
   return open.kind === "week"
-    ? weekSaveLine(count, terms.name, startDate)
-    : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, startDate);
+    ? weekSaveLine(count, terms.name, date)
+    : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, date);
 }
 
 /** What saving the section would send, as one comparable string. */
