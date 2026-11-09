@@ -7,7 +7,7 @@ import { t } from "@/i18n";
 import { shortDate } from "@/features/termsDisplay";
 import { calendarDayOf } from "@/lib/calendarDay";
 
-import { EMPLOYMENT_TERMS_FIELDS } from "./employeeHistoryArea";
+import { EMPLOYMENT_TERMS_FIELDS } from "../employeeHistoryArea";
 
 type Props = {
   employeeId: string;

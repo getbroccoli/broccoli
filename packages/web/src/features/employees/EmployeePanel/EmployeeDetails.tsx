@@ -8,7 +8,7 @@ import { t } from "@/i18n";
 
 import { cachedEmployeeName, cachedLocationName } from "../cache";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
-import { termsPeriodsOn } from "./employmentTermsView";
+import { termsPeriodsOn } from "./EmploymentTermsTab";
 import type { EmployeeFieldKey } from "./employeeDraft";
 import type { useEmployeeDraft } from "./useEmployeeDraft";
 

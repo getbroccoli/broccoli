@@ -1,9 +1,9 @@
-import type { Transact } from "../../../core/db";
-import { isInRecordScope, type SecurityContext } from "../../../core/security";
-import { type CalendarDate, parseUuid } from "../../../utils";
-import { termsRepository, workingPatternRepository } from "../db";
-import { type PatternVersion, type PersonVersion, personVersionsFrom } from "../domain";
-import { readTimelines } from "./employeeWorkingPatternService";
+import type { Transact } from "../../../../core/db";
+import { isInRecordScope, type SecurityContext } from "../../../../core/security";
+import { type CalendarDate, parseUuid } from "../../../../utils";
+import { termsRepository, workingPatternRepository } from "../../db";
+import { type PatternVersion, type PersonVersion, personVersionsFrom } from "../../domain";
+import { readTimelines } from "../employeeWorkingPatternService";
 
 /** A person's terms, earlier, today and planned, and their working week from today on. */
 export interface EmploymentTerms {

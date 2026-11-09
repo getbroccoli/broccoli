@@ -25,7 +25,7 @@ export {
   createEmployeeWorkingPatternService,
   type EmployeeWorkingPatternService,
 } from "./employeeWorkingPatternService";
-export type { EmploymentTerms, PersonWorkingWeek } from "./readEmploymentTerms";
+export type { EmploymentTerms, PersonWorkingWeek } from "./employmentTerms/readEmploymentTerms";
 export { employeeRecordType } from "./employeeRecordType";
 export {
   type CopyTermsParts,

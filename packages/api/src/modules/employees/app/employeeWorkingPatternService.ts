@@ -25,7 +25,7 @@ import {
 } from "../domain";
 import { employeeNotFound } from "./employeeNotFound";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
-import { type EmploymentTerms, readEmploymentTerms } from "./readEmploymentTerms";
+import { type EmploymentTerms, readEmploymentTerms } from "./employmentTerms/readEmploymentTerms";
 import { referencedPattern } from "./workingPatternService";
 
 const recordHistory = createRecordHistoryService();
