@@ -1,9 +1,15 @@
 import type { Transact } from "../../../../core/db";
 import { isInRecordScope, type SecurityContext } from "../../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../../utils";
-import { termsRepository, workingPatternRepository } from "../../db";
-import { type PatternVersion, type PersonVersion, personVersionsFrom } from "../../domain";
+import { employmentRepository, termsRepository, workingPatternRepository } from "../../db";
+import {
+  earliestChangeDate,
+  type PatternVersion,
+  type PersonVersion,
+  personVersionsFrom,
+} from "../../domain";
 import { readTimelines } from "./employeeWorkingPatternService";
+import type { TermsMovePreview } from "./membershipsAfterMove";
 
 /** A person's terms, earlier, today and planned, and their working week from today on. */
 export interface EmploymentTerms {
@@ -12,6 +18,10 @@ export interface EmploymentTerms {
   periods: TermsPeriod[];
   /** The week applying today first, then each later change. */
   workingWeek: PersonWorkingWeek[];
+  /** The earliest date a change may apply from: this leave year's start, or their start date when later. */
+  earliestChange: CalendarDate;
+  /** Set on a preview: the move these are read as if after, which other modules' parts follow too. */
+  move?: TermsMovePreview;
 }
 
 /** A working week as it applies to one person from a date until the next change. */
@@ -34,7 +44,7 @@ export interface TermsPeriod {
 export async function readEmploymentTerms(
   { transact, today }: { transact: Transact; today: () => CalendarDate },
   ctx: SecurityContext,
-  input: { employeeIds: readonly string[] },
+  input: { employeeIds: readonly string[]; move?: TermsMovePreview },
 ): Promise<Map<string, EmploymentTerms>> {
   const scope = await ctx.recordScope("working_pattern", "read");
   const ids = [...new Set(input.employeeIds.map(parseUuid))].filter(
@@ -43,7 +53,9 @@ export async function readEmploymentTerms(
   if (ids.length === 0) return new Map();
   return transact(async (tx) => {
     await workingPatternRepository(tx).lockForReads();
-    const { timelines, memberships, patterns } = await readTimelines(tx, ids);
+    const { timelines, memberships, patterns } = await readTimelines(tx, ids, input.move);
+    const startDates = await employmentRepository(tx).findStartDates(ids);
+    const leaveYearStart = earliestChangeDate(today());
     const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
     const names = await termsRepository(tx).findNames([...new Set(termsIds)]);
     const termsPatternIds = new Set(patterns.filter((p) => p.termsId).map(({ id }) => id));
@@ -63,6 +75,7 @@ export async function readEmploymentTerms(
           workingWeek: personVersionsFrom(timelines.get(id)!, today(), (patternId) =>
             termsPatternIds.has(patternId),
           ),
+          earliestChange: laterOf(leaveYearStart, startDates.get(id) ?? null),
         },
       ]),
     );
@@ -72,4 +85,8 @@ export async function readEmploymentTerms(
 // A period without a start date began with the employment, before every other.
 function byStartDate(a: TermsPeriod, b: TermsPeriod): number {
   return (a.startDate ?? "").localeCompare(b.startDate ?? "");
+}
+
+function laterOf(date: CalendarDate, other: CalendarDate | null): CalendarDate {
+  return other !== null && other > date ? other : date;
 }

@@ -155,7 +155,15 @@ export function createResolvers(
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
     EmployeeEmploymentTerms: {
-      timeOff: ({ employeeId }, _args, context) => loaders(context).personTimeOff.load(employeeId),
+      timeOff: async ({ employeeId, move }, _args, context) =>
+        move
+          ? ((
+              await timeOff.readPersonTimeOff(context.getActor(), {
+                employeeIds: [employeeId],
+                move,
+              })
+            ).get(employeeId) ?? null)
+          : loaders(context).personTimeOff.load(employeeId),
     },
     PersonTimeOff: {
       timeOffType: ({ timeOffType }) => toGraphqlType(timeOffType),

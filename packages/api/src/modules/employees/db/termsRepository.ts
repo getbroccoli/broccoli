@@ -41,6 +41,8 @@ export interface TermsRepository {
   exists(termsId: string): Promise<boolean>;
   /** Each employee's terms over time, by employee id. */
   findMemberships(employeeIds: readonly string[]): Promise<Map<string, TermsMembership[]>>;
+  /** Puts the employee on these terms over time instead of their current rows. */
+  replaceMemberships(employeeId: string, memberships: readonly TermsMembership[]): Promise<void>;
   /** The employees on each of the terms on any date, by terms id; terms without any are left out. */
   findMemberIds(termsIds: readonly string[]): Promise<Map<string, string[]>>;
   /** The terms among `termsIds` that anyone was ever on, on any date. */
@@ -152,6 +154,13 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
         memberships.set(employeeId, [...(memberships.get(employeeId) ?? []), membership]);
       }
       return memberships;
+    },
+
+    async replaceMemberships(employeeId, memberships) {
+      await orm().delete(employeeTerms).where(eq(employeeTerms.employeeId, employeeId));
+      await orm()
+        .insert(employeeTerms)
+        .values(memberships.map((membership) => ({ employeeId, ...membership })));
     },
 
     async findMemberIds(termsIds) {

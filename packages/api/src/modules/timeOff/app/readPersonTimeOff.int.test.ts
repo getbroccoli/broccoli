@@ -1,4 +1,5 @@
 import {
+  calendarDate,
   expect,
   giveTermsPolicies,
   OWNER,
@@ -7,6 +8,7 @@ import {
   seedTimeOffPolicy,
   seedTimeOffType,
   signedIn,
+  termsService,
   test,
   timeOffPolicyService,
   timeOffService,
@@ -140,4 +142,50 @@ test("leaves out a colleague whose time off the caller may not read", async ({ o
   });
 
   expect([...result.keys()]).toEqual([employee.id]);
+});
+
+test("reads Annual leave rules after a previewed move without changing today's rules", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const scotland = await termsService(orm, { today: "2026-11-09" }).createTerms(OWNER, {
+    name: "Scotland",
+    bankHolidayCalendar: "scotland",
+  });
+  await giveTermsPolicies(orm, transact, {
+    termsId: await seed.defaultTermsId(),
+    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+  });
+  await giveTermsPolicies(orm, transact, {
+    termsId: scotland.id,
+    policies: [{ key: "uk_25_days_plus_bank_holidays" }],
+  });
+  const service = timeOffService(orm, { today: "2026-11-09" });
+  const before = await service.readPersonTimeOff(OWNER, { employeeIds: [employee.id] });
+
+  const preview = await service.readPersonTimeOff(OWNER, {
+    employeeIds: [employee.id],
+    move: { termsId: scotland.id, startDate: calendarDate("2026-12-01") },
+  });
+
+  const annual = preview
+    .get(employee.id)
+    ?.find(({ timeOffType }) => timeOffType.typeKey === "annual_leave");
+  expect(annual?.versions).toMatchObject([
+    {
+      source: "from_their_terms",
+      startDate: "2026-11-09",
+      endDate: "2026-11-30",
+      version: { rules: [{ kind: "yearly_entitlement", entitlementDays: 20 }] },
+    },
+    {
+      source: "from_their_terms",
+      startDate: "2026-12-01",
+      endDate: null,
+      version: { rules: [{ kind: "yearly_entitlement", entitlementDays: 25 }] },
+    },
+  ]);
+  expect(await service.readPersonTimeOff(OWNER, { employeeIds: [employee.id] })).toEqual(before);
 });

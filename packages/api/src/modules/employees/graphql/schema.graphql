@@ -188,6 +188,75 @@ type EmployeesMutations {
   cancelWorkingPatternChange(
     input: WorkingPatternCancelChangeInput!
   ): WorkingPatternCancelChangePayload!
+  "Moves people to terms from a date no earlier than the start of the current leave year, each with a history line; a later move stays. Skips, saying why, who cannot move. Admins only."
+  changeTerms(input: EmployeeTermsChangeInput!): EmployeeTermsChangePayload!
+  "Removes a person's move to other terms that has not started; the terms before it run on. Refused with a ConflictError once it has started. Admins only."
+  cancelTermsChange(input: EmployeeTermsCancelChangeInput!): EmployeeTermsCancelChangePayload!
+}
+
+"People to move to terms from a date."
+input EmployeeTermsChangeInput {
+  "1 to 1,000 people."
+  employeeIds: [ID!]!
+  termsId: ID!
+  "A person who starts later moves from their start date."
+  startDate: Date!
+}
+
+input EmployeeTermsCancelChangeInput {
+  employeeId: ID!
+  "The start of the move to remove."
+  startDate: Date!
+}
+
+"Who moved and who was skipped, or why the change was refused."
+type EmployeeTermsChangePayload {
+  moved: [EmployeeTermsMove!]
+  skipped: [EmployeeTermsChangeSkip!]
+  error: EmployeeTermsChangeError
+}
+
+union EmployeeTermsChangeError = InvalidInputError | NotFoundError
+
+"A person moving to terms, and the date they move from."
+type EmployeeTermsMove {
+  employee: Employee!
+  startDate: Date!
+}
+
+"A person a move leaves as they are, and why."
+type EmployeeTermsChangeSkip {
+  employee: Employee!
+  reason: EmployeeTermsChangeSkipReason!
+}
+
+enum EmployeeTermsChangeSkipReason {
+  "They are on these terms on that date already."
+  ALREADY_ON_TERMS
+  "Their employment ended before that date."
+  LEFT_BEFORE_DATE
+}
+
+"The person whose move was cancelled, or why it was refused."
+type EmployeeTermsCancelChangePayload {
+  employee: Employee
+  error: EmployeeTermsCancelChangeError
+}
+
+union EmployeeTermsCancelChangeError = NotFoundError | ConflictError
+
+"What a move would do, before it is saved."
+type EmployeeTermsChangePreview {
+  moves: [EmployeeTermsMovePreview!]!
+  skipped: [EmployeeTermsChangeSkip!]!
+}
+
+"A person a move would reach."
+type EmployeeTermsMovePreview {
+  employee: Employee!
+  startDate: Date!
+  "Their terms, working week and time off rules as they would be after the move."
+  employmentTerms: EmployeeEmploymentTerms!
 }
 
 "A week from a date: minutes worked each day and whose bank holidays apply."
@@ -339,6 +408,8 @@ type Query {
   allTerms: [Terms!]!
   "One set of terms; null when none has this id. Admins only."
   terms(id: ID!): Terms
+  "What changeTerms would do with this input, writing nothing. Admins only."
+  termsChangePreview(input: EmployeeTermsChangeInput!): EmployeeTermsChangePreview!
 }
 
 "A named set of people who share a working week and time off rules; new people start on their location's terms."
@@ -508,6 +579,8 @@ type EmployeeEmploymentTerms {
   periods: [EmployeeTermsPeriod!]!
   "The week applying today first, then each later change."
   workingWeek: [PersonWorkingWeek!]!
+  "The earliest date a change may apply from: the start of this leave year, or the person's start date when later."
+  earliestChange: Date!
 }
 
 "One stretch of a person on one set of terms."

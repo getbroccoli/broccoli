@@ -1,7 +1,7 @@
 import type { Transact } from "../../../core/db";
 import { isInRecordScope, type SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
-import { type PersonVersion, personVersionsFrom } from "../../employees";
+import { type PersonVersion, personVersionsFrom, type TermsMovePreview } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import type { PolicyVersion, TimeOffType } from "../domain";
 import { type AllowanceEngineDependencies, readPeople } from "./allowanceEngine";
@@ -20,12 +20,13 @@ type Dependencies = Pick<AllowanceEngineDependencies, "employeeReads" | "today">
 
 /**
  * Each in-scope person's rules for every company time off type, in list order, marked as their
- * terms' or their own, by id; ids the caller may not read are left out.
+ * terms' or their own, by id; with `move`, as they would be after it. Ids the caller may not read
+ * are left out.
  */
 export async function readPersonTimeOff(
   { transact, employeeReads, today }: Dependencies,
   ctx: SecurityContext,
-  input: { employeeIds: readonly string[] },
+  input: { employeeIds: readonly string[]; move?: TermsMovePreview },
 ): Promise<Map<string, PersonTimeOff[]>> {
   const scope = await ctx.recordScope("time_off", "read");
   const ids = [...new Set(input.employeeIds.map(parseUuid))].filter(
@@ -34,7 +35,12 @@ export async function readPersonTimeOff(
   if (ids.length === 0) return new Map();
   return transact(async (tx) => {
     const types = (await timeOffPolicyRepository(tx).findAllTypes()).sort(byTypeOrder);
-    const { people, policies } = await readPeople(employeeReads, tx, ids);
+    const reads = {
+      ...employeeReads,
+      readTermsMemberships: (_tx: typeof tx, employeeIds: readonly string[]) =>
+        employeeReads.readTermsMemberships(tx, employeeIds, input.move),
+    };
+    const { people, policies } = await readPeople(reads, tx, ids);
     const termsPolicyIds = new Set(policies.filter((p) => p.termsId).map(({ id }) => id));
     const date: CalendarDate = today();
     return new Map(

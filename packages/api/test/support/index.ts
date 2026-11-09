@@ -29,6 +29,7 @@ export { calendarDate } from "./calendarDate";
 export { recordCloneService } from "./recordCloneService";
 export { termsService } from "./termsService";
 export { seedTermsPeriods } from "./seedTerms";
+export { termsChangedEvents } from "./termsChangedEvents";
 export { PNG, JPEG, WEBP } from "./images";
 export { fakeSlackApi, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./fakeSlackApi";
 export { managedOptions, postInit, startManagedEnv, signInAsManagedOwner } from "./managedTestEnv";
