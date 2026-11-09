@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { TimeOffTypeIcon } from "../TimeOffSettings";
+import { TimeOffTypeIcon } from "@/features/termsDisplay";
 import type { TimeOffRow } from "./termsQueries";
-import { companyToday, plannedLine, ruleLine, splitVersions } from "./termsText";
+import { companyToday, plannedLine, ruleLine, splitVersions } from "@/features/termsDisplay";
 
 type Props = {
   row: TimeOffRow;

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { t } from "@/i18n";
 
-import { nameError } from "./termsText";
+import { nameError } from "./termsNameText";
 import { TermsNameField } from "./TermsNameField";
 
 type Props = {

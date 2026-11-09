@@ -22,7 +22,7 @@ import { DeleteTimeOffTypeDialog } from "./DeleteTimeOffTypeDialog";
 import { nameErrorOf } from "./nameError";
 import { daysError, rulesValuesOf, typeInputOf } from "./timeOffRules";
 import { TimeOffTypeFields, type TimeOffTypeValues } from "./TimeOffTypeFields";
-import { TimeOffTypeIcon } from "./TimeOffTypeIcon";
+import { TimeOffTypeIcon } from "@/features/termsDisplay";
 
 type Props = {
   type: TimeOffSettingsQuery["timeOffSettings"]["timeOffTypes"][number]["timeOffType"];

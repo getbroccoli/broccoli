@@ -23,7 +23,7 @@ import { TermsMenu } from "./TermsMenu";
 import { TermsTimeOffSection } from "./TermsTimeOffSection";
 import { TERMS_DESCRIPTION } from "./termsDescription";
 import { changesOnlyDays } from "./termsDraft";
-import { ruleLine } from "./termsText";
+import { ruleLine } from "@/features/termsDisplay";
 import { usePlannedChanges } from "./usePlannedChanges";
 import { useTermsEditing } from "./useTermsEditing";
 import { WeekEditor } from "./WeekEditor";

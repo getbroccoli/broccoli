@@ -17,8 +17,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 
-import { calendarName } from "./calendarName";
-import { nameError } from "./termsText";
+import { calendarName } from "@/features/termsDisplay";
+import { nameError } from "./termsNameText";
 import { TermsNameField } from "./TermsNameField";
 
 type Props = {

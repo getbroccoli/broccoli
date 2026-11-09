@@ -3,9 +3,14 @@ import { Link } from "@tanstack/react-router";
 import type { EmploymentTermsQuery } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 
-import { calendarName } from "./calendarName";
+import { calendarName } from "@/features/termsDisplay";
 import { DefaultPill } from "./DefaultPill";
-import { annualLeaveSummary, companyToday, splitVersions, weekSummary } from "./termsText";
+import {
+  annualLeaveSummary,
+  companyToday,
+  splitVersions,
+  weekSummary,
+} from "@/features/termsDisplay";
 
 type Props = {
   terms: EmploymentTermsQuery["allTerms"][number];

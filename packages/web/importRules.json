@@ -60,6 +60,7 @@
       "src/components/ui",
       "src/features/invites",
       "src/features/records",
+      "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names",
@@ -121,11 +122,13 @@
       "src/components/ui",
       "src/features/employees",
       "src/features/records",
+      "src/features/termsDisplay",
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names",
       "src/lib/formatDays"
     ],
+    "src/features/termsDisplay": ["src/__generated__", "src/i18n", "src/lib/calendarDay"],
     "src/features/setup": [
       "src/__generated__",
       "src/apollo",

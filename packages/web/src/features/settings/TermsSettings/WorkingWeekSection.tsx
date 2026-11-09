@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
-import { calendarName } from "./calendarName";
+import { calendarName } from "@/features/termsDisplay";
 import {
   companyToday,
   DAY_FIELDS,
@@ -14,7 +14,7 @@ import {
   hoursOf,
   plannedWeekLine,
   splitVersions,
-} from "./termsText";
+} from "@/features/termsDisplay";
 
 type Version = NonNullable<EmploymentTermsStackQuery["terms"]>["workingWeek"][number];
 
