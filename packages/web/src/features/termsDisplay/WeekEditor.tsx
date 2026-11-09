@@ -24,7 +24,8 @@ type Props = {
 /** The working week section opened in place: hours each day, bank holidays, from when. */
 export function WeekEditor({ draft, current, earliest, dated, onChange }: Props) {
   const today = companyToday();
-  const nextYear = nextLeaveYear(earliest);
+  // From the leave year's start: a person who started this year may not change before their start.
+  const nextYear = nextLeaveYear(`${earliest.slice(0, 4)}-01-01`);
   const [other, setOther] = useState(false);
   const choice =
     other || (draft.startDate !== today && draft.startDate !== nextYear)

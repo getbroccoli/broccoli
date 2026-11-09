@@ -49,7 +49,8 @@ export interface WorkingPatternRepository {
     employeeId: string,
     row: Omit<DatedPattern, "id" | "startDate"> & { startDate: CalendarDate },
   ): Promise<void>;
-  endAssignment(id: string, endDate: CalendarDate): Promise<void>;
+  /** Sets the last day of an assignment; null makes it open-ended. */
+  endAssignment(id: string, endDate: CalendarDate | null): Promise<void>;
   deleteAssignment(id: string): Promise<void>;
 }
 

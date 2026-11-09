@@ -1,4 +1,5 @@
 import {
+  type GraphqlContext,
   mutationPayload,
   type Resolvers,
   type ResolversTypes,
@@ -13,6 +14,7 @@ import type {
   EmployeeTermsService,
   EmployeeWorkingPatternService,
   LocationService,
+  OwnWorkingWeekService,
   TermsChange,
   TermsService,
   WorkingPatternService,
@@ -32,10 +34,21 @@ export function createResolvers(
     TermsService &
     WorkingPatternService &
     EmployeeWorkingPatternService &
-    EmployeeTermsService,
+    EmployeeTermsService &
+    OwnWorkingWeekService,
   invites: EmployeeInviteService,
 ): Resolvers {
   const loaders = employeeLoaders(services, invites);
+  /** An own-week change's payload: the person afterwards, or why it was refused. */
+  const ownWeekPayload = (
+    context: GraphqlContext,
+    employeeId: string,
+    change: () => Promise<void>,
+  ) =>
+    mutationPayload<ResolversTypes["EmployeeOwnWorkingWeekPayload"]>(async () => {
+      await change();
+      return { employee: await services.readEmployee(context.getActor(), employeeId) };
+    }, ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"]);
   return {
     Query: {
       locations: (_parent, _args, context) => services.listLocations(context.getActor()),
@@ -241,6 +254,31 @@ export function createResolvers(
           await services.cancelTermsChange(context.getActor(), input);
           return { employee: await services.readEmployee(context.getActor(), input.employeeId) };
         }, ["NOT_FOUND", "CONFLICT"]),
+      setOwnWorkingWeek: (_parent, { input }, context) =>
+        ownWeekPayload(context, input.employeeId, () =>
+          services.setOwnWorkingWeek(context.getActor(), {
+            employeeId: input.employeeId,
+            startDate: input.startDate,
+            minutes: [
+              input.mondayMinutes,
+              input.tuesdayMinutes,
+              input.wednesdayMinutes,
+              input.thursdayMinutes,
+              input.fridayMinutes,
+              input.saturdayMinutes,
+              input.sundayMinutes,
+            ],
+            bankHolidayCalendar: input.bankHolidayCalendar.toLowerCase(),
+          }),
+        ),
+      useTermsWorkingWeek: (_parent, { input }, context) =>
+        ownWeekPayload(context, input.employeeId, () =>
+          services.useTermsWorkingWeek(context.getActor(), input),
+        ),
+      cancelOwnWorkingWeekChange: (_parent, { input }, context) =>
+        ownWeekPayload(context, input.employeeId, () =>
+          services.cancelOwnWorkingWeekChange(context.getActor(), input),
+        ),
       cancelWorkingPatternChange: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["WorkingPatternCancelChangePayload"]>(
           async () => ({

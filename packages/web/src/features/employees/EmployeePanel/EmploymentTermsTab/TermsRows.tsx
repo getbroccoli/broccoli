@@ -1,15 +1,11 @@
 import type { EmploymentTermsTab_TermsFragment } from "@/__generated__/graphql";
-import {
-  calendarName,
-  companyToday,
-  ruleSummary,
-  TimeOffTypeIcon,
-  weekSummary,
-} from "@/features/termsDisplay";
+import { companyToday, ruleSummary, TimeOffTypeIcon } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
-import { changeLineOn, rowOf, ruleSourceLabel } from "./employmentTermsView";
+import { changeLineOn, describeWeek, rowOf, ruleSourceLabel } from "./employmentTermsView";
 import { TermsRuleRow } from "./TermsRuleRow";
+import type { OwnWeekEdit } from "./useOwnWeekEdit";
+import { WeekRow } from "./WeekRow";
 
 type Terms = EmploymentTermsTab_TermsFragment;
 
@@ -23,6 +19,12 @@ type Props = {
   viewerIsPerson: boolean;
   /** A move being edited: the person's terms before and after it, read from its date. */
   change: { before: Terms; after: Terms; date: string } | null;
+  employeeId: string;
+  /** Admins edit the person's own week; null for everyone else. */
+  weekEdit: OwnWeekEdit | null;
+  /** Another edit is open on the tab. */
+  locked: boolean;
+  earliest: string;
 };
 
 /** The working week row, then a row per company time off type, each with what a move changes. */
@@ -33,6 +35,10 @@ export function TermsRows({
   firstName,
   viewerIsPerson,
   change,
+  employeeId,
+  weekEdit,
+  locked,
+  earliest,
 }: Props) {
   const today = companyToday();
   const sourceOf = (version: { source: "FROM_THEIR_TERMS" | "THEIR_OWN"; startDate: string }) =>
@@ -42,21 +48,14 @@ export function TermsRows({
       personFirstName: firstName,
     });
   const notOffered = t("people.panel.terms.notOfferedLower");
-  const week = rowOf(
-    workingWeek,
-    today,
-    describeWeek,
-    sourceOf,
-    t("people.panel.terms.noWeekLower"),
-  );
 
   return (
     <ul>
-      <TermsRuleRow
-        label={t("people.panel.terms.workingWeek")}
-        value={week.value}
-        missing={t("people.panel.terms.noWeek")}
-        planned={week.planned}
+      <WeekRow
+        employeeId={employeeId}
+        firstName={firstName}
+        workingWeek={workingWeek}
+        sourceOf={sourceOf}
         change={
           change &&
           changeLineOn(
@@ -67,6 +66,10 @@ export function TermsRows({
             t("people.panel.terms.noWeekLower"),
           )
         }
+        edit={weekEdit}
+        locked={locked}
+        earliest={earliest}
+        termsName={currentTermsName}
       />
       {timeOff?.map(({ timeOffType, versions }) => {
         const row = rowOf(versions, today, describeRules, sourceOf, notOffered);
@@ -101,16 +104,6 @@ export function TermsRows({
       })}
     </ul>
   );
-}
-
-/** A week as its row reads it: "Mon–Fri, 7.5 hours", then its bank holidays. */
-function describeWeek({ week }: Terms["workingWeek"][number]) {
-  return {
-    text: weekSummary(week),
-    detail: t("people.panel.terms.bankHolidays", {
-      calendar: calendarName(week.bankHolidayCalendar),
-    }),
-  };
 }
 
 /** A type's rules as its row reads them: "20 days a year, bank holidays on top", or recorded only. */

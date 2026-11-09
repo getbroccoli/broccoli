@@ -1,4 +1,4 @@
-import { shortDate } from "@/features/termsDisplay";
+import { DAY_FIELDS, shortDate, type WeekMinutes, weekSummary } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 /**
@@ -18,6 +18,7 @@ export function employeeChangeSentence({
   oldLabel?: string | null;
   newLabel?: string | null;
 }): string | null {
+  if (field === "workingWeek") return weekSentence(oldValue, newValue);
   if (field !== "terms") return null;
   const move = parseMove(newValue);
   if (move) {
@@ -34,6 +35,35 @@ export function employeeChangeSentence({
       date: shortDate(cancelled.startDate),
     })
   );
+}
+
+/**
+ * A change to the person's own week: given, changed, given back to the terms, or a planned change
+ * cancelled (no new value).
+ */
+function weekSentence(oldValue: string | null, newValue: string | null): string | null {
+  const before = parseWeekChange(oldValue);
+  const after = parseWeekChange(newValue);
+  if (!after) {
+    return before && t("ownWeek.history.cancelled", { date: shortDate(before.startDate) });
+  }
+  const date = shortDate(after.startDate);
+  if (!after.week) return t("ownWeek.history.back", { date });
+  const week = weekSummary(minutesOf(after.week.minutes));
+  return t(before?.week ? "ownWeek.history.changed" : "ownWeek.history.gave", { week, date });
+}
+
+/** An own-week change's stored value: the week, null for the terms', and the date it applies from. */
+type WeekChange = { week: { minutes: number[] } | null; startDate: string };
+
+function parseWeekChange(value: string | null): WeekChange | null {
+  return value === null ? null : (JSON.parse(value) as WeekChange);
+}
+
+function minutesOf(minutes: readonly number[]): WeekMinutes {
+  return Object.fromEntries(
+    DAY_FIELDS.map((day, index) => [day, minutes[index] ?? 0]),
+  ) as WeekMinutes;
 }
 
 /** A terms change's stored value: the terms and the date it applies from. */

@@ -13,6 +13,7 @@ import {
   createEmployeeTermsService,
   createEmployeeWorkingPatternService,
   createLocationService,
+  createOwnWorkingWeekService,
   createTermsService,
   createWorkingPatternService,
   type EmployeeInviteService,
@@ -35,6 +36,7 @@ export {
   createEmployeeTermsService,
   createEmployeeWorkingPatternService,
   createLocationService,
+  createOwnWorkingWeekService,
   createTermsService,
   employeeDirectory,
   termsRecordType,
@@ -68,6 +70,7 @@ export type {
   EmployeeTermsService,
   EmployeeWorkingPatternService,
   LocationService,
+  OwnWorkingWeekService,
   TermsMovePreview,
 } from "./app";
 export type {
@@ -113,6 +116,7 @@ export function employeesModule({
     ...createWorkingPatternService(dependencies),
     ...createEmployeeWorkingPatternService(dependencies),
     ...createEmployeeTermsService(dependencies),
+    ...createOwnWorkingWeekService(dependencies),
   };
   return {
     name: "employees",
