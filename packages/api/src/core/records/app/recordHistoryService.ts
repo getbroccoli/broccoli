@@ -1,7 +1,7 @@
 import type { Orm, Tx } from "../../db";
 import { type Connection, type PageArgs, paginate } from "../../pagination";
 import type { SecurityContext } from "../../security";
-import { HISTORY_SORT_VALUES, recordHistoryRepository } from "../db";
+import { HISTORY_SORT_VALUES, type HistoryFieldFilter, recordHistoryRepository } from "../db";
 import {
   authorOf,
   type CauseKind,
@@ -18,12 +18,12 @@ export interface RecordHistoryService {
    * `records.changed` per line. Returns the lines in the order of `append.records`.
    */
   append: (ctx: SecurityContext, tx: Tx, append: HistoryAppend) => Promise<HistoryLine[]>;
-  /** One record's history, newest first, one page at a time. */
+  /** One record's history, newest first, one page at a time, only the lines its field filter keeps. */
   read: (
     db: Orm | Tx,
     recordType: RecordType,
     recordId: string,
-    args: PageArgs,
+    args: HistoryPageArgs,
   ) => Promise<Connection<HistoryLine>>;
   /**
    * Deletes every history line of one record type in `tx`, without publishing; returns how many.
@@ -31,6 +31,9 @@ export interface RecordHistoryService {
    */
   purge: (tx: Tx, recordType: RecordType) => Promise<number>;
 }
+
+/** A history page's arguments: the page, and which lines by the fields they change. */
+export type HistoryPageArgs = PageArgs & HistoryFieldFilter;
 
 /** A change to one record, published once its transaction commits; it carries field keys, never values. */
 export interface RecordChanged {
@@ -77,12 +80,19 @@ export function createRecordHistoryService(): RecordHistoryService {
       }
       return lines;
     },
-    read: async (db, recordType, recordId, args) =>
-      paginate(args, {
+    read: async (db, recordType, recordId, { changingAnyOf, changingNoneOf, ...page }) =>
+      paginate(page, {
         order: { field: "NEWEST", direction: "DESC" },
         keysetValues: { NEWEST: HISTORY_SORT_VALUES },
         fetch: ({ after, limit }) =>
-          recordHistoryRepository(db).findPage({ recordType, recordId, after, limit }),
+          recordHistoryRepository(db).findPage({
+            recordType,
+            recordId,
+            after,
+            limit,
+            changingAnyOf,
+            changingNoneOf,
+          }),
       }),
     purge: (tx, recordType) => recordHistoryRepository(tx).deleteRecordType(recordType),
   };

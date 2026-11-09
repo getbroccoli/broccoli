@@ -14,10 +14,11 @@ import { SummaryText } from "./SummaryText";
 type Props = {
   line: HistoryLine;
   description: RecordDescription;
+  tag?: string | null;
 };
 
 /** One history line: who, what, any cause other than a direct edit, and time; a line of several changes expands to each of them. */
-export function HistoryRow({ line, description }: Props) {
+export function HistoryRow({ line, description, tag = null }: Props) {
   const [open, setOpen] = useState(false);
   const summary = summaryOf(line, description);
   const expandable = summary.kind === "updatedMany" || summary.kind === "created";
@@ -46,10 +47,16 @@ export function HistoryRow({ line, description }: Props) {
           <span className="font-medium">{author}</span> <SummaryText summary={summary} />
           {line.reason && <span className="text-muted-foreground"> · “{line.reason}”</span>}
         </p>
-        {cause && (
-          <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-            {cause}
-          </span>
+        {[tag, cause].map(
+          (label) =>
+            label && (
+              <span
+                key={label}
+                className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+              >
+                {label}
+              </span>
+            ),
         )}
         <time
           dateTime={line.occurredAt}

@@ -1,5 +1,19 @@
-query RecordHistory($recordType: RecordType!, $recordId: ID!, $first: Int, $after: String) {
-  recordHistory(recordType: $recordType, recordId: $recordId, first: $first, after: $after) {
+query RecordHistory(
+  $recordType: RecordType!
+  $recordId: ID!
+  $first: Int
+  $after: String
+  $changingAnyOf: [String!]
+  $changingNoneOf: [String!]
+) {
+  recordHistory(
+    recordType: $recordType
+    recordId: $recordId
+    first: $first
+    after: $after
+    changingAnyOf: $changingAnyOf
+    changingNoneOf: $changingNoneOf
+  ) {
     edges {
       node {
         ...RecordHistory_line @unmask

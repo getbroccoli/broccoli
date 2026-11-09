@@ -5,7 +5,7 @@ import { RecordHistoryDocument, type RecordType } from "@/__generated__/graphql"
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
-import { groupByDay, HISTORY_PAGE_SIZE } from "./historyLines";
+import { groupByDay, HISTORY_PAGE_SIZE, type HistoryLine } from "./historyLines";
 import { HistoryRow } from "./HistoryRow";
 import type { RecordDescription } from "../recordDescription";
 
@@ -13,17 +13,23 @@ type Props = {
   recordType: RecordType;
   recordId: string;
   description: RecordDescription;
+  /** Only the lines changing at least one, or none, of these fields; the server filters, as it pages. */
+  filter?: { changingAnyOf?: string[]; changingNoneOf?: string[] };
+  /** A short tag on each line, such as the part of the record it changes. */
+  tagOf?: (line: HistoryLine) => string | null;
 };
 
 /**
  * A record's history, newest first and grouped by day, for any record type: it loads its lines
  * itself, so a record's panel only says which record and how its fields read.
  */
-export function RecordHistory({ recordType, recordId, description }: Props) {
+export function RecordHistory({ recordType, recordId, description, filter, tagOf }: Props) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [olderFailed, setOlderFailed] = useState(false);
   const { data, error, refetch, fetchMore } = useQuery(RecordHistoryDocument, {
-    variables: { recordType, recordId, first: HISTORY_PAGE_SIZE },
+    variables: { recordType, recordId, first: HISTORY_PAGE_SIZE, ...filter },
+    // A save adds its line only to the unfiltered history; a filtered one reloads when shown.
+    fetchPolicy: filter ? "cache-and-network" : "cache-first",
   });
   const history = data?.recordHistory;
 
@@ -90,7 +96,12 @@ export function RecordHistory({ recordType, recordId, description }: Props) {
                 </div>
                 <ul>
                   {group.lines.map((line) => (
-                    <HistoryRow key={line.id} line={line} description={description} />
+                    <HistoryRow
+                      key={line.id}
+                      line={line}
+                      description={description}
+                      tag={tagOf?.(line) ?? null}
+                    />
                   ))}
                 </ul>
               </div>

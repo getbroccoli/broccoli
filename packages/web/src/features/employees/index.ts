@@ -1,6 +1,11 @@
 export { Avatar } from "./Avatar";
 export { EmployeeDirectory } from "./EmployeeDirectory";
-export { DiscardChangesDialog, EmployeePanel } from "./EmployeePanel";
+export {
+  DEFAULT_EMPLOYEE_PANEL_SEARCH,
+  DiscardChangesDialog,
+  EmployeePanel,
+  employeePanelSearch,
+} from "./EmployeePanel";
 export {
   DEFAULT_EMPLOYEE_LIST_SEARCH,
   employeeListSearch,

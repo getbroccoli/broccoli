@@ -49,10 +49,12 @@ export function createResolvers(
   return {
     ...accessResolvers(registry, reader),
     Query: {
-      recordHistory: (_parent, { recordType, recordId, first, after }, context) =>
+      recordHistory: (_parent, { recordType, recordId, first, after, ...filter }, context) =>
         reader.readHistory(context.getActor(), recordType.toLowerCase() as RecordType, recordId, {
           first: first ?? undefined,
           after,
+          changingAnyOf: filter.changingAnyOf ?? undefined,
+          changingNoneOf: filter.changingNoneOf ?? undefined,
         }),
     },
     Mutation: {

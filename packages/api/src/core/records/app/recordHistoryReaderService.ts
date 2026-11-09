@@ -1,6 +1,6 @@
 import { ApplicationError } from "../../applicationError";
 import type { Orm, Tx } from "../../db";
-import type { Connection, PageArgs } from "../../pagination";
+import type { Connection } from "../../pagination";
 import {
   isInRecordScope,
   type PermissionObject,
@@ -9,7 +9,7 @@ import {
 } from "../../security";
 import { findUserEmails } from "../db";
 import type { FieldChange, HistoryLine, RecordType } from "../domain";
-import { createRecordHistoryService } from "./recordHistoryService";
+import { createRecordHistoryService, type HistoryPageArgs } from "./recordHistoryService";
 
 /** Reads the history of a record of any type, its records and their access, for whoever its type allows. */
 export interface RecordHistoryReaderService {
@@ -18,7 +18,7 @@ export interface RecordHistoryReaderService {
     ctx: SecurityContext,
     recordType: RecordType,
     recordId: string,
-    args: PageArgs,
+    args: HistoryPageArgs,
   ) => Promise<Connection<HistoryLine>>;
   /** The records still there among these ids, each marked with its GraphQL type, by id. */
   readRecords: (

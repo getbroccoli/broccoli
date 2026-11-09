@@ -1,4 +1,4 @@
-import { useBlocker, useRouteContext } from "@tanstack/react-router";
+import { useBlocker, useNavigate, useRouteContext, useSearch } from "@tanstack/react-router";
 import { DotsThree, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
@@ -11,18 +11,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import {
   type CopiedLink,
   CopiedLinkDialog,
   InviteDialog,
   InviteMenuItems,
 } from "@/features/invites";
-import { EditBar, FieldValue, RecordHistory } from "@/features/records";
+import { EditBar, FieldValue } from "@/features/records";
 import { t } from "@/i18n";
 
 import { Avatar } from "../Avatar";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import { EmployeeDetails } from "./EmployeeDetails";
+import { EmployeeHistory } from "./EmployeeHistory";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
 import { KeyFacts } from "./KeyFacts";
@@ -36,8 +38,8 @@ type Props = {
 };
 
 /**
- * One loaded person in their panel: header, key facts, fields edited in place with one Save,
- * and their history. Leaving with unsaved changes asks first.
+ * One loaded person in their panel: header, then tabs for an overview of key facts, time off and
+ * fields edited in place with one Save, and their history. Leaving with unsaved changes asks first.
  */
 export function EmployeeRecord({ employee, onClose }: Props) {
   const draft = useEmployeeDraft(employee);
@@ -56,6 +58,8 @@ export function EmployeeRecord({ employee, onClose }: Props) {
     if (blocker.status === "blocked" && draft.changed.length === 0) blocker.proceed();
   }, [blocker, draft.changed.length]);
   const fullName = `${employee.firstName} ${employee.lastName}`;
+  const { tab } = useSearch({ from: "/_authenticated/people/$employeeId" });
+  const navigate = useNavigate({ from: "/people/$employeeId" });
   const { operations } = useRouteContext({ from: "/_authenticated" }).me;
   const editable = new Set(employee.access.editableFields);
   const canEdit = (key: EmployeeFieldKey) =>
@@ -114,42 +118,62 @@ export function EmployeeRecord({ employee, onClose }: Props) {
         </SheetClose>
       </header>
 
-      <div className="subtle-scrollbar flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-6">
-        <KeyFacts
-          startDate={employee.startDate ?? null}
-          email={
-            <FieldValue
-              field={EMAIL_FIELD}
-              recordId={employee.id}
-              saved={draft.saved.email}
-              draft={draft.draft.email}
-              error={draft.fieldErrors.email}
-              disabled={draft.saving}
-              readOnly={!canEdit("email")}
-              onEdit={(value) => draft.edit("email", value)}
-              onRevert={() => draft.revert("email")}
-            />
-          }
-          emailMark={
-            draft.fieldErrors.email ? "invalid" : draft.changed.includes("email") ? "changed" : null
-          }
-          signIn={
-            employee.signInStatus
-              ? { status: employee.signInStatus, onInvite: () => setInviting(true) }
-              : null
-          }
-        />
+      <Tabs
+        value={tab}
+        onValueChange={(value: typeof tab) =>
+          void navigate({ search: (previous) => ({ ...previous, tab: value }) })
+        }
+        className="min-h-0 flex-1 gap-0"
+      >
+        <TabsList aria-label={t("people.panel.tabs", { name: fullName })} className="px-6 pt-1">
+          <TabsTab value="overview" className="pt-2">
+            {t("people.panel.tab.overview")}
+          </TabsTab>
+          <TabsTab value="history" className="pt-2">
+            {t("people.panel.tab.history")}
+          </TabsTab>
+        </TabsList>
+        <TabsPanel
+          value="overview"
+          className="subtle-scrollbar flex flex-1 flex-col gap-6 overflow-y-auto px-6 py-6"
+        >
+          <KeyFacts
+            startDate={employee.startDate ?? null}
+            email={
+              <FieldValue
+                field={EMAIL_FIELD}
+                recordId={employee.id}
+                saved={draft.saved.email}
+                draft={draft.draft.email}
+                error={draft.fieldErrors.email}
+                disabled={draft.saving}
+                readOnly={!canEdit("email")}
+                onEdit={(value) => draft.edit("email", value)}
+                onRevert={() => draft.revert("email")}
+              />
+            }
+            emailMark={
+              draft.fieldErrors.email
+                ? "invalid"
+                : draft.changed.includes("email")
+                  ? "changed"
+                  : null
+            }
+            signIn={
+              employee.signInStatus
+                ? { status: employee.signInStatus, onInvite: () => setInviting(true) }
+                : null
+            }
+          />
 
-        <EmployeeDetails employee={employee} draft={draft} canEdit={canEdit} />
+          <EmployeeDetails employee={employee} draft={draft} canEdit={canEdit} />
 
-        {employee.timeOffTypes && <TimeOffSection timeOffTypes={employee.timeOffTypes} />}
-
-        <RecordHistory
-          recordType="EMPLOYEE"
-          recordId={employee.id}
-          description={EMPLOYEE_DESCRIPTION}
-        />
-      </div>
+          {employee.timeOffTypes && <TimeOffSection timeOffTypes={employee.timeOffTypes} />}
+        </TabsPanel>
+        <TabsPanel value="history" className="subtle-scrollbar flex-1 overflow-y-auto px-6 py-6">
+          <EmployeeHistory employeeId={employee.id} />
+        </TabsPanel>
+      </Tabs>
 
       {draft.changed.length > 0 && (
         <div className="border-t border-border px-4 py-3">
@@ -172,7 +196,8 @@ export function EmployeeRecord({ employee, onClose }: Props) {
         open={blocker.status === "blocked"}
         count={draft.changed.length}
         name={fullName}
-        onDiscard={() => blocker.proceed?.()}
+        // Navigation goes on once nothing is changed; a tab switch keeps the record open.
+        onDiscard={draft.cancel}
         onKeepEditing={() => blocker.reset?.()}
       />
       <InviteDialog people={[employee]} open={inviting} onOpenChange={setInviting} />
