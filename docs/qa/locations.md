@@ -9,7 +9,7 @@ A manual check of managing locations and their terms in Settings, against a deve
 
 ## The table
 
-- [ ] The Settings menu lists Locations under Areas, after Employment terms and Time off, not under Workspace.
+- [ ] The Settings menu lists Locations under Areas, after Employment terms and Time off, not under System.
 - [ ] The table lists London, Manchester and Remote by name, with columns Location, Terms and People; each shows its terms ("England and Wales" with the "Default" pill) and how many people are in it.
 - [ ] Without demo data (after Exit demo), it reads "No locations yet. Add one with New location."
 - [ ] At phone width the table scrolls sideways in its box.
