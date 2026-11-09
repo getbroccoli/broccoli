@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 
 import { TermsCard } from "./TermsCard";
+import type { TermsChange } from "./useTermsChange";
 
 type Props = {
   employeeId: string;
@@ -14,6 +15,8 @@ type Props = {
   viewerIsPerson: boolean;
   /** Admins see each terms' name as a link to its settings. */
   linksToSettings: boolean;
+  /** Admins move the person to other terms on the tab; null for everyone else. */
+  change: TermsChange | null;
 };
 
 /**

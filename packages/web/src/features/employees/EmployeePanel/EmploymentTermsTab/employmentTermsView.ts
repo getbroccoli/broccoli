@@ -1,6 +1,6 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-import { shortDate, splitVersions } from "@/features/termsDisplay";
+import { shortDate, splitVersions, versionOn } from "@/features/termsDisplay";
 import { calendarDayParts } from "@/lib/calendarDay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
@@ -87,6 +87,30 @@ export function rowOf<V extends DatedVersion>(
       return [...starts, ...stops];
     }),
   };
+}
+
+/**
+ * What a row changes to on `date` when moving the person, from their versions `before` and as they
+ * would be `after`; null when it stays the same or they have their own then.
+ */
+export function changeLineOn<V extends DatedVersion>(
+  before: readonly V[],
+  after: readonly V[],
+  date: string,
+  describe: (version: V) => { text: string; detail?: string },
+  missing: string,
+): string | null {
+  const next = versionOn(after, date);
+  if (next?.source === "THEIR_OWN") return null;
+  const textOf = (version: V | null) => {
+    if (!version) return missing;
+    const { text, detail } = describe(version);
+    return [text, detail].filter(Boolean).join(" · ");
+  };
+  const change = textOf(next);
+  return change === textOf(versionOn(before, date))
+    ? null
+    : t("people.panel.terms.planned", { date: shortDate(date), change });
 }
 
 /** What a planned version changes to; where it comes from too when that changes, or it is their own. */

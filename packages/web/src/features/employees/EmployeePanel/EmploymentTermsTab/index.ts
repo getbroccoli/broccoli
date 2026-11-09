@@ -1,2 +1,4 @@
 export { EmploymentTermsTab } from "./EmploymentTermsTab";
-export { termsPeriodsOn } from "./employmentTermsView";
+export { type TermsPeriod, termsPeriodsOn } from "./employmentTermsView";
+export { TermsChangeBar } from "./TermsChangeBar";
+export { useTermsChange } from "./useTermsChange";

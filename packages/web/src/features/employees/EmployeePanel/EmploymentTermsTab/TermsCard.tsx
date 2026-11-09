@@ -1,79 +1,97 @@
-import { CalendarBlank } from "@phosphor-icons/react";
-
-import type { EmploymentTermsTabQuery } from "@/__generated__/graphql";
-import {
-  calendarName,
-  companyToday,
-  ruleSummary,
-  shortDate,
-  TimeOffTypeIcon,
-  weekSummary,
-} from "@/features/termsDisplay";
+import type { EmploymentTermsTab_TermsFragment } from "@/__generated__/graphql";
+import { Button } from "@/components/ui/button";
+import { companyToday, shortDate } from "@/features/termsDisplay";
 import { t } from "@/i18n";
+import { cn } from "@/lib/class-names";
 
-import { rowOf, ruleSourceLabel, termsPeriodsOn } from "./employmentTermsView";
+import { ChangeTermsForm } from "../../ChangeTermsForm";
+import { termsPeriodsOn } from "./employmentTermsView";
+import { PlannedMove } from "./PlannedMove";
 import { TermsLastChange } from "./TermsLastChange";
 import { TermsName } from "./TermsName";
-import { TermsRuleRow } from "./TermsRuleRow";
-
-type EmploymentTerms = NonNullable<
-  NonNullable<EmploymentTermsTabQuery["employee"]>["employmentTerms"]
->;
+import { TermsRows } from "./TermsRows";
+import type { TermsChange } from "./useTermsChange";
 
 type Props = {
   employeeId: string;
   firstName: string;
-  employmentTerms: EmploymentTerms;
+  employmentTerms: EmploymentTermsTab_TermsFragment;
   /** The person reads about themselves: "your terms", "Your own". */
   viewerIsPerson: boolean;
   /** Admins see each terms' name as a link to its settings. */
   linksToSettings: boolean;
+  /** Admins move the person to other terms here; null for everyone else. */
+  change: TermsChange | null;
 };
 
-/** A person's terms, working week and each time off type's rules, today and planned, and earlier terms. */
+/**
+ * A person's terms, working week and each time off type's rules, today and planned, and earlier
+ * terms; for admins, Change terms opens in place and marks what the move changes.
+ */
 export function TermsCard({
   employeeId,
   firstName,
-  employmentTerms: { periods, workingWeek, timeOff },
+  employmentTerms,
   viewerIsPerson,
   linksToSettings,
+  change,
 }: Props) {
+  const { periods, timeOff } = employmentTerms;
   const today = companyToday();
   const { current, planned, earlier } = termsPeriodsOn(periods, today);
   const termsNameOn = (date: string) =>
     termsPeriodsOn(periods, date).current?.termsName ?? current?.termsName ?? "";
-  const sourceOf = (version: { source: "FROM_THEIR_TERMS" | "THEIR_OWN"; startDate: string }) =>
-    ruleSourceLabel(version.source, {
-      termsName: termsNameOn(version.startDate),
-      viewerIsPerson,
-      personFirstName: firstName,
-    });
-  const week = rowOf(
-    workingWeek,
-    today,
-    ({ week: version }) => ({
-      text: weekSummary(version),
-      detail: t("people.panel.terms.bankHolidays", {
-        calendar: calendarName(version.bankHolidayCalendar),
-      }),
-    }),
-    sourceOf,
-    t("people.panel.terms.noWeekLower"),
-  );
   // A type without a balance has no leave year; the first one with one says it.
   const leaveYear = timeOff
     ?.flatMap(({ versions }) => versions)
     .find(({ rules }) => rules.leaveYearStart)?.rules.leaveYearStart;
+  const editing = change?.open ?? false;
+  const changeDate = change?.value.startDate ?? today;
 
   return (
     <section aria-labelledby="employee-terms" className="flex flex-col gap-2">
-      <h2
-        id="employee-terms"
-        className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
+      <div className="flex items-center justify-between gap-2">
+        <h2
+          id="employee-terms"
+          className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
+        >
+          {t("people.panel.terms.title")}
+        </h2>
+        {change && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={editing}
+            onClick={() => change.start(employmentTerms.earliestChange)}
+          >
+            {t("people.panel.terms.change")}
+          </Button>
+        )}
+      </div>
+      <div
+        className={cn(
+          "overflow-hidden rounded-xl border bg-card",
+          editing ? "border-foreground" : "border-border",
+        )}
       >
-        {t("people.panel.terms.title")}
-      </h2>
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+        {change?.open && (
+          <div className="border-b border-border bg-sidebar px-3 py-3">
+            <ChangeTermsForm
+              value={change.value}
+              onChange={change.edit}
+              earliest={change.earliest}
+              currentTermsId={current?.termsId}
+              hint={[
+                t("changeTerms.hint", { terms: termsNameOn(changeDate) }),
+                change.after && t("changeTerms.hintMarked", { date: shortDate(changeDate) }),
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              error={change.error}
+              disabled={change.saving}
+            />
+          </div>
+        )}
         <div className="flex flex-wrap items-baseline gap-x-2.5 border-b border-border bg-sidebar px-3 py-2.5">
           {current ? (
             <>
@@ -88,54 +106,25 @@ export function TermsCard({
             <span className="text-sm text-muted-foreground">{t("people.panel.terms.noTerms")}</span>
           )}
         </div>
-        {planned.map((period) => (
-          <p
+        {planned.map((period, index) => (
+          <PlannedMove
             key={period.startDate}
-            className="mx-3 mt-2.5 flex items-center gap-2 rounded-lg bg-sidebar px-3 py-1.5 text-sm"
-          >
-            <CalendarBlank aria-hidden className="shrink-0" />
-            <span>
-              <span className="font-semibold">
-                {t("people.panel.terms.plannedFrom", { date: shortDate(period.startDate ?? "") })}
-              </span>{" "}
-              <TermsName period={period} linksToSettings={linksToSettings} />
-            </span>
-          </p>
-        ))}
-        <ul>
-          <TermsRuleRow
-            label={t("people.panel.terms.workingWeek")}
-            value={week.value}
-            missing={t("people.panel.terms.noWeek")}
-            planned={week.planned}
+            employeeId={employeeId}
+            firstName={firstName}
+            period={{ ...period, startDate: period.startDate! }}
+            staysOn={(index === 0 ? current : planned[index - 1])?.termsName ?? ""}
+            linksToSettings={linksToSettings}
+            canCancel={Boolean(change) && !editing}
           />
-          {timeOff?.map(({ timeOffType, versions }) => {
-            const row = rowOf(
-              versions,
-              today,
-              ({ rules }) => ({
-                text:
-                  rules.balance === "NO_BALANCE" ? t("terms.rule.recorded") : ruleSummary(rules),
-              }),
-              sourceOf,
-              t("people.panel.terms.notOfferedLower"),
-            );
-            return (
-              <TermsRuleRow
-                key={timeOffType.id}
-                label={
-                  <>
-                    <TimeOffTypeIcon icon={timeOffType.icon} colour={timeOffType.colour} />
-                    <span className="[overflow-wrap:anywhere]">{timeOffType.name}</span>
-                  </>
-                }
-                value={row.value}
-                missing={t("people.panel.terms.notOffered", { terms: current?.termsName ?? "" })}
-                planned={row.planned}
-              />
-            );
-          })}
-        </ul>
+        ))}
+        <TermsRows
+          employmentTerms={employmentTerms}
+          termsNameOn={termsNameOn}
+          currentTermsName={current?.termsName ?? ""}
+          firstName={firstName}
+          viewerIsPerson={viewerIsPerson}
+          change={change?.after ? { after: change.after, date: changeDate } : null}
+        />
         {leaveYear && (
           <p className="border-t border-border/60 px-3 py-2 text-[13px] text-muted-foreground">
             {leaveYear.kind === "LEAVE_YEAR_FROM_EMPLOYEE_START_DATE"

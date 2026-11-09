@@ -22,6 +22,7 @@ import {
   INPUT_KEYS,
   toUpdateInput,
 } from "./employeeDraft";
+import { useLocationSavedToast } from "./useLocationSavedToast";
 
 /** Why the last save failed, for the edit bar: a removed employee or any other failure. */
 export type SaveFailure = "removed" | "failed";
@@ -32,23 +33,16 @@ export type SaveFailure = "removed" | "failed";
  */
 export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
   const saved = valuesOf(employee);
-  const [edits, setEdits] = useState<Edits>({});
+  const { edits, setEdits, edit, revert } = useEdits();
   const [reason, setReason] = useState("");
   const { saving, failure, reset, saveChanges } = useSaveEmployee(employee.id);
+  const announceLocation = useLocationSavedToast({
+    firstName: employee.firstName,
+    periods: employee.employmentTerms?.periods ?? [],
+  });
   const draft = mapEdits(edits, ({ value }) => value);
   const fieldErrors = mapEdits(edits, ({ error }) => error);
   const changed = changedFields(saved, draft);
-
-  // A new value replaces the field's edit, and with it the error the last save gave it.
-  const edit = (key: EmployeeFieldKey, value: string) =>
-    setEdits((current) => ({ ...current, [key]: { value } }));
-
-  const revert = (key: EmployeeFieldKey) =>
-    setEdits((current) => {
-      const rest = { ...current };
-      delete rest[key];
-      return rest;
-    });
 
   const cancel = () => {
     setEdits({});
@@ -62,6 +56,7 @@ export function useEmployeeDraft(employee: EmployeePanel_EmployeeFragment) {
     setEdits((current) => mapEdits(current, ({ value }) => ({ value })));
     try {
       await saveChanges(saved, draft, reason);
+      if (draft.location && changed.includes("location")) announceLocation(draft.location);
       cancel();
     } catch (failed) {
       const messages = refusedFieldMessages(failed);
@@ -144,6 +139,21 @@ function useSaveEmployee(employeeId: string) {
       }
     },
   };
+}
+
+/** The unsaved fields, with an edit that replaces one and a revert that drops it. */
+function useEdits() {
+  const [edits, setEdits] = useState<Edits>({});
+  // A new value replaces the field's edit, and with it the error the last save gave it.
+  const edit = (key: EmployeeFieldKey, value: string) =>
+    setEdits((current) => ({ ...current, [key]: { value } }));
+  const revert = (key: EmployeeFieldKey) =>
+    setEdits((current) => {
+      const rest = { ...current };
+      delete rest[key];
+      return rest;
+    });
+  return { edits, setEdits, edit, revert };
 }
 
 /** The unsaved fields: each new value, and why the last save refused it until it changes. */

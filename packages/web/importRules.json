@@ -70,6 +70,7 @@
       "src/__generated__",
       "src/apollo",
       "src/components/dataTable",
+      "src/components/form",
       "src/components/ui",
       "src/features/invites",
       "src/features/records",
@@ -141,7 +142,12 @@
       "src/lib/class-names",
       "src/lib/formatDays"
     ],
-    "src/features/termsDisplay": ["src/__generated__", "src/i18n", "src/lib/calendarDay"],
+    "src/features/termsDisplay": [
+      "src/__generated__",
+      "src/components/ui",
+      "src/i18n",
+      "src/lib/calendarDay"
+    ],
     "src/features/setup": [
       "src/__generated__",
       "src/apollo",

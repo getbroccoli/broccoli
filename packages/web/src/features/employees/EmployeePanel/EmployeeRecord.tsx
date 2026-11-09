@@ -11,7 +11,7 @@ import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import { EmployeeDetails } from "./EmployeeDetails";
 import { EmployeeHeader } from "./EmployeeHeader";
 import { EmployeeHistory } from "./EmployeeHistory";
-import { EmploymentTermsTab } from "./EmploymentTermsTab";
+import { EmploymentTermsTab, TermsChangeBar, useTermsChange } from "./EmploymentTermsTab";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { shownTab } from "./employeePanelSearch";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
@@ -31,20 +31,22 @@ type Props = {
  */
 export function EmployeeRecord({ employee, onClose }: Props) {
   const draft = useEmployeeDraft(employee);
+  const termsChange = useTermsChange({ employeeId: employee.id, firstName: employee.firstName });
+  const unsaved = draft.changed.length > 0 || termsChange.changed;
   const [removing, setRemoving] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [copiedLink, setCopiedLink] = useState<CopiedLink | null>(null);
   // Set once the employee is removed, so closing their panel asks nothing.
   const removed = useRef(false);
   const blocker = useBlocker({
-    shouldBlockFn: () => !removed.current && draft.changed.length > 0,
-    enableBeforeUnload: () => !removed.current && draft.changed.length > 0,
+    shouldBlockFn: () => !removed.current && unsaved,
+    enableBeforeUnload: () => !removed.current && unsaved,
     withResolver: true,
   });
   // A save can finish while navigation is already waiting for the discard decision.
   useEffect(() => {
-    if (blocker.status === "blocked" && draft.changed.length === 0) blocker.proceed();
-  }, [blocker, draft.changed.length]);
+    if (blocker.status === "blocked" && !unsaved) blocker.proceed();
+  }, [blocker, unsaved]);
   const fullName = `${employee.firstName} ${employee.lastName}`;
   const { tab } = useSearch({ from: "/_authenticated/people/$employeeId" });
   const navigate = useNavigate({ from: "/people/$employeeId" });
@@ -71,9 +73,11 @@ export function EmployeeRecord({ employee, onClose }: Props) {
 
       <Tabs
         value={shownTab(tab, { canReadTerms: employee.employmentTerms !== null })}
-        onValueChange={(value: typeof tab) =>
-          void navigate({ search: (previous) => ({ ...previous, tab: value }) })
-        }
+        onValueChange={(value: typeof tab) => {
+          // An edit with nothing picked closes with its tab; a changed one asks first.
+          if (!termsChange.changed) termsChange.close();
+          void navigate({ search: (previous) => ({ ...previous, tab: value }) });
+        }}
         className="min-h-0 flex-1 gap-0"
       >
         <TabsList aria-label={t("people.panel.tabs", { name: fullName })} className="px-6 pt-1">
@@ -133,6 +137,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
               firstName={employee.firstName}
               viewerIsPerson={me.employee?.id === employee.id}
               linksToSettings={operations.includes("MANAGE_WORKSPACE")}
+              change={operations.includes("MANAGE_WORKSPACE") ? termsChange : null}
             />
           </TabsPanel>
         )}
@@ -141,7 +146,12 @@ export function EmployeeRecord({ employee, onClose }: Props) {
         </TabsPanel>
       </Tabs>
 
-      {draft.changed.length > 0 && (
+      {termsChange.open && (
+        <div className="border-t border-border px-4 py-3">
+          <TermsChangeBar change={termsChange} firstName={employee.firstName} />
+        </div>
+      )}
+      {!termsChange.open && draft.changed.length > 0 && (
         <div className="border-t border-border px-4 py-3">
           <EditBar
             changedLabels={changedLabels}
@@ -160,10 +170,13 @@ export function EmployeeRecord({ employee, onClose }: Props) {
 
       <DiscardChangesDialog
         open={blocker.status === "blocked"}
-        count={draft.changed.length}
+        count={draft.changed.length + (termsChange.changed ? 1 : 0)}
         name={fullName}
         // Navigation goes on once nothing is changed; a tab switch keeps the record open.
-        onDiscard={draft.cancel}
+        onDiscard={() => {
+          draft.cancel();
+          termsChange.close();
+        }}
         onKeepEditing={() => blocker.reset?.()}
       />
       <InviteDialog people={[employee]} open={inviting} onOpenChange={setInviting} />

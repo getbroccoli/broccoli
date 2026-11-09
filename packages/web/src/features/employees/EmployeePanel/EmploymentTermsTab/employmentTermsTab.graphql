@@ -4,53 +4,113 @@ query EmploymentTermsTab($id: ID!) {
   employee(id: $id) {
     id
     employmentTerms {
-      periods {
-        termsId
-        termsName
-        startDate
-        endDate
-      }
-      workingWeek {
-        source
-        startDate
-        endDate
-        week {
-          id
-          mondayMinutes
-          tuesdayMinutes
-          wednesdayMinutes
-          thursdayMinutes
-          fridayMinutes
-          saturdayMinutes
-          sundayMinutes
-          bankHolidayCalendar
+      ...EmploymentTermsTab_terms @unmask
+    }
+  }
+}
+
+fragment EmploymentTermsTab_terms on EmployeeEmploymentTerms {
+  earliestChange
+  periods {
+    termsId
+    termsName
+    startDate
+    endDate
+  }
+  workingWeek {
+    source
+    startDate
+    endDate
+    week {
+      id
+      mondayMinutes
+      tuesdayMinutes
+      wednesdayMinutes
+      thursdayMinutes
+      fridayMinutes
+      saturdayMinutes
+      sundayMinutes
+      bankHolidayCalendar
+    }
+  }
+  timeOff {
+    timeOffType {
+      id
+      name
+      icon
+      colour
+    }
+    versions {
+      source
+      startDate
+      endDate
+      rules {
+        id
+        balance
+        bankHolidays
+        leaveYearStart {
+          kind
+          month
+          day
+        }
+        yearlyEntitlement {
+          days
+          daysPerWeek
         }
       }
-      timeOff {
-        timeOffType {
-          id
-          name
-          icon
-          colour
+    }
+  }
+}
+
+query TermsChangePreview($input: EmployeeTermsChangeInput!) {
+  termsChangePreview(input: $input) {
+    moves {
+      startDate
+      employmentTerms {
+        ...EmploymentTermsTab_terms @unmask
+      }
+    }
+    skipped {
+      reason
+    }
+  }
+}
+
+mutation ChangeTerms($input: EmployeeTermsChangeInput!) {
+  employees {
+    changeTerms(input: $input) {
+      moved {
+        startDate
+      }
+      skipped {
+        reason
+      }
+      error {
+        __typename
+        ... on Error {
+          message
         }
-        versions {
-          source
-          startDate
-          endDate
-          rules {
-            id
-            balance
-            bankHolidays
-            leaveYearStart {
-              kind
-              month
-              day
-            }
-            yearlyEntitlement {
-              days
-              daysPerWeek
-            }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
           }
+        }
+      }
+    }
+  }
+}
+
+mutation CancelTermsChange($input: EmployeeTermsCancelChangeInput!) {
+  employees {
+    cancelTermsChange(input: $input) {
+      employee {
+        id
+      }
+      error {
+        __typename
+        ... on Error {
+          message
         }
       }
     }

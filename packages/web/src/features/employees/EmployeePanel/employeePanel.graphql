@@ -126,3 +126,16 @@ fragment EmployeePanel_employee on Employee {
     }
   }
 }
+
+# Each location's terms for new people, to say after a location is saved that the person's
+# terms stay. Admins only.
+query LocationStartTerms {
+  locations {
+    id
+    name
+    terms {
+      id
+      name
+    }
+  }
+}

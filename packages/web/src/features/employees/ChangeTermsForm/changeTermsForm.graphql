@@ -1,0 +1,7 @@
+# Every set of terms a person can move to, for the form's select. Admins only.
+query ChangeTermsFormTerms {
+  allTerms {
+    id
+    name
+  }
+}

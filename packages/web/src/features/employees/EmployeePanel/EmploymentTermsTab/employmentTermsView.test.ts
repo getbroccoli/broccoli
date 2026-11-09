@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
+import type { RuleSource } from "@/__generated__/graphql";
 
-import { rowOf, ruleSourceLabel, termsPeriodsOn } from "./employmentTermsView";
+import { changeLineOn, rowOf, ruleSourceLabel, termsPeriodsOn } from "./employmentTermsView";
 
 it("keeps today's terms current and puts planned moves in date order", () => {
   const current = {
@@ -260,3 +261,60 @@ it("says a type stops when nothing follows its version", () => {
     planned: ["From 1 Dec 2026: not offered"],
   });
 });
+
+it("describes the week and bank holidays that change on the move date", () => {
+  const line = changeLineOn(
+    [englandWeek],
+    [scotlandWeek],
+    "2026-12-01",
+    describeWeek,
+    "not offered",
+  );
+
+  expect(line).toBe("From 1 Dec 2026: Mon–Thu, 8 hours · Scotland bank holidays");
+});
+
+it("shows no change line for a person's own week on the move date", () => {
+  const own = { ...scotlandWeek, source: "THEIR_OWN" as const };
+
+  const line = changeLineOn([englandWeek], [own], "2026-12-01", describeWeek, "not offered");
+
+  expect(line).toBeNull();
+});
+
+it("shows no change line when the week reads the same before and after", () => {
+  const line = changeLineOn(
+    [englandWeek],
+    [englandWeek],
+    "2026-12-01",
+    describeWeek,
+    "not offered",
+  );
+
+  expect(line).toBeNull();
+});
+
+it("says a type is not offered when nothing applies after the move", () => {
+  const line = changeLineOn([englandWeek], [], "2026-12-01", describeWeek, "not offered");
+
+  expect(line).toBe("From 1 Dec 2026: not offered");
+});
+
+const englandWeek = {
+  source: "FROM_THEIR_TERMS" as RuleSource,
+  startDate: "2026-11-09",
+  endDate: null,
+  text: "Mon–Fri, 7.5 hours",
+  detail: "England and Wales bank holidays",
+};
+const scotlandWeek = {
+  source: "FROM_THEIR_TERMS" as RuleSource,
+  startDate: "2026-12-01",
+  endDate: null,
+  text: "Mon–Thu, 8 hours",
+  detail: "Scotland bank holidays",
+};
+
+function describeWeek({ text, detail }: { text: string; detail: string }) {
+  return { text, detail };
+}
