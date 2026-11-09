@@ -16,7 +16,7 @@ export function tasksModule({
   employees,
 }: {
   tasks: TaskService;
-  employees: Pick<EmployeeReadService, "readEmployee">;
+  employees: Pick<EmployeeReadService, "readEmployees">;
 }): ModuleManifest {
   return {
     name: "tasks",

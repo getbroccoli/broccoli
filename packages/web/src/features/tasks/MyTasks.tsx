@@ -13,7 +13,6 @@ import { cn } from "@/lib/class-names";
 import { TaskStatus } from "./TaskStatus";
 import { dueText, isLate, isOpen, taskFact, taskSource, type TaskRow } from "./taskText";
 import { useTaskActions } from "./useTaskActions";
-import { useTasksNeedingYou } from "./useTasksNeedingYou";
 
 type Group = keyof Omit<MyTasksQuery["myTasks"], "__typename">;
 type Row = { group: Group; task: TaskRow };
@@ -147,14 +146,6 @@ export function MyTasks() {
       }
     />
   );
-}
-
-/** The line under the page title: how many tasks need the signed-in person. */
-export function MyTasksSummary() {
-  const count = useTasksNeedingYou();
-  if (count === null) return null;
-  if (count === 0) return t("tasks.summary.none");
-  return count === 1 ? t("tasks.summary.one") : t("tasks.summary.many", { count: String(count) });
 }
 
 const NO_SORT = { key: "task", direction: "asc" } as const;

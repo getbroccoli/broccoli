@@ -1,9 +1,7 @@
-import { useQuery } from "@apollo/client/react";
-import { CheckSquare, DotsThree, X } from "@phosphor-icons/react";
+import { CheckSquare, DotsThree } from "@phosphor-icons/react";
 import { useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { TaskPanelDocument } from "@/__generated__/graphql";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,63 +9,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SheetTitle } from "@/components/ui/sheet";
 import { Avatar } from "@/features/employees";
 import { t } from "@/i18n";
 
+import { TaskStatus } from "../TaskStatus";
+import { formatTaskDay, isOpen, personName, taskSource, type TaskRow } from "../taskText";
+import { useTaskActions } from "../useTaskActions";
 import { CancelTaskDialog } from "./CancelTaskDialog";
-import { TaskStatus } from "./TaskStatus";
-import { formatTaskDay, isOpen, personName, taskSource, type TaskRow } from "./taskText";
-import { useTaskActions } from "./useTaskActions";
+import { PanelCloseButton } from "./PanelCloseButton";
 
-const PANEL = "max-md:inset-0 max-md:w-full max-md:rounded-none max-md:border-0";
+type Props = { task: TaskRow };
 
-type Props = { taskId: string; onClose: () => void };
-
-/**
- * One task over My tasks: what is asked and by whom on the left, what marking it done does and
- * where it came from on the right. Only its holder and the person who asked open it.
- */
-export function TaskPanel({ taskId, onClose }: Props) {
-  const { data, error, loading, refetch } = useQuery(TaskPanelDocument, {
-    variables: { id: taskId },
-  });
-  return (
-    <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent aria-describedby={undefined} className={PANEL}>
-        {data?.task ? (
-          <TaskDetails task={data.task} />
-        ) : (
-          <div className="flex flex-col gap-4 p-6">
-            <div className="flex items-center justify-between gap-4">
-              <SheetTitle className="text-base">
-                {loading ? (
-                  <Skeleton className="h-6 w-48" />
-                ) : (
-                  t(error ? "tasks.panel.loadFailed" : "tasks.panel.notFound")
-                )}
-              </SheetTitle>
-              <CloseButton />
-            </div>
-            {!loading && error && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="self-start"
-                onClick={() => void refetch()}
-              >
-                {t("tasks.retry")}
-              </Button>
-            )}
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-function TaskDetails({ task }: { task: TaskRow }) {
+/** A loaded task: what is asked and by whom on the left, what acting does and where it came from on the right. */
+export function TaskDetails({ task }: Props) {
   const { me } = useRouteContext({ from: "/_authenticated" });
   const viewerId = me.employee?.id ?? null;
   const actions = useTaskActions();
@@ -133,7 +88,7 @@ function TaskDetails({ task }: { task: TaskRow }) {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <CloseButton />
+        <PanelCloseButton />
       </header>
       <div className="subtle-scrollbar grid flex-1 content-start gap-8 overflow-y-auto px-6 py-6 md:grid-cols-[minmax(0,1fr)_16rem]">
         <section className="flex flex-col gap-3">
@@ -205,14 +160,6 @@ function originLine(task: TaskRow, asked: boolean, viewerId: string | null): str
   if (task.requestedBy)
     return t("tasks.panel.askedBy", { name: personName(task.requestedBy), date });
   return taskSource(task, viewerId);
-}
-
-function CloseButton() {
-  return (
-    <SheetClose render={<Button variant="ghost" size="icon" aria-label={t("tasks.panel.close")} />}>
-      <X />
-    </SheetClose>
-  );
 }
 
 const SECTION_LABEL = "text-[11px] font-medium tracking-wider text-muted-foreground uppercase";

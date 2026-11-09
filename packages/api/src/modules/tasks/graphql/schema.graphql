@@ -82,7 +82,7 @@ type TaskPayload {
 
 union TaskError = InvalidInputError | NotFoundError | ConflictError
 
-type TaskMutations {
+type TasksMutations {
   "The holder finishes a task to do."
   markDone(input: TaskMarkDoneInput!): TaskPayload!
   "The holder takes a done task back to do."
@@ -92,5 +92,5 @@ type TaskMutations {
 }
 
 type Mutation {
-  tasks: TaskMutations!
+  tasks: TasksMutations!
 }

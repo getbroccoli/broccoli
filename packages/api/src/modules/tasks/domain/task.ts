@@ -42,6 +42,11 @@ export interface Task {
   updatedAt: Date;
 }
 
+/** Only the holder and the person who asked see a task; whom it is about does not count. */
+export function isTaskVisibleTo(task: Task, employeeId: string): boolean {
+  return task.assigneeEmployeeId === employeeId || task.requestedByEmployeeId === employeeId;
+}
+
 export function markTaskDone(task: Task, byEmployeeId: string, now: Date): Task {
   refuseClosed(task);
   if (task.status === "waiting") {

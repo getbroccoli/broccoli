@@ -1,5 +1,6 @@
 export {
   cancelTask,
+  isTaskVisibleTo,
   markTaskDone,
   markTaskWaiting,
   reopenTask,

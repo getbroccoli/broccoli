@@ -1,11 +1,12 @@
 import { Fragment, type MouseEvent, type ReactNode } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { type DataTableDensity, SortableHeader, type DataTableSort } from "./SortableHeader";
+import { GroupHeading } from "./GroupHeading";
 import { TablePager, type DataTablePager } from "./TablePager";
 import { TableSkeleton } from "./TableStates";
 
@@ -211,21 +212,6 @@ export function DataTable<Row, SortKey extends string>({
         </div>
       )}
     </section>
-  );
-}
-
-/** The heading row that opens a group of rows. */
-function GroupHeading({ label, columnCount }: { label: string; columnCount: number }) {
-  return (
-    <TableRow className="bg-muted/50 hover:bg-muted/50">
-      <TableHead
-        scope="colgroup"
-        colSpan={columnCount}
-        className="h-8 px-3 text-xs font-medium text-foreground"
-      >
-        {label}
-      </TableHead>
-    </TableRow>
   );
 }
 

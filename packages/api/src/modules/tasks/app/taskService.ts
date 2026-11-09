@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Tx } from "../../../core/db";
+import type { Transact, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
@@ -8,6 +8,7 @@ import { taskRepository } from "../db";
 import {
   cancelTask,
   groupMyTasks,
+  isTaskVisibleTo,
   markTaskDone,
   markTaskWaiting,
   type MyTasks,
@@ -63,39 +64,6 @@ export function createTaskService({
   transact,
   logger,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger">): TaskService {
-  const history = createRecordHistoryService();
-
-  /** Changes one task the caller may see, inside one transaction, with its history line. */
-  async function changeTask(
-    ctx: SecurityContext,
-    taskId: string,
-    change: (task: Task, employeeId: string) => Task,
-  ): Promise<Task> {
-    return transact(async (tx) => {
-      const tasks = taskRepository(tx);
-      const id = parseUuid(taskId);
-      const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
-      const saved = await tasks.saveStatus(change(task, employeeId));
-      await appendStatusChange(ctx, tx, task, saved);
-      return saved;
-    });
-  }
-
-  async function appendStatusChange(ctx: SecurityContext, tx: Tx, before: Task, after: Task) {
-    await history.append(ctx, tx, {
-      recordType: "task",
-      operation: "UPDATED",
-      cause: { kind: "EDITED_DIRECTLY" },
-      reason: after.cancelReason,
-      records: [
-        {
-          recordId: after.id,
-          changes: [{ field: "status", oldValue: before.status, newValue: after.status }],
-        },
-      ],
-    });
-  }
-
   return {
     async createTask(ctx, tx, { title, description = null, ...task }) {
       const created = await taskRepository(tx).insert({
@@ -160,7 +128,7 @@ export function createTaskService({
     },
 
     async markDone(ctx, taskId) {
-      const done = await changeTask(ctx, taskId, (task, employeeId) => {
+      const done = await changeTask(transact, ctx, taskId, (task, employeeId) => {
         refuseUnlessHolder(
           task,
           employeeId,
@@ -173,7 +141,7 @@ export function createTaskService({
     },
 
     async reopen(ctx, taskId) {
-      const reopened = await changeTask(ctx, taskId, (task, employeeId) => {
+      const reopened = await changeTask(transact, ctx, taskId, (task, employeeId) => {
         refuseUnlessHolder(task, employeeId, "Only the person who holds this task can reopen it.");
         return reopenTask(task);
       });
@@ -182,7 +150,7 @@ export function createTaskService({
     },
 
     async cancel(ctx, taskId, reason) {
-      const cancelled = await changeTask(ctx, taskId, (task, employeeId) => {
+      const cancelled = await changeTask(transact, ctx, taskId, (task, employeeId) => {
         if (task.requestedByEmployeeId !== employeeId) {
           throw new ApplicationError(
             "FORBIDDEN",
@@ -202,17 +170,45 @@ export function createTaskService({
   };
 }
 
+/** Changes one task the caller may see, inside one transaction, with its history line. */
+async function changeTask(
+  transact: Transact,
+  ctx: SecurityContext,
+  taskId: string,
+  change: (task: Task, employeeId: string) => Task,
+): Promise<Task> {
+  return transact(async (tx) => {
+    const tasks = taskRepository(tx);
+    const id = parseUuid(taskId);
+    const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
+    const saved = await tasks.saveStatus(change(task, employeeId));
+    await appendStatusChange(ctx, tx, task, saved);
+    return saved;
+  });
+}
+
+async function appendStatusChange(ctx: SecurityContext, tx: Tx, before: Task, after: Task) {
+  await history.append(ctx, tx, {
+    recordType: "task",
+    operation: "UPDATED",
+    cause: { kind: "EDITED_DIRECTLY" },
+    reason: after.cancelReason,
+    records: [
+      {
+        recordId: after.id,
+        changes: [{ field: "status", oldValue: before.status, newValue: after.status }],
+      },
+    ],
+  });
+}
+
 /** The task and the caller's employee, if the caller holds or asked for it; else NOT_FOUND. */
 function requireVisible(
   ctx: SecurityContext,
   task: Task | null,
 ): { task: Task; employeeId: string } {
   const employeeId = ctx.user?.employeeId ?? null;
-  if (
-    task === null ||
-    employeeId === null ||
-    (task.assigneeEmployeeId !== employeeId && task.requestedByEmployeeId !== employeeId)
-  ) {
+  if (task === null || employeeId === null || !isTaskVisibleTo(task, employeeId)) {
     throw notFound();
   }
   return { task, employeeId };
@@ -235,3 +231,5 @@ function requireText(value: string, field: string): string {
 function notFound(): ApplicationError {
   return new ApplicationError("NOT_FOUND", "No task has this id.");
 }
+
+const history = createRecordHistoryService();

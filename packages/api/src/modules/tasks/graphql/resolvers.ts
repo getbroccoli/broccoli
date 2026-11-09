@@ -16,13 +16,14 @@ const EXPECTED_ERRORS = ["INVALID_INPUT", "NOT_FOUND", "CONFLICT"] as const;
 
 export function createResolvers(
   tasks: TaskService,
-  employees: Pick<EmployeeReadService, "readEmployee">,
+  employees: Pick<EmployeeReadService, "readEmployees">,
 ): Resolvers {
-  // The people a page of tasks names, each read once per request with the caller's access.
+  // The people a list of tasks names, read in one query with the caller's access.
   const loaders = perRequest((context) => ({
-    employee: new DataLoader((ids: readonly string[]) =>
-      Promise.all(ids.map((id) => employees.readEmployee(context.getActor(), id))),
-    ),
+    employee: new DataLoader(async (ids: readonly string[]) => {
+      const found = await employees.readEmployees(context.getActor(), ids);
+      return ids.map((id) => found.get(id) ?? null);
+    }),
   }));
   const loadEmployee = (context: GraphqlContext, id: string | null) =>
     id === null ? null : loaders(context).employee.load(id);
@@ -41,7 +42,7 @@ export function createResolvers(
     Mutation: {
       tasks: () => ({}),
     },
-    TaskMutations: {
+    TasksMutations: {
       markDone: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TaskPayload"]>(
           async () => ({ task: await tasks.markDone(context.getActor(), input.id) }),
