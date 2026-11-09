@@ -49,6 +49,7 @@ query EmploymentTermsStack($id: ID!) {
     isDefault
     peopleCount
     deleteBlocker
+    hadPeople
     locations {
       id
       name
