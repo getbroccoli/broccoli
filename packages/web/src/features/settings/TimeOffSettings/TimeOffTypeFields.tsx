@@ -5,16 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { t, type MessageKey } from "@/i18n";
+import {
+  ICONS,
+  tileStyle,
+  TIME_OFF_TYPE_COLOURS,
+  TIME_OFF_TYPE_ICONS,
+  TimeOffTypeIcon,
+} from "@/features/termsDisplay";
 
 import { daysError, type RulesValues } from "./timeOffRules";
 import { TimeOffRulesFields } from "./TimeOffRulesFields";
-import { TimeOffTypeIcon } from "@/features/termsDisplay";
-import {
-  ICONS,
-  TIME_OFF_TYPE_COLOURS,
-  TIME_OFF_TYPE_ICONS,
-  tileStyle,
-} from "@/features/termsDisplay";
 
 /** What an admin sets on a type: its identity, the same in every set of terms, and default rules. */
 export type TimeOffTypeValues = {

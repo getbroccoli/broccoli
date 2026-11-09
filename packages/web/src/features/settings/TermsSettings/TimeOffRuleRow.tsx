@@ -4,10 +4,15 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
+import {
+  companyToday,
+  plannedLine,
+  ruleLine,
+  splitVersions,
+  TimeOffTypeIcon,
+} from "@/features/termsDisplay";
 
-import { TimeOffTypeIcon } from "@/features/termsDisplay";
 import type { TimeOffRow } from "./termsQueries";
-import { companyToday, plannedLine, ruleLine, splitVersions } from "@/features/termsDisplay";
 
 type Props = {
   row: TimeOffRow;

@@ -1,8 +1,7 @@
 import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-
-import { calendarName } from "@/features/termsDisplay";
 import {
+  calendarName,
   DAY_FIELDS,
   DAY_NAMES,
   hoursOf,

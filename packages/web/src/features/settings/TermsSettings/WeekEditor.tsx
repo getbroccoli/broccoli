@@ -6,8 +6,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
+import { calendarName, companyToday, DAY_NAMES, shortDate } from "@/features/termsDisplay";
 
-import { calendarName } from "@/features/termsDisplay";
 import { DateChoice } from "./DateChoice";
 import {
   nextLeaveYear,
@@ -16,7 +16,6 @@ import {
   weekHint,
   type WeekVersion,
 } from "./termsDraft";
-import { companyToday, DAY_NAMES, shortDate } from "@/features/termsDisplay";
 
 type Props = {
   draft: WeekDraft;
