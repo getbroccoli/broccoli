@@ -69,7 +69,7 @@ export function TermsRows({
         edit={weekEdit}
         locked={locked}
         earliest={earliest}
-        termsName={currentTermsName}
+        termsNameOn={termsNameOn}
       />
       {timeOff?.map(({ timeOffType, versions }) => {
         const row = rowOf(versions, today, describeRules, sourceOf, notOffered);

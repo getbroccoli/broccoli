@@ -1,4 +1,4 @@
-import { asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { asc, eq, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { union } from "drizzle-orm/pg-core";
 
 import { type Orm, ormOf, type Tx } from "../../../core/db";
@@ -21,8 +21,11 @@ export interface WorkingPatternRepository {
   lockForWrites(): Promise<void>;
   /** Holds back working pattern writes, not reads, so several reads see one state. */
   lockForReads(): Promise<void>;
-  /** Every pattern with its versions, oldest first: named ones by name, then the terms'. */
-  findPatterns(): Promise<WorkingPattern[]>;
+  /**
+   * Every pattern with its versions, oldest first: named ones by name, then the terms'; with
+   * `only`, just the patterns with those ids or that name.
+   */
+  findPatterns(only?: { ids: readonly string[]; name: string }): Promise<WorkingPattern[]>;
   /** A new pattern, named or one set of terms', with one version from the beginning, open unless `week` ends. */
   insertPattern(
     owner: { name: string } | { termsId: string },
@@ -49,8 +52,7 @@ export interface WorkingPatternRepository {
     employeeId: string,
     row: Omit<DatedPattern, "id" | "startDate"> & { startDate: CalendarDate },
   ): Promise<void>;
-  /** Sets the last day of an assignment; null makes it open-ended. */
-  endAssignment(id: string, endDate: CalendarDate | null): Promise<void>;
+  endAssignment(id: string, endDate: CalendarDate): Promise<void>;
   deleteAssignment(id: string): Promise<void>;
 }
 
@@ -71,13 +73,20 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
       );
     },
 
-    async findPatterns() {
+    async findPatterns(only) {
       const rows = await orm()
         .select()
         .from(workingPatterns)
         .leftJoin(
           workingPatternVersions,
           eq(workingPatternVersions.workingPatternId, workingPatterns.id),
+        )
+        .where(
+          only &&
+            or(
+              eq(workingPatterns.name, only.name),
+              only.ids.length > 0 ? inArray(workingPatterns.id, [...only.ids]) : undefined,
+            ),
         )
         .orderBy(
           sql`${workingPatterns.name} asc nulls last`,

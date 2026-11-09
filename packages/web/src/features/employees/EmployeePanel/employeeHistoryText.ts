@@ -1,4 +1,11 @@
-import { DAY_FIELDS, shortDate, type WeekMinutes, weekSummary } from "@/features/termsDisplay";
+import type { BankHolidayCalendar } from "@/__generated__/graphql";
+import {
+  calendarName,
+  DAY_FIELDS,
+  shortDate,
+  type WeekMinutes,
+  weekSummary,
+} from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 /**
@@ -49,12 +56,20 @@ function weekSentence(oldValue: string | null, newValue: string | null): string 
   }
   const date = shortDate(after.startDate);
   if (!after.week) return t("ownWeek.history.back", { date });
-  const week = weekSummary(minutesOf(after.week.minutes));
+  const week = [
+    weekSummary(minutesOf(after.week.minutes)),
+    t("people.panel.terms.bankHolidays", {
+      calendar: calendarName(after.week.bankHolidayCalendar.toUpperCase() as BankHolidayCalendar),
+    }),
+  ].join(" · ");
   return t(before?.week ? "ownWeek.history.changed" : "ownWeek.history.gave", { week, date });
 }
 
 /** An own-week change's stored value: the week, null for the terms', and the date it applies from. */
-type WeekChange = { week: { minutes: number[] } | null; startDate: string };
+type WeekChange = {
+  week: { minutes: number[]; bankHolidayCalendar: string } | null;
+  startDate: string;
+};
 
 function parseWeekChange(value: string | null): WeekChange | null {
   return value === null ? null : (JSON.parse(value) as WeekChange);

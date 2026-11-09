@@ -39,6 +39,14 @@ export {
   versionsFromToday,
 } from "./datedChange";
 export {
+  cancelOwnWeekChange,
+  type OwnWeek,
+  ownWeekOn,
+  ownWeeksOf,
+  withOwnWeek,
+  withoutOwnWeeks,
+} from "./ownWeeks";
+export {
   cancelTermsMove,
   planTermsMove,
   type TermsMove,

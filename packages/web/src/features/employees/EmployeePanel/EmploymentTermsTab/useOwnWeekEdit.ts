@@ -36,7 +36,7 @@ export interface OwnWeekEdit {
   /** The week the editor started from, for its "Was …" hint. */
   current: WeekVersion | null;
   earliest: string;
-  /** The terms whose week a return gives back. */
+  /** The terms whose week a return gives back, on the date picked. */
   termsName: string;
   /** What saving does; null while the form can't be saved. */
   line: string | null;
@@ -48,7 +48,8 @@ export interface OwnWeekEdit {
     current: WeekVersion;
     earliest: string;
     alreadyOwn: boolean;
-    termsName: string;
+    /** The terms the person is on on a date. */
+    termsNameOn: (date: string) => string;
   }) => void;
   edit: (draft: WeekDraft) => void;
   close: () => void;
@@ -75,6 +76,7 @@ export function useOwnWeekEdit({
   const today = companyToday();
   const shown = draft ?? { hours: [], calendar: "ENGLAND_AND_WALES" as const, startDate: today };
   const valid = opened !== null && hasNoErrors(opened.mode, shown, opened.earliest);
+  const termsName = opened?.termsNameOn(shown.startDate) ?? "";
   const close = () => {
     setOpened(null);
     setDraft(null);
@@ -84,7 +86,7 @@ export function useOwnWeekEdit({
     const values = { firstName, startDate: shown.startDate, today };
     return mode === "own"
       ? ownWeekSaveLine({ ...values, alreadyOwn: opened?.alreadyOwn ?? false })
-      : termsWeekSaveLine({ ...values, termsName: opened?.termsName ?? "" });
+      : termsWeekSaveLine({ ...values, termsName });
   };
 
   return {
@@ -92,7 +94,7 @@ export function useOwnWeekEdit({
     draft: shown,
     current: opened?.current ?? null,
     earliest: opened?.earliest ?? today,
-    termsName: opened?.termsName ?? "",
+    termsName,
     line: opened && valid ? lineOf(opened.mode) : null,
     error: failed ? t("ownWeek.failed") : null,
     changed: opened !== null && draft !== null && changedFrom(opened.current, draft, today),
@@ -112,7 +114,7 @@ export function useOwnWeekEdit({
           toast(ownWeekSavedToast(firstName));
         } else {
           await returnToTerms({ variables: { input } });
-          toast(termsWeekSavedToast({ firstName, termsName: opened.termsName, ...input }));
+          toast(termsWeekSavedToast({ firstName, termsName, ...input }));
         }
         close();
       } catch {

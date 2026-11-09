@@ -43,7 +43,9 @@ it("describes giving a person their own working week", () => {
     newValue: JSON.stringify({ week: fourDays, startDate: "2026-12-01" }),
   });
 
-  expect(sentence).toBe("gave them their own working week, Mon–Thu, 8 hours, from 1 Dec 2026");
+  expect(sentence).toBe(
+    "gave them their own working week, Mon–Thu, 8 hours · England and Wales bank holidays, from 1 Dec 2026",
+  );
 });
 
 it("describes changing a person's own working week", () => {
@@ -53,10 +55,15 @@ it("describes changing a person's own working week", () => {
       week: { minutes: [420, 420, 420, 420, 420, 0, 0], bankHolidayCalendar: "england_and_wales" },
       startDate: "2026-12-01",
     }),
-    newValue: JSON.stringify({ week: fourDays, startDate: "2026-12-01" }),
+    newValue: JSON.stringify({
+      week: { ...fourDays, bankHolidayCalendar: "scotland" },
+      startDate: "2026-12-01",
+    }),
   });
 
-  expect(sentence).toBe("changed their own working week to Mon–Thu, 8 hours from 1 Dec 2026");
+  expect(sentence).toBe(
+    "changed their own working week to Mon–Thu, 8 hours · Scotland bank holidays from 1 Dec 2026",
+  );
 });
 
 it("describes returning a person to their terms' working week", () => {

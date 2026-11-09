@@ -252,7 +252,7 @@ export function referencedPattern(patterns: readonly WorkingPattern[], workingPa
  * Adds a version from its start date: the one covering that date ends the day before, one starting
  * on it goes.
  */
-export async function addVersion(
+async function addVersion(
   tx: Tx,
   pattern: WorkingPattern,
   version: Omit<PatternVersion, "id"> & { startDate: CalendarDate },
@@ -309,10 +309,7 @@ function namedPattern(patterns: readonly WorkingPattern[], workingPatternId: str
   return pattern;
 }
 
-export function versionInForce(
-  versions: readonly PatternVersion[],
-  date: CalendarDate,
-): PatternVersion {
+function versionInForce(versions: readonly PatternVersion[], date: CalendarDate): PatternVersion {
   // A pattern's first version starts from the beginning and none ends, so one is always in force.
   return versions.find((version) => coversDate(version, date))!;
 }

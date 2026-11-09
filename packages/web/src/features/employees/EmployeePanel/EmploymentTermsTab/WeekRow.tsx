@@ -6,20 +6,13 @@ import {
   type EmploymentTermsTab_TermsFragment,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
-import { FieldError } from "@/components/form";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
-import { Label } from "@/components/ui/label";
-import {
-  CancelChangeDialog,
-  companyToday,
-  splitVersions,
-  WeekEditor,
-} from "@/features/termsDisplay";
+import { CancelChangeDialog, companyToday, splitVersions } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { forgetHistory } from "../../cache";
 import { describeWeek, rowOf } from "./employmentTermsView";
+import { WeekRowEditor } from "./WeekRowEditor";
 import { cancellableStarts } from "./ownWeekText";
 import { TermsRuleRow } from "./TermsRuleRow";
 import type { OwnWeekEdit } from "./useOwnWeekEdit";
@@ -38,8 +31,8 @@ type Props = {
   /** Another edit is open on the tab, so this row's actions wait. */
   locked: boolean;
   earliest: string;
-  /** The terms whose week a return gives back. */
-  termsName: string;
+  /** The terms the person is on on a date, whose week a return gives back. */
+  termsNameOn: (date: string) => string;
 };
 
 /** The working week row: today's week and planned ones, and for admins the person's own week. */
@@ -52,7 +45,7 @@ export function WeekRow({
   edit,
   locked,
   earliest,
-  termsName,
+  termsNameOn,
 }: Props) {
   const today = companyToday();
   const [cancelling, setCancelling] = useState<string | null>(null);
@@ -76,7 +69,7 @@ export function WeekRow({
       current: current.week,
       earliest,
       alreadyOwn: current.source === "THEIR_OWN",
-      termsName,
+      termsNameOn,
     });
   const cancel = async (startDate: string) => {
     try {
@@ -109,7 +102,7 @@ export function WeekRow({
               </Button>
               {hasOwn && (
                 <Button variant="ghost" size="sm" onClick={() => open("terms")}>
-                  {t("ownWeek.useTerms", { terms: termsName })}
+                  {t("ownWeek.useTerms", { terms: termsNameOn(today) })}
                 </Button>
               )}
             </span>
@@ -124,38 +117,5 @@ export function WeekRow({
         onClose={() => setCancelling(null)}
       />
     </>
-  );
-}
-
-/** The row's editor: the week and from when, or only from when for a return to the terms. */
-function WeekRowEditor({ edit, firstName }: { edit: OwnWeekEdit; firstName: string }) {
-  return (
-    <div className="mt-2 flex flex-col gap-3 rounded-lg border border-foreground p-3">
-      {edit.mode === "own" && edit.current ? (
-        <WeekEditor
-          draft={edit.draft}
-          current={edit.current}
-          earliest={edit.earliest}
-          dated
-          onChange={edit.edit}
-        />
-      ) : (
-        <div className="flex max-w-64 flex-col gap-1.5">
-          <Label>{t("changeTerms.appliesFrom")}</Label>
-          <DatePicker
-            value={edit.draft.startDate}
-            fromDate={edit.earliest}
-            placeholder={t("changeTerms.appliesFrom")}
-            aria-label={t("changeTerms.appliesFrom")}
-            // A return needs a date: picking the chosen day again keeps it.
-            onChange={(startDate) => startDate && edit.edit({ ...edit.draft, startDate })}
-          />
-          <p className="text-[13px] text-muted-foreground">
-            {t("ownWeek.backHint", { name: firstName })}
-          </p>
-        </div>
-      )}
-      <FieldError id="own-week-error" message={edit.error ?? undefined} />
-    </div>
   );
 }
