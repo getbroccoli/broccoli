@@ -1,5 +1,5 @@
 {
-  "id": "a8de5061-9b1b-4855-af71-0260563cd606",
+  "id": "20041cc4-4671-45cc-afbb-c45784ca8274",
   "prevId": "3404ad2a-3757-4bb0-b2ae-f7d4feaa8a47",
   "version": "7",
   "dialect": "postgresql",
@@ -2301,24 +2301,17 @@
         }
       },
       "indexes": {
-        "tasks_open_by_assignee_idx": {
-          "name": "tasks_open_by_assignee_idx",
+        "tasks_assignee_idx": {
+          "name": "tasks_assignee_idx",
           "columns": [
             {
               "expression": "assignee_employee_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
-            {
-              "expression": "due_date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             }
           ],
           "isUnique": false,
-          "where": "\"tasks\".\"status\" in ('to_do', 'waiting')",
           "concurrently": false,
           "method": "btree",
           "with": {}

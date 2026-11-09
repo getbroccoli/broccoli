@@ -37,9 +37,7 @@ export const tasks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    index("tasks_open_by_assignee_idx")
-      .on(table.assigneeEmployeeId, table.dueDate)
-      .where(sql`${table.status} in ('to_do', 'waiting')`),
+    index("tasks_assignee_idx").on(table.assigneeEmployeeId),
     index("tasks_requested_by_idx").on(table.requestedByEmployeeId),
     index("tasks_record_idx").on(table.recordType, table.recordId),
     check("tasks_title_not_blank", sql`btrim(${table.title}) <> ''`),

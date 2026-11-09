@@ -31,7 +31,7 @@ CREATE TABLE "tasks" (
         and ("tasks"."cancel_reason" is null or btrim("tasks"."cancel_reason") <> ''))
 );
 --> statement-breakpoint
-CREATE INDEX "tasks_open_by_assignee_idx" ON "tasks" USING btree ("assignee_employee_id","due_date") WHERE "tasks"."status" in ('to_do', 'waiting');--> statement-breakpoint
+CREATE INDEX "tasks_assignee_idx" ON "tasks" USING btree ("assignee_employee_id");--> statement-breakpoint
 CREATE INDEX "tasks_requested_by_idx" ON "tasks" USING btree ("requested_by_employee_id");--> statement-breakpoint
 CREATE INDEX "tasks_record_idx" ON "tasks" USING btree ("record_type","record_id");--> statement-breakpoint
 ALTER TABLE "tasks" ADD CONSTRAINT "tasks_assignee_employee_id_employees_id_fk" FOREIGN KEY ("assignee_employee_id") REFERENCES "public"."employees"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

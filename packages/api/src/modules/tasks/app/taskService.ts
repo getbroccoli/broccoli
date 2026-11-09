@@ -20,15 +20,19 @@ import {
   type TaskType,
 } from "../domain";
 
-/** A task a feature, a process step or the demo asks of someone. */
-export interface NewTask {
+/** A task a feature, a process step or the demo asks of someone: a person who asked, a process step, or both. */
+export type NewTask = NewTaskFields &
+  (
+    | { requestedByEmployeeId: string; processSource?: TaskProcessSource | null }
+    | { requestedByEmployeeId?: null; processSource: TaskProcessSource }
+  );
+
+interface NewTaskFields {
   type: TaskType;
   title: string;
   description?: string | null;
   assigneeEmployeeId: string;
-  requestedByEmployeeId?: string | null;
   aboutEmployeeId?: string | null;
-  processSource?: TaskProcessSource | null;
   subject?: TaskSubject | null;
   dueDate?: CalendarDate | null;
 }
