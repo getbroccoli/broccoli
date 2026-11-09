@@ -53,11 +53,12 @@ export function createDemoFillService({
         const idsByEmail = await employeeSetup.createDemoEmployees(
           ctx,
           tx,
-          people.map(({ employee, managerEmail, locationName }, index) => ({
+          people.map(({ employee, managerEmail, locationName, isOwner }, index) => ({
             employee,
             avatar: avatars[index]!,
             managerEmail,
             locationName,
+            isOwner,
           })),
           { kind: "ADDED_WITH_DEMO" },
         );

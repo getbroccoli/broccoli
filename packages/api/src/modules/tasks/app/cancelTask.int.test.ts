@@ -1,4 +1,4 @@
-import { expect, recordHistory, signedIn, taskService, test } from "#test/support";
+import { expect, signedIn, taskService, test } from "#test/support";
 
 test("lets the asker cancel a task with a reason visible to both people", async ({ orm, seed }) => {
   const holder = await seed.employee();
@@ -8,7 +8,7 @@ test("lets the asker cancel a task with a reason visible to both people", async 
   const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
-  const cancelled = await tasks.cancel(askerCtx, task.id, "  No longer needed  ");
+  const { task: cancelled } = await tasks.cancel(askerCtx, task.id, "  No longer needed  ");
 
   expect(cancelled).toMatchObject({
     status: "cancelled",
@@ -79,18 +79,15 @@ test("records cancellation and its trimmed reason in the task's history", async 
   const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
   const ctx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
 
-  await taskService(orm).cancel(ctx, task.id, "  No longer needed  ");
+  const { historyLine } = await taskService(orm).cancel(ctx, task.id, "  No longer needed  ");
 
-  const history = await recordHistory.read(orm, "task", task.id, { first: 10 });
-  expect(history.edges.map(({ node }) => node)).toMatchObject([
-    {
-      operation: "UPDATED",
-      reason: "No longer needed",
-      changes: expect.arrayContaining([
-        { field: "status", oldValue: "to_do", newValue: "cancelled" },
-      ]) as unknown,
-    },
-  ]);
+  expect(historyLine).toMatchObject({
+    recordType: "task",
+    recordId: task.id,
+    operation: "UPDATED",
+    reason: "No longer needed",
+    changes: [{ field: "status", oldValue: "to_do", newValue: "cancelled" }],
+  });
 });
 
 test("hides a task from an unrelated caller trying to cancel it", async ({ orm, seed }) => {

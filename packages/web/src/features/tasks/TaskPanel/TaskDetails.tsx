@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SheetTitle } from "@/components/ui/sheet";
 import { Avatar } from "@/features/employees";
+import { RecordHistory } from "@/features/records";
 import { t } from "@/i18n";
 
+import { TASK_DESCRIPTION } from "../taskDescription";
 import { TaskStatus } from "../TaskStatus";
 import { formatTaskDay, isOpen, personName, taskSource, type TaskRow } from "../taskText";
 import { useTaskActions } from "../useTaskActions";
@@ -91,23 +93,26 @@ export function TaskDetails({ task }: Props) {
         <PanelCloseButton />
       </header>
       <div className="subtle-scrollbar grid flex-1 content-start gap-8 overflow-y-auto px-6 py-6 md:grid-cols-[minmax(0,1fr)_16rem]">
-        <section className="flex flex-col gap-3">
-          <h3 className={SECTION_LABEL}>
-            {asked
-              ? t("tasks.panel.youAsk")
-              : task.requestedBy
-                ? t("tasks.panel.asks", { name: task.requestedBy.firstName })
-                : t("tasks.panel.asksProcess")}
-          </h3>
-          <p className="text-[15px] leading-relaxed whitespace-pre-line">
-            {task.description ?? t("tasks.panel.noDescription")}
-          </p>
-          {task.dueDate && (
-            <p className="text-sm text-muted-foreground">
-              {t("tasks.panel.due", { date: formatTaskDay(task.dueDate) })}
+        <div className="flex flex-col gap-8">
+          <section className="flex flex-col gap-3">
+            <h3 className={SECTION_LABEL}>
+              {asked
+                ? t("tasks.panel.youAsk")
+                : task.requestedBy
+                  ? t("tasks.panel.asks", { name: task.requestedBy.firstName })
+                  : t("tasks.panel.asksProcess")}
+            </h3>
+            <p className="text-[15px] leading-relaxed whitespace-pre-line">
+              {task.description ?? t("tasks.panel.noDescription")}
             </p>
-          )}
-        </section>
+            {task.dueDate && (
+              <p className="text-sm text-muted-foreground">
+                {t("tasks.panel.due", { date: formatTaskDay(task.dueDate) })}
+              </p>
+            )}
+          </section>
+          <RecordHistory recordType="TASK" recordId={task.id} description={TASK_DESCRIPTION} />
+        </div>
         <aside className="flex flex-col gap-6 self-start rounded-xl bg-muted/50 p-4 text-sm">
           {holds && isOpen(task) && (
             <section className="flex flex-col gap-1.5">
@@ -126,10 +131,12 @@ export function TaskDetails({ task }: Props) {
             <p>{originLine(task, asked, viewerId)}</p>
             {task.status === "DONE" && (
               <p>
-                {t("tasks.panel.doneBy", {
-                  name: task.doneBy?.id === viewerId ? t("tasks.you") : personName(task.doneBy),
-                  date: formatTaskDay(task.doneAt!),
-                })}
+                {task.doneBy?.id === viewerId
+                  ? t("tasks.panel.doneByYou", { date: formatTaskDay(task.doneAt!) })
+                  : t("tasks.panel.doneBy", {
+                      name: personName(task.doneBy),
+                      date: formatTaskDay(task.doneAt!),
+                    })}
               </p>
             )}
             {task.status === "CANCELLED" && (

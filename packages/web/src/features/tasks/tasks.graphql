@@ -68,6 +68,9 @@ mutation MarkTaskDone($input: TaskMarkDoneInput!) {
       task {
         ...TaskFields @unmask
       }
+      historyLine {
+        ...RecordHistory_line @unmask
+      }
       error {
         ...TaskError @unmask
       }
@@ -81,6 +84,9 @@ mutation ReopenTask($input: TaskReopenInput!) {
       task {
         ...TaskFields @unmask
       }
+      historyLine {
+        ...RecordHistory_line @unmask
+      }
       error {
         ...TaskError @unmask
       }
@@ -93,6 +99,9 @@ mutation CancelTask($input: TaskCancelInput!) {
     cancel(input: $input) {
       task {
         ...TaskFields @unmask
+      }
+      historyLine {
+        ...RecordHistory_line @unmask
       }
       error {
         ...TaskError @unmask

@@ -7,7 +7,7 @@ A task is work asked of one person, its holder. The person who asked, or the pro
 - A task asks for work and never grants authority. A feature creates its tasks with `TaskService.createTask` in its own transaction and finishes them with its own command, under the caller's permissions.
 - Statuses: `to_do`, `waiting`, `done` and `cancelled`. Only the holder marks a to-do done or reopens it; only the person who asked cancels it, with a reason. A task created by a process step, with no person who asked, is cancelled only by its feature.
 - The first change wins: each change locks the task's row, so a second Mark done gets "This task is already done."
-- Every change appends a history line for record type `task`, in its transaction. The generic `recordHistory` query does not read them: who reads a task is its holder and the person who asked, which no permission scope expresses.
+- Every change appends a history line for record type `task`, in its transaction, and returns it. Tasks register their own reading rule with core's records: `recordHistory` and `Task.history` serve a task's lines to its holder and the person who asked, and refuse anyone else.
 - Deleting the holder or the person who asked deletes the task; deleting the person it is about or who finished it leaves it, without them. Reset setup and Exit demo forget the tasks' history.
 
 ## Data model

@@ -1,4 +1,4 @@
-import { expect, recordHistory, signedIn, taskService, test } from "#test/support";
+import { expect, signedIn, taskService, test } from "#test/support";
 
 test("lets the holder reopen a done task back into needs you", async ({ orm, seed }) => {
   const holder = await seed.employee();
@@ -13,7 +13,7 @@ test("lets the holder reopen a done task back into needs you", async ({ orm, see
   const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
-  const reopened = await tasks.reopen(ctx, task.id);
+  const { task: reopened } = await tasks.reopen(ctx, task.id);
 
   expect(reopened).toMatchObject({ status: "to_do", doneAt: null, doneByEmployeeId: null });
   expect(await tasks.listMyTasks(ctx)).toEqual({
@@ -67,17 +67,14 @@ test("records reopening in the task's history", async ({ orm, seed }) => {
   });
   const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
 
-  await taskService(orm).reopen(ctx, task.id);
+  const { historyLine } = await taskService(orm).reopen(ctx, task.id);
 
-  const history = await recordHistory.read(orm, "task", task.id, { first: 10 });
-  expect(history.edges.map(({ node }) => node)).toMatchObject([
-    {
-      operation: "UPDATED",
-      changes: expect.arrayContaining([
-        { field: "status", oldValue: "done", newValue: "to_do" },
-      ]) as unknown,
-    },
-  ]);
+  expect(historyLine).toMatchObject({
+    recordType: "task",
+    recordId: task.id,
+    operation: "UPDATED",
+    changes: [{ field: "status", oldValue: "done", newValue: "to_do" }],
+  });
 });
 
 test("hides a task from an unrelated caller trying to reopen it", async ({ orm, seed }) => {

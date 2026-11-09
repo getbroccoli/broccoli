@@ -11,6 +11,7 @@ export type NewTaskRow = Omit<Task, "id" | "createdAt" | "updatedAt">;
 export interface TaskRepository {
   insert(task: NewTaskRow): Promise<Task>;
   findById(id: string): Promise<Task | null>;
+  findByIds(ids: readonly string[]): Promise<Task[]>;
   /** The task with this id, or null, locked until the transaction ends, so the first change wins. */
   lockById(id: string): Promise<Task | null>;
   /** Writes the task's status and the columns that follow it. */
@@ -33,6 +34,14 @@ export function taskRepository(db: Orm | Tx): TaskRepository {
     async findById(id) {
       const [row] = await orm.select().from(tasks).where(eq(tasks.id, id));
       return row ? toTask(row) : null;
+    },
+
+    async findByIds(ids) {
+      const rows = await orm
+        .select()
+        .from(tasks)
+        .where(inArray(tasks.id, [...ids]));
+      return rows.map(toTask);
     },
 
     async lockById(id) {

@@ -19,6 +19,9 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   });
   await browser.graphql("mutation { imports { startDemo { import { id } } } }");
   expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
+  expect(await (await browser.graphql("query { me { employee { id } } }")).json()).toEqual({
+    data: { me: { employee: null } },
+  });
   const response = await browser.graphql(demoQuery);
   const body = (await response.json()) as DemoDataResponse;
   expect(response.status).toBe(200);
@@ -34,6 +37,27 @@ test("skipping import fills the directory and serves demo avatars", async ({ env
   const bytes = Buffer.from(await image.arrayBuffer());
   expect(bytes.toString("ascii", 0, 4)).toBe("RIFF");
   expect(bytes.toString("ascii", 8, 12)).toBe("WEBP");
+});
+
+test("the demo owner is Oliver Bennett with two tasks needing him", async ({ env }) => {
+  const { browser } = await env.startDemo();
+
+  const response = await browser.graphql(`query {
+    me { employee { firstName lastName } }
+    myTasks { needsYou { title } }
+  }`);
+
+  expect(await response.json()).toEqual({
+    data: {
+      me: { employee: { firstName: "Oliver", lastName: "Bennett" } },
+      myTasks: {
+        needsYou: [
+          { title: "Sign James Whitfield's new contract" },
+          { title: "Approve the hiring plan for next quarter" },
+        ],
+      },
+    },
+  });
 });
 
 test("a managed owner exits the demo through the API and returns to company setup", async () => {

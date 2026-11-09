@@ -112,7 +112,7 @@ export function createModules(
         bankHolidays,
       }),
     }),
-    tasksModule({ tasks, employees: createEmployeeReadService(core) }),
+    tasksModule({ orm: core.orm, tasks, employees: createEmployeeReadService(core) }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core, manifests)],

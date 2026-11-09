@@ -1,7 +1,12 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
-import { createRecordHistoryService } from "../../../core/records";
+import {
+  createRecordHistoryReaderService,
+  createRecordHistoryService,
+  type HistoryLine,
+} from "../../../core/records";
+import type { Connection, PageArgs } from "../../../core/pagination";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid } from "../../../utils";
 import { taskRepository } from "../db";
@@ -19,6 +24,7 @@ import {
   type TaskSubject,
   type TaskType,
 } from "../domain";
+import { taskRecordType } from "./taskRecordType";
 
 /** A task a feature, a process step or the demo asks of someone: a person who asked, a process step, or both. */
 export type NewTask = NewTaskFields &
@@ -50,12 +56,18 @@ export interface TaskService {
   listMyTasks(ctx: SecurityContext): Promise<MyTasks>;
   /** A task the caller holds or asked for. */
   readTask(ctx: SecurityContext, taskId: string): Promise<Task>;
+  /** A task's history, newest first, for its holder and the person who asked; others get FORBIDDEN. */
+  readTaskHistory(
+    ctx: SecurityContext,
+    taskId: string,
+    args: PageArgs,
+  ): Promise<Connection<HistoryLine>>;
   /** The holder finishes a task to do. */
-  markDone(ctx: SecurityContext, taskId: string): Promise<Task>;
+  markDone(ctx: SecurityContext, taskId: string): Promise<TaskChange>;
   /** The holder takes a done task back to do. */
-  reopen(ctx: SecurityContext, taskId: string): Promise<Task>;
+  reopen(ctx: SecurityContext, taskId: string): Promise<TaskChange>;
   /** The person who asked withdraws an open task, saying why. */
-  cancel(ctx: SecurityContext, taskId: string, reason: string): Promise<Task>;
+  cancel(ctx: SecurityContext, taskId: string, reason: string): Promise<TaskChange>;
   /**
    * Back to a fresh workspace when setup or the demo goes back to its start, after the employees,
    * whose deletion took their tasks: forgets the tasks' history.
@@ -63,11 +75,18 @@ export interface TaskService {
   resetTasks(ctx: SecurityContext, tx: Tx): Promise<void>;
 }
 
+/** A task after a change, with the history line the change appended. */
+export interface TaskChange {
+  task: Task;
+  historyLine: HistoryLine;
+}
+
 export function createTaskService({
   orm,
   transact,
   logger,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger">): TaskService {
+  const historyReader = createRecordHistoryReaderService(orm, { task: taskRecordType(orm) });
   return {
     async createTask(ctx, tx, { title, description = null, ...task }) {
       const created = await taskRepository(tx).insert({
@@ -131,6 +150,8 @@ export function createTaskService({
       return requireVisible(ctx, id ? await taskRepository(orm).findById(id) : null).task;
     },
 
+    readTaskHistory: (ctx, taskId, args) => historyReader.readHistory(ctx, "task", taskId, args),
+
     async markDone(ctx, taskId) {
       const done = await changeTask(transact, ctx, taskId, (task, employeeId) => {
         refuseUnlessHolder(
@@ -140,7 +161,7 @@ export function createTaskService({
         );
         return markTaskDone(task, employeeId, new Date());
       });
-      logger.info({ taskId: done.id, type: done.type }, "Task marked done");
+      logger.info({ taskId: done.task.id, type: done.task.type }, "Task marked done");
       return done;
     },
 
@@ -149,7 +170,7 @@ export function createTaskService({
         refuseUnlessHolder(task, employeeId, "Only the person who holds this task can reopen it.");
         return reopenTask(task);
       });
-      logger.info({ taskId: reopened.id, type: reopened.type }, "Task reopened");
+      logger.info({ taskId: reopened.task.id, type: reopened.task.type }, "Task reopened");
       return reopened;
     },
 
@@ -163,7 +184,7 @@ export function createTaskService({
         }
         return cancelTask(task, requireText(reason, "reason"), new Date());
       });
-      logger.info({ taskId: cancelled.id, type: cancelled.type }, "Task cancelled");
+      logger.info({ taskId: cancelled.task.id, type: cancelled.task.type }, "Task cancelled");
       return cancelled;
     },
 
@@ -180,19 +201,23 @@ async function changeTask(
   ctx: SecurityContext,
   taskId: string,
   change: (task: Task, employeeId: string) => Task,
-): Promise<Task> {
+): Promise<TaskChange> {
   return transact(async (tx) => {
     const tasks = taskRepository(tx);
     const id = parseUuid(taskId);
     const { task, employeeId } = requireVisible(ctx, id ? await tasks.lockById(id) : null);
     const saved = await tasks.saveStatus(change(task, employeeId));
-    await appendStatusChange(ctx, tx, task, saved);
-    return saved;
+    return { task: saved, historyLine: await appendStatusChange(ctx, tx, task, saved) };
   });
 }
 
-async function appendStatusChange(ctx: SecurityContext, tx: Tx, before: Task, after: Task) {
-  await history.append(ctx, tx, {
+async function appendStatusChange(
+  ctx: SecurityContext,
+  tx: Tx,
+  before: Task,
+  after: Task,
+): Promise<HistoryLine> {
+  const [line] = await history.append(ctx, tx, {
     recordType: "task",
     operation: "UPDATED",
     cause: { kind: "EDITED_DIRECTLY" },
@@ -204,6 +229,7 @@ async function appendStatusChange(ctx: SecurityContext, tx: Tx, before: Task, af
       },
     ],
   });
+  return line!;
 }
 
 /** The task and the caller's employee, if the caller holds or asked for it; else NOT_FOUND. */

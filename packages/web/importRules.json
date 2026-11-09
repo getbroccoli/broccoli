@@ -53,6 +53,7 @@
       "src/components/dataTable",
       "src/components/ui",
       "src/features/employees",
+      "src/features/records",
       "src/i18n",
       "src/lib/calendarDay",
       "src/lib/class-names"

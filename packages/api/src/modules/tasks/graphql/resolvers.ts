@@ -45,17 +45,17 @@ export function createResolvers(
     TasksMutations: {
       markDone: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TaskPayload"]>(
-          async () => ({ task: await tasks.markDone(context.getActor(), input.id) }),
+          () => tasks.markDone(context.getActor(), input.id),
           EXPECTED_ERRORS,
         ),
       reopen: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TaskPayload"]>(
-          async () => ({ task: await tasks.reopen(context.getActor(), input.id) }),
+          () => tasks.reopen(context.getActor(), input.id),
           EXPECTED_ERRORS,
         ),
       cancel: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TaskPayload"]>(
-          async () => ({ task: await tasks.cancel(context.getActor(), input.id, input.reason) }),
+          () => tasks.cancel(context.getActor(), input.id, input.reason),
           EXPECTED_ERRORS,
         ),
     },
@@ -69,6 +69,8 @@ export function createResolvers(
         loadEmployee(context, requestedByEmployeeId),
       about: ({ aboutEmployeeId }, _args, context) => loadEmployee(context, aboutEmployeeId),
       doneBy: ({ doneByEmployeeId }, _args, context) => loadEmployee(context, doneByEmployeeId),
+      history: ({ id }, { first, after }, context) =>
+        tasks.readTaskHistory(context.getActor(), id, { first: first ?? undefined, after }),
     },
   };
 }

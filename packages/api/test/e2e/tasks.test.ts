@@ -56,6 +56,48 @@ test("shows a manager's task as done to the person who asked after completion", 
   });
 });
 
+test("returns a completion history line and restricts shared task history to its readers", async ({
+  env,
+}) => {
+  const { browser } = await env.startDemo();
+  const listed = await browser.graphql("query { myTasks { needsYou { id } } }");
+  const body = (await listed.json()) as { data: { myTasks: { needsYou: { id: string }[] } } };
+  const { id } = body.data.myTasks.needsYou[0]!;
+
+  const completed = await browser.graphql(MARK_DONE_WITH_HISTORY, { id });
+
+  expect(await completed.json()).toEqual({
+    data: {
+      tasks: {
+        markDone: {
+          task: { id },
+          historyLine: {
+            operation: "UPDATED",
+            changes: [{ field: "status", oldValue: "to_do", newValue: "done" }],
+          },
+          error: null,
+        },
+      },
+    },
+  });
+  const history = await browser.graphql(TASK_HISTORY, { id });
+  expect(await history.json()).toEqual({
+    data: {
+      recordHistory: {
+        edges: [{ node: { operation: "UPDATED" } }, { node: { operation: "CREATED" } }],
+      },
+    },
+  });
+  const credentials = { email: "other@example.com", password: TEST_OWNER.password };
+  const user = await env.seed.user(credentials);
+  await env.seed.employee({ userId: user.id });
+  const { browser: otherBrowser } = await env.signIn(credentials);
+  const refused = await otherBrowser.graphql(TASK_HISTORY, { id });
+  expect(await refused.json()).toMatchObject({
+    errors: [{ message: "You cannot read this history.", extensions: { code: "FORBIDDEN" } }],
+  });
+});
+
 test("returns no task to an unrelated signed-in person", async ({ env }) => {
   await env.signInAsOwner();
   const holder = await env.seed.employee();
@@ -85,3 +127,14 @@ test("refuses my tasks without a session", async ({ env }) => {
     errors: [{ extensions: { code: "UNAUTHENTICATED" } }],
   });
 });
+
+const MARK_DONE_WITH_HISTORY = `mutation MarkDone($id: ID!) {
+  tasks { markDone(input: { id: $id }) {
+    task { id }
+    historyLine { operation changes { field oldValue newValue } }
+    error { __typename ... on Error { message } }
+  } }
+}`;
+const TASK_HISTORY = `query TaskHistory($id: ID!) {
+  recordHistory(recordType: TASK, recordId: $id) { edges { node { operation } } }
+}`;

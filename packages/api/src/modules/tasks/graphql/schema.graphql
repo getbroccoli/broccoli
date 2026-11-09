@@ -20,8 +20,8 @@ type TaskProcessSource {
   stepKey: String!
 }
 
-"Work asked of one person. Only its holder and the person who asked see it."
-type Task {
+"Work asked of one person. Only its holder and the person who asked see it and its history."
+type Task implements AnyRecord {
   id: ID!
   type: TaskType!
   status: TaskStatus!
@@ -42,6 +42,15 @@ type Task {
   "Why the person who asked cancelled it."
   cancelReason: String
   createdAt: DateTime!
+  "Changes to this task, newest first."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "Always read-only: a task changes through its own actions."
+  access: RecordAccess!
+}
+
+# Adds the task to the shared list of record types that keep history; the server merges them.
+enum RecordType {
+  TASK
 }
 
 "The signed-in person's tasks, by where the ball is."
@@ -77,6 +86,8 @@ input TaskCancelInput {
 "The task after a change, or why it was refused."
 type TaskPayload {
   task: Task
+  "The line the change added to the task's history."
+  historyLine: RecordChange
   error: TaskError
 }
 

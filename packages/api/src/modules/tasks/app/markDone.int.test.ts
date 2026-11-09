@@ -1,4 +1,4 @@
-import { expect, recordHistory, signedIn, taskService, test } from "#test/support";
+import { expect, signedIn, taskService, test } from "#test/support";
 
 test("marks a held task done and shows the asker who completed it", async ({ orm, seed }) => {
   const holder = await seed.employee();
@@ -8,7 +8,7 @@ test("marks a held task done and shows the asker who completed it", async ({ orm
   const askerCtx = signedIn(orm, { employeeId: asker.id, profiles: ["EMPLOYEE"] });
   const tasks = taskService(orm);
 
-  const done = await tasks.markDone(holderCtx, task.id);
+  const { task: done } = await tasks.markDone(holderCtx, task.id);
 
   expect(done).toMatchObject({
     status: "done",
@@ -77,37 +77,20 @@ test("accepts only the first of two concurrent completions", async ({ orm, seed 
   });
 });
 
-test("records creation and completion in the task's history", async ({ orm, seed, transact }) => {
+test("returns the history line appended by completion", async ({ orm, seed }) => {
   const holder = await seed.employee();
   const asker = await seed.employee();
+  const task = await seed.task({ assigneeEmployeeId: holder.id, requestedByEmployeeId: asker.id });
   const ctx = signedIn(orm, { employeeId: holder.id, profiles: ["EMPLOYEE"] });
-  const tasks = taskService(orm);
-  const task = await transact((tx) =>
-    tasks.createTask(ctx, tx, {
-      type: "manual_to_do",
-      title: "Read the handbook",
-      assigneeEmployeeId: holder.id,
-      requestedByEmployeeId: asker.id,
-    }),
-  );
 
-  await tasks.markDone(ctx, task.id);
+  const { historyLine } = await taskService(orm).markDone(ctx, task.id);
 
-  const history = await recordHistory.read(orm, "task", task.id, { first: 10 });
-  expect(history.edges.map(({ node }) => node)).toMatchObject([
-    {
-      operation: "UPDATED",
-      changes: expect.arrayContaining([
-        { field: "status", oldValue: "to_do", newValue: "done" },
-      ]) as unknown,
-    },
-    {
-      operation: "CREATED",
-      changes: expect.arrayContaining([
-        { field: "status", oldValue: null, newValue: "to_do" },
-      ]) as unknown,
-    },
-  ]);
+  expect(historyLine).toMatchObject({
+    recordType: "task",
+    recordId: task.id,
+    operation: "UPDATED",
+    changes: [{ field: "status", oldValue: "to_do", newValue: "done" }],
+  });
 });
 
 test("hides a task from an unrelated caller trying to complete it", async ({ orm, seed }) => {

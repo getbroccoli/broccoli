@@ -9,7 +9,7 @@ import {
 import { PayloadFailure, useCache, usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
-import { forgetStaleTask } from "./cache";
+import { addTaskHistoryLine, forgetStaleTask } from "./cache";
 
 /**
  * Mark done, with Undo for a few seconds, Reopen and Cancel. Each payload returns the task, which
@@ -18,9 +18,15 @@ import { forgetStaleTask } from "./cache";
  */
 export function useTaskActions() {
   const cache = useCache();
-  const [markDone, markDoneState] = usePayloadMutation(MarkTaskDoneDocument);
-  const [reopen, reopenState] = usePayloadMutation(ReopenTaskDocument);
-  const [cancel, cancelState] = usePayloadMutation(CancelTaskDocument);
+  const [markDone, markDoneState] = usePayloadMutation(MarkTaskDoneDocument, {
+    update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.markDone),
+  });
+  const [reopen, reopenState] = usePayloadMutation(ReopenTaskDocument, {
+    update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.reopen),
+  });
+  const [cancel, cancelState] = usePayloadMutation(CancelTaskDocument, {
+    update: (cache, { data }) => addTaskHistoryLine(cache, data?.tasks.cancel),
+  });
 
   const refused = (id: string) => (failure: unknown) => {
     const payloadError =
