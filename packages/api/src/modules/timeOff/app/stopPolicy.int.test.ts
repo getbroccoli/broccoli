@@ -270,3 +270,51 @@ test("offering a stopped type again from before the stop offers it from then on"
     balance: "no_balance",
   });
 });
+
+test("offering a stopped type again from before an earlier rules change keeps that change and drops the stop", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ key: "uk_20_days_plus_bank_holidays" }],
+    today: "2026-11-09",
+  });
+  const [policy] = await readTermsPolicies(orm, termsId);
+  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  await service.changePolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2026-07-01",
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 25,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+  await service.stopPolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    stopDate: "2026-11-09",
+  });
+
+  const result = await service.changePolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2026-01-01",
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 22,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+
+  expect(result.versions).toMatchObject([
+    { startDate: null, endDate: "2025-12-31" },
+    {
+      startDate: "2026-01-01",
+      endDate: "2026-06-30",
+      rules: [{ entitlementDays: 22 }],
+    },
+    { startDate: "2026-07-01", endDate: null, rules: [{ entitlementDays: 25 }] },
+  ]);
+});

@@ -3,6 +3,7 @@ import { addDays, type CalendarDate, coversDate } from "../../../utils";
 import { makeRoomForDatedRow } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import {
+  type PolicyVersion,
   refuseCountsChangeMidYear,
   type TimeOffPolicy,
   type TimeOffRules,
@@ -12,7 +13,7 @@ import {
 /**
  * Adds the rules' version from `startDate`: the version covering it ends the day before and the new
  * one runs to that version's end, or to the next version; one starting on the date is replaced. A
- * stop before `today` goes, so rules from before it offer the type again.
+ * stop before `today` goes when the rules start by the day after it, so they offer the type again.
  */
 export async function addVersionFrom(
   tx: Tx,
@@ -22,13 +23,12 @@ export async function addVersionFrom(
   today: CalendarDate,
 ) {
   const repository = timeOffPolicyRepository(tx);
-  const before = policy.versions.find((version) => coversDate(version, startDate)) ?? null;
-  const next =
-    policy.versions.find(({ startDate: from }) => from !== null && from > startDate) ?? null;
+  const versions = await reopenPastStop(tx, policy.versions, startDate, today);
+  const before = versions.find((version) => coversDate(version, startDate)) ?? null;
+  const next = versions.find(({ startDate: from }) => from !== null && from > startDate) ?? null;
   refuseCountsChangeMidYear(rules, startDate, { before, next });
-  const stoppedBefore = before?.endDate != null && before.endDate < today && !next;
-  const endDate = before && !stoppedBefore ? before.endDate : next && addDays(next.startDate!, -1);
-  const { ended, replaced } = makeRoomForDatedRow(policy.versions, startDate, endDate);
+  const endDate = before ? before.endDate : next && addDays(next.startDate!, -1);
+  const { ended, replaced } = makeRoomForDatedRow(versions, startDate, endDate);
   if (replaced) {
     await repository.deleteVersion(replaced.id);
   }
@@ -38,4 +38,19 @@ export async function addVersionFrom(
   const version = { ...versionFromRules(rules, before), startDate, endDate };
   await repository.insertVersion(policy.id, version);
   return { before, version };
+}
+
+/** The versions with a stop before `today` gone, when rules from `startDate` reach back to it. */
+async function reopenPastStop(
+  tx: Tx,
+  versions: readonly PolicyVersion[],
+  startDate: CalendarDate,
+  today: CalendarDate,
+): Promise<readonly PolicyVersion[]> {
+  const last = versions.at(-1);
+  if (!last?.endDate || last.endDate >= today || startDate > addDays(last.endDate, 1)) {
+    return versions;
+  }
+  await timeOffPolicyRepository(tx).endVersion(last.id, null);
+  return [...versions.slice(0, -1), { ...last, endDate: null }];
 }

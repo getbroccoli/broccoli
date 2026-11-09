@@ -200,6 +200,13 @@ export function createTimeOffPolicyService({
           cause: rulesChanged(policy.id, stopDate),
         });
         return { policy: await findPolicy(tx, policy.id), reached, ensured };
+      }).catch((error: unknown) => {
+        // A refusal becomes the payload's error, which no other log sees.
+        if (error instanceof ApplicationError) {
+          const refused = { timeOffPolicyId: input.timeOffPolicyId, stopDate, code: error.code };
+          logger.info(refused, "Refused to stop a time off policy");
+        }
+        throw error;
       });
       const { policy } = result;
       logger.info(
