@@ -31,6 +31,8 @@ export function createApolloClient({ onUnauthenticated }: ApolloClientOptions): 
         // A value has no id, so a query naming only some of its fields, such as a manager's name,
         // must add to the value review holds rather than replace it.
         ImportEmployeeValue: { merge: true },
+        // A person's terms have no id; the panel names their periods and its tab the rest.
+        EmployeeEmploymentTerms: { merge: true },
       }),
     }),
     dataMasking: true,

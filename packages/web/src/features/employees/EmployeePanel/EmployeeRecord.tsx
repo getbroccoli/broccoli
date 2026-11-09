@@ -13,6 +13,7 @@ import { EmployeeHeader } from "./EmployeeHeader";
 import { EmployeeHistory } from "./EmployeeHistory";
 import { EmploymentTermsTab } from "./EmploymentTermsTab";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
+import { shownTab } from "./employeePanelSearch";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
 import { KeyFacts } from "./KeyFacts";
 import { TimeOffSection } from "./TimeOffSection";
@@ -69,7 +70,7 @@ export function EmployeeRecord({ employee, onClose }: Props) {
       />
 
       <Tabs
-        value={tab}
+        value={shownTab(tab, { canReadTerms: employee.employmentTerms !== null })}
         onValueChange={(value: typeof tab) =>
           void navigate({ search: (previous) => ({ ...previous, tab: value }) })
         }
@@ -130,7 +131,6 @@ export function EmployeeRecord({ employee, onClose }: Props) {
             <EmploymentTermsTab
               employeeId={employee.id}
               firstName={employee.firstName}
-              employmentTerms={employee.employmentTerms}
               viewerIsPerson={me.employee?.id === employee.id}
               linksToSettings={operations.includes("MANAGE_WORKSPACE")}
             />

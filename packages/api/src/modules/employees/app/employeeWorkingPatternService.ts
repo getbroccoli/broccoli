@@ -13,6 +13,7 @@ import {
 } from "../db";
 import {
   type DatedPattern,
+  type TermsMembership,
   makeRoomForDatedRow,
   parseDateField,
   parseEmployeeIds,
@@ -243,6 +244,7 @@ interface EndChange {
 interface Timelines {
   timelines: Map<string, WorkingPatternTimeline>;
   assignments: Map<string, DatedPattern[]>;
+  memberships: Map<string, TermsMembership[]>;
   patterns: WorkingPattern[];
 }
 
@@ -268,7 +270,7 @@ export async function readTimelines(tx: Tx, employeeIds: readonly string[]): Pro
       }),
     ]),
   );
-  return { timelines, assignments, patterns };
+  return { timelines, assignments, memberships, patterns };
 }
 
 /** The pattern's name on `date`; a terms' own pattern goes by the terms' name. */

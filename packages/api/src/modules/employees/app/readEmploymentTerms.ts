@@ -43,8 +43,7 @@ export async function readEmploymentTerms(
   if (ids.length === 0) return new Map();
   return transact(async (tx) => {
     await workingPatternRepository(tx).lockForReads();
-    const { timelines, patterns } = await readTimelines(tx, ids);
-    const memberships = await termsRepository(tx).findMemberships(ids);
+    const { timelines, memberships, patterns } = await readTimelines(tx, ids);
     const termsIds = [...memberships.values()].flat().map(({ termsId }) => termsId);
     const names = await termsRepository(tx).findNames([...new Set(termsIds)]);
     const termsPatternIds = new Set(patterns.filter((p) => p.termsId).map(({ id }) => id));

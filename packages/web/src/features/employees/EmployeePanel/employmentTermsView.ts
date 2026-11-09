@@ -1,6 +1,6 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
-import { shortDate } from "@/features/termsDisplay";
+import { shortDate, splitVersions } from "@/features/termsDisplay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
 export type TermsPeriod = {
@@ -61,24 +61,22 @@ export function rowOf<V extends DatedVersion>(
   describe: (version: V) => { text: string; detail?: string },
   sourceOf: (version: V) => string,
 ) {
-  const current = versions[0]?.startDate === today ? versions[0] : null;
+  const { current, planned } = splitVersions(versions, today);
   return {
     value: current && {
       ...describe(current),
       source: current.source,
       sourceLabel: sourceOf(current),
     },
-    planned: versions
-      .filter((version) => version !== current)
-      .map((version) =>
-        t("people.panel.terms.planned", {
-          date: shortDate(version.startDate),
-          change:
-            version.source === "THEIR_OWN"
-              ? `${describe(version).text} · ${sourceOf(version)}`
-              : describe(version).text,
-        }),
-      ),
+    planned: planned.map((version) => {
+      const { text, detail } = describe(version);
+      // A change of where it comes from is part of the change, such as back to the terms' week.
+      const source = version.source !== current?.source || version.source === "THEIR_OWN";
+      return t("people.panel.terms.planned", {
+        date: shortDate(version.startDate),
+        change: [text, detail, source && sourceOf(version)].filter(Boolean).join(" · "),
+      });
+    }),
   };
 }
 
