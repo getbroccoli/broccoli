@@ -103,3 +103,33 @@ type Query {
     after: String
   ): RecordChangeConnection!
 }
+
+type Mutation {
+  records: RecordsMutations!
+}
+
+"Operations on records of any type that supports them."
+type RecordsMutations {
+  """
+  Starts a new record from this one under a new name. Terms get today's working week, and each
+  type's time off rules from the start of the current leave year; planned changes to both keep
+  their dates. Nobody is on the new terms and no location starts people on them. Refused on
+  `recordType` for a type that cannot be cloned. Admins only.
+  """
+  clone(input: RecordCloneInput!): RecordClonePayload!
+}
+
+input RecordCloneInput {
+  recordType: RecordType!
+  id: ID!
+  "The new record's name, as the type's create input takes it."
+  name: String!
+}
+
+type RecordClonePayload {
+  "The new record."
+  clone: AnyRecord
+  error: RecordCloneError
+}
+
+union RecordCloneError = InvalidInputError | NotFoundError

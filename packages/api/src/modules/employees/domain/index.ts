@@ -32,7 +32,12 @@ export {
   type WorkingPattern,
   type WorkingWeek,
 } from "./workingPattern";
-export { cancelPlannedVersion, earliestChangeDate, parseChangeDate } from "./datedChange";
+export {
+  cancelPlannedVersion,
+  earliestChangeDate,
+  parseChangeDate,
+  versionsFromToday,
+} from "./datedChange";
 export { createPersonTimeline, type PersonTimeline } from "./personTimeline";
 export {
   workingWeeksOf,
@@ -67,4 +72,11 @@ export {
   type StandardWorkingWeek,
 } from "./standardWorkingWeek";
 export { parseTermsSetup, type TermsSetup } from "./termsSetup";
-export { type Terms } from "./terms";
+export {
+  deleteBlockerOf,
+  deleteRefusal,
+  parseTermsName,
+  type Terms,
+  type TermsDeleteBlocker,
+  TermsNameTakenError,
+} from "./terms";

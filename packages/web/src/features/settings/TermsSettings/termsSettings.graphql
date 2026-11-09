@@ -48,7 +48,12 @@ query EmploymentTermsStack($id: ID!) {
     name
     isDefault
     peopleCount
+    deleteBlocker
     hadPeople
+    locations {
+      id
+      name
+    }
     workingPattern {
       id
       earliestChange
@@ -213,6 +218,87 @@ mutation CancelTermsTimeOffChange($input: TimeOffPolicyCancelChangeInput!) {
       }
       error {
         ...TermsChangeError
+      }
+    }
+  }
+}
+
+mutation CreateTerms($input: TermsCreateInput!) {
+  employees {
+    createTerms(input: $input) {
+      terms {
+        id
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation RenameTerms($input: TermsUpdateInput!) {
+  employees {
+    updateTerms(input: $input) {
+      terms {
+        id
+        name
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation DeleteTerms($input: TermsDeleteInput!) {
+  employees {
+    deleteTerms(input: $input) {
+      deletedTermsId
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
+mutation CloneTerms($input: RecordCloneInput!) {
+  records {
+    clone(input: $input) {
+      clone {
+        id
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
       }
     }
   }

@@ -207,17 +207,26 @@ it("names a created record from its title field's new value", () => {
   });
 });
 
-it("uses a record type's own wording for its created line", () => {
-  const termsDescription: RecordDescription = {
-    titleField: "name",
-    fields: [],
-    createdAs: "records.history.setUp",
-  };
+it("describes terms created when time off was turned on as set up", () => {
   const changes = [change({ field: "name", newValue: "England and Wales" })];
 
-  const summary = summaryOf({ ...line, operation: "CREATED", changes }, termsDescription);
+  const summary = summaryOf(
+    { ...line, operation: "CREATED", cause: { kind: "TIME_OFF_TURNED_ON" }, changes },
+    termsDescription,
+  );
 
   expect(summary).toEqual({ kind: "sentence", text: "set up England and Wales" });
+});
+
+it("describes terms created directly as created", () => {
+  const changes = [change({ field: "name", newValue: "Senior staff" })];
+
+  const summary = summaryOf(
+    { ...line, operation: "CREATED", cause: { kind: "EDITED_DIRECTLY" }, changes },
+    termsDescription,
+  );
+
+  expect(summary).toEqual({ kind: "sentence", text: "created Senior staff" });
 });
 
 it("leaves a created record's title null when its title field is missing", () => {
@@ -350,4 +359,13 @@ const description: RecordDescription = {
       format: (value) => formatCalendarDate(value) ?? value,
     },
   ],
+};
+
+const termsDescription: RecordDescription = {
+  titleField: "name",
+  fields: [],
+  createdAs: {
+    TIME_OFF_TURNED_ON: "records.history.setUp",
+    EDITED_DIRECTLY: "records.history.createdAs",
+  },
 };

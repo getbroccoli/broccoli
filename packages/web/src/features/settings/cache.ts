@@ -11,3 +11,8 @@ export function forgetTimeOffType(cache: ApolloCache, id: string): void {
 export function forgetLocation(cache: ApolloCache, id: string): void {
   evictRecord(cache, "Location", id);
 }
+
+/** Drops cached terms, so an open stack fetches them again, or lists leave them out once deleted. */
+export function forgetTerms(cache: ApolloCache, id: string): void {
+  evictRecord(cache, "Terms", id);
+}

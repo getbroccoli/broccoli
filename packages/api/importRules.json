@@ -127,6 +127,7 @@
       "src/core/db",
       "src/core/events",
       "src/core/graphql",
+      "src/core/logger",
       "src/core/pagination",
       "src/core/security"
     ],

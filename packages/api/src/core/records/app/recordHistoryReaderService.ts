@@ -1,5 +1,5 @@
 import { ApplicationError } from "../../applicationError";
-import type { Orm } from "../../db";
+import type { Orm, Tx } from "../../db";
 import type { Connection, PageArgs } from "../../pagination";
 import {
   isInRecordScope,
@@ -62,6 +62,11 @@ export interface RecordTypeRegistration {
   permissions: { object: PermissionObject; editableFields: readonly string[] };
   /** The change fields in its history whose values are ids of another record type, by field. */
   references?: Partial<Record<string, RecordType>>;
+  /**
+   * Starts a new record from the one with `id` under `name`, inside `tx`, and returns its id;
+   * absent when records of the type cannot be cloned. It checks the caller's permission.
+   */
+  clone?: (ctx: SecurityContext, tx: Tx, input: { id: string; name: string }) => Promise<string>;
 }
 
 /** A field change as a reader sees it: a value naming a record they may not read is hidden. */
@@ -71,7 +76,7 @@ export type VisibleFieldChange = FieldChange & { oldHidden: boolean; newHidden: 
 export type VisibleHistoryLine = Omit<HistoryLine, "changes"> & { changes: VisibleFieldChange[] };
 
 /** A record as `RecordChange.record` returns it, marked with its GraphQL type. */
-export type LoadedRecord = { __typename: string };
+export type LoadedRecord = { __typename: string; id: string };
 
 /** The record types that keep history, each registered by the module that owns it. */
 export type RecordTypeRegistry = { [Type in RecordType]?: RecordTypeRegistration };
@@ -120,7 +125,7 @@ export function createRecordHistoryReaderService(
           })
           .map(([id, record]) => [
             id,
-            { ...(record as object), __typename: registration.graphqlType },
+            { ...(record as { id: string }), __typename: registration.graphqlType },
           ]),
       );
     },

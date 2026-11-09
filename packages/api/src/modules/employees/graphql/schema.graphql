@@ -174,6 +174,12 @@ type EmployeesMutations {
   updateLocation(input: LocationUpdateInput!): LocationUpdatePayload!
   "Deletes a location nobody is in; refused with a conflict while someone is. Admins only."
   deleteLocation(input: LocationDeleteInput!): LocationDeletePayload!
+  "Adds terms on a Mon–Fri week, 7.5 hours a day, with these bank holidays and no time off offered. Admins only."
+  createTerms(input: TermsCreateInput!): TermsCreatePayload!
+  "Changes terms' fields and records the change in their history; renaming is always allowed. Admins only."
+  updateTerms(input: TermsUpdateInput!): TermsUpdatePayload!
+  "Deletes terms nobody was ever on and no location starts people on, never the default terms; refused with a conflict saying why otherwise. Admins only."
+  deleteTerms(input: TermsDeleteInput!): TermsDeletePayload!
   "Applies a new week from a date no earlier than the start of the current leave year; a later planned version stays. On terms, adds a line to their history. Admins only."
   changeWorkingPattern(input: WorkingPatternChangeInput!): WorkingPatternChangePayload!
   "Removes a version that has not started; the one before it runs on. Refused with a ConflictError once it has started. Admins only."
@@ -341,6 +347,8 @@ type Terms implements AnyRecord {
   isDefault: Boolean!
   "People on these terms today."
   peopleCount: Int!
+  "Locations whose new people start here, by name; the default terms also take locations without terms."
+  locations: [Location!]!
   "The version covering today first, if any, then planned ones; past versions stay out."
   workingWeek: [WorkingWeekVersion!]!
   "The terms' own working pattern."
@@ -351,7 +359,59 @@ type Terms implements AnyRecord {
   history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
   "What the signed-in user may do to these terms."
   access: RecordAccess!
+  "Why these terms cannot be deleted; null: they can."
+  deleteBlocker: TermsDeleteBlocker
 }
+
+enum TermsDeleteBlocker {
+  "People without a location start on the default terms."
+  DEFAULT_TERMS
+  "Someone was on these terms, even only in the past, so their history keeps them."
+  TERMS_HAD_PEOPLE
+  "A location starts its new people on these terms."
+  LOCATION_STARTS_PEOPLE_ON_TERMS
+}
+
+input TermsCreateInput {
+  "1 to 100 characters; unique, ignoring case and surrounding spaces."
+  name: String!
+  bankHolidayCalendar: BankHolidayCalendar!
+}
+
+"The fields to change; a field left out stays as it is, and null clears a field that may be empty."
+input TermsUpdateInput {
+  id: ID!
+  "1 to 100 characters; unique, ignoring case and surrounding spaces. Never null: terms always have a name."
+  name: String
+}
+
+input TermsDeleteInput {
+  id: ID!
+}
+
+"The new terms, or why they were refused."
+type TermsCreatePayload {
+  terms: Terms
+  error: TermsCreateError
+}
+
+union TermsCreateError = InvalidInputError
+
+"The changed terms, or why the change was refused."
+type TermsUpdatePayload {
+  terms: Terms
+  error: TermsUpdateError
+}
+
+union TermsUpdateError = InvalidInputError | NotFoundError
+
+"The deleted terms' id, or why they were not deleted."
+type TermsDeletePayload {
+  deletedTermsId: ID
+  error: TermsDeleteError
+}
+
+union TermsDeleteError = NotFoundError | ConflictError
 
 "A way of working over time: one set of terms' own, or a named one people are put on one by one."
 type WorkingPattern {

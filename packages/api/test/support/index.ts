@@ -26,6 +26,7 @@ export { connectAndReadSlack, slackAuthorization } from "./fakeSlack";
 export { startSimpleHttpServer } from "./simpleHttpServer";
 export { allowanceInputs, balanceOf, onTopPolicy, calculatedRowsOf } from "./allowanceCalculator";
 export { calendarDate } from "./calendarDate";
+export { recordCloneService } from "./recordCloneService";
 export { termsService } from "./termsService";
 export { PNG, JPEG, WEBP } from "./images";
 export { fakeSlackApi, SLACK_MEMBER_WITH_PHOTO, SLACK_PHOTO_URL } from "./fakeSlackApi";
@@ -109,6 +110,7 @@ export {
   giveTermsPolicies,
   readAllowances,
   readTermsPolicies,
+  readTermsPolicyVersions,
   type TermsPolicy,
   timeOffPolicyService,
   timeOffService,
@@ -121,6 +123,7 @@ export {
   seedTimeOff,
   seedTimeOffAssignment,
   seedTimeOffPolicy,
+  seedTimeOffPolicyVersions,
   seedTimeOffType,
 } from "./seedTimeOff";
 export { testTransactor } from "./testTransactor";

@@ -24,8 +24,11 @@ export interface RecordDescription {
   fields: RecordField[];
   /** The field whose value names the record in "added …" and "removed …". */
   titleField: string;
-  /** How a created line reads instead of "added … with N fields", with `{title}`, such as "set up {title}". */
-  createdAs?: MessageKey;
+  /**
+   * How a created line reads by its cause kind instead of "added … with N fields", with `{title}`,
+   * such as "set up {title}" when time off was turned on; another cause reads the generic way.
+   */
+  createdAs?: Partial<Record<string, MessageKey>>;
   /**
    * How a one-field change reads instead of "changed … to …"; null keeps that wording. `madeOn` is
    * the company day it was made, as `YYYY-MM-DD`.

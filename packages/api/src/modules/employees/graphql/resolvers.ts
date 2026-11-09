@@ -14,6 +14,7 @@ import type {
   TermsService,
   WorkingPatternService,
 } from "../app";
+import type { BankHolidayCalendar } from "../../bankHolidays";
 import { todayInLondon } from "../../../utils";
 import { earliestChangeDate } from "../domain";
 import { avatarUrl } from "../http";
@@ -50,6 +51,14 @@ export function createResolvers(
         (await loaders(context).terms.load(termsId ?? DEFAULT_TERMS))!,
     },
     Terms: {
+      locations: async ({ locations }, _args, context) => {
+        const loaded = await Promise.all(
+          locations.map(({ id }) => loaders(context).location.load(id)),
+        );
+        // A location deleted since the terms were read is left out.
+        return loaded.filter((location) => location !== null);
+      },
+      deleteBlocker: ({ deleteBlocker }) => deleteBlocker && toEnum(deleteBlocker),
       // shortcut: one query per terms; batch it when a list selects history.
       history: (terms, { first, after }, context) =>
         services.readTermsHistory(context.getActor(), terms.id, {
@@ -139,6 +148,26 @@ export function createResolvers(
       deleteLocation: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["LocationDeletePayload"]>(
           () => services.deleteLocation(context.getActor(), input),
+          ["NOT_FOUND", "CONFLICT"],
+        ),
+      createTerms: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TermsCreatePayload"]>(
+          async () => ({
+            terms: await services.createTerms(context.getActor(), {
+              name: input.name,
+              bankHolidayCalendar: input.bankHolidayCalendar.toLowerCase() as BankHolidayCalendar,
+            }),
+          }),
+          ["INVALID_INPUT"],
+        ),
+      updateTerms: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TermsUpdatePayload"]>(
+          async () => ({ terms: await services.updateTerms(context.getActor(), input) }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
+      deleteTerms: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TermsDeletePayload"]>(
+          () => services.deleteTerms(context.getActor(), input),
           ["NOT_FOUND", "CONFLICT"],
         ),
       changeWorkingPattern: (_parent, { input }, context) =>

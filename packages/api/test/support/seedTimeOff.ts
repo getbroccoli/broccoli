@@ -9,7 +9,24 @@ import {
   timeOffPolicyRepository,
   timeOffTypes,
 } from "../../src/modules/timeOff/db";
+import type { NewPolicyVersion } from "../../src/modules/timeOff/domain";
 import type { CalendarDate } from "../../src/utils";
+
+/** Ends a seeded policy's past version and adds its current and planned versions without history. */
+export async function seedTimeOffPolicyVersions(
+  orm: Orm,
+  input: {
+    policyId: string;
+    past: { id: string; endDate: CalendarDate };
+    versions: (NewPolicyVersion & { startDate: CalendarDate; endDate: CalendarDate | null })[];
+  },
+): Promise<void> {
+  const repository = timeOffPolicyRepository(orm);
+  await repository.endVersion(input.past.id, input.past.endDate);
+  for (const version of input.versions) {
+    await repository.insertVersion(input.policyId, version);
+  }
+}
 
 /** A named policy on a new or existing type, from the beginning, its leave year from 1 January. */
 export async function seedTimeOffPolicy(

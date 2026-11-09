@@ -53,10 +53,13 @@ export interface TimeOffPolicyRepository {
   sharePolicies(): Promise<void>;
   /** Whether any terms have a time off policy: whether time off is on. */
   hasAnyTermsPolicies(): Promise<boolean>;
-  /** A new policy, one set of terms' or named, with one open version from `version.startDate`, or the beginning. */
+  /**
+   * A new policy, one set of terms' or named, with one version from `version.startDate`, or the
+   * beginning, open unless the version ends.
+   */
   insertPolicy(
     policy: { timeOffTypeId: string } & ({ termsId: string } | { name: string }),
-    version: NewPolicyVersion & { startDate?: CalendarDate },
+    version: NewPolicyVersion & { startDate?: CalendarDate; endDate?: CalendarDate | null },
   ): Promise<string>;
   /** Deletes a policy with its versions; their rules stay for the ledger lines granted from them. */
   deletePolicy(id: string): Promise<void>;
@@ -173,12 +176,12 @@ export function timeOffPolicyRepository(db: Orm | Tx): TimeOffPolicyRepository {
       return policy !== undefined;
     },
 
-    async insertPolicy(policy, { startDate = null, ...version }) {
+    async insertPolicy(policy, { startDate = null, endDate = null, ...version }) {
       const [inserted] = await orm()
         .insert(timeOffPolicies)
         .values(policy)
         .returning({ id: timeOffPolicies.id });
-      await insertVersionRows(db, inserted!.id, { ...version, startDate, endDate: null });
+      await insertVersionRows(db, inserted!.id, { ...version, startDate, endDate });
       return inserted!.id;
     },
 

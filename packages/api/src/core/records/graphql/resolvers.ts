@@ -1,8 +1,15 @@
 import DataLoader from "dataloader";
 
-import { type GraphqlContext, perRequest, type Resolvers } from "../../graphql";
+import {
+  type GraphqlContext,
+  mutationPayload,
+  perRequest,
+  type Resolvers,
+  type ResolversTypes,
+} from "../../graphql";
 import {
   type LoadedRecord,
+  type RecordCloneService,
   type RecordHistoryReaderService,
   type RecordTypeRegistry,
   type VisibleFieldChange,
@@ -12,6 +19,7 @@ import type { HistoryLine, RecordType } from "../domain";
 export function createResolvers(
   registry: RecordTypeRegistry,
   reader: RecordHistoryReaderService,
+  cloner: RecordCloneService,
 ): Resolvers {
   const authorEmails = perRequest(
     () =>
@@ -46,6 +54,21 @@ export function createResolvers(
           first: first ?? undefined,
           after,
         }),
+    },
+    Mutation: {
+      records: () => ({}),
+    },
+    RecordsMutations: {
+      clone: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["RecordClonePayload"]>(
+          async () => ({
+            clone: await cloner.cloneRecord(context.getActor(), {
+              ...input,
+              recordType: input.recordType.toLowerCase() as RecordType,
+            }),
+          }),
+          ["INVALID_INPUT", "NOT_FOUND"],
+        ),
     },
     RecordChange: {
       record: (line, _args, context) => records(context).load(line),

@@ -6,7 +6,10 @@ import { termsChangeSentence } from "./termsHistoryText";
 /** The terms' fields as their history shows them: the name, and sentences for the week and rules. */
 export const TERMS_DESCRIPTION: RecordDescription = {
   titleField: "name",
-  createdAs: "records.history.setUp",
+  createdAs: {
+    TIME_OFF_TURNED_ON: "records.history.setUp",
+    EDITED_DIRECTLY: "records.history.createdAs",
+  },
   changedAs: termsChangeSentence,
   fields: [
     {
