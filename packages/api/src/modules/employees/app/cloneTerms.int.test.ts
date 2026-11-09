@@ -4,12 +4,13 @@ import {
   EMPLOYEE,
   expect,
   giveTermsPolicies,
+  readTermsPolicyVersions,
   recordCloneService,
+  seedTimeOffPolicyVersions,
   termsService,
   test,
 } from "#test/support";
 
-import { timeOffPolicyRepository } from "../../timeOff/db";
 import { locationRepository, workingPatternRepository } from "../db";
 
 test("clones today's working week from the beginning and keeps planned weeks, leaving past weeks out", async ({
@@ -75,12 +76,10 @@ test("clones each offered type's current and planned rules from the current leav
     today: "2026-11-09",
     policies: [{ key: "uk_statutory_minimum" }, { recordOnly: "sickness" }],
   });
-  const policies = timeOffPolicyRepository(orm);
-  const annual = (await policies.findAll()).find(
-    (policy) => policy.termsId === id && policy.timeOffType.typeKey === "annual_leave",
+  const annual = (await readTermsPolicyVersions(orm, id)).find(
+    (policy) => policy.timeOffType.typeKey === "annual_leave",
   )!;
   const { id: pastId, ...past } = annual.versions[0]!;
-  await policies.endVersion(pastId, calendarDate("2026-05-31"));
   const current = {
     ...past,
     startDate: calendarDate("2026-06-01"),
@@ -111,9 +110,12 @@ test("clones each offered type's current and planned rules from the current leav
       { kind: "service_extra" as const, afterYears: 4, extraDays: 3 },
     ],
   };
-  await policies.insertVersion(annual.id, current);
-  await policies.insertVersion(annual.id, planned);
-  const before = (await policies.findAll()).filter((policy) => policy.termsId === id);
+  await seedTimeOffPolicyVersions(orm, {
+    policyId: annual.id,
+    past: { id: pastId, endDate: calendarDate("2026-05-31") },
+    versions: [current, planned],
+  });
+  const before = await readTermsPolicyVersions(orm, id);
 
   const clone = await recordCloneService(orm, { today: "2026-11-09" }).cloneRecord(ADMIN, {
     recordType: "terms",
@@ -121,7 +123,7 @@ test("clones each offered type's current and planned rules from the current leav
     name: "Senior staff",
   });
 
-  const copied = (await policies.findAll()).filter((policy) => policy.termsId === clone.id);
+  const copied = await readTermsPolicyVersions(orm, clone.id);
   expect(copied.map(({ timeOffType }) => timeOffType.typeKey).sort()).toEqual([
     "annual_leave",
     "sickness",
@@ -141,7 +143,7 @@ test("clones each offered type's current and planned rules from the current leav
       rules: [],
     },
   ]);
-  expect((await policies.findAll()).filter((policy) => policy.termsId === id)).toEqual(before);
+  expect(await readTermsPolicyVersions(orm, id)).toEqual(before);
 });
 
 test("clones with a trimmed name, nobody and no locations, leaving the source unchanged", async ({
@@ -160,8 +162,7 @@ test("clones with a trimmed name, nobody and no locations, leaving the source un
   });
   const service = termsService(orm, { today: "2026-11-09" });
   const before = await service.readTerms(ADMIN, id);
-  const policies = timeOffPolicyRepository(orm);
-  const policiesBefore = (await policies.findAll()).filter((policy) => policy.termsId === id);
+  const policiesBefore = await readTermsPolicyVersions(orm, id);
   expect(before).toMatchObject({ peopleCount: 1, locations: [location] });
 
   const clone = await recordCloneService(orm, { today: "2026-11-09" }).cloneRecord(ADMIN, {
@@ -181,9 +182,7 @@ test("clones with a trimmed name, nobody and no locations, leaving the source un
   expect(clone.id).not.toBe(id);
   expect(clone).toEqual({ ...(await service.readTerms(ADMIN, clone.id)), __typename: "Terms" });
   expect(await service.readTerms(ADMIN, id)).toEqual(before);
-  expect((await policies.findAll()).filter((policy) => policy.termsId === id)).toEqual(
-    policiesBefore,
-  );
+  expect(await readTermsPolicyVersions(orm, id)).toEqual(policiesBefore);
 });
 
 test("writes only one created history line on the clone and leaves the source history unchanged", async ({

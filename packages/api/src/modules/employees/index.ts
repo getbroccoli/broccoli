@@ -3,9 +3,7 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import express from "express";
 
 import type { Mode } from "../../core/env";
-import { todayInLondon } from "../../utils";
 import {
-  cloneTerms,
   type CopyTermsParts,
   createEmployeeManagerService,
   createEmployeePermissionService,
@@ -24,7 +22,6 @@ import { avatarRouter, inviteRateLimit } from "./http";
 
 // Public values.
 export {
-  cloneTerms,
   createEmployeeInviteService,
   createEmployeeManagerService,
   createEmployeePermissionService,
@@ -101,7 +98,7 @@ export function employeesModule({
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
     ...createLocationService(dependencies),
-    ...createTermsService(dependencies),
+    ...createTermsService({ ...dependencies, copyTermsParts }),
     ...createWorkingPatternService(dependencies),
   };
   return {
@@ -110,11 +107,7 @@ export function employeesModule({
     resolvers: createResolvers(services, invites),
     recordTypes: {
       employee: employeeRecordType(dependencies.orm),
-      terms: {
-        ...termsRecordType(dependencies.orm),
-        clone: (ctx, tx, input) =>
-          cloneTerms(ctx, tx, input, { copyParts: copyTermsParts, today: todayInLondon() }),
-      },
+      terms: { ...termsRecordType(dependencies.orm), clone: services.cloneTerms },
     },
     jobs: invites.jobs,
     authPlugin: invitePlugin(invites, dependencies),

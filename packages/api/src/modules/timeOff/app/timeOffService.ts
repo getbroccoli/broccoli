@@ -191,6 +191,8 @@ export function createTimeOffService({
     async copyTermsPolicies(ctx, tx, { fromTermsId, toTermsId }) {
       ctx.require("MANAGE_WORKSPACE");
       const repository = timeOffPolicyRepository(tx);
+      // Held as every policy writer holds it, so no version changes between the reads below.
+      await repository.lockPolicies();
       const date = today();
       const policies = await repository.findAll();
       for (const { termsId, timeOffType, versions } of policies) {

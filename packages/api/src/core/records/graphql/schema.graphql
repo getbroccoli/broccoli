@@ -111,10 +111,10 @@ type Mutation {
 "Operations on records of any type that supports them."
 type RecordsMutations {
   """
-  Starts a new record from this one under a new name. Terms get the working week and each type's
-  time off rules that apply today, from the start of the current leave year, and the planned ones;
-  nobody is on them and no location starts people on them. Refused on `recordType` for a type that
-  cannot be cloned. Admins only.
+  Starts a new record from this one under a new name. Terms get today's working week, and each
+  type's time off rules from the start of the current leave year; planned changes to both keep
+  their dates. Nobody is on the new terms and no location starts people on them. Refused on
+  `recordType` for a type that cannot be cloned. Admins only.
   """
   clone(input: RecordCloneInput!): RecordClonePayload!
 }

@@ -110,6 +110,7 @@ export {
   giveTermsPolicies,
   readAllowances,
   readTermsPolicies,
+  readTermsPolicyVersions,
   type TermsPolicy,
   timeOffPolicyService,
   timeOffService,
@@ -122,6 +123,7 @@ export {
   seedTimeOff,
   seedTimeOffAssignment,
   seedTimeOffPolicy,
+  seedTimeOffPolicyVersions,
   seedTimeOffType,
 } from "./seedTimeOff";
 export { testTransactor } from "./testTransactor";
