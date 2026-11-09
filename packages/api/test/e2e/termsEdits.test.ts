@@ -1,5 +1,43 @@
 import { approveReviewedImport, expect, test, TEST_OWNER } from "#test/support";
 
+test("an admin can clone terms and gets an input error for a taken clone name", async ({ env }) => {
+  const browser = await env.startSetupAtImport();
+  expect(await (await approveReviewedImport(browser)).json()).toMatchObject({
+    data: { imports: { approve: { error: null } } },
+  });
+  expect((await browser.post("/api/auth/setup", TEST_OWNER)).status).toBe(200);
+  const id = await env.seed.defaultTermsId();
+  const mutation = `mutation Clone($id: ID!) {
+    records {
+      clone(input: { recordType: TERMS, id: $id, name: "Copy of England and Wales" }) {
+        clone { ... on Terms { id name } }
+        error { __typename }
+      }
+    }
+  }`;
+
+  const response = await browser.graphql(mutation, { id });
+  const created = (await response.json()) as {
+    data: { records: { clone: { clone: { id: string } } } };
+  };
+  expect(created).toEqual({
+    data: {
+      records: {
+        clone: {
+          clone: { id: expect.any(String) as unknown, name: "Copy of England and Wales" },
+          error: null,
+        },
+      },
+    },
+  });
+  expect(created.data.records.clone.clone.id).not.toBe(id);
+
+  const repeated = await browser.graphql(mutation, { id });
+  expect(await repeated.json()).toEqual({
+    data: { records: { clone: { clone: null, error: { __typename: "InvalidInputError" } } } },
+  });
+});
+
 test("an admin can create, rename and delete terms while the default terms report their blocker", async ({
   env,
 }) => {

@@ -23,8 +23,11 @@ export interface WorkingPatternRepository {
   lockForReads(): Promise<void>;
   /** Every pattern with its versions, oldest first: named ones by name, then the terms'. */
   findPatterns(): Promise<WorkingPattern[]>;
-  /** A new pattern, named or one set of terms', with one open version from the beginning. */
-  insertPattern(owner: { name: string } | { termsId: string }, week: PatternWeek): Promise<string>;
+  /** A new pattern, named or one set of terms', with one version from the beginning, open unless `week` ends. */
+  insertPattern(
+    owner: { name: string } | { termsId: string },
+    week: PatternWeek & { endDate?: CalendarDate | null },
+  ): Promise<string>;
   renamePattern(id: string, name: string): Promise<void>;
   /** Deletes a pattern with its versions. */
   deletePattern(id: string): Promise<void>;
@@ -91,14 +94,14 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
       return [...patterns.values()];
     },
 
-    async insertPattern(owner, week) {
+    async insertPattern(owner, { endDate = null, ...week }) {
       const [pattern] = await orm()
         .insert(workingPatterns)
         .values(owner)
         .returning({ id: workingPatterns.id });
       await orm()
         .insert(workingPatternVersions)
-        .values(versionRow(pattern!.id, { ...week, startDate: null, endDate: null }));
+        .values(versionRow(pattern!.id, { ...week, startDate: null, endDate }));
       return pattern!.id;
     },
 

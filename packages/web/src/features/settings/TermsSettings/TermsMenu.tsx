@@ -16,7 +16,7 @@ import {
 import { t } from "@/i18n";
 
 import { forgetTerms } from "../cache";
-import { RenameTermsDialog } from "./RenameTermsDialog";
+import { TermsNameDialog } from "./TermsNameDialog";
 import { deleteReason } from "./termsText";
 
 type Props = {
@@ -26,9 +26,9 @@ type Props = {
   >;
 };
 
-/** The stack's ⋯ menu: rename always, delete only when it changes nobody's start or history. */
+/** The stack's ⋯ menu: rename and clone always, delete only when it changes nobody's start or history. */
 export function TermsMenu({ terms }: Props) {
-  const [renaming, setRenaming] = useState(false);
+  const [naming, setNaming] = useState<"rename" | "clone" | null>(null);
   const navigate = useNavigate();
   const cache = useCache();
   const [deleteTerms, deletion] = usePayloadMutation(DeleteTermsDocument);
@@ -61,7 +61,10 @@ export function TermsMenu({ terms }: Props) {
           <DotsThree weight="bold" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-auto max-w-80">
-          <DropdownMenuItem onClick={() => setRenaming(true)}>{t("terms.rename")}</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setNaming("rename")}>
+            {t("terms.rename")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setNaming("clone")}>{t("terms.clone")}</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
@@ -82,7 +85,7 @@ export function TermsMenu({ terms }: Props) {
         </DropdownMenuContent>
       </DropdownMenu>
       {/* Mounted per opening, so each starts from the saved name. */}
-      {renaming && <RenameTermsDialog onClose={() => setRenaming(false)} terms={terms} />}
+      {naming && <TermsNameDialog action={naming} onClose={() => setNaming(null)} terms={terms} />}
     </>
   );
 }

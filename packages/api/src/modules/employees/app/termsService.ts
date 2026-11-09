@@ -12,7 +12,13 @@ import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import type { BankHolidayCalendar } from "../../bankHolidays";
 import { termsRepository, workingPatternRepository } from "../db";
-import { deleteRefusal, parseTermsName, STANDARD_WEEKS, TermsNameTakenError } from "../domain";
+import {
+  deleteRefusal,
+  parseTermsName,
+  STANDARD_WEEKS,
+  TermsNameTakenError,
+  versionsFromToday,
+} from "../domain";
 import { readTermsOverviews, type TermsOverview } from "./readTermsOverviews";
 import { termsRecordType } from "./termsRecordType";
 
@@ -128,6 +134,43 @@ export function createTermsService({
       return { deletedTermsId: termsId };
     },
   };
+}
+
+/** Copies the source terms' rows another module owns, such as time off rules, onto the clone. */
+export type CopyTermsParts = (
+  ctx: SecurityContext,
+  tx: Tx,
+  input: { fromTermsId: string; toTermsId: string },
+) => Promise<void>;
+
+/**
+ * New terms named `name` with the source terms' working week from today on, today's from the
+ * beginning, and the parts `copyParts` copies; nobody on them and no location. Admins only.
+ */
+export async function cloneTerms(
+  ctx: SecurityContext,
+  tx: Tx,
+  { id, name: givenName }: { id: string; name: string },
+  { copyParts, today }: { copyParts: CopyTermsParts; today: CalendarDate },
+): Promise<string> {
+  ctx.require("MANAGE_WORKSPACE");
+  const sourceId = parseTermsId(id);
+  const name = parseTermsName(givenName);
+  if (!(await termsRepository(tx).lock(sourceId))) {
+    throw termsNotFound();
+  }
+  const cloneId = await refuseTakenName(() => termsRepository(tx).insert(name));
+  const patterns = workingPatternRepository(tx);
+  const source = (await patterns.findPatterns()).find(({ termsId }) => termsId === sourceId)!;
+  // Today's week covers the past too, as on new terms; the first version starts from the beginning.
+  const [current, ...planned] = versionsFromToday(source.versions, today, null);
+  const patternId = await patterns.insertPattern({ termsId: cloneId }, current!);
+  for (const version of planned) {
+    await patterns.insertVersion(patternId, version);
+  }
+  await copyParts(ctx, tx, { fromTermsId: sourceId, toTermsId: cloneId });
+  await recordNameChange(ctx, tx, "CREATED", cloneId, { from: null, to: name });
+  return cloneId;
 }
 
 const recordHistory = createRecordHistoryService();

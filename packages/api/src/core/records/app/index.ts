@@ -8,3 +8,4 @@ export {
   type VisibleHistoryLine,
 } from "./recordHistoryReaderService";
 export { createRecordHistoryService, type RecordChanged } from "./recordHistoryService";
+export { createRecordCloneService, type RecordCloneService } from "./recordCloneService";

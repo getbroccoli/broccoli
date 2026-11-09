@@ -87,7 +87,12 @@ export function createModules(
       deleteAllEmployees,
       deleteFinishedImport: importServices.deleteFinishedImport,
     }),
-    employeesModule({ ...core, mode: deployment.mode, invites }),
+    employeesModule({
+      ...core,
+      mode: deployment.mode,
+      invites,
+      copyTermsParts: timeOff.copyTermsPolicies,
+    }),
     companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact, deleteAllEmployees }),
     slackModule(slackConnection),
@@ -104,7 +109,7 @@ export function createModules(
     }),
   ];
   return {
-    manifests: [...manifests, recordsManifest(core.orm, manifests)],
+    manifests: [...manifests, recordsManifest(core, manifests)],
     setupDemo: {
       prepareStart: importServices.prepareDemoStart,
       deleteAllEmployees,
