@@ -66,10 +66,13 @@ export function createTermsService({
   transact,
   logger,
   copyTermsParts,
+  lockTermsParts,
   today = todayInLondon,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   /** Copies what other modules keep on terms, such as time off rules, onto cloned terms. */
   copyTermsParts: CopyTermsParts;
+  /** Locks what other modules keep on terms, such as time off rules, before a terms' row. */
+  lockTermsParts: LockTermsParts;
   today?: () => CalendarDate;
 }): TermsService {
   const history = createRecordHistoryReaderService(orm, { terms: termsRecordType(orm, today) });
@@ -131,6 +134,8 @@ export function createTermsService({
       ctx.require("MANAGE_WORKSPACE");
       const termsId = parseTermsId(input.id);
       await transact(async (tx) => {
+        // The time off rules first, as offering a type takes them: deleting cascades into them.
+        await lockTermsParts(ctx, tx);
         const terms = await termsRepository(tx).lock(termsId);
         if (!terms) {
           throw termsNotFound();
@@ -178,6 +183,8 @@ export type CopyTermsParts = (
   tx: Tx,
   input: { fromTermsId: string; toTermsId: string },
 ) => Promise<void>;
+
+export type LockTermsParts = (ctx: SecurityContext, tx: Tx) => Promise<void>;
 
 const recordHistory = createRecordHistoryService();
 

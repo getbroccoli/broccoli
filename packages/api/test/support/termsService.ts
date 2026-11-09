@@ -12,6 +12,7 @@ export function termsService(orm: Orm, { today }: { today: string }) {
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     copyTermsParts: timeOffService(orm, { today }).copyTermsPolicies,
+    lockTermsParts: timeOffService(orm, { today }).lockPolicies,
     today: () => calendarDate(today),
   });
 }

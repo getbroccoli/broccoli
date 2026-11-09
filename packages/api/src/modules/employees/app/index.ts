@@ -26,7 +26,12 @@ export {
   type EmployeeWorkingPatternService,
 } from "./employeeWorkingPatternService";
 export { employeeRecordType } from "./employeeRecordType";
-export { type CopyTermsParts, createTermsService, type TermsService } from "./termsService";
+export {
+  type CopyTermsParts,
+  createTermsService,
+  type LockTermsParts,
+  type TermsService,
+} from "./termsService";
 export { termsRecordType } from "./termsRecordType";
 export type { TermsOverview } from "./readTermsOverviews";
 export {
