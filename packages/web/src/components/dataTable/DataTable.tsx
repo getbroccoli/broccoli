@@ -177,7 +177,9 @@ export function DataTable<Row, SortKey extends string>({
                         key={column.id}
                         className={cn(
                           comfortable ? "px-4 py-2.5" : "px-3 py-2.5",
-                          index === 0 && `${PINNED_COLUMN} group-hover/row:bg-row-hover`,
+                          // Fades with the row, so a pinned cell never lags behind the row's own transition.
+                          index === 0 &&
+                            `${PINNED_COLUMN} transition-colors group-hover/row:bg-row-hover`,
                           index === 0 && !comfortable && PINNED_EDGE,
                           column.className,
                         )}
