@@ -24,6 +24,11 @@ declare module "../../../core/events" {
      * beginning; a reader recalculates what depends on them from that date.
      */
     "employees.working_pattern_changed": { employeeIds: string[]; from: CalendarDate | null };
+    /**
+     * These employees moved to other terms from `from`, so their working weeks and time off rules
+     * may have changed from then on.
+     */
+    "employees.terms_changed": { employeeIds: string[]; from: CalendarDate };
   }
 }
 

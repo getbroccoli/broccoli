@@ -39,6 +39,12 @@ export {
   versionsFromToday,
 } from "./datedChange";
 export {
+  cancelTermsMove,
+  planTermsMove,
+  type TermsMove,
+  type TermsMoveSkipReason,
+} from "./termsMove";
+export {
   createPersonTimeline,
   type PersonTimeline,
   type PersonVersion,

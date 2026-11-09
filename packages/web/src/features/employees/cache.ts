@@ -60,3 +60,12 @@ export function cachedLocationName(cache: ApolloCache, id: string): string | nul
     })?.name ?? null
   );
 }
+
+/**
+ * Drops every cached page of history, so each reads again when shown: a change that returns no
+ * history line, such as a move to other terms, wrote one.
+ */
+export function forgetHistory(cache: ApolloCache): void {
+  cache.evict({ id: "ROOT_QUERY", fieldName: "recordHistory" });
+  cache.gc();
+}

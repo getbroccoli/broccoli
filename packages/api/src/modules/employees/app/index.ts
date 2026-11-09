@@ -29,6 +29,12 @@ export {
   type EmployeeWorkingPatternService,
 } from "./employmentTerms/employeeWorkingPatternService";
 export type { EmploymentTerms, PersonWorkingWeek } from "./employmentTerms/readEmploymentTerms";
+export {
+  createEmployeeTermsService,
+  type EmployeeTermsService,
+  type TermsChange,
+} from "./employmentTerms/employeeTermsService";
+export type { TermsMovePreview } from "./employmentTerms/membershipsAfterMove";
 export { employeeRecordType } from "./employeeRecordType";
 export {
   type CopyTermsParts,

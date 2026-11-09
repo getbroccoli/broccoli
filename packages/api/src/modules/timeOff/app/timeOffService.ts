@@ -13,6 +13,7 @@ import {
   earliestChangeDate,
   parseTermsSetup,
   type TermsSetup,
+  type TermsMovePreview,
   versionsFromToday,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
@@ -66,11 +67,12 @@ export interface TimeOffService {
   ) => Promise<Map<string, EmployeeTimeOffType[]>>;
   /**
    * Each person's rules for every company time off type from today on, marked as their terms' or
-   * their own, by id; ids outside the caller's time off scope are left out.
+   * their own, by id; with `move`, as they would be after it. Ids outside the caller's time off
+   * scope are left out.
    */
   readPersonTimeOff: (
     ctx: SecurityContext,
-    input: { employeeIds: readonly string[] },
+    input: { employeeIds: readonly string[]; move?: TermsMovePreview; from?: CalendarDate },
   ) => Promise<Map<string, PersonTimeOff[]>>;
   /** Adds a company time off type; no terms offer it until they get rules for it. Admins only. */
   createType: (ctx: SecurityContext, input: TimeOffTypeIdentityInput) => Promise<TimeOffType>;

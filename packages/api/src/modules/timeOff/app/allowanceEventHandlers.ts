@@ -11,7 +11,10 @@ interface AllowanceEventDependencies {
   logger: Logger;
 }
 
-/** Ensures allowances as the system after people are added or their start dates or working weeks change. */
+/**
+ * Ensures allowances as the system after people are added, or their start dates, working weeks or
+ * terms change.
+ */
 export function allowanceEventHandlers(dependencies: AllowanceEventDependencies): EventHandlers {
   return {
     "employees.added": ({ employeeIds }) =>
@@ -24,6 +27,8 @@ export function allowanceEventHandlers(dependencies: AllowanceEventDependencies)
       }),
     "employees.working_pattern_changed": ({ employeeIds, from }) =>
       ensureAllowances(dependencies, employeeIds, { kind: "WORKING_PATTERN_CHANGED", ref: from }),
+    "employees.terms_changed": ({ employeeIds, from }) =>
+      ensureAllowances(dependencies, employeeIds, { kind: "TERMS_CHANGED", ref: from }),
   };
 }
 

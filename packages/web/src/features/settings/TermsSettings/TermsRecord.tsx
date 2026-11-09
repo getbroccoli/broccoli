@@ -14,16 +14,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { RecordHistory } from "@/features/records";
+import { CancelChangeDialog, ruleLine } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
-import { CancelChangeDialog } from "./CancelChangeDialog";
 import { DefaultPill } from "./DefaultPill";
 import { RulesEditor } from "./RulesEditor";
 import { TermsMenu } from "./TermsMenu";
 import { TermsTimeOffSection } from "./TermsTimeOffSection";
 import { TERMS_DESCRIPTION } from "./termsDescription";
 import { changesOnlyDays } from "./termsDraft";
-import { ruleLine } from "@/features/termsDisplay";
 import { usePlannedChanges } from "./usePlannedChanges";
 import { useTermsEditing } from "./useTermsEditing";
 import { WeekEditor } from "./WeekEditor";

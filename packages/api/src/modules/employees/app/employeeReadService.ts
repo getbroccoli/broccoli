@@ -20,6 +20,7 @@ import {
 } from "../db";
 import type { Employee, EmployeeOrder, EmployeeOrderField, TermsMembership } from "../domain";
 import { employeeRecordType } from "./employeeRecordType";
+import { readMemberships, type TermsMovePreview } from "./employmentTerms/membershipsAfterMove";
 
 const fileStorage = createFileStorageService();
 
@@ -60,10 +61,14 @@ export interface EmployeeReadService {
   ) => Promise<Map<string, { startDate: CalendarDate | null; endDate: CalendarDate | null }[]>>;
   /** Trusted: the employees among `employeeIds`, by first then last name, in the caller's transaction. */
   readEmployeesByName: (tx: Tx, employeeIds: readonly string[]) => Promise<Employee[]>;
-  /** Trusted, for time off: each employee's terms over time, by id, in the caller's transaction. */
+  /**
+   * Trusted, for time off: each employee's terms over time, by id, in the caller's transaction;
+   * with `move`, as they would be after it.
+   */
   readTermsMemberships: (
     tx: Tx,
     employeeIds: readonly string[],
+    move?: TermsMovePreview,
   ) => Promise<Map<string, TermsMembership[]>>;
   /**
    * Trusted: the employees on the terms on any date, in the caller's transaction; null when no terms
@@ -133,7 +138,7 @@ export function createEmployeeReadService({
     lockEmployees: (tx, employeeIds) => employeeRepository(tx).lockByIds(employeeIds),
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
     readEmployeesByName,
-    readTermsMemberships: (tx, employeeIds) => termsRepository(tx).findMemberships(employeeIds),
+    readTermsMemberships: readMemberships,
     async readTermsMemberIds(tx, termsId) {
       const repository = termsRepository(tx);
       return (await repository.exists(termsId))

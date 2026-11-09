@@ -20,6 +20,7 @@ export type AllowanceCause =
         | "TIME_OFF_TURNED_ON"
         | "EMPLOYEE_ADDED"
         | "WORKING_PATTERN_CHANGED"
+        | "TERMS_CHANGED"
         | "LEAVE_YEAR_STARTED"
         | "DAILY_CHECK";
       /** The terms id, employee id or date the cause names; null when it names none. */

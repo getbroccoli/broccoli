@@ -131,7 +131,7 @@ function correctionDate(
   const changedFrom =
     cause.kind === "TIME_OFF_RULES_CHANGED"
       ? cause.from
-      : cause.kind === "WORKING_PATTERN_CHANGED"
+      : cause.kind === "WORKING_PATTERN_CHANGED" || cause.kind === "TERMS_CHANGED"
         ? (cause.ref as CalendarDate | null)
         : null;
   return changedFrom && changedFrom > firstDate ? changedFrom : firstDate;

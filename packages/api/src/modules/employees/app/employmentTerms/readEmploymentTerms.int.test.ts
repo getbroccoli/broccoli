@@ -1,4 +1,5 @@
 import {
+  calendarDate,
   expect,
   OWNER,
   seedTermsPeriods,
@@ -127,4 +128,106 @@ test("leaves out a colleague whose working pattern the caller may not read", asy
   expect(result.get(employee.id)?.workingWeek).toMatchObject([
     { source: "from_their_terms", startDate: "2026-06-01", endDate: null },
   ]);
+});
+
+test("reads the working week after a previewed move without writing the move", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const scotland = await termsService(orm, { today: "2026-11-09" }).createTerms(OWNER, {
+    name: "Scotland",
+    bankHolidayCalendar: "scotland",
+  });
+  const service = workingPatternService(orm, { today: "2026-11-09" });
+  const before = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
+
+  const preview = await service.readEmploymentTerms(OWNER, {
+    employeeIds: [employee.id],
+    move: { termsId: scotland.id, startDate: calendarDate("2026-12-01") },
+  });
+
+  expect(preview.get(employee.id)?.workingWeek).toMatchObject([
+    {
+      source: "from_their_terms",
+      startDate: "2026-11-09",
+      endDate: "2026-11-30",
+      version: { bankHolidayCalendar: "england_and_wales" },
+    },
+    {
+      source: "from_their_terms",
+      startDate: "2026-12-01",
+      endDate: null,
+      version: { minutes: [450, 450, 450, 450, 450, 0, 0], bankHolidayCalendar: "scotland" },
+    },
+  ]);
+  expect(preview.get(employee.id)?.periods).toMatchObject([
+    { termsId: await seed.defaultTermsId(), endDate: "2026-11-30" },
+    { termsId: scotland.id, startDate: "2026-12-01", endDate: null },
+  ]);
+  expect(await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] })).toEqual(before);
+});
+
+test("keeps a person's own week across a previewed move", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const scotland = await termsService(orm, { today: "2026-11-09" }).createTerms(OWNER, {
+    name: "Scotland",
+    bankHolidayCalendar: "scotland",
+  });
+  const service = workingPatternService(orm, { today: "2026-11-09" });
+  const own = await service.createPattern(OWNER, {
+    name: "Four days",
+    minutes: [480, 480, 480, 480, 0, 0, 0],
+  });
+  await service.assignPattern(OWNER, {
+    employeeId: employee.id,
+    workingPatternId: own.id,
+    startDate: "2026-03-01",
+  });
+
+  const preview = await service.readEmploymentTerms(OWNER, {
+    employeeIds: [employee.id],
+    move: { termsId: scotland.id, startDate: calendarDate("2026-12-01") },
+  });
+
+  expect(preview.get(employee.id)?.workingWeek).toMatchObject([
+    {
+      source: "their_own",
+      startDate: "2026-11-09",
+      endDate: null,
+      version: { minutes: [480, 480, 480, 480, 0, 0, 0] },
+    },
+  ]);
+});
+
+test.for([
+  { startDate: "2024-03-01", earliestChange: "2026-01-01" },
+  { startDate: "2026-05-04", earliestChange: "2026-05-04" },
+])(
+  "reads $earliestChange as the earliest change for a person starting $startDate",
+  async ({ startDate, earliestChange }, { orm, seed }) => {
+    const employee = await seed.employee({ startDate });
+
+    const terms = await workingPatternService(orm, { today: "2026-11-09" }).readEmploymentTerms(
+      OWNER,
+      { employeeIds: [employee.id] },
+    );
+
+    expect(terms.get(employee.id)?.earliestChange).toBe(earliestChange);
+  },
+);
+
+test("reads the week from a past date when asked", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const service = workingPatternService(orm, { today: "2026-11-09" });
+
+  const terms = await service.readEmploymentTerms(OWNER, {
+    employeeIds: [employee.id],
+    from: calendarDate("2026-03-01"),
+  });
+
+  expect(terms.get(employee.id)?.workingWeek[0]).toMatchObject({
+    startDate: "2026-03-01",
+    source: "from_their_terms",
+  });
 });

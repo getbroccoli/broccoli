@@ -3,6 +3,7 @@ import { t } from "@/i18n";
 import { formatCalendarDate } from "@/lib/formatDate";
 
 import type { EmployeeFieldKey } from "./employeeDraft";
+import { employeeChangeSentence } from "./employeeHistoryText";
 import { EmployeePicker } from "../EmployeePicker";
 import { LocationPicker } from "../LocationPicker";
 import { PermissionProfilePicker } from "./PermissionProfilePicker";
@@ -22,6 +23,7 @@ const PROFILE_LABELS: Partial<Record<string, string>> = {
 /** The employee's fields, by panel section, as the panel and its history show them. */
 export const EMPLOYEE_DESCRIPTION = {
   titleField: "firstName",
+  changedAs: employeeChangeSentence,
   fields: [
     textField("jobTitle", "people.panel.section.job"),
     {

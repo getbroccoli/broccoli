@@ -30,6 +30,7 @@ import {
   workingWeeksOf,
 } from "../../domain";
 import { employeeNotFound } from "../employeeNotFound";
+import { readMemberships, type TermsMovePreview } from "./membershipsAfterMove";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
 import { type EmploymentTerms, readEmploymentTerms } from "./readEmploymentTerms";
 import { referencedPattern } from "./workingPatternService";
@@ -55,12 +56,13 @@ export interface EmployeeWorkingPatternService {
    * transaction created; checks no caller and assumes every id names an employee.
    */
   /**
-   * Each person's terms, earlier, today and planned, and their working week from today on, marked
-   * as their terms' or their own, by id; people the caller may not read are left out.
+   * Each person's terms, earlier, today and planned, and their working week from today (or `from`)
+   * on, marked as their terms' or their own, by id; with `move`, as they would be after it. People
+   * the caller may not read are left out.
    */
   readEmploymentTerms: (
     ctx: SecurityContext,
-    input: { employeeIds: readonly string[] },
+    input: { employeeIds: readonly string[]; move?: TermsMovePreview; from?: CalendarDate },
   ) => Promise<Map<string, EmploymentTerms>>;
   readWorkingWeeksInTransaction: (
     tx: Tx,
@@ -254,12 +256,19 @@ interface Timelines {
   patterns: WorkingPattern[];
 }
 
-/** Each employee's own patterns and their terms, with every pattern and its versions. */
-export async function readTimelines(tx: Tx, employeeIds: readonly string[]): Promise<Timelines> {
+/**
+ * Each employee's own patterns and their terms, with every pattern and its versions; with `move`,
+ * their terms as they would be after it.
+ */
+export async function readTimelines(
+  tx: Tx,
+  employeeIds: readonly string[],
+  move?: TermsMovePreview,
+): Promise<Timelines> {
   const repository = workingPatternRepository(tx);
   // One after another: they share the transaction's connection.
   const assignments = await repository.findAssignments(employeeIds);
-  const memberships = await termsRepository(tx).findMemberships(employeeIds);
+  const memberships = await readMemberships(tx, employeeIds, move);
   const patterns = await repository.findPatterns();
   const byId = new Map(patterns.map((pattern) => [pattern.id, pattern]));
   const byTerms = new Map(
