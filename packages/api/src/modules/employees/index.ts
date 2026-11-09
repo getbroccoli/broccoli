@@ -5,6 +5,7 @@ import express from "express";
 import type { Mode } from "../../core/env";
 import {
   type CopyTermsParts,
+  type LockTermsParts,
   createEmployeeManagerService,
   createEmployeePermissionService,
   createEmployeeReadService,
@@ -84,6 +85,7 @@ export function employeesModule({
   mode,
   invites,
   copyTermsParts,
+  lockTermsParts,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   mode: Mode;
@@ -91,6 +93,8 @@ export function employeesModule({
   invites: EmployeeInviteService;
   /** Copies what other modules keep on terms, such as time off rules, onto cloned terms. */
   copyTermsParts: CopyTermsParts;
+  /** Locks what other modules keep on terms, such as time off rules, before a terms' row. */
+  lockTermsParts: LockTermsParts;
 }): ModuleManifest {
   const services = {
     ...createEmployeeService(dependencies),
@@ -98,7 +102,7 @@ export function employeesModule({
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
     ...createLocationService(dependencies),
-    ...createTermsService({ ...dependencies, copyTermsParts }),
+    ...createTermsService({ ...dependencies, copyTermsParts, lockTermsParts }),
     ...createWorkingPatternService(dependencies),
   };
   return {

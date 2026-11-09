@@ -1,16 +1,19 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import {
   ADMIN,
   calendarDate,
   EMPLOYEE,
   expect,
+  expectBlockedBy,
   seedEmploymentEnd,
   termsService,
   test,
+  timeOffService,
 } from "#test/support";
 
-import { employeeTerms, workingPatternRepository } from "../db";
+import { ormOf } from "../../../core/db";
+import { employeeTerms, termsRepository, workingPatternRepository } from "../db";
 
 test("lists the default terms first, then others by name ignoring case", async ({ orm, seed }) => {
   const defaultId = await seed.defaultTermsId();
@@ -170,4 +173,38 @@ test("refuses an employee reading one terms", async ({ orm, seed }) => {
   const service = termsService(orm, { today: "2026-11-06" });
 
   await expect(service.readTerms(EMPLOYEE, id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+
+test("deleting terms while a type is offered on them settles without a deadlock", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.terms("Scotland");
+  const offerReady = Promise.withResolvers<number>();
+  const releaseOffer = Promise.withResolvers<void>();
+  // Offering a type holds the time off rules, then checks the terms' row by key.
+  const offering = transact(async (tx) => {
+    await timeOffService(orm, { today: "2026-11-06" }).lockPolicies(ADMIN, tx);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    offerReady.resolve(rows[0]!.pid);
+    await releaseOffer.promise;
+    await termsRepository(tx).keep(termsId);
+  });
+  const blockingPid = await offerReady.promise;
+
+  const results = Promise.allSettled([
+    offering,
+    termsService(orm, { today: "2026-11-06" }).deleteTerms(ADMIN, { id: termsId }),
+  ]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseOffer.resolve();
+    await results;
+  }
+
+  const [offer, deletion] = await results;
+  expect(offer.status).toBe("fulfilled");
+  expect(deletion.status).toBe("fulfilled");
 });
