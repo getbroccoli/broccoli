@@ -43,8 +43,12 @@ mutation BulkChangeTerms($input: EmployeeTermsChangeInput!) {
     changeTerms(input: $input) {
       moved {
         startDate
+        # Their new terms, for any panel the cache holds.
         employee {
-          id
+          ...EmployeePanel_employee @unmask
+          employmentTerms {
+            ...EmploymentTermsTab_terms @unmask
+          }
         }
       }
       error {

@@ -62,7 +62,7 @@ export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }
     // A save since may have moved some of them.
     fetchPolicy: "network-only",
   });
-  const [changeTerms, { loading, error, payloadError }] = usePayloadMutation(
+  const [changeTerms, { loading, error, payloadError, reset }] = usePayloadMutation(
     BulkChangeTermsDocument,
     { update: forgetHistory },
   );
@@ -72,13 +72,14 @@ export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }
   const close = () => {
     onOpenChange(false);
     setValue({ termsId: null, startDate: companyToday() });
+    reset();
   };
   const save = async () => {
     const payload = await changeTerms({ variables: { input } }).catch(() => null);
     if (!payload) return;
     toast(
       bulkSavedToast({
-        count: payload.moved?.length ?? 0,
+        movedFrom: (payload.moved ?? []).map(({ startDate }) => startDate),
         termsName,
         startDate: value.startDate,
         today,
@@ -90,7 +91,11 @@ export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }
 
   return (
     <Dialog open={open} onOpenChange={(next) => !loading && (next ? onOpenChange(true) : close())}>
-      <DialogContent className="sm:max-w-lg" closeLabel={t("changeTerms.cancel")}>
+      <DialogContent
+        // Long lines scroll, so the actions stay reachable on a small screen.
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+        closeLabel={t("changeTerms.cancel")}
+      >
         <DialogHeader>
           <DialogTitle>{bulkTitle(employeeIds.length)}</DialogTitle>
         </DialogHeader>
@@ -151,7 +156,10 @@ function errorOf({
   earliest: string;
 }): string | null {
   if (previewFailed) return t("changeTerms.previewFailed");
-  if (saveError?.__typename === "InvalidInputError") {
+  if (
+    saveError?.__typename === "InvalidInputError" &&
+    saveError.fields.some(({ field }) => field === "startDate")
+  ) {
     return t("changeTerms.tooEarly", { date: shortDate(earliest) });
   }
   return saveFailed || saveError ? t("changeTerms.failed") : null;

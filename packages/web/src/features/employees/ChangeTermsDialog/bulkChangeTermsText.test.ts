@@ -175,9 +175,25 @@ it.each([
   { count: 4, startDate: "2026-03-01", expected: "4 people are on Scotland from 1 Mar 2026." },
   { count: 1, startDate: "2026-03-01", expected: "1 person is on Scotland from 1 Mar 2026." },
 ])("confirms $count saved moves from $startDate", ({ count, startDate, expected }) => {
-  const toast = bulkSavedToast({ count, termsName: "Scotland", startDate, today: "2026-11-09" });
+  const toast = bulkSavedToast({
+    movedFrom: Array.from({ length: count }, () => startDate),
+    termsName: "Scotland",
+    startDate,
+    today: "2026-11-09",
+  });
 
   expect(toast).toBe(expected);
+});
+
+it("says only who moved when some move from a later start", () => {
+  const toast = bulkSavedToast({
+    movedFrom: ["2026-11-09", "2027-01-10"],
+    termsName: "Scotland",
+    startDate: "2026-11-09",
+    today: "2026-11-09",
+  });
+
+  expect(toast).toBe("2 people moved to Scotland.");
 });
 
 const emptyGroups = {

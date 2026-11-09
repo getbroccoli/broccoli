@@ -117,19 +117,27 @@ export function bulkSaveLine({
   return t(count === 0 ? "changeTerms.bulk.nobody" : "changeTerms.bulk.saveLine", values);
 }
 
-/** The toast once saved: a move still to come, or one that applies already. */
+/**
+ * The toast once saved: a move still to come, or one that applies already; only who moved when
+ * some move from a later start.
+ */
 export function bulkSavedToast({
-  count,
+  movedFrom,
   termsName,
   startDate,
   today,
 }: {
-  count: number;
+  /** Each moved person's date. */
+  movedFrom: readonly string[];
   termsName: string;
   startDate: string;
   today: string;
 }): string {
+  const count = movedFrom.length;
   const values = { people: peopleCount(count), terms: termsName, date: shortDate(startDate) };
+  if (movedFrom.some((date) => date !== startDate)) {
+    return t("changeTerms.bulk.moved", values);
+  }
   const one = count === 1;
   if (startDate > today) {
     return t(one ? "changeTerms.bulk.movesOn" : "changeTerms.bulk.moveOn", values);
