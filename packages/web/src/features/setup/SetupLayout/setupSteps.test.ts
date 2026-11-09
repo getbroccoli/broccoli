@@ -20,7 +20,7 @@ it.each([
   ["READY", "MANAGED", "/setup/time-off"],
   ["DONE", "MANAGED", "/people"],
 ] as const)("enters %s in %s through %s", (step, mode, expected) => {
-  expect(setupStepPage(step, mode)).toBe(expected);
+  expect(setupStepPage(step, { mode, hasOwner: mode === "MANAGED" })).toBe(expected);
 });
 
 it.each([
@@ -38,7 +38,7 @@ it.each([
   ["who", "MANAGED", "/setup/time-off"],
   ["ready", "MANAGED", "/setup/who"],
 ] as const)("gives %s in %s the Back destination %s", (page, mode, expected) => {
-  expect(previousPage(page, mode)).toBe(expected);
+  expect(previousPage(page, { mode, hasOwner: mode === "MANAGED" })).toBe(expected);
 });
 
 it.each([
@@ -56,7 +56,24 @@ it.each([
   ["who", "MANAGED", "/setup/ready"],
   ["ready", "MANAGED", "/people"],
 ] as const)("continues from %s in %s to %s", (page, mode, expected) => {
-  expect(nextPage(page, mode)).toBe(expected);
+  expect(nextPage(page, { mode, hasOwner: mode === "MANAGED" })).toBe(expected);
+});
+
+it.each([
+  ["company", "/setup/ai"],
+  ["review", "/setup/time-off"],
+  ["timeOff", "/setup/who"],
+  ["who", "/setup/ready"],
+  ["ready", "/people"],
+] as const)("continues from %s after reset to %s", (page, destination) => {
+  expect(nextPage(page, { mode: "SELF_HOSTED", hasOwner: true })).toBe(destination);
+});
+
+it("shows setup confirmation instead of account creation after reset", () => {
+  const steps = stepViews("ready", { mode: "SELF_HOSTED", hasOwner: true });
+
+  expect(steps.map(({ id }) => id)).toEqual(["company", "ai", "people", "timeOff", "who", "ready"]);
+  expect(previousPage("ready", { mode: "SELF_HOSTED", hasOwner: true })).toBe("/setup/who");
 });
 
 it("sends a signed-out visitor without setup to login with their destination", () => {
@@ -65,7 +82,12 @@ it("sends a signed-out visitor without setup to login with their destination", (
 
   try {
     requireSetupPage("import", {
-      context: { me: null, holdsSetup: false, setupStep: "COMPANY", mode: "SELF_HOSTED" },
+      context: {
+        me: null,
+        holdsSetup: false,
+        setupStep: "COMPANY",
+        setupFlow: { mode: "SELF_HOSTED", hasOwner: false },
+      },
       location: { href },
     });
   } catch (error) {
@@ -89,6 +111,9 @@ it.each([
   ["timeOff", "OWNER", "SELF_HOSTED", null, true],
   ["who", "OWNER", "SELF_HOSTED", null, true],
   ["owner", "OWNER", "SELF_HOSTED", null, true],
+  ["timeOff", "READY", "SELF_HOSTED", { id: "owner" }, false],
+  ["who", "READY", "SELF_HOSTED", { id: "owner" }, false],
+  ["ready", "READY", "SELF_HOSTED", { id: "owner" }, false],
   ["company", "COMPANY", "MANAGED", { id: "owner" }, false],
   ["company", "IMPORT", "MANAGED", { id: "owner" }, false],
   ["import", "IMPORT", "MANAGED", { id: "owner" }, false],
@@ -100,7 +125,7 @@ it.each([
   "opens %s at %s in %s for an authorized visitor",
   (page, setupStep, mode, me, holdsSetup) => {
     const result = requireSetupPage(page, {
-      context: { me, holdsSetup, setupStep, mode },
+      context: { me, holdsSetup, setupStep, setupFlow: { mode, hasOwner: !!me } },
       location: { href: "/setup" },
     });
 
@@ -113,7 +138,7 @@ it.each([
   ["company", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
   ["import", "DONE", "SELF_HOSTED", { id: "owner" }, false, "/people"],
   ["import", "OWNER", "SELF_HOSTED", null, true, "/setup/time-off"],
-  ["company", "OWNER", "SELF_HOSTED", { id: "owner" }, false, "/setup/time-off"],
+  ["company", "READY", "SELF_HOSTED", { id: "owner" }, false, "/setup/time-off"],
 ] as const)(
   "sends a visitor opening %s at %s in %s to the current setup page",
   (page, setupStep, mode, me, holdsSetup, to) => {
@@ -121,7 +146,7 @@ it.each([
 
     try {
       requireSetupPage(page, {
-        context: { me, holdsSetup, setupStep, mode },
+        context: { me, holdsSetup, setupStep, setupFlow: { mode, hasOwner: !!me } },
         location: { href: "/setup" },
       });
     } catch (error) {
@@ -137,7 +162,12 @@ it("returns the signed-in user when setup is done", () => {
   const me = { id: "owner" };
 
   const result = requireFinishedSetup({
-    context: { me, holdsSetup: false, setupStep: "DONE", mode: "SELF_HOSTED" },
+    context: {
+      me,
+      holdsSetup: false,
+      setupStep: "DONE",
+      setupFlow: { mode: "SELF_HOSTED", hasOwner: true },
+    },
     location: { href: "/people" },
   });
 
@@ -147,7 +177,7 @@ it("returns the signed-in user when setup is done", () => {
 it.each([
   ["COMPANY", "SELF_HOSTED", "/setup/company"],
   ["IMPORT", "SELF_HOSTED", "/setup/ai"],
-  ["OWNER", "SELF_HOSTED", "/setup/time-off"],
+  ["READY", "SELF_HOSTED", "/setup/time-off"],
   ["IMPORT", "MANAGED", "/setup/import"],
   ["READY", "MANAGED", "/setup/time-off"],
 ] as const)(
@@ -157,7 +187,12 @@ it.each([
 
     try {
       requireFinishedSetup({
-        context: { me: { id: "owner" }, holdsSetup: false, setupStep, mode },
+        context: {
+          me: { id: "owner" },
+          holdsSetup: false,
+          setupStep,
+          setupFlow: { mode, hasOwner: true },
+        },
         location: { href: "/people" },
       });
     } catch (error) {
@@ -179,7 +214,12 @@ it.each([
 
   try {
     requireFinishedSetup({
-      context: { me: null, holdsSetup, setupStep, mode: "SELF_HOSTED" },
+      context: {
+        me: null,
+        holdsSetup,
+        setupStep,
+        setupFlow: { mode: "SELF_HOSTED", hasOwner: false },
+      },
       location: { href },
     });
   } catch (error) {
@@ -221,7 +261,7 @@ it.each([
 ] as const)(
   "marks the steps and People pages while on %s in %s",
   (page, mode, states, peopleStates) => {
-    const steps = stepViews(page, mode);
+    const steps = stepViews(page, { mode, hasOwner: mode === "MANAGED" });
 
     expect(steps.map(({ id }) => id)).toEqual(
       mode === "SELF_HOSTED"
@@ -238,7 +278,7 @@ it.each([
 it.each(["SELF_HOSTED", "MANAGED"] as const)(
   "gives Time off and Who their own steps in %s",
   (mode) => {
-    const timeOff = stepViews("timeOff", mode);
+    const timeOff = stepViews("timeOff", { mode, hasOwner: mode === "MANAGED" });
     expect(timeOff.map(({ id }) => id)).toEqual(
       mode === "SELF_HOSTED"
         ? ["company", "ai", "people", "timeOff", "who", "owner"]
@@ -256,7 +296,7 @@ it.each(["SELF_HOSTED", "MANAGED"] as const)(
       pages: [],
     });
 
-    const who = stepViews("who", mode);
+    const who = stepViews("who", { mode, hasOwner: mode === "MANAGED" });
     expect(who.find(({ id }) => id === "timeOff")).toMatchObject({
       id: "timeOff",
       state: "done",

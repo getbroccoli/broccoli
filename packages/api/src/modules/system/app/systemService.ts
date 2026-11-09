@@ -15,10 +15,10 @@ const setupSteps = createSetupStepService();
 const instances = createInstanceService();
 const owners = createOwnerService();
 
-/** The instance-wide setup beyond its steps: completing a managed setup and starting over. */
+/** The instance-wide setup beyond its steps: completing setup with an existing owner and starting over. */
 export interface SystemService {
   /**
-   * Completes a managed setup once the owner has seen what it will add: adds the approved
+   * Completes setup once the existing owner has seen what it will add: adds the approved
    * people, links the owner to their person, sends the invites they chose and publishes
    * `instance.setup_completed`, in one transaction. Returns the invites. Refused at any step but
    * `ready`, such as after another tab went back to the review.
@@ -39,7 +39,7 @@ export interface SystemService {
 export interface SystemServiceDependencies {
   transact: Transact;
   logger: Logger;
-  /** Adds the people the owner approved when managed setup completes. */
+  /** Adds the people the existing owner approved when setup completes. */
   addApprovedPeople: AddApprovedPeople;
   /** Deletes every employee when the owner resets setup. */
   deleteAllEmployees: (ctx: SecurityContext, tx: Tx) => Promise<void>;
@@ -55,19 +55,33 @@ export function createSystemService({
   deleteFinishedImport,
 }: SystemServiceDependencies): SystemService {
   return {
-    completeSetup: (ctx, choices) =>
-      transact(async (tx) => {
-        if (!(await setupSteps.completeReadyStep(ctx, tx))) {
-          throw new ApplicationError("CONFLICT", "Setup is not at the ready step.");
-        }
-        // An admin may finish too; the owner, who exists before managed setup, is linked either way.
-        const owner = (await owners.readOwner(tx))!;
-        return addApprovedPeople(ctx, tx, {
-          ...choices,
-          ownerUserId: owner.userId,
-          ownerEmail: owner.email,
+    async completeSetup(ctx, choices) {
+      try {
+        const invites = await transact(async (tx) => {
+          if (!(await setupSteps.completeReadyStep(ctx, tx))) {
+            throw new ApplicationError("CONFLICT", "Setup is not at the ready step.");
+          }
+          // An admin may finish too; the existing owner is linked either way.
+          const owner = (await owners.readOwner(tx))!;
+          return addApprovedPeople(ctx, tx, {
+            ...choices,
+            ownerUserId: owner.userId,
+            ownerEmail: owner.email,
+          });
         });
-      }),
+        logger.info({ userId: ctx.user?.userId }, "Completed setup");
+        return invites;
+      } catch (error) {
+        logger.warn(
+          {
+            userId: ctx.user?.userId,
+            code: error instanceof ApplicationError ? error.code : "UNEXPECTED",
+          },
+          "Setup completion failed",
+        );
+        throw error;
+      }
+    },
     async resetSetup(ctx) {
       ctx.require("RESET_WORKSPACE");
       await transact(async (tx) => {

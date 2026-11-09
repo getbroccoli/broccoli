@@ -20,7 +20,7 @@ type Props = {
 };
 
 /**
- * The last step of managed setup: the people it adds, and the invites the owner chose. Start
+ * The last step with an existing owner: the people it adds, and the invites the owner chose. Start
  * adds the people, links the owner, sends the invites and completes setup, which routing follows
  * into the app once any links are copied; Back returns to "Who uses Broccoli".
  */

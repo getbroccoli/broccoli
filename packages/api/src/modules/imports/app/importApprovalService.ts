@@ -2,7 +2,6 @@ import { ApplicationError } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import {
   type AddApprovedPeople,
-  createInstanceService,
   createSetupStepService,
   type SetupFinish,
   type SetupInvite,
@@ -21,7 +20,6 @@ import { type ImportReview, readImportReview } from "./importReview";
 import { requireImportAccess } from "./requireImportAccess";
 
 const setupSteps = createSetupStepService();
-const instances = createInstanceService();
 const employeeSetup = createEmployeeSetupService();
 
 /** What adding the approved people did, published once it commits. */
@@ -46,8 +44,7 @@ export type TurnOnTimeOff = (
 /** The owner's approval of the reviewed import, the people it adds, and reopening the review. */
 export interface ImportApprovalService {
   /**
-   * Completes the import step, adding the people only when that completes setup; otherwise the
-   * last step adds them (`addApprovedPeople`). Refused while a file is being mapped, and when
+   * Approves the import; the last setup step adds its people (`addApprovedPeople`). Refused while a file is being mapped, and when
    * the import no longer matches `version`, the `version` of `reads.readReview` the owner reviewed.
    */
   approveImport: (ctx: SecurityContext, version: string) => Promise<void>;
@@ -81,27 +78,32 @@ export function createImportApprovalService({
   return {
     async approveImport(ctx, version) {
       requireImportAccess(ctx);
-      const approved = await transact(async (tx) => {
-        // The step move locks the instance row, so a concurrent Approve waits and then finds
-        // the step moved.
-        if (!(await setupSteps.approveImportStep(ctx, tx))) {
-          return false;
-        }
-        const imports = await lockImport(tx);
-        if (isReading(await imports.listSources())) {
-          throw new ApplicationError("CONFLICT", "Files are still being read.");
-        }
-        if ((await readImportReview(ctx, tx)).version !== version) {
-          throw new ApplicationError("CONFLICT", "Your people changed while you were reviewing.");
-        }
-        // A self-hosted instance whose owner has an account has no last step to add them at.
-        if ((await instances.readInstance(tx)).step === "done") {
-          await addApprovedPeople({ invites, turnOnTimeOff }, ctx, tx);
-        }
-        return true;
-      });
-      if (approved) {
-        logger.info("Approved the import");
+      try {
+        const approved = await transact(async (tx) => {
+          // The step move locks the instance row, so a concurrent Approve waits and then finds
+          // the step moved.
+          if (!(await setupSteps.approveImportStep(ctx, tx))) {
+            return false;
+          }
+          const imports = await lockImport(tx);
+          if (isReading(await imports.listSources())) {
+            throw new ApplicationError("CONFLICT", "Files are still being read.");
+          }
+          if ((await readImportReview(ctx, tx)).version !== version) {
+            throw new ApplicationError("CONFLICT", "Your people changed while you were reviewing.");
+          }
+          return true;
+        });
+        logger.info({ userId: ctx.user?.userId, approved }, "Import approval finished");
+      } catch (error) {
+        logger.warn(
+          {
+            userId: ctx.user?.userId,
+            code: error instanceof ApplicationError ? error.code : "UNEXPECTED",
+          },
+          "Import approval failed",
+        );
+        throw error;
       }
     },
     addApprovedPeople: (ctx, tx, finish) =>

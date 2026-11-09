@@ -7,6 +7,6 @@ import { nextPage, previousPage, type SetupStepId } from "./SetupLayout";
  * the owner cannot go back from `page`.
  */
 export function useSetupPages(page: SetupStepId) {
-  const { mode } = useRouteContext({ from: "__root__" });
-  return { previous: previousPage(page, mode), next: nextPage(page, mode) };
+  const { setupFlow } = useRouteContext({ from: "__root__" });
+  return { previous: previousPage(page, setupFlow), next: nextPage(page, setupFlow) };
 }

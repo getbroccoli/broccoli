@@ -225,7 +225,7 @@ test("a callback after signing out redirects with state and clears the OAuth coo
   expect(slack.requests).toEqual([]);
 });
 
-test("approving creates the Slack members as employees once and completes self-hosted setup", async ({
+test("finishing setup creates the approved Slack members as employees once", async ({
   env,
   slack,
 }) => {
@@ -242,6 +242,16 @@ test("approving creates the Slack members as employees once and completes self-h
   }`;
 
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
+  expect(await (await browser.graphql("query { setup { step } }")).json()).toEqual({
+    data: { setup: { step: "READY" } },
+  });
+  expect(
+    await (
+      await browser.graphql("mutation { system { completeSetup { setup { step } } } }")
+    ).json(),
+  ).toEqual({
+    data: { system: { completeSetup: { setup: { step: "DONE" } } } },
+  });
   const approved: unknown = await (await browser.graphql(people)).json();
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
 
@@ -259,7 +269,7 @@ test("approving creates the Slack members as employees once and completes self-h
   expect(await (await browser.graphql(people)).json()).toEqual(approved);
 });
 
-test("review counts only complete Slack members and Approve adds exactly those members", async ({
+test("review counts only complete Slack members and finishing setup adds exactly those members", async ({
   env,
   slack,
 }) => {
@@ -292,6 +302,13 @@ test("review counts only complete Slack members and Approve adds exactly those m
   });
 
   expect(await (await approveReviewedImport(browser)).json()).toEqual(APPROVED);
+  expect(
+    await (
+      await browser.graphql("mutation { system { completeSetup { setup { step } } } }")
+    ).json(),
+  ).toEqual({
+    data: { system: { completeSetup: { setup: { step: "DONE" } } } },
+  });
   const people = await browser.graphql(
     `query { employees(first: 100, orderBy: { field: EMAIL, direction: ASC }) { edges { node { email } } } }`,
   );

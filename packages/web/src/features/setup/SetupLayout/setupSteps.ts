@@ -70,7 +70,7 @@ const TIME_OFF_SELF_HOSTED = {
   path: "/setup/time-off",
   step: "OWNER",
 } as const satisfies PageDefinition;
-const TIME_OFF_MANAGED = {
+const TIME_OFF_WITH_OWNER = {
   ...TIME_OFF_SELF_HOSTED,
   step: "READY",
 } as const satisfies PageDefinition;
@@ -80,7 +80,7 @@ const WHO_SELF_HOSTED = {
   path: "/setup/who",
   step: "OWNER",
 } as const satisfies PageDefinition;
-const WHO_MANAGED = { ...WHO_SELF_HOSTED, step: "READY" } as const satisfies PageDefinition;
+const WHO_WITH_OWNER = { ...WHO_SELF_HOSTED, step: "READY" } as const satisfies PageDefinition;
 // Gathering and review, and Setup AI before them, belong to the server's `import` step, until Approve.
 const PEOPLE = {
   id: "people",
@@ -97,16 +97,11 @@ const READY = {
 /** Where setup ends: the directory. */
 const FINISHED: SetupPath = "/people";
 
-/**
- * The setup flow: the steps in order, each with the copy key of its title. The owner may go
- * back to the company until Approve, then sets up time off and chooses who uses Broccoli. A self-hosted owner picks
- * how files are read with AI and creates their account last; a managed one keeps its provided
- * key, signed up before setup and sees what it will add last.
- */
-const SETUP_STEPS = {
-  SELF_HOSTED: [COMPANY, AI, PEOPLE, TIME_OFF_SELF_HOSTED, WHO_SELF_HOSTED, OWNER],
-  MANAGED: [COMPANY, PEOPLE, TIME_OFF_MANAGED, WHO_MANAGED, READY],
-} as const satisfies Record<Mode, readonly (PageDefinition | StepDefinition)[]>;
+/** Setup's pages depend on whether its last step creates an owner or uses the existing account. */
+export interface SetupFlow {
+  mode: Mode;
+  hasOwner: boolean;
+}
 
 type Page =
   | typeof OWNER
@@ -135,9 +130,9 @@ export interface StepView extends PageView {
 }
 
 /** Each step and its pages with their state, seen from the current page. */
-export function stepViews(current: SetupStepId, mode: Mode): StepView[] {
-  const steps: readonly (PageDefinition | StepDefinition)[] = SETUP_STEPS[mode];
-  const order = pagesOf(mode).map(({ id }) => id);
+export function stepViews(current: SetupStepId, flow: SetupFlow): StepView[] {
+  const steps = stepsOf(flow);
+  const order = pagesOf(flow).map(({ id }) => id);
   const currentIndex = order.indexOf(current);
   const view = ({ id, title }: { id: string; title: MessageKey }, ids: string[]): PageView => ({
     id,
@@ -154,29 +149,29 @@ export function stepViews(current: SetupStepId, mode: Mode): StepView[] {
 }
 
 /** The first page of a server step, or the directory once setup is done. */
-export function setupStepPage(step: SetupStep, mode: Mode): SetupPath {
+export function setupStepPage(step: SetupStep, flow: SetupFlow): SetupPath {
   if (step === "DONE") {
     return FINISHED;
   }
-  const page = pagesOf(mode).find((candidate) => candidate.step === step);
+  const page = pagesOf(flow).find((candidate) => candidate.step === step);
   if (!page) {
-    throw new Error(`${mode} setup has no page for the ${step} step`);
+    throw new Error(`${flow.mode} setup has no page for the ${step} step`);
   }
   return page.path;
 }
 
 /** The page before `page`, when the owner may go back to it from there. */
-export function previousPage(page: SetupStepId, mode: Mode): SetupPath | undefined {
-  const pages = pagesOf(mode);
-  const current = pageOf(page, mode);
+export function previousPage(page: SetupStepId, flow: SetupFlow): SetupPath | undefined {
+  const pages = pagesOf(flow);
+  const current = pageOf(page, flow);
   const previous = pages[pages.indexOf(current) - 1];
   return previous && isOpenAt(previous, current.step) ? previous.path : undefined;
 }
 
 /** The page after `page`, or the directory after the last one. */
-export function nextPage(page: SetupStepId, mode: Mode): SetupPath {
-  const pages = pagesOf(mode);
-  return pages[pages.indexOf(pageOf(page, mode)) + 1]?.path ?? FINISHED;
+export function nextPage(page: SetupStepId, flow: SetupFlow): SetupPath {
+  const pages = pagesOf(flow);
+  return pages[pages.indexOf(pageOf(page, flow)) + 1]?.path ?? FINISHED;
 }
 
 /**
@@ -187,9 +182,9 @@ export function requireSetupPage<Me>(page: SetupStepId, { context, location }: G
   if (!context.me && !context.holdsSetup) {
     throw loginRedirect(location.href);
   }
-  const definition = pagesOf(context.mode).find(({ id }) => id === page);
+  const definition = pagesOf(context.setupFlow).find(({ id }) => id === page);
   if (!definition || !isOpenAt(definition, context.setupStep)) {
-    throw redirect({ to: setupStepPage(context.setupStep, context.mode), replace: true });
+    throw redirect({ to: setupStepPage(context.setupStep, context.setupFlow), replace: true });
   }
 }
 
@@ -199,7 +194,7 @@ export function requireFinishedSetup<Me>({ context, location }: Gate<Me>): Me {
     throw loginRedirect(location.href);
   }
   if (context.setupStep !== "DONE") {
-    throw redirect({ to: setupStepPage(context.setupStep, context.mode), replace: true });
+    throw redirect({ to: setupStepPage(context.setupStep, context.setupFlow), replace: true });
   }
   // Setup ends by signing the new owner in, so only a signed-in user gets here.
   if (!context.me) {
@@ -209,19 +204,26 @@ export function requireFinishedSetup<Me>({ context, location }: Gate<Me>): Me {
 }
 
 interface Gate<Me> {
-  context: { me: Me | null; holdsSetup: boolean; setupStep: SetupStep; mode: Mode };
+  context: { me: Me | null; holdsSetup: boolean; setupStep: SetupStep; setupFlow: SetupFlow };
   location: { href: string };
 }
 
-function pagesOf(mode: Mode): readonly PageDefinition[] {
-  const steps: readonly (PageDefinition | StepDefinition)[] = SETUP_STEPS[mode];
+function stepsOf({ mode, hasOwner }: SetupFlow): readonly (PageDefinition | StepDefinition)[] {
+  const first = mode === "SELF_HOSTED" ? [COMPANY, AI, PEOPLE] : [COMPANY, PEOPLE];
+  return hasOwner
+    ? [...first, TIME_OFF_WITH_OWNER, WHO_WITH_OWNER, READY]
+    : [...first, TIME_OFF_SELF_HOSTED, WHO_SELF_HOSTED, OWNER];
+}
+
+function pagesOf(flow: SetupFlow): readonly PageDefinition[] {
+  const steps = stepsOf(flow);
   return steps.flatMap((step) => ("pages" in step ? step.pages : [step]));
 }
 
-function pageOf(page: SetupStepId, mode: Mode): PageDefinition {
-  const definition = pagesOf(mode).find(({ id }) => id === page);
+function pageOf(page: SetupStepId, flow: SetupFlow): PageDefinition {
+  const definition = pagesOf(flow).find(({ id }) => id === page);
   if (!definition) {
-    throw new Error(`${mode} setup has no ${page} page`);
+    throw new Error(`${flow.mode} setup has no ${page} page`);
   }
   return definition;
 }
