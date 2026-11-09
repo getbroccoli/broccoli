@@ -17,22 +17,25 @@ import {
   useCachedEmployeeRows,
   useEmployeeRows,
 } from "./employeeColumns";
+import { ChangeTermsDialog } from "./ChangeTermsDialog";
 import { NoMatchingEmployees } from "./NoMatchingEmployees";
 import { SetManagersButton } from "./SetManagersButton";
 
 /**
  * The People directory: employees one page at a time, with sort, search and paging in the URL.
- * Admins also see who can sign in, and select people to invite or give a manager.
+ * Admins also see who can sign in, and select people to invite, give a manager or move to other terms.
  */
 export function EmployeeDirectory() {
   const { me, demoExpiresAt } = useRouteContext({ from: "/_authenticated" });
+  const isAdmin = me.operations.includes("MANAGE_WORKSPACE");
   // Nobody signs in as the sample company's people.
-  const canInvite = me.operations.includes("MANAGE_WORKSPACE") && !demoExpiresAt;
+  const canInvite = isAdmin && !demoExpiresAt;
   // Kept across pages, so a selection can span them.
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
   // As the cache holds them now, so a status changed elsewhere shows and a removed person drops out.
   const selected = useCachedEmployeeRows(selectedIds);
   const [inviting, setInviting] = useState(false);
+  const [changingTerms, setChangingTerms] = useState(false);
   const search = useSearch({ from: "/_authenticated/people" });
   const navigate = useNavigate({ from: "/people" });
   const writeSearch = useCallback(
@@ -63,7 +66,7 @@ export function EmployeeDirectory() {
       <DataTable
         columns={canInvite ? [...EMPLOYEE_COLUMNS, SIGN_IN_COLUMN] : EMPLOYEE_COLUMNS}
         selection={
-          canInvite
+          isAdmin
             ? {
                 // The people still there, so removing the last one ends the selection.
                 selectedIds: new Set(selected.map(({ id }) => id)),
@@ -77,13 +80,18 @@ export function EmployeeDirectory() {
             count={selected.length}
             actions={
               <>
+                <Button size="sm" variant="outline" onClick={() => setChangingTerms(true)}>
+                  {t("changeTerms.bulk.button")}
+                </Button>
                 <SetManagersButton
                   employeeIds={selected.map(({ id }) => id)}
                   onSet={() => setSelectedIds(new Set())}
                 />
-                <Button size="sm" onClick={() => setInviting(true)}>
-                  {t("invites.bulk.invite")}
-                </Button>
+                {canInvite && (
+                  <Button size="sm" onClick={() => setInviting(true)}>
+                    {t("invites.bulk.invite")}
+                  </Button>
+                )}
               </>
             }
             onClear={() => setSelectedIds(new Set())}
@@ -124,6 +132,14 @@ export function EmployeeDirectory() {
         }
         pager={list.pager}
       />
+      {changingTerms && (
+        <ChangeTermsDialog
+          employeeIds={selected.map(({ id }) => id)}
+          open
+          onOpenChange={setChangingTerms}
+          onChanged={() => setSelectedIds(new Set())}
+        />
+      )}
       <InviteDialog
         people={selected}
         open={inviting}

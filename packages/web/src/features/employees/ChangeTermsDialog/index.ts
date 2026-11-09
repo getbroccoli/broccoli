@@ -1,0 +1,1 @@
+export { ChangeTermsDialog } from "./ChangeTermsDialog";
