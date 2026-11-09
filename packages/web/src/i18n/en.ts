@@ -13,6 +13,7 @@ import { setupEn } from "./en/setup";
 import { setupTimeOffEn } from "./en/setupTimeOff";
 import { setupWhoEn } from "./en/setupWho";
 import { tableEn } from "./en/table";
+import { tasksEn } from "./en/tasks";
 import { termsEn } from "./en/terms";
 import { workspaceEn } from "./en/workspace";
 
@@ -32,6 +33,7 @@ export const en = {
   ...invitesEn,
   ...recordsEn,
   ...tableEn,
+  ...tasksEn,
   ...notFoundEn,
   ...settingsEn,
   ...termsEn,

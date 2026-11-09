@@ -3,7 +3,13 @@
  * Each person's avatar is `avatars/<first>-<last>.webp`.
  */
 export const DEMO_PEOPLE: readonly DemoPersonEntry[] = [
-  { firstName: "Oliver", lastName: "Bennett", jobTitle: "CEO", startedDaysAgo: 2555 },
+  {
+    firstName: "Oliver",
+    lastName: "Bennett",
+    jobTitle: "CEO",
+    startedDaysAgo: 2555,
+    isOwner: true,
+  },
   {
     firstName: "Priya",
     lastName: "Shah",
@@ -268,4 +274,6 @@ export interface DemoPersonEntry {
   manager?: string;
   /** Days before the seeding day; negative for people who have not started yet. */
   startedDaysAgo?: number;
+  /** The person the workspace's owner is in the demo, so their own pages and tasks show. */
+  isOwner?: true;
 }

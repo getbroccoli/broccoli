@@ -45,21 +45,19 @@ export interface RecordHistoryReaderService {
   ) => Promise<Map<string, { canUpdate: boolean; canDelete: boolean; editableFields: string[] }>>;
 }
 
-/** What core needs from the module that owns a record type. */
-export interface RecordTypeRegistration {
+/**
+ * What core needs from the module that owns a record type. Who reads its records follows the
+ * permission scope over their subjects, or, for a record no scope describes, the type's own rule.
+ */
+export type RecordTypeRegistration = RecordTypeBasics & (ScopedReading | OwnReading);
+
+interface RecordTypeBasics {
   /** The GraphQL type of its records, such as "Employee"; resolves `RecordChange.record`. */
   graphqlType: string;
   /** The id as history stores it, such as an employee's lowercase uuid; null when it names no record. */
   canonicalId(recordId: string): string | null;
-  /**
-   * The subject of each record that still exists among these canonical ids, by id, or "public";
-   * core decides from it who may read the record, its history and what they may do to it.
-   */
-  subjectsOf(ids: readonly string[]): Promise<Map<string, Subject>>;
   /** The records that still exist among these canonical ids, by id; core keeps those the caller may read. */
   loadRecords(ids: readonly string[]): Promise<Map<string, unknown>>;
-  /** Its permission object, and the fields an update may change by their input names, for `access`. */
-  permissions: { object: PermissionObject; editableFields: readonly string[] };
   /** The change fields in its history whose values are ids of another record type, by field. */
   references?: Partial<Record<string, RecordType>>;
   /**
@@ -67,6 +65,24 @@ export interface RecordTypeRegistration {
    * absent when records of the type cannot be cloned. It checks the caller's permission.
    */
   clone?: (ctx: SecurityContext, tx: Tx, input: { id: string; name: string }) => Promise<string>;
+}
+
+interface ScopedReading {
+  /**
+   * The subject of each record that still exists among these canonical ids, by id, or "public";
+   * core decides from it who may read the record, its history and what they may do to it.
+   */
+  subjectsOf(ids: readonly string[]): Promise<Map<string, Subject>>;
+  /** Its permission object, and the fields an update may change by their input names, for `access`. */
+  permissions: { object: PermissionObject; editableFields: readonly string[] };
+}
+
+interface OwnReading {
+  /**
+   * The canonical ids among these whose records still exist and the caller may read, such as a
+   * task's holder and the person who asked. Such records are read-only through `access`.
+   */
+  readableIds(ctx: SecurityContext, ids: readonly string[]): Promise<Set<string>>;
 }
 
 /** A field change as a reader sees it: a value naming a record they may not read is hidden. */
@@ -96,8 +112,15 @@ export function createRecordHistoryReaderService(
   return {
     readHistory: async (ctx, recordType, recordId, args) => {
       const registration = registrationOf(recordType);
-      const { object } = registration.permissions;
       const canonicalId = registration.canonicalId(recordId);
+      if ("readableIds" in registration) {
+        const readable = canonicalId && (await registration.readableIds(ctx, [canonicalId]));
+        if (!readable || !readable.has(canonicalId)) {
+          throw new ApplicationError("FORBIDDEN", "You cannot read this history.");
+        }
+        return history.read(orm, recordType, canonicalId, args);
+      }
+      const { object } = registration.permissions;
       // A record that is gone has no subject: only a caller who reads every record reads its history.
       const subject =
         canonicalId && (await registration.subjectsOf([canonicalId])).get(canonicalId);
@@ -112,17 +135,13 @@ export function createRecordHistoryReaderService(
     },
     readRecords: async (ctx, recordType, ids) => {
       const registration = registrationOf(recordType);
-      const [scope, subjects, records] = await Promise.all([
-        ctx.recordScope(registration.permissions.object, "read"),
-        registration.subjectsOf(ids),
+      const [isReadable, records] = await Promise.all([
+        readableAmong(ctx, registration, ids),
         registration.loadRecords(ids),
       ]);
       return new Map(
         [...records]
-          .filter(([id]) => {
-            const subject = subjects.get(id);
-            return subject !== undefined && isInRecordScope(scope, subject);
-          })
+          .filter(([id]) => isReadable(id))
           .map(([id, record]) => [
             id,
             { ...(record as { id: string }), __typename: registration.graphqlType },
@@ -163,6 +182,9 @@ export function createRecordHistoryReaderService(
     readAuthorEmails: (userIds) => findUserEmails(orm, userIds),
     readAccess: async (ctx, recordType, recordIds) => {
       const registration = registrationOf(recordType);
+      if ("readableIds" in registration) {
+        return new Map(recordIds.map((id) => [id, NO_ACCESS]));
+      }
       const { object, editableFields } = registration.permissions;
       const subjects = await registration.subjectsOf(recordIds);
       const access = await ctx.recordAccess(object, [...new Set(subjects.values())]);
@@ -170,7 +192,7 @@ export function createRecordHistoryReaderService(
         recordIds.map((id) => {
           const subject = subjects.get(id);
           const found = subject === undefined ? undefined : access.get(subject);
-          if (!found) return [id, { canUpdate: false, canDelete: false, editableFields: [] }];
+          if (!found) return [id, NO_ACCESS];
           const { canUpdate, canDelete, writableFields } = found;
           return [
             id,
@@ -189,8 +211,9 @@ export function createRecordHistoryReaderService(
 }
 
 /**
- * Which of these ids of one record type the caller may read: by their subjects, or, for a record
- * that is gone, only with a read reaching every record. An unregistered type reads as none.
+ * Which of these ids of one record type the caller may read: by the type's own rule, else by their
+ * subjects, or, for a record that is gone, only with a read reaching every record. An unregistered
+ * type reads as none.
  */
 async function readableAmong(
   ctx: SecurityContext,
@@ -199,6 +222,10 @@ async function readableAmong(
 ): Promise<(id: string) => boolean> {
   if (!registration) return () => false;
   const canonical = ids.filter((id) => registration.canonicalId(id) === id);
+  if ("readableIds" in registration) {
+    const readable = await registration.readableIds(ctx, canonical);
+    return (id) => readable.has(id);
+  }
   const [scope, subjects] = await Promise.all([
     ctx.recordScope(registration.permissions.object, "read"),
     registration.subjectsOf(canonical),
@@ -208,3 +235,5 @@ async function readableAmong(
     return subject === undefined ? scope === "all" : isInRecordScope(scope, subject);
   };
 }
+
+const NO_ACCESS = { canUpdate: false, canDelete: false, editableFields: [] };

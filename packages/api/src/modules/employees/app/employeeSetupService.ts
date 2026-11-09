@@ -57,6 +57,8 @@ export interface DemoEmployee {
   avatar: RasterImage;
   managerEmail?: string | null;
   locationName?: string | null;
+  /** The workspace's owner signs in as this person, when there is an owner yet. */
+  isOwner?: boolean;
 }
 
 /** The employees setup adds, keeps or clears in bulk, joining the caller's `db` or `tx`. */
@@ -74,14 +76,15 @@ export interface EmployeeSetupService {
   ) => Promise<ImportedEmployees & { idsByEmail: ReadonlyMap<string, string> }>;
   /**
    * Adds the demo employees with their avatars to an instance without employees, with `cause`
-   * on their creation lines, and returns true; otherwise does nothing and returns false.
+   * on their creation lines, links an existing owner to the one marked `isOwner`, and returns
+   * their ids by email; otherwise does nothing and returns null.
    */
   createDemoEmployees: (
     ctx: SecurityContext,
     tx: Tx,
     demoEmployees: readonly DemoEmployee[],
     cause: HistoryAppend["cause"],
-  ) => Promise<boolean>;
+  ) => Promise<ReadonlyMap<string, string> | null>;
   /** Whether the instance holds demo employees, such as when setup leaves the demo. */
   hasDemoEmployees: (ctx: SecurityContext, db: Orm | Tx) => Promise<boolean>;
   /** The emails among these that an employee already has, so an import adds no one with them. */
@@ -154,7 +157,7 @@ export function createEmployeeSetupService(): EmployeeSetupService {
     async createDemoEmployees(ctx, tx, demoEmployees, cause) {
       ctx.require("MANAGE_WORKSPACE");
       if (await employeeRepository(tx).hasAny()) {
-        return false;
+        return null;
       }
       const placed = await placeInLocations(
         tx,
@@ -173,7 +176,9 @@ export function createEmployeeSetupService(): EmployeeSetupService {
       );
       const managers = await setNewEmployeeManagers(tx, employees, managerEmails);
       await recordCreatedEmployees(ctx, tx, employees, cause, managers);
-      return true;
+      const idsByEmail = new Map(employees.map(({ id, email }) => [email, id]));
+      await linkOwnerToDemoPerson(tx, demoEmployees, idsByEmail);
+      return idsByEmail;
     },
     hasDemoEmployees(ctx, db) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
@@ -249,6 +254,19 @@ const TERMS_NAMES: Record<BankHolidayCalendar, string> = {
   scotland: "Scotland",
   northern_ireland: "Northern Ireland",
 };
+
+/** Links the workspace's owner, if there is one yet, to the demo person marked as them. */
+async function linkOwnerToDemoPerson(
+  tx: Tx,
+  demoEmployees: readonly DemoEmployee[],
+  idsByEmail: ReadonlyMap<string, string>,
+): Promise<void> {
+  const ownerPerson = demoEmployees.find(({ isOwner }) => isOwner);
+  const owner = ownerPerson && (await owners.readOwner(tx));
+  if (!ownerPerson || !owner) return;
+  const email = parseNewEmployee(ownerPerson.employee).email;
+  await employeeRepository(tx).linkUser(idsByEmail.get(email)!, owner.userId);
+}
 
 /**
  * A nation's terms on `week` and its bank holidays: the default terms, when `defaultTermsId` is

@@ -39,6 +39,7 @@ import {
 import { createImportServices } from "../../src/modules/imports";
 import { createExternalAgentServices } from "../../src/modules/externalAgents";
 import { createSystemService } from "../../src/modules/system";
+import { createTaskService } from "../../src/modules/tasks";
 import { parseCalendarDate } from "../../src/utils";
 import { createSlackConnectionService } from "../../src/modules/slack";
 import { fakeMail } from "./fakeMail";
@@ -60,6 +61,9 @@ export function companyService(
 ) {
   return createCompanyService({ orm, transact: testTransactor(orm), logger, brandLookup });
 }
+
+export const taskService = (orm: Orm) =>
+  createTaskService({ orm, transact: testTransactor(orm), logger: createLogger("silent") });
 
 /** Every employee service a person's actions reach, together. */
 export type EmployeeServices = EmployeeService &

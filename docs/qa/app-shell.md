@@ -9,7 +9,7 @@ A manual check of the left menu, the workspace menu, Settings and the profile me
 
 ## App menu
 
-- [ ] The left menu shows the workspace menu at the top, "People" below it and the profile button at the bottom.
+- [ ] The left menu shows the workspace menu at the top, "Tasks" with the count of tasks that need you and "People" below it, and the profile button at the bottom.
 - [ ] The workspace menu opens with the company's logo and name, then "Settings"; with demo data, "Exit demo" under "Demo"; without it, "Reset setup".
 
 ## Settings

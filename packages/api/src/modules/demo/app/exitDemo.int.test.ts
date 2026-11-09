@@ -7,10 +7,13 @@ import {
   employeeServices,
   expect,
   instances,
+  recordHistory,
   readTermsPolicies,
   readTimeOffTerms,
   setupSteps,
+  signedIn,
   storedFileIds,
+  taskService,
   test,
   workingPatternService,
 } from "#test/support";
@@ -95,6 +98,23 @@ test("exiting the demo deletes every employee and their avatars and returns to c
     ownerUserId: owner.user!.userId,
   });
   expect(await company.getCompany(owner)).toMatchObject({ name: "Acme Corp" });
+});
+
+test("exiting the demo forgets the demo tasks' history", async ({ orm, seed, transact }) => {
+  const owner = await seed.owner();
+  await seed.assignment();
+  await seed.setupStep("done");
+  await transact(await demoFillService(orm).prepareDemoFill(parseCalendarDate("2026-10-13")));
+  const { edges } = await employeeServices(orm).listEmployees(owner, { first: 100 });
+  const oliver = edges.find(({ node }) => node.email === "oliver.bennett@example.com")!.node;
+  const ctx = signedIn(orm, { employeeId: oliver.id, profiles: ["EMPLOYEE"] });
+  const { needsYou } = await taskService(orm).listMyTasks(ctx);
+  const taskId = needsYou[0]!.id;
+  expect((await recordHistory.read(orm, "task", taskId, { first: 10 })).edges).toHaveLength(1);
+
+  await demoService(orm).exitDemo(owner);
+
+  expect((await recordHistory.read(orm, "task", taskId, { first: 10 })).edges).toEqual([]);
 });
 
 test("refuses a concurrent second exit and keeps the first exit's outcome", async ({

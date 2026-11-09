@@ -37,6 +37,7 @@
       "src/core/*",
       "!src/core/server",
       "src/modules/employees",
+      "src/modules/tasks",
       "src/modules/timeOff",
       "src/utils"
     ],
@@ -63,6 +64,7 @@
     ],
     "src/modules/slack": ["src/core/*", "!src/core/server", "src/integrations/slack", "src/utils"],
     "src/modules/system": ["src/core/*", "!src/core/server"],
+    "src/modules/tasks": ["src/core/*", "!src/core/server", "src/modules/employees", "src/utils"],
     "src/modules/timeOff": [
       "src/core/*",
       "!src/core/server",
@@ -154,6 +156,8 @@
       "src/modules/imports/db",
       "src/modules/imports/domain",
       "src/modules/slack/db",
+      "src/modules/tasks/db",
+      "src/modules/tasks/domain",
       "src/modules/timeOff/db",
       "src/modules/timeOff/domain",
       "src/utils"

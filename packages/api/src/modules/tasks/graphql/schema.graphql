@@ -1,0 +1,107 @@
+"What kind of work a task asks for, and how it is finished."
+enum TaskType {
+  "Finished by hand with Mark done; it produces nothing else."
+  MANUAL_TO_DO
+}
+
+enum TaskStatus {
+  "Its holder can do it now."
+  TO_DO
+  "It cannot be done until something else happens."
+  WAITING
+  DONE
+  "Withdrawn by the person who asked; cancelling keeps the task and its reason."
+  CANCELLED
+}
+
+"The process step that created a task, by key: `leave_request` and `manager_approves`."
+type TaskProcessSource {
+  processKey: String!
+  stepKey: String!
+}
+
+"Work asked of one person. Only its holder and the person who asked see it and its history."
+type Task implements AnyRecord {
+  id: ID!
+  type: TaskType!
+  status: TaskStatus!
+  title: String!
+  description: String
+  dueDate: Date
+  "Who holds it: the one person who can do it."
+  assignee: Employee!
+  "Who asked for it; null when a process step created it."
+  requestedBy: Employee
+  "Who it is about, when it is about someone."
+  about: Employee
+  processSource: TaskProcessSource
+  doneAt: DateTime
+  "Null once that person is removed."
+  doneBy: Employee
+  cancelledAt: DateTime
+  "Why the person who asked cancelled it."
+  cancelReason: String
+  createdAt: DateTime!
+  "Changes to this task, newest first."
+  history("Page size, 1 to 10000." first: Int = 50, after: String): RecordChangeConnection!
+  "Always read-only: a task changes through its own actions."
+  access: RecordAccess!
+}
+
+# Adds the task to the shared list of record types that keep history; the server merges them.
+enum RecordType {
+  TASK
+}
+
+"The signed-in person's tasks, by where the ball is."
+type MyTasks {
+  "Tasks they hold to do, by due date."
+  needsYou: [Task!]!
+  "Open tasks they asked someone else for, and their own waiting tasks."
+  waitingOnOthers: [Task!]!
+  "Tasks they hold or asked for, done or cancelled in the last 14 days, newest first."
+  resolvedRecently: [Task!]!
+}
+
+type Query {
+  myTasks: MyTasks!
+  "A task the caller holds or asked for; null for any other."
+  task(id: ID!): Task
+}
+
+input TaskMarkDoneInput {
+  id: ID!
+}
+
+input TaskReopenInput {
+  id: ID!
+}
+
+input TaskCancelInput {
+  id: ID!
+  "Required; the holder reads it."
+  reason: String!
+}
+
+"The task after a change, or why it was refused."
+type TaskPayload {
+  task: Task
+  "The line the change added to the task's history."
+  historyLine: RecordChange
+  error: TaskError
+}
+
+union TaskError = InvalidInputError | NotFoundError | ConflictError
+
+type TasksMutations {
+  "The holder finishes a task to do."
+  markDone(input: TaskMarkDoneInput!): TaskPayload!
+  "The holder takes a done task back to do."
+  reopen(input: TaskReopenInput!): TaskPayload!
+  "The person who asked withdraws an open task."
+  cancel(input: TaskCancelInput!): TaskPayload!
+}
+
+type Mutation {
+  tasks: TasksMutations!
+}

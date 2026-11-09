@@ -7,6 +7,7 @@ import { codegenMappers as employeeMappers } from "./src/modules/employees/codeg
 import { codegenMappers as externalAgentMappers } from "./src/modules/externalAgents/codegen";
 import { codegenMappers as importMappers } from "./src/modules/imports/codegen";
 import { codegenMappers as systemMappers } from "./src/modules/system/codegen";
+import { codegenMappers as taskMappers } from "./src/modules/tasks/codegen";
 import { codegenMappers as timeOffMappers } from "./src/modules/timeOff/codegen";
 
 const config: CodegenConfig = {
@@ -28,6 +29,7 @@ const config: CodegenConfig = {
           ...externalAgentMappers,
           ...importMappers,
           ...systemMappers,
+          ...taskMappers,
           ...timeOffMappers,
           ...recordMappers,
         },
