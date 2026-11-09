@@ -255,10 +255,6 @@ const TERMS_NAMES: Record<BankHolidayCalendar, string> = {
   northern_ireland: "Northern Ireland",
 };
 
-/**
- * A nation's terms on `week` and its bank holidays: the default terms, when `defaultTermsId` is
- * given, keep their own pattern on the new week; otherwise new terms get a new pattern of their own.
- */
 /** Links the workspace's owner, if there is one yet, to the demo person marked as them. */
 async function linkOwnerToDemoPerson(
   tx: Tx,
@@ -272,6 +268,10 @@ async function linkOwnerToDemoPerson(
   await employeeRepository(tx).linkUser(idsByEmail.get(email)!, owner.userId);
 }
 
+/**
+ * A nation's terms on `week` and its bank holidays: the default terms, when `defaultTermsId` is
+ * given, keep their own pattern on the new week; otherwise new terms get a new pattern of their own.
+ */
 async function termsOnWeek(
   tx: Tx,
   defaultTermsId: string | null,
