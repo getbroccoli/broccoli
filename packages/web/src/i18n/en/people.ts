@@ -97,7 +97,9 @@ export const peopleEn = {
   "changeTerms.bulk.movesOn": "1 person moves to {terms} on {date}.",
   "changeTerms.bulk.areOn": "{people} are on {terms} from {date}.",
   "changeTerms.bulk.isOn": "1 person is on {terms} from {date}.",
-  "changeTerms.bulk.moved": "{people} moved to {terms}.",
+  "changeTerms.bulk.moved": "Terms changed for {people}: {terms}.",
+  "changeTerms.bulk.saveLineLater":
+    "Saving moves {people} to {terms} from {date}, or from their start date if later.",
   "changeTerms.bulk.submit": "Change terms",
   "changeTerms.cancel": "Cancel",
   "people.panel.field.employmentTerms": "Employment terms",

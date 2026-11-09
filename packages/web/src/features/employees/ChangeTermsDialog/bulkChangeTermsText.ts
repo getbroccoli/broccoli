@@ -1,8 +1,8 @@
+import type { EmployeeTermsChangeSkipReason, RuleSource } from "@/__generated__/graphql";
 import { shortDate, versionOn } from "@/features/termsDisplay";
 import { type MessageKey, t } from "@/i18n";
 
-type Source = "FROM_THEIR_TERMS" | "THEIR_OWN";
-type Version = { source: Source; startDate: string; endDate?: string | null };
+type Version = { source: RuleSource; startDate: string; endDate?: string | null };
 type Person = { firstName: string; lastName: string };
 
 /** A person the preview would move, as they would be after it from its date on. */
@@ -16,7 +16,7 @@ type Move = {
   };
 };
 
-type Skip = { employee: Person; reason: "ALREADY_ON_TERMS" | "LEFT_BEFORE_DATE" };
+type Skip = { employee: Person; reason: EmployeeTermsChangeSkipReason };
 
 /** Who a bulk move reaches and who it leaves or moves otherwise, by name. */
 export interface BulkGroups {
@@ -108,13 +108,17 @@ export function bulkSaveLine({
   count,
   termsName,
   startDate,
+  startLater,
 }: {
   count: number;
   termsName: string;
   startDate: string;
+  /** Some of them start after the date, so move from their start. */
+  startLater: boolean;
 }): string {
   const values = { people: peopleCount(count), terms: termsName, date: shortDate(startDate) };
-  return t(count === 0 ? "changeTerms.bulk.nobody" : "changeTerms.bulk.saveLine", values);
+  if (count === 0) return t("changeTerms.bulk.nobody", values);
+  return t(startLater ? "changeTerms.bulk.saveLineLater" : "changeTerms.bulk.saveLine", values);
 }
 
 /**

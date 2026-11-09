@@ -162,9 +162,27 @@ it.each([
   { count: 1, expected: "Saving moves 1 person to Scotland from 1 Dec 2026." },
   { count: 0, expected: "Nobody here moves to Scotland from 1 Dec 2026." },
 ])("describes saving $count moves", ({ count, expected }) => {
-  const line = bulkSaveLine({ count, termsName: "Scotland", startDate: "2026-12-01" });
+  const line = bulkSaveLine({
+    count,
+    termsName: "Scotland",
+    startDate: "2026-12-01",
+    startLater: false,
+  });
 
   expect(line).toBe(expected);
+});
+
+it("says saving moves later starters from their start date", () => {
+  const line = bulkSaveLine({
+    count: 3,
+    termsName: "Scotland",
+    startDate: "2026-12-01",
+    startLater: true,
+  });
+
+  expect(line).toBe(
+    "Saving moves 3 people to Scotland from 1 Dec 2026, or from their start date if later.",
+  );
 });
 
 it.each([
@@ -193,7 +211,7 @@ it("says only who moved when some move from a later start", () => {
     today: "2026-11-09",
   });
 
-  expect(toast).toBe("2 people moved to Scotland.");
+  expect(toast).toBe("Terms changed for 2 people: Scotland.");
 });
 
 const emptyGroups = {

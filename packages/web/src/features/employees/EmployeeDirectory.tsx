@@ -132,12 +132,14 @@ export function EmployeeDirectory() {
         }
         pager={list.pager}
       />
-      <ChangeTermsDialog
-        employeeIds={selected.map(({ id }) => id)}
-        open={changingTerms}
-        onOpenChange={setChangingTerms}
-        onChanged={() => setSelectedIds(new Set())}
-      />
+      {changingTerms && (
+        <ChangeTermsDialog
+          employeeIds={selected.map(({ id }) => id)}
+          open
+          onOpenChange={setChangingTerms}
+          onChanged={() => setSelectedIds(new Set())}
+        />
+      )}
       <InviteDialog
         people={selected}
         open={inviting}

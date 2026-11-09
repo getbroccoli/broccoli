@@ -39,7 +39,8 @@ type Props = {
 };
 
 /**
- * Moves the selected people to other terms from a date: the shared form, then who won't move as
+ * Moves the selected people to other terms from a date; mounted while open, so each opening
+ * starts from today: the shared form, then who won't move as
  * asked and why, and what saving does.
  */
 export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }: Props) {
@@ -71,7 +72,6 @@ export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }
   const groups = answer && bulkGroups({ ...answer, startDate: value.startDate });
   const close = () => {
     onOpenChange(false);
-    setValue({ termsId: null, startDate: companyToday() });
     reset();
   };
   const save = async () => {
@@ -122,7 +122,12 @@ export function ChangeTermsDialog({ employeeIds, open, onOpenChange, onChanged }
         <DialogFooter className="items-center sm:justify-between">
           <p aria-live="polite" className="text-sm text-muted-foreground">
             {groups &&
-              bulkSaveLine({ count: groups.moving, termsName, startDate: value.startDate })}
+              bulkSaveLine({
+                count: groups.moving,
+                termsName,
+                startDate: value.startDate,
+                startLater: groups.startLater.length > 0,
+              })}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" disabled={loading} onClick={close}>
