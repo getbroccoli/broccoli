@@ -2,7 +2,7 @@ import { DrizzleQueryError } from "drizzle-orm";
 import { DatabaseError } from "pg";
 import { expect, it } from "vitest";
 
-import { isUniqueViolation } from ".";
+import { isForeignKeyViolation, isUniqueViolation } from ".";
 
 const constraint = "employees_email_unique";
 
@@ -47,4 +47,12 @@ it("ignores an error that is not a database error", () => {
   const error = Object.assign(new Error("Duplicate email"), { code: "23505", constraint });
 
   expect(isUniqueViolation(error, constraint)).toBe(false);
+});
+
+it("tells a foreign key violation from other errors", () => {
+  const error = new DatabaseError("Foreign key violation", 0, "error");
+  error.code = "23503";
+
+  expect(isForeignKeyViolation(error)).toBe(true);
+  expect(isForeignKeyViolation(new Error("Foreign key violation"))).toBe(false);
 });

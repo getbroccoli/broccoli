@@ -92,6 +92,7 @@ export function createModules(
       mode: deployment.mode,
       invites,
       copyTermsParts: timeOff.copyTermsPolicies,
+      lockTermsParts: timeOff.lockPolicies,
     }),
     companyModule(company),
     demoModule({ orm: core.orm, transact: core.transact, deleteAllEmployees }),

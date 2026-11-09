@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Orm, Tx } from "../../../core/db";
+import { isForeignKeyViolation, type Orm, type Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { Connection, PageArgs } from "../../../core/pagination";
 import {
@@ -66,10 +66,13 @@ export function createTermsService({
   transact,
   logger,
   copyTermsParts,
+  lockTermsParts,
   today = todayInLondon,
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   /** Copies what other modules keep on terms, such as time off rules, onto cloned terms. */
   copyTermsParts: CopyTermsParts;
+  /** Locks what other modules keep on terms, such as time off rules, before a terms' row. */
+  lockTermsParts: LockTermsParts;
   today?: () => CalendarDate;
 }): TermsService {
   const history = createRecordHistoryReaderService(orm, { terms: termsRecordType(orm, today) });
@@ -130,19 +133,26 @@ export function createTermsService({
     async deleteTerms(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const termsId = parseTermsId(input.id);
-      await transact(async (tx) => {
-        const terms = await termsRepository(tx).lock(termsId);
-        if (!terms) {
-          throw termsNotFound();
+      try {
+        await transact(async (tx) => {
+          // The time off rules first, as offering a type takes them: deleting cascades into them.
+          await lockTermsParts(ctx, tx);
+          const terms = await readOverview(tx, today(), termsId);
+          if (!terms) {
+            throw termsNotFound();
+          }
+          refuseDeleteWhenBlocked(terms);
+          await recordNameChange(ctx, tx, "DELETED", termsId, { from: terms.name, to: null });
+          await termsRepository(tx).delete(termsId);
+        });
+      } catch (error) {
+        if (!isForeignKeyViolation(error)) {
+          throw error;
         }
-        const { deleteBlocker, locations } = (await readOverview(tx, today(), termsId))!;
-        if (deleteBlocker) {
-          const names = locations.map(({ name }) => name);
-          throw new ApplicationError("CONFLICT", deleteRefusal(deleteBlocker, names));
-        }
-        await recordNameChange(ctx, tx, "DELETED", termsId, { from: terms.name, to: null });
-        await termsRepository(tx).delete(termsId);
-      });
+        // Someone joined the terms, or a location chose them, after the check: the database refused.
+        refuseDeleteWhenBlocked((await readOverview(orm, today(), termsId))!);
+        throw error;
+      }
       logger.info({ termsId }, "Deleted terms");
       return { deletedTermsId: termsId };
     },
@@ -179,6 +189,8 @@ export type CopyTermsParts = (
   input: { fromTermsId: string; toTermsId: string },
 ) => Promise<void>;
 
+export type LockTermsParts = (ctx: SecurityContext, tx: Tx) => Promise<void>;
+
 const recordHistory = createRecordHistoryService();
 
 /** One set of terms as Settings shows it; undefined when none has the id. */
@@ -188,6 +200,14 @@ async function readOverview(
   termsId: string,
 ): Promise<TermsOverview | undefined> {
   return (await readTermsOverviews(db, date, [termsId]))[0];
+}
+
+/** Refuses with CONFLICT, naming why, when the terms cannot be deleted. */
+function refuseDeleteWhenBlocked({ deleteBlocker, locations }: TermsOverview): void {
+  if (deleteBlocker) {
+    const names = locations.map(({ name }) => name);
+    throw new ApplicationError("CONFLICT", deleteRefusal(deleteBlocker, names));
+  }
 }
 
 /** One history line on the terms naming them: created (from null), renamed, or deleted (to null). */
