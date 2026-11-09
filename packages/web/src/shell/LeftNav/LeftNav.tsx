@@ -10,11 +10,13 @@ import { WorkspaceMenu } from "../WorkspaceMenu";
 import { NavList, type NavItem } from "./NavList";
 
 const APP_ITEMS: NavItem[] = [{ to: "/people", label: t("nav.people"), icon: Users }];
-const SETTINGS_ITEMS: NavItem[] = [{ to: "/settings/email", label: t("settings.email.title") }];
 const SETTINGS_AREA_ITEMS: NavItem[] = [
   { to: "/settings/terms", label: t("terms.title") },
   { to: "/settings/time-off", label: t("settings.timeOff.title") },
   { to: "/settings/locations", label: t("settings.locations.title") },
+];
+const SETTINGS_SYSTEM_ITEMS: NavItem[] = [
+  { to: "/settings/email", label: t("settings.email.title") },
 ];
 
 /**
@@ -50,10 +52,10 @@ export function LeftNav() {
           <span className="px-2 pt-3 pb-4 text-lg font-bold tracking-tight max-md:hidden">
             {t("settings.title")}
           </span>
-          <span className={groupLabelClass}>{t("settings.workspace")}</span>
-          <NavList label={t("settings.title")} items={SETTINGS_ITEMS} />
-          <span className={cn(groupLabelClass, "md:pt-4")}>{t("settings.areas")}</span>
+          <span className={groupLabelClass}>{t("settings.areas")}</span>
           <NavList label={t("settings.areas")} items={SETTINGS_AREA_ITEMS} />
+          <span className={cn(groupLabelClass, "md:pt-4")}>{t("settings.system")}</span>
+          <NavList label={t("settings.system")} items={SETTINGS_SYSTEM_ITEMS} />
           <ProfileMenu />
         </div>
       </div>

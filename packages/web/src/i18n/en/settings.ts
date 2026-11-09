@@ -1,8 +1,8 @@
 /** English copy under `settings.*`. */
 export const settingsEn = {
   "settings.title": "Settings",
-  "settings.workspace": "Workspace",
   "settings.areas": "Areas",
+  "settings.system": "System",
   "settings.timeOff.title": "Time off",
   "settings.timeOff.typeColumn": "Time off type",
   "settings.timeOff.empty": "No time off types yet.",

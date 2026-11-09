@@ -77,6 +77,8 @@ export const termsEn = {
     "Saving changes the working week for {people} on {terms}, from {date}. Their allowances are worked out again from that date.",
   "terms.edit.week.saveLineNobody":
     "Saving changes the working week for nobody on {terms} yet, from {date}.",
+  "terms.edit.week.saveLineNobodyEver":
+    "Saving changes the working week for nobody on {terms} yet.",
   "terms.edit.rules.counts": "Counts",
   "terms.edit.rules.fromBalanceHint": "People get days each leave year and spend them.",
   "terms.edit.rules.unlimitedHint": "No limit. Days taken are still counted.",
@@ -104,6 +106,10 @@ export const termsEn = {
   "terms.edit.rules.offerTitle": "{type}: offered, {rule}",
   "terms.edit.rules.fromDateOnTop": "From {date}, bank holidays still on top",
   "terms.edit.rules.fromDateIncluded": "From {date}, bank holidays still included",
+  "terms.edit.rules.stillOnTop": "Bank holidays still on top",
+  "terms.edit.rules.stillIncluded": "Bank holidays still included",
+  "terms.edit.rules.saveLineNobodyEver": "Saving changes {type} for nobody on {terms} yet.",
+  "terms.edit.rules.offerSaveLineNobodyEver": "Saving offers {type} to nobody on {terms} yet.",
   "terms.edit.rules.saveLine":
     "Saving changes {type} for {people} on {terms}, from {date}. Earlier years stay as they were.",
   "terms.edit.rules.offerSaveLine": "Saving offers {type} to {people} on {terms}, from {date}.",

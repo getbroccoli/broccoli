@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import {
   appliesFromHint,
+  asksForDate,
   canChangeCounts,
   rulesChangeBox,
   rulesErrors,
@@ -17,10 +18,33 @@ import {
 } from "./termsDraft";
 import type { PolicyVersionText } from "./termsText";
 
+it("asks for no date when nobody was ever on terms whose versions predate the leave year", () => {
+  const versions = [{ startDate: null }, { startDate: "2025-03-01" }];
+
+  expect(asksForDate(false, versions, "2026-01-01")).toBe(false);
+});
+
+it("asks for a date when nobody was ever on terms with a version starting after the leave year starts", () => {
+  const versions = [{ startDate: "2026-07-01" }];
+
+  expect(asksForDate(false, versions, "2026-01-01")).toBe(true);
+});
+
+it("asks for a date once anyone was on the terms even with no versions", () => {
+  expect(asksForDate(true, [], "2026-01-01")).toBe(true);
+});
+
 it("summarises a days-only change and the bank holidays that stay on top", () => {
   expect(rulesChangeBox("Annual leave", rules, currentRules, "2027-01-01")).toEqual({
     title: "Annual leave: 20 → 22 days",
     detail: "From 1 Jan 2027, bank holidays still on top",
+  });
+});
+
+it("keeps bank holidays on top without naming a date when nobody was ever on the terms", () => {
+  expect(rulesChangeBox("Annual leave", rules, currentRules, null)).toEqual({
+    title: "Annual leave: 20 → 22 days",
+    detail: "Bank holidays still on top",
   });
 });
 
@@ -30,6 +54,15 @@ it("summarises an offer of recorded leave", () => {
   expect(rulesChangeBox("Family leave", offer, null, "2026-01-01")).toEqual({
     title: "Family leave: offered, Recorded, doesn't count",
     detail: "From 1 Jan 2026.",
+  });
+});
+
+it("names no date for an offer when nobody was ever on the terms", () => {
+  const offer: RulesDraft = { ...rules, offer: true, balance: "NO_BALANCE", days: "" };
+
+  expect(rulesChangeBox("Family leave", offer, null, null)).toEqual({
+    title: "Family leave: offered, Recorded, doesn't count",
+    detail: null,
   });
 });
 
@@ -48,10 +81,35 @@ it("summarises a change to unlimited leave", () => {
 });
 
 it("summarises a new working week and when it starts", () => {
-  expect(weekChangeBox(week)).toEqual({
+  expect(weekChangeBox(week, week.startDate)).toEqual({
     title: "Working week: Mon–Thu, 8 hours",
     detail: "From 1 Dec 2026.",
   });
+});
+
+it("names no date for a working week when nobody was ever on the terms", () => {
+  expect(weekChangeBox(week, null)).toEqual({
+    title: "Working week: Mon–Thu, 8 hours",
+    detail: null,
+  });
+});
+
+it("names no date in the week save line when nobody was ever on the terms", () => {
+  expect(weekSaveLine(0, "Senior staff", null)).toBe(
+    "Saving changes the working week for nobody on Senior staff yet.",
+  );
+});
+
+it("names no date in the rules save line when nobody was ever on the terms", () => {
+  expect(rulesSaveLine(false, "Annual leave", 0, "Senior staff", null)).toBe(
+    "Saving changes Annual leave for nobody on Senior staff yet.",
+  );
+});
+
+it("names no date in the offer save line when nobody was ever on the terms", () => {
+  expect(rulesSaveLine(true, "Family leave", 0, "Senior staff", null)).toBe(
+    "Saving offers Family leave to nobody on Senior staff yet.",
+  );
 });
 
 it("names the people reached by a working week change", () => {

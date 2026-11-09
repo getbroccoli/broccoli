@@ -73,6 +73,16 @@ Every type is offered on the demo terms. For a type that is not, delete the term
 - [ ] Saving shows the row as offered and History reads "You offered Other from 1 Jan <this year>: Recorded, doesn't count".
 - [ ] An offer from next leave year shows its planned line and no "Offer"; cancelling it brings "Not offered here" and "Offer" back.
 
+## Terms nobody was ever on
+
+Use terms nobody was ever on, such as ones made with "New terms".
+
+- [ ] "Edit" on Working week has no "Applies from"; the footer reads "Saving changes the working week for nobody on <terms> yet." and "What changes" names no date.
+- [ ] Saving shows the new week from the start of this leave year, with no planned line.
+- [ ] "Edit" or "Offer" on a type has no "Applies from" and no "This changes only from the start of a leave year" hint; every choice under "Counts" is enabled.
+- [ ] A days-only change reads "Bank holidays still on top" or "Bank holidays still included" in "What changes"; the footer reads "Saving changes <type> for nobody on <terms> yet.", or "Saving offers <type> to nobody on <terms> yet." for an offer.
+- [ ] Terms someone was on in the past, even with nobody on them today, still ask "Applies from".
+
 ## One section at a time
 
 - [ ] With unsaved changes in one section, "Edit" on another asks "Discard your changes?"; "Keep editing" stays, "Discard" opens the other.

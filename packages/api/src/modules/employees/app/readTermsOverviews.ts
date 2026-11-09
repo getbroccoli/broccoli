@@ -22,6 +22,8 @@ export interface TermsOverview extends Terms {
   workingPattern: WorkingPattern;
   /** Why the terms cannot be deleted; null: they can. */
   deleteBlocker: TermsDeleteBlocker | null;
+  /** Whether anyone was ever on the terms, on any dates. */
+  hadPeople: boolean;
 }
 
 /** The terms among `termsIds`, or every set without, as they are on `date`; the default first, then by name. */
@@ -38,6 +40,7 @@ export async function readTermsOverviews(
   const patterns = await workingPatternRepository(db).findPatterns();
   const defaultTermsId = allTerms.find(({ isDefault }) => isDefault)?.id;
   return shown.map((terms) => {
+    const hadPeople = everJoined.has(terms.id);
     const termsLocations = locations
       .filter(({ termsId }) => (termsId ?? defaultTermsId) === terms.id)
       .map(({ id, name }) => ({ id, name }));
@@ -50,8 +53,9 @@ export async function readTermsOverviews(
       workingWeek: (patterns.find(({ termsId }) => termsId === terms.id)?.versions ?? []).filter(
         ({ endDate }) => endDate === null || endDate >= date,
       ),
+      hadPeople,
       deleteBlocker: deleteBlockerOf(terms, {
-        hadPeople: everJoined.has(terms.id),
+        hadPeople,
         locationCount: termsLocations.length,
       }),
     };
