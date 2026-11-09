@@ -74,7 +74,6 @@ export type {
   NewEmployeeInput,
   PersonTimeline,
   PersonVersion,
-  RuleSource,
   TermsMembership,
   TermsSetup,
   WeekdayMinutes,

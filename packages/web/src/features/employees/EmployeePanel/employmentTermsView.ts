@@ -1,6 +1,7 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { shortDate, splitVersions } from "@/features/termsDisplay";
+import { calendarDayParts } from "@/lib/calendarDay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
 export type TermsPeriod = {
@@ -53,32 +54,56 @@ type DatedVersion = { source: RuleSource; startDate: string; endDate?: string | 
 
 /**
  * A row's value today and its planned lines from a person's versions: `describe` says what a
- * version is, `sourceOf` where it comes from.
+ * version is, `sourceOf` where it comes from, and `missing` what days nothing applies read as,
+ * such as a type their next terms do not offer.
  */
 export function rowOf<V extends DatedVersion>(
   versions: readonly V[],
   today: string,
   describe: (version: V) => { text: string; detail?: string },
   sourceOf: (version: V) => string,
+  missing: string,
 ) {
   const { current, planned } = splitVersions(versions, today);
+  const shown = current ? [current, ...planned] : planned;
   return {
     value: current && {
       ...describe(current),
       source: current.source,
       sourceLabel: sourceOf(current),
     },
-    planned: planned.map((version, index) => {
-      const { text, detail } = describe(version);
-      const before = index === 0 ? current : planned[index - 1];
-      // A change of where it comes from is part of the change, such as back to the terms' week.
-      const source = version.source !== before?.source || version.source === "THEIR_OWN";
-      return t("people.panel.terms.planned", {
-        date: shortDate(version.startDate),
-        change: [text, detail, source && sourceOf(version)].filter(Boolean).join(" · "),
-      });
+    planned: shown.flatMap((version, index) => {
+      const before = index === 0 ? null : shown[index - 1]!;
+      const next = shown[index + 1];
+      const line = (date: string, change: string) =>
+        t("people.panel.terms.planned", { date: shortDate(date), change });
+      const starts =
+        version === current
+          ? []
+          : [line(version.startDate, changeOf(version, before, describe, sourceOf))];
+      const gapStart = version.endDate ? dayAfter(version.endDate) : null;
+      // Nothing follows until a later version, if any: the type stops being offered.
+      const stops = gapStart && next?.startDate !== gapStart ? [line(gapStart, missing)] : [];
+      return [...starts, ...stops];
     }),
   };
+}
+
+/** What a planned version changes to; where it comes from too when that changes, or it is their own. */
+function changeOf<V extends DatedVersion>(
+  version: V,
+  before: V | null,
+  describe: (version: V) => { text: string; detail?: string },
+  sourceOf: (version: V) => string,
+): string {
+  const { text, detail } = describe(version);
+  const source = version.source !== before?.source || version.source === "THEIR_OWN";
+  return [text, detail, source && sourceOf(version)].filter(Boolean).join(" · ");
+}
+
+function dayAfter(day: string): string {
+  const [year, month, date] = calendarDayParts(day);
+  return new Date(Date.UTC(year, month, date + 1)).toISOString().slice(0, 10);
 }
 
 function covers({ startDate, endDate }: TermsPeriod, date: string): boolean {

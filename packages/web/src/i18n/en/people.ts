@@ -41,6 +41,8 @@ export const peopleEn = {
   "people.panel.terms.planned": "From {date}: {change}",
   "people.panel.terms.plannedFrom": "From {date}:",
   "people.panel.terms.noWeek": "No working week yet.",
+  "people.panel.terms.noWeekLower": "no working week",
+  "people.panel.terms.notOfferedLower": "not offered",
   "people.panel.terms.leaveYear": "Leave years start on {date}.",
   "people.panel.terms.leaveYearFromStart": "Leave years start on each person’s start date.",
   "people.panel.terms.earlier": "Earlier terms ({count})",

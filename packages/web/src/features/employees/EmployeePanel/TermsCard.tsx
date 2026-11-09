@@ -58,8 +58,12 @@ export function TermsCard({
       }),
     }),
     sourceOf,
+    t("people.panel.terms.noWeekLower"),
   );
-  const leaveYear = timeOff?.flatMap(({ versions }) => versions)[0]?.rules.leaveYearStart;
+  // A type without a balance has no leave year; the first one with one says it.
+  const leaveYear = timeOff
+    ?.flatMap(({ versions }) => versions)
+    .find(({ rules }) => rules.leaveYearStart)?.rules.leaveYearStart;
 
   return (
     <section aria-labelledby="employee-terms" className="flex flex-col gap-2">
@@ -114,6 +118,7 @@ export function TermsCard({
                   rules.balance === "NO_BALANCE" ? t("terms.rule.recorded") : ruleSummary(rules),
               }),
               sourceOf,
+              t("people.panel.terms.notOfferedLower"),
             );
             return (
               <TermsRuleRow
