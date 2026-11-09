@@ -11,6 +11,7 @@ import { companyModule, createCompany } from "./company";
 import { createDemoFillService, demoModule } from "./demo";
 import {
   createEmployeeInviteService,
+  createEmployeeReadService,
   createEmployeeSetupService,
   employeeDirectory,
   employeesModule,
@@ -19,6 +20,7 @@ import { externalAgentsModule } from "./externalAgents";
 import { createImportServices, importsModule } from "./imports";
 import { createSlack, slackModule, type SlackUrls } from "./slack";
 import { systemModule } from "./system";
+import { createTaskService, tasksModule } from "./tasks";
 import { createTimeOffSetupService, createTimeOffService, timeOffModule } from "./timeOff";
 
 const employeeSetup = createEmployeeSetupService();
@@ -51,13 +53,15 @@ export function createModules(
     bankHolidaySource: createStaticBankHolidaySource(),
   });
   const timeOff = createTimeOffService({ ...core, bankHolidays });
-  // Every path that clears the people resets time off too, back to a fresh workspace.
+  const tasks = createTaskService(core);
+  // Every path that clears the people resets time off and tasks too, back to a fresh workspace.
   const deleteAllEmployees: typeof employeeSetup.deleteAllEmployees = async (ctx, tx) => {
     // The policies' lock first: turning time off on holds it while its allowances wait on employee rows.
     await timeOff.lockPolicies(ctx, tx);
     // Employees next: their assignments, allowances and ledger lines point at the policies.
     await employeeSetup.deleteAllEmployees(ctx, tx);
     await timeOff.resetTimeOff(ctx, tx);
+    await tasks.resetTasks(ctx, tx);
   };
   // Built once: the employees module serves it and setup's last step invites through it.
   const invites = createEmployeeInviteService({
@@ -71,7 +75,7 @@ export function createModules(
     slack: slackConnection,
     decisions: aiSettings.decisions,
     originalFileReader: aiSettings.originalFileReader,
-    prepareDemoFill: createDemoFillService({ timeOff }).prepareDemoFill,
+    prepareDemoFill: createDemoFillService({ timeOff, tasks }).prepareDemoFill,
     invites,
     turnOnTimeOff: timeOff.turnOnTimeOff,
     deleteAllEmployees,
@@ -108,6 +112,7 @@ export function createModules(
         bankHolidays,
       }),
     }),
+    tasksModule({ orm: core.orm, tasks, employees: createEmployeeReadService(core) }),
   ];
   return {
     manifests: [...manifests, recordsManifest(core, manifests)],

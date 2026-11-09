@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 
-import { employeeServices, expect, OWNER, test } from "#test/support";
+import { employeeServices, expect, OWNER, signedIn, test } from "#test/support";
 
 test("returns the employee with the requested id", async ({ orm, seed }) => {
   const employee = await seed.employee();
@@ -12,6 +12,74 @@ test("returns null for an unknown employee", async ({ orm }) => {
   expect(
     await employeeServices(orm).readEmployee(OWNER, "00000000-0000-4000-8000-000000000001"),
   ).toBeNull();
+});
+
+test("returns the requested employees keyed by their ids", async ({ orm, seed }) => {
+  const anna = await seed.employee({ firstName: "Anna" });
+  const ben = await seed.employee({ firstName: "Ben" });
+  await seed.employee({ firstName: "Carl" });
+
+  const employees = await employeeServices(orm).readEmployees(OWNER, [ben.id, anna.id]);
+
+  expect(employees).toEqual(
+    new Map([
+      [anna.id, anna],
+      [ben.id, ben],
+    ]),
+  );
+});
+
+test("leaves unknown ids out of a batch of employees", async ({ orm, seed }) => {
+  const employee = await seed.employee();
+
+  const employees = await employeeServices(orm).readEmployees(OWNER, [
+    "00000000-0000-4000-8000-000000000001",
+    employee.id,
+  ]);
+
+  expect(employees).toEqual(new Map([[employee.id, employee]]));
+});
+
+test("leaves malformed ids out of a batch without losing valid employees", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee();
+
+  const employees = await employeeServices(orm).readEmployees(OWNER, [
+    "not-an-id",
+    employee.id,
+    "",
+  ]);
+
+  expect(employees).toEqual(new Map([[employee.id, employee]]));
+});
+
+test("leaves employees outside the caller's read scope out of a batch", async ({ orm, seed }) => {
+  const caller = await seed.employee();
+  const report = await seed.employee();
+  const other = await seed.employee();
+  await seed.manager(report.id, caller.id);
+  const ctx = signedIn(orm, {
+    employeeId: caller.id,
+    grants: [
+      { key: "employee.read.self", object: "employee", actions: ["read"], scope: "self" },
+      { key: "employee.read.reports", object: "employee", actions: ["read"], scope: "all_reports" },
+    ],
+  });
+
+  const employees = await employeeServices(orm).readEmployees(ctx, [
+    other.id,
+    caller.id,
+    report.id,
+  ]);
+
+  expect(employees).toEqual(
+    new Map([
+      [caller.id, caller],
+      [report.id, report],
+    ]),
+  );
 });
 
 test("returns history for an employee id written in uppercase", async ({ orm, seed }) => {

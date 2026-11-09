@@ -7,6 +7,8 @@ import {
   readAllowances,
   readTermsPolicies,
   storedFileIds,
+  signedIn,
+  taskService,
   test,
 } from "#test/support";
 
@@ -86,6 +88,40 @@ test("does not fill demo data when a real employee exists", async ({ orm, seed, 
   expect(employees.edges.map(({ node }) => node)).toEqual([employee]);
   expect(await storedFileIds(orm)).toEqual([]);
   expect(await demo.getDemoData(OWNER)).toEqual({ isPresent: false });
+});
+
+test("fills Oliver's tasks with two to do and two waiting on others", async ({ orm, transact }) => {
+  await transact(await demoFillService(orm).prepareDemoFill(today));
+  const { edges } = await employeeServices(orm).listEmployees(OWNER, { first: 100 });
+  const oliver = edges.find(({ node }) => node.email === "oliver.bennett@example.com")!.node;
+  const priya = edges.find(({ node }) => node.email === "priya.shah@example.com")!.node;
+  const james = edges.find(({ node }) => node.email === "james.whitfield@example.com")!.node;
+  const ctx = signedIn(orm, { employeeId: oliver.id, profiles: ["EMPLOYEE"] });
+
+  const tasks = await taskService(orm).listMyTasks(ctx);
+
+  expect(tasks.needsYou).toHaveLength(2);
+  expect(tasks.needsYou).toMatchObject([
+    { assigneeEmployeeId: oliver.id, requestedByEmployeeId: priya.id, status: "to_do" },
+    { assigneeEmployeeId: oliver.id, requestedByEmployeeId: priya.id, status: "to_do" },
+  ]);
+  expect(tasks.needsYou[0]!.dueDate! < today).toBe(true);
+  expect(tasks.needsYou[1]!.dueDate! > today).toBe(true);
+  expect(tasks.waitingOnOthers).toHaveLength(2);
+  expect(tasks.waitingOnOthers).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        assigneeEmployeeId: oliver.id,
+        requestedByEmployeeId: james.id,
+        status: "waiting",
+      }),
+      expect.objectContaining({
+        assigneeEmployeeId: priya.id,
+        requestedByEmployeeId: oliver.id,
+        status: "to_do",
+      }),
+    ]),
+  );
 });
 
 const today = parseCalendarDate("2026-10-13")!;

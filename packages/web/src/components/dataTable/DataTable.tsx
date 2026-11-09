@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type MouseEvent, type ReactNode } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,6 +6,7 @@ import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { type DataTableDensity, SortableHeader, type DataTableSort } from "./SortableHeader";
+import { GroupHeading } from "./GroupHeading";
 import { TablePager, type DataTablePager } from "./TablePager";
 import { TableSkeleton } from "./TableStates";
 
@@ -56,6 +57,8 @@ interface DataTableProps<Row, SortKey extends string> {
   selection?: DataTableSelection<Row>;
   /** Replaces the toolbar while any row is selected. */
   bulkBar?: ReactNode;
+  /** The heading of each row's group; rows come in group order and each group opens with its heading. */
+  groupOf?: (row: Row) => string;
 }
 
 /**
@@ -78,6 +81,7 @@ export function DataTable<Row, SortKey extends string>({
   onRowClick,
   selection,
   bulkBar,
+  groupOf,
 }: DataTableProps<Row, SortKey>) {
   const placeholder = notice ?? (rows?.length === 0 ? emptyState : undefined);
   const comfortable = density === "comfortable";
@@ -155,55 +159,47 @@ export function DataTable<Row, SortKey extends string>({
           </TableHeader>
           {rows && !placeholder && (
             <TableBody className={cn("transition-opacity", isLoading && "opacity-60")}>
-              {rows.map((row) => (
-                <TableRow
-                  key={getRowId(row)}
-                  onClick={
-                    onRowClick &&
-                    ((event) => {
-                      // A link or control in the row does its own thing, as do modified clicks.
-                      const target = event.target as HTMLElement;
-                      if (
-                        target.closest(INTERACTIVE) ||
-                        event.metaKey ||
-                        event.ctrlKey ||
-                        event.shiftKey
-                      )
-                        return;
-                      onRowClick(row);
-                    })
-                  }
-                  className={cn(
-                    "group/row hover:bg-row-hover",
-                    onRowClick && "cursor-pointer",
-                    comfortable ? "h-[60px] border-border" : "border-border/40",
+              {rows.map((row, rowIndex) => (
+                <Fragment key={getRowId(row)}>
+                  {groupOf && (rowIndex === 0 || groupOf(rows[rowIndex - 1]!) !== groupOf(row)) && (
+                    <GroupHeading label={groupOf(row)} columnCount={columns.length} />
                   )}
-                >
-                  {columns.map((column, index) => (
-                    <TableCell
-                      key={column.id}
-                      className={cn(
-                        comfortable ? "px-4 py-2.5" : "px-3 py-2.5",
-                        index === 0 && `${PINNED_COLUMN} group-hover/row:bg-row-hover`,
-                        index === 0 && !comfortable && PINNED_EDGE,
-                        column.className,
-                      )}
-                    >
-                      {index === 0 && selection ? (
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            aria-label={t("table.selectRow", { name: selection.rowLabel(row) })}
-                            checked={selection.selectedIds.has(getRowId(row))}
-                            onCheckedChange={(checked) => toggle([getRowId(row)], checked)}
-                          />
-                          <div className="min-w-0 flex-1">{column.cell(row)}</div>
-                        </div>
-                      ) : (
-                        column.cell(row)
-                      )}
-                    </TableCell>
-                  ))}
-                </TableRow>
+                  <TableRow
+                    onClick={onRowClick && ((event) => openRow(event, () => onRowClick(row)))}
+                    className={cn(
+                      "group/row hover:bg-row-hover",
+                      onRowClick && "cursor-pointer",
+                      comfortable ? "h-[60px] border-border" : "border-border/40",
+                    )}
+                  >
+                    {columns.map((column, index) => (
+                      <TableCell
+                        key={column.id}
+                        className={cn(
+                          comfortable ? "px-4 py-2.5" : "px-3 py-2.5",
+                          // Fades with the row, so a pinned cell never lags behind the row's own transition.
+                          index === 0 &&
+                            `${PINNED_COLUMN} transition-colors group-hover/row:bg-row-hover`,
+                          index === 0 && !comfortable && PINNED_EDGE,
+                          column.className,
+                        )}
+                      >
+                        {index === 0 && selection ? (
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              aria-label={t("table.selectRow", { name: selection.rowLabel(row) })}
+                              checked={selection.selectedIds.has(getRowId(row))}
+                              onCheckedChange={(checked) => toggle([getRowId(row)], checked)}
+                            />
+                            <div className="min-w-0 flex-1">{column.cell(row)}</div>
+                          </div>
+                        ) : (
+                          column.cell(row)
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </Fragment>
               ))}
             </TableBody>
           )}
@@ -219,4 +215,11 @@ export function DataTable<Row, SortKey extends string>({
       )}
     </section>
   );
+}
+
+/** Opens a clicked row, unless the click was on a link or control in it, or modified. */
+function openRow(event: MouseEvent<HTMLTableRowElement>, open: () => void): void {
+  const target = event.target as HTMLElement;
+  if (target.closest(INTERACTIVE) || event.metaKey || event.ctrlKey || event.shiftKey) return;
+  open();
 }

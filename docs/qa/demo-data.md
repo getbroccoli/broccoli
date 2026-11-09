@@ -10,6 +10,7 @@ A manual check that skipping the import fills the demo company and that Exit dem
 ## Demo mode
 
 - [ ] `/people` opens without asking for an account and shows 40 people, each with a photo avatar, and the green banner "Demo mode · 7 days left" with "Exit demo".
+- [ ] You are Oliver Bennett: the profile button shows his photo, name and "CEO", and Tasks shows his demo tasks.
 - [ ] The workspace menu shows "Demo" with "Exit demo", and no "Sign out".
 - [ ] A reload, a new tab and a restart of the stack keep you in the app; none opens setup.
 - [ ] Reading Slack or uploading a file first, then going back and choosing "Use demo data", shows only the 40 demo people.

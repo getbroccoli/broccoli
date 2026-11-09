@@ -7,6 +7,10 @@ export interface NavItem {
   to: LinkProps["to"];
   label: string;
   icon?: Icon;
+  /** A count beside the label, such as the tasks that need you; hidden at 0. */
+  count?: number;
+  /** What the count means, for screen readers. */
+  countLabel?: string;
 }
 
 type Props = { label: string; items: NavItem[] };

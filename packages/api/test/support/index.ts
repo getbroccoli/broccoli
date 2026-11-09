@@ -52,6 +52,7 @@ export {
   importServices,
   slackServices,
   systemService,
+  taskService,
   aiSettings,
   mailSettings,
   passwordResetEmail,
@@ -85,7 +86,11 @@ export { importSourceValues } from "./importSourceValues";
 
 export { createSetupOwner, finishSelfHostedSetup } from "./finishSelfHostedSetup";
 
-export { EXAMPLE_RECORD, EXAMPLE_REGISTRATION } from "./exampleRecord";
+export {
+  EXAMPLE_RECORD,
+  EXAMPLE_REGISTRATION,
+  READABLE_EXAMPLE_REGISTRATION,
+} from "./exampleRecord";
 export { expectHistoryReplaysTo } from "./employeeHistory";
 export { expectBlockedBy } from "./expectBlockedBy";
 export { recordChangedEvents } from "./recordChangedEvents";

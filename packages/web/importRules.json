@@ -10,6 +10,7 @@
       "src/features/invites",
       "src/features/settings",
       "src/features/setup",
+      "src/features/tasks",
       "src/i18n",
       "src/shell"
     ],
@@ -20,6 +21,7 @@
       "src/features/demo",
       "src/features/employees",
       "src/features/setup",
+      "src/features/tasks",
       "src/i18n",
       "src/lib/class-names",
       "src/lib/useSessionChange"
@@ -45,6 +47,17 @@
       "src/lib/useRouteAction"
     ],
     "src/features/company": [],
+    "src/features/tasks": [
+      "src/__generated__",
+      "src/apollo",
+      "src/components/dataTable",
+      "src/components/ui",
+      "src/features/employees",
+      "src/features/records",
+      "src/i18n",
+      "src/lib/calendarDay",
+      "src/lib/class-names"
+    ],
     "src/features/demo": [
       "src/__generated__",
       "src/apollo",

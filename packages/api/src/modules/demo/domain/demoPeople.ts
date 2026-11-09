@@ -8,12 +8,16 @@ export interface DemoPerson {
   employee: NewEmployeeInput;
   managerEmail: string | null;
   locationName: string;
+  isOwner: boolean;
 }
 
 /** The demo company's people, with start dates counted from `today`. */
 export function demoPeople(today: CalendarDate): DemoPerson[] {
   return DEMO_PEOPLE.map(
-    ({ firstName, lastName, jobTitle = null, manager, startedDaysAgo }, index) => ({
+    (
+      { firstName, lastName, jobTitle = null, manager, startedDaysAgo, isOwner = false },
+      index,
+    ) => ({
       key: `${firstName}-${lastName}`.toLowerCase(),
       employee: {
         firstName,
@@ -24,6 +28,7 @@ export function demoPeople(today: CalendarDate): DemoPerson[] {
       },
       managerEmail: manager === undefined ? null : emailOf(manager),
       locationName: DEMO_LOCATIONS[index % DEMO_LOCATIONS.length]!,
+      isOwner,
     }),
   );
 }
@@ -31,6 +36,7 @@ export function demoPeople(today: CalendarDate): DemoPerson[] {
 /** The demo company's offices, handed out in turn so each has people. */
 const DEMO_LOCATIONS = ["London", "Manchester", "Remote"];
 
-function emailOf(fullName: string): string {
+/** The demo address of a demo person, by their full name. */
+export function emailOf(fullName: string): string {
   return `${fullName.replace(" ", ".")}@example.com`.toLowerCase();
 }

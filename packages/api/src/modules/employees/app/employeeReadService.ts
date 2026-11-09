@@ -35,6 +35,11 @@ export interface EmployeeReadService {
   readMyEmployee: (ctx: SecurityContext) => Promise<Employee | null>;
   /** The employees the caller may read, sorted by name unless ordered otherwise and filtered, one page at a time. */
   listEmployees: (ctx: SecurityContext, args: EmployeeListArgs) => Promise<Connection<Employee>>;
+  /** Each employee among these ids, by id; left out when there is none or the caller may not read them. */
+  readEmployees: (
+    ctx: SecurityContext,
+    employeeIds: readonly string[],
+  ) => Promise<Map<string, Employee>>;
   /** Each employee's start date, by the id asked for; left out when the caller may not read the employee. */
   readStartDates: (
     ctx: SecurityContext,
@@ -102,6 +107,15 @@ export function createEmployeeReadService({
         keysetValues: EMPLOYEE_SORT_VALUES,
         fetch: (query) => employees.findPage({ ...query, search, scope }),
       });
+    },
+    async readEmployees(ctx, employeeIds) {
+      const scope = await ctx.recordScope("employee", "read");
+      const ids = employeeIds.flatMap((askedId) => {
+        const id = parseUuid(askedId);
+        return id && isInRecordScope(scope, id) ? [id] : [];
+      });
+      const found = await employees.findByIds(ids);
+      return new Map(found.map((employee) => [employee.id, employee]));
     },
     async readStartDates(ctx, employeeIds) {
       const scope = await ctx.recordScope("employee", "read");
