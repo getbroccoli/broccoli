@@ -1,30 +1,17 @@
 import { useBlocker, useNavigate, useRouteContext, useSearch } from "@tanstack/react-router";
-import { DotsThree, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import type { EmployeePanel_EmployeeFragment } from "@/__generated__/graphql";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
-import {
-  type CopiedLink,
-  CopiedLinkDialog,
-  InviteDialog,
-  InviteMenuItems,
-} from "@/features/invites";
+import { type CopiedLink, CopiedLinkDialog, InviteDialog } from "@/features/invites";
 import { EditBar, FieldValue } from "@/features/records";
 import { t } from "@/i18n";
 
-import { Avatar } from "../Avatar";
 import { DiscardChangesDialog } from "./DiscardChangesDialog";
 import { EmployeeDetails } from "./EmployeeDetails";
+import { EmployeeHeader } from "./EmployeeHeader";
 import { EmployeeHistory } from "./EmployeeHistory";
+import { EmploymentTermsTab } from "./EmploymentTermsTab";
 import { EMPLOYEE_DESCRIPTION } from "./employeeDescription";
 import { type EmployeeFieldKey, INPUT_KEYS } from "./employeeDraft";
 import { KeyFacts } from "./KeyFacts";
@@ -60,7 +47,8 @@ export function EmployeeRecord({ employee, onClose }: Props) {
   const fullName = `${employee.firstName} ${employee.lastName}`;
   const { tab } = useSearch({ from: "/_authenticated/people/$employeeId" });
   const navigate = useNavigate({ from: "/people/$employeeId" });
-  const { operations } = useRouteContext({ from: "/_authenticated" }).me;
+  const { me } = useRouteContext({ from: "/_authenticated" });
+  const { operations } = me;
   const editable = new Set(employee.access.editableFields);
   const canEdit = (key: EmployeeFieldKey) =>
     key === "permissionProfiles"
@@ -73,50 +61,12 @@ export function EmployeeRecord({ employee, onClose }: Props) {
 
   return (
     <>
-      <header className="flex items-center gap-4 border-b border-border px-6 py-5">
-        <Avatar
-          url={employee.avatarUrl ?? null}
-          firstName={employee.firstName}
-          lastName={employee.lastName}
-          className="size-14 text-lg"
-        />
-        <div className="min-w-0 flex-1">
-          <SheetTitle className="truncate">{fullName}</SheetTitle>
-          {employee.jobTitle && (
-            <p className="truncate text-sm text-muted-foreground">{employee.jobTitle}</p>
-          )}
-        </div>
-        {/* Only admins see a sign-in status, and with it the invite actions. */}
-        {(employee.access.canDelete || employee.signInStatus) && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="ghost" size="icon" aria-label={t("people.panel.more")} />}
-            >
-              <DotsThree weight="bold" />
-            </DropdownMenuTrigger>
-            {/* As wide as its item, not the trigger, so the name stays on one line. */}
-            <DropdownMenuContent align="end" className="w-auto max-w-80">
-              <InviteMenuItems
-                person={employee}
-                onInvite={() => setInviting(true)}
-                onLinkCreated={setCopiedLink}
-              />
-              {employee.access.canDelete && (
-                <DropdownMenuItem variant="destructive" onClick={() => setRemoving(true)}>
-                  <span className="truncate">
-                    {t("people.panel.remove.menu", { name: fullName })}
-                  </span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        <SheetClose
-          render={<Button variant="ghost" size="icon" aria-label={t("people.panel.close")} />}
-        >
-          <X />
-        </SheetClose>
-      </header>
+      <EmployeeHeader
+        employee={employee}
+        onInvite={() => setInviting(true)}
+        onLinkCreated={setCopiedLink}
+        onRemove={() => setRemoving(true)}
+      />
 
       <Tabs
         value={tab}
@@ -129,6 +79,11 @@ export function EmployeeRecord({ employee, onClose }: Props) {
           <TabsTab value="overview" className="pt-2">
             {t("people.panel.tab.overview")}
           </TabsTab>
+          {employee.employmentTerms && (
+            <TabsTab value="terms" className="pt-2">
+              {t("people.panel.tab.terms")}
+            </TabsTab>
+          )}
           <TabsTab value="history" className="pt-2">
             {t("people.panel.tab.history")}
           </TabsTab>
@@ -170,6 +125,17 @@ export function EmployeeRecord({ employee, onClose }: Props) {
 
           <EmployeeDetails employee={employee} draft={draft} canEdit={canEdit} />
         </TabsPanel>
+        {employee.employmentTerms && (
+          <TabsPanel value="terms" className="subtle-scrollbar flex-1 overflow-y-auto px-6 py-6">
+            <EmploymentTermsTab
+              employeeId={employee.id}
+              firstName={employee.firstName}
+              employmentTerms={employee.employmentTerms}
+              viewerIsPerson={me.employee?.id === employee.id}
+              linksToSettings={operations.includes("MANAGE_WORKSPACE")}
+            />
+          </TabsPanel>
+        )}
         <TabsPanel value="history" className="subtle-scrollbar flex-1 overflow-y-auto px-6 py-6">
           <EmployeeHistory employeeId={employee.id} />
         </TabsPanel>

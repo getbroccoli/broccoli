@@ -56,6 +56,14 @@ A manual check of opening a person from People, their tabs, editing them in plac
 - [ ] The demo person's first line is "Broccoli added <first name> with 5 fields: …" with "Demo".
 - [ ] With more than 50 lines, "Show older changes" loads the rest.
 
+## Employment terms
+
+- [ ] Details › Job ends with "Employment terms: England and Wales"; choosing it opens the Employment terms tab (`?tab=terms`).
+- [ ] The tab shows "England and Wales" (a link to its settings for the owner) and "since they started"; Working week "Mon–Fri, 7.5 hours" with "England and Wales bank holidays"; each time off type with its icon and rules, such as "28 days a year, bank holidays included" or "Recorded, doesn't count"; each row "from England and Wales"; and "Leave years start on 1 January."
+- [ ] Planning England and Wales's working week from next year in Settings adds "From 1 Jan <next year>: Mon–Thu, 8 hours" under the person's Working week.
+- [ ] Signed in as an employee, their own panel reads "from your terms" and shows the terms' name without a link; a colleague who is not their report has no Employment terms tab.
+- [ ] At phone width each row stacks its name, rules and source.
+
 ## Time off
 
 - [ ] A demo person who started before this year shows "Time off · <this year>" between the key facts and Details: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded".

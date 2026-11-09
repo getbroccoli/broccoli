@@ -117,4 +117,55 @@ fragment EmployeePanel_employee on Employee {
     remaining
     used
   }
+  employmentTerms {
+    periods {
+      termsId
+      termsName
+      startDate
+      endDate
+    }
+    workingWeek {
+      source
+      startDate
+      endDate
+      week {
+        id
+        mondayMinutes
+        tuesdayMinutes
+        wednesdayMinutes
+        thursdayMinutes
+        fridayMinutes
+        saturdayMinutes
+        sundayMinutes
+        bankHolidayCalendar
+      }
+    }
+    timeOff {
+      timeOffType {
+        id
+        name
+        icon
+        colour
+      }
+      versions {
+        source
+        startDate
+        endDate
+        rules {
+          id
+          balance
+          bankHolidays
+          leaveYearStart {
+            kind
+            month
+            day
+          }
+          yearlyEntitlement {
+            days
+            daysPerWeek
+          }
+        }
+      }
+    }
+  }
 }
