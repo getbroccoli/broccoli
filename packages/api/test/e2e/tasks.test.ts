@@ -70,10 +70,19 @@ test("returns a completion history line and restricts shared task history to its
     data: {
       tasks: {
         markDone: {
-          task: { id },
+          task: {
+            id,
+            history: {
+              edges: [{ node: { operation: "UPDATED" } }, { node: { operation: "CREATED" } }],
+            },
+          },
           historyLine: {
             operation: "UPDATED",
             changes: [{ field: "status", oldValue: "to_do", newValue: "done" }],
+            record: {
+              id,
+              access: { canUpdate: false, canDelete: false, editableFields: [] },
+            },
           },
           error: null,
         },
@@ -130,8 +139,12 @@ test("refuses my tasks without a session", async ({ env }) => {
 
 const MARK_DONE_WITH_HISTORY = `mutation MarkDone($id: ID!) {
   tasks { markDone(input: { id: $id }) {
-    task { id }
-    historyLine { operation changes { field oldValue newValue } }
+    task { id history(first: 5) { edges { node { operation } } } }
+    historyLine {
+      operation
+      changes { field oldValue newValue }
+      record { ... on Task { id access { canUpdate canDelete editableFields } } }
+    }
     error { __typename ... on Error { message } }
   } }
 }`;

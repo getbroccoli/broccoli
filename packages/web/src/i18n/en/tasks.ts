@@ -61,7 +61,6 @@ export const tasksEn = {
   "tasks.history.reopened": "reopened it",
   "tasks.history.cancelled": "cancelled it",
   "tasks.history.waiting": "put it on hold",
-  "tasks.history.offHold": "took it off hold",
   "tasks.cancelDialog.title": "Cancel this task?",
   "tasks.cancelDialog.description": "{name} no longer needs to do it and sees why.",
   "tasks.cancelDialog.reason": "Why",

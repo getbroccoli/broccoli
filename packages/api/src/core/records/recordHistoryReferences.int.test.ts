@@ -1,4 +1,12 @@
-import { EXAMPLE_REGISTRATION, expect, OWNER, signedIn, test, recordHistory } from "#test/support";
+import {
+  EXAMPLE_REGISTRATION,
+  READABLE_EXAMPLE_REGISTRATION,
+  expect,
+  OWNER,
+  signedIn,
+  test,
+  recordHistory,
+} from "#test/support";
 
 import type { Grant } from "../security";
 import { createRecordHistoryReaderService } from ".";
@@ -194,6 +202,56 @@ test("hides a reference without refusing the line when its object has no read gr
           newValue: null,
           newLabel: null,
           newHidden: true,
+        },
+      ],
+    },
+  ]);
+});
+
+test("hides reference values and labels excluded by the record type's own rule", async ({
+  orm,
+  transact,
+}) => {
+  const lines = await transact((tx) =>
+    recordHistory.append(OWNER, tx, {
+      recordType: "example",
+      operation: "UPDATED",
+      cause: { kind: "EDITED_DIRECTLY" },
+      records: [
+        {
+          recordId: "example-1",
+          changes: [
+            {
+              field: "owner",
+              oldValue: "example-2",
+              oldLabel: "Excluded",
+              newValue: "example-1",
+              newLabel: "Allowed",
+            },
+          ],
+        },
+      ],
+    }),
+  );
+  const reader = createRecordHistoryReaderService(orm, {
+    example: { ...EXAMPLE_REGISTRATION, references: { owner: "other_example" } },
+    other_example: READABLE_EXAMPLE_REGISTRATION,
+  });
+
+  const visible = await reader.hideOutOfScopeReferences(OWNER, lines);
+
+  expect(visible).toEqual([
+    {
+      ...lines[0],
+      changes: [
+        {
+          field: "owner",
+          oldValue: null,
+          oldLabel: null,
+          oldHidden: true,
+          newValue: "example-1",
+          newLabel: "Allowed",
+          newHidden: false,
         },
       ],
     },

@@ -25,13 +25,12 @@ export const TASK_DESCRIPTION: RecordDescription = {
   ],
 };
 
-/** "marked it done", "reopened it", "cancelled it", "put it on hold" or "took it off hold". */
+/** "marked it done", "reopened it", "cancelled it" or "put it on hold". */
 function statusChangeSentence(oldValue: string | null, newValue: string | null): string | null {
   if (newValue === "done") return t("tasks.history.markedDone");
   if (newValue === "cancelled") return t("tasks.history.cancelled");
   if (newValue === "waiting") return t("tasks.history.waiting");
   if (newValue === "to_do" && oldValue === "done") return t("tasks.history.reopened");
-  if (newValue === "to_do" && oldValue === "waiting") return t("tasks.history.offHold");
   return null;
 }
 

@@ -1,4 +1,12 @@
-import { EXAMPLE_RECORD, EXAMPLE_REGISTRATION, expect, OWNER, signedIn, test } from "#test/support";
+import {
+  EXAMPLE_RECORD,
+  EXAMPLE_REGISTRATION,
+  READABLE_EXAMPLE_REGISTRATION,
+  expect,
+  OWNER,
+  signedIn,
+  test,
+} from "#test/support";
 
 import type { Grant } from "../security";
 import { createRecordHistoryReaderService } from ".";
@@ -71,6 +79,39 @@ test("reads records through their subjects, including two records of the same su
     new Map([
       ["example-1", { title: "First", __typename: "Example" }],
       ["example-3", { title: "Third", __typename: "Example" }],
+    ]),
+  );
+});
+
+test("reads only records allowed by the record type's own rule", async ({ orm }) => {
+  const reader = createRecordHistoryReaderService(orm, {
+    example: {
+      ...READABLE_EXAMPLE_REGISTRATION,
+      loadRecords: () =>
+        Promise.resolve(
+          new Map([
+            ["example-1", { id: "example-1", title: "Allowed" }],
+            ["example-2", { id: "example-2", title: "Excluded" }],
+          ]),
+        ),
+    },
+  });
+
+  const records = await reader.readRecords(OWNER, "example", ["example-1", "example-2"]);
+
+  expect(records).toEqual(
+    new Map([["example-1", { id: "example-1", title: "Allowed", __typename: "Example" }]]),
+  );
+});
+
+test("keeps records with their own reading rule read-only even for the owner", async ({ orm }) => {
+  const reader = createRecordHistoryReaderService(orm, { example: READABLE_EXAMPLE_REGISTRATION });
+
+  const access = await reader.readAccess(OWNER, "example", [EXAMPLE_RECORD.recordId]);
+
+  expect(access).toEqual(
+    new Map([
+      [EXAMPLE_RECORD.recordId, { canUpdate: false, canDelete: false, editableFields: [] }],
     ]),
   );
 });

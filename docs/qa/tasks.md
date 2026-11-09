@@ -9,7 +9,8 @@ A manual check of My tasks, against a development stack.
 
 ## The page
 
-- [ ] Tasks is first in the menu, above People, with a count of 2. Signing in again lands on `/tasks`.
+- [ ] Tasks is first in the menu, above People, with a count of 2.
+- [ ] An owner with an account (see "Create the owner" in [QA setup](setup.md)) lands on `/tasks` after signing in.
 - [ ] Under the title: "2 things need you. Everything else you asked for is below."
 - [ ] One table with Task, Type, From, Due and Where it is. Needs you lists "Sign James Whitfield's new contract" (Due in amber, "Late, was …") then "Approve the hiring plan for next quarter", each from Priya Shah with Mark done.
 - [ ] Waiting on others lists "Agree the updated expenses policy" (Waiting, from James Whitfield) and "Check the laptop budget for new starters" ("With Priya Shah", from You).

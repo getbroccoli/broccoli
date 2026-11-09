@@ -4,13 +4,15 @@ import { evictRecord } from "@/apollo";
 import { addHistoryLine } from "@/features/records";
 
 /**
- * Drops My tasks and this task from the cache after a refused change, such as one someone else
+ * Drops My tasks, this task and the cached histories after a refused change, such as one someone else
  * made first, so open lists and panels load them again as they now stand.
  */
 export function forgetStaleTask(cache: ApolloCache, taskId: string): void {
   cache.evict({ id: "ROOT_QUERY", fieldName: "myTasks" });
   // The panel's query may name the task in another spelling, such as an uppercase link.
   evictRecord(cache, "Task", taskId);
+  // Its history lacks the line the other change wrote; cached histories reload when next shown.
+  cache.evict({ id: "ROOT_QUERY", fieldName: "recordHistory" });
 }
 
 /** Adds the line a change just wrote to its task's cached history. */
