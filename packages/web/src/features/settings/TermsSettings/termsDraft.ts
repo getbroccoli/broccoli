@@ -207,22 +207,6 @@ export function rulesChangeBox(
   };
 }
 
-/** "From 1 Jan 2027, bank holidays still on top", or without the date when there is none. */
-function bankHolidaysStay(current: PolicyVersionText, startDate: string | null): string {
-  const included = current.bankHolidays === "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE";
-  if (startDate === null) {
-    return t(included ? "terms.edit.rules.stillIncluded" : "terms.edit.rules.stillOnTop");
-  }
-  return t(included ? "terms.edit.rules.fromDateIncluded" : "terms.edit.rules.fromDateOnTop", {
-    date: shortDate(startDate),
-  });
-}
-
-/** "From 1 Dec 2026.", or null when there is no date. */
-function fromDate(startDate: string | null): string | null {
-  return startDate === null ? null : t("terms.edit.fromDate", { date: shortDate(startDate) });
-}
-
 /**
  * The footer's line while the week is open: who saving reaches, and from when. `startDate` is null
  * when nobody was ever on the terms, so no date is named.
@@ -310,6 +294,22 @@ function minutesOf(hours: string): number | null {
   return Number.isFinite(value) && value >= 0 && value <= 24 && Number.isInteger(minutes / 15)
     ? minutes
     : null;
+}
+
+/** "From 1 Jan 2027, bank holidays still on top", or without the date when there is none. */
+function bankHolidaysStay(current: PolicyVersionText, startDate: string | null): string {
+  const included = current.bankHolidays === "BANK_HOLIDAYS_INCLUDED_IN_ALLOWANCE";
+  if (startDate === null) {
+    return t(included ? "terms.edit.rules.stillIncluded" : "terms.edit.rules.stillOnTop");
+  }
+  return t(included ? "terms.edit.rules.fromDateIncluded" : "terms.edit.rules.fromDateOnTop", {
+    date: shortDate(startDate),
+  });
+}
+
+/** "From 1 Dec 2026.", or null when there is no date. */
+function fromDate(startDate: string | null): string | null {
+  return startDate === null ? null : t("terms.edit.fromDate", { date: shortDate(startDate) });
 }
 
 function upperFirst(text: string): string {
