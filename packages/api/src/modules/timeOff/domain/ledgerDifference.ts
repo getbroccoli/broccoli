@@ -3,12 +3,29 @@ import type { CalendarDate } from "../../../utils";
 import type { AllowanceCause } from "./allowanceCause";
 import type { CalculatedAllowanceLine } from "./allowanceCalculator";
 
+/** What one booked day should cost its allowance: minus its cost while booked, 0 once cancelled. */
+export interface BookedDayLine {
+  kind: "time_off_booked";
+  allowanceRuleId: null;
+  bankHolidayDate: null;
+  timeOffDayId: string;
+  amount: string;
+  /** The booked day, which is also the line's effective date. */
+  firstDate: CalendarDate;
+}
+
+/** One line identity of an allowance and the amount its lines should add up to. */
+export type TargetLine = CalculatedAllowanceLine | BookedDayLine;
+
 /** What an allowance's lines of one identity add up to now, and how many there are. */
 export interface LedgerSum {
-  kind: CalculatedAllowanceLine["kind"];
+  kind: TargetLine["kind"];
   allowanceRuleId: string | null;
   /** The effective date of bank holidays taken; null on other kinds. */
   bankHolidayDate: CalendarDate | null;
+  /** Set on booked days, with the day they are booked on. */
+  timeOffDayId?: string | null;
+  bookedDate?: CalendarDate | null;
   /** Days as the database's decimal text. */
   amount: string;
   lineCount: number;
@@ -17,8 +34,9 @@ export interface LedgerSum {
 /** A line the engine appends. */
 export interface NewLedgerLine {
   allowanceId: string;
-  kind: CalculatedAllowanceLine["kind"];
+  kind: TargetLine["kind"];
   allowanceRuleId: string | null;
+  timeOffDayId: string | null;
   effectiveDate: CalendarDate;
   /** Days with at most six decimal places. */
   amount: string;
@@ -35,7 +53,7 @@ export interface NewLedgerLine {
  */
 export function ledgerDifference(
   allowance: { id: string; leaveYearStart: CalendarDate; leaveYearEnd: CalendarDate },
-  target: readonly CalculatedAllowanceLine[],
+  target: readonly TargetLine[],
   current: readonly LedgerSum[],
   cause: AllowanceCause,
   previous: readonly CalculatedAllowanceLine[] = [],
@@ -52,6 +70,9 @@ export function ledgerDifference(
       return [];
     }
     const { kind, allowanceRuleId, bankHolidayDate } = (line ?? sum)!;
+    const timeOffDayId =
+      line && "timeOffDayId" in line ? line.timeOffDayId : (sum?.timeOffDayId ?? null);
+    const bookedDate = kind === "time_off_booked" ? (line?.firstDate ?? sum?.bookedDate) : null;
     const previousLine = previousOf.get(identity);
     const firstDate =
       [line?.firstDate, previousLine?.firstDate]
@@ -68,7 +89,8 @@ export function ledgerDifference(
         allowanceId: allowance.id,
         kind,
         allowanceRuleId,
-        effectiveDate: withinLeaveYear(bankHolidayDate ?? changedFrom, allowance),
+        timeOffDayId,
+        effectiveDate: withinLeaveYear(bankHolidayDate ?? bookedDate ?? changedFrom, allowance),
         amount: difference.toString(),
         causeKind: cause.kind.toLowerCase() as NewLedgerLine["causeKind"],
         causeRef: cause.ref,
@@ -80,15 +102,16 @@ export function ledgerDifference(
 
 /** The earliest first date of a grant whose amount differs between the two calculations. */
 function firstChangedGrantDate(
-  lines: readonly CalculatedAllowanceLine[],
-  targetOf: ReadonlyMap<string, CalculatedAllowanceLine>,
-  previousOf: ReadonlyMap<string, CalculatedAllowanceLine>,
+  lines: readonly TargetLine[],
+  targetOf: ReadonlyMap<string, TargetLine>,
+  previousOf: ReadonlyMap<string, TargetLine>,
 ): CalendarDate | undefined {
   return lines
     .filter(
       (line) =>
         line.kind !== "bank_holiday_taken" &&
         line.kind !== "rounding_up_to_half_day" &&
+        line.kind !== "time_off_booked" &&
         !Big(targetOf.get(identityOf(line))?.amount ?? 0).eq(
           previousOf.get(identityOf(line))?.amount ?? 0,
         ),
@@ -108,8 +131,9 @@ function identityOf({
   kind,
   allowanceRuleId,
   bankHolidayDate,
-}: Pick<LedgerSum, "kind" | "allowanceRuleId" | "bankHolidayDate">): string {
-  return [kind, allowanceRuleId ?? bankHolidayDate].filter(Boolean).join(":");
+  timeOffDayId,
+}: Pick<LedgerSum, "kind" | "allowanceRuleId" | "bankHolidayDate" | "timeOffDayId">): string {
+  return [kind, allowanceRuleId ?? bankHolidayDate ?? timeOffDayId].filter(Boolean).join(":");
 }
 
 function correctionDate(

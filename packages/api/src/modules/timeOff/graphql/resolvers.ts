@@ -12,57 +12,35 @@ import { type CalendarDate, todayInLondon } from "../../../utils";
 import { earliestChangeDate, type TermsMovePreview } from "../../employees";
 import type {
   PersonTimeOff,
+  TimeOffBookingService,
   TimeOffPolicyService,
   TimeOffSetupService,
   TimeOffService,
   TimeOffWithPolicies,
 } from "../app";
 import {
-  DEFAULT_TIME_OFF_TYPE_LOOK,
   type PolicyVersion,
-  type TimeOffType,
   type TimeOffTypeColour,
   type TimeOffTypeIdentityInput,
   type TimeOffTypeIcon,
 } from "../domain";
+import { bookingResolvers } from "./bookingResolvers";
+import { BALANCE_KINDS, toGraphqlType } from "./graphqlValues";
 
 type TimeOffTypeRow = ResolversTypes["EmployeeTimeOffType"];
-
-const BALANCE_KINDS = {
-  balance_from_allowance: "BALANCE_FROM_ALLOWANCE",
-  unlimited_balance: "UNLIMITED_BALANCE",
-  no_balance: "NO_BALANCE",
-} as const;
 
 export function createResolvers(
   timeOff: TimeOffService,
   timeOffSetup: TimeOffSetupService,
   policies: TimeOffPolicyService,
+  booking: TimeOffBookingService,
 ): Resolvers {
-  const loaders = perRequest((context) => ({
-    timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
-      const read = await timeOff.readTimeOffTypes(context.getActor(), { employeeIds });
-      return employeeIds.map(
-        (id) =>
-          read.get(id)?.map((row) => ({
-            ...row,
-            timeOffType: toGraphqlType(row.timeOffType),
-            balance: BALANCE_KINDS[row.balance],
-          })) ?? null,
-      );
-    }),
-    personTimeOff: new DataLoader<string, PersonTimeOff[] | null>(async (employeeIds) => {
-      const read = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds });
-      return employeeIds.map((id) => read.get(id) ?? null);
-    }),
-    previewTimeOff: previewTimeOffLoader(timeOff, context),
-    termsTimeOff: new DataLoader<string, TimeOffWithPolicies[]>(async (termsIds) => {
-      const read = await timeOff.readTermsTimeOff(context.getActor(), termsIds);
-      return termsIds.map((id) => read.get(id)!);
-    }),
-  }));
+  const bookings = bookingResolvers(booking);
+  const loaders = timeOffLoaders(timeOff);
   return {
+    ...bookings,
     Query: {
+      ...bookings.Query,
       timeOffSettings: async (_parent, _args, context) => {
         const list = await timeOff.listTimeOffTypes(context.getActor());
         return {
@@ -99,6 +77,7 @@ export function createResolvers(
       timeOff: () => ({}),
     },
     TimeOffMutations: {
+      ...bookings.TimeOffMutations,
       createType: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TimeOffTypeCreatePayload"]>(
           async () => ({
@@ -155,6 +134,7 @@ export function createResolvers(
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
+      ...bookings.Employee,
     },
     EmployeeEmploymentTerms: {
       timeOff: ({ employeeId, move, from }, _args, context) =>
@@ -206,21 +186,30 @@ export function createResolvers(
   };
 }
 
-/** A time off type with its icon and colour as GraphQL values, the defaults filling in for none. */
-function toGraphqlType(type: TimeOffType) {
-  return {
-    id: type.id,
-    name: type.name,
-    icon: toEnum(type.icon ?? DEFAULT_TIME_OFF_TYPE_LOOK.icon),
-    colour: toEnum(type.colour ?? DEFAULT_TIME_OFF_TYPE_LOOK.colour),
-    typeKey: type.typeKey && toEnum(type.typeKey),
-    private: type.private,
-    defaultRules: {
-      balance: BALANCE_KINDS[type.defaultRules.balance],
-      entitlementDays: type.defaultRules.entitlementDays,
-      bankHolidays: type.defaultRules.bankHolidays && toEnum(type.defaultRules.bankHolidays),
-    },
-  };
+/** Per-request loaders batching each person's or terms' time off reads. */
+function timeOffLoaders(timeOff: TimeOffService) {
+  return perRequest((context) => ({
+    timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
+      const read = await timeOff.readTimeOffTypes(context.getActor(), { employeeIds });
+      return employeeIds.map(
+        (id) =>
+          read.get(id)?.map((row) => ({
+            ...row,
+            timeOffType: toGraphqlType(row.timeOffType),
+            balance: BALANCE_KINDS[row.balance],
+          })) ?? null,
+      );
+    }),
+    personTimeOff: new DataLoader<string, PersonTimeOff[] | null>(async (employeeIds) => {
+      const read = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds });
+      return employeeIds.map((id) => read.get(id) ?? null);
+    }),
+    previewTimeOff: previewTimeOffLoader(timeOff, context),
+    termsTimeOff: new DataLoader<string, TimeOffWithPolicies[]>(async (termsIds) => {
+      const read = await timeOff.readTermsTimeOff(context.getActor(), termsIds);
+      return termsIds.map((id) => read.get(id)!);
+    }),
+  }));
 }
 
 /** A type's identity from GraphQL input, its enums in the stored lower case. */

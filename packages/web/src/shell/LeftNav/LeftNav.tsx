@@ -1,4 +1,4 @@
-import { CaretLeft, CheckSquare, Users } from "@phosphor-icons/react";
+import { CalendarBlank, CaretLeft, CheckSquare, Users } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 
 import { useTasksNeedingYou } from "@/features/tasks";
@@ -35,6 +35,7 @@ export function LeftNav() {
       countLabel: t("nav.tasksNeedYou", { count: String(tasksNeedingYou) }),
     },
     { to: "/people", label: t("nav.people"), icon: Users },
+    { to: "/time-off", label: t("nav.timeOff"), icon: CalendarBlank },
   ];
   return (
     <aside className="shrink-0 md:h-full md:w-56 md:overflow-hidden">

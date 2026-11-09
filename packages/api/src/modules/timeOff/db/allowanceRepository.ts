@@ -1,4 +1,4 @@
-import { and, countDistinct, gte, inArray, notInArray, sql } from "drizzle-orm";
+import { and, countDistinct, gte, inArray, ne, sql } from "drizzle-orm";
 
 import { ormOf, type Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
@@ -67,6 +67,8 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           kind: allowanceLedgerLines.kind,
           allowanceRuleId: allowanceLedgerLines.allowanceRuleId,
           bankHolidayDate,
+          timeOffDayId: allowanceLedgerLines.timeOffDayId,
+          bookedDate: sql<CalendarDate | null>`case when ${allowanceLedgerLines.kind} = 'time_off_booked' then min(${allowanceLedgerLines.effectiveDate}) end`,
           amount: sql<string>`sum(${allowanceLedgerLines.amount})`,
           lineCount: sql<number>`count(*)::int`,
         })
@@ -74,7 +76,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
         .where(
           and(
             inArray(allowanceLedgerLines.allowanceId, [...allowanceIds]),
-            notInArray(allowanceLedgerLines.kind, ["time_off_booked", "manual_adjustment"]),
+            ne(allowanceLedgerLines.kind, "manual_adjustment"),
           ),
         )
         .groupBy(
@@ -82,6 +84,7 @@ export function allowanceRepository(tx: Tx): AllowanceRepository {
           allowanceLedgerLines.kind,
           allowanceLedgerLines.allowanceRuleId,
           bankHolidayDate,
+          allowanceLedgerLines.timeOffDayId,
         );
       const sums = rows.map((row) => ({ ...row, kind: row.kind as LedgerSum["kind"] }));
       return Map.groupBy(sums, ({ allowanceId }) => allowanceId);

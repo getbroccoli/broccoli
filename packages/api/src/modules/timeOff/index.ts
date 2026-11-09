@@ -1,7 +1,9 @@
 import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
+import type { BankHolidayService } from "../bankHolidays";
 import {
   allowanceEventHandlers,
+  createTimeOffBookingService,
   createTimeOffPolicyService,
   ensureAllowancesJob,
   type TimeOffSetupService,
@@ -10,7 +12,12 @@ import {
 import { createResolvers } from "./graphql";
 
 // Public values.
-export { createTimeOffPolicyService, createTimeOffSetupService, createTimeOffService } from "./app";
+export {
+  createTimeOffBookingService,
+  createTimeOffPolicyService,
+  createTimeOffSetupService,
+  createTimeOffService,
+} from "./app";
 
 // Public types.
 export type {
@@ -26,10 +33,12 @@ export type { AllowanceCause, StandardLeavePolicyKey } from "./domain";
 export function timeOffModule({
   timeOff,
   timeOffSetup,
+  bankHolidays,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   timeOff: TimeOffService;
   timeOffSetup: TimeOffSetupService;
+  bankHolidays: BankHolidayService;
 }): ModuleManifest {
   return {
     name: "timeOff",
@@ -38,6 +47,7 @@ export function timeOffModule({
       timeOff,
       timeOffSetup,
       createTimeOffPolicyService({ ...dependencies, timeOff }),
+      createTimeOffBookingService({ ...dependencies, timeOff, bankHolidays }),
     ),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),

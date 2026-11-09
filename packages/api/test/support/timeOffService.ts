@@ -7,6 +7,7 @@ import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import { createTaskService } from "../../src/modules/tasks";
 import {
+  createTimeOffBookingService,
   createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
@@ -40,6 +41,18 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
     orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),
+    bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The booking service on `orm`, with the engine of `timeOffService`; `today` is its date. */
+export function timeOffBookingService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+  return createTimeOffBookingService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+    timeOff: timeOffService(orm, { today }),
     bankHolidays: bankHolidayService(),
     today: () => today as CalendarDate,
   });
@@ -110,6 +123,16 @@ export async function giveDefaultTermsStatutoryMinimum(
   });
 }
 
+/** A full-time employee started in 2025, with statutory Annual leave and 20 days remaining in 2026. */
+export async function seedAnnualLeaveEmployee(orm: Orm, seed: TestSeed, transact: Transact) {
+  const employee = await seed.employee({ startDate: "2025-01-01" });
+  await giveDefaultTermsStatutoryMinimum(orm, seed, transact);
+  const annual = (await orm.select().from(timeOffTypes)).find(
+    ({ typeKey }) => typeKey === "annual_leave",
+  )!;
+  return { employeeId: employee.id, timeOffTypeId: annual.id };
+}
+
 /** Terms' policies have no public read yet: each with its type and how its first version counts. */
 export async function readTermsPolicies(orm: Orm, termsId: string) {
   const policies = await timeOffPolicyRepository(orm).findAll();
@@ -154,6 +177,7 @@ export function transactWithTimeOffEvents(orm: Orm): Transact {
         decisions: { decide: () => Promise.reject(new Error("Unexpected model request")) },
         bankHolidays: bankHolidayService(),
       }),
+      bankHolidays: bankHolidayService(),
       transact: testTransactor(orm),
       logger: createLogger("silent"),
     }).events!,

@@ -106,6 +106,7 @@ export function createModules(
     timeOffModule({
       ...core,
       timeOff,
+      bankHolidays,
       timeOffSetup: createTimeOffSetupService({
         ...core,
         decisions: aiSettings.decisions,
