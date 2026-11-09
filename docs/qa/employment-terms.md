@@ -79,7 +79,7 @@ Every type is offered on the demo terms. For a type that is not, delete the term
 - [ ] "What changes" shows "Family leave: not offered" and "From 1 Jan <next year>."; the footer names the people it reaches.
 - [ ] Saving shows the row's line "Not offered from 1 Jan <next year>" with "Cancel change", no "Edit" or "Stop", and the History line "You stopped offering Family leave from 1 Jan <next year>".
 - [ ] "Cancel change" says "Family leave stays offered on <terms>."; confirming removes the line and adds "You cancelled stopping Family leave from 1 Jan <next year>".
-- [ ] With someone's approved or pending Family leave booked from the stop date, saving keeps the form open and says "1 person has this time off type booked from that date."
+- [ ] With someone's approved or pending Family leave booked from the stop date, saving keeps the form open and says "Someone on <terms> has Family leave booked from 1 Jan <next year>. Move or decline it first."
 - [ ] A stop from today shows "Not offered here" with "Offer" at once; Offer gives the type back from the date picked.
 
 ## Add a type from the terms

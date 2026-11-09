@@ -1,5 +1,5 @@
 import { invalidInput } from "../../../core/applicationError";
-import type { CalendarDate } from "../../../utils";
+import { addDays, type CalendarDate } from "../../../utils";
 import type { NewPolicyVersion } from "./standardLeavePolicies";
 import type { PolicyVersion } from "./timeOffPolicy";
 
@@ -141,6 +141,21 @@ export function rulesValue(
     entitlementDays: yearly?.entitlementDays ?? null,
     bankHolidays: version.bankHolidays,
   });
+}
+
+/** The last version, when a stop from `stopDate`, after today, ends it; null otherwise. */
+export function plannedStop(
+  versions: readonly PolicyVersion[],
+  stopDate: string,
+  today: CalendarDate,
+): PolicyVersion | null {
+  const last = versions.at(-1);
+  return last?.endDate && stopDate > today && addDays(last.endDate, 1) === stopDate ? last : null;
+}
+
+/** A stop as history keeps it: a JSON object with its date. */
+export function stopValue(stopDate: string): string {
+  return JSON.stringify({ stopDate });
 }
 
 const BALANCES: readonly TimeOffRules["balance"][] = [

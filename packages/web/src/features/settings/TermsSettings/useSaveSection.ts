@@ -12,7 +12,7 @@ import { t } from "@/i18n";
 import { rulesInputOf } from "../TimeOffSettings";
 import { savedToast, weekOfDraft } from "./termsDraft";
 import { TERMS_REFETCH, type Terms } from "./termsQueries";
-import { companyToday } from "@/features/termsDisplay";
+import { companyToday, shortDate } from "@/features/termsDisplay";
 import type { OpenSection } from "./useTermsEditing";
 
 /** Saving the open section from its date: the week, a type's new rules, an offer or a stop. */
@@ -53,14 +53,7 @@ export function useSaveSection(terms: Terms) {
       toast(savedToast(row.timeOffType.name, terms.name, startDate, companyToday()));
       return true;
     } catch (error) {
-      // A refused stop says who has time off booked; other refusals are mistakes the form prevents.
-      const failure =
-        error instanceof PayloadFailure
-          ? (error as PayloadFailure<{ __typename: string; message: string }>).payloadError
-          : null;
-      toast.error(
-        failure?.__typename === "ConflictError" ? failure.message : t("terms.edit.saveFailed"),
-      );
+      toast.error(failureText(terms, open, startDate, error));
       return false;
     }
   };
@@ -69,4 +62,19 @@ export function useSaveSection(terms: Terms) {
     save,
     saving: weekState.loading || rulesState.loading || offerState.loading || stopState.loading,
   };
+}
+
+/** Why saving failed: a stop is refused while time off of the type is booked from its date. */
+function failureText(terms: Terms, open: OpenSection, startDate: string, error: unknown): string {
+  const failure =
+    error instanceof PayloadFailure ? (error as PayloadFailure<{ __typename: string }>) : null;
+  if (open.kind !== "rules" || !open.stop || failure?.payloadError.__typename !== "ConflictError") {
+    return t("terms.edit.saveFailed");
+  }
+  const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === open.timeOffTypeId)!;
+  return t("terms.edit.stop.booked", {
+    type: row.timeOffType.name,
+    terms: terms.name,
+    date: shortDate(startDate),
+  });
 }

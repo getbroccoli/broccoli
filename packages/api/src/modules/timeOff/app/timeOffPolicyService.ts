@@ -15,22 +15,17 @@ import {
   changesCountsMidYear,
   parseRules,
   type PolicyVersion,
+  plannedStop,
   rulesValue,
+  stopValue,
   type TimeOffPolicy,
   type TimeOffRulesInput,
+  type TimeOffType,
   versionFromRules,
 } from "../domain";
-import {
-  addVersionFrom,
-  appendTermsHistory,
-  endPolicyFrom,
-  existingPolicy,
-  existingType,
-  findPolicy,
-  isTermsPolicy,
-  plannedStop,
-  stopValue,
-} from "./policyChanges";
+import { addVersionFrom } from "./addVersionFrom";
+import { appendTermsHistory } from "./appendTermsHistory";
+import { endPolicyFrom } from "./endPolicyFrom";
 import { readOfferReach, readPolicyReach } from "./policyReach";
 import type { TimeOffService } from "./timeOffService";
 
@@ -316,4 +311,34 @@ export function createTimeOffPolicyService({
 
 function rulesChanged(timeOffPolicyId: string, from: CalendarDate) {
   return { kind: "TIME_OFF_RULES_CHANGED" as const, ref: `${timeOffPolicyId}:${from}`, from };
+}
+
+function isTermsPolicy(policy: TimeOffPolicy, termsId: string, timeOffTypeId: string): boolean {
+  return policy.termsId === termsId && policy.timeOffType.id === timeOffTypeId;
+}
+
+async function findPolicy(tx: Tx, timeOffPolicyId: string): Promise<TimeOffPolicy> {
+  const policies = await timeOffPolicyRepository(tx).findAll();
+  return policies.find(({ id }) => id === timeOffPolicyId)!;
+}
+
+/** The policy acted on; refuses one that does not exist with NOT_FOUND. */
+function existingPolicy(
+  policies: readonly TimeOffPolicy[],
+  timeOffPolicyId: string,
+): TimeOffPolicy {
+  const policy = policies.find(({ id }) => id === parseUuid(timeOffPolicyId));
+  if (!policy) {
+    throw new ApplicationError("NOT_FOUND", "No time off policy has this id.");
+  }
+  return policy;
+}
+
+/** The type acted on; refuses one that does not exist as invalid input. */
+function existingType(types: readonly TimeOffType[], timeOffTypeId: string): TimeOffType {
+  const type = types.find(({ id }) => id === parseUuid(timeOffTypeId));
+  if (!type) {
+    throw invalidInput([{ field: "timeOffTypeId", code: "not_found" }]);
+  }
+  return type;
 }

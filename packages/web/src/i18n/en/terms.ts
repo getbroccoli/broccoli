@@ -59,6 +59,8 @@ export const termsEn = {
   "terms.edit.stop.hint": "People keep the time off they take before this date.",
   "terms.edit.stop.saveLine":
     "Saving stops {type} for {people} on {terms}, from {date}. Their allowances are worked out again from that date.",
+  "terms.edit.stop.booked":
+    "Someone on {terms} has {type} booked from {date}. Move or decline it first.",
   "terms.edit.stopStays": "{type} stays offered on {terms}.",
   "terms.edit.cancel": "Cancel",
   "terms.edit.save": "Save",
