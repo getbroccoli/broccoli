@@ -49,6 +49,7 @@ export function EmployeeHistory({ employeeId }: Props) {
         recordType="EMPLOYEE"
         recordId={employeeId}
         description={EMPLOYEE_DESCRIPTION}
+        titled={false}
         filter={FILTERS[changes]}
         tagOf={(line) =>
           t(

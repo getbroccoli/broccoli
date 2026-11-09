@@ -17,13 +17,22 @@ type Props = {
   filter?: { changingAnyOf?: string[]; changingNoneOf?: string[] };
   /** A short tag on each line, such as the part of the record it changes. */
   tagOf?: (line: HistoryLine) => string | null;
+  /** False where a tab already names the history. */
+  titled?: boolean;
 };
 
 /**
  * A record's history, newest first and grouped by day, for any record type: it loads its lines
  * itself, so a record's panel only says which record and how its fields read.
  */
-export function RecordHistory({ recordType, recordId, description, filter, tagOf }: Props) {
+export function RecordHistory({
+  recordType,
+  recordId,
+  description,
+  filter,
+  tagOf,
+  titled = true,
+}: Props) {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [olderFailed, setOlderFailed] = useState(false);
   const { data, error, refetch, fetchMore } = useQuery(RecordHistoryDocument, {
@@ -58,13 +67,18 @@ export function RecordHistory({ recordType, recordId, description, filter, tagOf
   };
 
   return (
-    <section aria-labelledby="record-history" className="flex flex-col gap-2">
-      <h2
-        id="record-history"
-        className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
-      >
-        {t("records.history.title")}
-      </h2>
+    <section
+      aria-labelledby={titled ? "record-history" : undefined}
+      className="flex flex-col gap-2"
+    >
+      {titled && (
+        <h2
+          id="record-history"
+          className="text-[11px] font-medium tracking-wider text-muted-foreground uppercase"
+        >
+          {t("records.history.title")}
+        </h2>
+      )}
       {(error || olderFailed) && (
         <div role="alert" className="flex items-center gap-3 text-sm text-muted-foreground">
           {t("records.history.error")}
