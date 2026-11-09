@@ -81,7 +81,7 @@ export function EmployeeDetails({ employee, draft, canEdit }: Props) {
                 </span>
                 <button
                   type="button"
-                  className="justify-self-start underline decoration-border underline-offset-3"
+                  className="ml-1.5 justify-self-start underline decoration-border underline-offset-3"
                   onClick={() =>
                     void navigate({ search: (previous) => ({ ...previous, tab: "terms" }) })
                   }
