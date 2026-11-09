@@ -253,6 +253,13 @@
       "when": 1793631320766,
       "tag": "0035_locations",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794210974953,
+      "tag": "0036_tasks",
+      "breakpoints": true
     }
   ]
 }

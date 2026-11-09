@@ -52,6 +52,7 @@ export {
   importServices,
   slackServices,
   systemService,
+  taskService,
   aiSettings,
   mailSettings,
   passwordResetEmail,

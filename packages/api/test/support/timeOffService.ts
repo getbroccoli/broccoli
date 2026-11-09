@@ -5,6 +5,7 @@ import { createEventBus } from "../../src/core/events";
 import type { SecurityContext } from "../../src/core/security";
 import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
+import { createTaskService } from "../../src/modules/tasks";
 import {
   createTimeOffPolicyService,
   createTimeOffSetupService,
@@ -133,7 +134,12 @@ export async function readTermsPolicyVersions(orm: Orm, termsId: string) {
 
 /** The demo fill on `orm`, turning time off on for "England and Wales" terms. */
 export function demoFillService(orm: Orm) {
-  return createDemoFillService({ timeOff: timeOffService(orm) });
+  const tasks = createTaskService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
+  });
+  return createDemoFillService({ timeOff: timeOffService(orm), tasks });
 }
 
 /** Transactions on `orm` whose committed events reach time off's handlers, and no one else's. */

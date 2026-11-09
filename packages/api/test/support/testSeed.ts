@@ -18,6 +18,7 @@ import { calendarDate } from "./calendarDate";
 import { TEST_SECRET_BOX } from "./testSecretBox";
 import { defaultTermsId, insertTerms, leaveTerms, moveToTerms } from "./seedTerms";
 import { seedUser } from "./seedUser";
+import { seedTask } from "./seedTask";
 import { testTransactor } from "./testTransactor";
 
 type SeedEmployee = Partial<
@@ -174,6 +175,10 @@ export class TestSeed {
         ...overrides,
       }),
     );
+  }
+
+  task(overrides: Omit<Parameters<typeof seedTask>[1], "title"> & { title?: string }) {
+    return seedTask(this.orm, { title: `Task ${++this.#count}`, ...overrides });
   }
 
   /** The id of the seeded "England and Wales" terms, which every new employee joins. */
