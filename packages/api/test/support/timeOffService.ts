@@ -124,6 +124,13 @@ export async function readTermsPolicies(orm: Orm, termsId: string) {
     }));
 }
 
+/** A terms' policies with every version and allowance rule, including ended ones. */
+export async function readTermsPolicyVersions(orm: Orm, termsId: string) {
+  return (await timeOffPolicyRepository(orm).findAll()).filter(
+    (policy) => policy.termsId === termsId,
+  );
+}
+
 /** The demo fill on `orm`, turning time off on for "England and Wales" terms. */
 export function demoFillService(orm: Orm) {
   return createDemoFillService({ timeOff: timeOffService(orm) });

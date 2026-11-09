@@ -32,7 +32,12 @@ export {
   type WorkingPattern,
   type WorkingWeek,
 } from "./workingPattern";
-export { cancelPlannedVersion, earliestChangeDate, parseChangeDate } from "./datedChange";
+export {
+  cancelPlannedVersion,
+  earliestChangeDate,
+  parseChangeDate,
+  versionsFromToday,
+} from "./datedChange";
 export { createPersonTimeline, type PersonTimeline } from "./personTimeline";
 export {
   workingWeeksOf,

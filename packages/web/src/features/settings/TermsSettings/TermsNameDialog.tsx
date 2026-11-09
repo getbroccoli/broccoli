@@ -1,7 +1,9 @@
 import { useQuery } from "@apollo/client/react";
+import { useNavigate } from "@tanstack/react-router";
 import { type FormEvent, useState } from "react";
 
 import {
+  CloneTermsDocument,
   EmploymentTermsDocument,
   RecordHistoryDocument,
   RenameTermsDocument,
@@ -21,21 +23,33 @@ import { nameError } from "./termsText";
 import { TermsNameField } from "./TermsNameField";
 
 type Props = {
+  /** Rename the terms, or clone them into new terms under the name. */
+  action: "rename" | "clone";
   onClose: () => void;
   terms: { id: string; name: string };
 };
 
-/** Renames terms; the stack's header and the list show the new name once saved. */
-export function RenameTermsDialog({ onClose, terms }: Props) {
-  const [name, setName] = useState(terms.name);
+/**
+ * Asks for a name: renaming shows it in the stack's header and the list; cloning opens the new
+ * terms, which start with these terms' week and time off rules.
+ */
+export function TermsNameDialog({ action, onClose, terms }: Props) {
+  const navigate = useNavigate();
+  const [name, setName] = useState(
+    action === "clone" ? t("terms.clone.name", { name: terms.name }) : terms.name,
+  );
   // The list under the stack already holds every name, to say which terms a taken name belongs to.
   const { data } = useQuery(EmploymentTermsDocument, { fetchPolicy: "cache-only" });
   // The list orders by name, and the open history gains the rename's line.
   const [renameTerms, renaming] = usePayloadMutation(RenameTermsDocument, {
     refetch: [EmploymentTermsDocument, RecordHistoryDocument],
   });
-  const failed = Boolean(renaming.payloadError || renaming.error);
-  const refusal = renaming.payloadError;
+  const [cloneTerms, cloning] = usePayloadMutation(CloneTermsDocument, {
+    refetch: [EmploymentTermsDocument],
+  });
+  const saving = action === "clone" ? cloning : renaming;
+  const failed = Boolean(saving.payloadError || saving.error);
+  const refusal = saving.payloadError;
   const code =
     refusal?.__typename === "InvalidInputError"
       ? refusal.fields.find(({ field }) => field === "name")?.code
@@ -44,17 +58,26 @@ export function RenameTermsDialog({ onClose, terms }: Props) {
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    const renamed = await renameTerms({ variables: { input: { id: terms.id, name } } }).catch(
-      () => null,
-    );
-    if (renamed?.terms) onClose();
+    if (action === "rename") {
+      const renamed = await renameTerms({ variables: { input: { id: terms.id, name } } }).catch(
+        () => null,
+      );
+      if (renamed?.terms) onClose();
+      return;
+    }
+    const cloned = await cloneTerms({
+      variables: { input: { recordType: "TERMS", id: terms.id, name } },
+    }).catch(() => null);
+    if (!cloned?.clone) return;
+    onClose();
+    void navigate({ to: "/settings/terms/$termsId", params: { termsId: cloned.clone.id } });
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && !renaming.loading && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && !saving.loading && onClose()}>
       <DialogContent className="sm:max-w-lg" closeLabel={t("terms.close")}>
         <form onSubmit={(event) => void save(event)} className="flex flex-col gap-5">
-          <DialogTitle className="text-lg">{t("terms.rename.title")}</DialogTitle>
+          <DialogTitle className="text-lg">{t(`terms.${action}.title`)}</DialogTitle>
           <TermsNameField
             value={name}
             onChange={setName}
@@ -64,8 +87,8 @@ export function RenameTermsDialog({ onClose, terms }: Props) {
             <DialogClose render={<Button type="button" variant="outline" />}>
               {t("terms.cancel")}
             </DialogClose>
-            <Button type="submit" disabled={renaming.loading}>
-              {t("terms.rename.save")}
+            <Button type="submit" disabled={saving.loading}>
+              {t(`terms.${action}.save`)}
             </Button>
           </DialogFooter>
         </form>

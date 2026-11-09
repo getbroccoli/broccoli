@@ -6,11 +6,14 @@ import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
 import {
+  type CopyTermsParts,
   createEmployeeReadService,
   createEmployeeSetupService,
   createEmployeeWorkingPatternService,
+  earliestChangeDate,
   parseTermsSetup,
   type TermsSetup,
+  versionsFromToday,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import {
@@ -96,6 +99,11 @@ export interface TimeOffService {
    * employees: deletes every policy and the company's own types, and restores the seeded types.
    */
   resetTimeOff: (ctx: SecurityContext, tx: Tx) => Promise<void>;
+  /**
+   * Gives cloned terms the source terms' rules for each type they offer: today's from the start of
+   * the current leave year, then the planned ones. Admins only.
+   */
+  copyTermsPolicies: CopyTermsParts;
 }
 
 /** What turning time off on did; the terms ids are in the order of the input's terms. */
@@ -179,6 +187,28 @@ export function createTimeOffService({
     async resetTimeOff(ctx, tx) {
       ctx.requireSetupAccess("MANAGE_WORKSPACE");
       await timeOffPolicyRepository(tx).deleteAll();
+    },
+    async copyTermsPolicies(ctx, tx, { fromTermsId, toTermsId }) {
+      ctx.require("MANAGE_WORKSPACE");
+      const repository = timeOffPolicyRepository(tx);
+      // Held as every policy writer holds it, so no version changes between the reads below.
+      await repository.lockPolicies();
+      const date = today();
+      const policies = await repository.findAll();
+      for (const { termsId, timeOffType, versions } of policies) {
+        // Every copied version has a start: today's starts at the start of the leave year.
+        const [current, ...planned] = versionsFromToday(versions, date, earliestChangeDate(date));
+        if (termsId !== fromTermsId || !current) {
+          continue;
+        }
+        const policyId = await repository.insertPolicy(
+          { timeOffTypeId: timeOffType.id, termsId: toTermsId },
+          { ...current, startDate: current.startDate! },
+        );
+        for (const version of planned) {
+          await repository.insertVersion(policyId, { ...version, startDate: version.startDate! });
+        }
+      }
     },
   };
 }

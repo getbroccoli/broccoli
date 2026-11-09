@@ -1,10 +1,19 @@
-import type { Orm } from "../db";
+import type { Orm, Transact } from "../db";
+import type { Logger } from "../logger";
 import { readSdl, type Resolvers } from "../graphql";
-import { createRecordHistoryReaderService, type RecordTypeRegistry } from "./app";
+import {
+  createRecordCloneService,
+  createRecordHistoryReaderService,
+  type RecordTypeRegistry,
+} from "./app";
 import { createResolvers } from "./graphql";
 
 // Public values.
-export { createRecordHistoryReaderService, createRecordHistoryService } from "./app";
+export {
+  createRecordCloneService,
+  createRecordHistoryReaderService,
+  createRecordHistoryService,
+} from "./app";
 export { changeReasonSchema, parseChangeReason } from "./domain";
 
 // Public types.
@@ -26,11 +35,11 @@ export type {
 } from "./domain";
 
 /**
- * The shared record capabilities in the API: the history types and the `recordHistory` query,
- * for each record type the modules register.
+ * The shared record capabilities in the API: the history types, the `recordHistory` query and
+ * cloning, for each record type the modules register.
  */
 export function recordsManifest(
-  orm: Orm,
+  { orm, transact, logger }: { orm: Orm; transact: Transact; logger: Logger },
   modules: readonly { recordTypes?: RecordTypeRegistry }[],
 ): { name: string; typeDefs: string; resolvers: Resolvers } {
   const registry: RecordTypeRegistry = {};
@@ -40,6 +49,10 @@ export function recordsManifest(
   return {
     name: "records",
     typeDefs: readSdl(import.meta.url, "./graphql/schema.graphql"),
-    resolvers: createResolvers(registry, createRecordHistoryReaderService(orm, registry)),
+    resolvers: createResolvers(
+      registry,
+      createRecordHistoryReaderService(orm, registry),
+      createRecordCloneService({ orm, transact, logger, registry }),
+    ),
   };
 }

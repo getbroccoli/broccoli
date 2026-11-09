@@ -1,5 +1,5 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import { addDays, type CalendarDate, type CalendarDateRange } from "../../../utils";
+import { addDays, type CalendarDate, type CalendarDateRange, coversDate } from "../../../utils";
 import { parseDateField } from "./workingPattern";
 
 /**
@@ -9,6 +9,20 @@ import { parseDateField } from "./workingPattern";
  */
 export function earliestChangeDate(today: CalendarDate): CalendarDate {
   return `${today.slice(0, 4)}-01-01` as CalendarDate;
+}
+
+/**
+ * The versions a clone copies: the one covering today, starting from `from` instead, then the
+ * planned ones; versions that ended before today are left out.
+ */
+export function versionsFromToday<V extends CalendarDateRange>(
+  versions: readonly V[],
+  today: CalendarDate,
+  from: CalendarDate | null,
+): V[] {
+  return versions
+    .filter(({ endDate }) => endDate === null || endDate >= today)
+    .map((version) => (coversDate(version, today) ? { ...version, startDate: from } : version));
 }
 
 /** The date a change applies from, sent in `startDate`; refuses one before the earliest date. */

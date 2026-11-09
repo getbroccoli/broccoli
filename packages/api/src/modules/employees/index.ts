@@ -4,6 +4,7 @@ import express from "express";
 
 import type { Mode } from "../../core/env";
 import {
+  type CopyTermsParts,
   createEmployeeManagerService,
   createEmployeePermissionService,
   createEmployeeReadService,
@@ -32,6 +33,7 @@ export {
   createLocationService,
   createTermsService,
   employeeDirectory,
+  termsRecordType,
 } from "./app";
 export {
   cancelPlannedVersion,
@@ -43,10 +45,12 @@ export {
   parseDateField,
   parseEmployeeField,
   parseTermsSetup,
+  versionsFromToday,
 } from "./domain";
 
 // Public types.
 export type {
+  CopyTermsParts,
   EmployeeInviteService,
   EmployeeManagerService,
   EmployeePermissionService,
@@ -79,11 +83,14 @@ export type {
 export function employeesModule({
   mode,
   invites,
+  copyTermsParts,
   ...dependencies
 }: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
   mode: Mode;
   /** Built by startup, which setup's last step shares. */
   invites: EmployeeInviteService;
+  /** Copies what other modules keep on terms, such as time off rules, onto cloned terms. */
+  copyTermsParts: CopyTermsParts;
 }): ModuleManifest {
   const services = {
     ...createEmployeeService(dependencies),
@@ -91,7 +98,7 @@ export function employeesModule({
     ...createEmployeeManagerService(dependencies),
     ...createEmployeePermissionService(dependencies),
     ...createLocationService(dependencies),
-    ...createTermsService(dependencies),
+    ...createTermsService({ ...dependencies, copyTermsParts }),
     ...createWorkingPatternService(dependencies),
   };
   return {
@@ -100,7 +107,7 @@ export function employeesModule({
     resolvers: createResolvers(services, invites),
     recordTypes: {
       employee: employeeRecordType(dependencies.orm),
-      terms: termsRecordType(dependencies.orm),
+      terms: { ...termsRecordType(dependencies.orm), clone: services.cloneTerms },
     },
     jobs: invites.jobs,
     authPlugin: invitePlugin(invites, dependencies),
