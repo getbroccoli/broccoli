@@ -234,7 +234,7 @@ export function createResolvers(
             })),
             skipped: skippedOf(skipped, employees),
           };
-        }, ["NOT_FOUND"]),
+        }, ["INVALID_INPUT", "NOT_FOUND"]),
       cancelTermsChange: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["EmployeeTermsCancelChangePayload"]>(async () => {
           await services.cancelTermsChange(context.getActor(), input);

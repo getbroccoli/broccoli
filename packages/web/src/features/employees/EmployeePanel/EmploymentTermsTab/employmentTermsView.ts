@@ -90,17 +90,20 @@ export function rowOf<V extends DatedVersion>(
 }
 
 /**
- * What a row changes to on `date` when moving the person, from their versions `before` and as they
- * would be `after`; null when it stays the same or they have their own then.
+ * What a row changes to from `date` when moving the person, from their versions `before` and as
+ * they would be `after`; null when it stays the same or they have their own then. Versions start
+ * today, so a past date compares today's.
  */
 export function changeLineOn<V extends DatedVersion>(
   before: readonly V[],
   after: readonly V[],
   date: string,
+  today: string,
   describe: (version: V) => { text: string; detail?: string },
   missing: string,
 ): string | null {
-  const next = versionOn(after, date);
+  const on = date > today ? date : today;
+  const next = versionOn(after, on);
   if (next?.source === "THEIR_OWN") return null;
   const textOf = (version: V | null) => {
     if (!version) return missing;
@@ -108,7 +111,7 @@ export function changeLineOn<V extends DatedVersion>(
     return [text, detail].filter(Boolean).join(" · ");
   };
   const change = textOf(next);
-  return change === textOf(versionOn(before, date))
+  return change === textOf(versionOn(before, on))
     ? null
     : t("people.panel.terms.planned", { date: shortDate(date), change });
 }

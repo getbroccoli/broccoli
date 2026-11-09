@@ -99,6 +99,38 @@ test("an employee cannot move a person to other terms through GraphQL", async ({
   expect(await response.json()).toMatchObject({ errors: [{ extensions: { code: "FORBIDDEN" } }] });
 });
 
+test("returns an invalid move date as a payload field error without top-level errors", async ({
+  env,
+}) => {
+  const { browser } = await env.signInAsOwner();
+  const employee = await env.seed.employee({ startDate: "2024-03-01" });
+  const termsId = await env.seed.terms("Scotland");
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  const startDate = `${Number(today.slice(0, 4)) - 1}-12-31`;
+
+  const response = await browser.graphql(
+    `mutation Move($input: EmployeeTermsChangeInput!) {
+    employees { changeTerms(input: $input) {
+      error { __typename ... on InvalidInputError { fields { field code } } }
+    } }
+  }`,
+    { input: { employeeIds: [employee.id], termsId, startDate } },
+  );
+
+  expect(await response.json()).toEqual({
+    data: {
+      employees: {
+        changeTerms: {
+          error: {
+            __typename: "InvalidInputError",
+            fields: [{ field: "startDate", code: "too_early" }],
+          },
+        },
+      },
+    },
+  });
+});
+
 const CHANGE_TERMS = `mutation Move($input: EmployeeTermsChangeInput!) {
   employees { changeTerms(input: $input) {
     moved { employee { id } startDate } skipped { employee { id } reason } error { __typename }

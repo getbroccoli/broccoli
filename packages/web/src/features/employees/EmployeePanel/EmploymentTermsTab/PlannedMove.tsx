@@ -2,11 +2,7 @@ import { CalendarBlank } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  CancelTermsChangeDocument,
-  EmployeePanelDocument,
-  EmploymentTermsTabDocument,
-} from "@/__generated__/graphql";
+import { CancelTermsChangeDocument } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
 import { Button } from "@/components/ui/button";
 import { CancelChangeDialog, shortDate } from "@/features/termsDisplay";
@@ -38,7 +34,6 @@ export function PlannedMove({
 }: Props) {
   const [asking, setAsking] = useState(false);
   const [cancelChange, { loading }] = usePayloadMutation(CancelTermsChangeDocument, {
-    refetch: [EmploymentTermsTabDocument, EmployeePanelDocument],
     update: forgetHistory,
   });
   const cancel = async () => {

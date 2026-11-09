@@ -223,3 +223,35 @@ test("previews a move without writing it", async ({ orm, seed }) => {
   expect(await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] })).toEqual(before);
   expect(await service.changeTerms(OWNER, input)).toEqual(preview);
 });
+
+test("moves a person whose start moved past a planned move from their start, keeping earlier periods", async ({
+  orm,
+  seed,
+}) => {
+  const employee = await seed.employee({ startDate: "2027-01-01" });
+  const england = await seed.defaultTermsId();
+  const scotland = await seed.terms("Scotland");
+  const northernIreland = await seed.terms("Northern Ireland");
+  await seedTermsPeriods(orm, employee.id, [
+    { termsId: england, startDate: null, endDate: "2026-12-14" },
+    { termsId: scotland, startDate: "2026-12-15", endDate: null },
+  ]);
+  const service = workingPatternService(orm, { today: "2026-11-09" });
+
+  const result = await service.changeTerms(OWNER, {
+    employeeIds: [employee.id],
+    termsId: northernIreland,
+    startDate: "2026-12-01",
+  });
+
+  expect(result).toEqual({
+    moved: [{ employeeId: employee.id, startDate: "2027-01-01" }],
+    skipped: [],
+  });
+  const terms = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
+  expect(terms.get(employee.id)?.periods).toMatchObject([
+    { termsId: england, startDate: null, endDate: "2026-12-14" },
+    { termsId: scotland, startDate: "2026-12-15", endDate: "2026-12-31" },
+    { termsId: northernIreland, startDate: "2027-01-01", endDate: null },
+  ]);
+});

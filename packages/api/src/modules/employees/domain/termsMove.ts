@@ -40,13 +40,11 @@ export function planTermsMove(
   if (fromTermsId === termsId) {
     return { kind: "skip", reason: "ALREADY_ON_TERMS" };
   }
-  // From their first day, the move replaces the terms they started on.
-  const startsWithMove = start === null ? false : from <= start;
   return {
     kind: "move",
     from,
     fromTermsId,
-    memberships: withRow(person.memberships, termsId, startsWithMove ? null : from),
+    memberships: withRow(person.memberships, termsId, from, start !== null && from <= start),
   };
 }
 
@@ -70,17 +68,21 @@ export function cancelTermsMove(
   };
 }
 
-/** The rows with `termsId` from `from` (null: since the employment started) to the end of the row it lands in. */
+/**
+ * The rows with `termsId` from `from` to the end of the row covering it. From the person's first
+ * day, a row they started on (no start date) is replaced whole, as if they had always been on the
+ * new terms.
+ */
 function withRow(
   rows: readonly TermsMembership[],
   termsId: string,
-  from: CalendarDate | null,
+  from: CalendarDate,
+  fromFirstDay: boolean,
 ): TermsMembership[] {
   const sorted = rows.toSorted(byStart);
-  const covering = from === null ? sorted[0] : sorted.find((row) => coversDate(row, from));
-  const next = sorted.find(
-    ({ startDate }) => from !== null && startDate !== null && startDate > from,
-  );
+  const covering = sorted.find((row) => coversDate(row, from));
+  const next = sorted.find(({ startDate }) => startDate !== null && startDate > from);
+  const startDate = fromFirstDay && covering?.startDate === null ? null : from;
   const endDate = covering
     ? covering.endDate
     : next?.startDate
@@ -88,10 +90,10 @@ function withRow(
       : null;
   const kept = sorted.flatMap((row): TermsMembership[] => {
     if (row !== covering) return [row];
-    if (row.startDate === from || from === null) return [];
+    if (startDate === null || row.startDate === from) return [];
     return [{ ...row, endDate: addDays(from, -1) }];
   });
-  return merged([...kept, { termsId, startDate: from, endDate }]);
+  return merged([...kept, { termsId, startDate, endDate }]);
 }
 
 /** Rows in date order, with back-to-back rows on the same terms joined into one. */

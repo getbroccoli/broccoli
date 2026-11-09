@@ -81,6 +81,13 @@ mutation ChangeTerms($input: EmployeeTermsChangeInput!) {
     changeTerms(input: $input) {
       moved {
         startDate
+        # The person's new terms, for the tab and the Details row.
+        employee {
+          ...EmployeePanel_employee @unmask
+          employmentTerms {
+            ...EmploymentTermsTab_terms @unmask
+          }
+        }
       }
       skipped {
         reason
@@ -105,7 +112,10 @@ mutation CancelTermsChange($input: EmployeeTermsCancelChangeInput!) {
   employees {
     cancelTermsChange(input: $input) {
       employee {
-        id
+        ...EmployeePanel_employee @unmask
+        employmentTerms {
+          ...EmploymentTermsTab_terms @unmask
+        }
       }
       error {
         __typename

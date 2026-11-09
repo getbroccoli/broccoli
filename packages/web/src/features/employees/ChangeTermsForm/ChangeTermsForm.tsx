@@ -11,7 +11,7 @@ type Props = {
   onChange: (value: { termsId: string | null; startDate: string }) => void;
   /** The earliest date a move may apply from. */
   earliest: string;
-  /** The terms the person is on now, shown with "(now)" and not offered; none for many people. */
+  /** The terms the person is on now, shown with "(now)"; none for many people. */
   currentTermsId?: string | null;
   /** What the date means, such as "Earlier days stay on England and Wales." */
   hint: string;
@@ -47,7 +47,7 @@ export function ChangeTermsForm({
               {t("changeTerms.pick")}
             </option>
             {data?.allTerms.map(({ id, name }) => (
-              <option key={id} value={id} disabled={id === currentTermsId}>
+              <option key={id} value={id}>
                 {id === currentTermsId ? t("changeTerms.now", { terms: name }) : name}
               </option>
             ))}

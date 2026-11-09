@@ -1,6 +1,7 @@
 import DataLoader from "dataloader";
 
 import {
+  type GraphqlContext,
   mutationPayload,
   perRequest,
   type Resolvers,
@@ -8,7 +9,7 @@ import {
   toEnum,
 } from "../../../core/graphql";
 import { todayInLondon } from "../../../utils";
-import { earliestChangeDate } from "../../employees";
+import { earliestChangeDate, type TermsMovePreview } from "../../employees";
 import type {
   PersonTimeOff,
   TimeOffPolicyService,
@@ -54,6 +55,7 @@ export function createResolvers(
       const read = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds });
       return employeeIds.map((id) => read.get(id) ?? null);
     }),
+    movedTimeOff: movedTimeOffLoader(timeOff, context),
     termsTimeOff: new DataLoader<string, TimeOffWithPolicies[]>(async (termsIds) => {
       const read = await timeOff.readTermsTimeOff(context.getActor(), termsIds);
       return termsIds.map((id) => read.get(id)!);
@@ -155,14 +157,9 @@ export function createResolvers(
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),
     },
     EmployeeEmploymentTerms: {
-      timeOff: async ({ employeeId, move }, _args, context) =>
+      timeOff: ({ employeeId, move }, _args, context) =>
         move
-          ? ((
-              await timeOff.readPersonTimeOff(context.getActor(), {
-                employeeIds: [employeeId],
-                move,
-              })
-            ).get(employeeId) ?? null)
+          ? loaders(context).movedTimeOff.load({ employeeId, move })
           : loaders(context).personTimeOff.load(employeeId),
     },
     PersonTimeOff: {
@@ -276,4 +273,38 @@ function toStoredRules({
 
 function toBalanceKind(balance: PolicyVersion["balance"] | null) {
   return balance && BALANCE_KINDS[balance];
+}
+
+/** A person as they would be after a move, as a preview reads them. */
+interface MovedPerson {
+  employeeId: string;
+  move: TermsMovePreview;
+}
+
+function moveKey({ termsId, startDate }: TermsMovePreview): string {
+  return `${termsId}:${startDate}`;
+}
+
+function movedKey({ employeeId, move }: MovedPerson): string {
+  return `${moveKey(move)}:${employeeId}`;
+}
+
+/**
+ * Each person's rules as they would be after a move, for previews: every person after the same
+ * move is one read.
+ */
+function movedTimeOffLoader(timeOff: TimeOffService, context: GraphqlContext) {
+  return new DataLoader<MovedPerson, PersonTimeOff[] | null, string>(
+    async (keys) => {
+      const read = new Map<string, PersonTimeOff[]>();
+      for (const people of Map.groupBy(keys, ({ move }) => moveKey(move)).values()) {
+        const { move } = people[0]!;
+        const employeeIds = people.map(({ employeeId }) => employeeId);
+        const moved = await timeOff.readPersonTimeOff(context.getActor(), { employeeIds, move });
+        for (const [id, rows] of moved) read.set(movedKey({ employeeId: id, move }), rows);
+      }
+      return keys.map((key) => read.get(movedKey(key)) ?? null);
+    },
+    { cacheKeyFn: movedKey },
+  );
 }

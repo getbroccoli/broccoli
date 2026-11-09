@@ -63,6 +63,7 @@ export function TermsRows({
             workingWeek,
             change.after.workingWeek,
             change.date,
+            today,
             describeWeek,
             t("people.panel.terms.noWeekLower"),
           )
@@ -85,7 +86,14 @@ export function TermsRows({
             planned={row.planned}
             change={
               change &&
-              changeLineOn(versions, after?.versions ?? [], change.date, describeRules, notOffered)
+              changeLineOn(
+                versions,
+                after?.versions ?? [],
+                change.date,
+                today,
+                describeRules,
+                notOffered,
+              )
             }
           />
         );

@@ -6,8 +6,6 @@ import {
   ChangeTermsDocument,
   type ChangeTermsMutation,
   ChangeTermsFormTermsDocument,
-  EmployeePanelDocument,
-  EmploymentTermsTabDocument,
   type EmploymentTermsTab_TermsFragment,
   TermsChangePreviewDocument,
 } from "@/__generated__/graphql";
@@ -60,9 +58,8 @@ export function useTermsChange({
   const [earliest, setEarliest] = useState(companyToday());
   const [error, setError] = useState<string | null>(null);
   const { input, termsName, moves, skipped, loading } = usePreview(employeeId, value, open);
+  // The payload carries the person's new terms; History reads its new line when shown.
   const [changeTerms, mutation] = usePayloadMutation(ChangeTermsDocument, {
-    // The tab, the Details row and History read the new terms.
-    refetch: [EmploymentTermsTabDocument, EmployeePanelDocument],
     update: forgetHistory,
   });
   const texts = { firstName, termsName, startDate: value.startDate };
@@ -88,7 +85,7 @@ export function useTermsChange({
     earliest,
     termsName,
     after: moves[0]?.employmentTerms ?? null,
-    keepsOwn: moves[0] ? keptOwn(moves[0].employmentTerms, value.startDate) : [],
+    keepsOwn: moves[0] ? keptOwn(moves[0].employmentTerms, laterOf(value.startDate)) : [],
     error: error ?? (skipped[0] && value.termsId ? skipError({ ...texts, ...skipped[0] }) : null),
     ready: moves.length > 0 && !loading,
     changed: open && value.termsId !== null,
@@ -121,8 +118,10 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
     startDate: value.startDate,
   };
   const { data: terms } = useQuery(ChangeTermsFormTermsDocument, { skip: !open });
+  // Read afresh each time: a save or cancel since may have changed the answer.
   const preview = useQuery(TermsChangePreviewDocument, {
     variables: { input },
+    fetchPolicy: "network-only",
     skip: !open || !input.termsId,
   });
   return {
@@ -132,6 +131,12 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
     ...((open && preview.data?.termsChangePreview) || { moves: [], skipped: [] }),
     loading: preview.loading,
   };
+}
+
+// The preview's versions start today, so a past date reads today's.
+function laterOf(date: string): string {
+  const today = companyToday();
+  return date > today ? date : today;
 }
 
 /** The week and each type the person has their own on `date`, by name. */
