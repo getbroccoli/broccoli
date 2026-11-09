@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SheetClose, SheetTitle } from "@/components/ui/sheet";
 import { RecordHistory } from "@/features/records";
-import { CancelChangeDialog, ruleLine } from "@/features/termsDisplay";
+import { CancelChangeDialog, ruleLine, WeekEditor } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { DefaultPill } from "./DefaultPill";
@@ -25,7 +25,6 @@ import { TERMS_DESCRIPTION } from "./termsDescription";
 import { changesOnlyDays } from "./termsDraft";
 import { usePlannedChanges } from "./usePlannedChanges";
 import { useTermsEditing } from "./useTermsEditing";
-import { WeekEditor } from "./WeekEditor";
 import { WhatChanges } from "./WhatChanges";
 import { WorkingWeekSection } from "./WorkingWeekSection";
 

@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
 
+import type { WeekDraft } from "@/features/termsDisplay";
+
 import {
   appliesFromHint,
   asksForDate,
@@ -10,11 +12,8 @@ import {
   rulesSaveLine,
   savedToast,
   weekChangeBox,
-  weekErrors,
-  weekHint,
   weekSaveLine,
   type RulesDraft,
-  type WeekDraft,
 } from "./termsDraft";
 import type { PolicyVersionText } from "@/features/termsDisplay";
 
@@ -148,30 +147,6 @@ it("describes offering a type to the person reached", () => {
   );
 });
 
-it("accepts working hours in quarter-hour steps", () => {
-  expect(
-    weekErrors({ ...week, hours: ["7.25", "0", "0", "0", "0", "0", "0"] }, "2026-01-01"),
-  ).toEqual({});
-});
-
-it("refuses working hours between quarter-hour steps", () => {
-  expect(
-    weekErrors({ ...week, hours: ["7.3", "0", "0", "0", "0", "0", "0"] }, "2026-01-01"),
-  ).toEqual({ hours: "Enter hours from 0 to 24, in quarter hours." });
-});
-
-it("requires at least one working day", () => {
-  expect(weekErrors({ ...week, hours: ["0", "0", "0", "0", "0", "0", "0"] }, "2026-01-01")).toEqual(
-    { hours: "At least one day needs hours." },
-  );
-});
-
-it("refuses a working week starting before the earliest allowed date", () => {
-  expect(weekErrors({ ...week, startDate: "2025-12-31" }, "2026-01-01")).toEqual({
-    startDate: "Pick a date from 1 Jan 2026.",
-  });
-});
-
 it.each(["366", "20.5"])("accepts %s days of yearly entitlement", (days) => {
   expect(rulesErrors({ ...rules, days }, "2026-01-01")).toEqual({});
 });
@@ -220,10 +195,6 @@ it("adds the start date when a saved working week is planned", () => {
   expect(savedToast("Working week", "Scotland", "2026-12-01", "2026-11-06")).toBe(
     "Working week saved for Scotland. It changes on 1 Dec 2026.",
   );
-});
-
-it("compares the new working week's hours and days with the old week", () => {
-  expect(weekHint(week, currentWeek)).toBe("32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours.");
 });
 
 it.each([
@@ -321,16 +292,6 @@ const currentRules: PolicyVersionText = {
   bankHolidays: "BANK_HOLIDAYS_ON_TOP_OF_ALLOWANCE",
   yearlyEntitlement: { days: 20, daysPerWeek: 5 },
   leaveYearStart: { kind: "LEAVE_YEAR_FROM_FIXED_DATE", month: 1, day: 1 },
-};
-
-const currentWeek = {
-  mondayMinutes: 450,
-  tuesdayMinutes: 450,
-  wednesdayMinutes: 450,
-  thursdayMinutes: 450,
-  fridayMinutes: 450,
-  saturdayMinutes: 0,
-  sundayMinutes: 0,
 };
 
 const defaultRules = {

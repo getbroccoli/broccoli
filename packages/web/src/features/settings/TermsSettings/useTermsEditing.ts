@@ -13,13 +13,17 @@ import {
   rulesSaveLine,
   rulesStartDate,
   weekChangeBox,
-  type WeekDraft,
-  weekDraftOf,
-  weekErrors,
   weekSaveLine,
 } from "./termsDraft";
 import type { Terms, TimeOffRow } from "./termsQueries";
-import { companyToday, splitVersions, versionOn } from "@/features/termsDisplay";
+import {
+  companyToday,
+  splitVersions,
+  versionOn,
+  type WeekDraft,
+  weekDraftOf,
+  weekErrors,
+} from "@/features/termsDisplay";
 import { useSaveSection } from "./useSaveSection";
 
 /** The section open for editing, with its form. */

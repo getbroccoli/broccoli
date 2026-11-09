@@ -2,11 +2,9 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { t } from "@/i18n";
 
 import { TimeOffRulesFields } from "../TimeOffSettings";
-import { DateChoice } from "./DateChoice";
 import {
   appliesFromHint,
   canChangeCounts,
-  nextLeaveYear,
   type RulesDraft,
   rulesErrors,
   rulesStartDate,
@@ -17,6 +15,8 @@ import {
   shortDate,
   splitVersions,
   versionOn,
+  nextLeaveYear,
+  DateChoice,
 } from "@/features/termsDisplay";
 
 type Props = {

@@ -1,24 +1,17 @@
-import type { BankHolidayCalendar, TimeOffRulesInput } from "@/__generated__/graphql";
+import type { TimeOffRulesInput } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { calendarDayParts } from "@/lib/calendarDay";
 
 import { daysError, rulesInputOf, type RulesValues, rulesValuesOf } from "../TimeOffSettings";
 import {
-  DAY_FIELDS,
-  hoursOf,
   type PolicyVersionText,
   ruleSummary,
   shortDate,
-  type WeekMinutes,
   weekSummary,
+  nextLeaveYear,
+  type WeekDraft,
+  weekOfDraft,
 } from "@/features/termsDisplay";
-
-/** The working week form: hours as typed, Monday first. */
-export interface WeekDraft {
-  hours: string[];
-  calendar: BankHolidayCalendar;
-  startDate: string;
-}
 
 /** A time off type's rules form; `offer` when the terms don't have the type yet. */
 export interface RulesDraft extends RulesValues {
@@ -26,18 +19,6 @@ export interface RulesDraft extends RulesValues {
   appliesFrom: "THIS_LEAVE_YEAR" | "NEXT_LEAVE_YEAR" | "ANOTHER_DATE";
   /** The date picked under "Another date". */
   otherDate: string;
-}
-
-/** A week version as the form starts from it. */
-export type WeekVersion = WeekMinutes & { bankHolidayCalendar: BankHolidayCalendar };
-
-/** The week form filled from today's version, applying from today. */
-export function weekDraftOf(version: WeekVersion, today: string): WeekDraft {
-  return {
-    hours: DAY_FIELDS.map((field) => hoursOf(version[field])),
-    calendar: version.bankHolidayCalendar,
-    startDate: today,
-  };
 }
 
 /**
@@ -73,42 +54,6 @@ export function asksForDate(
   return hadPeople || versions.some(({ startDate }) => startDate !== null && startDate > earliest);
 }
 
-/** What is wrong with the week form, by field; empty when it can be saved. */
-export function weekErrors(
-  draft: WeekDraft,
-  earliest: string,
-): Partial<Record<"hours" | "startDate", string>> {
-  const minutes = draft.hours.map(minutesOf);
-  const errors: Partial<Record<"hours" | "startDate", string>> = {};
-  if (minutes.some((value) => value === null)) {
-    errors.hours = t("terms.edit.week.hoursInvalid");
-  } else if (minutes.every((value) => value === 0)) {
-    errors.hours = t("terms.edit.week.noWorkingDay");
-  }
-  if (!draft.startDate || draft.startDate < earliest) {
-    errors.startDate = t("terms.edit.tooEarly", { date: shortDate(earliest) });
-  }
-  return errors;
-}
-
-/** The week the form holds, as minutes; only for a form without errors. */
-export function weekOfDraft(draft: WeekDraft): WeekMinutes {
-  return Object.fromEntries(
-    DAY_FIELDS.map((field, index) => [field, minutesOf(draft.hours[index]!) ?? 0]),
-  ) as WeekMinutes;
-}
-
-/** The hint under the day fields: "32 hours a week, over 4 days. Was Mon–Fri, 7.5 hours." */
-export function weekHint(draft: WeekDraft, current: WeekMinutes): string {
-  const week = weekOfDraft(draft);
-  const minutes = DAY_FIELDS.map((field) => week[field]);
-  return t("terms.edit.week.hint", {
-    hours: hoursOf(minutes.reduce((sum, value) => sum + value, 0)),
-    days: String(minutes.filter((value) => value > 0).length),
-    was: weekSummary(current),
-  });
-}
-
 /** The date the rules apply from: a leave year's start, or the date picked; "" while none is. */
 export function rulesStartDate(draft: RulesDraft, earliest: string): string {
   switch (draft.appliesFrom) {
@@ -119,11 +64,6 @@ export function rulesStartDate(draft: RulesDraft, earliest: string): string {
     case "ANOTHER_DATE":
       return draft.otherDate;
   }
-}
-
-/** The start of the leave year after the one starting on `start`. */
-export function nextLeaveYear(start: string): string {
-  return `${calendarDayParts(start)[0] + 1}${start.slice(4)}`;
 }
 
 /**
@@ -299,15 +239,6 @@ function peopleText(people: number | null): string {
   return people === 1
     ? t("terms.edit.onePerson")
     : t("terms.edit.people", { count: String(people) });
-}
-
-/** Hours as typed, in steps of 15 minutes from 0 to 24, as minutes; null when not. */
-function minutesOf(hours: string): number | null {
-  const value = Number(hours.trim() === "" ? "0" : hours);
-  const minutes = value * 60;
-  return Number.isFinite(value) && value >= 0 && value <= 24 && Number.isInteger(minutes / 15)
-    ? minutes
-    : null;
 }
 
 /** "From 1 Jan 2027, bank holidays still on top", or without the date when there is none. */
