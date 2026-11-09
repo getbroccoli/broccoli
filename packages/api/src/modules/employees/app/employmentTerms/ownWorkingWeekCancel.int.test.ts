@@ -1,4 +1,4 @@
-import { expect, OWNER, test, workingPatternService } from "#test/support";
+import { employeeServices, expect, OWNER, test, workingPatternService } from "#test/support";
 
 test("cancels a planned own week", async ({ orm, seed }) => {
   const employee = await seed.employee({ startDate: "2024-03-01" });
@@ -92,6 +92,30 @@ test.for([
   await expect(
     service.cancelOwnWorkingWeekChange(OWNER, { employeeId: employee.id, startDate }),
   ).rejects.toMatchObject({ code: "CONFLICT", message: "This change has already started." });
+});
+
+test("cancels a planned own week after the person's start moves past it", async ({ orm, seed }) => {
+  const employee = await seed.employee({ startDate: "2024-03-01" });
+  const service = workingPatternService(orm, { today: "2026-11-09" });
+  await service.setOwnWorkingWeek(OWNER, {
+    employeeId: employee.id,
+    startDate: "2026-12-01",
+    ...fourDays,
+  });
+  await employeeServices(orm).updateEmployee(OWNER, {
+    id: employee.id,
+    startDate: "2027-01-01",
+  });
+
+  await service.cancelOwnWorkingWeekChange(OWNER, {
+    employeeId: employee.id,
+    startDate: "2026-12-01",
+  });
+
+  const terms = await service.readEmploymentTerms(OWNER, { employeeIds: [employee.id] });
+  expect(terms.get(employee.id)?.workingWeek).toMatchObject([
+    { source: "from_their_terms", endDate: null },
+  ]);
 });
 
 const fourDays = {

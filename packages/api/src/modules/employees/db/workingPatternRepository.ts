@@ -23,9 +23,13 @@ export interface WorkingPatternRepository {
   lockForReads(): Promise<void>;
   /**
    * Every pattern with its versions, oldest first: named ones by name, then the terms'; with
-   * `only`, just the patterns with those ids or that name.
+   * `only`, just the patterns with those ids, that name, or belonging to those terms.
    */
-  findPatterns(only?: { ids: readonly string[]; name: string }): Promise<WorkingPattern[]>;
+  findPatterns(only?: {
+    ids?: readonly string[];
+    name?: string;
+    termsIds?: readonly string[];
+  }): Promise<WorkingPattern[]>;
   /** A new pattern, named or one set of terms', with one version from the beginning, open unless `week` ends. */
   insertPattern(
     owner: { name: string } | { termsId: string },
@@ -84,8 +88,12 @@ export function workingPatternRepository(db: Orm | Tx): WorkingPatternRepository
         .where(
           only &&
             or(
-              eq(workingPatterns.name, only.name),
-              only.ids.length > 0 ? inArray(workingPatterns.id, [...only.ids]) : undefined,
+              sql`false`,
+              only.name === undefined ? undefined : eq(workingPatterns.name, only.name),
+              only.ids?.length ? inArray(workingPatterns.id, [...only.ids]) : undefined,
+              only.termsIds?.length
+                ? inArray(workingPatterns.termsId, [...only.termsIds])
+                : undefined,
             ),
         )
         .orderBy(

@@ -192,7 +192,7 @@ type EmployeesMutations {
   changeTerms(input: EmployeeTermsChangeInput!): EmployeeTermsChangePayload!
   "Removes a person's move to other terms that has not started; the terms before it run on. Refused with a ConflictError once it has started. Admins only."
   cancelTermsChange(input: EmployeeTermsCancelChangeInput!): EmployeeTermsCancelChangePayload!
-  "Gives a person their own working week from a date no earlier than this leave year's start or their start, open-ended, over their terms'; changes it when they have one then. Admins only."
+  "Gives a person their own working week from a date no earlier than this leave year's start or their start, over their terms', until their next own week change if one is planned; changes it when they have one then. Admins only."
   setOwnWorkingWeek(input: EmployeeOwnWorkingWeekSetInput!): EmployeeOwnWorkingWeekPayload!
   "Puts a person back on their terms' working week from a date: their own week covering it ends the day before, later ones go. Admins only."
   useTermsWorkingWeek(input: EmployeeTermsWorkingWeekUseInput!): EmployeeOwnWorkingWeekPayload!

@@ -11,6 +11,7 @@ import {
   type OwnWeek,
   ownWeekOn,
   parseChangeDate,
+  parseDateField,
   parseWeek,
   type PatternWeek,
   type WeekdayMinutes,
@@ -64,7 +65,9 @@ export function createOwnWorkingWeekService({
     ctx: SecurityContext,
     input: { employeeId: string; startDate: string },
     apply: (weeks: OwnWeek[], from: CalendarDate) => Applied,
-  ) => changeOwnWeeks({ transact, today: today() }, ctx, input, apply);
+    // A cancel names a change already made, whatever has happened to the dates since.
+    { cancel = false } = {},
+  ) => changeOwnWeeks({ transact, today: today(), cancel }, ctx, input, apply);
   return {
     async setOwnWorkingWeek(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
@@ -94,10 +97,15 @@ export function createOwnWorkingWeekService({
 
     async cancelOwnWorkingWeekChange(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const changed = await change(ctx, input, (weeks, from) => {
-        const { weeks: kept, cancelled } = cancelOwnWeekChange(weeks, from, today());
-        return { weeks: kept, before: cancelled, cancelled: true };
-      });
+      const changed = await change(
+        ctx,
+        input,
+        (weeks, from) => {
+          const { weeks: kept, cancelled } = cancelOwnWeekChange(weeks, from, today());
+          return { weeks: kept, before: cancelled, cancelled: true };
+        },
+        { cancel: true },
+      );
       logger.info(changed, "Cancelled an own working week change");
     },
   };
@@ -118,7 +126,11 @@ interface Applied {
  * `apply` leaves them, adds the history line and publishes the working week change.
  */
 async function changeOwnWeeks(
-  { transact, today }: { transact: ModuleDependencies["transact"]; today: CalendarDate },
+  {
+    transact,
+    today,
+    cancel,
+  }: { transact: ModuleDependencies["transact"]; today: CalendarDate; cancel: boolean },
   ctx: SecurityContext,
   input: { employeeId: string; startDate: string },
   apply: (weeks: OwnWeek[], from: CalendarDate) => Applied,
@@ -130,7 +142,9 @@ async function changeOwnWeeks(
     await employmentRepository(tx).lockForWrites();
     await workingPatternRepository(tx).lockForWrites();
     if (!(await employeeRepository(tx).findById(employeeId))) throw employeeNotFound();
-    const from = await parseFrom(tx, employeeId, input.startDate, today);
+    const from = cancel
+      ? parseDateField("startDate", input.startDate)
+      : await parseFrom(tx, employeeId, input.startDate, today);
     const { weeks, workingPatternId } = await readOwnWeeks(tx, employeeId);
     const applied = apply(weeks, from);
     const savedPatternId = await saveOwnWeeks(tx, employeeId, workingPatternId, applied.weeks);

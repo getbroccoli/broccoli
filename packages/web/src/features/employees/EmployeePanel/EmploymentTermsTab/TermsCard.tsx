@@ -119,7 +119,7 @@ export function TermsCard({
             period={{ ...period, startDate: period.startDate! }}
             staysOn={(index === 0 ? current : planned[index - 1])?.termsName ?? ""}
             linksToSettings={linksToSettings}
-            canCancel={Boolean(change) && !editing}
+            canCancel={Boolean(change) && !editing && !weekEdit?.mode}
           />
         ))}
         <TermsRows

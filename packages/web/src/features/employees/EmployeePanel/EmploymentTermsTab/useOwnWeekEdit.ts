@@ -36,8 +36,6 @@ export interface OwnWeekEdit {
   /** The week the editor started from, for its "Was …" hint. */
   current: WeekVersion | null;
   earliest: string;
-  /** The terms whose week a return gives back, on the date picked. */
-  termsName: string;
   /** What saving does; null while the form can't be saved. */
   line: string | null;
   error: string | null;
@@ -94,7 +92,6 @@ export function useOwnWeekEdit({
     draft: shown,
     current: opened?.current ?? null,
     earliest: opened?.earliest ?? today,
-    termsName,
     line: opened && valid ? lineOf(opened.mode) : null,
     error: failed ? t("ownWeek.failed") : null,
     changed: opened !== null && draft !== null && changedFrom(opened.current, draft, today),
@@ -107,6 +104,7 @@ export function useOwnWeekEdit({
     close,
     save: async () => {
       if (!opened || !valid) return;
+      setFailed(false);
       const input = { employeeId, startDate: shown.startDate };
       try {
         if (opened.mode === "own") {

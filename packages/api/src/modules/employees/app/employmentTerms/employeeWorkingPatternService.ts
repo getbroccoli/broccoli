@@ -208,7 +208,9 @@ async function changeAssignments(
       throw employeeNotFound();
     }
     const before = await readTimelines(tx, [employeeId]);
-    const end = await change(tx, before.assignments.get(employeeId) ?? [], before.patterns);
+    // Every pattern: the one a person is put on need not be one they are on yet.
+    const patterns = await workingPatternRepository(tx).findPatterns();
+    const end = await change(tx, before.assignments.get(employeeId) ?? [], patterns);
     const after = await readTimelines(tx, [employeeId]);
     publishWorkingPatternChange(tx, [employeeId], changedFrom);
     const [added] = await recordHistory.append(ctx, tx, {
@@ -269,7 +271,11 @@ export async function readTimelines(
   // One after another: they share the transaction's connection.
   const assignments = await repository.findAssignments(employeeIds);
   const memberships = await readMemberships(tx, employeeIds, move);
-  const patterns = await repository.findPatterns();
+  // Only the patterns these people are on, themselves or through their terms.
+  const patterns = await repository.findPatterns({
+    ids: [...assignments.values()].flat().map(({ workingPatternId }) => workingPatternId),
+    termsIds: [...memberships.values()].flat().map(({ termsId }) => termsId),
+  });
   const byId = new Map(patterns.map((pattern) => [pattern.id, pattern]));
   const byTerms = new Map(
     patterns.flatMap(({ id, termsId }) => (termsId ? [[termsId, id] as const] : [])),
