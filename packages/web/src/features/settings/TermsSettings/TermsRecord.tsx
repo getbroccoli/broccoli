@@ -1,7 +1,10 @@
 import { Briefcase, X } from "@phosphor-icons/react";
 import { useState } from "react";
 
-import type { EmploymentTermsStackQuery } from "@/__generated__/graphql";
+import {
+  EmploymentTermsStackDocument,
+  type EmploymentTermsStackQuery,
+} from "@/__generated__/graphql";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -169,7 +172,11 @@ export function TermsRecord({ terms }: Props) {
         </AlertDialogContent>
       </AlertDialog>
       {adding && (
-        <AddTimeOffTypeDialog onClose={() => setAdding(false)} onAdded={editing.offerType} />
+        <AddTimeOffTypeDialog
+          refetch={[EmploymentTermsStackDocument]}
+          onClose={() => setAdding(false)}
+          onAdded={editing.offerType}
+        />
       )}
       <CancelChangeDialog
         body={planned.body}

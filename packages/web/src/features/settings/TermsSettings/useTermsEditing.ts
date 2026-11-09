@@ -38,7 +38,9 @@ export type OpenSection =
  * unsaved changes; what saving changes, whom it reaches, and saving it.
  */
 export function useTermsEditing(terms: Terms) {
-  const [open, setOpen] = useState<OpenSection | null>(null);
+  const [chosen, setOpen] = useState<OpenSection | null>(null);
+  // A type added from the panel opens once the reloaded terms list it; until then nothing is open.
+  const open = chosen?.kind === "rules" && !hasRow(terms, chosen.timeOffTypeId) ? null : chosen;
   const [opened, setOpened] = useState<OpenSection | null>(null);
   const [waiting, setWaiting] = useState<OpenSection | null>(null);
   const { save, saving } = useSaveSection(terms);
@@ -83,7 +85,6 @@ export function useTermsEditing(terms: Terms) {
       }),
     editRules: (timeOffTypeId: string) =>
       ask({ kind: "rules", timeOffTypeId, draft: draftOf(terms, timeOffTypeId) }),
-    // The panel reloads before a type added from it opens, so its row is there.
     offerType: ({ id, defaultRules }: { id: string; defaultRules: TimeOffRulesInput }) =>
       ask({ kind: "rules", timeOffTypeId: id, draft: rulesDraftOf(null, defaultRules) }),
     // A stop starts from the next leave year, so this year's booked time off stays.
@@ -194,6 +195,10 @@ function savedValues(section: OpenSection | null, earliest: string): string {
   return section.kind === "week"
     ? JSON.stringify(section.draft)
     : JSON.stringify([rulesInputOf(section.draft), rulesStartDate(section.draft, earliest)]);
+}
+
+function hasRow(terms: Terms, timeOffTypeId: string): boolean {
+  return terms.timeOff.some(({ timeOffType }) => timeOffType.id === timeOffTypeId);
 }
 
 function rowOf(terms: Terms, timeOffTypeId: string): TimeOffRow {

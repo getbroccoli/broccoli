@@ -11,20 +11,23 @@ import {
 
 /**
  * Adds the rules' version from `startDate`: the version covering it ends the day before and the new
- * one runs to that version's end, or to the next version; one starting on the date is replaced.
+ * one runs to that version's end, or to the next version; one starting on the date is replaced. A
+ * stop before `today` goes, so rules from before it offer the type again.
  */
 export async function addVersionFrom(
   tx: Tx,
   policy: TimeOffPolicy,
   startDate: CalendarDate,
   rules: TimeOffRules,
+  today: CalendarDate,
 ) {
   const repository = timeOffPolicyRepository(tx);
   const before = policy.versions.find((version) => coversDate(version, startDate)) ?? null;
   const next =
     policy.versions.find(({ startDate: from }) => from !== null && from > startDate) ?? null;
   refuseCountsChangeMidYear(rules, startDate, { before, next });
-  const endDate = before ? before.endDate : next && addDays(next.startDate!, -1);
+  const stoppedBefore = before?.endDate != null && before.endDate < today && !next;
+  const endDate = before && !stoppedBefore ? before.endDate : next && addDays(next.startDate!, -1);
   const { ended, replaced } = makeRoomForDatedRow(policy.versions, startDate, endDate);
   if (replaced) {
     await repository.deleteVersion(replaced.id);

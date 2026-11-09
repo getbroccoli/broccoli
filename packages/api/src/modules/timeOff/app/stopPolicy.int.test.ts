@@ -239,3 +239,34 @@ test("stopping in December takes December's share of a reached person's yearly e
     causeRef: `${policy!.id}:2026-12-01`,
   });
 });
+
+test("offering a stopped type again from before the stop offers it from then on", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  await giveTermsPolicies(orm, transact, {
+    termsId,
+    policies: [{ recordOnly: "family_leave" }],
+    today: "2026-11-09",
+  });
+  const [policy] = await readTermsPolicies(orm, termsId);
+  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  await service.stopPolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    stopDate: "2026-11-09",
+  });
+
+  const result = await service.changePolicy(OWNER, {
+    timeOffPolicyId: policy!.id,
+    startDate: "2026-01-01",
+    rules: { balance: "no_balance" },
+  });
+
+  expect(result.versions.at(-1)).toMatchObject({
+    startDate: "2026-01-01",
+    endDate: null,
+    balance: "no_balance",
+  });
+});

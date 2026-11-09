@@ -1,7 +1,7 @@
 import type { RuleSource } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { shortDate, splitVersions, versionOn } from "@/features/termsDisplay";
-import { calendarDayParts } from "@/lib/calendarDay";
+import { dayAfter } from "@/lib/calendarDay";
 
 /** One stretch of a person on one set of terms, as the panel reads it. */
 export type TermsPeriod = {
@@ -124,11 +124,6 @@ function changeOf<V extends DatedVersion>(
   const { text, detail } = describe(version);
   const source = version.source !== before?.source || version.source === "THEIR_OWN";
   return [text, detail, source && sourceOf(version)].filter(Boolean).join(" · ");
-}
-
-function dayAfter(day: string): string {
-  const [year, month, date] = calendarDayParts(day);
-  return new Date(Date.UTC(year, month, date + 1)).toISOString().slice(0, 10);
 }
 
 function covers({ startDate, endDate }: TermsPeriod, date: string): boolean {

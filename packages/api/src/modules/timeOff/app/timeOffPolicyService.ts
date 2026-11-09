@@ -2,7 +2,7 @@ import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
+import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import {
   cancelPlannedVersion,
   createEmployeeReadService,
@@ -14,7 +14,6 @@ import { timeOffPolicyRepository } from "../db";
 import {
   changesCountsMidYear,
   parseRules,
-  type PolicyVersion,
   plannedStop,
   rulesValue,
   stopValue,
@@ -25,6 +24,7 @@ import {
 } from "../domain";
 import { addVersionFrom } from "./addVersionFrom";
 import { appendTermsHistory } from "./appendTermsHistory";
+import { cancelStop } from "./cancelStop";
 import { endPolicyFrom } from "./endPolicyFrom";
 import { readOfferReach, readPolicyReach } from "./policyReach";
 import type { TimeOffService } from "./timeOffService";
@@ -101,23 +101,6 @@ export function createTimeOffPolicyService({
   const employeeReads = createEmployeeReadService({ orm });
   const reachOf = (tx: Tx, policy: TimeOffPolicy, from: CalendarDate) =>
     readPolicyReach(employeeReads, tx, policy, from);
-  /** Makes the version a planned stop ends open-ended again; returns the policy. */
-  const cancelStop = async (
-    ctx: SecurityContext,
-    tx: Tx,
-    policy: TimeOffPolicy,
-    stopped: PolicyVersion,
-  ) => {
-    const stopDate = addDays(stopped.endDate!, 1);
-    await timeOffPolicyRepository(tx).endVersion(stopped.id, null);
-    await appendTermsHistory(ctx, tx, policy, stopValue(stopDate), null);
-    const reopened = await findPolicy(tx, policy.id);
-    await timeOff.ensureAllowances(ctx, tx, {
-      employeeIds: (await reachOf(tx, reopened, stopDate)).map(({ id }) => id),
-      cause: rulesChanged(policy.id, stopDate),
-    });
-    return reopened;
-  };
   return {
     async createPolicy(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
@@ -170,7 +153,7 @@ export function createTimeOffPolicyService({
         const repository = timeOffPolicyRepository(tx);
         await repository.lockPolicies();
         const policy = existingPolicy(await repository.findAll(), input.timeOffPolicyId);
-        const { before, version } = await addVersionFrom(tx, policy, startDate, rules);
+        const { before, version } = await addVersionFrom(tx, policy, startDate, rules, today());
         await appendTermsHistory(
           ctx,
           tx,
@@ -241,7 +224,8 @@ export function createTimeOffPolicyService({
         const policy = existingPolicy(await repository.findAll(), input.timeOffPolicyId);
         const stopped = plannedStop(policy.versions, input.startDate, today());
         if (stopped) {
-          return { policy, saved: await cancelStop(ctx, tx, policy, stopped) };
+          const saved = await cancelStop(ctx, tx, { policy, stopped, reachOf, timeOff });
+          return { policy, saved };
         }
         const { removed, extended } = cancelPlannedVersion(
           policy.versions,

@@ -12,5 +12,5 @@ export function calendarDayParts(day: string): [number, number, number] {
 /** The `YYYY-MM-DD` day after `day`. */
 export function dayAfter(day: string): string {
   const [year, month, date] = calendarDayParts(day);
-  return calendarDayOf(new Date(Date.UTC(year, month, date + 1)), "UTC");
+  return new Date(Date.UTC(year, month, date + 1)).toISOString().slice(0, 10);
 }
