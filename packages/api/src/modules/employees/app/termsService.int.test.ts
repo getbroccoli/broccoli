@@ -13,7 +13,12 @@ import {
 } from "#test/support";
 
 import { ormOf } from "../../../core/db";
-import { employeeTerms, termsRepository, workingPatternRepository } from "../db";
+import {
+  employeeTerms,
+  locationRepository,
+  termsRepository,
+  workingPatternRepository,
+} from "../db";
 
 test("lists the default terms first, then others by name ignoring case", async ({ orm, seed }) => {
   const defaultId = await seed.defaultTermsId();
@@ -207,4 +212,37 @@ test("deleting terms while a type is offered on them settles without a deadlock"
   const [offer, deletion] = await results;
   expect(offer.status).toBe("fulfilled");
   expect(deletion.status).toBe("fulfilled");
+});
+
+test("refuses deleting terms a location chose while the delete was checking", async ({
+  orm,
+  seed,
+  transact,
+}) => {
+  const id = await seed.terms("Senior staff");
+  await seed.location("Glasgow");
+  const choiceReady = Promise.withResolvers<number>();
+  const releaseChoice = Promise.withResolvers<void>();
+  const choosing = transact(async (tx) => {
+    await locationRepository(tx).setDefaultTerms([{ locationName: "Glasgow", termsId: id }]);
+    const { rows } = await ormOf(tx).execute<{ pid: number }>(sql`select pg_backend_pid() as pid`);
+    choiceReady.resolve(rows[0]!.pid);
+    await releaseChoice.promise;
+  });
+  const blockingPid = await choiceReady.promise;
+
+  const deleting = termsService(orm, { today: "2026-11-06" }).deleteTerms(ADMIN, { id });
+  const results = Promise.allSettled([choosing, deleting]);
+  try {
+    await expectBlockedBy(orm, blockingPid);
+  } finally {
+    releaseChoice.resolve();
+    await results;
+  }
+
+  await expect(deleting).rejects.toMatchObject({
+    code: "CONFLICT",
+    message:
+      "Glasgow starts new people here. Choose other terms for it in Settings › Locations first.",
+  });
 });

@@ -2810,7 +2810,7 @@
           "tableTo": "terms",
           "columnsFrom": ["default_terms_id"],
           "columnsTo": ["id"],
-          "onDelete": "set null",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

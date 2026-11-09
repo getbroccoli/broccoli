@@ -13,7 +13,7 @@ export const locations = pgTable(
     /** Trimmed, in the case it was given. */
     name: text("name").notNull(),
     /** The terms a person added here starts on; null: the default terms. */
-    defaultTermsId: uuid("default_terms_id").references(() => terms.id, { onDelete: "set null" }),
+    defaultTermsId: uuid("default_terms_id").references(() => terms.id),
   },
   (table) => [
     // "Leeds" and " leeds" are one place.

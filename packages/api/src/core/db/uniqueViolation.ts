@@ -2,6 +2,7 @@ import { DrizzleQueryError } from "drizzle-orm";
 import { DatabaseError } from "pg";
 
 const UNIQUE_VIOLATION = "23505";
+const FOREIGN_KEY_VIOLATION = "23503";
 
 /**
  * True when `error` (a node-postgres error, possibly wrapped by Drizzle) is a unique
@@ -14,4 +15,10 @@ export function isUniqueViolation(error: unknown, constraint: string): boolean {
     cause.code === UNIQUE_VIOLATION &&
     cause.constraint === constraint
   );
+}
+
+/** True when `error` (a node-postgres error, possibly wrapped by Drizzle) is a foreign key violation. */
+export function isForeignKeyViolation(error: unknown): boolean {
+  const cause = error instanceof DrizzleQueryError ? error.cause : error;
+  return cause instanceof DatabaseError && cause.code === FOREIGN_KEY_VIOLATION;
 }

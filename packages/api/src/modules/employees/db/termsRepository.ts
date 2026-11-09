@@ -26,7 +26,7 @@ export interface TermsRepository {
    * point rows at them; false when no terms have the id.
    */
   keep(termsId: string): Promise<boolean>;
-  /** Deletes the terms with their working pattern and time off policies; nobody may ever have been on them. */
+  /** Deletes the terms with their working pattern and time off policies; the database refuses while anyone was ever on them or a location starts people on them. */
   delete(termsId: string): Promise<void>;
   /**
    * Deletes every terms but the default ones, with their working patterns and time off policies,
