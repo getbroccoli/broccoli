@@ -1,0 +1,102 @@
+fragment TaskPerson on Employee {
+  id
+  firstName
+  lastName
+  avatarUrl
+}
+
+# A task as the table and its panel show it; every change's payload selects it too.
+fragment TaskFields on Task {
+  id
+  type
+  status
+  title
+  description
+  dueDate
+  createdAt
+  doneAt
+  cancelledAt
+  cancelReason
+  processSource {
+    processKey
+    stepKey
+  }
+  assignee {
+    ...TaskPerson @unmask
+  }
+  requestedBy {
+    ...TaskPerson @unmask
+  }
+  about {
+    ...TaskPerson @unmask
+  }
+  doneBy {
+    ...TaskPerson @unmask
+  }
+}
+
+query MyTasks {
+  myTasks {
+    needsYou {
+      ...TaskFields @unmask
+    }
+    waitingOnOthers {
+      ...TaskFields @unmask
+    }
+    resolvedRecently {
+      ...TaskFields @unmask
+    }
+  }
+}
+
+query TaskPanel($id: ID!) {
+  task(id: $id) {
+    ...TaskFields @unmask
+  }
+}
+
+fragment TaskError on TaskError {
+  __typename
+  ... on Error {
+    message
+  }
+}
+
+mutation MarkTaskDone($input: TaskMarkDoneInput!) {
+  tasks {
+    markDone(input: $input) {
+      task {
+        ...TaskFields @unmask
+      }
+      error {
+        ...TaskError @unmask
+      }
+    }
+  }
+}
+
+mutation ReopenTask($input: TaskReopenInput!) {
+  tasks {
+    reopen(input: $input) {
+      task {
+        ...TaskFields @unmask
+      }
+      error {
+        ...TaskError @unmask
+      }
+    }
+  }
+}
+
+mutation CancelTask($input: TaskCancelInput!) {
+  tasks {
+    cancel(input: $input) {
+      task {
+        ...TaskFields @unmask
+      }
+      error {
+        ...TaskError @unmask
+      }
+    }
+  }
+}

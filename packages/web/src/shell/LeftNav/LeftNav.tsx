@@ -1,6 +1,7 @@
-import { CaretLeft, Users } from "@phosphor-icons/react";
+import { CaretLeft, CheckSquare, Users } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 
+import { useTasksNeedingYou } from "@/features/tasks";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
@@ -9,7 +10,6 @@ import { useInSettings } from "../useInSettings";
 import { WorkspaceMenu } from "../WorkspaceMenu";
 import { NavList, type NavItem } from "./NavList";
 
-const APP_ITEMS: NavItem[] = [{ to: "/people", label: t("nav.people"), icon: Users }];
 const SETTINGS_AREA_ITEMS: NavItem[] = [
   { to: "/settings/terms", label: t("terms.title") },
   { to: "/settings/time-off", label: t("settings.timeOff.title") },
@@ -25,6 +25,17 @@ const SETTINGS_SYSTEM_ITEMS: NavItem[] = [
  */
 export function LeftNav() {
   const inSettings = useInSettings();
+  const tasksNeedingYou = useTasksNeedingYou() ?? 0;
+  const appItems: NavItem[] = [
+    {
+      to: "/tasks",
+      label: t("nav.tasks"),
+      icon: CheckSquare,
+      count: tasksNeedingYou,
+      countLabel: t("nav.tasksNeedYou", { count: String(tasksNeedingYou) }),
+    },
+    { to: "/people", label: t("nav.people"), icon: Users },
+  ];
   return (
     <aside className="shrink-0 md:h-full md:w-56 md:overflow-hidden">
       <div
@@ -38,7 +49,7 @@ export function LeftNav() {
           <div className="min-w-0 flex-1 md:flex-none md:pt-1 md:pb-4">
             <WorkspaceMenu />
           </div>
-          <NavList label={t("nav.label")} items={APP_ITEMS} />
+          <NavList label={t("nav.label")} items={appItems} />
           <ProfileMenu />
         </div>
         <div inert={!inSettings} className={cn(menuClass, !inSettings && "max-md:hidden")}>
