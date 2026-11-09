@@ -4,6 +4,7 @@ import {
   DEFAULT_EMPLOYEE_PANEL_SEARCH,
   EmployeePanel,
   employeePanelSearch,
+  listSearchOf,
 } from "@/features/employees";
 
 export const Route = createFileRoute("/_authenticated/people/$employeeId")({
@@ -15,13 +16,7 @@ export const Route = createFileRoute("/_authenticated/people/$employeeId")({
     return (
       <EmployeePanel
         employeeId={employeeId}
-        onClose={() =>
-          void navigate({
-            to: "/people",
-            // The list keeps its own search; the panel's tab leaves with the panel.
-            search: ({ q, sort, dir, after }) => ({ q, sort, dir, after }),
-          })
-        }
+        onClose={() => void navigate({ to: "/people", search: listSearchOf })}
       />
     );
   },

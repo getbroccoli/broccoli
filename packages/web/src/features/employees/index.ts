@@ -5,6 +5,7 @@ export {
   DiscardChangesDialog,
   EmployeePanel,
   employeePanelSearch,
+  listSearchOf,
 } from "./EmployeePanel";
 export {
   DEFAULT_EMPLOYEE_LIST_SEARCH,
