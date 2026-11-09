@@ -46,6 +46,7 @@ export const peopleEn = {
   "people.panel.terms.earlier": "Earlier terms ({count})",
   "people.panel.terms.earlierPeriod": "{from} to {until}",
   "people.panel.terms.noTerms": "Not on any terms yet.",
+  "people.panel.terms.loadError": "Couldn’t load the employment terms.",
   "people.panel.terms.lastChanged": "Last changed by {author} on {date}",
   "people.panel.terms.seeHistory": "See history",
   "people.panel.field.employmentTerms": "Employment terms",

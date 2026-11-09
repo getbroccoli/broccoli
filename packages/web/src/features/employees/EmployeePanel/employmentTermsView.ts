@@ -68,10 +68,11 @@ export function rowOf<V extends DatedVersion>(
       source: current.source,
       sourceLabel: sourceOf(current),
     },
-    planned: planned.map((version) => {
+    planned: planned.map((version, index) => {
       const { text, detail } = describe(version);
+      const before = index === 0 ? current : planned[index - 1];
       // A change of where it comes from is part of the change, such as back to the terms' week.
-      const source = version.source !== current?.source || version.source === "THEIR_OWN";
+      const source = version.source !== before?.source || version.source === "THEIR_OWN";
       return t("people.panel.terms.planned", {
         date: shortDate(version.startDate),
         change: [text, detail, source && sourceOf(version)].filter(Boolean).join(" · "),

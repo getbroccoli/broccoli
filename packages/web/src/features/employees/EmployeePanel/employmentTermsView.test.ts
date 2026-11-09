@@ -194,3 +194,38 @@ it("names the terms when a planned change returns from the person's own week", (
 
   expect(row.planned).toEqual(["From 1 Jan 2027: Mon–Fri, 7.5 hours · from England and Wales"]);
 });
+
+it("names the source of a planned return after a planned own week", () => {
+  const versions = [
+    {
+      source: "FROM_THEIR_TERMS",
+      startDate: "2026-11-10",
+      endDate: "2026-11-30",
+      text: "Mon–Fri, 7.5 hours",
+    },
+    {
+      source: "THEIR_OWN",
+      startDate: "2026-12-01",
+      endDate: "2026-12-31",
+      text: "Mon–Thu, 8 hours",
+    },
+    {
+      source: "FROM_THEIR_TERMS",
+      startDate: "2027-01-01",
+      endDate: null,
+      text: "Mon–Fri, 7.5 hours",
+    },
+  ] as const;
+
+  const row = rowOf(
+    versions,
+    "2026-11-10",
+    ({ text }) => ({ text }),
+    ({ source }) => (source === "THEIR_OWN" ? "Sam’s own" : "from England and Wales"),
+  );
+
+  expect(row.planned).toEqual([
+    "From 1 Dec 2026: Mon–Thu, 8 hours · Sam’s own",
+    "From 1 Jan 2027: Mon–Fri, 7.5 hours · from England and Wales",
+  ]);
+});

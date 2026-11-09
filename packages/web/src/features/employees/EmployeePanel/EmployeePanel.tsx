@@ -21,6 +21,8 @@ type Props = {
 export function EmployeePanel({ employeeId, onClose }: Props) {
   const { data, error, loading, refetch } = useQuery(EmployeePanelDocument, {
     variables: { id: employeeId },
+    // Settings can rename the terms the panel names; it reads them again each time it opens.
+    fetchPolicy: "cache-and-network",
   });
 
   return (
