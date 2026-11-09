@@ -128,7 +128,8 @@ function usePreview(employeeId: string, value: TermsChoice, open: boolean) {
   return {
     input,
     termsName: terms?.allTerms.find(({ id }) => id === input.termsId)?.name ?? "",
-    ...(preview.data?.termsChangePreview ?? { moves: [], skipped: [] }),
+    // A skipped query keeps its last answer, which a closed edit must not show.
+    ...((open && preview.data?.termsChangePreview) || { moves: [], skipped: [] }),
     loading: preview.loading,
   };
 }

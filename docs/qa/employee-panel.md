@@ -64,6 +64,21 @@ A manual check of opening a person from People, their tabs, editing them in plac
 - [ ] Signed in as an employee, their own panel reads "from your terms" and shows the terms' name without a link; a colleague who is not their report has no Employment terms tab.
 - [ ] At phone width each row stacks its name, rules and source.
 
+## Change terms
+
+Add terms "Scotland" in Settings › Employment terms first, and a location "Glasgow" that starts people on Scotland.
+
+- [ ] As the owner, "Change terms" on the tab opens the card with a dark border and the form on top: Terms ("England and Wales (now)" can't be picked) and Applies from (today; days before 1 January this year, or before the person's start, can't be picked). The button greys out while the form is open.
+- [ ] Picking Scotland from the 1st of next month adds "From 1 <month>: …" under each row that changes, such as "Mon–Fri, 7.5 hours · Scotland bank holidays", and "not offered" for a type Scotland doesn't offer; the hint ends "What changes on 1 <month> is marked below." The footer reads "Saving moves <first name> to Scotland from 1 <month>." with Cancel and Save.
+- [ ] Today or a past date adds "<first name>’s allowance is worked out again from that date." to the footer.
+- [ ] Save shows "<first name> moves to Scotland on 1 <month>."; the card still shows England and Wales, with "From 1 <month>: Scotland" and "Cancel change" under its name, and each row's planned line. A move from today shows "<first name> is on Scotland from <today>." and the card reads Scotland since today; Details › Job reads "Employment terms: Scotland".
+- [ ] History, filtered to Employment terms, shows "You changed terms to Scotland from 1 <month>"; "Last changed by You on <today>" sits under the card.
+- [ ] "Cancel change" asks "Cancel this change?" "<first name> stays on England and Wales."; Keep change leaves it; Cancel change shows "Change cancelled.", removes the line and adds "You cancelled the change of terms to Scotland from 1 <month>" to History.
+- [ ] With Scotland picked, switching tab or closing the panel asks "Discard 1 unsaved change?"; Discard closes the form. With nothing picked, switching tab just closes it.
+- [ ] Moving Aisha's location to Glasgow on Overview shows "Location saved. <first name> stays on England and Wales; Glasgow’s new people start on Scotland." and her terms stay.
+- [ ] Signed in as an employee, the tab has no "Change terms" and no "Cancel change".
+- [ ] At phone width the fields stack and the footer wraps its save line above Cancel and Save.
+
 ## Time off
 
 - [ ] A demo person who started before this year shows "Time off · <this year>" between the key facts and Details: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded".

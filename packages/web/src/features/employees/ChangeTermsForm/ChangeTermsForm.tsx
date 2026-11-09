@@ -54,7 +54,7 @@ export function ChangeTermsForm({
           </select>
         </div>
         <div className="flex min-w-48 flex-1 flex-col gap-1.5">
-          <span className="text-sm font-medium">{t("changeTerms.appliesFrom")}</span>
+          <Label>{t("changeTerms.appliesFrom")}</Label>
           <DatePicker
             value={value.startDate}
             fromDate={earliest}
