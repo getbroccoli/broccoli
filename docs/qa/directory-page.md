@@ -30,6 +30,17 @@ As an admin with at least three people (outside the demo):
 - [ ] Choosing "None" removes their manager.
 - [ ] Ticking someone and picking a person who reports to them toasts "That person reports to someone you selected, so they can’t be their manager." and changes nothing.
 
+## Change terms
+
+As an admin, with terms "Scotland" added in Settings › Employment terms (the demo works too; it shows no "Invite"):
+
+- [ ] Ticking three people shows "Change terms" beside "Set manager"; it opens "Change terms for 3 people" with Terms, Applies from (today; nothing before 1 January this year) and "Earlier days stay on their terms."
+- [ ] Picking Scotland reads "Saving moves 3 people to Scotland from <today>." with Cancel and "Change terms".
+- [ ] A person already on Scotland on that date shows "Already on Scotland on <date>, so they stay as they are: <name>." and isn't counted; with only such people, the footer reads "Nobody here moves to Scotland from <date>." and the button is disabled.
+- [ ] A person starting after the date shows under "Start after <date>, so they move from their start date: …"; one with a later planned move to other terms under "Have a later change that stays: <name> moves to <terms> on <date>."
+- [ ] More than three names in a line end "and N more".
+- [ ] Saving from today toasts "3 people are on Scotland from <today>." (a future date: "… move to Scotland on <date>."), clears the selection, and each panel's Employment terms tab and History show the move.
+
 ## Robustness
 
 - [ ] `/people?sort=bogus&dir=sideways&after=junk&q=` opens the normal list.

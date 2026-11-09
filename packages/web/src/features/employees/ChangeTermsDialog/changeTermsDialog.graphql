@@ -1,0 +1,64 @@
+# What a bulk move would do: who moves and from when, as they would be after it, and who is skipped.
+query BulkTermsChangePreview($input: EmployeeTermsChangeInput!) {
+  termsChangePreview(input: $input) {
+    moves {
+      startDate
+      employee {
+        id
+        firstName
+        lastName
+      }
+      employmentTerms {
+        periods {
+          termsName
+          startDate
+        }
+        workingWeek {
+          source
+          startDate
+          endDate
+        }
+        timeOff {
+          versions {
+            source
+            startDate
+            endDate
+          }
+        }
+      }
+    }
+    skipped {
+      reason
+      employee {
+        id
+        firstName
+        lastName
+      }
+    }
+  }
+}
+
+mutation BulkChangeTerms($input: EmployeeTermsChangeInput!) {
+  employees {
+    changeTerms(input: $input) {
+      moved {
+        startDate
+        employee {
+          id
+        }
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
