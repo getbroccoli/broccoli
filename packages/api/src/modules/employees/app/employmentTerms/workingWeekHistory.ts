@@ -1,7 +1,7 @@
-import type { Tx } from "../../../core/db";
-import { createRecordHistoryService } from "../../../core/records";
-import type { SecurityContext } from "../../../core/security";
-import type { PatternVersion, WorkingPattern } from "../domain";
+import type { Tx } from "../../../../core/db";
+import { createRecordHistoryService } from "../../../../core/records";
+import type { SecurityContext } from "../../../../core/security";
+import type { PatternVersion, WorkingPattern } from "../../domain";
 
 const recordHistory = createRecordHistoryService();
 

@@ -20,11 +20,14 @@ export {
   type LocationWithPeopleCount,
 } from "./locationService";
 export { employeeDirectory } from "./employeeDirectory";
-export { createWorkingPatternService, type WorkingPatternService } from "./workingPatternService";
+export {
+  createWorkingPatternService,
+  type WorkingPatternService,
+} from "./employmentTerms/workingPatternService";
 export {
   createEmployeeWorkingPatternService,
   type EmployeeWorkingPatternService,
-} from "./employeeWorkingPatternService";
+} from "./employmentTerms/employeeWorkingPatternService";
 export type { EmploymentTerms, PersonWorkingWeek } from "./employmentTerms/readEmploymentTerms";
 export { employeeRecordType } from "./employeeRecordType";
 export {

@@ -1,16 +1,22 @@
-import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Transact, Tx } from "../../../core/db";
-import type { Logger } from "../../../core/logger";
-import type { ModuleDependencies } from "../../../core/moduleManifest";
-import { createRecordHistoryService, type HistoryLine } from "../../../core/records";
-import { isInRecordScope, type SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../utils";
+import { ApplicationError, invalidInput } from "../../../../core/applicationError";
+import type { Transact, Tx } from "../../../../core/db";
+import type { Logger } from "../../../../core/logger";
+import type { ModuleDependencies } from "../../../../core/moduleManifest";
+import { createRecordHistoryService, type HistoryLine } from "../../../../core/records";
+import { isInRecordScope, type SecurityContext } from "../../../../core/security";
+import {
+  addDays,
+  type CalendarDate,
+  coversDate,
+  parseUuid,
+  todayInLondon,
+} from "../../../../utils";
 import {
   employeeRepository,
   employmentRepository,
   termsRepository,
   workingPatternRepository,
-} from "../db";
+} from "../../db";
 import {
   type DatedPattern,
   type TermsMembership,
@@ -22,10 +28,10 @@ import {
   type WorkingPatternTimeline,
   type WorkingWeek,
   workingWeeksOf,
-} from "../domain";
-import { employeeNotFound } from "./employeeNotFound";
+} from "../../domain";
+import { employeeNotFound } from "../employeeNotFound";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
-import { type EmploymentTerms, readEmploymentTerms } from "./employmentTerms/readEmploymentTerms";
+import { type EmploymentTerms, readEmploymentTerms } from "./readEmploymentTerms";
 import { referencedPattern } from "./workingPatternService";
 
 const recordHistory = createRecordHistoryService();

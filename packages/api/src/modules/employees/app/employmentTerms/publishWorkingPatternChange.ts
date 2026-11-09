@@ -1,5 +1,5 @@
-import type { Tx } from "../../../core/db";
-import type { CalendarDate } from "../../../utils";
+import type { Tx } from "../../../../core/db";
+import type { CalendarDate } from "../../../../utils";
 
 /** Tells other modules these employees' working weeks may have changed from `from`; none: no event. */
 export function publishWorkingPatternChange(
