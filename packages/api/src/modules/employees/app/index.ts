@@ -32,9 +32,9 @@ export {
   createTermsService,
   type LockTermsParts,
   type TermsService,
-} from "./termsService";
-export { termsRecordType } from "./termsRecordType";
-export type { TermsOverview } from "./readTermsOverviews";
+} from "./employmentTerms/termsService";
+export { termsRecordType } from "./employmentTerms/termsRecordType";
+export type { TermsOverview } from "./employmentTerms/readTermsOverviews";
 export {
   createEmployeeInviteService,
   type EmployeeInviteService,

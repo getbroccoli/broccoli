@@ -11,7 +11,7 @@ import {
   test,
 } from "#test/support";
 
-import { locationRepository, workingPatternRepository } from "../db";
+import { locationRepository, workingPatternRepository } from "../../db";
 
 test("clones today's working week from the beginning and keeps planned weeks, leaving past weeks out", async ({
   orm,
