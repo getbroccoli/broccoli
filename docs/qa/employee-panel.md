@@ -52,7 +52,7 @@ A manual check of opening a person from People, their tabs, editing them in plac
 
 - [ ] The History tab shows the chips All, Employment terms and Details, All chosen, and no "History" label.
 - [ ] Lines are newest first, grouped "Today", "Yesterday", "21 Oct"; each has the author (the owner's email, or "Broccoli" for the demo), the tag "Details" (or "Employment terms" for a working week change), the cause and the time.
-- [ ] Employment terms adds `changes=employmentTerms` and shows only such lines, or "No changes recorded yet."; Details shows the other lines. A change saved on Overview shows under Details when History opens.
+- [ ] Employment terms adds `changes=employmentTerms` and shows only such lines, or "No changes of this kind yet."; Details shows the other lines. A change saved on Overview shows under Details when History opens.
 - [ ] The demo person's first line is "Broccoli added <first name> with 5 fields: …" with "Demo".
 - [ ] With more than 50 lines, "Show older changes" loads the rest.
 

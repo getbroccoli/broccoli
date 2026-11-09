@@ -7,9 +7,5 @@ export {
   type VisibleFieldChange,
   type VisibleHistoryLine,
 } from "./recordHistoryReaderService";
-export {
-  createRecordHistoryService,
-  type HistoryPageArgs,
-  type RecordChanged,
-} from "./recordHistoryService";
+export { createRecordHistoryService, type RecordChanged } from "./recordHistoryService";
 export { createRecordCloneService, type RecordCloneService } from "./recordCloneService";

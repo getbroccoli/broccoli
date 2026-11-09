@@ -96,7 +96,9 @@ export function RecordHistory({
         </div>
       )}
       {history?.edges.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("records.history.empty")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t(filter ? "records.history.emptyFiltered" : "records.history.empty")}
+        </p>
       ) : (
         history && (
           <div className="overflow-hidden rounded-xl border border-border bg-card">

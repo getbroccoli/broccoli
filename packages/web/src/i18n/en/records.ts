@@ -39,6 +39,7 @@ export const recordsEn = {
   "records.history.showChanges": "Show the changes",
   "records.history.hideChanges": "Hide the changes",
   "records.history.empty": "No changes recorded yet.",
+  "records.history.emptyFiltered": "No changes of this kind yet.",
   "records.history.hidden": "Hidden",
   "records.history.older": "Show older changes",
   "records.history.error": "Couldn’t load the history.",
