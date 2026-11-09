@@ -151,7 +151,8 @@ export function createTermsService({
       ctx.require("MANAGE_WORKSPACE");
       const sourceId = parseTermsId(id);
       const name = parseTermsName(givenName);
-      if (!(await termsRepository(tx).lock(sourceId))) {
+      // Not `lock`: offering a type holds the policies, then checks these terms' row by key.
+      if (!(await termsRepository(tx).keep(sourceId))) {
         throw termsNotFound();
       }
       const cloneId = await refuseTakenName(() => termsRepository(tx).insert(name));

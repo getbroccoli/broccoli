@@ -21,6 +21,11 @@ export interface TermsRepository {
   rename(termsId: string, name: string): Promise<void>;
   /** Holds the terms' row until the caller commits, so nobody joins them meanwhile; null when no terms have the id. */
   lock(termsId: string): Promise<Terms | null>;
+  /**
+   * Keeps the terms from being deleted until the caller commits, still letting others rename them or
+   * point rows at them; false when no terms have the id.
+   */
+  keep(termsId: string): Promise<boolean>;
   /** Deletes the terms with their working pattern and time off policies; nobody may ever have been on them. */
   delete(termsId: string): Promise<void>;
   /**
@@ -98,6 +103,15 @@ export function termsRepository(db: Orm | Tx): TermsRepository {
         .where(eq(terms.id, termsId))
         .for("update");
       return locked ? termsOf(locked) : null;
+    },
+
+    async keep(termsId) {
+      const [kept] = await orm()
+        .select({ id: terms.id })
+        .from(terms)
+        .where(eq(terms.id, termsId))
+        .for("key share");
+      return kept !== undefined;
     },
 
     async delete(termsId) {
