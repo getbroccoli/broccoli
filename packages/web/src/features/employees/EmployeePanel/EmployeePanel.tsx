@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { t } from "@/i18n";
 
 import { EmployeeRecord } from "./EmployeeRecord";
+import { listSearchOf } from "./employeePanelSearch";
 
 type Props = {
   employeeId: string;
@@ -53,7 +54,7 @@ export function EmployeePanel({ employeeId, onClose }: Props) {
             {!loading && !error && (
               <Link
                 to="/people"
-                search={(previous) => previous}
+                search={listSearchOf}
                 className="text-sm underline underline-offset-2"
               >
                 {t("people.panel.backToPeople")}

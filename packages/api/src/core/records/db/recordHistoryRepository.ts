@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, desc, eq, lt, not, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { type Orm, ormOf, type Tx } from "../../db";
@@ -18,7 +18,7 @@ import { recordHistory } from "./recordHistoryTable";
 export interface RecordHistoryRepository {
   /** Inserts the lines in one statement and returns them in the same order. */
   insert(lines: readonly NewHistoryLine[]): Promise<HistoryLine[]>;
-  /** Up to `limit` of one record's lines, newest first, older than the line `after`. */
+  /** Up to `limit` of one record's lines that pass its field filter, newest first, older than the line `after`. */
   findPage(query: HistoryPageQuery): Promise<KeysetRow<HistoryLine, HistorySortValues>[]>;
   /** Deletes every line of one record type; returns how many. */
   deleteRecordType(recordType: RecordType): Promise<number>;
@@ -37,11 +37,20 @@ export const HISTORY_SORT_VALUES = z.tuple([
     .refine((id) => BigInt(id) <= MAX_HISTORY_ID),
 ]);
 
-export interface HistoryPageQuery {
+export interface HistoryPageQuery extends HistoryFieldFilter {
   recordType: RecordType;
   recordId: string;
   after: HistorySortValues | null;
   limit: number;
+}
+
+/**
+ * Keeps the lines that change at least one of `changingAnyOf` and none of `changingNoneOf`; absent
+ * lists keep every line. A name ending in `*` matches every field that starts with the rest.
+ */
+export interface HistoryFieldFilter {
+  changingAnyOf?: readonly string[];
+  changingNoneOf?: readonly string[];
 }
 
 export function recordHistoryRepository(db: Orm | Tx): RecordHistoryRepository {
@@ -60,7 +69,7 @@ export function recordHistoryRepository(db: Orm | Tx): RecordHistoryRepository {
       return inserted;
     },
 
-    findPage: async ({ recordType, recordId, after, limit }) => {
+    findPage: async ({ recordType, recordId, after, limit, changingAnyOf, changingNoneOf }) => {
       const rows = await orm()
         .select()
         .from(recordHistory)
@@ -69,6 +78,8 @@ export function recordHistoryRepository(db: Orm | Tx): RecordHistoryRepository {
             eq(recordHistory.recordType, recordType),
             eq(recordHistory.recordId, recordId),
             after ? lt(recordHistory.id, BigInt(after[0])) : undefined,
+            changingAnyOf ? changesAnyOf(changingAnyOf) : undefined,
+            changingNoneOf ? not(changesAnyOf(changingNoneOf)) : undefined,
           ),
         )
         .orderBy(desc(recordHistory.id))
@@ -92,6 +103,17 @@ const MAX_HISTORY_ID = 9_223_372_036_854_775_807n;
 const INSERT_BATCH_SIZE = 1_000;
 
 type HistoryRow = typeof recordHistory.$inferSelect;
+
+// The query builder cannot look inside a jsonb array (RULE67); every name is a parameter.
+function changesAnyOf(fields: readonly string[]): SQL {
+  if (fields.length === 0) return sql`false`;
+  const matches = fields.map((field) =>
+    field.endsWith("*")
+      ? sql`starts_with(change ->> 'field', ${field.slice(0, -1)})`
+      : sql`change ->> 'field' = ${field}`,
+  );
+  return sql`exists (select 1 from jsonb_array_elements(${recordHistory.changes}) as change where ${sql.join(matches, sql` or `)})`;
+}
 
 function toRow({ author, cause, operation, ...line }: NewHistoryLine) {
   return {

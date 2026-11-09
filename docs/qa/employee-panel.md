@@ -1,6 +1,6 @@
 # QA: A person's panel
 
-A manual check of opening a person from People, editing them in place, their history and removing them, against a development stack.
+A manual check of opening a person from People, their tabs, editing them in place, their history and removing them, against a development stack.
 
 ## Setup
 
@@ -11,7 +11,8 @@ A manual check of opening a person from People, editing them in place, their his
 
 - [ ] Clicking anywhere in a row opens that person's panel over the list; the URL becomes `/people/<id>` and keeps the list's search and sort.
 - [ ] Tab to a name and press Enter: the same panel opens.
-- [ ] The panel shows the avatar, name and job title; Start date, Tenure ("2 yrs 1 mo", "Starts in 3 days" for a future start) and Work email; Details in Job and Personal; History below.
+- [ ] The panel shows the avatar, name and job title, then the tabs Overview and History, on Overview: Start date, Tenure ("2 yrs 1 mo", "Starts in 3 days" for a future start) and Work email; Time off; Details in Job and Personal.
+- [ ] Choosing History adds `?tab=history` to the URL; reloading keeps History open; Overview removes it again. Closing the panel leaves no tab in the People URL.
 - [ ] Close (×), Escape and the browser Back button close the panel and return to the same list.
 - [ ] Reloading `/people/<id>` opens the panel again; an unknown id shows "This person doesn’t exist." with Back to People.
 
@@ -44,17 +45,20 @@ A manual check of opening a person from People, editing them in place, their his
 ## Leaving with unsaved changes
 
 - [ ] With unsaved changes, Close, Escape or Back asks "Discard N unsaved changes?"; Keep editing stays, Discard leaves without saving.
+- [ ] With unsaved changes, choosing History asks the same; Discard opens History and Overview shows the saved values.
 - [ ] Reloading or closing the tab with unsaved changes shows the browser's own leave prompt.
 
 ## History
 
-- [ ] Lines are newest first, grouped "Today", "Yesterday", "21 Oct"; each has the author (the owner's email, or "Broccoli" for the demo), the cause and the time.
+- [ ] The History tab shows the chips All, Employment terms and Details, All chosen, and no "History" label.
+- [ ] Lines are newest first, grouped "Today", "Yesterday", "21 Oct"; each has the author (the owner's email, or "Broccoli" for the demo), the tag "Details" (or "Employment terms" for a working week change), the cause and the time.
+- [ ] Employment terms adds `changes=employmentTerms` and shows only such lines, or "No changes of this kind yet."; Details shows the other lines. A change saved on Overview shows under Details when History opens.
 - [ ] The demo person's first line is "Broccoli added <first name> with 5 fields: …" with "Demo".
 - [ ] With more than 50 lines, "Show older changes" loads the rest.
 
 ## Time off
 
-- [ ] A demo person who started before this year shows "Time off · <this year>" between Details and History: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded".
+- [ ] A demo person who started before this year shows "Time off · <this year>" between the key facts and Details: an Annual leave card with Entitlement 28, Bank holidays 8, Used 0, Remaining 20, then Sickness, Family leave and Other, each "0 days recorded".
 - [ ] A demo person who started this year shows their pro-rated figures, and entitlement − bank holidays − used equals remaining.
 - [ ] After Reset setup, a person added without turning time off on shows "Time off" with "No time off this year."
 - [ ] Invite a person (see [Invites](invites.md)) and sign in as them: their own panel shows the section; a colleague's panel who is not their report shows no Time off section; once they manage that colleague (Manager above), it shows.

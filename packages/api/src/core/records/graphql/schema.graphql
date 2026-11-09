@@ -101,6 +101,10 @@ type Query {
     "Page size, 1 to 10000."
     first: Int = 50
     after: String
+    "Only changes to at least one of these fields; a name ending in `*` matches every field starting with the rest."
+    changingAnyOf: [String!]
+    "Only changes to none of these fields, matched as changingAnyOf matches."
+    changingNoneOf: [String!]
   ): RecordChangeConnection!
 }
 
