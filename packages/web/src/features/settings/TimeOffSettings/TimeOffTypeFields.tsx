@@ -59,7 +59,11 @@ export function TimeOffTypeFields({ values, onChange, sickness, nameError }: Pro
           />
         </div>
         {nameError && (
-          <p id="time-off-type-name-error" role="alert" className="text-sm text-destructive">
+          <p
+            id="time-off-type-name-error"
+            role="alert"
+            className="text-sm wrap-anywhere text-destructive"
+          >
             {t(nameError, { name: trimmed })}
           </p>
         )}
@@ -120,7 +124,10 @@ export function TimeOffTypeFields({ values, onChange, sickness, nameError }: Pro
         />
         <div className="flex flex-col gap-0.5">
           <Label htmlFor="time-off-type-show-reason">{t("settings.timeOff.showReason")}</Label>
-          <p id="time-off-type-show-reason-hint" className="text-sm text-muted-foreground">
+          <p
+            id="time-off-type-show-reason-hint"
+            className="text-sm wrap-anywhere text-muted-foreground"
+          >
             {sickness
               ? t("settings.timeOff.sicknessPrivate")
               : values.private
