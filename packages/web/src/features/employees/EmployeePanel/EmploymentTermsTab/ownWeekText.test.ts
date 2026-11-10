@@ -6,6 +6,7 @@ import {
   ownWeekSaveLine,
   termsWeekSavedToast,
   termsWeekSaveLine,
+  weekToEditFrom,
 } from "./ownWeekText";
 
 it("explains giving a person their own week from a future date", () => {
@@ -122,4 +123,9 @@ it("does not offer cancellation for a planned change from the terms", () => {
       "2026-11-09",
     ),
   ).toEqual([]);
+});
+
+it("edits a person who has not started yet from their first week", () => {
+  const first = { source: "FROM_THEIR_TERMS" as const, startDate: "2027-01-04", endDate: null };
+  expect(weekToEditFrom([first], "2026-11-09")).toBe(first);
 });

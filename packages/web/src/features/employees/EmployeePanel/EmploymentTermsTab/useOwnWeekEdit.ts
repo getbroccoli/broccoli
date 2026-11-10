@@ -94,7 +94,10 @@ export function useOwnWeekEdit({
     earliest: opened?.earliest ?? today,
     line: opened && valid ? lineOf(opened.mode) : null,
     error: failed ? t("ownWeek.failed") : null,
-    changed: opened !== null && draft !== null && changedFrom(opened.current, draft, today),
+    changed:
+      opened !== null &&
+      draft !== null &&
+      changedFrom(opened.current, draft, laterOf(opened.earliest, today)),
     saving: setting.loading || returning.loading,
     open: (start) => {
       setOpened(start);
@@ -137,12 +140,12 @@ function hasNoErrors(mode: OwnWeekMode, draft: WeekDraft, earliest: string): boo
 }
 
 /** Something differs from what the form opened with, so leaving asks first. */
-function changedFrom(current: WeekVersion, draft: WeekDraft, today: string): boolean {
-  const start = weekDraftOf(current, today);
+function changedFrom(current: WeekVersion, draft: WeekDraft, startDate: string): boolean {
+  const start = weekDraftOf(current, startDate);
   return (
     draft.calendar !== start.calendar ||
     draft.hours.some((hours, index) => hours !== start.hours[index]) ||
-    draft.startDate !== today
+    draft.startDate !== startDate
   );
 }
 

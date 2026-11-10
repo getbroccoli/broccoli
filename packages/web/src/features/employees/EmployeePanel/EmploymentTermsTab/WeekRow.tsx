@@ -13,7 +13,7 @@ import { t } from "@/i18n";
 import { forgetHistory } from "../../cache";
 import { describeWeek, rowOf } from "./employmentTermsView";
 import { WeekRowEditor } from "./WeekRowEditor";
-import { cancellableStarts } from "./ownWeekText";
+import { cancellableStarts, weekToEditFrom } from "./ownWeekText";
 import { TermsRuleRow } from "./TermsRuleRow";
 import type { OwnWeekEdit } from "./useOwnWeekEdit";
 
@@ -59,16 +59,17 @@ export function WeekRow({
     sourceOf,
     t("people.panel.terms.noWeekLower"),
   );
-  const { current, planned } = splitVersions(workingWeek, today);
-  const hasOwn = [current, ...planned].some((version) => version?.source === "THEIR_OWN");
-  const canAct = edit !== null && edit.mode === null && !locked && current !== null;
+  const base = weekToEditFrom(workingWeek, today);
+  const { planned } = splitVersions(workingWeek, today);
+  const hasOwn = [base, ...planned].some((version) => version?.source === "THEIR_OWN");
+  const canAct = edit !== null && edit.mode === null && !locked && base !== null;
   const open = (mode: "own" | "terms") =>
-    current &&
+    base &&
     edit?.open({
       mode,
-      current: current.week,
+      current: base.week,
       earliest,
-      alreadyOwn: current.source === "THEIR_OWN",
+      alreadyOwn: base.source === "THEIR_OWN",
       termsNameOn,
     });
   const cancel = async (startDate: string) => {
@@ -102,7 +103,9 @@ export function WeekRow({
               </Button>
               {hasOwn && (
                 <Button variant="ghost" size="sm" onClick={() => open("terms")}>
-                  {t("ownWeek.useTerms", { terms: termsNameOn(today) })}
+                  {t("ownWeek.useTerms", {
+                    terms: termsNameOn(base && base.startDate > today ? base.startDate : today),
+                  })}
                 </Button>
               )}
             </span>

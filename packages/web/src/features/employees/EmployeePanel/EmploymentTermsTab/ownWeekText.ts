@@ -75,6 +75,15 @@ export function cancellableStarts(
   });
 }
 
+/** The week the row's actions start from: today's, or the first one for a person not started yet. */
+export function weekToEditFrom<Version extends { startDate: string; endDate?: string | null }>(
+  versions: readonly Version[],
+  today: string,
+): Version | null {
+  const { current, planned } = splitVersions(versions, today);
+  return current ?? planned[0] ?? null;
+}
+
 function withAllowance(line: string, firstName: string, startDate: string, today: string): string {
   return startDate <= today ? `${line} ${t("changeTerms.reworked", { name: firstName })}` : line;
 }

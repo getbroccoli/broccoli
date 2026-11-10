@@ -87,7 +87,7 @@ export const peopleEn = {
   "ownWeek.saved": "{name}’s own working week saved.",
   "ownWeek.back": "{name} is back on {terms}’s week from {date}.",
   "ownWeek.failed": "The working week could not be saved. Try again.",
-  "ownWeek.backHint": "Earlier days keep {name}’s own week.",
+  "ownWeek.backHint": "Earlier days keep {name}’s working week as it is.",
   "ownWeek.cancelBody": "{name}’s working week stays as it was.",
   "ownWeek.history.gave": "gave them their own working week, {week}, from {date}",
   "ownWeek.history.changed": "changed their own working week to {week} from {date}",

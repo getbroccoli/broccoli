@@ -28,7 +28,6 @@ export {
   type WeekDraft,
   weekDraftOf,
   weekErrors,
-  weekHint,
   weekOfDraft,
   type WeekVersion,
 } from "./weekDraft";
