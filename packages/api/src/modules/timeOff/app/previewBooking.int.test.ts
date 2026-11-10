@@ -6,7 +6,8 @@ import {
   readAllowances,
   readTermsPolicies,
   test,
-  timeOffBookingService,
+  bookTimeOffService,
+  whosOutService,
   timeOffPolicyService,
   timeOffService,
 } from "#test/support";
@@ -19,7 +20,7 @@ test("previews no balance for a year whose policy stops counting", async ({
   transact,
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   await service.bookTimeOff(OWNER, {
     ...person,
     startDate: "2027-01-04",
@@ -47,7 +48,7 @@ test("previews two full days and a morning without booking or changing the balan
   transact,
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const before = await readAllowances(orm, person.employeeId);
 
   const preview = await service.previewBooking(OWNER, {
@@ -100,7 +101,7 @@ test("previews two full days and a morning without booking or changing the balan
     employeeIds: [person.employeeId],
   });
   expect(rows.get(person.employeeId)).toMatchObject([{ used: 0, remaining: 20 }]);
-  const calendar = await service.readWhosOut(OWNER, {
+  const calendar = await whosOutService(orm).readWhosOut(OWNER, {
     employeeIds: [person.employeeId],
     from: "2026-12-07",
     until: "2026-12-09",
@@ -115,7 +116,7 @@ test("lists bank holidays and weekends with zero cost and their reasons", async 
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
 
-  const preview = await timeOffBookingService(orm).previewBooking(OWNER, {
+  const preview = await bookTimeOffService(orm).previewBooking(OWNER, {
     ...person,
     startDate: "2026-12-24",
     endDate: "2026-12-27",
@@ -163,7 +164,7 @@ test("previews separate leave years without creating next year's allowance", asy
   const before = await readAllowances(orm, person.employeeId);
   expect(before.map(({ leaveYearStart }) => leaveYearStart)).toEqual(["2026-01-01"]);
 
-  const preview = await timeOffBookingService(orm).previewBooking(OWNER, {
+  const preview = await bookTimeOffService(orm).previewBooking(OWNER, {
     ...person,
     startDate: "2026-12-24",
     endDate: "2027-01-04",
@@ -198,7 +199,7 @@ test("returns the first clashing date and booking in a preview refusal", async (
   transact,
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const booked = await service.bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-08",
@@ -228,7 +229,7 @@ test("previews sickness without balances", async ({ orm, seed, transact }) => {
     ({ typeKey }) => typeKey === "sickness",
   )!;
 
-  const preview = await timeOffBookingService(orm).previewBooking(OWNER, {
+  const preview = await bookTimeOffService(orm).previewBooking(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: sickness.id,
     startDate: "2026-12-07",
@@ -240,7 +241,7 @@ test("previews sickness without balances", async ({ orm, seed, transact }) => {
 
 test("books the cost shown by the preview", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const input = {
     ...person,
     startDate: "2026-12-24",

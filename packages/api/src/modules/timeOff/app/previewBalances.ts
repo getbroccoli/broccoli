@@ -3,7 +3,7 @@ import { allowanceRepository } from "../db";
 import { type CostedDay, timeOffFigures, totalCost } from "../domain";
 import type { Person } from "./allowanceEngine";
 import type { ParsedBooking } from "./parseBooking";
-import type { BalanceChange } from "./timeOffBookingService";
+import type { BalanceChange } from "./bookTimeOffService";
 
 /** Each leave year's figures after the booking, and before it worked out from its cost there. */
 export async function balancesAfter(

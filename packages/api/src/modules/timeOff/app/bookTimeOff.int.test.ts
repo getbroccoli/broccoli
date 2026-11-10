@@ -9,7 +9,7 @@ import {
   seedTimeOffType,
   signedIn,
   test,
-  timeOffBookingService,
+  bookTimeOffService,
   timeOffPolicyService,
   timeOffService,
 } from "#test/support";
@@ -23,7 +23,7 @@ test("books while a policy change runs for the same people without a deadlock", 
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
   const [policy] = await readTermsPolicies(orm, await seed.defaultTermsId());
-  const bookings = timeOffBookingService(orm);
+  const bookings = bookTimeOffService(orm);
   const policies = timeOffPolicyService(orm, { today: "2026-11-09" });
 
   for (const date of ["2026-12-07", "2026-12-08", "2026-12-09", "2026-12-10", "2026-12-11"]) {
@@ -47,7 +47,7 @@ test("books while a policy change runs for the same people without a deadlock", 
 test("books two full days and a morning and deducts 2.5 days", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
 
-  const booked = await timeOffBookingService(orm).bookTimeOff(OWNER, {
+  const booked = await bookTimeOffService(orm).bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-07",
     endDate: "2026-12-09",
@@ -71,7 +71,7 @@ test("books two full days and a morning and deducts 2.5 days", async ({ orm, see
 test("books working days over Christmas", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
 
-  const booked = await timeOffBookingService(orm).bookTimeOff(OWNER, {
+  const booked = await bookTimeOffService(orm).bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-24",
     endDate: "2027-01-04",
@@ -96,7 +96,7 @@ test("books working days over Christmas", async ({ orm, seed, transact }) => {
 test("creates and charges the next leave year's allowance", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
 
-  await timeOffBookingService(orm).bookTimeOff(OWNER, {
+  await bookTimeOffService(orm).bookTimeOff(OWNER, {
     ...person,
     startDate: "2027-01-04",
     endDate: "2027-01-04",
@@ -112,7 +112,7 @@ test("creates and charges the next leave year's allowance", async ({ orm, seed, 
 
 test("allows a booking to take the balance below zero", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   await service.bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-11-02",
@@ -140,7 +140,7 @@ test.for(["full_day", "morning"] as const)(
   "refuses a %s over a booked full day",
   async (dayPart, { orm, seed, transact }) => {
     const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-    const service = timeOffBookingService(orm);
+    const service = bookTimeOffService(orm);
     const input = { ...person, startDate: "2026-12-07", endDate: "2026-12-07" };
     await service.bookTimeOff(OWNER, input);
 
@@ -158,7 +158,7 @@ test.for(["full_day", "morning"] as const)(
 
 test("books a morning beside an afternoon on the same date", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const input = { ...person, startDate: "2026-12-07", endDate: "2026-12-07" };
   await service.bookTimeOff(OWNER, {
     ...input,
@@ -175,7 +175,7 @@ test("books a morning beside an afternoon on the same date", async ({ orm, seed,
 
 test("books over a cancelled booking", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const input = { ...person, startDate: "2026-12-07", endDate: "2026-12-07" };
   const first = await service.bookTimeOff(OWNER, input);
   await service.cancelTimeOff(OWNER, { timeOffId: first.id });
@@ -197,7 +197,7 @@ test.for([
     const person = await seedAnnualLeaveEmployee(orm, seed, transact);
 
     await expect(
-      timeOffBookingService(orm).bookTimeOff(OWNER, {
+      bookTimeOffService(orm).bookTimeOff(OWNER, {
         ...person,
         startDate,
         endDate,
@@ -215,7 +215,7 @@ test("refuses a company type with no policy for the person", async ({ orm, seed,
   const type = await seedTimeOffType(orm, "Volunteering");
 
   await expect(
-    timeOffBookingService(orm).bookTimeOff(OWNER, {
+    bookTimeOffService(orm).bookTimeOff(OWNER, {
       employeeId: employee.id,
       timeOffTypeId: type.id,
       startDate: "2026-12-07",
@@ -241,7 +241,7 @@ test.for([
     )!;
 
     await expect(
-      timeOffBookingService(orm).bookTimeOff(OWNER, {
+      bookTimeOffService(orm).bookTimeOff(OWNER, {
         employeeId: employee.id,
         timeOffTypeId: annual.id,
         startDate: date,
@@ -258,7 +258,7 @@ test("refuses a half day on a bank holiday", async ({ orm, seed, transact }) => 
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
 
   await expect(
-    timeOffBookingService(orm).bookTimeOff(OWNER, {
+    bookTimeOffService(orm).bookTimeOff(OWNER, {
       ...person,
       startDate: "2026-12-24",
       endDate: "2026-12-25",
@@ -280,7 +280,7 @@ test("records sickness without a balance", async ({ orm, seed, transact }) => {
     ({ typeKey }) => typeKey === "sickness",
   )!;
 
-  const booked = await timeOffBookingService(orm).bookTimeOff(OWNER, {
+  const booked = await bookTimeOffService(orm).bookTimeOff(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: sickness.id,
     startDate: "2026-12-07",
@@ -301,7 +301,7 @@ test("forbids an employee from booking for themselves", async ({ orm, seed, tran
   const self = signedIn(orm, { employeeId: person.employeeId, profiles: ["EMPLOYEE"] });
 
   await expect(
-    timeOffBookingService(orm).bookTimeOff(self, {
+    bookTimeOffService(orm).bookTimeOff(self, {
       ...person,
       startDate: "2026-12-07",
       endDate: "2026-12-07",
@@ -311,7 +311,7 @@ test("forbids an employee from booking for themselves", async ({ orm, seed, tran
 
 test("refuses one of two bookings for the same day", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const input = { ...person, startDate: "2026-12-07", endDate: "2026-12-07" };
 
   const results = await Promise.allSettled([

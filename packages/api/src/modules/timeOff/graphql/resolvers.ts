@@ -11,12 +11,13 @@ import {
 import { type CalendarDate, todayInLondon } from "../../../utils";
 import { earliestChangeDate, type TermsMovePreview } from "../../employees";
 import type {
+  BookTimeOffService,
   PersonTimeOff,
-  TimeOffBookingService,
   TimeOffPolicyService,
   TimeOffSetupService,
   TimeOffService,
   TimeOffWithPolicies,
+  WhosOutService,
 } from "../app";
 import {
   type PolicyVersion,
@@ -33,9 +34,10 @@ export function createResolvers(
   timeOff: TimeOffService,
   timeOffSetup: TimeOffSetupService,
   policies: TimeOffPolicyService,
-  booking: TimeOffBookingService,
+  booking: BookTimeOffService,
+  whosOut: WhosOutService,
 ): Resolvers {
-  const bookings = bookingResolvers(booking);
+  const bookings = bookingResolvers(booking, whosOut);
   const loaders = timeOffLoaders(timeOff);
   return {
     ...bookings,

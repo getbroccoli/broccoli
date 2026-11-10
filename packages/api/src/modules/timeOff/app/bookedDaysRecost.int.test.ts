@@ -5,7 +5,8 @@ import {
   readAllowances,
   SYSTEM,
   test,
-  timeOffBookingService,
+  bookTimeOffService,
+  whosOutService,
   timeOffService,
   workingPatternService,
 } from "#test/support";
@@ -16,7 +17,7 @@ test("refunds a booked Friday when the person's working week becomes Monday to T
   transact,
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const bookings = timeOffBookingService(orm);
+  const bookings = bookTimeOffService(orm);
   const booked = await bookings.bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-04",
@@ -55,7 +56,7 @@ test("refunds a booked Friday when the person's working week becomes Monday to T
       .slice(beforeRecost!.lines.length)
       .filter(({ kind }) => kind === "time_off_booked"),
   ).toMatchObject([{ amount: 1, effectiveDate: "2026-12-04" }]);
-  const calendar = await bookings.readWhosOut(OWNER, {
+  const calendar = await whosOutService(orm).readWhosOut(OWNER, {
     employeeIds: [person.employeeId],
     from: "2026-12-04",
     until: "2026-12-04",
@@ -71,7 +72,7 @@ test("appends no ledger lines on a second engine run after booking", async ({
   transact,
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  await timeOffBookingService(orm).bookTimeOff(OWNER, {
+  await bookTimeOffService(orm).bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-07",
     endDate: "2026-12-09",

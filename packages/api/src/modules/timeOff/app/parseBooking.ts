@@ -1,9 +1,8 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import { type CalendarDate, parseUuid } from "../../../utils";
 import { parseDateField } from "../../employees";
-import { bookingWindow, type DayPart, leaveYearContaining } from "../domain";
-import type { Person } from "./allowanceEngine";
-import type { BookingInput } from "./timeOffBookingService";
+import type { DayPart } from "../domain";
+import type { BookingInput } from "./bookTimeOffService";
 
 const NOTE_MAX_LENGTH = 1_000;
 
@@ -42,21 +41,4 @@ export function parseBooking(input: BookingInput): ParsedBooking {
     ),
   );
   return { employeeId, timeOffTypeId, startDate, endDate, halfDays, note };
-}
-
-/**
- * The dates a person's type may be booked on: from the start of its leave year holding today to
- * the end of the next one; a type without a leave year counts calendar years.
- */
-export function windowOf(
-  person: Person,
-  timeOffTypeId: string,
-  today: CalendarDate,
-): { start: CalendarDate; end: CalendarDate } {
-  const leaveYear = person.timelineOf(timeOffTypeId).getVersionOnDate(today)?.leaveYear;
-  return bookingWindow(
-    leaveYear
-      ? leaveYearContaining(leaveYear, person.serviceStart, today).start
-      : (`${today.slice(0, 4)}-01-01` as CalendarDate),
-  );
 }

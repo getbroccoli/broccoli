@@ -73,14 +73,14 @@ Full-timer in England and Wales employed all of 2026 on the statutory minimum: g
 
 ## Booking time off
 
-`TimeOffBookingService`, for now for admins (the `time_off` create and delete scopes, which only `time_off.manage.all` grants), books time off for anyone, approved straight away, and cancels it.
+`BookTimeOffService`, for now for admins (the `time_off` create and delete scopes, which only `time_off.manage.all` grants), books time off for anyone, approved straight away, and cancels it.
 
 - A day costs 1, a morning or afternoon 0.5, and 0 on a weekday the person's working week has no minutes for or on a bank holiday of that week's calendar (`domain/bookedDay.ts`). Only days that cost something are stored as `time_off_days`.
 - `bookTimeOff` refuses, as invalid input on `dates`: a clash with approved time off of any type (a morning and an afternoon can share a day), no working days, a type with no policy for the person on some date, a date outside employment, a date before the start of the leave year holding today or after the end of the next one, and more than 366 days. Over the balance is never refused.
 - `previewBooking` books and runs the engine in a transaction it rolls back, so what it shows is what booking writes: each date's cost and reason, and each touched leave year's remaining before and after.
 - `cancelTimeOff` marks the time off cancelled; its days stay.
 - Both run the engine for the person in the same transaction, causes `time_off_booked` and `time_off_cancelled` (ref: the time off id).
-- `readWhosOut` gives everyone signed in each readable person's dates (working, not a working day, bank holiday, not employed) and approved bookings over at most 62 days. A private type's id, and every booking's cost, note and booked time, are left out for anyone outside the person's `time_off` read scope.
+- `WhosOutService.readWhosOut` gives everyone signed in each readable person's dates (working, not a working day, bank holiday, not employed) and approved bookings over at most 62 days. A private type's id, and every booking's cost, note and booked time, are left out for anyone outside the person's `time_off` read scope.
 
 The engine treats each booked day as a line identity, `time_off_booked` per `time_off_day_id`, on the allowance whose leave year holds the day: minus the day's cost under the working week of that day while the time off is approved, 0 once cancelled. Every run re-costs booked days in open leave years, so a later terms move, own week or bank holiday change gives days back or takes them. A booked day in a later leave year creates that year's allowance.
 

@@ -6,7 +6,8 @@ import {
   OWNER,
   signedIn,
   test,
-  timeOffBookingService,
+  bookTimeOffService,
+  whosOutService,
 } from "#test/support";
 
 import { timeOffTypes } from "../db";
@@ -17,7 +18,7 @@ test("lists every date of a month with employment, working days and bank holiday
 }) => {
   const employee = await seed.employee({ startDate: "2026-12-14" });
 
-  const rows = await timeOffBookingService(orm).readWhosOut(OWNER, {
+  const rows = await whosOutService(orm).readWhosOut(OWNER, {
     employeeIds: [employee.id],
     from: "2026-12-01",
     until: "2026-12-31",
@@ -67,7 +68,7 @@ test("shows a colleague Annual leave's type and days but hides its details", asy
   const annual = (await orm.select().from(timeOffTypes)).find(
     ({ typeKey }) => typeKey === "annual_leave",
   )!;
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const booked = await service.bookTimeOff(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: annual.id,
@@ -77,7 +78,7 @@ test("shows a colleague Annual leave's type and days but hides its details", asy
   });
   const colleague = signedIn(orm, { employeeId: peer.id, profiles: ["EMPLOYEE"] });
 
-  const rows = await service.readWhosOut(colleague, {
+  const rows = await whosOutService(orm).readWhosOut(colleague, {
     employeeIds: [employee.id],
     from: "2026-12-01",
     until: "2026-12-31",
@@ -105,7 +106,7 @@ test("hides a colleague's private Sickness type", async ({ orm, seed, transact }
   const sickness = (await orm.select().from(timeOffTypes)).find(
     ({ typeKey }) => typeKey === "sickness",
   )!;
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const booked = await service.bookTimeOff(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: sickness.id,
@@ -115,7 +116,7 @@ test("hides a colleague's private Sickness type", async ({ orm, seed, transact }
   });
   const colleague = signedIn(orm, { employeeId: peer.id, profiles: ["EMPLOYEE"] });
 
-  const rows = await service.readWhosOut(colleague, {
+  const rows = await whosOutService(orm).readWhosOut(colleague, {
     employeeIds: [employee.id],
     from: "2026-12-01",
     until: "2026-12-31",
@@ -146,7 +147,7 @@ test.for(["self", "manager"] as const)(
     const sickness = (await orm.select().from(timeOffTypes)).find(
       ({ typeKey }) => typeKey === "sickness",
     )!;
-    const service = timeOffBookingService(orm);
+    const service = bookTimeOffService(orm);
     const booked = await service.bookTimeOff(OWNER, {
       employeeId: employee.id,
       timeOffTypeId: sickness.id,
@@ -159,7 +160,7 @@ test.for(["self", "manager"] as const)(
       profiles: ["EMPLOYEE"],
     });
 
-    const rows = await service.readWhosOut(ctx, {
+    const rows = await whosOutService(orm).readWhosOut(ctx, {
       employeeIds: [employee.id],
       from: "2026-12-01",
       until: "2026-12-31",
@@ -180,7 +181,7 @@ test.for(["self", "manager"] as const)(
 
 test("omits a cancelled booking from who's out", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const booked = await service.bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-07",
@@ -188,7 +189,7 @@ test("omits a cancelled booking from who's out", async ({ orm, seed, transact })
   });
   await service.cancelTimeOff(OWNER, { timeOffId: booked.id });
 
-  const rows = await service.readWhosOut(OWNER, {
+  const rows = await whosOutService(orm).readWhosOut(OWNER, {
     employeeIds: [person.employeeId],
     from: "2026-12-01",
     until: "2026-12-31",

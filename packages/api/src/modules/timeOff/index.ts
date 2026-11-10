@@ -3,8 +3,9 @@ import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManife
 import type { BankHolidayService } from "../bankHolidays";
 import {
   allowanceEventHandlers,
-  createTimeOffBookingService,
+  createBookTimeOffService,
   createTimeOffPolicyService,
+  createWhosOutService,
   ensureAllowancesJob,
   type TimeOffSetupService,
   type TimeOffService,
@@ -13,10 +14,11 @@ import { createResolvers } from "./graphql";
 
 // Public values.
 export {
-  createTimeOffBookingService,
+  createBookTimeOffService,
   createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
+  createWhosOutService,
 } from "./app";
 
 // Public types.
@@ -47,7 +49,8 @@ export function timeOffModule({
       timeOff,
       timeOffSetup,
       createTimeOffPolicyService({ ...dependencies, timeOff }),
-      createTimeOffBookingService({ ...dependencies, timeOff, bankHolidays }),
+      createBookTimeOffService({ ...dependencies, timeOff, bankHolidays }),
+      createWhosOutService({ ...dependencies, bankHolidays }),
     ),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),

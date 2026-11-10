@@ -1,5 +1,6 @@
 import { addDays, addYears, type CalendarDate, daysBetween, isWithin } from "../../../utils";
 import { clashes, datesFrom, type DayPart } from "./bookedDay";
+import { leaveYearContaining, type PolicyVersion } from "./timeOffPolicy";
 
 /** Why a booking cannot be made, as the form says it. */
 export type BookingRefusalReason =
@@ -19,12 +20,23 @@ export interface BookingRefusal {
 
 const MAX_BOOKING_DAYS = 366;
 
-/** From the start of the leave year holding today to the end of the next one. */
-export function bookingWindow(leaveYearStart: CalendarDate): {
-  start: CalendarDate;
-  end: CalendarDate;
-} {
-  return { start: leaveYearStart, end: addDays(addYears(leaveYearStart, 2), -1) };
+/**
+ * The dates a type may be booked on: from the start of its leave year holding today to the end of
+ * the next one; a type without a leave year counts calendar years.
+ */
+export function bookingWindow({
+  leaveYear,
+  serviceStart,
+  today,
+}: {
+  leaveYear: PolicyVersion["leaveYear"] | undefined;
+  serviceStart: CalendarDate | null;
+  today: CalendarDate;
+}): { start: CalendarDate; end: CalendarDate } {
+  const start = leaveYear
+    ? leaveYearContaining(leaveYear, serviceStart, today).start
+    : (`${today.slice(0, 4)}-01-01` as CalendarDate);
+  return { start, end: addDays(addYears(start, 2), -1) };
 }
 
 /** Refuses a booking longer than a year or outside the window, before any day is costed. */

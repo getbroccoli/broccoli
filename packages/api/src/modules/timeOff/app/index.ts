@@ -7,11 +7,15 @@ export { createTimeOffPolicyService, type TimeOffPolicyService } from "./timeOff
 export {
   type BookingInput,
   type BookingPreview,
-  createTimeOffBookingService,
-  type TimeOffBookingService,
+  type BookTimeOffService,
+  createBookTimeOffService,
+} from "./bookTimeOffService";
+export {
+  createWhosOutService,
   type WhosOut,
+  type WhosOutService,
   type WhosOutTimeOff,
-} from "./timeOffBookingService";
+} from "./whosOutService";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
 export { ensureAllowancesJob } from "./ensureAllowancesJob";
 export {

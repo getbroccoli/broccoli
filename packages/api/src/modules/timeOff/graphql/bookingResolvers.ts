@@ -7,16 +7,22 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
-import type { BookingInput, BookingPreview, TimeOffBookingService, WhosOut } from "../app";
+import type {
+  BookingInput,
+  BookingPreview,
+  BookTimeOffService,
+  WhosOut,
+  WhosOutService,
+} from "../app";
 import type { TimeOffType } from "../domain";
 import { BALANCE_KINDS, toGraphqlType } from "./graphqlValues";
 
 /** Booking, cancelling and who's out; merged into the module's resolvers. */
-export function bookingResolvers(booking: TimeOffBookingService) {
+export function bookingResolvers(booking: BookTimeOffService, whosOut: WhosOutService) {
   const loaders = perRequest((context) => ({
     whosOutByRange: new Map<string, DataLoader<string, WhosOut | null>>(),
     types: new DataLoader<string, TimeOffType | null>(async (ids) => {
-      const types = await booking.readTypes(context.getActor());
+      const types = await whosOut.readTypes(context.getActor());
       return ids.map((id) => types.find((type) => type.id === id) ?? null);
     }),
   }));
@@ -46,7 +52,7 @@ export function bookingResolvers(booking: TimeOffBookingService) {
         const loader =
           byRange.get(key) ??
           new DataLoader<string, WhosOut | null>(async (employeeIds) => {
-            const read = await booking.readWhosOut(context.getActor(), {
+            const read = await whosOut.readWhosOut(context.getActor(), {
               employeeIds,
               from,
               until,

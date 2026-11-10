@@ -1,29 +1,103 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Tx } from "../../../core/db";
+import type { Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
-import { PrincipalSecurityContext, type SecurityContext } from "../../../core/security";
-import { type CalendarDate, parseUuid } from "../../../utils";
-import { BANK_HOLIDAY_CALENDARS, type BankHolidayService } from "../../bankHolidays";
-import type { EmployeeReadService, EmployeeWorkingPatternService } from "../../employees";
-import { timeOffPolicyRepository, timeOffRepository } from "../db";
+import type { ModuleDependencies } from "../../../core/moduleManifest";
+import type { SecurityContext } from "../../../core/security";
+import { type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
+import type { BankHolidayService } from "../../bankHolidays";
 import {
-  type BookingRefusal,
-  type CostedDay,
-  costedDays,
-  refusalOfBounds,
-  refusalOfDates,
-  refusalOfDays,
-  totalCost,
-} from "../domain";
-import { readPeople } from "./allowanceEngine";
+  createEmployeeReadService,
+  createEmployeeWorkingPatternService,
+  type EmployeeReadService,
+  type EmployeeWorkingPatternService,
+} from "../../employees";
+import { timeOffPolicyRepository, timeOffRepository } from "../db";
+import { type BookingRefusal, bookingWindow, type CostedDay, totalCost } from "../domain";
+import { type Person, readPeople } from "./allowanceEngine";
+import { checkDays } from "./checkDays";
 import { balancesAfter } from "./previewBalances";
-import { type ParsedBooking, parseBooking, windowOf } from "./parseBooking";
-import type { BookedTimeOff, BookingInput, BookingPreview } from "./timeOffBookingService";
+import { type ParsedBooking, parseBooking } from "./parseBooking";
 import type { TimeOffService } from "./timeOffService";
-import type { Transact } from "../../../core/db";
+import type { WhosOutTimeOff } from "./whosOutService";
 
-/** What booking and cancelling need. */
-export interface BookingDependencies {
+/** Booking and cancelling a person's time off. */
+export interface BookTimeOffService {
+  /** What booking would cost and do, without writing anything. Admins only, for now. */
+  previewBooking(ctx: SecurityContext, input: BookingInput): Promise<BookingPreview>;
+  /** Books approved time off for its working days and runs the allowance engine. Admins only, for now. */
+  bookTimeOff(ctx: SecurityContext, input: BookingInput): Promise<BookedTimeOff>;
+  /** Cancels a whole booking, giving its days back. Admins only, for now. */
+  cancelTimeOff(ctx: SecurityContext, input: { timeOffId: string }): Promise<void>;
+}
+
+/** What an admin asks to book: every working day from start to end, some as half days. */
+export interface BookingInput {
+  employeeId: string;
+  timeOffTypeId: string;
+  startDate: string;
+  endDate: string;
+  halfDays?: readonly { date: string; dayPart: "morning" | "afternoon" }[] | null;
+  note?: string | null;
+}
+
+/** What a booking would cost and do. */
+export interface BookingPreview {
+  /** Every date from start to end. */
+  days: CostedDay[];
+  cost: number;
+  /** One per leave year touched, oldest first; empty for a type without a balance or when refused. */
+  balances: BalanceChange[];
+  refusal: BookingRefusal | null;
+}
+
+/** A leave year's figures before and after the booking. */
+export interface BalanceChange {
+  periodStart: CalendarDate;
+  periodEnd: CalendarDate;
+  balance: "balance_from_allowance" | "unlimited_balance";
+  /** Null for an unlimited balance. */
+  remainingBefore: number | null;
+  remainingAfter: number | null;
+  usedBefore: number;
+  usedAfter: number;
+}
+
+/** A booking as it was saved: only the days that cost something. */
+export interface BookedTimeOff extends WhosOutTimeOff {
+  employeeId: string;
+  timeOffTypeId: string;
+  cost: number;
+}
+
+export function createBookTimeOffService({
+  orm,
+  transact,
+  logger,
+  timeOff,
+  bankHolidays,
+  today = todayInLondon,
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+  timeOff: Pick<TimeOffService, "ensureAllowances">;
+  bankHolidays: BankHolidayService;
+  today?: () => CalendarDate;
+}): BookTimeOffService {
+  const dependencies: BookingDependencies = {
+    transact,
+    logger,
+    timeOff,
+    employeeReads: createEmployeeReadService({ orm }),
+    workingWeeks: createEmployeeWorkingPatternService({ transact, logger, today }),
+    bankHolidays,
+    today,
+  };
+  return {
+    previewBooking: (ctx, input) => previewBooking(dependencies, ctx, input),
+    bookTimeOff: (ctx, input) => bookTimeOff(dependencies, ctx, input),
+    cancelTimeOff: (ctx, input) => cancelTimeOff(dependencies, ctx, input),
+  };
+}
+
+interface BookingDependencies {
   transact: Transact;
   logger: Logger;
   timeOff: Pick<TimeOffService, "ensureAllowances">;
@@ -37,7 +111,7 @@ export interface BookingDependencies {
 }
 
 /** What booking would cost and do: the booking is made and the engine run, then rolled back. */
-export async function previewBooking(
+async function previewBooking(
   dependencies: BookingDependencies,
   ctx: SecurityContext,
   input: BookingInput,
@@ -45,15 +119,14 @@ export async function previewBooking(
   const booking = parseBooking(input);
   try {
     return await dependencies.transact(async (tx) => {
-      await begin(dependencies, ctx, tx, booking);
-      const { days, refusal } = await check(dependencies, tx, booking);
+      const person = await begin(dependencies, ctx, tx, booking);
+      const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
       const cost = totalCost(days);
       if (refusal) {
         return { days, cost, balances: [], refusal };
       }
       const { booked } = await insertAndCost(dependencies, ctx, tx, booking, days);
-      const { people } = await readPeople(dependencies.employeeReads, tx, [booking.employeeId]);
-      const balances = await balancesAfter(tx, people[0]!, booking, booked);
+      const balances = await balancesAfter(tx, person, booking, booked);
       throw new PreviewDone({ days, cost, balances, refusal: null });
     });
   } catch (error) {
@@ -65,15 +138,15 @@ export async function previewBooking(
 }
 
 /** Books approved time off for its working days and runs the engine for the person. */
-export async function bookTimeOff(
+async function bookTimeOff(
   dependencies: BookingDependencies,
   ctx: SecurityContext,
   input: BookingInput,
 ): Promise<BookedTimeOff> {
   const booking = parseBooking(input);
   const result = await dependencies.transact(async (tx) => {
-    await begin(dependencies, ctx, tx, booking);
-    const { days, refusal } = await check(dependencies, tx, booking);
+    const person = await begin(dependencies, ctx, tx, booking);
+    const { days, refusal } = await checkBooking(dependencies, tx, booking, person);
     if (refusal) {
       throw invalidInput([{ field: "dates", code: refusal.reason }]);
     }
@@ -103,7 +176,7 @@ export async function bookTimeOff(
 }
 
 /** Cancels a whole booking and runs the engine, giving its days back. */
-export async function cancelTimeOff(
+async function cancelTimeOff(
   dependencies: BookingDependencies,
   ctx: SecurityContext,
   input: { timeOffId: string },
@@ -162,17 +235,28 @@ async function begin(
   ctx: SecurityContext,
   tx: Tx,
   booking: ParsedBooking,
-) {
+): Promise<Person> {
   await ctx.requireInScope("time_off", "create", booking.employeeId);
   if (!(await lockPerson(dependencies, tx, booking.employeeId))) {
     throw new ApplicationError("NOT_FOUND", "No employee has this id.");
   }
   const types = await timeOffPolicyRepository(tx).findAllTypes();
-  const type = types.find(({ id }) => id === booking.timeOffTypeId);
-  if (!type) {
+  if (!types.some(({ id }) => id === booking.timeOffTypeId)) {
     throw new ApplicationError("NOT_FOUND", "No time off type has this id.");
   }
-  return type;
+  const { people } = await readPeople(dependencies.employeeReads, tx, [booking.employeeId]);
+  return people[0]!;
+}
+
+/** The booking's days and the first refusal, in its window. */
+function checkBooking(
+  dependencies: BookingDependencies,
+  tx: Tx,
+  booking: ParsedBooking,
+  person: Person,
+) {
+  const window = windowOf(person, booking.timeOffTypeId, dependencies.today());
+  return checkDays(dependencies, tx, { booking, person, window });
 }
 
 /**
@@ -196,74 +280,6 @@ async function lockPerson(
   return locked !== undefined;
 }
 
-/** The booking's days and the first refusal, read in `tx`, which must hold the person's lock. */
-async function check(
-  dependencies: BookingDependencies,
-  tx: Tx,
-  booking: ParsedBooking,
-): Promise<{ days: CostedDay[]; refusal: BookingRefusal | null }> {
-  const { people } = await readPeople(dependencies.employeeReads, tx, [booking.employeeId]);
-  const person = people[0]!;
-  const timeline = person.timelineOf(booking.timeOffTypeId);
-  // Bounds first, so an oversized range is refused before any day is costed.
-  const bounds = refusalOfBounds(
-    booking,
-    windowOf(person, booking.timeOffTypeId, dependencies.today()),
-  );
-  if (bounds) {
-    return { days: [], refusal: bounds };
-  }
-  const days = await costBooking(dependencies, tx, booking);
-  const halfDayRefused = [...booking.halfDays.keys()].some(
-    (date) => !days.some((day) => day.date === date && day.cost > 0),
-  );
-  if (halfDayRefused) {
-    throw invalidInput([{ field: "halfDays", code: "not_a_working_day" }]);
-  }
-  const charged = days.filter(({ cost }) => cost > 0);
-  const refusal =
-    refusalOfDates({
-      ...booking,
-      employments: person.periods,
-      isOfferedOn: (date) => timeline.getVersionOnDate(date) !== null,
-    }) ??
-    refusalOfDays(
-      charged,
-      charged.length === 0
-        ? []
-        : await timeOffRepository(tx).findBookedDays({
-            employeeIds: [booking.employeeId],
-            from: charged[0]!.date,
-            until: charged.at(-1)!.date,
-          }),
-    );
-  return { days, refusal };
-}
-
-async function costBooking(
-  { workingWeeks, bankHolidays }: BookingDependencies,
-  tx: Tx,
-  booking: ParsedBooking,
-): Promise<CostedDay[]> {
-  const range = { from: booking.startDate, until: booking.endDate };
-  const [weeks, holidays] = await Promise.all([
-    workingWeeks.readWorkingWeeksInTransaction(tx, {
-      employeeIds: [booking.employeeId],
-      ...range,
-    }),
-    bankHolidays.readBankHolidays(PrincipalSecurityContext.system(), {
-      calendars: BANK_HOLIDAY_CALENDARS,
-      ...range,
-    }),
-  ]);
-  return costedDays({
-    ...range,
-    halfDays: booking.halfDays,
-    workingWeeks: weeks.get(booking.employeeId) ?? [],
-    bankHolidays: holidays,
-  });
-}
-
 async function insertAndCost(
   { timeOff }: BookingDependencies,
   ctx: SecurityContext,
@@ -284,4 +300,12 @@ async function insertAndCost(
     cause: { kind: "TIME_OFF_BOOKED", ref: saved.id },
   });
   return { ...saved, booked, ensured };
+}
+
+function windowOf(person: Person, timeOffTypeId: string, today: CalendarDate) {
+  return bookingWindow({
+    leaveYear: person.timelineOf(timeOffTypeId).getVersionOnDate(today)?.leaveYear,
+    serviceStart: person.serviceStart,
+    today,
+  });
 }

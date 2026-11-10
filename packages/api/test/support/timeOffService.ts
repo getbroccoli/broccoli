@@ -7,10 +7,11 @@ import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import { createTaskService } from "../../src/modules/tasks";
 import {
-  createTimeOffBookingService,
+  createBookTimeOffService,
   createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
+  createWhosOutService,
   timeOffModule,
 } from "../../src/modules/timeOff";
 import { employeeTerms } from "../../src/modules/employees/db";
@@ -47,12 +48,23 @@ export function timeOffService(orm: Orm, { today = "2026-06-01" }: { today?: str
 }
 
 /** The booking service on `orm`, with the engine of `timeOffService`; `today` is its date. */
-export function timeOffBookingService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
-  return createTimeOffBookingService({
+export function bookTimeOffService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+  return createBookTimeOffService({
     orm,
     transact: testTransactor(orm),
     logger: createLogger("silent"),
     timeOff: timeOffService(orm, { today }),
+    bankHolidays: bankHolidayService(),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The who's out service on `orm`; `today` is its date. */
+export function whosOutService(orm: Orm, { today = "2026-11-09" }: { today?: string } = {}) {
+  return createWhosOutService({
+    orm,
+    transact: testTransactor(orm),
+    logger: createLogger("silent"),
     bankHolidays: bankHolidayService(),
     today: () => today as CalendarDate,
   });

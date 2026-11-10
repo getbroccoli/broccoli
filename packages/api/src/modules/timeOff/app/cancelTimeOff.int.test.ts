@@ -5,7 +5,8 @@ import {
   OWNER,
   signedIn,
   test,
-  timeOffBookingService,
+  bookTimeOffService,
+  whosOutService,
   timeOffService,
 } from "#test/support";
 
@@ -15,7 +16,7 @@ test.for([1, 2, 3, 4, 5])(
   "cancels while the same person is deleted without a deadlock (run %i)",
   async (_run, { orm, seed, transact }) => {
     const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-    const service = timeOffBookingService(orm);
+    const service = bookTimeOffService(orm);
     const booked = await service.bookTimeOff(OWNER, {
       ...person,
       startDate: "2026-12-07",
@@ -41,18 +42,18 @@ test("refuses to cancel a booking with a day in a closed leave year", async ({
   transact,
 }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const booked = await timeOffBookingService(orm, { today: "2026-11-09" }).bookTimeOff(OWNER, {
+  const booked = await bookTimeOffService(orm, { today: "2026-11-09" }).bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-07",
     endDate: "2026-12-07",
   });
-  const service = timeOffBookingService(orm, { today: "2027-01-04" });
+  const service = bookTimeOffService(orm, { today: "2027-01-04" });
 
   await expect(service.cancelTimeOff(OWNER, { timeOffId: booked.id })).rejects.toMatchObject({
     code: "CONFLICT",
   });
 
-  const calendar = await service.readWhosOut(OWNER, {
+  const calendar = await whosOutService(orm, { today: "2027-01-04" }).readWhosOut(OWNER, {
     employeeIds: [person.employeeId],
     from: "2026-12-01",
     until: "2026-12-31",
@@ -64,7 +65,7 @@ test("refuses to cancel a booking with a day in a closed leave year", async ({
 
 test("cancelling gives the booked days back", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const booked = await service.bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-07",
@@ -86,7 +87,7 @@ test("cancelling gives the booked days back", async ({ orm, seed, transact }) =>
 
 test("refuses to cancel a booking twice", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const booked = await service.bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-07",
@@ -101,7 +102,7 @@ test("refuses to cancel a booking twice", async ({ orm, seed, transact }) => {
 
 test("reports an unknown booking as not found", async ({ orm }) => {
   await expect(
-    timeOffBookingService(orm).cancelTimeOff(OWNER, {
+    bookTimeOffService(orm).cancelTimeOff(OWNER, {
       timeOffId: "00000000-0000-4000-8000-000000000001",
     }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -109,7 +110,7 @@ test("reports an unknown booking as not found", async ({ orm }) => {
 
 test("forbids an employee from cancelling their own booking", async ({ orm, seed, transact }) => {
   const person = await seedAnnualLeaveEmployee(orm, seed, transact);
-  const service = timeOffBookingService(orm);
+  const service = bookTimeOffService(orm);
   const booked = await service.bookTimeOff(OWNER, {
     ...person,
     startDate: "2026-12-07",
