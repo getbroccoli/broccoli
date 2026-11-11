@@ -115,6 +115,9 @@ export const termsEn = {
     "Publishing keeps the changes for later and applies them to nobody.",
   "terms.publish.done": "Changes published for {terms}.",
   "terms.publish.failed": "The changes could not be published. Try again.",
+  "terms.publish.countsDate":
+    "How a type counts changes only from the start of a leave year. Pick 1 January.",
+  "terms.publish.overlaps": "A later change on these terms is in the way. Cancel it first.",
   "terms.edit.cancelTitle": "Cancel this change?",
   "terms.edit.keepChange": "Keep change",
   "terms.edit.weekStays": "The working week stays {week} for {people} on {terms}.",

@@ -62,7 +62,6 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
   const confirm = async () => {
     if (!suggestions || !startDate) return;
     const published = await publish({
-      versions: suggestions.versions.map(({ id, revision }) => ({ id, revision })),
       startDate,
       owners: ticked.map(({ termsId, employeeId }) => ({ termsId, employeeId })),
     });
@@ -109,13 +108,15 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
                 : undefined
             }
             picker={
-              <DatePicker
-                value={otherDate}
-                fromDate={earliest}
-                placeholder={t("terms.edit.pickDate")}
-                aria-label={t("terms.edit.pickDate")}
-                onChange={setOtherDate}
-              />
+              !countsChange && (
+                <DatePicker
+                  value={otherDate}
+                  fromDate={earliest}
+                  placeholder={t("terms.edit.pickDate")}
+                  aria-label={t("terms.edit.pickDate")}
+                  onChange={setOtherDate}
+                />
+              )
             }
           />
           {startDate ? (
@@ -197,7 +198,7 @@ function dateOptions(earliest: string, countsChange: boolean) {
   ];
   // shortcut: every leave year starts on 1 January; offer the policy's own starts once they can differ.
   return countsChange
-    ? [...leaveYears, { value: "ANOTHER_DATE" as const, label: t("terms.edit.otherDate") }]
+    ? leaveYears
     : [
         { value: "TODAY" as const, label: t("terms.edit.today") },
         ...leaveYears,

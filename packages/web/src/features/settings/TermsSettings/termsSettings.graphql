@@ -243,7 +243,16 @@ mutation PublishTerms($input: TermsPublishInput!) {
         id
       }
       error {
-        ...TermsChangeError
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
       }
     }
   }

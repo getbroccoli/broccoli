@@ -27,6 +27,18 @@ export interface RulesDraft extends RulesValues {
 /** A week as the form starts from it. */
 export type WeekVersion = WeekMinutes & { bankHolidayCalendar: BankHolidayCalendar };
 
+/** The week a form starts from on terms without one: Monday to Friday, 7.5 hours a day. */
+export const DEFAULT_WEEK: WeekVersion = {
+  mondayMinutes: 450,
+  tuesdayMinutes: 450,
+  wednesdayMinutes: 450,
+  thursdayMinutes: 450,
+  fridayMinutes: 450,
+  saturdayMinutes: 0,
+  sundayMinutes: 0,
+  bankHolidayCalendar: "ENGLAND_AND_WALES",
+};
+
 /** The week form filled from a week: the unpublished one, else today's. */
 export function weekDraftOf(version: WeekVersion): WeekDraft {
   return {

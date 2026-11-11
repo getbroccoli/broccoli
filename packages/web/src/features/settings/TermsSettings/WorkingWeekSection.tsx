@@ -48,7 +48,7 @@ export function WorkingWeekSection({
         <h3 id="terms-week" className="text-[17px] font-semibold">
           {t("terms.week.title")}
         </h3>
-        {!editor && (current || unpublished) && (
+        {!editor && (
           <Button variant="ghost" size="sm" onClick={onEdit}>
             {t("terms.edit.edit")}
           </Button>

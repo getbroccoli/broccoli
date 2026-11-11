@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { rulesInputOf } from "../TimeOffSettings";
 import {
+  DEFAULT_WEEK,
   type RulesDraft,
   rulesDraftOf,
   rulesErrors,
@@ -40,7 +41,8 @@ export function useTermsEditing(terms: Terms) {
     setWaiting(null);
   };
   const ask = (section: OpenSection) => (open && dirty ? setWaiting(section) : show(section));
-  const weekShown = terms.unpublishedWorkingWeek ?? week;
+  // Terms without a week, such as new terms whose draft was discarded, start from Mon–Fri.
+  const weekShown = terms.unpublishedWorkingWeek ?? week ?? DEFAULT_WEEK;
 
   return {
     open,
@@ -53,7 +55,7 @@ export function useTermsEditing(terms: Terms) {
     /** The open type's row; null while no type is open. */
     row,
     canSave: savable,
-    editWeek: () => weekShown && ask({ kind: "week", draft: weekDraftOf(weekShown) }),
+    editWeek: () => ask({ kind: "week", draft: weekDraftOf(weekShown) }),
     editRules: (timeOffTypeId: string) =>
       ask({ kind: "rules", timeOffTypeId, draft: draftOf(rowOf(terms, timeOffTypeId)) }),
     change: setOpen,
