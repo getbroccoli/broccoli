@@ -148,6 +148,11 @@ export function createResolvers(
           await policies.cancelPolicyChange(context.getActor(), input);
           return { cancelledAssignmentId: input.assignmentId };
         }, ["NOT_FOUND", "CONFLICT"]),
+      cancelPolicyStop: (_parent, { input }, context) =>
+        mutationPayload<ResolversTypes["TimeOffPolicyCancelStopPayload"]>(async () => {
+          await policies.cancelPolicyStop(context.getActor(), input);
+          return { reopenedAssignmentId: input.assignmentId };
+        }, ["NOT_FOUND", "CONFLICT"]),
       publishTerms: (_parent, { input }, context) =>
         mutationPayload<ResolversTypes["TermsPublishPayload"]>(async () => {
           return { terms: await policies.publishTerms(context.getActor(), input) };

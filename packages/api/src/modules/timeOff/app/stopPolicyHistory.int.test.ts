@@ -73,7 +73,7 @@ test("cancelling a planned stop writes one terms history line with the cancelled
   });
   const before = await history.readTermsHistory(OWNER, termsId, {});
 
-  await service.cancelPolicyChange(OWNER, {
+  await service.cancelPolicyStop(OWNER, {
     assignmentId: stopped.id,
   });
 

@@ -1,24 +1,85 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
-import type { Tx } from "../../../core/db";
+import type { Transact, Tx } from "../../../core/db";
+import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, coversDate } from "../../../utils";
+import { addDays, type CalendarDate, coversDate, parseUuid } from "../../../utils";
 import { type EmployeeReadService, parseChangeDate } from "../../employees";
 import { type PolicyAssignment, timeOffPolicyRepository, timeOffRepository } from "../db";
+import { isPlannedStop } from "../domain";
 import { readPeople } from "./allowanceEngine";
 import {
   appendRulesHistory,
   employeesOf,
   existingTerms,
   existingType,
+  ownerIds,
   rulesChanged,
   versionOf,
 } from "./policyRules";
 import type { TimeOffService } from "./timeOffService";
 
 export interface StopDependencies {
+  transact: Transact;
+  logger: Logger;
   employeeReads: EmployeeReadService;
   timeOff: Pick<TimeOffService, "ensureAllowances">;
   today: () => CalendarDate;
+}
+
+/**
+ * Stops offering the type on the terms from `stopDate`; logs the outcome, or why it was refused.
+ * Returns the assignment that now ends the day before.
+ */
+export async function stopPolicy(
+  dependencies: StopDependencies,
+  ctx: SecurityContext,
+  input: { termsId: string; timeOffTypeId: string; stopDate: string },
+): Promise<PolicyAssignment> {
+  ctx.require("MANAGE_WORKSPACE");
+  const { logger } = dependencies;
+  const { stopped, ...outcome } = await dependencies
+    .transact((tx) => stopTermsPolicy(dependencies, ctx, tx, input))
+    .catch((error: unknown) => {
+      if (error instanceof ApplicationError) {
+        const ids = {
+          termsId: parseUuid(input.termsId),
+          timeOffTypeId: parseUuid(input.timeOffTypeId),
+        };
+        logger.info({ ...ids, code: error.code }, "Refused to stop offering a time off type");
+      }
+      throw error;
+    });
+  logger.info(
+    {
+      assignmentId: stopped.id,
+      ...stopped.owner,
+      timeOffTypeId: stopped.timeOffTypeId,
+      ...outcome,
+    },
+    "Stopped offering a time off type",
+  );
+  return stopped;
+}
+
+/** Cancels a planned stop by the assignment it ends, which runs on open-ended. */
+export async function cancelPolicyStop(
+  dependencies: StopDependencies,
+  ctx: SecurityContext,
+  input: { assignmentId: string },
+): Promise<void> {
+  ctx.require("MANAGE_WORKSPACE");
+  const { stopped, ...outcome } = await dependencies.transact((tx) =>
+    cancelPlannedStop(dependencies, ctx, tx, input.assignmentId),
+  );
+  dependencies.logger.info(
+    {
+      assignmentId: stopped.id,
+      ...stopped.owner,
+      timeOffTypeId: stopped.timeOffTypeId,
+      ...outcome,
+    },
+    "Cancelled stopping a time off type",
+  );
 }
 
 /**
@@ -26,7 +87,7 @@ export interface StopDependencies {
  * returns the row that ends. INVALID_INPUT when the type is not offered the day before; CONFLICT
  * while someone's booked time off of the type from `stopDate` would be left without rules.
  */
-export async function stopTermsPolicy(
+async function stopTermsPolicy(
   { employeeReads, timeOff, today }: StopDependencies,
   ctx: SecurityContext,
   tx: Tx,
@@ -75,14 +136,29 @@ export async function stopTermsPolicy(
   };
 }
 
-/** Makes the row a planned stop ends open-ended again, with a line in the terms' history. */
-export async function cancelTermsStop(
-  { employeeReads, timeOff }: StopDependencies,
+/**
+ * Makes the assignment a planned stop ends open-ended again, with a line in its owner's history.
+ * NOT_FOUND without such an assignment; CONFLICT when it is no planned stop.
+ */
+async function cancelPlannedStop(
+  { employeeReads, timeOff, today }: StopDependencies,
   ctx: SecurityContext,
   tx: Tx,
-  stopped: PolicyAssignment,
+  assignmentId: string,
 ) {
   const repository = timeOffPolicyRepository(tx);
+  await repository.lockPolicies();
+  const id = parseUuid(assignmentId);
+  const [stopped] = id ? await repository.findAssignmentsById([id]) : [];
+  if (!stopped) {
+    throw new ApplicationError("NOT_FOUND", "No time off rules have this id.");
+  }
+  const lane = (await repository.findAssignments(ownerIds(stopped.owner))).filter(
+    (row) => row.timeOffTypeId === stopped.timeOffTypeId,
+  );
+  if (!isPlannedStop(lane, stopped, today())) {
+    throw new ApplicationError("CONFLICT", "This type has no planned stop.");
+  }
   const stopDate = addDays(stopped.endDate!, 1);
   await repository.endAssignment(stopped.id, null);
   const timeOffType = existingType(await repository.findAllTypes(), stopped.timeOffTypeId);
@@ -90,10 +166,11 @@ export async function cancelTermsStop(
     before: { stopDate },
     after: null,
   });
-  return timeOff.ensureAllowances(ctx, tx, {
+  const ensured = await timeOff.ensureAllowances(ctx, tx, {
     employeeIds: await employeesOf(employeeReads, tx, stopped.owner),
     cause: rulesChanged(stopped.timeOffPolicyId, stopDate),
   });
+  return { stopped, stopDate, ...ensured };
 }
 
 /**
@@ -127,16 +204,15 @@ async function refuseBookedTimeOff(
       input.stopped,
     ]),
   ]);
-  const hasRules = (people: typeof before.people, employeeId: string, date: CalendarDate) =>
-    people
-      .find((person) => person.employeeId === employeeId)!
-      .timelineOf(input.timeOffTypeId)
-      .getVersionOnDate(date) !== null;
+  const timelines = (people: typeof before.people) =>
+    new Map(people.map((person) => [person.employeeId, person.timelineOf(input.timeOffTypeId)]));
+  const [rulesBefore, rulesAfter] = [timelines(before.people), timelines(after.people)];
   const losing = new Set(
     booked
       .filter(
         ({ employeeId, date }) =>
-          hasRules(before.people, employeeId, date) && !hasRules(after.people, employeeId, date),
+          rulesBefore.get(employeeId)!.getVersionOnDate(date) !== null &&
+          rulesAfter.get(employeeId)!.getVersionOnDate(date) === null,
       )
       .map(({ employeeId }) => employeeId),
   );

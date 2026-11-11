@@ -153,18 +153,13 @@ export function rulesValue(
   });
 }
 
-/**
- * Whether `row` is a planned stop: it has started, ends on or after today, and nothing in its
- * owner's `lane` for the type follows it.
- */
+/** Whether `row` is a planned stop: it ends on or after today and nothing in its owner's `lane` follows it. */
 export function isPlannedStop(
   lane: readonly CalendarDateRange[],
-  row: CalendarDateRange,
+  { endDate }: CalendarDateRange,
   today: CalendarDate,
 ): boolean {
-  const { startDate, endDate } = row;
   return (
-    (startDate === null || startDate <= today) &&
     endDate !== null &&
     endDate >= today &&
     !lane.some((other) => other.startDate !== null && other.startDate > endDate)

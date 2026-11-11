@@ -229,6 +229,17 @@ mutation StopTermsTimeOff($input: TimeOffPolicyStopInput!) {
   }
 }
 
+mutation CancelTermsTimeOffStop($input: TimeOffPolicyCancelStopInput!) {
+  timeOff {
+    cancelPolicyStop(input: $input) {
+      reopenedAssignmentId
+      error {
+        ...TermsChangeError
+      }
+    }
+  }
+}
+
 mutation CancelTermsTimeOffChange($input: TimeOffPolicyCancelChangeInput!) {
   timeOff {
     cancelPolicyChange(input: $input) {

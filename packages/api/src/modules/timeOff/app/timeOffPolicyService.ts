@@ -12,7 +12,6 @@ import {
 import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
 import {
   changesCountsMidYear,
-  isPlannedStop,
   parseRules,
   type PolicyVersion,
   type TimeOffPolicy,
@@ -28,7 +27,7 @@ import {
   rulesChanged,
   versionOf,
 } from "./policyRules";
-import { cancelTermsStop, stopTermsPolicy } from "./policyStop";
+import { cancelPolicyStop, stopPolicy } from "./policyStop";
 import {
   publishTerms,
   type PublishSuggestions,
@@ -64,11 +63,15 @@ export interface TimeOffPolicyService {
   ) => Promise<PolicyAssignment>;
   /**
    * Removes a rules assignment that starts after today; the one ending the day before runs to its
-   * end. Given the row a planned stop ends, makes it open-ended again. CONFLICT once a change has
-   * started, or when the two around it would count the type differently partway through a leave
-   * year. Keeps its people's allowances and adds a line to the terms' history.
+   * end. CONFLICT once it has started, or when the two around it would count the type differently
+   * partway through a leave year. Keeps its people's allowances and adds a line to the terms' history.
    */
   cancelPolicyChange: (ctx: SecurityContext, input: { assignmentId: string }) => Promise<void>;
+  /**
+   * Makes the assignment a planned stop ends open-ended again: the last one for its type, ending on
+   * or after today. CONFLICT when it is no planned stop.
+   */
+  cancelPolicyStop: (ctx: SecurityContext, input: { assignmentId: string }) => Promise<void>;
   /** What Publish on the terms would do from `from`: their unpublished versions and every owner it reaches. */
   readPublishSuggestions: (
     ctx: SecurityContext,
@@ -104,7 +107,6 @@ export function createTimeOffPolicyService({
     employeeReads,
     workingPatterns: createWorkingPatternService({ transact, logger, today }),
   };
-  const stopping = { employeeReads, timeOff, today };
   return {
     async saveTimeOffPolicy(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
@@ -164,27 +166,7 @@ export function createTimeOffPolicyService({
       );
     },
 
-    async stopPolicy(ctx, input) {
-      ctx.require("MANAGE_WORKSPACE");
-      const { stopped, ...outcome } = await transact((tx) =>
-        stopTermsPolicy(stopping, ctx, tx, input),
-      ).catch((error: unknown) => {
-        if (error instanceof ApplicationError) {
-          logger.info({ ...input, code: error.code }, "Refused to stop offering a time off type");
-        }
-        throw error;
-      });
-      logger.info(
-        {
-          assignmentId: stopped.id,
-          ...stopped.owner,
-          timeOffTypeId: stopped.timeOffTypeId,
-          ...outcome,
-        },
-        "Stopped offering a time off type",
-      );
-      return stopped;
-    },
+    stopPolicy: (ctx, input) => stopPolicy(publishing, ctx, input),
 
     async cancelPolicyChange(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
@@ -200,9 +182,6 @@ export function createTimeOffPolicyService({
         const lane = (await repository.findAssignments(ownerIds(removed.owner))).filter(
           (row) => row.timeOffTypeId === removed.timeOffTypeId,
         );
-        if (isPlannedStop(lane, removed, today())) {
-          return { removed, ensured: await cancelTermsStop(stopping, ctx, tx, removed) };
-        }
         const { extended } = cancelPlannedVersion(lane, removed.startDate, today());
         refuseCountsChangeOnCancel(policies, extended, lane, removed);
         await repository.deleteAssignment(removed.id);
@@ -233,6 +212,7 @@ export function createTimeOffPolicyService({
       );
     },
 
+    cancelPolicyStop: (ctx, input) => cancelPolicyStop(publishing, ctx, input),
     readPublishSuggestions: (ctx, input) => readPublishSuggestions(publishing, ctx, input),
     publishTerms: (ctx, input) => publishTerms(publishing, ctx, input),
   };

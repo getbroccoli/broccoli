@@ -202,32 +202,6 @@ test("cancelling a change does not compare counts across the gap before the next
   ]);
 });
 
-test("cancelling a planned stop makes the last assignment open-ended again", async ({
-  orm,
-  seed,
-  transact,
-}) => {
-  const termsId = await seed.defaultTermsId();
-  await giveTermsPolicies(orm, transact, {
-    termsId,
-    policies: [{ recordOnly: "family_leave" }],
-    today: "2026-11-06",
-  });
-  const [policy] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-06" });
-  const stopped = await service.stopPolicy(OWNER, {
-    termsId,
-    timeOffTypeId: policy!.timeOffTypeId,
-    stopDate: "2027-01-01",
-  });
-
-  await service.cancelPolicyChange(OWNER, { assignmentId: stopped.id });
-
-  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
-    [{ id: stopped.id, versionId: policy!.versionId, startDate: "2026-01-01", endDate: null }],
-  );
-});
-
 async function publishRules(
   orm: Orm,
   termsId: string,
