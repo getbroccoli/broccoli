@@ -46,7 +46,8 @@
       "**/*.test.ts",
       "**/*.gen.ts",
       "**/__generated__/**",
-      "**/components/ui/**"
+      "**/components/ui/**",
+      "**/core/auth/schema.ts"
     ],
     "reporters": [
       "console"
