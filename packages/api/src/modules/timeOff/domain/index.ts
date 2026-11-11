@@ -20,7 +20,34 @@ export {
   type DatedWorkingWeek,
   yearlyDays,
 } from "./allowanceCalculator";
-export { ledgerDifference, type LedgerSum, type NewLedgerLine } from "./ledgerDifference";
+export {
+  type BookedDayLine,
+  ledgerDifference,
+  type LedgerSum,
+  type NewLedgerLine,
+  type TargetLine,
+} from "./ledgerDifference";
+export {
+  type BookingRefusal,
+  type BookingRefusalReason,
+  bookingWindow,
+  refusalOfBounds,
+  refusalOfDates,
+  refusalOfDays,
+  totalCost,
+} from "./bookingRules";
+export {
+  clashes,
+  costedDays,
+  costOfDay,
+  costOn,
+  type CostedDay,
+  datesFrom,
+  type DayCostReason,
+  type DayPart,
+  type NamedBankHoliday,
+  weekOn,
+} from "./bookedDay";
 export {
   parseStandardLeavePolicyKey,
   RECORD_ONLY_POLICY,

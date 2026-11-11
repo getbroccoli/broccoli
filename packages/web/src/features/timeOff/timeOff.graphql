@@ -1,0 +1,153 @@
+fragment WhosOutTimeOff on TimeOff {
+  id
+  timeOffType {
+    id
+    name
+    colour
+    icon
+  }
+  startDate
+  endDate
+  days {
+    date
+    dayPart
+  }
+  cost
+  note
+  bookedAt
+}
+
+# Everyone the viewer may read, by name, with their month of who's out.
+query WhosOut($from: Date!, $until: Date!) {
+  employees(first: 10000) {
+    edges {
+      node {
+        id
+        firstName
+        lastName
+        avatarUrl
+        whosOut(from: $from, until: $until) {
+          days {
+            date
+            kind
+            bankHolidayName
+          }
+          timeOff {
+            ...WhosOutTimeOff @unmask
+          }
+        }
+      }
+    }
+  }
+}
+
+# Who an admin can book for, by name.
+query BookingPeople {
+  employees(first: 10000) {
+    edges {
+      node {
+        id
+        firstName
+        lastName
+        jobTitle
+        avatarUrl
+      }
+    }
+  }
+}
+
+# The types one person has, with their figures, for the dialog's type menu.
+query BookingPersonTypes($id: ID!) {
+  employee(id: $id) {
+    id
+    timeOffTypes {
+      timeOffType {
+        id
+        name
+        colour
+        icon
+      }
+      balance
+      entitlement
+      remaining
+      used
+    }
+  }
+}
+
+query TimeOffBookingPreview($input: TimeOffBookInput!) {
+  timeOffBookingPreview(input: $input) {
+    days {
+      date
+      dayPart
+      cost
+      reason
+      bankHolidayName
+    }
+    cost
+    balances {
+      periodStart
+      periodEnd
+      balance
+      remainingBefore
+      remainingAfter
+      usedBefore
+      usedAfter
+    }
+    refusal {
+      reason
+      date
+      clashingTimeOffId
+    }
+  }
+}
+
+mutation BookTimeOff($input: TimeOffBookInput!) {
+  timeOff {
+    bookTimeOff(input: $input) {
+      timeOff {
+        ...WhosOutTimeOff @unmask
+      }
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+        ... on InvalidInputError {
+          fields {
+            field
+            code
+          }
+        }
+      }
+    }
+  }
+}
+
+mutation CancelTimeOff($input: TimeOffCancelInput!) {
+  timeOff {
+    cancelTimeOff(input: $input) {
+      cancelledTimeOffId
+      error {
+        __typename
+        ... on Error {
+          message
+        }
+      }
+    }
+  }
+}
+
+# Every company type, for types offered to the person only from a later date.
+query BookingCompanyTypes {
+  timeOffSettings {
+    timeOffTypes {
+      timeOffType {
+        id
+        name
+        colour
+        icon
+      }
+    }
+  }
+}

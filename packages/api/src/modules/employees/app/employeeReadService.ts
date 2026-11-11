@@ -53,6 +53,11 @@ export interface EmployeeReadService {
    */
   lockEmployees: (tx: Tx, employeeIds: readonly string[]) => Promise<string[]>;
   /**
+   * Trusted, for time off: holds back employee writes and deletes until the transaction ends, not
+   * reads. Take it before any other lock, as those writes take theirs first.
+   */
+  holdEmployeeWrites: (tx: Tx) => Promise<void>;
+  /**
    * Trusted, for time off: each employee's employments, oldest first, by id, in the caller's
    * transaction. A null start is unknown, a null end open-ended.
    */
@@ -141,6 +146,7 @@ export function createEmployeeReadService({
       );
     },
     lockEmployees: (tx, employeeIds) => employeeRepository(tx).lockByIds(employeeIds),
+    holdEmployeeWrites: (tx) => employmentRepository(tx).lockForReads(),
     readEmploymentPeriods: (tx, employeeIds) => employmentRepository(tx).findPeriods(employeeIds),
     readEmployeesByName,
     readTermsMemberships: readMemberships,
