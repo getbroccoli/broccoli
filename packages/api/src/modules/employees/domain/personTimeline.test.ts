@@ -280,52 +280,25 @@ it("does not reach a person whose own assignment covers every later day", () => 
 });
 
 it("detects a terms assignment ending when the person has no own assignment", () => {
-  const before = createPersonTimeline({
-    direct: [],
-    terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    version: (versionId: string) => versionId,
-    termsAssignments: () => [assignment("standard")],
-  });
-  const after = createPersonTimeline({
-    direct: [],
-    terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    version: (versionId: string) => versionId,
-    termsAssignments: () => [assignment("standard", "2026-01-01", "2026-10-31")],
-  });
+  const before = onTerms([assignment("standard")]);
+  const after = onTerms([assignment("standard", "2026-01-01", "2026-10-31")]);
 
   expect(changesWithin(before, after, date("2026-11-01"), [period("2026-01-01")])).toBe(true);
 });
 
 it("ignores a terms assignment ending when an own assignment keeps the same version", () => {
-  const before = createPersonTimeline({
-    direct: [],
-    terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    version: (versionId: string) => versionId,
-    termsAssignments: () => [assignment("standard")],
-  });
-  const after = createPersonTimeline({
-    direct: [assignment("standard", "2026-11-01")],
-    terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    version: (versionId: string) => versionId,
-    termsAssignments: () => [assignment("standard", "2026-01-01", "2026-10-31")],
-  });
+  const before = onTerms([assignment("standard")]);
+  const after = onTerms(
+    [assignment("standard", "2026-01-01", "2026-10-31")],
+    [assignment("standard", "2026-11-01")],
+  );
 
   expect(changesWithin(before, after, date("2026-11-01"), [period("2026-01-01")])).toBe(false);
 });
 
 it("ignores a version change after the person's employment ends", () => {
-  const before = createPersonTimeline({
-    direct: [],
-    terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    version: (versionId: string) => versionId,
-    termsAssignments: () => [assignment("standard")],
-  });
-  const after = createPersonTimeline({
-    direct: [],
-    terms: [{ termsId: "terms", startDate: null, endDate: null }],
-    version: (versionId: string) => versionId,
-    termsAssignments: () => [assignment("standard", "2026-01-01", "2026-11-30")],
-  });
+  const before = onTerms([assignment("standard")]);
+  const after = onTerms([assignment("standard", "2026-01-01", "2026-11-30")]);
 
   expect(
     changesWithin(before, after, date("2026-11-01"), [period("2026-01-01", "2026-11-30")]),
@@ -344,4 +317,17 @@ function assignment(versionId: string, startDate = "2026-01-01", endDate: string
     startDate: date(startDate),
     endDate: endDate === null ? null : date(endDate),
   };
+}
+
+/** A person always on one set of terms with `termsRows`, and `direct` rows of their own. */
+function onTerms(
+  termsRows: ReturnType<typeof assignment>[],
+  direct: ReturnType<typeof assignment>[] = [],
+) {
+  return createPersonTimeline({
+    direct,
+    terms: [{ termsId: "terms", startDate: null, endDate: null }],
+    version: (versionId: string) => versionId,
+    termsAssignments: () => termsRows,
+  });
 }
