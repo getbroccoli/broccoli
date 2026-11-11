@@ -83,6 +83,9 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+// The OAuth provider's tables (`@better-auth/oauth-provider`), for people's own agents, as its CLI
+// generates them: the provider writes every column. Broccoli uses clients, consents, tokens and
+// resources; `oauth_client_resource` and `oauth_client_assertion` stay empty for public clients.
 export const oauthClient = pgTable(
   "oauth_client",
   {

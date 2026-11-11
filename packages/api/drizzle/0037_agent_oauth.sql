@@ -1,3 +1,5 @@
+-- The OAuth provider's tables (@better-auth/oauth-provider) for people's own agents, as Better Auth's
+-- CLI generates them (see src/core/auth/schema.ts); keep them as generated rather than trimming.
 CREATE TABLE "oauth_access_token" (
 	"id" text PRIMARY KEY NOT NULL,
 	"token" text NOT NULL,
