@@ -81,19 +81,18 @@ const NOT_AUTHORIZE_PARAMETERS = new Set([
 
 /**
  * An agent's authorize request that sent the person here to sign in becomes the redirect, so
- * signing in resumes it: the authorize endpoint then asks them to allow the agent.
+ * signing in resumes it: the authorize endpoint then asks them to allow the agent. Its parameters
+ * come from the page's query as sent, since the router reads values such as `1e3` as JSON.
  */
 function withAgentAuthorizeRedirect(search: unknown): unknown {
   const raw = (search ?? {}) as Record<string, unknown>;
   if (raw.response_type === undefined || raw.client_id === undefined) {
     return search;
   }
-  const query = new URLSearchParams();
-  for (const [name, value] of Object.entries(raw)) {
-    if (!NOT_AUTHORIZE_PARAMETERS.has(name)) {
-      for (const each of Array.isArray(value) ? value : [value]) {
-        query.append(name, String(each));
-      }
+  const query = new URLSearchParams(window.location.search);
+  for (const name of [...query.keys()]) {
+    if (NOT_AUTHORIZE_PARAMETERS.has(name)) {
+      query.delete(name);
     }
   }
   return { redirect: `${AGENT_AUTHORIZE_PATH}?${query.toString()}` };

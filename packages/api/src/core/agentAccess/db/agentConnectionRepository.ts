@@ -22,6 +22,8 @@ export interface AgentConnectionRepository {
   findConnection(userId: string): Promise<StoredAgentConnection | null>;
   /** The person's connection of this client and their email, or null when it has ended. */
   findConnectionOf(userId: string, clientId: string): Promise<ConnectionInUse | null>;
+  /** Locks the person's user row until the transaction ends, so their connections change in turn. */
+  lockPerson(userId: string): Promise<void>;
   /** Notes that the connection was used at `now`. */
   touchConnection(connectionId: string, now: Date): Promise<void>;
   /**
@@ -29,6 +31,8 @@ export interface AgentConnectionRepository {
    * when null), and returns the ids of the consents it deleted.
    */
   deleteConnections(userId: string, keptClientId: string | null): Promise<string[]>;
+  /** Deletes the person's consent and tokens of this client; returns the consent's id, if any. */
+  deleteConnection(userId: string, clientId: string): Promise<string | null>;
   /** Adds the resource row for `identifier` unless it exists. */
   ensureResource(identifier: string): Promise<void>;
   /**
@@ -78,6 +82,9 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
         .where(and(eq(oauthConsent.userId, userId), eq(oauthConsent.clientId, clientId)));
       return row ?? null;
     },
+    async lockPerson(userId) {
+      await orm().select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update");
+    },
     async touchConnection(connectionId, now) {
       await orm()
         .update(oauthConsent)
@@ -97,6 +104,17 @@ export function agentConnectionRepository(db: Orm | Tx): AgentConnectionReposito
         .where(ofPerson(oauthConsent))
         .returning({ id: oauthConsent.id });
       return deleted.map(({ id }) => id);
+    },
+    async deleteConnection(userId, clientId) {
+      const ofClient = (table: TokenOrConsentTable) =>
+        and(eq(table.userId, userId), eq(table.clientId, clientId));
+      await orm().delete(oauthRefreshToken).where(ofClient(oauthRefreshToken));
+      await orm().delete(oauthAccessToken).where(ofClient(oauthAccessToken));
+      const [deleted] = await orm()
+        .delete(oauthConsent)
+        .where(ofClient(oauthConsent))
+        .returning({ id: oauthConsent.id });
+      return deleted?.id ?? null;
     },
     async ensureResource(identifier) {
       const now = new Date();

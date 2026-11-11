@@ -72,6 +72,24 @@ test("allowing a client grants read and offline access without write access", as
   expect(scope.split(" ")).not.toContain("broccoli:write");
 });
 
+test("a signed-in person cannot widen consent through the provider's endpoint", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Read client");
+  await connectAgent(env, browser, { clientId });
+  const listed = await browser.get("/api/auth/oauth2/get-consents");
+  expect(listed.status).toBe(200);
+  const consents = (await listed.json()) as { id: string; clientId: string }[];
+  const consent = consents.find((each) => each.clientId === clientId)!;
+  expect(consent).toBeDefined();
+
+  const response = await browser.post("/api/auth/oauth2/update-consent", {
+    id: consent.id,
+    update: { scopes: ["broccoli:read", "broccoli:write", "offline_access"] },
+  });
+
+  expect(response.ok).toBe(false);
+});
+
 test("a connection unused for 31 days loses access and cannot refresh", async ({ env }) => {
   const { browser, user } = await env.signInAsOwner();
   const clientId = await registerAgentClient(env, "Unused client");

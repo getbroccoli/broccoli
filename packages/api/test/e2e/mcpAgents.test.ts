@@ -109,6 +109,29 @@ test("an owner connects an agent and reads their identity", async ({ env }) => {
   });
 });
 
+test("malformed JSON with a valid read token returns a JSON-RPC parse error", async ({ env }) => {
+  const { browser } = await env.signInAsOwner();
+  const clientId = await registerAgentClient(env, "Read client");
+  const { accessToken } = await connectAgent(env, browser, { clientId });
+
+  const response = await fetch(`${env.url}/api/mcp`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+    },
+    body: "not json",
+  });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({
+    jsonrpc: "2.0",
+    id: null,
+    error: { code: -32700 },
+  });
+});
+
 test("authorization sends a signed-out browser to login with the client ID", async ({ env }) => {
   await env.seed.owner(TEST_OWNER);
   const clientId = await registerAgentClient(env, "Claude Code");

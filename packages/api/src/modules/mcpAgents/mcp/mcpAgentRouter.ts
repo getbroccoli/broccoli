@@ -13,6 +13,8 @@ import { MCP_AGENT_TOOLS, registerMcpAgentTools } from "./mcpAgentTools";
 const MAX_BODY_BYTES = 64 * 1024;
 /** Far more than an agent answering a person's questions needs. */
 const CALLS_PER_PERSON_PER_MINUTE = 120;
+/** Room for a few people's agents behind one address; bounds token guessing from it. */
+const CALLS_PER_ADDRESS_PER_MINUTE = 600;
 
 /**
  * `POST /api/mcp`: the MCP server people's own agents call, stateless, by the agent's bearer
@@ -41,6 +43,12 @@ export function mcpAgentRouter(
     })
     .post(
       "/mcp",
+      rateLimit({
+        windowMs: 60_000,
+        limit: CALLS_PER_ADDRESS_PER_MINUTE,
+        // Without a trusted proxy the socket address counts; a forwarded header is ignored.
+        validate: { xForwardedForHeader: false },
+      }),
       express.json({ limit: MAX_BODY_BYTES }),
       refuseBatches,
       asAgent(publicOrigin, resolveAgentSecurity, logger),
@@ -59,7 +67,35 @@ export function mcpAgentRouter(
         await server.connect(transport);
         await transport.handleRequest(request, response, request.body);
       },
-    );
+    )
+    .use(mcpErrorHandler(logger));
+}
+
+/**
+ * Answers a body that is no JSON, or too large, as JSON-RPC does; any other failure logs only its
+ * name, since a parser's message quotes the request.
+ */
+function mcpErrorHandler(logger: Logger): express.ErrorRequestHandler {
+  return (error: unknown, _request, response, next) => {
+    if (response.headersSent) {
+      next(error);
+      return;
+    }
+    const type = (error as { type?: unknown }).type;
+    if (type === "entity.parse.failed" || type === "entity.too.large") {
+      const status = type === "entity.too.large" ? 413 : 400;
+      response.status(status).json({
+        jsonrpc: "2.0",
+        error: { code: -32700, message: "Parse error" },
+        id: null,
+      });
+      return;
+    }
+    logger.error({ error: (error as Error).name }, "MCP call failed");
+    response
+      .status(500)
+      .json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal error" }, id: null });
+  };
 }
 
 /** One request at a time, so each tool call is checked for its scope; MCP has no batches. */

@@ -63,34 +63,7 @@ function agentConnectionPolicy(connections: AgentConnectionService): BetterAuthP
       },
     }),
     hooks: {
-      before: [
-        {
-          matcher: (ctx) => ctx.path === "/oauth2/register",
-          handler: createAuthMiddleware((ctx) =>
-            Promise.resolve({ context: { body: publicClientRegistration(ctx.body) } }),
-          ),
-        },
-        {
-          matcher: (ctx) => ctx.path === "/oauth2/consent",
-          handler: createAuthMiddleware((ctx) =>
-            Promise.resolve({ context: { body: readOnlyConsent(ctx.body) } }),
-          ),
-        },
-        {
-          // The resource is the MCP server at the address the agent reached Broccoli at.
-          matcher: (ctx) => ctx.path === "/oauth2/authorize",
-          handler: createAuthMiddleware((ctx) =>
-            connections.ensureAgentResource(
-              system,
-              agentResourceOf(new URL(ctx.context.baseURL).origin),
-            ),
-          ),
-        },
-        {
-          matcher: (ctx) => ctx.path === "/oauth2/token",
-          handler: createAuthMiddleware(() => connections.detachExpiredSessions(system)),
-        },
-      ],
+      before: policyBeforeHooks(connections),
       after: [
         {
           matcher: (ctx) =>
@@ -109,6 +82,51 @@ function agentConnectionPolicy(connections: AgentConnectionService): BetterAuthP
       ],
     },
   } satisfies BetterAuthPlugin;
+}
+
+/**
+ * Before the provider acts: public clients only, no widening of a consent outside Allow, read
+ * only for now, the resource at this address, and tokens detached from expired browser sessions.
+ */
+function policyBeforeHooks(connections: AgentConnectionService) {
+  const system = PrincipalSecurityContext.system();
+  return [
+    {
+      matcher: (ctx) => ctx.path === "/oauth2/register",
+      handler: createAuthMiddleware((ctx) =>
+        Promise.resolve({ context: { body: publicClientRegistration(ctx.body) } }),
+      ),
+    },
+    {
+      // A person changes what their agent may do only by allowing it again.
+      matcher: (ctx) => ctx.path === "/oauth2/update-consent",
+      handler: createAuthMiddleware(() => {
+        throw new APIError("FORBIDDEN", {
+          message: "Allow the agent again to change its access",
+        });
+      }),
+    },
+    {
+      matcher: (ctx) => ctx.path === "/oauth2/consent",
+      handler: createAuthMiddleware((ctx) =>
+        Promise.resolve({ context: { body: readOnlyConsent(ctx.body) } }),
+      ),
+    },
+    {
+      // The resource is the MCP server at the address the agent reached Broccoli at.
+      matcher: (ctx) => ctx.path === "/oauth2/authorize",
+      handler: createAuthMiddleware((ctx) =>
+        connections.ensureAgentResource(
+          system,
+          agentResourceOf(new URL(ctx.context.baseURL).origin),
+        ),
+      ),
+    },
+    {
+      matcher: (ctx) => ctx.path === "/oauth2/token",
+      handler: createAuthMiddleware(() => connections.detachExpiredSessions(system)),
+    },
+  ] satisfies NonNullable<BetterAuthPlugin["hooks"]>["before"];
 }
 
 /** What the Allow page posts; the provider has checked the query's signature by now. */
