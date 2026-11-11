@@ -5,7 +5,6 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
-import { parseUuid } from "../../../utils";
 import type {
   EmployeeReadService,
   EmployeeTermsService,
@@ -13,7 +12,7 @@ import type {
   OwnWorkingWeekService,
   TermsChange,
 } from "../app";
-import { type Employee, parseDateField } from "../domain";
+import type { Employee } from "../domain";
 
 /** Moving people to other terms and a person's own working week, with the preview of a move. */
 export function employmentTermsResolvers(
@@ -37,24 +36,12 @@ export function employmentTermsResolvers(
       async termsChangePreview(_parent, { input }, context) {
         const actor = context.getActor();
         const { moved, skipped } = await services.previewTermsChange(actor, input);
-        // Checked by the preview already; in their canonical form, as saving reads them.
-        const from = parseDateField("startDate", input.startDate);
-        const move = { termsId: parseUuid(input.termsId)!, startDate: from };
-        const ids = moved.map(({ employeeId }) => employeeId);
-        // Both read from the move's date, so a past one compares the rules on that date.
-        const after = await services.readEmploymentTerms(actor, { employeeIds: ids, move, from });
-        const now = await services.readEmploymentTerms(actor, { employeeIds: ids, from });
-        const employees = await services.readEmployees(actor, [
-          ...ids,
-          ...skipped.map(({ employeeId }) => employeeId),
-        ]);
+        const employees = await services.readEmployees(
+          actor,
+          [...moved, ...skipped].map(({ employeeId }) => employeeId),
+        );
         return {
-          moves: moved.map(({ employeeId, startDate }) => ({
-            employee: employees.get(employeeId)!,
-            startDate,
-            employmentTerms: { ...after.get(employeeId)!, move, from },
-            currentTerms: { ...now.get(employeeId)!, from },
-          })),
+          moves: moved.map((move) => ({ ...move, employee: employees.get(move.employeeId)! })),
           skipped: skippedOf(skipped, employees),
         };
       },
