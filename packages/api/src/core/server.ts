@@ -6,6 +6,13 @@ import { setTimeout as delay } from "node:timers/promises";
 
 import express from "express";
 
+import {
+  agentAccessPlugins,
+  agentDiscoveryRouter,
+  agentSecurityResolver,
+  type AgentSecurityResolver,
+  createAgentConnectionService,
+} from "./agentAccess";
 import { authHandler, type DeploymentServer } from "./auth";
 import { connectDatabase, type Database, transactor } from "./db";
 import type { Env } from "./env";
@@ -60,6 +67,8 @@ export async function startServer(
   let modules: readonly ModuleManifest[];
   let deployment: DeploymentServer;
   let resolveSecurity: SecurityResolver;
+  let resolveAgentSecurity: AgentSecurityResolver;
+  const agentConnections = createAgentConnectionService({ orm: database.orm, transact, logger });
   let graphql: GraphqlApi;
   try {
     const { manifests, setupDemo, addApprovedPeople, employeeDirectory, passwordResetEmail } =
@@ -72,7 +81,10 @@ export async function startServer(
         jobs: jobRunner.queue,
       });
     modules = manifests;
-    const plugins = modules.flatMap((module) => (module.authPlugin ? [module.authPlugin] : []));
+    const plugins = [
+      ...modules.flatMap((module) => (module.authPlugin ? [module.authPlugin] : [])),
+      ...agentAccessPlugins(agentConnections),
+    ];
     const services = { orm: database.orm, transact, secret: authSecret, logger, plugins };
     deployment =
       env.deployment.mode === "managed"
@@ -93,6 +105,7 @@ export async function startServer(
     const auth = deployment.auth;
     resolveSecurity = (headers) =>
       resolveSecurityContext(auth, database.orm, employeeDirectory, headers);
+    resolveAgentSecurity = agentSecurityResolver(auth, database.orm, employeeDirectory);
     graphql = await startGraphqlApi(
       modules,
       httpServer,
@@ -108,13 +121,17 @@ export async function startServer(
     app.use(healthRouter(readiness, deployment.initStatus));
     app.use("/api/auth", refuseBearerAuth);
     app.use(deployment.router);
+    app.use(agentDiscoveryRouter(deployment.auth, deployment.publicOrigin));
     // Before the auth handler, so a module's router can guard its own sign-in endpoints.
     for (const module of modules) {
       if (module.events) {
         eventBus.subscribe(module.events);
       }
       if (module.router) {
-        app.use("/api", module.router(resolveSecurity, deployment.publicOrigin));
+        app.use(
+          "/api",
+          module.router(resolveSecurity, deployment.publicOrigin, resolveAgentSecurity),
+        );
       }
     }
     app.all("/api/auth/{*path}", authHandler(deployment.auth));

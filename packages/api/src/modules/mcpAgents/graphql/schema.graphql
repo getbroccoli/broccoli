@@ -1,0 +1,13 @@
+"A person's own agent, such as Claude or Codex, connected to Broccoli to act as them."
+type AgentConnection {
+  id: ID!
+  "The name the agent gave itself; null when it gave none."
+  clientName: String
+  "When the person last allowed it."
+  connectedAt: DateTime!
+}
+
+type Query {
+  "The caller's own agent connection; null without one."
+  myAgentConnection: AgentConnection
+}

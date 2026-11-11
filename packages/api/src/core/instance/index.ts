@@ -16,6 +16,7 @@ export {
   linkPassword,
   refuseBearerAuth,
   resolveSecurityContext,
+  resolveUserSecurity,
 } from "./betterAuth";
 export { selfHostedServer } from "./selfHostedServer";
 export { AssignmentConflictError, NO_SETUP_INVITES, OwnerExistsError } from "./domain";
