@@ -10,6 +10,7 @@ import { usePayloadMutation } from "@/apollo";
 import {
   companyToday,
   DAY_FIELDS,
+  shortDate,
   type WeekDraft,
   weekDraftOf,
   weekErrors,
@@ -29,10 +30,13 @@ import {
 /** What the week row edits: the person's own week, or a return to their terms' week. */
 export type OwnWeekMode = "own" | "terms";
 
+/** The week form with the date it applies from. */
+export type OwnWeekDraft = WeekDraft & { startDate: string };
+
 /** One person's open week edit on the Employment terms tab, as the row and the panel footer use it. */
 export interface OwnWeekEdit {
   mode: OwnWeekMode | null;
-  draft: WeekDraft;
+  draft: OwnWeekDraft;
   /** The week the editor started from, for its "Was …" hint. */
   current: WeekVersion | null;
   earliest: string;
@@ -49,7 +53,7 @@ export interface OwnWeekEdit {
     /** The terms the person is on on a date. */
     termsNameOn: (date: string) => string;
   }) => void;
-  edit: (draft: WeekDraft) => void;
+  edit: (draft: OwnWeekDraft) => void;
   close: () => void;
   save: () => Promise<void>;
 }
@@ -63,7 +67,7 @@ export function useOwnWeekEdit({
   firstName: string;
 }): OwnWeekEdit {
   const [opened, setOpened] = useState<Parameters<OwnWeekEdit["open"]>[0] | null>(null);
-  const [draft, setDraft] = useState<WeekDraft | null>(null);
+  const [draft, setDraft] = useState<OwnWeekDraft | null>(null);
   const [failed, setFailed] = useState(false);
   const [setOwn, setting] = usePayloadMutation(SetOwnWorkingWeekDocument, {
     update: forgetHistory,
@@ -101,7 +105,7 @@ export function useOwnWeekEdit({
     saving: setting.loading || returning.loading,
     open: (start) => {
       setOpened(start);
-      setDraft({ ...weekDraftOf(start.current, today), startDate: laterOf(start.earliest, today) });
+      setDraft({ ...weekDraftOf(start.current), startDate: laterOf(start.earliest, today) });
     },
     edit: setDraft,
     close,
@@ -126,7 +130,7 @@ export function useOwnWeekEdit({
 }
 
 /** The week form as the mutation takes it: minutes each day and the bank holidays. */
-function weekInput(draft: WeekDraft) {
+function weekInput(draft: OwnWeekDraft) {
   const week = weekOfDraft(draft);
   return {
     ...Object.fromEntries(DAY_FIELDS.map((day) => [day, week[day]])),
@@ -134,14 +138,20 @@ function weekInput(draft: WeekDraft) {
   } as Record<(typeof DAY_FIELDS)[number], number> & { bankHolidayCalendar: BankHolidayCalendar };
 }
 
-function hasNoErrors(mode: OwnWeekMode, draft: WeekDraft, earliest: string): boolean {
-  const errors = weekErrors(draft, earliest);
-  return mode === "own" ? Object.keys(errors).length === 0 : !errors.startDate;
+function hasNoErrors(mode: OwnWeekMode, draft: OwnWeekDraft, earliest: string): boolean {
+  return !startDateError(draft, earliest) && (mode === "terms" || !weekErrors(draft).hours);
+}
+
+/** Why the date can't be saved: missing, or before the earliest change; null when it can. */
+export function startDateError(draft: OwnWeekDraft, earliest: string): string | null {
+  return !draft.startDate || draft.startDate < earliest
+    ? t("terms.edit.tooEarly", { date: shortDate(earliest) })
+    : null;
 }
 
 /** Something differs from what the form opened with, so leaving asks first. */
-function changedFrom(current: WeekVersion, draft: WeekDraft, startDate: string): boolean {
-  const start = weekDraftOf(current, startDate);
+function changedFrom(current: WeekVersion, draft: OwnWeekDraft, startDate: string): boolean {
+  const start = weekDraftOf(current);
   return (
     draft.calendar !== start.calendar ||
     draft.hours.some((hours, index) => hours !== start.hours[index]) ||

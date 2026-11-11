@@ -83,7 +83,10 @@ export interface Person {
   allowances: readonly Allowance[];
 }
 
-/** Every policy, and what decides each person's allowances. */
+/**
+ * Every policy, and what decides each person's allowances; `assignments` replaces the stored
+ * assignments read, as a publish would leave them.
+ */
 export async function readPeople(
   employeeReads: Pick<
     AllowanceEngineDependencies["employeeReads"],
@@ -91,20 +94,20 @@ export async function readPeople(
   >,
   tx: Tx,
   ids: readonly string[],
+  assignments?: (stored: PolicyAssignment[]) => PolicyAssignment[],
 ): Promise<{ people: Person[]; policies: TimeOffPolicy[] }> {
   const policyRepository = timeOffPolicyRepository(tx);
-  const [policies, employments, memberships, assignments, existing] = await Promise.all([
+  const [policies, employments, memberships, existing] = await Promise.all([
     policyRepository.findAll(),
     employeeReads.readEmploymentPeriods(tx, ids),
     employeeReads.readTermsMemberships(tx, ids),
-    policyRepository.findAssignments(ids),
     allowanceRepository(tx).findByEmployees(ids),
   ]);
-  const byId = new Map(policies.map((policy) => [policy.id, policy]));
-  const termsPolicyIds = new Map(
-    policies.flatMap(({ id, termsId, timeOffType }) =>
-      termsId ? [[`${termsId}:${timeOffType.id}`, id] as const] : [],
-    ),
+  const termsIds = [...new Set([...memberships.values()].flat().map(({ termsId }) => termsId))];
+  const stored = await policyRepository.findAssignments({ employeeIds: ids, termsIds });
+  const rows = Map.groupBy(assignments ? assignments(stored) : stored, laneKey);
+  const versions = new Map(
+    policies.flatMap((policy) => policy.versions.map((version) => [version.id, version])),
   );
   const existingOf = Map.groupBy(existing, ({ employeeId }) => employeeId);
   const people = ids.map((employeeId) => {
@@ -115,10 +118,11 @@ export async function readPeople(
       serviceStart: periods[0]?.startDate ?? null,
       timelineOf: (timeOffTypeId: string) =>
         createPersonTimeline({
-          direct: ownPoliciesOf(assignments.get(employeeId) ?? [], timeOffTypeId),
+          direct: rows.get(laneKey({ owner: { employeeId }, timeOffTypeId })) ?? [],
           terms: memberships.get(employeeId) ?? [],
-          idOfTerms: (termsId: string) => termsPolicyIds.get(`${termsId}:${timeOffTypeId}`) ?? null,
-          versions: (policyId: string) => byId.get(policyId)?.versions ?? [],
+          termsAssignments: (termsId) =>
+            rows.get(laneKey({ owner: { termsId }, timeOffTypeId })) ?? [],
+          version: (versionId) => versions.get(versionId)!,
         }),
       allowances: existingOf.get(employeeId) ?? [],
     };
@@ -126,15 +130,14 @@ export async function readPeople(
   return { people, policies };
 }
 
-/** A person's own policies for one type, dated, as their timeline reads them. */
-export function ownPoliciesOf(assignments: readonly PolicyAssignment[], timeOffTypeId: string) {
-  return assignments
-    .filter((assignment) => assignment.timeOffTypeId === timeOffTypeId)
-    .map(({ timeOffPolicyId, startDate, endDate }) => ({
-      id: timeOffPolicyId,
-      startDate,
-      endDate,
-    }));
+/** One owner's assignments for one type, as a key. */
+export function laneKey({
+  owner,
+  timeOffTypeId,
+}: Pick<PolicyAssignment, "owner" | "timeOffTypeId">): string {
+  const ownerKey =
+    "employeeId" in owner ? `employee:${owner.employeeId}` : `terms:${owner.termsId}`;
+  return `${ownerKey}:${timeOffTypeId}`;
 }
 
 /** The allowances to create: one per person and type that has none for the year needed. */

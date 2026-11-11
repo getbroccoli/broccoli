@@ -1,45 +1,42 @@
 import type { Tx } from "../../../../core/db";
 import { createRecordHistoryService } from "../../../../core/records";
 import type { SecurityContext } from "../../../../core/security";
-import type { PatternVersion, WorkingPattern } from "../../domain";
+import type { CalendarDate } from "../../../../utils";
+import type { AssignmentOwner, PatternWeek } from "../../domain";
 
 const recordHistory = createRecordHistoryService();
 
-/** On a terms' pattern, the line in the terms' history: the week before and after, or null when cancelled. */
+/** A working week from the date it applies from, as history keeps it. */
+export type DatedWeek = PatternWeek & { startDate: CalendarDate | null };
+
+/**
+ * The line in the owner's history for a change to their working week: the week before and after;
+ * null before for a first week, null after when a planned one was cancelled. Terms get it in their
+ * history, a person in their working pattern's.
+ */
 export async function appendWorkingWeekHistory(
   ctx: SecurityContext,
   tx: Tx,
-  pattern: WorkingPattern,
-  before: Omit<PatternVersion, "id">,
-  after: Omit<PatternVersion, "id"> | null,
+  owner: AssignmentOwner,
+  before: DatedWeek | null,
+  after: DatedWeek | null,
 ) {
-  if (!pattern.termsId) {
-    return;
-  }
+  const change = {
+    field: "workingWeek",
+    oldValue: before && weekValue(before),
+    newValue: after && weekValue(after),
+  };
   await recordHistory.append(ctx, tx, {
-    recordType: "terms",
+    recordType: "termsId" in owner ? "terms" : "working_pattern",
     operation: "UPDATED",
     cause: { kind: "EDITED_DIRECTLY" },
     records: [
-      {
-        recordId: pattern.termsId,
-        changes: [
-          {
-            field: "workingWeek",
-            oldValue: weekValue(before),
-            newValue: after && weekValue(after),
-          },
-        ],
-      },
+      { recordId: "termsId" in owner ? owner.termsId : owner.employeeId, changes: [change] },
     ],
   });
 }
 
-/** A version's week as history keeps it: a JSON object with its start date. */
-function weekValue({
-  startDate,
-  minutes,
-  bankHolidayCalendar,
-}: Omit<PatternVersion, "id">): string {
+/** A week as history keeps it: a JSON object with its start date. */
+function weekValue({ startDate, minutes, bankHolidayCalendar }: DatedWeek): string {
   return JSON.stringify({ startDate, minutes, bankHolidayCalendar });
 }

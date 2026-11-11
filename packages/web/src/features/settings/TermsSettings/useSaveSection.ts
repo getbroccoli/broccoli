@@ -1,50 +1,44 @@
 import { toast } from "sonner";
 
 import {
-  ChangeTermsTimeOffRulesDocument,
-  ChangeTermsWorkingWeekDocument,
-  OfferTermsTimeOffDocument,
+  SaveTermsTimeOffRulesDocument,
+  SaveTermsWorkingWeekDocument,
 } from "@/__generated__/graphql";
 import { usePayloadMutation } from "@/apollo";
+import { weekOfDraft } from "@/features/termsDisplay";
 import { t } from "@/i18n";
 
 import { rulesInputOf } from "../TimeOffSettings";
-import { savedToast } from "./termsDraft";
 import { TERMS_REFETCH, type Terms } from "./termsQueries";
-import { companyToday, weekOfDraft } from "@/features/termsDisplay";
 import type { OpenSection } from "./useTermsEditing";
 
-/** Saving the open section from its date: the week, a type's new rules, or an offer. */
+/** Saving the open section as the terms' unpublished week or a type's unpublished rules. */
 export function useSaveSection(terms: Terms) {
   const options = { refetch: TERMS_REFETCH };
-  const [changeWeek, weekState] = usePayloadMutation(ChangeTermsWorkingWeekDocument, options);
-  const [changeRules, rulesState] = usePayloadMutation(ChangeTermsTimeOffRulesDocument, options);
-  const [offer, offerState] = usePayloadMutation(OfferTermsTimeOffDocument, options);
+  const [saveWeek, weekState] = usePayloadMutation(SaveTermsWorkingWeekDocument, options);
+  const [saveRules, rulesState] = usePayloadMutation(SaveTermsTimeOffRulesDocument, options);
 
   /** Saves and says so; resolves with whether it saved. */
-  const save = async (open: OpenSection, startDate: string): Promise<boolean> => {
+  const save = async (open: OpenSection): Promise<boolean> => {
     try {
       if (open.kind === "week") {
         const input = {
-          workingPatternId: terms.workingPattern.id,
-          startDate,
+          termsId: terms.id,
           ...weekOfDraft(open.draft),
           bankHolidayCalendar: open.draft.calendar,
         };
-        await changeWeek({ variables: { input } });
-        toast(savedToast(t("terms.week.title"), terms.name, startDate, companyToday()));
+        await saveWeek({ variables: { input } });
+        toast(t("terms.edit.saved", { what: t("terms.week.title"), terms: terms.name }));
         return true;
       }
       const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === open.timeOffTypeId)!;
-      const rules = rulesInputOf(open.draft);
-      if (row.policy) {
-        const input = { timeOffPolicyId: row.policy.id, startDate, rules };
-        await changeRules({ variables: { input } });
-      } else {
-        const input = { termsId: terms.id, timeOffTypeId: open.timeOffTypeId, startDate, rules };
-        await offer({ variables: { input } });
-      }
-      toast(savedToast(row.timeOffType.name, terms.name, startDate, companyToday()));
+      const input = {
+        termsId: terms.id,
+        timeOffTypeId: open.timeOffTypeId,
+        rules: rulesInputOf(open.draft),
+      };
+      await saveRules({ variables: { input } });
+      toast(t("terms.edit.saved", { what: row.timeOffType.name, terms: terms.name }));
       return true;
     } catch {
       toast.error(t("terms.edit.saveFailed"));
@@ -52,5 +46,5 @@ export function useSaveSection(terms: Terms) {
     }
   };
 
-  return { save, saving: weekState.loading || rulesState.loading || offerState.loading };
+  return { save, saving: weekState.loading || rulesState.loading };
 }

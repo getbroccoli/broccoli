@@ -10,6 +10,8 @@ import {
   timeOffService,
   transactWithTimeOffEvents,
   workingPatternService,
+  seedWorkingPattern,
+  seedOwnWeek,
 } from "#test/support";
 
 test("a new person starts on terms configured before their location existed", async ({
@@ -97,13 +99,13 @@ test("turning time off on preserves existing default memberships and own pattern
   const glasgow = await seed.location("Glasgow");
   const employee = await seed.employee({ locationId: glasgow.id, startDate: "2025-01-01" });
   const patterns = workingPatternService(orm);
-  const own = await patterns.createPattern(OWNER, {
+  const own = await seedWorkingPattern(orm, {
     name: "Monday only",
     minutes: [450, 0, 0, 0, 0, 0, 0],
   });
-  await patterns.assignPattern(OWNER, {
+  await seedOwnWeek(orm, {
     employeeId: employee.id,
-    workingPatternId: own.id,
+    versionId: own.versionId,
     startDate: "2025-01-01",
   });
   const before = await readOwnPatternAssignments(orm, [employee.id]);

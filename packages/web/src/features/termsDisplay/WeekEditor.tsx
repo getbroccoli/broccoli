@@ -1,39 +1,23 @@
-import { useState } from "react";
-
 import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { FieldError } from "@/components/form";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { t } from "@/i18n";
 import { cn } from "@/lib/class-names";
 
 import { calendarName } from "./calendarName";
-import { DateChoice } from "./DateChoice";
-import { companyToday, DAY_NAMES, shortDate } from "./termsText";
-import { nextLeaveYear, type WeekDraft, weekErrors, weekHint, type WeekVersion } from "./weekDraft";
+import { DAY_NAMES } from "./termsText";
+import { type WeekDraft, weekErrors, weekHint, type WeekVersion } from "./weekDraft";
 
 type Props = {
   draft: WeekDraft;
-  current: WeekVersion;
-  earliest: string;
-  /** Whether "Applies from" shows; not while nobody was ever on the terms. */
-  dated: boolean;
+  /** The week the terms work today, which the hint compares with; null while they work none. */
+  current: WeekVersion | null;
   onChange: (draft: WeekDraft) => void;
 };
 
-/** The working week section opened in place: hours each day, bank holidays, from when. */
-export function WeekEditor({ draft, current, earliest, dated, onChange }: Props) {
-  const today = companyToday();
-  // From the leave year's start: a person who started this year may not change before their start.
-  const nextYear = nextLeaveYear(`${earliest.slice(0, 4)}-01-01`);
-  const [other, setOther] = useState(false);
-  const choice =
-    other || (draft.startDate !== today && draft.startDate !== nextYear)
-      ? "ANOTHER_DATE"
-      : draft.startDate === today
-        ? "TODAY"
-        : "NEXT_LEAVE_YEAR";
-  const errors = weekErrors(draft, earliest);
+/** The working week section opened in place: hours each day and bank holidays. */
+export function WeekEditor({ draft, current, onChange }: Props) {
+  const errors = weekErrors(draft);
   return (
     <div className="flex flex-col gap-5">
       <fieldset className="flex flex-col gap-2">
@@ -56,7 +40,7 @@ export function WeekEditor({ draft, current, earliest, dated, onChange }: Props)
           ))}
         </div>
         <p id="week-hours-hint" className="text-[13px] text-muted-foreground">
-          {errors.hours ? null : weekHint(draft, current)}
+          {errors.hours || !current ? null : weekHint(draft, current)}
         </p>
         <FieldError id="week-hours-error" message={errors.hours} />
       </fieldset>
@@ -77,36 +61,6 @@ export function WeekEditor({ draft, current, earliest, dated, onChange }: Props)
           ))}
         </select>
       </label>
-
-      {dated && (
-        <DateChoice
-          name="week-start"
-          options={[
-            { value: "TODAY", label: t("terms.edit.today") },
-            { value: "NEXT_LEAVE_YEAR", label: shortDate(nextYear) },
-            { value: "ANOTHER_DATE", label: t("terms.edit.otherDate") },
-          ]}
-          selected={choice}
-          onSelect={(value) => {
-            setOther(value === "ANOTHER_DATE");
-            if (value !== "ANOTHER_DATE") {
-              onChange({ ...draft, startDate: value === "TODAY" ? today : nextYear });
-            }
-          }}
-          hint={t("terms.edit.week.startHint")}
-          error={errors.startDate}
-          picker={
-            <DatePicker
-              value={draft.startDate}
-              fromDate={earliest}
-              placeholder={t("terms.edit.pickDate")}
-              aria-label={t("terms.edit.pickDate")}
-              aria-invalid={Boolean(errors.startDate)}
-              onChange={(startDate) => onChange({ ...draft, startDate })}
-            />
-          }
-        />
-      )}
     </div>
   );
 }

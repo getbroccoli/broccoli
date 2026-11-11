@@ -145,9 +145,9 @@ async function changeOwnWeeks(
     const from = cancel
       ? parseDateField("startDate", input.startDate)
       : await parseFrom(tx, employeeId, input.startDate, today);
-    const { weeks, workingPatternId } = await readOwnWeeks(tx, employeeId);
+    const { weeks, versions } = await readOwnWeeks(tx, employeeId);
     const applied = apply(weeks, from);
-    const savedPatternId = await saveOwnWeeks(tx, employeeId, workingPatternId, applied.weeks);
+    await saveOwnWeeks(tx, employeeId, versions, applied.weeks);
     await recordHistory.append(ctx, tx, {
       recordType: "employee",
       operation: "UPDATED",
@@ -166,7 +166,7 @@ async function changeOwnWeeks(
       ],
     });
     publishWorkingPatternChange(tx, [employeeId], from);
-    return { employeeId, workingPatternId: savedPatternId, startDate: from };
+    return { employeeId, startDate: from };
   });
 }
 

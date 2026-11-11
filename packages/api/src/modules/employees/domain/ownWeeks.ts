@@ -1,35 +1,25 @@
 import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import { addDays, type CalendarDate, coversDate } from "../../../utils";
-import type { PatternVersion, PatternWeek } from "./workingPattern";
-import type { DatedPattern } from "./workingPatternTimeline";
+import type { Assignment } from "./assignment";
+import type { PatternWeek } from "./workingPattern";
 
 /** A stretch of a person's own week; between stretches their terms' week applies. */
 export interface OwnWeek {
-  startDate: CalendarDate | null;
+  startDate: CalendarDate;
   endDate: CalendarDate | null;
   week: PatternWeek;
 }
 
-/**
- * A person's own weeks, oldest first, from their dated assignments: each pattern version an
- * assignment covers is a stretch of its own.
- */
+/** A person's own weeks, oldest first, from their assignments and the version each gives. */
 export function ownWeeksOf(
-  assignments: readonly DatedPattern[],
-  versionsOf: (workingPatternId: string) => readonly PatternVersion[],
+  assignments: readonly Assignment[],
+  versionOf: (versionId: string) => PatternWeek | undefined,
 ): OwnWeek[] {
   return assignments
-    .flatMap((assignment) =>
-      versionsOf(assignment.workingPatternId).flatMap(
-        ({ startDate, endDate, minutes, bankHolidayCalendar }): OwnWeek[] => {
-          const start = later(startDate, assignment.startDate);
-          const end = earlier(endDate, assignment.endDate);
-          return start !== null && end !== null && end < start
-            ? []
-            : [{ startDate: start, endDate: end, week: { minutes, bankHolidayCalendar } }];
-        },
-      ),
-    )
+    .flatMap(({ versionId, startDate, endDate }) => {
+      const version = versionOf(versionId);
+      return version ? [{ startDate, endDate, week: weekOf(version) }] : [];
+    })
     .toSorted(byStart);
 }
 
@@ -48,8 +38,8 @@ export function withOwnWeek(
   week: PatternWeek,
 ): OwnWeek[] {
   const covering = ownWeekOn(weeks, from);
-  const next = weeks.find(({ startDate }) => startDate !== null && startDate > from);
-  const endDate = covering ? covering.endDate : next ? addDays(next.startDate!, -1) : null;
+  const next = weeks.find(({ startDate }) => startDate > from);
+  const endDate = covering ? covering.endDate : next ? addDays(next.startDate, -1) : null;
   return [...endedBefore(weeks, from, covering), { startDate: from, endDate, week }].toSorted(
     byStart,
   );
@@ -61,7 +51,7 @@ export function withOwnWeek(
  */
 export function withoutOwnWeeks(weeks: readonly OwnWeek[], from: CalendarDate): OwnWeek[] {
   const covering = ownWeekOn(weeks, from);
-  const later = weeks.filter(({ startDate }) => startDate !== null && startDate > from);
+  const later = weeks.filter(({ startDate }) => startDate > from);
   if (!covering && later.length === 0) {
     throw invalidInput([{ field: "startDate", code: "no_own_week" }]);
   }
@@ -92,8 +82,8 @@ export function cancelOwnWeekChange(
     };
   }
   if (from > today && before) {
-    const next = weeks.find(({ startDate }) => startDate !== null && startDate > from);
-    const endDate = next ? addDays(next.startDate!, -1) : null;
+    const next = weeks.find(({ startDate }) => startDate > from);
+    const endDate = next ? addDays(next.startDate, -1) : null;
     return {
       weeks: weeks.map((stretch) => (stretch === before ? { ...stretch, endDate } : stretch)),
       cancelled: null,
@@ -114,17 +104,10 @@ function endedBefore(
   });
 }
 
-function later(a: CalendarDate | null, b: CalendarDate | null): CalendarDate | null {
-  if (a === null) return b;
-  return b !== null && b > a ? b : a;
+function weekOf({ minutes, bankHolidayCalendar }: PatternWeek): PatternWeek {
+  return { minutes, bankHolidayCalendar };
 }
 
-function earlier(a: CalendarDate | null, b: CalendarDate | null): CalendarDate | null {
-  if (a === null) return b;
-  return b !== null && b < a ? b : a;
-}
-
-// A stretch without a start date began before every other.
 function byStart(a: OwnWeek, b: OwnWeek): number {
-  return (a.startDate ?? "").localeCompare(b.startDate ?? "");
+  return a.startDate.localeCompare(b.startDate);
 }

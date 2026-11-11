@@ -1,8 +1,9 @@
 import {
-  createStandardPattern,
   expect,
   OWNER,
   seedEmploymentEnd,
+  seedOwnWeek,
+  seedWorkingPattern,
   test,
   workingPatternService,
 } from "#test/support";
@@ -115,10 +116,10 @@ test("drops a planned own change for good when going back to the terms before it
 test("replaces a named pattern the person is on", async ({ orm, seed }) => {
   const employee = await seed.employee({ startDate: "2024-03-01" });
   const service = workingPatternService(orm, { today: "2026-11-09" });
-  const standard = await createStandardPattern(orm);
-  await service.assignPattern(OWNER, {
+  const standard = await seedWorkingPattern(orm, { name: "Standard" });
+  await seedOwnWeek(orm, {
     employeeId: employee.id,
-    workingPatternId: standard.id,
+    versionId: standard.versionId,
     startDate: "2026-03-01",
   });
 

@@ -33,15 +33,25 @@ test("a December terms move splits Annual leave between the old and new terms an
   const annual = timeOffTypes.find(
     ({ timeOffType }) => timeOffType.typeKey === "annual_leave",
   )!.timeOffType;
-  await timeOffPolicyService(orm, { today: "2026-11-09" }).createPolicy(OWNER, {
+  const policies = timeOffPolicyService(orm, { today: "2026-11-09" });
+  await policies.saveTimeOffPolicy(OWNER, {
     termsId: scotland.id,
     timeOffTypeId: annual.id,
-    startDate: "2026-01-01",
     rules: {
       balance: "balance_from_allowance",
       entitlementDays: 28,
       bankHolidays: "bank_holidays_on_top_of_allowance",
     },
+  });
+  const suggestions = await policies.readPublishSuggestions(OWNER, {
+    termsId: scotland.id,
+    from: "2026-01-01",
+  });
+  await policies.publishTerms(OWNER, {
+    termsId: scotland.id,
+    versions: suggestions.versions,
+    startDate: "2026-01-01",
+    owners: [{ termsId: scotland.id }],
   });
   const handlers = allowanceEventHandlers({ timeOff, transact, logger: createLogger("silent") });
   expect(await readAllowances(orm, employee.id)).toMatchObject([

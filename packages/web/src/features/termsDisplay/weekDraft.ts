@@ -2,43 +2,47 @@ import type { BankHolidayCalendar } from "@/__generated__/graphql";
 import { t } from "@/i18n";
 import { calendarDayParts } from "@/lib/calendarDay";
 
-import { DAY_FIELDS, hoursOf, shortDate, type WeekMinutes, weekSummary } from "./termsText";
+import { DAY_FIELDS, hoursOf, type WeekMinutes, weekSummary } from "./termsText";
 
 /** The working week form: hours as typed, Monday first. */
 export interface WeekDraft {
   hours: string[];
   calendar: BankHolidayCalendar;
-  startDate: string;
 }
 
-/** A week version as the form starts from it. */
+/** A week as the form starts from it. */
 export type WeekVersion = WeekMinutes & { bankHolidayCalendar: BankHolidayCalendar };
 
-/** The week form filled from today's version, applying from today. */
-export function weekDraftOf(version: WeekVersion, today: string): WeekDraft {
+/** The week a form starts from on terms without one: Monday to Friday, 7.5 hours a day. */
+export const DEFAULT_WEEK: WeekVersion = {
+  mondayMinutes: 450,
+  tuesdayMinutes: 450,
+  wednesdayMinutes: 450,
+  thursdayMinutes: 450,
+  fridayMinutes: 450,
+  saturdayMinutes: 0,
+  sundayMinutes: 0,
+  bankHolidayCalendar: "ENGLAND_AND_WALES",
+};
+
+/** The week form filled from a week: the unpublished one, else today's. */
+export function weekDraftOf(version: WeekVersion): WeekDraft {
   return {
     hours: DAY_FIELDS.map((field) => hoursOf(version[field])),
     calendar: version.bankHolidayCalendar,
-    startDate: today,
   };
 }
 
 /** What is wrong with the week form, by field; empty when it can be saved. */
-export function weekErrors(
-  draft: WeekDraft,
-  earliest: string,
-): Partial<Record<"hours" | "startDate", string>> {
+export function weekErrors(draft: WeekDraft): Partial<Record<"hours", string>> {
   const minutes = draft.hours.map(minutesOf);
-  const errors: Partial<Record<"hours" | "startDate", string>> = {};
   if (minutes.some((value) => value === null)) {
-    errors.hours = t("terms.edit.week.hoursInvalid");
-  } else if (minutes.every((value) => value === 0)) {
-    errors.hours = t("terms.edit.week.noWorkingDay");
+    return { hours: t("terms.edit.week.hoursInvalid") };
   }
-  if (!draft.startDate || draft.startDate < earliest) {
-    errors.startDate = t("terms.edit.tooEarly", { date: shortDate(earliest) });
+  if (minutes.every((value) => value === 0)) {
+    return { hours: t("terms.edit.week.noWorkingDay") };
   }
-  return errors;
+  return {};
 }
 
 /** The week the form holds, as minutes; only for a form without errors. */

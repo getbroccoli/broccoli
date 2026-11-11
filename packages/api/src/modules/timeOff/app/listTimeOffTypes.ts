@@ -1,7 +1,12 @@
 import type { Transact } from "../../../core/db";
 import type { SecurityContext } from "../../../core/security";
 import { type CalendarDate, coversDate } from "../../../utils";
-import { allowanceRepository, timeOffPolicyRepository, timeOffRepository } from "../db";
+import {
+  allowanceRepository,
+  type PolicyAssignment,
+  timeOffPolicyRepository,
+  timeOffRepository,
+} from "../db";
 import { type PolicyVersion, sharedBalance, type TimeOffPolicy, type TimeOffType } from "../domain";
 import { byTypeOrder, calendarYearOf } from "./readTimeOffTypes";
 
@@ -30,19 +35,22 @@ export async function listTimeOffTypes(
 ): Promise<TimeOffTypeList> {
   ctx.require("MANAGE_WORKSPACE");
   const year = calendarYearOf(today());
-  const { types, policies, takenDays, peopleWithTimeOff } = await transact(async (tx) => {
-    const policyRepository = timeOffPolicyRepository(tx);
-    return {
-      types: await policyRepository.findAllTypes(),
-      policies: await policyRepository.findAll(),
-      takenDays: await timeOffRepository(tx).sumDaysByType({ from: year.start, until: year.end }),
-      peopleWithTimeOff: await allowanceRepository(tx).countEmployeesWithAllowanceUntil(today()),
-    };
-  });
+  const { types, policies, assignments, takenDays, peopleWithTimeOff } = await transact(
+    async (tx) => {
+      const policyRepository = timeOffPolicyRepository(tx);
+      return {
+        types: await policyRepository.findAllTypes(),
+        policies: await policyRepository.findAll(),
+        assignments: await policyRepository.findAllAssignments(),
+        takenDays: await timeOffRepository(tx).sumDaysByType({ from: year.start, until: year.end }),
+        peopleWithTimeOff: await allowanceRepository(tx).countEmployeesWithAllowanceUntil(today()),
+      };
+    },
+  );
   return {
     timeOffTypes: types.sort(byTypeOrder).map((timeOffType) => ({
       timeOffType,
-      balance: sharedBalance(countingToday(policies, timeOffType.id, today())),
+      balance: sharedBalance(countingToday(policies, assignments, timeOffType.id, today())),
       daysTakenThisYear:
         takenDays.find(({ timeOffTypeId }) => timeOffTypeId === timeOffType.id)?.days ?? 0,
     })),
@@ -50,16 +58,24 @@ export async function listTimeOffTypes(
   };
 }
 
-/** The type's policies as each counts today, or as its latest version did; one without versions is left out. */
+/**
+ * The type's policies as each counts today, by a version assigned today, else by its latest
+ * published version; one with none published is left out.
+ */
 function countingToday(
   policies: readonly TimeOffPolicy[],
+  assignments: readonly PolicyAssignment[],
   timeOffTypeId: string,
   date: CalendarDate,
 ): { id: string; balance: PolicyVersion["balance"] }[] {
+  const today = new Set(
+    assignments.filter((row) => coversDate(row, date)).map((row) => row.versionId),
+  );
   return policies
     .filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
     .flatMap(({ id, versions }) => {
-      const version = versions.find((candidate) => coversDate(candidate, date)) ?? versions.at(-1);
+      const published = versions.filter(({ status }) => status === "published");
+      const version = published.find((candidate) => today.has(candidate.id)) ?? published.at(-1);
       return version ? [{ id, balance: version.balance }] : [];
     });
 }

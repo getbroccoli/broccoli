@@ -24,6 +24,7 @@ export { ICONS, tileStyle, TIME_OFF_TYPE_COLOURS, TIME_OFF_TYPE_ICONS } from "./
 export { DateChoice } from "./DateChoice";
 export { WeekEditor } from "./WeekEditor";
 export {
+  DEFAULT_WEEK,
   nextLeaveYear,
   type WeekDraft,
   weekDraftOf,

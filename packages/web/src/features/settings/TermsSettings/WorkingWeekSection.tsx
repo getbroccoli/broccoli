@@ -13,20 +13,34 @@ import {
   hoursOf,
   plannedWeekLine,
   splitVersions,
+  weekSummary,
 } from "@/features/termsDisplay";
 
-type Version = NonNullable<EmploymentTermsStackQuery["terms"]>["workingWeek"][number];
+import { DraftPill } from "./DraftPill";
+
+type Terms = NonNullable<EmploymentTermsStackQuery["terms"]>;
+type Version = Terms["workingWeek"][number];
 
 type Props = {
   versions: Version[];
+  /** The week saved and not published yet; null while there is none. */
+  unpublished: Terms["unpublishedWorkingWeek"];
   /** The open form in place of today's week; null while the section is closed. */
   editor: ReactNode;
   onEdit: () => void;
   onCancelPlanned: (version: Version) => void;
+  onDiscard: () => void;
 };
 
-/** The terms' working week today, day by day, with any planned week under it. */
-export function WorkingWeekSection({ versions, editor, onEdit, onCancelPlanned }: Props) {
+/** The terms' working week today, day by day, with any planned and unpublished week under it. */
+export function WorkingWeekSection({
+  versions,
+  unpublished,
+  editor,
+  onEdit,
+  onCancelPlanned,
+  onDiscard,
+}: Props) {
   const { current, planned } = splitVersions(versions, companyToday());
   return (
     <section aria-labelledby="terms-week" className="flex flex-col gap-3">
@@ -34,7 +48,7 @@ export function WorkingWeekSection({ versions, editor, onEdit, onCancelPlanned }
         <h3 id="terms-week" className="text-[17px] font-semibold">
           {t("terms.week.title")}
         </h3>
-        {!editor && current && (
+        {!editor && (
           <Button variant="ghost" size="sm" onClick={onEdit}>
             {t("terms.edit.edit")}
           </Button>
@@ -75,7 +89,7 @@ export function WorkingWeekSection({ versions, editor, onEdit, onCancelPlanned }
           </dl>
         </>
       ) : (
-        <p className="text-sm text-muted-foreground">{t("terms.week.none")}</p>
+        <p className="text-sm text-muted-foreground">{t("terms.week.notSet")}</p>
       )}
       {planned.map((version) => (
         <div key={version.id} className="flex items-center gap-2 text-[13px] text-muted-foreground">
@@ -90,6 +104,19 @@ export function WorkingWeekSection({ versions, editor, onEdit, onCancelPlanned }
           </Button>
         </div>
       ))}
+      {unpublished && !editor && (
+        <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+          <DraftPill />
+          <span className="flex-1">
+            {`${weekSummary(unpublished)}, ${t("terms.bankHolidays", {
+              calendar: calendarName(unpublished.bankHolidayCalendar),
+            })}`}
+          </span>
+          <Button variant="ghost" size="sm" onClick={onDiscard}>
+            {t("terms.edit.discard")}
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

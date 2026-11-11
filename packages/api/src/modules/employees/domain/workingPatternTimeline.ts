@@ -2,12 +2,6 @@ import { addDays, type CalendarDate, type CalendarDateRange } from "../../../uti
 import type { PersonTimeline } from "./personTimeline";
 import type { PatternVersion, WorkingWeek } from "./workingPattern";
 
-/** A person's own pattern from a date to a date. */
-export interface DatedPattern extends CalendarDateRange {
-  id: string;
-  workingPatternId: string;
-}
-
 /** A person's terms over a period; null dates are open. */
 export interface TermsMembership extends CalendarDateRange {
   termsId: string;
