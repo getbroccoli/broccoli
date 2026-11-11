@@ -1,25 +1,16 @@
-import { useQuery } from "@apollo/client/react";
 import { useState } from "react";
-
-import { TermsTimeOffReachDocument, TermsWeekReachDocument } from "@/__generated__/graphql";
 
 import { rulesInputOf } from "../TimeOffSettings";
 import {
-  asksForDate,
-  rulesChangeBox,
   type RulesDraft,
   rulesDraftOf,
   rulesErrors,
-  rulesSaveLine,
-  rulesStartDate,
-  weekChangeBox,
   type WeekDraft,
   weekDraftOf,
   weekErrors,
-  weekSaveLine,
 } from "./termsDraft";
 import type { Terms, TimeOffRow } from "./termsQueries";
-import { companyToday, splitVersions, versionOn } from "@/features/termsDisplay";
+import { companyToday, splitVersions } from "@/features/termsDisplay";
 import { useSaveSection } from "./useSaveSection";
 
 /** The section open for editing, with its form. */
@@ -28,21 +19,20 @@ export type OpenSection =
 
 /**
  * Editing one set of terms in place: one section open at a time, opening another asks to discard
- * unsaved changes; what saving changes, whom it reaches, and saving it.
+ * unsaved changes; saving keeps the section's changes unpublished.
  */
 export function useTermsEditing(terms: Terms) {
   const [open, setOpen] = useState<OpenSection | null>(null);
   const [opened, setOpened] = useState<OpenSection | null>(null);
   const [waiting, setWaiting] = useState<OpenSection | null>(null);
   const { save, saving } = useSaveSection(terms);
-  const facts = sectionFacts(terms, open);
-  const people = useReach(terms.id, open, facts);
-  // Changed from what the section opened with: only what saving sends, so typing a value back,
-  // or a date left under an unpicked "Another date", is no change.
-  const dirty =
-    open !== null && savedValues(open, facts.earliest) !== savedValues(opened, facts.earliest);
+  const week = splitVersions(terms.workingWeek, companyToday()).current;
+  const row = open?.kind === "rules" ? rowOf(terms, open.timeOffTypeId) : null;
+  const valid = open !== null && Object.keys(errorsOf(open)).length === 0;
+  // Changed from what the section opened with: only what saving sends, so typing a value back is no change.
+  const dirty = open !== null && savedValues(open) !== savedValues(opened);
   // An offer saves as it opened too: taking the type's default rules is the point of it.
-  const savable = facts.valid && (dirty || (open?.kind === "rules" && open.draft.offer));
+  const savable = valid && (dirty || (open?.kind === "rules" && open.draft.offer));
 
   const show = (section: OpenSection | null) => {
     setOpen(section);
@@ -50,6 +40,7 @@ export function useTermsEditing(terms: Terms) {
     setWaiting(null);
   };
   const ask = (section: OpenSection) => (open && dirty ? setWaiting(section) : show(section));
+  const weekShown = terms.unpublishedWorkingWeek ?? week;
 
   return {
     open,
@@ -57,132 +48,40 @@ export function useTermsEditing(terms: Terms) {
     /** The section waiting while "discard your changes?" is asked. */
     waiting,
     saving,
-    ...facts,
-    people,
-    box: savable ? changeBox(open, facts) : null,
-    saveLine: open && facts.valid ? saveLineOf(terms, open, facts, people) : null,
+    /** The week the terms work today; null while they work none. */
+    week,
+    /** The open type's row; null while no type is open. */
+    row,
     canSave: savable,
-    editWeek: () =>
-      facts.week &&
-      ask({
-        kind: "week",
-        // Without a date the week applies from the leave year's start, so anyone added later
-        // with an earlier start date has it.
-        draft: weekDraftOf(
-          facts.week,
-          weekAsksForDate(terms) ? companyToday() : terms.workingPattern.earliestChange,
-        ),
-      }),
+    editWeek: () => weekShown && ask({ kind: "week", draft: weekDraftOf(weekShown) }),
     editRules: (timeOffTypeId: string) =>
-      ask({ kind: "rules", timeOffTypeId, draft: draftOf(terms, timeOffTypeId) }),
+      ask({ kind: "rules", timeOffTypeId, draft: draftOf(rowOf(terms, timeOffTypeId)) }),
     change: setOpen,
     close: () => show(null),
     discard: () => show(waiting),
     keepEditing: () => setWaiting(null),
     save: async () => {
-      if (open && facts.valid && (await save(open, facts.startDate))) show(null);
+      if (open && valid && (await save(open))) show(null);
     },
   };
 }
 
-type SectionFacts = ReturnType<typeof sectionFacts>;
-
-/** What the open section starts from: today's week or rules, the earliest date, the date picked. */
-function sectionFacts(terms: Terms, open: OpenSection | null) {
-  const today = companyToday();
-  const week = splitVersions(terms.workingWeek, today).current;
-  const row = open?.kind === "rules" ? rowOf(terms, open.timeOffTypeId) : null;
-  const rowToday = row ? splitVersions(row.versions, today).current : null;
-  const earliest =
-    open?.kind === "week"
-      ? terms.workingPattern.earliestChange
-      : (row?.policy?.earliestChange ?? row?.earliestOffer ?? today);
-  const startDate =
-    open?.kind === "week" ? open.draft.startDate : open ? rulesStartDate(open.draft, earliest) : "";
-  const errors =
-    open?.kind === "week"
-      ? weekErrors(open.draft, earliest)
-      : open
-        ? rulesErrors(open.draft, earliest)
-        : null;
-  const valid = errors !== null && Object.keys(errors).length === 0;
-  // The rules the new ones follow on their date, which is today's unless a plan starts earlier.
-  const rowBase = row ? (versionOn(row.versions, startDate) ?? rowToday) : null;
-  const dated =
-    open?.kind === "week"
-      ? weekAsksForDate(terms)
-      : asksForDate(terms.hadPeople, row?.versions ?? [], earliest);
-  return { week, row, rowBase, earliest, startDate, valid, dated };
-}
-
-function weekAsksForDate(terms: Terms): boolean {
-  return asksForDate(terms.hadPeople, terms.workingWeek, terms.workingPattern.earliestChange);
-}
-
-/** The people saving the open section reaches from its date, by name; null while they load. */
-function useReach(
-  termsId: string,
-  open: OpenSection | null,
-  { row, startDate, valid }: SectionFacts,
-) {
-  const week = useQuery(TermsWeekReachDocument, {
-    variables: { id: termsId, from: startDate },
-    skip: open?.kind !== "week" || !valid,
-    fetchPolicy: "no-cache",
-  });
-  const timeOff = useQuery(TermsTimeOffReachDocument, {
-    variables: {
-      id: termsId,
-      from: startDate,
-      timeOffTypeId: row?.timeOffType.id ?? "",
-      offer: !row?.policy,
-    },
-    skip: open?.kind !== "rules" || !valid,
-    fetchPolicy: "no-cache",
-  });
-  if (open?.kind === "week") return week.data?.terms?.workingPattern.reach ?? null;
-  const reached = timeOff.data?.terms?.timeOff.find(
-    ({ timeOffType }) => open?.kind === "rules" && timeOffType.id === open.timeOffTypeId,
-  );
-  return reached ? (reached.policy?.reach ?? reached.offerReach ?? null) : null;
-}
-
-function changeBox(open: OpenSection | null, { row, rowBase, startDate, dated }: SectionFacts) {
-  const date = dated ? startDate : null;
-  if (open?.kind === "week") return weekChangeBox(open.draft, date);
-  return open && row ? rulesChangeBox(row.timeOffType.name, open.draft, rowBase, date) : null;
-}
-
-function saveLineOf(
-  terms: Terms,
-  open: OpenSection,
-  { row, startDate, dated }: SectionFacts,
-  people: unknown[] | null,
-) {
-  const count = people?.length ?? null;
-  const date = dated ? startDate : null;
-  return open.kind === "week"
-    ? weekSaveLine(count, terms.name, date)
-    : rulesSaveLine(open.draft.offer, row!.timeOffType.name, count, terms.name, date);
+function errorsOf(open: OpenSection) {
+  return open.kind === "week" ? weekErrors(open.draft) : rulesErrors(open.draft);
 }
 
 /** What saving the section would send, as one comparable string. */
-function savedValues(section: OpenSection | null, earliest: string): string {
+function savedValues(section: OpenSection | null): string {
   if (!section) return "";
-  return section.kind === "week"
-    ? JSON.stringify(section.draft)
-    : JSON.stringify([rulesInputOf(section.draft), rulesStartDate(section.draft, earliest)]);
+  return JSON.stringify(section.kind === "week" ? section.draft : rulesInputOf(section.draft));
 }
 
 function rowOf(terms: Terms, timeOffTypeId: string): TimeOffRow {
   return terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
 }
 
-/** The type's rules form: from today's version, or its default rules for an offer. */
-function draftOf(terms: Terms, timeOffTypeId: string) {
-  const row = rowOf(terms, timeOffTypeId);
-  return rulesDraftOf(
-    splitVersions(row.versions, companyToday()).current,
-    row.timeOffType.defaultRules,
-  );
+/** The type's rules form: from its unpublished rules, else today's, else its default rules. */
+function draftOf(row: TimeOffRow) {
+  const current = splitVersions(row.versions, companyToday()).current;
+  return rulesDraftOf(row.unpublished ?? current, row.timeOffType.defaultRules, current === null);
 }

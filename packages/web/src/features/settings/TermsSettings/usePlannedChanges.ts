@@ -8,13 +8,12 @@ import {
 import { usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
+import { peopleText } from "./termsDraft";
 import { TERMS_REFETCH, type Terms, type TimeOffRow } from "./termsQueries";
 import { ruleSummary, versionBefore, weekSummary } from "@/features/termsDisplay";
 
 /** A planned change waiting for "Cancel change" to be confirmed, with what stays once it goes. */
-type PlannedChange =
-  | { kind: "week"; startDate: string; body: string }
-  | { kind: "rules"; timeOffPolicyId: string; startDate: string; body: string };
+type PlannedChange = { kind: "week" | "rules"; assignmentId: string; body: string };
 
 /** Cancelling the terms' planned changes, each after a confirmation saying what stays. */
 export function usePlannedChanges(terms: Terms) {
@@ -23,15 +22,10 @@ export function usePlannedChanges(terms: Terms) {
   const [cancelWeek, weekState] = usePayloadMutation(CancelTermsWorkingWeekChangeDocument, options);
   const [cancelRules, rulesState] = usePayloadMutation(CancelTermsTimeOffChangeDocument, options);
 
-  const confirm = async (change: PlannedChange) => {
+  const confirm = async ({ kind, assignmentId }: PlannedChange) => {
     try {
-      if (change.kind === "week") {
-        const input = { workingPatternId: terms.workingPattern.id, startDate: change.startDate };
-        await cancelWeek({ variables: { input } });
-      } else {
-        const { timeOffPolicyId, startDate } = change;
-        await cancelRules({ variables: { input: { timeOffPolicyId, startDate } } });
-      }
+      const cancel = kind === "week" ? cancelWeek : cancelRules;
+      await cancel({ variables: { input: { assignmentId } } });
       toast(t("terms.edit.cancelled"));
     } catch {
       toast.error(t("terms.edit.cancelFailed"));
@@ -52,14 +46,14 @@ export function usePlannedChanges(terms: Terms) {
 }
 
 function weekChange(terms: Terms, version: Terms["workingWeek"][number]): PlannedChange | null {
-  const before = versionBefore(terms.workingWeek, version.startDate!);
+  const before = versionBefore(terms.workingWeek, version.startDate);
   return (
     before && {
       kind: "week",
-      startDate: version.startDate!,
+      assignmentId: version.id,
       body: t("terms.edit.weekStays", {
         week: weekSummary(before),
-        people: peopleOf(terms.peopleCount),
+        people: peopleText(terms.peopleCount),
         terms: terms.name,
       }),
     }
@@ -72,17 +66,16 @@ function rulesChange(
   version: TimeOffRow["versions"][number],
 ): PlannedChange {
   const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
-  const before = versionBefore(row.versions, version.startDate!);
+  const before = versionBefore(row.versions, version.startDate);
   const values = {
     type: row.timeOffType.name,
-    people: peopleOf(terms.peopleCount),
+    people: peopleText(terms.peopleCount),
     terms: terms.name,
   };
   const fromAllowance = before?.balance === "BALANCE_FROM_ALLOWANCE";
   return {
     kind: "rules",
-    timeOffPolicyId: row.policy!.id,
-    startDate: version.startDate!,
+    assignmentId: version.id,
     body: before
       ? t(fromAllowance ? "terms.edit.rulesStaysAt" : "terms.edit.rulesStays", {
           ...values,
@@ -90,8 +83,4 @@ function rulesChange(
         })
       : t("terms.edit.offerStays", values),
   };
-}
-
-function peopleOf(count: number): string {
-  return count === 1 ? t("terms.edit.onePerson") : t("terms.edit.people", { count: String(count) });
 }
