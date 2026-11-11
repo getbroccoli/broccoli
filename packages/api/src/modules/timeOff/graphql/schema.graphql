@@ -1,4 +1,6 @@
 extend type Employee {
+  "Who's out: this person's dates and approved time off from `from` to `until`, at most 62 days. Everyone signed in reads it; a private type, the cost and the note only who may read this person's time off."
+  whosOut(from: Date!, until: Date!): EmployeeWhosOut!
   "One per time off type with a policy for this person, in the leave year containing today (or their start, when later), Annual leave first; empty when there is none, such as while time off is off; null for callers who may not read this person's time off."
   timeOffTypes: [EmployeeTimeOffType!]
 }
@@ -405,6 +407,135 @@ type Query {
   Without an answer a location is England and Wales, unsure. Admins, and the browser holding setup.
   """
   locationCalendarSuggestions(locationNames: [String!]!): [LocationCalendarSuggestion!]!
+  "What booking would cost and do, without writing anything. Admins only, for now."
+  timeOffBookingPreview(input: TimeOffBookInput!): TimeOffBookingPreview!
+}
+
+"One person's dates and approved time off over a range."
+type EmployeeWhosOut {
+  "Every date of the range, oldest first."
+  days: [WhosOutDay!]!
+  "Approved time off with a day in the range, oldest first."
+  timeOff: [TimeOff!]!
+}
+
+type WhosOutDay {
+  date: Date!
+  kind: WhosOutDayKind!
+  "Set on BANK_HOLIDAY."
+  bankHolidayName: String
+}
+
+enum WhosOutDayKind {
+  WORKING_DAY
+  "The person's working week has no minutes on that weekday."
+  NOT_A_WORKING_DAY
+  "A bank holiday on one of the person's working days."
+  BANK_HOLIDAY
+  NOT_EMPLOYED
+}
+
+"Time off booked for a person: its days that cost something when it was booked."
+type TimeOff {
+  id: ID!
+  "Null for a private type, such as Sickness, when the caller may not read this person's time off."
+  timeOffType: TimeOffType
+  startDate: Date!
+  endDate: Date!
+  days: [TimeOffDay!]!
+  "Days booked, a half day 0.5; null unless the caller may read this person's time off."
+  cost: Float
+  "Null unless the caller may read this person's time off."
+  note: String
+  "Null unless the caller may read this person's time off."
+  bookedAt: DateTime
+}
+
+type TimeOffDay {
+  date: Date!
+  dayPart: TimeOffDayPart!
+}
+
+enum TimeOffDayPart {
+  FULL_DAY
+  MORNING
+  AFTERNOON
+}
+
+input TimeOffBookInput {
+  employeeId: ID!
+  timeOffTypeId: ID!
+  startDate: Date!
+  "The last day, included."
+  endDate: Date!
+  "Days taken as a morning or an afternoon; every other working day is a full day."
+  halfDays: [TimeOffHalfDayInput!]
+  "Up to 1,000 characters."
+  note: String
+}
+
+input TimeOffHalfDayInput {
+  date: Date!
+  "MORNING or AFTERNOON."
+  dayPart: TimeOffDayPart!
+}
+
+"What a booking would cost and do."
+type TimeOffBookingPreview {
+  "Every date from start to end with its cost."
+  days: [TimeOffPreviewDay!]!
+  cost: Float!
+  "One per leave year the booking touches, oldest first; empty for a type without a balance, or when refused."
+  balances: [TimeOffBalanceChange!]!
+  "The first reason it cannot be booked; null when it can."
+  refusal: TimeOffBookingRefusal
+}
+
+type TimeOffPreviewDay {
+  date: Date!
+  dayPart: TimeOffDayPart!
+  cost: Float!
+  reason: TimeOffDayCostReason!
+  "Set when reason is BANK_HOLIDAY."
+  bankHolidayName: String
+}
+
+enum TimeOffDayCostReason {
+  WORKING_DAY
+  BANK_HOLIDAY
+  NOT_A_WORKING_DAY
+}
+
+"A leave year's figures before and after a booking."
+type TimeOffBalanceChange {
+  periodStart: Date!
+  periodEnd: Date!
+  balance: TimeOffBalanceKind!
+  "Null for UNLIMITED_BALANCE."
+  remainingBefore: Float
+  "Null for UNLIMITED_BALANCE."
+  remainingAfter: Float
+  usedBefore: Float!
+  usedAfter: Float!
+}
+
+type TimeOffBookingRefusal {
+  reason: TimeOffBookingRefusalReason!
+  "The first date the reason applies to, when it is about one date."
+  date: Date
+  "The booking it clashes with, for CLASHES_WITH_TIME_OFF."
+  clashingTimeOffId: ID
+}
+
+enum TimeOffBookingRefusalReason {
+  CLASHES_WITH_TIME_OFF
+  "Every day costs nothing: weekends, days the person doesn't work, bank holidays."
+  NO_WORKING_DAYS
+  TYPE_NOT_OFFERED
+  "Before the start of the leave year holding today, or after the end of the next one."
+  OUTSIDE_BOOKING_WINDOW
+  OUTSIDE_EMPLOYMENT
+  LONGER_THAN_A_YEAR
 }
 
 "How time off is turned on."
@@ -448,6 +579,10 @@ type TimeOffMutations {
   saveTimeOffStop(input: TimeOffStopSaveInput!): TimeOffPolicySavePayload!
   "Removes a rules change that has not started; the rules before it run on, and a planned offer leaves the type not offered. Refused with a ConflictError once it has started. Admins only."
   cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
+  "Books approved time off for a person's working days from start to end; refused with an InvalidInputError whose field `dates` carries a TimeOffBookingRefusalReason in lower case. Booking over the balance is allowed. Admins only, for now."
+  bookTimeOff(input: TimeOffBookInput!): TimeOffBookPayload!
+  "Cancels a whole booking, giving its days back. Admins only, for now."
+  cancelTimeOff(input: TimeOffCancelInput!): TimeOffCancelPayload!
   "Cancels a planned stop: the rules it ends, the type's last on their owner and ending on or after today, run on open-ended. Refused with a ConflictError when they are no planned stop. Admins only."
   cancelPolicyStop(input: TimeOffPolicyCancelStopInput!): TimeOffPolicyCancelStopPayload!
   "Publishes the terms' unpublished working week and rules and gives them, from a date no earlier than the start of the current leave year, to the owners asked: these terms and others using what they replace. How a type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). A stop ends the owners' rules for its type the day before the date instead (`startDate` / `not_offered` when an owner has none then). Refused with a ConflictError when they were saved again since `versions` was read, or when a stop would leave booked time off without rules. Admins only."
@@ -459,6 +594,26 @@ type TimeOffMutations {
   "Removes a change to a person's own rules for a type that has not started: new own rules, a change to them, or a return to their terms. Refused with a ConflictError once it has started. Admins only."
   cancelOwnRulesChange(input: TimeOffOwnRulesCancelChangeInput!): TimeOffOwnRulesPayload!
 }
+
+"The booked time off, or why it was refused."
+type TimeOffBookPayload {
+  timeOff: TimeOff
+  error: TimeOffBookError
+}
+
+union TimeOffBookError = InvalidInputError | NotFoundError
+
+input TimeOffCancelInput {
+  timeOffId: ID!
+}
+
+"The cancelled time off's id, or why it was refused."
+type TimeOffCancelPayload {
+  cancelledTimeOffId: ID
+  error: TimeOffCancelError
+}
+
+union TimeOffCancelError = NotFoundError | ConflictError
 
 "A person's own rules for a type from a date."
 input TimeOffOwnRulesSetInput {

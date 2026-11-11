@@ -8,6 +8,18 @@ export {
   type OwnTimeOffRulesService,
 } from "./ownTimeOffRulesService";
 export { createTimeOffPolicyService, type TimeOffPolicyService } from "./timeOffPolicyService";
+export {
+  type BookingInput,
+  type BookingPreview,
+  type BookTimeOffService,
+  createBookTimeOffService,
+} from "./bookTimeOffService";
+export {
+  createWhosOutService,
+  type WhosOut,
+  type WhosOutService,
+  type WhosOutTimeOff,
+} from "./whosOutService";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
 export { ensureAllowancesJob } from "./ensureAllowancesJob";
 export {

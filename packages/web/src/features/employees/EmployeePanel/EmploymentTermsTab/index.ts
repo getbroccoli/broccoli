@@ -4,3 +4,4 @@ export { EditFooter } from "./EditFooter";
 export { type OwnRulesEdit, useOwnRulesEdit } from "./useOwnRulesEdit";
 export { type OwnWeekEdit, useOwnWeekEdit } from "./useOwnWeekEdit";
 export { type TermsChange, useTermsChange } from "./useTermsChange";
+export { type TermsTabEdits, useTermsTabEdits } from "./useTermsTabEdits";

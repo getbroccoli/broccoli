@@ -128,7 +128,9 @@ CREATE TABLE "time_off" (
 	"employee_id" uuid NOT NULL,
 	"time_off_type_id" uuid NOT NULL,
 	"note" text,
-	"status" text NOT NULL
+	"status" text NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"created_by_user_id" text
 );
 --> statement-breakpoint
 CREATE TABLE "time_off_types" (

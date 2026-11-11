@@ -202,6 +202,7 @@ export const peopleEn = {
   "people.panel.remove.failed": "Couldn’t remove them. Try again.",
   "people.panel.remove.done": "{name} removed",
   "people.panel.timeOff.title": "Time off · {period}",
+  "people.panel.timeOff.book": "Book time off",
   "people.panel.timeOff.titleWithoutPeriod": "Time off",
   "people.panel.timeOff.empty": "No time off this year.",
   "people.panel.timeOff.entitlement": "Entitlement",
