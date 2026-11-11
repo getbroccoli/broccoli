@@ -50,11 +50,12 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
   const [otherDate, setOtherDate] = useState("");
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
   const startDate = dateOf(choice, earliest, otherDate);
-  const suggestions = useQuery(TermsPublishSuggestionsDocument, {
+  const read = useQuery(TermsPublishSuggestionsDocument, {
     variables: { id: terms.id, from: startDate },
     skip: !open || !startDate,
     fetchPolicy: "no-cache",
-  }).data?.terms?.publishSuggestions;
+  });
+  const suggestions = read.data?.terms?.publishSuggestions;
   const owners = suggestions?.owners ?? [];
   const ticked = owners.filter((owner) => !unticked.has(ownerKey(owner)));
   const people = suggestions ? reachedBy(ticked) : null;
@@ -119,7 +120,14 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
               )
             }
           />
-          {startDate ? (
+          {read.error ? (
+            <div className="flex items-center gap-3 text-sm">
+              <p className="text-destructive">{t("terms.publish.loadFailed")}</p>
+              <Button variant="outline" size="sm" onClick={() => void read.refetch()}>
+                {t("terms.retry")}
+              </Button>
+            </div>
+          ) : startDate ? (
             <WhatChanges changes={changesOf(terms, startDate)} people={people} />
           ) : (
             <Skeleton className="h-24 w-full" />

@@ -1,4 +1,7 @@
 import {
+  calendarDate,
+  seedTermsPolicy,
+  seedTimeOffType,
   EMPLOYEE,
   expect,
   OWNER,
@@ -11,7 +14,7 @@ import {
 } from "#test/support";
 import type { Orm } from "../../../core/db";
 import { timeOffPolicyRepository } from "../db";
-import type { TimeOffRulesInput } from "../domain";
+import { type TimeOffRulesInput, RECORD_ONLY_POLICY, STANDARD_LEAVE_POLICIES } from "../domain";
 
 test("cancelling a planned change restores the previous assignment's end date", async ({
   orm,
@@ -149,6 +152,54 @@ test("an employee cannot cancel planned rules", async ({ orm, seed }) => {
   expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual(
     before,
   );
+});
+
+test("cancelling a change does not compare counts across the gap before the next row", async ({
+  orm,
+  seed,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const type = await seedTimeOffType(orm, "Study leave");
+  const previous = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type.id,
+    version: RECORD_ONLY_POLICY,
+    startDate: "2026-01-01",
+    endDate: "2026-12-31",
+  });
+  const repository = timeOffPolicyRepository(orm);
+  const versionId = await repository.insertVersion(previous.id, {
+    ...STANDARD_LEAVE_POLICIES.uk_20_days_plus_bank_holidays,
+    status: "published",
+  });
+  const assignmentId = await repository.insertAssignment({
+    owner: { termsId },
+    timeOffTypeId: type.id,
+    timeOffPolicyId: previous.id,
+    versionId,
+    startDate: calendarDate("2027-01-01"),
+    endDate: calendarDate("2027-06-30"),
+  });
+  const nextId = await repository.insertAssignment({
+    owner: { termsId },
+    timeOffTypeId: type.id,
+    timeOffPolicyId: previous.id,
+    versionId,
+    startDate: calendarDate("2027-08-01"),
+    endDate: null,
+  });
+
+  await timeOffPolicyService(orm).cancelPolicyChange(OWNER, { assignmentId });
+
+  expect(await repository.findAssignments({ termsIds: [termsId] })).toMatchObject([
+    {
+      id: previous.assignmentId,
+      versionId: previous.versionId,
+      startDate: "2026-01-01",
+      endDate: "2027-06-30",
+    },
+    { id: nextId, versionId, startDate: "2027-08-01", endDate: null },
+  ]);
 });
 
 async function publishRules(

@@ -32,8 +32,10 @@ export function useTermsEditing(terms: Terms) {
   const valid = open !== null && Object.keys(errorsOf(open)).length === 0;
   // Changed from what the section opened with: only what saving sends, so typing a value back is no change.
   const dirty = open !== null && savedValues(open) !== savedValues(opened);
-  // An offer saves as it opened too: taking the type's default rules is the point of it.
-  const savable = valid && (dirty || (open?.kind === "rules" && open.draft.offer));
+  // An offer, or a first week on terms without one, saves as it opened too: taking the defaults is
+  // the point of it.
+  const firstWeek = open?.kind === "week" && !week && !terms.unpublishedWorkingWeek;
+  const savable = valid && (dirty || firstWeek || (open?.kind === "rules" && open.draft.offer));
 
   const show = (section: OpenSection | null) => {
     setOpen(section);

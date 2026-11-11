@@ -11,7 +11,6 @@ import {
   isSameOwner,
   parseChangeDate,
   parseDateField,
-  readTermsOverviews,
   type TermsOverview,
   type WorkingPatternPublish,
   type WorkingPatternService,
@@ -102,7 +101,7 @@ export async function publishTerms(
   input: PublishTermsInput,
 ): Promise<TermsOverview> {
   ctx.require("MANAGE_WORKSPACE");
-  const { orm, transact, logger, today, employeeReads, workingPatterns } = dependencies;
+  const { transact, logger, today, employeeReads, workingPatterns } = dependencies;
   const from = parseChangeDate(input.startDate, today());
   const owners = parseOwners(input.owners);
   const result = await transact(async (tx) => {
@@ -110,7 +109,8 @@ export async function publishTerms(
     const termsId = await existingTerms(employeeReads, tx, input.termsId);
     const week = await workingPatterns.readPublish(tx, { termsId, from });
     const policies = await planPolicies(tx, termsId, from);
-    policies.forEach(refuseCountsChangesOf);
+    const allPolicies = await timeOffPolicyRepository(tx).findAll();
+    for (const publish of policies) refuseCountsChangesOf(publish, owners, allPolicies);
     refuseChangedVersions(input.versions, [
       ...(week ? [week.version] : []),
       ...policies.map(({ version }) => version),
@@ -133,7 +133,7 @@ export async function publishTerms(
     { ...result, startDate: from, ownerCount: owners.length },
     "Published terms' working week and time off rules",
   );
-  return (await readTermsOverviews(orm, today(), [result.termsId]))[0]!;
+  return (await employeeReads.readTermsOverview(result.termsId, today()))!;
 }
 
 /** Publishes the week, then each type's rules, and keeps the allowances of everyone they reach. */

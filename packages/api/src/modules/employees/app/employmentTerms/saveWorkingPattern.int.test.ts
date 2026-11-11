@@ -202,3 +202,37 @@ test("discard refuses an unknown week", async ({ orm }) => {
     message: "No unpublished working week has this id.",
   });
 });
+
+test("saving before the first planned week starts keeps its pattern and replaces that planned row", async ({
+  orm,
+}) => {
+  const terms = await termsService(orm).createTerms(OWNER, {
+    name: "Scotland",
+    bankHolidayCalendar: "scotland",
+  });
+  const first = terms.unpublishedWorkingWeek!;
+  const publishing = timeOffPolicyService(orm);
+  await publishing.publishTerms(OWNER, {
+    termsId: terms.id,
+    versions: [first],
+    startDate: "2026-07-01",
+    owners: [{ termsId: terms.id }],
+  });
+
+  const draft = await workingPatternService(orm).saveWorkingPattern(OWNER, {
+    termsId: terms.id,
+    minutes: [480, 480, 480, 480, 0, 0, 0],
+    bankHolidayCalendar: "scotland",
+  });
+  await publishing.publishTerms(OWNER, {
+    termsId: terms.id,
+    versions: [draft],
+    startDate: "2026-07-01",
+    owners: [{ termsId: terms.id }],
+  });
+
+  expect(draft.workingPatternId).toBe(first.workingPatternId);
+  expect(
+    await workingPatternRepository(orm).findAssignments({ termsIds: [terms.id] }),
+  ).toMatchObject([{ versionId: draft.id, startDate: "2026-07-01", endDate: null }]);
+});

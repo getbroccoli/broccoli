@@ -52,9 +52,13 @@ export function usePublishTerms(terms: Terms, openDialog: () => void) {
       openDialog();
       return;
     }
-    const { data } = await readSuggestions({
+    const { data, error } = await readSuggestions({
       variables: { id: terms.id, from: terms.earliestChange },
     });
+    if (error) {
+      toast.error(t("terms.publish.failed"));
+      return;
+    }
     const owners = data?.terms?.publishSuggestions.owners;
     if (!owners || owners.length > 1) {
       openDialog();

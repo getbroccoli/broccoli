@@ -227,7 +227,10 @@ function draftOf(versions: readonly PatternVersion[], termsId: string): PatternV
   );
 }
 
-/** The pattern the terms work on `date`; null when they work none that day. */
+/**
+ * The pattern the terms work on `date`, else the one they start on later, as a first week planned
+ * for a later date; null when they have none.
+ */
 async function patternWorkedBy(
   tx: Tx,
   versions: readonly PatternVersion[],
@@ -235,7 +238,9 @@ async function patternWorkedBy(
   date: CalendarDate,
 ): Promise<string | null> {
   const rows = await workingPatternRepository(tx).findAssignments({ termsIds: [termsId] });
-  const row = rows.find((candidate) => coversDate(candidate, date));
+  const row =
+    rows.find((candidate) => coversDate(candidate, date)) ??
+    rows.find(({ startDate }) => startDate > date);
   return row ? versions.find(({ id }) => id === row.versionId)!.workingPatternId : null;
 }
 

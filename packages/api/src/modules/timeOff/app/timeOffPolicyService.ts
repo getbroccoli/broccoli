@@ -2,7 +2,7 @@ import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../utils";
+import { addDays, type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../utils";
 import {
   cancelPlannedVersion,
   createEmployeeReadService,
@@ -233,7 +233,10 @@ function refuseCountsChangeOnCancel(
   lane: readonly PolicyAssignment[],
   removed: PolicyAssignment,
 ) {
-  const next = lane.find(({ startDate }) => startDate > removed.startDate);
+  // Only a row starting the day after the cancelled one ends follows on from the extended row.
+  const next = lane.find(
+    ({ startDate }) => removed.endDate !== null && startDate === addDays(removed.endDate, 1),
+  );
   if (
     extended &&
     next &&

@@ -111,8 +111,8 @@ export const termsEn = {
   "terms.publish.footer":
     "Publishing changes these for {people} from {date}. Their allowances are worked out again from that date. Unticked ones keep their current settings.",
   "terms.publish.footerNobody": "Tick who gets the changes to publish them.",
-  "terms.publish.footerNoPeople":
-    "Publishing changes these from {date}. Nobody is on them on that day or later yet.",
+  "terms.publish.footerNoPeople": "Publishing changes these from {date}. They reach nobody yet.",
+  "terms.publish.loadFailed": "Who these changes reach could not be loaded.",
   "terms.publish.done": "Changes published for {terms}.",
   "terms.publish.failed": "The changes could not be published. Try again.",
   "terms.publish.countsDate":
@@ -124,6 +124,7 @@ export const termsEn = {
   "terms.edit.rulesStaysAt": "{type} stays at {rule}, for {people} on {terms}.",
   "terms.edit.rulesStays": "{type} stays {rule}, for {people} on {terms}.",
   "terms.edit.offerStays": "{type} stays not offered on {terms}.",
+  "terms.edit.weekStaysNone": "{terms} go back to having no working week.",
   "terms.edit.cancelled": "Change cancelled.",
   "terms.edit.cancelFailed": "The change could not be cancelled. Try again.",
   "terms.edit.discardTitle": "Discard your changes?",

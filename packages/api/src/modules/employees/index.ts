@@ -38,7 +38,6 @@ export {
   createLocationService,
   createTermsService,
   employeeDirectory,
-  readTermsOverviews,
   termsRecordType,
 } from "./app";
 export {

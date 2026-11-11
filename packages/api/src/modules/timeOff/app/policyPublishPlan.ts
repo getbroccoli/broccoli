@@ -68,12 +68,22 @@ export async function planPolicies(
 }
 
 /**
- * Refuses publishing `publish` to `owners` when a row it adds, or the one it follows on from or
- * leads into, would change how the type counts partway through a leave year.
+ * Refuses publishing `publish` to the `ticked` owners when a row it adds, or the one it follows on
+ * from or leads into, would change how the type counts partway through a leave year; `policies`
+ * give every neighbouring row its rules, whichever policy it belongs to.
  */
-export function refuseCountsChangesOf({ version, policy, owners }: PolicyPublish) {
-  const balances = new Map(policy.versions.map(({ id, balance }) => [id, balance]));
+export function refuseCountsChangesOf(
+  { version, owners }: PolicyPublish,
+  ticked: readonly AssignmentOwner[],
+  policies: readonly TimeOffPolicy[],
+) {
+  const balances = new Map(
+    policies.flatMap(({ versions }) => versions.map(({ id, balance }) => [id, balance])),
+  );
   for (const { owner, lane, plan } of owners) {
+    if (!ticked.some((one) => isSameOwner(one, owner))) {
+      continue;
+    }
     refuseCountsChangesMidYear(
       rowsAfterPlan(lane, plan, { versionId: version.id, owner }).map((row) => ({
         ...row,

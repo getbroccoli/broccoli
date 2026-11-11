@@ -45,19 +45,19 @@ export function usePlannedChanges(terms: Terms) {
   };
 }
 
-function weekChange(terms: Terms, version: Terms["workingWeek"][number]): PlannedChange | null {
+function weekChange(terms: Terms, version: Terms["workingWeek"][number]): PlannedChange {
   const before = versionBefore(terms.workingWeek, version.startDate);
-  return (
-    before && {
-      kind: "week",
-      assignmentId: version.id,
-      body: t("terms.edit.weekStays", {
-        week: weekSummary(before),
-        people: peopleText(terms.peopleCount),
-        terms: terms.name,
-      }),
-    }
-  );
+  return {
+    kind: "week",
+    assignmentId: version.id,
+    body: before
+      ? t("terms.edit.weekStays", {
+          week: weekSummary(before),
+          people: peopleText(terms.peopleCount),
+          terms: terms.name,
+        })
+      : t("terms.edit.weekStaysNone", { terms: terms.name }),
+  };
 }
 
 function rulesChange(

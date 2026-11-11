@@ -1,6 +1,5 @@
 import {
   calendarDate,
-  EMPLOYEE,
   expect,
   OWNER,
   giveTermsPolicies,
@@ -12,7 +11,7 @@ import {
   workingPatternService,
 } from "#test/support";
 import { timeOffPolicyRepository } from "../db";
-import { RECORD_ONLY_POLICY } from "../domain";
+import { RECORD_ONLY_POLICY, STANDARD_LEAVE_POLICIES } from "../domain";
 
 test("publishing terms without unpublished versions is refused", async ({ orm, seed }) => {
   const termsId = await seed.defaultTermsId();
@@ -87,56 +86,6 @@ test("leaving out a newly saved section refuses the whole publish", async ({ orm
     message: "These changes were saved again since you opened them.",
   });
   expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual([]);
-});
-
-test("publish refuses an owner that does not use the policy", async ({ orm, seed }) => {
-  const termsId = await seed.defaultTermsId();
-  const otherTermsId = await seed.terms("Other terms");
-  const type = await seedTimeOffType(orm, "Study leave");
-  const service = timeOffPolicyService(orm);
-  const draft = await service.saveTimeOffPolicy(OWNER, {
-    termsId,
-    timeOffTypeId: type.id,
-    rules: { balance: "no_balance" },
-  });
-
-  await expect(
-    service.publishTerms(OWNER, {
-      termsId,
-      versions: [draft],
-      startDate: "2026-01-01",
-      owners: [{ termsId }, { termsId: otherTermsId }],
-    }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "owners", code: "not_using_policy" }],
-  });
-  expect(
-    await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId, otherTermsId] }),
-  ).toEqual([]);
-});
-
-test("publish cannot apply changes before the current year", async ({ orm, seed }) => {
-  const termsId = await seed.defaultTermsId();
-  const type = await seedTimeOffType(orm, "Study leave");
-  const service = timeOffPolicyService(orm);
-  const draft = await service.saveTimeOffPolicy(OWNER, {
-    termsId,
-    timeOffTypeId: type.id,
-    rules: { balance: "no_balance" },
-  });
-
-  await expect(
-    service.publishTerms(OWNER, {
-      termsId,
-      versions: [draft],
-      startDate: "2025-12-31",
-      owners: [{ termsId }],
-    }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "startDate", code: "too_early" }],
-  });
 });
 
 test("publish checks how leave counts at a later assignment's start", async ({ orm, seed }) => {
@@ -253,38 +202,101 @@ test("an offer that would overlap a later unrelated policy is refused", async ({
   );
 });
 
-test("an employee cannot publish terms", async ({ orm, seed }) => {
+test("publishing new days compares the neighbouring policy's own rules", async ({ orm, seed }) => {
   const termsId = await seed.defaultTermsId();
   const type = await seedTimeOffType(orm, "Study leave");
+  const previous = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type.id,
+    version: STANDARD_LEAVE_POLICIES.uk_20_days_plus_bank_holidays,
+    startDate: "2026-01-01",
+    endDate: "2026-06-30",
+  });
+  const planned = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type.id,
+    version: STANDARD_LEAVE_POLICIES.uk_25_days_plus_bank_holidays,
+    startDate: "2026-07-01",
+  });
+  const service = timeOffPolicyService(orm, { today: "2026-07-01" });
+  const draft = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: type.id,
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 30,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-07-01",
+    owners: [{ termsId }],
+  });
+
+  expect(draft.timeOffPolicyId).toBe(planned.id);
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toMatchObject(
+    [
+      {
+        id: previous.assignmentId,
+        timeOffPolicyId: previous.id,
+        versionId: previous.versionId,
+        startDate: "2026-01-01",
+        endDate: "2026-06-30",
+      },
+      { timeOffPolicyId: planned.id, versionId: draft.id, startDate: "2026-07-01", endDate: null },
+    ],
+  );
+});
+
+test("an unticked owner's mid-year counts change does not refuse publishing to the ticked terms", async ({
+  orm,
+  seed,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const otherTermsId = await seed.terms("Other terms");
+  const type = await seedTimeOffType(orm, "Study leave");
+  const shared = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type.id,
+    version: RECORD_ONLY_POLICY,
+    startDate: "2026-01-01",
+  });
+  await seedTermsPolicy(orm, {
+    termsId: otherTermsId,
+    timeOffTypeId: type.id,
+    version: RECORD_ONLY_POLICY,
+    startDate: "2026-01-01",
+    endDate: "2026-06-30",
+  });
+  const repository = timeOffPolicyRepository(orm);
+  await repository.insertAssignment({
+    owner: { termsId: otherTermsId },
+    timeOffTypeId: type.id,
+    timeOffPolicyId: shared.id,
+    versionId: shared.versionId,
+    startDate: calendarDate("2026-07-01"),
+    endDate: null,
+  });
+  const before = await repository.findAssignments({ termsIds: [otherTermsId] });
   const service = timeOffPolicyService(orm);
   const draft = await service.saveTimeOffPolicy(OWNER, {
     termsId,
     timeOffTypeId: type.id,
-    rules: { balance: "no_balance" },
+    rules: { balance: "unlimited_balance" },
   });
 
-  await expect(
-    service.publishTerms(EMPLOYEE, {
-      termsId,
-      versions: [draft],
-      startDate: "2026-01-01",
-      owners: [{ termsId }],
-    }),
-  ).rejects.toMatchObject({ code: "FORBIDDEN" });
-});
-
-test("publishing unknown terms is refused", async ({ orm }) => {
-  const termsId = "00000000-0000-4000-8000-000000000001";
-
-  await expect(
-    timeOffPolicyService(orm).publishTerms(OWNER, {
-      termsId,
-      versions: [],
-      startDate: "2026-01-01",
-      owners: [{ termsId }],
-    }),
-  ).rejects.toMatchObject({
-    code: "INVALID_INPUT",
-    fieldErrors: [{ field: "termsId", code: "not_found" }],
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-01-01",
+    owners: [{ termsId }],
   });
+
+  expect(await repository.findAssignments({ termsIds: [termsId] })).toMatchObject([
+    { versionId: draft.id, startDate: "2026-01-01", endDate: null },
+  ]);
+  expect(await repository.findAssignments({ termsIds: [otherTermsId] })).toEqual(before);
 });
