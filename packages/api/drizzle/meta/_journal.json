@@ -260,6 +260,13 @@
       "when": 1794212977314,
       "tag": "0036_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794422885948,
+      "tag": "0037_agent_oauth",
+      "breakpoints": true
     }
   ]
 }
