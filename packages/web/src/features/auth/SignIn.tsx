@@ -8,10 +8,10 @@ import { ManagedSignIn } from "./ManagedSignIn";
 /** The login page's form: a password on self-hosted instances, the accounts service on managed ones. */
 export function SignIn() {
   const { mode, ownerSignInMethod, passwordResetByEmail } = useRouteContext({ from: "/login" });
-  const { error, reset } = useSearch({ from: "/login" });
+  const { error, reset, redirect } = useSearch({ from: "/login" });
   return mode === "MANAGED" ? (
     <div className="flex flex-col gap-6">
-      <ManagedSignIn error={error} method={ownerSignInMethod} />
+      <ManagedSignIn error={error} method={ownerSignInMethod} redirect={redirect} />
       {/* People who joined by invite sign in with the password they chose. */}
       <div className="flex items-center gap-3 text-xs text-muted-foreground">
         <span className="h-px flex-1 bg-border" />

@@ -4,6 +4,7 @@ import { demoEn } from "./en/demo";
 import { externalAgentsEn } from "./en/externalAgents";
 import { importsEn } from "./en/imports";
 import { invitesEn } from "./en/invites";
+import { mcpAgentsEn } from "./en/mcpAgents";
 import { navEn } from "./en/nav";
 import { notFoundEn } from "./en/notFound";
 import { peopleEn } from "./en/people";
@@ -26,6 +27,7 @@ export const en = {
   ...setupWhoEn,
   ...importsEn,
   ...externalAgentsEn,
+  ...mcpAgentsEn,
   ...workspaceEn,
   ...navEn,
   ...demoEn,

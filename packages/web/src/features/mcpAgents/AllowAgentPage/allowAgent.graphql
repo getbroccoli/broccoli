@@ -1,0 +1,16 @@
+query AllowAgent {
+  me {
+    id
+    email
+    employee {
+      id
+      firstName
+      lastName
+    }
+  }
+  myAgentConnection {
+    id
+    clientName
+    connectedAt
+  }
+}

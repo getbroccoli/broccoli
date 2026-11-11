@@ -1,0 +1,1 @@
+export { AllowAgentPage } from "./AllowAgentPage";

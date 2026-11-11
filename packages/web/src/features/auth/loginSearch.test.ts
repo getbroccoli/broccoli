@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, onTestFinished, vi } from "vitest";
 
 import { loginSearch, toLocalPath } from "./loginSearch";
 
@@ -10,6 +10,38 @@ it.each(["sign_in_required", "sign_in_unavailable"])("keeps the %s error", (erro
 
 it("drops an unknown error", () => {
   expect(loginSearch.parse({ error: "<script>" }).error).toBeUndefined();
+});
+
+it("resumes OAuth authorization in parameter order without the signature or login prompt", () => {
+  const search = {
+    response_type: "code",
+    exp: "1800000000",
+    client_id: "agent-client",
+    redirect_uri: "http://127.0.0.1:33418/callback",
+    scope: "broccoli:read offline_access",
+    ba_iat: "1799999700",
+    state: "client-state",
+    code_challenge: "challenge",
+    ba_param: ["client_id", "scope"],
+    code_challenge_method: "S256",
+    resource: "https://broccoli.example.com/api/mcp",
+    sig: "signed-query",
+    prompt: "login",
+  };
+
+  vi.stubGlobal("window", { location: { origin } });
+  onTestFinished(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const parsed = loginSearch.parse(search);
+
+  expect(parsed.redirect).toBe(
+    "/api/auth/oauth2/authorize?response_type=code&client_id=agent-client" +
+      "&redirect_uri=http%3A%2F%2F127.0.0.1%3A33418%2Fcallback" +
+      "&scope=broccoli%3Aread+offline_access&state=client-state&code_challenge=challenge" +
+      "&code_challenge_method=S256&resource=https%3A%2F%2Fbroccoli.example.com%2Fapi%2Fmcp",
+  );
 });
 
 it("keeps a local path with its query and hash", () => {
