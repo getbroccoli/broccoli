@@ -85,7 +85,6 @@ export function createTimeOffPolicyService({
 }: Dependencies): TimeOffPolicyService {
   const employeeReads = createEmployeeReadService({ orm });
   const publishing = {
-    orm,
     transact,
     logger,
     today,

@@ -177,7 +177,8 @@ export function createWorkingPatternService({
       const reached = [];
       // One after another: they share the transaction's connection.
       for (const { owner, lane, plan } of owners) {
-        reached.push({ owner, reachedIds: await readReach(tx, owner, lane, plan, draft.id, from) });
+        const reachedIds = plan ? await readReach(tx, owner, lane, plan, draft.id, from) : [];
+        reached.push({ owner, reachedIds });
       }
       return { version: draft, owners: reached };
     },
@@ -189,9 +190,12 @@ export function createWorkingPatternService({
       const draft = draftOf(versions, termsId)!;
       const suggested = await ownersOf(tx, termsId, draft, versions, from);
       const employeeIds = new Set<string>();
-      for (const { owner, plan, replaced } of suggested) {
+      for (const { owner, plan, refusal, replaced } of suggested) {
         if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
           continue;
+        }
+        if (!plan) {
+          throw refusal;
         }
         await applyAssignmentPlan(repository, plan, (span) =>
           repository.insertAssignment({ ...span, versionId: draft.id, owner }),
@@ -200,7 +204,10 @@ export function createWorkingPatternService({
           ...versions.find(({ id }) => id === replaced.versionId)!,
           startDate: replaced.startDate,
         };
-        await appendWorkingWeekHistory(ctx, tx, owner, before, { ...draft, startDate: from });
+        await appendWorkingWeekHistory(ctx, tx, owner, before, {
+          ...draft,
+          startDate: plan.added[0]?.startDate ?? from,
+        });
         for (const id of await employeesOf(tx, owner)) employeeIds.add(id);
       }
       await repository.publishVersion(draft.id);

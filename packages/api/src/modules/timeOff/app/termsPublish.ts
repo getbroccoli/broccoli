@@ -1,4 +1,4 @@
-import { ApplicationError, invalidInput } from "../../../core/applicationError";
+import { invalidInput } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
 import type { Logger } from "../../../core/logger";
 import type { SecurityContext } from "../../../core/security";
@@ -15,14 +15,15 @@ import {
   type WorkingPatternPublish,
   type WorkingPatternService,
 } from "../../employees";
-import type { Orm } from "../../../core/db";
 import { timeOffPolicyRepository } from "../db";
 import type { EnsuredAllowances } from "./allowanceEngine";
 import {
   type PolicyPublish,
   planPolicies,
   readPolicyReach,
+  refuseChangedVersions,
   refuseCountsChangesOf,
+  refuseUnsuggestedOwners,
 } from "./policyPublishPlan";
 import {
   appendRulesHistory,
@@ -54,7 +55,6 @@ export interface PublishTermsInput {
 
 /** What Publish needs: its transaction, the working weeks it publishes with, and the allowance engine. */
 export interface PublishDependencies {
-  orm: Orm;
   transact: Transact;
   logger: Logger;
   today: () => CalendarDate;
@@ -109,12 +109,13 @@ export async function publishTerms(
     const termsId = await existingTerms(employeeReads, tx, input.termsId);
     const week = await workingPatterns.readPublish(tx, { termsId, from });
     const policies = await planPolicies(tx, termsId, from);
-    const allPolicies = await timeOffPolicyRepository(tx).findAll();
-    for (const publish of policies) refuseCountsChangesOf(publish, owners, allPolicies);
+    // Revisions first: a draft saved again is reported as such, before what it would change.
     refuseChangedVersions(input.versions, [
       ...(week ? [week.version] : []),
       ...policies.map(({ version }) => version),
     ]);
+    const allPolicies = await timeOffPolicyRepository(tx).findAll();
+    for (const publish of policies) refuseCountsChangesOf(publish, owners, allPolicies);
     refuseUnsuggestedOwners(owners, [
       { termsId },
       ...(week?.owners.map(({ owner }) => owner) ?? []),
@@ -193,9 +194,12 @@ async function publishPolicy(
 ): Promise<string[]> {
   const repository = timeOffPolicyRepository(tx);
   const people = new Set<string>();
-  for (const { owner, plan, replaced } of plans) {
+  for (const { owner, plan, refusal, replaced } of plans) {
     if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
       continue;
+    }
+    if (!plan) {
+      throw refusal;
     }
     await applyAssignmentPlan(repository, plan, (span) =>
       repository.insertAssignment({
@@ -211,7 +215,7 @@ async function publishPolicy(
         ...versionOf([policy], replaced.versionId),
         startDate: replaced.startDate,
       },
-      after: { ...version, startDate: from },
+      after: { ...version, startDate: plan.added[0]?.startDate ?? from },
     });
     for (const id of await employeesOf(employeeReads, tx, owner)) people.add(id);
   }
@@ -299,37 +303,14 @@ function parseOwners(owners: PublishTermsInput["owners"]): AssignmentOwner[] {
   return owners.map(({ employeeId, termsId }) => {
     const employee = employeeId ? parseUuid(employeeId) : null;
     const terms = termsId ? parseUuid(termsId) : null;
-    if ((employee === null) === (terms === null)) {
+    // Exactly one id, and every id given well formed: a bad one is never read as absent.
+    if (
+      Boolean(employeeId) === Boolean(termsId) ||
+      (employeeId && !employee) ||
+      (termsId && !terms)
+    ) {
       throw invalidInput([{ field: "owners", code: "invalid" }]);
     }
     return employee ? { employeeId: employee } : { termsId: terms! };
   });
-}
-
-/** Refuses, with CONFLICT, unpublished versions that are not exactly the ones asked, at their revisions. */
-function refuseChangedVersions(
-  asked: readonly { id: string; revision: number }[],
-  current: readonly { id: string; revision: number }[],
-) {
-  if (current.length === 0) {
-    throw new ApplicationError("CONFLICT", "These terms have nothing to publish.");
-  }
-  const same =
-    asked.length === current.length &&
-    current.every(({ id, revision }) =>
-      asked.some((version) => version.id === id && version.revision === revision),
-    );
-  if (!same) {
-    throw new ApplicationError("CONFLICT", "These changes were saved again since you opened them.");
-  }
-}
-
-/** Refuses an owner Publish does not suggest as invalid input. */
-function refuseUnsuggestedOwners(
-  owners: readonly AssignmentOwner[],
-  suggested: readonly AssignmentOwner[],
-) {
-  if (owners.some((owner) => !suggested.some((known) => isSameOwner(known, owner)))) {
-    throw invalidInput([{ field: "owners", code: "not_using_policy" }]);
-  }
 }

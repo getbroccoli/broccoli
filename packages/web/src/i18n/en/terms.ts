@@ -109,7 +109,7 @@ export const termsEn = {
   "terms.publish.reach": "{count} people",
   "terms.publish.reachOne": "1 person",
   "terms.publish.footer":
-    "Publishing changes these for {people} from {date}. Their allowances are worked out again from that date. Unticked ones keep their current settings.",
+    "Publishing reaches {people} from {date}, each with the changes that apply to them; their allowances are worked out again from that date. Unticked ones keep their current settings.",
   "terms.publish.footerNobody": "Tick who gets the changes to publish them.",
   "terms.publish.footerNoPeople": "Publishing changes these from {date}. They reach nobody yet.",
   "terms.publish.loadFailed": "Who these changes reach could not be loaded.",

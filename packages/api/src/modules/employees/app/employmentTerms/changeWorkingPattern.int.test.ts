@@ -1,4 +1,5 @@
 import {
+  calendarDate,
   termsService,
   expect,
   OWNER,
@@ -8,6 +9,7 @@ import {
   timeOffPolicyService,
   workingPatternService,
 } from "#test/support";
+import { workingPatternRepository } from "../../db";
 
 test("publishing a terms' week writes one history line with the old and new settings", async ({
   orm,
@@ -95,4 +97,45 @@ test("publishing one terms' week leaves another terms' week unchanged", async ({
   });
 
   expect(await termsService(orm).readTerms(OWNER, other!.id)).toEqual(other);
+});
+
+test("publishing to a planned working week records its own start date in terms history", async ({
+  orm,
+  seed,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const otherTermsId = await seed.terms("Other terms");
+  const repository = workingPatternRepository(orm);
+  const [current] = await repository.findAssignments({ termsIds: [termsId] });
+  await repository.insertAssignment({
+    owner: { termsId: otherTermsId },
+    versionId: current!.versionId,
+    startDate: calendarDate("2026-07-01"),
+    endDate: null,
+  });
+  const draft = await workingPatternService(orm).saveWorkingPattern(OWNER, {
+    termsId,
+    minutes: [480, 480, 480, 480, 0, 0, 0],
+    bankHolidayCalendar: "scotland",
+  });
+
+  await timeOffPolicyService(orm).publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-06-01",
+    owners: [{ termsId: otherTermsId }],
+  });
+
+  expect(await repository.findAssignments({ termsIds: [otherTermsId] })).toMatchObject([
+    { versionId: draft.id, startDate: "2026-07-01", endDate: null },
+  ]);
+  const page = await termsService(orm).readTermsHistory(OWNER, otherTermsId, {});
+  expect(page.edges).toHaveLength(1);
+  const [change] = page.edges[0]!.node.changes;
+  expect(change!.field).toBe("workingWeek");
+  expect(JSON.parse(change!.newValue!)).toEqual({
+    startDate: "2026-07-01",
+    minutes: [480, 480, 480, 480, 0, 0, 0],
+    bankHolidayCalendar: "scotland",
+  });
 });

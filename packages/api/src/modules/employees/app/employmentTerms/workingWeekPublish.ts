@@ -7,7 +7,7 @@ import {
   type AssignmentPlan,
   isSameOwner,
   type PatternVersion,
-  planReplacement,
+  planOrRefusal,
   rowsAfterPlan,
 } from "../../domain";
 import { readTimelines } from "./employeeWorkingPatternService";
@@ -47,11 +47,24 @@ export async function ownersOf(
     planned.push({
       owner,
       lane,
-      plan: planReplacement(lane, isOfPattern, from),
-      replaced: lane.find((row) => isOfPattern(row) && coversDate(row, from)) ?? null,
+      ...planOrRefusal(lane, isOfPattern, from),
+      replaced: firstReplaced(lane, isOfPattern, from),
     });
   }
   return planned;
+}
+
+/** The row a publish from `from` takes over first: the one covering `from`, else the next one; null for none. */
+export function firstReplaced<R extends Assignment>(
+  lane: readonly R[],
+  isReplaced: (row: R) => boolean,
+  from: CalendarDate,
+): R | null {
+  return (
+    lane.find((row) => isReplaced(row) && coversDate(row, from)) ??
+    lane.find((row) => isReplaced(row) && row.startDate > from) ??
+    null
+  );
 }
 
 /** The employees on whom the draft would apply on some day from `from` on that they are employed. */

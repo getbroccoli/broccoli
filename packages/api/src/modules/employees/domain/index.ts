@@ -42,6 +42,7 @@ export {
   type AssignmentPlan,
   isSameOwner,
   NEW_ROW,
+  planOrRefusal,
   planReplacement,
   rowsAfterPlan,
   type VersionStatus,

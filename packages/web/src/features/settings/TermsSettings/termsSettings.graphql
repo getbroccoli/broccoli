@@ -135,16 +135,10 @@ query TermsPublishSuggestions($id: ID!, $from: Date!) {
   terms(id: $id) {
     id
     publishSuggestions(from: $from) {
-      versions {
-        id
-        revision
-        timeOffTypeId
-      }
       owners {
         termsId
         employeeId
         name
-        versionIds
         reached {
           id
           firstName

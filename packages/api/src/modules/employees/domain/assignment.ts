@@ -64,6 +64,22 @@ export function planReplacement<R extends Assignment>(
 }
 
 /**
+ * `planReplacement`, keeping a refusal instead of throwing it, so an owner nobody publishes to
+ * cannot refuse the others; publishing to that owner throws `refusal`.
+ */
+export function planOrRefusal<R extends Assignment>(
+  rows: readonly R[],
+  isReplaced: (row: R) => boolean,
+  from: CalendarDate,
+): { plan: AssignmentPlan | null; refusal: unknown } {
+  try {
+    return { plan: planReplacement(rows, isReplaced, from), refusal: null };
+  } catch (refusal) {
+    return { plan: null, refusal };
+  }
+}
+
+/**
  * One owner's rows as `plan` leaves them, oldest first; the added rows carry `versionId` and the
  * id `NEW_ROW`, as they have none yet.
  */

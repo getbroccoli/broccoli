@@ -26,6 +26,7 @@ import { avatarRouter, inviteRateLimit } from "./http";
 // Public values.
 export {
   applyAssignmentPlan,
+  firstReplaced,
   createEmployeeInviteService,
   createEmployeeManagerService,
   createEmployeePermissionService,
@@ -52,6 +53,7 @@ export {
   isSameOwner,
   NEW_ROW,
   personVersionsFrom,
+  planOrRefusal,
   planReplacement,
   rowsAfterPlan,
   SETUP_START_DATE,

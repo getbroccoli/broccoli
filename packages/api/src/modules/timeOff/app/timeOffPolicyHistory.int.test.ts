@@ -1,4 +1,6 @@
 import {
+  calendarDate,
+  seedTermsPolicy,
   termsService,
   recordHistory,
   seedTimeOffAssignment,
@@ -10,6 +12,7 @@ import {
   timeOffPolicyService,
 } from "#test/support";
 import { timeOffPolicyRepository } from "../db";
+import { STANDARD_LEAVE_POLICIES } from "../domain";
 
 test("changing rules writes one terms history line with both dated settings and the type's name", async ({
   orm,
@@ -222,6 +225,59 @@ test("publishing to a person's own assignment writes their history", async ({
   });
   expect(JSON.parse(history.edges[0]!.node.changes[0]!.newValue!)).toMatchObject({
     startDate: "2026-01-01",
+    entitlementDays: 22,
+  });
+});
+
+test("publishing to a planned policy assignment records its own start date in terms history", async ({
+  orm,
+  seed,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const otherTermsId = await seed.terms("Other terms");
+  const type = await seedTimeOffType(orm, "Study leave");
+  const shared = await seedTermsPolicy(orm, {
+    termsId,
+    timeOffTypeId: type.id,
+    version: STANDARD_LEAVE_POLICIES.uk_20_days_plus_bank_holidays,
+    startDate: "2026-01-01",
+  });
+  const repository = timeOffPolicyRepository(orm);
+  await repository.insertAssignment({
+    owner: { termsId: otherTermsId },
+    timeOffTypeId: type.id,
+    timeOffPolicyId: shared.id,
+    versionId: shared.versionId,
+    startDate: calendarDate("2026-07-01"),
+    endDate: null,
+  });
+  const service = timeOffPolicyService(orm);
+  const draft = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: type.id,
+    rules: {
+      balance: "balance_from_allowance",
+      entitlementDays: 22,
+      bankHolidays: "bank_holidays_on_top_of_allowance",
+    },
+  });
+
+  await service.publishTerms(OWNER, {
+    termsId,
+    versions: [draft],
+    startDate: "2026-06-01",
+    owners: [{ termsId: otherTermsId }],
+  });
+
+  expect(await repository.findAssignments({ termsIds: [otherTermsId] })).toMatchObject([
+    { versionId: draft.id, startDate: "2026-07-01", endDate: null },
+  ]);
+  const page = await termsService(orm).readTermsHistory(OWNER, otherTermsId, {});
+  expect(page.edges).toHaveLength(1);
+  const [change] = page.edges[0]!.node.changes;
+  expect(change!.field).toBe(`timeOff.${type.id}`);
+  expect(JSON.parse(change!.newValue!)).toMatchObject({
+    startDate: "2026-07-01",
     entitlementDays: 22,
   });
 });

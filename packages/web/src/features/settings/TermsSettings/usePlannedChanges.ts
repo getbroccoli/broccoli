@@ -11,6 +11,7 @@ import { t } from "@/i18n";
 import { peopleText } from "./termsDraft";
 import { TERMS_REFETCH, type Terms, type TimeOffRow } from "./termsQueries";
 import { ruleSummary, versionBefore, weekSummary } from "@/features/termsDisplay";
+import { addDays } from "@/lib/calendarDay";
 
 /** A planned change waiting for "Cancel change" to be confirmed, with what stays once it goes. */
 type PlannedChange = { kind: "week" | "rules"; assignmentId: string; body: string };
@@ -46,7 +47,7 @@ export function usePlannedChanges(terms: Terms) {
 }
 
 function weekChange(terms: Terms, version: Terms["workingWeek"][number]): PlannedChange {
-  const before = versionBefore(terms.workingWeek, version.startDate);
+  const before = rowBefore(terms.workingWeek, version.startDate);
   return {
     kind: "week",
     assignmentId: version.id,
@@ -66,7 +67,7 @@ function rulesChange(
   version: TimeOffRow["versions"][number],
 ): PlannedChange {
   const row = terms.timeOff.find(({ timeOffType }) => timeOffType.id === timeOffTypeId)!;
-  const before = versionBefore(row.versions, version.startDate);
+  const before = rowBefore(row.versions, version.startDate);
   const values = {
     type: row.timeOffType.name,
     people: peopleText(terms.peopleCount),
@@ -83,4 +84,16 @@ function rulesChange(
         })
       : t("terms.edit.offerStays", values),
   };
+}
+
+/**
+ * The row a cancelled one's days go back to: the one before it, when it ends the day before; null
+ * across a gap, which stays empty.
+ */
+function rowBefore<V extends { startDate: string; endDate?: string | null }>(
+  rows: readonly V[],
+  startDate: string,
+): V | null {
+  const before = versionBefore(rows, startDate);
+  return before?.endDate === addDays(startDate, -1) ? before : null;
 }

@@ -93,3 +93,32 @@ test("publishing unknown terms is refused", async ({ orm }) => {
     fieldErrors: [{ field: "termsId", code: "not_found" }],
   });
 });
+
+test("publish refuses a malformed employee id supplied alongside a valid terms id", async ({
+  orm,
+  seed,
+}) => {
+  const termsId = await seed.defaultTermsId();
+  const type = await seedTimeOffType(orm, "Study leave");
+  const service = timeOffPolicyService(orm);
+  const draft = await service.saveTimeOffPolicy(OWNER, {
+    termsId,
+    timeOffTypeId: type.id,
+    rules: { balance: "no_balance" },
+  });
+
+  await expect(
+    service.publishTerms(OWNER, {
+      termsId,
+      versions: [draft],
+      startDate: "2026-01-01",
+      owners: [{ employeeId: "not-a-uuid", termsId }],
+    }),
+  ).rejects.toMatchObject({
+    code: "INVALID_INPUT",
+    fieldErrors: [{ field: "owners", code: "invalid" }],
+  });
+
+  expect(await timeOffPolicyRepository(orm).findAssignments({ termsIds: [termsId] })).toEqual([]);
+  expect((await timeOffPolicyRepository(orm).findAll())[0]!.versions).toEqual([draft]);
+});

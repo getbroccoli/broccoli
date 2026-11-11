@@ -1,3 +1,4 @@
+import { ApplicationError, invalidInput } from "../../../core/applicationError";
 import type { Tx } from "../../../core/db";
 import type { CalendarDate } from "../../../utils";
 import { coversDate } from "../../../utils";
@@ -7,7 +8,8 @@ import {
   type EmployeeReadService,
   isSameOwner,
   NEW_ROW,
-  planReplacement,
+  firstReplaced,
+  planOrRefusal,
   rowsAfterPlan,
 } from "../../employees";
 import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
@@ -27,7 +29,9 @@ export interface PolicyPublish {
 export interface OwnerPlan {
   owner: AssignmentOwner;
   lane: PolicyAssignment[];
-  plan: AssignmentPlan;
+  /** Null when the owner's rows refuse the publish: publishing to them throws `refusal`. */
+  plan: AssignmentPlan | null;
+  refusal: unknown;
   replaced: PolicyAssignment | null;
 }
 
@@ -58,9 +62,12 @@ export async function planPolicies(
     const ownerPlans: OwnerPlan[] = [];
     for (const owner of owners) {
       const lane = await laneOf(tx, owner, typeId);
-      const plan = planReplacement(lane, isOfPolicy, from);
-      const replaced = lane.find((row) => isOfPolicy(row) && coversDate(row, from));
-      ownerPlans.push({ owner, lane, plan, replaced: replaced ?? null });
+      ownerPlans.push({
+        owner,
+        lane,
+        ...planOrRefusal(lane, isOfPolicy, from),
+        replaced: firstReplaced(lane, isOfPolicy, from),
+      });
     }
     plans.push({ version, policy, owners: ownerPlans });
   }
@@ -80,9 +87,12 @@ export function refuseCountsChangesOf(
   const balances = new Map(
     policies.flatMap(({ versions }) => versions.map(({ id, balance }) => [id, balance])),
   );
-  for (const { owner, lane, plan } of owners) {
+  for (const { owner, lane, plan, refusal } of owners) {
     if (!ticked.some((one) => isSameOwner(one, owner))) {
       continue;
+    }
+    if (!plan) {
+      throw refusal;
     }
     refuseCountsChangesMidYear(
       rowsAfterPlan(lane, plan, { versionId: version.id, owner }).map((row) => ({
@@ -102,6 +112,9 @@ export async function readPolicyReach(
   { owner, plan, lane }: OwnerPlan,
   from: CalendarDate,
 ): Promise<string[]> {
+  if (!plan) {
+    return [];
+  }
   const candidates =
     "employeeId" in owner
       ? [owner.employeeId]
@@ -134,4 +147,32 @@ async function laneOf(
 ): Promise<PolicyAssignment[]> {
   const rows = await timeOffPolicyRepository(tx).findAssignments(ownerIds(owner));
   return rows.filter((row) => row.timeOffTypeId === timeOffTypeId);
+}
+
+/** Refuses, with CONFLICT, unpublished versions that are not exactly the ones asked, at their revisions. */
+export function refuseChangedVersions(
+  asked: readonly { id: string; revision: number }[],
+  current: readonly { id: string; revision: number }[],
+) {
+  if (current.length === 0) {
+    throw new ApplicationError("CONFLICT", "These terms have nothing to publish.");
+  }
+  const same =
+    asked.length === current.length &&
+    current.every(({ id, revision }) =>
+      asked.some((version) => version.id === id && version.revision === revision),
+    );
+  if (!same) {
+    throw new ApplicationError("CONFLICT", "These changes were saved again since you opened them.");
+  }
+}
+
+/** Refuses an owner Publish does not suggest as invalid input. */
+export function refuseUnsuggestedOwners(
+  owners: readonly AssignmentOwner[],
+  suggested: readonly AssignmentOwner[],
+) {
+  if (owners.some((owner) => !suggested.some((known) => isSameOwner(known, owner)))) {
+    throw invalidInput([{ field: "owners", code: "not_using_policy" }]);
+  }
 }
