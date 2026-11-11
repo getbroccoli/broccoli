@@ -71,11 +71,14 @@ export function PublishDialog({ terms, open, onClose, publish, publishing }: Pro
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && !publishing && onClose()}>
-      <DialogContent className="sm:max-w-xl" closeLabel={t("terms.close")}>
+      <DialogContent
+        className="flex max-h-[calc(100dvh-2rem)] flex-col sm:max-w-xl"
+        closeLabel={t("terms.close")}
+      >
         <DialogTitle className="text-lg">
           {t("terms.publish.title", { terms: terms.name })}
         </DialogTitle>
-        <div className="flex max-h-[70vh] flex-col gap-5 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
           {owners.length > 0 && (
             <fieldset className="flex flex-col gap-2">
               <legend className="mb-2 text-sm font-semibold">{t("terms.publish.applyTo")}</legend>
@@ -195,12 +198,10 @@ function reachedBy(owners: readonly { reached: readonly Reached[] }[]): Reached[
 
 /** Whether an unpublished type's rules count it differently from today's, so they start a leave year. */
 function changesCounts(terms: Terms): boolean {
-  const today = companyToday();
+  // Against every row from this leave year on: Publish can start on any of them, or replace it.
   return terms.timeOff.some(
     ({ unpublished, versions }) =>
-      unpublished !== null &&
-      versionOn(versions, today) !== null &&
-      versionOn(versions, today)!.balance !== unpublished.balance,
+      unpublished !== null && versions.some(({ balance }) => balance !== unpublished.balance),
   );
 }
 
@@ -242,12 +243,46 @@ function dateOf(choice: DateOption, earliest: string, otherDate: string): string
 /** What publishing from `startDate` changes on these terms: the week, then each type in list order. */
 function changesOf(terms: Terms, startDate: string): ChangeBox[] {
   const week = terms.unpublishedWorkingWeek
-    ? [weekChangeBox(terms.unpublishedWorkingWeek, startDate)]
+    ? [
+        withReplaced(
+          weekChangeBox(terms.unpublishedWorkingWeek, startDate),
+          terms.workingWeek,
+          startDate,
+        ),
+      ]
     : [];
   const rules = terms.timeOff.flatMap(({ timeOffType, unpublished, versions }) =>
     unpublished
-      ? [rulesChangeBox(timeOffType.name, unpublished, versionOn(versions, startDate), startDate)]
+      ? [
+          withReplaced(
+            rulesChangeBox(
+              timeOffType.name,
+              unpublished,
+              versionOn(versions, startDate),
+              startDate,
+            ),
+            versions,
+            startDate,
+          ),
+        ]
       : [],
   );
   return [...week, ...rules];
+}
+
+/** The box, saying which planned changes after `startDate` publishing replaces, if any. */
+function withReplaced(
+  box: ChangeBox,
+  rows: readonly { startDate: string }[],
+  startDate: string,
+): ChangeBox {
+  const planned = rows.filter((row) => row.startDate > startDate);
+  return planned.length === 0
+    ? box
+    : {
+        ...box,
+        detail: `${box.detail.replace(/\.?$/, ".")} ${t("terms.publish.replacesPlanned", {
+          dates: planned.map((row) => shortDate(row.startDate)).join(", "),
+        })}`,
+      };
 }

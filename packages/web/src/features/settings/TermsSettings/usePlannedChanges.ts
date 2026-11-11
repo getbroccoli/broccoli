@@ -5,7 +5,7 @@ import {
   CancelTermsTimeOffChangeDocument,
   CancelTermsWorkingWeekChangeDocument,
 } from "@/__generated__/graphql";
-import { usePayloadMutation } from "@/apollo";
+import { PayloadFailure, usePayloadMutation } from "@/apollo";
 import { t } from "@/i18n";
 
 import { peopleText } from "./termsDraft";
@@ -28,8 +28,15 @@ export function usePlannedChanges(terms: Terms) {
       const cancel = kind === "week" ? cancelWeek : cancelRules;
       await cancel({ variables: { input: { assignmentId } } });
       toast(t("terms.edit.cancelled"));
-    } catch {
-      toast.error(t("terms.edit.cancelFailed"));
+    } catch (error) {
+      // A conflict says why the change stays, such as having started meanwhile.
+      const failure =
+        error instanceof PayloadFailure
+          ? (error.payloadError as { __typename: string; message: string })
+          : null;
+      toast.error(
+        failure?.__typename === "ConflictError" ? failure.message : t("terms.edit.cancelFailed"),
+      );
     }
     setPlanned(null);
   };

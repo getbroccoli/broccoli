@@ -59,10 +59,12 @@ A manual check of Settings › Employment terms, the list and one set of terms, 
 ## Publish
 
 - [ ] With the week and Annual leave saved, "Publish" opens "Publish changes to England and Wales": "Apply to" with England and Wales ticked ("Terms · 40 people"; "Terms · 1 person" for one), "Applies from" as "Today", "1 Jan <this year>", "1 Jan <next year>", "Other date…" on "1 Jan <this year>", and "What changes" with "Working week: Mon–Thu, 8 hours" and "Annual leave: 28 → 30 days", each "From <date>", then the people by name, five at first, then "Show all 40".
-- [ ] The footer reads "Publishing changes these for the 40 people from <date>. Their allowances are worked out again from that date. Unticked ones keep their current settings."; unticking every row reads "Tick who gets the changes to publish them." and turns Publish off
-- [ ] With a draft that changes how a type counts, such as Sickness to Unlimited, "Applies from" offers only "1 Jan <this year>", "1 Jan <next year>" and "Other date…", and the hint reads "How a type counts changes only from the start of a leave year."
+- [ ] The footer reads "Publishing applies these from <date> and reaches the 40 people, each with the changes that apply to them. Their allowances are worked out again from that date. Unticked ones keep their current settings."; unticking every row reads "Tick who gets the changes to publish them." and turns Publish off
+- [ ] With a draft that changes how a type counts, such as Sickness to Unlimited, "Applies from" offers only "1 Jan <this year>" and "1 Jan <next year>", and the hint reads "How a type counts changes only from the start of a leave year."
 - [ ] Publishing from 1 Jan <this year> shows "Changes published for England and Wales.", the new week and 30 days as today's, no "Draft" pill, the list's cells updated, and History "You changed the working week to Mon–Thu, 8 hours from 1 Jan <this year>" and "You changed Annual leave to 30 days a year from 1 Jan <this year>". A person on the terms shows 24 days for the four-day week.
 - [ ] Publishing from 1 Jan <next year> keeps today's lines and adds planned lines "From 1 Jan <next year>: …" with "Cancel change".
+- [ ] With such a planned change, publishing another draft of the same section from an earlier date says "Replaces the changes planned from 1 Jan <next year>." in "What changes"; afterwards the planned line is gone and History reads "You cancelled the change to … from 1 Jan <next year>" beside the new change.
+- [ ] "Cancel change" on a change that started meanwhile, or that another tab cancelled, shows the server's reason, not "Try again".
 - [ ] Saving again in another tab after the dialog opened, then publishing, shows "These changes were saved again since you opened them." and nothing changes.
 
 ## Cancel a planned change
