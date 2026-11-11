@@ -22,6 +22,7 @@ export {
 export { employeeDirectory } from "./employeeDirectory";
 export {
   createWorkingPatternService,
+  type WorkingPatternPublish,
   type WorkingPatternService,
 } from "./employmentTerms/workingPatternService";
 export {
@@ -43,7 +44,11 @@ export {
   type TermsService,
 } from "./employmentTerms/termsService";
 export { termsRecordType } from "./employmentTerms/termsRecordType";
-export type { TermsOverview } from "./employmentTerms/readTermsOverviews";
+export type {
+  DatedWorkingWeek,
+  TermsOverview,
+  TermsWorkingWeek,
+} from "./employmentTerms/readTermsOverviews";
 export {
   createEmployeeInviteService,
   type EmployeeInviteService,

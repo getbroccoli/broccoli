@@ -75,6 +75,8 @@ export interface EmployeeReadService {
    * have this id.
    */
   readTermsMemberIds: (tx: Tx, termsId: string) => Promise<string[] | null>;
+  /** Each of the terms' names, by id; ids that name no terms are left out. */
+  readTermsNames: (tx: Tx, termsIds: readonly string[]) => Promise<Map<string, string>>;
   /** An employee's history, newest first, also after the employee is deleted; read as `recordHistory` reads it. */
   readEmployeeHistory: (
     ctx: SecurityContext,
@@ -145,6 +147,7 @@ export function createEmployeeReadService({
         ? ((await repository.findMemberIds([termsId])).get(termsId) ?? [])
         : null;
     },
+    readTermsNames: (tx, termsIds) => termsRepository(tx).findNames(termsIds),
     readEmployeeHistory: (ctx, employeeId, args) =>
       history.readHistory(ctx, "employee", employeeId, args),
     async readAvatar(ctx, fileId) {

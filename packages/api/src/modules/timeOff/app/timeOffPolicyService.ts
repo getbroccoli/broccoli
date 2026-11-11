@@ -3,79 +3,87 @@ import type { Tx } from "../../../core/db";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../utils";
+import { type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../utils";
 import {
+  type AssignmentOwner,
   cancelPlannedVersion,
   createEmployeeReadService,
+  createWorkingPatternService,
   type Employee,
-  makeRoomForDatedRow,
+  isSameOwner,
   parseChangeDate,
   parseDateField,
 } from "../../employees";
-import { timeOffPolicyRepository } from "../db";
+import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
 import {
   changesCountsMidYear,
   type NewPolicyVersion,
   parseRules,
   type PolicyVersion,
-  refuseCountsChangeMidYear,
   rulesValue,
   type TimeOffPolicy,
-  type TimeOffRules,
   type TimeOffRulesInput,
   type TimeOffType,
   versionFromRules,
 } from "../domain";
-import { readOfferReach, readPolicyReach } from "./policyReach";
+import { type PolicyPublish, planPolicies, readPolicyReach } from "./termsPublish";
 import type { TimeOffService } from "./timeOffService";
 
 const recordHistory = createRecordHistoryService();
 
 /**
- * Changes to a time off policy from a date: an offer to terms that don't have the type, new rules,
- * and cancelling a change that has not started. Each keeps its people's allowances and, on a terms'
- * policy, adds a line to the terms' history. Admins only.
+ * The time off rules admins keep on terms: unpublished rules saved and discarded, a planned change
+ * cancelled, and Publish, which applies all of a set of terms' unpublished working week and rules
+ * from one date. Admins only.
  */
 export interface TimeOffPolicyService {
   /**
-   * Gives terms their rules for a type they don't have, from a date no earlier than 1 January this
-   * year. CONFLICT when the terms already have a policy for the type.
+   * Creates these terms' unpublished rules for the type, under the policy they have for it today
+   * or a new one for an offer, or saves them again one revision later. Nobody's rules change.
    */
-  createPolicy: (
+  saveTimeOffPolicy: (
     ctx: SecurityContext,
-    input: { termsId: string; timeOffTypeId: string; startDate: string; rules: TimeOffRulesInput },
-  ) => Promise<TimeOffPolicy>;
+    input: { termsId: string; timeOffTypeId: string; rules: TimeOffRulesInput },
+  ) => Promise<PolicyVersion>;
+  /** Deletes unpublished rules; a policy left without versions goes too. */
+  discardTimeOffPolicy: (ctx: SecurityContext, input: { versionId: string }) => Promise<void>;
   /**
-   * New rules from a date no earlier than 1 January this year: the version covering it ends the day
-   * before and the new one runs to that version's end; one starting on the date is replaced. How
-   * the type counts changes only from the start of a leave year.
+   * Removes a rules assignment that starts after today; the one ending the day before runs to its
+   * end. CONFLICT once it has started, or when the two around it would count the type differently
+   * partway through a leave year. Keeps its people's allowances and adds a line to the terms' history.
    */
-  changePolicy: (
+  cancelPolicyChange: (ctx: SecurityContext, input: { assignmentId: string }) => Promise<void>;
+  /** What Publish on the terms would do from `from`: their unpublished versions and every owner it reaches. */
+  readPublishSuggestions: (
     ctx: SecurityContext,
-    input: { timeOffPolicyId: string; startDate: string; rules: TimeOffRulesInput },
-  ) => Promise<TimeOffPolicy>;
+    input: { termsId: string; from: string },
+  ) => Promise<PublishSuggestions>;
   /**
-   * Removes the version that starts on a date after today; the one before runs to its end. With none
-   * before, a policy left without versions goes too, and null comes back. CONFLICT for a version
-   * that has started.
+   * Publishes every unpublished version of the terms, the working week and each type's rules, and
+   * gives each to the `owners` using what it replaces from `startDate`, in one transaction that
+   * keeps their allowances. CONFLICT when the versions are not the ones `versions` names at their
+   * revisions; an owner not suggested is invalid input.
    */
-  cancelPolicyChange: (
+  publishTerms: (
     ctx: SecurityContext,
-    input: { timeOffPolicyId: string; startDate: string },
-  ) => Promise<TimeOffPolicy | null>;
-  /** The people the policy applies to on some day from `from` on, by name. */
-  readPolicyReach: (
-    ctx: SecurityContext,
-    input: { timeOffPolicyId: string; from: string },
-  ) => Promise<Employee[]>;
+    input: {
+      termsId: string;
+      versions: readonly { id: string; revision: number }[];
+      startDate: string;
+      owners: readonly { employeeId?: string | null; termsId?: string | null }[];
+    },
+  ) => Promise<void>;
+}
+
+/** What Publish on a set of terms would do from a date. */
+export interface PublishSuggestions {
+  /** The terms' unpublished versions, as Publish takes them; a null type is the working week. */
+  versions: { id: string; revision: number; timeOffTypeId: string | null }[];
   /**
-   * The people an offer of the type from `from` would reach: on the terms on some day from then on,
-   * without their own policy for the type that day; by name.
+   * These terms first, then every other owner it reaches, each named, with the versions it gets
+   * and whom they reach.
    */
-  readOfferReach: (
-    ctx: SecurityContext,
-    input: { termsId: string; timeOffTypeId: string; from: string },
-  ) => Promise<Employee[]>;
+  owners: { owner: AssignmentOwner; name: string; versionIds: string[]; reached: Employee[] }[];
 }
 
 type Dependencies = Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
@@ -91,167 +99,346 @@ export function createTimeOffPolicyService({
   today = todayInLondon,
 }: Dependencies): TimeOffPolicyService {
   const employeeReads = createEmployeeReadService({ orm });
-  const reachOf = (tx: Tx, policy: TimeOffPolicy, from: CalendarDate) =>
-    readPolicyReach(employeeReads, tx, policy, from);
+  const workingPatterns = createWorkingPatternService({ transact, logger, today });
   return {
-    async createPolicy(ctx, input) {
+    async saveTimeOffPolicy(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const startDate = parseChangeDate(input.startDate, today());
       const rules = parseRules(input.rules);
-      const result = await transact(async (tx) => {
+      const saved = await transact(async (tx) => {
         const repository = timeOffPolicyRepository(tx);
         await repository.lockPolicies();
-        const termsId = parseUuid(input.termsId);
-        if (!termsId || (await employeeReads.readTermsMemberIds(tx, termsId)) === null) {
-          throw invalidInput([{ field: "termsId", code: "not_found" }]);
-        }
+        const termsId = await existingTerms(tx, input.termsId);
         const timeOffType = existingType(await repository.findAllTypes(), input.timeOffTypeId);
         const policies = await repository.findAll();
-        if (policies.some((policy) => isTermsPolicy(policy, termsId, timeOffType.id))) {
-          throw new ApplicationError("CONFLICT", "These terms already have this time off type.");
+        const draft = draftOf(policies, termsId, timeOffType.id);
+        const inForce = await termsRowOn(tx, termsId, timeOffType.id, today());
+        const base = draft ?? (inForce && versionOf(policies, inForce.versionId));
+        const version = versionFromRules(rules, base);
+        if (draft) {
+          await repository.updateDraft(draft.id, version);
+          return draft.id;
         }
-        const reached = await readOfferReach(employeeReads, tx, termsId, timeOffType.id, startDate);
-        const version = { ...versionFromRules(rules, null), startDate };
-        const policyId = await repository.insertPolicy(
-          { termsId, timeOffTypeId: timeOffType.id },
-          version,
-        );
-        await appendTermsHistory(ctx, tx, { termsId, timeOffType }, null, version);
-        const ensured = await timeOff.ensureAllowances(ctx, tx, {
-          employeeIds: reached.map(({ id }) => id),
-          cause: rulesChanged(policyId, startDate),
-        });
-        return { policy: await findPolicy(tx, policyId), reached, ensured };
+        const policyId =
+          inForce?.timeOffPolicyId ??
+          (await repository.insertPolicy({ timeOffTypeId: timeOffType.id }));
+        return repository.insertVersion(policyId, { ...version, status: "draft", termsId });
       });
       logger.info(
-        {
-          termsId: result.policy.termsId,
-          timeOffTypeId: result.policy.timeOffType.id,
-          timeOffPolicyId: result.policy.id,
-          startDate,
-          reachedCount: result.reached.length,
-          ...result.ensured,
-        },
-        "Offered a time off type",
+        { termsId: input.termsId, timeOffPolicyVersionId: saved },
+        "Saved unpublished time off rules",
       );
-      return result.policy;
+      return versionOf(await timeOffPolicyRepository(orm).findAll(), saved);
     },
 
-    async changePolicy(ctx, input) {
+    async discardTimeOffPolicy(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const startDate = parseChangeDate(input.startDate, today());
-      const rules = parseRules(input.rules);
-      const result = await transact(async (tx) => {
+      const versionId = parseUuid(input.versionId);
+      const discarded = await transact(async (tx) => {
         const repository = timeOffPolicyRepository(tx);
         await repository.lockPolicies();
-        const policy = existingPolicy(await repository.findAll(), input.timeOffPolicyId);
-        const { before, version } = await addVersionFrom(tx, policy, startDate, rules);
-        await appendTermsHistory(ctx, tx, policy, before, version);
-        const reached = await reachOf(tx, await findPolicy(tx, policy.id), startDate);
-        const ensured = await timeOff.ensureAllowances(ctx, tx, {
-          employeeIds: reached.map(({ id }) => id),
-          cause: rulesChanged(policy.id, startDate),
-        });
-        return { policy: await findPolicy(tx, policy.id), reached, ensured };
+        const policy = (await repository.findAll()).find(({ versions }) =>
+          versions.some(({ id, status }) => id === versionId && status === "draft"),
+        );
+        if (!policy) {
+          throw new ApplicationError("NOT_FOUND", "No unpublished time off rules have this id.");
+        }
+        await repository.deleteVersion(versionId!);
+        if (policy.versions.length === 1) {
+          await repository.deletePolicy(policy.id);
+        }
+        return policy;
       });
-      const { policy } = result;
       logger.info(
-        {
-          timeOffPolicyId: policy.id,
-          termsId: policy.termsId,
-          timeOffTypeId: policy.timeOffType.id,
-          timeOffPolicyVersionId: policy.versions.find(({ startDate: from }) => from === startDate)
-            ?.id,
-          startDate,
-          reachedCount: result.reached.length,
-          ...result.ensured,
-        },
-        "Changed a time off policy",
+        { timeOffPolicyId: discarded.id, timeOffPolicyVersionId: versionId },
+        "Discarded time off rules",
       );
-      return policy;
     },
 
     async cancelPolicyChange(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const { policy, saved } = await transact(async (tx) => {
+      const assignmentId = parseUuid(input.assignmentId);
+      const { removed, ensured } = await transact(async (tx) => {
         const repository = timeOffPolicyRepository(tx);
         await repository.lockPolicies();
-        const policy = existingPolicy(await repository.findAll(), input.timeOffPolicyId);
-        const { removed, extended } = cancelPlannedVersion(
-          policy.versions,
-          input.startDate,
-          today(),
+        const [removed] = assignmentId ? await repository.findAssignmentsById([assignmentId]) : [];
+        if (!removed) {
+          throw new ApplicationError("NOT_FOUND", "No time off rules change has this id.");
+        }
+        const policies = await repository.findAll();
+        const lane = (await repository.findAssignments(ownerIds(removed.owner))).filter(
+          (row) => row.timeOffTypeId === removed.timeOffTypeId,
         );
-        const next = policy.versions.find(({ startDate }) => startDate! > removed.startDate!);
-        if (extended && next && changesCountsMidYear(extended, next)) {
+        const { extended } = cancelPlannedVersion(lane, removed.startDate, today());
+        const next = lane.find(({ startDate }) => startDate > removed.startDate);
+        if (
+          extended &&
+          next &&
+          changesCountsMidYear(versionOf(policies, extended.versionId), {
+            ...versionOf(policies, next.versionId),
+            startDate: next.startDate,
+          })
+        ) {
           throw new ApplicationError(
             "CONFLICT",
             "Cancelling this change would change how the type counts partway through a leave year.",
           );
         }
-        const reached = await reachOf(tx, policy, removed.startDate!);
-        await repository.deleteVersion(removed.id);
+        await repository.deleteAssignment(removed.id);
         if (extended) {
-          await repository.endVersion(extended.id, removed.endDate);
-        } else if (policy.versions.length === 1) {
-          await repository.deletePolicy(policy.id);
+          await repository.endAssignment(extended.id, removed.endDate);
         }
-        await appendTermsHistory(ctx, tx, policy, removed, null);
-        await timeOff.ensureAllowances(ctx, tx, {
-          employeeIds: reached.map(({ id }) => id),
-          cause: rulesChanged(policy.id, removed.startDate!),
+        const policy = policies.find(({ id }) => id === removed.timeOffPolicyId)!;
+        await appendRulesHistory(ctx, tx, removed.owner, policy.timeOffType, {
+          before: { ...versionOf(policies, removed.versionId), startDate: removed.startDate },
+          after: null,
         });
-        const saved = (await repository.findAll()).find(({ id }) => id === policy.id) ?? null;
-        return { policy, saved };
+        const ensured = await timeOff.ensureAllowances(ctx, tx, {
+          employeeIds: await employeesOf(tx, removed.owner),
+          cause: rulesChanged(removed.timeOffPolicyId, removed.startDate),
+        });
+        return { removed, ensured };
       });
       logger.info(
         {
-          timeOffPolicyId: policy.id,
-          termsId: policy.termsId,
-          timeOffTypeId: policy.timeOffType.id,
-          startDate: input.startDate,
+          assignmentId: removed.id,
+          ...removed.owner,
+          timeOffTypeId: removed.timeOffTypeId,
+          timeOffPolicyId: removed.timeOffPolicyId,
+          startDate: removed.startDate,
+          ...ensured,
         },
-        "Cancelled a time off policy change",
+        "Cancelled a time off rules change",
       );
-      return saved;
     },
 
-    async readPolicyReach(ctx, input) {
+    async readPublishSuggestions(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
       const from = parseDateField("from", input.from);
       return transact(async (tx) => {
-        const policy = existingPolicy(
-          await timeOffPolicyRepository(tx).findAll(),
-          input.timeOffPolicyId,
-        );
-        return reachOf(tx, policy, from);
+        await timeOffPolicyRepository(tx).sharePolicies();
+        const termsId = await existingTerms(tx, input.termsId);
+        const week = await workingPatterns.readPublish(tx, { termsId, from });
+        const policies = await planPolicies(tx, termsId, from);
+        const owners = [
+          {
+            owner: { termsId } as AssignmentOwner,
+            versionIds: [] as string[],
+            reachedIds: new Set<string>(),
+          },
+        ];
+        const add = (owner: AssignmentOwner, versionId: string, reachedIds: readonly string[]) => {
+          const known = owners.find((entry) => isSameOwner(entry.owner, owner));
+          const entry = known ?? { owner, versionIds: [], reachedIds: new Set<string>() };
+          entry.versionIds.push(versionId);
+          for (const id of reachedIds) entry.reachedIds.add(id);
+          if (!known) owners.push(entry);
+        };
+        for (const { owner, reachedIds } of week?.owners ?? []) {
+          add(owner, week!.version.id, reachedIds);
+        }
+        for (const publish of policies) {
+          for (const ownerPlan of publish.owners) {
+            const reached = await readPolicyReach(employeeReads, tx, publish, ownerPlan, from);
+            add(ownerPlan.owner, publish.version.id, reached);
+          }
+        }
+        return {
+          versions: [
+            ...(week ? [{ ...week.version, timeOffTypeId: null }] : []),
+            ...policies.map(({ version, policy }) => ({
+              ...version,
+              timeOffTypeId: policy.timeOffType.id,
+            })),
+          ].map(({ id, revision, timeOffTypeId }) => ({ id, revision, timeOffTypeId })),
+          owners: await nameOwners(tx, owners),
+        };
       });
     },
 
-    async readOfferReach(ctx, input) {
+    async publishTerms(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const from = parseDateField("from", input.from);
-      const termsId = parseUuid(input.termsId);
-      return transact(async (tx) => {
-        const timeOffType = existingType(
-          await timeOffPolicyRepository(tx).findAllTypes(),
-          input.timeOffTypeId,
-        );
-        return termsId ? readOfferReach(employeeReads, tx, termsId, timeOffType.id, from) : [];
+      const from = parseChangeDate(input.startDate, today());
+      const owners = parseOwners(input.owners);
+      const result = await transact(async (tx) => {
+        const repository = timeOffPolicyRepository(tx);
+        await repository.lockPolicies();
+        const termsId = await existingTerms(tx, input.termsId);
+        const week = await workingPatterns.readPublish(tx, { termsId, from });
+        const policies = await planPolicies(tx, termsId, from);
+        refuseChangedVersions(input.versions, [
+          ...(week ? [week.version] : []),
+          ...policies.map(({ version }) => version),
+        ]);
+        const suggested = [
+          { termsId },
+          ...(week?.owners.map(({ owner }) => owner) ?? []),
+          ...policies.flatMap((publish) => publish.owners.map(({ owner }) => owner)),
+        ];
+        if (owners.some((owner) => !suggested.some((known) => isSameOwner(known, owner)))) {
+          throw invalidInput([{ field: "owners", code: "not_using_policy" }]);
+        }
+        const weekPeople = week
+          ? (await workingPatterns.publish(ctx, tx, { termsId, from, owners })).employeeIds
+          : [];
+        const ensured = [
+          await timeOff.ensureAllowances(ctx, tx, {
+            employeeIds: weekPeople,
+            cause: { kind: "WORKING_PATTERN_CHANGED", ref: from },
+          }),
+        ];
+        for (const publish of policies) {
+          const people = await publishPolicy(ctx, tx, publish, owners, from);
+          ensured.push(
+            await timeOff.ensureAllowances(ctx, tx, {
+              employeeIds: people,
+              cause: rulesChanged(publish.policy.id, from),
+            }),
+          );
+        }
+        return {
+          termsId,
+          versionCount: policies.length + (week ? 1 : 0),
+          allowancesCreated: ensured.reduce((sum, run) => sum + run.allowancesCreated, 0),
+          linesAppended: ensured.reduce((sum, run) => sum + run.linesAppended, 0),
+        };
       });
+      logger.info(
+        { ...result, startDate: from, ownerCount: owners.length },
+        "Published terms' working week and time off rules",
+      );
     },
   };
+
+  /** The owners with their names and the people they reach, by name. */
+  async function nameOwners(
+    tx: Tx,
+    owners: readonly { owner: AssignmentOwner; versionIds: string[]; reachedIds: Set<string> }[],
+  ): Promise<PublishSuggestions["owners"]> {
+    const termsNames = await employeeReads.readTermsNames(
+      tx,
+      owners.flatMap(({ owner }) => ("termsId" in owner ? [owner.termsId] : [])),
+    );
+    const people = await employeeReads.readEmployeesByName(
+      tx,
+      owners.flatMap(({ owner }) => ("employeeId" in owner ? [owner.employeeId] : [])),
+    );
+    const named = [];
+    for (const { owner, versionIds, reachedIds } of owners) {
+      const person = "employeeId" in owner && people.find(({ id }) => id === owner.employeeId);
+      named.push({
+        owner,
+        name: "termsId" in owner ? termsNames.get(owner.termsId)! : fullName(person || null),
+        versionIds,
+        reached: await employeeReads.readEmployeesByName(tx, [...reachedIds]),
+      });
+    }
+    return named;
+  }
+
+  async function existingTerms(tx: Tx, id: string): Promise<string> {
+    const termsId = parseUuid(id);
+    if (!termsId || (await employeeReads.readTermsMemberIds(tx, termsId)) === null) {
+      throw invalidInput([{ field: "termsId", code: "not_found" }]);
+    }
+    return termsId;
+  }
+
+  async function employeesOf(tx: Tx, owner: AssignmentOwner): Promise<string[]> {
+    return "employeeId" in owner
+      ? [owner.employeeId]
+      : ((await employeeReads.readTermsMemberIds(tx, owner.termsId)) ?? []);
+  }
+
+  /**
+   * Publishes one policy version and gives it to each ticked owner its plan reaches, with a line
+   * in the terms' history; returns the employees whose rules may have changed.
+   */
+  async function publishPolicy(
+    ctx: SecurityContext,
+    tx: Tx,
+    { version, policy, owners: plans }: PolicyPublish,
+    owners: readonly AssignmentOwner[],
+    from: CalendarDate,
+  ): Promise<string[]> {
+    const repository = timeOffPolicyRepository(tx);
+    const policies = await repository.findAll();
+    const people = new Set<string>();
+    for (const { owner, plan, replaced } of plans) {
+      if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
+        continue;
+      }
+      for (const id of plan.deletedIds) await repository.deleteAssignment(id);
+      for (const { id, endDate } of plan.ended) await repository.endAssignment(id, endDate);
+      for (const span of plan.added) {
+        await repository.insertAssignment({
+          ...span,
+          owner,
+          versionId: version.id,
+          timeOffPolicyId: policy.id,
+          timeOffTypeId: policy.timeOffType.id,
+        });
+      }
+      await appendRulesHistory(ctx, tx, owner, policy.timeOffType, {
+        before: replaced && {
+          ...versionOf(policies, replaced.versionId),
+          startDate: replaced.startDate,
+        },
+        after: { ...version, startDate: from },
+      });
+      for (const id of await employeesOf(tx, owner)) people.add(id);
+    }
+    await repository.publishVersion(version.id);
+    return [...people];
+  }
 }
 
-/** On a terms' policy, the line in the terms' history: the rules before and after; null for none. */
-async function appendTermsHistory(
+/** The owners Publish is asked for: each names one employee or one set of terms. */
+function parseOwners(
+  owners: readonly { employeeId?: string | null; termsId?: string | null }[],
+): AssignmentOwner[] {
+  return owners.map(({ employeeId, termsId }) => {
+    const employee = employeeId ? parseUuid(employeeId) : null;
+    const terms = termsId ? parseUuid(termsId) : null;
+    if ((employee === null) === (terms === null)) {
+      throw invalidInput([{ field: "owners", code: "invalid" }]);
+    }
+    return employee ? { employeeId: employee } : { termsId: terms! };
+  });
+}
+
+/** Refuses, with CONFLICT, unpublished versions that are not exactly the ones asked, at their revisions. */
+function refuseChangedVersions(
+  asked: readonly { id: string; revision: number }[],
+  current: readonly { id: string; revision: number }[],
+) {
+  const same =
+    asked.length === current.length &&
+    current.every(({ id, revision }) =>
+      asked.some((version) => version.id === id && version.revision === revision),
+    );
+  if (!same) {
+    throw new ApplicationError("CONFLICT", "These changes were saved again since you opened them.");
+  }
+}
+
+/**
+ * On terms, the line in their history for a change to a type's rules: the rules before and after,
+ * each with the date it applies from; null before for an offer, null after when cancelled.
+ */
+async function appendRulesHistory(
   ctx: SecurityContext,
   tx: Tx,
-  policy: { termsId: string | null; timeOffType: TimeOffType },
-  before: Pick<PolicyVersion, "startDate" | "balance" | "bankHolidays" | "rules"> | null,
-  after: (NewPolicyVersion & { startDate: CalendarDate }) | null,
+  owner: AssignmentOwner,
+  timeOffType: TimeOffType,
+  {
+    before,
+    after,
+  }: {
+    before: (NewPolicyVersion & { startDate: CalendarDate }) | null;
+    after: (NewPolicyVersion & { startDate: CalendarDate }) | null;
+  },
 ) {
-  if (!policy.termsId) {
+  if (!("termsId" in owner)) {
     return;
   }
   await recordHistory.append(ctx, tx, {
@@ -260,13 +447,13 @@ async function appendTermsHistory(
     cause: { kind: "EDITED_DIRECTLY" },
     records: [
       {
-        recordId: policy.termsId,
+        recordId: owner.termsId,
         changes: [
           {
-            field: `timeOff.${policy.timeOffType.id}`,
+            field: `timeOff.${timeOffType.id}`,
             oldValue: before && rulesValue(before),
             newValue: after && rulesValue(after),
-            newLabel: policy.timeOffType.name,
+            newLabel: timeOffType.name,
           },
         ],
       },
@@ -274,57 +461,49 @@ async function appendTermsHistory(
   });
 }
 
-/**
- * Adds the rules' version from `startDate`: the version covering it ends the day before and the new
- * one runs to that version's end, or to the next version; one starting on the date is replaced.
- */
-async function addVersionFrom(
-  tx: Tx,
-  policy: TimeOffPolicy,
-  startDate: CalendarDate,
-  rules: TimeOffRules,
-) {
-  const repository = timeOffPolicyRepository(tx);
-  const before = policy.versions.find((version) => coversDate(version, startDate)) ?? null;
-  const next =
-    policy.versions.find(({ startDate: from }) => from !== null && from > startDate) ?? null;
-  refuseCountsChangeMidYear(rules, startDate, { before, next });
-  const endDate = before ? before.endDate : next && addDays(next.startDate!, -1);
-  const { ended, replaced } = makeRoomForDatedRow(policy.versions, startDate, endDate);
-  if (replaced) {
-    await repository.deleteVersion(replaced.id);
-  }
-  if (ended) {
-    await repository.endVersion(ended.id, addDays(startDate, -1));
-  }
-  const version = { ...versionFromRules(rules, before), startDate, endDate };
-  await repository.insertVersion(policy.id, version);
-  return { before, version };
+function fullName(person: Employee | null): string {
+  return person ? `${person.firstName} ${person.lastName}` : "";
 }
 
 function rulesChanged(timeOffPolicyId: string, from: CalendarDate) {
   return { kind: "TIME_OFF_RULES_CHANGED" as const, ref: `${timeOffPolicyId}:${from}`, from };
 }
 
-function isTermsPolicy(policy: TimeOffPolicy, termsId: string, timeOffTypeId: string): boolean {
-  return policy.termsId === termsId && policy.timeOffType.id === timeOffTypeId;
-}
-
-async function findPolicy(tx: Tx, timeOffPolicyId: string): Promise<TimeOffPolicy> {
-  const policies = await timeOffPolicyRepository(tx).findAll();
-  return policies.find(({ id }) => id === timeOffPolicyId)!;
-}
-
-/** The policy acted on; refuses one that does not exist with NOT_FOUND. */
-function existingPolicy(
+/** The terms' unpublished rules for the type, if any. */
+function draftOf(
   policies: readonly TimeOffPolicy[],
-  timeOffPolicyId: string,
-): TimeOffPolicy {
-  const policy = policies.find(({ id }) => id === parseUuid(timeOffPolicyId));
-  if (!policy) {
-    throw new ApplicationError("NOT_FOUND", "No time off policy has this id.");
-  }
-  return policy;
+  termsId: string,
+  timeOffTypeId: string,
+): PolicyVersion | null {
+  return (
+    policies
+      .filter(({ timeOffType }) => timeOffType.id === timeOffTypeId)
+      .flatMap(({ versions }) => versions)
+      .find(({ status, termsId: owner }) => status === "draft" && owner === termsId) ?? null
+  );
+}
+
+/** The terms' assignment for the type covering `date`, else their last one; null without any. */
+async function termsRowOn(
+  tx: Tx,
+  termsId: string,
+  timeOffTypeId: string,
+  date: CalendarDate,
+): Promise<PolicyAssignment | null> {
+  const rows = (await timeOffPolicyRepository(tx).findAssignments({ termsIds: [termsId] })).filter(
+    (row) => row.timeOffTypeId === timeOffTypeId,
+  );
+  return rows.find((row) => coversDate(row, date)) ?? rows.at(-1) ?? null;
+}
+
+function versionOf(policies: readonly TimeOffPolicy[], versionId: string): PolicyVersion {
+  return policies.flatMap(({ versions }) => versions).find(({ id }) => id === versionId)!;
+}
+
+function ownerIds(owner: AssignmentOwner) {
+  return "employeeId" in owner
+    ? { employeeIds: [owner.employeeId] }
+    : { termsIds: [owner.termsId] };
 }
 
 /** The type acted on; refuses one that does not exist as invalid input. */

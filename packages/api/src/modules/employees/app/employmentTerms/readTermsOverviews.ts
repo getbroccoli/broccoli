@@ -2,12 +2,14 @@ import type { Orm, Tx } from "../../../../core/db";
 import type { CalendarDate } from "../../../../utils";
 import { locationRepository, termsRepository, workingPatternRepository } from "../../db";
 import {
+  type Assignment,
   deleteBlockerOf,
+  earliestChangeDate,
   type Location,
   type PatternVersion,
+  type PatternWeek,
   type Terms,
   type TermsDeleteBlocker,
-  type WorkingPattern,
 } from "../../domain";
 
 /** A set of terms as Settings shows it on a date. */
@@ -16,15 +18,27 @@ export interface TermsOverview extends Terms {
   peopleCount: number;
   /** Locations whose new people start here, by name; the default terms also take locations without terms. */
   locations: Location[];
-  /** The terms' pattern versions covering that day or later, oldest first: the day's, then planned ones. */
-  workingWeek: PatternVersion[];
-  /** The terms' own pattern, with all its versions. */
-  workingPattern: WorkingPattern;
+  /** The terms' working week assignments covering that day or later, oldest first, with their versions. */
+  workingWeek: TermsWorkingWeek[];
+  /** The terms' unpublished working week; null when there is none. */
+  unpublishedWorkingWeek: PatternVersion | null;
+  /** The earliest date a change may apply from: the start of the leave year of that day. */
+  earliestChange: CalendarDate;
   /** Why the terms cannot be deleted; null: they can. */
   deleteBlocker: TermsDeleteBlocker | null;
   /** Whether anyone was ever on the terms, on any dates. */
   hadPeople: boolean;
 }
+
+/** A version given to terms from a date to a date. */
+export type TermsWorkingWeek = Assignment & { version: PatternVersion };
+
+/** A working week from a date to a date, as GraphQL shows it; its id is the assignment's on terms. */
+export type DatedWorkingWeek = PatternWeek & {
+  id: string;
+  startDate: CalendarDate;
+  endDate: CalendarDate | null;
+};
 
 /** The terms among `termsIds`, or every set without, as they are on `date`; the default first, then by name. */
 export async function readTermsOverviews(
@@ -34,10 +48,13 @@ export async function readTermsOverviews(
 ): Promise<TermsOverview[]> {
   const allTerms = await termsRepository(db).findAll();
   const shown = allTerms.filter(({ id }) => !termsIds || termsIds.includes(id));
+  const shownIds = shown.map(({ id }) => id);
   const peopleCounts = await termsRepository(db).countMembersOn(date);
-  const everJoined = await termsRepository(db).findEverJoined(shown.map(({ id }) => id));
+  const everJoined = await termsRepository(db).findEverJoined(shownIds);
   const locations = await locationRepository(db).findAllWithPeopleCounts();
-  const patterns = await workingPatternRepository(db).findPatterns();
+  const patterns = workingPatternRepository(db);
+  const versions = (await patterns.findPatterns()).flatMap((pattern) => pattern.versions);
+  const assignments = await patterns.findAssignments({ termsIds: shownIds });
   const defaultTermsId = allTerms.find(({ isDefault }) => isDefault)?.id;
   return shown.map((terms) => {
     const hadPeople = everJoined.has(terms.id);
@@ -46,13 +63,14 @@ export async function readTermsOverviews(
       .map(({ id, name }) => ({ id, name }));
     return {
       ...terms,
-      // Every set of terms gets its pattern when it is set up.
-      workingPattern: patterns.find(({ termsId }) => termsId === terms.id)!,
       peopleCount: peopleCounts.get(terms.id) ?? 0,
       locations: termsLocations,
-      workingWeek: (patterns.find(({ termsId }) => termsId === terms.id)?.versions ?? []).filter(
-        ({ endDate }) => endDate === null || endDate >= date,
-      ),
+      workingWeek: assignments
+        .filter(({ owner, endDate }) => isOfTerms(owner, terms.id) && (!endDate || endDate >= date))
+        .map((row) => ({ ...row, version: versions.find(({ id }) => id === row.versionId)! })),
+      unpublishedWorkingWeek:
+        versions.find(({ status, termsId }) => status === "draft" && termsId === terms.id) ?? null,
+      earliestChange: earliestChangeDate(date),
       hadPeople,
       deleteBlocker: deleteBlockerOf(terms, {
         hadPeople,
@@ -60,4 +78,8 @@ export async function readTermsOverviews(
       }),
     };
   });
+}
+
+function isOfTerms(owner: Assignment["owner"], termsId: string): boolean {
+  return "termsId" in owner && owner.termsId === termsId;
 }

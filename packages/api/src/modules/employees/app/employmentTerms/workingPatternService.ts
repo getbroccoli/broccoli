@@ -1,325 +1,330 @@
 import { ApplicationError, invalidInput } from "../../../../core/applicationError";
-import type { Orm, Tx } from "../../../../core/db";
+import type { Tx } from "../../../../core/db";
 import type { ModuleDependencies } from "../../../../core/moduleManifest";
 import type { SecurityContext } from "../../../../core/security";
+import { type CalendarDate, coversDate, parseUuid, todayInLondon } from "../../../../utils";
+import { parseBankHolidayCalendar } from "../../../bankHolidays";
+import { employmentRepository, termsRepository, workingPatternRepository } from "../../db";
 import {
-  addDays,
-  type CalendarDate,
-  coversDate,
-  parseUuid,
-  todayInLondon,
-} from "../../../../utils";
-import { type BankHolidayCalendar, parseBankHolidayCalendar } from "../../../bankHolidays";
-import { employmentRepository, workingPatternRepository } from "../../db";
-import {
+  type Assignment,
+  type AssignmentOwner,
+  type AssignmentPlan,
   cancelPlannedVersion,
-  type Employee,
-  makeRoomForDatedRow,
-  parseChangeDate,
-  parseDateField,
-  parsePatternName,
-  parseWeek,
+  isSameOwner,
   type PatternVersion,
+  parseWeek,
+  planReplacement,
+  rowsAfterPlan,
   type WeekdayMinutes,
-  type WorkingPattern,
 } from "../../domain";
-import { readEmployeesByName } from "../employeeReadService";
 import { readTimelines } from "./employeeWorkingPatternService";
 import { publishWorkingPatternChange } from "./publishWorkingPatternChange";
 import { appendWorkingWeekHistory } from "./workingWeekHistory";
 
 /**
- * The working patterns admins keep: each set of terms' own and the named ones people are put on,
- * with their versions. A change to a pattern's minutes is a new version from a date, so earlier
- * days keep theirs.
+ * The working weeks admins keep on terms: an unpublished week saved and discarded, a planned one
+ * cancelled, and, for time off's Publish, what publishing one would do and doing it.
  */
 export interface WorkingPatternService {
-  /** Every pattern with its versions: named ones by name, then the terms'. Admins only. */
-  listPatterns: (ctx: SecurityContext) => Promise<WorkingPattern[]>;
   /**
-   * A new named pattern whose only version applies from the beginning, with England and Wales bank
-   * holidays unless another calendar is given. Admins only.
+   * Creates these terms' unpublished working week, from the pattern they work today, or saves it
+   * again one revision later. Nobody's week changes. Admins only.
    */
-  createPattern: (
+  saveWorkingPattern: (
     ctx: SecurityContext,
-    input: {
-      name: string;
-      minutes: WeekdayMinutes;
-      bankHolidayCalendar?: string;
-    },
-  ) => Promise<WorkingPattern>;
-  /** Renames a named pattern for every date. Admins only. */
-  renamePattern: (
-    ctx: SecurityContext,
-    input: { workingPatternId: string; name: string },
-  ) => Promise<WorkingPattern>;
+    input: { termsId: string; minutes: WeekdayMinutes; bankHolidayCalendar: string },
+  ) => Promise<PatternVersion>;
+  /** Deletes an unpublished week; a pattern left without versions goes too. Admins only. */
+  discardWorkingPattern: (ctx: SecurityContext, input: { versionId: string }) => Promise<void>;
   /**
-   * New minutes or calendar for a pattern from a date no earlier than 1 January this year: the
-   * version covering it ends the day before and the new one runs to that version's end; one
-   * starting on the date is replaced, keeping its end. Without a calendar it keeps the one in force
-   * on that date. A terms' pattern adds a line to the terms' history. Admins only.
+   * Removes a working week assignment that starts after today; the one ending the day before runs
+   * to its end. CONFLICT once it has started. Adds a line to its owner's history. Admins only.
    */
-  changePattern: (
+  cancelWorkingPatternChange: (
     ctx: SecurityContext,
-    input: {
-      workingPatternId: string;
-      startDate: string;
-      minutes: WeekdayMinutes;
-      bankHolidayCalendar?: string;
-    },
-  ) => Promise<WorkingPattern>;
+    input: { assignmentId: string },
+  ) => Promise<void>;
   /**
-   * Removes the version that starts on a date after today; the one before runs to its end. CONFLICT
-   * for a version that has started. A terms' pattern adds a line to the terms' history. Admins only.
+   * Trusted, for time off's Publish, in its transaction: the terms' unpublished week, the version
+   * it replaces from `from` and every owner using that one, these terms first, each with the
+   * employees publishing to it would reach; null without an unpublished week.
    */
-  cancelPatternChange: (
+  readPublish: (
+    tx: Tx,
+    input: { termsId: string; from: CalendarDate },
+  ) => Promise<WorkingPatternPublish | null>;
+  /**
+   * Trusted, for time off's Publish, in its transaction: publishes the terms' unpublished week and
+   * gives it to each of `owners` from `from` in place of the version it replaces, with a history
+   * line each. Returns the employees whose week may have changed.
+   */
+  publish: (
     ctx: SecurityContext,
-    input: { workingPatternId: string; startDate: string },
-  ) => Promise<WorkingPattern>;
-  /** The people the pattern applies to on some day from `from` on, by name. Admins only. */
-  readPatternReach: (
-    ctx: SecurityContext,
-    input: { workingPatternId: string; from: string },
-  ) => Promise<Employee[]>;
-  /** Deletes a named pattern no person is put on. Admins only. */
-  deletePattern: (ctx: SecurityContext, input: { workingPatternId: string }) => Promise<void>;
+    tx: Tx,
+    input: { termsId: string; from: CalendarDate; owners: readonly AssignmentOwner[] },
+  ) => Promise<{ employeeIds: string[] }>;
+}
+
+/** What publishing a set of terms' working week from a date would do. */
+export interface WorkingPatternPublish {
+  version: PatternVersion;
+  owners: { owner: AssignmentOwner; reachedIds: string[] }[];
 }
 
 export function createWorkingPatternService({
-  orm,
   transact,
   logger,
   today = todayInLondon,
-}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+}: Pick<ModuleDependencies, "transact" | "logger"> & {
   today?: () => CalendarDate;
 }): WorkingPatternService {
   return {
-    async listPatterns(ctx) {
+    async saveWorkingPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      return workingPatternRepository(orm).findPatterns();
-    },
-
-    async createPattern(ctx, input) {
-      ctx.require("MANAGE_WORKSPACE");
-      const name = parsePatternName(input.name);
+      const termsId = parseUuid(input.termsId);
       const week = {
         ...parseWeek(input),
-        bankHolidayCalendar: optionalCalendar(input.bankHolidayCalendar) ?? "england_and_wales",
+        bankHolidayCalendar: parseBankHolidayCalendar(input.bankHolidayCalendar),
       };
       const saved = await transact(async (tx) => {
         const repository = workingPatternRepository(tx);
         await repository.lockForWrites();
-        refuseTakenName(await repository.findPatterns(), name);
-        return findPattern(tx, await repository.insertPattern({ name }, week));
+        if (!termsId || !(await termsRepository(tx).keep(termsId))) {
+          throw invalidInput([{ field: "termsId", code: "not_found" }]);
+        }
+        const versions = (await repository.findPatterns()).flatMap(({ versions: all }) => all);
+        const draft = draftOf(versions, termsId);
+        if (draft) {
+          await repository.updateDraft(draft.id, week);
+          return draft.id;
+        }
+        const patternId =
+          (await patternWorkedBy(tx, versions, termsId, today())) ??
+          (await repository.insertPattern(null));
+        return repository.insertVersion(patternId, { ...week, status: "draft", termsId });
       });
-      logger.info(
-        { workingPatternId: saved.id, bankHolidayCalendar: week.bankHolidayCalendar },
-        "Created a working pattern",
-      );
-      return saved;
+      logger.info({ termsId, workingPatternVersionId: saved }, "Saved an unpublished working week");
+      return findVersion(transact, saved);
     },
 
-    async renamePattern(ctx, input) {
+    async discardWorkingPattern(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const name = parsePatternName(input.name);
-      const saved = await transact(async (tx) => {
+      const versionId = parseUuid(input.versionId);
+      const termsId = await transact(async (tx) => {
         const repository = workingPatternRepository(tx);
         await repository.lockForWrites();
-        const patterns = await repository.findPatterns();
-        const pattern = namedPattern(patterns, input.workingPatternId);
-        refuseTakenName(
-          patterns.filter(({ id }) => id !== pattern.id),
-          name,
+        const pattern = (await repository.findPatterns()).find(({ versions }) =>
+          versions.some(({ id, status }) => id === versionId && status === "draft"),
         );
-        await repository.renamePattern(pattern.id, name);
-        return findPattern(tx, pattern.id);
+        if (!pattern) {
+          throw new ApplicationError("NOT_FOUND", "No unpublished working week has this id.");
+        }
+        await repository.deleteVersion(versionId!);
+        if (pattern.versions.length === 1) {
+          await repository.deletePattern(pattern.id);
+        }
+        return pattern.versions.find(({ id }) => id === versionId)!.termsId;
       });
-      logger.info({ workingPatternId: saved.id }, "Renamed a working pattern");
-      return saved;
+      logger.info({ termsId, workingPatternVersionId: versionId }, "Discarded a working week");
     },
 
-    async changePattern(ctx, input) {
+    async cancelWorkingPatternChange(ctx, input) {
       ctx.require("MANAGE_WORKSPACE");
-      const startDate = parseChangeDate(input.startDate, today());
-      const week = parseWeek(input);
-      const calendar = optionalCalendar(input.bankHolidayCalendar);
-      const { saved, employeeIds } = await transact(async (tx) => {
+      const assignmentId = parseUuid(input.assignmentId);
+      const removed = await transact(async (tx) => {
         const repository = workingPatternRepository(tx);
         await repository.lockForWrites();
-        const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
-        const inForce = versionInForce(pattern.versions, startDate);
-        const version = {
-          ...week,
-          startDate,
-          endDate: inForce.endDate,
-          bankHolidayCalendar: calendar ?? inForce.bankHolidayCalendar,
-        };
-        await addVersion(tx, pattern, version);
-        await appendWorkingWeekHistory(ctx, tx, pattern, inForce, version);
-        const onPattern = await repository.findEmployeesOnPattern(pattern.id);
-        publishWorkingPatternChange(tx, onPattern, startDate);
-        return { saved: await findPattern(tx, pattern.id), employeeIds: onPattern };
-      });
-      logger.info(
-        {
-          workingPatternId: saved.id,
-          termsId: saved.termsId,
-          startDate,
-          bankHolidayCalendar: versionInForce(saved.versions, startDate).bankHolidayCalendar,
-          employeeCount: employeeIds.length,
-        },
-        "Changed a working pattern",
-      );
-      return saved;
-    },
-
-    async cancelPatternChange(ctx, input) {
-      ctx.require("MANAGE_WORKSPACE");
-      const saved = await transact(async (tx) => {
-        const repository = workingPatternRepository(tx);
-        await repository.lockForWrites();
-        const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
-        // A pattern's first version starts from the beginning, so a planned one always has one before.
-        const { removed, extended } = cancelPlannedVersion(
-          pattern.versions,
-          input.startDate,
-          today(),
+        const assignment = await findAssignment(tx, assignmentId);
+        const lane = await repository.findAssignments(ownerIds(assignment.owner));
+        const { extended } = cancelPlannedVersion(lane, assignment.startDate, today());
+        await repository.deleteAssignment(assignment.id);
+        if (extended) {
+          await repository.endAssignment(extended.id, assignment.endDate);
+        }
+        const week = await findVersionIn(tx, assignment.versionId);
+        await appendWorkingWeekHistory(
+          ctx,
+          tx,
+          assignment.owner,
+          { ...week, startDate: assignment.startDate },
+          null,
         );
-        await repository.deleteVersion(removed.id);
-        await repository.endVersion(extended!.id, removed.endDate);
-        await appendWorkingWeekHistory(ctx, tx, pattern, removed, null);
         publishWorkingPatternChange(
           tx,
-          await repository.findEmployeesOnPattern(pattern.id),
-          removed.startDate,
+          await employeesOf(tx, assignment.owner),
+          assignment.startDate,
         );
-        return findPattern(tx, pattern.id);
+        return assignment;
       });
       logger.info(
-        { workingPatternId: saved.id, termsId: saved.termsId, startDate: input.startDate },
-        "Cancelled a working pattern change",
+        { assignmentId: removed.id, ...removed.owner, startDate: removed.startDate },
+        "Cancelled a working week change",
       );
-      return saved;
     },
 
-    async readPatternReach(ctx, input) {
-      ctx.require("MANAGE_WORKSPACE");
-      const from = parseDateField("from", input.from);
-      return transact(async (tx) => {
-        const repository = workingPatternRepository(tx);
-        await repository.lockForReads();
-        const pattern = existingPattern(await repository.findPatterns(), input.workingPatternId);
-        return readReach(tx, pattern.id, from);
-      });
+    async readPublish(tx, { termsId, from }) {
+      const repository = workingPatternRepository(tx);
+      await repository.lockForReads();
+      const versions = (await repository.findPatterns()).flatMap(({ versions: all }) => all);
+      const draft = draftOf(versions, termsId);
+      if (!draft) {
+        return null;
+      }
+      const owners = await ownersOf(tx, termsId, from);
+      const reached = [];
+      // One after another: they share the transaction's connection.
+      for (const { owner, lane, plan } of owners) {
+        reached.push({ owner, reachedIds: await readReach(tx, owner, lane, plan, draft.id, from) });
+      }
+      return { version: draft, owners: reached };
     },
 
-    async deletePattern(ctx, input) {
-      ctx.require("MANAGE_WORKSPACE");
-      const workingPatternId = await transact(async (tx) => {
-        const repository = workingPatternRepository(tx);
-        await repository.lockForWrites();
-        const pattern = namedPattern(await repository.findPatterns(), input.workingPatternId);
-        if (await repository.isPatternAssigned(pattern.id)) {
-          throw new ApplicationError(
-            "CONFLICT",
-            "A person is on this working pattern on some date, past or future, so it is kept.",
-          );
+    async publish(ctx, tx, { termsId, from, owners }) {
+      const repository = workingPatternRepository(tx);
+      await repository.lockForWrites();
+      const versions = (await repository.findPatterns()).flatMap(({ versions: all }) => all);
+      const draft = draftOf(versions, termsId)!;
+      const suggested = await ownersOf(tx, termsId, from);
+      const employeeIds = new Set<string>();
+      for (const { owner, plan, replaced } of suggested) {
+        if (!owners.some((ticked) => isSameOwner(ticked, owner))) {
+          continue;
         }
-        await repository.deletePattern(pattern.id);
-        return pattern.id;
-      });
-      logger.info({ workingPatternId }, "Deleted a working pattern");
+        for (const id of plan.deletedIds) await repository.deleteAssignment(id);
+        for (const { id, endDate } of plan.ended) await repository.endAssignment(id, endDate);
+        for (const span of plan.added) {
+          await repository.insertAssignment({ ...span, versionId: draft.id, owner });
+        }
+        const before = replaced && versions.find(({ id }) => id === replaced.versionId)!;
+        await appendWorkingWeekHistory(
+          ctx,
+          tx,
+          owner,
+          before && { ...before, startDate: replaced!.startDate },
+          { ...draft, startDate: from },
+        );
+        for (const id of await employeesOf(tx, owner)) employeeIds.add(id);
+      }
+      await repository.publishVersion(draft.id);
+      publishWorkingPatternChange(tx, [...employeeIds], from);
+      logger.info(
+        {
+          termsId,
+          workingPatternVersionId: draft.id,
+          startDate: from,
+          ownerCount: owners.length,
+          employeeCount: employeeIds.size,
+        },
+        "Published a working week",
+      );
+      return { employeeIds: [...employeeIds] };
     },
   };
 }
 
 /**
- * The named pattern an input puts a person on; refuses one that does not exist, and a terms' own,
- * as invalid input.
+ * The owners publishing `draft` from `from` reaches, these terms first: the terms, and every owner
+ * with an assignment of the version the terms work on `from` that covers it or starts later; each
+ * with how its rows would change and the row the draft takes over on `from`.
  */
-export function referencedPattern(patterns: readonly WorkingPattern[], workingPatternId: string) {
-  const pattern = patterns.find(({ id }) => id === parseUuid(workingPatternId));
-  if (!pattern) {
-    throw invalidInput([{ field: "workingPatternId", code: "not_found" }]);
-  }
-  if (pattern.termsId) {
-    throw invalidInput([{ field: "workingPatternId", code: "belongs_to_terms" }]);
-  }
-  return pattern;
-}
-
-/**
- * Adds a version from its start date: the one covering that date ends the day before, one starting
- * on it goes.
- */
-async function addVersion(
-  tx: Tx,
-  pattern: WorkingPattern,
-  version: Omit<PatternVersion, "id"> & { startDate: CalendarDate },
-) {
+async function ownersOf(tx: Tx, termsId: string, from: CalendarDate) {
   const repository = workingPatternRepository(tx);
-  const { startDate, endDate } = version;
-  const { ended, replaced } = makeRoomForDatedRow(pattern.versions, startDate, endDate);
-  if (replaced) {
-    await repository.deleteVersion(replaced.id);
+  const termsRows = await repository.findAssignments({ termsIds: [termsId] });
+  const source = termsRows.find((row) => coversDate(row, from))?.versionId ?? null;
+  const sharing = (source ? await repository.findAssignmentsOfVersions([source]) : []).filter(
+    (row) => coversDate(row, from) || row.startDate > from,
+  );
+  const owners: AssignmentOwner[] = [{ termsId }];
+  for (const { owner } of sharing) {
+    if (!owners.some((known) => isSameOwner(known, owner))) owners.push(owner);
   }
-  if (ended) {
-    await repository.endVersion(ended.id, addDays(startDate, -1));
+  const planned = [];
+  for (const owner of owners) {
+    const lane = await repository.findAssignments(ownerIds(owner));
+    planned.push({
+      owner,
+      lane,
+      plan: planReplacement(lane, source, from),
+      replaced: lane.find((row) => row.versionId === source && coversDate(row, from)) ?? null,
+    });
   }
-  await repository.insertVersion(pattern.id, version);
+  return planned;
 }
 
-/** The people the pattern applies to on some day from `from` on that they are employed, by name. */
+/** The employees on whom the draft would apply on some day from `from` on that they are employed. */
 async function readReach(
   tx: Tx,
-  workingPatternId: string,
+  owner: AssignmentOwner,
+  lane: readonly Assignment[],
+  plan: AssignmentPlan,
+  draftId: string,
   from: CalendarDate,
-): Promise<Employee[]> {
-  const candidates = await workingPatternRepository(tx).findEmployeesOnPattern(workingPatternId);
-  const { timelines } = await readTimelines(tx, candidates);
+): Promise<string[]> {
+  const candidates = await employeesOf(tx, owner);
+  const after = rowsAfterPlan(lane, plan, { versionId: draftId, owner });
+  const { timelines } = await readTimelines(tx, candidates, undefined, (stored) => [
+    ...stored.filter((row) => !isSameOwner(row.owner, owner)),
+    ...after,
+  ]);
   const periods = await employmentRepository(tx).findPeriods(candidates);
-  return readEmployeesByName(
-    tx,
-    candidates.filter((id) =>
-      timelines.get(id)!.appliesFrom(workingPatternId, from, periods.get(id) ?? []),
-    ),
+  return candidates.filter((id) =>
+    timelines
+      .get(id)!
+      .appliesFrom((versionId) => versionId === draftId, from, periods.get(id) ?? []),
   );
 }
 
-async function findPattern(db: Orm | Tx, workingPatternId: string): Promise<WorkingPattern> {
-  const patterns = await workingPatternRepository(db).findPatterns();
-  return patterns.find(({ id }) => id === workingPatternId)!;
+/** The terms' unpublished version, if any. */
+function draftOf(versions: readonly PatternVersion[], termsId: string): PatternVersion | null {
+  return (
+    versions.find((version) => version.status === "draft" && version.termsId === termsId) ?? null
+  );
 }
 
-/** The pattern acted on; refuses one that does not exist with NOT_FOUND. */
-function existingPattern(patterns: readonly WorkingPattern[], workingPatternId: string) {
-  const pattern = patterns.find(({ id }) => id === parseUuid(workingPatternId));
-  if (!pattern) {
-    throw new ApplicationError("NOT_FOUND", "No working pattern has this id.");
+/** The pattern the terms work on `date`, else the one they work last; null when they have none. */
+async function patternWorkedBy(
+  tx: Tx,
+  versions: readonly PatternVersion[],
+  termsId: string,
+  date: CalendarDate,
+): Promise<string | null> {
+  const rows = await workingPatternRepository(tx).findAssignments({ termsIds: [termsId] });
+  const row = rows.find((candidate) => coversDate(candidate, date)) ?? rows.at(-1);
+  return row ? versions.find(({ id }) => id === row.versionId)!.workingPatternId : null;
+}
+
+/** The employees an owner's working week applies to: the person, or everyone ever on the terms. */
+async function employeesOf(tx: Tx, owner: AssignmentOwner): Promise<string[]> {
+  if ("employeeId" in owner) {
+    return [owner.employeeId];
   }
-  return pattern;
+  return (await termsRepository(tx).findMemberIds([owner.termsId])).get(owner.termsId) ?? [];
 }
 
-/** A named pattern acted on; refuses a terms' own with CONFLICT, as it goes only with its terms. */
-function namedPattern(patterns: readonly WorkingPattern[], workingPatternId: string) {
-  const pattern = existingPattern(patterns, workingPatternId);
-  if (pattern.termsId) {
-    throw new ApplicationError("CONFLICT", "A terms' working pattern changes only with its terms.");
+function ownerIds(owner: AssignmentOwner) {
+  return "employeeId" in owner
+    ? { employeeIds: [owner.employeeId] }
+    : { termsIds: [owner.termsId] };
+}
+
+async function findAssignment(tx: Tx, assignmentId: string | null): Promise<Assignment> {
+  const rows = assignmentId
+    ? await workingPatternRepository(tx).findAssignmentsById([assignmentId])
+    : [];
+  if (!rows[0]) {
+    throw new ApplicationError("NOT_FOUND", "No working week change has this id.");
   }
-  return pattern;
+  return rows[0];
 }
 
-function versionInForce(versions: readonly PatternVersion[], date: CalendarDate): PatternVersion {
-  // A pattern's first version starts from the beginning and none ends, so one is always in force.
-  return versions.find((version) => coversDate(version, date))!;
+async function findVersionIn(tx: Tx, versionId: string): Promise<PatternVersion> {
+  const patterns = await workingPatternRepository(tx).findPatterns();
+  return patterns.flatMap(({ versions }) => versions).find(({ id }) => id === versionId)!;
 }
 
-function optionalCalendar(value: string | undefined): BankHolidayCalendar | null {
-  return value === undefined ? null : parseBankHolidayCalendar(value);
-}
-
-function refuseTakenName(patterns: readonly WorkingPattern[], name: string) {
-  if (patterns.some((pattern) => pattern.name === name)) {
-    throw invalidInput([{ field: "name", code: "taken" }]);
-  }
+async function findVersion(
+  transact: ModuleDependencies["transact"],
+  versionId: string,
+): Promise<PatternVersion> {
+  return transact((tx) => findVersionIn(tx, versionId));
 }

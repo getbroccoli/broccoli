@@ -3,22 +3,22 @@ import type { Tx } from "../../../core/db";
 import type { SetupTermsInput } from "../../../core/instance";
 import type { ModuleDependencies } from "../../../core/moduleManifest";
 import type { SecurityContext } from "../../../core/security";
-import { type CalendarDate, todayInLondon } from "../../../utils";
+import { type CalendarDate, coversDate, todayInLondon } from "../../../utils";
 import type { BankHolidayService } from "../../bankHolidays";
 import {
   type CopyTermsParts,
   createEmployeeReadService,
   createEmployeeSetupService,
   createEmployeeWorkingPatternService,
-  earliestChangeDate,
   parseTermsSetup,
+  SETUP_START_DATE,
   type TermsSetup,
   type TermsMovePreview,
-  versionsFromToday,
 } from "../../employees";
 import { timeOffPolicyRepository } from "../db";
 import {
   type AllowanceCause,
+  type NewPolicyVersion,
   parseStandardLeavePolicyKey,
   RECORD_ONLY_POLICY,
   type StandardLeavePolicyKey,
@@ -93,8 +93,8 @@ export interface TimeOffService {
   /** Every time off type for Settings, in list order, and how many people have time off. */
   listTimeOffTypes: (ctx: SecurityContext) => Promise<TimeOffTypeList>;
   /**
-   * For each terms id asked: every time off type in list order with the terms' policy versions
-   * covering today or later, oldest first; no versions: not offered. Admins only.
+   * For each terms id asked: every time off type in list order with the terms' rules covering
+   * today or later, oldest first, and their unpublished ones; no rules: not offered. Admins only.
    */
   readTermsTimeOff: (
     ctx: SecurityContext,
@@ -111,8 +111,8 @@ export interface TimeOffService {
    */
   resetTimeOff: (ctx: SecurityContext, tx: Tx) => Promise<void>;
   /**
-   * Gives cloned terms the source terms' rules for each type they offer: today's from the start of
-   * the current leave year, then the planned ones. Admins only.
+   * Gives cloned terms an unpublished copy of the rules the source terms have today for each type,
+   * under a policy of their own. Admins only.
    */
   copyTermsPolicies: CopyTermsParts;
 }
@@ -164,7 +164,7 @@ export function createTimeOffService({
             typeKey === "annual_leave"
               ? STANDARD_LEAVE_POLICIES[annualLeaveKeys[index]!]
               : RECORD_ONLY_POLICY;
-          await repository.insertPolicy({ timeOffTypeId, termsId }, version);
+          await givePolicy(tx, { termsId, timeOffTypeId }, version);
         }
       }
       await setAnnualLeaveDefault(tx, types, annualLeaveKeys[defaultTermsIndex(setup)]!);
@@ -206,24 +206,45 @@ export function createTimeOffService({
       const repository = timeOffPolicyRepository(tx);
       // Held as every policy writer holds it, so no version changes between the reads below.
       await repository.lockPolicies();
+      const versions = new Map(
+        (await repository.findAll()).flatMap(({ versions: all }) => all.map((v) => [v.id, v])),
+      );
       const date = today();
-      const policies = await repository.findAll();
-      for (const { termsId, timeOffType, versions } of policies) {
-        // Every copied version has a start: today's starts at the start of the leave year.
-        const [current, ...planned] = versionsFromToday(versions, date, earliestChangeDate(date));
-        if (termsId !== fromTermsId || !current) {
+      for (const row of await repository.findAssignments({ termsIds: [fromTermsId] })) {
+        if (!coversDate(row, date)) {
           continue;
         }
-        const policyId = await repository.insertPolicy(
-          { timeOffTypeId: timeOffType.id, termsId: toTermsId },
-          { ...current, startDate: current.startDate! },
-        );
-        for (const version of planned) {
-          await repository.insertVersion(policyId, { ...version, startDate: version.startDate! });
-        }
+        const policyId = await repository.insertPolicy({ timeOffTypeId: row.timeOffTypeId });
+        await repository.insertVersion(policyId, {
+          ...versions.get(row.versionId)!,
+          status: "draft",
+          termsId: toTermsId,
+        });
       }
     },
   };
+}
+
+/** A new policy for the type with one published version, given to the terms from the setup start. */
+async function givePolicy(
+  tx: Tx,
+  { termsId, timeOffTypeId }: { termsId: string; timeOffTypeId: string },
+  version: NewPolicyVersion,
+): Promise<void> {
+  const repository = timeOffPolicyRepository(tx);
+  const timeOffPolicyId = await repository.insertPolicy({ timeOffTypeId });
+  const versionId = await repository.insertVersion(timeOffPolicyId, {
+    ...version,
+    status: "published",
+  });
+  await repository.insertAssignment({
+    versionId,
+    owner: { termsId },
+    timeOffTypeId,
+    timeOffPolicyId,
+    startDate: SETUP_START_DATE,
+    endDate: null,
+  });
 }
 
 /** Annual leave, unless it was deleted, offers the default nation's standard policy from now on. */

@@ -74,31 +74,65 @@ enum TimeOffTypeKey {
 extend type Terms {
   "Every time off type in list order, with these terms' rules for it from today on; only that type when `timeOffTypeId` is given."
   timeOff(timeOffTypeId: ID): [TimeOffWithPolicies!]!
+  "Whether the terms have a working week or time off rules saved and not published yet."
+  hasUnpublishedChanges: Boolean!
+  "What publishing the terms from `from` would do: their unpublished working week and rules, and everyone it reaches. Admins only."
+  publishSuggestions(from: Date!): PublishSuggestions!
 }
 
-"A time off type with its policy versions."
+"A time off type with a set of terms' rules for it."
 type TimeOffWithPolicies {
   timeOffType: TimeOffType!
-  "The version covering today first, if any, then planned ones; empty: not offered on these terms."
+  "The rules covering today first, if any, then planned ones; empty: not offered on these terms."
   versions: [TimeOffPolicyVersion!]!
-  "The terms' own rules for this type; null: never offered."
-  policy: TimeOffPolicy
-  "People an offer from `from` would reach: on these terms on some day from then on, without their own rules for this type that day. By name. Admins only."
-  offerReach(from: Date!): [Employee!]!
-  "The earliest date an offer of this type may apply from: the start of the current leave year."
-  earliestOffer: Date!
-}
-
-"A time off type's rules over time: one set of terms' own, or a named one people are put on one by one."
-type TimeOffPolicy {
-  id: ID!
-  timeOffType: TimeOffType!
-  "The version covering today first, if any, then planned ones; past versions stay out."
-  versions: [TimeOffPolicyVersion!]!
-  "People this policy applies to on some day from `from` on, by name. Admins only."
-  reach(from: Date!): [Employee!]!
+  "The rules saved and not published yet; null: none."
+  unpublished: UnpublishedTimeOffRules
   "The earliest date a change may apply from: the start of the current leave year."
   earliestChange: Date!
+}
+
+"Time off rules saved on terms and not published yet."
+type UnpublishedTimeOffRules {
+  id: ID!
+  "Goes up by one each time they are saved; publishing names the revision it saw."
+  revision: Int!
+  balance: TimeOffBalanceKind!
+  "Null unless the balance is BALANCE_FROM_ALLOWANCE."
+  bankHolidays: TimeOffBankHolidays
+  "When each leave year starts; null for NO_BALANCE."
+  leaveYearStart: LeaveYearStart
+  "The yearly allowance; null without one."
+  yearlyEntitlement: YearlyEntitlement
+}
+
+"What publishing a set of terms from a date would do."
+type PublishSuggestions {
+  "The terms' unpublished working week and rules, as publishing names them."
+  versions: [UnpublishedVersion!]!
+  "These terms first, then every other set of terms or person using what a version replaces on that date."
+  owners: [PublishOwner!]!
+}
+
+"An unpublished working week, or a type's unpublished rules."
+type UnpublishedVersion {
+  id: ID!
+  revision: Int!
+  "Null: the working week."
+  timeOffTypeId: ID
+}
+
+"Terms or a person publishing can reach, with what they would get."
+type PublishOwner {
+  "Set for terms; null for a person."
+  termsId: ID
+  "Set for a person; null for terms."
+  employeeId: ID
+  "The terms' name, or the person's first and last name."
+  name: String!
+  "The unpublished versions they would get."
+  versionIds: [ID!]!
+  "The people it would reach, on some day from the date on, by name."
+  reached: [Employee!]!
 }
 
 "How a type counts, as one version sets it."
@@ -110,56 +144,81 @@ input TimeOffRulesInput {
   bankHolidays: TimeOffBankHolidays
 }
 
-"Terms' rules for a type they don't have. A named policy (later) takes a name instead of termsId."
-input TimeOffPolicyCreateInput {
+"A set of terms' unpublished rules for a type."
+input TimeOffPolicySaveInput {
   termsId: ID!
   timeOffTypeId: ID!
-  startDate: Date!
   rules: TimeOffRulesInput!
 }
 
-input TimeOffPolicyChangeInput {
-  timeOffPolicyId: ID!
-  startDate: Date!
-  rules: TimeOffRulesInput!
+input TimeOffPolicyDiscardInput {
+  "The unpublished rules' id."
+  versionId: ID!
 }
 
 input TimeOffPolicyCancelChangeInput {
-  timeOffPolicyId: ID!
-  "The start of the version to remove."
+  "The planned rules' id, as `TimeOffWithPolicies.versions` gives it."
+  assignmentId: ID!
+}
+
+"What publishing a set of terms takes: the unpublished versions it read, the date, and who gets them."
+input TermsPublishInput {
+  termsId: ID!
+  "Every unpublished version of the terms, as `publishSuggestions` gave them."
+  versions: [TermsPublishVersionInput!]!
   startDate: Date!
+  "Suggested owners to give the versions to; none publishes without giving them to anyone."
+  owners: [AssignmentOwnerInput!]!
 }
 
-"The new policy, or why it was refused."
-type TimeOffPolicyCreatePayload {
-  timeOffPolicy: TimeOffPolicy
-  error: TimeOffPolicyCreateError
+input TermsPublishVersionInput {
+  id: ID!
+  revision: Int!
 }
 
-union TimeOffPolicyCreateError = InvalidInputError | ConflictError
-
-"The changed policy, or why it was refused."
-type TimeOffPolicyChangePayload {
-  timeOffPolicy: TimeOffPolicy
-  error: TimeOffPolicyChangeError
+"Exactly one of a set of terms or a person."
+input AssignmentOwnerInput {
+  termsId: ID
+  employeeId: ID
 }
 
-union TimeOffPolicyChangeError = InvalidInputError | NotFoundError
+"The saved unpublished rules, or why they were refused."
+type TimeOffPolicySavePayload {
+  rules: UnpublishedTimeOffRules
+  error: TimeOffPolicySaveError
+}
 
-"The policy without the cancelled version, or why it was refused."
+union TimeOffPolicySaveError = InvalidInputError
+
+"The discarded rules' id, or why it was refused."
+type TimeOffPolicyDiscardPayload {
+  discardedVersionId: ID
+  error: TimeOffPolicyDiscardError
+}
+
+union TimeOffPolicyDiscardError = NotFoundError
+
+"The cancelled change's id, or why it was refused."
 type TimeOffPolicyCancelChangePayload {
-  "Null when the cancelled version was a planned offer, so the policy went."
-  timeOffPolicy: TimeOffPolicy
+  cancelledAssignmentId: ID
   error: TimeOffPolicyCancelChangeError
 }
 
+"The published terms' id, or why publishing was refused."
+type TermsPublishPayload {
+  publishedTermsId: ID
+  error: TermsPublishError
+}
+
+union TermsPublishError = InvalidInputError | ConflictError
+
 union TimeOffPolicyCancelChangeError = NotFoundError | ConflictError
 
-"A time off type's rules on one set of terms from a date to a date; never edited, only ended."
+"A time off type's rules from a date to a date."
 type TimeOffPolicyVersion {
+  "On terms, the id a planned change is cancelled by."
   id: ID!
-  "Null: from the beginning."
-  startDate: Date
+  startDate: Date!
   "The last day; null: open-ended."
   endDate: Date
   balance: TimeOffBalanceKind!
@@ -360,12 +419,14 @@ type TimeOffMutations {
   changeType(input: TimeOffTypeChangeInput!): TimeOffTypeChangePayload!
   "Deletes a type with its rules on every terms; refused while any time off of it is on record, whatever its status. Starting over brings a deleted standard type back. Admins only."
   deleteType(input: TimeOffTypeDeleteInput!): TimeOffTypeDeletePayload!
-  "Gives terms their rules for a type they don't have, from a date no earlier than the start of the current leave year; adds a line to their history. Refused with a ConflictError when they have it. Admins only."
-  createPolicy(input: TimeOffPolicyCreateInput!): TimeOffPolicyCreatePayload!
-  "Applies new rules from a date no earlier than the start of the current leave year; a later planned version stays. How the type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Admins only."
-  changePolicy(input: TimeOffPolicyChangeInput!): TimeOffPolicyChangePayload!
-  "Removes a version that has not started; the one before it runs on. Removing a planned offer removes the policy, so the type is not offered. Refused with a ConflictError once it has started. Admins only."
+  "Saves the terms' unpublished rules for a type: created from the rules they have today, or the type's default rules for an offer, or saved again. Nobody's rules change until the terms are published. Admins only."
+  saveTimeOffPolicy(input: TimeOffPolicySaveInput!): TimeOffPolicySavePayload!
+  "Deletes unpublished rules. Admins only."
+  discardTimeOffPolicy(input: TimeOffPolicyDiscardInput!): TimeOffPolicyDiscardPayload!
+  "Removes a rules change that has not started; the rules before it run on, and a planned offer leaves the type not offered. Refused with a ConflictError once it has started. Admins only."
   cancelPolicyChange(input: TimeOffPolicyCancelChangeInput!): TimeOffPolicyCancelChangePayload!
+  "Publishes the terms' unpublished working week and rules and gives them, from a date no earlier than the start of the current leave year, to the owners asked: these terms and others using what they replace. How a type counts changes only from the start of a leave year (`rules.balance` / `not_leave_year_start`). Refused with a ConflictError when they were saved again since `versions` was read. Admins only."
+  publishTerms(input: TermsPublishInput!): TermsPublishPayload!
 }
 
 input TimeOffTypeCreateInput {
