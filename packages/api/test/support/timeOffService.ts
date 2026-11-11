@@ -7,6 +7,7 @@ import { createLogger } from "../../src/core/logger";
 import { createDemoFillService } from "../../src/modules/demo";
 import { createTaskService } from "../../src/modules/tasks";
 import {
+  createOwnTimeOffRulesService,
   createTimeOffPolicyService,
   createTimeOffSetupService,
   createTimeOffService,
@@ -57,6 +58,20 @@ export function timeOffPolicyService(
   return createTimeOffPolicyService({
     orm,
     transact,
+    logger: createLogger("silent"),
+    timeOff: timeOffService(orm, { today }),
+    today: () => today as CalendarDate,
+  });
+}
+
+/** The own time off rules service on `orm`, with the engine of `timeOffService`; `today` is its date. */
+export function ownTimeOffRulesService(
+  orm: Orm,
+  { today = "2026-06-01" }: { today?: string } = {},
+) {
+  return createOwnTimeOffRulesService({
+    orm,
+    transact: testTransactor(orm),
     logger: createLogger("silent"),
     timeOff: timeOffService(orm, { today }),
     today: () => today as CalendarDate,

@@ -5,14 +5,17 @@ import {
   type ResolversTypes,
 } from "../../../core/graphql";
 import type { EmployeeReadService } from "../../employees";
-import type { TimeOffPolicyService } from "../app";
+import type { OwnTimeOffRulesService } from "../app";
 import { toStoredRules } from "./storedRules";
 
+/** What the own-rules mutations call: the use cases, and the person read back for the payload. */
+export interface OwnRulesServices {
+  ownRules: OwnTimeOffRulesService;
+  employees: Pick<EmployeeReadService, "readEmployee">;
+}
+
 /** The time off mutations on a person's own rules, each answering with the person afterwards. */
-export function ownRulesResolvers(
-  policies: TimeOffPolicyService,
-  employees: Pick<EmployeeReadService, "readEmployee">,
-) {
+export function ownRulesResolvers({ ownRules, employees }: OwnRulesServices) {
   const payload = (context: GraphqlContext, employeeId: string, change: () => Promise<void>) =>
     mutationPayload<ResolversTypes["TimeOffOwnRulesPayload"]>(async () => {
       await change();
@@ -21,13 +24,13 @@ export function ownRulesResolvers(
   return {
     setOwnRules: (_parent, { input }, context) =>
       payload(context, input.employeeId, () =>
-        policies.setOwnRules(context.getActor(), { ...input, rules: toStoredRules(input.rules) }),
+        ownRules.setOwnRules(context.getActor(), { ...input, rules: toStoredRules(input.rules) }),
       ),
     useTermsRules: (_parent, { input }, context) =>
-      payload(context, input.employeeId, () => policies.useTermsRules(context.getActor(), input)),
+      payload(context, input.employeeId, () => ownRules.useTermsRules(context.getActor(), input)),
     cancelOwnRulesChange: (_parent, { input }, context) =>
       payload(context, input.employeeId, () =>
-        policies.cancelOwnRulesChange(context.getActor(), input),
+        ownRules.cancelOwnRulesChange(context.getActor(), input),
       ),
   } satisfies Resolvers["TimeOffMutations"];
 }

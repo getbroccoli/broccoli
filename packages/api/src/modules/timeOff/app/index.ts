@@ -3,6 +3,10 @@ export type { EmployeeTimeOffType } from "./readTimeOffTypes";
 export type { PersonTimeOff } from "./readPersonTimeOff";
 export type { TimeOffWithPolicies } from "./readTermsTimeOff";
 export { createTimeOffService, type TimeOffService, type TurnedOnTimeOff } from "./timeOffService";
+export {
+  createOwnTimeOffRulesService,
+  type OwnTimeOffRulesService,
+} from "./ownTimeOffRulesService";
 export { createTimeOffPolicyService, type TimeOffPolicyService } from "./timeOffPolicyService";
 export { allowanceEventHandlers } from "./allowanceEventHandlers";
 export { ensureAllowancesJob } from "./ensureAllowancesJob";

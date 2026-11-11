@@ -1,35 +1,58 @@
 import { ApplicationError } from "../../../core/applicationError";
 import type { Transact, Tx } from "../../../core/db";
-import type { Logger } from "../../../core/logger";
+import type { ModuleDependencies } from "../../../core/moduleManifest";
 import { createRecordHistoryService } from "../../../core/records";
 import type { SecurityContext } from "../../../core/security";
-import { addDays, type CalendarDate, parseUuid } from "../../../utils";
+import { addDays, type CalendarDate, parseUuid, todayInLondon } from "../../../utils";
 import {
   cancelOwnChange,
+  createEmployeeReadService,
   type EmployeeReadService,
   employeeNotFound,
   type OwnStretch,
-  ownStretchesOf,
   ownStretchOn,
   parseDateField,
   parsePersonChangeDate,
   withOwnStretch,
   withoutOwnStretches,
 } from "../../employees";
-import { type PolicyAssignment, timeOffPolicyRepository } from "../db";
+import { timeOffPolicyRepository } from "../db";
 import {
   type NewPolicyVersion,
   parseRules,
   refuseCountsChangesMidYear,
   rulesOfVersion,
-  type TimeOffPolicy,
   type TimeOffRulesInput,
   type TimeOffType,
   versionFromRules,
 } from "../domain";
 import { readPeople } from "./allowanceEngine";
-import { existingType, rulesChanged, versionOf } from "./policyRules";
+import { readOwnRules, saveOwnRules } from "./ownRulesStore";
+import { existingType, rulesChanged } from "./policyRules";
 import type { TimeOffService } from "./timeOffService";
+
+/**
+ * A person's own rules for one time off type on top of their terms: set or changed from a date,
+ * given back to the terms from a date, and a change that has not started cancelled. Each keeps
+ * the person's allowances and adds a line to their history. Admins only.
+ */
+export interface OwnTimeOffRulesService {
+  /**
+   * The person's own rules for the type from `startDate`, until their next own rules or
+   * open-ended; how the type counts changes only from the start of a leave year.
+   */
+  setOwnRules: (
+    ctx: SecurityContext,
+    input: OwnRulesInput & { rules: TimeOffRulesInput },
+  ) => Promise<void>;
+  /** Their terms' rules for the type from `startDate`: own rules covering it end the day before, later ones go. */
+  useTermsRules: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
+  /**
+   * Removes an own-rules change starting on `startDate` after today: new own rules, a change to
+   * them, or a return to the terms. CONFLICT otherwise.
+   */
+  cancelOwnRulesChange: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
+}
 
 /** Which person's own rules for which type, from when. */
 export interface OwnRulesInput {
@@ -38,69 +61,74 @@ export interface OwnRulesInput {
   startDate: string;
 }
 
-/** What own rules changes need: their transaction, the people they read and the allowance engine. */
-export interface OwnRulesDependencies {
+export function createOwnTimeOffRulesService({
+  orm,
+  transact,
+  logger,
+  timeOff,
+  today = todayInLondon,
+}: Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
+  timeOff: Pick<TimeOffService, "ensureAllowances">;
+  today?: () => CalendarDate;
+}): OwnTimeOffRulesService {
+  const dependencies = {
+    transact,
+    today,
+    timeOff,
+    employeeReads: createEmployeeReadService({ orm }),
+  };
+  return {
+    async setOwnRules(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
+      const rules = parseRules(input.rules);
+      const changed = await changeOwnRules(
+        dependencies,
+        ctx,
+        input,
+        ({ stretches, from, onDate }) => {
+          const before = ownStretchOn(stretches, from)?.value ?? null;
+          const after = versionFromRules(rules, onDate);
+          return { stretches: withOwnStretch(stretches, from, after), before, after };
+        },
+      );
+      logger.info(changed, "Set own time off rules");
+    },
+
+    async useTermsRules(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
+      const changed = await changeOwnRules(dependencies, ctx, input, ({ stretches, from }) => ({
+        stretches: withoutOwnStretches(stretches, from),
+        before:
+          (ownStretchOn(stretches, from) ?? stretches.find(({ startDate }) => startDate > from))
+            ?.value ?? null,
+        after: null,
+      }));
+      logger.info(changed, "Put a person back on the terms' rules");
+    },
+
+    async cancelOwnRulesChange(ctx, input) {
+      ctx.require("MANAGE_WORKSPACE");
+      const changed = await changeOwnRules(
+        dependencies,
+        ctx,
+        input,
+        ({ stretches, from }) => {
+          const { stretches: kept, cancelled } = cancelOwnChange(stretches, from, today());
+          return { stretches: kept, before: cancelled, cancelled: true };
+        },
+        { cancel: true },
+      );
+      logger.info(changed, "Cancelled an own time off rules change");
+    },
+  };
+}
+
+/** What own-rules changes need: their transaction, the people they read and the allowance engine. */
+interface Dependencies {
   transact: Transact;
-  logger: Logger;
   today: () => CalendarDate;
   timeOff: Pick<TimeOffService, "ensureAllowances">;
   employeeReads: EmployeeReadService;
-}
-
-/** The person's own rules for the type from `startDate`, until their next own rules or open-ended. */
-export async function setOwnRules(
-  dependencies: OwnRulesDependencies,
-  ctx: SecurityContext,
-  input: OwnRulesInput & { rules: TimeOffRulesInput },
-): Promise<void> {
-  ctx.require("MANAGE_WORKSPACE");
-  const rules = parseRules(input.rules);
-  const changed = await changeOwnRules(dependencies, ctx, input, ({ stretches, from, onDate }) => {
-    const before = ownStretchOn(stretches, from)?.value ?? null;
-    const after = versionFromRules(rules, onDate);
-    return { stretches: withOwnStretch(stretches, from, after), before, after };
-  });
-  dependencies.logger.info(changed, "Set own time off rules");
-}
-
-/** Their terms' rules for the type from `startDate`: own rules covering it end the day before, later ones go. */
-export async function useTermsRules(
-  dependencies: OwnRulesDependencies,
-  ctx: SecurityContext,
-  input: OwnRulesInput,
-): Promise<void> {
-  ctx.require("MANAGE_WORKSPACE");
-  const changed = await changeOwnRules(dependencies, ctx, input, ({ stretches, from }) => ({
-    stretches: withoutOwnStretches(stretches, from),
-    before:
-      (ownStretchOn(stretches, from) ?? stretches.find(({ startDate }) => startDate > from))
-        ?.value ?? null,
-    after: null,
-  }));
-  dependencies.logger.info(changed, "Put a person back on the terms' rules");
-}
-
-/**
- * Removes an own-rules change starting on `startDate` after today: new own rules, a change to them,
- * or a return to the terms. CONFLICT otherwise.
- */
-export async function cancelOwnRulesChange(
-  dependencies: OwnRulesDependencies,
-  ctx: SecurityContext,
-  input: OwnRulesInput,
-): Promise<void> {
-  ctx.require("MANAGE_WORKSPACE");
-  const changed = await changeOwnRules(
-    dependencies,
-    ctx,
-    input,
-    ({ stretches, from }) => {
-      const { stretches: kept, cancelled } = cancelOwnChange(stretches, from, dependencies.today());
-      return { stretches: kept, before: cancelled, cancelled: true };
-    },
-    { cancel: true },
-  );
-  dependencies.logger.info(changed, "Cancelled an own time off rules change");
 }
 
 type Rules = NewPolicyVersion;
@@ -128,7 +156,7 @@ interface ChangeStart {
  * adds the history line and works the person's allowances out again.
  */
 async function changeOwnRules(
-  { transact, today, timeOff, employeeReads }: OwnRulesDependencies,
+  { transact, today, timeOff, employeeReads }: Dependencies,
   ctx: SecurityContext,
   input: OwnRulesInput,
   apply: (start: ChangeStart) => Applied,
@@ -144,21 +172,12 @@ async function changeOwnRules(
       { ...input, employeeId },
       cancel,
     );
-    const policies = await timeOffPolicyRepository(tx).findAll();
-    const rows = (
-      await timeOffPolicyRepository(tx).findAssignments({ employeeIds: [employeeId] })
-    ).filter((row) => row.timeOffTypeId === timeOffType.id);
-    const stretches = ownStretchesOf(rows, (id) => versionOf(policies, id));
+    const lane = { employeeId, timeOffTypeId: timeOffType.id };
+    const { stretches, versions } = await readOwnRules(tx, lane);
     const timeline = await timelineOf(employeeReads, tx, employeeId, timeOffType);
     const onDate = timeline.getVersionOnDate(from);
     const applied = apply({ stretches, from, onDate });
-    const timeOffPolicyId = await saveOwnRules(tx, {
-      employeeId,
-      timeOffType,
-      policies,
-      rows,
-      stretches: applied.stretches,
-    });
+    const timeOffPolicyId = await saveOwnRules(tx, lane, versions, applied.stretches);
     await refuseCountsChangeFrom(employeeReads, tx, { employeeId, timeOffType, from, cancel });
     await appendOwnRulesHistory(ctx, tx, { employeeId, timeOffType, from, applied });
     const ensured = await timeOff.ensureAllowances(ctx, tx, {
@@ -196,56 +215,6 @@ async function parseChange(
     timeOffType,
     from: parsePersonChangeDate(input.startDate, today, periods.get(input.employeeId) ?? []),
   };
-}
-
-/**
- * Gives the person one assignment per own stretch for the type, in place of the ones they had: to
- * a version they already use with the same rules, else to a new published one under their own
- * policy for the type. Returns that policy's id.
- */
-async function saveOwnRules(
-  tx: Tx,
-  {
-    employeeId,
-    timeOffType,
-    policies,
-    rows,
-    stretches,
-  }: {
-    employeeId: string;
-    timeOffType: TimeOffType;
-    policies: readonly TimeOffPolicy[];
-    rows: readonly PolicyAssignment[];
-    stretches: readonly OwnStretch<Rules>[];
-  },
-): Promise<string> {
-  const repository = timeOffPolicyRepository(tx);
-  for (const { id } of rows) await repository.deleteAssignment(id);
-  const saved: (Rules & { id: string; timeOffPolicyId: string })[] = rows.map(({ versionId }) =>
-    versionOf(policies, versionId),
-  );
-  let timeOffPolicyId = saved[0]?.timeOffPolicyId;
-  for (const { startDate, endDate, value } of stretches) {
-    let version = saved.find((candidate) => isSameRules(candidate, value));
-    if (!version) {
-      timeOffPolicyId ??= await repository.insertPolicy({ timeOffTypeId: timeOffType.id });
-      const id = await repository.insertVersion(timeOffPolicyId, {
-        ...value,
-        status: "published",
-      });
-      version = { ...value, id, timeOffPolicyId };
-      saved.push(version);
-    }
-    await repository.insertAssignment({
-      owner: { employeeId },
-      versionId: version.id,
-      timeOffPolicyId: version.timeOffPolicyId,
-      timeOffTypeId: timeOffType.id,
-      startDate,
-      endDate,
-    });
-  }
-  return timeOffPolicyId!;
 }
 
 /**
@@ -334,21 +303,6 @@ async function appendOwnRulesHistory(
 /** Rules as the line in history keeps them, with the date they apply from; null rules are the terms'. */
 function rulesValue(rules: Rules | null, startDate: CalendarDate): string {
   return JSON.stringify({ startDate, rules: rules && rulesOfVersion(rules) });
-}
-
-function isSameRules(a: Rules, b: Rules): boolean {
-  return JSON.stringify(rulesKey(a)) === JSON.stringify(rulesKey(b));
-}
-
-/** What makes two versions' rules the same, without their ids. */
-function rulesKey({ balance, bankHolidays, leaveYear, rules }: Rules) {
-  return {
-    balance,
-    bankHolidays,
-    leaveYear,
-    // Stored rules carry ids, new ones not; JSON leaves an undefined id out.
-    rules: rules.map((rule) => ({ ...rule, id: undefined })),
-  };
 }
 
 const LAST_DATE = "9999-12-31" as CalendarDate;

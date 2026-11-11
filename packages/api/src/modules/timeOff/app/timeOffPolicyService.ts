@@ -17,7 +17,6 @@ import {
   type TimeOffRulesInput,
   versionFromRules,
 } from "../domain";
-import { cancelOwnRulesChange, type OwnRulesInput, setOwnRules, useTermsRules } from "./ownRules";
 import {
   appendRulesHistory,
   employeesOf,
@@ -82,21 +81,6 @@ export interface TimeOffPolicyService {
    * revisions; an owner not suggested is invalid input. Returns the terms as they are afterwards.
    */
   publishTerms: (ctx: SecurityContext, input: PublishTermsInput) => Promise<TermsOverview>;
-  /**
-   * Gives a person their own rules for a type from a date, on top of their terms, until their next
-   * own rules change if one is planned; keeps their allowances.
-   */
-  setOwnRules: (
-    ctx: SecurityContext,
-    input: OwnRulesInput & { rules: TimeOffRulesInput },
-  ) => Promise<void>;
-  /** Puts a person back on their terms' rules for a type from a date; keeps their allowances. */
-  useTermsRules: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
-  /**
-   * Removes a change to a person's own rules for a type that has not started: new own rules, a
-   * change to them, or a return to their terms. CONFLICT once it has started.
-   */
-  cancelOwnRulesChange: (ctx: SecurityContext, input: OwnRulesInput) => Promise<void>;
 }
 
 type Dependencies = Pick<ModuleDependencies, "orm" | "transact" | "logger"> & {
@@ -218,9 +202,6 @@ export function createTimeOffPolicyService({
     cancelPolicyStop: (ctx, input) => cancelPolicyStop(publishing, ctx, input),
     readPublishSuggestions: (ctx, input) => readPublishSuggestions(publishing, ctx, input),
     publishTerms: (ctx, input) => publishTerms(publishing, ctx, input),
-    setOwnRules: (ctx, input) => setOwnRules(publishing, ctx, input),
-    useTermsRules: (ctx, input) => useTermsRules(publishing, ctx, input),
-    cancelOwnRulesChange: (ctx, input) => cancelOwnRulesChange(publishing, ctx, input),
   };
 }
 

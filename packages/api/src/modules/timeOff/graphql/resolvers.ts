@@ -7,7 +7,6 @@ import {
   type ResolversTypes,
   toEnum,
 } from "../../../core/graphql";
-import type { EmployeeReadService } from "../../employees";
 import type {
   PersonTimeOff,
   TimeOffPolicyService,
@@ -23,7 +22,7 @@ import {
   type TimeOffTypeIdentityInput,
   type TimeOffTypeIcon,
 } from "../domain";
-import { ownRulesResolvers } from "./ownRulesResolvers";
+import { ownRulesResolvers, type OwnRulesServices } from "./ownRulesResolvers";
 import { toStoredRules } from "./storedRules";
 import { previewTimeOffLoader } from "./previewTimeOffLoader";
 
@@ -39,7 +38,7 @@ export function createResolvers(
   timeOff: TimeOffService,
   timeOffSetup: TimeOffSetupService,
   policies: TimeOffPolicyService,
-  employees: Pick<EmployeeReadService, "readEmployee">,
+  ownRules: OwnRulesServices,
 ): Resolvers {
   const loaders = perRequest((context) => ({
     timeOffTypes: new DataLoader<string, TimeOffTypeRow[] | null>(async (employeeIds) => {
@@ -160,7 +159,7 @@ export function createResolvers(
         mutationPayload<ResolversTypes["TermsPublishPayload"]>(async () => {
           return { terms: await policies.publishTerms(context.getActor(), input) };
         }, ["INVALID_INPUT", "CONFLICT"]),
-      ...ownRulesResolvers(policies, employees),
+      ...ownRulesResolvers(ownRules),
     },
     Employee: {
       timeOffTypes: (employee, _args, context) => loaders(context).timeOffTypes.load(employee.id),

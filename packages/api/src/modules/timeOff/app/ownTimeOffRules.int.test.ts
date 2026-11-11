@@ -6,7 +6,7 @@ import {
   readTermsPolicies,
   termsService,
   test,
-  timeOffPolicyService,
+  ownTimeOffRulesService,
   timeOffService,
   workingPatternService,
 } from "#test/support";
@@ -21,7 +21,7 @@ test("gives a person their own Annual leave from a date", async ({ orm, seed, tr
   });
   const [annual] = await readTermsPolicies(orm, termsId);
 
-  await timeOffPolicyService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
+  await ownTimeOffRulesService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: annual!.timeOffTypeId,
     startDate: "2027-01-01",
@@ -66,7 +66,7 @@ test("changes the days mid-year and keeps a later own-rules change", async ({
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
   await service.setOwnRules(OWNER, { ...input, startDate: "2026-01-01", rules: twentyFiveDays });
   await service.setOwnRules(OWNER, {
@@ -122,7 +122,7 @@ test("offers Family leave when the person's terms do not offer it", async ({
     ({ timeOffType }) => timeOffType.typeKey === "family_leave",
   )!.timeOffType;
 
-  await timeOffPolicyService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
+  await ownTimeOffRulesService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: family.id,
     startDate: "2026-01-01",
@@ -157,7 +157,7 @@ test("puts a person back on their terms' rules and drops later own rules", async
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
   await service.setOwnRules(OWNER, { ...input, startDate: "2026-01-01", rules: twentyFiveDays });
   await service.setOwnRules(OWNER, {
@@ -197,7 +197,7 @@ test("stops offering a person's own type when returning to terms that do not off
   const family = timeOffTypes.find(
     ({ timeOffType }) => timeOffType.typeKey === "family_leave",
   )!.timeOffType;
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: family.id };
   await service.setOwnRules(OWNER, {
     ...input,
@@ -239,7 +239,7 @@ test("keeps a person's own rules through a move to other terms", async ({
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  await timeOffPolicyService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
+  await ownTimeOffRulesService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: annual!.timeOffTypeId,
     startDate: "2026-01-01",
@@ -282,7 +282,7 @@ test("works out this year's allowance again when own rules are saved", async ({
     { leaveYearStart: "2026-01-01", total: 20 },
   ]);
 
-  await timeOffPolicyService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
+  await ownTimeOffRulesService(orm, { today: "2026-11-09" }).setOwnRules(OWNER, {
     employeeId: employee.id,
     timeOffTypeId: annual!.timeOffTypeId,
     startDate: "2026-01-01",

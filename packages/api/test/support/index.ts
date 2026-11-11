@@ -119,6 +119,7 @@ export {
   readTermsPolicies,
   readTermsPolicyVersions,
   type TermsPolicy,
+  ownTimeOffRulesService,
   timeOffPolicyService,
   timeOffService,
   transactWithTimeOffEvents,

@@ -2,6 +2,7 @@ import { readSdl } from "../../core/graphql";
 import type { ModuleDependencies, ModuleManifest } from "../../core/moduleManifest";
 import {
   allowanceEventHandlers,
+  createOwnTimeOffRulesService,
   createTimeOffPolicyService,
   ensureAllowancesJob,
   type TimeOffSetupService,
@@ -11,7 +12,12 @@ import { createEmployeeReadService } from "../employees";
 import { createResolvers } from "./graphql";
 
 // Public values.
-export { createTimeOffPolicyService, createTimeOffSetupService, createTimeOffService } from "./app";
+export {
+  createOwnTimeOffRulesService,
+  createTimeOffPolicyService,
+  createTimeOffSetupService,
+  createTimeOffService,
+} from "./app";
 
 // Public types.
 export type {
@@ -39,7 +45,10 @@ export function timeOffModule({
       timeOff,
       timeOffSetup,
       createTimeOffPolicyService({ ...dependencies, timeOff }),
-      createEmployeeReadService(dependencies),
+      {
+        ownRules: createOwnTimeOffRulesService({ ...dependencies, timeOff }),
+        employees: createEmployeeReadService(dependencies),
+      },
     ),
     events: {
       ...allowanceEventHandlers({ timeOff, ...dependencies }),

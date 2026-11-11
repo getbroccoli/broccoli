@@ -5,7 +5,7 @@ import {
   OWNER,
   readTermsPolicies,
   test,
-  timeOffPolicyService,
+  ownTimeOffRulesService,
 } from "#test/support";
 
 test("records giving own rules as one employee history line", async ({ orm, seed, transact }) => {
@@ -16,7 +16,7 @@ test("records giving own rules as one employee history line", async ({ orm, seed
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
 
   await service.setOwnRules(OWNER, { ...input, startDate: "2027-01-01", rules: twentyFiveDays });
@@ -52,7 +52,7 @@ test("records the previous and new own rules in one employee history line", asyn
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
   await service.setOwnRules(OWNER, {
     ...input,
@@ -96,7 +96,7 @@ test("records returning to the terms' rules in one employee history line", async
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
   await service.setOwnRules(OWNER, { ...input, startDate: "2026-01-01", rules: twentyFiveDays });
 
@@ -133,7 +133,7 @@ test("records cancelling own rules with the cancelled rules and no new value", a
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
   await service.setOwnRules(OWNER, { ...input, startDate: "2027-01-01", rules: twentyFiveDays });
 
@@ -170,7 +170,7 @@ test("records cancelling a return with the cancelled date and no new value", asy
     policies: [{ key: "uk_20_days_plus_bank_holidays" }],
   });
   const [annual] = await readTermsPolicies(orm, termsId);
-  const service = timeOffPolicyService(orm, { today: "2026-11-09" });
+  const service = ownTimeOffRulesService(orm, { today: "2026-11-09" });
   const input = { employeeId: employee.id, timeOffTypeId: annual!.timeOffTypeId };
   await service.setOwnRules(OWNER, { ...input, startDate: "2026-01-01", rules: twentyFiveDays });
   await service.useTermsRules(OWNER, { ...input, startDate: "2027-01-01" });
